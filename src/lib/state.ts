@@ -28,6 +28,10 @@ export interface GameState {
   discoveries: string[];
   defeatedEnemies: string[];
   playSeconds: number;
+  /** Ember balance (src/lib/embers.ts). Saves from before Embers load as 0. */
+  embers: number;
+  /** One-way world flags: lit road lanterns, opened chests, one-off gifts. */
+  flags: string[];
 }
 
 export class InvalidSaveError extends Error {
@@ -84,6 +88,8 @@ export function createNewGame(): GameState {
     discoveries: [],
     defeatedEnemies: [],
     playSeconds: 0,
+    embers: 0,
+    flags: [],
   };
 }
 
@@ -212,6 +218,10 @@ export function validateSave(data: unknown): GameState {
   const playSeconds = requireFiniteNumber(data.playSeconds, 'playSeconds', {
     min: 0,
   });
+  // Added after save version 1 shipped: absent means "none yet".
+  const embers =
+    data.embers === undefined ? 0 : Math.floor(requireFiniteNumber(data.embers, 'embers', { min: 0 }));
+  const flags = data.flags === undefined ? [] : requireStringArray(data.flags, 'flags');
 
   return {
     version: SAVE_VERSION,
@@ -226,6 +236,8 @@ export function validateSave(data: unknown): GameState {
     discoveries,
     defeatedEnemies,
     playSeconds,
+    embers,
+    flags,
   };
 }
 

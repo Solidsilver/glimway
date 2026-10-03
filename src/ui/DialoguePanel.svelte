@@ -5,6 +5,7 @@
   import { sfx, voiceBlip } from '../game/sfx'
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
+  import Icon from './Icon.svelte'
 
   /** Name-tag colors per speaker; objects get a neutral stone tag. */
   const TAG: Record<string, string> = {
@@ -12,7 +13,10 @@
     Pip: '#c0602e',
     Orrin: '#6b4c9a',
     'Route Marker': '#6e6a5e',
-    'Hilltop Lantern': '#b07a12'
+    'Hilltop Lantern': '#b07a12',
+    'Hearth Lantern': '#c0702a',
+    'Road Lantern': '#b07a12',
+    'Ashwatch Chest': '#7a5a2e'
   }
 
   const touch = isTouchFirst()
@@ -27,6 +31,8 @@
   let choices = $state<DialogueChoice[] | null>(null)
   /** True once a reply was picked (choices are not offered again). */
   let answered = $state(false)
+  /** The picked reply's world action, delivered when the conversation closes. */
+  let chosenAction: string | undefined
   let timer: number | null = null
   /** Timestamp of the keydown that opened this conversation (if any). */
   let openedAt = 0
@@ -76,6 +82,7 @@
     questEvent = payload.event
     choices = payload.choices && payload.choices.length > 0 ? payload.choices : null
     answered = false
+    chosenAction = undefined
     typeLine(lines[0] ?? '')
   }
 
@@ -98,7 +105,12 @@
   }
 
   function choose(choice: DialogueChoice): void {
+    if (choice.disabled) {
+      sfx('fizzle')
+      return
+    }
     answered = true
+    chosenAction = choice.action
     sfx('click')
     const reply = choice.reply ?? []
     if (reply.length === 0) {
@@ -117,8 +129,10 @@
     uiState.dialogueOpen = false
     sfx('close')
     const event = questEvent
+    const action = chosenAction
     questEvent = undefined
-    bus.emit(EV.dialogueClosed, { event })
+    chosenAction = undefined
+    bus.emit(EV.dialogueClosed, { event, action })
   }
 
   onMount(() => {
@@ -164,11 +178,11 @@
 
   /** Focus the first reply so keyboard users can pick with arrows/Enter. */
   function focusFirst(node: HTMLElement) {
-    queueMicrotask(() => node.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }))
+    queueMicrotask(() => node.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true }))
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
       e.preventDefault()
-      const items = [...node.querySelectorAll<HTMLButtonElement>('button')]
+      const items = [...node.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
       const i = items.indexOf(document.activeElement as HTMLButtonElement)
       const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length
       items[next]?.focus()
@@ -194,9 +208,21 @@
         {#if showChoices && choices}
           <div class="choices" use:focusFirst>
             {#each choices as c, i}
-              <button type="button" class="choice" onclick={(e) => { e.stopPropagation(); choose(c) }}>
+              <button
+                type="button"
+                class="choice"
+                class:costs={!!c.action}
+                disabled={c.disabled}
+                aria-describedby={c.note ? `choice-note-${i}` : undefined}
+                onclick={(e) => { e.stopPropagation(); choose(c) }}
+              >
                 {#if !touch}<span class="kbd">{i + 1}</span>{/if}
-                <span>{c.text}</span>
+                <span class="label">{c.text}</span>
+                {#if c.note}
+                  <span class="note" id={`choice-note-${i}`}>
+                    {#if c.action || c.disabled}<Icon name="ember" size={12} />{/if}{c.note}
+                  </span>
+                {/if}
               </button>
             {/each}
           </div>
@@ -327,6 +353,22 @@
     font-weight: 700;
     font-size: 15.5px;
     padding: 9px 14px;
+  }
+  .choice .label {
+    flex: 1;
+  }
+  .choice .note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--ember-deep);
+    white-space: nowrap;
+  }
+  .choice:disabled .note {
+    color: var(--text-faint);
   }
   .choice:focus-visible {
     background: linear-gradient(180deg, #fff3b8, #f5cf5c);

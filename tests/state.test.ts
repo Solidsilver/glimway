@@ -135,6 +135,8 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'area',
     'defeatedEnemies',
     'discoveries',
+    'embers',
+    'flags',
     'hp',
     'inventory',
     'mana',
@@ -146,6 +148,15 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'version',
   ]);
   assert.ok(!JSON.stringify(clean).includes('habitica-api-token'));
+});
+
+test('saves from before Embers load with an empty balance and no flags', () => {
+  const { embers: _e, flags: _f, ...legacy } = createNewGame();
+  const loaded = validateSave(legacy);
+  assert.equal(loaded.embers, 0);
+  assert.deepEqual(loaded.flags, []);
+  assert.throws(() => validateSave({ ...createNewGame(), embers: -1 }), /embers/);
+  assert.throws(() => validateSave({ ...createNewGame(), flags: [3] }), /flags/);
 });
 
 test('validateSave rejects malformed data with descriptive errors', () => {

@@ -15,6 +15,7 @@ import type { GameState, QuestEvent, QuestStage } from '../lib/state'
 import { advanceQuest, questObjective } from '../lib/state'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
 import { resolveDefeatRecovery } from '../lib/habitica/sync'
+import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck } from '../lib/embers'
 import { saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
 
@@ -144,7 +145,37 @@ export class Session {
       return
     }
     this.emitQuest()
+    const reward = questEmbers(event)
+    if (reward > 0) this.addEmbers(reward, `+${reward} embers — a little warmth from the road.`)
     this.saveSoon()
+  }
+
+  /** Credit embers locally (quest beats). Habitica-earned embers arrive via
+   *  applySynced, already folded into the synced state. */
+  addEmbers(n: number, toast?: string): void {
+    if (this.destroyed || n <= 0) return
+    this.state = grantEmbers(this.state, n)
+    this.emitStats()
+    if (toast) bus.emit(EV.toast, { text: toast, icon: 'ember' })
+    this.saveSoon()
+  }
+
+  checkSpend(spend: EmberSpend): SpendCheck {
+    return checkSpend(this.state, spend)
+  }
+
+  /** Spend embers via the shared rules. Returns false (and changes nothing)
+   *  when the spend is not allowed. Saved promptly: it is a purchase. */
+  spend(spend: EmberSpend): boolean {
+    if (this.destroyed || this.syncInFlight) return false
+    try {
+      this.state = spendEmbers(this.state, spend)
+    } catch {
+      return false
+    }
+    this.emitStats()
+    this.saveSoon()
+    return true
   }
 
   emitQuest(): void {
@@ -160,7 +191,8 @@ export class Session {
       hp: Math.max(0, Math.ceil(s.hp)),
       maxHp: s.maxHp,
       mana: Math.floor(s.mana),
-      maxMana: s.maxMana
+      maxMana: s.maxMana,
+      embers: s.embers
     }
     bus.emit(EV.stats, payload)
   }

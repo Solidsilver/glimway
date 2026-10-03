@@ -1,7 +1,8 @@
 <script lang="ts">
   import { clearSave, exportSave, importSaveDocument, saveGame } from '../lib/save'
   import { createNewGame } from '../lib/state'
-  import { syncProfile } from '../lib/habitica/sync'
+  import { syncProfile, type SyncResult } from '../lib/habitica/sync'
+  import { XP_PER_EMBER } from '../lib/embers'
   import type { Session } from '../game/session'
   import { setMuted, sfx } from '../game/sfx'
   import { ui } from './store.svelte'
@@ -213,6 +214,7 @@
             : `Synced — ${profile.name} is up to date.`,
           icon: 'person'
         })
+        emberToast(result)
       } else if (applied === 'stale') {
         connection = isConnected() ? 'connected' : 'disconnected'
         connectionError = 'That sync was cancelled because your journey changed. Nothing was applied.'
@@ -226,6 +228,18 @@
     } finally {
       syncBusy = false
     }
+  }
+
+  /** Tell the player what their real-life XP turned into. */
+  function emberToast(result: SyncResult): void {
+    const e = result.embers
+    if (!e || e.gained <= 0) return
+    sfx('ember')
+    if (e.welcome > 0) {
+      ui.toast({ text: `Mara presses ${e.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
+      return
+    }
+    ui.toast({ text: `+${e.gained} ember${e.gained === 1 ? '' : 's'} — from the ${e.xp} XP you earned on Habitica.`, icon: 'ember' })
   }
 
   function disconnect(): void {
@@ -265,6 +279,7 @@
         ui.vitalsSource = 'imported'
         ui.importedProfile = sample.profile
         ui.toast({ text: `${sample.profile.name} steps into Hearthwick.`, icon: 'person' })
+        emberToast(result)
       } else if (applied === 'save-failed') {
         connectionError = 'The sample hero is ready, but this browser wouldn’t save — nothing changed.'
       } else if (applied === 'stale') {
@@ -317,6 +332,14 @@
         <p class="tiny">Builders: set VITE_HABITICA_CREATOR_ID to enable live connection.</p>
       {:else}
         <p class="fine">Optional and read-only: we only <em>look</em> at your character, never change it. Your details stay in this tab until you disconnect — never saved, exported or logged. Sync from Hearthwick.</p>
+        <div class="embers-note">
+          <span class="ei"><Icon name="ember" size={18} /></span>
+          <p>
+            <strong>Your real-life progress lights the road.</strong> Every {XP_PER_EMBER} XP you earn on Habitica
+            becomes an ember the next time you sync. Spend them on a warm rest by Hearthwick’s lantern, on the road
+            lanterns in Brackenwood, and on a certain chest in Ashwatch.
+          </p>
+        </div>
         {#if connection === 'disconnected' || connection === 'error'}
           <label class="field">
             <span>User ID</span>
@@ -513,5 +536,25 @@
       grid-template-columns: 1fr;
       gap: 4px;
     }
+  }
+  .embers-note {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 4px 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255, 194, 122, 0.22), rgba(255, 179, 92, 0.12));
+    border: 2px dashed rgba(181, 72, 31, 0.35);
+  }
+  .embers-note p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .embers-note .ei {
+    color: var(--ember-deep);
+    margin-top: 1px;
   }
 </style>

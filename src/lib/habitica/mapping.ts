@@ -179,6 +179,7 @@ export function toHabiticaProfile(user: unknown, gearStats?: GearStatsLookup): H
   }
 
   const level = requireNumber(statsRaw.lvl, 'stats.lvl', { min: 1 });
+  const exp = Math.max(0, optionalNumber(statsRaw.exp, 'stats.exp', 0));
   const hp = requireNumber(statsRaw.hp, 'stats.hp', { min: 0 });
   const maxHp =
     statsRaw.maxHealth === undefined || statsRaw.maxHealth === null
@@ -212,6 +213,7 @@ export function toHabiticaProfile(user: unknown, gearStats?: GearStatsLookup): H
     name,
     class: characterClass,
     level,
+    exp,
     hp,
     maxHp,
     mp,
@@ -320,6 +322,7 @@ export function validateHabiticaProfile(data: unknown): HabiticaProfile {
     name: requireString(data.name, 'name'),
     class: characterClass,
     level: requireNumber(data.level, 'level', { min: 1 }),
+    ...(data.exp === undefined || data.exp === null ? {} : { exp: requireNumber(data.exp, 'exp', { min: 0 }) }),
     hp: requireNumber(data.hp, 'hp', { min: 0 }),
     maxHp: requireNumber(data.maxHp, 'maxHp', { min: 1 }),
     mp: requireNumber(data.mp, 'mp', { min: 0 }),

@@ -24,6 +24,7 @@ export type SfxCue =
   | 'lantern'
   | 'defeat'
   | 'step-area'
+  | 'ember'
 
 const MUTE_KEY = 'fingersnap:muted'
 
@@ -202,6 +203,13 @@ export function sfx(cue: SfxCue): void {
         { freq: 659, at: 0.1, dur: 0.12, type: 'triangle', vol: 0.3 },
         { freq: 784, at: 0.2, dur: 0.12, type: 'triangle', vol: 0.3 },
         { freq: 1047, at: 0.3, dur: 0.3, type: 'triangle', vol: 0.28 }
+      ])
+    case 'ember':
+      // A small warm crackle-chime: embers landing in your pocket.
+      return playNotes([
+        { freq: 660, dur: 0.06, type: 'triangle', vol: 0.16 },
+        { freq: 990, at: 0.05, dur: 0.07, type: 'triangle', vol: 0.15 },
+        { freq: 1320, at: 0.1, dur: 0.14, type: 'sine', vol: 0.13 }
       ])
     case 'discover':
       return playNotes([

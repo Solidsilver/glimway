@@ -37,6 +37,27 @@ same UI are appended at the end of this file.
 - Errors from the client are typed and carry status codes only — never
   credentials or response bodies that might echo them.
 
+## Embers (added 2026-10-03)
+
+Embers turn Habitica XP into an in-game currency without any write path:
+
+- **Source**: `syncProfile` compares lifetime XP (`level` + `exp`, on
+  Habitica's level curve) between the saved baseline profile and the fresh
+  one, and credits `floor(after / 10) - floor(before / 10)` embers. The
+  baseline advances with every accepted sync, so XP pays exactly once;
+  rejected syncs (outside the village, account switch) credit nothing and
+  keep the baseline. XP loss (a Habitica death) never removes embers.
+  Profiles saved before `exp` existed credit nothing until the next sync
+  establishes a baseline.
+- **First import**: pays a one-off `WELCOME_EMBERS` gift, guarded by a save
+  flag so disconnecting and reconnecting cannot repeat it. Past XP is not paid.
+- **Spending** is local only (`spendEmbers`): a warm rest restores local HP and
+  mana (this also lifts the imported zero-HP lock, because it was paid for with
+  real-life progress), road lanterns become rest spots, and the chest grants
+  the Ember Charm. None of these touch the Habitica account.
+- **Save shape**: `GameState.embers` and `GameState.flags` are optional on load
+  (older saves read as 0 and `[]`), so `SAVE_VERSION` stays 1.
+
 ## Module API
 
 ### `src/lib/habitica/types.ts` (mirror this)

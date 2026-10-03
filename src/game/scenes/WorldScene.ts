@@ -1,15 +1,16 @@
 import Phaser from 'phaser'
 import type { AreaId, GameState, QuestEvent } from '../../lib/state'
-import { dialogueFor, locations } from '../../content/world'
+import { dialogueFor, emberDialogue, itemInfo, locations, type Dialogue } from '../../content/world'
 import { placeFingersnapOccluder } from '../expansion'
-import { bus, EV, type AbilityPayload, type PromptPayload } from '../events'
+import { bus, EV, type AbilityPayload, type DialogueClosedPayload, type PromptPayload } from '../events'
 import { prefersReducedMotion, sfx } from '../sfx'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { TERRAIN, TILE } from '../textures'
 import type { Session } from '../session'
-import { buildArea, type EnemyType, type InteractId, type WorldData } from '../worlds'
+import { buildArea, type EmberSpotId, type EnemyType, type InteractId, type WorldData } from '../worlds'
 import { getCombatKit, type CombatKit } from '../../lib/combat'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
+import { CHARM_ITEM, EMBER_COSTS, withCharm, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { loadCompanion, loadWorldAvatar } from '../avatar-render'
 
 /**
@@ -140,7 +141,8 @@ export class WorldScene extends Phaser.Scene {
   private transitioning = false
   private guardianSpawned = false
   /** Atlas-prop lanterns that can glow when lit: shrine and village lantern. */
-  private lightProps: { sprite: Phaser.GameObjects.Image; gx: number; gy: number; glow: Phaser.GameObjects.Image | null }[] = []
+  /** Flames that can be lit: 'village', 'shrine', or a road lantern id. */
+  private lightProps: { id: string; sprite: Phaser.GameObjects.Image; gx: number; gy: number; glow: Phaser.GameObjects.Image | null }[] = []
   private positionTimer = 0
   /** Foreground canopies/arches that fade when something walks beneath. */
   private occluders: { image: Phaser.GameObjects.Image; bounds: Phaser.Geom.Rectangle; footY: number }[] = []
@@ -459,8 +461,8 @@ export class WorldScene extends Phaser.Scene {
       body.setVisible(false)
       this.solidGroup.add(body)
       // Light-capable props get a glow anchor near their lamp
-      if (p.frame === 'lantern-post' || p.frame === 'lantern-shrine') {
-        this.lightProps.push({ sprite: img, gx: x, gy: y - p.h * 0.72, glow: null })
+      if (p.light) {
+        this.lightProps.push({ id: p.light, sprite: img, gx: x, gy: y - p.h * 0.72, glow: null })
       }
     }
   }
@@ -481,6 +483,24 @@ export class WorldScene extends Phaser.Scene {
     if (this.world.shrine) {
       this.interactables.push({ id: 'lantern', x: this.world.shrine.tx * TILE + 8, y: this.world.shrine.ty * TILE + TILE, label: 'Look at the lantern' })
     }
+    for (const spot of this.world.emberSpots) {
+      this.interactables.push({
+        id: spot.id,
+        x: spot.tx * TILE + 8,
+        y: spot.ty * TILE + TILE,
+        label: spot.id === 'hearth' ? 'Sit by the lantern' : spot.id === 'chest' ? 'Look at the chest' : 'Look at the lantern'
+      })
+    }
+  }
+
+  private isEmberSpot(id: InteractId): id is EmberSpotId {
+    return id === 'hearth' || id === 'chest' || (ROAD_LANTERNS as readonly string[]).includes(id)
+  }
+
+  /** Whether an ember spot has something to buy right now (drives its marker). */
+  private emberSpotReady(id: EmberSpotId): boolean {
+    const spend: EmberSpend = id === 'hearth' ? { kind: 'rest' } : id === 'chest' ? { kind: 'chest' } : { kind: 'road-lantern', id }
+    return this.session.checkSpend(spend).ok
   }
 
   /** Prompt wording that says what pressing the button will actually do. */
@@ -488,13 +508,20 @@ export class WorldScene extends Phaser.Scene {
     const stage = this.session.questStage
     if (it.id === 'clue') return stage === 'accepted' ? 'Take a rubbing of the marker' : it.label
     if (it.id === 'lantern') return stage === 'guardian-defeated' ? 'Light the lantern' : it.label
+    if (it.id === 'chest') return this.session.state.flags.includes('opened:ashwatch-chest') ? it.label : `Open the chest · ${EMBER_COSTS.chest} embers`
+    if (it.id === 'hearth') return `Rest by the lantern · ${EMBER_COSTS.rest} embers`
+    if (this.isEmberSpot(it.id)) {
+      return isLit(this.session.state, it.id as RoadLanternId) ? it.label : `Light the lantern · ${EMBER_COSTS.roadLantern} embers`
+    }
     return it.label
   }
 
   /** Height above an interactable's base where its marker floats. */
   private markerOffset(id: InteractId): number {
     if (id === 'lantern') return 44
-    if (id === 'clue') return 22
+    if (id === 'hearth') return 36
+    if (id === 'road-1' || id === 'road-2' || id === 'road-3') return 32
+    if (id === 'clue' || id === 'chest') return 22
     return 25
   }
 
@@ -524,12 +551,16 @@ export class WorldScene extends Phaser.Scene {
       const img = this.markers.get(it.id)
       if (!img || !img.active) continue
       let kind: 'quest' | 'talk' | null = null
-      try {
-        const d = dialogueFor(it.id, stage)
-        if (d.event) kind = 'quest'
-        else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
-      } catch {
-        kind = null
+      if (this.isEmberSpot(it.id)) {
+        kind = this.emberSpotReady(it.id) ? 'talk' : null
+      } else {
+        try {
+          const d = dialogueFor(it.id, stage)
+          if (d.event) kind = 'quest'
+          else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
+        } catch {
+          kind = null
+        }
       }
       if (kind) img.setTexture(kind === 'quest' ? 'mark-quest' : 'mark-talk')
       img.setVisible(kind !== null && this.currentTarget?.id !== it.id)
@@ -593,6 +624,9 @@ export class WorldScene extends Phaser.Scene {
     if (this.textures.get('fingersnap-props').has('stone-milestone')) add('Route Marker', 'fingersnap-props', 'stone-milestone', false)
     else add('Route Marker', 'mural', undefined, false)
     add('Hilltop Lantern', 'fingersnap-props', 'lantern-shrine', false)
+    add('Hearth Lantern', 'fingersnap-props', 'lantern-post', false)
+    add('Road Lantern', 'fingersnap-props', 'lantern-post', false)
+    add('Ashwatch Chest', 'fingersnap-props', 'treasure-chest', false)
     add('You', 'fingersnap-demo-walk', 'walk-down-0', true)
     bus.emit(EV.portraits, out)
   }
@@ -1035,6 +1069,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onProfileChanged(): void {
+    // A sync may have brought embers: ember-spot markers can change.
+    this.refreshMarkers()
     this.riding = this.riding && this.world.areaId !== 'village'
     void this.buildAvatarVisual()
   }
@@ -1097,7 +1133,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private kit(): CombatKit {
-    return getCombatKit(this.session.importedProfile)
+    return withCharm(getCombatKit(this.session.importedProfile), this.session.state.inventory)
   }
 
   private tryAttack(): void {
@@ -1368,9 +1404,11 @@ export class WorldScene extends Phaser.Scene {
   // ------------------------------------------------------------- interaction
 
   private openInteraction(target: Interactable): void {
-    let payload: ReturnType<typeof dialogueFor>
+    let payload: Dialogue
     try {
-      payload = dialogueFor(target.id, this.session.questStage)
+      payload = this.isEmberSpot(target.id)
+        ? emberDialogue(target.id, this.session.state, { connected: this.session.vitalsSource === 'imported' })
+        : dialogueFor(target.id, this.session.questStage)
     } catch (err) {
       console.warn('[fingersnap] no dialogue available for', target.id, err)
       return
@@ -1388,9 +1426,10 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
-  private onDialogueClosed = (payload: { event?: string }): void => {
+  private onDialogueClosed = (payload: DialogueClosedPayload): void => {
     uiState.dialogueOpen = false
     uiState.blockedUntil = performance.now() + 220
+    if (payload?.action) this.applyEmberAction(payload.action)
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
     // The clue is journaled under the shared content id (advanceQuest also
@@ -1405,15 +1444,62 @@ export class WorldScene extends Phaser.Scene {
     if (event === 'find-clue' && this.world.areaId === 'ruin') this.spawnGuardian(true)
   }
 
+  /** A spend picked in an ember-spot conversation; the payoff is visible. */
+  private applyEmberAction(action: string): void {
+    const spend: EmberSpend | null =
+      action === 'rest' ? { kind: 'rest' }
+        : action === 'chest' ? { kind: 'chest' }
+          : action.startsWith('light:') && (ROAD_LANTERNS as readonly string[]).includes(action.slice(6))
+            ? { kind: 'road-lantern', id: action.slice(6) as RoadLanternId }
+            : null
+    if (!spend) return
+    if (!this.session.spend(spend)) {
+      bus.emit(EV.toast, { text: 'The flame gutters — not enough embers after all.', kind: 'error' })
+      return
+    }
+    sfx('lantern')
+    if (spend.kind === 'rest') {
+      this.player.setTint(0xffe2a8)
+      this.time.delayedCall(260, () => this.player.clearTint())
+      this.sparkBurst(this.player.x, this.player.y - 10, 10)
+      this.floatText(this.player.x, this.player.y - 24, 'Rested', '#ffd27a', false)
+      bus.emit(EV.toast, { text: 'Warm and rested. Health and mana restored.', icon: 'ember' })
+    } else if (spend.kind === 'road-lantern') {
+      const lp = this.lightProps.find((l) => l.id === spend.id)
+      this.refreshLanternVisuals()
+      if (lp) {
+        const bloom = this.add.image(lp.gx, lp.gy, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(4002).setScale(0.2)
+        this.tweens.add({ targets: bloom, scale: 2.4, alpha: 0, duration: 900, ease: 'Quad.easeOut', onComplete: () => bloom.destroy() })
+        this.sparkBurst(lp.gx, lp.gy, 10)
+      }
+      bus.emit(EV.toast, { text: 'The road lantern is lit. Rest in its light to recover.', icon: 'lantern' })
+    } else {
+      const spot = this.world.emberSpots.find((e) => e.id === 'chest')
+      if (spot) this.sparkBurst(spot.tx * TILE + 8, spot.ty * TILE + 6, 14)
+      bus.emit(EV.toast, { text: `Found: ${itemInfo(CHARM_ITEM).name}. Your strikes find the gaps more often.`, icon: 'ember' })
+    }
+    this.refreshMarkers()
+    this.lastPrompt = null
+  }
+
+  /** Standing in a lit road lantern's light (and out of a fight) mends you. */
+  private lanternRestRate(): number {
+    for (const lp of this.lightProps) {
+      if (!(ROAD_LANTERNS as readonly string[]).includes(lp.id) || !isLit(this.session.state, lp.id as RoadLanternId)) continue
+      if (Math.hypot(this.player.x - lp.gx, this.player.y - (lp.gy + 18)) > 44) continue
+      const threatened = this.enemies.some((e) => !e.dead && Math.hypot(e.sprite.x - this.player.x, e.sprite.y - this.player.y) < 90)
+      return threatened ? 0 : 1
+    }
+    return 0
+  }
+
   /**
    * The big moment: the HUD steps aside, the camera eases to the lantern,
    * and the flame catches with a bloom of light and a chime. The quest event
    * is applied at the peak so the UI's quest banner lands right after.
    */
   private playLanternBeat(event: QuestEvent): void {
-    const target = event === 'light-lantern'
-      ? this.lightProps.find((lp) => this.world.shrine && Math.abs(lp.gx - (this.world.shrine.tx * TILE + 8)) < 1)
-      : this.lightProps[0]
+    const target = this.lightProps.find((lp) => lp.id === (event === 'light-lantern' ? 'shrine' : 'village'))
     const finish = () => {
       this.session.applyQuestEvent(event)
       this.refreshLanternVisuals()
@@ -1460,12 +1546,15 @@ export class WorldScene extends Phaser.Scene {
   private refreshLanternVisuals(): void {
     const stage = this.session.questStage
     if (this.lightProps.length === 0) return
-    // lightProps[0] = village lantern post (village), last = shrine (ruin)
     const shrineLit = stage === 'lantern-lit' || stage === 'complete'
     const villageLit = stage === 'complete'
     for (const lp of this.lightProps) {
-      const isShrine = this.world.shrine !== null && Math.abs(lp.gx - (this.world.shrine.tx * TILE + 8)) < 1
-      const shouldGlow = isShrine ? shrineLit : villageLit
+      const isShrine = lp.id === 'shrine'
+      const shouldGlow = isShrine
+        ? shrineLit
+        : lp.id === 'village'
+          ? villageLit
+          : (ROAD_LANTERNS as readonly string[]).includes(lp.id) && isLit(this.session.state, lp.id as RoadLanternId)
       // The delivered art is drawn lit; dim it until the flame is relit so
       // lighting it is a visible change, not just an added halo.
       if (shouldGlow) lp.sprite.clearTint()
@@ -1628,8 +1717,12 @@ export class WorldScene extends Phaser.Scene {
     // - HP regen only when the shared policy allows it (demo vitals, in the
     //   village). Imported vitals get NO passive refill anywhere.
     const state = this.session.state
-    const mana = Math.min(state.maxMana, state.mana + 5 * dt)
+    // Lit road lanterns are ember-bought rest spots: they mend imported and
+    // demo vitals alike (still local only — Habitica is never touched).
+    const rest = this.lanternRestRate()
+    const mana = Math.min(state.maxMana, state.mana + (5 + 6 * rest) * dt)
     let hp = state.hp
+    if (rest > 0 && state.hp > 0) hp = Math.min(state.maxHp, hp + 2 * dt)
     if (
       passiveRegenAllowed(this.session.vitalsSource) &&
       this.world.areaId === 'village' &&

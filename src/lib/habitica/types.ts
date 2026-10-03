@@ -62,6 +62,12 @@ export interface HabiticaProfile {
   /** null when the account has not selected a class (flags.classSelected false). */
   class: HabiticaClass | null;
   level: number;
+  /**
+   * stats.exp — XP toward the next level. With `level` it gives the account's
+   * lifetime XP, which is what Embers are credited from (src/lib/embers.ts).
+   * Optional: profiles saved before Embers existed lack it.
+   */
+  exp?: number;
   hp: number;
   maxHp: number;
   mp: number;

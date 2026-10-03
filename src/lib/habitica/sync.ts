@@ -1,5 +1,6 @@
 import { recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
+import { embersBetween, grantEmbers, grantWelcome } from '../embers.ts';
 import type {
   HabiticaProfile,
   LoadedSave,
@@ -26,6 +27,9 @@ export interface SyncResult {
   /** Unchanged input save for 'rejected' and 'unchanged'. */
   save: SyncedSave;
   notes: string[];
+  /** Embers credited by this sync: from Habitica XP since the baseline, plus
+   *  the one-off welcome gift on a first import. */
+  embers?: { xp: number; gained: number; welcome: number };
 }
 
 /**
@@ -135,10 +139,14 @@ export function syncProfile(
   }
 
   if (save.vitalsSource === 'demo') {
+    const imported = applyImportedProfile(save.state, p);
+    // The import itself only sets the XP baseline; past XP is not paid out.
+    const welcome = grantWelcome(imported.state);
     return {
       status: 'imported',
-      save: applyImportedProfile(save.state, p),
+      save: { ...imported, state: welcome.state },
       notes: ['first import: demo vitals replaced by imported vitals at the village'],
+      embers: { xp: 0, gained: welcome.granted, welcome: welcome.granted },
     };
   }
 
@@ -180,6 +188,11 @@ export function syncProfile(
     notes.push('baseline established; no vitals credited');
   }
 
+  // XP earned in Habitica since the baseline becomes embers, exactly once:
+  // the baseline advances with this sync, so the same XP never pays twice.
+  const earned = baseline ? embersBetween(baseline, p) : { xp: 0, embers: 0 };
+  if (earned.embers > 0) notes.push(`+${earned.xp} XP since last sync credited as ${earned.embers} embers`);
+
   // The profile itself is the new baseline even when local vitals did not
   // move (capped delta, clamped already equal, or appearance/stat/gear-only
   // changes) — otherwise a later sync would re-credit the same delta.
@@ -202,11 +215,12 @@ export function syncProfile(
   return {
     status: 'synced',
     save: {
-      state: validateSave({ ...state, hp, maxHp, mana, maxMana }),
+      state: grantEmbers(validateSave({ ...state, hp, maxHp, mana, maxMana }), earned.embers),
       vitalsSource: 'imported',
       importedProfile: p,
     },
     notes,
+    embers: { xp: earned.xp, gained: earned.embers, welcome: 0 },
   };
 }
 

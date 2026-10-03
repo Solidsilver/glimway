@@ -40,6 +40,8 @@ export interface StatsPayload {
   maxHp: number
   mana: number
   maxMana: number
+  /** Ember balance (spent at lanterns and the Ashwatch chest). */
+  embers: number
 }
 
 export interface QuestPayload {
@@ -69,6 +71,8 @@ export interface PromptPayload {
 export interface ToastPayload {
   text: string
   kind?: 'info' | 'error'
+  /** Icon name (src/ui/Icon.svelte); defaults to a sparkle. */
+  icon?: string
 }
 
 export interface AbilityPayload {
@@ -97,4 +101,15 @@ export interface DefeatPayload {
 export interface DialogueChoice {
   text: string
   reply?: string[]
+  /** World action applied when the conversation closes (e.g. an ember spend). */
+  action?: string
+  disabled?: boolean
+  /** Cost, or why the choice is unavailable. */
+  note?: string
+}
+
+export interface DialogueClosedPayload {
+  event?: string
+  /** The picked choice's action, if any. */
+  action?: string
 }

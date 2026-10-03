@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ui } from './store.svelte'
   import { getCombatKit } from '../lib/combat'
+  import { EMBER_COSTS } from '../lib/embers'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
 
@@ -17,6 +18,15 @@
   /** The E/Space slot follows context: talking beats swinging. */
   const actLabel = $derived(ui.prompt.label ? (ui.prompt.label.startsWith('Talk') ? 'Talk' : 'Use') : kit.basicName)
   let objectiveOpen = $state(false)
+  const showEmbers = $derived(ui.stats.embers > 0 || ui.vitalsSource === 'imported')
+  /** Bumps when the balance grows, to replay the little glow. */
+  let emberPulse = $state(0)
+  let lastEmbers = -1
+  $effect(() => {
+    const n = ui.stats.embers
+    if (lastEmbers >= 0 && n > lastEmbers) emberPulse += 1
+    lastEmbers = n
+  })
 </script>
 
 <div class="hud" class:hidden={ui.cinematic} aria-hidden={ui.cinematic}>
@@ -24,6 +34,13 @@
     <div class="place">
       <Icon name="lantern" size={14} />
       <span>{ui.area.name}</span>
+      {#if showEmbers}
+        {#key emberPulse}
+          <span class="embers" class:pulse={emberPulse > 0} title="Embers — earned from your Habitica XP, spent at lanterns" aria-label={`${ui.stats.embers} embers`}>
+            <Icon name="ember" size={13} />{ui.stats.embers}
+          </span>
+        {/key}
+      {/if}
     </div>
     <button
       type="button"
@@ -54,7 +71,7 @@
       </div>
     {/if}
     {#if resting}
-      <div class="resting">Resting in Hearthwick — sync on Habitica to heal up.</div>
+      <div class="resting">Resting in Hearthwick — heal on Habitica and sync, or rest by the lantern for {EMBER_COSTS.rest} embers.</div>
     {/if}
   </div>
 
@@ -138,6 +155,31 @@
   }
   .place :global(.icon) {
     color: var(--gold-deep);
+  }
+  .embers {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px 1px 6px;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: #5a2410;
+    background: linear-gradient(180deg, #ffe0b0, #ffc27a);
+    border: 2px solid var(--wood-dark);
+    border-radius: 999px;
+    box-shadow: 0 2px 0 var(--wood-dark);
+  }
+  .place .embers :global(.icon) {
+    color: var(--ember-deep);
+  }
+  .embers.pulse {
+    animation: ember-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  }
+  @keyframes ember-pop {
+    0% { transform: scale(1); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 0 rgba(255, 179, 92, 0.9); }
+    40% { transform: scale(1.18); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 8px rgba(255, 179, 92, 0); }
+    100% { transform: scale(1); }
   }
   .objective {
     all: unset;

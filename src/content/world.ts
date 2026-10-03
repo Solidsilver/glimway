@@ -1,9 +1,16 @@
-import type { AreaId, QuestEvent, QuestStage } from '../lib/state.ts';
+import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts';
+import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 
 export interface DialogueChoice {
   text: string;
   /** Lines the speaker answers with before the conversation closes. */
   reply?: string[];
+  /** Something the world does when this choice is picked (e.g. an ember spend). */
+  action?: string;
+  /** Shown but not pickable (e.g. not enough embers); `note` says why. */
+  disabled?: boolean;
+  /** Small side text: a cost, or why the choice is unavailable. */
+  note?: string;
 }
 
 export interface Dialogue {
@@ -63,6 +70,11 @@ export const ITEM_INFO: Record<string, ItemInfo> = {
     name: 'Map of Hearthwick',
     icon: 'map',
     blurb: 'Hand-inked by a carter. The east gate is circled twice.',
+  },
+  'ember-charm': {
+    name: 'Ember Charm',
+    icon: 'ember',
+    blurb: 'Still warm from the Ashwatch chest. Your strikes find the gaps more often.',
   },
 };
 
@@ -441,4 +453,97 @@ export function journalEntries(stage: QuestStage): JournalEntry[] {
     }
   }
   return entries;
+}
+
+// ------------------------------------------------------------------ embers
+
+export type EmberSpotKind = 'hearth' | RoadLanternId | 'chest';
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+/** How to get more embers, in the world's voice. */
+function emberHint(connected: boolean): string {
+  return connected
+    ? `Every ${XP_PER_EMBER} XP you earn in Habitica becomes an ember. Sync from the Menu here in Hearthwick to collect them.`
+    : `Embers come from real-life progress: connect Habitica in the Menu, and every ${XP_PER_EMBER} XP you earn there becomes an ember.`;
+}
+
+function spendChoice(state: GameState, label: string, spend: Parameters<typeof checkSpend>[1], action: string, reply: string[]): DialogueChoice {
+  const check = checkSpend(state, spend);
+  const cost = plural(check.cost, 'ember');
+  if (check.ok) return { text: label, note: cost, action, reply };
+  const note =
+    check.reason === 'short' ? `Needs ${cost}` : check.reason === 'full' ? 'Already rested' : 'Done';
+  return { text: label, note, disabled: true };
+}
+
+/**
+ * Conversations at the places where embers are spent. Built from the live
+ * state so costs, balances and already-done states are always current.
+ */
+export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { connected: boolean }): Dialogue {
+  const balance = state.embers > 0 ? `You carry ${plural(state.embers, 'ember')}.` : 'You have no embers yet.';
+  const short = (cost: number) => state.embers < cost;
+
+  if (id === 'hearth') {
+    const lines = ['The village lantern hums with a low, patient warmth.', balance];
+    if (short(EMBER_COSTS.rest)) lines.push(emberHint(opts.connected));
+    return {
+      speaker: 'Hearth Lantern',
+      lines,
+      choices: [
+        spendChoice(state, 'Rest by the flame', { kind: 'rest' }, 'rest', [
+          'You sit with your back to the warm post. Aches loosen. Your head clears.',
+        ]),
+        { text: 'Just warm my hands', reply: ['You stay a moment. It helps a little, the way small warm things do.'] },
+      ],
+    };
+  }
+
+  if (id === 'chest') {
+    if (chestOpened(state)) {
+      return {
+        speaker: 'Ashwatch Chest',
+        lines: ['The chest stands open and empty. Its lock-flame still flickers, pleased with itself.'],
+      };
+    }
+    const lines = [
+      'An old iron-bound chest. Its lock is shaped like a lantern with no flame.',
+      'It looks like it wants an ember, not a key.',
+      balance,
+    ];
+    if (short(EMBER_COSTS.chest)) lines.push(emberHint(opts.connected));
+    return {
+      speaker: 'Ashwatch Chest',
+      lines,
+      choices: [
+        spendChoice(state, 'Kindle the lock', { kind: 'chest' }, 'chest', [
+          'The lock-flame flares and the lid sighs open. Inside, wrapped in oilcloth: a small charm, still warm.',
+        ]),
+        { text: 'Not yet' },
+      ],
+    };
+  }
+
+  // Road lanterns
+  if (isLit(state, id)) {
+    return {
+      speaker: 'Road Lantern',
+      lines: ['The lantern you lit burns steady. Resting in its light mends you.'],
+    };
+  }
+  const lines = ['A cold iron lantern leans over the path. Its wick is dry but whole.', balance];
+  if (short(EMBER_COSTS.roadLantern)) lines.push(emberHint(opts.connected));
+  return {
+    speaker: 'Road Lantern',
+    lines,
+    choices: [
+      spendChoice(state, 'Light it', { kind: 'road-lantern', id }, `light:${id}`, [
+        'The flame catches and steadies. Stand in its light to catch your breath.',
+      ]),
+      { text: 'Leave it for now' },
+    ],
+  };
 }

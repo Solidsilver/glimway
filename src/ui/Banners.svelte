@@ -19,10 +19,12 @@
       if (timer !== null) window.clearTimeout(timer)
       timer = null
       shownId = null
+      ui.shownBannerId = null
       return
     }
     if (b.id === shownId) return
     shownId = b.id
+    ui.shownBannerId = b.id
     sfx(b.kind === 'quest' ? 'quest' : 'step-area')
     if (timer !== null) window.clearTimeout(timer)
     timer = window.setTimeout(() => dismiss(b.id), b.kind === 'quest' ? 4200 : 2600)
@@ -31,6 +33,7 @@
   function dismiss(id: string): void {
     if (timer !== null) window.clearTimeout(timer)
     timer = null
+    if (ui.shownBannerId === id) ui.shownBannerId = null
     ui.dismissBanner(id)
   }
 </script>

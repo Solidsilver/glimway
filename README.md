@@ -70,6 +70,25 @@ healing; defeat wakes you at capped vitals (zero stays zero) and locks
 expeditions until a genuine external heal — village life (NPCs, journal,
 sync) keeps working. See [docs/import-contract.md](docs/import-contract.md).
 
+### Embers: real-life progress lights the road
+
+Every 10 XP you earn **on Habitica** becomes an ember the next time you sync
+in Hearthwick. It's still read-only: the game compares your profile's
+level + XP with the copy saved at your last sync, credits the difference
+once, and moves the baseline forward (the same rule as HP credit). The first
+import pays a one-off welcome of 3 embers (not your past XP), and two story
+beats leave a few embers so demo players can try spending them too.
+
+Spend them in the world:
+
+| Where | Cost | What you get |
+|---|---|---|
+| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana |
+| Three road lanterns along Brackenwood | 3 each | A lit rest spot that mends you while no enemy is near |
+| The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
+
+Rules live in `src/lib/embers.ts`, with tests in `tests/embers.test.ts`.
+
 ### Defeat (demo vs imported rule)
 
 Falling in battle wakes you by the village well with restored demo vitals; all

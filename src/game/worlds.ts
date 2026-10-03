@@ -6,7 +6,9 @@ import type { AreaId } from '../lib/state.ts'
 import { TERRAIN, TILE } from './textures.ts'
 
 export type NpcId = 'mara' | 'pip' | 'orrin'
-export type InteractId = NpcId | 'clue' | 'lantern'
+/** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
+export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId
 export type EnemyType = 'wisp' | 'guardian'
 
 export interface NpcSpot {
@@ -40,6 +42,8 @@ export interface PropSpot {
   h: number
   /** Explicit collision box [w, h] in px at the prop's base. */
   body: [number, number]
+  /** Light-capable prop: which flame this is ('village', 'shrine', or a road lantern id). */
+  light?: string
 }
 
 export interface WorldData {
@@ -62,6 +66,8 @@ export interface WorldData {
   mural: { tx: number; ty: number } | null
   shrine: { tx: number; ty: number } | null
   villageLantern: { tx: number; ty: number } | null
+  /** Places where embers are spent (each sits on a solid prop). */
+  emberSpots: { id: EmberSpotId; tx: number; ty: number }[]
   spawn: { tx: number; ty: number }
 }
 
@@ -223,7 +229,7 @@ function buildVillage(): WorldData {
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
-    { frame: 'lantern-post', tx: 11, ty: 12, h: 32, body: [8, 6] },
+    { frame: 'lantern-post', tx: 11, ty: 12, h: 32, body: [8, 6], light: 'village' },
     { frame: 'patched-bench', tx: 9, ty: 13, h: 18, body: [16, 6] },
     { frame: 'bread-basket', tx: 6, ty: 8, h: 12, body: [12, 6] },
     { frame: 'flower-planter', tx: 22, ty: 7, h: 16, body: [14, 6] },
@@ -251,6 +257,7 @@ function buildVillage(): WorldData {
     mural: null,
     shrine: null,
     villageLantern,
+    emberSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
     spawn: { tx: 7, ty: 11 }
   }
 }
@@ -308,6 +315,14 @@ function buildWoodland(): WorldData {
     scatterOne(g, tx, ty)
   }
 
+  // Road lanterns beside the path, one per leg; kept clear of groves.
+  const roadLanterns = [
+    { id: 'road-1' as const, tx: 10, ty: 14 },
+    { id: 'road-2' as const, tx: 27, ty: 16 },
+    { id: 'road-3' as const, tx: 41, ty: 17 }
+  ]
+  for (const l of roadLanterns) g.solid[l.ty][l.tx] = false
+
   const marker = { tx: 25, ty: 13 }
   const npcs: NpcSpot[] = []
   const enemies: EnemySpot[] = [
@@ -321,15 +336,16 @@ function buildWoodland(): WorldData {
     { tx: W - 1, ty: 21, tw: 1, th: 3, to: 'ruin', entry: { tx: 2, ty: 13 } }
   ]
   const trees = collectTrees(g)
-  const bushes = scatter(g, rng, 10, [...npcs, marker]).filter((b) => !nearExit({ exits: woodlandExits }, b.tx, b.ty))
-  const rocks = scatter(g, rng, 8, [...npcs, marker]).filter((r) => !nearExit({ exits: woodlandExits }, r.tx, r.ty))
+  const bushes = scatter(g, rng, 10, [...npcs, marker, ...roadLanterns]).filter((b) => !nearExit({ exits: woodlandExits }, b.tx, b.ty))
+  const rocks = scatter(g, rng, 8, [...npcs, marker, ...roadLanterns]).filter((r) => !nearExit({ exits: woodlandExits }, r.tx, r.ty))
 
   const props: PropSpot[] = [
     { frame: 'trail-sign', tx: 25, ty: 13, h: 24, body: [10, 6] },
     { frame: 'stone-milestone', tx: 39, ty: 13, h: 18, body: [10, 6] },
     { frame: 'mushroom-cluster', tx: 9, ty: 17, h: 12, body: [12, 6] },
     { frame: 'mushroom-cluster', tx: 33, ty: 24, h: 12, body: [12, 6] },
-    { frame: 'grappling-rope', tx: 44, ty: 21, h: 14, body: [12, 6] }
+    { frame: 'grappling-rope', tx: 44, ty: 21, h: 14, body: [12, 6] },
+    ...roadLanterns.map((l): PropSpot => ({ frame: 'lantern-post', tx: l.tx, ty: l.ty, h: 28, body: [8, 6], light: l.id }))
   ]
 
   return {
@@ -354,6 +370,7 @@ function buildWoodland(): WorldData {
     mural: null,
     shrine: null,
     villageLantern: null,
+    emberSpots: roadLanterns,
     spawn: { tx: 3, ty: 15 }
   }
 }
@@ -417,7 +434,7 @@ function buildRuin(): WorldData {
   const rocks: { tx: number; ty: number }[] = [{ tx: 10, ty: 16 }, { tx: 24, ty: 6 }, { tx: 6, ty: 20 }]
 
   const props: PropSpot[] = [
-    { frame: 'lantern-shrine', tx: 17, ty: 11, h: 40, body: [14, 8] },
+    { frame: 'lantern-shrine', tx: 17, ty: 11, h: 40, body: [14, 8], light: 'shrine' },
     { frame: 'treasure-chest', tx: 29, ty: 3, h: 20, body: [14, 8] },
     { frame: 'mushroom-cluster', tx: 12, ty: 9, h: 12, body: [12, 6] },
     { frame: 'mushroom-cluster', tx: 6, ty: 20, h: 12, body: [12, 6] },
@@ -444,6 +461,7 @@ function buildRuin(): WorldData {
     mural,
     shrine,
     villageLantern: null,
+    emberSpots: [{ id: 'chest', tx: 29, ty: 3 }],
     spawn: { tx: 3, ty: 13 }
   }
 }

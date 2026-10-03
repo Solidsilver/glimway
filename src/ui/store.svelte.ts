@@ -3,7 +3,7 @@ import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { isMuted } from '../game/sfx'
 
 /** Stored toast = payload plus a render key and optional icon. */
-type StoredToast = ToastPayload & { id: string; icon?: string }
+type StoredToast = ToastPayload & { id: string }
 
 /** A quest beat or area title waiting to be shown. */
 export interface Banner {
@@ -19,7 +19,7 @@ export interface Banner {
  * Written by App.svelte's bus wiring, read by UI components.
  */
 class UiStore {
-  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5 })
+  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0 })
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
   /** False until the first quest snapshot arrives (load is not a "change"). */
   questKnown = $state(false)
@@ -46,7 +46,7 @@ class UiStore {
   endingOpen = $state(false)
   muted = $state(isMuted())
 
-  toast(payload: ToastPayload & { icon?: string }): void {
+  toast(payload: ToastPayload): void {
     const id = Math.random().toString(36).slice(2)
     const entry: StoredToast = { ...payload, id, kind: payload.kind ?? 'info' }
     this.toasts = [...this.toasts.slice(-2), entry]
@@ -55,10 +55,14 @@ class UiStore {
     }, payload.kind === 'error' ? 6000 : 4200)
   }
 
+  /** Id of the banner currently on screen (set by Banners.svelte). */
+  shownBannerId: string | null = null
+
   banner(b: Omit<Banner, 'id'>): void {
     const id = Math.random().toString(36).slice(2)
-    // Area titles are transient: a newer one replaces any queued area title.
-    const rest = b.kind === 'area' ? this.banners.filter((x) => x.kind !== 'area' || x === this.banners[0]) : this.banners
+    // A newer banner of the same kind supersedes any not yet seen: a stale
+    // area title or an already-overtaken quest beat is never shown late.
+    const rest = this.banners.filter((x) => x.kind !== b.kind || x.id === this.shownBannerId)
     this.banners = [...rest, { ...b, id }]
   }
 
