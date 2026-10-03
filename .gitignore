@@ -11,6 +11,10 @@ dist
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 
+# Playwright
+/test-results/
+/playwright-report/
+
 # Publication hygiene
 /public/assets/fingersnap/**/drafts/
 .idea/

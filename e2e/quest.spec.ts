@@ -1,0 +1,73 @@
+import { expect, test } from '@playwright/test'
+import { beginNewJourney, expectStage, hold, player, strikeAll, talkThrough, warp, waitForArea, world } from './helpers'
+
+const TILE = 16
+
+test.beforeEach(async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  ;(page as unknown as { __errors: string[] }).__errors = errors
+})
+
+test.afterEach(async ({ page }) => {
+  expect((page as unknown as { __errors: string[] }).__errors, 'uncaught page errors').toEqual([])
+})
+
+test('the whole quest can be played from a fresh start to the ending', async ({ page }) => {
+  await beginNewJourney(page)
+
+  // Mara, just south of her spot by the well.
+  await warp(page, 'village', 16, 14)
+  await talkThrough(page, /Talk to Mara/)
+  await expectStage(page, 'accepted')
+
+  // The route marker in the ruin's alcove.
+  await warp(page, 'ruin', 15, 3)
+  await talkThrough(page, /rubbing of the marker/)
+  await expectStage(page, 'clue-found')
+
+  // The warden appears once the clue is found; skip the long fight.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsEnemies: () => { texture: string }[] }).__fsEnemies().length)).toBeGreaterThan(0)
+  await strikeAll(page, 999)
+  await expectStage(page, 'guardian-defeated')
+
+  // Light the shrine lantern (plays a short cinematic).
+  await warp(page, 'ruin', 17, 12)
+  await talkThrough(page, /Light the lantern/)
+  await expectStage(page, 'lantern-lit')
+
+  // Home to Mara for the ending.
+  await warp(page, 'village', 16, 14)
+  await talkThrough(page, /Talk to Mara/)
+  await expectStage(page, 'complete')
+  await expect(page.getByRole('dialog', { name: 'The Road Is Lit' })).toBeVisible({ timeout: 15_000 })
+})
+
+test('exits connect left-to-right and you come back the way you came', async ({ page }) => {
+  await beginNewJourney(page)
+
+  // Village east gate → arrive on Brackenwood's west side.
+  await warp(page, 'village', 38, 10)
+  await hold(page, 'ArrowRight', 1200)
+  await waitForArea(page, 'woodland')
+  expect((await player(page)).x).toBeLessThan(6 * TILE)
+
+  // Brackenwood west edge → arrive on the village's east side.
+  await hold(page, 'ArrowLeft', 1500)
+  await waitForArea(page, 'village')
+  const w = await world(page)
+  expect((await player(page)).x).toBeGreaterThan(w.widthPx - 6 * TILE)
+})
+
+test('the hero is confined to each map', async ({ page }) => {
+  await beginNewJourney(page)
+  for (const [area, tx, ty] of [['village', 20, 2], ['woodland', 30, 3], ['ruin', 20, 3]] as const) {
+    await warp(page, area, tx, ty)
+    const w = await world(page)
+    expect(w.bounds).toEqual({ x: 0, y: 0, w: w.widthPx, h: w.heightPx })
+    await hold(page, 'ArrowUp', 1500)
+    const p = await player(page)
+    expect(p.y).toBeGreaterThan(0)
+    expect(p.y).toBeLessThanOrEqual(w.heightPx)
+  }
+})

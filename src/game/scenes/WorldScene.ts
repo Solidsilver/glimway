@@ -277,6 +277,11 @@ export class WorldScene extends Phaser.Scene {
           tint: '0x' + e.sprite.tintTopLeft.toString(16).padStart(6, '0')
         }
       })
+    // Read-only map geometry, so playtests can check the hero is confined to it.
+    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number } } }).__fsWorld = () => {
+      const b = this.physics.world.bounds
+      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height } }
+    }
     // Dev-only playtest lever: deal damage through the normal hurt path so
     // low-health and defeat beats can be checked without a long fight.
     if (import.meta.env.DEV) {

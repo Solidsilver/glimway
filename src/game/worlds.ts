@@ -2,8 +2,8 @@
  * World builder for the three demo areas. Maps are generated deterministically
  * from code (seeded) — part of the original, code-native asset set.
  */
-import type { AreaId } from '../lib/state'
-import { TERRAIN, TILE } from './textures'
+import type { AreaId } from '../lib/state.ts'
+import { TERRAIN, TILE } from './textures.ts'
 
 export type NpcId = 'mara' | 'pip' | 'orrin'
 export type InteractId = NpcId | 'clue' | 'lantern'

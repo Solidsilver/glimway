@@ -22,8 +22,13 @@ npm run typecheck  # tsc --noEmit
 npm run check      # svelte-check
 npm run build      # production bundle in dist/
 npm run preview    # serve the production build
-npm run verify     # typecheck + check + build
+npm test           # unit tests (node --test)
+npm run test:e2e   # browser playtests (Playwright, starts its own dev server)
+npm run verify     # typecheck + check + unit tests + build
+npm run verify:all # verify, then the browser playtests
 ```
+
+First time running the browser playtests: `npx playwright install chromium`.
 
 ## The demo adventure
 
@@ -115,7 +120,7 @@ devices; the layout is responsive with safe-area insets for phones.
   tweens.
 
 Dev builds expose read-only playtest hooks (`__fsPlayer`, `__fsEnemies`,
-`__fsSafety`, `__fsDebug`) plus dev-only levers (`__fsDevHurt(n)`,
+`__fsSafety`, `__fsWorld`, `__fsDebug`) plus dev-only levers (`__fsDevHurt(n)`,
 `__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`) for checking the
 low-health, defeat and quest beats without a full playthrough.
 
@@ -176,6 +181,14 @@ account writes, and checkpoint rewind remain out of scope.
 - `npm run verify` — typecheck + svelte-check + unit tests + production build.
 - `npm test` — Node's built-in test runner (`node --test tests/*.test.ts`)
   covering shared quest state, save validation, and content contracts.
+  `tests/worlds.test.ts` checks every map's layout rules: the border is closed
+  except at exits, exits come back on the opposite edge beside the way home,
+  the journey runs village → woodland → ruin left to right, and every NPC,
+  enemy, exit and quest target is reachable from the spawn.
+- `npm run test:e2e` — Playwright playtests in `e2e/`: the whole quest from a
+  fresh start to the ending card (real keyboard input; warps and the dev
+  strike skip long walks and fights), exits round-tripping in the right
+  direction, and the hero staying inside every map.
 - Manual smoke test: full quest playthrough, scene transitions, collisions,
   dialogue pausing, resize/portrait layout, reload resume, save
   export/import, defeat recovery. Results and screenshots:
