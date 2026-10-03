@@ -1,0 +1,159 @@
+{
+  "frames": {
+    "oak-canopy": {
+      "frame": {
+        "x": 11,
+        "y": 138,
+        "w": 437,
+        "h": 455
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 437,
+        "h": 455
+      },
+      "sourceSize": {
+        "w": 437,
+        "h": 455
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "pine-canopy": {
+      "frame": {
+        "x": 458,
+        "y": 119,
+        "w": 358,
+        "h": 471
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 471
+      },
+      "sourceSize": {
+        "w": 358,
+        "h": 471
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "leafy-arch": {
+      "frame": {
+        "x": 822,
+        "y": 157,
+        "w": 421,
+        "h": 425
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 421,
+        "h": 425
+      },
+      "sourceSize": {
+        "w": 421,
+        "h": 425
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "cottage-roof": {
+      "frame": {
+        "x": 12,
+        "y": 709,
+        "w": 422,
+        "h": 414
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 422,
+        "h": 414
+      },
+      "sourceSize": {
+        "w": 422,
+        "h": 414
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "stone-arch": {
+      "frame": {
+        "x": 445,
+        "y": 684,
+        "w": 386,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 386,
+        "h": 426
+      },
+      "sourceSize": {
+        "w": 386,
+        "h": 426
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "fern-cluster": {
+      "frame": {
+        "x": 840,
+        "y": 781,
+        "w": 396,
+        "h": 324
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 396,
+        "h": 324
+      },
+      "sourceSize": {
+        "w": 396,
+        "h": 324
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "meta": {
+    "app": "Fingersnap",
+    "version": "1",
+    "image": "fingersnap-foreground.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    },
+    "scale": "1"
+  }
+}

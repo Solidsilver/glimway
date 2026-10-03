@@ -1,0 +1,364 @@
+import type { AreaId, QuestEvent, QuestStage } from '../lib/state.ts';
+
+export interface Dialogue {
+  speaker: string;
+  lines: string[];
+  event?: QuestEvent;
+}
+
+export interface JournalEntry {
+  title: string;
+  body: string;
+}
+
+export interface LocationInfo {
+  name: string;
+  description: string;
+}
+
+export interface DemoCharacter {
+  name: string;
+  class: string;
+  level: number;
+  stats: { str: number; int: number; con: number; per: number };
+}
+
+/**
+ * Demo character: a classless wayfarer with a sensible starter kit, standing
+ * in for a future Habitica import. No account data is used in the demo.
+ */
+export const DEMO_CHARACTER: DemoCharacter = {
+  name: 'Wren',
+  class: 'Adventurer',
+  level: 1,
+  stats: { str: 9, int: 7, con: 8, per: 8 },
+};
+
+export const locations: Record<AreaId, LocationInfo> = {
+  village: {
+    name: 'Hearthwick',
+    description:
+      'A hillside village of patched slate roofs, kitchen gardens, and a square where someone is always mending something. The dark lantern road begins at the west gate.',
+  },
+  woodland: {
+    name: 'Brackenwood Path',
+    description:
+      'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the west gate visible behind you.',
+  },
+  ruin: {
+    name: 'Ashwatch Ruin',
+    description:
+      'A roofless waystation of grey blocks, heather pushing through the floor. The hilltop lantern shrine stands beyond its broken arch, watched over by a stone warden.',
+  },
+};
+
+type DialogueRule = Dialogue & { forStages: QuestStage[] };
+
+/**
+ * NPC and interaction ids used by the runtime. This list is the agreement
+ * point with docs/runtime-contract.md: mara, pip, orrin, clue, lantern.
+ * The quest event 'defeat-guardian' is fired by runtime encounter logic, not
+ * by dialogue.
+ */
+const DIALOGUE: Record<string, DialogueRule[]> = {
+  mara: [
+    {
+      forStages: ['new'],
+      speaker: 'Mara',
+      lines: [
+        'You must be the traveler the carters mentioned. Welcome to Hearthwick — mind the ladder, Orrin is mending the signpost again.',
+        "I'm Mara. My grandmother kept the lantern road when it still carried people home after dark. Now half the route stones are mossed over and the hilltop lantern has been cold since before I was born.",
+        'I would go myself, but the lamp oil ledger does not keep itself, and someone has to be here when the carters come through. Would you walk the old road for me? Brackenwood path, through the ruin, up to the shrine. Bring back whatever you find.',
+      ],
+      event: 'accept',
+    },
+    {
+      forStages: ['accepted'],
+      speaker: 'Mara',
+      lines: [
+        'The west gate is the start of it. Follow the Brackenwood path and keep an eye out for the old route stones — my grandmother swore they still point the way.',
+        'If you get turned around, ask Pip. That child knows every shortcut, mostly because they have taken all of them.',
+      ],
+    },
+    {
+      forStages: ['clue-found'],
+      speaker: 'Mara',
+      lines: [
+        'A rubbing of the route marker — look at that, the pattern is still legible. Grandmother drew the same one in the front of her ledger.',
+        'So the road was not abandoned, it was closed. Something about a warden on the shrine path. Be careful up there — careful, not slow.',
+      ],
+    },
+    {
+      forStages: ['guardian-defeated'],
+      speaker: 'Mara',
+      lines: [
+        "You bested the stone warden? Orrin is going to pretend he never doubted you, but he did, loudly, over breakfast.",
+        'The shrine is just past the arch. If the lamp still has oil in it, the flint and steel are on the ledge where they have always been. Light it. Let us see the road again.',
+      ],
+    },
+    {
+      forStages: ['lantern-lit'],
+      speaker: 'Mara',
+      lines: [
+        "Is that — I can see it from here. A point of gold on the hill, just like in the stories. Come inside, tell me everything.",
+        "You did it. The road is lit. When you are ready, meet me in the square — I want to hear it all from the beginning.",
+      ],
+      event: 'return-village',
+    },
+    {
+      forStages: ['complete'],
+      speaker: 'Mara',
+      lines: [
+        'There. The square has not looked like this in thirty years — lantern light on the slate, and everyone pretending they are not staying out late to enjoy it.',
+        'Grandmother kept a line in her ledger: "A road is a promise people keep renewing." I think she would be glad to know it was renewed by a traveler who just kept walking.',
+      ],
+    },
+  ],
+  pip: [
+    {
+      forStages: ['new'],
+      speaker: 'Pip',
+      lines: [
+        "New face! I'm Pip. I run messages between here and the mill, which is the fastest job in the world and also the only one.",
+        "If you're heading into Brackenwood, do not eat the red berries no matter what anyone tells you. They are not poisonous, they just taste like soap and you will be annoyed for hours.",
+      ],
+    },
+    {
+      forStages: ['accepted'],
+      speaker: 'Pip',
+      lines: [
+        "You're walking the old lantern road! Brilliant. Halfway along there is a fallen oak with a notch cut in it — that's where the path forks. Take the uphill side.",
+        'I would come with you, but I have a delivery, and also Mara gave me a look. You know the look.',
+      ],
+    },
+    {
+      forStages: ['clue-found'],
+      speaker: 'Pip',
+      lines: [
+        'Is that a rubbing? Let me see, let me see. The lines look like the ones on the mill sign, all curly at the ends.',
+        "A stone warden. That's what the miller's dad used to call it. He said it is not mean, it is just still doing its job. Which is a lot like Orrin, actually.",
+      ],
+    },
+    {
+      forStages: ['guardian-defeated'],
+      speaker: 'Pip',
+      lines: [
+        "You actually fought it? On purpose? I once ran past it and it did not even turn around and that was the most exciting day of my year.",
+        'Go light the lantern. I want to see it from the mill roof. I want to see it from the moon, but the mill roof is a start.',
+      ],
+    },
+    {
+      forStages: ['lantern-lit'],
+      speaker: 'Pip',
+      lines: [
+        "There's a light on the hill! There is a light on the hill! I have to tell everyone, but first — did it make a sound? Lanterns in stories always make a sound.",
+        "I'm going to run the message route twice tonight just to look at it. Maybe three times. Do not tell Mara about the third time.",
+      ],
+    },
+    {
+      forStages: ['complete'],
+      speaker: 'Pip',
+      lines: [
+        'People keep walking up the west gate road just to stand under the lantern glow and act like they are checking the fence. I have counted nine of them.',
+        "I am collecting string for a light-line of my own, between the signpost and the well. Orrin says the knotwork is wrong. The knotwork is fine.",
+      ],
+    },
+  ],
+  orrin: [
+    {
+      forStages: ['new'],
+      speaker: 'Orrin',
+      lines: [
+        "Mind the shavings. And the ladder. And the signpost — it leans because the frost heaves the post every winter, not because I fitted it badly.",
+        "I'm Orrin. Built bridges for thirty years, now I build bridges and also signposts, and complain about both. You here about the lantern road? Hm. Thought someone would come eventually.",
+      ],
+    },
+    {
+      forStages: ['accepted'],
+      speaker: 'Orrin',
+      lines: [
+        "The warden on the shrine path is stone, and it is not cruel — it is dutiful, which is harder to deal with. It tests whether you know why the road was closed.",
+        "Take a rubbing of the route marker before you climb. The old pattern is the point. Anyone can wave a sword; the road wanted people who paid attention.",
+      ],
+    },
+    {
+      forStages: ['clue-found'],
+      speaker: 'Orrin',
+      lines: [
+        "Let me see that rubbing. Aye — that is the closure mark, not a direction mark. Two weaves and a break. They closed the road on purpose after the winter of two storms.",
+        "Mara's grandmother wrote the same pattern in her ledger and never told a soul what it meant. Some people keep their promises quietly. Annoying habit. Good habit.",
+      ],
+    },
+    {
+      forStages: ['guardian-defeated'],
+      speaker: 'Orrin',
+      lines: [
+        "Huh. Thirty years that thing has been standing there and it took one traveler with a rubbing and a stubborn streak. I am not impressed. I am slightly impressed.",
+        "Go on then. Light the lamp. I will still be here, and the signpost will still lean, and that is fine.",
+      ],
+    },
+    {
+      forStages: ['lantern-lit'],
+      speaker: 'Orrin',
+      lines: [
+        "There is a light on the hill. Do not make a thing of it. I am not making a thing of it.",
+        "...I have a bracket in the workshop that would fit the square's old lamp post. Been saving it. Do not tell Mara I said that. It is going to be a surprise.",
+      ],
+    },
+    {
+      forStages: ['complete'],
+      speaker: 'Orrin',
+      lines: [
+        'Bracket held. Lamp post in the square is lit again, and the signpost is still leaning, and the world is in its proper order.',
+        "You did right by this road, traveler. If you ever need a bridge built — or a bridge complained about — you know where I am.",
+      ],
+    },
+  ],
+  clue: [
+    {
+      forStages: ['new', 'clue-found', 'guardian-defeated', 'lantern-lit', 'complete'],
+      speaker: 'Route Marker',
+      lines: [
+        'A weathered route stone, its carved pattern half swallowed by lichen. Without knowing what the pattern means, it is hard to make out where the carving ends and the wear begins.',
+      ],
+    },
+    {
+      forStages: ['accepted'],
+      speaker: 'Route Marker',
+      lines: [
+        'A weathered route stone stands here, its carved pattern half swallowed by lichen — but the weave of lines is still deep enough to copy.',
+        'You press paper to the stone and work charcoal over it. Two weaves and a break: a closure mark, pointing not along the road, but at why it was shut.',
+      ],
+      event: 'find-clue',
+    },
+  ],
+  lantern: [
+    {
+      forStages: ['new', 'accepted', 'clue-found'],
+      speaker: 'Hilltop Lantern',
+      lines: [
+        'The shrine lantern hangs cold in its iron frame, soot-streaked and patient. The stone warden stands between you and the lighting ledge, unmoving.',
+      ],
+    },
+    {
+      forStages: ['guardian-defeated'],
+      speaker: 'Hilltop Lantern',
+      lines: [
+        'The stone warden has stepped aside. The iron frame still holds a dry wick, and flint and steel wait on the ledge where they were left decades ago.',
+        'You strike a spark. The wick catches, then the oil, and the lantern fills with steady gold light. Somewhere far below, a village square turns its face toward the hill.',
+      ],
+      event: 'light-lantern',
+    },
+    {
+      forStages: ['lantern-lit', 'complete'],
+      speaker: 'Hilltop Lantern',
+      lines: [
+        'The lantern burns steadily, throwing a warm path of light down the hillside and across the dark weave of Brackenwood.',
+        'On clear evenings, Hearthwick will be able to see this flame from the square. The old road is a promise people keep renewing.',
+      ],
+    },
+  ],
+};
+
+const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
+  new: [
+    {
+      title: 'Arrival in Hearthwick',
+      body: 'A hillside village of patched roofs and small kindnesses. The carters left me at the square, where Mara keeps her grandmother\u2019s lamp-oil ledger and Orrin keeps pretending his signpost does not lean.',
+    },
+  ],
+  accepted: [
+    {
+      title: "Mara's Request",
+      body: 'Mara asked me to walk the old lantern road: through the west gate, along the Brackenwood path, past the Ashwatch ruin, up to the hilltop shrine. Her grandmother once kept that road lit. Find what is left of it.',
+    },
+    {
+      title: 'Orrin\u2019s Advice',
+      body: 'The stone warden on the shrine path is dutiful, not cruel. It wants proof that I know why the road was closed. The route marker in the ruin should carry the pattern.',
+    },
+  ],
+  'clue-found': [
+    {
+      title: 'The Closure Mark',
+      body: 'A charcoal rubbing from the ruin\u2019s route stone: two weaves and a break. Orrin says it is a closure mark, cut after the winter of two storms. The road was shut on purpose — and the warden is still keeping that decision.',
+    },
+  ],
+  'guardian-defeated': [
+    {
+      title: 'The Stone Warden',
+      body: 'The warden on the shrine path has yielded. It kept its post for decades longer than anyone in Hearthwick expected. The lighting ledge holds flint, steel, and a dry wick.',
+    },
+  ],
+  'lantern-lit': [
+    {
+      title: 'The Hilltop Lantern',
+      body: 'The shrine lantern is lit. Its light runs down the hillside toward Hearthwick, and the square turned to watch. Mara should hear it from me directly.',
+    },
+  ],
+  complete: [
+    {
+      title: 'The Lantern Road',
+      body: 'Told Mara the whole story in the square, under a relit lamp post — Orrin\u2019s doing, and his surprise. The old road glows again, and Hearthwick is staying out late to enjoy it. As Mara\u2019s grandmother wrote: a road is a promise people keep renewing.',
+    },
+  ],
+};
+
+const STAGE_ORDER: QuestStage[] = [
+  'new',
+  'accepted',
+  'clue-found',
+  'guardian-defeated',
+  'lantern-lit',
+  'complete',
+];
+
+/**
+ * Dialogue for one NPC/interaction at the given quest stage. Optional `event`
+ * fires when the runtime finishes presenting these lines: only the legal next
+ * quest event is ever attached, so dialogue cannot skip or repeat stages.
+ * Throws for unknown NPC ids.
+ */
+export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
+  const rules = DIALOGUE[npcId];
+  if (!rules) {
+    throw new Error(
+      `Unknown NPC id ${JSON.stringify(npcId)}; expected one of ${Object.keys(DIALOGUE)
+        .map((id) => JSON.stringify(id))
+        .join(', ')}`,
+    );
+  }
+  const rule = rules.find((r) => r.forStages.includes(stage));
+  if (!rule) {
+    throw new Error(
+      `No dialogue defined for NPC ${JSON.stringify(npcId)} at quest stage ${JSON.stringify(stage)}`,
+    );
+  }
+  const dialogue: Dialogue = {
+    speaker: rule.speaker,
+    lines: [...rule.lines],
+  };
+  if (rule.event) {
+    dialogue.event = rule.event;
+  }
+  return dialogue;
+}
+
+/**
+ * Cumulative journal entries unlocked up to and including the given stage.
+ * Entries are ordered by unlock stage and never shrink as the quest advances.
+ */
+export function journalEntries(stage: QuestStage): JournalEntry[] {
+  const stageIndex = STAGE_ORDER.indexOf(stage);
+  if (stageIndex === -1) {
+    throw new Error(
+      `Unknown quest stage ${JSON.stringify(stage)}; expected one of ${STAGE_ORDER.map((s) => JSON.stringify(s)).join(', ')}`,
+    );
+  }
+  const entries: JournalEntry[] = [];
+  for (let i = 0; i <= stageIndex; i += 1) {
+    for (const entry of JOURNAL_BY_STAGE[STAGE_ORDER[i]]) {
+      entries.push({ title: entry.title, body: entry.body });
+    }
+  }
+  return entries;
+}

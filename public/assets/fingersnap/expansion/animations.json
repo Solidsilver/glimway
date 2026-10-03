@@ -1,0 +1,83 @@
+[
+  {
+    "key": "demo-walk-down",
+    "texture": "fingersnap-demo-walk",
+    "frames": [
+      "walk-down-0",
+      "walk-down-1",
+      "walk-down-2",
+      "walk-down-3"
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  {
+    "key": "demo-walk-left",
+    "texture": "fingersnap-demo-walk",
+    "frames": [
+      "walk-left-0",
+      "walk-left-1",
+      "walk-left-2",
+      "walk-left-3"
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  {
+    "key": "demo-walk-right",
+    "texture": "fingersnap-demo-walk",
+    "frames": [
+      "walk-right-0",
+      "walk-right-1",
+      "walk-right-2",
+      "walk-right-3"
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  {
+    "key": "demo-walk-up",
+    "texture": "fingersnap-demo-walk",
+    "frames": [
+      "walk-up-0",
+      "walk-up-1",
+      "walk-up-2",
+      "walk-up-3"
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  {
+    "key": "slime-idle",
+    "texture": "fingersnap-enemies",
+    "frames": [
+      "slime-idle",
+      "slime-squash",
+      "slime-idle"
+    ],
+    "frameRate": 4,
+    "repeat": -1
+  },
+  {
+    "key": "mushroom-idle",
+    "texture": "fingersnap-enemies",
+    "frames": [
+      "mushroom-idle",
+      "mushroom-squash",
+      "mushroom-idle"
+    ],
+    "frameRate": 4,
+    "repeat": -1
+  },
+  {
+    "key": "beetle-idle",
+    "texture": "fingersnap-enemies",
+    "frames": [
+      "beetle-idle",
+      "beetle-squash",
+      "beetle-idle"
+    ],
+    "frameRate": 4,
+    "repeat": -1
+  }
+]

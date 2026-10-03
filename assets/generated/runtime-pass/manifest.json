@@ -1,0 +1,736 @@
+{
+  "version": 1,
+  "baseUrl": "/assets/fingersnap/runtime-pass/",
+  "specSource": "docs/runtime-asset-spec.md",
+  "sources": [
+    {
+      "key": "fingersnap-npcs",
+      "file": "fingersnap-npcs.png",
+      "width": 1024,
+      "height": 1535
+    },
+    {
+      "key": "fingersnap-guardian",
+      "file": "fingersnap-guardian.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "fingersnap-class-effects",
+      "file": "fingersnap-class-effects.png",
+      "width": 1254,
+      "height": 1254
+    }
+  ],
+  "frames": [
+    {
+      "key": "mara-idle-0",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 188,
+        "y": 75,
+        "w": 237,
+        "h": 452
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 4,
+        "y": 1,
+        "w": 8,
+        "h": 15
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "mara-idle-1",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 602,
+        "y": 75,
+        "w": 233,
+        "h": 452
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 4,
+        "y": 1,
+        "w": 8,
+        "h": 15
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "pip-idle-0",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 180,
+        "y": 640,
+        "w": 236,
+        "h": 347
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 8,
+        "h": 12
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "pip-idle-1",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 593,
+        "y": 640,
+        "w": 236,
+        "h": 347
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 8,
+        "h": 12
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "orrin-idle-0",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 163,
+        "y": 1052,
+        "w": 283,
+        "h": 412
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 3,
+        "y": 2,
+        "w": 9,
+        "h": 14
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "orrin-idle-1",
+      "source": "fingersnap-npcs",
+      "sourceRect": {
+        "x": 577,
+        "y": 1052,
+        "w": 283,
+        "h": 412
+      },
+      "width": 16,
+      "height": 16,
+      "destinationRect": {
+        "x": 3,
+        "y": 2,
+        "w": 9,
+        "h": 14
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "npc"
+    },
+    {
+      "key": "guardian-idle",
+      "source": "fingersnap-guardian",
+      "sourceRect": {
+        "x": 41,
+        "y": 138,
+        "w": 439,
+        "h": 336
+      },
+      "width": 24,
+      "height": 24,
+      "destinationRect": {
+        "x": 2,
+        "y": 9,
+        "w": 20,
+        "h": 15
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "guardian"
+    },
+    {
+      "key": "guardian-windup",
+      "source": "fingersnap-guardian",
+      "sourceRect": {
+        "x": 542,
+        "y": 187,
+        "w": 418,
+        "h": 287
+      },
+      "width": 24,
+      "height": 24,
+      "destinationRect": {
+        "x": 2,
+        "y": 11,
+        "w": 19,
+        "h": 13
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "guardian"
+    },
+    {
+      "key": "guardian-lunge",
+      "source": "fingersnap-guardian",
+      "sourceRect": {
+        "x": 1013,
+        "y": 154,
+        "w": 492,
+        "h": 312
+      },
+      "width": 24,
+      "height": 24,
+      "destinationRect": {
+        "x": 0,
+        "y": 10,
+        "w": 23,
+        "h": 14
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "guardian"
+    },
+    {
+      "key": "guardian-hurt",
+      "source": "fingersnap-guardian",
+      "sourceRect": {
+        "x": 40,
+        "y": 588,
+        "w": 424,
+        "h": 368
+      },
+      "width": 24,
+      "height": 24,
+      "destinationRect": {
+        "x": 2,
+        "y": 7,
+        "w": 19,
+        "h": 17
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "guardian"
+    },
+    {
+      "key": "guardian-defeat",
+      "source": "fingersnap-guardian",
+      "sourceRect": {
+        "x": 497,
+        "y": 725,
+        "w": 522,
+        "h": 239
+      },
+      "width": 24,
+      "height": 24,
+      "destinationRect": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 11
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "guardian"
+    },
+    {
+      "key": "cleave-0",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 314,
+        "h": 314
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "cleave-1",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 314,
+        "y": 0,
+        "w": 313,
+        "h": 314
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "cleave-2",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 627,
+        "y": 0,
+        "w": 313,
+        "h": 314
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "cleave-3",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 940,
+        "y": 0,
+        "w": 314,
+        "h": 314
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "magic-bolt-0",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 0,
+        "y": 314,
+        "w": 314,
+        "h": 313
+      },
+      "width": 8,
+      "height": 8,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "magic-bolt-1",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 314,
+        "y": 314,
+        "w": 313,
+        "h": 313
+      },
+      "width": 8,
+      "height": 8,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "magic-bolt-2",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 627,
+        "y": 314,
+        "w": 313,
+        "h": 313
+      },
+      "width": 8,
+      "height": 8,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "magic-bolt-3",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 940,
+        "y": 314,
+        "w": 314,
+        "h": 313
+      },
+      "width": 8,
+      "height": 8,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "dash-trail-0",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 0,
+        "y": 627,
+        "w": 314,
+        "h": 313
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "dash-trail-1",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 314,
+        "y": 627,
+        "w": 313,
+        "h": 313
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "dash-trail-2",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 627,
+        "y": 627,
+        "w": 313,
+        "h": 313
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "dash-trail-3",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 940,
+        "y": 627,
+        "w": 314,
+        "h": 313
+      },
+      "width": 18,
+      "height": 18,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 18,
+        "h": 18
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "healing-pulse-0",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 0,
+        "y": 940,
+        "w": 314,
+        "h": 314
+      },
+      "width": 32,
+      "height": 32,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "healing-pulse-1",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 314,
+        "y": 940,
+        "w": 313,
+        "h": 314
+      },
+      "width": 32,
+      "height": 32,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "healing-pulse-2",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 627,
+        "y": 940,
+        "w": 313,
+        "h": 314
+      },
+      "width": 32,
+      "height": 32,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    },
+    {
+      "key": "healing-pulse-3",
+      "source": "fingersnap-class-effects",
+      "sourceRect": {
+        "x": 940,
+        "y": 940,
+        "w": 314,
+        "h": 314
+      },
+      "width": 32,
+      "height": 32,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "effect"
+    }
+  ],
+  "animations": [
+    {
+      "key": "effect-cleave",
+      "frames": [
+        "cleave-0",
+        "cleave-1",
+        "cleave-2",
+        "cleave-3"
+      ],
+      "frameRate": 12,
+      "repeat": 0
+    },
+    {
+      "key": "effect-magic-bolt",
+      "frames": [
+        "magic-bolt-0",
+        "magic-bolt-1",
+        "magic-bolt-2",
+        "magic-bolt-3"
+      ],
+      "frameRate": 12,
+      "repeat": -1
+    },
+    {
+      "key": "effect-dash-trail",
+      "frames": [
+        "dash-trail-0",
+        "dash-trail-1",
+        "dash-trail-2",
+        "dash-trail-3"
+      ],
+      "frameRate": 12,
+      "repeat": 0
+    },
+    {
+      "key": "effect-healing-pulse",
+      "frames": [
+        "healing-pulse-0",
+        "healing-pulse-1",
+        "healing-pulse-2",
+        "healing-pulse-3"
+      ],
+      "frameRate": 12,
+      "repeat": 0
+    },
+    {
+      "key": "mara-breathing",
+      "frames": [
+        "mara-idle-0",
+        "mara-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "pip-breathing",
+      "frames": [
+        "pip-idle-0",
+        "pip-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "orrin-breathing",
+      "frames": [
+        "orrin-idle-0",
+        "orrin-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    }
+  ],
+  "aliases": {
+    "mara": "mara-idle-0",
+    "pip": "pip-idle-0",
+    "orrin": "orrin-idle-0",
+    "guardian0": "guardian-idle",
+    "guardian1": "guardian-lunge",
+    "slash": "cleave-2",
+    "bolt": "magic-bolt-0"
+  },
+  "notes": [
+    "High-resolution source sheets; integration.js creates exact native-size canvas textures.",
+    "NPCs/guardian use a common scale and bottom-center anchor. Effects rotate around their center.",
+    "Dash trail (18x18) and healing pulse (32x32) are proposed new slots; the spec does not assign their dimensions.",
+    "Guardian poses are discrete states, not one automatically looping attack animation."
+  ]
+}

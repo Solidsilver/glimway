@@ -1,0 +1,216 @@
+# Fingersnap runtime asset spec
+
+This is the one drop-in art contract for future art and for what already
+shipped. Ownership split: the art/content agent (snap_mimo) maintains the
+sprite slots, delivered-pack notes and the wanted list here alongside
+`ASSETS.md`; the game-runtime agent (Agent A) maintains the wiring notes and
+owns `BootScene`/`WorldScene` call sites. Character/terrain placeholders
+generated at boot in `src/game/textures.ts` remain the fallback layer; the
+**expansion pack** and the **runtime art pass** (below) are the primary art
+sources.
+
+## Expansion pack (delivered October 2, 2026)
+
+`assets/generated/expansion/` → runtime copies in
+`public/assets/fingersnap/expansion/`. Typed helpers live in
+`src/game/expansion.ts` (content agent's module, built from
+`assets/generated/expansion/integration.js`); the runtime agent owns the
+wiring in `BootScene`/`WorldScene`.
+
+- **Terrain** (`fingersnap-terrain`): 16 named 32px tiles with unequal source
+  cells — `createFingersnapTerrain` normalizes them into a uniform 4×4 runtime
+  tileset at 32px; `WorldScene.buildGround` blits cells into 16px world tiles
+  via an explicit `TERRAIN_TO_EXPANSION` mapping (grass→grass, flowers→
+  flower-grass, paths→packed-dirt, water→pond-water, bridge→wood-planks,
+  stone→cobblestone/shrine-stone, roofs/walls→wood/dark-wood-planks…). Source
+  PNG is never treated as an even grid.
+- **Hero** (`fingersnap-demo-walk`): 4-direction walk (`demo-walk-up/down/
+  left/right`, 4 frames each, from `animations.json`). Displayed ~20px tall in
+  the 16px-tile world (suggested 40px at 32px tiles, halved); body stays
+  10×6 at the feet via explicit `setSize`/`setOffset`.
+- **Enemies** (`fingersnap-enemies`): slime (wisp-a/b) and mushroom (wisp-c)
+  at ~14px with idle anims; explicit 10×6 foot bodies. The guardian keeps its
+  procedural placeholder in this pack — no guardian asset here (delivered
+  later by the runtime art pass below).
+- **Foreground** (`fingersnap-foreground`): oak/pine canopies over existing
+  tree bases, leafy/stone arches at area gates, fern clusters, cottage roof —
+  visual occluders only, **no new collision**; placed via
+  `placeFingersnapOccluder` with foot-anchored origins at small-world widths
+  (26–118px).
+
+## Runtime art pass (delivered October 3, 2026)
+
+`assets/generated/runtime-pass/` → runtime copies in
+`public/assets/fingersnap/runtime-pass/`. Typed helpers live in
+`src/game/runtime-art.ts` (content agent's module, ported from
+`assets/generated/runtime-pass/integration.js`); the runtime agent owns the
+wiring in `BootScene`/`WorldScene`. Manifest contract is validated by
+`tests/runtime-art.test.ts`. Original PNGs stay byte-unchanged.
+
+- **Source sheets** (`fingersnap-npcs` 1024×1535, `fingersnap-guardian`
+  1536×1024, `fingersnap-class-effects` 1254×1254): high-resolution
+  transparent sheets, **not** evenly spaced spritesheets. `manifest.json`
+  carries individually measured `sourceRect`/`destinationRect` per frame
+  (**27 frames**). Never load the PNGs with `frameWidth` or any grid
+  assumption; never pre-scale or flatten them (transparent pixels may hide
+  original backdrop RGB — that is fine and never rendered).
+- **Native textures** — `createRuntimeArt` blits each measured rect into an
+  exact native-size canvas (`imageSmoothingEnabled = false`, nearest
+  neighbor), so origins and foot baselines stay fixed between frames:
+  - NPCs (`mara-idle-0/1`, `pip-idle-0/1`, `orrin-idle-0/1`): **16×16**,
+    origin **(0.5, 1)**, destinationRect sitting on the canvas foot
+    baseline. All three share one common scale so Pip's smaller stature
+    survives; do not stretch each character to fill its slot.
+  - Guardian (`guardian-idle`, `guardian-windup`, `guardian-lunge`,
+    `guardian-hurt`, `guardian-defeat`): **24×24**, origin **(0.5, 1)**,
+    same foot-baseline rule and a common scale (the collapsed defeat pose
+    stays smaller instead of being enlarged). These are **discrete combat
+    states**, not one automatically looping attack/walk animation.
+  - Class effects, origin **(0.5, 0.5)** center anchor for
+    rotation/expansion: `cleave-0..3` **18×18**, `magic-bolt-0..3` **8×8**,
+    `dash-trail-0..3` **18×18** and `healing-pulse-0..3` **32×32** (the last
+    two were proposed slots the spec had not sized; they are adopted at
+    those sizes now).
+- **Animations** (created by `createRuntimeArt`): `mara-breathing`,
+  `pip-breathing`, `orrin-breathing` — 2 frames, 1.5 fps, looping; do not
+  stack the code bob on top of breathing unless intentionally desired.
+  `effect-cleave`, `effect-dash-trail`, `effect-healing-pulse` — one-shot at
+  12 fps; `effect-magic-bolt` loops at 12 fps. Effects are cosmetic only:
+  they define **no** hit areas and no healing radius. Rotate centered
+  effects by facing; place the cleave canvas center at the attacker and the
+  trail center at its emission point.
+- **Native helper contract** — `src/game/runtime-art.ts`, exact exports,
+  call in this order:
+  1. `preloadRuntimeArt(scene, base?)` in `BootScene.preload` (default base
+     `/assets/fingersnap/runtime-pass/`; loads the three sheets plus
+     `manifest.json` under `fingersnap-runtime-art`).
+  2. `createRuntimeArt(scene)` after preload completes and before
+     `WorldScene` starts — builds the 27 canvas textures and 7 animations.
+     Idempotent (existing keys are skipped); returns the manifest.
+  3. `installRuntimeAliases(scene, { replaceExisting? })` optionally and
+     deliberately, only after procedural fallback textures exist. Default
+     `replaceExisting: false` leaves existing keys alone; `true` replaces
+     supported keys with copies of the new frames. Run replacement only in
+     boot setup, before dependent sprites are created.
+- **Compatibility aliases** (only applied with `replaceExisting: true`):
+  `mara`→`mara-idle-0`, `pip`→`pip-idle-0`, `orrin`→`orrin-idle-0`,
+  `guardian0`→`guardian-idle`, `guardian1`→`guardian-lunge`,
+  `slash`→`cleave-2`, `bolt`→`magic-bolt-0`. Unchanged scenes keep working
+  against these static keys; breathing wiring and new guardian states are
+  explicit runtime work.
+- **Collision stays authored** — preserve the explicitly authored NPC 10×8
+  and guardian 20×10 foot collision bodies; never infer collision from
+  source alpha or visual bounds. Code tinting, timers, death handling,
+  physics bodies, and quest events remain runtime responsibilities. Facing
+  is a `flipX` away (sheets are authored facing right/down as noted in the
+  pack README).
+
+## Delivered generated art (October 2, 2026)
+
+`assets/generated/` holds original generated art with provenance in
+`assets/generated/manifest.json` and `assets/generated/prompts.json`; runtime
+copies live in `public/assets/fingersnap/`. Loaded in `BootScene.preload`:
+
+| Key | Content | Runtime use |
+|---|---|---|
+| `fingersnap-props` (atlas) | 12 transparent props | In-world props: `lantern-post` (village lantern), `lantern-shrine` (ruin shrine), `trail-sign` + `stone-milestone` + `mushroom-cluster` + `grappling-rope` (woodland), `patched-bench` + `bread-basket` + `flower-planter` + `tool-crate` (village), `treasure-chest` (ruin) |
+| `fingersnap-village` | Flattened village scene | UI illustration only (intro screen, journal header) — **never** used as a walkable map or terrain source |
+| `fingersnap-shrine` | Flattened shrine scene | UI illustration only (journal header in the ruin) |
+
+Sizing rule: the manifest's suggested display heights (64/56/40px) assume a
+larger avatar than the demo's 16px hero. Runtime uses a deliberate
+small-world scale instead: lantern-post 32, lantern-shrine 40, trail-sign 24,
+stone-milestone 18, patched-bench 18, tool-crate/flower-planter/backpack 16,
+grappling-rope 14, treasure-chest 20, bread-basket/mushroom-cluster 12
+(display height in px; aspect preserved; origin (0.5, 1)). Collision boxes are
+authored explicitly per prop in `src/game/worlds.ts` — never inferred from the
+images. The lanterns have no lit frame; lighting is an additive `glow`
+overlay anchored near the lamp.
+
+## How rendering works
+
+- Phaser `pixelArt: true`, `roundPixels: true` — all textures render with
+  nearest-neighbor. Provide art at native pixel sizes; never pre-scale.
+- Tiles are 16×16 on screen. Ground tiles are authored at 8×8 and painted at
+  2× into one ground canvas per area at scene build time.
+- Depth is y-sorted: entity depth = feet y. Anchor every standing sprite at
+  **bottom-center** of its visual body (see per-slot origin below).
+- Replacement path: load real textures in `BootScene.preload` under the same
+  texture keys (or let `installRuntimeAliases` copy the runtime-pass frames
+  onto those keys), or replace the corresponding `addArtTexture` call in
+  `textures.ts`. No scene code changes needed — everything references keys.
+
+## Sprite slots
+
+### Terrain sheet `terrain` (generated; replaceable per-tile)
+
+One canvas sheet, 7 columns of 16px tiles. Tile ids in `TERRAIN`
+(`src/game/textures.ts`), in order: grass_a, grass_b, grass_c, flowers, path_a,
+path_b, dirt, sand, water_a, water_b, bridge, stone_a, stone_b, stone_crack,
+wall_stone, wall_moss, roof, roof_edge, wall_house, door, window, fence.
+Rules: seamless tiling, 8×8 art upscaled to 16×16, palette warm/cozy, bridge
+and fence may use transparency (ground shows through).
+
+### Characters (16×16, origin (0.5, 1), body 10×8 at feet)
+
+| Key | Who | Frames needed |
+|---|---|---|
+| `fingersnap-demo-walk` | Player, 4-direction walk (**delivered** — replaced `hero0`/`hero1`; the procedural `hero0` stays as a texture-missing fallback) | 4 frames × 4 directions |
+| `mara` | NPC quest giver | **delivered** (runtime pass): `mara-idle-0/1` front-facing breathing pair + `mara-breathing`; side-facing still wanted |
+| `orrin` | NPC elder | **delivered** (runtime pass): `orrin-idle-0/1` + `orrin-breathing`; side-facing still wanted |
+| `pip` | NPC child | **delivered** (runtime pass): `pip-idle-0/1` + `pip-breathing`; side-facing still wanted |
+| `wisp` | Woodland enemy | superseded by `fingersnap-enemies` (slime/mushroom idle anims) |
+
+Imported characters do NOT use these slots: they compose layered official
+Habitica sprites at runtime (`src/game/avatar-render.ts`, static with a code
+bob). Optional runtime niceties, not required: small additive class-effect FX
+beyond the delivered effect sequences — remaining extras (hit `spark`,
+under-entity `shadow`, lantern `glow`) stay code-driven.
+
+### Guardian shade (24×24, origin (0.5, 1), body 20×10 at feet)
+
+**Delivered** (runtime pass): five discrete states `guardian-idle`,
+`guardian-windup`, `guardian-lunge`, `guardian-hurt`, `guardian-defeat`.
+Select them from the combat state machine; do not loop all five as a walk.
+Static aliases `guardian0` (idle) and `guardian1` (lunge) cover unchanged
+references. flipX by facing. A telegraph flash is code-tinted white over
+`guardian-windup`; a death dissolve is code-driven over `guardian-defeat`.
+Keep the authored 20×10 foot body.
+
+### Props
+
+| Key | Size px | Origin | Notes |
+|---|---|---|---|
+| `tree` | 16×18 drawn in 16×24 box | (0.5, 1) | trunk base = collision, ~12×6 |
+| `bush` | 16×12 (in 16×16 box) | (0.5, 1) | |
+| `rock` | 14×10 (in 16×16 box) | (0.5, 1) | |
+| `well` | 14×15 | (0.5, 1) | village centerpiece |
+| `mural` | 16×11 | (0.5, 1) | quest clue, mounted near wall |
+| `lantern_off` | 16×25 (in 16×28 box) | (0.5, 1) | shrine + village lantern, dark glass |
+| `lantern_on` | same slot as `lantern_off` | (0.5, 1) | lit variant, same silhouette |
+
+### Effects (partly art, partly code-generated)
+
+Delivered (runtime pass, center-anchored, rotate by facing): `cleave-*`
+18×18 under `slash` / `effect-cleave` (attack arc), `magic-bolt-*` 8×8 under
+`bolt` / `effect-magic-bolt` (projectile, loops), `dash-trail-*` 18×18 under
+`effect-dash-trail` (one-shot trail), `healing-pulse-*` 32×32 under
+`effect-healing-pulse` (one-shot pulse). Still code-generated, no art
+needed: `spark` 4×4 (hit particles), `shadow` 14×7 (soft ellipse under
+entities), `glow` 64×64 (additive radial halo over lit lanterns).
+
+## Wanted for the real art pass
+
+Delivered so far: 4-direction hero walk (`fingersnap-demo-walk`); NPC
+front-facing breathing pairs, the five guardian states, and the four class
+effect sequences (runtime pass, October 3). Still wanted:
+
+1. NPCs: left/right-facing idle or walk frames for Mara, Pip, and Orrin
+   (the runtime pass covers front-facing breathing only).
+2. Enemy move sets: walk/attack frames for the slime/mushroom/beetle trio
+   beyond idle/squash/windup/hurt.
+3. Terrain: keep 8×8-authored tiles; add path edge variants later if
+   desired.
+4. Palette: warm cozy; outline dark warm brown `#3a2a28` on characters.
+5. Audio (ambience, UI, interaction) — tracked as a pending deliverable in
+   `ASSETS.md`, not an art slot.

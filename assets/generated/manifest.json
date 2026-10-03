@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "baseUrl": "/assets/fingersnap/",
+  "images": [
+    {
+      "key": "fingersnap-village",
+      "file": "fingersnap-village.png",
+      "width": 1536,
+      "height": 1024,
+      "role": "static-background-and-map-reference"
+    },
+    {
+      "key": "fingersnap-shrine",
+      "file": "fingersnap-shrine.png",
+      "width": 1536,
+      "height": 1024,
+      "role": "static-background-and-map-reference"
+    }
+  ],
+  "atlas": {
+    "key": "fingersnap-props",
+    "texture": "fingersnap-props.png",
+    "data": "fingersnap-props.atlas.json",
+    "props": {
+      "lantern-post": {
+        "frame": "lantern-post",
+        "suggestedDisplayHeight": 64,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "patched-bench": {
+        "frame": "patched-bench",
+        "suggestedDisplayHeight": 40,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "trail-sign": {
+        "frame": "trail-sign",
+        "suggestedDisplayHeight": 56,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "stone-milestone": {
+        "frame": "stone-milestone",
+        "suggestedDisplayHeight": 40,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "bread-basket": {
+        "frame": "bread-basket",
+        "suggestedDisplayHeight": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "flower-planter": {
+        "frame": "flower-planter",
+        "suggestedDisplayHeight": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "tool-crate": {
+        "frame": "tool-crate",
+        "suggestedDisplayHeight": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "expedition-backpack": {
+        "frame": "expedition-backpack",
+        "suggestedDisplayHeight": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "treasure-chest": {
+        "frame": "treasure-chest",
+        "suggestedDisplayHeight": 40,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "lantern-shrine": {
+        "frame": "lantern-shrine",
+        "suggestedDisplayHeight": 64,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "mushroom-cluster": {
+        "frame": "mushroom-cluster",
+        "suggestedDisplayHeight": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      "grappling-rope": {
+        "frame": "grappling-rope",
+        "suggestedDisplayHeight": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Display sizes are starting suggestions; match the chosen Habitica avatar scale.",
+    "These images do not include collision geometry, map layers or animations.",
+    "Frames use hand-reviewed object bounds with one-pixel padding; faint alpha speckles beyond silhouettes may be excluded."
+  ]
+}

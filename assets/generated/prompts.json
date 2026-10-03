@@ -1,0 +1,26 @@
+[
+  {
+    "key": "village",
+    "transparent_background": false,
+    "prompt": "Use case: stylized-concept. Asset type: original 2D pixel-art background illustration for the browser RPG Fingersnap. Create a landscape 3:2 composition depicting a cute, rich, lived-in fantasy village in a forest, viewed from a consistent top-down three-quarter RPG camera, NOT isometric. Crisp deliberate pixel art, restrained small-pixel detail, strong readable silhouettes, warm amber lantern light, rich emerald foliage, teal shadows, russet tile roofs and golden stone. A small village square, crooked bakery with bread by its door, patched cottage roofs, a repaired wooden bridge crossing a narrow stream, tiny flower gardens, laundry line, an old lantern monument, woodland road exiting into mossy ruins. Evidence of generations of care and repair. Cozy and inviting but with history and mystery. Clear walkable paths and uncluttered focal points. No people, no characters, no interface, no text, no logo, no watermark. This is a scene illustration and visual direction reference, not a tileset or screenshot. Original artwork; do not reproduce any existing game scene.",
+    "tool": "built-in image_gen",
+    "file": "fingersnap-village.png",
+    "date": "2026-10-02"
+  },
+  {
+    "key": "props",
+    "transparent_background": true,
+    "prompt": "Use case: stylized-concept. Asset type: transparent environment prop atlas for original browser RPG Fingersnap. Create a square image with exactly 12 isolated objects evenly arranged in 4 columns and 3 rows with generous transparent gutters, no overlap, no labels. Row 1: amber lantern on a short wooden post; patched wooden bench; weathered wooden trail sign without lettering; mossy stone milestone. Row 2: bakery bread basket; terracotta flower planter with small blue flowers; wooden crate with repair tools; rolled expedition backpack with bedroll. Row 3: closed brass-trimmed wooden treasure chest; old stone lantern shrine glowing amber; small mushroom cluster; coiled rope and grappling hook. All objects original crisp 2D pixel art with visible hard pixel edges, consistent top-down three-quarter RPG view, NOT isometric, restrained detail and strong silhouettes. Rich emerald accents, teal shadows, amber lights, russet wood and golden stone; cute but worn and cared for. Each complete object centered inside its own equal cell, fully visible, shadow confined to object footprint. Actual transparent background and clean alpha, no ground tiles, no simulated checkerboard, no text, no borders, no grid lines, no watermark. Static source art atlas, not animation frames.",
+    "tool": "built-in image_gen",
+    "file": "fingersnap-props.png",
+    "date": "2026-10-02"
+  },
+  {
+    "key": "ruin",
+    "transparent_background": false,
+    "prompt": "Use case: stylized-concept. Asset type: original 2D pixel-art scene background for the browser RPG Fingersnap, matching a cozy woodland village aesthetic. Landscape 3:2 composition. A woodland lantern shrine ruin from a top-down three-quarter RPG camera, NOT isometric. Crisp pixel art, visible deliberate pixel clusters, strong silhouettes, rich emerald greens, deep teal shaded trees, warm amber light, golden weathered stone. A small clearing with cracked stone path, an ancient central lantern pedestal with a faint amber ember, broken low walls, ivy covering a carved arch, little blue flowers, a repaired wooden handrail crossing a shallow brook. Nature has reclaimed this place, but traces of recent care remain. Mysterious, cute, inviting, history conveyed through repairs and worn materials. Clear center and readable traversal route with richly detailed margins. No people, enemies, interface, text, labels, watermark or logos. Original scene illustration usable as a static background or map composition reference; do not pretend it is a seamless tileset.",
+    "tool": "built-in image_gen",
+    "file": "fingersnap-shrine.png",
+    "date": "2026-10-02"
+  }
+]

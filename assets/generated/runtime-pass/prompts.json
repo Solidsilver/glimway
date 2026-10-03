@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-03",
+  "tool": "built-in image_gen",
+  "generation": [
+    {
+      "key": "npcs",
+      "file": "fingersnap-npcs.png",
+      "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG NPC sprite sheet for Fingersnap. Genuine transparent background, portrait 2:3 image composition with EXACTLY two columns and three rows, SIX isolated front-facing character poses, no labels/grid. Row1 Mara in both cells: adult warm village lantern keeper, auburn hair, blue dress, cream apron, russet shoes. Row2 Pip in both cells: small child messenger, dark brown hair, rose-pink short dress, russet boots, big head, noticeably shorter than adults. Row3 Orrin in both cells: elderly bridge carpenter, grey hair and long cream-grey beard, brown work tunic and boots. Each row SAME character with exactly two barely different breathing poses: left neutral; right chest/shoulders gently raised, feet unchanged, eyes open both. View directly facing down toward viewer from top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel sprite style, each character designed to read at ONLY 16x16 native pixels: few large flat-color blocks, dark warm brown #3a2a28 outline, NO tiny texture, no gradients, no antialias or painterly detail. Show these tiny-pixel designs enlarged on sheet with large transparent gutters. Characters fill about 45% of cell width and 65% of cell height; all feet consistently on horizontal 85%-height baseline inside cells; same scale within each row. Entire bodies visible and separate. No ground, no shadows, no effects, no interface, no labels, no text, no watermark. Warm cozy distinct personalities, preserve costumes and face through both frames."
+    },
+    {
+      "key": "guardian",
+      "file": "fingersnap-guardian.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent low-resolution game guardian pose sheet for Fingersnap. Landscape 3:2 canvas with EXACT 3 columns x2 rows, six equal cells; FIVE poses plus final empty cell. Same stone guardian in all five poses: cute ancient squat QUADRUPED mossy stone warden, dark purple-grey stone blocks, cyan glowing eyes, broad low body, small stone ear-like horns, tiny moss accents. Not humanoid, not scary. Crisp ultra simple chunky pixel art designed for 24x24 native pixel readability: strong dark warm-brown #3a2a28 outline, flat clusters, minimal detail, no painterly texture, no antialias. Three-quarter front-side top-down RPG view facing RIGHT, horizontal direction consistent so it can be flipped. Top row cell1 idle with four planted stone feet; cell2 attack windup crouched back; cell3 lunge reaching right, feet stretched but body fully within cell. Bottom row cell1 hurt recoiling with dim eyes and small stone crack but no external sparks; cell2 defeated collapsed pile of recognizable same stone blocks, eyes dark; cell3 EMPTY transparent. Same scale and stone identity across poses, a consistent ground-contact baseline at 85% each cell height; collapsed remains on same ground. All fully inside separate cells with large transparent margins. No ground shadows, no floor, no labels, no text, no grid lines, no motion lines or decorative effect, no watermark. Genuine alpha transparency."
+    },
+    {
+      "key": "effects",
+      "file": "fingersnap-class-effects.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent animated class-effect atlas for Fingersnap cozy low-resolution RPG. Square image EXACT 4 columns x4 rows, sixteen separate effect frames centered in equal cells with abundant transparent gutters. Each row one effect with 4 sequential animation stages, very simple crisp chunky pixel-art clusters that read at 8 to 32 native pixels, hard edges, no blur or painterly detail, no humanoids or weapons. Row1 CLEAVE: warm ivory/gold crescent slash on RIGHT side of invisible central character point, stages small leading streak, growing crescent, broad crescent, dissipating short fragments. This rotates around the CENTER of cell to face other directions. Row2 MAGIC BOLT: compact cyan/blue projectile pointing RIGHT, four subtly flickering consecutive poses, glowing core expressed as flat colored pixel clusters, tail trails left, all centered on same flight axis. Row3 DASH TRAIL: violet/teal wind streaks trailing LEFT behind invisible point at center, stages few short streaks, long streaks, shorter fading streaks, sparse final streaks. Row4 HEALING PULSE: emerald/amber TOP-DOWN CIRCULAR ring expanding symmetrically around fixed center, stages small ring, medium ring, large ring with four tiny plus-shaped sparks, sparse dissipating ring fragments. No perspective ellipse. Effect centers and rotation pivot fixed across each row, no sprite touching neighbors or cell edges. No actual glow haze outside silhouettes, use a few deliberate flat colors. Truly transparent alpha background, no checkerboard, no text, labels, watermark, ground or grid."
+    }
+  ],
+  "cleanup": {
+    "assets": [
+      "npcs",
+      "guardian"
+    ],
+    "prompt": "Remove halos, glow, shadows, haze and background pixels outside sprite outlines; preserve poses, colors, positions and arrangement; genuine transparent alpha."
+  }
+}

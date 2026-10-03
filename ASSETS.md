@@ -1,0 +1,322 @@
+# Fingersnap asset register
+
+Provenance and license record for every asset used in the project. The
+runtime-facing loading notes live in `docs/runtime-asset-spec.md` (art slots
+and wanted list kept by the art/content agent there; wiring notes by the
+runtime agent); `assets/ASSETS_GUIDE.md` is the delivered handoff from the
+asset agent. This file is the register of record.
+
+## Art direction
+
+Stay close to **Habitica pixel art**: crisp deliberate pixels, readable
+silhouettes, warm lived-in cozy-fantasy palette (emerald foliage, teal
+shadows, amber lantern light, russet wood/roofs, golden weathered stone),
+consistent top-down three-quarter RPG view (not isometric). Style alignment
+is intentional and recorded here; **no Habitica or BrowserQuest files are
+copied or extracted**. Depicting similar subject matter in a similar style
+does not import Habitica's asset license. When licensed Habitica assets are
+introduced later, they enter this register individually with their own
+license lines (see "Third-party assets" below).
+
+## License status — decision pending
+
+**No distribution license has been selected for original Fingersnap art.**
+Until one is chosen and recorded here:
+
+- No public deployment, store listing, advertising, sponsorship, or
+  redistribution of the art pack.
+- Local development and private playtesting are fine.
+- Source prompts and provenance stay with the assets (already true of the
+  delivered pack).
+
+Per the plan, code license and art license are separate decisions.
+
+## Register A — original generated art pack (delivered)
+
+Delivered 2026-10-02 by the external asset agent to `assets/generated/`;
+runtime copies the loadable files to `public/assets/fingersnap/` (copies are
+the same bytes; the originals in `assets/generated/` are the archive of
+record).
+
+Provenance: original artwork generated 2026-10-02 with the built-in
+image-generation tool ("built-in image_gen"). Exact source prompts:
+`assets/generated/prompts.json` (keys `village`, `props`, `ruin`; prompts
+instruct "Original artwork; do not reproduce any existing game scene" and
+explicitly avoid people/UI/text). Generation metadata:
+`assets/generated/manifest.json`. Handoff notes: `assets/generated/README.md`,
+`assets/ASSETS_GUIDE.md`. Visual and dimensional review recorded in the
+handoff README (PNG sizes, alpha, atlas bounds checked).
+
+| File | Key(s) | Size | Role | Source prompt key |
+|---|---|---|---|---|
+| `fingersnap-village.png` | `fingersnap-village` | 1536×1024 | Village scene illustration; runtime background/map reference (UI/reference only) | `village` |
+| `fingersnap-shrine.png` | `fingersnap-shrine` | 1536×1024 | Shrine/ruin scene illustration; runtime background/map reference (UI/reference only) | `ruin` |
+| `fingersnap-props.png` + `fingersnap-props.atlas.json` | `fingersnap-props` | 4 cols × 3 rows atlas | 12 static transparent props, Phaser JSON-hash atlas | `props` |
+| `manifest.json`, `prompts.json`, `README.md` | — | — | Provenance metadata (not game art) | — |
+
+Atlas frames (12): `lantern-post`, `patched-bench`, `trail-sign`,
+`stone-milestone`, `bread-basket`, `flower-planter`, `tool-crate`,
+`expedition-backpack`, `treasure-chest`, `lantern-shrine`,
+`mushroom-cluster`, `grappling-rope`. Frames are hand-measured with 1 px
+padding; origins and suggested display heights are in the manifest.
+
+Known limits (recorded, not defects): flattened scenes are not tilesets or
+collision maps; prop frames are static (no animation/open states); generated
+pixel art is not authored on a strict 16/32 px grid and may need grid cleanup
+to match eventual avatar scale.
+
+Provenance attributes for the register table: **Author** — Fingersnap project
+(external asset agent via built-in image_gen). **Source** — original
+generation, prompts in-repo. **Modifications** — none yet (atlas frames are
+measured from the sheet, not edited). **License** — pending (see above).
+**Attribution text** — TBD with license choice.
+
+## Register B — original procedural placeholders (current)
+
+Style-aligned placeholder art generated procedurally by project code (shapes,
+tiles, and simple pixel figures drawn in code; no external files, no
+third-party sources). Used by the runtime for anything the delivered pack does
+not cover (walkable-area marks, temporary sprites, UI stand-ins).
+
+| Item | Source | Author | License | Notes |
+|---|---|---|---|---|
+| Code-drawn placeholder shapes/tiles/sprites produced at runtime or build time | Project source (`src/game/` placeholder generators, runtime-owned) | Fingersnap project | pending (same as Register A) | Original; style direction per "Art direction" above; no third-party bytes |
+
+Each placeholder generator is original code; treat its output as original
+art. When a delivered or licensed asset replaces a placeholder, keep the row
+for history and move the replacement into Register A or C.
+
+## Register D — expansion art pack (delivered)
+
+Delivered 2026-10-02 (second drop, same day) by the external asset agent to
+`assets/generated/expansion/`; runtime-loaded copies live at
+`public/assets/fingersnap/expansion/` (same bytes; generated copy is the
+archive of record).
+
+Provenance: original artwork generated 2026-10-02 with the built-in
+image-generation tool ("built-in image_gen"). Exact source prompts:
+`assets/generated/expansion/prompts.json` (keys `terrain`, `foreground`,
+`hero-walk`, `enemies`; hero-walk prompt explicitly says "original demo
+adventurer NOT a Habitica asset"). Generation metadata:
+`assets/generated/expansion/manifest.json`; animation defs:
+`animations.json`; atlas builder that measured frames:
+`build_atlases.py`; integration reference `integration.js` (ported to
+`src/game/expansion.ts`, runtime-owned call sites).
+
+| File | Key(s) | Source size | Role | Prompt key |
+|---|---|---|---|---|
+| `fingersnap-terrain.png` + `.atlas.json` | `fingersnap-terrain` | 1254×1254 (uneven grid) | 16 named ground tiles (grass…paths) | `terrain` |
+| `fingersnap-foreground.png` + `.atlas.json` | `fingersnap-foreground` | 1254×1254 | 6 transparent occluders (canopies, arches, roof, ferns) | `foreground` |
+| `fingersnap-demo-walk.png` + `.atlas.json` | `fingersnap-demo-walk` | 1254×1254 | 16 frames, 4-direction demo walk (stand-in hero) | `hero-walk` |
+| `fingersnap-enemies.png` + `.atlas.json` | `fingersnap-enemies` | 1448×1086 | 12 frames: slime/mushroom/beetle idle+squash+windup+hurt | `enemies` |
+| `animations.json` | `fingersnap-expansion-animations` | — | 7 animation defs (4 walks, 3 enemy idles) | — |
+| `manifest.json` | `fingersnap-expansion-manifest` | — | Tile index map, frame lists, `runtimeTexture` key | — |
+
+Frame names: terrain `grass, flower-grass, forest-moss, packed-dirt,
+cobblestone, mossy-cobblestone, shrine-stone, cave-gravel, pond-water,
+shallow-water, wood-planks, dark-wood-planks, path-vertical, path-horizontal,
+path-crossroads, path-t-junction` (runtime tileset index order 0–15 as in
+manifest); foreground `oak-canopy, pine-canopy, leafy-arch, cottage-roof,
+stone-arch, fern-cluster`; walk `walk-{down,left,right,up}-0..3`; enemies
+`{slime,mushroom,beetle}-{idle,squash,windup,hurt}`.
+
+Recorded limits/quirks: terrain source cells are **uneven** (1254 px sheet is
+not an even 4×4 of 256 px; hand-measured atlas rects ~314 px are
+authoritative) — runtime normalizes them into a uniform 32 px tileset
+(`fingersnap-terrain-runtime`) via `createFingersnapTerrain`; the demo walker
+is an original stand-in, not a Habitica avatar; enemy windup/hurt frames are
+available but no full combat anim set; trimmed frames carry
+`spriteSourceSize` offsets (handled by Phaser atlas loader); no collision or
+walkability metadata (runtime authors it).
+
+Provenance attributes: **Author** — Fingersnap project (external asset agent
+via built-in image_gen). **Source** — original generation, prompts in-repo.
+**Modifications** — none to source PNGs; atlas rects measured by
+`build_atlases.py`; runtime tileset is a derived canvas at load time (not a
+file). **License** — pending (same decision as Register A).
+**Attribution text** — TBD with license choice.
+
+## Register E — runtime art pass (NPCs, guardian, class effects)
+
+Delivered 2026-10-03 by the external asset agent to
+`assets/generated/runtime-pass/`; runtime-loaded copies live at
+`public/assets/fingersnap/runtime-pass/` (same bytes; the generated copy is
+the archive of record).
+
+Provenance: original artwork generated 2026-10-03 with the built-in
+image-generation tool ("built-in image_gen"; pack `prompts.json` records
+`date` 2026-10-03 and `tool`). Exact source prompts:
+`assets/generated/runtime-pass/prompts.json` (generation keys `npcs`,
+`guardian`, `effects`; a cleanup prompt removes halos, glow, shadows, haze
+and background pixels outside sprite outlines while preserving poses,
+colors, positions and arrangement). Generation metadata and measured
+rectangles: `manifest.json` — 27 frames with `sourceRect`/`destinationRect`,
+7 animation defs, 7 compatibility aliases (rects measured by
+`build_manifest.py`). Handoff notes and the validation record:
+`assets/generated/runtime-pass/README.md`. Browser preview `preview.html`
+(validation only, not game art). Integration reference `integration.js`
+ported to `src/game/runtime-art.ts` (content agent's module; runtime-owned
+call sites); manifest contract covered by `tests/runtime-art.test.ts`.
+
+| File | Key(s) | Source size | Role | Prompt key |
+|---|---|---|---|---|
+| `fingersnap-npcs.png` | `fingersnap-npcs` (source sheet) | 1024×1535 | Mara/Pip/Orrin, 2 breathing poses each (6 measured frames → 16×16 native) | `npcs` |
+| `fingersnap-guardian.png` | `fingersnap-guardian` (source sheet) | 1536×1024 | Stone guardian idle/windup/lunge/hurt/defeat (5 measured frames → 24×24 native) | `guardian` |
+| `fingersnap-class-effects.png` | `fingersnap-class-effects` (source sheet) | 1254×1254 | Cleave, magic bolt, dash trail, healing pulse, 4 stages each (16 measured frames) | `effects` |
+| `manifest.json` | `fingersnap-runtime-art` | — | 27 measured frame rects, 7 animation defs, 7 compat aliases | — |
+| `integration.js`, `build_manifest.py`, `preview.html`, `README.md`, `prompts.json` | — | — | Provenance/helper metadata (not game art) | — |
+
+Frame keys: `mara-idle-0/1`, `pip-idle-0/1`, `orrin-idle-0/1`,
+`guardian-idle|windup|lunge|hurt|defeat`, `cleave-0..3`, `magic-bolt-0..3`,
+`dash-trail-0..3`, `healing-pulse-0..3`. Animation keys: `mara-breathing`,
+`pip-breathing`, `orrin-breathing` (2 frames, 1.5 fps, looping),
+`effect-cleave` / `effect-dash-trail` / `effect-healing-pulse` (4 frames,
+12 fps, one-shot), `effect-magic-bolt` (4 frames, 12 fps, looping).
+Compatibility aliases: `mara`→`mara-idle-0`, `pip`→`pip-idle-0`,
+`orrin`→`orrin-idle-0`, `guardian0`→`guardian-idle`,
+`guardian1`→`guardian-lunge`, `slash`→`cleave-2`, `bolt`→`magic-bolt-0`;
+applied only deliberately via `installRuntimeAliases(..., { replaceExisting:
+true })` in boot setup.
+
+Recorded limits/quirks: the PNGs are high-resolution sheets with
+hand-measured rectangles — never treat them as even grids, never load them
+with `frameWidth`, never pre-scale or overwrite them; transparent pixels may
+hide original backdrop RGB (never rendered; do not flatten against black);
+NPCs share one common scale (Pip stays smaller) and sit on a fixed foot
+baseline in their 16×16 canvases; guardian poses share one common scale
+(defeat stays collapsed) in 24×24 canvases and are discrete combat states,
+not a loop; native canvases are deliberately small and lose source detail;
+dash-trail 18×18 and healing-pulse 32×32 were proposed sizes the spec had
+not defined (adopted in `docs/runtime-asset-spec.md` with this delivery);
+NPC poses are front-facing only; no collision or walkability metadata
+(runtime keeps the authored NPC 10×8 and guardian 20×10 foot bodies); no
+audio.
+
+Provenance attributes: **Author** — Fingersnap project (external asset agent
+via built-in image_gen). **Source** — original generation, prompts in-repo.
+**Modifications** — cleanup prompt pass (background/halo removal) applied at
+generation time; source PNGs byte-unchanged since delivery; runtime canvas
+textures are derived at load time (not files). **License** — pending (same
+decision as Register A; this original generated pack does not inherit
+Habitica's artwork license). **Attribution text** — TBD with license choice.
+
+## Register C — pending delivered art (not yet in repo)
+
+Expected from the external asset agent; **not present, not licensed, not
+integrated**. When delivered, copy into `assets/generated/` (or a dated
+subfolder), attach the exact source prompts, and add a Register A-style table.
+
+| Expected asset | Purpose | Status |
+|---|---|---|
+| ~~Stone warden/guardian frames~~ | Guardian encounter beats the enemy trio can't cover | **delivered** (Register E: idle/windup/lunge/hurt/defeat) |
+| Enemy walk/attack move sets (beyond idle/squash/windup/hurt) | Light real-time combat | pending |
+| NPC side-facing frames (left/right) for Mara, Pip, Orrin | Walk/idle beyond the front-facing breathing pair | pending |
+| Weather/occlusion variants, interior/mask layers | Depth over flattened scenes | pending |
+| Audio (ambience, UI, interaction) | Warmth and feedback | pending |
+| Licensed Habitica avatar/equipment/pet/mount composition | "Make it your character" milestone (license-verified) | pending |
+
+## Next asset priorities (requested 2026-10-02; first three delivered)
+
+1. ~~Terrain tiles~~ — **delivered** (Register D `fingersnap-terrain`).
+2. ~~Avatar walking~~ — **delivered** as original demo stand-in (Register D
+   `fingersnap-demo-walk`). Replace with licensed Habitica avatar composition
+   at the "Make it your character" milestone.
+3. ~~Enemies~~ — **delivered** as trio idle sets (Register D
+   `fingersnap-enemies`); guardian/warden frames delivered separately in
+   Register E.
+
+Next in priority order now:
+
+1. **Stone warden / guardian frames** — ~~the quest's required encounter
+   (`defeat-guardian`), with readable telegraph and defeat pose.~~
+   **delivered** (Register E: idle/windup/lunge/hurt/defeat; telegraph =
+   windup + code tint).
+2. **NPC side-facing frames** — left/right idle or walk for Mara, Pip, and
+   Orrin; Register E covers front-facing breathing only.
+3. **Terrain collision/walkability annotation** — not art, but the companion
+   deliverable so terrain tiles become real movement (runtime authors it from
+   tile ids if metadata can't be generated).
+4. **Enemy movement/combat frames** — walk/attack for the trio once combat
+   prototyping starts (milestone 3).
+5. **Audio** — ambience, UI, interaction (Register C row).
+
+Style bar for all: keep to the Art direction above ("stay close to Habitica
+pixel art"); clean pixel grid; strong silhouettes; Register D palette.
+
+## Third-party assets (Habitica, introduced 2026-10-03)
+
+Any non-original asset must be registered here **before** it enters the repo,
+one row each:
+
+| File | Source URL | Author | License + link | Attribution text | Modifications | Register date |
+|---|---|---|---|---|---|---|
+| `src/content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG / Habitica contributors | GPL v3 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE | "Game data derived from Habitica (habitica.com), © HabitRPG, licensed GPL v3." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
+| `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG / Weirdly Wonderful (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ | "Avatar and companion art derived from Habitica (habitica.com), © HabitRPG / Weirdly Wonderful, licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
+| Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG / Habitica contributors | GPL v3 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
+
+Rules (from the plan): Habitica source code is GPL v3; Habitica original
+artwork/content is CC BY-NC-SA 3.0; BrowserQuest-derived artwork/content is
+CC BY-SA 3.0. Individual files may carry individual licenses — verify each.
+Adapted assets keep share-alike conditions. Keep notices in credits. Free
+access does not settle noncommercial-license questions; revisit before any
+monetization or partnership.
+
+### Third-party use boundaries (Fingersnap)
+
+- The CC BY-NC-SA art subset is **non-commercial**: no store listing, ads,
+  sponsorship, or paid version while it ships. This is stricter than the
+  original-art decision above and blocks public monetization independently
+  of it.
+- Share-alike: distributing a build that includes the cached art subset
+  requires the same CC BY-NC-SA 3.0 terms for those files (see license
+  link). Keep this register + attribution text in any shipped credits.
+- The GPL v3 data snapshot: if the catalog is redistributed as part of a
+  binary or data package, GPL source-availability obligations apply to the
+  derived data. **Nothing satisfies that today** — this workspace is not a
+  git repository and no public source distribution is in place (the plan's
+  "publicly reviewable source" commitment is a plan intent, not a current
+  fact). Any redistribution must first publish corresponding source (this
+  repo included) or keep the catalog out of the shipped artifact.
+
+## Credits text (ship in-game)
+
+Place in the Character panel / credits UI (runtime wires this; text of
+record here):
+
+> Fingersnap uses game data derived from [Habitica](https://habitica.com)
+> (© HabitRPG, GPL v3) and a subset of Habitica avatar art (© HabitRPG /
+> Weirdly Wonderful, [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/)).
+> Habitica is not affiliated with and does not endorse Fingersnap. Original
+> Fingersnap art and code: see repository.
+
+## Changelog
+
+- 2026-10-02 — Register created. Art direction recorded (Habitica-aligned
+  pixel art, original work only). Register A populated from the delivered
+  `assets/generated/` pack with prompt provenance. Placeholder policy set.
+  Next priorities listed (terrain tiles, avatar walking, enemies). License
+  decision pending; no public deployment until chosen.
+- 2026-10-02 — Register D added for the expansion pack
+  (`assets/generated/expansion/` + `public/assets/fingersnap/expansion/`):
+  terrain, demo 4-direction walks, enemies, foreground atlases, animations,
+  prompts and manifest recorded; uneven terrain-sheet normalization noted.
+  First three priorities now delivered; next priorities re-ordered (guardian
+  frames, walkability annotation, enemy combat frames). License still
+  pending.
+- 2026-10-03 — Third-party assets introduced (Register note + rows above):
+  Habitica gear-data snapshot (GPL v3) in `src/content/habitica-gear.json`
+  and a 41-file scoped art subset (CC BY-NC-SA 3.0) under
+  `public/assets/habitica/` with `manifest.json` (sha256s). API register:
+  `docs/habitica-assets.md`. Attribution/credits text added. Non-commercial
+  and share-alike boundaries recorded. No account credentials used.
+- 2026-10-03 — Register E added for the runtime art pass
+  (`assets/generated/runtime-pass/` + `public/assets/fingersnap/runtime-pass/`):
+  NPC breathing pairs (16×16), five discrete guardian states (24×24), and
+  four class-effect sequences (cleave/bolt/dash-trail/healing-pulse) with
+  measured source/destination rects for 27 frames. Integration helper ported
+  to `src/game/runtime-art.ts` (type-only Phaser, no new deps); manifest
+  source/animation/alias contract covered by `tests/runtime-art.test.ts`;
+  native-helper contract recorded in `docs/runtime-asset-spec.md`. Guardian
+  priority now delivered; wanted list re-set (side-facing NPC frames, enemy
+  move sets, audio). License still pending; this pack keeps separate
+  provenance from Habitica's artwork license.

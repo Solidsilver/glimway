@@ -1,0 +1,123 @@
+import Phaser from 'phaser'
+
+export const FINGERSNAP_EXPANSION_BASE = '/assets/fingersnap/expansion/'
+
+export const FINGERSNAP_EXPANSION_ATLASES = [
+  'fingersnap-terrain',
+  'fingersnap-foreground',
+  'fingersnap-demo-walk',
+  'fingersnap-enemies',
+] as const
+
+export interface FingersnapAnimationDefinition {
+  key: string
+  texture: string
+  frames: string[]
+  frameRate: number
+  repeat: number
+}
+
+export interface FingersnapExpansionManifest {
+  version: number
+  baseUrl: string
+  terrain: {
+    texture: string
+    image: string
+    data: string
+    runtimeTexture: string
+    tileWidth: number
+    tileHeight: number
+    tiles: Record<string, string>
+    note?: string
+  }
+  suggestedWorldTileSize: number
+  suggestedCharacterHeight: number
+  foregroundFrames: string[]
+  characterFrames: string[]
+  enemyFrames: string[]
+}
+
+export function preloadFingersnapExpansion(
+  scene: Phaser.Scene,
+  base: string = FINGERSNAP_EXPANSION_BASE,
+): void {
+  for (const key of FINGERSNAP_EXPANSION_ATLASES) {
+    scene.load.atlas(key, `${base}${key}.png`, `${base}${key}.atlas.json`)
+  }
+  scene.load.json('fingersnap-expansion-manifest', `${base}manifest.json`)
+  scene.load.json('fingersnap-expansion-animations', `${base}animations.json`)
+}
+
+export function createFingersnapAnimations(scene: Phaser.Scene): void {
+  const definitions = scene.cache.json.get(
+    'fingersnap-expansion-animations',
+  ) as FingersnapAnimationDefinition[]
+  for (const definition of definitions) {
+    if (scene.anims.exists(definition.key)) continue
+    scene.anims.create({
+      key: definition.key,
+      frames: definition.frames.map((frame) => ({
+        key: definition.texture,
+        frame,
+      })),
+      frameRate: definition.frameRate,
+      repeat: definition.repeat,
+    })
+  }
+}
+
+/**
+ * The generator produced a 1254px sheet, not an evenly divisible 4x4 grid.
+ * Named atlas rectangles are authoritative. Construct a uniform tileset at
+ * runtime for Phaser Tilemaps rather than treating the PNG as 32px source
+ * cells. Idempotent: returns the existing runtime texture if already built.
+ */
+export function createFingersnapTerrain(
+  scene: Phaser.Scene,
+  tileSize: number = 32,
+): Phaser.Textures.CanvasTexture {
+  const manifest = scene.cache.json.get(
+    'fingersnap-expansion-manifest',
+  ) as FingersnapExpansionManifest
+  const key = manifest.terrain.runtimeTexture
+  if (scene.textures.exists(key)) return scene.textures.get(key) as Phaser.Textures.CanvasTexture
+  const output = scene.textures.createCanvas(key, tileSize * 4, tileSize * 4)
+  if (!output) throw new Error('Could not create Fingersnap terrain texture')
+  const context = output.context
+  context.imageSmoothingEnabled = false
+  const source = scene.textures.get('fingersnap-terrain')
+  for (let index = 0; index < 16; index++) {
+    const name = manifest.terrain.tiles[index]
+    const frame = source.get(name)
+    context.drawImage(
+      frame.source.image as CanvasImageSource,
+      frame.cutX,
+      frame.cutY,
+      frame.cutWidth,
+      frame.cutHeight,
+      (index % 4) * tileSize,
+      Math.floor(index / 4) * tileSize,
+      tileSize,
+      tileSize,
+    )
+  }
+  output.refresh()
+  return output
+}
+
+/**
+ * Occluder texture origins depend on where they attach in the world. Keep
+ * canopy depth anchored to its trunk/ground footpoint, not its top-left
+ * corner.
+ */
+export function placeFingersnapOccluder(
+  scene: Phaser.Scene,
+  frame: string,
+  x: number,
+  footY: number,
+  displayWidth: number = 96,
+): Phaser.GameObjects.Image {
+  const image = scene.add.image(x, footY, 'fingersnap-foreground', frame)
+  image.setOrigin(0.5, 1).setScale(displayWidth / image.width).setDepth(footY)
+  return image
+}

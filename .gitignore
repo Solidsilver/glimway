@@ -1,0 +1,24 @@
+node_modules
+dist
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+
+# Publication hygiene
+/public/assets/fingersnap/**/drafts/
+.idea/
+.vscode/
+.cache/
+*.swp
+*.swo
+*~
+*.sqlite*
+*.db
+*.db-shm
+*.db-wal
+.agent*/
+.agents/
+.codex/
+/assets/generated/**/drafts/

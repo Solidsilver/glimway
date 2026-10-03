@@ -1,0 +1,303 @@
+{
+  "frames": {
+    "slime-idle": {
+      "frame": {
+        "x": 44,
+        "y": 96,
+        "w": 277,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 16,
+        "y": 64,
+        "w": 277,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "slime-squash": {
+      "frame": {
+        "x": 397,
+        "y": 169,
+        "w": 294,
+        "h": 191
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 133,
+        "w": 294,
+        "h": 191
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "slime-windup": {
+      "frame": {
+        "x": 770,
+        "y": 37,
+        "w": 258,
+        "h": 322
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 2,
+        "w": 258,
+        "h": 322
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "slime-hurt": {
+      "frame": {
+        "x": 1123,
+        "y": 151,
+        "w": 289,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 115,
+        "w": 289,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "mushroom-idle": {
+      "frame": {
+        "x": 45,
+        "y": 446,
+        "w": 275,
+        "h": 266
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 58,
+        "w": 275,
+        "h": 266
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "mushroom-squash": {
+      "frame": {
+        "x": 418,
+        "y": 499,
+        "w": 268,
+        "h": 213
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 20,
+        "y": 111,
+        "w": 268,
+        "h": 213
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "mushroom-windup": {
+      "frame": {
+        "x": 770,
+        "y": 430,
+        "w": 258,
+        "h": 282
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 42,
+        "w": 258,
+        "h": 282
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "mushroom-hurt": {
+      "frame": {
+        "x": 1158,
+        "y": 493,
+        "w": 245,
+        "h": 214
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 32,
+        "y": 110,
+        "w": 245,
+        "h": 214
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "beetle-idle": {
+      "frame": {
+        "x": 33,
+        "y": 774,
+        "w": 305,
+        "h": 261
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 2,
+        "y": 63,
+        "w": 305,
+        "h": 261
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "beetle-squash": {
+      "frame": {
+        "x": 403,
+        "y": 812,
+        "w": 299,
+        "h": 223
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 5,
+        "y": 101,
+        "w": 299,
+        "h": 223
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "beetle-windup": {
+      "frame": {
+        "x": 751,
+        "y": 750,
+        "w": 285,
+        "h": 279
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 12,
+        "y": 45,
+        "w": 285,
+        "h": 279
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "beetle-hurt": {
+      "frame": {
+        "x": 1123,
+        "y": 807,
+        "w": 294,
+        "h": 233
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 91,
+        "w": 294,
+        "h": 233
+      },
+      "sourceSize": {
+        "w": 309,
+        "h": 326
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "meta": {
+    "app": "Fingersnap",
+    "version": "1",
+    "image": "fingersnap-enemies.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1448,
+      "h": 1086
+    },
+    "scale": "1"
+  }
+}

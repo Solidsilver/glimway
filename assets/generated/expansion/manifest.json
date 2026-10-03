@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "baseUrl": "/assets/fingersnap/expansion/",
+  "terrain": {
+    "texture": "fingersnap-terrain",
+    "image": "fingersnap-terrain.png",
+    "data": "fingersnap-terrain.atlas.json",
+    "runtimeTexture": "fingersnap-terrain-runtime",
+    "note": "Use integration.js to normalize unequal source cells into a uniform runtime tileset.",
+    "tileWidth": 32,
+    "tileHeight": 32,
+    "tiles": {
+      "0": "grass",
+      "1": "flower-grass",
+      "2": "forest-moss",
+      "3": "packed-dirt",
+      "4": "cobblestone",
+      "5": "mossy-cobblestone",
+      "6": "shrine-stone",
+      "7": "cave-gravel",
+      "8": "pond-water",
+      "9": "shallow-water",
+      "10": "wood-planks",
+      "11": "dark-wood-planks",
+      "12": "path-vertical",
+      "13": "path-horizontal",
+      "14": "path-crossroads",
+      "15": "path-t-junction"
+    }
+  },
+  "atlases": [
+    {
+      "key": "fingersnap-foreground",
+      "texture": "fingersnap-foreground.png",
+      "data": "fingersnap-foreground.atlas.json"
+    },
+    {
+      "key": "fingersnap-demo-walk",
+      "texture": "fingersnap-demo-walk.png",
+      "data": "fingersnap-demo-walk.atlas.json"
+    },
+    {
+      "key": "fingersnap-enemies",
+      "texture": "fingersnap-enemies.png",
+      "data": "fingersnap-enemies.atlas.json"
+    }
+  ],
+  "animations": "animations.json",
+  "suggestedWorldTileSize": 32,
+  "suggestedCharacterHeight": 40,
+  "foregroundFrames": [
+    "oak-canopy",
+    "pine-canopy",
+    "leafy-arch",
+    "cottage-roof",
+    "stone-arch",
+    "fern-cluster"
+  ],
+  "characterFrames": [
+    "walk-down-0",
+    "walk-down-1",
+    "walk-down-2",
+    "walk-down-3",
+    "walk-left-0",
+    "walk-left-1",
+    "walk-left-2",
+    "walk-left-3",
+    "walk-right-0",
+    "walk-right-1",
+    "walk-right-2",
+    "walk-right-3",
+    "walk-up-0",
+    "walk-up-1",
+    "walk-up-2",
+    "walk-up-3"
+  ],
+  "enemyFrames": [
+    "slime-idle",
+    "slime-squash",
+    "slime-windup",
+    "slime-hurt",
+    "mushroom-idle",
+    "mushroom-squash",
+    "mushroom-windup",
+    "mushroom-hurt",
+    "beetle-idle",
+    "beetle-squash",
+    "beetle-windup",
+    "beetle-hurt"
+  ]
+}

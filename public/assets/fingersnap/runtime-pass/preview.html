@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fingersnap sprite review</title>
+<style>
+body{margin:0;background:#142c30;color:#f8edcd;font:16px/1.5 system-ui,sans-serif;padding:28px}main{max-width:1000px;margin:auto}h1{font-size:28px}h2{font-size:21px;margin-top:28px}button{font:inherit;background:#e7bb61;border:0;border-radius:8px;padding:8px 16px;color:#243134;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}.card{padding:12px;border:1px solid #5a7774;border-radius:12px;background:#213d3e;text-align:center}.stage{height:150px;display:flex;justify-content:center;align-items:flex-end;background:repeating-conic-gradient(#365957 0% 25%,#304e4e 0% 50%) 50%/16px 16px;border-bottom:2px solid #e7bb61;margin-bottom:10px}canvas{image-rendering:pixelated}.small{color:#c5d8cb;font-size:14px}
+</style>
+<main><h1>Fingersnap sprite review</h1><p>Sprites render at native size, enlarged 6× for inspection. The gold line marks the foot anchor for characters and the guardian.</p><button id="toggle">Pause animation</button><p id="status" role="status">Loading art…</p><h2>Residents · two-frame breathing</h2><div id="npcs" class="grid"></div><h2>Stone guardian · state poses</h2><div id="guardian" class="grid"></div><h2>Class effects · four-frame sequences</h2><div id="effects" class="grid"></div><p class="small">This previews artwork and native texture preparation. It does not run combat or change game code.</p></main>
+<script type="module">
+const status=document.querySelector('#status');
+try {
+const response=await fetch('./manifest.json');if(!response.ok)throw new Error('Manifest not available');const manifest=await response.json();
+const images={};await Promise.all(manifest.sources.map(async source=>{const image=new Image();image.src='./'+source.file;await image.decode();images[source.key]=image;}));
+const textures={};
+for(const frame of manifest.frames){const canvas=document.createElement('canvas');canvas.width=frame.width;canvas.height=frame.height;const context=canvas.getContext('2d');context.imageSmoothingEnabled=false;const s=frame.sourceRect,d=frame.destinationRect;context.drawImage(images[frame.source],s.x,s.y,s.w,s.h,d.x,d.y,d.w,d.h);textures[frame.key]=canvas;}
+const cards=[];
+function add(group,label,keys,fps=0){const card=document.createElement('div');card.className='card';const stage=document.createElement('div');stage.className='stage';const canvas=document.createElement('canvas');const first=textures[keys[0]];canvas.width=first.width;canvas.height=first.height;canvas.style.width=first.width*6+'px';canvas.style.height=first.height*6+'px';stage.append(canvas);const text=document.createElement('div');text.textContent=label;card.append(stage,text);document.querySelector('#'+group).append(card);cards.push({canvas,keys,fps});}
+for(const name of ['mara','pip','orrin'])add('npcs',name[0].toUpperCase()+name.slice(1),[name+'-idle-0',name+'-idle-1'],1.5);
+for(const state of ['idle','windup','lunge','hurt','defeat'])add('guardian',state,['guardian-'+state]);
+for(const effect of ['cleave','magic-bolt','dash-trail','healing-pulse'])add('effects',effect,[0,1,2,3].map(i=>effect+'-'+i),6);
+let paused=matchMedia('(prefers-reduced-motion: reduce)').matches;let elapsed=0;let previous=performance.now();const toggle=document.querySelector('#toggle');function label(){toggle.textContent=paused?'Play animation':'Pause animation';}label();toggle.onclick=()=>{paused=!paused;label();};
+function draw(now){if(!paused)elapsed+=Math.max(0,now-previous);previous=now;for(const card of cards){const key=card.keys[Math.floor(elapsed/1000*card.fps)%card.keys.length];const context=card.canvas.getContext('2d');context.clearRect(0,0,card.canvas.width,card.canvas.height);context.drawImage(textures[key],0,0);}requestAnimationFrame(draw);}requestAnimationFrame(draw);status.textContent=`Loaded ${manifest.frames.length} frames. Native NPCs 16×16; guardian 24×24.`;
+}catch(error){status.textContent='Could not load art: '+error.message;}
+</script>
+</html>
