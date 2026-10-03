@@ -62,7 +62,7 @@ export const ITEM_INFO: Record<string, ItemInfo> = {
   'hearthwick-map': {
     name: 'Map of Hearthwick',
     icon: 'map',
-    blurb: 'Hand-inked by a carter. The west gate is circled twice.',
+    blurb: 'Hand-inked by a carter. The east gate is circled twice.',
   },
 };
 
@@ -98,14 +98,14 @@ export const locations: Record<AreaId, LocationInfo> = {
     eyebrow: 'The village of',
     tagline: 'Someone here is always mending something.',
     description:
-      'A hillside village of patched slate roofs, kitchen gardens, and a square where someone is always mending something. The dark lantern road begins at the west gate.',
+      'A hillside village of patched slate roofs, kitchen gardens, and a square where someone is always mending something. The dark lantern road begins at the east gate.',
   },
   woodland: {
     name: 'Brackenwood Path',
     eyebrow: 'The old lantern road',
     tagline: 'Cool shade, leaning stones — and wisps. Mind the wisps.',
     description:
-      'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the west gate visible behind you.',
+      'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the east gate visible behind you.',
   },
   ruin: {
     name: 'Ashwatch Ruin',
@@ -138,13 +138,13 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       choices: [
         {
           text: 'Of course. Point me at the gate.',
-          reply: ['West gate, past the milestone. Thank you — truly. Grandmother would have liked you.'],
+          reply: ['East gate, past the milestone. Thank you — truly. Grandmother would have liked you.'],
         },
         {
           text: '…Is there a reward?',
           reply: [
             'Ha! A lit road, the gratitude of a small village, and as much of Orrin\u2019s complaining as you can stand.',
-            'Also soup. There is always soup. West gate, past the milestone.',
+            'Also soup. There is always soup. East gate, past the milestone.',
           ],
         },
       ],
@@ -153,7 +153,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['accepted'],
       speaker: 'Mara',
       lines: [
-        'The west gate is the start of it. Follow the Brackenwood path and keep an eye out for the old route stones — my grandmother swore they still point the way.',
+        'The east gate is the start of it. Follow the Brackenwood path and keep an eye out for the old route stones — my grandmother swore they still point the way.',
         'If you get turned around, ask Pip. That child knows every shortcut, mostly because they have taken all of them.',
       ],
     },
@@ -236,7 +236,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['complete'],
       speaker: 'Pip',
       lines: [
-        'People keep walking up the west gate road just to stand under the lantern glow and act like they are checking the fence. I have counted nine of them.',
+        'People keep walking up the east gate road just to stand under the lantern glow and act like they are checking the fence. I have counted nine of them.',
         "I am collecting string for a light-line of my own, between the signpost and the well. Orrin says the knotwork is wrong. The knotwork is fine.",
       ],
     },
@@ -347,7 +347,7 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   accepted: [
     {
       title: "Mara's Request",
-      body: 'Mara asked me to walk the old lantern road: through the west gate, along the Brackenwood path, past the Ashwatch ruin, up to the hilltop shrine. Her grandmother once kept that road lit. Find what is left of it.',
+      body: 'Mara asked me to walk the old lantern road: through the east gate, along the Brackenwood path, past the Ashwatch ruin, up to the hilltop shrine. Her grandmother once kept that road lit. Find what is left of it.',
     },
     {
       title: 'Orrin\u2019s Advice',

@@ -180,12 +180,11 @@ function buildVillage(): WorldData {
   g.house(31, 4, 6)
 
   // Paths
-  g.row(3, 10, 36, TERRAIN.path_a)
+  g.row(3, 10, W - 3, TERRAIN.path_a)
   g.col(8, 7, 3, TERRAIN.path_a)
   g.col(20, 7, 3, TERRAIN.path_a)
   g.col(33, 8, 2, TERRAIN.path_a)
   g.col(13, 10, 3, TERRAIN.path_a)
-  g.row(3, 11, 3, TERRAIN.path_a)
 
   // Garden fence with a gap
   g.row(24, 13, 7, TERRAIN.fence, true)
@@ -195,14 +194,15 @@ function buildVillage(): WorldData {
   g.set(27, 18, TERRAIN.grass_a)
   g.solid[18][27] = false
 
-  // Border trees, with a gap on the left edge to the woodland
+  // Unbroken border trees, with one gap on the east edge to the woodland
+  // (the journey reads left to right: village → woodland → ruin).
   for (let x = 0; x < W; x++) {
-    if (rng() < 0.9) scatterOne(g, x, 0)
-    if (rng() < 0.9) scatterOne(g, x, H - 1)
+    scatterOne(g, x, 0)
+    scatterOne(g, x, H - 1)
   }
   for (let y = 0; y < H; y++) {
-    if (y < 11 || y > 13) scatterOne(g, 0, y)
-    if (rng() < 0.9) scatterOne(g, W - 1, y)
+    scatterOne(g, 0, y)
+    if (y < 9 || y > 11) scatterOne(g, W - 1, y)
   }
 
   const well = { tx: 13, ty: 12 }
@@ -215,7 +215,7 @@ function buildVillage(): WorldData {
   ]
 
   const villageExits: ExitDef[] = [
-    { tx: 0, ty: 11, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } }
+    { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } }
   ]
   const trees = collectTrees(g)
   const bushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
@@ -228,7 +228,7 @@ function buildVillage(): WorldData {
     { frame: 'bread-basket', tx: 6, ty: 8, h: 12, body: [12, 6] },
     { frame: 'flower-planter', tx: 22, ty: 7, h: 16, body: [14, 6] },
     { frame: 'tool-crate', tx: 24, ty: 8, h: 16, body: [12, 8] },
-    { frame: 'stone-milestone', tx: 3, ty: 14, h: 18, body: [10, 6] }
+    { frame: 'stone-milestone', tx: 38, ty: 12, h: 18, body: [10, 6] }
   ]
 
   return {
@@ -317,7 +317,7 @@ function buildWoodland(): WorldData {
   ]
 
   const woodlandExits: ExitDef[] = [
-    { tx: 0, ty: 14, tw: 1, th: 3, to: 'village', entry: { tx: 2, ty: 12 } },
+    { tx: 0, ty: 14, tw: 1, th: 3, to: 'village', entry: { tx: 39, ty: 10 } },
     { tx: W - 1, ty: 21, tw: 1, th: 3, to: 'ruin', entry: { tx: 2, ty: 13 } }
   ]
   const trees = collectTrees(g)

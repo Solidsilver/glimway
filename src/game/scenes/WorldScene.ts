@@ -193,6 +193,9 @@ export class WorldScene extends Phaser.Scene {
     this.buildExitSigns()
     this.physics.add.collider(this.player, this.solidGroup)
 
+    // Arcade's world bounds default to the canvas size, which is larger than
+    // small maps — without this the hero can walk off the map edge.
+    this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
     this.applyZoom(this.scale.width, this.scale.height)
