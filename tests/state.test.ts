@@ -135,6 +135,7 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'area',
     'defeatedEnemies',
     'discoveries',
+    'emberXp',
     'embers',
     'flags',
     'hp',
@@ -146,6 +147,7 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'position',
     'quest',
     'version',
+    'xpEmbers',
   ]);
   assert.ok(!JSON.stringify(clean).includes('habitica-api-token'));
 });

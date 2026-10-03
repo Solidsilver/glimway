@@ -12,7 +12,7 @@ type Hooks = {
   __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number } }
   __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
   __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
-  __fsDevStrike?: (n: number) => void
+  __fsDevStrike?: (n: number, type?: string) => void
 }
 
 /** Fresh start: title screen → "Begin your journey" → world is live. */
@@ -45,8 +45,9 @@ export async function world(page: Page) {
   return page.evaluate(() => (window as unknown as Hooks).__fsWorld!())
 }
 
-export async function strikeAll(page: Page, n: number): Promise<void> {
-  await page.evaluate((d) => (window as unknown as Hooks).__fsDevStrike!(d), n)
+/** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). */
+export async function strikeAll(page: Page, n: number, type?: string): Promise<void> {
+  await page.evaluate(([d, t]) => (window as unknown as Hooks).__fsDevStrike!(d as number, t as string | undefined), [n, type] as const)
 }
 
 /** Hold a key for a while (real keydown/keyup, so Phaser sees it held). */

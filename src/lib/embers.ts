@@ -90,10 +90,35 @@ export function embersBetween(before: XpPoint, after: XpPoint): { xp: number; em
   };
 }
 
-export function grantEmbers(state: GameState, n: number): GameState {
+/**
+ * Credit XP against the paid-out high-water mark. Only XP above the highest
+ * lifetime total ever paid counts, so losing XP and earning it back (or
+ * unchecking and re-checking a task) pays nothing new. `mark` undefined means
+ * no paid history yet: nothing is credited and the mark is established.
+ */
+export function creditXp(mark: number | undefined, after: XpPoint): { xp: number; embers: number; mark: number | undefined } {
+  if (after.exp === undefined) return { xp: 0, embers: 0, mark };
+  const now = lifetimeXp(after.level, after.exp);
+  if (mark === undefined) return { xp: 0, embers: 0, mark: now };
+  if (now <= mark) return { xp: 0, embers: 0, mark };
+  return {
+    xp: Math.round(now - mark),
+    embers: Math.floor(now / XP_PER_EMBER) - Math.floor(mark / XP_PER_EMBER),
+    mark: now,
+  };
+}
+
+/** Add embers. `fromXp` marks them as earned on Habitica (the only kind
+ *  that can revive an imported hero from 0 HP). */
+export function grantEmbers(state: GameState, n: number, opts: { fromXp?: boolean } = {}): GameState {
   const current = validateSave(state);
   if (!Number.isFinite(n) || n <= 0) return current;
-  return { ...current, embers: current.embers + Math.floor(n) };
+  const add = Math.floor(n);
+  return {
+    ...current,
+    embers: current.embers + add,
+    xpEmbers: opts.fromXp ? current.xpEmbers + add : current.xpEmbers,
+  };
 }
 
 export function questEmbers(event: QuestEvent): number {
@@ -115,9 +140,21 @@ export type EmberSpend =
   | { kind: 'road-lantern'; id: RoadLanternId }
   | { kind: 'chest' };
 
+export type SpendReason = 'short' | 'done' | 'full' | 'needs-earned';
+
 export type SpendCheck =
   | { ok: true; cost: number }
-  | { ok: false; cost: number; reason: 'short' | 'done' | 'full' };
+  | { ok: false; cost: number; reason: SpendReason };
+
+/** Who is spending: an imported hero at 0 HP can only be revived by a rest
+ *  paid with XP-earned embers (gifts and quest embers don't lift the lock). */
+export interface SpendContext {
+  imported?: boolean;
+}
+
+export function isRevive(state: GameState, spend: EmberSpend, ctx: SpendContext): boolean {
+  return spend.kind === 'rest' && ctx.imported === true && state.hp <= 0;
+}
 
 export function spendCost(spend: EmberSpend): number {
   switch (spend.kind) {
@@ -139,8 +176,9 @@ export function chestOpened(state: GameState): boolean {
 }
 
 /** Whether a spend would go through, and why not ('done' = already bought,
- *  'full' = a rest would restore nothing). */
-export function checkSpend(state: GameState, spend: EmberSpend): SpendCheck {
+ *  'full' = a rest would restore nothing, 'needs-earned' = a 0-HP revive
+ *  needs embers earned on Habitica). */
+export function checkSpend(state: GameState, spend: EmberSpend, ctx: SpendContext = {}): SpendCheck {
   const cost = spendCost(spend);
   if (spend.kind === 'road-lantern' && isLit(state, spend.id)) return { ok: false, cost, reason: 'done' };
   if (spend.kind === 'chest' && chestOpened(state)) return { ok: false, cost, reason: 'done' };
@@ -148,15 +186,22 @@ export function checkSpend(state: GameState, spend: EmberSpend): SpendCheck {
     return { ok: false, cost, reason: 'full' };
   }
   if (state.embers < cost) return { ok: false, cost, reason: 'short' };
+  if (isRevive(state, spend, ctx) && state.xpEmbers < cost) return { ok: false, cost, reason: 'needs-earned' };
   return { ok: true, cost };
 }
 
 export class EmberSpendError extends Error {
-  readonly reason: 'short' | 'done' | 'full';
+  readonly reason: SpendReason;
 
-  constructor(reason: 'short' | 'done' | 'full') {
+  constructor(reason: SpendReason) {
     super(
-      reason === 'short' ? 'Not enough embers.' : reason === 'done' ? 'Already done.' : 'Already rested.',
+      reason === 'short'
+        ? 'Not enough embers.'
+        : reason === 'done'
+          ? 'Already done.'
+          : reason === 'full'
+            ? 'Already rested.'
+            : 'Reviving needs embers earned on Habitica.',
     );
     this.name = 'EmberSpendError';
     this.reason = reason;
@@ -164,11 +209,15 @@ export class EmberSpendError extends Error {
 }
 
 /** Apply a spend immutably; throws EmberSpendError when checkSpend says no. */
-export function spendEmbers(state: GameState, spend: EmberSpend): GameState {
+export function spendEmbers(state: GameState, spend: EmberSpend, ctx: SpendContext = {}): GameState {
   const current = validateSave(state);
-  const check = checkSpend(current, spend);
+  const check = checkSpend(current, spend, ctx);
   if (!check.ok) throw new EmberSpendError(check.reason);
-  const paid = { ...current, embers: current.embers - check.cost };
+  // A revive is paid from XP-earned embers; anything else spends gifted and
+  // quest embers first, keeping earned ones for when they matter most.
+  const gifted = current.embers - current.xpEmbers;
+  const fromXp = isRevive(current, spend, ctx) ? check.cost : Math.max(0, check.cost - gifted);
+  const paid = { ...current, embers: current.embers - check.cost, xpEmbers: current.xpEmbers - fromXp };
   switch (spend.kind) {
     case 'rest':
       // A warm rest bought with real-life progress: full local vitals. Never

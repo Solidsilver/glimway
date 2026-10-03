@@ -71,7 +71,7 @@
       </div>
     {/if}
     {#if resting}
-      <div class="resting">Resting in Hearthwick — heal on Habitica and sync, or rest by the lantern for {EMBER_COSTS.rest} embers.</div>
+      <div class="resting">Resting in Hearthwick — heal on Habitica and sync, or rest by the lantern with {EMBER_COSTS.rest} embers earned on Habitica.</div>
     {/if}
   </div>
 

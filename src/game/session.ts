@@ -15,7 +15,7 @@ import type { GameState, QuestEvent, QuestStage } from '../lib/state'
 import { advanceQuest, questObjective } from '../lib/state'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
 import { resolveDefeatRecovery } from '../lib/habitica/sync'
-import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck } from '../lib/embers'
+import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
 import { saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
 
@@ -161,21 +161,20 @@ export class Session {
   }
 
   checkSpend(spend: EmberSpend): SpendCheck {
-    return checkSpend(this.state, spend)
+    return checkSpend(this.state, spend, { imported: this.vitalsSource === 'imported' })
   }
 
-  /** Spend embers via the shared rules. Returns false (and changes nothing)
-   *  when the spend is not allowed. Saved promptly: it is a purchase. */
-  spend(spend: EmberSpend): boolean {
-    if (this.destroyed || this.syncInFlight) return false
-    try {
-      this.state = spendEmbers(this.state, spend)
-    } catch {
-      return false
-    }
+  /** Spend embers via the shared rules. Returns null on success, or why it
+   *  was refused (and nothing changed). Saved promptly: it is a purchase. */
+  spend(spend: EmberSpend): null | 'busy' | SpendReason {
+    if (this.destroyed || this.syncInFlight) return 'busy'
+    const ctx = { imported: this.vitalsSource === 'imported' }
+    const check = checkSpend(this.state, spend, ctx)
+    if (!check.ok) return check.reason
+    this.state = spendEmbers(this.state, spend, ctx)
     this.emitStats()
     this.saveSoon()
-    return true
+    return null
   }
 
   emitQuest(): void {

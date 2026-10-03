@@ -172,3 +172,79 @@ test('ember-spot conversations offer the spend only when it can go through', asy
   const opened = spendEmbers(rich, { kind: 'chest' });
   assert.equal(emberDialogue('chest', opened, { connected: true }).choices, undefined);
 });
+
+test('losing XP and earning it back never pays twice (no farming)', () => {
+  const base = profileFrom('lowLevel');
+  const exp0 = base.exp ?? 0;
+  let save = importedSave(base);
+  const gainedAt = (exp: number) => {
+    const r = syncProfile(save, { ...base, exp });
+    save = r.save;
+    return r.embers?.gained ?? 0;
+  };
+  // Check a 20 XP to-do, uncheck it, re-check it — five times over.
+  let total = 0;
+  for (let i = 0; i < 5; i++) {
+    total += gainedAt(exp0 + 20);
+    total += gainedAt(exp0);
+  }
+  assert.equal(total, 2, 'only the first 20 XP pays');
+  assert.equal(save.state.embers, 2);
+  // Genuinely new XP above the high-water mark still pays.
+  assert.equal(gainedAt(exp0 + 40), 2);
+});
+
+test('first import sets the XP mark so later syncs pay only new XP', () => {
+  const profile = profileFrom('lowLevel');
+  const first = syncProfile({ state: createNewGame(), vitalsSource: 'demo' }, profile);
+  assert.equal(first.save.state.emberXp, lifetimeXp(profile.level, profile.exp ?? 0));
+  const next = syncProfile(first.save, { ...profile, exp: (profile.exp ?? 0) + 30 });
+  assert.equal(next.embers?.xp, 30);
+});
+
+test('saves from before the XP mark fall back to the saved profile baseline', () => {
+  const before = profileFrom('lowLevel');
+  const save = importedSave(before); // emberXp 0 = unknown
+  const r = syncProfile(save, { ...before, exp: (before.exp ?? 0) + 20 });
+  assert.equal(r.embers?.xp, 20);
+  assert.ok(r.save.state.emberXp > 0);
+});
+
+test('a 0-HP imported hero can only be revived with embers earned on Habitica', () => {
+  // 3 gifted embers (welcome) — enough for a rest, but not a revive.
+  const down = { ...createNewGame(), hp: 0, embers: 3, xpEmbers: 0 };
+  assert.deepEqual(checkSpend(down, { kind: 'rest' }, { imported: true }), { ok: false, cost: EMBER_COSTS.rest, reason: 'needs-earned' });
+  // Demo heroes (or imported heroes above 0 HP) may rest with any embers.
+  assert.equal(checkSpend(down, { kind: 'rest' }).ok, true);
+  assert.equal(checkSpend({ ...down, hp: 1 }, { kind: 'rest' }, { imported: true }).ok, true);
+  // With XP-earned embers the revive goes through, paid from those.
+  const earned = { ...down, embers: 5, xpEmbers: 2 };
+  const revived = spendEmbers(earned, { kind: 'rest' }, { imported: true });
+  assert.equal(revived.hp, revived.maxHp);
+  assert.equal(revived.embers, 3);
+  assert.equal(revived.xpEmbers, 0);
+});
+
+test('ordinary spends use gifted embers first, keeping earned ones', () => {
+  const s = { ...createNewGame(), embers: 5, xpEmbers: 3 };
+  const lit = spendEmbers(s, { kind: 'road-lantern', id: 'road-1' });
+  assert.equal(lit.embers, 2);
+  assert.equal(lit.xpEmbers, 2, '2 gifted spent, then 1 earned');
+});
+
+test('XP synced from Habitica counts as earned embers; the welcome gift does not', () => {
+  const profile = profileFrom('lowLevel');
+  const first = syncProfile({ state: createNewGame(), vitalsSource: 'demo' }, profile);
+  assert.equal(first.save.state.xpEmbers, 0);
+  const next = syncProfile(first.save, { ...profile, exp: (profile.exp ?? 0) + 20 });
+  assert.equal(next.save.state.xpEmbers, 2);
+  assert.equal(next.save.state.embers, WELCOME_EMBERS + 2);
+});
+
+test('the hearth tells a downed imported hero it needs earned embers', async () => {
+  const { emberDialogue } = await import('../src/content/world.ts');
+  const down = { ...createNewGame(), hp: 0, embers: 3, xpEmbers: 0 };
+  const rest = emberDialogue('hearth', down, { connected: true }).choices?.find((c) => c.text.startsWith('Rest'));
+  assert.equal(rest?.disabled, true);
+  assert.match(rest?.note ?? '', /earned on Habitica/);
+});

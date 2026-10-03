@@ -470,12 +470,18 @@ function emberHint(connected: boolean): string {
     : `Embers come from real-life progress: connect Habitica in the Menu, and every ${XP_PER_EMBER} XP you earn there becomes an ember.`;
 }
 
-function spendChoice(state: GameState, label: string, spend: Parameters<typeof checkSpend>[1], action: string, reply: string[]): DialogueChoice {
-  const check = checkSpend(state, spend);
+function spendChoice(state: GameState, label: string, spend: Parameters<typeof checkSpend>[1], action: string, reply: string[], imported: boolean): DialogueChoice {
+  const check = checkSpend(state, spend, { imported });
   const cost = plural(check.cost, 'ember');
   if (check.ok) return { text: label, note: cost, action, reply };
   const note =
-    check.reason === 'short' ? `Needs ${cost}` : check.reason === 'full' ? 'Already rested' : 'Done';
+    check.reason === 'short'
+      ? `Needs ${cost}`
+      : check.reason === 'full'
+        ? 'Already rested'
+        : check.reason === 'needs-earned'
+          ? `Needs ${cost} earned on Habitica`
+          : 'Done';
   return { text: label, note, disabled: true };
 }
 
@@ -496,7 +502,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
       choices: [
         spendChoice(state, 'Rest by the flame', { kind: 'rest' }, 'rest', [
           'You sit with your back to the warm post. Aches loosen. Your head clears.',
-        ]),
+        ], opts.connected),
         { text: 'Just warm my hands', reply: ['You stay a moment. It helps a little, the way small warm things do.'] },
       ],
     };
@@ -521,7 +527,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
       choices: [
         spendChoice(state, 'Kindle the lock', { kind: 'chest' }, 'chest', [
           'The lock-flame flares and the lid sighs open. Inside, wrapped in oilcloth: a small charm, still warm.',
-        ]),
+        ], opts.connected),
         { text: 'Not yet' },
       ],
     };
@@ -542,7 +548,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
     choices: [
       spendChoice(state, 'Light it', { kind: 'road-lantern', id }, `light:${id}`, [
         'The flame catches and steadies. Stand in its light to catch your breath.',
-      ]),
+      ], opts.connected),
       { text: 'Leave it for now' },
     ],
   };

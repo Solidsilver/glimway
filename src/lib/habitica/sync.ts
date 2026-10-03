@@ -1,6 +1,6 @@
 import { recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
-import { embersBetween, grantEmbers, grantWelcome } from '../embers.ts';
+import { creditXp, grantEmbers, grantWelcome, lifetimeXp } from '../embers.ts';
 import type {
   HabiticaProfile,
   LoadedSave,
@@ -97,6 +97,8 @@ export function applyImportedProfile(current: GameState, profile: HabiticaProfil
     maxHp: p.maxHp,
     mana: Math.min(p.mp, p.maxMp),
     maxMana: p.maxMp,
+    // Past XP is not paid: the import marks today's lifetime XP as paid.
+    emberXp: Math.max(state.emberXp, creditXp(undefined, p).mark ?? 0),
   });
   return { state: next, vitalsSource: 'imported', importedProfile: p };
 }
@@ -188,9 +190,18 @@ export function syncProfile(
     notes.push('baseline established; no vitals credited');
   }
 
-  // XP earned in Habitica since the baseline becomes embers, exactly once:
-  // the baseline advances with this sync, so the same XP never pays twice.
-  const earned = baseline ? embersBetween(baseline, p) : { xp: 0, embers: 0 };
+  // XP earned in Habitica becomes embers exactly once: credit is measured
+  // against the highest lifetime XP ever paid (state.emberXp), which never
+  // falls — so XP lost and regained (an unchecked-then-rechecked task)
+  // cannot pay twice. Saves from before the mark fall back to the baseline.
+  const priorMark =
+    state.emberXp > 0
+      ? state.emberXp
+      : baseline?.exp !== undefined
+        ? lifetimeXp(baseline.level, baseline.exp)
+        : undefined;
+  const earned = creditXp(priorMark, p);
+  const emberXp = Math.max(state.emberXp, earned.mark ?? 0);
   if (earned.embers > 0) notes.push(`+${earned.xp} XP since last sync credited as ${earned.embers} embers`);
 
   // The profile itself is the new baseline even when local vitals did not
@@ -202,7 +213,8 @@ export function syncProfile(
     hp !== state.hp ||
     mana !== state.mana ||
     maxHp !== state.maxHp ||
-    maxMana !== state.maxMana;
+    maxMana !== state.maxMana ||
+    emberXp !== state.emberXp;
 
   if (!changed) {
     return {
@@ -215,7 +227,7 @@ export function syncProfile(
   return {
     status: 'synced',
     save: {
-      state: grantEmbers(validateSave({ ...state, hp, maxHp, mana, maxMana }), earned.embers),
+      state: grantEmbers(validateSave({ ...state, hp, maxHp, mana, maxMana, emberXp }), earned.embers, { fromXp: true }),
       vitalsSource: 'imported',
       importedProfile: p,
     },

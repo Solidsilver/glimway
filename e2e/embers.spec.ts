@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './fixtures'
 import { beginNewJourney, expectStage, strikeAll, talkThrough, warp } from './helpers'
 
 /** Read the save's ember balance and flags straight from IndexedDB. */

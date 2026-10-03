@@ -41,22 +41,28 @@ same UI are appended at the end of this file.
 
 Embers turn Habitica XP into an in-game currency without any write path:
 
-- **Source**: `syncProfile` compares lifetime XP (`level` + `exp`, on
-  Habitica's level curve) between the saved baseline profile and the fresh
-  one, and credits `floor(after / 10) - floor(before / 10)` embers. The
-  baseline advances with every accepted sync, so XP pays exactly once;
-  rejected syncs (outside the village, account switch) credit nothing and
-  keep the baseline. XP loss (a Habitica death) never removes embers.
-  Profiles saved before `exp` existed credit nothing until the next sync
-  establishes a baseline.
+- **Source**: `syncProfile` computes lifetime XP (`level` + `exp`, on
+  Habitica's level curve) and credits `floor(now / 10) - floor(mark / 10)`
+  embers, where `GameState.emberXp` is the highest lifetime XP ever paid. The
+  mark only rises, so XP lost and regained (unchecking and re-checking a task,
+  or a Habitica death followed by recovery) never pays twice. The import sets
+  the mark to the account's current XP (past XP is not paid). Rejected syncs
+  (outside the village, account switch) credit nothing and keep the mark.
+  XP loss never removes embers. Saves from before the mark fall back to the
+  saved profile's XP once. Habitica's "Fix Character Values" can still set
+  XP directly; a read-only client cannot tell that apart from earned XP.
 - **First import**: pays a one-off `WELCOME_EMBERS` gift, guarded by a save
   flag so disconnecting and reconnecting cannot repeat it. Past XP is not paid.
+- **Earned vs gifted**: `GameState.xpEmbers` counts embers that came from XP.
+  Ordinary spends use gifted (welcome/quest) embers first.
 - **Spending** is local only (`spendEmbers`): a warm rest restores local HP and
-  mana (this also lifts the imported zero-HP lock, because it was paid for with
-  real-life progress), road lanterns become rest spots, and the chest grants
-  the Ember Charm. None of these touch the Habitica account.
-- **Save shape**: `GameState.embers` and `GameState.flags` are optional on load
-  (older saves read as 0 and `[]`), so `SAVE_VERSION` stays 1.
+  mana. For an imported hero at 0 HP it lifts the zero-HP lock only when paid
+  with XP-earned embers (`needs-earned` otherwise), so the welcome gift can't
+  bypass the lock. Lit road lanterns restore mana for everyone but HP only for
+  demo vitals (no passive HP refill for imported heroes). The chest grants the
+  Ember Charm. None of these touch the Habitica account.
+- **Save shape**: `embers`, `flags`, `emberXp` and `xpEmbers` are optional on
+  load (older saves read as 0 / `[]`), so `SAVE_VERSION` stays 1.
 
 ## Module API
 

@@ -1,4 +1,5 @@
-import { devices, expect, test } from '@playwright/test'
+import { devices } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { warp } from './helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })

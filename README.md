@@ -66,16 +66,18 @@ tab's memory until Disconnect (never saved, exported, or logged), and the
 Health policy: importing replaces the demo vitals once; later syncs credit
 genuine external HP/MP changes **exactly once** (damage + unchanged profile
 never refills) and only in the village. Imported vitals get no passive
-healing; defeat wakes you at capped vitals (zero stays zero) and locks
-expeditions until a genuine external heal — village life (NPCs, journal,
-sync) keeps working. See [docs/import-contract.md](docs/import-contract.md).
+healing (lit road lanterns give them mana only); defeat wakes you at capped
+vitals (zero stays zero) and locks expeditions until a genuine external heal
+or a warm rest paid with embers earned from Habitica XP — village life (NPCs,
+journal, sync) keeps working. See [docs/import-contract.md](docs/import-contract.md).
 
 ### Embers: real-life progress lights the road
 
 Every 10 XP you earn **on Habitica** becomes an ember the next time you sync
-in Hearthwick. It's still read-only: the game compares your profile's
-level + XP with the copy saved at your last sync, credits the difference
-once, and moves the baseline forward (the same rule as HP credit). The first
+in Hearthwick. It's still read-only: the game keeps the highest lifetime XP
+it has ever paid out and credits only XP above that, so each XP pays once —
+losing XP and earning it back (unchecking and re-checking a task) pays
+nothing new. The first
 import pays a one-off welcome of 3 embers (not your past XP), and two story
 beats leave a few embers so demo players can try spending them too.
 
@@ -83,8 +85,8 @@ Spend them in the world:
 
 | Where | Cost | What you get |
 |---|---|---|
-| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana |
-| Three road lanterns along Brackenwood | 3 each | A lit rest spot that mends you while no enemy is near |
+| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana (at 0 HP, an imported hero needs embers earned from XP) |
+| Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone, health for demo heroes |
 | The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
 
 Rules live in `src/lib/embers.ts`, with tests in `tests/embers.test.ts`.

@@ -32,6 +32,16 @@ export interface GameState {
   embers: number;
   /** One-way world flags: lit road lanterns, opened chests, one-off gifts. */
   flags: string[];
+  /**
+   * Highest lifetime Habitica XP already paid out as embers (0 = not yet
+   * known). It only ever rises, so XP lost and earned back never pays twice.
+   */
+  emberXp: number;
+  /**
+   * How many of `embers` were earned from Habitica XP (not gifts or quest
+   * beats). Only these can revive an imported hero from 0 HP. Always <= embers.
+   */
+  xpEmbers: number;
 }
 
 export class InvalidSaveError extends Error {
@@ -90,6 +100,8 @@ export function createNewGame(): GameState {
     playSeconds: 0,
     embers: 0,
     flags: [],
+    emberXp: 0,
+    xpEmbers: 0,
   };
 }
 
@@ -222,6 +234,12 @@ export function validateSave(data: unknown): GameState {
   const embers =
     data.embers === undefined ? 0 : Math.floor(requireFiniteNumber(data.embers, 'embers', { min: 0 }));
   const flags = data.flags === undefined ? [] : requireStringArray(data.flags, 'flags');
+  const emberXp =
+    data.emberXp === undefined ? 0 : requireFiniteNumber(data.emberXp, 'emberXp', { min: 0 });
+  const xpEmbers = Math.min(
+    embers,
+    data.xpEmbers === undefined ? 0 : Math.floor(requireFiniteNumber(data.xpEmbers, 'xpEmbers', { min: 0 })),
+  );
 
   return {
     version: SAVE_VERSION,
@@ -238,6 +256,8 @@ export function validateSave(data: unknown): GameState {
     playSeconds,
     embers,
     flags,
+    emberXp,
+    xpEmbers,
   };
 }
 

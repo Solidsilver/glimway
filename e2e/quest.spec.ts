@@ -1,17 +1,7 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { beginNewJourney, expectStage, hold, player, strikeAll, talkThrough, warp, waitForArea, world } from './helpers'
 
 const TILE = 16
-
-test.beforeEach(async ({ page }) => {
-  const errors: string[] = []
-  page.on('pageerror', (e) => errors.push(e.message))
-  ;(page as unknown as { __errors: string[] }).__errors = errors
-})
-
-test.afterEach(async ({ page }) => {
-  expect((page as unknown as { __errors: string[] }).__errors, 'uncaught page errors').toEqual([])
-})
 
 test('the whole quest can be played from a fresh start to the ending', async ({ page }) => {
   await beginNewJourney(page)
@@ -74,6 +64,10 @@ test('the hero is confined to each map', async ({ page }) => {
 
 test('the area title card always names the area you are in', async ({ page }) => {
   await beginNewJourney(page)
+  // Leave while Hearthwick's card is still up, then again while Brackenwood's is.
+  await expect(page.locator('.area .title')).toHaveText('Hearthwick')
   await warp(page, 'woodland', 15, 20)
   await expect(page.locator('.area .title')).toHaveText('Brackenwood Path')
+  await warp(page, 'ruin', 3, 13)
+  await expect(page.locator('.area .title')).toHaveText('Ashwatch Ruin')
 })

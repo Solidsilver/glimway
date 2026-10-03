@@ -73,6 +73,8 @@ interface Enemy {
   hurtTimer: number
   /** Knockback in progress: physics velocity owned by the shove, AI paused. */
   knockTimer: number
+  /** Sidestepping an obstacle on the way home (seconds left). */
+  detourTimer: number
   knockX: number
   knockY: number
   /** Atlas art prefix for small enemies ('slime' | 'mushroom' | 'beetle'). */
@@ -289,7 +291,7 @@ export class WorldScene extends Phaser.Scene {
         blocked: { up: b.blocked.up, down: b.blocked.down, left: b.blocked.left, right: b.blocked.right }
       }
     }
-    ;(window as unknown as { __fsEnemies?: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: { w: number; h: number }; flipX: boolean; type: string; locked: boolean }> }).__fsEnemies =
+    ;(window as unknown as { __fsEnemies?: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: { x: number; y: number; w: number; h: number }; flipX: boolean; type: string; locked: boolean }> }).__fsEnemies =
       () => this.enemies.map((e) => {
         const b = e.sprite.body as Phaser.Physics.Arcade.Body
         return {
@@ -298,7 +300,7 @@ export class WorldScene extends Phaser.Scene {
           state: e.state,
           hp: e.hp,
           texture: e.sprite.texture.key,
-          body: { w: Math.round(b.width), h: Math.round(b.height) },
+          body: { x: b.x, y: b.y, w: Math.round(b.width), h: Math.round(b.height) },
           flipX: e.sprite.flipX,
           type: e.type,
           locked: e.state === 'telegraph' && (e.lungeX !== 0 || e.lungeY !== 0),
@@ -306,9 +308,9 @@ export class WorldScene extends Phaser.Scene {
         }
       })
     // Read-only map geometry, so playtests can check the hero is confined to it.
-    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number } } }).__fsWorld = () => {
+    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; solid: boolean[][] } }).__fsWorld = () => {
       const b = this.physics.world.bounds
-      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height } }
+      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: this.world.solid }
     }
     // Dev-only playtest lever: deal damage through the normal hurt path so
     // low-health and defeat beats can be checked without a long fight.
@@ -319,8 +321,11 @@ export class WorldScene extends Phaser.Scene {
         this.damagePlayer(n, this.player.x - 1)
       }
       w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
-      w.__fsDevStrike = (n: number) => {
-        for (const e of [...this.enemies]) this.damageEnemy(e, n, this.player.x)
+      // Roll in a given direction from inside the frame loop, so playtests can
+      // react to an aim lock without input latency.
+      w.__fsDevDodge = (dx: number, dy: number) => this.tryDodge(new Phaser.Math.Vector2(dx, dy))
+      w.__fsDevStrike = (n: number, type?: EnemyType) => {
+        for (const e of [...this.enemies]) if (!e.dead && (!type || e.type === type)) this.damageEnemy(e, n, this.player.x)
       }
     }
     // Sync-safety snapshot for the UI gate (read-only).
@@ -875,13 +880,17 @@ export class WorldScene extends Phaser.Scene {
       lungeY: 0,
       hurtTimer: 0,
       knockTimer: 0,
+      detourTimer: 0,
       knockX: 0,
       knockY: 0,
       art,
       dead: false
     }
     // Enemies respect walls, trees and water: a charge can end in a tree.
+    // They also stay on the map: an exit gap in the treeline is a way out
+    // for the hero, never for a beetle mid-charge.
     this.physics.add.collider(sprite, this.solidGroup)
+    ;(sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true)
     this.enemies.push(enemy)
     return enemy
   }
@@ -1229,7 +1238,8 @@ export class WorldScene extends Phaser.Scene {
     this.time.delayedCall(seconds * 1000, () => bang.destroy())
     if (enemy.type === 'beetle' && !this.reducedMotion) {
       // Pawing the ground: a small shiver while it winds up.
-      this.tweens.add({ targets: enemy.sprite, x: enemy.sprite.x + 1, duration: 45, yoyo: true, repeat: Math.floor(seconds * 1000 / 90) - 1 })
+      // Rocks on its feet (angle only: position stays owned by physics).
+      this.tweens.add({ targets: enemy.sprite, angle: 5, duration: 45, yoyo: true, repeat: Math.floor(seconds * 1000 / 90) - 1, onComplete: () => enemy.sprite.setAngle(0) })
     }
   }
 
@@ -1572,8 +1582,15 @@ export class WorldScene extends Phaser.Scene {
             ? { kind: 'road-lantern', id: action.slice(6) as RoadLanternId }
             : null
     if (!spend) return
-    if (!this.session.spend(spend)) {
-      bus.emit(EV.toast, { text: 'The flame gutters — not enough embers after all.', kind: 'error' })
+    const refused = this.session.spend(spend)
+    if (refused) {
+      const text =
+        refused === 'short' ? 'The flame gutters — not enough embers after all.'
+          : refused === 'full' ? 'You’re already rested. Keep your embers.'
+            : refused === 'done' ? 'That’s already done.'
+                : refused === 'needs-earned' ? 'Only embers earned on Habitica can get you back on your feet.'
+              : 'Hold on — your hero is still syncing. Try again in a moment.'
+      bus.emit(EV.toast, { text, kind: 'error' })
       return
     }
     sfx('lantern')
@@ -1805,6 +1822,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.worldLive()) this.tryDodge()
   }
 
+
   /** Current movement input (keys + joystick), not normalized. */
   private inputVector(): Phaser.Math.Vector2 {
     let dx = touchVec.x
@@ -1820,10 +1838,10 @@ export class WorldScene extends Phaser.Scene {
    * Dodge roll: a quick burst the way you're heading (or facing), with a
    * short window of invulnerability. Physics-driven, so walls still stop it.
    */
-  private tryDodge(): void {
+  private tryDodge(towards?: Phaser.Math.Vector2): void {
     if (uiBlocked() || this.cinematic || this.transitioning || this.session.persistenceInFlight) return
     if (this.dodgeCooldown > 0 || this.dashTime > 0) return
-    const dir = this.inputVector()
+    const dir = towards ?? this.inputVector()
     if (dir.lengthSq() < 0.01) dir.set(this.facing.x, this.facing.y)
     dir.normalize()
     const speed = this.riding ? DODGE.speed * 1.2 : DODGE.speed
@@ -1889,12 +1907,14 @@ export class WorldScene extends Phaser.Scene {
     // - HP regen only when the shared policy allows it (demo vitals, in the
     //   village). Imported vitals get NO passive refill anywhere.
     const state = this.session.state
-    // Lit road lanterns are ember-bought rest spots: they mend imported and
-    // demo vitals alike (still local only — Habitica is never touched).
+    // Lit road lanterns are ember-bought rest spots: mana for everyone, HP
+    // for demo heroes (still local only — Habitica is never touched).
     const rest = this.lanternRestRate()
     const mana = Math.min(state.maxMana, state.mana + (5 + 6 * rest) * dt)
     let hp = state.hp
-    if (rest > 0 && state.hp > 0) hp = Math.min(state.maxHp, hp + 2 * dt)
+    // HP only for demo vitals: imported health mirrors Habitica (approved
+    // policy: no passive HP refill for imported heroes, lanterns included).
+    if (rest > 0 && state.hp > 0 && passiveRegenAllowed(this.session.vitalsSource)) hp = Math.min(state.maxHp, hp + 2 * dt)
     if (
       passiveRegenAllowed(this.session.vitalsSource) &&
       this.world.areaId === 'village' &&
@@ -1960,9 +1980,20 @@ export class WorldScene extends Phaser.Scene {
       enemy.dirX = Math.cos(angle)
       enemy.dirY = Math.sin(angle)
     }
-    body.setVelocity(enemy.dirX * speed, enemy.dirY * speed)
+    const blocked = body.blocked.left || body.blocked.right || body.blocked.up || body.blocked.down
     const home = new Phaser.Math.Vector2(enemy.homeX - enemy.sprite.x, enemy.homeY - enemy.sprite.y)
-    if (home.length() > 90) body.setVelocity(home.x * 0.5, home.y * 0.5)
+    if (blocked && enemy.detourTimer <= 0) {
+      // Walking into a tree (now that enemies collide): slide sideways for a
+      // moment instead of pushing into it forever.
+      const side = home.lengthSq() > 0.01 ? home.clone().normalize() : new Phaser.Math.Vector2(enemy.dirX, enemy.dirY)
+      const sign = Math.random() < 0.5 ? 1 : -1
+      enemy.dirX = -side.y * sign
+      enemy.dirY = side.x * sign
+      enemy.detourTimer = 0.6
+    }
+    enemy.detourTimer = Math.max(0, enemy.detourTimer - dt)
+    body.setVelocity(enemy.dirX * speed, enemy.dirY * speed)
+    if (home.length() > 90 && enemy.detourTimer <= 0) body.setVelocity(home.x * 0.5, home.y * 0.5)
     if (Math.abs(enemy.dirX) > 0.2) enemy.sprite.setFlipX(enemy.dirX < 0)
   }
 
@@ -2140,6 +2171,8 @@ export class WorldScene extends Phaser.Scene {
         }
         if (enemy.attackTimer <= 0 && dist < 150) {
           enemy.state = 'telegraph'
+          enemy.lungeX = 0
+          enemy.lungeY = 0
           enemy.stateTimer = tune.telegraph
           enemy.sprite.setTint(0xd0e8ff)
         }
