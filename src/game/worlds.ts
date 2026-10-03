@@ -9,7 +9,8 @@ export type NpcId = 'mara' | 'pip' | 'orrin'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId
-export type EnemyType = 'wisp' | 'guardian'
+/** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
+export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
 export interface NpcSpot {
   id: NpcId
@@ -328,7 +329,11 @@ function buildWoodland(): WorldData {
   const enemies: EnemySpot[] = [
     { id: 'wisp-a', type: 'wisp', tx: 17, ty: 18 },
     { id: 'wisp-b', type: 'wisp', tx: 31, ty: 11 },
-    { id: 'wisp-c', type: 'wisp', tx: 45, ty: 19 }
+    { id: 'wisp-c', type: 'wisp', tx: 45, ty: 19 },
+    // Beetles guard the two long straight stretches, where a charge has
+    // room to build and a sidestep has room to land.
+    { id: 'beetle-a', type: 'beetle', tx: 35, ty: 13 },
+    { id: 'beetle-b', type: 'beetle', tx: 50, ty: 23 }
   ]
 
   const woodlandExits: ExitDef[] = [

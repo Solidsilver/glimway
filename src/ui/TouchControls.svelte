@@ -77,6 +77,11 @@
     bus.emit(EV.cast)
   }
 
+  function rollDown(e: PointerEvent): void {
+    e.preventDefault()
+    bus.emit(EV.dodge)
+  }
+
   const kit = $derived(getCombatKit(ui.importedProfile))
   const canAfford = $derived(ui.stats.mana >= kit.manaCost)
   const talkMode = $derived(!!ui.prompt.label && !ui.dialogueOpen)
@@ -111,6 +116,19 @@
     </div>
 
     <div class="actions">
+      <div class="col">
+      <button
+        type="button"
+        class="round roll"
+        onpointerdown={rollDown}
+        oncontextmenu={(e) => e.preventDefault()}
+        aria-label="Roll"
+      >
+        <Icon name="roll" size={20} />
+        {#key ui.roll.readyAt}
+          {#if ui.roll.readyAt > 0}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span>{/if}
+        {/key}
+      </button>
       <button
         type="button"
         class="round cast"
@@ -127,6 +145,7 @@
         {/key}
         <span class="cost"><Icon name="drop" size={9} />{kit.manaCost}</span>
       </button>
+      </div>
       <button
         type="button"
         class="round act"
@@ -226,10 +245,23 @@
     text-shadow: 0 1px 0 #2b1d1a, 1px 0 0 #2b1d1a, -1px 0 0 #2b1d1a, 0 -1px 0 #2b1d1a;
     white-space: nowrap;
   }
+  .col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 34px;
+    pointer-events: none;
+  }
+  .roll {
+    width: 46px;
+    height: 46px;
+    background: linear-gradient(180deg, #eef6e4, #b9d7a5);
+    color: #2c4a22;
+  }
   .cast {
     width: 60px;
     height: 60px;
-    margin-bottom: 34px;
     background: linear-gradient(180deg, #d6e6ff, #8fb3ec);
     color: #20365c;
     overflow: visible;

@@ -28,9 +28,13 @@ export const EV = {
   portraits: 'ui:portraits',
   /** A discovery was written into the journal. */
   discovery: 'ui:discovery',
+  /** The hero rolled (cooldown starts) — HUD/touch cooldown sweep. */
+  rolled: 'ui:rolled',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
+  /** Touch roll button. */
+  dodge: 'game:dodge',
   dpad: 'game:dpad',
   dialogueClosed: 'game:dialogue-closed'
 } as const

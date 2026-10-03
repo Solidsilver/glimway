@@ -119,6 +119,9 @@
       if (p.status === 'cast') ui.ability = { ...ui.ability, readyAt: performance.now() + (p.cooldown ?? 1) * 1000, cooldown: p.cooldown ?? 1 }
       else if (p.status === 'no-mana') ui.ability = { ...ui.ability, deniedAt: performance.now() }
     }
+    const onRolled = (p: { cooldown: number }) => {
+      ui.roll = { readyAt: performance.now() + p.cooldown * 1000, cooldown: p.cooldown }
+    }
     const onCinematic = (p: CinematicPayload) => {
       ui.cinematic = p.active
     }
@@ -137,6 +140,7 @@
       [EV.toast, onToast],
       [EV.defeat, onDefeat],
       [EV.ability, onAbility],
+      [EV.rolled, onRolled],
       [EV.cinematic, onCinematic],
       [EV.portraits, onPortraits],
       [EV.discovery, onDiscovery]
@@ -376,6 +380,7 @@
               <span><span class="kbd">WASD</span> walk</span>
               <span><span class="kbd">E</span> talk · act</span>
               <span><span class="kbd">F</span> ability</span>
+              <span><span class="kbd">Shift</span> roll</span>
               <span><span class="kbd">Esc</span> menu</span>
             </p>
           {/if}

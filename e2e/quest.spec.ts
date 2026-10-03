@@ -71,3 +71,9 @@ test('the hero is confined to each map', async ({ page }) => {
     expect(p.y).toBeLessThanOrEqual(w.heightPx)
   }
 })
+
+test('the area title card always names the area you are in', async ({ page }) => {
+  await beginNewJourney(page)
+  await warp(page, 'woodland', 15, 20)
+  await expect(page.locator('.area .title')).toHaveText('Brackenwood Path')
+})

@@ -25,6 +25,8 @@ export type SfxCue =
   | 'defeat'
   | 'step-area'
   | 'ember'
+  | 'windup'
+  | 'roll'
 
 const MUTE_KEY = 'fingersnap:muted'
 
@@ -203,6 +205,18 @@ export function sfx(cue: SfxCue): void {
         { freq: 659, at: 0.1, dur: 0.12, type: 'triangle', vol: 0.3 },
         { freq: 784, at: 0.2, dur: 0.12, type: 'triangle', vol: 0.3 },
         { freq: 1047, at: 0.3, dur: 0.3, type: 'triangle', vol: 0.28 }
+      ])
+    case 'windup':
+      // A short rising warble: something is about to lunge.
+      return playNotes([
+        { freq: 220, dur: 0.08, type: 'square', vol: 0.07 },
+        { freq: 300, at: 0.08, dur: 0.08, type: 'square', vol: 0.07 },
+        { freq: 400, at: 0.16, dur: 0.1, type: 'square', vol: 0.07 }
+      ])
+    case 'roll':
+      return playNotes([
+        { freq: 180, dur: 0.06, type: 'triangle', vol: 0.14 },
+        { freq: 130, at: 0.05, dur: 0.09, type: 'triangle', vol: 0.12 }
       ])
     case 'ember':
       // A small warm crackle-chime: embers landing in your pocket.

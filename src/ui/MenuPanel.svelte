@@ -380,6 +380,7 @@
         <div><dt><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span></dt><dd>Walk (arrows work too)</dd></div>
         <div><dt><span class="kbd">E</span> <span class="kbd">Space</span></dt><dd>Talk, use, attack</dd></div>
         <div><dt><span class="kbd">F</span></dt><dd>Signature ability</dd></div>
+        <div><dt><span class="kbd">Shift</span></dt><dd>Dodge roll — move when the enemy flashes white</dd></div>
         <div><dt><span class="kbd">J</span> <span class="kbd">C</span></dt><dd>Journal · Character</dd></div>
         <div><dt><span class="kbd">M</span></dt><dd>Ride your mount (Habitica heroes, outdoors)</dd></div>
         <div><dt><span class="kbd">Esc</span></dt><dd>Menu · close panels</dd></div>

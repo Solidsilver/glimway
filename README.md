@@ -104,9 +104,17 @@ so the rule is testable and single-sourced.
 | Move | WASD / arrow keys | Joystick (bottom left) |
 | Talk / use / attack | E or Space | Big button (bottom right; shows Talk near people) |
 | Cast signature ability | F | ✦ button (shows mana cost and cooldown) |
+| Dodge roll | Shift | Small green button above ✦ |
 | Pick a dialogue reply | 1 / 2 or arrows + Enter | Tap the reply |
 | Mount up / dismount | M | (outdoors, imported characters) |
 | Journal / Character / Menu | J / C / Esc | HUD buttons |
+
+Every real enemy attack is telegraphed: a windup pose, a "!" and a rising
+tone, then a white flash when its aim locks, which is your cue to step aside
+or roll. Slimes and mushrooms hop at you; beetles back off and then charge in
+a straight line, and a beetle that charges into a tree or wall is dazed and
+takes extra damage. Hits knock enemies (and you) back through physics, so
+nothing gets shoved through a wall.
 
 Dialogue pauses movement and combat. Touch controls appear on coarse-pointer
 devices; the layout is responsive with safe-area insets for phones.
@@ -204,10 +212,18 @@ account writes, and checkpoint rewind remain out of scope.
   except at exits, exits come back on the opposite edge beside the way home,
   the journey runs village → woodland → ruin left to right, and every NPC,
   enemy, exit and quest target is reachable from the spawn.
-- `npm run test:e2e` — Playwright playtests in `e2e/`: the whole quest from a
-  fresh start to the ending card (real keyboard input; warps and the dev
-  strike skip long walks and fights), exits round-tripping in the right
-  direction, and the hero staying inside every map.
+- `npm run test:e2e` — Playwright playtests in `e2e/` (real keyboard and touch
+  input; warps and the dev strike skip long walks and fights):
+  - `quest.spec.ts`: the whole quest from a fresh start to the ending card,
+    exits round-tripping in the right direction, the hero staying inside every
+    map, and area title cards naming the current area.
+  - `embers.spec.ts`: welcome embers from a sample hero, a warm rest, a
+    greyed-out chest, and lighting a road lantern with quest embers.
+  - `combat.spec.ts`: slime windups and hops, a beetle charge that hurts if
+    you stand still and misses if you roll when it flashes, and knockback that
+    never leaves an enemy off the map.
+  - `touch.spec.ts`: the phone layout's controls fit without overlapping, and
+    the roll button works.
 - Manual smoke test: full quest playthrough, scene transitions, collisions,
   dialogue pausing, resize/portrait layout, reload resume, save
   export/import, defeat recovery. Results and screenshots:

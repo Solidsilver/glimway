@@ -115,7 +115,7 @@ export const locations: Record<AreaId, LocationInfo> = {
   woodland: {
     name: 'Brackenwood Path',
     eyebrow: 'The old lantern road',
-    tagline: 'Cool shade, leaning stones — and wisps. Mind the wisps.',
+    tagline: 'Cool shade, leaning stones — and things that hop. Watch for the wind-up.',
     description:
       'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the east gate visible behind you.',
   },

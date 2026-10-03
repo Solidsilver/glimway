@@ -65,12 +65,18 @@ interface Enemy {
   dirY: number
   wanderTimer: number
   attackTimer: number
-  state: 'chase' | 'telegraph' | 'lunge' | 'recover'
+  state: 'chase' | 'telegraph' | 'lunge' | 'recover' | 'stunned'
   stateTimer: number
   lungeX: number
   lungeY: number
   /** Remaining hurt-pose window (seconds); visual only. */
   hurtTimer: number
+  /** Knockback in progress: physics velocity owned by the shove, AI paused. */
+  knockTimer: number
+  knockX: number
+  knockY: number
+  /** Atlas art prefix for small enemies ('slime' | 'mushroom' | 'beetle'). */
+  art: string
   dead: boolean
 }
 
@@ -103,11 +109,24 @@ const PLAYER_SPEED = 110
 const ATTACK_RANGE = 26
 const CONTACT_IFRAMES = 1.1
 
-/** Cozy-demo combat tuning: forgiving hit-and-recover rhythm. */
+/**
+ * Cozy-demo combat tuning: every real attack is telegraphed (a windup pose,
+ * a "!" and a rising tone) so it can be read and dodged; bumping into an
+ * enemy that isn't attacking only stings.
+ */
 const ENEMY_TUNING = {
-  wisp: { hp: 10, contact: 1, chase: 40, aggro: 90 },
+  // lock: seconds before launch when the aim freezes (with a white flash) —
+  // the moment to step aside.
+  wisp: { hp: 10, contact: 1, chase: 38, aggro: 90, hopRange: 46, windup: 0.5, lock: 0.18, hopSpeed: 175, hopTime: 0.24, hop: 2, recover: 0.65, cooldown: 1.4 },
+  beetle: { hp: 18, contact: 1, walk: 30, aggro: 130, keepAway: 64, chargeRange: 120, windup: 0.8, lock: 0.3, chargeSpeed: 220, chargeTime: 0.85, charge: 3, stun: 1.4, recover: 0.5, cooldown: 2.1, stunnedTakes: 1.5 },
   guardian: { hp: 44, contact: 2, lunge: 3, lungeSpeed: 250, telegraph: 0.65, cooldown: 3.2 }
 } as const
+
+/** Dodge roll: a short burst with invulnerability, on its own cooldown. */
+const DODGE = { speed: 240, time: 0.2, iframes: 0.32, cooldown: 0.75 }
+
+/** Knockback impulses (px/s) applied over KNOCK.time through physics. */
+const KNOCK = { small: 170, guardian: 60, player: 150, time: 0.13 }
 
 export class WorldScene extends Phaser.Scene {
   private session!: Session
@@ -153,6 +172,7 @@ export class WorldScene extends Phaser.Scene {
   private reducedMotion = false
   private captureReleased = false
   private cinematic = false
+  private dodgeCooldown = 0
 
   constructor() {
     super('World')
@@ -181,6 +201,7 @@ export class WorldScene extends Phaser.Scene {
     this.keyHint = null
     this.lightProps = []
     this.cinematic = false
+    this.dodgeCooldown = 0
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
 
@@ -208,10 +229,10 @@ export class WorldScene extends Phaser.Scene {
 
     // Input
     const kb = this.input.keyboard!
-    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,M')
+    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,M,SHIFT')
     this.cursors = kb.createCursorKeys()
     this.wasd = kb.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
-    this.actionKeys = kb.addKeys('E,SPACE,F,M') as Record<string, Phaser.Input.Keyboard.Key>
+    this.actionKeys = kb.addKeys('E,SPACE,F,M,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>
     // Event-driven, not polled: Key.onUp clears _justDown, so polling
     // JustDown once per frame silently drops taps shorter than a frame
     // (common on slower devices). DOWN fires once per press, never on repeat.
@@ -219,13 +240,16 @@ export class WorldScene extends Phaser.Scene {
     this.actionKeys.SPACE.on('down', this.onActionKey, this)
     this.actionKeys.F.on('down', this.onCastKey, this)
     this.actionKeys.M.on('down', this.onRideKey, this)
+    this.actionKeys.SHIFT.on('down', this.onDodgeKey, this)
     bus.on(EV.action, this.handleAction, this)
     bus.on(EV.cast, this.handleCast, this)
+    bus.on(EV.dodge, this.onDodgeKey, this)
     bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     this.events.once('shutdown', () => {
       for (const key of Object.values(this.actionKeys)) key.removeAllListeners('down')
       bus.off(EV.action, this.handleAction, this)
       bus.off(EV.cast, this.handleCast, this)
+      bus.off(EV.dodge, this.onDodgeKey, this)
       bus.off(EV.dialogueClosed, this.onDialogueClosed, this)
       // A restart mid-beat must never leave the HUD hidden and input blocked.
       if (this.cinematic) {
@@ -265,7 +289,7 @@ export class WorldScene extends Phaser.Scene {
         blocked: { up: b.blocked.up, down: b.blocked.down, left: b.blocked.left, right: b.blocked.right }
       }
     }
-    ;(window as unknown as { __fsEnemies?: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: { w: number; h: number }; flipX: boolean }> }).__fsEnemies =
+    ;(window as unknown as { __fsEnemies?: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: { w: number; h: number }; flipX: boolean; type: string; locked: boolean }> }).__fsEnemies =
       () => this.enemies.map((e) => {
         const b = e.sprite.body as Phaser.Physics.Arcade.Body
         return {
@@ -276,6 +300,8 @@ export class WorldScene extends Phaser.Scene {
           texture: e.sprite.texture.key,
           body: { w: Math.round(b.width), h: Math.round(b.height) },
           flipX: e.sprite.flipX,
+          type: e.type,
+          locked: e.state === 'telegraph' && (e.lungeX !== 0 || e.lungeY !== 0),
           tint: '0x' + e.sprite.tintTopLeft.toString(16).padStart(6, '0')
         }
       })
@@ -808,10 +834,10 @@ export class WorldScene extends Phaser.Scene {
     // placeholder otherwise). Every pose shares the same 24x24 texture size
     // and (0.5, 1) origin, so the intended world size and the authored
     // 20x10 foot body are identical across poses.
-    const isMushroom = id === 'wisp-c'
-    const frame = type === 'guardian' ? 'guardian0' : isMushroom ? 'mushroom-idle' : 'slime-idle'
+    const art = type === 'beetle' ? 'beetle' : id === 'wisp-c' ? 'mushroom' : 'slime'
+    const frame = type === 'guardian' ? 'guardian0' : `${art}-idle`
     const texKey = type === 'guardian' ? this.guardianPoseTexture('idle', 'guardian0') : 'fingersnap-enemies'
-    const displayH = type === 'guardian' ? 24 : 14
+    const displayH = type === 'guardian' ? 24 : type === 'beetle' ? 13 : 14
     const sprite = this.physics.add.sprite(tx * TILE + 8, ty * TILE + TILE, texKey, type === 'guardian' ? undefined : frame)
       .setOrigin(0.5, 1)
     if (type !== 'guardian') {
@@ -822,7 +848,7 @@ export class WorldScene extends Phaser.Scene {
       const ebody = sprite.body as Phaser.Physics.Arcade.Body
       ebody.setSize(10 / s, 4 / s)
       ebody.setOffset(f.width / 2 - 5 / s, f.height - 4 / s)
-      const anim = isMushroom ? 'mushroom-idle' : 'slime-idle'
+      const anim = `${art}-idle`
       if (this.anims.exists(anim)) sprite.play(anim)
     } else {
       const gbody = sprite.body as Phaser.Physics.Arcade.Body
@@ -835,8 +861,8 @@ export class WorldScene extends Phaser.Scene {
       id,
       type,
       sprite,
-      hp: type === 'wisp' ? ENEMY_TUNING.wisp.hp : ENEMY_TUNING.guardian.hp,
-      maxHp: type === 'wisp' ? ENEMY_TUNING.wisp.hp : ENEMY_TUNING.guardian.hp,
+      hp: ENEMY_TUNING[type].hp,
+      maxHp: ENEMY_TUNING[type].hp,
       homeX: tx * TILE + 8,
       homeY: ty * TILE + TILE,
       dirX: 0,
@@ -848,8 +874,14 @@ export class WorldScene extends Phaser.Scene {
       lungeX: 0,
       lungeY: 0,
       hurtTimer: 0,
+      knockTimer: 0,
+      knockX: 0,
+      knockY: 0,
+      art,
       dead: false
     }
+    // Enemies respect walls, trees and water: a charge can end in a tree.
+    this.physics.add.collider(sprite, this.solidGroup)
     this.enemies.push(enemy)
     return enemy
   }
@@ -1097,6 +1129,11 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private damageEnemy(enemy: Enemy, amount: number, fromX: number, crit = false): void {
+    // A dazed beetle (charged into something) is wide open.
+    if (enemy.type === 'beetle' && enemy.state === 'stunned') {
+      amount *= ENEMY_TUNING.beetle.stunnedTakes
+      crit = true
+    }
     enemy.hp -= amount
     this.floatText(enemy.sprite.x, enemy.sprite.y - (enemy.type === 'guardian' ? 26 : 16), crit ? `${Math.round(amount)}!` : `${Math.round(amount)}`, crit ? '#ffd24a' : '#fffbef', crit)
     sfx(crit ? 'crit' : 'hit')
@@ -1110,13 +1147,90 @@ export class WorldScene extends Phaser.Scene {
         else enemy.sprite.clearTint()
       }
     })
-    const knock = enemy.type === 'wisp' ? 26 : 8
-    enemy.sprite.x += Math.sign(enemy.sprite.x - fromX) * knock
+    this.knockEnemy(enemy, fromX)
     if (enemy.hp <= 0) {
       this.killEnemy(enemy)
       return
     }
     if (enemy.type === 'guardian') this.flashGuardianHurt(enemy)
+  }
+
+  /**
+   * Shove an enemy away from the hit through physics (walls still apply).
+   * Hopping slimes are knocked out of their hop; a charging beetle is too
+   * heavy to stop, and the warden only rocks back between lunges.
+   */
+  private knockEnemy(enemy: Enemy, fromX: number): void {
+    if (enemy.type === 'beetle' && enemy.state === 'lunge') return
+    if (enemy.type === 'guardian' && enemy.state === 'lunge') return
+    const dir = new Phaser.Math.Vector2(enemy.sprite.x - fromX, (enemy.sprite.y - this.player.y) * 0.5)
+    if (dir.lengthSq() < 0.01) dir.set(this.facing.x, this.facing.y)
+    dir.normalize()
+    const speed = enemy.type === 'guardian' ? KNOCK.guardian : KNOCK.small
+    enemy.knockX = dir.x * speed
+    enemy.knockY = dir.y * speed
+    enemy.knockTimer = KNOCK.time
+    if (enemy.type === 'wisp' && (enemy.state === 'telegraph' || enemy.state === 'lunge')) {
+      // Interrupted: the windup is lost, so a quick hit is a real answer.
+      enemy.state = 'recover'
+      enemy.stateTimer = ENEMY_TUNING.wisp.recover
+      enemy.sprite.clearTint()
+    }
+    if (enemy.type !== 'guardian') this.setEnemyPose(enemy, 'hurt')
+    enemy.hurtTimer = 0.22
+  }
+
+  /** Small-enemy pose: the idle loop, or a held atlas frame. */
+  private setEnemyPose(enemy: Enemy, pose: 'idle' | 'windup' | 'squash' | 'hurt'): void {
+    if (enemy.type === 'guardian' || enemy.dead || !enemy.sprite.active) return
+    if (pose === 'idle') {
+      const anim = `${enemy.art}-idle`
+      if (enemy.sprite.anims.currentAnim?.key !== anim || !enemy.sprite.anims.isPlaying) {
+        if (this.anims.exists(anim)) enemy.sprite.play(anim)
+      }
+      return
+    }
+    enemy.sprite.anims.stop()
+    enemy.sprite.setFrame(`${enemy.art}-${pose}`)
+  }
+
+  /**
+   * Freeze the attack's aim at the player's position now, with a white flash
+   * so the lock reads. Returns true the first frame it locks.
+   */
+  private lockAim(enemy: Enemy, lockAt: number, speed: number, px: number, py: number): boolean {
+    if (enemy.stateTimer > lockAt || enemy.lungeX !== 0 || enemy.lungeY !== 0) return false
+    const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y)
+    if (dir.lengthSq() < 0.01) dir.set(enemy.sprite.flipX ? -1 : 1, 0)
+    dir.normalize()
+    enemy.lungeX = dir.x * speed
+    enemy.lungeY = dir.y * speed
+    enemy.sprite.setTintFill(0xffffff)
+    this.time.delayedCall(70, () => {
+      if (!enemy.dead && enemy.sprite.active && enemy.state === 'telegraph') enemy.sprite.setTint(0xffd0c0)
+    })
+    return true
+  }
+
+  /** The tell before a real attack: windup pose, a "!" and a rising tone. */
+  private telegraph(enemy: Enemy, seconds: number): void {
+    this.setEnemyPose(enemy, 'windup')
+    enemy.sprite.setTint(0xffd0c0)
+    sfx('windup')
+    const bang = this.add.text(enemy.sprite.x, enemy.sprite.y - (enemy.type === 'beetle' ? 18 : 20), '!', {
+      fontFamily: '"Pixelify Sans", monospace',
+      fontSize: '14px',
+      color: '#ffcf4a',
+      stroke: '#3a1a10',
+      strokeThickness: 4,
+      resolution: 3
+    }).setOrigin(0.5, 1).setDepth(6100)
+    this.tweens.add({ targets: bang, y: bang.y - 4, scale: { from: 0.4, to: 1 }, duration: 140, ease: 'Back.easeOut' })
+    this.time.delayedCall(seconds * 1000, () => bang.destroy())
+    if (enemy.type === 'beetle' && !this.reducedMotion) {
+      // Pawing the ground: a small shiver while it winds up.
+      this.tweens.add({ targets: enemy.sprite, x: enemy.sprite.x + 1, duration: 45, yoyo: true, repeat: Math.floor(seconds * 1000 / 90) - 1 })
+    }
   }
 
   // ------------------------------------------------------------- combat
@@ -1325,7 +1439,7 @@ export class WorldScene extends Phaser.Scene {
     bolt.setData('life', 1.2)
   }
 
-  private damagePlayer(amount: number, fromX: number): void {
+  private damagePlayer(amount: number, fromX: number, fromY = this.player.y): void {
     if (this.iframes > 0 || this.transitioning) return
     const state = this.session.state
     // kit.mitigation is a FRACTION (0..0.45, shared combat contract), not a
@@ -1351,8 +1465,13 @@ export class WorldScene extends Phaser.Scene {
         onComplete: () => body.setAlpha(1)
       })
     }
-    const dir = Math.sign(this.player.x - fromX) || 1
-    this.player.x += dir * 6
+    // Knocked back through physics (never into a wall); the dash window
+    // stops ordinary movement from cancelling the shove.
+    const away = new Phaser.Math.Vector2(this.player.x - fromX, this.player.y - fromY)
+    if (away.lengthSq() < 0.01) away.set(-this.facing.x, -this.facing.y)
+    away.normalize()
+    this.player.setVelocity(away.x * KNOCK.player, away.y * KNOCK.player)
+    this.dashTime = Math.max(this.dashTime, KNOCK.time)
     if (this.session.state.hp <= 0) this.defeatRecovery()
   }
 
@@ -1629,6 +1748,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
     this.castCooldown = Math.max(0, this.castCooldown - dt)
+    this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt)
     this.iframes = Math.max(0, this.iframes - dt)
     this.session.tickPlaySeconds(dt)
 
@@ -1679,6 +1799,58 @@ export class WorldScene extends Phaser.Scene {
 
   private onRideKey(): void {
     if (this.worldLive()) void this.toggleRide()
+  }
+
+  private onDodgeKey(): void {
+    if (this.worldLive()) this.tryDodge()
+  }
+
+  /** Current movement input (keys + joystick), not normalized. */
+  private inputVector(): Phaser.Math.Vector2 {
+    let dx = touchVec.x
+    let dy = touchVec.y
+    if (this.cursors.left.isDown || this.wasd.A.isDown) dx -= 1
+    if (this.cursors.right.isDown || this.wasd.D.isDown) dx += 1
+    if (this.cursors.up.isDown || this.wasd.W.isDown) dy -= 1
+    if (this.cursors.down.isDown || this.wasd.S.isDown) dy += 1
+    return new Phaser.Math.Vector2(dx, dy)
+  }
+
+  /**
+   * Dodge roll: a quick burst the way you're heading (or facing), with a
+   * short window of invulnerability. Physics-driven, so walls still stop it.
+   */
+  private tryDodge(): void {
+    if (uiBlocked() || this.cinematic || this.transitioning || this.session.persistenceInFlight) return
+    if (this.dodgeCooldown > 0 || this.dashTime > 0) return
+    const dir = this.inputVector()
+    if (dir.lengthSq() < 0.01) dir.set(this.facing.x, this.facing.y)
+    dir.normalize()
+    const speed = this.riding ? DODGE.speed * 1.2 : DODGE.speed
+    this.player.setVelocity(dir.x * speed, dir.y * speed)
+    this.dashTime = DODGE.time
+    this.iframes = Math.max(this.iframes, DODGE.iframes)
+    this.dodgeCooldown = DODGE.cooldown
+    sfx('roll')
+    bus.emit(EV.rolled, { cooldown: DODGE.cooldown })
+    const body = this.avatarContainer ?? this.player
+    if (!this.reducedMotion) {
+      const sy = body.scaleY
+      this.tweens.add({ targets: body, scaleY: sy * 0.75, duration: DODGE.time * 500, yoyo: true, onComplete: () => body.setScale(body.scaleX, sy) })
+      body.setAlpha(0.65)
+      this.time.delayedCall(DODGE.iframes * 1000, () => body.setAlpha(1))
+    }
+    // A puff of dust where you left.
+    const dust = this.add.particles(this.player.x, this.player.y - 2, 'spark', {
+      speed: { min: 10, max: 35 },
+      lifespan: 300,
+      quantity: 5,
+      scale: { start: 0.7, end: 0 },
+      tint: 0xc8b28a,
+      emitting: false
+    }).setDepth(this.player.y - 1)
+    dust.explode(5)
+    this.time.delayedCall(400, () => dust.destroy())
   }
 
   private movePlayer(dt: number): void {
@@ -1737,41 +1909,217 @@ export class WorldScene extends Phaser.Scene {
     const px = this.player.x
     const py = this.player.y - 8
     for (const enemy of [...this.enemies]) {
+      if (enemy.dead) continue
       const ex = enemy.sprite.x
       const ey = enemy.sprite.y - 6
       const dist = Math.hypot(px - ex, py - ey)
-      if (enemy.type === 'wisp') {
-        this.updateWisp(enemy, dt, dist, px, py)
+      const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+      if (enemy.knockTimer > 0) {
+        // Shoved: physics owns the body for a beat, the AI waits.
+        enemy.knockTimer -= dt
+        body.setVelocity(enemy.knockX, enemy.knockY)
+        enemy.stateTimer -= dt
+        if (enemy.knockTimer <= 0) {
+          body.setVelocity(0, 0)
+          if (enemy.type !== 'guardian' && enemy.state !== 'telegraph' && enemy.state !== 'stunned') this.setEnemyPose(enemy, 'idle')
+        }
+      } else if (enemy.type === 'wisp') {
+        this.updateHopper(enemy, dt, dist, px, py)
+      } else if (enemy.type === 'beetle') {
+        this.updateBeetle(enemy, dt, dist, px, py)
       } else {
         this.updateGuardian(enemy, dt, dist, px, py)
       }
-      // Contact damage
-      const reach = enemy.type === 'guardian' && enemy.state === 'lunge' ? 18 : 13
-      const dmg = enemy.type === 'guardian'
-        ? enemy.state === 'lunge' ? ENEMY_TUNING.guardian.lunge : ENEMY_TUNING.guardian.contact
-        : ENEMY_TUNING.wisp.contact
-      if (dist < reach) this.damagePlayer(dmg, ex)
+      // Contact damage: attacks hit hard; a bump only stings.
+      let reach = 12
+      let dmg: number = ENEMY_TUNING[enemy.type].contact
+      if (enemy.type === 'guardian' && enemy.state === 'lunge') {
+        reach = 18
+        dmg = ENEMY_TUNING.guardian.lunge
+      } else if (enemy.type === 'wisp' && enemy.state === 'lunge') {
+        reach = 14
+        dmg = ENEMY_TUNING.wisp.hop
+      } else if (enemy.type === 'beetle' && enemy.state === 'lunge') {
+        reach = 15
+        dmg = ENEMY_TUNING.beetle.charge
+      } else if (enemy.type === 'beetle' && enemy.state === 'stunned') {
+        dmg = 0
+      }
+      if (dmg > 0 && dist < reach) this.damagePlayer(dmg, ex, enemy.sprite.y)
       enemy.sprite.setDepth(enemy.sprite.y)
     }
   }
 
-  private updateWisp(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
+  /** Idle wandering near home, used by small enemies out of aggro range. */
+  private wander(enemy: Enemy, dt: number, speed: number): void {
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
-    if (dist < ENEMY_TUNING.wisp.aggro) {
-      const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y).normalize()
-      body.setVelocity(dir.x * ENEMY_TUNING.wisp.chase, dir.y * ENEMY_TUNING.wisp.chase)
-    } else {
-      enemy.wanderTimer -= dt
-      if (enemy.wanderTimer <= 0) {
-        enemy.wanderTimer = 1 + Math.random() * 1.6
-        const angle = Math.random() * Math.PI * 2
-        enemy.dirX = Math.cos(angle)
-        enemy.dirY = Math.sin(angle)
+    enemy.wanderTimer -= dt
+    if (enemy.wanderTimer <= 0) {
+      enemy.wanderTimer = 1 + Math.random() * 1.6
+      const angle = Math.random() * Math.PI * 2
+      enemy.dirX = Math.cos(angle)
+      enemy.dirY = Math.sin(angle)
+    }
+    body.setVelocity(enemy.dirX * speed, enemy.dirY * speed)
+    const home = new Phaser.Math.Vector2(enemy.homeX - enemy.sprite.x, enemy.homeY - enemy.sprite.y)
+    if (home.length() > 90) body.setVelocity(home.x * 0.5, home.y * 0.5)
+    if (Math.abs(enemy.dirX) > 0.2) enemy.sprite.setFlipX(enemy.dirX < 0)
+  }
+
+  /**
+   * Slimes and mushrooms: shuffle closer, then a telegraphed hop at where
+   * you stood when the windup ended. Step aside (or roll) and it lands short.
+   */
+  private updateHopper(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
+    const t = ENEMY_TUNING.wisp
+    const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+    enemy.attackTimer -= dt
+    enemy.stateTimer -= dt
+    switch (enemy.state) {
+      case 'chase': {
+        if (dist >= t.aggro) {
+          this.wander(enemy, dt, 26)
+          break
+        }
+        const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y).normalize()
+        if (dist > t.hopRange * 0.7) body.setVelocity(dir.x * t.chase, dir.y * t.chase)
+        else body.setVelocity(0, 0)
+        if (Math.abs(dir.x) > 0.2) enemy.sprite.setFlipX(dir.x < 0)
+        if (enemy.attackTimer <= 0 && dist < t.hopRange) {
+          enemy.state = 'telegraph'
+          enemy.stateTimer = t.windup
+          enemy.lungeX = 0
+          enemy.lungeY = 0
+          body.setVelocity(0, 0)
+          this.telegraph(enemy, t.windup)
+        }
+        break
       }
-      body.setVelocity(enemy.dirX * 26, enemy.dirY * 26)
-      // Drift home
-      const home = new Phaser.Math.Vector2(enemy.homeX - enemy.sprite.x, enemy.homeY - enemy.sprite.y)
-      if (home.length() > 90) body.setVelocity(home.x * 0.5, home.y * 0.5)
+      case 'telegraph': {
+        body.setVelocity(0, 0)
+        this.lockAim(enemy, t.lock, t.hopSpeed, px, py)
+        if (enemy.stateTimer <= 0) {
+          // A shove can skip the lock frame; never launch without an aim.
+          this.lockAim(enemy, Infinity, t.hopSpeed, px, py)
+          enemy.state = 'lunge'
+          enemy.stateTimer = t.hopTime
+          enemy.sprite.clearTint()
+          this.setEnemyPose(enemy, 'idle')
+          if (!this.reducedMotion) {
+            this.tweens.add({ targets: enemy.sprite, scaleY: enemy.sprite.scaleY * 1.25, scaleX: enemy.sprite.scaleX * 0.85, duration: t.hopTime * 500, yoyo: true })
+          }
+        }
+        break
+      }
+      case 'lunge': {
+        body.setVelocity(enemy.lungeX, enemy.lungeY)
+        if (enemy.stateTimer <= 0) {
+          enemy.state = 'recover'
+          enemy.stateTimer = t.recover
+          body.setVelocity(0, 0)
+          this.setEnemyPose(enemy, 'squash')
+        }
+        break
+      }
+      default: {
+        // recover: squashed and open for a moment after landing.
+        body.setVelocity(0, 0)
+        if (enemy.stateTimer <= 0) {
+          enemy.state = 'chase'
+          enemy.attackTimer = t.cooldown * (0.8 + Math.random() * 0.5)
+          this.setEnemyPose(enemy, 'idle')
+        }
+      }
+    }
+  }
+
+  /**
+   * Beetles: plod toward you, paw the ground, then charge in a straight line
+   * locked at the end of the windup. A charge that hits a tree or wall leaves
+   * the beetle dazed and taking extra damage.
+   */
+  private updateBeetle(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
+    const t = ENEMY_TUNING.beetle
+    const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+    enemy.attackTimer -= dt
+    enemy.stateTimer -= dt
+    switch (enemy.state) {
+      case 'chase': {
+        if (dist >= t.aggro) {
+          this.wander(enemy, dt, 18)
+          break
+        }
+        const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y).normalize()
+        // Keep a charging distance: approach from afar, back off up close.
+        if (dist > t.keepAway + 16) body.setVelocity(dir.x * t.walk, dir.y * t.walk)
+        else if (dist < t.keepAway - 16) body.setVelocity(-dir.x * t.walk * 0.7, -dir.y * t.walk * 0.7)
+        else body.setVelocity(0, 0)
+        if (Math.abs(dir.x) > 0.2) enemy.sprite.setFlipX(dir.x < 0)
+        if (enemy.attackTimer <= 0 && dist < t.chargeRange) {
+          enemy.state = 'telegraph'
+          enemy.stateTimer = t.windup
+          enemy.lungeX = 0
+          enemy.lungeY = 0
+          body.setVelocity(0, 0)
+          this.telegraph(enemy, t.windup)
+        }
+        break
+      }
+      case 'telegraph': {
+        body.setVelocity(0, 0)
+        if (enemy.lungeX === 0 && enemy.lungeY === 0) {
+          const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y)
+          if (Math.abs(dir.x) > 4) enemy.sprite.setFlipX(dir.x < 0)
+        }
+        this.lockAim(enemy, t.lock, t.chargeSpeed, px, py)
+        if (enemy.stateTimer <= 0) {
+          this.lockAim(enemy, Infinity, t.chargeSpeed, px, py)
+          enemy.state = 'lunge'
+          enemy.stateTimer = t.chargeTime
+          enemy.sprite.clearTint()
+          this.setEnemyPose(enemy, 'squash')
+          sfx('swing')
+        }
+        break
+      }
+      case 'lunge': {
+        body.setVelocity(enemy.lungeX, enemy.lungeY)
+        const crashed = body.blocked.left || body.blocked.right || body.blocked.up || body.blocked.down
+        if (crashed) {
+          enemy.state = 'stunned'
+          enemy.stateTimer = t.stun
+          body.setVelocity(0, 0)
+          this.setEnemyPose(enemy, 'hurt')
+          sfx('hit')
+          if (!this.reducedMotion) this.cameras.main.shake(90, 0.004)
+          this.floatText(enemy.sprite.x, enemy.sprite.y - 18, 'Dazed!', '#ffe08a', false)
+          this.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 6)
+        } else if (enemy.stateTimer <= 0) {
+          enemy.state = 'recover'
+          enemy.stateTimer = t.recover
+          body.setVelocity(0, 0)
+          this.setEnemyPose(enemy, 'idle')
+        }
+        break
+      }
+      case 'stunned': {
+        body.setVelocity(0, 0)
+        if (!this.reducedMotion) enemy.sprite.setAngle(Math.sin(enemy.stateTimer * 30) * 6)
+        if (enemy.stateTimer <= 0) {
+          enemy.sprite.setAngle(0)
+          enemy.state = 'chase'
+          enemy.attackTimer = t.cooldown
+          this.setEnemyPose(enemy, 'idle')
+        }
+        break
+      }
+      default: {
+        body.setVelocity(0, 0)
+        if (enemy.stateTimer <= 0) {
+          enemy.state = 'chase'
+          enemy.attackTimer = t.cooldown * (0.8 + Math.random() * 0.4)
+        }
+      }
     }
   }
 

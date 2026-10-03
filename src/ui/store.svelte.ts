@@ -38,6 +38,8 @@ class UiStore {
   portraits = $state<Record<string, string>>({})
   /** Signature ability readiness for the HUD slot / touch button. */
   ability = $state<{ readyAt: number; cooldown: number; deniedAt: number }>({ readyAt: 0, cooldown: 1, deniedAt: 0 })
+  /** Dodge roll cooldown for the HUD slot / touch button. */
+  roll = $state<{ readyAt: number; cooldown: number }>({ readyAt: 0, cooldown: 1 })
   /** Queue of quest beats / area titles (shown one at a time). */
   banners = $state<Banner[]>([])
   /** Defeat overlay phase. */
@@ -60,9 +62,10 @@ class UiStore {
 
   banner(b: Omit<Banner, 'id'>): void {
     const id = Math.random().toString(36).slice(2)
-    // A newer banner of the same kind supersedes any not yet seen: a stale
-    // area title or an already-overtaken quest beat is never shown late.
-    const rest = this.banners.filter((x) => x.kind !== b.kind || x.id === this.shownBannerId)
+    // A newer banner of the same kind supersedes any not yet seen, so an
+    // overtaken quest beat is never shown late. Area titles describe where
+    // you are now: a new one replaces even the title on screen.
+    const rest = this.banners.filter((x) => x.kind !== b.kind || (b.kind === 'quest' && x.id === this.shownBannerId))
     this.banners = [...rest, { ...b, id }]
   }
 

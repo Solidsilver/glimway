@@ -111,6 +111,16 @@
       <span class="label">{kit.signatureName}</span>
       <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span>
     </div>
+    <div class="slot roll">
+      <div class="face"><Icon name="roll" size={20} /></div>
+      {#key ui.roll.readyAt}
+        {#if ui.roll.readyAt > 0}
+          <div class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></div>
+        {/if}
+      {/key}
+      <span class="kbd wide">Shift</span>
+      <span class="label">Roll</span>
+    </div>
   </div>
 {/if}
 
@@ -342,6 +352,14 @@
   .slot.sig .face {
     background: linear-gradient(180deg, #d6e6ff, #8fb3ec);
     color: #20365c;
+  }
+  .slot.roll .face {
+    background: linear-gradient(180deg, #eef6e4, #b9d7a5);
+    color: #2c4a22;
+  }
+  .slot .kbd.wide {
+    right: -8px;
+    font-size: 10px;
   }
   .slot.dim .face {
     filter: grayscale(0.7) brightness(0.85);
