@@ -14,7 +14,14 @@
 
   $effect(() => {
     const b = current
-    if (!b || b.id === shownId) return
+    if (!b) {
+      // Hidden by a cinematic/defeat: stop the clock so it re-shows in full.
+      if (timer !== null) window.clearTimeout(timer)
+      timer = null
+      shownId = null
+      return
+    }
+    if (b.id === shownId) return
     shownId = b.id
     sfx(b.kind === 'quest' ? 'quest' : 'step-area')
     if (timer !== null) window.clearTimeout(timer)

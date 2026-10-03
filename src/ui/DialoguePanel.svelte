@@ -28,6 +28,8 @@
   /** True once a reply was picked (choices are not offered again). */
   let answered = $state(false)
   let timer: number | null = null
+  /** Timestamp of the keydown that opened this conversation (if any). */
+  let openedAt = 0
 
   const atLastLine = $derived(idx + 1 >= lines.length)
   const showChoices = $derived(open && !typing && atLastLine && !!choices && !answered)
@@ -63,6 +65,9 @@
 
   function openDialogue(payload: DialoguePayload): void {
     open = true
+    // Phaser handles the same keydown first and opens us synchronously;
+    // without this the opening press would also skip line one's typing.
+    openedAt = performance.now()
     ui.dialogueOpen = true
     uiState.dialogueOpen = true
     speaker = payload.speaker
@@ -122,14 +127,23 @@
       if (open) advance()
     }
     const onKey = (e: KeyboardEvent) => {
-      if (!open) return
+      if (!open || e.timeStamp <= openedAt) return
       if (showChoices && choices) {
         const n = Number(e.key)
         if (n >= 1 && n <= choices.length) {
           e.preventDefault()
           choose(choices[n - 1])
+          return
         }
-        return // Enter/Space act on the focused choice button
+        // Space/E pick the focused reply (Enter is native button behavior).
+        if (!e.repeat && (e.code === 'Space' || e.code === 'KeyE')) {
+          const el = document.activeElement as HTMLElement | null
+          if (el?.classList.contains('choice')) {
+            e.preventDefault()
+            el.click()
+          }
+        }
+        return
       }
       if (e.repeat) return
       if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') {

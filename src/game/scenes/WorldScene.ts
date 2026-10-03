@@ -149,6 +149,7 @@ export class WorldScene extends Phaser.Scene {
   /** Keycap hint floating above the current interaction target. */
   private keyHint: Phaser.GameObjects.Image | null = null
   private reducedMotion = false
+  private captureReleased = false
   private cinematic = false
 
   constructor() {
@@ -178,6 +179,7 @@ export class WorldScene extends Phaser.Scene {
     this.keyHint = null
     this.lightProps = []
     this.cinematic = false
+    this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
 
     this.buildGround()
@@ -194,7 +196,9 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12)
     this.applyZoom(this.scale.width, this.scale.height)
-    this.scale.on('resize', (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height))
+    const onResize = (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height)
+    this.scale.on('resize', onResize)
+    this.events.once('shutdown', () => this.scale.off('resize', onResize))
     this.cameras.main.fadeIn(280, 12, 12, 20)
 
     // Input
@@ -218,7 +222,12 @@ export class WorldScene extends Phaser.Scene {
       bus.off(EV.action, this.handleAction, this)
       bus.off(EV.cast, this.handleCast, this)
       bus.off(EV.dialogueClosed, this.onDialogueClosed, this)
-      this.scale.off('resize')
+      // A restart mid-beat must never leave the HUD hidden and input blocked.
+      if (this.cinematic) {
+        this.cinematic = false
+        bus.emit(EV.cinematic, { active: false })
+      }
+      this.input.keyboard?.enableGlobalCapture()
     })
 
     this.session.emitArea()
@@ -1314,7 +1323,9 @@ export class WorldScene extends Phaser.Scene {
     this.player.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatarContainer ?? this.player, scaleY: (this.avatarContainer ?? this.player).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.player.setTint(0x8a7a9a)
-    this.cameras.main.fadeOut(1100, 12, 12, 20)
+    // force: a fade-in still running (scene just started) must not swallow
+    // this fade, or 'camerafadeoutcomplete' never fires and we soft-lock.
+    this.cameras.main.fade(1100, 12, 12, 20, true)
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.restart({ fromDefeat: true })
     })
@@ -1424,7 +1435,8 @@ export class WorldScene extends Phaser.Scene {
     })
     this.time.delayedCall(panMs + 2300, () => {
       cam.pan(this.player.x, this.player.y, panMs, 'Sine.easeInOut')
-      if (!this.reducedMotion) cam.zoomTo(baseZoom, panMs, 'Sine.easeInOut')
+      // Return to the zoom for the CURRENT viewport (it may have resized).
+      if (!this.reducedMotion) cam.zoomTo(this.zoomFor(this.scale.height), panMs, 'Sine.easeInOut')
       this.time.delayedCall(panMs + 50, () => {
         cam.startFollow(this.player, true, 0.12, 0.12)
         this.cinematic = false
@@ -1490,7 +1502,7 @@ export class WorldScene extends Phaser.Scene {
     state.area = area
     state.position = { x: (entry.tx + 0.5) * TILE, y: (entry.ty + 0.5) * TILE }
     this.session.saveSoon()
-    this.cameras.main.fadeOut(240, 12, 12, 20)
+    this.cameras.main.fade(240, 12, 12, 20, true)
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.restart({ entry })
     })
@@ -1498,16 +1510,26 @@ export class WorldScene extends Phaser.Scene {
 
   // ------------------------------------------------------------- zoom
 
+  private zoomFor(h: number): number {
+    return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, 5)
+  }
+
   private applyZoom(_w: number, h: number): void {
-    const base = Math.round((h / 280) * 2) / 2
-    const zoom = Phaser.Math.Clamp(base, 1.5, 5)
-    this.cameras.main.setZoom(zoom)
+    this.cameras.main.setZoom(this.zoomFor(h))
   }
 
   // ------------------------------------------------------------- update loop
 
   update(time: number, delta: number): void {
     const dt = Math.min(delta / 1000, 0.05)
+    // While a panel/dialogue owns the screen, stop preventDefault-ing Space
+    // etc. so focused buttons (replies, confirms) activate natively.
+    const uiOwns = uiBlocked()
+    if (uiOwns !== this.captureReleased) {
+      this.captureReleased = uiOwns
+      if (uiOwns) this.input.keyboard?.disableGlobalCapture()
+      else this.input.keyboard?.enableGlobalCapture()
+    }
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
     this.castCooldown = Math.max(0, this.castCooldown - dt)
     this.iframes = Math.max(0, this.iframes - dt)

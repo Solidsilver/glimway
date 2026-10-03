@@ -190,8 +190,12 @@
     }
   })
 
+  /** Set synchronously so a double click / Enter can't start two games. */
+  let starting = false
+
   async function begin(): Promise<void> {
-    if (!session || !stageEl || phase !== 'title') return
+    if (!session || !stageEl || phase !== 'title' || starting) return
+    starting = true
     unlockAudio()
     sfx('open')
     // World text (damage numbers, exit labels) uses the display font: make
@@ -212,6 +216,7 @@
 
   async function startFresh(): Promise<void> {
     confirm = null
+    if (starting) return
     session?.destroy(true)
     session = new Session(createNewGame())
     hasSave = false

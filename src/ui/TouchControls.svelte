@@ -55,6 +55,8 @@
 
   function actionDown(e: PointerEvent): void {
     e.preventDefault()
+    // Keep pointerup on this button even if the controls hide mid-press.
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
     bus.emit(EV.action)
     if (actionRepeat !== null) window.clearInterval(actionRepeat)
     // Hold to keep swinging — but never auto-advance conversations.
@@ -80,6 +82,15 @@
   const talkMode = $derived(!!ui.prompt.label && !ui.dialogueOpen)
   // The dialogue box covers this corner on phones; tapping it advances.
   const hidden = $derived(ui.cinematic || ui.dialogueOpen)
+
+  // Never leave a held-swing repeat running behind a hidden/unmounted pad.
+  $effect(() => {
+    if (hidden) actionUp()
+  })
+  $effect(() => () => {
+    actionUp()
+    setVec(0, 0)
+  })
 </script>
 
 {#if show}
