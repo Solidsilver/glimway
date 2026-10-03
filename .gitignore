@@ -6,6 +6,11 @@ dist
 .env.*
 !.env.example
 
+# Local tooling / test artifacts
+.playwright-mcp
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
 # Publication hygiene
 /public/assets/fingersnap/**/drafts/
 .idea/

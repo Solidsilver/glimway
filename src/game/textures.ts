@@ -498,6 +498,74 @@ function addCanvasTexture(
   scene.textures.addCanvas(key, canvas)
 }
 
+// ---------------------------------------------------------------- world UI markers
+
+const markPal: Palette = {
+  o: '#2b1d1a',
+  y: '#ffd24a',
+  h: '#fff3c4',
+  Y: '#d99a1e',
+  k: '#4a3220',
+  w: '#fffbef',
+  g: '#d8c79c',
+  p: '#f4e4c1',
+  s: '#b89a6a'
+}
+
+/** Gold "!" bubble: this character moves the story forward. */
+const MARK_QUEST: string[] = [
+  '.ooooooo.',
+  'ohhyyyyyo',
+  'ohyykyyYo',
+  'oyyykyyYo',
+  'oyyykyyYo',
+  'oyyykyyYo',
+  'oyyyyyyYo',
+  'oyyykyyYo',
+  'oYYYYYYYo',
+  '.ooooooo.',
+  '...oYo...',
+  '....o....'
+]
+
+/** Speech bubble "…": someone with something new to say. */
+const MARK_TALK: string[] = [
+  '.ooooooooo.',
+  'owwwwwwwwgo',
+  'owwwwwwwwgo',
+  'owkwwkwwkgo',
+  'owwwwwwwwgo',
+  'ogggggggggo',
+  '.oooggoooo.',
+  '...ogo.....',
+  '...oo......'
+]
+
+/** Exit chevron (points right; rotated per exit side). */
+const MARK_CHEVRON: string[] = [
+  'oo.....',
+  'oyo....',
+  'ohyo...',
+  '.ohyo..',
+  '..oyyo.',
+  '.oyyo..',
+  'oyyo...',
+  'oyo....',
+  'oo.....'
+]
+
+const GLYPH_E = ['kkkk', 'k...', 'kkk.', 'k...', 'kkkk']
+const GLYPH_A = ['.kk.', 'k..k', 'kkkk', 'k..k', 'k..k']
+
+/** A small parchment keycap with a 4x5 glyph and a pressed-edge shadow. */
+function keycap(glyph: string[]): string[] {
+  // 11 wide: outline, 3px margin, 4px glyph, 2px margin, outline.
+  const rows = ['.ooooooooo.', 'owwwwwwwwwo']
+  for (const g of glyph) rows.push('owpp' + g.replace(/\./g, 'p') + 'ppo')
+  rows.push('opppppppppo', 'ossssssssso', '.ooooooooo.')
+  return rows
+}
+
 function artSize(art: Art): { w: number; h: number } {
   return { w: Math.max(...art.rows.map((r) => r.length)), h: art.rows.length }
 }
@@ -613,6 +681,13 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = g
     ctx.fillRect(0, 0, 64, 64)
   })
+
+  // --- world UI markers (crisp pixel art, drawn above everything)
+  addArtTexture(scene, 'mark-quest', { rows: MARK_QUEST, pal: markPal })
+  addArtTexture(scene, 'mark-talk', { rows: MARK_TALK, pal: markPal })
+  addArtTexture(scene, 'mark-chevron', { rows: MARK_CHEVRON, pal: markPal })
+  addArtTexture(scene, 'key-e', { rows: keycap(GLYPH_E), pal: markPal })
+  addArtTexture(scene, 'key-a', { rows: keycap(GLYPH_A), pal: markPal })
 
   addCanvasTexture(scene, 'px', 2, 2, (ctx) => {
     ctx.fillStyle = '#ffffff'

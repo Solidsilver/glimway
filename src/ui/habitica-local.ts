@@ -99,20 +99,20 @@ export function friendlyErrorCopy(err: unknown): string {
   if (err instanceof HabiticaApiError) {
     switch (err.kind as HabiticaErrorKind) {
       case 'auth':
-        return 'Habitica rejected the sign-in (check the user id and API token).'
+        return 'Habitica didn\u2019t recognise those details — double-check your User ID and API Token.'
       case 'rate-limited':
         return err.retryAfterMs
           ? `Habitica is rate-limiting requests. Try again in about ${Math.max(1, Math.round(err.retryAfterMs / 1000))} seconds.`
           : 'Habitica is rate-limiting requests. Wait a moment and try again.'
       case 'timeout':
-        return 'Habitica took too long to answer. Try again.'
+        return 'Habitica is taking a nap (it didn\u2019t answer in time). Try again?'
       case 'network':
-        return 'Could not reach Habitica — check the connection.'
+        return 'Couldn\u2019t reach Habitica — are you online?'
       case 'invalid-response':
-        return 'Habitica sent an unexpected answer. Try again later.'
+        return 'Habitica sent back something we didn\u2019t expect. Try again in a bit.'
       case 'http':
-        return `Habitica returned an error${err.status ? ` (status ${err.status})` : ''}. Try again later.`
+        return `Habitica had a problem${err.status ? ` (error ${err.status})` : ''}. Try again in a bit.`
     }
   }
-  return 'Something went wrong while syncing. No account changes were made.'
+  return 'Something went wrong while syncing. Your Habitica account wasn\u2019t touched.'
 }

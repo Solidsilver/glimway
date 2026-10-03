@@ -20,6 +20,14 @@ export const EV = {
   defeat: 'ui:defeat',
   /** Session committed a new imported profile — the world avatar/pet refresh. */
   profileChanged: 'ui:profile-changed',
+  /** Signature ability fired (cooldown starts) or failed (not enough mana). */
+  ability: 'ui:ability',
+  /** A scripted beat (lantern lighting) owns the screen: hide the HUD. */
+  cinematic: 'ui:cinematic',
+  /** Native-size portrait images for dialogue, built once from loaded art. */
+  portraits: 'ui:portraits',
+  /** A discovery was written into the journal. */
+  discovery: 'ui:discovery',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -44,6 +52,8 @@ export interface DialoguePayload {
   speaker: string
   lines: string[]
   event?: string
+  /** Optional replies offered after the last line (all keep the same event). */
+  choices?: DialogueChoice[]
 }
 
 export interface AreaPayload {
@@ -59,4 +69,32 @@ export interface PromptPayload {
 export interface ToastPayload {
   text: string
   kind?: 'info' | 'error'
+}
+
+export interface AbilityPayload {
+  status: 'cast' | 'no-mana' | 'cooldown'
+  /** Seconds until the ability is ready again (cast only). */
+  cooldown?: number
+}
+
+export interface CinematicPayload {
+  active: boolean
+}
+
+/** Speaker name -> PNG data URL. */
+export type PortraitsPayload = Record<string, string>
+
+export interface DiscoveryPayload {
+  id: string
+  label: string
+}
+
+export interface DefeatPayload {
+  /** 'falling' fires as the hero collapses; 'woke' once back at the well. */
+  phase: 'falling' | 'woke'
+}
+
+export interface DialogueChoice {
+  text: string
+  reply?: string[]
 }

@@ -89,7 +89,7 @@ export class Session {
       } catch (err) {
         console.warn('[fingersnap] sync save failed', err)
         bus.emit(EV.toast, {
-          text: 'Sync succeeded online but could not be saved locally — the world kept its previous state.',
+          text: 'Your character arrived, but this browser wouldn\u2019t let us save it. Nothing changed.',
           kind: 'error'
         })
         outcome = 'save-failed'
@@ -139,7 +139,7 @@ export class Session {
       this.state = advanceQuest(this.state, event)
     } catch (err) {
       console.warn('[fingersnap] advanceQuest rejected event', event, err)
-      const toast: ToastPayload = { text: 'Something interrupted the quest state.', kind: 'error' }
+      const toast: ToastPayload = { text: 'The story hiccupped — that step didn\u2019t take. Try again?', kind: 'error' }
       bus.emit(EV.toast, toast)
       return
     }
@@ -193,7 +193,7 @@ export class Session {
   recordDiscovery(discoveryId: string, label: string): boolean {
     if (this.state.discoveries.includes(discoveryId)) return false
     this.state.discoveries.push(discoveryId)
-    bus.emit(EV.toast, { text: `Noted in your journal: ${label}` })
+    bus.emit(EV.discovery, { id: discoveryId, label })
     this.saveSoon()
     return true
   }
@@ -282,7 +282,7 @@ export class Session {
     } catch (err) {
       console.warn('[fingersnap] save failed', err)
       bus.emit(EV.toast, {
-        text: 'Saving failed — progress may not persist.',
+        text: 'Couldn\u2019t save just now — your latest steps may not stick.',
         kind: 'error'
       })
     }

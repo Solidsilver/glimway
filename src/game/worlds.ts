@@ -251,7 +251,7 @@ function buildVillage(): WorldData {
     mural: null,
     shrine: null,
     villageLantern,
-    spawn: { tx: 8, ty: 12 }
+    spawn: { tx: 7, ty: 11 }
   }
 }
 

@@ -1,8 +1,18 @@
 import type { AreaPayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
+import { isMuted } from '../game/sfx'
 
-/** Stored toast = payload plus a render key. */
-type StoredToast = ToastPayload & { id: string }
+/** Stored toast = payload plus a render key and optional icon. */
+type StoredToast = ToastPayload & { id: string; icon?: string }
+
+/** A quest beat or area title waiting to be shown. */
+export interface Banner {
+  id: string
+  kind: 'quest' | 'area'
+  eyebrow: string
+  title: string
+  body?: string
+}
 
 /**
  * Reactive snapshot of the game's meaningful state events for the interface.
@@ -11,6 +21,8 @@ type StoredToast = ToastPayload & { id: string }
 class UiStore {
   stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5 })
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
+  /** False until the first quest snapshot arrives (load is not a "change"). */
+  questKnown = $state(false)
   area = $state<AreaPayload>({ areaId: 'village', name: 'Village', description: '' })
   prompt = $state<PromptPayload>({ label: null })
   toasts = $state<StoredToast[]>([])
@@ -19,13 +31,39 @@ class UiStore {
   vitalsSource = $state<VitalsSource>('demo')
   importedProfile = $state<HabiticaProfile | null>(null)
 
-  toast(payload: ToastPayload): void {
+  /** Mirrors of world/UI ownership flags, reactive for the interface. */
+  dialogueOpen = $state(false)
+  cinematic = $state(false)
+  /** Speaker -> portrait data URL. */
+  portraits = $state<Record<string, string>>({})
+  /** Signature ability readiness for the HUD slot / touch button. */
+  ability = $state<{ readyAt: number; cooldown: number; deniedAt: number }>({ readyAt: 0, cooldown: 1, deniedAt: 0 })
+  /** Queue of quest beats / area titles (shown one at a time). */
+  banners = $state<Banner[]>([])
+  /** Defeat overlay phase. */
+  defeat = $state<'none' | 'falling' | 'woke'>('none')
+  /** The end-of-quest card. */
+  endingOpen = $state(false)
+  muted = $state(isMuted())
+
+  toast(payload: ToastPayload & { icon?: string }): void {
     const id = Math.random().toString(36).slice(2)
     const entry: StoredToast = { ...payload, id, kind: payload.kind ?? 'info' }
-    this.toasts = [...this.toasts.slice(-3), entry]
+    this.toasts = [...this.toasts.slice(-2), entry]
     setTimeout(() => {
       this.toasts = this.toasts.filter((t) => t.id !== id)
-    }, 3800)
+    }, payload.kind === 'error' ? 6000 : 4200)
+  }
+
+  banner(b: Omit<Banner, 'id'>): void {
+    const id = Math.random().toString(36).slice(2)
+    // Area titles are transient: a newer one replaces any queued area title.
+    const rest = b.kind === 'area' ? this.banners.filter((x) => x.kind !== 'area' || x === this.banners[0]) : this.banners
+    this.banners = [...rest, { ...b, id }]
+  }
+
+  dismissBanner(id: string): void {
+    this.banners = this.banners.filter((b) => b.id !== id)
   }
 }
 

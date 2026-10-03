@@ -1,9 +1,23 @@
 import type { AreaId, QuestEvent, QuestStage } from '../lib/state.ts';
 
+export interface DialogueChoice {
+  text: string;
+  /** Lines the speaker answers with before the conversation closes. */
+  reply?: string[];
+}
+
 export interface Dialogue {
   speaker: string;
   lines: string[];
   event?: QuestEvent;
+  /** Optional replies offered after the last line; every choice keeps the event. */
+  choices?: DialogueChoice[];
+}
+
+export interface ItemInfo {
+  name: string;
+  icon: string;
+  blurb: string;
 }
 
 export interface JournalEntry {
@@ -14,6 +28,10 @@ export interface JournalEntry {
 export interface LocationInfo {
   name: string;
   description: string;
+  /** Small line above the name on the area title card. */
+  eyebrow: string;
+  /** One short, in-voice line for the title card. */
+  tagline: string;
 }
 
 export interface DemoCharacter {
@@ -34,19 +52,65 @@ export const DEMO_CHARACTER: DemoCharacter = {
   stats: { str: 9, int: 7, con: 8, per: 8 },
 };
 
+/** Display names and flavor for inventory ids (raw ids never reach the UI). */
+export const ITEM_INFO: Record<string, ItemInfo> = {
+  'field-journal': {
+    name: 'Field Journal',
+    icon: 'book',
+    blurb: 'Half-full of other people\u2019s roads. Press J to read it.',
+  },
+  'hearthwick-map': {
+    name: 'Map of Hearthwick',
+    icon: 'map',
+    blurb: 'Hand-inked by a carter. The west gate is circled twice.',
+  },
+};
+
+/** Display names for discovery ids. */
+export const DISCOVERY_INFO: Record<string, ItemInfo> = {
+  'route-marker': {
+    name: 'The Faded Route Marker',
+    icon: 'stone',
+    blurb: 'A lichen-eaten waystone in Brackenwood, still pointing at the hill.',
+  },
+  'old-route-marker': {
+    name: 'The Closure Mark',
+    icon: 'scroll',
+    blurb: 'A charcoal rubbing: two weaves and a break. The road was shut on purpose.',
+  },
+};
+
+export function itemInfo(id: string): ItemInfo {
+  return ITEM_INFO[id] ?? { name: titleCase(id), icon: 'sparkle', blurb: '' };
+}
+
+export function discoveryInfo(id: string): ItemInfo {
+  return DISCOVERY_INFO[id] ?? { name: titleCase(id), icon: 'sparkle', blurb: '' };
+}
+
+function titleCase(id: string): string {
+  return id.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export const locations: Record<AreaId, LocationInfo> = {
   village: {
     name: 'Hearthwick',
+    eyebrow: 'The village of',
+    tagline: 'Someone here is always mending something.',
     description:
       'A hillside village of patched slate roofs, kitchen gardens, and a square where someone is always mending something. The dark lantern road begins at the west gate.',
   },
   woodland: {
     name: 'Brackenwood Path',
+    eyebrow: 'The old lantern road',
+    tagline: 'Cool shade, leaning stones — and wisps. Mind the wisps.',
     description:
       'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the west gate visible behind you.',
   },
   ruin: {
     name: 'Ashwatch Ruin',
+    eyebrow: 'Beneath the hilltop shrine',
+    tagline: 'Something made of stone is still keeping watch.',
     description:
       'A roofless waystation of grey blocks, heather pushing through the floor. The hilltop lantern shrine stands beyond its broken arch, watched over by a stone warden.',
   },
@@ -71,6 +135,19 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
         'I would go myself, but the lamp oil ledger does not keep itself, and someone has to be here when the carters come through. Would you walk the old road for me? Brackenwood path, through the ruin, up to the shrine. Bring back whatever you find.',
       ],
       event: 'accept',
+      choices: [
+        {
+          text: 'Of course. Point me at the gate.',
+          reply: ['West gate, past the milestone. Thank you — truly. Grandmother would have liked you.'],
+        },
+        {
+          text: '…Is there a reward?',
+          reply: [
+            'Ha! A lit road, the gratitude of a small village, and as much of Orrin\u2019s complaining as you can stand.',
+            'Also soup. There is always soup. West gate, past the milestone.',
+          ],
+        },
+      ],
     },
     {
       forStages: ['accepted'],
@@ -339,6 +416,9 @@ export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
   };
   if (rule.event) {
     dialogue.event = rule.event;
+  }
+  if (rule.choices) {
+    dialogue.choices = rule.choices.map((c) => ({ text: c.text, reply: c.reply ? [...c.reply] : undefined }));
   }
   return dialogue;
 }

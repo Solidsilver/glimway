@@ -77,14 +77,47 @@ so the rule is testable and single-sourced.
 
 | Action | Desktop | Touch |
 |---|---|---|
-| Move | WASD / arrow keys | D-pad (bottom left) |
-| Talk / attack | E or Space | A button (bottom right) |
-| Cast signature ability | F | ✦ button |
+| Move | WASD / arrow keys | Joystick (bottom left) |
+| Talk / use / attack | E or Space | Big button (bottom right; shows Talk near people) |
+| Cast signature ability | F | ✦ button (shows mana cost and cooldown) |
+| Pick a dialogue reply | 1 / 2 or arrows + Enter | Tap the reply |
 | Mount up / dismount | M | (outdoors, imported characters) |
-| Journal / Character | J / C | HUD buttons |
+| Journal / Character / Menu | J / C / Esc | HUD buttons |
 
 Dialogue pauses movement and combat. Touch controls appear on coarse-pointer
 devices; the layout is responsive with safe-area insets for phones.
+
+## Interface
+
+- **HUD:** area, current goal (tap to expand), health and mana with icons; a
+  desktop action bar shows the E action (it follows context: Slash / Talk /
+  Use) and the signature ability with its mana cost, cooldown sweep and a
+  shake when you can't afford it. Low health pulses the bar and adds a red
+  vignette.
+- **In the world:** a gold **!** floats over whoever moves the story on, a
+  **…** bubble over anyone with something new to say, and a keycap over the
+  current interaction target. Exits are labelled with their destination and
+  pulse with chevrons. Canopies and arches fade when anything walks beneath.
+- **Moments:** quest beats arrive as a ribbon banner, new areas get a title
+  card, lighting a lantern plays a short camera beat, defeat has a "You
+  stumble…" collapse and a wake-up card, and finishing the quest shows a
+  closing card with your play time and finds.
+- **Panels:** Journal (goal, quest-step checklist, notes newest first),
+  Character (portrait, vitals, stat tiles, ability cards, pack with item
+  names), and Menu (save codes, Habitica connection, sound, controls,
+  credits, start over). Panels trap focus; hard choices use in-game
+  confirms rather than browser popups.
+- **Sound:** small procedural Web Audio cues (no files, no network): UI
+  clicks, per-speaker dialogue blips, hits, casts, quest chimes, the lantern
+  sting. Toggle in the Menu; the choice is remembered on this device.
+- **Fonts:** Pixelify Sans (display) and Nunito (body), bundled locally via
+  Fontsource. `prefers-reduced-motion` turns off shakes, hit-stop and big
+  tweens.
+
+Dev builds expose read-only playtest hooks (`__fsPlayer`, `__fsEnemies`,
+`__fsSafety`, `__fsDebug`) plus dev-only levers (`__fsDevHurt(n)`,
+`__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`) for checking the
+low-health, defeat and quest beats without a full playthrough.
 
 ## Architecture
 
@@ -152,7 +185,7 @@ account writes, and checkpoint rewind remain out of scope.
 
 - Demo art is placeholder; imported avatars render only from the small cached
   official-art subset (uncached layers are skipped and reported).
-- No audio, no gamepad, no installable/offline mode.
+- Procedural sound effects only (no music), no gamepad, no installable/offline mode.
 - Saves are local to one browser; export codes are the manual backup path.
 - The generated art pack has no distribution license selected yet; the bundled
   Habitica art subset and gear catalog are non-commercial/attribution-bound —

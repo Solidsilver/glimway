@@ -1,7 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { bus, EV, type DialoguePayload } from '../game/events'
+  import { bus, EV, type DialogueChoice, type DialoguePayload } from '../game/events'
   import { uiState } from '../game/input'
+  import { sfx, voiceBlip } from '../game/sfx'
+  import { ui } from './store.svelte'
+  import { isTouchFirst } from './device'
+
+  /** Name-tag colors per speaker; objects get a neutral stone tag. */
+  const TAG: Record<string, string> = {
+    Mara: '#2f7f7a',
+    Pip: '#c0602e',
+    Orrin: '#6b4c9a',
+    'Route Marker': '#6e6a5e',
+    'Hilltop Lantern': '#b07a12'
+  }
+
+  const touch = isTouchFirst()
 
   let open = $state(false)
   let speaker = $state('')
@@ -10,56 +24,93 @@
   let shown = $state('')
   let typing = $state(false)
   let questEvent = $state<string | undefined>(undefined)
+  let choices = $state<DialogueChoice[] | null>(null)
+  /** True once a reply was picked (choices are not offered again). */
+  let answered = $state(false)
   let timer: number | null = null
 
+  const atLastLine = $derived(idx + 1 >= lines.length)
+  const showChoices = $derived(open && !typing && atLastLine && !!choices && !answered)
+  const portrait = $derived(ui.portraits[speaker] ?? null)
+  const tagColor = $derived(TAG[speaker] ?? '#6b4c2e')
+
+  function stopTyping(): void {
+    if (timer !== null) window.clearTimeout(timer)
+    timer = null
+  }
+
+  /** Typewriter with breathing room after punctuation. */
   function typeLine(line: string): void {
+    stopTyping()
     typing = true
     shown = ''
-    if (timer !== null) window.clearInterval(timer)
     let i = 0
-    timer = window.setInterval(() => {
+    const step = () => {
       i += 1
       shown = line.slice(0, i)
+      const ch = line[i - 1]
+      if (ch && /[A-Za-z0-9]/.test(ch)) voiceBlip(speaker)
       if (i >= line.length) {
-        window.clearInterval(timer!)
         timer = null
         typing = false
+        return
       }
-    }, 16)
+      const delay = /[.!?…]/.test(ch) && line[i] === ' ' ? 240 : /[,;:—]/.test(ch) ? 110 : 18
+      timer = window.setTimeout(step, delay)
+    }
+    timer = window.setTimeout(step, 18)
   }
 
   function openDialogue(payload: DialoguePayload): void {
     open = true
+    ui.dialogueOpen = true
     uiState.dialogueOpen = true
     speaker = payload.speaker
     lines = payload.lines
     idx = 0
     questEvent = payload.event
+    choices = payload.choices && payload.choices.length > 0 ? payload.choices : null
+    answered = false
     typeLine(lines[0] ?? '')
   }
 
   function advance(): void {
     if (!open) return
     if (typing) {
-      if (timer !== null) window.clearInterval(timer)
-      timer = null
+      stopTyping()
       typing = false
       shown = lines[idx] ?? ''
       return
     }
+    if (showChoices) return // a reply must be picked
     if (idx + 1 < lines.length) {
       idx += 1
+      sfx('blip')
       typeLine(lines[idx])
       return
     }
     close()
   }
 
+  function choose(choice: DialogueChoice): void {
+    answered = true
+    sfx('click')
+    const reply = choice.reply ?? []
+    if (reply.length === 0) {
+      close()
+      return
+    }
+    lines = [...lines, ...reply]
+    idx += 1
+    typeLine(lines[idx])
+  }
+
   function close(): void {
-    if (timer !== null) window.clearInterval(timer)
-    timer = null
+    stopTyping()
     open = false
+    ui.dialogueOpen = false
     uiState.dialogueOpen = false
+    sfx('close')
     const event = questEvent
     questEvent = undefined
     bus.emit(EV.dialogueClosed, { event })
@@ -72,7 +123,16 @@
     }
     const onKey = (e: KeyboardEvent) => {
       if (!open) return
-      if (e.code === 'Space' || e.code === 'Enter') {
+      if (showChoices && choices) {
+        const n = Number(e.key)
+        if (n >= 1 && n <= choices.length) {
+          e.preventDefault()
+          choose(choices[n - 1])
+        }
+        return // Enter/Space act on the focused choice button
+      }
+      if (e.repeat) return
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') {
         e.preventDefault()
         advance()
       }
@@ -84,19 +144,59 @@
       bus.off(EV.dialogue, onDialogue)
       bus.off(EV.action, onAction)
       window.removeEventListener('keydown', onKey)
-      if (timer !== null) window.clearInterval(timer)
+      stopTyping()
     }
   })
+
+  /** Focus the first reply so keyboard users can pick with arrows/Enter. */
+  function focusFirst(node: HTMLElement) {
+    queueMicrotask(() => node.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }))
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+      e.preventDefault()
+      const items = [...node.querySelectorAll<HTMLButtonElement>('button')]
+      const i = items.indexOf(document.activeElement as HTMLButtonElement)
+      const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length
+      items[next]?.focus()
+    }
+    node.addEventListener('keydown', onKey)
+    return { destroy: () => node.removeEventListener('keydown', onKey) }
+  }
 </script>
 
 {#if open}
   <div class="dialogue" role="dialog" aria-label={`Conversation with ${speaker}`}>
-    <div class="panel box">
-      <div class="speaker">{speaker}</div>
-      <p class="line">{shown}</p>
-      <div class="footer">
-        <span class="hint">{typing ? '…' : idx + 1 < lines.length ? 'more ▾' : questEvent ? '✦' : 'close'}</span>
-        <button type="button" onclick={advance}>{idx + 1 < lines.length || typing ? 'Next' : 'Done'}</button>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="panel box" class:has-portrait={!!portrait} onclick={() => !showChoices && advance()}>
+      {#if portrait}
+        <div class="portrait" style={`--tag:${tagColor}`}>
+          <img class="pixel" src={portrait} alt="" />
+        </div>
+      {/if}
+      <div class="content">
+        <div class="tag" style={`--tag:${tagColor}`}>{speaker}</div>
+        <p class="line" aria-live="polite">{shown}<span class="caret" class:on={typing}></span></p>
+        {#if showChoices && choices}
+          <div class="choices" use:focusFirst>
+            {#each choices as c, i}
+              <button type="button" class="choice" onclick={(e) => { e.stopPropagation(); choose(c) }}>
+                {#if !touch}<span class="kbd">{i + 1}</span>{/if}
+                <span>{c.text}</span>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <div class="footer">
+            {#if !typing}
+              <span class="next" class:more={!atLastLine}>
+                {#if !touch}<span class="kbd">E</span>{/if}
+                {atLastLine ? (questEvent ? 'Continue' : 'Done') : 'Next'}
+                <span class="arrow">{atLastLine ? '✓' : '▼'}</span>
+              </span>
+            {/if}
+          </div>
+        {/if}
       </div>
     </div>
   </div>
@@ -107,39 +207,146 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: max(10px, env(safe-area-inset-bottom));
+    bottom: max(14px, env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
-    padding: 0 12px;
+    padding: 0 14px;
     z-index: 30;
     pointer-events: none;
+    animation: up 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   }
   .box {
-    width: min(620px, 100%);
-    padding: 12px 14px;
+    width: min(680px, 100%);
+    padding: 16px 20px 14px;
     pointer-events: auto;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
-  .speaker {
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    font-weight: 700;
+  .box.has-portrait {
+    grid-template-columns: auto 1fr;
+  }
+  .portrait {
+    width: 92px;
+    height: 92px;
+    align-self: start;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.55), transparent 70%),
+      color-mix(in srgb, var(--tag) 22%, #f6e8c8);
+    border: 3px solid var(--wood-dark);
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 2px rgba(255, 249, 230, 0.8);
+    overflow: hidden;
+    place-items: end center;
+  }
+  /* Pre-cropped, square native art scaled up crisply. */
+  .portrait img {
+    width: 80px;
+    height: 80px;
+    margin-top: 6px;
+    object-fit: contain;
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 10px 3px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: var(--tag);
+    border: 2px solid var(--wood-dark);
+    border-radius: 8px;
+    box-shadow: 0 2px 0 var(--wood-dark);
   }
   .line {
-    margin: 8px 0 10px;
-    font-size: 14px;
-    line-height: 1.5;
-    min-height: 2.6em;
+    margin: 10px 0 8px;
+    font-size: 17px;
+    line-height: 1.55;
+    min-height: 3.1em;
     white-space: pre-wrap;
+    color: var(--text);
+  }
+  .caret {
+    display: inline-block;
+    width: 0.5em;
+  }
+  .caret.on::after {
+    content: '▍';
+    color: var(--text-faint);
+    animation: blink 0.6s steps(1) infinite;
   }
   .footer {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: flex-end;
+    min-height: 26px;
   }
-  .hint {
-    font-size: 11px;
-    color: #8a7a5a;
+  .next {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--wood);
+  }
+  .next .arrow {
+    color: var(--gold-deep);
+  }
+  .next.more .arrow {
+    animation: bob 0.8s ease-in-out infinite;
+  }
+  .choices {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15.5px;
+    padding: 9px 14px;
+  }
+  .choice:focus-visible {
+    background: linear-gradient(180deg, #fff3b8, #f5cf5c);
+  }
+  @keyframes up {
+    from { transform: translateY(16px); opacity: 0; }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1px); }
+  }
+  @media (max-width: 560px) {
+    .box {
+      padding: 12px 14px 12px;
+      gap: 12px;
+    }
+    .portrait {
+      width: 64px;
+      height: 64px;
+    }
+    .portrait img {
+      width: 56px;
+      height: 56px;
+      margin-top: 4px;
+    }
+    .line {
+      font-size: 15.5px;
+    }
   }
 </style>

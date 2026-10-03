@@ -1,105 +1,415 @@
 <script lang="ts">
   import { ui } from './store.svelte'
+  import { getCombatKit } from '../lib/combat'
+  import { isTouchFirst } from './device'
+  import Icon from './Icon.svelte'
 
-  let showBars = $derived(ui.stats.maxHp > 0)
+  let { onJournal, onCharacter, onMenu }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void } = $props()
+
+  const touch = isTouchFirst()
+  const showBars = $derived(ui.stats.maxHp > 0)
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))
-
-  let { onJournal, onCharacter }: { onJournal: () => void; onCharacter: () => void } = $props()
+  const lowHp = $derived(ui.stats.hp > 0 && hpPct <= 30)
+  const kit = $derived(getCombatKit(ui.importedProfile))
+  const canAfford = $derived(ui.stats.mana >= kit.manaCost)
+  const resting = $derived(ui.stats.hp <= 0 && ui.vitalsSource === 'imported')
+  /** The E/Space slot follows context: talking beats swinging. */
+  const actLabel = $derived(ui.prompt.label ? (ui.prompt.label.startsWith('Talk') ? 'Talk' : 'Use') : kit.basicName)
+  let objectiveOpen = $state(false)
 </script>
 
-<div class="hud">
-  <div class="left panel">
-    <div class="location">{ui.area.name}</div>
-    <div class="objective">{ui.quest.objective}</div>
+<div class="hud" class:hidden={ui.cinematic} aria-hidden={ui.cinematic}>
+  <div class="card panel" class:open={objectiveOpen}>
+    <div class="place">
+      <Icon name="lantern" size={14} />
+      <span>{ui.area.name}</span>
+    </div>
+    <button
+      type="button"
+      class="objective"
+      onclick={() => (objectiveOpen = !objectiveOpen)}
+      aria-expanded={objectiveOpen}
+      title="Current goal"
+    >
+      <span class="goal-icon"><Icon name="star" size={12} /></span>
+      <span class="goal-text">{ui.quest.objective}</span>
+    </button>
     {#if showBars}
       <div class="bars">
-        <div class="bar hp" title="Health">
-          <div class="fill" style={`width:${hpPct}%`}></div>
-          <span>{ui.stats.hp}/{ui.stats.maxHp}</span>
+        <div class="vital" class:low={lowHp} title="Health">
+          <span class="vi hp"><Icon name="heart" size={14} /></span>
+          <div class="bar hp" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax={ui.stats.maxHp} aria-valuenow={ui.stats.hp}>
+            <div class="fill" style={`width:${hpPct}%`}></div>
+          </div>
+          <span class="num">{ui.stats.hp}<small>/{ui.stats.maxHp}</small></span>
         </div>
-        <div class="bar mana" title="Mana">
-          <div class="fill" style={`width:${manaPct}%`}></div>
-          <span>{ui.stats.mana}/{ui.stats.maxMana}</span>
+        <div class="vital" title="Mana">
+          <span class="vi mana"><Icon name="drop" size={14} /></span>
+          <div class="bar mana" role="meter" aria-label="Mana" aria-valuemin="0" aria-valuemax={ui.stats.maxMana} aria-valuenow={ui.stats.mana}>
+            <div class="fill" style={`width:${manaPct}%`}></div>
+          </div>
+          <span class="num">{ui.stats.mana}<small>/{ui.stats.maxMana}</small></span>
         </div>
       </div>
     {/if}
-    {#if ui.stats.hp <= 0 && ui.vitalsSource === 'imported'}
-      <div class="zerohp">Too injured to adventure — village activities only. Rest until a Habitica sync brings HP back.</div>
+    {#if resting}
+      <div class="resting">Resting in Hearthwick — sync on Habitica to heal up.</div>
     {/if}
   </div>
-  <div class="buttons">
-    <button type="button" onclick={onJournal} aria-label="Open journal">Journal</button>
-    <button type="button" onclick={onCharacter} aria-label="Open character sheet">Character</button>
-  </div>
+
+  <nav class="buttons" aria-label="Menus">
+    <button type="button" class="hb" onclick={onJournal} aria-label="Journal (J)" title="Journal">
+      <Icon name="book" size={20} />
+      {#if !touch}<span class="kbd">J</span>{/if}
+    </button>
+    <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
+      <Icon name="person" size={20} />
+      {#if !touch}<span class="kbd">C</span>{/if}
+    </button>
+    <button type="button" class="hb" onclick={onMenu} aria-label="Menu (Esc)" title="Menu">
+      <Icon name="menu" size={20} />
+      {#if !touch}<span class="kbd">Esc</span>{/if}
+    </button>
+  </nav>
 </div>
+
+{#if !touch && showBars}
+  <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen}>
+    <div class="slot" class:context={!!ui.prompt.label}>
+      <div class="face"><Icon name={ui.prompt.label ? 'sparkle' : 'sword'} size={22} /></div>
+      <span class="kbd">E</span>
+      <span class="label">{actLabel}</span>
+    </div>
+    <div class="slot sig" class:dim={!canAfford} class:denied={ui.ability.deniedAt > 0}>
+      {#key ui.ability.deniedAt}
+        <div class="face" class:shake={ui.ability.deniedAt > 0}><Icon name="sparkle" size={22} /></div>
+      {/key}
+      {#key ui.ability.readyAt}
+        {#if ui.ability.readyAt > 0}
+          <div class="sweep" style={`animation-duration:${ui.ability.cooldown}s`}></div>
+        {/if}
+      {/key}
+      <span class="kbd">F</span>
+      <span class="label">{kit.signatureName}</span>
+      <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span>
+    </div>
+  </div>
+{/if}
+
+{#if lowHp && !ui.cinematic}
+  <div class="vignette" aria-hidden="true"></div>
+{/if}
 
 <style>
   .hud {
     position: absolute;
-    top: max(8px, env(safe-area-inset-top));
-    left: max(8px, env(safe-area-inset-left));
-    right: max(8px, env(safe-area-inset-right));
+    top: max(10px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 8px;
+    gap: 10px;
     pointer-events: none;
     z-index: 20;
+    transition: opacity 300ms ease, transform 300ms ease;
   }
-  .left {
-    padding: 8px 12px;
-    max-width: min(420px, 70vw);
+  .hud.hidden,
+  .actionbar.hidden {
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
   }
-  .location {
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .card {
+    padding: 10px 14px 12px;
+    width: min(340px, 62vw);
+    pointer-events: auto;
+  }
+  .place {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     color: var(--wood-dark);
   }
-  .objective {
-    font-size: 12px;
-    color: #5a4a3a;
-    margin-top: 2px;
+  .place :global(.icon) {
+    color: var(--gold-deep);
   }
-  .bars {
+  .objective {
+    all: unset;
     display: flex;
     gap: 6px;
-    margin-top: 6px;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    margin-top: 4px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.35;
+    color: var(--text-soft);
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .objective:hover:not(:disabled),
+  .objective:active:not(:disabled) {
+    background: none;
+    box-shadow: none;
+    transform: none;
+  }
+  .objective:focus-visible {
+    outline: 3px solid var(--gold);
+  }
+  .goal-icon {
+    color: var(--gold-deep);
+    margin-top: 2px;
+  }
+  .goal-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card.open .goal-text {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+  .bars {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .vital {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+  .vi.hp {
+    color: var(--hp);
+  }
+  .vi.mana {
+    color: var(--mana);
   }
   .bar {
     position: relative;
-    width: 120px;
     height: 12px;
-    background: #d8c79c;
+    background: #4a3a30;
     border: 2px solid var(--wood-dark);
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
-    font-size: 9px;
+    box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
   }
   .bar .fill {
     height: 100%;
-    transition: width 0.2s ease-out;
+    border-radius: 3px 0 0 3px;
+    transition: width 0.25s ease-out;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
   }
-  .hp .fill { background: var(--danger); }
-  .mana .fill { background: var(--mana); }
-  .bar span {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink);
-    font-weight: 700;
+  .hp .fill {
+    background: linear-gradient(180deg, var(--hp-hi), var(--hp));
   }
+  .mana .fill {
+    background: linear-gradient(180deg, var(--mana-hi), var(--mana));
+  }
+  .num {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--wood-dark);
+    min-width: 46px;
+    text-align: right;
+  }
+  .num small {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .vital.low .bar {
+    animation: lowpulse 0.9s ease-in-out infinite;
+  }
+  .vital.low .vi {
+    animation: beat 0.9s ease-in-out infinite;
+  }
+  .resting {
+    margin-top: 8px;
+    padding: 6px 8px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    background: rgba(196, 82, 58, 0.12);
+    color: #7a2e1e;
+  }
+
   .buttons {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     pointer-events: auto;
   }
+  .hb {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-width: 3px;
+    border-radius: 12px;
+  }
+  .hb .kbd {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    height: 20px;
+    min-width: 20px;
+  }
+
+  .actionbar {
+    position: absolute;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    display: flex;
+    gap: 12px;
+    z-index: 20;
+    pointer-events: none;
+    transition: opacity 250ms ease, transform 250ms ease;
+  }
+  .slot {
+    position: relative;
+    width: 64px;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+  }
+  .face {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border: 3px solid var(--wood-dark);
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--paper-hi), var(--paper-dark));
+    color: var(--wood-dark);
+    box-shadow: 0 4px 0 rgba(20, 12, 16, 0.5), inset 0 0 0 2px rgba(255, 249, 230, 0.8);
+  }
+  .slot.context .face {
+    background: linear-gradient(180deg, #fff3b8, #f5cf5c);
+  }
+  .slot.sig .face {
+    background: linear-gradient(180deg, #d6e6ff, #8fb3ec);
+    color: #20365c;
+  }
+  .slot.dim .face {
+    filter: grayscale(0.7) brightness(0.85);
+  }
+  .face.shake {
+    animation: deny 0.32s ease;
+  }
+  .slot .kbd {
+    position: absolute;
+    top: 42px;
+    right: 0;
+  }
+  .label {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: #fff3c4;
+    text-shadow: 0 1px 0 #2b1d1a, 1px 0 0 #2b1d1a, -1px 0 0 #2b1d1a, 0 -1px 0 #2b1d1a;
+    white-space: nowrap;
+  }
+  .cost {
+    position: absolute;
+    top: -6px;
+    left: -4px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 5px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: #fff;
+    background: var(--mana);
+    border: 2px solid #20365c;
+    border-radius: 8px;
+  }
+  .sweep {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: conic-gradient(rgba(20, 14, 24, 0.55) var(--p, 100%), transparent 0);
+    animation: sweep linear forwards;
+    pointer-events: none;
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+    background: radial-gradient(ellipse at center, transparent 42%, rgba(150, 20, 10, 0.32) 72%, rgba(110, 8, 4, 0.72) 100%);
+    box-shadow: inset 0 0 60px rgba(120, 10, 5, 0.55);
+    animation: vig 1.8s ease-in-out infinite;
+  }
+
+  @property --p {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 100%;
+  }
+  @keyframes sweep {
+    from { --p: 100%; }
+    to { --p: 0%; }
+  }
+  @keyframes lowpulse {
+    0%, 100% { box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(224, 86, 63, 0); }
+    50% { box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(224, 86, 63, 0.45); }
+  }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.25); }
+    30% { transform: scale(1); }
+  }
+  @keyframes deny {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+  }
+  @keyframes vig {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
   @media (max-width: 560px) {
-    .bar { width: 84px; }
-    .buttons button { padding: 4px 8px; font-size: 11px; }
+    .card {
+      width: auto;
+      flex: 1;
+      max-width: none;
+      padding: 8px 12px 10px;
+    }
+    .place {
+      font-size: 15px;
+    }
+    .objective {
+      font-size: 12.5px;
+    }
+    .goal-text {
+      -webkit-line-clamp: 1;
+      line-clamp: 1;
+    }
+    .buttons {
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hb {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+    }
   }
 </style>

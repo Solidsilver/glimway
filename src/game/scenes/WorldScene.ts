@@ -1,8 +1,9 @@
 import Phaser from 'phaser'
 import type { AreaId, GameState, QuestEvent } from '../../lib/state'
-import { dialogueFor } from '../../content/world'
+import { dialogueFor, locations } from '../../content/world'
 import { placeFingersnapOccluder } from '../expansion'
-import { bus, EV, type PromptPayload } from '../events'
+import { bus, EV, type AbilityPayload, type PromptPayload } from '../events'
+import { prefersReducedMotion, sfx } from '../sfx'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { TERRAIN, TILE } from '../textures'
 import type { Session } from '../session'
@@ -79,6 +80,18 @@ interface Interactable {
   label: string
 }
 
+/** Who the player has already heard from at each quest stage (this tab). */
+const heardAt = new Set<string>()
+
+/** Was this a touch-first device? Picks the in-world button hint. */
+function isTouchFirst(): boolean {
+  try {
+    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
+  } catch {
+    return false
+  }
+}
+
 const NPC_NAMES: Record<string, string> = {
   mara: 'Mara',
   orrin: 'Orrin',
@@ -129,6 +142,14 @@ export class WorldScene extends Phaser.Scene {
   /** Atlas-prop lanterns that can glow when lit: shrine and village lantern. */
   private lightProps: { sprite: Phaser.GameObjects.Image; gx: number; gy: number; glow: Phaser.GameObjects.Image | null }[] = []
   private positionTimer = 0
+  /** Foreground canopies/arches that fade when something walks beneath. */
+  private occluders: { image: Phaser.GameObjects.Image; bounds: Phaser.Geom.Rectangle; footY: number }[] = []
+  /** Floating "!" / "…" markers keyed by interactable id. */
+  private markers = new Map<string, Phaser.GameObjects.Image>()
+  /** Keycap hint floating above the current interaction target. */
+  private keyHint: Phaser.GameObjects.Image | null = null
+  private reducedMotion = false
+  private cinematic = false
 
   constructor() {
     super('World')
@@ -152,6 +173,12 @@ export class WorldScene extends Phaser.Scene {
     this.world = buildArea(state.area)
     this.npcs = []
     this.enemies = []
+    this.occluders = []
+    this.markers = new Map()
+    this.keyHint = null
+    this.lightProps = []
+    this.cinematic = false
+    this.reducedMotion = prefersReducedMotion()
 
     this.buildGround()
     this.buildSolids()
@@ -161,6 +188,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildNpcs()
     this.buildEnemies(state)
     this.buildForeground()
+    this.buildExitSigns()
     this.physics.add.collider(this.player, this.solidGroup)
 
     this.cameras.main.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
@@ -175,10 +203,18 @@ export class WorldScene extends Phaser.Scene {
     this.cursors = kb.createCursorKeys()
     this.wasd = kb.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
     this.actionKeys = kb.addKeys('E,SPACE,F,M') as Record<string, Phaser.Input.Keyboard.Key>
+    // Event-driven, not polled: Key.onUp clears _justDown, so polling
+    // JustDown once per frame silently drops taps shorter than a frame
+    // (common on slower devices). DOWN fires once per press, never on repeat.
+    this.actionKeys.E.on('down', this.onActionKey, this)
+    this.actionKeys.SPACE.on('down', this.onActionKey, this)
+    this.actionKeys.F.on('down', this.onCastKey, this)
+    this.actionKeys.M.on('down', this.onRideKey, this)
     bus.on(EV.action, this.handleAction, this)
     bus.on(EV.cast, this.handleCast, this)
     bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     this.events.once('shutdown', () => {
+      for (const key of Object.values(this.actionKeys)) key.removeAllListeners('down')
       bus.off(EV.action, this.handleAction, this)
       bus.off(EV.cast, this.handleCast, this)
       bus.off(EV.dialogueClosed, this.onDialogueClosed, this)
@@ -190,6 +226,10 @@ export class WorldScene extends Phaser.Scene {
     this.session.emitQuest()
     this.session.startAutosave()
     this.refreshLanternVisuals()
+    this.buildMarkers()
+    this.emitPortraits()
+    bus.on(EV.quest, this.refreshMarkers, this)
+    this.events.once('shutdown', () => bus.off(EV.quest, this.refreshMarkers, this))
     bus.on(EV.profileChanged, this.onProfileChanged, this)
     this.events.once('shutdown', () => {
       bus.off(EV.profileChanged, this.onProfileChanged, this)
@@ -225,6 +265,19 @@ export class WorldScene extends Phaser.Scene {
           tint: '0x' + e.sprite.tintTopLeft.toString(16).padStart(6, '0')
         }
       })
+    // Dev-only playtest lever: deal damage through the normal hurt path so
+    // low-health and defeat beats can be checked without a long fight.
+    if (import.meta.env.DEV) {
+      const w = window as unknown as Record<string, unknown>
+      w.__fsDevHurt = (n: number) => {
+        this.iframes = 0
+        this.damagePlayer(n, this.player.x - 1)
+      }
+      w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
+      w.__fsDevStrike = (n: number) => {
+        for (const e of [...this.enemies]) this.damageEnemy(e, n, this.player.x)
+      }
+    }
     // Sync-safety snapshot for the UI gate (read-only).
     ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
       const px = this.player.x
@@ -271,10 +324,7 @@ export class WorldScene extends Phaser.Scene {
 
     if (this.pendingDefeatToast) {
       this.pendingDefeatToast = false
-      bus.emit(EV.toast, {
-        text: 'You come to by the village well. (Demo recovery — Habitica health rules come later.)'
-      })
-      bus.emit(EV.defeat, {})
+      bus.emit(EV.defeat, { phase: 'woke' })
     }
   }
 
@@ -360,6 +410,20 @@ export class WorldScene extends Phaser.Scene {
       const w = this.world.well
       this.add.image(w.tx * TILE + 6, w.ty * TILE + TILE, 'well').setOrigin(0.5, 1).setDepth(w.ty * TILE + TILE)
     }
+    // The ruin's route marker is the quest's clue: it needs a visible stone
+    // (it used to be an invisible interactable on a bare wall).
+    if (this.world.mural) {
+      const m = this.world.mural
+      const x = m.tx * TILE + 8
+      const y = m.ty * TILE + TILE
+      const props = this.textures.get('fingersnap-props')
+      if (props.has('stone-milestone')) {
+        const f = props.get('stone-milestone')!
+        this.add.image(x, y, 'fingersnap-props', 'stone-milestone').setOrigin(0.5, 1).setScale(22 / f.height).setDepth(y)
+      } else {
+        this.add.image(x, y, 'mural').setOrigin(0.5, 1).setDepth(y)
+      }
+    }
     // Supplied atlas props at deliberate small-world display heights, with
     // explicit collision boxes at their bases.
     for (const p of this.world.props) {
@@ -395,11 +459,125 @@ export class WorldScene extends Phaser.Scene {
       })
     }
     if (this.world.mural) {
-      this.interactables.push({ id: 'clue', x: this.world.mural.tx * TILE + 8, y: this.world.mural.ty * TILE + TILE, label: 'Study the mural' })
+      this.interactables.push({ id: 'clue', x: this.world.mural.tx * TILE + 8, y: this.world.mural.ty * TILE + TILE, label: 'Study the route marker' })
     }
     if (this.world.shrine) {
-      this.interactables.push({ id: 'lantern', x: this.world.shrine.tx * TILE + 8, y: this.world.shrine.ty * TILE + TILE, label: 'The old lantern' })
+      this.interactables.push({ id: 'lantern', x: this.world.shrine.tx * TILE + 8, y: this.world.shrine.ty * TILE + TILE, label: 'Look at the lantern' })
     }
+  }
+
+  /** Prompt wording that says what pressing the button will actually do. */
+  private promptLabel(it: Interactable): string {
+    const stage = this.session.questStage
+    if (it.id === 'clue') return stage === 'accepted' ? 'Take a rubbing of the marker' : it.label
+    if (it.id === 'lantern') return stage === 'guardian-defeated' ? 'Light the lantern' : it.label
+    return it.label
+  }
+
+  /** Height above an interactable's base where its marker floats. */
+  private markerOffset(id: InteractId): number {
+    if (id === 'lantern') return 44
+    if (id === 'clue') return 22
+    return 25
+  }
+
+  /** "!" over whoever moves the story on, "…" over anyone with news. */
+  private buildMarkers(): void {
+    for (const it of this.interactables) {
+      const img = this.add.image(it.x, it.y - this.markerOffset(it.id), 'mark-quest')
+        .setOrigin(0.5, 1)
+        .setDepth(6000)
+        .setVisible(false)
+      if (!this.reducedMotion) {
+        this.tweens.add({ targets: img, y: img.y - 2, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+      this.markers.set(it.id, img)
+    }
+    this.keyHint = this.add.image(0, 0, isTouchFirst() ? 'key-a' : 'key-e')
+      .setOrigin(0.5, 1)
+      .setDepth(6001)
+      .setVisible(false)
+    this.refreshMarkers()
+  }
+
+  private refreshMarkers(): void {
+    if (!this.session) return
+    const stage = this.session.questStage
+    for (const it of this.interactables) {
+      const img = this.markers.get(it.id)
+      if (!img || !img.active) continue
+      let kind: 'quest' | 'talk' | null = null
+      try {
+        const d = dialogueFor(it.id, stage)
+        if (d.event) kind = 'quest'
+        else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
+      } catch {
+        kind = null
+      }
+      if (kind) img.setTexture(kind === 'quest' ? 'mark-quest' : 'mark-talk')
+      img.setVisible(kind !== null && this.currentTarget?.id !== it.id)
+    }
+  }
+
+  /**
+   * Small native portraits for the dialogue box and character sheet. Each is
+   * trimmed to its visible pixels (textures carry transparent padding) and,
+   * for people, cropped to head and shoulders, then centered on a square.
+   */
+  private emitPortraits(): void {
+    const out: Record<string, string> = {}
+    const add = (name: string, key: string, frame: string | undefined, bust: boolean) => {
+      try {
+        if (!this.textures.exists(key)) return
+        const tex = this.textures.get(key)
+        if (frame && !tex.has(frame)) return
+        const f = frame ? tex.get(frame) : tex.get()
+        const src = f.source.image as CanvasImageSource
+        const w = f.cutWidth
+        const h = f.cutHeight
+        const c = document.createElement('canvas')
+        c.width = w
+        c.height = h
+        const ctx = c.getContext('2d', { willReadFrequently: true })!
+        ctx.drawImage(src, f.cutX, f.cutY, w, h, 0, 0, w, h)
+        const data = ctx.getImageData(0, 0, w, h).data
+        let minX = w, minY = h, maxX = -1, maxY = -1
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > 16) {
+              if (x < minX) minX = x
+              if (x > maxX) maxX = x
+              if (y < minY) minY = y
+              if (y > maxY) maxY = y
+            }
+          }
+        }
+        if (maxX < 0) return
+        const bw = maxX - minX + 1
+        const bh = maxY - minY + 1
+        const cropH = bust ? Math.max(1, Math.ceil(bh * 0.58)) : bh
+        const size = Math.max(bw, cropH) + 2
+        const o = document.createElement('canvas')
+        o.width = size
+        o.height = size
+        const octx = o.getContext('2d')!
+        octx.imageSmoothingEnabled = false
+        const dx = Math.floor((size - bw) / 2)
+        const dy = bust ? size - cropH : Math.floor((size - bh) / 2)
+        octx.drawImage(c, minX, minY, bw, cropH, dx, dy, bw, cropH)
+        out[name] = o.toDataURL()
+      } catch {
+        /* portrait is optional decoration */
+      }
+    }
+    for (const id of ['mara', 'pip', 'orrin']) {
+      add(NPC_NAMES[id], this.textures.exists(`${id}-idle-0`) ? `${id}-idle-0` : id, undefined, true)
+    }
+    if (this.textures.get('fingersnap-props').has('stone-milestone')) add('Route Marker', 'fingersnap-props', 'stone-milestone', false)
+    else add('Route Marker', 'mural', undefined, false)
+    add('Hilltop Lantern', 'fingersnap-props', 'lantern-shrine', false)
+    add('You', 'fingersnap-demo-walk', 'walk-down-0', true)
+    bus.emit(EV.portraits, out)
   }
 
   private buildPlayer(state: GameState, entry: { tx: number; ty: number } | null): void {
@@ -513,7 +691,61 @@ export class WorldScene extends Phaser.Scene {
       spots.push({ frame: 'fern-cluster', tx: 7, ty: 17, w: 26 })
     }
     for (const s of spots) {
-      placeFingersnapOccluder(this, s.frame, s.tx * TILE + 8, s.ty * TILE + TILE, s.w)
+      const footY = s.ty * TILE + TILE
+      const image = placeFingersnapOccluder(this, s.frame, s.tx * TILE + 8, footY, s.w)
+      this.occluders.push({ image, bounds: image.getBounds(), footY })
+    }
+  }
+
+  /**
+   * Readable exits: a floating destination label and pulsing chevrons on the
+   * exit tiles pointing the way out.
+   */
+  private buildExitSigns(): void {
+    for (const exit of this.world.exits) {
+      const westEdge = exit.tx === 0
+      const midY = (exit.ty + exit.th / 2) * TILE
+      const edgeX = westEdge ? exit.tx * TILE + 6 : (exit.tx + 1) * TILE - 6
+      const chevron = this.add.image(edgeX, midY, 'mark-chevron')
+        .setDepth(5500)
+        .setFlipX(westEdge)
+        .setAlpha(0.9)
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: chevron,
+          x: edgeX + (westEdge ? -4 : 4),
+          alpha: 0.45,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        })
+      }
+      // Destination label: high-resolution text so it stays crisp at zoom.
+      const name = locations[exit.to].name
+      const labelX = westEdge ? exit.tx * TILE + 26 : (exit.tx + 1) * TILE - 26
+      this.add.text(labelX, midY - 20, westEdge ? `◂ ${name}` : `${name} ▸`, {
+        fontFamily: '"Pixelify Sans", monospace',
+        fontSize: '7px',
+        color: '#fff3c4',
+        stroke: '#2b1d1a',
+        strokeThickness: 3,
+        resolution: 8
+      })
+        .setOrigin(westEdge ? 0 : 1, 0.5)
+        .setDepth(5501)
+    }
+  }
+
+  /** Canopies and arches fade so nothing (hero or enemy) hides beneath them. */
+  private updateOccluders(dt: number): void {
+    if (this.occluders.length === 0) return
+    const things: { x: number; y: number }[] = [{ x: this.player.x, y: this.player.y }]
+    for (const e of this.enemies) things.push({ x: e.sprite.x, y: e.sprite.y })
+    for (const o of this.occluders) {
+      const covered = things.some((t) => t.y <= o.footY + 2 && o.bounds.contains(t.x, t.y - 6))
+      const target = covered ? 0.38 : 1
+      o.image.alpha += (target - o.image.alpha) * Math.min(1, dt * 10)
     }
   }
 
@@ -581,7 +813,10 @@ export class WorldScene extends Phaser.Scene {
     if (this.session.questStage !== 'clue-found') return
     this.guardianSpawned = true
     this.spawnEnemy('stone-warden', 'guardian', this.world.shrine.tx + 1, this.world.shrine.ty + 3)
-    if (announce) bus.emit(EV.toast, { text: 'The air goes cold. A stone warden uncoils from the dark!' })
+    if (announce) {
+      bus.emit(EV.toast, { text: 'The air goes cold. The stone warden grinds awake!' })
+      if (!this.reducedMotion) this.cameras.main.shake(260, 0.005)
+    }
   }
 
   /**
@@ -617,6 +852,7 @@ export class WorldScene extends Phaser.Scene {
 
   private killEnemy(enemy: Enemy): void {
     enemy.dead = true
+    sfx('pop')
     this.session.recordDefeat(enemy.id)
     // Spark burst
     const bx = enemy.sprite.x
@@ -653,7 +889,6 @@ export class WorldScene extends Phaser.Scene {
     this.enemies = this.enemies.filter((e) => e !== enemy)
     if (enemy.type === 'guardian') {
       this.session.applyQuestEvent('defeat-guardian')
-      bus.emit(EV.toast, { text: 'The shade dissolves into motes of light.' })
     }
   }
 
@@ -693,7 +928,7 @@ export class WorldScene extends Phaser.Scene {
       this.player.setAlpha(1)
       if (!this.avatarFallbackNotified) {
         this.avatarFallbackNotified = true
-        bus.emit(EV.toast, { text: 'Placeholder avatar — official layers unavailable for this character.' })
+        bus.emit(EV.toast, { text: 'Your Habitica look isn\u2019t in the art cache yet — Wren stands in for you.' })
       }
       return
     }
@@ -704,7 +939,7 @@ export class WorldScene extends Phaser.Scene {
       if (!this.avatarPartialNotified) {
         this.avatarPartialNotified = true
         bus.emit(EV.toast, {
-          text: 'Some Habitica layers are not in the local art cache — they are skipped from this avatar.',
+          text: 'A few pieces of your Habitica outfit aren\u2019t in the art cache, so they\u2019re left off.',
           kind: 'info'
         })
       }
@@ -759,27 +994,27 @@ export class WorldScene extends Phaser.Scene {
   private async toggleRide(): Promise<void> {
     const mountKey = (this.session.importedProfile as { selectedMount?: string | null } | null)?.selectedMount
     if (!mountKey) {
-      bus.emit(EV.toast, { text: 'No mount selected on this character.' })
+      bus.emit(EV.toast, { text: 'No mount chosen on Habitica — pick one there to ride here.' })
       return
     }
     if (this.riding) {
       this.riding = false
       void this.buildAvatarVisual()
-      bus.emit(EV.toast, { text: 'You dismount.' })
+      bus.emit(EV.toast, { text: 'You hop down.' })
       return
     }
     if (this.world.areaId === 'village') {
-      bus.emit(EV.toast, { text: 'No riding in the village — mount up outside the gates.' })
+      bus.emit(EV.toast, { text: 'Orrin would never forgive hoofprints in the square. Ride outside the gate.' })
       return
     }
     const mountKeys = await loadCompanion(this, mountKey, 'mount')
     if (!mountKeys || mountKeys.length < 2) {
-      bus.emit(EV.toast, { text: 'Your mount is not available here (its art is not cached) — you stay on foot.' })
+      bus.emit(EV.toast, { text: 'Your mount stayed home this time (its art isn\u2019t cached). On foot it is.' })
       return
     }
     this.riding = true
     void this.buildAvatarVisual()
-    bus.emit(EV.toast, { text: 'You mount up. (Faster travel, outdoors.)' })
+    bus.emit(EV.toast, { text: 'You saddle up. Faster on the open road!' })
   }
 
   private onProfileChanged(): void {
@@ -804,12 +1039,15 @@ export class WorldScene extends Phaser.Scene {
     if (this.riding && this.world.areaId === 'village') {
       this.riding = false
       void this.buildAvatarVisual()
-      bus.emit(EV.toast, { text: 'You dismount at the village gates.' })
+      bus.emit(EV.toast, { text: 'You lead your mount through the gate on foot.' })
     }
   }
 
-  private damageEnemy(enemy: Enemy, amount: number, fromX: number): void {
+  private damageEnemy(enemy: Enemy, amount: number, fromX: number, crit = false): void {
     enemy.hp -= amount
+    this.floatText(enemy.sprite.x, enemy.sprite.y - (enemy.type === 'guardian' ? 26 : 16), crit ? `${Math.round(amount)}!` : `${Math.round(amount)}`, crit ? '#ffd24a' : '#fffbef', crit)
+    sfx(crit ? 'crit' : 'hit')
+    this.hitStop(crit ? 70 : 45)
     enemy.sprite.setTint(0xffe0d0)
     this.time.delayedCall(90, () => {
       if (!enemy.dead && enemy.sprite.active) {
@@ -831,7 +1069,7 @@ export class WorldScene extends Phaser.Scene {
   // ------------------------------------------------------------- combat
 
   private handleAction(): void {
-    if (uiBlocked() || performance.now() < uiState.blockedUntil) return
+    if (uiBlocked() || this.cinematic || this.transitioning || performance.now() < uiState.blockedUntil) return
     if (this.currentTarget) {
       // Free village activities stay available at zero HP: talking is fine.
       this.openInteraction(this.currentTarget)
@@ -861,6 +1099,7 @@ export class WorldScene extends Phaser.Scene {
     // The aliased slash is a directional crescent (native art faces right):
     // rotate it to the facing like the other FX, instead of the old
     // flip/45-degree heuristic that turned cardinal attacks into diagonals.
+    sfx('swing')
     const slash = this.add.image(sx, sy, 'slash')
       .setDepth(this.player.y + 2)
       .setRotation(Math.atan2(dir.y, dir.x))
@@ -873,7 +1112,7 @@ export class WorldScene extends Phaser.Scene {
           const crit = Math.random() < kit.critChance
           const dmg = crit ? kit.meleeDamage * 2 : kit.meleeDamage
           if (crit) this.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 8)
-          this.damageEnemy(enemy, dmg, this.player.x)
+          this.damageEnemy(enemy, dmg, this.player.x, crit)
         }
       }
     })
@@ -881,14 +1120,21 @@ export class WorldScene extends Phaser.Scene {
 
   private handleCast(): void {
     const kit = this.kit()
-    if (uiBlocked() || performance.now() < uiState.blockedUntil || this.transitioning) return
+    if (uiBlocked() || performance.now() < uiState.blockedUntil || this.transitioning || this.cinematic) return
     if (this.session.zeroHpLocked) return
-    if (this.castCooldown > 0 || this.attackCooldown > kit.cooldown) return
+    if (this.castCooldown > 0 || this.attackCooldown > kit.cooldown) {
+      bus.emit(EV.ability, { status: 'cooldown' } satisfies AbilityPayload)
+      return
+    }
     if (this.session.state.mana < kit.manaCost) {
-      bus.emit(EV.toast, { text: `Not enough mana for ${kit.signatureName} (${kit.manaCost} needed).` })
+      sfx('fizzle')
+      this.floatText(this.player.x, this.player.y - 24, 'no mana', '#9cc4ff', false)
+      bus.emit(EV.ability, { status: 'no-mana' } satisfies AbilityPayload)
       return
     }
     this.castCooldown = 1.0
+    sfx('cast')
+    bus.emit(EV.ability, { status: 'cast', cooldown: this.castCooldown } satisfies AbilityPayload)
     this.session.setVitals(this.session.state.hp, this.session.state.mana - kit.manaCost)
     const dir = this.facing.clone().normalize()
     switch (kit.signature) {
@@ -944,7 +1190,7 @@ export class WorldScene extends Phaser.Scene {
               const reach = travelled ? 34 : 22
               if (dx * dx + dy * dy < reach * reach) {
                 const crit = Math.random() < kit.critChance * 2
-                this.damageEnemy(enemy, crit ? kit.signatureDamage * 2 : kit.signatureDamage, this.player.x - dir.x * 10)
+                this.damageEnemy(enemy, crit ? kit.signatureDamage * 2 : kit.signatureDamage, this.player.x - dir.x * 10, crit)
               }
             }
           })
@@ -1035,26 +1281,75 @@ export class WorldScene extends Phaser.Scene {
     this.session.setVitals(state.hp - mitigated, state.mana)
     this.iframes = CONTACT_IFRAMES
     this.player.setTint(0xff9080)
-    this.time.delayedCall(120, () => this.player.clearTint())
+    this.time.delayedCall(160, () => this.player.clearTint())
+    this.floatText(this.player.x, this.player.y - 24, `-${mitigated}`, '#ff8a70', false)
+    sfx('hurt')
+    if (!this.reducedMotion) this.cameras.main.shake(120, 0.006)
+    // A brief blink while invulnerable shows the grace window. The imported
+    // avatar container is the visible body when present (player alpha 0).
+    const body = this.avatarContainer ?? this.player
+    if (!this.reducedMotion) {
+      this.tweens.add({
+        targets: body,
+        alpha: { from: 0.35, to: 1 },
+        duration: 110,
+        repeat: 3,
+        yoyo: true,
+        onComplete: () => body.setAlpha(1)
+      })
+    }
     const dir = Math.sign(this.player.x - fromX) || 1
     this.player.x += dir * 6
     if (this.session.state.hp <= 0) this.defeatRecovery()
   }
 
-  /** Demo-only defeat recovery: wake at the village well with restored health. */
+  /** Defeat: a short collapse beat, then wake at the village well. */
   private defeatRecovery(): void {
     this.transitioning = true
+    // Tell the UI first: it holds the bars while the hero collapses, then
+    // shows the recovered vitals once the screen is dark.
+    bus.emit(EV.defeat, { phase: 'falling' })
     this.session.defeat()
-    this.cameras.main.fadeOut(320, 12, 12, 20)
+    sfx('defeat')
+    this.player.setVelocity(0, 0)
+    this.tweens.add({ targets: this.avatarContainer ?? this.player, scaleY: (this.avatarContainer ?? this.player).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
+    this.player.setTint(0x8a7a9a)
+    this.cameras.main.fadeOut(1100, 12, 12, 20)
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.restart({ fromDefeat: true })
     })
   }
 
+  /** Damage numbers and small callouts, crisp at any zoom. */
+  private floatText(x: number, y: number, text: string, color: string, big: boolean): void {
+    const t = this.add.text(Math.round(x), Math.round(y), text, {
+      fontFamily: '"Pixelify Sans", monospace',
+      fontSize: big ? '10px' : '8px',
+      color,
+      stroke: '#2b1d1a',
+      strokeThickness: 3,
+      resolution: 8
+    }).setOrigin(0.5, 1).setDepth(7000)
+    if (this.reducedMotion) {
+      this.time.delayedCall(550, () => t.destroy())
+      return
+    }
+    t.setScale(big ? 1.5 : 1.2)
+    this.tweens.add({ targets: t, scale: 1, duration: 120, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: t, y: y - 14, alpha: 0, delay: 220, duration: 520, ease: 'Quad.easeOut', onComplete: () => t.destroy() })
+  }
+
+  /** A few frames of freeze on impact so hits land with weight. */
+  private hitStop(ms: number): void {
+    if (this.reducedMotion || this.physics.world.isPaused) return
+    this.physics.world.pause()
+    this.time.delayedCall(ms, () => this.physics.world.resume())
+  }
+
   // ------------------------------------------------------------- interaction
 
   private openInteraction(target: Interactable): void {
-    let payload: { speaker: string; lines: string[]; event?: QuestEvent }
+    let payload: ReturnType<typeof dialogueFor>
     try {
       payload = dialogueFor(target.id, this.session.questStage)
     } catch (err) {
@@ -1062,11 +1357,15 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     uiState.dialogueOpen = true
+    heardAt.add(`${target.id}@${this.session.questStage}`)
+    this.refreshMarkers()
+    sfx('open')
     bus.emit(EV.dialogue, {
       id: target.id,
       speaker: payload.speaker,
       lines: payload.lines,
-      event: payload.event
+      event: payload.event,
+      choices: payload.choices
     })
   }
 
@@ -1077,10 +1376,61 @@ export class WorldScene extends Phaser.Scene {
     if (!event) return
     // The clue is journaled under the shared content id (advanceQuest also
     // carries it; addUnique keeps it single-entry).
-    if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'the painted lanterns')
+    if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'The Closure Mark')
+    if (event === 'light-lantern' || event === 'return-village') {
+      this.playLanternBeat(event)
+      return
+    }
     this.session.applyQuestEvent(event)
     this.refreshLanternVisuals()
     if (event === 'find-clue' && this.world.areaId === 'ruin') this.spawnGuardian(true)
+  }
+
+  /**
+   * The big moment: the HUD steps aside, the camera eases to the lantern,
+   * and the flame catches with a bloom of light and a chime. The quest event
+   * is applied at the peak so the UI's quest banner lands right after.
+   */
+  private playLanternBeat(event: QuestEvent): void {
+    const target = event === 'light-lantern'
+      ? this.lightProps.find((lp) => this.world.shrine && Math.abs(lp.gx - (this.world.shrine.tx * TILE + 8)) < 1)
+      : this.lightProps[0]
+    const finish = () => {
+      this.session.applyQuestEvent(event)
+      this.refreshLanternVisuals()
+    }
+    if (!target) {
+      finish()
+      return
+    }
+    this.cinematic = true
+    bus.emit(EV.cinematic, { active: true })
+    const cam = this.cameras.main
+    const baseZoom = cam.zoom
+    cam.stopFollow()
+    const panMs = this.reducedMotion ? 0 : 900
+    cam.pan(target.gx, target.gy + 10, panMs, 'Sine.easeInOut')
+    if (!this.reducedMotion) cam.zoomTo(baseZoom * 1.3, panMs, 'Sine.easeInOut')
+    this.time.delayedCall(panMs + 150, () => {
+      sfx('lantern')
+      if (!this.reducedMotion) cam.flash(500, 255, 220, 150)
+      const bloom = this.add.image(target.gx, target.gy, 'glow')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(4002)
+        .setScale(0.2)
+      this.tweens.add({ targets: bloom, scale: 4, alpha: 0, duration: 1400, ease: 'Quad.easeOut', onComplete: () => bloom.destroy() })
+      this.sparkBurst(target.gx, target.gy, 16)
+      finish()
+    })
+    this.time.delayedCall(panMs + 2300, () => {
+      cam.pan(this.player.x, this.player.y, panMs, 'Sine.easeInOut')
+      if (!this.reducedMotion) cam.zoomTo(baseZoom, panMs, 'Sine.easeInOut')
+      this.time.delayedCall(panMs + 50, () => {
+        cam.startFollow(this.player, true, 0.12, 0.12)
+        this.cinematic = false
+        bus.emit(EV.cinematic, { active: false })
+      })
+    })
   }
 
   /**
@@ -1096,6 +1446,10 @@ export class WorldScene extends Phaser.Scene {
     for (const lp of this.lightProps) {
       const isShrine = this.world.shrine !== null && Math.abs(lp.gx - (this.world.shrine.tx * TILE + 8)) < 1
       const shouldGlow = isShrine ? shrineLit : villageLit
+      // The delivered art is drawn lit; dim it until the flame is relit so
+      // lighting it is a visible change, not just an added halo.
+      if (shouldGlow) lp.sprite.clearTint()
+      else lp.sprite.setTint(0x8a849c)
       if (shouldGlow && !lp.glow) {
         lp.glow = this.add.image(lp.gx, lp.gy, 'glow')
           .setBlendMode(Phaser.BlendModes.ADD)
@@ -1163,13 +1517,15 @@ export class WorldScene extends Phaser.Scene {
     // resource/combat mutations: the committed snapshot must never revert a
     // mid-flight enemy hit, regen tick, or position write. The panel closes
     // normally; this gate only covers the brief disk write.
-    if (uiBlocked() || this.transitioning || this.session.persistenceInFlight) {
+    if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight) {
       this.player.setVelocity(0, 0)
+      this.player.anims.stop()
+      this.keyHint?.setVisible(false)
       this.updateEnemyBars()
+      this.updateOccluders(dt)
       return
     }
 
-    this.handleKeyboardActions()
     this.movePlayer(dt)
     this.updateEnemies(dt)
     this.updateBolts(dt)
@@ -1177,6 +1533,7 @@ export class WorldScene extends Phaser.Scene {
     this.checkExits()
     this.updatePrompt()
     this.updateEnemyBars()
+    this.updateOccluders(dt)
     this.updateDepth()
     this.updateAvatarVisual(time)
 
@@ -1187,15 +1544,22 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  private handleKeyboardActions(): void {
-    const now = performance.now()
-    if (now < uiState.blockedUntil) return
-    const justDown = (key: Phaser.Input.Keyboard.Key) => Phaser.Input.Keyboard.JustDown(key)
-    if ((this.actionKeys.E && justDown(this.actionKeys.E)) || (this.actionKeys.SPACE && justDown(this.actionKeys.SPACE))) {
-      this.handleAction()
-    }
-    if (this.actionKeys.F && justDown(this.actionKeys.F)) this.handleCast()
-    if (this.actionKeys.M && justDown(this.actionKeys.M)) void this.toggleRide()
+  /** World input is live only while the hero actually has control. */
+  private worldLive(): boolean {
+    return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
+      performance.now() >= uiState.blockedUntil
+  }
+
+  private onActionKey(): void {
+    if (this.worldLive()) this.handleAction()
+  }
+
+  private onCastKey(): void {
+    if (this.worldLive()) this.handleCast()
+  }
+
+  private onRideKey(): void {
+    if (this.worldLive()) void this.toggleRide()
   }
 
   private movePlayer(dt: number): void {
@@ -1400,11 +1764,22 @@ export class WorldScene extends Phaser.Scene {
     }
     if (best !== this.currentTarget) {
       this.currentTarget = best
-      const label = best ? best.label : null
-      if (label !== this.lastPrompt) {
-        this.lastPrompt = label
-        const payload: PromptPayload = { label }
-        bus.emit(EV.prompt, payload)
+      this.refreshMarkers()
+    }
+    // Recomputed every frame: the wording follows quest progress even while
+    // the hero stands still next to the target.
+    const label = best ? this.promptLabel(best) : null
+    if (label !== this.lastPrompt) {
+      this.lastPrompt = label
+      const payload: PromptPayload = { label }
+      bus.emit(EV.prompt, payload)
+    }
+    if (this.keyHint) {
+      if (best) {
+        const bob = this.reducedMotion ? 0 : Math.round(Math.sin(this.time.now * 0.008) * 1)
+        this.keyHint.setPosition(best.x, best.y - this.markerOffset(best.id) + bob).setVisible(true)
+      } else {
+        this.keyHint.setVisible(false)
       }
     }
   }
@@ -1412,13 +1787,23 @@ export class WorldScene extends Phaser.Scene {
   private updateEnemyBars(): void {
     this.hpBars.clear()
     for (const enemy of this.enemies) {
-      const w = 22
-      const x = enemy.sprite.x - w / 2
-      const y = enemy.sprite.y - (enemy.type === 'guardian' ? 30 : 22)
-      this.hpBars.fillStyle(0x241f31, 0.8)
-      this.hpBars.fillRect(x - 1, y - 1, w + 2, 5)
-      this.hpBars.fillStyle(0x7fe0e8, 1)
-      this.hpBars.fillRect(x, y, Math.max(0, (enemy.hp / enemy.maxHp) * w), 3)
+      const boss = enemy.type === 'guardian'
+      // Small creatures only show a bar once hurt — less clutter, and no
+      // bars floating over foliage for enemies the player hasn't met.
+      if (!boss && enemy.hp >= enemy.maxHp) continue
+      const w = boss ? 30 : 16
+      const h = boss ? 4 : 3
+      const x = Math.round(enemy.sprite.x - w / 2)
+      const y = Math.round(enemy.sprite.y - (boss ? 31 : 19))
+      const pct = Math.max(0, enemy.hp / enemy.maxHp)
+      this.hpBars.fillStyle(0x2b1d1a, 0.9)
+      this.hpBars.fillRect(x - 1, y - 1, w + 2, h + 2)
+      this.hpBars.fillStyle(0x5a3a32, 1)
+      this.hpBars.fillRect(x, y, w, h)
+      this.hpBars.fillStyle(boss ? 0xe8734f : 0xf2c14e, 1)
+      this.hpBars.fillRect(x, y, Math.max(0, Math.round(pct * w)), h)
+      this.hpBars.fillStyle(0xffffff, 0.35)
+      this.hpBars.fillRect(x, y, Math.max(0, Math.round(pct * w)), 1)
     }
   }
 
