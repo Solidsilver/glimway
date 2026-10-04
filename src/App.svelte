@@ -28,6 +28,8 @@
   import Hud from './ui/Hud.svelte'
   import DialoguePanel from './ui/DialoguePanel.svelte'
   import JournalPanel from './ui/JournalPanel.svelte'
+  import LibraryPanel from './ui/LibraryPanel.svelte'
+  import { PAPER_EV } from './game/papers'
   import CharacterPanel from './ui/CharacterPanel.svelte'
   import MenuPanel from './ui/MenuPanel.svelte'
   import TouchControls from './ui/TouchControls.svelte'
@@ -54,7 +56,7 @@
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
-  type Panel = 'journal' | 'character' | 'menu' | null
+  type Panel = 'journal' | 'character' | 'menu' | 'library' | null
 
   let phase = $state<Phase>('loading')
   let hasSave = $state(false)
@@ -202,6 +204,9 @@
     const onLinkNotice = () => {
       ui.linkNotice = 'played-elsewhere'
     }
+    const onOpenLibrary = () => {
+      if (panel === null) toggle('library')
+    }
     const pairs: [string, (...args: never[]) => void][] = [
       [EV.stats, onStats],
       [EV.quest, onQuest],
@@ -215,7 +220,8 @@
       [EV.portraits, onPortraits],
       [EV.discovery, onDiscovery],
       [EV.link, onLink],
-      [EV.linkNotice, onLinkNotice]
+      [EV.linkNotice, onLinkNotice],
+      [PAPER_EV.openLibrary, onOpenLibrary]
     ]
     for (const [ev, fn] of pairs) bus.on(ev, fn)
     return () => {
@@ -660,6 +666,8 @@
     {/if}
     {#if panel === 'journal'}
       <JournalPanel onClose={() => toggle('journal')} />
+    {:else if panel === 'library'}
+      <LibraryPanel {session} onClose={() => toggle('library')} />
     {:else if panel === 'character'}
       <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} />
     {:else if panel === 'menu'}

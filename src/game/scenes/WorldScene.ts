@@ -30,6 +30,7 @@ import { Hero } from '../entities/hero'
 import { EnemySystem } from '../entities/enemies'
 import { Projectiles } from '../entities/projectiles'
 import { Interactables } from '../entities/interactables'
+import { PaperPickups } from '../entities/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
@@ -95,7 +96,10 @@ export class WorldScene extends Phaser.Scene {
     this.lightProps = buildProps(this, this.world, this.solidGroup)
 
     // Entities
-    this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion })
+    const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion })
+    this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, papers })
+    // Read-only: found-text pickups still lying in this area (playtests).
+    ;(window as unknown as { __fsPapers?: () => string[] }).__fsPapers = () => papers.lying()
     this.hero = new Hero(
       this,
       {

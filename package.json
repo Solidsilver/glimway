@@ -15,7 +15,8 @@
     "verify:all": "npm run verify && npm run test:e2e",
     "server": "go run ./server/cmd/fingersnap-server -cookie-secure=false",
     "vectors": "node scripts/backend-vectors.ts",
-    "vectors:wilds": "node scripts/wilds-vectors.ts"
+    "vectors:wilds": "node scripts/wilds-vectors.ts",
+    "papers": "node scripts/papers.ts"
   },
   "dependencies": {
     "@fontsource-variable/nunito": "^5.3.0",
