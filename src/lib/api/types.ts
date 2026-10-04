@@ -59,7 +59,7 @@ export interface SpendResponse extends Snapshot {
   outcome: string;
 }
 
-export type SpendKind = 'rest' | 'revive' | 'road-lantern' | 'chest';
+export type SpendKind = 'rest' | 'revive' | 'home-rest' | 'road-lantern' | 'chest';
 
 export interface LoginRequest {
   userId: string;

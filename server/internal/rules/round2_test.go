@@ -15,20 +15,20 @@ func TestRound2AForgerySignalsAndVerifiedRebirth(t *testing.T) {
 	}{
 		{"three windows tolerated", LossReference{10, xp + 3*window}, 5, false},
 		{"above generous window", LossReference{10, xp + 3*window + E.CheckpointToleranceXP + 1}, 5, true},
-		{"higher level but less XP", LossReference{4, xp + 1}, 5, true},
+		{"inconsistent small synthetic loss", LossReference{4, xp + 1}, 5, false},
 		{"ordinary loss", LossReference{6, xp + 10}, 5, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if CheckpointForgery(p, tc.ref, tc.high) != tc.flag {
+			if CheckpointForgery(p, tc.ref, tc.high, tc.ref, 0) != tc.flag {
 				t.Fatal("wrong flag policy")
 			}
 		})
 	}
 	p.Level = 1
-	if !CheckpointForgery(p, LossReference{40, LifetimeXP(40, 0)}, 1) {
+	if !CheckpointForgery(p, LossReference{40, LifetimeXP(40, 0)}, 1, LossReference{40, LifetimeXP(40, 0)}, 0) {
 		t.Fatal("client claim authorized rebirth")
 	}
-	if CheckpointForgery(p, LossReference{40, LifetimeXP(40, 0)}, 5) {
+	if CheckpointForgery(p, LossReference{40, LifetimeXP(40, 0)}, 5, LossReference{40, LifetimeXP(40, 0)}, 0) {
 		t.Fatal("verified rebirth flagged")
 	}
 }

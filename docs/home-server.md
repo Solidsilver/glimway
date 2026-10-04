@@ -171,11 +171,16 @@ Unverified credit starts at 200 embers above the login checkpoint, grows by
 100 per full day, and caps at 3000. Pending lots are confirmed only by a verified
 login reaching their original reported XP and expire after 90 days. Both syncs
 and logins advance the separate loss reference. Several deaths can be synced
-at once; large losses are audited. A checkpoint flags only the generous forgery
-signals documented in `.agent/REPORT.md`, preserving pending until expiry or
-confirmation. Rebirth requires earlier verified history above level 1. Sessions
-expire absolutely 30 days after login even with daily activity; the server sees
-a token only during `POST /api/session`, so active players sign in monthly.
+at once; large losses are audited. A checkpoint compares verified XP with the highest report that earned or held
+credit since the preceding checkpoint, even if later reports step down. It
+allows three death windows plus the configured XP tolerance, and one extra
+window per full day since that highest report. A ledger cursor distinguishes
+reports and checkpoints in the same second. Flags preserve paid/pending credit;
+pending still expires or settles under the existing rules. Rebirth requires earlier verified history above level 1. Sessions
+expire after seven idle days. Successful authenticated requests slide that
+seven-day deadline, bounded by thirty days from login. Daily activity cannot
+extend the absolute limit; the server sees a token only during
+`POST /api/session`, so active players sign in at least monthly.
 
 ### Backend upgrade notes
 
@@ -232,3 +237,66 @@ world before any state or loot is returned.
 Restore validation now also populates and checks the new tables, verifies material
 and decoration ledger sums, and checks the original player's full snapshot and
 revision after reopening the backup. The same manual backup procedure applies.
+
+
+### Round-3 login and frontend contract
+
+Every reverse proxy must preserve the browser's original **Host header**,
+including its port. The server compares the request Origin host against Host.
+Caddy's existing HTTP reverse proxy does this by default; Vite uses
+`changeOrigin: false`. Rewriting Host to the upstream address makes legitimate
+browser POSTs fail with `cross-origin`. Trusted-proxy configuration controls
+forwarded client IPs; it does not bypass this Origin check.
+
+The existing IP, concurrency, and global upstream limits now also reserve
+failed-proof capacity per claimed user ID: five rejected upstream identity
+proofs per fifteen-minute fixed window. Inflight reservations prevent a
+parallel burst from overshooting that limit. A rejected proof is an upstream
+401/403 mapped to `habitica-auth`; successes, upstream outages, global-rate
+rejections and busy slots do not consume failed-proof capacity. At the cap,
+login returns 429 `login-user-rate-limited`, with Retry-After for the remaining
+window. A full inflight-only reservation set asks for a one-second retry. The
+map is bounded to 4096 IDs and evicts the oldest non-inflight bucket when full.
+This in-memory protection resets on process restart, like the existing login
+limiters. Valid credentials cannot be distinguished before proof, so a targeted
+user must wait for the window after five rejected proofs. Other users retain
+their independent failed-proof capacity.
+
+CLI and player invites are now six words from the fixed 256-word catalog in
+`content/invite-words.json`, followed by four digits (including leading zeros),
+separated by hyphens. Independent uniform cryptographic draws give
+`6*log2(256)+log2(10000) = 61.2877` bits of entropy. Words can repeat. Redemption
+is case-insensitive and accepts hyphens or whitespace, including mixed/repeated
+separators. Old 64-hex invitations still use the same hash and remain valid
+until used, revoked or expired. New and old codes stay single-use, expire after
+thirty days, and are stored only as SHA-256 hashes. Raw codes are shown only
+once at creation. Admin revocation still takes the 64-hex **hash ID**.
+
+New additive response fields:
+
+- Every state-bearing snapshot has `displayName`, including login before origin
+  selection. Imported profile names are not needed to label the verified hero.
+- `GET /api/state` returns `leaseActive`, true only when a nonempty
+  `X-Play-Lease` matches the player's current stored lease. Mismatches still
+  return 200 and never heartbeat the winning lease. Without the header it is
+  false. Poll with the tab's lease to detect takeover while idle.
+- `GET /api/invites` returns `remaining` (lifetime creations left, including
+  used/revoked/expired codes in the spent budget) and `outstandingLimit`.
+
+For a locked imported hero (stored HP 0 and imported baseline HP 0), sync and
+spend must carry the **pre-sync local progress with `hp: 0`**. Supply new Habitica
+healing only in sync's `profile`; apply the server's returned snapshot after
+it accepts the operation. Pre-applying healing to `progress.hp` fails with
+400 `invalid-progress`. A zero-HP revive/rest needs XP-earned embers, with
+zero-HP progress still carried. The same rule applies to home rest.
+
+Migration 005 adds the private checkpoint ledger cursor and a partial index
+for credit-report lookup. It preserves ambiguous legacy same-second reports
+for the first new checkpoint. Existing session deadlines are clamped to the
+minimum of their old expiry, the thirty-day absolute deadline, and seven days
+after the best available legacy activity timestamp (`max(session.created_at,
+player.last_seen_at)`). Older code did not record each session's last
+successful read, so active read-only legacy sessions may need to sign in again
+on upgrade. Retained historical idempotency responses with snapshots gain a
+missing `displayName` from the player row; existing historical names and all
+request hashes remain unchanged. No economic grants or balances are rewritten.

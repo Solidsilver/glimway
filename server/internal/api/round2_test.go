@@ -283,7 +283,7 @@ func TestRound2BCeilingFullDayBoundariesAndMaximum(t *testing.T) {
 		t.Run(fmt.Sprint(tc.age), func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
-			x.now.Add(tc.age)
+			advanceActive(x, c, tc.age)
 			p := profile("alice", 100, 0, 20)
 			next := x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
 			if next.State.XPEmbers != tc.cap || next.Pending != int(rules.LifetimeXP(100, 0)/10)-tc.cap {

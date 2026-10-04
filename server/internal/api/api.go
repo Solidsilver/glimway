@@ -23,6 +23,7 @@ import (
 
 const CookieName = "fingersnap_session"
 const SessionTTL = 30 * 24 * time.Hour
+const SessionIdleTTL = 7 * 24 * time.Hour
 
 type Config struct {
 	SecureCookie     bool
@@ -43,6 +44,7 @@ type Server struct {
 	loginSlots  chan struct{}
 	loginLimit  *loginLimiter
 	loginGlobal *loginLimiter
+	loginProofs *proofLimiter
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
@@ -204,7 +206,7 @@ func (a *Server) auth(ctx context.Context, tx *sql.Tx, r *http.Request) (string,
 	if err != nil {
 		return "", "", err
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE sessions SET expires_at=MIN(?,created_at+?) WHERE id_hash=?", now+int64(SessionTTL.Seconds()), int64(SessionTTL.Seconds()), hash)
+	_, err = tx.ExecContext(ctx, "UPDATE sessions SET expires_at=MIN(?,created_at+?) WHERE id_hash=?", now+int64(SessionIdleTTL.Seconds()), int64(SessionTTL.Seconds()), hash)
 	return id, hash, err
 }
 func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error) {
@@ -251,7 +253,11 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 128 {
+	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 512 {
+		return fail(400, "invalid-credentials")
+	}
+	req.Invite = store.NormalizeInvite(req.Invite)
+	if len(req.Invite) > 128 {
 		return fail(400, "invalid-credentials")
 	}
 	eligible, err := a.precheck(r.Context(), req.UserID, req.Invite)
@@ -265,6 +271,13 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
 		return fail(429, "login-rate-limited")
 	}
+	finishProof, retry, ok := a.loginProofs.begin(req.UserID, a.Config.Now())
+	if !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retry.Seconds()))))
+		return fail(429, "login-user-rate-limited")
+	}
+	failedProof := false
+	defer func() { finishProof(failedProof) }()
 	select {
 	case a.loginSlots <- struct{}{}:
 		defer func() { <-a.loginSlots }()
@@ -277,6 +290,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		var h *habitica.Error
 		if errors.As(err, &h) {
+			failedProof = h.Code == "habitica-auth"
 			if h.Status == 429 {
 				w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(h.RetryAfter.Seconds()))))
 			}
@@ -368,7 +382,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE habitica_id=?", p.Name, now, p.PartyID, p.ID); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?) WHERE habitica_id=?", verified, store.JSON(p), now, p.Level, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE habitica_id=?),0) WHERE habitica_id=?", verified, store.JSON(p), now, p.Level, p.ID, p.ID); err != nil {
 			return err
 		}
 	}
@@ -376,7 +390,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	expires := time.Unix(now, 0).Add(SessionTTL)
+	expires := time.Unix(now, 0).Add(SessionIdleTTL)
 	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE expires_at<=? OR created_at<=?", now, now-int64(SessionTTL.Seconds())); err != nil {
 		return err
 	}
@@ -410,12 +424,17 @@ func (a *Server) state(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if l := r.Header.Get("X-Play-Lease"); l != "" && s.LeaseID.Valid && l == s.LeaseID.String {
+	l := r.Header.Get("X-Play-Lease")
+	active := l != "" && s.LeaseID.Valid && l == s.LeaseID.String
+	if active {
 		if _, err = tx.ExecContext(r.Context(), "UPDATE players SET lease_seen_at=? WHERE habitica_id=?", a.Config.Now().Unix(), s.HabiticaID); err != nil {
 			return err
 		}
 	}
-	return a.finish(w, r, tx, s)
+	return a.finish(w, r, tx, struct {
+		store.Snapshot
+		LeaseActive bool `json:"leaseActive"`
+	}{s, active})
 }
 func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	var req struct {

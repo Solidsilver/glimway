@@ -430,19 +430,25 @@ func DeathWindow(level float64) float64 {
 func IsRebirth(p Profile, prior LossReference, verifiedHighLevel float64) bool {
 	return p.Level == 1 && prior.Level > 1 && verifiedHighLevel > 1
 }
-func CheckpointForgery(p Profile, prior LossReference, verifiedHighLevel float64) bool {
-	if IsRebirth(p, prior, verifiedHighLevel) {
+
+// CreditReference recovers the level associated with a ledger's lifetime XP.
+func CreditReference(xp float64) LossReference {
+	level, exact := slices.BinarySearch(lifetimeTotals[:], xp)
+	if !exact {
+		level--
+	}
+	return LossReference{Level: float64(max(1, min(level, MaxProfileLevel))), XP: xp}
+}
+
+// Forgery uses the highest credit-bearing report, while rebirth trusts only
+// the latest loss reference and previously verified level history.
+func CheckpointForgery(p Profile, latest LossReference, verifiedHighLevel float64, highest LossReference, ageSeconds int64) bool {
+	if IsRebirth(p, latest, verifiedHighLevel) {
 		return false
 	}
-	xp := LifetimeXP(p.Level, *p.Exp)
-	loss := prior.XP - xp
-	if p.Level > prior.Level && loss > 0 {
-		return true
-	}
-	if loss <= E.CheckpointToleranceXP {
-		return false
-	}
-	return loss > 3*DeathWindow(prior.Level)+E.CheckpointToleranceXP
+	days := max(int64(0), ageSeconds) / 86400
+	bound := (3+float64(days))*DeathWindow(highest.Level) + E.CheckpointToleranceXP
+	return highest.XP-LifetimeXP(p.Level, *p.Exp) > bound
 }
 
 // XP loss is always accepted: the monotone credit mark prevents double payment.

@@ -90,7 +90,7 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 			if err == nil {
 				var n int
 				err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n)
-				if err == nil && n != 4 {
+				if err == nil && n != 5 {
 					err = sql.ErrNoRows
 				}
 				s.Close()
@@ -194,8 +194,8 @@ func TestRound2UpgradeLossHistoryRemovalAndSessionDeadline(t *testing.T) {
 		t.Fatal("upgrade ignored newest checkpoint or verified history")
 	}
 	var deadline, removed, revoked int64
-	if err = s.DB.QueryRow("SELECT expires_at FROM sessions").Scan(&deadline); err != nil || deadline != 1+30*86400 {
-		t.Fatal("legacy session extended absolute lifetime")
+	if err = s.DB.QueryRow("SELECT expires_at FROM sessions").Scan(&deadline); err != nil || deadline != 100+7*86400 {
+		t.Fatal("legacy session not bounded by idle and absolute lifetimes")
 	}
 	if err = s.DB.QueryRow("SELECT removed_at FROM access_removals WHERE habitica_id='alice'").Scan(&removed); err != nil {
 		t.Fatal("legacy removed account not recorded")
