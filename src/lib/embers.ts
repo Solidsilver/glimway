@@ -1,4 +1,8 @@
+import economyJson from '../../content/economy.json' with { type: 'json' };
+import type { Economy } from './economy.ts';
 import { validateSave, type GameState, type QuestEvent } from './state.ts';
+
+const economy = economyJson as unknown as Economy;
 
 /**
  * Embers: real-life progress turned into something to spend in the world.
@@ -12,23 +16,19 @@ import { validateSave, type GameState, type QuestEvent } from './state.ts';
  * Pure logic only: no network, no Phaser, no randomness.
  */
 
-export const XP_PER_EMBER = 10;
+export const XP_PER_EMBER = economy.xpPerEmber;
 /** One-off gift on the first Habitica import (flag-guarded, so reconnecting
  *  after a disconnect does not pay it again). */
-export const WELCOME_EMBERS = 3;
+export const WELCOME_EMBERS = economy.welcomeEmbers;
 
-export const EMBER_COSTS = {
-  rest: 2,
-  roadLantern: 3,
-  chest: 5,
-} as const;
+export const EMBER_COSTS = economy.costs;
 
 /** Road lanterns along Brackenwood that can be lit as rest spots. */
-export const ROAD_LANTERNS = ['road-1', 'road-2', 'road-3'] as const;
+export const ROAD_LANTERNS = economy.roadLanterns;
 export type RoadLanternId = (typeof ROAD_LANTERNS)[number];
 
-export const CHEST_ID = 'ashwatch-chest';
-export const CHARM_ITEM = 'ember-charm';
+export const CHEST_ID = economy.chestId;
+export const CHARM_ITEM = economy.charmItem;
 /** Extra crit chance while carrying the Ember Charm. */
 export const CHARM_CRIT_BONUS = 0.1;
 
@@ -38,10 +38,7 @@ export function withCharm<K extends { critChance: number }>(kit: K, inventory: r
   return { ...kit, critChance: Math.min(0.6, kit.critChance + CHARM_CRIT_BONUS) };
 }
 
-const QUEST_EMBERS: Partial<Record<QuestEvent, number>> = {
-  'defeat-guardian': 2,
-  'return-village': 3,
-};
+const QUEST_EMBERS = economy.questEmbers;
 
 export const FLAGS = {
   welcome: 'embers:welcome',

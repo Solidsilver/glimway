@@ -1,0 +1,86 @@
+package habitica
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+const valid = `{"success":true,"data":{"_id":"alice","profile":{"name":"Hero"},"flags":{"classSelected":false},"stats":{"lvl":1,"exp":0,"hp":5,"mp":10,"str":0,"int":0,"con":0,"per":0}}}`
+
+func TestRetryAfterOnce(t *testing.T) {
+	for _, always := range []bool{false, true} {
+		var n atomic.Int64
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			call := n.Add(1)
+			if r.Header.Get("X-Api-Key") != "secret" || r.Header.Get("X-Client") != "creator-app" || r.URL.Query().Get("userFields") == "" {
+				t.Error("missing upstream headers/projection")
+			}
+			if call == 1 || always {
+				w.Header().Set("Retry-After", "0")
+				w.WriteHeader(429)
+				return
+			}
+			_, _ = w.Write([]byte(valid))
+		}))
+		c := New(s.URL, "creator-app")
+		p, err := c.Verify(context.Background(), "alice", "secret")
+		s.Close()
+		if n.Load() != 2 {
+			t.Fatalf("retried %d times", n.Load())
+		}
+		if always {
+			var e *Error
+			if !errors.As(err, &e) || e.Code != "habitica-rate-limited" {
+				t.Fatal(err)
+			}
+		} else if err != nil || p.ID != "alice" {
+			t.Fatal(err)
+		}
+	}
+}
+func TestUpstreamErrorsAreScrubbedAndRedirectsBlocked(t *testing.T) {
+	for _, status := range []int{401, 403, 500, 200, 302} {
+		var calls atomic.Int64
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls.Add(1)
+			w.Header().Set("Location", "/echo-secret")
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte("secret"))
+		}))
+		_, err := New(s.URL, "creator-app").Verify(context.Background(), "alice", "secret")
+		s.Close()
+		if err == nil || strings.Contains(err.Error(), "secret") || calls.Load() != 1 {
+			t.Fatalf("unsafe error/retry: %v", err)
+		}
+	}
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(strings.Replace(valid, `"alice"`, `"bob"`, 1)))
+	}))
+	defer s.Close()
+	if _, err := New(s.URL, "tag").Verify(context.Background(), "alice", "secret"); err == nil {
+		t.Fatal("identity mismatch accepted")
+	}
+}
+func TestRetryAfterParser(t *testing.T) {
+	if retryAfter("2") != 2*time.Second || retryAfter("-1") != time.Second || retryAfter("9999999") != 60*time.Second || retryAfter("garbage") != time.Second {
+		t.Fatal("Retry-After seconds")
+	}
+	if retryAfter(time.Now().Add(10*time.Second).UTC().Format(http.TimeFormat)) < 8*time.Second {
+		t.Fatal("Retry-After HTTP date")
+	}
+}
+func TestRateLimitWaitCancellation(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Header().Set("Retry-After", "60"); w.WriteHeader(429) }))
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if _, err := New(s.URL, "tag").Verify(ctx, "alice", "secret"); err == nil {
+		t.Fatal("cancelled login succeeded")
+	}
+}

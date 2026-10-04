@@ -21,9 +21,13 @@ same UI are appended at the end of this file.
   Fingersnap never scores tasks, spends gold, changes stats, equips items,
   casts spells, or consumes Habitica possessions. Ordinary gameplay causes
   zero Habitica requests; sync is one explicit `GET /user` per user action.
-- **Token in memory only**: `HabiticaCredentials` lives in a JS variable for
-  the session. It is never written to GameState, IndexedDB saves, save
-  exports, logs, error messages, URLs, or source control. Save validation
+- **Token handling**: `HabiticaCredentials` lives in client memory; the client
+  may store credentials in a separate IndexedDB store only with the explicit
+  Remember opt-in (phase 1). It is never written to GameState, IndexedDB saves,
+  save exports, logs, error messages, URLs, or source control. The server holds
+  the raw token only during one login proof request; it never stores it in
+  files, its database, backups, logs or responses. Server logging excludes
+  bodies, headers and unrecognized paths/query strings. Save validation
   (`validateSave`, `validateHabiticaProfile`) strips unknown fields, so a
   stray token cannot ride along even if handed in.
 - **`.env` is dev-only**: `HABITICA_USER_ID` / `HABITICA_API_TOKEN` (see
@@ -55,7 +59,8 @@ Embers turn Habitica XP into an in-game currency without any write path:
   flag so disconnecting and reconnecting cannot repeat it. Past XP is not paid.
 - **Earned vs gifted**: `GameState.xpEmbers` counts embers that came from XP.
   Ordinary spends use gifted (welcome/quest) embers first.
-- **Spending** is local only (`spendEmbers`): a warm rest restores local HP and
+- **Guest spending** is local (`spendEmbers`); connected spending uses the
+  server transaction and ledger: a warm rest restores local HP and
   mana. For an imported hero at 0 HP it lifts the zero-HP lock only when paid
   with XP-earned embers (`needs-earned` otherwise), so the welcome gift can't
   bypass the lock. Lit road lanterns restore mana for everyone but HP only for
@@ -302,3 +307,27 @@ hand-computed expected effective stats:
 9. Demo rollback / "reset to demo": `saveGame(state,
    { vitalsSource: 'demo', importedProfile: null })` — never leave a stale
    baseline.
+
+## Connected saves (phase 2 backend)
+
+The browser still fetches Habitica profiles directly for explicit syncs. The
+server calls Habitica only for `POST /api/session`, to verify the account,
+with at most one retry after 429. For connected saves the server owns the HP/MP
+baseline, XP high-water mark, earned/gifted balances, paid outcomes and bought
+inventory. Guests retain all existing local rules above.
+
+`content/economy.json` is canonical for both languages; `content/vectors/`
+contains outputs of the real TypeScript functions replayed by Go tests.
+Connected reported profiles receive extra shape/curve/vitals/death-loss checks.
+A sync pays at most 200 XP-earned embers immediately and holds the excess
+pending; the next verified login settles confirmed pending credit, or drops it
+and flags a mark ahead of the checkpoint by more than 10 XP. The XP mark never
+falls, and login does not consume the gameplay healing baseline.
+
+An accepted upload grants the two story gifts once per account. A stale upload
+merges only story progress; the server retains health, mana, area and position.
+Syncs and spends require a current revision and play lease and commit their
+carried progress atomically. All uploads ignore balances, maxima, paid flags
+and purchased items. Migration is once per account, carries at most 30 gifted
+embers, and never trusts local XP marks or earned provenance. The complete
+phase-2 wire contract and validation decisions are in `.agent/REPORT.md`.

@@ -1,7 +1,7 @@
 # Habitica gear catalog & asset helpers (M3)
 
 Owner: `snap_assets`. Scope: `src/lib/habitica/gear.ts`,
-`src/lib/habitica/avatar.ts`, `src/content/habitica-gear.json`,
+`src/lib/habitica/avatar.ts`, `content/habitica-gear.json`,
 `tests/habitica-assets.test.ts`, `public/assets/habitica/*`, this file,
 `ASSETS.md`. Peer modules (`types.ts`, `mapping.ts`, `sync.ts`, `client.ts`,
 `save.ts`) are snap_state; game/UI consumption is snap_runtime.
@@ -12,7 +12,7 @@ Date: 2026-10-03. No account credentials were used or stored.
 
 | What | Source | Revision / retrieval | License |
 |---|---|---|---|
-| Gear numerics (`src/content/habitica-gear.json`) | `GET https://habitica.com/api/v3/content` (public static content, x-client header only, no auth) | source tree `HabitRPG/habitica` `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09` (2026-10-02T16:07:04Z); retrieved 2026-10-03 | Item stat definitions derived from Habitica content data — **GPL v3** |
+| Gear numerics (`content/habitica-gear.json`) | `GET https://habitica.com/api/v3/content` (public static content, x-client header only, no auth) | source tree `HabitRPG/habitica` `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09` (2026-10-02T16:07:04Z); retrieved 2026-10-03 | Item stat definitions derived from Habitica content data — **GPL v3** |
 | Sprite naming / layer order | `website/client/src/components/avatar.vue`, `website/client/src/components/ui/sprite.vue`, `website/client/src/assets/css/sprites/spritesmith-main.css`, `website/common/script/content/constants/gifSprites.js` (same revision) | retrieved 2026-10-03 | GPL v3 (code); naming facts |
 | Sprite art (`public/assets/habitica/*`) | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` | retrieved 2026-10-03 | **CC BY-NC-SA 3.0** (HabitRPG / Weirdly Wonderful art) |
 
@@ -23,7 +23,7 @@ Cached art files are byte-identical copies (sha256 recorded in
 
 Attribution text for the UI credits line is in `ASSETS.md`.
 
-## Catalog shape (`src/content/habitica-gear.json`)
+## Catalog shape (`content/habitica-gear.json`)
 
 - `provenance` — endpoint, project, revision + date, retrieval date,
   x-client tag used, auth note, license split, counts, modification note.

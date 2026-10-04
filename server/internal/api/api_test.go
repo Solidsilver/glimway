@@ -1,0 +1,835 @@
+package api
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fingersnap/server/internal/habitica"
+	"fingersnap/server/internal/rules"
+	"fingersnap/server/internal/store"
+	"fmt"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+const secret = "RECOGNIZABLE-HABITICA-TOKEN-NEVER-PERSIST-9238"
+
+type rig struct {
+	t        *testing.T
+	db       *store.Store
+	api      *Server
+	upstream *httptest.Server
+	profiles map[string]rules.Profile
+	mu       sync.Mutex
+	now      atomic.Int64
+	logs     bytes.Buffer
+	calls    atomic.Int64
+	dir      string
+}
+type response struct {
+	store.Snapshot
+	Lease  string `json:"lease"`
+	Status string `json:"status"`
+}
+
+func profile(id string, level, exp, hp float64) rules.Profile {
+	p := rules.Profile{ID: id, Name: "Hero", Level: level, Exp: &exp, HP: hp, MaxHP: 50, MP: 10, MaxMP: 30 + 2*float64(int(level)/2), Stats: rules.Stats{Str: float64(int(level) / 2), Int: float64(int(level) / 2), Con: float64(int(level) / 2), Per: float64(int(level) / 2)}, Pets: []string{}, Mounts: []string{}}
+	return rules.SanitizeProfile(p)
+}
+func newRig(t *testing.T) *rig {
+	t.Helper()
+	x := &rig{t: t, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
+	x.now.Store(time.Now().Unix())
+	var err error
+	x.db, err = store.Open(filepath.Join(x.dir, "game.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	x.upstream = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		x.calls.Add(1)
+		if r.Method != "GET" || r.URL.Path != "/api/v3/user" || r.Header.Get("X-Client") != "test-creator-fingersnap" {
+			t.Error("invalid upstream request")
+		}
+		id := r.Header.Get("X-Api-User")
+		x.mu.Lock()
+		p, ok := x.profiles[id]
+		x.mu.Unlock()
+		if !ok {
+			p = profile(id, 1, 0, 20)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": false}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
+	}))
+	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-fingersnap"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
+	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
+	return x
+}
+func (x *rig) set(p rules.Profile) { x.mu.Lock(); defer x.mu.Unlock(); x.profiles[p.ID] = p }
+func (x *rig) request(method, path string, body any, cookie *http.Cookie) (int, response, string, *http.Cookie) {
+	b := []byte{}
+	if body != nil {
+		b = []byte(store.JSON(body))
+	}
+	r := httptest.NewRequest(method, path, bytes.NewReader(b))
+	r.Header.Set("Content-Type", "application/json")
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+	w := httptest.NewRecorder()
+	x.api.ServeHTTP(w, r)
+	var v response
+	_ = json.Unmarshal(w.Body.Bytes(), &v)
+	var errDoc struct{ Error struct{ Code string } }
+	_ = json.Unmarshal(w.Body.Bytes(), &errDoc)
+	var out *http.Cookie
+	if cs := w.Result().Cookies(); len(cs) > 0 {
+		out = cs[0]
+	}
+	return w.Code, v, errDoc.Error.Code, out
+}
+func (x *rig) expect(method, path string, body any, c *http.Cookie, code int) response {
+	x.t.Helper()
+	status, s, e, _ := x.request(method, path, body, c)
+	if status != code {
+		x.t.Fatalf("%s %s: got %d %s, want %d", method, path, status, e, code)
+	}
+	return s
+}
+func (x *rig) login(id, invite string) *http.Cookie {
+	x.t.Helper()
+	if invite == "" {
+		if err := x.db.Allow(context.Background(), id, true); err != nil {
+			x.t.Fatal(err)
+		}
+	}
+	code, _, err, c := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "invite": invite}, nil)
+	if code != 200 {
+		x.t.Fatalf("login: %d %s", code, err)
+	}
+	return c
+}
+func (x *rig) ready(id string) (*http.Cookie, response) {
+	c := x.login(id, "")
+	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
+	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
+	return c, s
+}
+func mutation(s response, doc rules.State) map[string]any {
+	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "doc": doc}
+}
+func syncBody(s response, p rules.Profile, doc rules.State) map[string]any {
+	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "profile": p, "progress": doc}
+}
+func spendBody(s response, kind, target, key string, doc rules.State) map[string]any {
+	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "kind": kind, "target": target, "key": key, "progress": doc}
+}
+func count(t *testing.T, s *store.Store, q string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := s.DB.QueryRow(q, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+func unchanged(t *testing.T, a, b store.Snapshot) {
+	t.Helper()
+	if store.JSON(a) != store.JSON(b) {
+		t.Fatalf("state changed on rejected operation\nbefore=%s\nafter=%s", store.JSON(a), store.JSON(b))
+	}
+}
+func TestTokenCookieAndBackup(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	if !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteLaxMode || c.MaxAge != 30*24*3600 {
+		t.Fatal("cookie policy")
+	}
+	p := profile("alice", 2, 5, 30)
+	s = x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
+	away := s.State
+	away.Area = "ruin"
+	x.expect("POST", "/api/sync", syncBody(response{Snapshot: s.Snapshot, Lease: x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200).Lease}, p, away), c, 409)
+	backup := filepath.Join(x.dir, "backup.sqlite")
+	if err := x.db.Backup(context.Background(), backup); err != nil {
+		t.Fatal(err)
+	}
+	paths, err := filepath.Glob(filepath.Join(x.dir, "*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range paths {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Contains(b, []byte(secret)) || bytes.Contains(b, []byte(c.Value)) {
+			t.Fatalf("credential persisted: %s", path)
+		}
+	}
+	if strings.Contains(x.logs.String(), secret) || strings.Contains(x.logs.String(), c.Value) {
+		t.Fatal("credentials logged")
+	}
+	if strings.Contains(store.JSON(s), secret) {
+		t.Fatal("credential response")
+	}
+	restore, err := store.Open(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restore.Close()
+	tx, _ := restore.DB.Begin()
+	restored, err := store.Load(context.Background(), tx, "alice")
+	tx.Rollback()
+	if err != nil {
+		t.Fatal(err)
+	}
+	unchanged(t, s.Snapshot, restored)
+	for _, db := range []*store.Store{x.db, restore} {
+		var sum, earned int
+		var rev int64
+		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(earned_delta),0) FROM ledger WHERE habitica_id='alice'").Scan(&sum, &earned); err != nil {
+			t.Fatal(err)
+		}
+		if err = db.DB.QueryRow("SELECT rev FROM players WHERE habitica_id='alice'").Scan(&rev); err != nil {
+			t.Fatal(err)
+		}
+		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Rev {
+			t.Fatal("ledger or rev differs on restore")
+		}
+	}
+	if x.calls.Load() != 1 {
+		t.Fatal("server called Habitica outside login")
+	}
+}
+func TestInviteRaceAndWorld(t *testing.T) {
+	x := newRig(t)
+	owner, _ := x.ready("owner")
+	world := x.expect("GET", "/api/state", nil, owner, 200).WorldID
+	code, err := x.db.Invite(context.Background(), world)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	statuses := make(chan int, 2)
+	for _, id := range []string{"one", "two"} {
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			status, _, _, _ := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "invite": code}, nil)
+			statuses <- status
+		}(id)
+	}
+	wg.Wait()
+	close(statuses)
+	ok, denied := 0, 0
+	for s := range statuses {
+		if s == 200 {
+			ok++
+		}
+		if s == 403 {
+			denied++
+		}
+	}
+	if ok != 1 || denied != 1 {
+		t.Fatalf("race: %d wins %d denials", ok, denied)
+	}
+	if count(t, x.db, "SELECT count(*) FROM players WHERE world_id=?", world) != 2 || count(t, x.db, "SELECT count(*) FROM invites WHERE used_by IS NOT NULL") != 1 {
+		t.Fatal("invite world transaction")
+	}
+	if count(t, x.db, "SELECT count(*) FROM worlds") != 1 {
+		t.Fatal("extra solo world created")
+	}
+}
+func TestAccessAndSessionSliding(t *testing.T) {
+	x := newRig(t)
+	x.expect("POST", "/api/session", map[string]any{"userId": "no-access", "token": secret}, nil, 403)
+	if count(t, x.db, "SELECT count(*) FROM players") != 0 {
+		t.Fatal("denied login wrote player")
+	}
+	c, _ := x.ready("alice")
+	x.now.Add(29 * 86400)
+	code, _, _, renewed := x.request("GET", "/api/state", nil, c)
+	if code != 200 || renewed == nil {
+		t.Fatal("session renewal")
+	}
+	x.now.Add(29 * 86400)
+	x.expect("GET", "/api/state", nil, c, 200)
+	if err := x.db.Allow(context.Background(), "alice", false); err != nil {
+		t.Fatal(err)
+	}
+	x.expect("GET", "/api/state", nil, c, 401)
+	c = x.login("alice", "")
+	x.now.Add(31 * 86400)
+	x.expect("GET", "/api/state", nil, c, 401)
+	c = x.login("alice", "")
+	x.expect("DELETE", "/api/session", nil, c, 200)
+	x.expect("GET", "/api/state", nil, c, 401)
+}
+func TestLeaseTakeoverIdleAndExemptions(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	same := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
+	if same.Lease != s.Lease || same.Rev != s.Rev {
+		t.Fatal("lease renew bumped rev or changed lease")
+	}
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, c, 409)
+	other := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
+	if other.Rev != s.Rev || other.Lease == s.Lease {
+		t.Fatal("takeover")
+	}
+	status, _, code, _ := x.request("PUT", "/api/progress", mutation(s, s.State), c)
+	if status != 409 || code != "superseded" {
+		t.Fatal("old lease accepted")
+	}
+	x.expect("POST", "/api/sync", syncBody(s, profile("alice", 2, 1, 30), s.State), c, 409)
+	x.expect("POST", "/api/spend", spendBody(s, "rest", "", "x", s.State), c, 409)
+	x.now.Add(120)
+	idle := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-c"}, c, 200)
+	if idle.Lease == other.Lease || idle.Rev != s.Rev {
+		t.Fatal("idle acquisition")
+	}
+	second := x.login("alice", "")
+	x.expect("GET", "/api/state", nil, second, 200)
+	status, _, code, _ = x.request("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "second-device"}, second)
+	if status != 409 || code != "already-set" {
+		t.Fatal("origin incorrectly required lease")
+	}
+	x.expect("DELETE", "/api/session", nil, second, 200)
+}
+func TestProgressCurrentStaleAndServerAuthority(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	doc := s.State
+	doc.Area = "woodland"
+	doc.Position = rules.Position{X: 12, Y: 34}
+	doc.HP = 8
+	doc.Mana = 3
+	doc.Quest = "guardian-defeated"
+	doc.Inventory = append(doc.Inventory, "warden-seal", rules.E.CharmItem, "future-purchase")
+	doc.Discoveries = []string{"marker"}
+	doc.DefeatedEnemies = []string{"warden"}
+	doc.Flags = []string{"story:yes", "embers:welcome", "lit:road-1", "opened:" + rules.E.ChestID}
+	doc.PlaySeconds = 200
+	doc.Embers = 999
+	doc.XPEmbers = 999
+	doc.EmberXP = 999999
+	doc.MaxHP = 999
+	doc.MaxMana = 999
+	current := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
+	if current.Status != "current" || current.State.HP != 8 || current.State.Area != "woodland" || current.State.Embers != 2 || current.State.XPEmbers != 0 || current.State.EmberXP != 0 || current.State.MaxHP != 50 || slices.Contains(current.State.Inventory, rules.E.CharmItem) || slices.Contains(current.State.Flags, "lit:road-1") {
+		t.Fatalf("owned upload admitted: %s", store.JSON(current))
+	}
+	offline := doc
+	offline.HP = 0
+	offline.Mana = 0
+	offline.Area = "ruin"
+	offline.Quest = "complete"
+	offline.Position = rules.Position{X: 999, Y: 999}
+	offline.Discoveries = []string{"offline"}
+	offline.PlaySeconds = 300
+	stale := x.expect("PUT", "/api/progress", mutation(s, offline), c, 200)
+	if stale.Status != "stale" || stale.State.HP != 8 || stale.State.Mana != 3 || stale.State.Area != "woodland" || stale.State.Position != current.State.Position || stale.State.Quest != "complete" || stale.State.Embers != 5 || len(stale.State.Discoveries) != 2 {
+		t.Fatal("stale progress merge")
+	}
+	repeat := x.expect("PUT", "/api/progress", mutation(s, offline), c, 200)
+	if repeat.State.Embers != 5 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='quest'") != 2 {
+		t.Fatal("quest gift repeated")
+	}
+	future := mutation(s, offline)
+	future["baseRev"] = repeat.Rev + 1
+	x.expect("PUT", "/api/progress", future, c, 409)
+}
+func TestSyncRejectsAtomicallyAndCreditsOnce(t *testing.T) {
+	x := newRig(t)
+	x.set(profile("alice", 2, 10, 20))
+	c, s := x.ready("alice")
+	doc := s.State
+	doc.HP = 5
+	doc.Mana = 2
+	doc.Quest = "complete"
+	p := profile("alice", 2, 30, 30)
+	for _, kind := range []string{"area", "account", "lease", "revision", "hp", "mp", "exp", "fractional-level", "death-loss", "missing-exp"} {
+		body := syncBody(s, p, doc)
+		bad := p
+		d := doc
+		switch kind {
+		case "area":
+			d.Area = "ruin"
+			body["progress"] = d
+		case "account":
+			bad.ID = "bob"
+			body["profile"] = bad
+		case "lease":
+			body["lease"] = "old"
+		case "revision":
+			body["baseRev"] = s.Rev - 1
+		case "hp":
+			bad.HP = 51
+			body["profile"] = bad
+		case "mp":
+			bad.MP = bad.MaxMP + 1
+			body["profile"] = bad
+		case "exp":
+			n := rules.XPToNextLevel(bad.Level)
+			bad.Exp = &n
+			body["profile"] = bad
+		case "fractional-level":
+			bad.Level = 2.5
+			body["profile"] = bad
+		case "death-loss":
+			bad.Level = 1
+			exp := 0.
+			bad.Exp = &exp
+			bad.MaxMP = 30
+			bad.Stats.Int = 0
+			body["profile"] = bad
+		case "missing-exp":
+			bad.Exp = nil
+			body["profile"] = bad
+		}
+		// At low levels a drop to level one is within the one-death allowance.
+		if kind == "death-loss" {
+			continue
+		}
+		before := x.expect("GET", "/api/state", nil, c, 200)
+		status, _, _, _ := x.request("POST", "/api/sync", body, c)
+		if status == 200 {
+			t.Fatalf("%s accepted", kind)
+		}
+		after := x.expect("GET", "/api/state", nil, c, 200)
+		unchanged(t, before.Snapshot, after.Snapshot)
+		if count(t, x.db, "SELECT count(*) FROM ledger") != 0 {
+			t.Fatal("failed sync paid quest gifts")
+		}
+	}
+	synced := x.expect("POST", "/api/sync", syncBody(s, p, doc), c, 200)
+	if synced.State.HP != 15 || synced.State.Mana != 2 || synced.State.Embers != 10 || synced.State.XPEmbers != 2 || synced.State.EmberXP != 55 {
+		t.Fatalf("sync rules: %s", store.JSON(synced))
+	}
+	synced.Lease = s.Lease
+	damage := synced.State
+	damage.HP = 3
+	again := x.expect("POST", "/api/sync", syncBody(synced, p, damage), c, 200)
+	if again.State.HP != 3 || again.State.Embers != 10 {
+		t.Fatal("identical sync recredited")
+	}
+	// An old baseRev cannot consume a newer healing delta.
+	healed := profile("alice", 2, 40, 40)
+	x.expect("POST", "/api/sync", syncBody(synced, healed, damage), c, 409)
+	again.Lease = s.Lease
+	latest := x.expect("POST", "/api/sync", syncBody(again, healed, again.State), c, 200)
+	if latest.State.HP != 13 || latest.State.XPEmbers != 3 {
+		t.Fatal("retry lost healing/XP")
+	}
+}
+func TestStaleAfterSyncRestRevivePurchaseAndIdempotency(t *testing.T) {
+	for _, kind := range []string{"sync", "rest", "revive", "road-lantern", "chest"} {
+		t.Run(kind, func(t *testing.T) {
+			x := newRig(t)
+			c, s := x.ready("alice")
+			p := profile("alice", 4, 99, 30)
+			s1 := x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
+			s1.Lease = s.Lease
+			doc := s1.State
+			doc.HP = 5
+			doc.Mana = 1
+			if kind == "revive" {
+				doc.HP = 0
+			}
+			if kind == "sync" {
+				p.HP = 40
+				p.MP = 20
+				p.Exp = func() *float64 { n := 100.; return &n }()
+				p.Level = 5
+				p.MaxMP = 34
+				p.Stats.Int = 2
+			}
+			var bought response
+			if kind == "sync" {
+				bought = x.expect("POST", "/api/sync", syncBody(s1, p, doc), c, 200)
+			} else {
+				target := ""
+				if kind == "road-lantern" {
+					target = "road-1"
+				}
+				body := spendBody(s1, kind, target, "purchase", doc)
+				bought = x.expect("POST", "/api/spend", body, c, 200)
+				duplicate := x.expect("POST", "/api/spend", body, c, 200)
+				if duplicate.Rev != bought.Rev || duplicate.State.Embers != bought.State.Embers {
+					t.Fatal("duplicate changed balance")
+				}
+				body["target"] = "other"
+				status, _, code, _ := x.request("POST", "/api/spend", body, c)
+				if status != 409 || code != "idempotency-mismatch" {
+					t.Fatal("key mismatch accepted")
+				}
+			}
+			staleDoc := doc
+			staleDoc.Area = "ruin"
+			staleDoc.Position = rules.Position{X: 2, Y: 2}
+			staleDoc.HP = 0
+			staleDoc.Mana = 0
+			staleDoc.Quest = "complete"
+			stale := x.expect("PUT", "/api/progress", mutation(s1, staleDoc), c, 200)
+			if stale.Status != "stale" || stale.State.HP != bought.State.HP || stale.State.Mana != bought.State.Mana || stale.State.Area != bought.State.Area || stale.State.Position != bought.State.Position {
+				t.Fatalf("stale undid %s", kind)
+			}
+			if kind == "chest" && (!slices.Contains(stale.State.Inventory, rules.E.CharmItem) || !slices.Contains(stale.State.Flags, "opened:"+rules.E.ChestID)) {
+				t.Fatal("lost purchase")
+			}
+			if kind == "road-lantern" && !slices.Contains(stale.State.Flags, "lit:road-1") {
+				t.Fatal("lost lantern")
+			}
+		})
+	}
+}
+func TestSpendGiftedFirstZeroLockAndFailedCarry(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	s1 := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 1, 0, 20), s.State), c, 200)
+	s1.Lease = s.Lease
+	doc := s1.State
+	doc.HP = 0
+	before := x.expect("GET", "/api/state", nil, c, 200)
+	status, _, code, _ := x.request("POST", "/api/spend", spendBody(s1, "rest", "", "gift-only", doc), c)
+	if status != 409 || code != "needs-earned" {
+		t.Fatal("gift revived")
+	}
+	after := x.expect("GET", "/api/state", nil, c, 200)
+	unchanged(t, before.Snapshot, after.Snapshot)
+	p := profile("alice", 2, 15, 20)
+	s2 := x.expect("POST", "/api/sync", syncBody(s1, p, s1.State), c, 200)
+	s2.Lease = s.Lease
+	doc = s2.State
+	doc.HP = 10
+	rest := x.expect("POST", "/api/spend", spendBody(s2, "rest", "", "rest", doc), c, 200)
+	if rest.State.XPEmbers != 4 || rest.State.Embers != 5 {
+		t.Fatal("ordinary spend did not use gifted first")
+	}
+	rest.Lease = s.Lease
+	doc = rest.State
+	doc.HP = 0
+	revived := x.expect("POST", "/api/spend", spendBody(rest, "revive", "", "revive", doc), c, 200)
+	if revived.State.HP != 50 || revived.State.XPEmbers != 2 || revived.State.Embers != 3 {
+		t.Fatal("revive provenance")
+	}
+	revived.Lease = s.Lease
+	doc = revived.State
+	doc.Area = "woodland"
+	x.expect("POST", "/api/spend", spendBody(revived, "rest", "", "away", doc), c, 409)
+}
+func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
+	for _, verified := range []bool{true, false} {
+		t.Run(fmt.Sprint(verified), func(t *testing.T) {
+			x := newRig(t)
+			c, s := x.ready("alice")
+			p := profile("alice", 20, 0, 20)
+			sync := x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
+			total := int(rules.LifetimeXP(p.Level, 0) / 10)
+			if sync.State.XPEmbers != rules.E.SyncCreditCap || sync.Pending != total-rules.E.SyncCreditCap {
+				t.Fatalf("cap: %s", store.JSON(sync))
+			}
+			if verified {
+				x.set(p)
+			}
+			c = x.login("alice", "")
+			next := x.expect("GET", "/api/state", nil, c, 200)
+			if next.Pending != 0 {
+				t.Fatal("pending retained")
+			}
+			if verified {
+				if next.State.XPEmbers != total || next.Flagged {
+					t.Fatal("verified pending not settled")
+				}
+			} else if !next.Flagged || next.State.XPEmbers != rules.E.SyncCreditCap {
+				t.Fatal("unverified pending not dropped/flagged")
+			}
+			if next.State.EmberXP != sync.State.EmberXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {
+				t.Fatal("login consumed gameplay baseline or lowered mark")
+			}
+			if next.Rev != sync.Rev+1 {
+				t.Fatal("checkpoint economy change did not bump rev")
+			}
+		})
+	}
+}
+func TestImplausibleDeathRegression(t *testing.T) {
+	x := newRig(t)
+	p := profile("alice", 20, 0, 20)
+	x.set(p)
+	c, s := x.ready("alice")
+	lost := profile("alice", 1, 0, 20)
+	x.expect("POST", "/api/sync", syncBody(s, lost, s.State), c, 422)
+	legit := profile("alice", 19, 0, 20)
+	x.expect("POST", "/api/sync", syncBody(s, legit, s.State), c, 200)
+}
+func TestMigrationRacesOnceAndPaidOutcomes(t *testing.T) {
+	x := newRig(t)
+	x.set(profile("alice", 3, 10, 20))
+	c := x.login("alice", "")
+	local := rules.NewState()
+	local.HP = 5
+	local.Mana = 3
+	local.Embers = 999
+	local.XPEmbers = 999
+	local.EmberXP = 999999
+	local.Quest = "complete"
+	local.Flags = []string{"embers:welcome", "lit:road-1", "opened:" + rules.E.ChestID}
+	local.Inventory = append(local.Inventory, rules.E.CharmItem, "warden-seal")
+	var wg sync.WaitGroup
+	statuses := make(chan int, 2)
+	for _, key := range []string{"one", "two"} {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			code, _, _, _ := x.request("POST", "/api/origin", map[string]any{"choice": "migrate", "key": key, "save": map[string]any{"state": local, "vitalsSource": "imported"}}, c)
+			statuses <- code
+		}(key)
+	}
+	wg.Wait()
+	close(statuses)
+	ok, denied := 0, 0
+	for code := range statuses {
+		if code == 200 {
+			ok++
+		}
+		if code == 409 {
+			denied++
+		}
+	}
+	if ok != 1 || denied != 1 {
+		t.Fatal("migration race")
+	}
+	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab"}, c, 200)
+	if s.State.HP != 5 || s.State.Mana != 3 || s.State.Embers != 30 || s.State.XPEmbers != 0 || s.State.EmberXP != 85 || s.State.Quest != "complete" || !slices.Contains(s.State.Inventory, rules.E.CharmItem) {
+		t.Fatalf("migration: %s", store.JSON(s))
+	}
+	if count(t, x.db, "SELECT count(*) FROM outcomes") != 6 {
+		t.Fatal("missing migration outcomes")
+	}
+	synced := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 3, 10, 20), s.State), c, 200)
+	if synced.State.Embers != 30 {
+		t.Fatal("migrated gifts paid twice")
+	}
+	second := x.login("alice", "")
+	status, _, code, _ := x.request("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "device-two", "save": map[string]any{"state": local}}, second)
+	if status != 409 || code != "already-set" {
+		t.Fatal("second device migrated")
+	}
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='migration'") != 1 {
+		t.Fatal("migration credited twice")
+	}
+}
+func TestOriginFreshGuardDemoVitalsAndIdempotency(t *testing.T) {
+	x := newRig(t)
+	c := x.login("fresh", "")
+	body := map[string]any{"choice": "fresh", "key": "fresh"}
+	s := x.expect("POST", "/api/origin", body, c, 200)
+	repeat := x.expect("POST", "/api/origin", body, c, 200)
+	if repeat.Rev != s.Rev {
+		t.Fatal("origin replay changed rev")
+	}
+	x.expect("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "second", "save": map[string]any{"state": rules.NewState()}}, c, 409)
+	c = x.login("demo", "")
+	local := rules.NewState()
+	local.HP = 1
+	local.Mana = 1
+	s = x.expect("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "demo", "save": map[string]any{"state": local, "vitalsSource": "demo"}}, c, 200)
+	if s.State.HP != 20 || s.State.Mana != 10 {
+		t.Fatal("demo migration not first import")
+	}
+	play := x.expect("POST", "/api/play", map[string]any{"clientId": "tab"}, c, 200)
+	synced := x.expect("POST", "/api/sync", syncBody(play, profile("demo", 1, 0, 20), play.State), c, 200)
+	if synced.State.Embers != 3 {
+		t.Fatal("unreceived welcome missing")
+	}
+}
+func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	for _, body := range []any{map[string]any{}, map[string]any{"version": 1, "area": "village"}, map[string]any{"version": 1, "area": "village", "position": map[string]any{"x": 0, "y": 0}, "quest": "new", "hp": 0, "mana": 0, "playSeconds": 0, "inventory": []string{}, "discoveries": []string{}, "defeatedEnemies": []string{}, "flags": []string{}}} {
+		m := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "doc": body}
+		code, _, _, _ := x.request("PUT", "/api/progress", m, c)
+		if bodyMap := body.(map[string]any); len(bodyMap) > 5 {
+			if code != 200 {
+				t.Fatal("valid zero vital upload rejected")
+			}
+		} else if code != 400 {
+			t.Fatal("missing progress accepted")
+		}
+	}
+	for _, raw := range []string{`{`, strings.Repeat("x", 200001), `{} {}`} {
+		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(raw))
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		x.api.ServeHTTP(w, r)
+		if w.Code != 400 {
+			t.Fatal("bad body accepted")
+		}
+	}
+	r := httptest.NewRequest("POST", "/api/play", strings.NewReader(`{"clientId":"tab"}`))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Origin", "https://evil.example")
+	r.AddCookie(c)
+	w := httptest.NewRecorder()
+	x.api.ServeHTTP(w, r)
+	if w.Code != 403 {
+		t.Fatal("cross-origin mutation accepted")
+	}
+	r = httptest.NewRequest("GET", "/unknown/"+secret+"?token="+secret, nil)
+	r.Header.Set("X-Api-Key", secret)
+	w = httptest.NewRecorder()
+	x.api.ServeHTTP(w, r)
+	if strings.Contains(x.logs.String(), secret) {
+		t.Fatal("raw URL/header logged")
+	}
+}
+
+func TestOriginUsesThisSessionsVerifiedRead(t *testing.T) {
+	x := newRig(t)
+	x.set(profile("alice", 3, 15, 30))
+	first := x.login("alice", "")
+	x.set(profile("alice", 3, 25, 10))
+	_ = x.login("alice", "")
+	s := x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "first"}, first, 200)
+	if s.State.HP != 30 || s.State.EmberXP != 90 {
+		t.Fatal("origin imported another login's checkpoint")
+	}
+}
+func TestConcurrentSpendIdempotencyAndDone(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	p := profile("alice", 4, 90, 30)
+	credited := x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
+	credited.Lease = s.Lease
+	body := spendBody(credited, "chest", "", "same-key", credited.State)
+	var wg sync.WaitGroup
+	results := make(chan response, 2)
+	statuses := make(chan int, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			status, out, _, _ := x.request("POST", "/api/spend", body, c)
+			statuses <- status
+			results <- out
+		}()
+	}
+	wg.Wait()
+	close(statuses)
+	for status := range statuses {
+		if status != 200 {
+			t.Fatal("concurrent duplicate failed")
+		}
+	}
+	a, b := <-results, <-results
+	if a.Rev != b.Rev || a.State.Embers != b.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
+		t.Fatal("duplicate purchase paid twice")
+	}
+	a.Lease = s.Lease
+	status, _, code, _ := x.request("POST", "/api/spend", spendBody(a, "chest", "", "new-key", a.State), c)
+	if status != 409 || code != "done" {
+		t.Fatal("chest bought twice")
+	}
+	staleDoc := credited.State
+	staleDoc.Quest = "complete"
+	before := x.expect("GET", "/api/state", nil, c, 200)
+	x.expect("POST", "/api/spend", spendBody(credited, "rest", "", "stale-spend", staleDoc), c, 409)
+	after := x.expect("GET", "/api/state", nil, c, 200)
+	unchanged(t, before.Snapshot, after.Snapshot)
+}
+func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.now.Add(110)
+	r := httptest.NewRequest("GET", "/api/state", nil)
+	r.AddCookie(c)
+	r.Header.Set("X-Play-Lease", s.Lease)
+	w := httptest.NewRecorder()
+	x.api.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatal("heartbeat")
+	}
+	x.now.Add(15)
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, c, 409)
+	s1 := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 4, 90, 20), s.State), c, 200)
+	s1.Lease = s.Lease
+	doc := s1.State
+	doc.HP = 10
+	body := spendBody(s1, "rest", "", "expiring-key", doc)
+	paid := x.expect("POST", "/api/spend", body, c, 200)
+	paid.Lease = s.Lease
+	x.now.Add(7*86400 + 1)
+	doc = paid.State
+	doc.HP = 10
+	again := x.expect("POST", "/api/spend", spendBody(paid, "rest", "", "expiring-key", doc), c, 200)
+	if again.Rev != paid.Rev+1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 2 {
+		t.Fatal("expired key did not permit a new operation")
+	}
+}
+
+func TestDeathAtEndOfPreviousLevelIsPlausible(t *testing.T) {
+	x := newRig(t)
+	p := profile("alice", 20, rules.XPToNextLevel(20)-1, 20)
+	x.set(p)
+	c, s := x.ready("alice")
+	dead := profile("alice", 19, 0, 0)
+	after := x.expect("POST", "/api/sync", syncBody(s, dead, s.State), c, 200)
+	if after.State.HP != 0 || after.State.EmberXP != s.State.EmberXP || after.State.XPEmbers != 0 {
+		t.Fatal("death changed XP mark or paid credit")
+	}
+}
+func TestOwnedUploadTypesAreIgnoredAndUnknownCredentialsStripped(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	doc := map[string]any{}
+	_ = json.Unmarshal([]byte(store.JSON(s.State)), &doc)
+	doc["maxHp"] = secret
+	doc["maxMana"] = map[string]string{"token": secret}
+	doc["embers"] = -999
+	doc["xpEmbers"] = "forged"
+	doc["emberXp"] = secret
+	doc["apiToken"] = secret
+	p := map[string]any{}
+	_ = json.Unmarshal([]byte(store.JSON(profile("alice", 2, 15, 20))), &p)
+	p["apiToken"] = secret
+	p["equipped"].(map[string]any)["apiToken"] = secret
+	body := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "profile": p, "progress": doc, "token": secret}
+	result := x.expect("POST", "/api/sync", body, c, 200)
+	if strings.Contains(store.JSON(result), secret) {
+		t.Fatal("credential field returned")
+	}
+	result.Lease = s.Lease
+	rawState := result.State
+	rawState.Mana = 30
+	newProfile := profile("alice", 1, 0, 20)
+	newProfile.MP = 10
+	changed := x.expect("POST", "/api/sync", syncBody(result, newProfile, rawState), c, 200)
+	changed.Lease = s.Lease
+	old := result.State
+	old.Mana = 32
+	stale := x.expect("PUT", "/api/progress", mutation(result, old), c, 200)
+	if stale.State.Mana != changed.State.Mana || stale.State.MaxMana != 30 {
+		t.Fatal("stale vitals above new maximum were not ignored")
+	}
+	backup := filepath.Join(x.dir, "scrubbed.sqlite")
+	if err := x.db.Backup(context.Background(), backup); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(b, []byte(secret)) {
+		t.Fatal("unknown credentials persisted")
+	}
+}
