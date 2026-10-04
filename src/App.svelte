@@ -35,6 +35,11 @@
   import Moments from './ui/Moments.svelte'
   import ConfirmDialog from './ui/ConfirmDialog.svelte'
   import Icon from './ui/Icon.svelte'
+  import ConnectGuide from './ui/ConnectGuide.svelte'
+  import { loadRemembered } from './lib/habitica/remembered'
+  import { XP_PER_EMBER } from './lib/embers'
+  import { emberLine, titleChoice } from './content/connect-guide'
+  import { connectSession, isConnected } from './ui/habitica-local'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
   type Panel = 'journal' | 'character' | 'menu' | null
@@ -45,6 +50,8 @@
   let recovery = $state<{ message: string; raw: string } | null>(null)
   let rawCopied = $state(false)
   let confirm = $state<'new' | 'discard' | 'overwrite' | null>(null)
+  /** New-game flow on the title screen: pick a way to play, or walk the connect guide. */
+  let titleView = $state<'choice' | 'guide'>('choice')
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
@@ -175,6 +182,13 @@
           importedProfile: record?.importedProfile
         })
         phase = 'title'
+        // Opt-in remembered credentials: connect without a paste. Storage
+        // trouble just means "nothing remembered".
+        void loadRemembered().then((creds) => {
+          if (!creds) return
+          ui.remembered = true
+          if (!isConnected()) connectSession(creds.userId, creds.apiToken)
+        })
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err)
@@ -215,9 +229,24 @@
 
   function requestNew(): void {
     if (hasSave) confirm = 'new'
-    else void startFresh()
+    else showChoice()
   }
 
+  /** A confirmed new journey: nothing is written until the player picks a way to play. */
+  function showChoice(): void {
+    confirm = null
+    if (starting) return
+    if (hasSave) {
+      session?.destroy(true)
+      session = new Session(createNewGame())
+      hasSave = false
+      ui.vitalsSource = 'demo'
+      ui.importedProfile = null
+    }
+    titleView = 'choice'
+  }
+
+  /** Guest path: today's demo start. */
   async function startFresh(): Promise<void> {
     confirm = null
     if (starting) return
@@ -228,6 +257,18 @@
     ui.importedProfile = null
     void session.save()
     await begin()
+  }
+
+  /** Habitica path: a fresh game whose connect guide runs before Mara's first line. */
+  function startHabitica(): void {
+    if (starting) return
+    session?.destroy(true)
+    session = new Session(createNewGame())
+    hasSave = false
+    ui.vitalsSource = 'demo'
+    ui.importedProfile = null
+    void session.save()
+    titleView = 'guide'
   }
 
   async function copyRawSave(): Promise<void> {
@@ -368,11 +409,22 @@
                 <span class="goal">{saveSummary.goal}</span>
               </button>
               <button type="button" class="secondary" onclick={requestNew}>New journey</button>
+            {:else if titleView === 'guide' && session}
+              <div class="panel guide-card">
+                <h2 class="guide-title"><Icon name="person" size={18} /> {titleChoice.habitica}</h2>
+                <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} onReady={begin} />
+              </div>
             {:else}
-              <button type="button" class="primary continue" onclick={begin}>
-                <span class="big">Begin your journey</span>
-                <span class="meta">A short, cozy adventure · saves as you go</span>
-              </button>
+              <div class="choice-col">
+                <button type="button" class="primary continue" onclick={startHabitica}>
+                  <span class="big">{titleChoice.habitica}</span>
+                  <span class="meta">{emberLine(XP_PER_EMBER)}</span>
+                </button>
+                <button type="button" class="secondary guest" onclick={startFresh}>
+                  <span class="big">{titleChoice.guest}</span>
+                  <span class="gmeta">{titleChoice.guestMeta}</span>
+                </button>
+              </div>
             {/if}
           </div>
           {#if !touch}
@@ -396,7 +448,7 @@
       body="Your current journey will be replaced. Copy a save code from the Menu first if you might want it back."
       confirmLabel="Start fresh"
       danger
-      onConfirm={startFresh}
+      onConfirm={showChoice}
       onCancel={() => (confirm = null)}
     />
   {:else if confirm === 'discard'}
@@ -515,6 +567,9 @@
     max-height: 100%;
     overflow-y: auto;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 4px 6px 10px;
+    box-sizing: border-box;
     justify-items: center;
     gap: 18px;
     text-align: center;
@@ -531,7 +586,8 @@
   }
   h1 {
     margin: 4px 0 0;
-    font-size: clamp(44px, 11vw, 72px);
+    white-space: nowrap;
+    font-size: clamp(40px, 11vw, 60px);
     line-height: 1;
     letter-spacing: 0.04em;
     color: #fff3c4;
@@ -576,6 +632,48 @@
     font-weight: 600;
     color: #5a3a14;
     opacity: 0.85;
+  }
+  .choice-col {
+    width: min(380px, 100%);
+    display: grid;
+    gap: 12px;
+  }
+  .choice-col .continue {
+    width: 100%;
+  }
+  .choice-col .continue .meta {
+    text-align: center;
+    line-height: 1.35;
+  }
+  .guest {
+    display: grid;
+    gap: 2px;
+    padding: 10px 16px 12px;
+  }
+  .guest .big {
+    font-family: var(--font-display);
+    font-size: 19px;
+  }
+  .guest .gmeta {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    opacity: 0.8;
+  }
+  .guide-card {
+    box-sizing: border-box;
+    width: min(440px, 100%);
+    padding: 14px 18px 16px;
+    text-align: left;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .guide-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-size: 20px;
   }
   .secondary {
     background: rgba(36, 28, 40, 0.75);

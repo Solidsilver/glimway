@@ -160,6 +160,13 @@ export class Session {
     this.saveSoon()
   }
 
+  /** Record a one-way story flag (once) and save soon. */
+  addFlag(flag: string): void {
+    if (this.destroyed || this.state.flags.includes(flag)) return
+    this.state = { ...this.state, flags: [...this.state.flags, flag] }
+    this.saveSoon()
+  }
+
   checkSpend(spend: EmberSpend): SpendCheck {
     return checkSpend(this.state, spend, { imported: this.vitalsSource === 'imported' })
   }
