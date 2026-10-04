@@ -8,12 +8,34 @@
   import Icon from './Icon.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import ConnectGuide from './ConnectGuide.svelte'
+  import InvitePanel from './InvitePanel.svelte'
+  import type { HabiticaProfile } from '../lib/habitica/types'
+  import type { Snapshot } from '../lib/api/types'
+  import { accountCopy, offlineCopy } from '../content/connected'
 
-  let { session, onClose }: { session: Session; onClose: () => void } = $props()
+  let {
+    session,
+    onClose,
+    onSignedIn,
+    onLogout,
+    onEnterWorld
+  }: {
+    session: Session
+    onClose: () => void
+    /** The guide signed in to the Fingersnap server (connected mode starts). */
+    onSignedIn?: (snapshot: Snapshot, profile: HabiticaProfile) => void
+    onLogout?: () => void
+    /** Signed in but playing the guest save: switch to the world. */
+    onEnterWorld?: () => void
+  } = $props()
 
   let importText = $state('')
   let importError = $state('')
   let confirmReset = $state(false)
+  let confirmLogout = $state(false)
+  /** Connected play: the world holds the save; export/restore and Start over are guest-only. */
+  const connected = $derived(!!session.link)
+  const offline = $derived(connected && ui.link?.status === 'offline')
 
   /** Text fields must not leak keys to the game (Phaser captures WASD/E/F). */
   const keepKeys = (e: KeyboardEvent) => {
@@ -90,6 +112,27 @@
       </button>
     </div>
 
+    {#if ui.account}
+      <section class="card world" data-testid="world-card">
+        <h3 class="section-title"><Icon name="lantern" size={14} /> {accountCopy.section}</h3>
+        <p class="who"><strong>{accountCopy.signedInAs(ui.account.name)}</strong></p>
+        {#if connected}
+          <p class="fine">
+            {#if offline}<span class="chip off"><Icon name="cloud" size={12} /> {offlineCopy.chip}</span>{/if}
+            {offline ? accountCopy.savedOffline : accountCopy.saved}
+          </p>
+        {/if}
+        <div class="row">
+          {#if !connected && onEnterWorld}
+            <button type="button" class="primary" onclick={onEnterWorld}>Play in your world</button>
+          {/if}
+          <button type="button" onclick={() => (confirmLogout = true)} disabled={offline} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
+          {#if offline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
+        </div>
+      </section>
+    {/if}
+
+    {#if !connected}
     <section class="card">
       <h3 class="section-title"><Icon name="scroll" size={14} /> Save & restore</h3>
       <p class="fine">Your journey saves itself in this browser as you play. Copy a save code to back it up or carry it to another device.</p>
@@ -108,11 +151,19 @@
         <button type="button" onclick={applyImport} disabled={importText.trim().length === 0}>Restore this save</button>
       </div>
     </section>
+    {/if}
 
     <section class="card">
-      <h3 class="section-title"><Icon name="person" size={14} /> Play as your Habitica hero</h3>
-      <ConnectGuide {session} mode="menu" />
+      <h3 class="section-title"><Icon name="person" size={14} /> {connected ? 'Sync your Habitica hero' : 'Play as your Habitica hero'}</h3>
+      <ConnectGuide {session} mode="menu" {onSignedIn} />
     </section>
+
+    {#if ui.account}
+      <section class="card" data-testid="invites-card">
+        <h3 class="section-title"><Icon name="key" size={14} /> Invite a friend</h3>
+        <InvitePanel />
+      </section>
+    {/if}
 
     <section class="card">
       <h3 class="section-title"><Icon name="star" size={14} /> Controls</h3>
@@ -129,17 +180,36 @@
 
     <section class="card">
       <h3 class="section-title"><Icon name="lantern" size={14} /> About</h3>
-      <p class="fine">Fingersnap plays entirely in your browser — no account needed, and your saves never leave this device.</p>
+      {#if connected}
+        <p class="fine">Fingersnap plays in your browser. Your journey is kept in your world on the Fingersnap server; your Habitica token never is.</p>
+      {:else}
+        <p class="fine">Fingersnap plays entirely in your browser — no account needed, and your saves never leave this device.</p>
+      {/if}
       <p class="tiny">
         Avatar and companion art derived from Habitica (habitica.com), © HabitRPG / Weirdly Wonderful,
         licensed CC BY-NC-SA 3.0; gear statistics derived from Habitica content data (GPL v3).
       </p>
-      <div class="row">
-        <button type="button" class="danger" onclick={() => (confirmReset = true)}>Start over…</button>
-      </div>
+      {#if !connected}
+        <div class="row">
+          <button type="button" class="danger" onclick={() => (confirmReset = true)}>Start over…</button>
+        </div>
+      {/if}
     </section>
   </div>
 </div>
+
+{#if confirmLogout}
+  <ConfirmDialog
+    title={accountCopy.logoutTitle}
+    body={connected && ui.link?.dirty ? accountCopy.logoutDirty : accountCopy.logoutBody}
+    confirmLabel={accountCopy.logout}
+    onConfirm={() => {
+      confirmLogout = false
+      onLogout?.()
+    }}
+    onCancel={() => (confirmLogout = false)}
+  />
+{/if}
 
 {#if confirmReset}
   <ConfirmDialog
@@ -179,6 +249,29 @@
   }
   .fine {
     margin: 0 0 10px;
+  }
+  .who {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    vertical-align: 1px;
+  }
+  .chip.off {
+    background: rgba(79, 134, 214, 0.16);
+    color: #2c4f84;
+    border: 1.5px solid rgba(79, 134, 214, 0.4);
+  }
+  .tiny.inline {
+    align-self: center;
   }
   .tiny {
     font-size: 12px;

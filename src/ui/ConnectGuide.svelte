@@ -12,6 +12,10 @@
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import { connectedClient, connectSession, creatorId, disconnectSession, fixtureProfiles, friendlyErrorCopy, isConnected } from './habitica-local'
+  import { api } from './account'
+  import { errorCode, isUnreachable } from '../lib/api/errors'
+  import type { Snapshot } from '../lib/api/types'
+  import { offlineCopy, signInCopy } from '../content/connected'
 
   /**
    * The Habitica connect guide, shared by the title screen ("title": a fresh
@@ -23,8 +27,16 @@
     session,
     mode,
     onBack,
-    onReady
-  }: { session: Session; mode: 'title' | 'menu'; onBack?: () => void; onReady?: () => void } = $props()
+    onReady,
+    onSignedIn
+  }: {
+    session: Session
+    mode: 'title' | 'menu'
+    onBack?: () => void
+    onReady?: () => void
+    /** A Fingersnap server answered the sign-in: connected mode takes over from here. */
+    onSignedIn?: (snapshot: Snapshot, profile: HabiticaProfile) => void
+  } = $props()
 
   type ConnectionState = 'disconnected' | 'connected' | 'syncing' | 'error'
 
@@ -46,6 +58,17 @@
   let lastWasUnlabeled = false
   let syncBusy = $state(false)
   const setupNotice = creatorId() === null
+  /** Connected play: pasted details only enable syncing; the server keeps the journey. */
+  const remote = $derived(!!session.link)
+  const linkOffline = $derived(remote && ui.link?.status !== 'online')
+  /** Offer the server sign-in: a server answered, nobody is signed in yet, and play is not connected. */
+  const canSignIn = $derived(ui.server === 'available' && !ui.account && !remote && !!onSignedIn)
+  let inviteCode = $state('')
+  let showInvite = $state(false)
+  /** The server said this account needs an invite. */
+  let inviteOnly = $state(false)
+  /** The server refused for another reason (rate limit, trouble): local play is offered. */
+  let offerLocal = $state(false)
 
   const hero = $derived(ui.importedProfile ?? heroPreview)
 
@@ -117,6 +140,92 @@
     rememberNote = ''
     lastWasUnlabeled = parsed?.kind === 'unlabeled'
     connectSession(creds.userId, creds.apiToken)
+    if (remote) {
+      // Already in a world: these details are for syncing that hero.
+      const ok = await syncCharacter(true)
+      if (ok) {
+        await rememberIfAsked(creds)
+        clearPaste()
+      }
+      return
+    }
+    if (canSignIn) {
+      syncBusy = true
+      connection = 'syncing'
+      let next: 'done' | 'stop' | 'local' = 'local'
+      try {
+        const profile = await connectedClient()!.fetchProfile()
+        heroPreview = profile
+        next = await serverSignIn(creds, profile)
+      } catch (err) {
+        failSignIn(err)
+        return
+      } finally {
+        syncBusy = false
+        if (connection === 'syncing') connection = isConnected() ? 'connected' : 'disconnected'
+      }
+      if (next !== 'local') return
+    }
+    await localSignIn(creds)
+  }
+
+  /**
+   * Sign in to the Fingersnap server with the details just checked against
+   * Habitica. The server reads Habitica once to prove the account, and never
+   * keeps the token. 'local' means no server answered: carry on as today.
+   */
+  async function serverSignIn(creds: { userId: string; apiToken: string }, profile: HabiticaProfile): Promise<'done' | 'stop' | 'local'> {
+    try {
+      const snapshot = await api.login({ userId: creds.userId, token: creds.apiToken, invite: inviteCode })
+      await rememberIfAsked(creds)
+      clearPaste()
+      inviteOnly = false
+      offerLocal = false
+      inviteCode = ''
+      connection = 'connected'
+      step = 3
+      onSignedIn?.(snapshot, profile)
+      return 'done'
+    } catch (err) {
+      const code = errorCode(err)
+      if (isUnreachable(err)) {
+        ui.server = 'unavailable'
+        return 'local'
+      }
+      if (code === 'habitica-auth') {
+        failSignIn(new HabiticaApiError('auth', 'Habitica rejected the details.', { status: 401 }))
+        return 'stop'
+      }
+      if (code === 'access-denied') {
+        inviteOnly = true
+        showInvite = true
+        connectionError = inviteCode.trim() ? 'That invite code didn’t work. Check it, or ask for a new one.' : ''
+        return 'stop'
+      }
+      offerLocal = true
+      const wait = err instanceof Error && 'retryAfterMs' in err ? Number((err as { retryAfterMs?: number }).retryAfterMs ?? 0) : 0
+      connectionError = code === 'login-rate-limited' || code === 'login-global-rate-limited' || code === 'login-busy' || code === 'habitica-rate-limited'
+        ? signInCopy.rateLimited(Math.max(1, Math.round(wait / 1000)))
+        : signInCopy.serverTrouble
+      return 'stop'
+    }
+  }
+
+  /** "Play on this device instead": the details stay in memory, the journey stays local. */
+  async function playLocally(): Promise<void> {
+    const creds = connectedClient() ? resolved ?? null : null
+    inviteOnly = false
+    offerLocal = false
+    connectionError = ''
+    if (!creds) {
+      step = 2
+      return
+    }
+    await localSignIn(creds)
+  }
+
+  /** Today's path: apply the hero to the journey on this device. */
+  async function localSignIn(creds: { userId: string; apiToken: string }): Promise<void> {
     const blocker = syncBlocker()
     if (blocker) {
       // Not somewhere safe to apply a sync: still verify the sign-in (one read).
@@ -166,6 +275,10 @@
       connectionError = blocker
       return false
     }
+    if (remote && linkOffline) {
+      connectionError = `${offlineCopy.needs}. Syncing waits until you’re back online.`
+      return false
+    }
     connection = 'syncing'
     connectionError = ''
     syncBusy = true
@@ -184,6 +297,8 @@
         connectionError = 'Something happened mid-sync. Try again from a quiet spot in Hearthwick.'
         return false
       }
+
+      if (session.link) return await remoteSync(profile, signingIn)
 
       const result = syncProfile(
         { state: session.state, vitalsSource: session.vitalsSource, importedProfile: session.importedProfile ?? undefined },
@@ -263,6 +378,50 @@
     } finally {
       syncBusy = false
     }
+  }
+
+  /**
+   * Connected play: the browser fetched the profile; the server records it
+   * against the journey's baseline and XP mark (design: "Sync: the browser
+   * fetches, the server records").
+   */
+  async function remoteSync(profile: HabiticaProfile, signingIn: boolean): Promise<boolean> {
+    const result = await session.link!.sync(profile)
+    if (result.ok) {
+      connection = 'connected'
+      step = 3
+      heroPreview = profile
+      ui.vitalsSource = session.vitalsSource
+      ui.importedProfile = session.importedProfile
+      if (result.welcome > 0) {
+        sfx('ember')
+        ui.toast({ text: `Mara presses ${result.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
+      } else if (result.gained > 0) {
+        sfx('ember')
+        ui.toast({ text: `+${result.gained} ember${result.gained === 1 ? '' : 's'} — from the XP you earned on Habitica.`, icon: 'ember' })
+      } else if (result.status === 'unchanged') {
+        ui.toast({ text: 'All caught up — nothing new on Habitica.' })
+      } else {
+        ui.toast({ text: `Synced — ${profile.name} is up to date.`, icon: 'person' })
+      }
+      return true
+    }
+    const code = result.code
+    connection = 'error'
+    connectionError =
+      code === 'offline' ? `${offlineCopy.needs}. Syncing waits until you’re back online.`
+        : code === 'account-switch' ? 'That’s a different Habitica hero than the one in this world. Log out first to switch heroes.'
+          : code === 'not-at-safe-boundary' ? 'Syncing only works in Hearthwick. Nothing changed.'
+            : code === 'implausible-profile' ? 'The world couldn’t accept that profile just now. Nothing changed; try again later.'
+              : code === 'superseded' ? 'Another device took over this journey.'
+                : code === 'busy' ? 'Hold on — the last request is still on its way.'
+                  : 'The sync didn’t go through. Nothing changed — try again.'
+    if (signingIn && code === 'account-switch') {
+      disconnectSession()
+      connection = 'disconnected'
+      step = 2
+    }
+    return false
   }
 
   /** Tell the player what their real-life XP turned into. */
@@ -373,10 +532,12 @@
       <li class:on={step === 3} aria-current={step === 3 ? 'step' : undefined}><span>3</span> Connected</li>
     </ol>
 
+    {#if step !== 2}
     <div class="embers-note">
       <span class="ei"><Icon name="ember" size={18} /></span>
       <p><strong>Your real-life progress lights the road.</strong> {emberLine(XP_PER_EMBER)}</p>
     </div>
+    {/if}
 
     {#if step === 1}
       <h4 class="step-title">{guideCopy.step1}</h4>
@@ -408,7 +569,7 @@
       <div class="row">
         {#if onBack}<button type="button" class="ghost" onclick={onBack}>Back</button>{/if}
         <button type="button" class="primary" onclick={() => (step = 2)}>I have them</button>
-        <button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>
+        {#if !remote}<button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>{/if}
       </div>
     {:else if step === 2}
       <h4 class="step-title">{guideCopy.step2}</h4>
@@ -461,18 +622,52 @@
       </label>
       <p class="tiny" class:warn={remember}>{remember ? guideCopy.rememberExposure : guideCopy.rememberOffNote}</p>
 
-      {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
+      {#if canSignIn && !inviteOnly}
+        <details class="invite" bind:open={showInvite}>
+          <summary><Icon name="key" size={12} /> {signInCopy.inviteToggle}</summary>
+          <label class="field">
+            <span>{signInCopy.inviteLabel}</span>
+            <input type="text" bind:value={inviteCode} autocomplete="off" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
+          </label>
+        </details>
+      {/if}
+
+      {#if inviteOnly}
+        <div class="callout" role="group" aria-labelledby="invite-only-title" data-testid="invite-only">
+          <strong id="invite-only-title"><Icon name="key" size={14} /> {signInCopy.inviteOnlyTitle}</strong>
+          <p>{signInCopy.inviteOnlyBody}</p>
+          <label class="field">
+            <span>{signInCopy.inviteLabel}</span>
+            <input type="text" bind:value={inviteCode} autocomplete="off" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
+          </label>
+          {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
+          <div class="row">
+            <button type="button" class="primary" onclick={signIn} disabled={syncBusy || !resolved || !inviteCode.trim()}>{signInCopy.inviteJoin}</button>
+            <button type="button" onclick={playLocally} disabled={syncBusy}>{signInCopy.playLocal}</button>
+          </div>
+          <p class="tiny">{signInCopy.playLocalNote}</p>
+        </div>
+      {:else if connectionError}
+        <p class="error" role="alert">{connectionError}</p>
+      {/if}
+      {#if offerLocal && !inviteOnly}
+        <div class="row">
+          <button type="button" onclick={playLocally} disabled={syncBusy}>{signInCopy.playLocal}</button>
+        </div>
+      {/if}
       {#if rememberNote}<p class="error" role="alert">{rememberNote}</p>{/if}
 
       {#if connection === 'syncing' || syncBusy}
         <p class="status"><span class="spinner" aria-hidden="true"></span> Fetching your hero…</p>
       {/if}
-      <div class="row">
-        <button type="button" class="ghost" onclick={() => (step = 1)}>Back</button>
-        <button type="button" class="primary" onclick={signIn} disabled={syncBusy || !resolved}>
-          {parsed?.kind === 'unlabeled' ? 'Looks right — Connect' : 'Connect'}
-        </button>
-      </div>
+      {#if !inviteOnly}
+        <div class="row">
+          <button type="button" class="ghost" onclick={() => (step = 1)}>Back</button>
+          <button type="button" class="primary" onclick={signIn} disabled={syncBusy || !resolved}>
+            {parsed?.kind === 'unlabeled' ? 'Looks right — Connect' : 'Connect'}
+          </button>
+        </div>
+      {/if}
     {:else}
       <h4 class="step-title">{guideCopy.step3}</h4>
       {#if hero}
@@ -485,6 +680,9 @@
         </div>
       {:else}
         <p class="status"><span class="ok"><Icon name="check" size={12} /></span> Connected for this tab.</p>
+      {/if}
+      {#if ui.account}
+        <p class="world-line" data-testid="world-line"><Icon name="lantern" size={12} /> {signInCopy.signedIn(ui.account.name)}</p>
       {/if}
       {#if welcome > 0}<p class="fine">Mara is holding {welcome} embers for you to start.</p>{/if}
 
@@ -517,9 +715,10 @@
           {#if mode === 'title' && onReady && ui.importedProfile}
             <button type="button" class="primary" onclick={onReady}>Begin your journey</button>
           {:else}
-            <button type="button" class="primary" onclick={() => syncCharacter()} disabled={syncBusy}>Sync character</button>
+            <button type="button" class="primary" onclick={() => syncCharacter()} disabled={syncBusy || linkOffline} title={linkOffline ? offlineCopy.needs : undefined}>Sync character</button>
           {/if}
           <button type="button" onclick={requestDisconnect}>Disconnect</button>
+          {#if linkOffline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
         </div>
       {/if}
     {/if}
@@ -611,6 +810,14 @@
     border-radius: 8px 8px 0 0;
     padding: 8px 6px;
     font-size: 14px;
+    white-space: nowrap;
+  }
+  @media (max-width: 420px) {
+    .tabs button {
+      padding: 7px 4px;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
   }
   .tabs button.active {
     background: var(--paper-hi);
@@ -798,6 +1005,48 @@
     margin: 8px 0 0;
     font-size: 13.5px;
     line-height: 1.5;
+  }
+  .invite {
+    margin: 8px 0 0;
+  }
+  .invite summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .callout {
+    margin: 10px 0 4px;
+    padding: 10px 12px 8px;
+    border-radius: 10px;
+    border: 2px solid var(--wood);
+    background: linear-gradient(180deg, rgba(255, 252, 240, 0.9), rgba(244, 228, 193, 0.9));
+  }
+  .callout strong {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--wood-dark);
+  }
+  .callout p {
+    margin: 4px 0 2px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .world-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -2px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .tiny.inline {
+    align-self: center;
+    margin: 0;
   }
   .embers-note {
     display: flex;

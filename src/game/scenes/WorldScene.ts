@@ -17,7 +17,7 @@ import { buildProps } from '../area/props'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
 import { buildExitSigns } from '../area/exits'
 import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
-import { bus, EV, type DialogueClosedPayload } from '../events'
+import { bus, EV, type DialogueClosedPayload, type RelocatePayload } from '../events'
 import { prefersReducedMotion, sfx } from '../sfx'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { TILE } from '../textures'
@@ -185,8 +185,12 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EV.quest, this.refreshMarkers, this)
     this.events.once('shutdown', () => bus.off(EV.quest, this.refreshMarkers, this))
     bus.on(EV.profileChanged, this.onProfileChanged, this)
+    bus.on(EV.worldRefresh, this.onWorldRefresh, this)
+    bus.on(EV.relocate, this.onRelocate, this)
     this.events.once('shutdown', () => {
       bus.off(EV.profileChanged, this.onProfileChanged, this)
+      bus.off(EV.worldRefresh, this.onWorldRefresh, this)
+      bus.off(EV.relocate, this.onRelocate, this)
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -246,6 +250,8 @@ export class WorldScene extends Phaser.Scene {
         for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
       }
     }
+    // Connected-play status for playtests (read-only; null for guests).
+    ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null
     // Sync-safety snapshot for the UI gate (read-only).
     ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
       const px = this.hero.sprite.x
@@ -398,6 +404,32 @@ export class WorldScene extends Phaser.Scene {
     this.avatar.onProfileChanged()
   }
 
+  /** Connected play: balances or paid outcomes changed on the server. */
+  private onWorldRefresh(): void {
+    refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
+    this.refreshMarkers()
+    this.interactables.invalidatePrompt()
+  }
+
+  /**
+   * Connected play: the server's area/position won (a stale merge after
+   * another device played). Same area: step there. Another area: rebuild the
+   * scene, which places the hero from the session state.
+   */
+  private onRelocate(p: RelocatePayload): void {
+    if (this.transitioning) return
+    if (p.area === this.world.areaId) {
+      this.hero.sprite.setPosition(p.x, p.y)
+      this.hero.sprite.setVelocity(0, 0)
+      return
+    }
+    this.transitioning = true
+    this.cameras.main.fade(240, 12, 12, 20, true)
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.restart({})
+    })
+  }
+
   /** Canopies and arches fade so nothing (hero or enemy) hides beneath them. */
   private updateOccluders(dt: number): void {
     if (this.occluders.length === 0) return
@@ -504,6 +536,10 @@ export class WorldScene extends Phaser.Scene {
             ? { kind: 'road-lantern', id: action.slice(6) as RoadLanternId }
             : null
     if (!spend) return
+    if (this.session.link) {
+      void this.applyRemoteSpend(spend)
+      return
+    }
     const refused = this.session.spend(spend)
     if (refused) {
       const text =
@@ -515,6 +551,37 @@ export class WorldScene extends Phaser.Scene {
       bus.emit(EV.toast, { text, kind: 'error' })
       return
     }
+    this.spendPayoff(spend)
+  }
+
+  /**
+   * Connected play: the server decides. The world waits (persistenceInFlight)
+   * and the HUD shows a short pending state; the payoff plays only after a
+   * yes, and nothing changes on a no.
+   */
+  private async applyRemoteSpend(spend: EmberSpend): Promise<void> {
+    const link = this.session.link!
+    const result = await link.spend(spend)
+    if (!this.sys.isActive()) return
+    if (result === null) {
+      this.spendPayoff(spend)
+      return
+    }
+    const text =
+      result === 'offline' ? 'Needs a connection. Your embers are safe — try again when you’re back online.'
+        : result === 'superseded' ? 'Another device took over this journey.'
+          : result === 'short' ? 'The flame gutters — not enough embers after all.'
+            : result === 'full' ? 'You’re already rested. Keep your embers.'
+              : result === 'done' ? 'That’s already done.'
+                : result === 'needs-earned' ? 'Only embers earned on Habitica can get you back on your feet.'
+                  : result === 'unsafe' ? 'Resting only works in Hearthwick.'
+                    : result === 'busy' ? 'Hold on — the last one is still on its way.'
+                      : 'The lantern didn’t answer. Nothing was spent — try again in a moment.'
+    bus.emit(EV.toast, { text, kind: 'error' })
+  }
+
+  /** The visible reward for a spend that went through. */
+  private spendPayoff(spend: EmberSpend): void {
     sfx('lantern')
     if (spend.kind === 'rest') {
       this.hero.sprite.setTint(0xffe2a8)
