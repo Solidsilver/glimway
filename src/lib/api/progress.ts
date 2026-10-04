@@ -146,6 +146,8 @@ export function spendLanded(spend: EmberSpend, before: GameState, after: GameSta
       return !before.flags.includes(FLAGS.chest) && after.flags.includes(FLAGS.chest);
     case 'rest':
       return before.embers - after.embers >= EMBER_COSTS.rest;
+    case 'home-rest':
+      return before.embers - after.embers >= EMBER_COSTS.homeRest;
   }
 }
 
