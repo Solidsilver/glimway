@@ -6,7 +6,7 @@ test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
 test('phone layout: joystick, roll, ability and action buttons fit and work', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: /Begin your journey/ }).tap()
+  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
   await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
   await warp(page, 'woodland', 15, 20)
 

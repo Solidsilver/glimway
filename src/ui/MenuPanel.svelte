@@ -1,23 +1,13 @@
 <script lang="ts">
   import { clearSave, exportSave, importSaveDocument, saveGame } from '../lib/save'
   import { createNewGame } from '../lib/state'
-  import { syncProfile, type SyncResult } from '../lib/habitica/sync'
-  import { XP_PER_EMBER } from '../lib/embers'
   import type { Session } from '../game/session'
   import { setMuted, sfx } from '../game/sfx'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
-  import {
-    connectedClient,
-    connectSession,
-    creatorId,
-    disconnectSession,
-    fixtureProfiles,
-    friendlyErrorCopy,
-    isConnected
-  } from './habitica-local'
+  import ConnectGuide from './ConnectGuide.svelte'
 
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
@@ -86,209 +76,6 @@
       .then(() => window.location.reload())
       .catch(() => ui.toast({ text: 'Couldn’t start over — this browser wouldn’t save.', kind: 'error' }))
   }
-
-  // ---- Habitica connect (real read-only adapter; credentials in memory only) ----
-
-  type ConnectionState = 'disconnected' | 'connected' | 'syncing' | 'error'
-
-  let connection = $state<ConnectionState>(isConnected() ? 'connected' : 'disconnected')
-  let userId = $state('')
-  let apiToken = $state('')
-  let connectionError = $state('')
-  const setupNotice = creatorId() === null
-  /** Shared in-flight guard: one sync (real or sample) at a time, and its
-   * persistence is awaited — never a dangling write racing the user. */
-  let syncBusy = $state(false)
-
-  /** Safety gate: sync only in a quiet village — before network and after. */
-  function syncBlocker(): string | null {
-    const safety = (window as unknown as {
-      __fsSafety?: () => { areaId: string; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean }
-    }).__fsSafety?.()
-    if (!safety) return 'The world is still waking up — try again in a moment.'
-    if (safety.areaId !== 'village') return 'Head back to Hearthwick first — syncing only happens somewhere safe.'
-    if (safety.transitioning) return 'Finish walking through the gate first.'
-    if (safety.dialogueOpen) return 'Finish your conversation first.'
-    if (safety.enemiesNear) return 'Not with creatures this close!'
-    return null
-  }
-
-  function connect(): void {
-    connectionError = ''
-    if (!userId.trim() || !apiToken.trim()) {
-      connectionError = 'We need both your User ID and your API Token.'
-      return
-    }
-    connectSession(userId.trim(), apiToken.trim())
-    userId = ''
-    apiToken = ''
-    connection = 'connected'
-  }
-
-  async function syncCharacter(): Promise<void> {
-    const client = connectedClient()
-    if (!client) {
-      connection = 'disconnected'
-      connectionError = 'Connect first — your details stay in this tab until you disconnect.'
-      return
-    }
-    if (syncBusy) return
-    const generation = session.currentGeneration
-    const blocker = syncBlocker()
-    if (blocker) {
-      connectionError = blocker
-      return
-    }
-    connection = 'syncing'
-    connectionError = ''
-    syncBusy = true
-    try {
-      // One explicit GET per press. Ordinary gameplay never reaches here.
-      const profile = await client.fetchProfile()
-
-      // Race guard first: a disconnect/reset during the fetch cancels the
-      // sync entirely — no status updates without a live connection.
-      if (!isConnected() || session.currentGeneration !== generation) {
-        connection = isConnected() ? 'connected' : 'disconnected'
-        connectionError = 'That sync was cancelled because your journey changed. Nothing was applied.'
-        return
-      }
-
-      // Post-response gate: scene-transient conditions only (the shared
-      // syncProfile owns boundary/account rejections).
-      const late = (window as unknown as { __fsSafety?: () => { transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety?.()
-      if (late && (late.transitioning || late.dialogueOpen || late.enemiesNear)) {
-        connection = 'error'
-        connectionError = 'Something happened mid-sync. Try again from a quiet spot in Hearthwick.'
-        return
-      }
-
-      // Shared reconciliation: first import replaces demo vitals; later syncs
-      // credit external deltas exactly once; boundary/account rules enforced.
-      const result = syncProfile(
-        { state: session.state, vitalsSource: session.vitalsSource, importedProfile: session.importedProfile ?? undefined },
-        profile,
-        { atSafeBoundary: true }
-      )
-
-      if (result.status === 'rejected') {
-        connection = 'error'
-        connectionError = result.reason === 'account-switch'
-          ? 'That’s a different Habitica character than this journey’s. Start over to switch heroes.'
-          : 'Syncing only works in Hearthwick. Your save is unchanged.'
-        return
-      }
-      if (result.status === 'unchanged') {
-        connection = 'connected'
-        // The shared logic may still advance the stored baseline (capped
-        // deltas): persist it and await the outcome — no dangling write.
-        const baselineMoved = JSON.stringify(result.save.importedProfile ?? null) !== JSON.stringify(session.importedProfile)
-        if (baselineMoved) {
-          const applied = await session.applySynced(result.save, generation)
-          if (applied === 'committed') {
-            ui.importedProfile = result.save.importedProfile ?? null
-          } else if (applied === 'save-failed') {
-            connection = 'error'
-            connectionError = 'We read your character, but couldn’t save here. Try again in a moment.'
-            return
-          } else if (applied === 'stale') {
-            connection = isConnected() ? 'connected' : 'disconnected'
-            connectionError = 'That sync was cancelled because your journey changed. Nothing was applied.'
-            return
-          }
-        }
-        ui.toast({ text: 'All caught up — nothing new on Habitica.' })
-        return
-      }
-
-      // Persist first; the runtime commits only after a successful save.
-      const firstImport = session.vitalsSource !== 'imported'
-      const applied = await session.applySynced(result.save, generation)
-      if (applied === 'committed') {
-        ui.vitalsSource = 'imported'
-        ui.importedProfile = profile
-        connection = 'connected'
-        ui.toast({
-          text: firstImport
-            ? `Welcome to Hearthwick, ${profile.name}! Your Habitica health and mana travel with you.`
-            : `Synced — ${profile.name} is up to date.`,
-          icon: 'person'
-        })
-        emberToast(result)
-      } else if (applied === 'stale') {
-        connection = isConnected() ? 'connected' : 'disconnected'
-        connectionError = 'That sync was cancelled because your journey changed. Nothing was applied.'
-      } else {
-        connection = 'error'
-        connectionError = 'We read your character, but couldn’t save here — nothing changed. Try again in a moment.'
-      }
-    } catch (err) {
-      connectionError = friendlyErrorCopy(err)
-      connection = 'error'
-    } finally {
-      syncBusy = false
-    }
-  }
-
-  /** Tell the player what their real-life XP turned into. */
-  function emberToast(result: SyncResult): void {
-    const e = result.embers
-    if (!e || e.gained <= 0) return
-    sfx('ember')
-    if (e.welcome > 0) {
-      ui.toast({ text: `Mara presses ${e.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
-      return
-    }
-    ui.toast({ text: `+${e.gained} ember${e.gained === 1 ? '' : 's'} — from the ${e.xp} XP you earned on Habitica.`, icon: 'ember' })
-  }
-
-  function disconnect(): void {
-    // Ends the sync session: an in-flight sync must not commit after this.
-    // If its write already landed, applySynced's stale path re-persists the
-    // current intent durably (session still owns persistence here).
-    session.markReset()
-    disconnectSession()
-    connectionError = ''
-    connection = 'disconnected'
-  }
-
-  /** Offline demo of the import pipeline (no network, no credentials). Same
-   * village gate and one-at-a-time rule as the real sync. */
-  async function sampleImport(): Promise<void> {
-    if (syncBusy) return
-    const blocker = syncBlocker()
-    if (blocker) {
-      connectionError = blocker
-      return
-    }
-    const generation = session.currentGeneration
-    const sample = fixtureProfiles().find((f) => f.key === 'lowLevel') ?? fixtureProfiles()[0]
-    const result = syncProfile(
-      { state: session.state, vitalsSource: session.vitalsSource, importedProfile: session.importedProfile ?? undefined },
-      sample.profile,
-      { atSafeBoundary: true }
-    )
-    if (result.status === 'rejected') {
-      connectionError = 'Sample heroes follow the same rules: head back to Hearthwick first.'
-      return
-    }
-    syncBusy = true
-    try {
-      const applied = await session.applySynced(result.save, generation)
-      if (applied === 'committed') {
-        ui.vitalsSource = 'imported'
-        ui.importedProfile = sample.profile
-        ui.toast({ text: `${sample.profile.name} steps into Hearthwick.`, icon: 'person' })
-        emberToast(result)
-      } else if (applied === 'save-failed') {
-        connectionError = 'The sample hero is ready, but this browser wouldn’t save — nothing changed.'
-      } else if (applied === 'stale') {
-        connectionError = 'That was cancelled because your journey changed. Nothing was applied.'
-      }
-    } finally {
-      syncBusy = false
-    }
-  }
 </script>
 
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -324,54 +111,7 @@
 
     <section class="card">
       <h3 class="section-title"><Icon name="person" size={14} /> Play as your Habitica hero</h3>
-      {#if setupNotice}
-        <p class="fine">Live Habitica connection isn’t switched on in this build, but you can still try a sample hero to see how it works.</p>
-        <div class="row">
-          <button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>
-        </div>
-        <p class="tiny">Builders: set VITE_HABITICA_CREATOR_ID to enable live connection.</p>
-      {:else}
-        <p class="fine">Optional and read-only: we only <em>look</em> at your character, never change it. Your details stay in this tab until you disconnect — never saved, exported or logged. Sync from Hearthwick.</p>
-        <div class="embers-note">
-          <span class="ei"><Icon name="ember" size={18} /></span>
-          <p>
-            <strong>Your real-life progress lights the road.</strong> Every {XP_PER_EMBER} XP you earn on Habitica
-            becomes an ember the next time you sync. Spend them on a warm rest by Hearthwick’s lantern, on the road
-            lanterns in Brackenwood, and on a certain chest in Ashwatch.
-          </p>
-        </div>
-        {#if connection === 'disconnected' || connection === 'error'}
-          <label class="field">
-            <span>User ID</span>
-            <input type="text" bind:value={userId} autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" onkeydown={keepKeys} />
-          </label>
-          <label class="field">
-            <span>API Token</span>
-            <input type="password" bind:value={apiToken} autocomplete="off" placeholder="••••••••••••" onkeydown={keepKeys} />
-          </label>
-          <div class="row">
-            <button type="button" class="primary" onclick={connect}>Connect</button>
-            <button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>
-          </div>
-        {:else if connection === 'syncing'}
-          <p class="status"><span class="spinner" aria-hidden="true"></span> Fetching your hero…</p>
-          <div class="row">
-            <button type="button" disabled>Sync character</button>
-            <!-- Disconnect stays available mid-sync: it cancels the in-flight
-                 sync (generation guard + durable rollback protect the save). -->
-            <button type="button" onclick={disconnect}>Disconnect</button>
-          </div>
-        {:else}
-          <p class="status"><span class="ok"><Icon name="check" size={12} /></span> Connected for this tab.</p>
-          <div class="row">
-            <button type="button" class="primary" onclick={syncCharacter} disabled={syncBusy}>Sync character</button>
-            <button type="button" onclick={disconnect}>Disconnect</button>
-          </div>
-        {/if}
-      {/if}
-      {#if connectionError}
-        <p class="error" role="alert">{connectionError}</p>
-      {/if}
+      <ConnectGuide {session} mode="menu" />
     </section>
 
     <section class="card">
@@ -451,31 +191,19 @@
     margin: 8px 0;
     flex-wrap: wrap;
   }
-  .field {
-    display: grid;
-    gap: 4px;
-    margin: 8px 0;
-    font-family: var(--font-display);
-    font-size: 13px;
-    color: var(--wood-dark);
-  }
-  input,
   textarea {
     font: inherit;
     font-family: var(--font-body);
-    font-size: 14px;
+    font-size: 12.5px;
     width: 100%;
     padding: 8px 10px;
     border: 2px solid var(--wood);
     border-radius: 8px;
     background: #fffbef;
     color: var(--text);
+    resize: vertical;
     user-select: text;
     -webkit-user-select: text;
-  }
-  textarea {
-    resize: vertical;
-    font-size: 12.5px;
   }
   .error {
     margin: 6px 0;
@@ -484,30 +212,6 @@
     color: #7a2e1e;
     background: rgba(196, 82, 58, 0.12);
     border-radius: 8px;
-  }
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 6px 0;
-    font-weight: 700;
-  }
-  .ok {
-    display: grid;
-    place-items: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #fff;
-  }
-  .spinner {
-    width: 14px;
-    height: 14px;
-    border: 3px solid var(--paper-line);
-    border-top-color: var(--wood);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
   }
   .keys {
     display: grid;
@@ -529,33 +233,10 @@
     margin: 0;
     font-size: 14px;
   }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
   @media (max-width: 560px) {
     .keys div {
       grid-template-columns: 1fr;
       gap: 4px;
     }
-  }
-  .embers-note {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    margin: 4px 0 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: linear-gradient(180deg, rgba(255, 194, 122, 0.22), rgba(255, 179, 92, 0.12));
-    border: 2px dashed rgba(181, 72, 31, 0.35);
-  }
-  .embers-note p {
-    margin: 0;
-    font-size: 13.5px;
-    line-height: 1.5;
-    color: var(--text);
-  }
-  .embers-note .ei {
-    color: var(--ember-deep);
-    margin-top: 1px;
   }
 </style>

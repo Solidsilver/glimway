@@ -30,6 +30,8 @@ class UiStore {
   /** Save provenance (format 2), shown in the character panel. */
   vitalsSource = $state<VitalsSource>('demo')
   importedProfile = $state<HabiticaProfile | null>(null)
+  /** True when the player opted to remember their Habitica details on this device. */
+  remembered = $state(false)
 
   /** Mirrors of world/UI ownership flags, reactive for the interface. */
   dialogueOpen = $state(false)

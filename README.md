@@ -55,13 +55,28 @@ see the village lantern glowing again.
 
 ### Your Habitica character (optional, read-only)
 
-In the Character sheet (C) you can paste a Habitica user id + API token to play
-as your own character: vitals, effective stats, class kit, appearance layers
-from the bundled official-art cache, plus pet follower and outdoor mount. The
-adapter is strictly read-only — one explicit `GET /user` per button press, and
-**nothing in the game ever writes to your account**. Credentials stay in this
-tab's memory until Disconnect (never saved, exported, or logged), and the
-`X-Client` header identifies the tool's creator, never you.
+On a new game the title screen asks how you want to play: **Play as your
+Habitica hero** or **Wander as a guest**. The first opens a three-step connect
+guide (also in the Menu): where to find your User ID and API Token (website,
+iOS, Android; the app steps are still unverified and say so), a paste step, and
+a connected card with your hero's name, class and level. You can paste both
+values at once: labeled text (`User ID: … API Token: …`, any order) is read by
+its labels; two unlabeled codes are filled in order with a preview and a
+**Swap** button, and nothing is sent until you confirm. From then on every
+10 XP you earn on Habitica becomes an ember. Guide copy lives in
+`src/content/connect-guide.ts`; the parser in `src/lib/habitica/paste.ts`.
+
+The adapter is strictly read-only: one explicit `GET /user` per sign-in or
+Sync press, and **nothing in the game ever writes to your account**. (The
+token itself *can* write to your account; the game limits itself to reads, in
+public code.) Credentials stay in this tab's memory and are never in saves,
+save codes, or logs, **unless** you tick **Remember on this device**: then
+they are kept in this browser in a separate IndexedDB database
+(`fingersnap-credentials`), apart from your save. Script injected into this
+site could read them, so leave it off if you'd rather paste per visit.
+**Forget** deletes them, and Disconnect offers to. A guest who walks to the
+Hearthwick gate gets one nudge from Pip, once per save. The `X-Client` header
+identifies the tool's creator, never you.
 
 Health policy: importing replaces the demo vitals once; later syncs credit
 genuine external HP/MP changes **exactly once** (damage + unchanged profile

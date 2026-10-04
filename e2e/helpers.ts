@@ -15,10 +15,10 @@ type Hooks = {
   __fsDevStrike?: (n: number, type?: string) => void
 }
 
-/** Fresh start: title screen → "Begin your journey" → world is live. */
+/** Fresh start: title screen → "Wander as a guest" → world is live. */
 export async function beginNewJourney(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: /Begin your journey/ }).click()
+  await page.getByRole('button', { name: /Wander as a guest/ }).click()
   await waitForArea(page, 'village')
 }
 
@@ -98,4 +98,74 @@ export async function talkThrough(page: Page, prompt: RegExp): Promise<void> {
     await page.waitForTimeout(250)
   }
   await expect(dialogue).toBeHidden()
+}
+
+/** Fake credentials for the mocked Habitica API (see mockHabitica). */
+export const MOCK_USER = '11111111-aaaa-4bbb-8ccc-222222222222'
+export const MOCK_TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
+
+/**
+ * Stand-in for habitica.com: answers GET /api/v3/user with the "Tansy" fixture
+ * when the headers match the mock credentials, 401 otherwise. Returns the list
+ * of request header pairs seen, so tests can assert what was (not) sent.
+ */
+export async function mockHabitica(page: Page): Promise<{ calls: Array<{ user: string; key: string }> }> {
+  const { FIXTURES_BY_KEY } = await import('../src/lib/habitica/fixtures.ts')
+  const calls: Array<{ user: string; key: string }> = []
+  await page.route('https://habitica.com/api/v3/user*', async (route) => {
+    const h = route.request().headers()
+    calls.push({ user: h['x-api-user'], key: h['x-api-key'] })
+    if (h['x-api-user'] !== MOCK_USER || h['x-api-key'] !== MOCK_TOKEN) {
+      return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false }) })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ success: true, data: FIXTURES_BY_KEY.lowLevel.user })
+    })
+  })
+  return { calls }
+}
+
+/** Raw read of the credentials database (null when absent or empty). */
+export async function rememberedRecord(page: Page): Promise<unknown> {
+  return page.evaluate(async () => {
+    const dbs = await indexedDB.databases()
+    if (!dbs.some((d) => d.name === 'fingersnap-credentials')) return null
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('fingersnap-credentials')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+    try {
+      return await new Promise((resolve) => {
+        const req = db.transaction('credentials').objectStore('credentials').get('habitica')
+        req.onsuccess = () => resolve(req.result ?? null)
+        req.onerror = () => resolve(null)
+      })
+    } finally {
+      db.close()
+    }
+  })
+}
+
+/** The whole `fingersnap` save record as JSON text. */
+export async function savedRecordText(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('fingersnap')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+    try {
+      return await new Promise<string>((resolve) => {
+        const req = db.transaction('saves').objectStore('saves').get('current')
+        req.onsuccess = () => resolve(JSON.stringify(req.result ?? null))
+        req.onerror = () => resolve('')
+      })
+    } finally {
+      db.close()
+    }
+  })
 }

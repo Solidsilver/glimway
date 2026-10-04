@@ -11,6 +11,7 @@ import { buildArea, type EmberSpotId, type EnemyType, type InteractId, type Worl
 import { getCombatKit, type CombatKit } from '../../lib/combat'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
 import { CHARM_ITEM, EMBER_COSTS, withCharm, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { loadCompanion, loadWorldAvatar } from '../avatar-render'
 
 /**
@@ -1787,6 +1788,7 @@ export class WorldScene extends Phaser.Scene {
     this.updateBolts(dt)
     this.updateDiscoveries()
     this.checkExits()
+    maybeNudgePip(this.session, this.world, this.player) // P1 onboarding: Pip's one-off gate line
     this.updatePrompt()
     this.updateEnemyBars()
     this.updateOccluders(dt)

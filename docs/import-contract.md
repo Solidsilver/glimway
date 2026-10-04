@@ -21,11 +21,22 @@ same UI are appended at the end of this file.
   Fingersnap never scores tasks, spends gold, changes stats, equips items,
   casts spells, or consumes Habitica possessions. Ordinary gameplay causes
   zero Habitica requests; sync is one explicit `GET /user` per user action.
-- **Token in memory only**: `HabiticaCredentials` lives in a JS variable for
-  the session. It is never written to GameState, IndexedDB saves, save
-  exports, logs, error messages, URLs, or source control. Save validation
-  (`validateSave`, `validateHabiticaProfile`) strips unknown fields, so a
-  stray token cannot ride along even if handed in.
+- **Token in memory only, unless the player opts in**: `HabiticaCredentials`
+  lives in a JS variable for the session. It is never written to GameState,
+  IndexedDB saves, save exports, logs, error messages, URLs, or source
+  control. Save validation (`validateSave`, `validateHabiticaProfile`) strips
+  unknown fields, so a stray token cannot ride along even if handed in.
+  **The one exception** is the connect guide's **Remember on this device**
+  box (off by default). When ticked, the User ID and token are stored in
+  IndexedDB in their own database (`fingersnap-credentials`, see
+  `src/lib/habitica/remembered.ts`), separate from the `fingersnap` save
+  database. They are still never put in GameState, saves, save exports, logs
+  or error messages. A visible **Forget** button deletes them, and Disconnect
+  asks whether to forget too. The exposure is stated in the UI: a script
+  injection on the Fingersnap origin could read a remembered token, and that
+  token can write to the Habitica account. All storage access is wrapped in
+  try/catch; the game works when IndexedDB is unavailable. (No server exists
+  yet; nothing is sent anywhere but Habitica.)
 - **`.env` is dev-only**: `HABITICA_USER_ID` / `HABITICA_API_TOKEN` (see
   `.env.example`, gitignored) prefill credentials for local live checks and
   tests run in Node. They are read via `process.env` in dev/test tooling.
@@ -33,7 +44,8 @@ same UI are appended at the end of this file.
   client bundle. **Never** name the token variable `VITE_HABITICA_API_TOKEN`
   (or any `VITE_*` secret) — it would be compiled into public JS. In
   production builds there is no credential path in the bundle at all: the
-  player pastes credentials into the Character panel and they stay in memory.
+  player pastes credentials into the connect guide (title screen or Menu) and
+  they stay in memory unless Remember on this device is ticked.
 - Errors from the client are typed and carry status codes only — never
   credentials or response bodies that might echo them.
 
