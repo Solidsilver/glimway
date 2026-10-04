@@ -25,14 +25,20 @@ const CookieName = "fingersnap_session"
 const SessionTTL = 30 * 24 * time.Hour
 
 type Config struct {
-	SecureCookie bool
-	Logger       *log.Logger
-	Now          func() time.Time
+	SecureCookie     bool
+	Logger           *log.Logger
+	Now              func() time.Time
+	TrustedProxies   []string
+	LoginConcurrency int
+	LoginRate        int
+	LoginWindow      time.Duration
 }
 type Server struct {
-	Store    *store.Store
-	Habitica *habitica.Client
-	Config   Config
+	Store      *store.Store
+	Habitica   *habitica.Client
+	Config     Config
+	loginSlots chan struct{}
+	loginLimit *loginLimiter
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
@@ -42,7 +48,7 @@ func New(s *store.Store, h *habitica.Client, c Config) *Server {
 	if c.Logger == nil {
 		c.Logger = log.New(io.Discard, "", 0)
 	}
-	return &Server{s, h, c}
+	return newServer(s, h, c)
 }
 
 type failure struct {
@@ -87,10 +93,21 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites"}, r.URL.Path) {
 		route = r.URL.Path
 	}
-	defer a.Config.Logger.Printf("request method=%s route=%s", safeMethod(r.Method), route)
+	observed := &statusWriter{ResponseWriter: w, status: 200}
+	w = observed
+	if strings.HasPrefix(r.URL.Path, "/api/invites/") {
+		route = "/api/invites/:id"
+	}
+	defer func() {
+		class := "none"
+		if observed.status >= 500 {
+			class = "internal"
+		}
+		a.Config.Logger.Printf("request method=%s route=%s status=%d error_class=%s", safeMethod(r.Method), route, observed.status, class)
+	}()
 	if r.Method != "GET" && r.Method != "HEAD" {
 		if site := r.Header.Get("Sec-Fetch-Site"); site == "cross-site" {
 			problem(w, fail(403, "cross-origin"))
@@ -110,6 +127,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	switch r.Method + " " + r.URL.Path {
+	case "POST /api/invites":
+		err = a.createInvite(w, r)
+	case "GET /api/invites":
+		err = a.listInvites(w, r)
 	case "POST /api/session":
 		err = a.login(w, r)
 	case "DELETE /api/session":
@@ -127,7 +148,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST /api/spend":
 		err = a.spend(w, r)
 	default:
-		err = fail(404, "not-found")
+		if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
+			err = a.revokeInvite(w, r)
+		} else {
+			err = fail(404, "not-found")
+		}
 	}
 	if err != nil {
 		problem(w, err)
@@ -199,6 +224,24 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 128 {
 		return fail(400, "invalid-credentials")
 	}
+	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
+		return fail(429, "login-rate-limited")
+	}
+	eligible, err := a.precheck(r.Context(), req.UserID, req.Invite)
+	if err != nil {
+		return err
+	}
+	if !eligible {
+		return fail(403, "access-denied")
+	}
+	select {
+	case a.loginSlots <- struct{}{}:
+		defer func() { <-a.loginSlots }()
+	default:
+		w.Header().Set("Retry-After", "1")
+		return fail(429, "login-busy")
+	}
 	p, err := a.Habitica.Verify(r.Context(), req.UserID, req.Token)
 	req.Token = ""
 	if err != nil {
@@ -225,7 +268,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	world := ""
 	if allowed == 0 {
 		var named sql.NullString
-		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE code_hash=? AND used_by IS NULL", store.Hash(req.Invite)).Scan(&named)
+		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", store.Hash(req.Invite), now).Scan(&named)
 		if err == sql.ErrNoRows {
 			return fail(403, "access-denied")
 		}
@@ -235,7 +278,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if named.Valid {
 			world = named.String
 		}
-		res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND used_by IS NULL", p.ID, now, store.Hash(req.Invite))
+		res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, now, store.Hash(req.Invite), now)
 		if err != nil {
 			return err
 		}
@@ -265,11 +308,11 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at,habitica_party_id) VALUES(?,?,?,?,?)", world, p.ID, seed, now, p.PartyID); err != nil {
 				return err
 			}
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES(?,?,?,?,?)", p.ID, p.Name, world, now, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO progress VALUES(?,1,0,?,?)", p.ID, store.JSON(rules.NewState()), now); err != nil {
@@ -286,42 +329,10 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		changed := false
-		if s.State.EmberXP > verified+rules.E.CheckpointToleranceXP {
-			if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=COALESCE(flagged_at,?) WHERE habitica_id=?", now, p.ID); err != nil {
-				return err
-			}
-			s.Flagged = true
-			if s.Pending > 0 {
-				if err = store.Credit(ctx, tx, &s, 0, 0, "pending-dropped", "checkpoint", &verified, now); err != nil {
-					return err
-				}
-			}
-			s.Pending = 0
-			changed = true
-		} else if s.Pending > 0 {
-			// Pay only the portion independently confirmed by this checkpoint.
-			unconfirmed := max(0, int(math.Floor(s.State.EmberXP/float64(rules.E.XPPerEmber))-math.Floor(verified/float64(rules.E.XPPerEmber))))
-			confirmed := max(0, s.Pending-unconfirmed)
-			if confirmed > 0 {
-				if err = store.Credit(ctx, tx, &s, confirmed, confirmed, "pending-settled", "checkpoint", &verified, now); err != nil {
-					return err
-				}
-			}
-			if s.Pending > confirmed {
-				if err = store.Credit(ctx, tx, &s, 0, 0, "pending-dropped", "checkpoint", &verified, now); err != nil {
-					return err
-				}
-			}
-			s.Pending = 0
-			changed = true
+		if err = checkpoint(ctx, tx, &s, p, now); err != nil {
+			return err
 		}
-		if changed {
-			if err = store.Persist(ctx, tx, &s, now); err != nil {
-				return err
-			}
-		}
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=? WHERE habitica_id=?", p.Name, now, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE habitica_id=?", p.Name, now, p.PartyID, p.ID); err != nil {
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=? WHERE habitica_id=?", verified, store.JSON(p), now, p.ID); err != nil {
@@ -445,6 +456,9 @@ func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMess
 		return fail(400, "invalid-progress")
 	}
 	s.State = rules.Merge(s.State, p, stale)
+	if !rules.ValidMerged(s.State) {
+		return fail(400, "invalid-progress")
+	}
 	return gifts(ctx, tx, s, now)
 }
 func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
@@ -529,7 +543,7 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if p.ID != s.HabiticaID {
 		return fail(409, "account-switch")
 	}
-	if !rules.Plausible(p, s.State.EmberXP) {
+	if !rules.Plausible(p, s.ImportedProfile) {
 		return fail(422, "implausible-profile")
 	}
 	if err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
@@ -538,13 +552,25 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if !rules.SafeAreas[s.State.Area] {
 		return fail(409, "not-at-safe-boundary")
 	}
+	p.MP = math.Min(p.MP, p.MaxMP)
 	before := s.State
+	if s.ImportedProfile != nil {
+		_, rebirth := rules.ReportLoss(p, *s.ImportedProfile, 0)
+		if rebirth {
+			xp := rules.LifetimeXP(p.Level, *p.Exp)
+			if err = store.Credit(ctx, tx, &s, 0, 0, "rebirth", "sync", &xp, now); err != nil {
+				return err
+			}
+		}
+	}
 	r0 := rules.Sync(rules.Save{State: s.State, VitalsSource: s.VitalsSource, ImportedProfile: s.ImportedProfile}, p, true)
 	s.State = r0.Save.State
 	s.ImportedProfile = r0.Save.ImportedProfile
 	s.VitalsSource = r0.Save.VitalsSource
 	credit := s.State.Embers - before.Embers
-	paid := min(credit, rules.E.SyncCreditCap)
+	// A fixed ceiling from the checkpoint cannot be bypassed with repeated syncs.
+	payable := max(0, int(math.Floor(s.VerifiedXP/float64(rules.E.XPPerEmber)))+rules.E.SyncCreditCap-int(math.Floor(before.EmberXP/float64(rules.E.XPPerEmber))))
+	paid := min(credit, payable)
 	s.State.Embers = before.Embers
 	s.State.XPEmbers = before.XPEmbers
 	s.Pending += credit - paid
@@ -555,6 +581,9 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if credit > paid {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO pending_credits VALUES(?,?,?,?)", s.HabiticaID, reported, credit-paid, now); err != nil {
+			return err
+		}
 		if err = store.Credit(ctx, tx, &s, 0, 0, "pending-held", strconv.Itoa(credit-paid), &reported, now); err != nil {
 			return err
 		}
@@ -589,6 +618,9 @@ func idem(ctx context.Context, tx *sql.Tx, id, op, key string, req any, now int6
 	var value any
 	if err := json.Unmarshal([]byte(canonical), &value); err != nil {
 		return "", "", err
+	}
+	if fields, ok := value.(map[string]any); ok {
+		delete(fields, "lease")
 	}
 	hash := store.Hash(store.JSON(value))
 	var prior, response string

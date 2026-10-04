@@ -9,9 +9,11 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fingersnap/server/internal/rules"
 	"fmt"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,50 +36,91 @@ func Open(path string) (*Store, error) {
 		}
 		f.Close()
 	}
-	db, err := sql.Open("sqlite", path)
+	dsn := path
+	if path != ":memory:" {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return nil, err
+		}
+		dsn = (&url.URL{Scheme: "file", Path: abs}).String()
+	}
+	// Apply timeout before WAL setup; CLI and service may open concurrently.
+	dsn += "?_txlock=immediate&_pragma=busy_timeout(10000)&_pragma=foreign_keys(ON)&_pragma=synchronous(FULL)"
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	fail := func(err error) (*Store, error) { db.Close(); return nil, err }
-	for _, q := range []string{"PRAGMA journal_mode=WAL", "PRAGMA foreign_keys=ON", "PRAGMA busy_timeout=10000", "PRAGMA synchronous=FULL", "CREATE TABLE IF NOT EXISTS schema_migrations(name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)"} {
-		if _, err = db.Exec(q); err != nil {
-			return fail(err)
+	if err = configureWAL(db); err != nil {
+		return fail(err)
+	}
+	if err = migrate(db); err != nil {
+		return fail(err)
+	}
+	return &Store{db}, nil
+}
+
+// Switching a fresh database into WAL may report BUSY without waiting for
+// busy_timeout when two openers both need the header lock. Retry that setup
+// only, bounded by the same ten-second startup budget.
+func configureWAL(db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	for {
+		_, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL")
+		if err == nil {
+			return nil
 		}
+		var busy *sqlite.Error
+		if !errors.As(err, &busy) || (busy.Code()&255 != 5 && busy.Code()&255 != 6) {
+			return err
+		}
+		timer := time.NewTimer(20 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return err
+		case <-timer.C:
+		}
+	}
+}
+
+// Hold an immediate transaction before both the schema check and each change.
+func migrate(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec("CREATE TABLE IF NOT EXISTS schema_migrations(name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)"); err != nil {
+		return err
 	}
 	files, err := migrations.ReadDir("migrations")
 	if err != nil {
-		return fail(err)
+		return err
 	}
 	for _, f := range files {
 		var exists int
-		if err = db.QueryRow("SELECT count(*) FROM schema_migrations WHERE name=?", f.Name()).Scan(&exists); err != nil {
-			return fail(err)
+		if err = tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE name=?", f.Name()).Scan(&exists); err != nil {
+			return err
 		}
 		if exists > 0 {
 			continue
 		}
 		b, err := migrations.ReadFile("migrations/" + f.Name())
 		if err != nil {
-			return fail(err)
+			return err
 		}
-		tx, err := db.Begin()
-		if err != nil {
-			return fail(err)
+		if _, err = tx.Exec(string(b)); err != nil {
+			return err
 		}
-		if _, err = tx.Exec(string(b)); err == nil {
-			_, err = tx.Exec("INSERT INTO schema_migrations VALUES(?,?)", f.Name(), time.Now().Unix())
-		}
-		if err != nil {
-			tx.Rollback()
-			return fail(err)
-		}
-		if err = tx.Commit(); err != nil {
-			return fail(err)
+		if _, err = tx.Exec("INSERT INTO schema_migrations VALUES(?,?)", f.Name(), time.Now().Unix()); err != nil {
+			return err
 		}
 	}
-	return &Store{db}, nil
+	return tx.Commit()
 }
 func (s *Store) Close() error { return s.DB.Close() }
 func Random() (string, error) {
@@ -145,7 +188,7 @@ func (s *Store) Invite(ctx context.Context, world string) (string, error) {
 	if strings.TrimSpace(world) != "" {
 		w = world
 	}
-	_, err = s.DB.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at) VALUES(?,?,?,?)", Hash(code), "cli", w, time.Now().Unix())
+	_, err = s.DB.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", Hash(code), "cli", w, time.Now().Unix(), time.Now().Add(30*24*time.Hour).Unix())
 	return code, err
 }
 
@@ -155,6 +198,7 @@ type Snapshot struct {
 	VitalsSource    string         `json:"vitalsSource"`
 	ImportedProfile *rules.Profile `json:"importedProfile,omitempty"`
 	HabiticaID      string         `json:"habiticaId"`
+	HabiticaPartyID *string        `json:"habiticaPartyId"`
 	WorldID         string         `json:"worldId"`
 	SaveOrigin      *string        `json:"saveOrigin"`
 	Pending         int            `json:"pending"`
@@ -173,7 +217,7 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	var origin sql.NullString
 	var flagged sql.NullInt64
 	var checkpoint string
-	err := tx.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.rev,p.save_origin,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,g.doc_json,b.embers,b.xp_embers,x.profile_json,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json FROM players p JOIN progress g USING(habitica_id) JOIN balances b USING(habitica_id) JOIN sync_baselines x USING(habitica_id) WHERE p.habitica_id=?`, id).Scan(&s.HabiticaID, &s.WorldID, &s.Rev, &origin, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &doc, &s.State.Embers, &s.State.XPEmbers, &baseline, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint)
+	err := tx.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.habitica_party_id,p.rev,p.save_origin,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,g.doc_json,b.embers,b.xp_embers,x.profile_json,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json FROM players p JOIN progress g USING(habitica_id) JOIN balances b USING(habitica_id) JOIN sync_baselines x USING(habitica_id) WHERE p.habitica_id=?`, id).Scan(&s.HabiticaID, &s.WorldID, &s.HabiticaPartyID, &s.Rev, &origin, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &doc, &s.State.Embers, &s.State.XPEmbers, &baseline, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint)
 	if err != nil {
 		return s, err
 	}

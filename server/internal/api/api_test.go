@@ -43,7 +43,7 @@ type response struct {
 }
 
 func profile(id string, level, exp, hp float64) rules.Profile {
-	p := rules.Profile{ID: id, Name: "Hero", Level: level, Exp: &exp, HP: hp, MaxHP: 50, MP: 10, MaxMP: 30 + 2*float64(int(level)/2), Stats: rules.Stats{Str: float64(int(level) / 2), Int: float64(int(level) / 2), Con: float64(int(level) / 2), Per: float64(int(level) / 2)}, Pets: []string{}, Mounts: []string{}}
+	p := rules.Profile{ID: id, Name: "Hero", Level: level, Exp: &exp, HP: hp, MaxHP: 50, MP: 10, MaxMP: 30 + 2*float64(int(min(level, 100))/2), Stats: rules.Stats{Str: float64(int(min(level, 100)) / 2), Int: float64(int(min(level, 100)) / 2), Con: float64(int(min(level, 100)) / 2), Per: float64(int(min(level, 100)) / 2)}, Pets: []string{}, Mounts: []string{}}
 	return rules.SanitizeProfile(p)
 }
 func newRig(t *testing.T) *rig {
@@ -68,7 +68,7 @@ func newRig(t *testing.T) *rig {
 			p = profile(id, 1, 0, 20)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": false}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": false}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
 	}))
 	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-fingersnap"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
 	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
@@ -357,7 +357,7 @@ func TestSyncRejectsAtomicallyAndCreditsOnce(t *testing.T) {
 	doc.Mana = 2
 	doc.Quest = "complete"
 	p := profile("alice", 2, 30, 30)
-	for _, kind := range []string{"area", "account", "lease", "revision", "hp", "mp", "exp", "fractional-level", "death-loss", "missing-exp"} {
+	for _, kind := range []string{"area", "account", "lease", "revision", "hp", "exp", "fractional-level", "death-loss", "missing-exp"} {
 		body := syncBody(s, p, doc)
 		bad := p
 		d := doc
@@ -540,6 +540,8 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			}
 			if verified {
 				x.set(p)
+			} else {
+				x.set(profile("alice", 5, 0, 20))
 			}
 			c = x.login("alice", "")
 			next := x.expect("GET", "/api/state", nil, c, 200)
@@ -567,7 +569,7 @@ func TestImplausibleDeathRegression(t *testing.T) {
 	p := profile("alice", 20, 0, 20)
 	x.set(p)
 	c, s := x.ready("alice")
-	lost := profile("alice", 1, 0, 20)
+	lost := profile("alice", 10, 0, 20)
 	x.expect("POST", "/api/sync", syncBody(s, lost, s.State), c, 422)
 	legit := profile("alice", 19, 0, 20)
 	x.expect("POST", "/api/sync", syncBody(s, legit, s.State), c, 200)

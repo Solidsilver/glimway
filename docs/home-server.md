@@ -96,6 +96,7 @@ sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/finge
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist remove HABITICA_USER_ID
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invite [WORLD_ID]
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite flagged
+sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite notes
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite backup /var/lib/fingersnap-server/backups/manual.sqlite
 ```
 
@@ -126,3 +127,28 @@ store, and checks state, revision, total ledger deltas and earned deltas.
 When Go dependencies change, regenerate the module's fixed-output vendor hash
 using `go mod vendor -o /tmp/fingersnap-vendor` and
 `nix hash path /tmp/fingersnap-vendor` (start with an absent destination).
+
+### Login limits and player invites
+
+The backend pre-checks allowlist membership or an unused/unexpired invite before
+calling Habitica, then rechecks access in the transaction. Login proofs have a
+global concurrency limit of four and a per-IP limit of ten attempts per minute
+(`-login-concurrency`, `-login-rate`). Client IP is RemoteAddr unless its peer
+is a configured trusted proxy; only then is the last X-Forwarded-For hop used.
+Caddy's localhost peer is trusted by default. Configure `-trusted-proxies`,
+`FINGERSNAP_TRUSTED_PROXIES`, or the Nix `trustedProxies` option as needed; an
+empty value trusts no proxy. Headers supplied by untrusted peers cannot bypass
+the rate limit.
+
+Authenticated world members can create an invite with `POST /api/invites {}`
+without a play lease, list hash-only outstanding metadata with `GET /api/invites`,
+and revoke an unused code with `DELETE /api/invites/:id`. Three outstanding
+codes per player are allowed; codes expire after 30 days. The raw code is
+returned only at creation. Admin CLI invites also expire after 30 days. Invites
+admit new players to the inviter's world, but never move an existing player.
+The `notes` admin command lists rebirth audit events separately from flagged
+players; legitimate deaths/rebirths keep the paid XP mark without forgery flags.
+
+Schema upgrades run with immediate transaction locking; migration 002 carries
+previous aggregate pending credit into a lot at its original XP mark, backfills
+invite expiries, and adds player party IDs. Existing databases upgrade in place.

@@ -26,6 +26,43 @@ func TestTypeScriptParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var tree map[string]any
+	if err = json.Unmarshal(b, &tree); err != nil {
+		t.Fatal(err)
+	}
+	defaults := tree["stateDefaults"].(map[string]any)
+	same(t, "state defaults", defaults, rules.NewState())
+	var expand func(any) any
+	expand = func(v any) any {
+		switch v := v.(type) {
+		case []any:
+			for i, c := range v {
+				v[i] = expand(c)
+			}
+			return v
+		case map[string]any:
+			if patch, ok := v["$state"].(map[string]any); ok {
+				out := map[string]any{}
+				for k, c := range defaults {
+					out[k] = c
+				}
+				for k, c := range patch {
+					out[k] = c
+				}
+				return out
+			}
+			for k, c := range v {
+				v[k] = expand(c)
+			}
+			return v
+		default:
+			return v
+		}
+	}
+	b, err = json.Marshal(expand(tree))
+	if err != nil {
+		t.Fatal(err)
+	}
 	var v struct {
 		XP []struct {
 			Level  float64

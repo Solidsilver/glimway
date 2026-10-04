@@ -42,7 +42,7 @@ func retryAfter(v string) time.Duration {
 }
 func (c *Client) Verify(ctx context.Context, id, token string) (rules.Profile, error) {
 	var zero rules.Profile
-	u := strings.TrimRight(c.BaseURL, "/") + "/api/v3/user?userFields=" + url.QueryEscape("stats,profile.name,flags.classSelected,items.gear.equipped,items.gear.costume,items.pets,items.mounts,items.currentPet,items.currentMount,preferences")
+	u := strings.TrimRight(c.BaseURL, "/") + "/api/v3/user?userFields=" + url.QueryEscape("stats,profile.name,flags.classSelected,items.gear.equipped,items.gear.costume,items.pets,items.mounts,items.currentPet,items.currentMount,preferences,party._id")
 	for attempt := 0; attempt < 2; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 		if err != nil {
@@ -104,6 +104,9 @@ func Map(b []byte) (rules.Profile, error) {
 	var payload struct {
 		Success *bool `json:"success"`
 		Data    struct {
+			Party struct {
+				ID *string `json:"_id"`
+			} `json:"party"`
 			ID      string `json:"_id"`
 			AltID   string `json:"id"`
 			Profile struct {
@@ -161,9 +164,13 @@ func Map(b []byte) (rules.Profile, error) {
 	if s.HP == nil || s.MP == nil || s.Level == nil || s.Str == nil || s.Int == nil || s.Con == nil || s.Per == nil {
 		return rules.Profile{}, bad
 	}
-	p := rules.Profile{ID: u.ID, Name: u.Profile.Name, Level: *s.Level, Exp: s.Exp, HP: *s.HP, MP: *s.MP, MaxHP: 50, Equipped: u.Items.Gear.Equipped, Costume: u.Items.Gear.Costume, Pets: []string{}, Mounts: []string{}, SelectedPet: u.Items.CurrentPet, SelectedMount: u.Items.CurrentMount}
+	p := rules.Profile{PartyID: u.Party.ID, ID: u.ID, Name: u.Profile.Name, Level: *s.Level, Exp: s.Exp, HP: *s.HP, MP: *s.MP, MaxHP: 50, Equipped: u.Items.Gear.Equipped, Costume: u.Items.Gear.Costume, Pets: []string{}, Mounts: []string{}, SelectedPet: u.Items.CurrentPet, SelectedMount: u.Items.CurrentMount}
 	if p.ID == "" {
 		p.ID = u.AltID
+	}
+	if p.Exp != nil && *p.Exp < 0 {
+		n := 0.
+		p.Exp = &n
 	}
 	if p.Exp == nil {
 		n := 0.
@@ -219,7 +226,7 @@ func Map(b []byte) (rules.Profile, error) {
 		p.SelectedMount = nil
 	}
 	p = rules.SanitizeProfile(p)
-	if !rules.ValidProfile(p) || p.Level > 100 || p.Level != math.Floor(p.Level) {
+	if !rules.ValidProfile(p) || p.Level > rules.MaxProfileLevel || p.Level != math.Floor(p.Level) {
 		return rules.Profile{}, bad
 	}
 	return p, nil

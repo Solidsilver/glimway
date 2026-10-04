@@ -8,6 +8,7 @@ export interface Economy {
   chestId: string;
   charmItem: string;
   syncCreditCap: number;
+  outstandingInvites: number;
   migrationGiftCap: number;
   checkpointToleranceXp: number;
 }

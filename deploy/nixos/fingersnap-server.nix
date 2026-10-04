@@ -12,7 +12,7 @@ let
     };
     vendorHash = "sha256-7IC/p5GlD2EZkDXQzkaZ7E19S/ABKEBsg68vt8pykis=";
     subPackages = [ "server/cmd/fingersnap-server" ];
-    CGO_ENABLED = 0;
+    env.CGO_ENABLED = 0;
   };
   backup = pkgs.writeShellScript "fingersnap-backup" ''
     set -eu
@@ -30,6 +30,7 @@ in
     database = lib.mkOption { type = lib.types.str; default = "/var/lib/fingersnap-server/fingersnap.sqlite"; description = "SQLite path; custom paths must be writable by the service."; };
     habiticaUrl = lib.mkOption { type = lib.types.str; default = "https://habitica.com"; description = "Habitica read-only API base URL."; };
     xClient = lib.mkOption { type = lib.types.str; default = "5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap"; description = "Habitica creator-id-appname header."; };
+    trustedProxies = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "127.0.0.1" "::1" ]; description = "Proxy IPs permitted to supply the last X-Forwarded-For hop; empty trusts none."; };
     backupRetentionDays = lib.mkOption { type = lib.types.ints.positive; default = 30; description = "Nightly backup retention in days."; };
   };
   config = lib.mkIf cfg.enable {
@@ -45,6 +46,7 @@ in
         FINGERSNAP_HABITICA_URL = cfg.habiticaUrl;
         FINGERSNAP_X_CLIENT = cfg.xClient;
         FINGERSNAP_COOKIE_SECURE = "true";
+        FINGERSNAP_TRUSTED_PROXIES = lib.concatStringsSep "," cfg.trustedProxies;
       };
       serviceConfig = {
         ExecStart = "${cfg.package}/bin/fingersnap-server";

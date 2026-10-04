@@ -319,9 +319,13 @@ inventory. Guests retain all existing local rules above.
 `content/economy.json` is canonical for both languages; `content/vectors/`
 contains outputs of the real TypeScript functions replayed by Go tests.
 Connected reported profiles receive extra shape/curve/vitals/death-loss checks.
-A sync pays at most 200 XP-earned embers immediately and holds the excess
-pending; the next verified login settles confirmed pending credit, or drops it
-and flags a mark ahead of the checkpoint by more than 10 XP. The XP mark never
+At most 200 unverified XP-earned embers can be paid above the latest verified
+checkpoint; repeating syncs cannot increase that allowance. Excess credit is
+held in lots tagged with the XP at which it was reported. A verified login pays
+lots whose reported XP it reaches; a plausible death keeps unconfirmed lots
+pending. Reports/checkpoints compare XP losses against the last accepted
+profile, with a one-death allowance; a level-1 rebirth is accepted and audited.
+Only an implausibly low verified checkpoint flags the player and drops pending. The XP mark never
 falls, and login does not consume the gameplay healing baseline.
 
 An accepted upload grants the two story gifts once per account. A stale upload

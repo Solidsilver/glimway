@@ -57,6 +57,7 @@ type Appearance struct {
 	HairFlower   float64 `json:"hairFlower"`
 }
 type Profile struct {
+	PartyID       *string            `json:"-"`
 	ID            string             `json:"id"`
 	Name          string             `json:"name"`
 	Class         *string            `json:"class"`
@@ -107,7 +108,7 @@ func SanitizeProfile(p Profile) Profile {
 }
 func finite(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }
 func ValidProfile(p Profile) bool {
-	if p.ID == "" || len(p.ID) > 128 || p.Name == "" || len(p.Name) > 256 || p.Level < 1 || p.MaxHP < 1 || p.MaxMP < 0 {
+	if p.ID == "" || len(p.ID) > 128 || p.Name == "" || len(p.Name) > 256 || p.Level < 1 || p.Level > MaxProfileLevel || p.MaxHP < 1 || p.MaxMP < 0 {
 		return false
 	}
 	if p.Class != nil && !slices.Contains([]string{"warrior", "mage", "healer", "rogue"}, *p.Class) {
@@ -136,12 +137,25 @@ func XPToNextLevel(level float64) float64 {
 	}
 	return math.Floor((l*l*.25+10*l+139.75)/10+.5) * 10
 }
-func LifetimeXP(level, exp float64) float64 {
-	total := math.Max(0, exp)
-	for l := 1.; l < math.Floor(level); l++ {
-		total += XPToNextLevel(l)
+
+// The API admits levels through 10,000, independently of the stat bonus cap.
+const MaxProfileLevel = 10000
+
+var lifetimeTotals = func() [MaxProfileLevel + 1]float64 {
+	var totals [MaxProfileLevel + 1]float64
+	for l := 1; l < MaxProfileLevel; l++ {
+		totals[l+1] = totals[l] + XPToNextLevel(float64(l))
 	}
-	return total
+	return totals
+}()
+
+// A bounded startup table makes each request O(1), including invalid huge levels.
+func LifetimeXP(level, exp float64) float64 {
+	if !finite(level) || level > MaxProfileLevel {
+		return math.NaN()
+	}
+	l := int(math.Max(1, math.Floor(level)))
+	return lifetimeTotals[l] + math.Max(0, exp)
 }
 
 type Credit struct {
@@ -170,9 +184,14 @@ func CreditXP(mark *float64, p Profile) Credit {
 }
 func AddUnique(a []string, b ...string) []string {
 	out := append([]string{}, a...)
+	seen := make(map[string]bool, len(a)+len(b))
+	for _, v := range a {
+		seen[v] = true
+	}
 	for _, v := range b {
-		if !slices.Contains(out, v) {
+		if !seen[v] {
 			out = append(out, v)
+			seen[v] = true
 		}
 	}
 	return out
@@ -400,17 +419,51 @@ func Merge(s, p State, stale bool) State {
 	return s
 }
 
-// Plausibility is additional connected-play policy, independent of guest parity.
-// A death may remove one level and all XP within it. Repeated losses beyond
-// that window are rejected. The allowance includes one removed level and the
-// entire XP bar of the previous (one-higher) level.
-func Plausible(p Profile, mark float64) bool {
-	if !ValidProfile(p) || p.Exp == nil || p.Level != math.Floor(p.Level) || p.Level > 100 || *p.Exp >= XPToNextLevel(p.Level) || p.HP > p.MaxHP || p.MP > p.MaxMP || p.MaxHP != 50 || p.MaxMP != 2*p.Stats.Int+30 {
+// ReportLoss compares consecutive accepted reports, never the paid XP mark.
+// A one-level loss includes all XP in the previous level's bar. Level one is
+// an allowed Orb of Rebirth; callers record it as an owner-visible audit note.
+func ReportLoss(after, before Profile, tolerance float64) (plausible, rebirth bool) {
+	if after.Exp == nil || before.Exp == nil {
+		return false, false
+	}
+	if after.Level == 1 && before.Level > 1 {
+		return true, true
+	}
+	if after.Level < before.Level-1 {
+		return false, false
+	}
+	now, prior := LifetimeXP(after.Level, *after.Exp), LifetimeXP(before.Level, *before.Exp)
+	loss := XPToNextLevel(after.Level) + XPToNextLevel(after.Level+1)
+	return now+tolerance >= prior-loss, false
+}
+func Plausible(p Profile, before *Profile) bool {
+	if !ValidProfile(p) || p.Exp == nil || p.Level != math.Floor(p.Level) || *p.Exp >= XPToNextLevel(p.Level) || p.HP > p.MaxHP || p.MaxHP != 50 || p.MaxMP != 2*p.Stats.Int+30 {
 		return false
 	}
-	now := LifetimeXP(p.Level, *p.Exp)
-	loss := XPToNextLevel(p.Level) + XPToNextLevel(p.Level+1)
-	return now >= mark-loss
+	if before == nil {
+		return true
+	}
+	ok, _ := ReportLoss(p, *before, 0)
+	return ok
+}
+
+// Bound each persisted union as well as each request, so clients cannot grow
+// progress indefinitely by uploading distinct bounded batches.
+const MaxMergedItems = 4096
+
+func ValidMerged(s State) bool {
+	for _, a := range [][]string{s.Inventory, s.Discoveries, s.DefeatedEnemies} {
+		if len(a) > MaxMergedItems {
+			return false
+		}
+	}
+	storyFlags := 0
+	for _, v := range s.Flags {
+		if !EconomyFlag(v) {
+			storyFlags++
+		}
+	}
+	return storyFlags <= MaxMergedItems
 }
 
 // DecodeProfile rejects omitted required numeric fields as well as bad values.

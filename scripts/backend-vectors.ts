@@ -11,7 +11,7 @@ import type { HabiticaProfile } from '../src/lib/habitica/types.ts';
 export function vectors() {
   const base = validateHabiticaProfile(toHabiticaProfile(FIXTURES_BY_KEY.lowLevel.user, gearStatsFor));
   const xp = [];
-  for (const level of [1, 2, 4, 5, 6, 10, 50, 99, 100, 101]) {
+  for (const level of [1, 2, 4, 5, 6, 10, 50, 99, 100, 101, 120, 1000, 10000]) {
     for (const exp of [0, 0.4, 9.9, 10, xpToNextLevel(level) - 1]) {
       const total = lifetimeXp(level, exp);
       for (const mark of [undefined, 0, total, total + 5, Math.max(0, total - 10.4)]) {
@@ -53,7 +53,7 @@ export function vectors() {
   }
   const spend = [];
   const spends: EmberSpend[] = [{ kind: 'rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
-  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const embers of [0, 2, 5, 10]) for (const earned of [0, 2, embers]) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
+  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const embers of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, embers), embers])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
     const state = validateSave({ ...createNewGame(), hp, mana, embers, xpEmbers: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
     const check = checkSpend(state, operation, { imported });
     spend.push({ state, operation, imported, check, ...(check.ok ? { result: spendEmbers(state, operation, { imported }) } : {}) });
@@ -62,7 +62,23 @@ export function vectors() {
   const mapping = Object.values(FIXTURES_BY_KEY).map(f => ({ payload: { success: true, data: f.user }, result: validateHabiticaProfile(toHabiticaProfile(f.user, gearStatsFor)) }));
   return { xp, sync, spend, welcome, mapping };
 }
-export const serializeVectors = () => JSON.stringify(vectors(), null, 2) + '\n';
+/** Deduplicate immutable state fields while retaining self-contained JSON. */
+export const serializeVectors = () => {
+  const defaults = createNewGame();
+  function compact(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(compact);
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      if (obj.version === 1 && obj.position && Array.isArray(obj.inventory)) {
+        const patch = Object.fromEntries(Object.entries(obj).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(defaults[k as keyof GameState])));
+        return { $state: patch };
+      }
+      return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, compact(v)]));
+    }
+    return value;
+  }
+  return JSON.stringify({ stateDefaults: defaults, ...compact(vectors()) as Record<string, unknown> }) + '\n';
+};
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   writeFileSync(new URL('../content/vectors/backend.json', import.meta.url), serializeVectors());
   console.log('Wrote content/vectors/backend.json');
