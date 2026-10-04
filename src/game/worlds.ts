@@ -8,7 +8,8 @@ import { TERRAIN, TILE } from './textures.ts'
 export type NpcId = 'mara' | 'pip' | 'orrin'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId
+/** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -70,6 +71,8 @@ export interface WorldData {
   /** Places where embers are spent (each sits on a solid prop). */
   emberSpots: { id: EmberSpotId; tx: number; ty: number }[]
   spawn: { tx: number; ty: number }
+  /** The Hearthwick Library's door tile (village only): opens the reading room. */
+  library?: { tx: number; ty: number }
 }
 
 // ---------------------------------------------------------------- utilities
@@ -225,8 +228,19 @@ function buildVillage(): WorldData {
     { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } }
   ]
   const trees = collectTrees(g)
-  const bushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
-  const rocks = scatter(g, rng, 3, [...npcs, well, villageLantern]).filter((r) => !nearExit({ exits: villageExits }, r.tx, r.ty))
+  const scatteredBushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
+  const scatteredRocks = scatter(g, rng, 3, [...npcs, well, villageLantern]).filter((r) => !nearExit({ exits: villageExits }, r.tx, r.ty))
+
+  // The Hearthwick Library: a small reading house on the square's quiet
+  // south-west corner, off the quest route. Raised after the scatter so the
+  // rest of the village keeps its seeded layout; nothing may crowd its door.
+  const libraryAt = { tx: 2, ty: 14, w: 5 }
+  g.house(libraryAt.tx, libraryAt.ty, libraryAt.w)
+  const library = { tx: libraryAt.tx + Math.floor(libraryAt.w / 2) - 1, ty: libraryAt.ty + 3 }
+  const clearOfLibrary = (p: { tx: number; ty: number }) =>
+    !(p.tx >= libraryAt.tx - 1 && p.tx <= libraryAt.tx + libraryAt.w && p.ty >= libraryAt.ty - 1 && p.ty <= libraryAt.ty + 5)
+  const bushes = scatteredBushes.filter(clearOfLibrary)
+  const rocks = scatteredRocks.filter(clearOfLibrary)
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
@@ -259,7 +273,8 @@ function buildVillage(): WorldData {
     shrine: null,
     villageLantern,
     emberSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
-    spawn: { tx: 7, ty: 11 }
+    spawn: { tx: 7, ty: 11 },
+    library
   }
 }
 

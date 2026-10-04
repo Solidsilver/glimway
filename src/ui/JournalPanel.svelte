@@ -4,11 +4,30 @@
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
+  import PapersTab from './PapersTab.svelte'
+  import { papers } from './papers.svelte'
 
   // Mounted only while open (App owns journalOpen + the J/Escape keys). Quest
   // state comes from the shared store, which App keeps current from the
   // first snapshot on — never a local copy that starts at 'new'.
   let { onClose }: { onClose: () => void } = $props()
+
+  // Two pages: the quest, and the found texts ("Papers").
+  type Tab = 'road' | 'papers'
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'road', label: 'Lantern Road' },
+    { id: 'papers', label: 'Papers' }
+  ]
+  let tab = $state<Tab>('road')
+
+  function onTabKey(e: KeyboardEvent): void {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    const i = TABS.findIndex((t) => t.id === tab)
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length
+    tab = TABS[next].id
+    document.getElementById(`journal-tab-${tab}`)?.focus()
+  }
 
   const STEPS: { stage: QuestStage; label: string }[] = [
     { stage: 'new', label: 'Hear Mara out' },
@@ -33,6 +52,31 @@
     <button type="button" class="modal-close" onclick={onClose} aria-label="Close journal"><Icon name="close" size={14} /></button>
     <h2 class="panel-title" id="journal-title"><Icon name="book" size={20} /> Journal</h2>
 
+    <div class="tabs" role="tablist" aria-label="Journal pages">
+      {#each TABS as t (t.id)}
+        <button
+          type="button"
+          role="tab"
+          id={`journal-tab-${t.id}`}
+          aria-selected={tab === t.id}
+          aria-controls={`journal-page-${t.id}`}
+          tabindex={tab === t.id ? 0 : -1}
+          class:active={tab === t.id}
+          onclick={() => (tab = t.id)}
+          onkeydown={onTabKey}
+        >
+          {t.label}
+          {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
+        </button>
+      {/each}
+    </div>
+
+    {#if tab === 'papers'}
+      <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
+        <PapersTab />
+      </div>
+    {:else}
+    <div role="tabpanel" id="journal-page-road" aria-labelledby="journal-tab-road">
     <div class="hero">
       <img src={illustration} alt="" />
       <div class="goal">
@@ -59,10 +103,55 @@
         <p>{entry.body}</p>
       </article>
     {/each}
+    </div>
+    {/if}
   </div>
 </div>
 
 <style>
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin: -2px 0 14px;
+    border-bottom: 2px solid var(--paper-line);
+  }
+  .tabs button {
+    position: relative;
+    padding: 6px 14px 7px;
+    border-radius: 9px 9px 0 0;
+    border-bottom: none;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.25);
+    color: var(--text-soft);
+    margin-bottom: -2px;
+  }
+  .tabs button.active {
+    background: var(--paper-hi);
+    color: var(--wood-dark);
+    border-bottom: 2px solid var(--paper-hi);
+  }
+  .tabs button:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .newdot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--ember);
+    border: 1.5px solid var(--wood-dark);
+  }
   .hero {
     position: relative;
     border: 3px solid var(--wood-dark);

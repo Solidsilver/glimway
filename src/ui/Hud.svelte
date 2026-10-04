@@ -5,6 +5,7 @@
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
   import { offlineCopy } from '../content/connected'
+  import { papers } from './papers.svelte'
 
   let { onJournal, onCharacter, onMenu }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void } = $props()
 
@@ -87,8 +88,9 @@
   </div>
 
   <nav class="buttons" aria-label="Menus">
-    <button type="button" class="hb" onclick={onJournal} aria-label="Journal (J)" title="Journal">
+    <button type="button" class="hb" onclick={onJournal} aria-label={papers.unread.length ? `Journal (J), ${papers.unread.length} new paper${papers.unread.length === 1 ? '' : 's'}` : 'Journal (J)'} title="Journal">
       <Icon name="book" size={20} />
+      {#if papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span>{/if}
       {#if !touch}<span class="kbd">J</span>{/if}
     </button>
     <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
@@ -365,6 +367,20 @@
     place-items: center;
     border-width: 3px;
     border-radius: 12px;
+  }
+  .newdot {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ember);
+    border: 2px solid var(--wood-dark);
+    animation: newdot 1.8s ease-in-out infinite;
+  }
+  @keyframes newdot {
+    50% { transform: scale(1.2); }
   }
   .hb .kbd {
     position: absolute;

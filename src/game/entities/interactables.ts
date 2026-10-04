@@ -1,6 +1,7 @@
 /**
  * Interactables: the interaction points derived from WorldData (NPCs, the
- * clue, the shrine lantern, ember spots), their floating "!" / "…" markers
+ * clue, the shrine lantern, ember spots — plus the found-text pickups and
+ * library door owned by ./papers), their floating "!" / "…" markers
  * and keycap hint, the proximity prompt (recomputed every frame so the
  * wording follows quest progress), and opening conversations.
  */
@@ -14,6 +15,8 @@ import type { Session } from '../session'
 import { TILE } from '../textures'
 import type { EmberSpotId, InteractId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
+import { handoverFor } from '../../content/papers'
+import type { PaperPickups } from './papers'
 
 export interface Interactable {
   id: InteractId
@@ -26,6 +29,8 @@ export interface InteractableDeps {
   world: WorldData
   session: Session
   reducedMotion: boolean
+  /** Found-text pickups and the library door (they handle their own interactions). */
+  papers?: PaperPickups
 }
 
 /** Who the player has already heard from at each quest stage (this tab). */
@@ -43,7 +48,8 @@ function isTouchFirst(): boolean {
 export class Interactables {
   readonly list: Interactable[] = []
   currentTarget: Interactable | null = null
-  private lastPrompt: string | null = null
+  /** undefined until the first frame, so a new area always clears a stale prompt. */
+  private lastPrompt: string | null | undefined = undefined
   /** Floating "!" / "…" markers keyed by interactable id. */
   private markers = new Map<string, Phaser.GameObjects.Image>()
   /** Keycap hint floating above the current interaction target. */
@@ -73,6 +79,7 @@ export class Interactables {
         label: spot.id === 'hearth' ? 'Sit by the lantern' : spot.id === 'chest' ? 'Look at the chest' : 'Look at the lantern'
       })
     }
+    if (deps.papers) this.list.push(...deps.papers.interactions())
   }
 
   /** "!" over whoever moves the story on, "…" over anyone with news. */
@@ -100,13 +107,16 @@ export class Interactables {
       const img = this.markers.get(it.id)
       if (!img || !img.active) continue
       let kind: 'quest' | 'talk' | null = null
-      if (this.isEmberSpot(it.id)) {
+      if (this.deps.papers?.owns(it.id)) {
+        kind = null // pickups sparkle instead; the library is a building
+      } else if (this.isEmberSpot(it.id)) {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else {
         try {
           const d = dialogueFor(it.id, stage)
           if (d.event) kind = 'quest'
           else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
+          else if (it.id in NPC_NAMES && handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
         } catch {
           kind = null
         }
@@ -152,7 +162,11 @@ export class Interactables {
 
   /** Open the conversation at an interactable (dialogue panel owns the screen). */
   open(target: Interactable): void {
-    const { session } = this.deps
+    const { session, papers } = this.deps
+    if (papers?.owns(target.id)) {
+      if (papers.activate(target.id)) this.remove(target)
+      return
+    }
     let payload: Dialogue
     try {
       payload = this.isEmberSpot(target.id)
@@ -165,6 +179,9 @@ export class Interactables {
       console.warn('[fingersnap] no dialogue available for', target.id, err)
       return
     }
+    // A paper to hand over rides at the end of the NPC's usual lines.
+    const handover = !this.isEmberSpot(target.id) && target.id in NPC_NAMES ? papers?.handover(target.id) : null
+    if (handover) payload = { ...payload, lines: [...payload.lines, ...handover] }
     uiState.dialogueOpen = true
     heardAt.add(`${target.id}@${session.questStage}`)
     this.refreshMarkers()
@@ -176,6 +193,19 @@ export class Interactables {
       event: payload.event,
       choices: payload.choices
     })
+  }
+
+  /** Drop a used-up interaction point (a picked-up paper) and its marker. */
+  private remove(target: Interactable): void {
+    const i = this.list.indexOf(target)
+    if (i >= 0) this.list.splice(i, 1)
+    this.markers.get(target.id)?.destroy()
+    this.markers.delete(target.id)
+    if (this.currentTarget === target) this.currentTarget = null
+    this.keyHint?.setVisible(false)
+    this.lastPrompt = null
+    const payload: PromptPayload = { label: null }
+    bus.emit(EV.prompt, payload)
   }
 
   /** Hide the keycap hint while the world is frozen (a panel owns input). */
@@ -218,6 +248,8 @@ export class Interactables {
     if (id === 'hearth') return 36
     if (id === 'road-1' || id === 'road-2' || id === 'road-3') return 32
     if (id === 'clue' || id === 'chest') return 22
+    if (id === 'library') return 44
+    if (id.startsWith('paper:')) return 12
     return 25
   }
 }
