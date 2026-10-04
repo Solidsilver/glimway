@@ -58,7 +58,7 @@ export class SyncRejectedError extends Error {
 
 /** The only safe boundary in the demo: Hearthwick village. */
 export function isSafeBoundary(state: GameState): boolean {
-  return state.area === 'village';
+  return ['village', 'commons'].includes(state.area);
 }
 
 /**

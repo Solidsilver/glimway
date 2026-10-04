@@ -1,0 +1,288 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "id": "tier-0",
+      "name": "Campsite",
+      "purchasable": false,
+      "embers": 0
+    },
+    {
+      "tier": 1,
+      "id": "tier-1",
+      "name": "Cottage",
+      "purchasable": true,
+      "embers": 15
+    },
+    {
+      "tier": 2,
+      "id": "tier-2",
+      "name": "Workshop",
+      "purchasable": false,
+      "embers": 0
+    },
+    {
+      "tier": 3,
+      "id": "tier-3",
+      "name": "Garden",
+      "purchasable": false,
+      "embers": 0
+    },
+    {
+      "tier": 4,
+      "id": "tier-4",
+      "name": "Hall",
+      "purchasable": false,
+      "embers": 0
+    }
+  ],
+  "outdoor": {
+    "width": 16,
+    "height": 12
+  },
+  "indoor": {
+    "width": 12,
+    "height": 10
+  },
+  "commons": {
+    "tileSize": 32,
+    "columns": 4,
+    "gap": 4,
+    "originX": 4,
+    "originY": 4
+  },
+  "items": [
+    {
+      "id": "wooden-stool",
+      "name": "Wooden Stool",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 0,
+      "embers": 2,
+      "materials": {}
+    },
+    {
+      "id": "reading-chair",
+      "name": "Reading Chair",
+      "category": "furniture",
+      "footprint": [
+        1,
+        2
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "braided-rug",
+      "name": "Braided Rug",
+      "category": "decor",
+      "footprint": [
+        2,
+        2
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "iron-lantern",
+      "name": "Iron Lantern",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {}
+    },
+    {
+      "id": "oak-table",
+      "name": "Oak Table",
+      "category": "furniture",
+      "footprint": [
+        2,
+        2
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 6,
+      "materials": {}
+    },
+    {
+      "id": "potted-fern",
+      "name": "Potted Fern",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 0,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "bookshelf",
+      "name": "Short Bookshelf",
+      "category": "furniture",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 5,
+      "materials": {}
+    },
+    {
+      "id": "wash-basin",
+      "name": "Wash Basin",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 0,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "stone-hearth",
+      "name": "Stone Hearth",
+      "category": "utility",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 0,
+      "materials": {
+        "stone": 8,
+        "timber": 4
+      }
+    },
+    {
+      "id": "carved-bed",
+      "name": "Carved Bed",
+      "category": "furniture",
+      "footprint": [
+        2,
+        2
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 0,
+      "materials": {
+        "timber": 10,
+        "fiber": 6
+      }
+    },
+    {
+      "id": "woven-basket",
+      "name": "Woven Basket",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 0,
+      "embers": 0,
+      "materials": {
+        "fiber": 4
+      }
+    },
+    {
+      "id": "display-stand",
+      "name": "Display Stand",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 0,
+      "materials": {
+        "timber": 6
+      }
+    },
+    {
+      "id": "tool-rack",
+      "name": "Tool Rack",
+      "category": "decor",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 0,
+      "materials": {
+        "timber": 6,
+        "stone": 4
+      }
+    },
+    {
+      "id": "amber-sconce",
+      "name": "Amber Sconce",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 0,
+      "materials": {
+        "amber": 4,
+        "stone": 4
+      }
+    }
+  ]
+}

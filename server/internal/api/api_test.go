@@ -150,7 +150,7 @@ func unchanged(t *testing.T, a, b store.Snapshot) {
 func TestTokenCookieAndBackup(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	if !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteLaxMode || c.MaxAge != 30*24*3600 {
+	if !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteLaxMode || c.MaxAge != 7*24*3600 {
 		t.Fatal("cookie policy")
 	}
 	p := profile("alice", 2, 5, 30)
@@ -256,7 +256,7 @@ func TestAccessAndSessionSliding(t *testing.T) {
 		t.Fatal("denied login wrote player")
 	}
 	c, _ := x.ready("alice")
-	x.now.Add(29 * 86400)
+	advanceActive(x, c, 29*86400)
 	code, _, _, renewed := x.request("GET", "/api/state", nil, c)
 	if code != 200 || renewed == nil {
 		t.Fatal("session renewal")
@@ -771,7 +771,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	body := spendBody(s1, "rest", "", "expiring-key", doc)
 	paid := x.expect("POST", "/api/spend", body, c, 200)
 	paid.Lease = s.Lease
-	x.now.Add(7*86400 + 1)
+	advanceActive(x, c, 7*86400+1)
 	doc = paid.State
 	doc.HP = 10
 	again := x.expect("POST", "/api/spend", spendBody(paid, "rest", "", "expiring-key", doc), c, 200)

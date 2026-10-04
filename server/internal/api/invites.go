@@ -56,7 +56,7 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	if outstanding >= rules.E.OutstandingInvites {
 		return fail(409, "invite-limit")
 	}
-	code, err := store.Random()
+	code, err := store.InviteCode()
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,11 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, map[string]any{"invites": entries})
+	var lifetime int
+	if err = tx.QueryRowContext(r.Context(), "SELECT count(*) FROM invites WHERE created_by=?", s.HabiticaID).Scan(&lifetime); err != nil {
+		return err
+	}
+	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites})
 }
 func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/api/invites/")

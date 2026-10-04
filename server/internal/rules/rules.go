@@ -12,7 +12,7 @@ import (
 )
 
 var E = content.Rules
-var SafeAreas = map[string]bool{"village": true}
+var SafeAreas = map[string]bool{"village": true, "commons": true}
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
 var QuestItems = []string{"field-journal", "hearthwick-map", "lantern-route-rubbing", "warden-seal"}
 
@@ -296,6 +296,8 @@ type Check struct {
 func CheckSpend(s State, sp Spend, imported bool) Check {
 	cost := 0
 	switch sp.Kind {
+	case "home-rest":
+		cost = E.Costs.HomeRest
 	case "rest", "revive":
 		cost = E.Costs.Rest
 	case "road-lantern":
@@ -309,11 +311,11 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 	switch {
 	case sp.Kind == "road-lantern" && slices.Contains(s.Flags, "lit:"+sp.ID), sp.Kind == "chest" && slices.Contains(s.Flags, "opened:"+E.ChestID):
 		c.Reason = "done"
-	case (sp.Kind == "rest" || sp.Kind == "revive") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
+	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
 		c.Reason = "full"
 	case s.Embers < cost:
 		c.Reason = "short"
-	case (sp.Kind == "rest" || sp.Kind == "revive") && imported && s.HP <= 0 && s.XPEmbers < cost:
+	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPEmbers < cost:
 		c.Reason = "needs-earned"
 	default:
 		c.OK = true
@@ -326,13 +328,13 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 		return s, errors.New(c.Reason)
 	}
 	earned := max(0, c.Cost-(s.Embers-s.XPEmbers))
-	if (sp.Kind == "rest" || sp.Kind == "revive") && imported && s.HP <= 0 {
+	if (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 {
 		earned = c.Cost
 	}
 	s.Embers -= c.Cost
 	s.XPEmbers -= earned
 	switch sp.Kind {
-	case "rest", "revive":
+	case "rest", "revive", "home-rest":
 		s.HP = s.MaxHP
 		s.Mana = s.MaxMana
 	case "road-lantern":
@@ -364,7 +366,7 @@ func DecodeProgress(b json.RawMessage, maxHP, maxMana float64) (State, error) {
 		Flags           []string `json:"flags"`
 	}
 	bad := errors.New("invalid-progress")
-	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin"}, p.Area) || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
+	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin", "commons", "wilds"}, p.Area) || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
 		return State{}, bad
 	}
 	for _, n := range []float64{*p.Position.X, *p.Position.Y, *p.HP, *p.Mana, *p.PlaySeconds} {
@@ -428,19 +430,25 @@ func DeathWindow(level float64) float64 {
 func IsRebirth(p Profile, prior LossReference, verifiedHighLevel float64) bool {
 	return p.Level == 1 && prior.Level > 1 && verifiedHighLevel > 1
 }
-func CheckpointForgery(p Profile, prior LossReference, verifiedHighLevel float64) bool {
-	if IsRebirth(p, prior, verifiedHighLevel) {
+
+// CreditReference recovers the level associated with a ledger's lifetime XP.
+func CreditReference(xp float64) LossReference {
+	level, exact := slices.BinarySearch(lifetimeTotals[:], xp)
+	if !exact {
+		level--
+	}
+	return LossReference{Level: float64(max(1, min(level, MaxProfileLevel))), XP: xp}
+}
+
+// Forgery uses the highest credit-bearing report, while rebirth trusts only
+// the latest loss reference and previously verified level history.
+func CheckpointForgery(p Profile, latest LossReference, verifiedHighLevel float64, highest LossReference, ageSeconds int64) bool {
+	if IsRebirth(p, latest, verifiedHighLevel) {
 		return false
 	}
-	xp := LifetimeXP(p.Level, *p.Exp)
-	loss := prior.XP - xp
-	if p.Level > prior.Level && loss > 0 {
-		return true
-	}
-	if loss <= E.CheckpointToleranceXP {
-		return false
-	}
-	return loss > 3*DeathWindow(prior.Level)+E.CheckpointToleranceXP
+	days := max(int64(0), ageSeconds) / 86400
+	bound := (3+float64(days))*DeathWindow(highest.Level) + E.CheckpointToleranceXP
+	return highest.XP-LifetimeXP(p.Level, *p.Exp) > bound
 }
 
 // XP loss is always accepted: the monotone credit mark prevents double payment.

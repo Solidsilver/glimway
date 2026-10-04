@@ -134,6 +134,7 @@ export function grantWelcome(state: GameState): { state: GameState; granted: num
 
 export type EmberSpend =
   | { kind: 'rest' }
+  | { kind: 'home-rest' }
   | { kind: 'road-lantern'; id: RoadLanternId }
   | { kind: 'chest' };
 
@@ -150,11 +151,13 @@ export interface SpendContext {
 }
 
 export function isRevive(state: GameState, spend: EmberSpend, ctx: SpendContext): boolean {
-  return spend.kind === 'rest' && ctx.imported === true && state.hp <= 0;
+  return (spend.kind === 'rest' || spend.kind === 'home-rest') && ctx.imported === true && state.hp <= 0;
 }
 
 export function spendCost(spend: EmberSpend): number {
   switch (spend.kind) {
+    case 'home-rest':
+      return EMBER_COSTS.homeRest;
     case 'rest':
       return EMBER_COSTS.rest;
     case 'road-lantern':
@@ -179,7 +182,7 @@ export function checkSpend(state: GameState, spend: EmberSpend, ctx: SpendContex
   const cost = spendCost(spend);
   if (spend.kind === 'road-lantern' && isLit(state, spend.id)) return { ok: false, cost, reason: 'done' };
   if (spend.kind === 'chest' && chestOpened(state)) return { ok: false, cost, reason: 'done' };
-  if (spend.kind === 'rest' && state.hp >= state.maxHp && state.mana >= state.maxMana) {
+  if ((spend.kind === 'rest' || spend.kind === 'home-rest') && state.hp >= state.maxHp && state.mana >= state.maxMana) {
     return { ok: false, cost, reason: 'full' };
   }
   if (state.embers < cost) return { ok: false, cost, reason: 'short' };
@@ -217,6 +220,7 @@ export function spendEmbers(state: GameState, spend: EmberSpend, ctx: SpendConte
   const paid = { ...current, embers: current.embers - check.cost, xpEmbers: current.xpEmbers - fromXp };
   switch (spend.kind) {
     case 'rest':
+    case 'home-rest':
       // A warm rest bought with real-life progress: full local vitals. Never
       // a Habitica operation — the account's HP is untouched.
       return { ...paid, hp: paid.maxHp, mana: paid.maxMana };

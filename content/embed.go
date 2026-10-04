@@ -12,9 +12,18 @@ import (
 var FS embed.FS
 
 type Economy struct {
+	WildsLimits struct {
+		ClaimsPerMinute       int `json:"claimsPerMinute"`
+		LanternRelightsPerDay int `json:"lanternRelightsPerDay"`
+		LanternReward         struct {
+			Material string `json:"material"`
+			Qty      int    `json:"qty"`
+		} `json:"lanternReward"`
+	} `json:"wildsLimits"`
 	XPPerEmber    int `json:"xpPerEmber"`
 	WelcomeEmbers int `json:"welcomeEmbers"`
 	Costs         struct {
+		HomeRest    int `json:"homeRest"`
 		Rest        int `json:"rest"`
 		RoadLantern int `json:"roadLantern"`
 		Chest       int `json:"chest"`
@@ -42,7 +51,7 @@ func LoadEconomy() (Economy, error) {
 	if err = json.Unmarshal(b, &e); err != nil {
 		return e, err
 	}
-	if e.XPPerEmber <= 0 || e.WelcomeEmbers < 0 || e.Costs.Rest <= 0 || e.Costs.RoadLantern <= 0 || e.Costs.Chest <= 0 || e.SyncCreditCap <= 0 || e.SyncCreditDailyGrowth < 0 || e.SyncCreditMax < e.SyncCreditCap || e.PendingCreditDays <= 0 || e.LifetimeInvites < e.OutstandingInvites || e.OutstandingInvites <= 0 || e.MigrationGiftCap < 0 || e.CheckpointToleranceXP < 0 || len(e.RoadLanterns) != 3 || e.ChestID == "" || e.CharmItem == "" {
+	if e.WildsLimits.ClaimsPerMinute <= 0 || e.WildsLimits.LanternRelightsPerDay <= 0 || e.WildsLimits.LanternReward.Material != "amber" || e.WildsLimits.LanternReward.Qty <= 0 || e.Costs.HomeRest <= 0 || e.Costs.HomeRest >= e.Costs.Rest || e.XPPerEmber <= 0 || e.WelcomeEmbers < 0 || e.Costs.Rest <= 0 || e.Costs.RoadLantern <= 0 || e.Costs.Chest <= 0 || e.SyncCreditCap <= 0 || e.SyncCreditDailyGrowth < 0 || e.SyncCreditMax < e.SyncCreditCap || e.PendingCreditDays <= 0 || e.LifetimeInvites < e.OutstandingInvites || e.OutstandingInvites <= 0 || e.MigrationGiftCap < 0 || e.CheckpointToleranceXP < 0 || len(e.RoadLanterns) != 3 || e.ChestID == "" || e.CharmItem == "" {
 		return e, fmt.Errorf("invalid economy")
 	}
 	return e, nil

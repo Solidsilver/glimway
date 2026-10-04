@@ -30,6 +30,10 @@ func expirePending(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64
 }
 func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Profile, now int64) error {
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
+	high, highAt, err := highestCredit(ctx, tx, s)
+	if err != nil {
+		return err
+	}
 	changed, err := expirePending(ctx, tx, s, now)
 	if err != nil {
 		return err
@@ -38,11 +42,11 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 		if err = store.Credit(ctx, tx, s, 0, 0, "rebirth", "checkpoint", &verified, now); err != nil {
 			return err
 		}
-	} else if rules.CheckpointForgery(p, s.LossReference, s.VerifiedHighLevel) && !s.Flagged {
+	} else if rules.CheckpointForgery(p, s.LossReference, s.VerifiedHighLevel, rules.CreditReference(high), now-highAt) && !s.Flagged {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=? WHERE habitica_id=?", now, s.HabiticaID); err != nil {
 			return err
 		}
-		if err = store.Credit(ctx, tx, s, 0, 0, "checkpoint-flag", "loss-reference", &verified, now); err != nil {
+		if err = store.Credit(ctx, tx, s, 0, 0, "checkpoint-flag", "highest-credit", &verified, now); err != nil {
 			return err
 		}
 		s.Flagged = true
@@ -69,4 +73,22 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 		return store.Persist(ctx, tx, s, now)
 	}
 	return nil
+}
+
+// The cursor excludes reports already reviewed at a checkpoint, even when
+// several syncs/logins share a Unix second. Pending rows also cover legacy
+// held credit without a corresponding modern ledger entry.
+func highestCredit(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (float64, int64, error) {
+	var xp float64
+	var at int64
+	err := tx.QueryRowContext(ctx, `SELECT reported_xp,created_at FROM (
+ SELECT reported_xp,created_at FROM ledger WHERE habitica_id=? AND id>?
+ AND reason IN ('sync','pending-held') AND reported_xp IS NOT NULL
+ UNION ALL
+ SELECT reported_xp,created_at FROM pending_credits WHERE habitica_id=? AND created_at>?
+ ) ORDER BY reported_xp DESC,created_at ASC LIMIT 1`, s.HabiticaID, s.CheckpointLedgerID, s.HabiticaID, s.CheckpointAt).Scan(&xp, &at)
+	if err == sql.ErrNoRows {
+		return 0, 0, nil
+	}
+	return xp, at, err
 }

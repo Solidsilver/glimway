@@ -199,7 +199,7 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 	return tx.Commit()
 }
 func (s *Store) Invite(ctx context.Context, world string) (string, error) {
-	code, err := Random()
+	code, err := InviteCode()
 	if err != nil {
 		return "", err
 	}
@@ -212,25 +212,27 @@ func (s *Store) Invite(ctx context.Context, world string) (string, error) {
 }
 
 type Snapshot struct {
-	State             rules.State         `json:"state"`
-	Rev               int64               `json:"rev"`
-	VitalsSource      string              `json:"vitalsSource"`
-	ImportedProfile   *rules.Profile      `json:"importedProfile,omitempty"`
-	HabiticaID        string              `json:"habiticaId"`
-	HabiticaPartyID   *string             `json:"habiticaPartyId"`
-	WorldID           string              `json:"worldId"`
-	SaveOrigin        *string             `json:"saveOrigin"`
-	Pending           int                 `json:"pending"`
-	VerifiedXP        float64             `json:"verifiedXp"`
-	Flagged           bool                `json:"flagged"`
-	Checkpoint        rules.Profile       `json:"-"`
-	CheckpointAt      int64               `json:"-"`
-	LossReference     rules.LossReference `json:"-"`
-	LossAt            int64               `json:"-"`
-	VerifiedHighLevel float64             `json:"-"`
-	LeaseID           sql.NullString      `json:"-"`
-	LeaseClient       sql.NullString      `json:"-"`
-	LeaseSeen         sql.NullInt64       `json:"-"`
+	State              rules.State         `json:"state"`
+	Rev                int64               `json:"rev"`
+	VitalsSource       string              `json:"vitalsSource"`
+	ImportedProfile    *rules.Profile      `json:"importedProfile,omitempty"`
+	HabiticaID         string              `json:"habiticaId"`
+	DisplayName        string              `json:"displayName"`
+	HabiticaPartyID    *string             `json:"habiticaPartyId"`
+	WorldID            string              `json:"worldId"`
+	SaveOrigin         *string             `json:"saveOrigin"`
+	Pending            int                 `json:"pending"`
+	VerifiedXP         float64             `json:"verifiedXp"`
+	Flagged            bool                `json:"flagged"`
+	Checkpoint         rules.Profile       `json:"-"`
+	CheckpointAt       int64               `json:"-"`
+	CheckpointLedgerID int64               `json:"-"`
+	LossReference      rules.LossReference `json:"-"`
+	LossAt             int64               `json:"-"`
+	VerifiedHighLevel  float64             `json:"-"`
+	LeaseID            sql.NullString      `json:"-"`
+	LeaseClient        sql.NullString      `json:"-"`
+	LeaseSeen          sql.NullInt64       `json:"-"`
 }
 
 func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
@@ -240,7 +242,7 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	var origin sql.NullString
 	var flagged sql.NullInt64
 	var checkpoint string
-	err := tx.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.habitica_party_id,p.rev,p.save_origin,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,g.doc_json,b.embers,b.xp_embers,x.profile_json,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json,x.checkpoint_at,x.loss_level,x.loss_xp,x.loss_at,x.verified_high_level FROM players p JOIN progress g USING(habitica_id) JOIN balances b USING(habitica_id) JOIN sync_baselines x USING(habitica_id) WHERE p.habitica_id=?`, id).Scan(&s.HabiticaID, &s.WorldID, &s.HabiticaPartyID, &s.Rev, &origin, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &doc, &s.State.Embers, &s.State.XPEmbers, &baseline, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint, &s.CheckpointAt, &s.LossReference.Level, &s.LossReference.XP, &s.LossAt, &s.VerifiedHighLevel)
+	err := tx.QueryRowContext(ctx, `SELECT p.habitica_id,p.display_name,p.world_id,p.habitica_party_id,p.rev,p.save_origin,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,g.doc_json,b.embers,b.xp_embers,x.profile_json,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json,x.checkpoint_at,x.loss_level,x.loss_xp,x.loss_at,x.verified_high_level,x.checkpoint_ledger_id FROM players p JOIN progress g USING(habitica_id) JOIN balances b USING(habitica_id) JOIN sync_baselines x USING(habitica_id) WHERE p.habitica_id=?`, id).Scan(&s.HabiticaID, &s.DisplayName, &s.WorldID, &s.HabiticaPartyID, &s.Rev, &origin, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &doc, &s.State.Embers, &s.State.XPEmbers, &baseline, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint, &s.CheckpointAt, &s.LossReference.Level, &s.LossReference.XP, &s.LossAt, &s.VerifiedHighLevel, &s.CheckpointLedgerID)
 	if err != nil {
 		return s, err
 	}
