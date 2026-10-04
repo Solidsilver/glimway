@@ -1,4 +1,5 @@
-export type AreaId = 'village' | 'woodland' | 'ruin';
+// Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
+export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
 
 export type QuestStage =
   | 'new'
@@ -54,7 +55,9 @@ export class InvalidSaveError extends Error {
   }
 }
 
+// Curated areas are buildable by the existing standalone frontend.
 export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
+export const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'wilds'];
 
 export const QUEST_STAGES: readonly QuestStage[] = [
   'new',
@@ -187,9 +190,9 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
-  if (typeof data.area !== 'string' || !(AREAS as readonly string[]).includes(data.area)) {
+  if (typeof data.area !== 'string' || !(SAVE_AREAS as readonly string[]).includes(data.area)) {
     throw new InvalidSaveError(
-      `expected one of ${AREAS.map((a) => JSON.stringify(a)).join(', ')}, got ${describe(data.area)}`,
+      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')}, got ${describe(data.area)}`,
       'area',
     );
   }

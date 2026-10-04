@@ -12,7 +12,7 @@ import (
 )
 
 var E = content.Rules
-var SafeAreas = map[string]bool{"village": true}
+var SafeAreas = map[string]bool{"village": true, "commons": true}
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
 var QuestItems = []string{"field-journal", "hearthwick-map", "lantern-route-rubbing", "warden-seal"}
 
@@ -296,6 +296,8 @@ type Check struct {
 func CheckSpend(s State, sp Spend, imported bool) Check {
 	cost := 0
 	switch sp.Kind {
+	case "home-rest":
+		cost = E.Costs.HomeRest
 	case "rest", "revive":
 		cost = E.Costs.Rest
 	case "road-lantern":
@@ -309,11 +311,11 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 	switch {
 	case sp.Kind == "road-lantern" && slices.Contains(s.Flags, "lit:"+sp.ID), sp.Kind == "chest" && slices.Contains(s.Flags, "opened:"+E.ChestID):
 		c.Reason = "done"
-	case (sp.Kind == "rest" || sp.Kind == "revive") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
+	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
 		c.Reason = "full"
 	case s.Embers < cost:
 		c.Reason = "short"
-	case (sp.Kind == "rest" || sp.Kind == "revive") && imported && s.HP <= 0 && s.XPEmbers < cost:
+	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPEmbers < cost:
 		c.Reason = "needs-earned"
 	default:
 		c.OK = true
@@ -326,13 +328,13 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 		return s, errors.New(c.Reason)
 	}
 	earned := max(0, c.Cost-(s.Embers-s.XPEmbers))
-	if (sp.Kind == "rest" || sp.Kind == "revive") && imported && s.HP <= 0 {
+	if (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 {
 		earned = c.Cost
 	}
 	s.Embers -= c.Cost
 	s.XPEmbers -= earned
 	switch sp.Kind {
-	case "rest", "revive":
+	case "rest", "revive", "home-rest":
 		s.HP = s.MaxHP
 		s.Mana = s.MaxMana
 	case "road-lantern":
@@ -364,7 +366,7 @@ func DecodeProgress(b json.RawMessage, maxHP, maxMana float64) (State, error) {
 		Flags           []string `json:"flags"`
 	}
 	bad := errors.New("invalid-progress")
-	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin"}, p.Area) || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
+	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin", "commons", "wilds"}, p.Area) || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
 		return State{}, bad
 	}
 	for _, n := range []float64{*p.Position.X, *p.Position.Y, *p.HP, *p.Mana, *p.PlaySeconds} {

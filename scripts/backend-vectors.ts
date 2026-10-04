@@ -23,7 +23,7 @@ export function vectors() {
   xp.push({ level: 2, mark: 10, total: null, next: xpToNextLevel(2), result: { ...creditXp(10, { level: 2 }), mark: 10 } });
   const sync = [];
   const saveOf = (state: GameState, imported = true, baseline: HabiticaProfile | undefined = base): SyncedSave => ({ state: validateSave(state), vitalsSource: imported ? 'imported' : 'demo', ...(baseline ? { importedProfile: baseline } : {}) });
-  for (const area of ['village', 'woodland', 'ruin'] as const) {
+  for (const area of ['village', 'woodland', 'ruin', 'commons', 'wilds'] as const) {
     for (const hp of [0, 4.5, base.hp, base.maxHp]) {
       for (const mode of ['same', 'heal', 'fall', 'max-up', 'cosmetic', 'account', 'no-exp', 'no-baseline', 'first', 'restricted']) {
         const state = { ...createNewGame(), area, hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, emberXp: lifetimeXp(base.level, base.exp ?? 0) };
@@ -52,7 +52,7 @@ export function vectors() {
     sequential = { ...result.save, state: { ...result.save.state, hp: 0 } };
   }
   const spend = [];
-  const spends: EmberSpend[] = [{ kind: 'rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
+  const spends: EmberSpend[] = [{ kind: 'rest' }, { kind: 'home-rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
   for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const embers of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, embers), embers])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
     const state = validateSave({ ...createNewGame(), hp, mana, embers, xpEmbers: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
     const check = checkSpend(state, operation, { imported });

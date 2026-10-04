@@ -1,4 +1,4 @@
-// Package api implements the phase-2 HTTP contract. All gameplay commits,
+// Package api implements the phase-2 through phase-4 HTTP contracts. All gameplay commits,
 // authorization checks, ledger entries and idempotency responses share one tx.
 package api
 
@@ -33,6 +33,8 @@ type Config struct {
 	LoginRate        int
 	LoginGlobalRate  int
 	LoginWindow      time.Duration
+	// Zero uses the shared content default; stored epochs always retain their version.
+	WildsGeneratorVersion int
 }
 type Server struct {
 	Store       *store.Store
@@ -95,13 +97,19 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
 	w = observed
 	if strings.HasPrefix(r.URL.Path, "/api/invites/") {
 		route = "/api/invites/:id"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/homestead/") {
+		route = "/api/homestead/:action"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/wilds/") {
+		route = "/api/wilds/:action"
 	}
 	defer func() {
 		class := "none"
@@ -149,11 +157,21 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.progress(w, r)
 	case "POST /api/sync":
 		err = a.sync(w, r)
+	case "GET /api/commons":
+		err = a.commons(w, r)
+	case "POST /api/wilds/claim", "POST /api/wilds/lantern", "POST /api/wilds/defeat":
+		err = a.wildsMutation(w, r)
+	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade":
+		err = a.homeMutation(w, r)
 	case "POST /api/spend":
 		err = a.spend(w, r)
 	default:
 		if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
 			err = a.revokeInvite(w, r)
+		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/") {
+			err = a.homeRead(w, r)
+		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/region/") {
+			err = a.regionRead(w, r)
 		} else {
 			err = fail(404, "not-found")
 		}
@@ -477,6 +495,11 @@ func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMess
 	if !rules.ValidMerged(s.State) {
 		return fail(400, "invalid-progress")
 	}
+	if s.State.Area == "commons" {
+		if _, err := ensureHome(ctx, tx, s, now); err != nil {
+			return err
+		}
+	}
 	return gifts(ctx, tx, s, now)
 }
 func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
@@ -703,7 +726,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	if !slices.Contains([]string{"rest", "revive", "road-lantern", "chest"}, req.Kind) || req.Kind == "road-lantern" && !slices.Contains(rules.E.RoadLanterns, req.Target) {
+	if !slices.Contains([]string{"rest", "revive", "home-rest", "road-lantern", "chest"}, req.Kind) || req.Kind == "road-lantern" && !slices.Contains(rules.E.RoadLanterns, req.Target) {
 		return fail(400, "invalid-spend")
 	}
 	if (req.Kind == "rest" || req.Kind == "revive") && !rules.SafeAreas[s.State.Area] {
@@ -711,6 +734,11 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 	}
 	if req.Kind == "revive" && s.State.HP > 0 {
 		return fail(409, "not-defeated")
+	}
+	if req.Kind == "home-rest" {
+		if err = checkHomeRest(ctx, tx, &s, now); err != nil {
+			return err
+		}
 	}
 	before := s.State
 	after, err := rules.SpendEmbers(before, rules.Spend{Kind: req.Kind, ID: req.Target}, true)

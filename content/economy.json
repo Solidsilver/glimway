@@ -4,7 +4,8 @@
   "costs": {
     "rest": 2,
     "roadLantern": 3,
-    "chest": 5
+    "chest": 5,
+    "homeRest": 1
   },
   "questEmbers": {
     "defeat-guardian": 2,
@@ -24,5 +25,13 @@
   "syncCreditDailyGrowth": 100,
   "syncCreditMax": 3000,
   "pendingCreditDays": 90,
-  "lifetimeInvites": 5
+  "lifetimeInvites": 5,
+  "wildsLimits": {
+    "claimsPerMinute": 20,
+    "lanternRelightsPerDay": 3,
+    "lanternReward": {
+      "material": "amber",
+      "qty": 1
+    }
+  }
 }

@@ -124,7 +124,10 @@ Restore procedure (owner operation, while the service is stopped):
 3. Set owner/group to `fingersnap-server` and mode to `0600`, then start the
    service. Embedded migrations run automatically and safely on reopen.
 4. Check `/api/state` for a known account's `rev`, ember balances and outcomes;
-   compare ledger sums with balances before allowing play.
+   compare ledger sums **per currency** with balances before allowing play.
+   Ember totals use `currency='embers'`; materials use `material:timber`,
+   `material:stone`, `material:fiber`, and `material:amber`. Decoration and
+   trinket ledger currencies count owned units rather than embers.
 
 An automated test backs up a live database, reopens the backup as a fresh
 store, and checks state, revision, total ledger deltas and earned deltas.
@@ -192,3 +195,40 @@ accepted syncs and verified checkpoints record their reference explicitly.
 Existing pending lots retain their original creation date for 90-day expiry.
 The service upgrades existing databases in place; use the backup procedure above
 before an owner deployment.
+
+
+### Homesteads and the compact Wilds (phases 3–4)
+
+Migration 004 adds lazy homestead allocation, decoration instances and placement,
+material balances, permanent region epochs, shared entity cycles, personal claims,
+discoveries, fallen-hero lanterns, UTC relight reward counts, and durable claim
+limits. It preserves existing progress, balances, sessions, and revisions. A free
+campsite is granted at first homestead/Commons access and recorded in the ledger;
+the owner's revision advances once. Accepted Commons progress also grants it in
+the same progress transaction.
+
+The current inner region is `inner-1`, with a permanent season `"0"` epoch using
+generator version 1. Future generator deployments must retain the implementation
+**and its generation data** for every version referenced by a stored epoch.
+Unsupported versions fail with `generator-unavailable` rather than silently
+regenerating land. No scheduled reset runs in this phase.
+
+Shared `content/homestead.json` contains the five tier identities and fourteen
+items. Only the free Campsite and the 15-ember Cottage ship now; higher upgrades
+remain unavailable. `content/economy.json` contains the one-ember home rest, twenty
+successful claims per minute, three rewarded relights per UTC day, and one-amber
+relight reward. These are starting values for playtesting. Camps respawn after
+600 seconds and nodes regrow after 300 seconds, from `content/wilds.json`. A
+relight after the reward cap still lights the lantern but grants no material.
+
+All gameplay POSTs require the play lease, current `baseRev`, and an idempotency
+key, with optional current `progress`. New response payloads are additive to the
+existing top-level snapshot. Exact request/response fields and coordinate
+conventions are recorded in `.agent/REPORT.md`, under "Phase 3/4 server".
+Homestead layouts are visible only to the owner's world; mutations always affect
+the caller's owned instances. Wilds epoch IDs are checked against the caller's
+world before any state or loot is returned.
+
+Restore validation now also populates and checks the new tables, verifies material
+and decoration ledger sums, and checks the original player's full snapshot and
+revision after reopening the backup. The same manual backup procedure applies.
