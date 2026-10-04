@@ -486,13 +486,77 @@ function collectTrees(g: Grid): { tx: number; ty: number }[] {
   return out
 }
 
-export function buildArea(areaId: AreaId): WorldData {
-  switch (areaId) {
-    case 'village':
-      return buildVillage()
-    case 'woodland':
-      return buildWoodland()
-    case 'ruin':
-      return buildRuin()
+// ---------------------------------------------------------------- area kinds
+
+/** Foreground occluder spot (canopy/arch/fern) — placed by game/area/foreground. */
+export interface ForegroundSpot {
+  frame: string
+  tx: number
+  ty: number
+  /** Deliberate display width in px. */
+  w: number
+}
+
+/**
+ * One area kind: its data builder plus the small kind-specific builder
+ * (foreground decor). Adding an area — a homestead Commons plot, a generated
+ * Wilds chunk — means registering a kind (or calling registerAreaKind at
+ * runtime for generated chunks); the generic construction in src/game/area/
+ * renders any WorldData, so nothing else needs editing.
+ */
+export interface AreaKind {
+  /** Deterministic data for this area. */
+  build(): WorldData
+  /** Kind-specific foreground occluder spots, given the built world. */
+  foreground(world: WorldData): ForegroundSpot[]
+}
+
+function villageForeground(): ForegroundSpot[] {
+  return [
+    { frame: 'leafy-arch', tx: 1, ty: 12, w: 44 },
+    { frame: 'fern-cluster', tx: 7, ty: 17, w: 26 }
+  ]
+}
+
+function woodlandForeground(world: WorldData): ForegroundSpot[] {
+  // Canopies over every 9th existing tree base (collisions stay the trees').
+  const spots: ForegroundSpot[] = []
+  for (let i = 0; i < world.trees.length; i += 9) {
+    const t = world.trees[i]
+    spots.push({ frame: i % 18 === 0 ? 'oak-canopy' : 'pine-canopy', tx: t.tx, ty: t.ty, w: 60 })
   }
+  spots.push({ frame: 'leafy-arch', tx: 2, ty: 15, w: 48 })
+  spots.push({ frame: 'fern-cluster', tx: 10, ty: 16, w: 28 })
+  spots.push({ frame: 'fern-cluster', tx: 30, ty: 23, w: 28 })
+  return spots
+}
+
+function ruinForeground(): ForegroundSpot[] {
+  return [
+    { frame: 'stone-arch', tx: 2, ty: 13, w: 48 },
+    { frame: 'fern-cluster', tx: 12, ty: 19, w: 26 },
+    { frame: 'fern-cluster', tx: 24, ty: 7, w: 26 }
+  ]
+}
+
+const AREA_KINDS: Record<string, AreaKind> = {
+  village: { build: buildVillage, foreground: villageForeground },
+  woodland: { build: buildWoodland, foreground: woodlandForeground },
+  ruin: { build: buildRuin, foreground: ruinForeground }
+}
+
+/** Look up an area kind (its data builder plus kind-specific decor). */
+export function areaKind(id: string): AreaKind {
+  const kind = AREA_KINDS[id]
+  if (!kind) throw new Error(`[fingersnap] unknown area kind: ${id}`)
+  return kind
+}
+
+/** Register an area kind — how the Commons and the Wilds will arrive. */
+export function registerAreaKind(id: string, kind: AreaKind): void {
+  AREA_KINDS[id] = kind
+}
+
+export function buildArea(areaId: AreaId): WorldData {
+  return areaKind(areaId).build()
 }
