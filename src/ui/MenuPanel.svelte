@@ -33,6 +33,16 @@
   let importError = $state('')
   let confirmReset = $state(false)
   let confirmLogout = $state(false)
+  let logoutBusy = $state(false)
+
+  /** Upload what's pending first, so the dialog says truthfully whether anything is unsent. */
+  async function requestLogout(): Promise<void> {
+    logoutBusy = true
+    const link = session.link
+    if (link?.online) await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, 3000))])
+    logoutBusy = false
+    confirmLogout = true
+  }
   /** Connected play: the world holds the save; export/restore and Start over are guest-only. */
   const connected = $derived(!!session.link)
   const offline = $derived(connected && ui.link?.status === 'offline')
@@ -118,15 +128,15 @@
         <p class="who"><strong>{accountCopy.signedInAs(ui.account.name)}</strong></p>
         {#if connected}
           <p class="fine">
-            {#if offline}<span class="chip off"><Icon name="cloud" size={12} /> {offlineCopy.chip}</span>{/if}
-            {offline ? accountCopy.savedOffline : accountCopy.saved}
+            {#if offline}<span class="chip off"><Icon name="cloud" size={12} /> {ui.link?.trouble ? offlineCopy.troubleChip : offlineCopy.chip}</span>{/if}
+            {offline ? (ui.link?.trouble ? accountCopy.savedTrouble : accountCopy.savedOffline) : accountCopy.saved}
           </p>
         {/if}
         <div class="row">
           {#if !connected && onEnterWorld}
             <button type="button" class="primary" onclick={onEnterWorld}>Play in your world</button>
           {/if}
-          <button type="button" onclick={() => (confirmLogout = true)} disabled={offline} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
+          <button type="button" onclick={requestLogout} disabled={offline || logoutBusy} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
           {#if offline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
         </div>
       </section>
@@ -201,7 +211,7 @@
 {#if confirmLogout}
   <ConfirmDialog
     title={accountCopy.logoutTitle}
-    body={connected && ui.link?.dirty ? accountCopy.logoutDirty : accountCopy.logoutBody}
+    body={session.link?.dirty ? accountCopy.logoutDirty : accountCopy.logoutBody}
     confirmLabel={accountCopy.logout}
     onConfirm={() => {
       confirmLogout = false

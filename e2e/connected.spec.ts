@@ -26,6 +26,29 @@ const hurt = (page: Page, n: number) => page.evaluate((d) => (window as unknown 
 const leaseGate = (page: Page) => page.getByRole('alertdialog', { name: 'Playing on another device' })
 const shownHp = (page: Page) => page.evaluate(() => Number(document.querySelector('[aria-label="Health"]')?.getAttribute('aria-valuenow')))
 
+/** The account's record in the connected cache (null when absent). */
+async function cacheRecord(page: Page, id: string): Promise<Record<string, any> | null> {
+  return page.evaluate(async (key) => {
+    const dbs = await indexedDB.databases()
+    if (!dbs.some((d) => d.name === 'fingersnap-connected')) return null
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const r = indexedDB.open('fingersnap-connected')
+      r.onsuccess = () => resolve(r.result)
+      r.onerror = () => reject(r.error)
+    })
+    try {
+      if (!db.objectStoreNames.contains('records')) return null
+      return await new Promise<Record<string, any> | null>((resolve) => {
+        const r = db.transaction('records').objectStore('records').get(key)
+        r.onsuccess = () => resolve((r.result as Record<string, any> | undefined) ?? null)
+        r.onerror = () => resolve(null)
+      })
+    } finally {
+      db.close()
+    }
+  }, `acct:${id}`)
+}
+
 /** Read a conversation to its end (replies included). */
 async function finishTalking(page: Page): Promise<void> {
   const dialogue = page.getByRole('dialog', { name: /Conversation/ })
@@ -66,17 +89,8 @@ test('login + fresh start: the guide signs in, the world starts fresh, a sync pa
   await expect(hud(page)).toHaveText('3')
   await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(3)
   // Nothing about the token reached the connected cache.
-  const cache = await page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const r = indexedDB.open('fingersnap-connected')
-      r.onsuccess = () => resolve(r.result)
-      r.onerror = () => reject(r.error)
-    })
-    return new Promise<string>((resolve) => {
-      const r = db.transaction('connected').objectStore('connected').get('current')
-      r.onsuccess = () => resolve(JSON.stringify(r.result))
-    })
-  })
+  await expect.poll(() => cacheRecord(page, id)).not.toBeNull()
+  const cache = JSON.stringify(await cacheRecord(page, id))
   expect(cache).toContain(id)
   expect(cache).not.toContain('99999999-ffff')
 })
@@ -245,7 +259,7 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
 })
 
 test('offline play meets newer progress from another device: story merges, vitals come from the server', async ({ page, context, browser, baseURL }) => {
-  await freshPlayer(page)
+  const id = await freshPlayer(page)
   await context.setOffline(true)
   await hurt(page, 5)
   await expect(page.getByTestId('net-offline')).toBeVisible()
@@ -275,17 +289,7 @@ test('offline play meets newer progress from another device: story merges, vital
   expect(Math.ceil(s.state.hp)).toBe(otherHp) // health from the latest session
   await expect.poll(() => shownHp(page)).toBe(otherHp)
   // The offline copy is kept until the notice is dismissed.
-  const recovery = () =>
-    page.evaluate(async () => {
-      const db = await new Promise<IDBDatabase>((resolve) => {
-        const r = indexedDB.open('fingersnap-connected')
-        r.onsuccess = () => resolve(r.result)
-      })
-      return new Promise<boolean>((resolve) => {
-        const r = db.transaction('connected').objectStore('connected').get('current')
-        r.onsuccess = () => resolve(!!(r.result as { recovery?: unknown } | undefined)?.recovery)
-      })
-    })
+  const recovery = async () => !!(await cacheRecord(page, id))?.recovery
   await expect.poll(recovery).toBe(true)
   await page.getByRole('button', { name: 'Got it' }).click()
   await expect.poll(recovery).toBe(false)
@@ -338,6 +342,86 @@ test('a returning player is signed in by the cookie alone', async ({ page, conte
   await fresh.getByRole('button', { name: 'Take over here' }).click()
   await waitForWorld(fresh)
   await expect.poll(() => shownHp(fresh)).toBe(hp)
+})
+
+test('logout with unsent progress keeps it on the device, and the next sign-in uploads it (review 1)', async ({ page }) => {
+  const id = await freshPlayer(page)
+  // The server refuses uploads for a while: the story step stays unsent.
+  await page.route('**/api/progress', (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-progress' } }) })
+  )
+  await warp(page, 'village', 16, 14)
+  await talkThrough(page, /Talk to Mara/)
+  await expect(page.locator('.toast', { hasText: 'didn’t accept that save' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toContainText('hasn’t reached your world yet')
+  await dialog.getByRole('button', { name: 'Log out' }).click()
+  await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
+  expect((await serverState(page)).status).toBe(401)
+  const kept = await cacheRecord(page, id)
+  expect(kept?.dirty).toBe(true)
+  expect(kept?.loggedOut).toBe(true)
+  expect(kept?.state.quest).toBe('accepted')
+
+  // The server is fine again; signing in brings the step up.
+  await page.unroute('**/api/progress')
+  await page.getByRole('button', { name: 'Sign in to your world' }).click()
+  await page.getByRole('button', { name: 'I have them' }).click()
+  await pasteAndConnect(page, id)
+  // Logout doesn't release the old session's lease (contract issue), and it
+  // was active moments ago: the new sign-in has to take over.
+  await expect(leaseGate(page)).toBeVisible()
+  await page.getByRole('button', { name: 'Take over here' }).click()
+  await waitForWorld(page)
+  await expect.poll(async () => (await serverState(page)).body.state.quest).toBe('accepted')
+})
+
+test('a logout with nothing unsent clears the device copy', async ({ page }) => {
+  const id = await freshPlayer(page)
+  await expect.poll(() => cacheRecord(page, id)).not.toBeNull()
+  await page.keyboard.press('Escape')
+  await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('Your journey stays in your world')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
+  await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
+  expect(await cacheRecord(page, id)).toBeNull()
+})
+
+test('a duplicated tab gets its own play id, so it must take over like any other (review 2)', async ({ page, context }) => {
+  await freshPlayer(page)
+  const original = await page.evaluate(() => sessionStorage.getItem('fingersnap:client-id'))
+  expect(original).toBeTruthy()
+  // "Duplicate tab" copies sessionStorage into the new page.
+  const dup = await context.newPage()
+  await dup.addInitScript((cid) => {
+    if (!sessionStorage.getItem('fingersnap:dup-seeded')) {
+      sessionStorage.setItem('fingersnap:client-id', cid)
+      sessionStorage.setItem('fingersnap:dup-seeded', '1')
+    }
+  }, original!)
+  await dup.goto('/')
+  await expect.poll(() => dup.evaluate(() => sessionStorage.getItem('fingersnap:client-id'))).not.toBe(original)
+  await dup.getByTestId('continue-world').click()
+  await expect(leaseGate(dup)).toBeVisible()
+  expect(await linkStatus(page)).toBe('online')
+  // The original keeps its id across a reload (no other live page holds it).
+  await dup.close()
+  await page.reload()
+  await expect(page.getByTestId('continue-world')).toBeVisible()
+  expect(await page.evaluate(() => sessionStorage.getItem('fingersnap:client-id'))).toBe(original)
+})
+
+test('closing the tab still sends the last steps (review 6)', async ({ page, context }) => {
+  await freshPlayer(page)
+  const before = Math.ceil((await serverState(page)).body.state.hp)
+  await hurt(page, 6)
+  // Close inside the 350 ms save debounce: only the page-hide upload can carry it.
+  await page.close({ runBeforeUnload: true })
+  await expect
+    .poll(async () => Math.ceil((await (await context.request.get('/api/state')).json()).state.hp), { timeout: 10_000 })
+    .toBeLessThan(before)
 })
 
 test.describe('no server', () => {

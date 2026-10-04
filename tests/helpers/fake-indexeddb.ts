@@ -1,7 +1,7 @@
 /**
  * Minimal in-memory IndexedDB stand-in for Node tests. Implements only the
  * surface src/lib/save.ts uses: open with versioned upgrade, object store
- * creation keyed by `id`, and get/put/delete requests with async success
+ * creation keyed by `id`, and get/getAll/put/delete requests with async success
  * handlers. Data persists across open/close within a process so reload
  * behavior can be tested; call resetFakeIndexedDB() between tests.
  */
@@ -116,6 +116,14 @@ function makeStoreHandle(db: FakeDatabase, name: string): Record<string, unknown
         }
         store.data.set(key, value);
         request.result = key;
+        fireSuccess(request);
+      });
+      return request;
+    },
+    getAll() {
+      const request = new FakeRequest<unknown>();
+      queueMicrotask(() => {
+        request.result = [...store.data.values()];
         fireSuccess(request);
       });
       return request;

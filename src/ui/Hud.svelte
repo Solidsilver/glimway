@@ -48,8 +48,13 @@
         {#if ui.link.busy}
           <span class="pill busy" data-testid="net-pending"><span class="dots" aria-hidden="true"></span>{offlineCopy.pending}</span>
         {:else}
-          <span class="pill off" title={offlineCopy.chipTitle} data-testid="net-offline"><Icon name="cloud" size={12} />{offlineCopy.chip}</span>
-          <span class="why">{offlineCopy.chipTitle}</span>
+          {#if ui.link.trouble}
+            <span class="pill off trouble" title={offlineCopy.troubleTitle} data-testid="net-trouble"><Icon name="cloud" size={12} />{offlineCopy.troubleChip}</span>
+            <span class="why">{offlineCopy.troubleTitle}</span>
+          {:else}
+            <span class="pill off" title={offlineCopy.chipTitle} data-testid="net-offline"><Icon name="cloud" size={12} />{offlineCopy.chip}</span>
+            <span class="why">{offlineCopy.chipTitle}</span>
+          {/if}
         {/if}
       </div>
     {/if}
@@ -223,6 +228,10 @@
   .pill.off {
     color: #1f3c66;
     background: linear-gradient(180deg, #dbe8ff, #b5cdf5);
+  }
+  .pill.trouble {
+    color: #5a1a0e;
+    background: linear-gradient(180deg, #ffe1d6, #f4b8a3);
   }
   .pill.busy {
     color: #5a2410;

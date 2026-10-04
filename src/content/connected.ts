@@ -67,6 +67,8 @@ export const leaseCopy = {
 export const offlineCopy = {
   chip: 'Offline',
   chipTitle: 'Saving on this device. Spends and syncs need a connection.',
+  troubleChip: 'Server trouble',
+  troubleTitle: 'The world server is having trouble. Saving on this device; spends and syncs wait.',
   needs: 'Needs a connection',
   pending: 'Asking the world…',
   noticeTitle: 'Welcome back',
@@ -80,10 +82,13 @@ export const accountCopy = {
   signedInAs: (name: string) => `Signed in as ${name}`,
   saved: 'Your journey saves to your world as you play.',
   savedOffline: 'Offline: your journey saves on this device and goes up when you reconnect.',
+  savedTrouble: 'The world server is having trouble. Your journey saves on this device and goes up once it recovers.',
   logout: 'Log out',
   logoutTitle: 'Log out of your world?',
   logoutBody: 'Your journey stays in your world. You’ll play as a guest on this device until you sign in again.',
-  logoutDirty: 'Some progress hasn’t reached your world yet. If you log out now, this device keeps it only until you sign in again.',
+  logoutDirty: 'Some progress hasn’t reached your world yet. If you log out now, this device keeps it until you sign in again.',
+  uploadFirst: 'Continue to upload first',
+  logoutAnyway: 'Log out anyway',
   titleChip: 'In your world',
   titleChipOffline: 'Offline · saves on this device'
 }

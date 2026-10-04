@@ -2,7 +2,7 @@
  * Pure rules for the connected save (design: "The progress document" and
  * "Revisions, conflicts, and offline play"). No network, no storage.
  */
-import { CHARM_ITEM, FLAGS } from '../embers.ts';
+import { CHARM_ITEM, EMBER_COSTS, FLAGS, type EmberSpend } from '../embers.ts';
 import { QUEST_STAGES, validateSave, type GameState, type QuestStage } from '../state.ts';
 import type { ApiErrorCode } from './errors.ts';
 import type { Progress } from './types.ts';
@@ -41,6 +41,25 @@ export function toProgress(state: GameState): Progress {
     flags: s.flags.filter((f) => !isServerFlag(f)),
     playSeconds: Math.max(0, s.playSeconds),
   };
+}
+
+/**
+ * What an upload of this state would change on the server: story and vitals,
+ * not play time (which alone is not worth an upload).
+ */
+export function docKey(state: GameState): string {
+  const { playSeconds: _ignored, ...rest } = toProgress(state);
+  return JSON.stringify(rest);
+}
+
+/**
+ * A reload or lost answer left the cache dirty with an upload already sent.
+ * If the server is exactly one revision past it and holds exactly that
+ * document, the upload landed: nobody else played, so the reconnect is a
+ * current write, not "you played somewhere else".
+ */
+export function uploadLanded(sent: { rev: number; key: string } | undefined, serverRev: number, serverState: GameState): boolean {
+  return !!sent && serverRev === sent.rev + 1 && docKey(serverState) === sent.key;
 }
 
 /**
@@ -97,6 +116,37 @@ export function reconnectPlan(baseRev: number, serverRev: number): { mode: 'curr
 /** Whether to show "you played somewhere else" after a reconnect. */
 export function reconnectNotice(plan: { mode: 'current' | 'stale' }, hadOfflineProgress: boolean): boolean {
   return plan.mode === 'stale' && hadOfflineProgress;
+}
+
+/** A server-side failure (500): the world is up but having trouble. */
+export function isTrouble(code: ApiErrorCode): boolean {
+  return code === 'internal';
+}
+
+/**
+ * Wait before the next reconnect try. No network: a steady 8 s. Server
+ * trouble: back off from 8 s, doubling, up to 5 minutes, so one bad request
+ * isn't resent forever at full rate.
+ */
+export function retryDelay(failures: number, trouble: boolean): number {
+  if (!trouble) return 8_000;
+  return Math.min(8_000 * 2 ** Math.max(0, failures - 1), 300_000);
+}
+
+/**
+ * A spend whose answer was lost: did it happen? Compares the state before
+ * the reconnect with the merged one after (outcomes for lanterns and the
+ * chest; the ember balance for a rest).
+ */
+export function spendLanded(spend: EmberSpend, before: GameState, after: GameState): boolean {
+  switch (spend.kind) {
+    case 'road-lantern':
+      return !before.flags.includes(FLAGS.lit(spend.id)) && after.flags.includes(FLAGS.lit(spend.id));
+    case 'chest':
+      return !before.flags.includes(FLAGS.chest) && after.flags.includes(FLAGS.chest);
+    case 'rest':
+      return before.embers - after.embers >= EMBER_COSTS.rest;
+  }
 }
 
 /** What a failed call means for the connected session. */

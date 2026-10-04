@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createQueue } from '../src/lib/api/queue.ts';
 import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERROR_CODES } from '../src/lib/api/errors.ts';
-import { createApiClient, newKey, tabClientId } from '../src/lib/api/client.ts';
+import { claimClientId, createApiClient, newKey } from '../src/lib/api/client.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
 import type { Progress } from '../src/lib/api/types.ts';
 
@@ -187,13 +187,60 @@ test('client: responses are validated; a bad state is a bad-response, unknown fi
   assert.equal('token' in (s.state as GameState & { token?: string }), false);
 });
 
-test('ids: idempotency keys are unique; the tab client id survives reloads of the tab', () => {
+test('ids: idempotency keys are unique', () => {
   assert.notEqual(newKey(), newKey());
+});
+
+function memoryStorage(initial?: string) {
   const store = new Map<string, string>();
-  const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-  const first = tabClientId(storage);
-  assert.equal(tabClientId(storage), first);
-  assert.ok(first.length > 0 && first.length <= 128);
+  if (initial) store.set('fingersnap:client-id', initial);
+  return { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), store };
+}
+let channelSeq = 0;
+const freshChannel = () => `fingersnap-client-test-${process.pid}-${channelSeq++}`;
+/** Open claims keep Node alive: close them even when an assertion fails. */
+const openClaims: Array<{ close(): void }> = [];
+const track = <T extends { close(): void }>(c: T): T => (openClaims.push(c), c);
+test.afterEach(() => {
+  for (const c of openClaims.splice(0)) c.close();
+});
+
+test('client id: a reload with no other live page keeps its stored id', async () => {
+  const channelName = freshChannel();
+  const storage = memoryStorage('stored-id');
+  const claim = track(await claimClientId({ storage, channelName, waitMs: 30 }));
+  assert.equal(claim.id, 'stored-id');
+});
+
+test('client id: a duplicated tab (same stored id, original still open) gets its own id', async () => {
+  const channelName = freshChannel();
+  const original = track(await claimClientId({ storage: memoryStorage('dup-id'), channelName, waitMs: 30 }));
+  const copyStorage = memoryStorage('dup-id'); // "Duplicate tab" copies sessionStorage
+  const duplicate = track(await claimClientId({ storage: copyStorage, channelName, waitMs: 300 }));
+  assert.equal(original.id, 'dup-id');
+  assert.notEqual(duplicate.id, 'dup-id');
+  assert.equal(copyStorage.getItem('fingersnap:client-id'), duplicate.id, 'the duplicate remembers its new id');
+  // A third page with the duplicate's new id is turned away too.
+  const third = track(await claimClientId({ storage: memoryStorage(duplicate.id), channelName, waitMs: 300 }));
+  assert.notEqual(third.id, duplicate.id);
+});
+
+test('client id: two pages claiming the same id at once end up different', async () => {
+  const channelName = freshChannel();
+  const [a, b] = (
+    await Promise.all([
+      claimClientId({ storage: memoryStorage('same'), channelName, waitMs: 300 }),
+      claimClientId({ storage: memoryStorage('same'), channelName, waitMs: 300 }),
+    ])
+  ).map(track);
+  assert.notEqual(a.id, b.id);
+  assert.ok(a.id === 'same' || b.id === 'same', 'one of them keeps it');
+});
+
+test('client id: without BroadcastChannel or storage it still works', async () => {
+  const noChannel = await claimClientId({ storage: memoryStorage('kept'), makeChannel: () => null, waitMs: 1 });
+  assert.equal(noChannel.id, 'kept');
   const blocked = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
-  assert.equal(tabClientId(blocked), tabClientId(blocked));
+  const c = await claimClientId({ storage: blocked, makeChannel: () => null, waitMs: 1 });
+  assert.ok(c.id.length > 0 && c.id.length <= 128);
 });
