@@ -4,37 +4,61 @@
  * player (design: "Revisions, conflicts, and offline play").
  *
  * - Saves go to the connected cache (src/lib/api/cache.ts) and, while
- *   online, upload as a progress document with `baseRev`.
+ *   online, upload as a progress document with `baseRev`. On page hide the
+ *   upload starts first, synchronously, so a closing tab still sends it.
  * - Spends and syncs carry the current progress and wait for the server; the
  *   world freezes for the short wait (Session.persistenceInFlight).
  * - Losing the network switches to offline play: saves stay local, spends
  *   and syncs say "Needs a connection", and a reconnect follows the design's
- *   lease-then-upload flow.
+ *   lease-then-upload flow. Server trouble (500s) looks the same to play but
+ *   backs off and says so.
  * - A takeover elsewhere ends this tab's lease: status `superseded` until
- *   the player chooses Take over.
+ *   the player chooses Take over. Unsent story from that window goes to an
+ *   orphan slot, which the next lease holder merges (stale write).
  *
- * All calls share the API client's queue, so nothing overlaps.
+ * All calls share the API client's queue, so nothing overlaps. No Phaser
+ * here: events go out through the injected `emit`, so this runs in tests.
  */
-import type { ApiClient } from '../lib/api/client'
-import { newKey } from '../lib/api/client'
-import { errorCode, isUnreachable, type ApiErrorCode } from '../lib/api/errors'
-import { embersGained, failureAction, mergeServerState, reconnectNotice, reconnectPlan, toProgress, type MergeMode } from '../lib/api/progress'
-import { saveCache, type ConnectedCache } from '../lib/api/cache'
-import type { Snapshot, SpendRequest, SyncResponse } from '../lib/api/types'
-import type { HabiticaProfile } from '../lib/habitica/types'
-import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers'
-import type { GameState } from '../lib/state'
-import { bus, EV, type LinkPayload, type LinkStatus } from './events'
-import type { Session } from './session'
+import type { ApiClient } from '../lib/api/client.ts'
+import { newKey } from '../lib/api/client.ts'
+import { errorCode, isUnreachable, type ApiErrorCode } from '../lib/api/errors.ts'
+import {
+  docKey,
+  embersGained,
+  failureAction,
+  isTrouble,
+  mergeServerState,
+  reconnectNotice,
+  reconnectPlan,
+  retryDelay,
+  spendLanded,
+  toProgress,
+  uploadLanded,
+  type MergeMode
+} from '../lib/api/progress.ts'
+import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
+import type { Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
+import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
+import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
+import type { GameState } from '../lib/state.ts'
+import { EV, type LinkPayload, type LinkStatus } from './event-names.ts'
 
 const HEARTBEAT_MS = 30_000
-const RETRY_MS = 8_000
 
 export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 'unsafe' | 'busy' | 'error'
 
 export type RemoteSyncResult =
   | { ok: true; status: SyncResponse['status']; gained: number; welcome: number; credit: { hp: number; mana: number } }
   | { ok: false; code: ApiErrorCode | 'offline' | 'busy' }
+
+/** The part of a Session the link drives (Session implements it). */
+export interface LinkSession {
+  state: GameState
+  vitalsSource: VitalsSource
+  importedProfile: HabiticaProfile | null
+  remoteBusy: boolean
+  applyServer(next: GameState, provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null }, relocate: boolean): void
+}
 
 export interface LinkInit {
   api: ApiClient
@@ -44,17 +68,17 @@ export interface LinkInit {
   rev: number
   lease: string | null
   status: 'online' | 'offline'
-  /** The cache holds changes the server hasn't seen (offline play). */
+  /** The cache holds changes the server hasn't seen. */
   dirty?: boolean
+  /** Those changes were made while offline (cache flag). */
+  offlineProgress?: boolean
+  /** The last upload sent before the page went away (cache). */
+  sent?: { rev: number; key: string }
   recovery?: ConnectedCache['recovery']
+  /** Bus emit (src/game/events.ts); injectable for tests. */
+  emit: (event: string, payload?: unknown) => void
   /** Injectable for tests. */
-  writeCache?: (record: ConnectedCache) => Promise<boolean>
-}
-
-/** Story and vitals only — play time alone is not worth an upload. */
-function docKey(state: GameState): string {
-  const { playSeconds: _ignored, ...rest } = toProgress(state)
-  return JSON.stringify(rest)
+  store?: LinkStore
 }
 
 export class Link {
@@ -66,21 +90,32 @@ export class Link {
   rev: number
   lease: string | null
   status: LinkStatus
+  /** Offline because the server answers 500s, not because the network is gone. */
+  trouble = false
   /** A spend or sync is out: the world waits. */
   busy = false
   recovery: ConnectedCache['recovery']
-  private session: Session | null = null
+  private session: LinkSession | null = null
   /** docKey of the last state the server accepted ('' = unknown, so dirty). */
   private acked: string
+  /** docKey the server refused (400s): not resent until something changes. */
+  private refused = ''
+  /** The upload in flight (or lost with the page): rev it was based on and its doc. */
+  private sent: { rev: number; key: string } | undefined
   /** True once local changes were made while offline (drives the notice). */
   private offlineProgress: boolean
+  /** A spend whose answer never came: the reconnect says whether it happened. */
+  private lostSpend: EmberSpend | null = null
+  private failures = 0
   private uploadQueued = false
-  private heartbeat: number | null = null
-  private retry: number | null = null
+  private heartbeat: ReturnType<typeof setInterval> | null = null
+  private retry: ReturnType<typeof setTimeout> | null = null
   private lastContact = Date.now()
   private stopped = false
   private reconnecting: Promise<void> | null = null
-  private readonly writeCache: (record: ConnectedCache) => Promise<boolean>
+  private loggedOut = false
+  private readonly store: LinkStore
+  private readonly emitter: (event: string, payload?: unknown) => void
   private readonly onOnline = () => {
     if (this.status === 'offline') void this.reconnect(false)
   }
@@ -95,13 +130,15 @@ export class Link {
     this.status = init.status
     this.recovery = init.recovery
     this.acked = init.dirty ? '' : 'pending'
-    this.offlineProgress = init.status === 'offline' && init.dirty === true
-    this.writeCache = init.writeCache ?? saveCache
+    this.offlineProgress = init.dirty === true && init.offlineProgress === true
+    this.sent = init.sent
+    this.store = init.store ?? idbLinkStore
+    this.emitter = init.emit
     if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline)
   }
 
   /** Bind the live session (once, before play starts). */
-  attach(session: Session): void {
+  attach(session: LinkSession): void {
     this.session = session
     if (this.acked === 'pending') this.acked = docKey(session.state)
     if (this.status === 'online') this.startHeartbeat()
@@ -119,22 +156,29 @@ export class Link {
 
   // ------------------------------------------------------------ persistence
 
-  /** Session.save for connected play: cache always, upload while online. */
-  async persist(): Promise<void> {
+  /**
+   * Session.save for connected play: cache always, upload while online.
+   * `urgent` (page hide / close): the upload starts before the cache write,
+   * because a closing page rarely lives to see IndexedDB finish.
+   */
+  async persist(opts: { urgent?: boolean } = {}): Promise<void> {
     if (this.stopped || !this.session) return
+    if (this.status === 'superseded') {
+      // Another tab holds the lease: our unsent story goes to the orphan
+      // slot (never over its cache record), for the next holder to merge.
+      if (this.dirty) await this.store.saveOrphan({ habiticaId: this.habiticaId, clientId: this.clientId, state: this.session.state, rev: this.rev, savedAt: Date.now() })
+      return
+    }
     if (this.status === 'offline' && this.dirty) this.offlineProgress = true
-    // A taken-over tab must not overwrite the device's cache. A signed-out
-    // one keeps caching: signing in again (any 401: idle or lifetime expiry)
-    // finds the unsent progress there and uploads it.
-    if (this.status === 'superseded') return
+    if (opts.urgent) this.scheduleUpload(true)
     await this.saveLocal()
     this.scheduleUpload()
   }
 
   private async saveLocal(): Promise<void> {
     const s = this.session
-    if (!s) return
-    const ok = await this.writeCache({
+    if (!s || this.status === 'superseded') return
+    const ok = await this.store.save({
       habiticaId: this.habiticaId,
       name: this.name,
       state: s.state,
@@ -145,29 +189,47 @@ export class Link {
       clientId: this.clientId,
       dirty: this.dirty,
       offline: this.status === 'offline',
+      offlineProgress: this.offlineProgress,
+      sent: this.sent,
+      loggedOut: this.loggedOut || undefined,
       recovery: this.recovery,
       savedAt: Date.now()
     })
     if (!ok && this.status === 'offline') {
-      bus.emit(EV.toast, { text: 'This browser wouldn’t save your offline progress. Reconnect soon.', kind: 'error' })
+      this.emitter(EV.toast, { text: 'This browser wouldn’t save your offline progress. Reconnect soon.', kind: 'error' })
     }
   }
 
-  private scheduleUpload(): void {
-    if (this.status !== 'online' || !this.lease || this.uploadQueued || !this.dirty) return
+  private scheduleUpload(urgent = false): void {
+    if (this.status !== 'online' || !this.lease || !this.dirty) return
+    if (this.session && docKey(this.session.state) === this.refused) return
+    if (urgent && (this.uploadQueued || this.api.queue.size > 0)) {
+      // The queue is busy and the page is going: send now, out of turn. At
+      // worst it lands as a stale write, which still keeps its story.
+      const s = this.session!
+      this.sent = { rev: this.rev, key: docKey(s.state) }
+      void this.api.raw.progress({ lease: this.lease, baseRev: this.rev, doc: toProgress(s.state) }, { keepalive: true }).catch(() => undefined)
+      return
+    }
+    if (this.uploadQueued) return
     this.uploadQueued = true
     void this.api
       .run(async (raw) => {
         this.uploadQueued = false
         const s = this.session
         if (!s || this.status !== 'online' || !this.lease || !this.dirty) return
-        const sent = docKey(s.state)
+        const key = docKey(s.state)
+        if (key === this.refused) return
+        this.sent = { rev: this.rev, key }
         const res = await raw.progress({ lease: this.lease, baseRev: this.rev, doc: toProgress(s.state) }, { keepalive: true })
         this.contact()
+        this.sent = undefined
         const before = s.state
         this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
-        this.acked = res.status === 'current' ? sent : docKey(s.state)
-        this.giftToast(before)
+        this.acked = res.status === 'current' ? key : docKey(s.state)
+        // A current answer's new embers are this upload's quest gifts. After a
+        // stale merge they may be another device's sync: no gift toast then.
+        if (res.status === 'current') this.giftToast(before)
         // Changes made while this upload was out go up next.
         this.scheduleUpload()
       })
@@ -178,7 +240,7 @@ export class Link {
       .finally(() => void this.saveLocal())
   }
 
-  /** Upload anything pending now (logout, page hide). */
+  /** Upload anything pending now (logout, tests). */
   async flush(): Promise<void> {
     this.scheduleUpload()
     await this.api.queue.idle()
@@ -198,7 +260,7 @@ export class Link {
     const s = this.session
     if (!s) return
     const gained = embersGained(before, s.state)
-    if (gained > 0) bus.emit(EV.toast, { text: `+${gained} embers — a little warmth from the road.`, icon: 'ember' })
+    if (gained > 0) this.emitter(EV.toast, { text: `+${gained} embers — a little warmth from the road.`, icon: 'ember' })
   }
 
   // ------------------------------------------------------------ spends & sync
@@ -230,6 +292,8 @@ export class Link {
       const code = errorCode(err)
       if (code === 'short' || code === 'done' || code === 'full' || code === 'needs-earned') return code
       if (code === 'not-at-safe-boundary') return 'unsafe'
+      // No answer: it may have gone through. The reconnect will say.
+      if (code === 'network') this.lostSpend = spend
       const action = this.onFailure(err, 'spend')
       return action === 'offline' ? 'offline' : action === 'superseded' ? 'superseded' : 'error'
     } finally {
@@ -246,6 +310,8 @@ export class Link {
     this.setBusy(true)
     try {
       const before = s.state
+      // The hero's own progress, untouched: Habitica healing comes only from
+      // the server's answer (a hero locked at 0 HP must send hp 0).
       const res = await this.withReload(() =>
         this.api.run((raw) => raw.sync({ lease: this.lease!, baseRev: this.rev, progress: toProgress(s.state), profile }))
       )
@@ -307,9 +373,15 @@ export class Link {
       const play = await this.api.run((raw) => raw.play({ clientId: this.clientId, takeOver }))
       this.contact()
       this.lease = play.lease
-      const dirty = this.dirty
-      const plan = reconnectPlan(this.rev, play.rev)
-      if (dirty) {
+      const before = s.state
+      if (this.dirty && uploadLanded(this.sent, play.rev, play.state)) {
+        // Our last upload committed; only its answer was lost. Nobody else
+        // played: adopt the revision and send anything newer as current.
+        const sentKey = this.sent!.key
+        this.apply(play, 'keep-local')
+        this.acked = sentKey
+      } else if (this.dirty) {
+        const plan = reconnectPlan(this.rev, play.rev)
         const offlineCopy = s.state
         // Keyed on changes made offline, not on the current status: the first
         // try after reconnecting may have met another device's lease.
@@ -317,21 +389,26 @@ export class Link {
         const res = await this.api.run((raw) =>
           raw.progress({ lease: this.lease!, baseRev: plan.baseRev, doc: toProgress(s.state) }, { keepalive: true })
         )
-        const before = s.state
+        const pre = s.state
         this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
         this.acked = docKey(s.state)
-        this.giftToast(before)
+        if (res.status === 'current') this.giftToast(pre)
         if (notice) {
           this.recovery = { state: offlineCopy, savedAt: Date.now() }
-          bus.emit(EV.linkNotice, { kind: 'played-elsewhere' })
+          this.emitter(EV.linkNotice, { kind: 'played-elsewhere' })
         }
       } else {
         this.apply(play, play.rev === this.rev ? 'keep-local' : 'server')
         this.acked = docKey(s.state)
       }
+      this.sent = undefined
       this.offlineProgress = false
+      this.failures = 0
+      this.trouble = false
+      this.lostSpendToast(before)
       this.setStatus('online')
       this.startHeartbeat()
+      await this.adoptOrphans()
       // Anything that changed while the reconnect was out goes up next.
       this.scheduleUpload()
     } catch (err) {
@@ -345,6 +422,44 @@ export class Link {
     }
   }
 
+  /** A spend whose answer was lost: tell the player whether it happened. */
+  private lostSpendToast(before: GameState): void {
+    const spend = this.lostSpend
+    this.lostSpend = null
+    if (!spend || !this.session) return
+    if (!spendLanded(spend, before, this.session.state)) return
+    const text =
+      spend.kind === 'road-lantern' ? 'Your road lantern was lit after all.'
+        : spend.kind === 'chest' ? 'The chest opened after all. The Ember Charm is yours.'
+          : 'Your rest went through after all. Health and mana restored.'
+    this.emitter(EV.toast, { text, icon: spend.kind === 'road-lantern' ? 'lantern' : 'ember' })
+  }
+
+  /**
+   * Unsent story from tabs that lost the lease: merge each as a stale write
+   * (server vitals stay), then drop it. Our own slot is already covered by
+   * the upload above, since this tab's state carries on from it.
+   */
+  private async adoptOrphans(): Promise<void> {
+    const orphans = await this.store.loadOrphans(this.habiticaId)
+    for (const o of orphans) {
+      if (o.clientId !== this.clientId && this.rev > 0 && this.status === 'online') {
+        try {
+          const res = await this.api.run((raw) =>
+            raw.progress({ lease: this.lease!, baseRev: Math.min(o.rev, this.rev - 1), doc: toProgress(o.state) })
+          )
+          const wasDirty = this.dirty
+          this.apply(res, 'keep-local')
+          if (!wasDirty) this.acked = docKey(this.session!.state)
+        } catch (err) {
+          this.onFailure(err, 'orphan')
+          return
+        }
+      }
+      await this.store.deleteOrphan(this.habiticaId, o.clientId)
+    }
+  }
+
   /** The player chose Take over on the "Playing on another device" screen. */
   takeOver(): Promise<void> {
     return this.reconnect(true)
@@ -353,18 +468,18 @@ export class Link {
   private startHeartbeat(): void {
     this.stopRetry()
     if (this.heartbeat !== null || this.stopped) return
-    this.heartbeat = window.setInterval(() => void this.beat(), HEARTBEAT_MS)
+    this.heartbeat = setInterval(() => void this.beat(), HEARTBEAT_MS)
   }
 
   private stopHeartbeat(): void {
-    if (this.heartbeat !== null) window.clearInterval(this.heartbeat)
+    if (this.heartbeat !== null) clearInterval(this.heartbeat)
     this.heartbeat = null
   }
 
   /** Keep the lease alive while idle, and notice a takeover elsewhere. */
-  private async beat(): Promise<void> {
+  async beat(force = false): Promise<void> {
     if (this.status !== 'online' || this.busy || this.api.queue.size > 0) return
-    if (Date.now() - this.lastContact < HEARTBEAT_MS - 5_000) return
+    if (!force && Date.now() - this.lastContact < HEARTBEAT_MS - 5_000) return
     try {
       const snap = await this.api.run((raw) => raw.state(this.lease))
       this.contact()
@@ -375,8 +490,18 @@ export class Link {
       const play = await this.api.run((raw) => raw.play({ clientId: this.clientId }))
       const sameLease = play.lease === this.lease
       this.lease = play.lease
-      this.apply(play, sameLease && !this.dirty ? 'keep-local' : 'server')
-      this.acked = docKey(this.session!.state)
+      if (sameLease) {
+        // Still ours (clientIds are unique per page), so nobody else played:
+        // the rev moved for bookkeeping (a login settling credit, an owner
+        // action). Keep local vitals and position, adopt the rev, and send
+        // what we have as a current write.
+        this.apply(play, 'keep-local')
+        this.scheduleUpload()
+      } else {
+        // The lease had lapsed to someone else and come back: theirs is newer.
+        this.apply(play, 'server')
+        this.acked = docKey(this.session!.state)
+      }
       void this.saveLocal()
     } catch (err) {
       if (errorCode(err) === 'playing-elsewhere') this.setStatus('superseded')
@@ -386,13 +511,14 @@ export class Link {
 
   private scheduleRetry(): void {
     if (this.retry !== null || this.stopped) return
-    this.retry = window.setInterval(() => {
+    this.retry = setTimeout(() => {
+      this.retry = null
       if (this.status === 'offline') void this.reconnect(false)
-    }, RETRY_MS)
+    }, retryDelay(this.failures, this.trouble))
   }
 
   private stopRetry(): void {
-    if (this.retry !== null) window.clearInterval(this.retry)
+    if (this.retry !== null) clearTimeout(this.retry)
     this.retry = null
   }
 
@@ -402,9 +528,10 @@ export class Link {
 
   /** Decide what a failed call means; returns the action taken. */
   private onFailure(err: unknown, what: string): ReturnType<typeof failureAction> {
-    const action = failureAction(errorCode(err))
+    const code = errorCode(err)
+    const action = failureAction(code)
     if (action === 'offline' || isUnreachable(err)) {
-      this.goOffline()
+      this.goOffline(isTrouble(code))
       return 'offline'
     }
     if (action === 'superseded' || action === 'elsewhere') {
@@ -426,21 +553,29 @@ export class Link {
         .catch(() => undefined)
       return action
     }
-    console.warn('[fingersnap] server refused a', what, errorCode(err))
+    console.warn('[fingersnap] server refused a', what, code)
     if (what === 'upload' && this.session) {
-      // Don't retry the same refused document in a loop; the next change tries again.
-      this.acked = docKey(this.session.state)
-      bus.emit(EV.toast, { text: 'The server didn’t accept that save. Your progress is kept on this device.', kind: 'error' })
+      // Don't resend the same refused document in a loop; the next change
+      // tries again. It stays dirty: the cache keeps it.
+      this.refused = docKey(this.session.state)
+      this.emitter(EV.toast, { text: 'The server didn’t accept that save. Your progress is kept on this device.', kind: 'error' })
     }
     return action
   }
 
-  private goOffline(): void {
-    if (this.status === 'offline') return
-    if (this.status !== 'online') return
+  /** Lost the server (network) or it is failing (trouble): play on locally. */
+  private goOffline(trouble: boolean): void {
+    if (this.status !== 'online' && this.status !== 'offline') return
+    this.failures += 1
+    const changed = this.status !== 'offline' || this.trouble !== trouble
+    this.trouble = trouble
     this.stopHeartbeat()
-    this.setStatus('offline')
-    void this.saveLocal()
+    this.stopRetry()
+    this.status = 'offline'
+    if (changed) {
+      this.emit()
+      void this.saveLocal()
+    }
     this.scheduleRetry()
   }
 
@@ -450,18 +585,28 @@ export class Link {
     if (status !== 'online') this.stopHeartbeat()
     if (status === 'online') this.stopRetry()
     if (status === 'offline') this.scheduleRetry()
+    if (status === 'superseded' && this.dirty) void this.persist()
     this.emit()
   }
 
   private emit(): void {
-    const payload: LinkPayload = { status: this.status, busy: this.busy, dirty: this.dirty }
-    bus.emit(EV.link, payload)
+    const payload: LinkPayload = { status: this.status, busy: this.busy, dirty: this.dirty, trouble: this.trouble }
+    this.emitter(EV.link, payload)
   }
 
   /** The player dismissed the reconnect notice: the recovery copy goes. */
   dismissRecovery(): void {
     this.recovery = undefined
     void this.saveLocal()
+  }
+
+  /**
+   * Logging out with unsent progress: keep the record for this account's
+   * next sign-in, but don't offer it for offline play meanwhile.
+   */
+  async keepForNextSignIn(): Promise<void> {
+    this.loggedOut = true
+    await this.saveLocal()
   }
 
   stop(): void {

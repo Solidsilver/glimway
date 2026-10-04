@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, TOKEN, waitForWorld } from './connected'
+import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, TOKEN, waitForWorld } from './connected'
 import { beginNewJourney, talkThrough, warp, waitForArea } from './helpers'
 
 /**
@@ -109,6 +109,17 @@ for (const [name, vp] of sizes) {
     await shot(page, '08-logout-confirm')
     await page.getByRole('alertdialog').getByRole('button', { name: 'Never mind' }).click()
     await page.getByRole('button', { name: 'Back to the road' }).click()
+
+    // Server trouble (500s): plays on locally, says so, backs off.
+    await page.route('**/api/progress', (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'internal' } }) })
+    )
+    await hurt(page, 2)
+    await expect(page.getByTestId('net-trouble')).toBeVisible()
+    await fits(page, vp)
+    await shot(page, '18-hud-server-trouble')
+    await page.unroute('**/api/progress')
+    await expect.poll(() => linkStatus(page), { timeout: 30_000 }).toBe('online')
 
     // Pending: the world waits for the server's answer to a spend.
     await page.keyboard.press('Escape')

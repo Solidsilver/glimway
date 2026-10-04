@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  docKey,
   embersGained,
+  isTrouble,
+  retryDelay,
+  spendLanded,
+  uploadLanded,
   failureAction,
   hasProgress,
   isServerFlag,
@@ -10,7 +15,18 @@ import {
   reconnectPlan,
   toProgress,
 } from '../src/lib/api/progress.ts';
-import { normalizeCache } from '../src/lib/api/cache.ts';
+import {
+  clearCache,
+  deleteOrphan,
+  loadCache,
+  loadLatestCache,
+  loadOrphans,
+  normalizeCache,
+  saveCache,
+  saveOrphan,
+  type ConnectedCache,
+} from '../src/lib/api/cache.ts';
+import { installFakeIndexedDB, resetFakeIndexedDB } from './helpers/fake-indexeddb.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
 
 const base = (over: Partial<GameState> = {}): GameState => ({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 36, mana: 30, ...over });
@@ -137,4 +153,100 @@ test('cache: records are validated; anything unreadable counts as no cache, and 
   assert.equal(normalizeCache({ habiticaId: 'h', clientId: 'c', rev: -1, state: base() }), null);
   assert.equal(normalizeCache({ habiticaId: 'h', clientId: 'c', rev: 1, state: { version: 2 } }), null);
   assert.equal(normalizeCache(null), null);
+});
+
+test('docKey: play time alone is not a change worth uploading', () => {
+  assert.equal(docKey(base({ playSeconds: 10 })), docKey(base({ playSeconds: 500 })));
+  assert.notEqual(docKey(base({ hp: 10 })), docKey(base({ hp: 11 })));
+});
+
+test('uploadLanded: one rev past the sent upload, holding exactly that document', () => {
+  const sentState = base({ hp: 22, quest: 'accepted' });
+  const sent = { rev: 4, key: docKey(sentState) };
+  // The server merged it (server-owned fields differ, play time moved on).
+  const server = base({ hp: 22, quest: 'accepted', embers: 5, flags: ['embers:welcome'], playSeconds: 99 });
+  assert.equal(uploadLanded(sent, 5, server), true);
+  assert.equal(uploadLanded(sent, 6, server), false, 'something else wrote too');
+  assert.equal(uploadLanded(sent, 5, base({ hp: 30, quest: 'accepted' })), false, 'another device wrote instead');
+  assert.equal(uploadLanded(undefined, 5, server), false);
+});
+
+test('retryDelay: steady for no network, backing off for server trouble', () => {
+  assert.equal(retryDelay(1, false), 8000);
+  assert.equal(retryDelay(9, false), 8000);
+  assert.deepEqual([1, 2, 3, 4].map((n) => retryDelay(n, true)), [8000, 16000, 32000, 64000]);
+  assert.equal(retryDelay(40, true), 300_000);
+  assert.equal(isTrouble('internal'), true);
+  assert.equal(isTrouble('network'), false);
+});
+
+test('spendLanded: outcomes for lanterns and the chest, the balance for a rest', () => {
+  const before = base({ embers: 6, flags: [] });
+  assert.equal(spendLanded({ kind: 'road-lantern', id: 'road-1' }, before, base({ embers: 3, flags: ['lit:road-1'] })), true);
+  assert.equal(spendLanded({ kind: 'road-lantern', id: 'road-1' }, before, base({ embers: 6, flags: ['lit:road-2'] })), false);
+  assert.equal(spendLanded({ kind: 'chest' }, before, base({ embers: 1, flags: ['opened:ashwatch-chest'] })), true);
+  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 4 })), true);
+  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 6 })), false);
+});
+
+const record = (id: string, over: Partial<ConnectedCache> = {}): ConnectedCache => ({
+  habiticaId: id,
+  name: id,
+  state: base(),
+  vitalsSource: 'imported',
+  rev: 2,
+  lease: 'L',
+  clientId: 'c1',
+  dirty: false,
+  offline: false,
+  offlineProgress: false,
+  savedAt: 0,
+  ...over,
+});
+
+test('cache: one record per account, so a second account never overwrites the first', async () => {
+  installFakeIndexedDB();
+  resetFakeIndexedDB();
+  assert.equal(await saveCache(record('acct-1', { dirty: true, state: base({ quest: 'accepted' }) })), true);
+  assert.equal(await saveCache(record('acct-2')), true);
+  assert.equal((await loadCache('acct-1'))?.state.quest, 'accepted');
+  assert.equal((await loadCache('acct-1'))?.dirty, true);
+  assert.equal((await loadCache('acct-2'))?.habiticaId, 'acct-2');
+  await clearCache('acct-2');
+  assert.equal(await loadCache('acct-2'), null);
+  assert.equal((await loadCache('acct-1'))?.dirty, true);
+});
+
+test('cache: offline start picks the latest account, skipping ones kept after a logout', async () => {
+  installFakeIndexedDB();
+  resetFakeIndexedDB();
+  await saveCache(record('older'));
+  await new Promise((r) => setTimeout(r, 5));
+  await saveCache(record('newer', { loggedOut: true, dirty: true }));
+  assert.equal((await loadLatestCache())?.habiticaId, 'older');
+});
+
+test('cache: orphan slots are per account and client, and can be dropped', async () => {
+  installFakeIndexedDB();
+  resetFakeIndexedDB();
+  await saveOrphan({ habiticaId: 'a', clientId: 'tab-1', state: base({ quest: 'clue-found' }), rev: 3, savedAt: 0 });
+  await saveOrphan({ habiticaId: 'a', clientId: 'tab-2', state: base(), rev: 3, savedAt: 0 });
+  await saveOrphan({ habiticaId: 'b', clientId: 'tab-1', state: base(), rev: 1, savedAt: 0 });
+  await saveCache(record('a'));
+  const orphans = await loadOrphans('a');
+  assert.deepEqual(orphans.map((o) => o.clientId).sort(), ['tab-1', 'tab-2']);
+  assert.equal(orphans.find((o) => o.clientId === 'tab-1')?.state.quest, 'clue-found');
+  await deleteOrphan('a', 'tab-1');
+  assert.deepEqual((await loadOrphans('a')).map((o) => o.clientId), ['tab-2']);
+  assert.equal((await loadOrphans('b')).length, 1);
+});
+
+test('cache: new flags round-trip (offline progress, sent upload, logged out)', () => {
+  const r = normalizeCache({ ...record('x'), offlineProgress: true, sent: { rev: 3, key: 'k' }, loggedOut: true });
+  assert.ok(r);
+  if (!r) return;
+  assert.equal(r.offlineProgress, true);
+  assert.deepEqual(r.sent, { rev: 3, key: 'k' });
+  assert.equal(r.loggedOut, true);
+  assert.equal(normalizeCache({ ...record('x'), sent: { rev: 'x', key: 1 } })?.sent, undefined);
 });

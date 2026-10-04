@@ -9,7 +9,9 @@
     cancelLabel = 'Never mind',
     danger = false,
     onConfirm,
-    onCancel
+    onCancel,
+    altLabel,
+    onAlt
   }: {
     title: string
     body: string
@@ -18,6 +20,9 @@
     danger?: boolean
     onConfirm: () => void
     onCancel: () => void
+    /** An optional second action (e.g. "Log out anyway"). Escape still cancels. */
+    altLabel?: string
+    onAlt?: () => void
   } = $props()
 
   function onKey(e: KeyboardEvent): void {
@@ -34,6 +39,7 @@
     <p id="confirm-body">{body}</p>
     <div class="row">
       <button type="button" class="cancel" onclick={onCancel}>{cancelLabel}</button>
+      {#if altLabel && onAlt}<button type="button" class="alt" onclick={onAlt}>{altLabel}</button>{/if}
       <button type="button" class={danger ? 'danger' : 'primary'} onclick={onConfirm}>{confirmLabel}</button>
     </div>
   </div>

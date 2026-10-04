@@ -62,6 +62,8 @@ export interface ApiClient extends RawApi {
   /** Queue a task that uses the raw calls; it starts after everything before it settles. */
   run<T>(task: (raw: RawApi) => Promise<T>): Promise<T>;
   readonly queue: SerialQueue;
+  /** Unqueued calls. Only for the page-unload upload, which can't wait its turn. */
+  readonly raw: RawApi;
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -155,6 +157,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   return {
     run,
     queue,
+    raw,
     login: (req) => run((r) => r.login(req)),
     logout: () => run((r) => r.logout()),
     state: (lease) => run((r) => r.state(lease)),
@@ -177,24 +180,103 @@ export function newKey(): string {
 }
 
 const CLIENT_ID_KEY = 'fingersnap:client-id';
-let memoryClientId: string | null = null;
+const CLAIM_CHANNEL = 'fingersnap-client';
+
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+interface ChannelLike {
+  postMessage(message: unknown): void;
+  onmessage: ((ev: { data: unknown }) => void) | null;
+  close(): void;
+}
+
+export interface ClaimOptions {
+  storage?: StorageLike | null;
+  /** How long to wait for another live page to say it holds the id. */
+  waitMs?: number;
+  /** Injectable for tests; defaults to BroadcastChannel when the browser has it. */
+  makeChannel?: (name: string) => ChannelLike | null;
+  channelName?: string;
+}
+
+export interface ClientIdClaim {
+  readonly id: string;
+  /** Stop answering for this id (tests; a page answers until it closes). */
+  close(): void;
+}
 
 /**
- * This tab's play-client id (backend: unique per tab, kept across offline
- * reconnects). sessionStorage survives reloads of the tab but not new tabs.
+ * This page's play-client id (backend: unique per tab, kept across offline
+ * reconnects and reloads). sessionStorage keeps it across reloads, but a
+ * duplicated tab (or a restored session) copies sessionStorage too, and two
+ * live pages sharing an id would share one lease. So the stored id is
+ * claimed over a BroadcastChannel: a live page holding it answers, and the
+ * newcomer takes a fresh id. Two pages claiming at once break the tie by a
+ * random nonce. Without BroadcastChannel, the stored id is used as before.
  */
-export function tabClientId(storage: Pick<Storage, 'getItem' | 'setItem'> | null = safeSessionStorage()): string {
+export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdClaim> {
+  const storage = opts.storage === undefined ? safeSessionStorage() : opts.storage;
+  const waitMs = opts.waitMs ?? 150;
+  const makeChannel =
+    opts.makeChannel ??
+    ((name: string) => {
+      const BC = (globalThis as { BroadcastChannel?: new (n: string) => ChannelLike }).BroadcastChannel;
+      return BC ? new BC(name) : null;
+    });
+
+  let id = readStored(storage) ?? newKey();
+  const nonce = newKey();
+  let held = false;
+  let lost = false;
+  let channel: ChannelLike | null = null;
+  try {
+    channel = makeChannel(opts.channelName ?? CLAIM_CHANNEL);
+  } catch {
+    channel = null;
+  }
+
+  if (channel) {
+    const ch = channel;
+    ch.onmessage = (ev) => {
+      const m = ev.data as { type?: string; id?: string; nonce?: string } | null;
+      if (!m || m.id !== id) return;
+      if (m.type === 'who' && m.nonce !== nonce) {
+        // A holder always answers. Two claimers at once: the smaller nonce
+        // keeps it. Each side decides for itself, because a channel opened
+        // later never hears claims posted before it existed.
+        if (held || (m.nonce !== undefined && nonce < m.nonce)) ch.postMessage({ type: 'mine', id, nonce: m.nonce });
+        else if (m.nonce !== undefined) lost = true;
+      } else if (m.type === 'mine' && m.nonce === nonce && !held) {
+        lost = true;
+      }
+    };
+    ch.postMessage({ type: 'who', id, nonce });
+    await new Promise((r) => setTimeout(r, waitMs));
+    if (lost) id = newKey();
+  }
+  held = true;
+  try {
+    storage?.setItem(CLIENT_ID_KEY, id);
+  } catch {
+    /* storage blocked: the id lives for this page only */
+  }
+  return {
+    id,
+    close() {
+      if (channel) {
+        channel.onmessage = null;
+        channel.close();
+      }
+    },
+  };
+}
+
+function readStored(storage: StorageLike | null): string | null {
   try {
     const stored = storage?.getItem(CLIENT_ID_KEY);
-    if (stored && stored.length <= 128) return stored;
-    const id = newKey();
-    storage?.setItem(CLIENT_ID_KEY, id);
-    if (storage) return id;
+    return stored && stored.length <= 128 ? stored : null;
   } catch {
-    /* storage blocked: fall back to memory for this page */
+    return null;
   }
-  memoryClientId ??= newKey();
-  return memoryClientId;
 }
 
 function safeSessionStorage(): Storage | null {

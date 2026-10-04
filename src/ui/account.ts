@@ -1,20 +1,28 @@
 /**
  * Connected-mode glue for the interface: the one API client (and its queue)
- * for this tab, the tab's play-client id, the server probe, and building a
+ * for this tab, the page's play-client id, the server probe, and building a
  * connected Session from a server snapshot or the device's connected cache.
  *
  * Guest play never needs any of this: a build without a server probes once,
  * gets `unavailable`, and everything stays local.
  */
-import { createApiClient, tabClientId } from '../lib/api/client'
+import { claimClientId, createApiClient } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
 import type { ConnectedCache } from '../lib/api/cache'
 import type { Snapshot } from '../lib/api/types'
 import { Link } from '../game/link'
 import { Session } from '../game/session'
+import { bus } from '../game/events'
 
 export const api = createApiClient()
-export const clientId = tabClientId()
+
+/**
+ * This page's play-client id, unique among live pages (a duplicated tab
+ * gets its own). Claimed once at load; the channel stays open so later pages
+ * hear that this one holds it.
+ */
+const claim = claimClientId()
+export const clientIdReady: Promise<string> = claim.then((c) => c.id)
 
 export type Probe = { kind: 'signed-in'; snapshot: Snapshot } | { kind: 'signed-out' } | { kind: 'unavailable' }
 
@@ -34,16 +42,18 @@ export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | n
 }
 
 /**
- * A connected Session, not yet holding the lease. The device's cache wins
- * over the server snapshot when it belongs to this account and either holds
- * unsent progress (offline play, even from a closed tab) or was written by
- * this very tab. Call `session.link.reconnect()` next.
+ * A connected Session, not yet holding the lease. The account's cache wins
+ * over the server snapshot when it holds unsent progress (offline play, even
+ * from a closed tab or before a logout) or was written by this very page.
+ * Call `session.link.reconnect()` next.
  */
-export function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Session {
-  const { snapshot, cache } = opts
-  const habiticaId = snapshot?.habiticaId ?? cache?.habiticaId
+export async function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<Session> {
+  const { snapshot } = opts
+  const clientId = await clientIdReady
+  const habiticaId = snapshot?.habiticaId ?? opts.cache?.habiticaId
   if (!habiticaId) throw new Error('connectedSession needs a snapshot or a cache')
-  const useCache = !!cache && cache.habiticaId === habiticaId && (!snapshot || cache.dirty || cache.clientId === clientId)
+  const cache = opts.cache?.habiticaId === habiticaId ? opts.cache : null
+  const useCache = !!cache && (!snapshot || cache.dirty || cache.clientId === clientId)
   const base = useCache
     ? { state: cache!.state, rev: cache!.rev, vitalsSource: cache!.vitalsSource, importedProfile: cache!.importedProfile ?? null }
     : { state: snapshot!.state, rev: snapshot!.rev, vitalsSource: snapshot!.vitalsSource, importedProfile: snapshot!.importedProfile ?? null }
@@ -56,7 +66,10 @@ export function connectedSession(opts: { snapshot: Snapshot | null; cache: Conne
     lease: useCache && cache!.clientId === clientId ? cache!.lease : null,
     status: 'offline',
     dirty: useCache ? cache!.dirty : false,
-    recovery: cache?.habiticaId === habiticaId ? cache.recovery : undefined
+    offlineProgress: useCache ? cache!.offlineProgress : false,
+    sent: useCache ? cache!.sent : undefined,
+    recovery: cache?.recovery,
+    emit: (event, payload) => bus.emit(event, payload)
   })
   return new Session(base.state, { vitalsSource: base.vitalsSource, importedProfile: base.importedProfile }, link)
 }

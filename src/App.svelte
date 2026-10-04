@@ -42,7 +42,7 @@
   import { emberLine, titleChoice } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
   import { accountName, api, connectedSession, probeServer } from './ui/account'
-  import { clearCache, loadCache, type ConnectedCache } from './lib/api/cache'
+  import { clearCache, loadCache, loadLatestCache, saveCache, type ConnectedCache } from './lib/api/cache'
   import { newKey } from './lib/api/client'
   import { errorCode, isUnreachable } from './lib/api/errors'
   import { hasProgress } from './lib/api/progress'
@@ -302,9 +302,10 @@
    * except that a device with a connected cache can keep playing offline.
    */
   async function initServer(): Promise<void> {
-    const [probe, cache] = await Promise.all([probeServer(), loadCache()])
-    accountCache = cache
+    const probe = await probeServer()
     if (probe.kind === 'signed-in') {
+      const cache = await loadCache(probe.snapshot.habiticaId)
+      accountCache = cache
       ui.server = 'available'
       accountSnapshot = probe.snapshot
       ui.account = { habiticaId: probe.snapshot.habiticaId, name: accountName(probe.snapshot, cache) }
@@ -312,6 +313,9 @@
       ui.server = 'available'
     } else {
       ui.server = 'unavailable'
+      // No server can say who is signed in: offer the latest account played here.
+      const cache = await loadLatestCache()
+      accountCache = cache
       if (cache) {
         accountOffline = true
         ui.account = { habiticaId: cache.habiticaId, name: cache.name || 'Your hero' }
@@ -329,7 +333,7 @@
         openOrigin(ui.account.name)
         return
       }
-      const s = connectedSession({ snapshot: accountSnapshot, cache: await loadCache(), name: ui.account.name })
+      const s = await connectedSession({ snapshot: accountSnapshot, cache: await loadCache(ui.account.habiticaId), name: ui.account.name })
       await s.link!.reconnect(false)
       await settle(s)
     } finally {
@@ -346,7 +350,7 @@
     ui.account = { habiticaId: snapshot.habiticaId, name }
     // Signed in from the Menu: the next step (origin, lease) takes the screen.
     panel = null
-    accountCache = await loadCache()
+    accountCache = await loadCache(snapshot.habiticaId)
     if (snapshot.saveOrigin === null) {
       const guest = session && !session.link ? session : null
       if (guest && hasProgress(guest.state)) openOrigin(name)
@@ -411,7 +415,7 @@
 
   async function startAccount(snapshot: Snapshot, name: string): Promise<void> {
     if (ui.account) ui.account = { ...ui.account, name }
-    const s = connectedSession({ snapshot, cache: await loadCache(), name })
+    const s = await connectedSession({ snapshot, cache: await loadCache(snapshot.habiticaId), name })
     await s.link!.reconnect(false)
     await settle(s)
   }
@@ -491,17 +495,32 @@
     if (session.link.status === 'superseded') leaseError = leaseCopy.failed
   }
 
-  /** Log out of the world: upload what's pending, end the session, back to guest play. */
+  /**
+   * Log out of the world: upload what's pending, end the session, back to
+   * guest play. The account's cache is cleared only when the server has
+   * everything; unsent progress (a refused or slow upload, offline play from
+   * an earlier visit) stays on this device for the next sign-in.
+   */
   async function logout(): Promise<void> {
     confirmLogout = false
     const link = session?.link
-    if (link) await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, 4000))])
+    const habiticaId = link?.habiticaId ?? ui.account?.habiticaId
+    let keep = false
+    if (link) {
+      await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, 4000))])
+      keep = link.dirty
+      if (keep) await link.keepForNextSignIn()
+    } else if (habiticaId) {
+      const cache = await loadCache(habiticaId)
+      keep = cache?.dirty === true
+      if (cache && keep) await saveCache({ ...cache, loggedOut: true })
+    }
     try {
       await api.logout()
     } catch {
-      /* the cookie expires on its own; the device forgets below */
+      /* the cookie expires on its own */
     }
-    await clearCache()
+    if (habiticaId && !keep) await clearCache(habiticaId)
     if (link) session?.destroy(true)
     window.location.reload()
   }
@@ -785,7 +804,21 @@
     />
   {/if}
 
-  {#if confirmLogout}
+  {#if confirmLogout && accountCache?.dirty && accountCache.habiticaId === ui.account?.habiticaId}
+    <!-- Progress from an earlier visit hasn't reached the world: upload it first. -->
+    <ConfirmDialog
+      title={accountCopy.logoutTitle}
+      body={accountCopy.logoutDirty}
+      confirmLabel={accountCopy.uploadFirst}
+      onConfirm={() => {
+        confirmLogout = false
+        void continueAccount()
+      }}
+      altLabel={accountCopy.logoutAnyway}
+      onAlt={logout}
+      onCancel={() => (confirmLogout = false)}
+    />
+  {:else if confirmLogout}
     <ConfirmDialog
       title={accountCopy.logoutTitle}
       body={accountCopy.logoutBody}

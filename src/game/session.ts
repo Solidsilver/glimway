@@ -381,7 +381,10 @@ export class Session {
       window.clearTimeout(this.saveTimer)
       this.saveTimer = null
     }
-    void this.save()
+    // Connected: the upload starts before the cache write, so a closing tab
+    // still sends it.
+    if (this.link && !this.destroyed) void this.link.persist({ urgent: true })
+    else void this.save()
   }
 
   /**
@@ -402,7 +405,7 @@ export class Session {
     const finalProfile = this.importedProfile
     if (this.link) {
       const link = this.link
-      const last = skipSave ? Promise.resolve() : link.persist()
+      const last = skipSave ? Promise.resolve() : link.persist({ urgent: true })
       this.destroyed = true
       void last.finally(() => link.stop())
       return
