@@ -39,6 +39,16 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	if worldExists != 1 {
 		return fail(403, "world-required")
 	}
+	if s.Flagged {
+		return fail(403, "player-flagged")
+	}
+	var lifetime int
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=?", s.HabiticaID).Scan(&lifetime); err != nil {
+		return err
+	}
+	if lifetime >= rules.E.LifetimeInvites {
+		return fail(409, "invite-budget")
+	}
 	var outstanding int
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", s.HabiticaID, now).Scan(&outstanding); err != nil {
 		return err
@@ -65,14 +75,14 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at FROM invites WHERE created_by=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>? ORDER BY created_at,code_hash", s.HabiticaID, a.Config.Now().Unix())
+	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at,used_by IS NOT NULL FROM invites WHERE created_by=? AND (used_by IS NOT NULL OR (revoked_at IS NULL AND expires_at>?)) ORDER BY created_at,code_hash", s.HabiticaID, a.Config.Now().Unix())
 	if err != nil {
 		return err
 	}
 	entries := []InviteMetadata{}
 	for rows.Next() {
 		var m InviteMetadata
-		if err = rows.Scan(&m.ID, &m.CreatedAt, &m.ExpiresAt); err != nil {
+		if err = rows.Scan(&m.ID, &m.CreatedAt, &m.ExpiresAt, &m.Used); err != nil {
 			rows.Close()
 			return err
 		}

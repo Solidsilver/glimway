@@ -31,14 +31,16 @@ type Config struct {
 	TrustedProxies   []string
 	LoginConcurrency int
 	LoginRate        int
+	LoginGlobalRate  int
 	LoginWindow      time.Duration
 }
 type Server struct {
-	Store      *store.Store
-	Habitica   *habitica.Client
-	Config     Config
-	loginSlots chan struct{}
-	loginLimit *loginLimiter
+	Store       *store.Store
+	Habitica    *habitica.Client
+	Config      Config
+	loginSlots  chan struct{}
+	loginLimit  *loginLimiter
+	loginGlobal *loginLimiter
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
@@ -82,7 +84,7 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	return nil
 }
 func (a *Server) cookie(w http.ResponseWriter, value string, expires time.Time) {
-	maxAge := int(SessionTTL.Seconds())
+	maxAge := int(expires.Unix() - a.Config.Now().Unix())
 	if value == "" {
 		maxAge = -1
 	}
@@ -103,7 +105,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		class := "none"
-		if observed.status >= 500 {
+		if observed.status == 502 {
+			class = "upstream"
+		} else if observed.status >= 500 {
 			class = "internal"
 		}
 		a.Config.Logger.Printf("request method=%s route=%s status=%d error_class=%s", safeMethod(r.Method), route, observed.status, class)
@@ -175,14 +179,14 @@ func (a *Server) auth(ctx context.Context, tx *sql.Tx, r *http.Request) (string,
 	hash := store.Hash(c.Value)
 	var id string
 	now := a.Config.Now().Unix()
-	err = tx.QueryRowContext(ctx, "SELECT s.habitica_id FROM sessions s JOIN allowlist l USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>?", hash, now).Scan(&id)
+	err = tx.QueryRowContext(ctx, "SELECT s.habitica_id FROM sessions s JOIN allowlist l USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?", hash, now, now-int64(SessionTTL.Seconds())).Scan(&id)
 	if err == sql.ErrNoRows {
 		return "", "", fail(401, "unauthorized")
 	}
 	if err != nil {
 		return "", "", err
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE sessions SET expires_at=? WHERE id_hash=?", now+int64(SessionTTL.Seconds()), hash)
+	_, err = tx.ExecContext(ctx, "UPDATE sessions SET expires_at=MIN(?,created_at+?) WHERE id_hash=?", now+int64(SessionTTL.Seconds()), int64(SessionTTL.Seconds()), hash)
 	return id, hash, err
 }
 func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error) {
@@ -203,11 +207,19 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 	return tx, s, hash, nil
 }
 func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v any) error {
+	var cookie *http.Cookie
+	var expiry int64
+	if c, err := r.Cookie(CookieName); err == nil {
+		cookie = c
+		if err = tx.QueryRowContext(r.Context(), "SELECT expires_at FROM sessions WHERE id_hash=?", store.Hash(c.Value)).Scan(&expiry); err != nil {
+			return err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if c, err := r.Cookie(CookieName); err == nil {
-		a.cookie(w, c.Value, a.Config.Now().Add(SessionTTL))
+	if cookie != nil {
+		a.cookie(w, cookie.Value, time.Unix(expiry, 0))
 	}
 	write(w, 200, v)
 	return nil
@@ -224,16 +236,16 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 128 {
 		return fail(400, "invalid-credentials")
 	}
-	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
-		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
-		return fail(429, "login-rate-limited")
-	}
 	eligible, err := a.precheck(r.Context(), req.UserID, req.Invite)
 	if err != nil {
 		return err
 	}
 	if !eligible {
 		return fail(403, "access-denied")
+	}
+	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
+		return fail(429, "login-rate-limited")
 	}
 	select {
 	case a.loginSlots <- struct{}{}:
@@ -242,7 +254,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", "1")
 		return fail(429, "login-busy")
 	}
-	p, err := a.Habitica.Verify(r.Context(), req.UserID, req.Token)
+	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserID, req.Token, func() bool { return a.loginGlobal.allow("global", a.Config.Now()) })
 	req.Token = ""
 	if err != nil {
 		var h *habitica.Error
@@ -268,7 +280,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	world := ""
 	if allowed == 0 {
 		var named sql.NullString
-		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", store.Hash(req.Invite), now).Scan(&named)
+		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, store.Hash(req.Invite), now).Scan(&named)
 		if err == sql.ErrNoRows {
 			return fail(403, "access-denied")
 		}
@@ -290,6 +302,9 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			return fail(403, "access-denied")
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, "invite", now); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", p.ID); err != nil {
 			return err
 		}
 	}
@@ -321,7 +336,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", p.ID); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO sync_baselines(habitica_id,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES(?,?,?,?,?,?)", p.ID, verified, verified, store.JSON(p), now, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO sync_baselines(habitica_id,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level) VALUES(?,?,?,?,?,?,?,?,?,?)", p.ID, verified, verified, store.JSON(p), now, now, p.Level, verified, now, p.Level); err != nil {
 			return err
 		}
 	} else {
@@ -335,7 +350,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE habitica_id=?", p.Name, now, p.PartyID, p.ID); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=? WHERE habitica_id=?", verified, store.JSON(p), now, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?) WHERE habitica_id=?", verified, store.JSON(p), now, p.Level, p.ID); err != nil {
 			return err
 		}
 	}
@@ -343,8 +358,8 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	expires := a.Config.Now().Add(SessionTTL)
-	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE expires_at<=?", now); err != nil {
+	expires := time.Unix(now, 0).Add(SessionTTL)
+	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE expires_at<=? OR created_at<=?", now, now-int64(SessionTTL.Seconds())); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), p.ID, now, expires.Unix(), store.JSON(p), verified); err != nil {
@@ -455,6 +470,9 @@ func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMess
 	if err != nil {
 		return fail(400, "invalid-progress")
 	}
+	if !stale && s.VitalsSource == "imported" && s.ImportedProfile != nil && s.State.HP <= 0 && s.ImportedProfile.HP <= 0 && p.HP != 0 {
+		return fail(400, "invalid-progress")
+	}
 	s.State = rules.Merge(s.State, p, stale)
 	if !rules.ValidMerged(s.State) {
 		return fail(400, "invalid-progress")
@@ -543,7 +561,7 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if p.ID != s.HabiticaID {
 		return fail(409, "account-switch")
 	}
-	if !rules.Plausible(p, s.ImportedProfile) {
+	if !rules.Plausible(p) {
 		return fail(422, "implausible-profile")
 	}
 	if err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
@@ -554,27 +572,36 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	}
 	p.MP = math.Min(p.MP, p.MaxMP)
 	before := s.State
-	if s.ImportedProfile != nil {
-		_, rebirth := rules.ReportLoss(p, *s.ImportedProfile, 0)
-		if rebirth {
-			xp := rules.LifetimeXP(p.Level, *p.Exp)
-			if err = store.Credit(ctx, tx, &s, 0, 0, "rebirth", "sync", &xp, now); err != nil {
-				return err
-			}
+	reported := rules.LifetimeXP(p.Level, *p.Exp)
+	if rules.IsRebirth(p, s.LossReference, s.VerifiedHighLevel) {
+		if err = store.Credit(ctx, tx, &s, 0, 0, "rebirth", "sync", &reported, now); err != nil {
+			return err
 		}
+	} else if s.LossReference.XP-reported > rules.DeathWindow(s.LossReference.Level) {
+		if err = store.Credit(ctx, tx, &s, 0, 0, "xp-loss", "sync", &reported, now); err != nil {
+			return err
+		}
+	}
+	if _, err = expirePending(ctx, tx, &s, now); err != nil {
+		return err
+	}
+	if err = store.SetLossReference(ctx, tx, &s, p, now); err != nil {
+		return err
 	}
 	r0 := rules.Sync(rules.Save{State: s.State, VitalsSource: s.VitalsSource, ImportedProfile: s.ImportedProfile}, p, true)
 	s.State = r0.Save.State
 	s.ImportedProfile = r0.Save.ImportedProfile
 	s.VitalsSource = r0.Save.VitalsSource
 	credit := s.State.Embers - before.Embers
-	// A fixed ceiling from the checkpoint cannot be bypassed with repeated syncs.
-	payable := max(0, int(math.Floor(s.VerifiedXP/float64(rules.E.XPPerEmber)))+rules.E.SyncCreditCap-int(math.Floor(before.EmberXP/float64(rules.E.XPPerEmber))))
+	// The checkpoint allowance grows by full days, never by request count.
+	days := max(int64(0), (now-s.CheckpointAt)/86400)
+	cap := rules.E.SyncCreditCap + int(min(days, int64(rules.E.SyncCreditMax)))*rules.E.SyncCreditDailyGrowth
+	cap = min(cap, rules.E.SyncCreditMax)
+	payable := max(0, int(math.Floor(s.VerifiedXP/float64(rules.E.XPPerEmber)))+cap-int(math.Floor(before.EmberXP/float64(rules.E.XPPerEmber))))
 	paid := min(credit, payable)
 	s.State.Embers = before.Embers
 	s.State.XPEmbers = before.XPEmbers
 	s.Pending += credit - paid
-	reported := rules.LifetimeXP(p.Level, *p.Exp)
 	if paid > 0 {
 		if err = store.Credit(ctx, tx, &s, paid, paid, "sync", "xp", &reported, now); err != nil {
 			return err

@@ -8,6 +8,10 @@ export interface Economy {
   chestId: string;
   charmItem: string;
   syncCreditCap: number;
+  syncCreditDailyGrowth: number;
+  syncCreditMax: number;
+  pendingCreditDays: number;
+  lifetimeInvites: number;
   outstandingInvites: number;
   migrationGiftCap: number;
   checkpointToleranceXp: number;

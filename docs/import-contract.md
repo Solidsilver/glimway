@@ -318,15 +318,28 @@ inventory. Guests retain all existing local rules above.
 
 `content/economy.json` is canonical for both languages; `content/vectors/`
 contains outputs of the real TypeScript functions replayed by Go tests.
-Connected reported profiles receive extra shape/curve/vitals/death-loss checks.
-At most 200 unverified XP-earned embers can be paid above the latest verified
-checkpoint; repeating syncs cannot increase that allowance. Excess credit is
-held in lots tagged with the XP at which it was reported. A verified login pays
-lots whose reported XP it reaches; a plausible death keeps unconfirmed lots
-pending. Reports/checkpoints compare XP losses against the last accepted
-profile, with a one-death allowance; a level-1 rebirth is accepted and audited.
-Only an implausibly low verified checkpoint flags the player and drops pending. The XP mark never
-falls, and login does not consume the gameplay healing baseline.
+Connected reports receive extra shape/curve/vitals checks. XP losses are accepted:
+the paid XP mark never falls, so regained XP cannot pay twice. A separate loss
+reference (level and lifetime XP) advances on every accepted sync and verified
+login; the imported profile remains the healing baseline. Large sync losses are
+ledger notes. Checkpoints flag only a loss beyond three death windows (plus
+10 XP tolerance), or a higher verified level with lower lifetime XP. A level-1
+rebirth exemption requires earlier verified history above level 1.
+
+The unverified credit allowance starts at 200 embers and grows by 100 per full
+24 hours since the last login checkpoint, capped at 3000. Repeating syncs cannot
+refresh it. Excess credit is held in lots tagged with their original reported XP.
+A verified login pays lots whose reported XP it reaches; deaths and flagging
+retain other lots. Lots expire after 90 days, with an audit entry. Accepted syncs
+and login checkpoints prune expired lots. Time growth does not itself settle
+previously held lots. Sessions have both sliding expiry and an absolute 30-day
+lifetime, measured from login; active players must log in again at least monthly.
+The server receives a Habitica token only at login.
+
+Current uploads from imported heroes must carry zero HP when both stored local
+HP and the imported baseline HP are zero. This applies to carried progress in
+syncs and spends too. Sync healing and XP-earned rest/revive still lift the lock;
+positive-HP healer self-healing remains writable. Stale uploads discard vitals.
 
 An accepted upload grants the two story gifts once per account. A stale upload
 merges only story progress; the server retains health, mana, area and position.

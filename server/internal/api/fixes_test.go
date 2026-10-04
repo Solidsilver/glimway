@@ -151,21 +151,33 @@ func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 }
 func TestLoginPrecheckAndPerIPRateLimit(t *testing.T) {
 	x := newRig(t)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 11; i++ {
 		x.expect("POST", "/api/session", map[string]any{"userId": "no-access", "token": secret}, nil, 403)
 	}
-	status, _, code, _ := x.request("POST", "/api/session", map[string]any{"userId": "no-access", "token": secret}, nil)
-	if status != 429 || code != "login-rate-limited" || x.calls.Load() != 0 {
-		t.Fatal("uninvited upstream calls or missing per-IP limit")
+	if x.calls.Load() != 0 || len(x.api.loginLimit.buckets) != 0 {
+		t.Fatal("ineligible login consumed upstream or bucket")
+	}
+	if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 10; i++ {
+		x.expect("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil, 200)
+	}
+	status, _, code, _ := x.request("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil)
+	if status != 429 || code != "login-rate-limited" || x.calls.Load() != 10 {
+		t.Fatal("eligible per-IP limit missing")
 	}
 	x.now.Add(60)
-	x.expect("POST", "/api/session", map[string]any{"userId": "no-access", "token": secret}, nil, 403)
+	x.expect("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil, 200)
 }
 func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 	x := newRig(t)
+	if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+		t.Fatal(err)
+	}
 	x.api = New(x.db, x.api.Habitica, Config{TrustedProxies: []string{"127.0.0.1"}, LoginRate: 2, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
 	attempt := func(remote, xff string) int {
-		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(`{"userId":"none","token":"secret"}`))
+		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(`{"userId":"alice","token":"secret"}`))
 		r.RemoteAddr = remote
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Forwarded-For", xff)
@@ -173,14 +185,14 @@ func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 		x.api.ServeHTTP(w, r)
 		return w.Code
 	}
-	if attempt("198.51.100.2:1", "1.1.1.1") != 403 || attempt("198.51.100.2:1", "2.2.2.2") != 403 || attempt("198.51.100.2:1", "3.3.3.3") != 429 {
+	if attempt("198.51.100.2:1", "1.1.1.1") != 200 || attempt("198.51.100.2:1", "2.2.2.2") != 200 || attempt("198.51.100.2:1", "3.3.3.3") != 429 {
 		t.Fatal("untrusted forwarded IP bypass")
 	}
-	if attempt("127.0.0.1:1", "1.1.1.1, 203.0.113.2") != 403 || attempt("127.0.0.1:1", "2.2.2.2, 203.0.113.2") != 403 || attempt("127.0.0.1:1", "3.3.3.3, 203.0.113.2") != 429 || attempt("127.0.0.1:1", "203.0.113.3") != 403 {
+	if attempt("127.0.0.1:1", "1.1.1.1, 203.0.113.2") != 200 || attempt("127.0.0.1:1", "2.2.2.2, 203.0.113.2") != 200 || attempt("127.0.0.1:1", "3.3.3.3, 203.0.113.2") != 429 || attempt("127.0.0.1:1", "203.0.113.3") != 200 {
 		t.Fatal("proxy did not use the last hop")
 	}
-	if x.calls.Load() != 0 {
-		t.Fatal("precheck called upstream")
+	if x.calls.Load() != 5 {
+		t.Fatal("unexpected proxy rate-limit call count")
 	}
 }
 func TestGlobalLoginConcurrencyAndTransactionalRecheck(t *testing.T) {
@@ -384,8 +396,9 @@ func TestPlayerInviteLifecycleLimitExpiryAndWorlds(t *testing.T) {
 	x.now.Add(InviteTTL)
 	inviteReq(t, x, "GET", "/api/invites", owner, 401)
 	owner = x.login("owner", "")
-	if len(inviteReq(t, x, "GET", "/api/invites", owner, 200).Invites) != 0 {
-		t.Fatal("expired outstanding codes listed")
+	history := inviteReq(t, x, "GET", "/api/invites", owner, 200).Invites
+	if len(history) != 1 || !history[0].Used {
+		t.Fatal("used history missing or expired unused listed")
 	}
 	x.expect("POST", "/api/session", map[string]any{"userId": "expired", "token": secret, "invite": created[2].Code}, nil, 403)
 	if x.expect("GET", "/api/state", nil, owner, 200).Rev != baseline.Rev {

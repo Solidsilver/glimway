@@ -41,6 +41,11 @@ func retryAfter(v string) time.Duration {
 	return time.Second
 }
 func (c *Client) Verify(ctx context.Context, id, token string) (rules.Profile, error) {
+	return c.VerifyLimited(ctx, id, token, nil)
+}
+
+// The login server's shared limiter gates each network call, including retries.
+func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func() bool) (rules.Profile, error) {
 	var zero rules.Profile
 	u := strings.TrimRight(c.BaseURL, "/") + "/api/v3/user?userFields=" + url.QueryEscape("stats,profile.name,flags.classSelected,items.gear.equipped,items.gear.costume,items.pets,items.mounts,items.currentPet,items.currentMount,preferences,party._id")
 	for attempt := 0; attempt < 2; attempt++ {
@@ -52,6 +57,9 @@ func (c *Client) Verify(ctx context.Context, id, token string) (rules.Profile, e
 		req.Header.Set("X-Api-Key", token)
 		req.Header.Set("X-Client", c.XClient)
 		req.Header.Set("Accept", "application/json")
+		if allow != nil && !allow() {
+			return zero, &Error{Code: "login-global-rate-limited", Status: 429, RetryAfter: time.Minute}
+		}
 		res, err := c.HTTP.Do(req)
 		if err != nil {
 			return zero, &Error{Code: "habitica-unavailable", Status: 502}

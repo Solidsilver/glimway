@@ -419,32 +419,33 @@ func Merge(s, p State, stale bool) State {
 	return s
 }
 
-// ReportLoss compares consecutive accepted reports, never the paid XP mark.
-// A one-level loss includes all XP in the previous level's bar. Level one is
-// an allowed Orb of Rebirth; callers record it as an owner-visible audit note.
-func ReportLoss(after, before Profile, tolerance float64) (plausible, rebirth bool) {
-	if after.Exp == nil || before.Exp == nil {
-		return false, false
-	}
-	if after.Level == 1 && before.Level > 1 {
-		return true, true
-	}
-	if after.Level < before.Level-1 {
-		return false, false
-	}
-	now, prior := LifetimeXP(after.Level, *after.Exp), LifetimeXP(before.Level, *before.Exp)
-	loss := XPToNextLevel(after.Level) + XPToNextLevel(after.Level+1)
-	return now+tolerance >= prior-loss, false
+// LossReference is separate from the vitals baseline and the paid XP mark.
+type LossReference struct{ Level, XP float64 }
+
+func DeathWindow(level float64) float64 {
+	return XPToNextLevel(level) + XPToNextLevel(level+1)
 }
-func Plausible(p Profile, before *Profile) bool {
-	if !ValidProfile(p) || p.Exp == nil || p.Level != math.Floor(p.Level) || *p.Exp >= XPToNextLevel(p.Level) || p.HP > p.MaxHP || p.MaxHP != 50 || p.MaxMP != 2*p.Stats.Int+30 {
+func IsRebirth(p Profile, prior LossReference, verifiedHighLevel float64) bool {
+	return p.Level == 1 && prior.Level > 1 && verifiedHighLevel > 1
+}
+func CheckpointForgery(p Profile, prior LossReference, verifiedHighLevel float64) bool {
+	if IsRebirth(p, prior, verifiedHighLevel) {
 		return false
 	}
-	if before == nil {
+	xp := LifetimeXP(p.Level, *p.Exp)
+	loss := prior.XP - xp
+	if p.Level > prior.Level && loss > 0 {
 		return true
 	}
-	ok, _ := ReportLoss(p, *before, 0)
-	return ok
+	if loss <= E.CheckpointToleranceXP {
+		return false
+	}
+	return loss > 3*DeathWindow(prior.Level)+E.CheckpointToleranceXP
+}
+
+// XP loss is always accepted: the monotone credit mark prevents double payment.
+func Plausible(p Profile) bool {
+	return ValidProfile(p) && p.Exp != nil && p.Level == math.Floor(p.Level) && *p.Exp < XPToNextLevel(p.Level) && p.HP <= p.MaxHP && p.MaxHP == 50 && p.MaxMP == 2*p.Stats.Int+30
 }
 
 // Bound each persisted union as well as each request, so clients cannot grow

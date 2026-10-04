@@ -261,8 +261,9 @@ func TestAccessAndSessionSliding(t *testing.T) {
 	if code != 200 || renewed == nil {
 		t.Fatal("session renewal")
 	}
-	x.now.Add(29 * 86400)
-	x.expect("GET", "/api/state", nil, c, 200)
+	x.now.Add(86400)
+	x.expect("GET", "/api/state", nil, c, 401)
+	c = x.login("alice", "")
 	if err := x.db.Allow(context.Background(), "alice", false); err != nil {
 		t.Fatal(err)
 	}
@@ -545,15 +546,15 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			}
 			c = x.login("alice", "")
 			next := x.expect("GET", "/api/state", nil, c, 200)
-			if next.Pending != 0 {
-				t.Fatal("pending retained")
+			if (verified && next.Pending != 0) || (!verified && next.Pending != sync.Pending) {
+				t.Fatal("pending settlement/retention")
 			}
 			if verified {
 				if next.State.XPEmbers != total || next.Flagged {
 					t.Fatal("verified pending not settled")
 				}
 			} else if !next.Flagged || next.State.XPEmbers != rules.E.SyncCreditCap {
-				t.Fatal("unverified pending not dropped/flagged")
+				t.Fatal("unverified pending not retained/flagged")
 			}
 			if next.State.EmberXP != sync.State.EmberXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {
 				t.Fatal("login consumed gameplay baseline or lowered mark")
@@ -564,15 +565,15 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 		})
 	}
 }
-func TestImplausibleDeathRegression(t *testing.T) {
+func TestLargeDeathLossIsAcceptedWithoutCredit(t *testing.T) {
 	x := newRig(t)
-	p := profile("alice", 20, 0, 20)
-	x.set(p)
+	x.set(profile("alice", 20, 0, 20))
 	c, s := x.ready("alice")
 	lost := profile("alice", 10, 0, 20)
-	x.expect("POST", "/api/sync", syncBody(s, lost, s.State), c, 422)
-	legit := profile("alice", 19, 0, 20)
-	x.expect("POST", "/api/sync", syncBody(s, legit, s.State), c, 200)
+	after := x.expect("POST", "/api/sync", syncBody(s, lost, s.State), c, 200)
+	if after.State.EmberXP != s.State.EmberXP || after.State.XPEmbers != 0 {
+		t.Fatal("loss changed mark or paid credit")
+	}
 }
 func TestMigrationRacesOnceAndPaidOutcomes(t *testing.T) {
 	x := newRig(t)
