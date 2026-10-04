@@ -130,13 +130,13 @@ func TestHomesteadAllocationAccessAndCommonsVisit(t *testing.T) {
 	}
 	rev := s.Rev
 	h := x.exp("GET", "/api/homestead/alice", nil, c, 200)
-	if h.Rev != rev || h.Home.Tier != 0 || h.Home.Indoor != nil || h.Home.PlotIndex != 0 || len(h.Home.Items) != 0 {
+	if h.Rev != rev || h.Home.Tier != 0 || h.Home.Indoor != nil || (h.Home.PlotIndex == nil || *h.Home.PlotIndex != 0) || len(h.Home.Items) != 0 {
 		t.Fatal("campsite")
 	}
 	bc, b := x.member("bob", s.WorldID)
 	bh := x.exp("GET", "/api/homestead/bob", nil, bc, 200)
 	update(&b, bh)
-	if bh.Home.PlotIndex != 1 || bh.Rev != b.Rev {
+	if (bh.Home.PlotIndex == nil || *bh.Home.PlotIndex != 1) || bh.Rev != b.Rev {
 		t.Fatal("neighbor allocation")
 	}
 	visited := x.exp("GET", "/api/homestead/bob", nil, c, 200)
@@ -158,11 +158,11 @@ func TestHomesteadAllocationAccessAndCommonsVisit(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='homestead-grant'") != 1 {
 		t.Fatal("duplicate grant")
 	}
-	// Reading a neighbor's unallocated home grants it once and bumps that owner.
+	// Reading an unallocated neighbor returns a virtual home without changing them.
 	dc, d := x.member("dora", s.WorldID)
 	_ = dc
 	x.exp("GET", "/api/homestead/dora", nil, c, 200)
-	if count(t, x.db, "SELECT rev FROM players WHERE habitica_id='dora'") != int(d.Rev+1) {
+	if count(t, x.db, "SELECT rev FROM players WHERE habitica_id='dora'") != int(d.Rev) {
 		t.Fatal("lazy visitor allocation revision")
 	}
 }
@@ -186,6 +186,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 		return x.exp("POST", "/api/homestead/place", body(s, key, map[string]any{"itemId": id, "scene": scene, "x": px, "y": py, "rotation": rotation}), c, status)
 	}
 	place("no-indoor", fern, "indoor", 0, 0, 0, 409)
+	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
 	place("bounds", fern, "outdoor", 16, 0, 0, 409)
 	place("rotation", fern, "outdoor", 0, 0, 45, 400)
 	x.exp("POST", "/api/homestead/place", body(s, "missing-coordinate", map[string]any{"itemId": fern, "scene": "outdoor", "rotation": 0}), c, 400)
@@ -202,7 +203,6 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x.exp("POST", "/api/homestead/remove", body(s, "remove-again", map[string]any{"itemId": fern}), c, 409)
 	bc, b := x.member("bob", s.WorldID)
 	x.exp("POST", "/api/homestead/place", body(b, "steal", map[string]any{"itemId": fern, "scene": "outdoor", "x": 0, "y": 0, "rotation": 0}), bc, 404)
-	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
 	if s.State.Embers != 40 || s.State.XPEmbers != 20 {
 		t.Fatal("gifted first upgrade debit")
 	}
@@ -299,7 +299,7 @@ func TestWildsConcurrentClaimCyclesAndAccess(t *testing.T) {
 			s response
 		}) {
 			defer wg.Done()
-			req := body(pair.s, "race", map[string]any{"epoch": ep, "entityId": camp.ID, "cycle": 0})
+			req := body(pair.s, "race", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(pair.s, camp), "cycle": 0})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewBufferString(store.JSON(req)))
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(pair.c)
@@ -339,14 +339,14 @@ func TestWildsConcurrentClaimCyclesAndAccess(t *testing.T) {
 	if camp.Cycle != 1 || camp.State != "available" {
 		t.Fatal("lazy cycle")
 	}
-	if x.exp("POST", "/api/wilds/claim", body(s, "old", map[string]any{"epoch": ep, "entityId": camp.ID, "cycle": 0}), c, 409).Error.Code != "old-cycle" {
+	if x.exp("POST", "/api/wilds/claim", body(s, "old", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(s, camp), "cycle": 0}), c, 409).Error.Code != "old-cycle" {
 		t.Fatal("old cycle")
 	}
-	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "cycle1", map[string]any{"epoch": ep, "entityId": camp.ID, "cycle": 1}), c, 200))
+	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "cycle1", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(s, camp), "cycle": 1}), c, 200))
 	node := entityKind(t, next, "node")
-	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "node0", map[string]any{"epoch": ep, "entityId": node.ID, "cycle": 0}), c, 200))
+	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "node0", map[string]any{"epoch": ep, "entityId": node.ID, "progress": nearEntity(s, node), "cycle": 0}), c, 200))
 	x.now.Add(int64(content.WildsRules.Timers.NodeRegrowSeconds))
-	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "node1", map[string]any{"epoch": ep, "entityId": node.ID, "cycle": 1}), c, 200))
+	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "node1", map[string]any{"epoch": ep, "entityId": node.ID, "progress": nearEntity(s, node), "cycle": 1}), c, 200))
 	for _, invalid := range []string{"camp:3:0:0", "camp:-1:0:0", "camp:0:0:999", "node:0:0:00", "node:0:0:0junk"} {
 		if x.exp("POST", "/api/wilds/claim", body(s, invalid, map[string]any{"epoch": ep, "entityId": invalid, "cycle": 0}), c, 404).Error.Code != "entity-not-found" {
 			t.Fatal(invalid)
@@ -357,13 +357,13 @@ func TestWildsConcurrentClaimCyclesAndAccess(t *testing.T) {
 	if outside.Epoch.ID == ep {
 		t.Fatal("cross-world epoch")
 	}
-	x.exp("POST", "/api/wilds/claim", body(o, "other-world", map[string]any{"epoch": ep, "entityId": camp.ID, "cycle": 1}), oc, 403)
-	x.exp("POST", "/api/wilds/lantern", body(o, "other-lantern", map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": "unknown"}), oc, 403)
+	x.exp("POST", "/api/wilds/claim", body(o, "other-world", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(o, camp), "cycle": 1}), oc, 403)
+	x.exp("POST", "/api/wilds/lantern", body(o, "other-lantern", map[string]any{"epoch": ep, "progress": atLantern(o), "ownerId": "alice", "lanternId": "unknown"}), oc, 403)
 	x.exp("GET", "/api/wilds/region/not-a-region", nil, c, 404)
 	if _, err = x.db.DB.Exec("UPDATE region_epochs SET ends_at=? WHERE id=?", x.now.Load(), ep); err != nil {
 		t.Fatal(err)
 	}
-	if x.exp("POST", "/api/wilds/claim", body(s, "ended", map[string]any{"epoch": ep, "entityId": camp.ID, "cycle": 2}), c, 409).Error.Code != "epoch-ended" {
+	if x.exp("POST", "/api/wilds/claim", body(s, "ended", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(s, camp), "cycle": 2}), c, 409).Error.Code != "epoch-ended" {
 		t.Fatal("ended epoch")
 	}
 	if x.exp("GET", "/api/wilds/region/inner-1", nil, c, 409).Error.Code != "epoch-ended" {
@@ -378,7 +378,7 @@ func TestWildsPersonalClaimsDiscoveryReplayAndEpochPin(t *testing.T) {
 	ep := v.Epoch.ID
 	chest := entityKind(t, v, "chest")
 	poi := entityKind(t, v, "poi")
-	req := body(s, "chest", map[string]any{"epoch": ep, "entityId": chest.ID, "cycle": 0})
+	req := body(s, "chest", map[string]any{"epoch": ep, "entityId": chest.ID, "progress": nearEntity(s, chest), "cycle": 0})
 	grant := x.exp("POST", "/api/wilds/claim", req, c, 200)
 	update(&s, grant)
 	loot, err := wilds.RollLoot(v.Epoch.Epoch, chest.ID, 0)
@@ -393,10 +393,10 @@ func TestWildsPersonalClaimsDiscoveryReplayAndEpochPin(t *testing.T) {
 	if x.exp("POST", "/api/wilds/claim", req, c, 409).Error.Code != "idempotency-mismatch" {
 		t.Fatal("key mismatch")
 	}
-	update(&b, x.exp("POST", "/api/wilds/claim", body(b, "chest", map[string]any{"epoch": ep, "entityId": chest.ID, "cycle": 0}), bc, 200))
-	x.exp("POST", "/api/wilds/claim", body(s, "chest-again", map[string]any{"epoch": ep, "entityId": chest.ID, "cycle": 0}), c, 409)
-	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "cycle": 0}), c, 200))
-	update(&b, x.exp("POST", "/api/wilds/claim", body(b, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "cycle": 0}), bc, 200))
+	update(&b, x.exp("POST", "/api/wilds/claim", body(b, "chest", map[string]any{"epoch": ep, "entityId": chest.ID, "progress": nearEntity(b, chest), "cycle": 0}), bc, 200))
+	x.exp("POST", "/api/wilds/claim", body(s, "chest-again", map[string]any{"epoch": ep, "entityId": chest.ID, "progress": nearEntity(s, chest), "cycle": 0}), c, 409)
+	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "progress": nearEntity(s, poi), "cycle": 0}), c, 200))
+	update(&b, x.exp("POST", "/api/wilds/claim", body(b, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "progress": nearEntity(b, poi), "cycle": 0}), bc, 200))
 	v = x.region(c)
 	if len(v.PersonalClaims) != 2 || len(v.Discoveries) != 1 || v.Discoveries[0].DiscovererID != "alice" || v.Discoveries[0].DisplayName != "Hero" {
 		t.Fatal("discovery ownership")
@@ -408,7 +408,7 @@ func TestWildsPersonalClaimsDiscoveryReplayAndEpochPin(t *testing.T) {
 		t.Fatal("epoch changed")
 	}
 	node := entityKind(t, pinned, "node")
-	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "retained-v1", map[string]any{"epoch": ep, "entityId": node.ID, "cycle": 0}), c, 200))
+	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "retained-v1", map[string]any{"epoch": ep, "entityId": node.ID, "progress": nearEntity(s, node), "cycle": 0}), c, 200))
 	oc, _ := x.ready("new-world")
 	if x.exp("GET", "/api/wilds/region/inner-1", nil, oc, 503).Error.Code != "generator-unavailable" {
 		t.Fatal("unsupported new version")
@@ -425,12 +425,12 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	var last map[string]any
 	for i := 0; i < limit; i++ {
 		e := v.Entities[i]
-		last = body(s, fmt.Sprintf("claim%d", i), map[string]any{"epoch": v.Epoch.ID, "entityId": e.ID, "cycle": 0})
+		last = body(s, fmt.Sprintf("claim%d", i), map[string]any{"epoch": v.Epoch.ID, "entityId": e.ID, "progress": nearEntity(s, e), "cycle": 0})
 		update(&s, x.exp("POST", "/api/wilds/claim", last, c, 200))
 	}
 	x.exp("POST", "/api/wilds/claim", last, c, 200)
 	e := v.Entities[limit]
-	req := body(s, "limited", map[string]any{"epoch": v.Epoch.ID, "entityId": e.ID, "cycle": 0})
+	req := body(s, "limited", map[string]any{"epoch": v.Epoch.ID, "entityId": e.ID, "progress": nearEntity(s, e), "cycle": 0})
 	before := s.Snapshot
 	if x.exp("POST", "/api/wilds/claim", req, c, 429).Error.Code != "claim-rate-limited" {
 		t.Fatal("rate limiter")
@@ -455,10 +455,16 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 		doc := s.State
 		doc.Area = "wilds"
 		doc.HP = 0
-		doc.Position = rules.Position{X: 320, Y: 320}
+		doc.Position = rules.Position{X: 160, Y: 160}
 		v := x.exp("POST", "/api/wilds/defeat", body(s, key, map[string]any{"epoch": ep, "x": 10, "y": 10, "progress": doc}), c, 200)
 		update(&s, v)
-		if len(v.Result.Lanterns) != 1 {
+		found := false
+		for _, l := range v.Result.Lanterns {
+			if l.OwnerID == "alice" && l.ID == v.Result.LanternID {
+				found = true
+			}
+		}
+		if !found {
 			return ""
 		}
 		return v.Result.LanternID
@@ -468,17 +474,22 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 	if first == second || first == "" || second == "" {
 		t.Fatal("replacement identity")
 	}
-	x.exp("POST", "/api/wilds/lantern", body(b, "obsolete", map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": first}), bc, 404)
-	own := x.exp("POST", "/api/wilds/lantern", body(s, "own", map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": second}), c, 200)
+	x.exp("POST", "/api/wilds/lantern", body(b, "obsolete", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": first}), bc, 404)
+	own := x.exp("POST", "/api/wilds/lantern", body(s, "own", map[string]any{"epoch": ep, "progress": atLantern(s), "ownerId": "alice", "lanternId": second}), c, 200)
 	update(&s, own)
 	if own.Result.Rewarded || len(own.Result.Loot.Materials) != 0 {
 		t.Fatal("own reward")
 	}
-	x.exp("POST", "/api/wilds/lantern", body(b, "already-lit", map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": second}), bc, 409)
+	x.exp("POST", "/api/wilds/lantern", body(b, "already-lit", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": second}), bc, 409)
 	limit := content.Rules.WildsLimits.LanternRelightsPerDay
 	for i := 0; i <= limit; i++ {
-		id := defeat(fmt.Sprintf("fall%d", i+3))
-		req := body(b, fmt.Sprintf("light%d", i), map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": id})
+		owner := fmt.Sprintf("fallen%d", i)
+		cc, cs := x.member(owner, s.WorldID)
+		doc := atLantern(cs)
+		doc.HP = 0
+		fallen := x.exp("POST", "/api/wilds/defeat", body(cs, "fall", map[string]any{"epoch": ep, "x": 10, "y": 10, "progress": doc}), cc, 200)
+		id := fallen.Result.LanternID
+		req := body(b, fmt.Sprintf("light%d", i), map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": owner, "lanternId": id})
 		lit := x.exp("POST", "/api/wilds/lantern", req, bc, 200)
 		update(&b, lit)
 		if lit.Result.Rewarded != (i < limit) {
@@ -499,7 +510,7 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 	tomorrow := time.Unix(x.now.Load(), 0).UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
 	x.now.Store(tomorrow.Unix())
 	id := defeat("next-day")
-	lit := x.exp("POST", "/api/wilds/lantern", body(b, "tomorrow", map[string]any{"epoch": ep, "ownerId": "alice", "lanternId": id}), bc, 200)
+	lit := x.exp("POST", "/api/wilds/lantern", body(b, "tomorrow", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": id}), bc, 200)
 	if !lit.Result.Rewarded {
 		t.Fatal("UTC reward reset")
 	}
@@ -524,7 +535,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 		t.Fatal("missing fiber node")
 	}
 	for cycle := 0; cycle < 2; cycle++ {
-		update(&s, x.exp("POST", "/api/wilds/claim", body(s, fmt.Sprintf("fiber%d", cycle), map[string]any{"epoch": v.Epoch.ID, "entityId": fiber.ID, "cycle": cycle}), c, 200))
+		update(&s, x.exp("POST", "/api/wilds/claim", body(s, fmt.Sprintf("fiber%d", cycle), map[string]any{"epoch": v.Epoch.ID, "entityId": fiber.ID, "progress": nearEntity(s, fiber), "cycle": cycle}), c, 200))
 		x.now.Add(int64(content.WildsRules.Timers.NodeRegrowSeconds))
 	}
 	read := x.exp("GET", "/api/homestead/alice", nil, c, 200)
@@ -550,16 +561,16 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	chest := entityKind(t, v, "chest")
 	poi := entityKind(t, v, "poi")
 	for _, entity := range []entityView{chest, poi} {
-		update(&s, x.exp("POST", "/api/wilds/claim", body(s, "backup-"+entity.Kind, map[string]any{"epoch": v.Epoch.ID, "entityId": entity.ID, "cycle": 0}), c, 200))
+		update(&s, x.exp("POST", "/api/wilds/claim", body(s, "backup-"+entity.Kind, map[string]any{"epoch": v.Epoch.ID, "entityId": entity.ID, "progress": nearEntity(s, entity), "cycle": 0}), c, 200))
 	}
 	bc, b := x.member("bob", s.WorldID)
 	doc := s.State
 	doc.Area = "wilds"
 	doc.HP = 0
-	doc.Position = rules.Position{X: 320, Y: 320}
+	doc.Position = rules.Position{X: 160, Y: 160}
 	fallen := x.exp("POST", "/api/wilds/defeat", body(s, "backup-defeat", map[string]any{"epoch": v.Epoch.ID, "x": 10, "y": 10, "progress": doc}), c, 200)
 	update(&s, fallen)
-	update(&b, x.exp("POST", "/api/wilds/lantern", body(b, "backup-relight", map[string]any{"epoch": v.Epoch.ID, "ownerId": "alice", "lanternId": fallen.Result.LanternID}), bc, 200))
+	update(&b, x.exp("POST", "/api/wilds/lantern", body(b, "backup-relight", map[string]any{"epoch": v.Epoch.ID, "progress": atLantern(b), "ownerId": "alice", "lanternId": fallen.Result.LanternID}), bc, 200))
 	currentMaterials := x.region(c).Materials
 	backup := filepath.Join(x.dir, "expansion-backup.sqlite")
 	if err := x.db.Backup(context.Background(), backup); err != nil {
@@ -580,7 +591,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	}
 	unchanged(t, s.Snapshot, rs)
 	tx.Rollback()
-	for _, table := range []string{"homesteads", "homestead_items", "materials", "region_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "claim_rate", "ledger", "idempotency"} {
+	for _, table := range []string{"homesteads", "homestead_items", "materials", "region_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "lantern_creations", "claim_rate", "ledger", "idempotency"} {
 		if count(t, x.db, "SELECT count(*) FROM "+table) != count(t, restored, "SELECT count(*) FROM "+table) {
 			t.Fatal("backup", table)
 		}
@@ -644,6 +655,6 @@ func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 	region := x.region(c)
 	node := entityKind(t, region, "node")
 	before := next.Snapshot
-	x.exp("POST", "/api/wilds/claim", body(s, "old-lease", map[string]any{"epoch": region.Epoch.ID, "entityId": node.ID, "cycle": 0}), c, 409)
+	x.exp("POST", "/api/wilds/claim", body(s, "old-lease", map[string]any{"epoch": region.Epoch.ID, "entityId": node.ID, "progress": nearEntity(s, node), "cycle": 0}), c, 409)
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
 }

@@ -36,9 +36,9 @@ type homeView struct {
 	OwnerID     string            `json:"ownerId"`
 	DisplayName string            `json:"displayName"`
 	WorldID     string            `json:"worldId"`
-	PlotIndex   int               `json:"plotIndex"`
+	PlotIndex   *int              `json:"plotIndex"`
 	Tier        int               `json:"tier"`
-	Bounds      plotRect          `json:"bounds"`
+	Bounds      *plotRect         `json:"bounds"`
 	Outdoor     content.HomeGrid  `json:"outdoor"`
 	Indoor      *content.HomeGrid `json:"indoor"`
 	Items       []homeInstance    `json:"items"`
@@ -60,11 +60,14 @@ func ensureHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (
 }
 func loadHome(ctx context.Context, tx *sql.Tx, id string) (homeView, error) {
 	h := homeView{OwnerID: id, Outdoor: content.HomeRules.Outdoor, Items: []homeInstance{}}
-	err := tx.QueryRowContext(ctx, "SELECT p.display_name,h.world_id,h.plot_index,h.tier FROM homesteads h JOIN players p USING(habitica_id) WHERE h.habitica_id=?", id).Scan(&h.DisplayName, &h.WorldID, &h.PlotIndex, &h.Tier)
+	err := tx.QueryRowContext(ctx, "SELECT p.display_name,p.world_id,h.plot_index,COALESCE(h.tier,0) FROM players p LEFT JOIN homesteads h USING(habitica_id) WHERE p.habitica_id=?", id).Scan(&h.DisplayName, &h.WorldID, &h.PlotIndex, &h.Tier)
 	if err != nil {
 		return h, err
 	}
-	h.Bounds = plotBounds(h.PlotIndex)
+	if h.PlotIndex != nil {
+		b := plotBounds(*h.PlotIndex)
+		h.Bounds = &b
+	}
 	if h.Tier >= 1 {
 		g := content.HomeRules.Indoor
 		h.Indoor = &g
@@ -105,27 +108,13 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 	if world != s.WorldID {
 		return fail(403, "world-access-denied")
 	}
-	owner := s
-	if id != s.HabiticaID {
-		owner, err = store.Load(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-	}
-	if owner.SaveOrigin == nil {
+	if s.SaveOrigin == nil {
 		return fail(409, "origin-required")
 	}
-	created, err := ensureHome(ctx, tx, &owner, a.Config.Now().Unix())
-	if err != nil {
+	// Reads allocate only the caller's plot. The zero-delta campsite audit does
+	// not change progress, balances or revisions, including for visiting members.
+	if _, err = ensureHome(ctx, tx, &s, a.Config.Now().Unix()); err != nil {
 		return err
-	}
-	if created {
-		if err = store.Persist(ctx, tx, &owner, a.Config.Now().Unix()); err != nil {
-			return err
-		}
-	}
-	if id == s.HabiticaID {
-		s = owner
 	}
 	h, err := loadHome(ctx, tx, id)
 	if err != nil {
@@ -152,24 +141,18 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	if s.SaveOrigin == nil {
 		return fail(409, "origin-required")
 	}
-	created, err := ensureHome(ctx, tx, &s, now)
-	if err != nil {
+	if _, err = ensureHome(ctx, tx, &s, now); err != nil {
 		return err
 	}
-	if created {
-		if err = store.Persist(ctx, tx, &s, now); err != nil {
-			return err
-		}
-	}
 	type plot struct {
-		OwnerID     string   `json:"ownerId"`
-		DisplayName string   `json:"displayName"`
-		Tier        int      `json:"tier"`
-		PlotIndex   int      `json:"plotIndex"`
-		Bounds      plotRect `json:"bounds"`
+		OwnerID     string    `json:"ownerId"`
+		DisplayName string    `json:"displayName"`
+		Tier        int       `json:"tier"`
+		PlotIndex   *int      `json:"plotIndex"`
+		Bounds      *plotRect `json:"bounds"`
 	}
 	plots := []plot{}
-	rows, err := tx.QueryContext(ctx, "SELECT h.habitica_id,p.display_name,h.tier,h.plot_index FROM homesteads h JOIN players p USING(habitica_id) WHERE h.world_id=? ORDER BY h.plot_index", s.WorldID)
+	rows, err := tx.QueryContext(ctx, "SELECT p.habitica_id,p.display_name,COALESCE(h.tier,0),h.plot_index FROM players p LEFT JOIN homesteads h USING(habitica_id) WHERE p.world_id=? ORDER BY h.plot_index IS NULL,h.plot_index,p.habitica_id", s.WorldID)
 	if err != nil {
 		return err
 	}
@@ -179,7 +162,10 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 			rows.Close()
 			return err
 		}
-		p.Bounds = plotBounds(p.PlotIndex)
+		if p.PlotIndex != nil {
+			b := plotBounds(*p.PlotIndex)
+			p.Bounds = &b
+		}
 		plots = append(plots, p)
 	}
 	err = rows.Err()
@@ -334,7 +320,7 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int{0, 90, 180, 270}, *r.Rotation) || !slices.Contains(def.Where, r.Scene) {
 		return fail(400, "invalid-placement")
 	}
-	if h.Tier < def.MinTier || (r.Scene == "indoor" && h.Indoor == nil) {
+	if h.Tier < 1 || h.Tier < def.MinTier || (r.Scene == "indoor" && h.Indoor == nil) {
 		return fail(409, "tier-required")
 	}
 	grid := h.Outdoor

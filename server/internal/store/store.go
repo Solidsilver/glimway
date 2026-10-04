@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -250,6 +251,7 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	if err = json.Unmarshal([]byte(doc), &s.State); err != nil {
 		return s, err
 	}
+	s.State.Inventory = questInventory(s.State.Inventory)
 	s.State.Embers = embers
 	s.State.XPEmbers = xp
 	s.State.EmberXP = mark
@@ -333,12 +335,7 @@ func Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
 			doc.Flags = append(doc.Flags, v)
 		}
 	}
-	doc.Inventory = []string{}
-	for _, v := range s.State.Inventory {
-		if v != rules.E.CharmItem {
-			doc.Inventory = append(doc.Inventory, v)
-		}
-	}
+	doc.Inventory = questInventory(s.State.Inventory)
 	var p any
 	if s.ImportedProfile != nil {
 		p = JSON(s.ImportedProfile)
@@ -357,4 +354,16 @@ func Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
 		}
 	}
 	return nil
+}
+
+// Legacy documents may contain loot copied before inventory was normalized.
+// Filter on both read and write so revoking a table row takes effect immediately.
+func questInventory(items []string) []string {
+	out := []string{}
+	for _, id := range items {
+		if slices.Contains(rules.QuestItems, id) {
+			out = rules.AddUnique(out, id)
+		}
+	}
+	return out
 }

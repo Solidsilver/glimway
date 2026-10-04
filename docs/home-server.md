@@ -209,8 +209,9 @@ material balances, permanent region epochs, shared entity cycles, personal claim
 discoveries, fallen-hero lanterns, UTC relight reward counts, and durable claim
 limits. It preserves existing progress, balances, sessions, and revisions. A free
 campsite is granted at first homestead/Commons access and recorded in the ledger;
-the owner's revision advances once. Accepted Commons progress also grants it in
-the same progress transaction.
+reads allocate only the caller's plot without changing any revision. Unallocated
+neighbors remain visible as virtual tier-0 homes with null plot indices and bounds.
+Accepted Commons progress also grants the campsite in the same progress transaction.
 
 The current inner region is `inner-1`, with a permanent season `"0"` epoch using
 generator version 1. Future generator deployments must retain the implementation
@@ -220,11 +221,24 @@ regenerating land. No scheduled reset runs in this phase.
 
 Shared `content/homestead.json` contains the five tier identities and fourteen
 items. Only the free Campsite and the 15-ember Cottage ship now; higher upgrades
-remain unavailable. `content/economy.json` contains the one-ember home rest, twenty
-successful claims per minute, three rewarded relights per UTC day, and one-amber
+remain unavailable. Decoration placement requires the Cottage; buying tier-0
+items is allowed. `rest`/`revive` require the village hearth; `home-rest` requires
+the caller's own Commons plot. Sync remains allowed in both safe areas.
+`content/economy.json` contains the one-ember home rest, twenty
+successful claims per minute, two fallen lantern creations per owner per UTC day,
+three rewarded relights per UTC day, and one-amber
 relight reward. These are starting values for playtesting. Camps respawn after
 600 seconds and nodes regrow after 300 seconds, from `content/wilds.json`. A
 relight after the reward cap still lights the lantern but grants no material.
+Migration 006 persists creation counts and backfills them from the defeat ledger;
+replacements count, while idempotent replays do not. The third creation returns
+429 `lantern-creation-limited`, with Retry-After to UTC midnight.
+
+Claims and relights require Wilds progress within a three-tile Euclidean radius.
+Wilds tiles are 16 pixels (the game TILE), entity tx/ty are chunk-local, and
+lantern x/y are region tiles. Defeat positions use the same 16-pixel conversion.
+Home bounds use the separately configured Commons tile size. Normalized inventory
+rows are the only authority for loot; legacy progress copies are filtered on load.
 
 All gameplay POSTs require the play lease, current `baseRev`, and an idempotency
 key, with optional current `progress`. New response payloads are additive to the

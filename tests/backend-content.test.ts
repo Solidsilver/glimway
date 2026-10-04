@@ -19,6 +19,7 @@ test('shared economy has the complete typed shape and valid values', () => {
   assert.equal(e.chestId, 'ashwatch-chest');
   assert.equal(e.wildsLimits.claimsPerMinute, 20);
   assert.equal(e.wildsLimits.lanternRelightsPerDay, 3);
+  assert.equal(e.wildsLimits.lanternsCreatedPerDay, 2);
   assert.equal(e.wildsLimits.lanternReward.material, 'amber');
   assert.ok(e.costs.homeRest > 0 && e.costs.homeRest < e.costs.rest);
   assert.equal(e.charmItem, 'ember-charm');
