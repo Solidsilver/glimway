@@ -57,7 +57,15 @@ func (l *loginLimiter) allow(ip string, now time.Time) bool {
 	}
 	b, exists := l.buckets[ip]
 	if !exists && len(l.buckets) >= 4096 {
-		return false
+		var oldestKey string
+		var oldest time.Time
+		for key, value := range l.buckets {
+			if oldestKey == "" || value.start.Before(oldest) {
+				oldestKey = key
+				oldest = value.start
+			}
+		}
+		delete(l.buckets, oldestKey)
 	}
 	if !exists || now.Sub(b.start) >= l.window {
 		b = loginBucket{start: now}
@@ -76,10 +84,13 @@ func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
 	if c.LoginRate <= 0 {
 		c.LoginRate = 10
 	}
+	if c.LoginGlobalRate <= 0 {
+		c.LoginGlobalRate = 60
+	}
 	if c.LoginWindow <= 0 {
 		c.LoginWindow = time.Minute
 	}
-	return &Server{Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	return &Server{loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
 }
 func (a *Server) clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -100,13 +111,21 @@ func (a *Server) clientIP(r *http.Request) string {
 	if trusted {
 		hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
 		if ip := net.ParseIP(strings.TrimSpace(hops[len(hops)-1])); ip != nil {
-			return ip.String()
+			return ipBucket(ip)
 		}
 	}
-	return remote.String()
+	return ipBucket(remote)
+}
+
+// IPv6 privacy-address rotation stays in one /64 rate bucket.
+func ipBucket(ip net.IP) string {
+	if v4 := ip.To4(); v4 != nil {
+		return v4.String()
+	}
+	return ip.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
 func (a *Server) precheck(ctx context.Context, id, invite string) (bool, error) {
 	var allowed bool
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?)`, id, store.Hash(invite), a.Config.Now().Unix()).Scan(&allowed)
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?)`, id, id, store.Hash(invite), a.Config.Now().Unix()).Scan(&allowed)
 	return allowed, err
 }

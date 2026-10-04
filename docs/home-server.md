@@ -95,16 +95,20 @@ sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/finge
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist list
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist remove HABITICA_USER_ID
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invite [WORLD_ID]
+sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invites [HABITICA_USER_ID]
+sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invite revoke HASH
+sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite flag clear HABITICA_USER_ID
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite flagged
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite notes
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite backup /var/lib/fingersnap-server/backups/manual.sqlite
 ```
 
 Invoke the installed service package's binary path (from its `ExecStart`) if it
-is not on PATH. `invite` prints a random single-use code; its hash is stored.
+is not on PATH. `invite [WORLD_ID]` prints a random single-use code; its hash is stored.
 Without a world ID it creates a solo world for the recipient; with an existing
-world ID it admits a new player to that world. Allowlist removal also revokes
-all existing sessions. Existing players keep their world on later logins.
+world ID it admits a new player to that world. Allowlist removal records a removal marker and revokes
+all existing sessions and unused invites made by that player. Only CLI
+`allowlist add` or redemption of a CLI-created invite can re-admit that ID. Existing players keep their world on later logins.
 
 The nightly timer runs `VACUUM INTO` at 03:15, retains 30 days by default, and
 writes consistent standalone `.sqlite` snapshots under the state's `backups/`
@@ -130,25 +134,61 @@ using `go mod vendor -o /tmp/fingersnap-vendor` and
 
 ### Login limits and player invites
 
-The backend pre-checks allowlist membership or an unused/unexpired invite before
-calling Habitica, then rechecks access in the transaction. Login proofs have a
-global concurrency limit of four and a per-IP limit of ten attempts per minute
-(`-login-concurrency`, `-login-rate`). Client IP is RemoteAddr unless its peer
-is a configured trusted proxy; only then is the last X-Forwarded-For hop used.
-Caddy's localhost peer is trusted by default. Configure `-trusted-proxies`,
-`FINGERSNAP_TRUSTED_PROXIES`, or the Nix `trustedProxies` option as needed; an
-empty value trusts no proxy. Headers supplied by untrusted peers cannot bypass
-the rate limit.
+The backend pre-checks allowlist membership or an eligible unused/unexpired
+invite before creating a limiter bucket or calling Habitica, then rechecks
+access in the transaction. Default limits are four concurrent identity proofs,
+ten eligible attempts per IPv4 address or IPv6 /64 per minute, and sixty actual
+upstream calls globally per minute (including the single permitted 429 retry).
+Flags are `-login-concurrency`, `-login-rate`, and `-login-global-rate`.
+The bounded IP map evicts its oldest bucket when full. Client IP is RemoteAddr
+unless its peer is a configured trusted proxy; only then is the last
+X-Forwarded-For hop used. Caddy's localhost peer is trusted by default. Configure
+`-trusted-proxies`, `FINGERSNAP_TRUSTED_PROXIES`, or the Nix `trustedProxies` option;
+an empty value trusts no proxy.
 
-Authenticated world members can create an invite with `POST /api/invites {}`
-without a play lease, list hash-only outstanding metadata with `GET /api/invites`,
-and revoke an unused code with `DELETE /api/invites/:id`. Three outstanding
-codes per player are allowed; codes expire after 30 days. The raw code is
-returned only at creation. Admin CLI invites also expire after 30 days. Invites
-admit new players to the inviter's world, but never move an existing player.
-The `notes` admin command lists rebirth audit events separately from flagged
-players; legitimate deaths/rebirths keep the paid XP mark without forgery flags.
+Authenticated, unflagged world members can create an invite with
+`POST /api/invites`, sending `Content-Type: application/json` and the body `{}`
+(an empty body is rejected). No play lease is needed. `GET /api/invites` lists
+hash-only metadata for active unused codes and used history (`used: true`);
+`DELETE /api/invites/:id` revokes an unused code. Three outstanding codes and
+five total lifetime creations per player are allowed. Expiry, use and revocation
+do not restore the lifetime budget. Codes expire after 30 days. Raw codes are
+returned only at creation. Admin CLI invites also expire after 30 days, and are
+under the owner's control rather than the player budget. Invites admit new
+players to the inviter's world and preserve existing players' world membership.
 
-Schema upgrades run with immediate transaction locking; migration 002 carries
-previous aggregate pending credit into a lot at its original XP mark, backfills
-invite expiries, and adds player party IDs. Existing databases upgrade in place.
+`invites [player]` prints one JSON metadata record per code, optionally filtered
+by creator, including creator, recipient, world, expiry and revocation timestamps.
+`invite revoke HASH` revokes any unused code; the CLI can inspect player-made
+codes as well as its own. `notes` lists rebirth and large sync-loss audit events.
+`flag clear ID` clears a flag, advances the snapshot revision once and records an
+audit entry. Access removal and flags are separate owner controls.
+
+Unverified credit starts at 200 embers above the login checkpoint, grows by
+100 per full day, and caps at 3000. Pending lots are confirmed only by a verified
+login reaching their original reported XP and expire after 90 days. Both syncs
+and logins advance the separate loss reference. Several deaths can be synced
+at once; large losses are audited. A checkpoint flags only the generous forgery
+signals documented in `.agent/REPORT.md`, preserving pending until expiry or
+confirmation. Rebirth requires earlier verified history above level 1. Sessions
+expire absolutely 30 days after login even with daily activity; the server sees
+a token only during `POST /api/session`, so active players sign in monthly.
+
+### Backend upgrade notes
+
+Schema upgrades use immediate transaction locking. Migration 002 carries old
+aggregate pending credit into a lot at its original XP mark and adds party IDs.
+It also **backfills every existing invite's expiry as created_at + 30 days**,
+including old CLI codes already handed out: codes older than 30 days become
+expired on upgrade. Inspect with `invites` and create replacement CLI codes when
+needed.
+
+Migration 003 adds independent loss references and verified-level history,
+records legacy players lacking allowlist access as removed, revokes their unused
+invites, and bounds existing session expiry by created_at + 30 days. Loss
+references are initialized from the newest available legacy baseline/checkpoint
+metadata; old databases did not retain a distinct sync-only timestamp. New
+accepted syncs and verified checkpoints record their reference explicitly.
+Existing pending lots retain their original creation date for 90-day expiry.
+The service upgrades existing databases in place; use the backup procedure above
+before an owner deployment.

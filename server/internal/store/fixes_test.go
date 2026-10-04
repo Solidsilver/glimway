@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fingersnap/server/internal/rules"
 	"os"
 	"path/filepath"
 	"sync"
@@ -89,7 +90,7 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 			if err == nil {
 				var n int
 				err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n)
-				if err == nil && n != 2 {
+				if err == nil && n != 3 {
 					err = sql.ErrNoRows
 				}
 				s.Close()
@@ -148,5 +149,58 @@ func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 	}
 	if _, err = os.Stat(path); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRound2UpgradeLossHistoryRemovalAndSessionDeadline(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "round1.sqlite")
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"001_core.sql", "002_fix_round.sql"} {
+		schema, err := migrations.ReadFile("migrations/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = old.Exec(string(schema)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p := rules.Profile{ID: "alice", Name: "Hero", Level: 30, Exp: new(float64)}
+	cp := p
+	cp.Level = 29
+	if _, err = old.Exec("CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL); INSERT INTO schema_migrations VALUES('001_core.sql',0),('002_fix_round.sql',0); INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',1); INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Hero','w',1,100)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = old.Exec("INSERT INTO sync_baselines(habitica_id,profile_json,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice',?,10080,?,?,200,100)", JSON(p), rules.LifetimeXP(29, 0), JSON(cp)); err != nil {
+		t.Fatal(err)
+	}
+	cp.Level = 120
+	if _, err = old.Exec("INSERT INTO sessions VALUES('hash','alice',1,9999999,?,0)", JSON(cp)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = old.Exec("INSERT INTO invites(code_hash,created_by,created_at,expires_at) VALUES('player-code','alice',1,9999999)"); err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var level, xp, high float64
+	if err = s.DB.QueryRow("SELECT loss_level,loss_xp,verified_high_level FROM sync_baselines WHERE habitica_id='alice'").Scan(&level, &xp, &high); err != nil || level != 29 || xp != rules.LifetimeXP(29, 0) || high != 120 {
+		t.Fatal("upgrade ignored newest checkpoint or verified history")
+	}
+	var deadline, removed, revoked int64
+	if err = s.DB.QueryRow("SELECT expires_at FROM sessions").Scan(&deadline); err != nil || deadline != 1+30*86400 {
+		t.Fatal("legacy session extended absolute lifetime")
+	}
+	if err = s.DB.QueryRow("SELECT removed_at FROM access_removals WHERE habitica_id='alice'").Scan(&removed); err != nil {
+		t.Fatal("legacy removed account not recorded")
+	}
+	if err = s.DB.QueryRow("SELECT revoked_at FROM invites").Scan(&revoked); err != nil || revoked != removed {
+		t.Fatal("legacy removed player's invite not revoked")
 	}
 }

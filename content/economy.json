@@ -20,5 +20,9 @@
   "syncCreditCap": 200,
   "migrationGiftCap": 30,
   "checkpointToleranceXp": 10,
-  "outstandingInvites": 3
+  "outstandingInvites": 3,
+  "syncCreditDailyGrowth": 100,
+  "syncCreditMax": 3000,
+  "pendingCreditDays": 90,
+  "lifetimeInvites": 5
 }
