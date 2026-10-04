@@ -30,6 +30,14 @@ export const EV = {
   discovery: 'ui:discovery',
   /** The hero rolled (cooldown starts) — HUD/touch cooldown sweep. */
   rolled: 'ui:rolled',
+  /** Connected play: server link status changed (online, offline, taken over…). */
+  link: 'ui:link',
+  /** Connected play: a reconnect merged offline progress into newer server progress. */
+  linkNotice: 'ui:link-notice',
+  /** Connected play: the server moved the hero (a stale merge) — the scene follows. */
+  relocate: 'game:relocate',
+  /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
+  worldRefresh: 'game:world-refresh',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -116,4 +124,20 @@ export interface DialogueClosedPayload {
   event?: string
   /** The picked choice's action, if any. */
   action?: string
+}
+
+export type LinkStatus = 'online' | 'offline' | 'superseded' | 'signed-out'
+
+export interface LinkPayload {
+  status: LinkStatus
+  /** A spend or sync is waiting for the server. */
+  busy: boolean
+  /** Local changes the server hasn't accepted yet. */
+  dirty: boolean
+}
+
+export interface RelocatePayload {
+  area: 'village' | 'woodland' | 'ruin'
+  x: number
+  y: number
 }

@@ -156,7 +156,10 @@ export class Interactables {
     let payload: Dialogue
     try {
       payload = this.isEmberSpot(target.id)
-        ? emberDialogue(target.id, session.state, { connected: session.vitalsSource === 'imported' })
+        ? emberDialogue(target.id, session.state, {
+          connected: session.vitalsSource === 'imported',
+          remote: session.link ? (session.link.online ? 'online' : 'offline') : null
+        })
         : dialogueFor(target.id, session.questStage)
     } catch (err) {
       console.warn('[fingersnap] no dialogue available for', target.id, err)

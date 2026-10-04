@@ -18,6 +18,7 @@ import { resolveDefeatRecovery } from '../lib/habitica/sync'
 import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
 import { saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
+import type { Link } from './link'
 
 /** advanceQuest is only called when the current stage matches this gate. */
 const QUEST_GATE: Record<QuestEvent, QuestStage> = {
@@ -40,11 +41,26 @@ export class Session {
   private generation = 0
   /** True while a sync persistence is in flight — ordinary saves defer. */
   private syncInFlight = false
+  /**
+   * Connected play: the server link. Null for guests, whose saves stay on
+   * this device exactly as before. With a link, saves go to the connected
+   * cache and the server, spends and syncs go through the server, and quest
+   * embers arrive from the server instead of being granted here.
+   */
+  readonly link: Link | null
+  /** A server spend or sync is out: the world waits for its answer. */
+  remoteBusy = false
 
-  constructor(state: GameState, provenance?: { vitalsSource?: VitalsSource; importedProfile?: HabiticaProfile | null }) {
+  constructor(
+    state: GameState,
+    provenance?: { vitalsSource?: VitalsSource; importedProfile?: HabiticaProfile | null },
+    link: Link | null = null
+  ) {
     this.state = state
     this.vitalsSource = provenance?.vitalsSource ?? 'demo'
     this.importedProfile = provenance?.importedProfile ?? null
+    this.link = link
+    link?.attach(this)
   }
 
   get currentGeneration(): number {
@@ -55,7 +71,7 @@ export class Session {
    * resource/combat mutations for the (brief) write so a mid-flight enemy hit
    * or regen tick cannot be reverted by the committed snapshot. */
   get persistenceInFlight(): boolean {
-    return this.syncInFlight
+    return this.syncInFlight || this.remoteBusy
   }
 
   /** True when the given generation is still the live one. */
@@ -145,15 +161,18 @@ export class Session {
       return
     }
     this.emitQuest()
-    const reward = questEmbers(event)
+    // Connected: the server grants quest gifts when the upload lands (once
+    // per player) and the toast follows its answer (Link.giftToast).
+    const reward = this.link ? 0 : questEmbers(event)
     if (reward > 0) this.addEmbers(reward, `+${reward} embers — a little warmth from the road.`)
     this.saveSoon()
   }
 
   /** Credit embers locally (quest beats). Habitica-earned embers arrive via
-   *  applySynced, already folded into the synced state. */
+   *  applySynced, already folded into the synced state. Never for connected
+   *  play: balances are server-owned. */
   addEmbers(n: number, toast?: string): void {
-    if (this.destroyed || n <= 0) return
+    if (this.destroyed || n <= 0 || this.link) return
     this.state = grantEmbers(this.state, n)
     this.emitStats()
     if (toast) bus.emit(EV.toast, { text: toast, icon: 'ember' })
@@ -174,7 +193,7 @@ export class Session {
   /** Spend embers via the shared rules. Returns null on success, or why it
    *  was refused (and nothing changed). Saved promptly: it is a purchase. */
   spend(spend: EmberSpend): null | 'busy' | SpendReason {
-    if (this.destroyed || this.syncInFlight) return 'busy'
+    if (this.destroyed || this.syncInFlight || this.link) return 'busy'
     const ctx = { imported: this.vitalsSource === 'imported' }
     const check = checkSpend(this.state, spend, ctx)
     if (!check.ok) return check.reason
@@ -182,6 +201,32 @@ export class Session {
     this.emitStats()
     this.saveSoon()
     return null
+  }
+
+  /**
+   * Connected play: adopt a state merged from a server answer
+   * (src/lib/api/progress.ts). `relocate` moves the hero when the server's
+   * area or position won (a stale merge).
+   */
+  applyServer(
+    next: GameState,
+    provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null },
+    relocate: boolean
+  ): void {
+    if (this.destroyed) return
+    const prev = this.state
+    const profileChanged = JSON.stringify(provenance.importedProfile) !== JSON.stringify(this.importedProfile)
+    this.state = next
+    this.vitalsSource = provenance.vitalsSource
+    this.importedProfile = provenance.importedProfile
+    this.emitStats()
+    if (prev.quest !== next.quest) this.emitQuest()
+    if (profileChanged) bus.emit(EV.profileChanged, { profile: this.importedProfile })
+    // Balances and paid outcomes change what markers and lanterns show.
+    bus.emit(EV.worldRefresh)
+    if (relocate && (prev.area !== next.area || Math.hypot(prev.position.x - next.position.x, prev.position.y - next.position.y) > 4)) {
+      bus.emit(EV.relocate, { area: next.area, x: next.position.x, y: next.position.y })
+    }
   }
 
   emitQuest(): void {
@@ -306,6 +351,10 @@ export class Session {
    */
   async save(): Promise<void> {
     if (this.destroyed) return
+    if (this.link) {
+      await this.link.persist()
+      return
+    }
     if (this.syncInFlight) {
       this.pendingSave = true
       return
@@ -351,6 +400,13 @@ export class Session {
     const finalState = this.state
     const finalVitalsSource = this.vitalsSource
     const finalProfile = this.importedProfile
+    if (this.link) {
+      const link = this.link
+      const last = skipSave ? Promise.resolve() : link.persist()
+      this.destroyed = true
+      void last.finally(() => link.stop())
+      return
+    }
     this.destroyed = true
     if (skipSave) return
     void saveGame(finalState, {

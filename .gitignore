@@ -19,6 +19,9 @@ dist
 .data/
 /fingersnap-server
 
+# Connected playtests: throwaway server database and binary
+/.e2e-server/
+
 # Publication hygiene
 /public/assets/fingersnap/**/drafts/
 .idea/
