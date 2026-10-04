@@ -9,6 +9,7 @@
     type CinematicPayload,
     type DefeatPayload,
     type DiscoveryPayload,
+    type LinkPayload,
     type PortraitsPayload,
     type PromptPayload,
     type QuestPayload,
@@ -17,7 +18,7 @@
   } from './game/events'
   import { ui } from './ui/store.svelte'
   import { Session } from './game/session'
-  import { createNewGame, questObjective, type QuestStage } from './lib/state'
+  import { createNewGame, questObjective, type GameState, type QuestStage } from './lib/state'
   import { clearSave, loadSaveRecord } from './lib/save'
   import { discoveryInfo, locations } from './content/world'
   import { startGame, stopGame } from './game/main'
@@ -40,6 +41,17 @@
   import { XP_PER_EMBER } from './lib/embers'
   import { emberLine, titleChoice } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
+  import { accountName, api, connectedSession, probeServer } from './ui/account'
+  import { clearCache, loadCache, type ConnectedCache } from './lib/api/cache'
+  import { newKey } from './lib/api/client'
+  import { errorCode, isUnreachable } from './lib/api/errors'
+  import { hasProgress } from './lib/api/progress'
+  import type { Snapshot } from './lib/api/types'
+  import type { HabiticaProfile } from './lib/habitica/types'
+  import OriginChoice from './ui/OriginChoice.svelte'
+  import LinkGate from './ui/LinkGate.svelte'
+  import LinkNotice from './ui/LinkNotice.svelte'
+  import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
   type Panel = 'journal' | 'character' | 'menu' | null
@@ -52,6 +64,27 @@
   let confirm = $state<'new' | 'discard' | 'overwrite' | null>(null)
   /** New-game flow on the title screen: pick a way to play, or walk the connect guide. */
   let titleView = $state<'choice' | 'guide'>('choice')
+
+  // ---- connected play (Fingersnap server) ----
+  /** Latest server snapshot for the signed-in account (null when offline or signed out). */
+  let accountSnapshot = $state<Snapshot | null>(null)
+  /** The device's connected cache (offline copy, revision, lease). */
+  let accountCache = $state<ConnectedCache | null>(null)
+  /** Signed in earlier, but no server answered at load: play from the cache. */
+  let accountOffline = $state(false)
+  let accountBusy = $state(false)
+  let accountError = $state('')
+  type Gate =
+    | { kind: 'origin'; name: string; local: GameState; key: string; busy: boolean; error: string }
+    | { kind: 'elsewhere'; busy: boolean; error: string }
+  /** A step between signing in and playing: the origin choice or the lease. */
+  let gate = $state<Gate | null>(null)
+  /** A connected session waiting for the player to take over the lease. */
+  let pending: Session | null = null
+  /** In-play lease screen (taken over elsewhere, or signed out). */
+  let leaseBusy = $state(false)
+  let leaseError = $state('')
+  let confirmLogout = $state(false)
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
@@ -77,6 +110,30 @@
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
   })
+
+  /** The signed-in account's Continue card on the title screen. */
+  const accountSummary = $derived.by(() => {
+    if (!ui.account) return null
+    if (accountSnapshot && accountSnapshot.saveOrigin === null) {
+      return { place: 'Your world', time: '', goal: 'Choose how to begin.' }
+    }
+    const cached = accountCache && accountCache.habiticaId === ui.account.habiticaId ? accountCache : null
+    const st = cached && (cached.dirty || !accountSnapshot) ? cached.state : accountSnapshot?.state
+    if (!st) return null
+    const mins = Math.floor(st.playSeconds / 60)
+    return {
+      place: locations[st.area].name,
+      goal: questObjective(st.quest),
+      time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
+    }
+  })
+
+  /** Connected play can't go on here: taken over elsewhere, or signed out. */
+  const leaseBlock = $derived(
+    phase === 'playing' && !!session?.link && (ui.link?.status === 'superseded' || ui.link?.status === 'signed-out')
+      ? (ui.link.status === 'superseded' ? 'elsewhere' : 'signed-out')
+      : null
+  )
 
   function wireBus(): () => void {
     const onStats = (p: StatsPayload) => {
@@ -139,6 +196,12 @@
       sfx('discover')
       ui.toast({ text: `New in your journal: ${discoveryInfo(p.id).name}`, icon: 'scroll' })
     }
+    const onLink = (p: LinkPayload) => {
+      ui.link = p
+    }
+    const onLinkNotice = () => {
+      ui.linkNotice = 'played-elsewhere'
+    }
     const pairs: [string, (...args: never[]) => void][] = [
       [EV.stats, onStats],
       [EV.quest, onQuest],
@@ -150,7 +213,9 @@
       [EV.rolled, onRolled],
       [EV.cinematic, onCinematic],
       [EV.portraits, onPortraits],
-      [EV.discovery, onDiscovery]
+      [EV.discovery, onDiscovery],
+      [EV.link, onLink],
+      [EV.linkNotice, onLinkNotice]
     ]
     for (const [ev, fn] of pairs) bus.on(ev, fn)
     return () => {
@@ -182,6 +247,7 @@
           importedProfile: record?.importedProfile
         })
         phase = 'title'
+        void initServer()
         // Opt-in remembered credentials: connect without a paste. Storage
         // trouble just means "nothing remembered".
         void loadRemembered().then((creds) => {
@@ -225,6 +291,219 @@
     }
     phase = 'playing'
     game = startGame(stageEl, session)
+  }
+
+  // ------------------------------------------------------------ connected play
+
+  /**
+   * Is there a Fingersnap server, and are we signed in? A valid session
+   * cookie means signed in even with no remembered Habitica token. No server
+   * (a guest-only build, or offline) leaves guest play exactly as it was,
+   * except that a device with a connected cache can keep playing offline.
+   */
+  async function initServer(): Promise<void> {
+    const [probe, cache] = await Promise.all([probeServer(), loadCache()])
+    accountCache = cache
+    if (probe.kind === 'signed-in') {
+      ui.server = 'available'
+      accountSnapshot = probe.snapshot
+      ui.account = { habiticaId: probe.snapshot.habiticaId, name: accountName(probe.snapshot, cache) }
+    } else if (probe.kind === 'signed-out') {
+      ui.server = 'available'
+    } else {
+      ui.server = 'unavailable'
+      if (cache) {
+        accountOffline = true
+        ui.account = { habiticaId: cache.habiticaId, name: cache.name || 'Your hero' }
+      }
+    }
+  }
+
+  /** Title: Continue in your world. */
+  async function continueAccount(): Promise<void> {
+    if (accountBusy || starting || !ui.account) return
+    accountBusy = true
+    accountError = ''
+    try {
+      if (accountSnapshot && accountSnapshot.saveOrigin === null) {
+        openOrigin(ui.account.name)
+        return
+      }
+      const s = connectedSession({ snapshot: accountSnapshot, cache: await loadCache(), name: ui.account.name })
+      await s.link!.reconnect(false)
+      await settle(s)
+    } finally {
+      accountBusy = false
+    }
+  }
+
+  /** The guide signed in to the server. */
+  async function onSignedIn(snapshot: Snapshot, profile: HabiticaProfile): Promise<void> {
+    ui.server = 'available'
+    accountOffline = false
+    accountSnapshot = snapshot
+    const name = snapshot.importedProfile?.name ?? profile.name
+    ui.account = { habiticaId: snapshot.habiticaId, name }
+    // Signed in from the Menu: the next step (origin, lease) takes the screen.
+    panel = null
+    accountCache = await loadCache()
+    if (snapshot.saveOrigin === null) {
+      const guest = session && !session.link ? session : null
+      if (guest && hasProgress(guest.state)) openOrigin(name)
+      else await chooseOrigin('fresh', name)
+      return
+    }
+    // The account already has a journey: this device's guest save stays put.
+    if (session && !session.link && hasProgress(session.state)) ui.toast({ text: originCopy.alreadySet })
+    await startAccount(snapshot, name)
+  }
+
+  function openOrigin(name: string): void {
+    const local = session && !session.link ? session.state : createNewGame()
+    gate = { kind: 'origin', name, local, key: newKey(), busy: false, error: '' }
+  }
+
+  /** First sign-in for the account: bring this device's journey, or start fresh. */
+  async function chooseOrigin(choice: 'migrate' | 'fresh', fallbackName?: string): Promise<void> {
+    const g = gate?.kind === 'origin' ? gate : null
+    if (g?.busy) return
+    const key = g?.key ?? newKey()
+    const name = g?.name ?? fallbackName ?? ui.account?.name ?? 'Your hero'
+    if (g) {
+      g.busy = true
+      g.error = ''
+    }
+    const guest = session && !session.link ? session : null
+    try {
+      const snap = await api.origin({
+        choice,
+        key,
+        ...(choice === 'migrate' && guest ? { save: { state: guest.state, vitalsSource: guest.vitalsSource } } : {})
+      })
+      accountSnapshot = snap
+      gate = null
+      await startAccount(snap, snap.importedProfile?.name ?? name)
+      if (choice === 'migrate' && session?.link) ui.toast({ text: 'Your journey came with you into your world.', icon: 'lantern' })
+    } catch (err) {
+      if (errorCode(err) === 'already-set') {
+        // Chosen already (another device, a race): keep the local save as a
+        // guest save on this device and load the account.
+        gate = null
+        try {
+          const snap = await api.state()
+          accountSnapshot = snap
+          ui.toast({ text: originCopy.alreadySet })
+          await startAccount(snap, snap.importedProfile?.name ?? name)
+        } catch {
+          accountError = originCopy.offline
+        }
+        return
+      }
+      const error = isUnreachable(err) ? originCopy.offline : originCopy.failed
+      if (g) {
+        g.busy = false
+        g.error = error
+      } else {
+        gate = { kind: 'origin', name, local: guest?.state ?? createNewGame(), key, busy: false, error }
+      }
+    }
+  }
+
+  async function startAccount(snapshot: Snapshot, name: string): Promise<void> {
+    if (ui.account) ui.account = { ...ui.account, name }
+    const s = connectedSession({ snapshot, cache: await loadCache(), name })
+    await s.link!.reconnect(false)
+    await settle(s)
+  }
+
+  /** After the first lease attempt: play, ask to take over, or step back. */
+  async function settle(s: Session): Promise<void> {
+    const status = s.link!.status
+    if (status === 'superseded') {
+      pending = s
+      gate = { kind: 'elsewhere', busy: false, error: '' }
+      return
+    }
+    if (status === 'signed-out') {
+      s.destroy(true)
+      ui.link = null
+      ui.account = null
+      accountSnapshot = null
+      accountError = 'Your sign-in ended. Sign in again to play in your world.'
+      return
+    }
+    // Online, or offline (the link keeps retrying and the world plays on).
+    await enterSession(s)
+  }
+
+  async function takeOverPending(): Promise<void> {
+    const g = gate?.kind === 'elsewhere' ? gate : null
+    if (!pending || !g || g.busy) return
+    g.busy = true
+    g.error = ''
+    await pending.link!.takeOver()
+    if (pending.link!.status === 'superseded') {
+      g.busy = false
+      g.error = leaseCopy.failed
+      return
+    }
+    const s = pending
+    pending = null
+    await settle(s)
+  }
+
+  function dropPending(): void {
+    pending?.destroy(true)
+    pending = null
+    gate = null
+    ui.link = null
+  }
+
+  /** Swap the running session for a connected one (title or mid-game). */
+  async function enterSession(next: Session): Promise<void> {
+    gate = null
+    pending = null
+    const prev = session
+    session = next
+    accountOffline = next.link?.status === 'offline'
+    ui.vitalsSource = next.vitalsSource
+    ui.importedProfile = next.importedProfile
+    ui.questKnown = false // a different journey: its first quest reading is not a change
+    hasSave = true
+    // The guest journey saves itself one last time and stays on this device.
+    if (prev && prev !== next) prev.destroy()
+    if (phase === 'playing') {
+      panel = null
+      stopGame(game)
+      areaShown = false
+      game = startGame(stageEl, next)
+    } else {
+      await begin()
+    }
+  }
+
+  async function takeOverInPlay(): Promise<void> {
+    if (!session?.link || leaseBusy) return
+    leaseBusy = true
+    leaseError = ''
+    await session.link.takeOver()
+    leaseBusy = false
+    if (session.link.status === 'superseded') leaseError = leaseCopy.failed
+  }
+
+  /** Log out of the world: upload what's pending, end the session, back to guest play. */
+  async function logout(): Promise<void> {
+    confirmLogout = false
+    const link = session?.link
+    if (link) await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, 4000))])
+    try {
+      await api.logout()
+    } catch {
+      /* the cookie expires on its own; the device forgets below */
+    }
+    await clearCache()
+    if (link) session?.destroy(true)
+    window.location.reload()
   }
 
   function requestNew(): void {
@@ -296,7 +575,7 @@
   }
 
   $effect(() => {
-    uiState.panelOpen = panel !== null || ui.endingOpen
+    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null
   })
 
   function toggle(p: Exclude<Panel, null>): void {
@@ -312,7 +591,7 @@
    * fields (credentials, import codes) are ignored so typing never toggles.
    */
   function onKeyGlobal(e: KeyboardEvent): void {
-    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm) return
+    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
@@ -352,12 +631,29 @@
     <Banners />
     <Toasts />
     <Moments {session} />
+    {#if ui.linkNotice && session.link}
+      <LinkNotice
+        onDismiss={() => {
+          ui.linkNotice = null
+          session?.link?.dismissRecovery()
+        }}
+      />
+    {/if}
     {#if panel === 'journal'}
       <JournalPanel onClose={() => toggle('journal')} />
     {:else if panel === 'character'}
       <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} />
     {:else if panel === 'menu'}
-      <MenuPanel {session} onClose={() => toggle('menu')} />
+      <MenuPanel
+        {session}
+        onClose={() => toggle('menu')}
+        {onSignedIn}
+        onLogout={logout}
+        onEnterWorld={() => {
+          panel = null
+          void continueAccount()
+        }}
+      />
     {/if}
   {/if}
 
@@ -402,18 +698,38 @@
           <p class="status"><span class="spark"></span> Lighting the lamps…</p>
         {:else}
           <div class="actions">
-            {#if hasSave && saveSummary}
+            {#if ui.account && accountSummary && titleView !== 'guide'}
+              <button type="button" class="primary continue" onclick={continueAccount} disabled={accountBusy} data-testid="continue-world">
+                <span class="big">{accountBusy ? 'Opening your world…' : 'Continue'}</span>
+                <span class="meta"><Icon name="person" size={12} /> {ui.account.name} · {accountSummary.place}{accountSummary.time ? ` · ${accountSummary.time}` : ''}</span>
+                <span class="goal">{accountSummary.goal}</span>
+              </button>
+              <p class="world-chip" class:off={accountOffline}>
+                <Icon name={accountOffline ? 'cloud' : 'lantern'} size={12} />
+                {accountOffline ? accountCopy.titleChipOffline : accountCopy.titleChip}
+              </p>
+              {#if accountError}<p class="title-error" role="alert">{accountError}</p>{/if}
+              {#if !accountOffline}
+                <button type="button" class="secondary small" onclick={() => (confirmLogout = true)}>{accountCopy.logout}</button>
+              {/if}
+            {:else if titleView === 'guide' && session}
+              <div class="panel guide-card">
+                <h2 class="guide-title"><Icon name="person" size={18} /> {hasSave ? 'Sign in to your world' : titleChoice.habitica}</h2>
+                <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} onReady={begin} {onSignedIn} />
+              </div>
+            {:else if hasSave && saveSummary}
               <button type="button" class="primary continue" onclick={begin}>
                 <span class="big">Continue</span>
                 <span class="meta"><Icon name="lantern" size={12} /> {saveSummary.place} · {saveSummary.time}</span>
                 <span class="goal">{saveSummary.goal}</span>
               </button>
               <button type="button" class="secondary" onclick={requestNew}>New journey</button>
-            {:else if titleView === 'guide' && session}
-              <div class="panel guide-card">
-                <h2 class="guide-title"><Icon name="person" size={18} /> {titleChoice.habitica}</h2>
-                <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} onReady={begin} />
-              </div>
+              {#if ui.server === 'available' && !ui.account}
+                <!-- A returning player whose sign-in ended: the guest journey stays, nothing is replaced. -->
+                <button type="button" class="ghost signin" onclick={() => (titleView = 'guide')}>
+                  <Icon name="lantern" size={12} /> Sign in to your world
+                </button>
+              {/if}
             {:else}
               <div class="choice-col">
                 <button type="button" class="primary continue" onclick={startHabitica}>
@@ -437,9 +753,46 @@
             </p>
           {/if}
         {/if}
-        <p class="fineprint">Plays right here in your browser. Your saves stay on this device.</p>
+        {#if accountError && !(ui.account && accountSummary)}<p class="title-error" role="alert">{accountError}</p>{/if}
+        <p class="fineprint">
+          {ui.account ? 'Plays right here in your browser. Your journey saves to your world.' : 'Plays right here in your browser. Your saves stay on this device.'}
+        </p>
       </div>
     </div>
+  {/if}
+
+  {#if gate?.kind === 'origin'}
+    <OriginChoice
+      name={gate.name}
+      local={gate.local}
+      busy={gate.busy}
+      error={gate.error}
+      onChoose={(c) => void chooseOrigin(c)}
+      onCancel={() => (gate = null)}
+    />
+  {:else if gate?.kind === 'elsewhere'}
+    <LinkGate kind="elsewhere" busy={gate.busy} error={gate.error} onTakeOver={takeOverPending} onBack={dropPending} />
+  {/if}
+
+  {#if leaseBlock && !gate}
+    <LinkGate
+      kind={leaseBlock}
+      busy={leaseBusy}
+      error={leaseError}
+      onTakeOver={takeOverInPlay}
+      onBack={() => window.location.reload()}
+      backLabel={leaseCopy.toTitle}
+    />
+  {/if}
+
+  {#if confirmLogout}
+    <ConfirmDialog
+      title={accountCopy.logoutTitle}
+      body={accountCopy.logoutBody}
+      confirmLabel={accountCopy.logout}
+      onConfirm={logout}
+      onCancel={() => (confirmLogout = false)}
+    />
   {/if}
 
   {#if confirm === 'new'}
@@ -696,6 +1049,49 @@
   .keys .kbd {
     margin-right: 4px;
     font-size: 12px;
+  }
+  .world-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: -2px 0 0;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-family: var(--font-display);
+    font-size: 12.5px;
+    color: #fff3c4;
+    background: rgba(47, 127, 122, 0.55);
+    border: 1.5px solid rgba(143, 220, 210, 0.55);
+  }
+  .world-chip.off {
+    background: rgba(79, 134, 214, 0.35);
+    border-color: rgba(143, 184, 255, 0.55);
+  }
+  .ghost.signin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #f4e4c1;
+    text-decoration: underline;
+    text-decoration-color: rgba(244, 228, 193, 0.4);
+    text-underline-offset: 4px;
+  }
+  .ghost.signin:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .secondary.small {
+    padding: 5px 14px;
+    font-size: 14px;
+  }
+  .title-error {
+    margin: 0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: #ffe1d6;
+    background: rgba(196, 82, 58, 0.45);
   }
   .fineprint {
     margin: 0;

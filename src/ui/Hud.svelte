@@ -4,6 +4,7 @@
   import { EMBER_COSTS } from '../lib/embers'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import { offlineCopy } from '../content/connected'
 
   let { onJournal, onCharacter, onMenu }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void } = $props()
 
@@ -42,6 +43,16 @@
         {/key}
       {/if}
     </div>
+    {#if ui.link && (ui.link.status === 'offline' || ui.link.busy)}
+      <div class="net" role="status" aria-live="polite">
+        {#if ui.link.busy}
+          <span class="pill busy" data-testid="net-pending"><span class="dots" aria-hidden="true"></span>{offlineCopy.pending}</span>
+        {:else}
+          <span class="pill off" title={offlineCopy.chipTitle} data-testid="net-offline"><Icon name="cloud" size={12} />{offlineCopy.chip}</span>
+          <span class="why">{offlineCopy.chipTitle}</span>
+        {/if}
+      </div>
+    {/if}
     <button
       type="button"
       class="objective"
@@ -190,6 +201,54 @@
     0% { transform: scale(1); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 0 rgba(255, 179, 92, 0.9); }
     40% { transform: scale(1.18); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 8px rgba(255, 179, 92, 0); }
     100% { transform: scale(1); }
+  }
+  .net {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 0;
+    min-width: 0;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    padding: 1px 9px 1px 7px;
+    font-family: var(--font-display);
+    font-size: 12.5px;
+    border-radius: 999px;
+    border: 2px solid var(--wood-dark);
+  }
+  .pill.off {
+    color: #1f3c66;
+    background: linear-gradient(180deg, #dbe8ff, #b5cdf5);
+  }
+  .pill.busy {
+    color: #5a2410;
+    background: linear-gradient(180deg, #fff2c9, #ffd98a);
+  }
+  .dots {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--ember);
+    animation: net-pulse 0.9s ease-in-out infinite;
+  }
+  .why {
+    font-size: 11.5px;
+    line-height: 1.25;
+    color: var(--text-soft);
+    min-width: 0;
+  }
+  @media (max-width: 560px) {
+    .why {
+      display: none;
+    }
+  }
+  @keyframes net-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
   }
   .objective {
     all: unset;
