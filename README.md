@@ -256,3 +256,14 @@ account writes, and checkpoint rewind remain out of scope.
   Habitica art subset and gear catalog are non-commercial/attribution-bound —
   see `ASSETS.md` "Third-party use boundaries" (public redistribution blocked
   until corresponding source is published).
+
+## Optional connected backend
+
+Guest play remains local. The phase-2 Go backend lives in `server/` with shared
+JSON in `content/`; run it locally with `npm run server` (Go 1.26+), alongside
+`npm run dev`. Server access is allowlist/invite-only. The server sees a
+Habitica token only during login and makes one read-only `GET /user` to prove
+account ownership (one retry on 429). It never stores, logs, or returns the
+token. Later sync fetches remain browser-to-Habitica. The backend owns
+connected balances, sync baselines and paid outcomes; frontend integration
+is a later phase. See [deployment and backups](docs/home-server.md).

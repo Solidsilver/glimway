@@ -26,17 +26,21 @@ same UI are appended at the end of this file.
   IndexedDB saves, save exports, logs, error messages, URLs, or source
   control. Save validation (`validateSave`, `validateHabiticaProfile`) strips
   unknown fields, so a stray token cannot ride along even if handed in.
-  **The one exception** is the connect guide's **Remember on this device**
-  box (off by default). When ticked, the User ID and token are stored in
-  IndexedDB in their own database (`fingersnap-credentials`, see
+  **On the device, the one exception** is the connect guide's **Remember on
+  this device** box (off by default). When ticked, the User ID and token are
+  stored in IndexedDB in their own database (`fingersnap-credentials`, see
   `src/lib/habitica/remembered.ts`), separate from the `fingersnap` save
   database. They are still never put in GameState, saves, save exports, logs
   or error messages. A visible **Forget** button deletes them, and Disconnect
   asks whether to forget too. The exposure is stated in the UI: a script
   injection on the Fingersnap origin could read a remembered token, and that
   token can write to the Habitica account. All storage access is wrapped in
-  try/catch; the game works when IndexedDB is unavailable. (No server exists
-  yet; nothing is sent anywhere but Habitica.)
+  try/catch; the game works when IndexedDB is unavailable.
+- **On the Fingersnap server**: the raw token exists only during one login
+  proof request (`POST /api/session`). It is never stored in files, the
+  database, backups, logs or responses. Server logging excludes bodies,
+  headers and unrecognized paths/query strings. Syncs go from the browser to
+  Habitica directly; the server only records the reported profile.
 - **`.env` is dev-only**: `HABITICA_USER_ID` / `HABITICA_API_TOKEN` (see
   `.env.example`, gitignored) prefill credentials for local live checks and
   tests run in Node. They are read via `process.env` in dev/test tooling.
@@ -67,7 +71,8 @@ Embers turn Habitica XP into an in-game currency without any write path:
   flag so disconnecting and reconnecting cannot repeat it. Past XP is not paid.
 - **Earned vs gifted**: `GameState.xpEmbers` counts embers that came from XP.
   Ordinary spends use gifted (welcome/quest) embers first.
-- **Spending** is local only (`spendEmbers`): a warm rest restores local HP and
+- **Guest spending** is local (`spendEmbers`); connected spending uses the
+  server transaction and ledger: a warm rest restores local HP and
   mana. For an imported hero at 0 HP it lifts the zero-HP lock only when paid
   with XP-earned embers (`needs-earned` otherwise), so the welcome gift can't
   bypass the lock. Lit road lanterns restore mana for everyone but HP only for
@@ -314,3 +319,31 @@ hand-computed expected effective stats:
 9. Demo rollback / "reset to demo": `saveGame(state,
    { vitalsSource: 'demo', importedProfile: null })` — never leave a stale
    baseline.
+
+## Connected saves (phase 2 backend)
+
+The browser still fetches Habitica profiles directly for explicit syncs. The
+server calls Habitica only for `POST /api/session`, to verify the account,
+with at most one retry after 429. For connected saves the server owns the HP/MP
+baseline, XP high-water mark, earned/gifted balances, paid outcomes and bought
+inventory. Guests retain all existing local rules above.
+
+`content/economy.json` is canonical for both languages; `content/vectors/`
+contains outputs of the real TypeScript functions replayed by Go tests.
+Connected reported profiles receive extra shape/curve/vitals/death-loss checks.
+At most 200 unverified XP-earned embers can be paid above the latest verified
+checkpoint; repeating syncs cannot increase that allowance. Excess credit is
+held in lots tagged with the XP at which it was reported. A verified login pays
+lots whose reported XP it reaches; a plausible death keeps unconfirmed lots
+pending. Reports/checkpoints compare XP losses against the last accepted
+profile, with a one-death allowance; a level-1 rebirth is accepted and audited.
+Only an implausibly low verified checkpoint flags the player and drops pending. The XP mark never
+falls, and login does not consume the gameplay healing baseline.
+
+An accepted upload grants the two story gifts once per account. A stale upload
+merges only story progress; the server retains health, mana, area and position.
+Syncs and spends require a current revision and play lease and commit their
+carried progress atomically. All uploads ignore balances, maxima, paid flags
+and purchased items. Migration is once per account, carries at most 30 gifted
+embers, and never trusts local XP marks or earned provenance. The complete
+phase-2 wire contract and validation decisions are in `.agent/REPORT.md`.

@@ -15,6 +15,10 @@ dist
 /test-results/
 /playwright-report/
 
+# Local Go backend data and binaries
+.data/
+/fingersnap-server
+
 # Publication hygiene
 /public/assets/fingersnap/**/drafts/
 .idea/

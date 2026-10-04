@@ -250,7 +250,7 @@ one row each:
 
 | File | Source URL | Author | License + link | Attribution text | Modifications | Register date |
 |---|---|---|---|---|---|---|
-| `src/content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG / Habitica contributors | GPL v3 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE | "Game data derived from Habitica (habitica.com), © HabitRPG, licensed GPL v3." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
+| `content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG / Habitica contributors | GPL v3 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE | "Game data derived from Habitica (habitica.com), © HabitRPG, licensed GPL v3." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
 | `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG / Weirdly Wonderful (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ | "Avatar and companion art derived from Habitica (habitica.com), © HabitRPG / Weirdly Wonderful, licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
 | Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG / Habitica contributors | GPL v3 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
 
@@ -304,7 +304,7 @@ record here):
   frames, walkability annotation, enemy combat frames). License still
   pending.
 - 2026-10-03 — Third-party assets introduced (Register note + rows above):
-  Habitica gear-data snapshot (GPL v3) in `src/content/habitica-gear.json`
+  Habitica gear-data snapshot (GPL v3) in `content/habitica-gear.json`
   and a 41-file scoped art subset (CC BY-NC-SA 3.0) under
   `public/assets/habitica/` with `manifest.json` (sha256s). API register:
   `docs/habitica-assets.md`. Attribution/credits text added. Non-commercial

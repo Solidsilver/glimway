@@ -1,7 +1,7 @@
 /**
  * Habitica gear catalog — Fingersnap M3 (owner: snap_assets).
  *
- * NUMERIC item data bundled in `src/content/habitica-gear.json`, snapshotted
+ * NUMERIC item data bundled in `content/habitica-gear.json`, snapshotted
  * from Habitica's public content endpoint (see provenance below and
  * docs/habitica-assets.md). No account credentials are used or stored here;
  * the snapshot is a static, unauthenticated content GET.
@@ -16,7 +16,7 @@
  * `toHabiticaProfile(user, gearStatsFor)` (src/lib/habitica/mapping.ts).
  */
 import type { GearItemStats } from './types.ts';
-import catalogJson from '../../content/habitica-gear.json' with { type: 'json' };
+import catalogJson from '../../../content/habitica-gear.json' with { type: 'json' };
 
 /** Per-item numeric entry as bundled in habitica-gear.json. */
 export interface GearCatalogItem {

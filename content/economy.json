@@ -1,0 +1,24 @@
+{
+  "xpPerEmber": 10,
+  "welcomeEmbers": 3,
+  "costs": {
+    "rest": 2,
+    "roadLantern": 3,
+    "chest": 5
+  },
+  "questEmbers": {
+    "defeat-guardian": 2,
+    "return-village": 3
+  },
+  "roadLanterns": [
+    "road-1",
+    "road-2",
+    "road-3"
+  ],
+  "chestId": "ashwatch-chest",
+  "charmItem": "ember-charm",
+  "syncCreditCap": 200,
+  "migrationGiftCap": 30,
+  "checkpointToleranceXp": 10,
+  "outstandingInvites": 3
+}
