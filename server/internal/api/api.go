@@ -748,7 +748,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 	if !slices.Contains([]string{"rest", "revive", "home-rest", "road-lantern", "chest"}, req.Kind) || req.Kind == "road-lantern" && !slices.Contains(rules.E.RoadLanterns, req.Target) {
 		return fail(400, "invalid-spend")
 	}
-	if (req.Kind == "rest" || req.Kind == "revive") && !rules.SafeAreas[s.State.Area] {
+	if (req.Kind == "rest" || req.Kind == "revive") && s.State.Area != "village" {
 		return fail(409, "not-at-safe-boundary")
 	}
 	if req.Kind == "revive" && s.State.HP > 0 {

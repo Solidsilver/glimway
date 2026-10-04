@@ -7,7 +7,9 @@ import (
 	"fingersnap/content"
 	"fingersnap/server/internal/store"
 	"fingersnap/server/internal/wilds"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -316,6 +318,12 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 			if !found {
 				return nil, fail(404, "entity-not-found")
 			}
+			parts := strings.Split(entity.ID, ":")
+			cx, _ := strconv.Atoi(parts[1])
+			cy, _ := strconv.Atoi(parts[2])
+			if err := nearWilds(*s, e, cx*content.WildsRules.ChunkSize+entity.TX, cy*content.WildsRules.ChunkSize+entity.TY); err != nil {
+				return nil, err
+			}
 			state, err := entityStatus(ctx, tx, e, entity, now)
 			if err != nil {
 				return nil, err
@@ -351,7 +359,9 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 					_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO discoveries VALUES(?,?,?,?,?)", e.ID, entity.ID, entity.POI, s.HabiticaID, now)
 					if err == nil {
 						_, err = tx.ExecContext(ctx, "UPDATE entity_state SET state='charted',by_id=COALESCE(by_id,?),at=COALESCE(at,?) WHERE epoch=? AND entity_id=?", s.HabiticaID, now, e.ID, entity.ID)
-						state, err = entityStatus(ctx, tx, e, entity, now)
+						if err == nil {
+							state, err = entityStatus(ctx, tx, e, entity, now)
+						}
 					}
 				}
 			}
@@ -388,8 +398,23 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "not-defeated-in-wilds")
 			}
 			// Lantern positions are region tile coordinates; progress uses pixels.
-			if s.State.Position.X < 0 || s.State.Position.Y < 0 || req.X == nil || req.Y == nil || *req.X < 0 || *req.Y < 0 || *req.X >= region.GridWidth*content.WildsRules.ChunkSize || *req.Y >= region.GridHeight*content.WildsRules.ChunkSize || int(s.State.Position.X/32) != *req.X || int(s.State.Position.Y/32) != *req.Y {
+			if s.State.Position.X < 0 || s.State.Position.Y < 0 || req.X == nil || req.Y == nil || *req.X < 0 || *req.Y < 0 || *req.X >= region.GridWidth*content.WildsRules.ChunkSize || *req.Y >= region.GridHeight*content.WildsRules.ChunkSize || int(s.State.Position.X/wildsTileSize) != *req.X || int(s.State.Position.Y/wildsTileSize) != *req.Y {
 				return nil, fail(400, "invalid-position")
+			}
+
+			day := time.Unix(now, 0).UTC().Format("2006-01-02")
+			var n int
+			err = tx.QueryRowContext(ctx, "SELECT qty FROM lantern_creations WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day).Scan(&n)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			if n >= content.Rules.WildsLimits.LanternsCreatedPerDay {
+				midnight := time.Unix(now, 0).UTC().Truncate(24 * time.Hour).Add(24 * time.Hour).Unix()
+				w.Header().Set("Retry-After", strconv.FormatInt(midnight-now, 10))
+				return nil, fail(429, "lantern-creation-limited")
+			}
+			if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_creations VALUES(?,?,1) ON CONFLICT(habitica_id,utc_day) DO UPDATE SET qty=qty+1", s.HabiticaID, day); err != nil {
+				return nil, err
 			}
 			id, err := store.Random()
 			if err != nil {
@@ -413,11 +438,15 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(400, "lantern-id-required")
 			}
 			var lit sql.NullString
-			err := tx.QueryRowContext(ctx, "SELECT lit_by FROM lanterns WHERE epoch=? AND owner_id=? AND id=?", e.ID, req.OwnerID, req.LanternID).Scan(&lit)
+			var lx, ly int
+			err := tx.QueryRowContext(ctx, "SELECT lit_by,x,y FROM lanterns WHERE epoch=? AND owner_id=? AND id=?", e.ID, req.OwnerID, req.LanternID).Scan(&lit, &lx, &ly)
 			if err == sql.ErrNoRows {
 				return nil, fail(404, "lantern-not-found")
 			}
 			if err != nil {
+				return nil, err
+			}
+			if err = nearWilds(*s, e, lx, ly); err != nil {
 				return nil, err
 			}
 			if lit.Valid {
@@ -492,4 +521,25 @@ func appendUnique(values []string, v string) []string {
 		}
 	}
 	return append(values, v)
+}
+
+// Matches src/game/textures.ts TILE. Entity coordinates are local to chunks;
+// lantern coordinates and this check use region tiles, never screen pixels.
+const wildsTileSize = 16
+const wildsInteractionRadius = 3
+
+func nearWilds(s store.Snapshot, e regionEpoch, x, y int) error {
+	if s.State.Area != "wilds" {
+		return fail(409, "not-in-wilds")
+	}
+	r, ok := regionDefinition(e.RegionID)
+	if !ok {
+		return fail(404, "region-not-found")
+	}
+	px, py := math.Floor(s.State.Position.X/wildsTileSize), math.Floor(s.State.Position.Y/wildsTileSize)
+	dx, dy := px-float64(x), py-float64(y)
+	if px < 0 || py < 0 || px >= float64(r.GridWidth*content.WildsRules.ChunkSize) || py >= float64(r.GridHeight*content.WildsRules.ChunkSize) || dx*dx+dy*dy > wildsInteractionRadius*wildsInteractionRadius {
+		return fail(409, "too-far-away")
+	}
+	return nil
 }

@@ -12,7 +12,7 @@ export interface Economy {
   syncCreditMax: number;
   pendingCreditDays: number;
   lifetimeInvites: number;
-  wildsLimits: { claimsPerMinute: number; lanternRelightsPerDay: number; lanternReward: { material: string; qty: number } };
+  wildsLimits: { claimsPerMinute: number; lanternRelightsPerDay: number; lanternsCreatedPerDay: number; lanternReward: { material: string; qty: number } };
   outstandingInvites: number;
   migrationGiftCap: number;
   checkpointToleranceXp: number;

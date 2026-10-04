@@ -29,6 +29,7 @@
   "wildsLimits": {
     "claimsPerMinute": 20,
     "lanternRelightsPerDay": 3,
+    "lanternsCreatedPerDay": 2,
     "lanternReward": {
       "material": "amber",
       "qty": 1
