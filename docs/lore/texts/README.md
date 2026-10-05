@@ -83,4 +83,4 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [The Brackenwood Cutter's Handbook](brackenwood-cutters-handbook.md) | Oak Hall field manual on felling Iron-Oak and surviving the Memory Wake. |
 | [Scraps from Orrin's Workshop](orrins-workshop-rules.md) | Rules for the bench, in thick angry charcoal. If it doesn't creak, it's going to snap. |
 | [The Twoford Almanac — Silas's Copy](twoford-almanac-silas-copy.md) | University astronomy annotated by a carter who knows the Drift doesn't care about the moon. |
-| [Maren's Notes on Hubs and Tyres](marens-notes-on-hubs-and-tyres.md) | Wheelwright's craft notes, and a last word left behind by a rider on the Lull Run. |
+| [Maren's Notes on Hubs and Tyres](marens-notes-on-hubs-and-tyres.md) | Wheelwright's craft notes, and Maren Brack's last word the night her wheels went out on the Lull Run. |
