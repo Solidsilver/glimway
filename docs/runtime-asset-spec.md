@@ -16,22 +16,22 @@ Players never download the full-resolution sheets. `npm run atlases`
 `assets/generated/**` (never modified) and writes
 `public/assets/fingersnap/packed/`; `src/game/atlas-plan.ts` is the plan the
 build and the runtime share, `src/game/packed.ts` loads it in
-`BootScene.preload`. What `public/assets/fingersnap/` holds now: the four
+`BootScene.preload`. What `public/assets/fingersnap/` holds now: the five
 small JSON manifests (`commons-pass/manifest.json`,
-`runtime-pass/manifest.json`, `expansion/manifest.json`,
-`expansion/animations.json`) and `packed/` (~3.6 MB, was 43 MB):
+`runtime-pass/manifest.json`, `items-pass/manifest.json`, `expansion/manifest.json`,
+`expansion/animations.json`) and `packed/` (~3.7 MB, was 60 MB):
 
 - **Canvas-blitted packs — pixel-identical.** The Commons pass (173 native
-  frames + 20 off-size samples), the runtime pass (27 frames) and the
-  expansion terrain tileset (4×4 cells of 32 px) are baked in headless
-  Chromium with the loaders' own canvas calls (native canvas, smoothing off,
-  `drawImage(sheet, sourceRect, destinationRect)`), packed, and copied back
-  out 1:1 at boot (`commons.png`, `runtime.png`, `terrain.png`). The build
-  reads every frame back from the encoded PNG and fails on any difference;
-  `e2e/atlases.spec.ts` redoes the old blits from the source sheets in the
-  browser and compares them with the game's textures. Off-size samples (the
-  refitted 2×1 decorations, the Wilds decor boxes, the mirrored fence corner)
-  come from `commonsBlitPlan`; `blitFrame` fetches them by key.
+  frames + 20 off-size samples), the runtime pass (27 frames), the items
+  pass (170 frames), and the expansion terrain tileset (4×4 cells of 32 px)
+  are baked in headless Chromium with the loaders' own canvas calls (native
+  canvas, smoothing off, `drawImage(sheet, sourceRect, destinationRect)`),
+  packed, and copied back out 1:1 at boot (`commons.png`, `runtime.png`,
+  `items.png`, `terrain.png`). The build reads every frame back from the encoded
+  PNG and fails on any difference; `e2e/atlases.spec.ts` redoes the old blits
+  from the source sheets in the browser and compares them with the game's textures.
+  Off-size samples (the refitted 2×1 decorations, the Wilds decor boxes, the
+  mirrored fence corner) come from `commonsBlitPlan`; `blitFrame` fetches them by key.
 - **GPU-scaled atlases — same look, re-sampled.** The hero walk, enemies,
   foreground occluders and props are drawn with `setScale(display / frame
   size)` and the camera zooms 1.5–5× (1.3× more in the lantern beat), so the
@@ -230,6 +230,37 @@ boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
   detached windbreak, cot and ring at their authored spots and bodies),
   `workshop-addon`, `dead-birch-turncaps`, `reed-pool`, `fence-straight-v`, `fence-gateway`, `hedge-corner-ne/nw`,
   path `end-*` pieces.
+
+## Items pass (delivered October 5, 2026)
+
+`assets/generated/items-pass/` (archive of record: 12 sheets, per-sheet
+atlases, `manifest.json`, `jobs.json`, `request-index.json`, `drafts/`,
+`preview.html`, `validation.json`, `frame-inspection.json`, `build_manifest.py`,
+`integration.js`, README and COVERAGE). `public/assets/fingersnap/items-pass/`
+ships only `manifest.json`; the frames ship baked into the packed atlas
+(`items.png`). Typed helpers: `src/game/items-pass.ts` (loader, `items-art:`
+native textures, `itemIcon` helper with discrete states and fallbacks,
+`itemIconUrls`). Contract: `tests/items-pass.test.ts`.
+
+- **Native textures** — `createItemsPass(scene)` builds one canvas per
+  manifest frame (170) at its native size under `items-art:<frame>`,
+  measured `sourceRect` → `destinationRect`, nearest-neighbour. 110
+  inventory icons (`item-*`, 16×16) and 60 world sprites (`world-*`,
+  various sizes).
+- **Aliases & states** — 9 `commons:` aliases resolve directly to existing
+  `commons-art:` textures (e.g. `timber` → `commons:icon-timber`) without
+  duplicating them. Tool wear conditions and item variants are discrete states
+  (`manifest.stateGroups`, 31 groups), never auto-looping animations.
+- **Tolley Mill art** — `installItemsPass(scene)` replaces code-drawn
+  placeholders with delivered art for `mill-house` (64×64), `mill-hopper`
+  (16×20), `mill-wheel-0..3` (32×32), `mill-wheel-mended-0..3` (32×32), and
+  `mill-froth-0..1` (14×6). Authored looping animations: `mill-wheel`,
+  `mill-wheel-mended`, and `mill-froth`. The waterwheel sits against the east
+  wall of the mill with its lower edge in the mill-race water.
+- **Icon helpers** — `itemIcon(itemId, state?, fallback?)` resolves item IDs
+  to texture keys, respecting `commons:` aliases and discrete states, with
+  a 16×16 placeholder fallback (`items-art:fallback`) when no art exists.
+  `itemIconUrls(scene)` exports data URLs for Svelte UI.
 
 ## Delivered generated art (October 2, 2026)
 

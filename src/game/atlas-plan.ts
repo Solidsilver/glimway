@@ -55,6 +55,7 @@ export interface PackedManifest {
   inputs: Record<string, string>
   commons: PackedCanvasPack
   runtime: PackedCanvasPack
+  items: PackedCanvasPack
   terrain: { image: string; size: [number, number] }
   /** Phaser atlases (image + JSON hash), loaded under their old texture keys. */
   atlases: Record<string, { image: string; json: string }>
