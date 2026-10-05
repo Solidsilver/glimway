@@ -18,10 +18,13 @@ type plotRect struct {
 	Height int `json:"height"`
 }
 
+// plotBounds is plot i's pixel rectangle on the client's Commons map
+// (content/homestead.json "commons", the same layout the client draws).
 func plotBounds(index int) plotRect {
 	h := content.HomeRules
-	c := h.Commons
-	return plotRect{(c.OriginX + index%c.Columns*(h.Outdoor.Width+c.Gap)) * c.TileSize, (c.OriginY + index/c.Columns*(h.Outdoor.Height+c.Gap)) * c.TileSize, h.Outdoor.Width * c.TileSize, h.Outdoor.Height * c.TileSize}
+	tx, ty := h.PlotTile(index)
+	t := h.Commons.TileSize
+	return plotRect{tx * t, ty * t, h.Outdoor.Width * t, h.Outdoor.Height * t}
 }
 
 type homeInstance struct {
@@ -323,14 +326,20 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	if h.Tier < 1 || h.Tier < def.MinTier || (r.Scene == "indoor" && h.Indoor == nil) {
 		return fail(409, "tier-required")
 	}
-	grid := h.Outdoor
+	grid, reserved := h.Outdoor, content.HomeRules.OutdoorReserved
 	if r.Scene == "indoor" {
-		grid = *h.Indoor
+		grid, reserved = *h.Indoor, content.HomeRules.IndoorReserved
 	}
 	w, ht := footprint(def.ID, *r.Rotation)
 	x, y := *r.X, *r.Y
 	if x < 0 || y < 0 || x > grid.Width-w || y > grid.Height-ht {
 		return fail(409, "out-of-bounds")
+	}
+	// The camp/cottage and the doorway are scenery a decoration cannot cover.
+	for _, v := range reserved {
+		if x < v.X+v.W && x+w > v.X && y < v.Y+v.H && y+ht > v.Y {
+			return fail(409, "placement-overlap")
+		}
 	}
 	for _, v := range h.Items {
 		if v.ID == item.ID || v.Scene == nil || *v.Scene != r.Scene {

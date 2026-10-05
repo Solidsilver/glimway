@@ -14,7 +14,9 @@ export function maybeNudgePip(
 ): void {
   const tx = Math.floor(player.x / TILE)
   const ty = Math.floor(player.y / TILE)
-  if (!pipGateNudgeDue(session.state, { vitalsSource: session.vitalsSource, connected: isConnected(), areaId: world.areaId, tx, ty, exits: world.exits })) return
+  // Only the ways out into danger: the Commons gate is home ground.
+  const exits = world.exits.filter((e) => (e as { to?: string }).to !== 'commons')
+  if (!pipGateNudgeDue(session.state, { vitalsSource: session.vitalsSource, connected: isConnected(), areaId: world.areaId, tx, ty, exits })) return
   session.addFlag(PIP_GATE_FLAG)
   bus.emit(EV.toast, { text: pipGateNudge, icon: 'person' })
 }

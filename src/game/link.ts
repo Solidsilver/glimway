@@ -37,7 +37,7 @@ import {
   type MergeMode
 } from '../lib/api/progress.ts'
 import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
-import type { Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionRequest, HomeView, PlotInfo, Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
@@ -45,7 +45,14 @@ import { EV, type LinkPayload, type LinkStatus } from './event-names.ts'
 
 const HEARTBEAT_MS = 30_000
 
-export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 'unsafe' | 'busy' | 'error'
+export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 'unsafe' | 'not-home' | 'busy' | 'error'
+
+/** A homestead read: the view, or why there isn't one right now. */
+export type HomeRead<T> = { ok: true; value: T } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' }
+
+export type HomeActionResult =
+  | { ok: true; home: HomeView; materials: Record<string, number>; itemId?: string }
+  | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' }
 
 export type RemoteSyncResult =
   | { ok: true; status: SyncResponse['status']; gained: number; welcome: number; credit: { hp: number; mana: number } }
@@ -317,6 +324,7 @@ export class Link {
       const code = errorCode(err)
       if (code === 'short' || code === 'done' || code === 'full' || code === 'needs-earned') return code
       if (code === 'not-at-safe-boundary') return 'unsafe'
+      if (code === 'not-at-own-plot') return 'not-home'
       // No answer: it may have gone through. The reconnect will say.
       if (code === 'network') this.lostSpend = spend
       const action = this.onFailure(err, 'spend')
@@ -352,6 +360,69 @@ export class Link {
       const action = failureAction(code)
       if (action === 'offline' || action === 'superseded' || action === 'signed-out') this.onFailure(err, 'sync')
       return { ok: false, code: action === 'offline' ? 'offline' : code }
+    } finally {
+      this.setBusy(false)
+    }
+  }
+
+  // ------------------------------------------------------------ homesteads
+
+  /** Read a member's homestead (own or same world). Reads never move the revision. */
+  async readHome(habiticaId: string): Promise<HomeRead<HomeView>> {
+    return this.read(async () => (await this.api.run((raw) => raw.home(habiticaId))).home)
+  }
+
+  /** The world's Commons roster. */
+  async readCommons(): Promise<HomeRead<PlotInfo[]>> {
+    return this.read(async () => (await this.api.run((raw) => raw.commons())).plots)
+  }
+
+  private async read<T>(get: () => Promise<T>): Promise<HomeRead<T>> {
+    if (this.stopped) return { ok: false, code: 'unknown' }
+    if (this.status !== 'online') return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
+    try {
+      const value = await get()
+      this.contact()
+      return { ok: true, value }
+    } catch (err) {
+      const code = errorCode(err)
+      if (isUnreachable(err)) {
+        this.onFailure(err, 'home-read')
+        return { ok: false, code: 'offline' }
+      }
+      return { ok: false, code }
+    }
+  }
+
+  /**
+   * A homestead purchase, placement or upgrade. Like a spend: it carries the
+   * current progress, the world waits for the answer, and nothing changes
+   * locally on a no.
+   */
+  async homeAction(action: HomeAction): Promise<HomeActionResult> {
+    const s = this.session
+    if (!s || this.stopped) return { ok: false, code: 'unknown' }
+    if (this.busy) return { ok: false, code: 'busy' }
+    if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
+    const key = newKey()
+    const { op, ...fields } = action
+    const build = (): HomeActionRequest => ({ lease: this.lease!, baseRev: this.rev, key, progress: toProgress(s.state), ...fields })
+    this.setBusy(true)
+    try {
+      const res = await this.withReload(() => this.api.run((raw) => raw.homeAction(op, build())))
+      this.contact()
+      this.apply(res, 'server')
+      this.acked = docKey(s.state)
+      void this.saveLocal()
+      return { ok: true, home: res.result.home, materials: res.result.materials, itemId: res.result.itemId }
+    } catch (err) {
+      const code = errorCode(err)
+      const fa = failureAction(code)
+      if (isUnreachable(err) || fa === 'offline' || fa === 'superseded' || fa === 'elsewhere' || fa === 'signed-out') {
+        const action = this.onFailure(err, 'home')
+        return { ok: false, code: action === 'superseded' ? 'superseded' : action === 'offline' ? 'offline' : code }
+      }
+      return { ok: false, code }
     } finally {
       this.setBusy(false)
     }

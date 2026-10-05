@@ -33,7 +33,11 @@ const TERRAIN_TO_EXPANSION: Record<number, string> = {
   [TERRAIN.wall_house]: 'wood-planks',
   [TERRAIN.door]: 'dark-wood-planks',
   [TERRAIN.window]: 'dark-wood-planks',
-  [TERRAIN.fence]: 'wood-planks'
+  [TERRAIN.fence]: 'wood-planks',
+  [TERRAIN.cobble]: 'cobblestone',
+  [TERRAIN.cobble_moss]: 'mossy-cobblestone',
+  [TERRAIN.planks]: 'wood-planks',
+  [TERRAIN.planks_dark]: 'dark-wood-planks'
 }
 
 export function buildGround(scene: Phaser.Scene, world: WorldData): void {
