@@ -128,6 +128,8 @@ export function normalFacing(f: { x: number; y: number }): { x: number; y: numbe
 
 const POS_GAP = Math.ceil(1000 / PRESENCE.positionHz); // 125 ms at 8 Hz
 const HEARTBEAT_MS = 20_000;
+/** Connected this long without a close: earlier failures are forgiven. */
+export const STABLE_MS = 30_000;
 
 export class PresenceClient {
   status: PresenceStatus = 'off';
@@ -138,6 +140,9 @@ export class PresenceClient {
   private ready = false;
   private attempts = 0;
   private retryTimer: unknown = null;
+  private stableTimer: unknown = null;
+  /** A lease a terminal close stopped for good. */
+  private latched: string | null = null;
   /** The area we want to be in (null: none) and the one last sent. */
   private area: string | null = null;
   private sentArea: string | null = null;
@@ -163,16 +168,32 @@ export class PresenceClient {
     this.handlers = opts.handlers ?? {};
   }
 
-  /** Connect (or reconnect) with this lease. A different lease restarts the socket. */
+  /**
+   * Run presence for this lease. Idempotent for the same lease: whether the
+   * socket is connecting, live, or waiting out a retry backoff, the client
+   * owns it, so callers may call this as often as they like (review-6 #2).
+   * A terminal close (4001/4002/4003, a protocol rejection) latches that
+   * lease: it is never retried; only a different lease starts again
+   * (review-6 #1).
+   */
   start(lease: string): void {
-    if (this.lease === lease && this.socket && this.status !== 'off') return;
+    if (lease === this.lease || lease === this.latched) return;
     this.stop();
+    this.latched = null;
     this.lease = lease;
     this.attempts = 0;
     this.open();
   }
 
-  /** Close for good (lease lost, sign-out, leaving connected play). */
+  /** The lease a terminal close stopped for good (null: none). */
+  get stoppedFor(): string | null {
+    return this.latched;
+  }
+
+  /**
+   * Close (lease lost, sign-out, leaving connected play). Keeps a terminal
+   * latch: the same lease coming back later still stays stopped.
+   */
   stop(): void {
     this.lease = null;
     this.clearTimers();
@@ -275,6 +296,7 @@ export class PresenceClient {
         this.scheduleRetry();
         return;
       }
+      if (action !== 'retry') this.latched = this.lease;
       this.lease = null;
       this.setStatus(action === 'retry' ? 'off' : action, ev.code);
     };
@@ -300,7 +322,9 @@ export class PresenceClient {
     switch (m.type) {
       case 'ready':
         this.ready = true;
-        this.attempts = 0;
+        // Failures are forgiven only after a stable stretch, not on `ready`:
+        // ready → join → 1013/1011 cycles must keep backing off (review-6 #2).
+        this.armStable();
         this.self = typeof m.habiticaId === 'string' ? m.habiticaId : null;
         this.setStatus('live');
         this.handlers.ready?.(this.self ?? '');
@@ -406,9 +430,18 @@ export class PresenceClient {
     }
   }
 
+  /** After this long connected, past failures stop counting toward the backoff. */
+  private armStable(): void {
+    if (this.stableTimer !== null) this.timers.clear(this.stableTimer);
+    this.stableTimer = this.timers.set(() => {
+      this.stableTimer = null;
+      if (this.ready) this.attempts = 0;
+    }, STABLE_MS);
+  }
+
   private clearTimers(): void {
-    for (const t of [this.retryTimer, this.joinTimer, this.posTimer, this.heartbeatTimer]) if (t !== null) this.timers.clear(t);
-    this.retryTimer = this.joinTimer = this.posTimer = this.heartbeatTimer = null;
+    for (const t of [this.retryTimer, this.joinTimer, this.posTimer, this.heartbeatTimer, this.stableTimer]) if (t !== null) this.timers.clear(t);
+    this.retryTimer = this.joinTimer = this.posTimer = this.heartbeatTimer = this.stableTimer = null;
   }
 
   private setStatus(status: PresenceStatus, code?: number): void {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  STABLE_MS,
   PresenceClient,
   closeAction,
   isPresenceArea,
@@ -270,10 +271,8 @@ test('lost transport reconnects with backoff, re-auths and re-joins', () => {
   r.sock().push({ type: 'ready', habiticaId: 'me' });
   assert.deepEqual(r.sentTypes(), ['auth', 'join']);
   assert.equal(r.sock().sent[1].area, 'commons');
-  // Repeated failures back off further.
+  // A failure soon after `ready` still counts: the next wait is ~2 s, not 1 s.
   r.sock().drop(1013);
-  r.clock.advance(1_100);
-  r.sock().drop(1006);
   const before = r.sockets.length;
   r.clock.advance(1_900);
   assert.equal(r.sockets.length, before, 'waits ~2 s the second time');
@@ -347,4 +346,63 @@ test('helpers: areas, facing, backoff, close codes', () => {
   assert.equal(closeAction(1008, 'rate-limited'), 'retry');
   assert.equal(closeAction(1008, 'invalid-position'), 'rejected');
   assert.equal(closeAction(1011, 'auth-unavailable'), 'retry');
+});
+
+test('review-6 #2: a same-lease start never cuts a backoff short', () => {
+  const r = rig();
+  r.live();
+  r.sock().drop(1006);
+  r.clock.advance(1_100); // first retry opens…
+  r.sock().drop(1006); // …and is refused again: now ~2 s
+  const n = r.sockets.length;
+  for (let i = 0; i < 10; i++) r.client.start('L'.repeat(64)); // the feed's polls
+  assert.equal(r.sockets.length, n, 'no immediate reopen');
+  assert.equal(r.client.status, 'retrying');
+  r.clock.advance(1_900);
+  assert.equal(r.sockets.length, n);
+  r.clock.advance(300);
+  assert.equal(r.sockets.length, n + 1, 'the backoff ran its course');
+});
+
+test('review-6 #2: ready → capacity close cycles keep backing off; a stable stretch forgives', () => {
+  const r = rig();
+  r.live();
+  const gaps: number[] = [];
+  for (let cycle = 0; cycle < 5; cycle++) {
+    const before = r.sockets.length;
+    r.sock().drop(1013); // room-full right after ready
+    let waited = 0;
+    while (r.sockets.length === before) {
+      r.clock.advance(100);
+      waited += 100;
+    }
+    gaps.push(waited);
+    r.sock().open();
+    r.sock().push({ type: 'ready', habiticaId: 'me' });
+  }
+  for (let i = 1; i < gaps.length; i++) assert.ok(gaps[i] > gaps[i - 1], `gaps grow: ${gaps.join(', ')}`);
+  // Connected for a stable stretch: the next failure starts over at ~1 s.
+  r.clock.advance(STABLE_MS + 10);
+  r.sock().drop(1011);
+  const before = r.sockets.length;
+  r.clock.advance(1_300);
+  assert.equal(r.sockets.length, before + 1);
+});
+
+test('review-6 #1: terminal closes latch the lease; only a new lease starts again', () => {
+  for (const code of [4001, 4002, 4003, 1008]) {
+    const r = rig();
+    r.live();
+    r.sock().drop(code);
+    for (let i = 0; i < 5; i++) r.client.start('L'.repeat(64));
+    r.clock.advance(60_000);
+    assert.equal(r.sockets.length, 1, `stays stopped after ${code}`);
+    assert.equal(r.client.stoppedFor, 'L'.repeat(64));
+    r.client.stop();
+    r.client.start('L'.repeat(64)); // the same lease coming back after a stop: still latched
+    assert.equal(r.sockets.length, 1);
+    r.client.start('new-lease');
+    assert.equal(r.sockets.length, 2, `a new lease starts after ${code}`);
+    assert.equal(r.client.stoppedFor, null);
+  }
 });

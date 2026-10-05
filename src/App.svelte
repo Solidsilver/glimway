@@ -332,6 +332,8 @@
       })
 
     return () => {
+      // Presence first: its socket, link poll and bus listener go with the App.
+      stopPresence()
       cleanupBus()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onHide)
