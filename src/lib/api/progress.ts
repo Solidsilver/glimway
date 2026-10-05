@@ -145,8 +145,21 @@ export function spendLanded(spend: EmberSpend, before: GameState, after: GameSta
     case 'chest':
       return !before.flags.includes(FLAGS.chest) && after.flags.includes(FLAGS.chest);
     case 'rest':
-      return before.embers - after.embers >= EMBER_COSTS.rest;
+      return restLanded(before, after, EMBER_COSTS.rest);
+    case 'home-rest':
+      return restLanded(before, after, EMBER_COSTS.homeRest);
   }
+}
+
+/**
+ * A rest leaves no outcome flag, and another device can move the balance in
+ * the meantime. So it counts as landed only if the vitals went from not full
+ * to full *and* the balance dropped by at least its cost (re-review N3).
+ */
+function restLanded(before: GameState, after: GameState, cost: number): boolean {
+  const wasFull = before.hp >= before.maxHp && before.mana >= before.maxMana;
+  const isFull = after.hp >= after.maxHp && after.mana >= after.maxMana;
+  return !wasFull && isFull && before.embers - after.embers >= cost;
 }
 
 /** What a failed call means for the connected session. */

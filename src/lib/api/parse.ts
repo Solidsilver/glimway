@@ -9,10 +9,12 @@ import { ApiError } from './errors.ts';
 import type {
   CreatedInvite,
   InviteInfo,
+  InviteList,
   PlayResponse,
   ProgressResponse,
   SaveOrigin,
   Snapshot,
+  StateResponse,
   SpendResponse,
   SyncResponse,
 } from './types.ts';
@@ -54,6 +56,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
     rev,
     vitalsSource,
     habiticaId: str(o.habiticaId),
+    displayName: typeof o.displayName === 'string' ? o.displayName.slice(0, 128) : '',
     habiticaPartyId: typeof o.habiticaPartyId === 'string' ? o.habiticaPartyId : null,
     worldId: typeof o.worldId === 'string' ? o.worldId : '',
     saveOrigin: (origin ?? null) as SaveOrigin | null,
@@ -63,6 +66,13 @@ export function parseSnapshot(raw: unknown): Snapshot {
   };
   if (importedProfile) snapshot.importedProfile = importedProfile;
   return snapshot;
+}
+
+export function parseState(raw: unknown): StateResponse {
+  const lease = obj(raw).leaseActive;
+  const out: StateResponse = parseSnapshot(raw);
+  if (typeof lease === 'boolean') out.leaseActive = lease;
+  return out;
 }
 
 export function parsePlay(raw: unknown): PlayResponse {
@@ -96,8 +106,16 @@ export function parseCreatedInvite(raw: unknown): CreatedInvite {
   return { ...parseInvite(raw), code: str(obj(raw).code) };
 }
 
-export function parseInviteList(raw: unknown): InviteInfo[] {
-  const list = obj(raw).invites;
-  if (!Array.isArray(list)) throw new ApiError('bad-response');
-  return list.map(parseInvite);
+const count = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : undefined;
+
+export function parseInviteList(raw: unknown): InviteList {
+  const o = obj(raw);
+  if (!Array.isArray(o.invites)) throw new ApiError('bad-response');
+  const out: InviteList = { invites: o.invites.map(parseInvite) };
+  const remaining = count(o.remaining);
+  const outstandingLimit = count(o.outstandingLimit);
+  if (remaining !== undefined) out.remaining = remaining;
+  if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
+  return out;
 }

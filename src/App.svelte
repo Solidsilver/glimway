@@ -228,9 +228,11 @@
   onMount(() => {
     const cleanupBus = wireBus()
 
-    const onHide = () => session?.flushSync()
+    // Hidden: save now, in queue order. Leaving (pagehide): the last upload
+    // may skip a busy queue, since the page won't wait for it.
+    const onHide = () => session?.flushSync(true)
     const onVisibility = () => {
-      if (document.hidden) onHide()
+      if (document.hidden) session?.flushSync(false)
     }
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pagehide', onHide)
@@ -346,7 +348,7 @@
     ui.server = 'available'
     accountOffline = false
     accountSnapshot = snapshot
-    const name = snapshot.importedProfile?.name ?? profile.name
+    const name = snapshot.displayName || snapshot.importedProfile?.name || profile.name
     ui.account = { habiticaId: snapshot.habiticaId, name }
     // Signed in from the Menu: the next step (origin, lease) takes the screen.
     panel = null
@@ -386,7 +388,7 @@
       })
       accountSnapshot = snap
       gate = null
-      await startAccount(snap, snap.importedProfile?.name ?? name)
+      await startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
       if (choice === 'migrate' && session?.link) ui.toast({ text: 'Your journey came with you into your world.', icon: 'lantern' })
     } catch (err) {
       if (errorCode(err) === 'already-set') {
@@ -397,7 +399,7 @@
           const snap = await api.state()
           accountSnapshot = snap
           ui.toast({ text: originCopy.alreadySet })
-          await startAccount(snap, snap.importedProfile?.name ?? name)
+          await startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
         } catch {
           accountError = originCopy.offline
         }

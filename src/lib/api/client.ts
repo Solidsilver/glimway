@@ -17,18 +17,20 @@ import {
   parseProgress,
   parseSnapshot,
   parseSpend,
+  parseState,
   parseSync,
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
 import type {
   CreatedInvite,
-  InviteInfo,
+  InviteList,
   LoginRequest,
   OriginRequest,
   PlayResponse,
   ProgressRequest,
   ProgressResponse,
   Snapshot,
+  StateResponse,
   SpendRequest,
   SpendResponse,
   SyncRequest,
@@ -47,14 +49,14 @@ export interface ApiClientOptions {
 export interface RawApi {
   login(req: LoginRequest): Promise<Snapshot>;
   logout(): Promise<void>;
-  state(lease?: string | null): Promise<Snapshot>;
+  state(lease?: string | null): Promise<StateResponse>;
   origin(req: OriginRequest): Promise<Snapshot>;
   play(req: { clientId: string; takeOver?: boolean }): Promise<PlayResponse>;
   progress(req: ProgressRequest, opts?: { keepalive?: boolean }): Promise<ProgressResponse>;
   sync(req: SyncRequest): Promise<SyncResponse>;
   spend(req: SpendRequest): Promise<SpendResponse>;
   createInvite(): Promise<CreatedInvite>;
-  listInvites(): Promise<InviteInfo[]>;
+  listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
 }
 
@@ -117,14 +119,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const raw: RawApi = {
     async login(req) {
       const body: LoginRequest = { userId: req.userId, token: req.token };
-      if (req.invite && req.invite.trim()) body.invite = req.invite.trim();
+      const invite = req.invite ? normalizeInviteCode(req.invite) : '';
+      if (invite) body.invite = invite;
       return parseSnapshot(await request('POST', '/api/session', body));
     },
     async logout() {
       await request('DELETE', '/api/session');
     },
     async state(lease) {
-      return parseSnapshot(await request('GET', '/api/state', undefined, lease ? { headers: { 'X-Play-Lease': lease } } : {}));
+      return parseState(await request('GET', '/api/state', undefined, lease ? { headers: { 'X-Play-Lease': lease } } : {}));
     },
     async origin(req) {
       return parseSnapshot(await request('POST', '/api/origin', req));
@@ -172,6 +175,28 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   };
 }
 
+/**
+ * Invite codes as people type or paste them: any case, words split by
+ * hyphens, spaces or line breaks ("AMBER fox river - lantern…"). Becomes the
+ * canonical lowercase hyphenated form. The server normalizes the same way
+ * (and still accepts old hex codes, spaced or not).
+ */
+export function normalizeInviteCode(input: string): string {
+  return input
+    .slice(0, 512)
+    .toLowerCase()
+    .split(/[\s\-\u2010-\u2015]+/u)
+    .filter(Boolean)
+    .join('-');
+}
+
+/** Split a readable code for display: words, and the trailing number. */
+export function inviteCodeParts(code: string): { words: string[]; number: string } {
+  const parts = normalizeInviteCode(code).split('-');
+  const last = parts[parts.length - 1] ?? '';
+  return /^\d+$/.test(last) && parts.length > 1 ? { words: parts.slice(0, -1), number: last } : { words: parts, number: '' };
+}
+
 /** A fresh idempotency key (spends, origin). Reuse it only to retry the same request. */
 export function newKey(): string {
   const c = (globalThis as { crypto?: Crypto }).crypto;
@@ -199,7 +224,14 @@ export interface ClaimOptions {
 }
 
 export interface ClientIdClaim {
+  /** The id this page holds now (it can change after `reclaim`). */
   readonly id: string;
+  /**
+   * Check again that no other live page holds our id, e.g. after this page
+   * was frozen or sat in the back-forward cache, when it couldn't answer a
+   * duplicate's claim. If one does, take a fresh id. Resolves to the id held.
+   */
+  reclaim(): Promise<string>;
   /** Stop answering for this id (tests; a page answers until it closes). */
   close(): void;
 }
@@ -227,6 +259,9 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
   const nonce = newKey();
   let held = false;
   let lost = false;
+  /** Nonce of a re-claim in progress, and whether a live holder answered it. */
+  let reclaimNonce: string | null = null;
+  let reclaimLost = false;
   let channel: ChannelLike | null = null;
   try {
     channel = makeChannel(opts.channelName ?? CLAIM_CHANNEL);
@@ -247,6 +282,8 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
         else if (m.nonce !== undefined) lost = true;
       } else if (m.type === 'mine' && m.nonce === nonce && !held) {
         lost = true;
+      } else if (m.type === 'mine' && reclaimNonce !== null && m.nonce === reclaimNonce) {
+        reclaimLost = true;
       }
     };
     ch.postMessage({ type: 'who', id, nonce });
@@ -259,8 +296,32 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
   } catch {
     /* storage blocked: the id lives for this page only */
   }
+  const remember = () => {
+    try {
+      storage?.setItem(CLIENT_ID_KEY, id);
+    } catch {
+      /* storage blocked */
+    }
+  };
   return {
-    id,
+    get id() {
+      return id;
+    },
+    async reclaim() {
+      if (!channel || reclaimNonce !== null) return id;
+      const n = newKey();
+      reclaimNonce = n;
+      reclaimLost = false;
+      // Still the holder meanwhile: we keep answering others' claims.
+      channel.postMessage({ type: 'who', id, nonce: n });
+      await new Promise((r) => setTimeout(r, waitMs));
+      reclaimNonce = null;
+      if (reclaimLost) {
+        id = newKey();
+        remember();
+      }
+      return id;
+    },
     close() {
       if (channel) {
         channel.onmessage = null;
