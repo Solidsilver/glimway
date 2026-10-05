@@ -284,6 +284,13 @@ test('a refused upload stays unsent (and cached as dirty) without resending in a
   await link.persist();
   await server.api.queue.idle();
   assert.equal(server.sent('PUT /api/progress').length, 1, 'the same refused document is not resent');
+  // A further change refused too: no second toast.
+  session.state = base({ quest: 'accepted', discoveries: ['old-well'] });
+  await link.persist();
+  await server.api.queue.idle();
+  await settle();
+  assert.equal(server.sent('PUT /api/progress').length, 2);
+  assert.equal(toasts().filter((t) => t.includes('didn’t accept')).length, 1);
   link.stop();
 });
 

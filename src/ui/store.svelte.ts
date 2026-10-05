@@ -1,4 +1,4 @@
-import type { AreaPayload, LinkPayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
+import type { AreaPayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { isMuted } from '../game/sfx'
 
@@ -41,6 +41,10 @@ class UiStore {
   link = $state<LinkPayload | null>(null)
   /** Connected play: the reconnect notice ("you played somewhere else"). */
   linkNotice = $state<'played-elsewhere' | null>(null)
+  /** Presence (phase 6): socket status and others in this area. */
+  presence = $state<PresencePayload>({ status: 'off', here: 0 })
+  /** The emote picker is open. */
+  emoteOpen = $state(false)
 
   /** Mirrors of world/UI ownership flags, reactive for the interface. */
   dialogueOpen = $state(false)

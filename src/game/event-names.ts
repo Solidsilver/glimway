@@ -30,6 +30,10 @@ export const EV = {
   linkNotice: 'ui:link-notice',
   /** Connected play: the server moved the hero (a stale merge) — the scene follows. */
   relocate: 'game:relocate',
+  /** Presence (phase 6): socket status and how many others share the area. */
+  presence: 'ui:presence',
+  /** Presence: someone (or you) emoted — the scene shows a bubble. */
+  emote: 'game:emote',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
   // ui -> game (and dialogue panel -> scene)
@@ -138,4 +142,17 @@ export interface RelocatePayload {
   area: 'village' | 'woodland' | 'ruin'
   x: number
   y: number
+}
+
+export interface PresencePayload {
+  /** 'off' for guests and before the lease; 'live' once the socket is ready. */
+  status: 'off' | 'connecting' | 'live' | 'retrying' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected'
+  /** Other players in this area right now. */
+  here: number
+}
+
+export interface EmotePayload {
+  /** null for the local hero. */
+  habiticaId: string | null
+  id: string
 }
