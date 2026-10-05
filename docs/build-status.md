@@ -11,12 +11,12 @@ canon pass, the Commons and the Tangle merged on `expansion`).
 | Habitica (read-only) | Connect guide with paste/Swap and opt-in Remember; class kits, effective stats, layered avatars, pets and mounts; the approved imported-health policy. |
 | Connected play | Go server with login-only token check, allowlist and invites (readable codes), recorded syncs with plausibility checks and checkpoints, revisions and one play lease, offline play and reconnect, guest-save migration. |
 | Homes | Hearthwick Commons, plots, campsite → cottage → workshop, 14 decorations with placement, storage and crafting, home rest, read-only visits. |
-| Wilds | The Tangle (inner region): camps, nodes, chests, points of interest, trinkets, fallen-hero lanterns; a local Tangle for guests. The outer region and its weekly Turning run on the server only; the client doesn't enter it yet. |
+| Wilds | The Tangle (inner region): camps, nodes, chests, points of interest, trinkets, fallen-hero lanterns; a local Tangle for guests. Beyond it, the Whitequiet (outer region): new land every wick with a look for each Mark, the Turning ("the Wilds shift"), and Echoes of the Six to settle; guests generate both regions locally. |
 | Village | Game calendar (one wick = 7 days) with festivals, notice board, six village projects, mail. |
-| Papers | 52 papers in eight collections (13 on the shelves from the start, 39 to find; 11 of those are declared but not yet obtainable in-game), Journal tab, Hearthwick Library with a shared per-world shelf. |
+| Papers | 52 papers in eight collections (13 on the shelves from the start, 39 to find, all obtainable in-game), Journal tab, Hearthwick Library with a shared per-world shelf. |
 | Presence | `/ws` rooms with avatars, name tags, interpolation and emotes. |
 
-Not built yet: the outer Wilds in the client, Garden and Hall tiers,
+Not built yet: Garden and Hall tiers,
 Habitica-driven decoration, co-op combat, world moves, checkpoint rewind,
 purchases, music. Real-account Habitica sign-in has only been exercised
 against fixtures and a fake Habitica server.
