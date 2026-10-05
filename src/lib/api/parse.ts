@@ -7,6 +7,19 @@ import { validateSave } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
 import type {
+  Asset,
+  AssetCounts,
+  CalendarResponse,
+  ContributeResponse,
+  CraftResponse,
+  Mail,
+  MailActionResponse,
+  MailResponse,
+  ProjectView,
+  ProjectsResponse,
+  ProjectsView,
+  StorageMoveResponse,
+  StorageResponse,
   CommonsResponse,
   HomeActionResponse,
   HomeResponse,
@@ -206,4 +219,145 @@ export function parseHomeAction(raw: unknown): HomeActionResponse {
     ...parseSnapshot(raw),
     result: { home: parseHomeView(r.home), materials: materials(r.materials), ...(typeof r.itemId === 'string' ? { itemId: r.itemId } : {}) },
   };
+}
+
+// ------------------------------------------------------------ phase 5
+
+const ASSET_KINDS = ['material', 'item', 'decoration'];
+
+function countMap(v: unknown): Record<string, number> {
+  return materials(v);
+}
+
+export function parseAsset(raw: unknown): Asset {
+  const o = obj(raw);
+  if (!ASSET_KINDS.includes(o.kind as string)) throw new ApiError('bad-response');
+  return { kind: o.kind as Asset['kind'], id: str(o.id), qty: int(o.qty, 0) };
+}
+
+export function parseCounts(raw: unknown): AssetCounts {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  return { materials: countMap(o.materials), items: countMap(o.items), decorations: countMap(o.decorations) };
+}
+
+export function parseCalendar(raw: unknown): CalendarResponse {
+  const o = obj(raw);
+  return {
+    wick: str(o.wick),
+    wickNumber: num(o.wickNumber),
+    year: num(o.year),
+    day: int(o.day, 1),
+    mark: str(o.mark),
+    festival: typeof o.festival === 'string' ? o.festival : null,
+    startsAt: num(o.startsAt),
+    nextTurning: num(o.nextTurning),
+    notice: typeof o.notice === 'string' ? o.notice : null,
+    wickDays: int(o.wickDays, 1),
+  };
+}
+
+export function parseStorage(raw: unknown): StorageResponse {
+  const o = obj(raw);
+  return { ...parseSnapshot(raw), home: parseHomeView(o.home), inventory: parseCounts(o.inventory), storage: parseCounts(o.storage) };
+}
+
+export function parseStorageMove(raw: unknown): StorageMoveResponse {
+  const r = obj(obj(raw).result);
+  return { ...parseSnapshot(raw), result: { home: parseHomeView(r.home), inventory: parseCounts(r.inventory), storage: parseCounts(r.storage) } };
+}
+
+export function parseCraft(raw: unknown): CraftResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      home: parseHomeView(r.home),
+      inventory: parseCounts(r.inventory),
+      storage: parseCounts(r.storage),
+      recipeId: str(r.recipeId),
+      output: parseAsset(r.output),
+      instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],
+    },
+  };
+}
+
+function optTime(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+export function parseMailEntry(raw: unknown): Mail {
+  const o = obj(raw);
+  const m: Mail = {
+    id: str(o.id),
+    worldId: typeof o.worldId === 'string' ? o.worldId : '',
+    fromId: str(o.fromId),
+    toId: str(o.toId),
+    fromName: name(o.fromName),
+    toName: name(o.toName),
+    asset: parseAsset(o.asset),
+    sentAt: num(o.sentAt),
+    claimedAt: optTime(o.claimedAt),
+  };
+  if ('returnedAt' in o) m.returnedAt = optTime(o.returnedAt);
+  if (o.returnReason === 'recalled' || o.returnReason === 'expired' || o.returnReason === 'recipient-removed') m.returnReason = o.returnReason;
+  else if ('returnReason' in o) m.returnReason = null;
+  return m;
+}
+
+function mailList(v: unknown): Mail[] {
+  if (!Array.isArray(v)) throw new ApiError('bad-response');
+  return v.map(parseMailEntry);
+}
+
+export function parseMail(raw: unknown): MailResponse {
+  const o = obj(raw);
+  const out: MailResponse = { ...parseSnapshot(raw), mail: mailList(o.mail) };
+  if (o.inventory) out.inventory = parseCounts(o.inventory);
+  out.nextCursor = typeof o.nextCursor === 'string' ? o.nextCursor : null;
+  out.nextPendingCursor = typeof o.nextPendingCursor === 'string' ? o.nextPendingCursor : null;
+  return out;
+}
+
+export function parseMailAction(raw: unknown): MailActionResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      mailId: typeof r.mailId === 'string' ? r.mailId : '',
+      mail: Array.isArray(r.mail) ? mailList(r.mail) : [],
+      inventory: parseCounts(r.inventory),
+      ...(r.asset ? { asset: parseAsset(r.asset) } : {}),
+    },
+  };
+}
+
+function parseProject(raw: unknown): ProjectView {
+  const o = obj(raw);
+  if (!['open', 'in-progress', 'complete'].includes(o.stage as string)) throw new ApiError('bad-response');
+  return {
+    id: str(o.id),
+    name: str(o.name),
+    stage: o.stage as ProjectView['stage'],
+    required: countMap(o.required),
+    contributed: countMap(o.contributed),
+    mine: countMap(o.mine),
+    completedAt: optTime(o.completedAt),
+    worldFlag: typeof o.worldFlag === 'string' ? o.worldFlag : null,
+    grantablePapers: Array.isArray(o.grantablePapers) ? o.grantablePapers.filter((v): v is string => typeof v === 'string') : [],
+  };
+}
+
+export function parseProjectsView(o: Record<string, unknown>): ProjectsView {
+  if (!Array.isArray(o.projects)) throw new ApiError('bad-response');
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  return { projects: o.projects.map(parseProject), worldFlags: strings(o.worldFlags), grantablePapers: strings(o.grantablePapers) };
+}
+
+export function parseProjects(raw: unknown): ProjectsResponse {
+  return { ...parseSnapshot(raw), ...parseProjectsView(obj(raw)) };
+}
+
+export function parseContribute(raw: unknown): ContributeResponse {
+  const r = obj(obj(raw).result);
+  return { ...parseSnapshot(raw), result: { ...parseProjectsView(r), projectId: str(r.projectId), materials: countMap(r.materials) } };
 }

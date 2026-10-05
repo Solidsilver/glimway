@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { villageUi } from './village.svelte'
+  import { dateLine, MARK_NOTES } from '../lib/village'
   import { ui } from './store.svelte'
   import { getCombatKit } from '../lib/combat'
   import { EMBER_COSTS } from '../lib/embers'
@@ -51,6 +53,13 @@
         {/key}
       {/if}
     </div>
+    {#if villageUi.calendar}
+      {@const c = villageUi.calendar}
+      <div class="date" data-testid="calendar-line" title={MARK_NOTES[c.mark] ?? c.mark}>
+        <span>{dateLine(c)} — {c.mark}</span>
+        {#if c.festival}<span class="fest">{c.festival}</span>{/if}
+      </div>
+    {/if}
     {#if presenceLive && ui.presence.here > 0}
       <div class="net">
         <span class="pill here" title={presenceCopy.hereTitle} data-testid="presence-here"><Icon name="person" size={12} />{presenceCopy.here(ui.presence.here)}</span>
@@ -183,6 +192,26 @@
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
+  }
+  .date {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    margin: 1px 0 3px 20px;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-soft);
+  }
+  .fest {
+    font-style: normal;
+    font-family: var(--font-display);
+    font-size: 11px;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--wood-dark);
+    background: linear-gradient(180deg, #ffe9a6, #f2c95a);
+    border: 1.5px solid var(--gold-deep);
   }
   .card {
     padding: 10px 14px 12px;

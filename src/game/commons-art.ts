@@ -493,6 +493,8 @@ interface CottageStyle {
   roof: string[]
   /** Silas's has a workshop board and a lean-to. */
   silas: boolean
+  /** Tier 2: deep eaves over a heavy bench and a rack of clean tools. */
+  workshop?: boolean
 }
 
 function drawCottage(c: C, style: CottageStyle): void {
@@ -568,6 +570,33 @@ function drawCottage(c: C, style: CottageStyle): void {
     rect(c, wx + 2, wallTop + 15, 12, 1, OAK.dk)
     box(c, wx - 1, wallTop + 22, 18, 4, OAK.md)
     for (let i = 0; i < 5; i++) px(c, wx + 2 + i * 3, wallTop + 21, i % 2 ? '#e891ac' : '#fff3d6')
+  }
+  if (style.workshop) {
+    // The right window gives way to the workshop: a deep plank eave on
+    // brackets, a heavy bench under it, clean tools racked on the wall.
+    const ex = W - 36
+    box(c, ex, wallTop + 4, 34, 30, WOOD.md)
+    for (let x = ex + 1; x < ex + 33; x++) for (let y = wallTop + 5; y < wallTop + 33; y++) px(c, x, y, (x - ex) % 6 === 5 ? WOOD.dk : WOOD.lt)
+    // Tools: saw, mallet, chisels, a coil of twine.
+    rect(c, ex + 4, wallTop + 9, 2, 12, '#b8b8c0')
+    rect(c, ex + 3, wallTop + 8, 4, 3, OAK.dk)
+    box(c, ex + 10, wallTop + 9, 7, 5, OAK.md)
+    rect(c, ex + 13, wallTop + 14, 1, 8, OAK.dk)
+    for (const x of [ex + 21, ex + 24, ex + 27]) rect(c, x, wallTop + 9, 1, 9, '#b8b8c0')
+    disc(c, ex + 30, wallTop + 12, 2, '#c4b48a')
+    // The bench: thick iron-oak top, square legs, shavings beneath.
+    box(c, ex - 2, base - 26, 38, 6, OAK.lt)
+    rect(c, ex - 1, base - 25, 36, 1, OAK.hi)
+    for (const x of [ex, ex + 30]) box(c, x, base - 21, 4, 13, OAK.md)
+    box(c, ex + 12, base - 30, 9, 4, OAK.md)
+    for (const [x, y] of [[ex + 8, base - 9], [ex + 18, base - 10], [ex + 24, base - 9]]) px(c, x, y, '#e8d2a6')
+    // The eave, deep and dark, on two brackets.
+    for (let i = 0; i < 6; i++) rect(c, ex - 4 + i, wallTop - 1 + i, 42 - i * 2 + 4, 1, i === 0 ? O : i % 2 ? '#5c4128' : '#6b4c2e')
+    rect(c, ex - 4, wallTop + 5, 46, 1, O)
+    for (const x of [ex - 2, ex + 36]) {
+      rect(c, x, wallTop + 5, 2, 8, OAK.dk)
+      px(c, x + (x < ex ? 2 : -1), wallTop + 6, OAK.dk)
+    }
   }
   if (style.silas) {
     // A workshop board by the door: a saw and a plane, painted.
@@ -986,7 +1015,128 @@ function drawRoomFire(c: C, frame: number): void {
 // ---------------------------------------------------------------- boot
 
 /** Register every fixed Commons/homestead texture (BootScene, after the game's own). */
+// ---------------------------------------------------------------- phase 5: village life
+
+function drawMailbox(c: C, flag: boolean): void {
+  // A carter's post box on a stake: a little slate roof, a slot, a flag.
+  box(c, 6, 10, 3, 12, OAK.md)
+  box(c, 1, 3, 13, 9, '#5f7f8f')
+  rect(c, 2, 4, 11, 2, '#7f9fae')
+  rect(c, 4, 8, 7, 1, '#2f3f48')
+  for (let i = 0; i < 3; i++) rect(c, i, 3 - i, 15 - i * 2, 1, i === 0 ? '#4a5560' : '#55606e')
+  if (flag) {
+    rect(c, 14, 1, 1, 8, O)
+    box(c, 14, 0, 5, 4, '#c4523a')
+  } else {
+    rect(c, 14, 6, 4, 1, '#8a3f30')
+  }
+}
+
+function drawChest(c: C): void {
+  // Oak, iron-bound, waxed against the damp. A chest that doesn't drink it.
+  box(c, 0, 6, 28, 16, OAK.md)
+  for (let x = 1; x < 27; x++) for (let y = 7; y < 21; y++) if ((x + 1) % 7 === 0) px(c, x, y, OAK.dk)
+  box(c, 0, 0, 28, 8, OAK.lt)
+  rect(c, 1, 1, 26, 2, OAK.hi)
+  for (const x of [3, 23]) rect(c, x, 0, 2, 22, '#4a4452')
+  box(c, 11, 8, 6, 6, '#c9922e')
+  px(c, 14, 11, O)
+}
+
+function drawBench(c: C): void {
+  // The crafting bench: vise, mallet, a pot of pegs, curls of shavings.
+  box(c, 0, 8, 44, 6, OAK.lt)
+  rect(c, 1, 9, 42, 1, OAK.hi)
+  for (const x of [2, 38]) box(c, x, 13, 4, 11, OAK.md)
+  rect(c, 6, 18, 32, 2, OAK.dk)
+  box(c, 4, 2, 8, 7, '#4a4452')
+  rect(c, 6, 4, 4, 1, '#8a8a96')
+  box(c, 18, 3, 8, 5, OAK.md)
+  rect(c, 21, 8, 2, 1, OAK.dk)
+  box(c, 32, 3, 6, 6, '#b25a3c')
+  for (const [x, y] of [[33, 2], [35, 1], [36, 2]]) px(c, x, y, '#e8d2a6')
+  for (const [x, y] of [[10, 25], [20, 26], [28, 25]]) px(c, x, y, '#e8d2a6')
+}
+
+function drawStall(c: C, awning: [string, string]): void {
+  // A Carting Day stall: striped awning on poles, a counter of goods.
+  const W = 40
+  for (const x of [2, W - 5]) box(c, x, 6, 3, 30, OAK.md)
+  for (let y = 0; y < 10; y++) {
+    const inset = Math.max(0, 3 - y)
+    for (let x = inset; x < W - inset; x++) px(c, x, y, y === 0 ? O : Math.floor(x / 5) % 2 ? awning[0] : awning[1])
+  }
+  rect(c, 0, 10, W, 1, O)
+  for (let x = 0; x < W; x += 5) rect(c, x, 10, 4, 2, Math.floor(x / 5) % 2 ? awning[0] : awning[1])
+  box(c, 0, 22, W, 14, '#b08a5e')
+  rect(c, 1, 23, W - 2, 2, '#c4a074')
+  // Goods: twists, crocks, a ribbon of bunting.
+  for (let i = 0; i < 5; i++) {
+    box(c, 3 + i * 7, 17, 6, 6, i % 2 ? '#d9a678' : '#b25a3c')
+    px(c, 5 + i * 7, 18, '#fff3c4')
+  }
+}
+
+function drawBunting(c: C, w: number): void {
+  // A string of little flags in Carting colours, sagging between posts.
+  const cols = ['#c9922e', '#2f7f7a', '#b25a3c', '#efe2c0']
+  for (let x = 0; x < w; x++) {
+    const y = Math.round(Math.sin((x / (w - 1)) * Math.PI) * 4)
+    px(c, x, y, '#6b4c2e')
+    if (x % 6 === 2) {
+      const col = cols[(x / 6) % cols.length | 0]
+      for (let i = 0; i < 4; i++) rect(c, x - 1 + Math.floor(i / 2), y + 1 + i, 3 - Math.floor(i / 1.5), 1, col)
+    }
+  }
+}
+
+function drawCandleHull(c: C): void {
+  // A walnut-shell boat with a leaf sail and a stub of candle.
+  oval(c, 5, 7, 5, 2, '#6b4423')
+  oval(c, 5, 6, 4, 1, '#8a5a34')
+  rect(c, 5, 1, 1, 5, '#efe2c0')
+  px(c, 5, 0, '#ffd24a')
+  for (let y = 2; y < 5; y++) rect(c, 6, y, 3 - (y - 2), 1, '#7fb35c')
+}
+
+function drawWellCanopy(c: C): void {
+  // A slate canopy over the village well: Orrin cut a mark on the lintel.
+  for (const x of [2, 25]) box(c, x, 9, 3, 19, OAK.md)
+  for (let y = 0; y < 10; y++) {
+    const inset = Math.max(0, 5 - y)
+    rect(c, inset, y, 30 - inset * 2, 1, y === 0 ? O : y % 3 === 0 ? '#55606e' : '#7f8f9e')
+  }
+  rect(c, 0, 9, 30, 2, O)
+  rect(c, 1, 9, 28, 1, OAK.lt)
+  px(c, 15, 9, O)
+}
+
+function drawBridge(c: C): void {
+  // The mended bridge: new iron-oak planks, rails both sides, a lamp hook.
+  const W = 48
+  rect(c, 0, 6, W, 16, O)
+  for (let x = 1; x < W - 1; x++) for (let y = 7; y < 21; y++) px(c, x, y, x % 6 === 0 ? OAK.dk : y < 9 ? OAK.hi : OAK.lt)
+  for (const y of [3, 21]) {
+    rect(c, 0, y, W, 3, O)
+    rect(c, 1, y + 1, W - 2, 1, OAK.md)
+    for (let x = 1; x < W; x += 8) box(c, x, y - 3, 3, 6, OAK.md)
+  }
+}
+
 export function generateCommonsArt(scene: Phaser.Scene): void {
+  makeTexture(scene, 'mailbox', 19, 22, (c) => drawMailbox(c, false))
+  makeTexture(scene, 'mailbox-flag', 19, 22, (c) => drawMailbox(c, true))
+  makeTexture(scene, 'workshop-chest', 28, 22, drawChest)
+  makeTexture(scene, 'workshop-bench', 44, 26, drawBench)
+  makeTexture(scene, 'stall-a', 40, 36, (c) => drawStall(c, ['#c4523a', '#efe2c0']))
+  makeTexture(scene, 'stall-b', 40, 36, (c) => drawStall(c, ['#2f7f7a', '#efe2c0']))
+  makeTexture(scene, 'stall-c', 40, 36, (c) => drawStall(c, ['#c9922e', '#efe2c0']))
+  makeTexture(scene, 'bunting-64', 64, 10, (c) => drawBunting(c, 64))
+  makeTexture(scene, 'bunting-96', 96, 10, (c) => drawBunting(c, 96))
+  makeTexture(scene, 'candle-hull', 11, 10, drawCandleHull)
+  makeTexture(scene, 'well-canopy', 30, 28, drawWellCanopy)
+  makeTexture(scene, 'mended-bridge', 48, 26, drawBridge)
+  makeTexture(scene, 'cottage-workshop', COTTAGE_W, COTTAGE_H, (c) => drawCottage(c, { roof: ['#8a9aa8', '#6f7f8f', '#55606e', '#3f4854'], silas: false, workshop: true }))
   makeTexture(scene, 'silas', 16, 16, (c) => paint(c, SILAS, silasPal))
   makeTexture(scene, 'silas-idle-0', 16, 16, (c) => paint(c, SILAS, silasPal))
   makeTexture(scene, 'silas-idle-1', 16, 16, (c) => paint(c, SILAS_B, silasPal, 0, 0))

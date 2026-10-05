@@ -11,7 +11,7 @@ export type NpcId = 'mara' | 'pip' | 'orrin'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}`
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -92,6 +92,8 @@ export interface WorldData {
   spawn: { tx: number; ty: number }
   /** The Hearthwick Library's door tile (village only): opens the reading room. */
   library?: { tx: number; ty: number }
+  /** A notice board (village, Commons): Turning notices and village projects. */
+  board?: { tx: number; ty: number }
   /** Code-drawn scenery sprites (the Commons). */
   scenery?: ScenerySpot[]
 }
@@ -264,8 +266,13 @@ function buildVillage(): WorldData {
   const library = { tx: libraryAt.tx + Math.floor(libraryAt.w / 2) - 1, ty: libraryAt.ty + 3 }
   const clearOfLibrary = (p: { tx: number; ty: number }) =>
     !(p.tx >= libraryAt.tx - 1 && p.tx <= libraryAt.tx + libraryAt.w && p.ty >= libraryAt.ty - 1 && p.ty <= libraryAt.ty + 5)
-  const bushes = scatteredBushes.filter(clearOfLibrary)
-  const rocks = scatteredRocks.filter(clearOfLibrary)
+  // The village notice board, by the road at the square: raised after the
+  // scatter too, so the seeded layout stays as it was.
+  const board = { tx: 15, ty: 9 }
+  g.solid[board.ty][board.tx] = true
+  const clearOfBoard = (p: { tx: number; ty: number }) => Math.abs(p.tx - board.tx) > 1 || Math.abs(p.ty - board.ty) > 1
+  const bushes = scatteredBushes.filter(clearOfLibrary).filter(clearOfBoard)
+  const rocks = scatteredRocks.filter(clearOfLibrary).filter(clearOfBoard)
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
@@ -299,7 +306,9 @@ function buildVillage(): WorldData {
     villageLantern,
     emberSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
     spawn: { tx: 7, ty: 11 },
-    library
+    library,
+    board,
+    scenery: [{ key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE }]
   }
 }
 
@@ -600,6 +609,11 @@ export function areaKind(id: string): AreaKind {
   const kind = AREA_KINDS[id]
   if (!kind) throw new Error(`[fingersnap] unknown area kind: ${id}`)
   return kind
+}
+
+/** Whether this build can draw an area (an exit to anything else is closed). */
+export function hasAreaKind(id: string): boolean {
+  return Object.prototype.hasOwnProperty.call(AREA_KINDS, id)
 }
 
 /** Register an area kind — how the Commons and the Wilds will arrive. */

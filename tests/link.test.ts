@@ -508,3 +508,90 @@ test('sync and spend send the local progress as it is (a 0 HP hero sends hp 0)',
   assert.equal(session.state.hp, 10, 'healing comes from the answer');
   link.stop();
 });
+
+// ---------------------------------------------------------------- lost mutation answers (phase 3 review, finding 1)
+
+const homeView = (items: unknown[] = [], tier = 0) => ({ ownerId: 'hero', displayName: 'Tansy', worldId: 'w', plotIndex: 0, tier, bounds: { x: 64, y: 64, width: 256, height: 192 }, indoor: null, items });
+const stool = { id: 's1', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null };
+
+test('a purchase whose answer is lost is pending, then replayed exactly before anything else is bought', async () => {
+  const server = fakeServer();
+  const store = memoryStore();
+  const { link, session, events } = makeLink(server, { rev: 5, store, state: base({ embers: 10 }) });
+  server.on('POST /api/homestead/buy', 'network');
+  const first = await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' });
+  assert.deepEqual(first, { ok: false, code: 'pending' }, 'the outcome is unknown, not "nothing changed"');
+  const lost = server.sent('POST /api/homestead/buy')[0].body;
+  assert.equal(link.pendingOperation?.body.key, lost.key);
+  assert.ok(store.saved.at(-1)?.unresolved, 'kept in the cache across a reload');
+  assert.equal(link.status, 'offline');
+
+  // Back online. The server had committed it: the replay gets the original answer.
+  (link as unknown as { status: string }).status = 'online';
+  link.lease = 'L2';
+  server.on('POST /api/homestead/buy', (c) => ({ body: { ...snap(base({ embers: 8 }), 6), result: { home: homeView([stool]), materials: {}, itemId: 's1' } }, _seen: c } as Answer));
+  server.on('POST /api/homestead/place', (c) => ({ body: { ...snap(base({ embers: 8 }), 7), result: { home: homeView([{ ...stool, scene: 'outdoor', x: 0, y: 0, rotation: 0 }], 1), materials: {}, itemId: 's1' } }, _seen: c } as Answer));
+  const next = await link.homeAction({ op: 'place', itemId: 's1', scene: 'outdoor', x: 0, y: 0, rotation: 0 });
+  assert.equal(next.ok, true);
+  const replay = server.sent('POST /api/homestead/buy')[1].body;
+  assert.equal(replay.key, lost.key, 'same idempotency key');
+  assert.equal(replay.baseRev, lost.baseRev, 'same revision');
+  assert.deepEqual(replay.progress, lost.progress, 'same progress');
+  assert.equal(replay.lease, 'L2', 'only the lease is current');
+  assert.equal(server.sent('POST /api/homestead/buy').length, 2, 'never a second purchase with a new key');
+  assert.equal(link.pendingOperation, null);
+  assert.equal(session.state.embers, 8);
+  const resolved = events.find((e) => e.event === EV.mutationResolved)!;
+  assert.equal(resolved.payload.outcome, 'landed');
+});
+
+test('a lost mutation refused on replay never committed: cleared, and the next one goes ahead', async () => {
+  const server = fakeServer();
+  const { link, events } = makeLink(server, { rev: 5 });
+  server.on('POST /api/homestead/upgrade', 'network', { status: 409, body: { error: { code: 'stale-revision' } } });
+  assert.deepEqual(await link.homeAction({ op: 'upgrade', tier: 1 }), { ok: false, code: 'pending' });
+  (link as unknown as { status: string }).status = 'online';
+  assert.equal(await link.resolveUnresolved(), 'refused');
+  assert.equal(link.pendingOperation, null);
+  assert.equal(events.find((e) => e.event === EV.mutationResolved)!.payload.outcome, 'refused');
+});
+
+test('still no answer on replay: the new purchase waits (pending) instead of risking a double charge', async () => {
+  const server = fakeServer();
+  const { link } = makeLink(server, { rev: 5 });
+  server.on('POST /api/homestead/buy', 'network');
+  await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' });
+  (link as unknown as { status: string }).status = 'online';
+  const again = await link.homeAction({ op: 'buy', itemDef: 'potted-fern' });
+  assert.deepEqual(again, { ok: false, code: 'pending' });
+  const sent = server.sent('POST /api/homestead/buy')
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].body.itemDef, 'wooden-stool', 'only the replay went out');
+});
+
+test('a home read carries the caller’s materials (phase 3 review, finding 6)', async () => {
+  const server = fakeServer();
+  const { link } = makeLink(server, { rev: 5 });
+  server.on('GET /api/homestead/bob', { body: { ...snap(base(), 5), home: { ...homeView(), ownerId: 'bob' }, materials: { timber: 3, stone: 0, fiber: 20, amber: 1 } } });
+  const r = await link.readHome('bob');
+  assert.ok(r.ok);
+  assert.equal(r.value.home.ownerId, 'bob');
+  assert.deepEqual(r.value.materials, { timber: 3, stone: 0, fiber: 20, amber: 1 });
+});
+
+test('a reconnect resolves a lost mutation by exact replay', async () => {
+  const server = fakeServer();
+  const { link, events } = makeLink(server, { rev: 5 });
+  server.on('POST /api/homestead/buy', 'network');
+  await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' });
+  assert.equal(link.status, 'offline');
+  server.on('POST /api/play', { body: { ...snap(base({ embers: 8 }), 6), lease: 'L2' } });
+  server.on('POST /api/homestead/buy', { body: { ...snap(base({ embers: 8 }), 6), result: { home: homeView([stool]), materials: {}, itemId: 's1' } } });
+  await link.reconnect(false);
+  assert.equal(link.status, 'online');
+  const [lost, replay] = server.sent('POST /api/homestead/buy');
+  assert.equal(replay.body.key, lost.body.key);
+  assert.equal(replay.body.lease, 'L2');
+  assert.equal(link.pendingOperation, null);
+  assert.equal(events.filter((e) => e.event === EV.mutationResolved).at(-1)!.payload.outcome, 'landed');
+});

@@ -55,8 +55,8 @@ export interface InteractableDeps {
   reducedMotion: boolean
   /** Found-text pickups and the library door (they handle their own interactions). */
   papers?: PaperPickups
-  /** Runtime interaction points owned by a feature (homesteads). */
-  extra?: InteractionProvider
+  /** Runtime interaction points owned by features (homesteads, village life). */
+  extras?: InteractionProvider[]
 }
 
 /** Who the player has already heard from at each quest stage (this tab). */
@@ -110,23 +110,30 @@ export class Interactables {
 
   /** Attach the runtime provider (it is built after this, since it pushes points here). */
   setExtra(extra: InteractionProvider): void {
-    this.deps.extra = extra
+    this.deps.extras = [...(this.deps.extras ?? []), extra]
   }
 
-  /** Interaction points the `extra` provider pushes; replaced wholesale. */
-  private dynamic: Interactable[] = []
+  /** The runtime provider that answers for this id, if any. */
+  private extra(id: InteractId): InteractionProvider | undefined {
+    return this.deps.extras?.find((p) => p.owns(id))
+  }
+
+  /** Interaction points each provider pushes; each provider's set is replaced wholesale. */
+  private dynamicBy = new Map<InteractionProvider | undefined, Interactable[]>()
   private markersBuilt = false
 
-  /** Replace the provider's interaction points (and their markers). */
-  setDynamic(list: Interactable[]): void {
-    for (const it of this.dynamic) {
+  /** Replace a provider's interaction points (and their markers). */
+  setDynamic(list: Interactable[], owner?: InteractionProvider): void {
+    for (const it of this.dynamicBy.get(owner) ?? []) {
       const i = this.list.indexOf(it)
       if (i >= 0) this.list.splice(i, 1)
-      this.markers.get(it.id)?.destroy()
+      const marker = this.markers.get(it.id)
+      if (marker) this.scene.tweens.killTweensOf(marker)
+      marker?.destroy()
       this.markers.delete(it.id)
       if (this.currentTarget === it) this.currentTarget = null
     }
-    this.dynamic = list
+    this.dynamicBy.set(owner, list)
     this.list.push(...list)
     if (this.markersBuilt) {
       for (const it of list) this.addMarker(it)
@@ -174,8 +181,8 @@ export class Interactables {
       let kind: 'quest' | 'talk' | null = null
       if (this.deps.papers?.owns(it.id)) {
         kind = null // pickups sparkle instead; the library is a building
-      } else if (this.deps.extra?.owns(it.id)) {
-        kind = this.deps.extra.marker?.(it.id) ?? null
+      } else if (this.extra(it.id)) {
+        kind = this.extra(it.id)!.marker?.(it.id) ?? null
       } else if (this.isEmberSpot(it.id)) {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else {
@@ -217,7 +224,7 @@ export class Interactables {
     const label = action ? action.label : best ? this.promptLabel(best) : null
     if (label !== this.lastPrompt) {
       this.lastPrompt = label
-      const verb = !action && best && this.deps.extra?.owns(best.id) ? this.deps.extra.verb?.(best.id) : null
+      const verb = !action && best && this.extra(best.id) ? this.extra(best.id)!.verb?.(best.id) : null
       const payload: PromptPayload = action && label ? { label, verb: action.verb } : verb && label ? { label, verb } : { label }
       bus.emit(EV.prompt, payload)
     }
@@ -240,8 +247,8 @@ export class Interactables {
       if (papers.activate(target.id)) this.remove(target)
       return
     }
-    if (this.deps.extra?.owns(target.id)) {
-      this.deps.extra.activate(target.id)
+    if (this.extra(target.id)) {
+      this.extra(target.id)!.activate(target.id)
       return
     }
     let payload: Dialogue
@@ -309,7 +316,7 @@ export class Interactables {
   private promptLabel(it: Interactable): string {
     const { session } = this.deps
     const stage = session.questStage
-    if (this.deps.extra?.owns(it.id)) return this.deps.extra.label?.(it.id) ?? it.label
+    if (this.extra(it.id)) return this.extra(it.id)!.label?.(it.id) ?? it.label
     if (it.id === 'clue') return stage === 'accepted' ? 'Take a rubbing of the marker' : it.label
     if (it.id === 'lantern') return stage === 'guardian-defeated' ? 'Light the lantern' : it.label
     if (it.id === 'chest') return session.state.flags.includes('opened:ashwatch-chest') ? it.label : `Open the chest · ${EMBER_COSTS.chest} embers`
@@ -322,7 +329,7 @@ export class Interactables {
 
   /** Height above an interactable's base where its marker floats. */
   private markerOffset(id: InteractId): number {
-    const extra = this.deps.extra?.owns(id) ? this.deps.extra.markerOffset?.(id) : null
+    const extra = this.extra(id)?.markerOffset?.(id) ?? null
     if (typeof extra === 'number') return extra
     if (id === 'lantern') return 44
     if (id === 'hearth') return 36

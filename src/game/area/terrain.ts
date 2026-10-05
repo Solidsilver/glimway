@@ -1,10 +1,10 @@
 /**
- * Area construction — ground. Paints a WorldData terrain grid into one
- * canvas texture (one image, one draw surface, crisp nearest-neighbor).
+ * Area construction — ground. Paints a WorldData terrain grid into canvas
+ * textures, one per bounded chunk (crisp nearest-neighbor).
  */
 import type Phaser from 'phaser'
-import { TERRAIN, TILE } from '../textures'
-import type { WorldData } from '../worlds'
+import { TERRAIN, TILE } from '../textures.ts'
+import type { WorldData } from '../worlds.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -40,6 +40,20 @@ const TERRAIN_TO_EXPANSION: Record<number, string> = {
   [TERRAIN.planks_dark]: 'dark-wood-planks'
 }
 
+/**
+ * The ground is drawn in chunks no larger than this many tiles a side, so a
+ * big map (a Commons with many plots) never asks the GPU for a texture past
+ * its size limit (often 4096 or 8192 px). 64 tiles = 1024 px.
+ */
+export const GROUND_CHUNK_TILES = 64
+
+/** Tile rectangles covering a map in chunks of at most `max` tiles a side. */
+export function groundChunks(width: number, height: number, max = GROUND_CHUNK_TILES): { tx: number; ty: number; tw: number; th: number }[] {
+  const out: { tx: number; ty: number; tw: number; th: number }[] = []
+  for (let ty = 0; ty < height; ty += max) for (let tx = 0; tx < width; tx += max) out.push({ tx, ty, tw: Math.min(max, width - tx), th: Math.min(max, height - ty) })
+  return out
+}
+
 export function buildGround(scene: Phaser.Scene, world: WorldData): void {
   const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as {
     terrain: { tileWidth: number; tiles: Record<string, string> }
@@ -51,24 +65,26 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): void {
   const cell = manifest ? manifest.terrain.tileWidth : 32
   const cols = 4
   const sheet = scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLCanvasElement
-  const canvas = document.createElement('canvas')
-  canvas.width = world.widthPx
-  canvas.height = world.heightPx
-  const ctx = canvas.getContext('2d')!
-  ctx.imageSmoothingEnabled = false
-  for (let y = 0; y < world.height; y++) {
-    for (let x = 0; x < world.width; x++) {
-      const id = world.ground[y][x]
-      const draw = (name: string) => {
-        const idx = tileIndex[name] ?? 0
-        ctx.drawImage(sheet, (idx % cols) * cell, Math.floor(idx / cols) * cell, cell, cell, x * TILE, y * TILE, TILE, TILE)
+  groundChunks(world.width, world.height).forEach((c, i) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = c.tw * TILE
+    canvas.height = c.th * TILE
+    const ctx = canvas.getContext('2d')!
+    ctx.imageSmoothingEnabled = false
+    for (let y = c.ty; y < c.ty + c.th; y++) {
+      for (let x = c.tx; x < c.tx + c.tw; x++) {
+        const id = world.ground[y][x]
+        const draw = (name: string) => {
+          const idx = tileIndex[name] ?? 0
+          ctx.drawImage(sheet, (idx % cols) * cell, Math.floor(idx / cols) * cell, cell, cell, (x - c.tx) * TILE, (y - c.ty) * TILE, TILE, TILE)
+        }
+        if (id === TERRAIN.bridge) draw('pond-water')
+        draw(TERRAIN_TO_EXPANSION[id] ?? 'grass')
       }
-      if (id === TERRAIN.bridge) draw('pond-water')
-      draw(TERRAIN_TO_EXPANSION[id] ?? 'grass')
     }
-  }
-  const key = `ground-${world.areaId}`
-  if (scene.textures.exists(key)) scene.textures.remove(key)
-  scene.textures.addCanvas(key, canvas)
-  scene.add.image(0, 0, key).setOrigin(0, 0).setDepth(-10)
+    const key = `ground-${world.areaId}-${i}`
+    if (scene.textures.exists(key)) scene.textures.remove(key)
+    scene.textures.addCanvas(key, canvas)
+    scene.add.image(c.tx * TILE, c.ty * TILE, key).setOrigin(0, 0).setDepth(-10)
+  })
 }

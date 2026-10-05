@@ -11,6 +11,14 @@
  */
 import { ApiError, errorFromResponse } from './errors.ts';
 import {
+  parseCalendar,
+  parseContribute,
+  parseCraft,
+  parseMail,
+  parseMailAction,
+  parseProjects,
+  parseStorage,
+  parseStorageMove,
   parseCommons,
   parseHome,
   parseHomeAction,
@@ -25,6 +33,15 @@ import {
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
 import type {
+  Asset,
+  CalendarResponse,
+  ContributeResponse,
+  CraftResponse,
+  MailActionResponse,
+  MailResponse,
+  ProjectsResponse,
+  StorageMoveResponse,
+  StorageResponse,
   CommonsResponse,
   HomeActionRequest,
   HomeActionResponse,
@@ -72,6 +89,27 @@ export interface RawApi {
   commons(): Promise<CommonsResponse>;
   /** A keyed homestead mutation: buy, place, move, remove or upgrade. */
   homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
+  /** The Hearthwick calendar (public, no session). */
+  calendar(): Promise<CalendarResponse>;
+  /** Workshop storage: carried and stored counts. */
+  storage(): Promise<StorageResponse>;
+  storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset }): Promise<StorageMoveResponse>;
+  craft(req: Envelope & { recipeId: string; qty: number }): Promise<CraftResponse>;
+  mail(page?: { cursor?: string; pendingCursor?: string }): Promise<MailResponse>;
+  mailSend(req: Envelope & { toId: string; asset: Asset }): Promise<MailActionResponse>;
+  mailClaim(id: string, req: Envelope): Promise<MailActionResponse>;
+  /** Take back unclaimed mail (server fix round 5; 404/405 from older servers). */
+  mailRecall(id: string, req: Envelope): Promise<MailActionResponse>;
+  projects(): Promise<ProjectsResponse>;
+  contribute(id: string, req: Envelope & { materials: Record<string, number> }): Promise<ContributeResponse>;
+}
+
+/** The common keyed-mutation fields (Link.mutate fills them). */
+export interface Envelope {
+  lease: string;
+  baseRev: number;
+  key: string;
+  progress?: unknown;
 }
 
 export interface ApiClient extends RawApi {
@@ -176,6 +214,40 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async homeAction(op, req) {
       return parseHomeAction(await request('POST', `/api/homestead/${op}`, req));
     },
+    async calendar() {
+      return parseCalendar(await request('GET', '/api/calendar'));
+    },
+    async storage() {
+      return parseStorage(await request('GET', '/api/storage'));
+    },
+    async storageMove(req) {
+      return parseStorageMove(await request('POST', '/api/storage', req));
+    },
+    async craft(req) {
+      return parseCraft(await request('POST', '/api/craft', req));
+    },
+    async mail(page) {
+      const q = new URLSearchParams();
+      if (page?.cursor) q.set('cursor', page.cursor);
+      if (page?.pendingCursor) q.set('pendingCursor', page.pendingCursor);
+      const qs = q.toString();
+      return parseMail(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`));
+    },
+    async mailSend(req) {
+      return parseMailAction(await request('POST', '/api/mail', req));
+    },
+    async mailClaim(id, req) {
+      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/claim`, req));
+    },
+    async mailRecall(id, req) {
+      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
+    },
+    async projects() {
+      return parseProjects(await request('GET', '/api/projects'));
+    },
+    async contribute(id, req) {
+      return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, req));
+    },
   };
 
   const run = <T>(task: (r: RawApi) => Promise<T>): Promise<T> => queue.run(() => task(raw));
@@ -198,6 +270,16 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
     homeAction: (op, req) => run((r) => r.homeAction(op, req)),
+    calendar: () => run((r) => r.calendar()),
+    storage: () => run((r) => r.storage()),
+    storageMove: (req) => run((r) => r.storageMove(req)),
+    craft: (req) => run((r) => r.craft(req)),
+    mail: (page) => run((r) => r.mail(page)),
+    mailSend: (req) => run((r) => r.mailSend(req)),
+    mailClaim: (id, req) => run((r) => r.mailClaim(id, req)),
+    mailRecall: (id, req) => run((r) => r.mailRecall(id, req)),
+    projects: () => run((r) => r.projects()),
+    contribute: (id, req) => run((r) => r.contribute(id, req)),
   };
 }
 

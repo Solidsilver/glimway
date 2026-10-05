@@ -9,6 +9,8 @@
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import { home } from './home.svelte'
+  import { workshopShort } from '../game/entities/homesteads'
+  import { costPhrase } from '../lib/village'
 
   // Silas's yard: the cottage, and the pieces he has finished. Prices come
   // from content/homestead.json; the server charges what it says, not us.
@@ -45,6 +47,12 @@
   const materialItems = HOMESTEAD_DATA.items.filter((i) => i.embers === 0)
   const cottage = HOMESTEAD_DATA.tiers[1]
   const cottageBlurb = HOMESTEAD_TIERS[1].blurb
+  const workshop = HOMESTEAD_DATA.tiers[2]
+  const workshopBlurb = HOMESTEAD_TIERS[2].blurb
+  const workshopWhy = $derived.by(() => {
+    void version
+    return workshopShort(ui.stats.embers, homes.materials)
+  })
 
   function why(it: HomeItem): string | null {
     if (view.tier < it.minTier) return 'Needs the cottage'
@@ -70,7 +78,7 @@
     message = null
     const r = await homes.upgrade()
     busy = null
-    message = r.ok ? { text: SILAS.dialogue.afterUpgrade.lines[0], kind: 'ok' } : { text: r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text, kind: 'error' }
+    message = r.ok ? { text: homes.mine?.tier === 2 ? 'There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Go and make something.' : SILAS.dialogue.afterUpgrade.lines[0], kind: 'ok' } : { text: r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text, kind: 'error' }
   }
 
   const cost = (it: HomeItem) =>
@@ -110,6 +118,22 @@
             </span>
             <button type="button" class="primary small" disabled={busy !== null || ui.stats.embers < cottage.embers} onclick={raise}>
               {busy === 'cottage' ? 'Raising…' : `Raise it · ${cottage.embers}`}
+            </button>
+          </div>
+        </section>
+      {/if}
+
+      {#if view.tier === 1}
+        <section aria-label="The workshop">
+          <h3 class="section-title">The workshop</h3>
+          <div class="row feature">
+            <span class="txt">
+              <span class="name">{workshop.name}</span>
+              <span class="desc">{workshopBlurb} Unlocks the storage chest and the crafting bench.</span>
+              <span class="meta">{workshop.embers} embers · {costPhrase(workshop.materials ?? {})}</span>
+            </span>
+            <button type="button" class="small" class:primary={!workshopWhy} data-testid="build-workshop" disabled={busy !== null || !!workshopWhy} onclick={raise}>
+              {busy === 'cottage' ? 'Building…' : workshopWhy ?? 'Build it'}
             </button>
           </div>
         </section>

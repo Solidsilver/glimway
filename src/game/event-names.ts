@@ -34,6 +34,8 @@ export const EV = {
   presence: 'ui:presence',
   /** Presence: someone (or you) emoted — the scene shows a bubble. */
   emote: 'game:emote',
+  /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
+  mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
   // ui -> game (and dialogue panel -> scene)

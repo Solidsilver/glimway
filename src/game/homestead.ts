@@ -9,11 +9,12 @@
  * Commons with no homes: building needs a world.
  */
 import { HOMESTEAD_DATA, homeItem, type HomeInstance } from '../lib/homestead'
-import type { HomeAction, HomeView, PlotInfo } from '../lib/api/types'
+import type { HomeAction, HomeActionResponse, HomeView, PlotInfo } from '../lib/api/types'
+import type { MutationOp } from './link'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing'
 import { setCommonsPlotCount } from './worlds'
-import { bus } from './events'
+import { bus, EV } from './events'
 import { grantPaper } from './papers'
 import type { Session } from './session'
 
@@ -129,6 +130,8 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'Another device took over this journey.'
     case 'busy':
       return 'Hold on — the last one is still on its way.'
+    case 'pending':
+      return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
     default:
       return 'Silas didn’t catch that. Nothing changed — try again in a moment.'
   }
@@ -149,6 +152,9 @@ export class Homesteads {
 
   constructor(private session: Session) {
     this.status = session.link ? 'loading' : 'guest'
+    bus.on(EV.mutationResolved, (p: Parameters<Homesteads['onResolved']>[0]) => {
+      if (current?.homes === this) this.onResolved(p)
+    })
   }
 
   get connected(): boolean {
@@ -222,12 +228,51 @@ export class Homesteads {
     setCommonsPlotCount(this.slotCount())
     this.status = 'ready'
     this.emit('roster')
-    for (const p of this.roster) {
+    // Your own home first (Silas needs it to walk you to your plot), then the neighbours.
+    const me = this.myId
+    const order = [...this.roster].sort((a, b) => (a.ownerId === me ? -1 : b.ownerId === me ? 1 : 0))
+    for (const p of order) {
       const r = await link.readHome(p.ownerId)
       if (!r.ok) continue
-      this.homes.set(p.ownerId, r.value)
-      this.emit('home')
+      this.adoptRead(r.value)
     }
+  }
+
+  /** A home read: the owner's home, and always the caller's own materials. */
+  private adoptRead(v: { home: HomeView; materials: Record<string, number> }): void {
+    const before = this.homes.get(v.home.ownerId)
+    this.homes.set(v.home.ownerId, v.home)
+    this.materials = v.materials
+    this.reconcilePapers()
+    // Only the plot that changed is redrawn (and only if it did change).
+    if (!before || JSON.stringify(before) !== JSON.stringify(v.home)) this.emit('home', v.home.ownerId)
+  }
+
+  /**
+   * Papers that follow from the home's state, not from one answer: a cottage
+   * means a laid foundation (a lost upgrade answer must still bring Orrin's
+   * standard once the home reads tier 1).
+   */
+  private reconcilePapers(): void {
+    if ((this.mine?.tier ?? 0) >= 1) grantPaper(this.session, PAPERS.foundation)
+  }
+
+  /** A homestead mutation whose answer was lost is now known (Link.resolveUnresolved). */
+  private onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused'; res?: HomeActionResponse }): void {
+    if (p.op.kind !== 'home') return
+    if (p.outcome === 'landed' && p.res?.result) {
+      this.homes.set(p.res.result.home.ownerId, p.res.result.home)
+      this.materials = p.res.result.materials
+      this.reconcilePapers()
+      this.emit(p.op.op, p.res.result.home.ownerId)
+    } else {
+      const me = this.myId
+      if (me) void this.fetchHome(me)
+    }
+    bus.emit(EV.toast, {
+      text: p.outcome === 'landed' ? 'Your last order with Silas went through after all.' : 'Your last order with Silas didn’t go through. Nothing was charged.',
+      icon: 'ember'
+    })
   }
 
   /** A member's home, fresh from the server (visiting their cottage). */
@@ -236,9 +281,8 @@ export class Homesteads {
     if (!link) return null
     const r = await link.readHome(ownerId)
     if (!r.ok) return this.homes.get(ownerId) ?? null
-    this.homes.set(ownerId, r.value)
-    this.emit('home')
-    return r.value
+    this.adoptRead(r.value)
+    return r.value.home
   }
 
   // ------------------------------------------------------------ actions
@@ -246,15 +290,14 @@ export class Homesteads {
   async act(action: HomeAction): Promise<ActResult> {
     const link = this.session.link
     if (!link) return { ok: false, code: 'guest', text: 'Plots are for people with a world. Sign in to your world to claim one.' }
-    const firstHouse = action.op === 'upgrade' && (this.mine?.tier ?? 0) === 0
     const r = await link.homeAction(action)
     if (!r.ok) return { ok: false, code: r.code, text: homeErrorText(r.code) }
     this.homes.set(r.home.ownerId, r.home)
     this.materials = r.materials
     const row = this.roster.find((p) => p.ownerId === r.home.ownerId)
     if (row) row.tier = r.home.tier
-    if (firstHouse) grantPaper(this.session, PAPERS.foundation)
-    this.emit(action.op)
+    this.reconcilePapers()
+    this.emit(action.op, r.home.ownerId)
     return { ok: true, itemId: r.itemId }
   }
 
@@ -271,7 +314,7 @@ export class Homesteads {
     if (!this.mine || this.claimed) return false
     this.session.addFlag(HOME_FLAGS.claimed)
     grantPaper(this.session, PAPERS.deed)
-    this.emit('claim')
+    this.emit('claim', this.myId ?? undefined)
     return true
   }
 
@@ -288,8 +331,9 @@ export class Homesteads {
     return HOMESTEAD_DATA.tiers[1].embers
   }
 
-  private emit(reason: string): void {
-    bus.emit(HOME_EV.changed, { reason })
+  /** `ownerId`: only that plot changed (the scene redraws just it). */
+  private emit(reason: string, ownerId?: string): void {
+    bus.emit(HOME_EV.changed, { reason, ownerId })
   }
 }
 

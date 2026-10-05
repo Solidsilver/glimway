@@ -590,3 +590,30 @@ func TestPhase5ContributionFailureAndMutationGuards(t *testing.T) {
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
 }
+
+// The client shows "your contribution" and what you can send without a Workshop.
+func TestPhase5ProjectsShowMyShareAndMailShowsCarriedCounts(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, b := x.member("bob", s.WorldID)
+	x.seedAssets("alice")
+	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
+	x.seedAssets("bob")
+	b.Snapshot = x.expect("GET", "/api/state", nil, bc, 200).Snapshot
+	path := "/api/projects/well-canopy/contribute"
+	v := x.p5("POST", path, body(s, "a1", map[string]any{"materials": map[string]int{"timber": 7, "fiber": 2}}), c, 200)
+	s.Snapshot = v.Snapshot
+	v = x.p5("POST", path, body(s, "a2", map[string]any{"materials": map[string]int{"timber": 3}}), c, 200)
+	x.p5("POST", path, body(b, "b1", map[string]any{"materials": map[string]int{"stone": 5}}), bc, 200)
+	mine := x.p5("GET", "/api/projects", nil, c, 200).Projects[1]
+	if mine.ID != "well-canopy" || mine.Mine["timber"] != 10 || mine.Mine["fiber"] != 2 || mine.Mine["stone"] != 0 || mine.Contributed["stone"] != 5 {
+		t.Fatalf("my share %+v", mine)
+	}
+	if theirs := x.p5("GET", "/api/projects", nil, bc, 200).Projects[1]; theirs.Mine["stone"] != 5 || theirs.Mine["timber"] != 0 {
+		t.Fatalf("their share %+v", theirs)
+	}
+	m := x.p5("GET", "/api/mail", nil, c, 200)
+	if m.Inventory.Materials["timber"] != 990 || m.Inventory.Items[content.WildsRules.Trinkets[0]] != 5 {
+		t.Fatalf("mail carried counts %+v", m.Inventory)
+	}
+}

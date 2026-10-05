@@ -20,7 +20,7 @@
   const needsCottage = $derived(!!p && p.tier < 1)
 </script>
 
-{#if p}
+{#if p && !hidden}
   <div class="tray panel" role="region" aria-label="Arranging your place" data-testid="placement-tray">
     <div class="head">
       <h2><Icon name="home" size={16} /> {p.scene === 'indoor' ? 'Arranging your cottage' : 'Arranging your plot'}</h2>

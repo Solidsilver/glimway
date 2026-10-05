@@ -49,7 +49,7 @@ export async function waitForArea(page: Page, area: AreaId): Promise<void> {
 
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   await page.evaluate(([a, x, y]) => (window as unknown as Hooks).__fsDevWarp!(a, x, y), [area, tx, ty] as const)
-  await page.waitForFunction(() => (window as unknown as Hooks).__fsSafety?.().transitioning === true).catch(() => {})
+  await page.waitForFunction(() => (window as unknown as Hooks).__fsSafety?.().transitioning === true, undefined, { timeout: 2000 }).catch(() => {})
   await waitForArea(page, area)
 }
 

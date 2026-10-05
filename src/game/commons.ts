@@ -416,6 +416,7 @@ export function buildCommons(plotCount = 0): CommonsWorld {
     villageLantern: null,
     emberSpots: [],
     spawn: { ...COMMONS_FROM_VILLAGE },
+    board: { ...board },
     plots: slots,
     features: { gate, hame, well, board, silas, toolbox, firebox, skids, lamps },
     rows
