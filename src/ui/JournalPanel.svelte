@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { journalEntries } from '../content/world'
+  import { journalEntries, QUEST_STEPS } from '../content/world'
   import type { QuestStage } from '../lib/state'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
@@ -29,13 +29,7 @@
     document.getElementById(`journal-tab-${tab}`)?.focus()
   }
 
-  const STEPS: { stage: QuestStage; label: string }[] = [
-    { stage: 'new', label: 'Hear Mara out' },
-    { stage: 'accepted', label: 'Find the old route marker' },
-    { stage: 'clue-found', label: 'Face the stone warden' },
-    { stage: 'guardian-defeated', label: 'Light the hilltop lantern' },
-    { stage: 'lantern-lit', label: 'Tell Mara the road is lit' }
-  ]
+  const STEPS = QUEST_STEPS
   const ORDER: QuestStage[] = ['new', 'accepted', 'clue-found', 'guardian-defeated', 'lantern-lit', 'complete']
 
   const stage = $derived(ui.quest.stage as QuestStage)

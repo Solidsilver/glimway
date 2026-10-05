@@ -418,6 +418,18 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   ],
 };
 
+/**
+ * The Journal's quest checklist: one line per step, worded like the
+ * objective for that stage (src/lib/state.ts questObjective).
+ */
+export const QUEST_STEPS: { stage: QuestStage; label: string }[] = [
+  { stage: 'new', label: 'Hear Mara out' },
+  { stage: 'accepted', label: 'Take a rubbing of the route stone' },
+  { stage: 'clue-found', label: 'Settle the stone warden' },
+  { stage: 'guardian-defeated', label: 'Light the hilltop lantern' },
+  { stage: 'lantern-lit', label: 'Tell Mara the road is lit' }
+];
+
 const STAGE_ORDER: QuestStage[] = [
   'new',
   'accepted',
@@ -492,7 +504,7 @@ function plural(n: number, word: string): string {
 /** How to get more embers, in the world's voice. */
 function emberHint(connected: boolean): string {
   return connected
-    ? `Every ${XP_PER_EMBER} XP you earn in Habitica becomes an ember. Sync from the Menu here in Hearthwick to collect them.`
+    ? `Every ${XP_PER_EMBER} XP you earn in Habitica becomes an ember. Sync from the Menu in Hearthwick or the Commons to collect them.`
     : `Embers come from real-life progress: connect Habitica in the Menu, and every ${XP_PER_EMBER} XP you earn there becomes an ember.`;
 }
 

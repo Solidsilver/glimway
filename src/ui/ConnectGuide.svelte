@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { syncProfile, type SyncResult } from '../lib/habitica/sync'
+  import { isSafeArea, syncProfile, type SyncResult } from '../lib/habitica/sync'
   import { parseFields, parsePaste, swapped, type PasteResult } from '../lib/habitica/paste'
   import { forgetRemembered, saveRemembered } from '../lib/habitica/remembered'
   import { HabiticaApiError } from '../lib/habitica/client'
   import type { HabiticaProfile } from '../lib/habitica/types'
   import { XP_PER_EMBER } from '../lib/embers'
-  import { emberLine, guideCopy, guideTabs, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
+  import { emberLine, guideCopy, guideTabs, syncCopy, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
   import { ui } from './store.svelte'
@@ -99,14 +99,18 @@
 
   // ---- sync (moved from the Menu panel; same rules) ----
 
-  /** Safety gate: sync only in a quiet village — before network and after. */
+  /**
+   * Safety gate: sync only somewhere safe and quiet (Hearthwick or the
+   * Commons, including your cottage), before network and after. The area
+   * test is the save's, as the shared rules and the server check it.
+   */
   function syncBlocker(): string | null {
     if (mode === 'title') return null // nothing has started: a new game is in the village
     const safety = (window as unknown as {
       __fsSafety?: () => { areaId: string; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean }
     }).__fsSafety?.()
     if (!safety) return 'The world is still waking up — try again in a moment.'
-    if (safety.areaId !== 'village') return 'Head back to Hearthwick first — syncing only happens somewhere safe.'
+    if (!isSafeArea(session.state.area)) return syncCopy.goSafe
     if (safety.transitioning) return 'Finish walking through the gate first.'
     if (safety.dialogueOpen) return 'Finish your conversation first.'
     if (safety.enemiesNear) return 'Not with creatures this close!'
@@ -294,7 +298,7 @@
       const late = (window as unknown as { __fsSafety?: () => { transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety?.()
       if (mode === 'menu' && late && (late.transitioning || late.dialogueOpen || late.enemiesNear)) {
         connection = 'error'
-        connectionError = 'Something happened mid-sync. Try again from a quiet spot in Hearthwick.'
+        connectionError = syncCopy.midSync
         return false
       }
 
@@ -310,7 +314,7 @@
         connection = 'error'
         connectionError = result.reason === 'account-switch'
           ? 'That’s a different Habitica character than this journey’s. Start over to switch heroes.'
-          : 'Syncing only works in Hearthwick. Your save is unchanged.'
+          : syncCopy.unsafeUnchanged
         if (signingIn) {
           disconnectSession()
           connection = 'disconnected'
@@ -411,7 +415,7 @@
     connectionError =
       code === 'offline' ? `${offlineCopy.needs}. Syncing waits until you’re back online.`
         : code === 'account-switch' ? 'That’s a different Habitica hero than the one in this world. Log out first to switch heroes.'
-          : code === 'not-at-safe-boundary' ? 'Syncing only works in Hearthwick. Nothing changed.'
+          : code === 'not-at-safe-boundary' ? syncCopy.unsafeNothing
             : code === 'implausible-profile' ? 'The world couldn’t accept that profile just now. Nothing changed; try again later.'
               : code === 'superseded' ? 'Another device took over this journey.'
                 : code === 'busy' ? 'Hold on — the last request is still on its way.'
@@ -480,7 +484,7 @@
       { atSafeBoundary: true }
     )
     if (result.status === 'rejected') {
-      connectionError = 'Sample heroes follow the same rules: head back to Hearthwick first.'
+      connectionError = syncCopy.sampleUnsafe
       return
     }
     syncBusy = true
@@ -571,6 +575,8 @@
         <button type="button" class="primary" onclick={() => (step = 2)}>I have them</button>
         {#if !remote}<button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>{/if}
       </div>
+      <!-- A sample hero refused here (not somewhere safe) says why, instead of nothing. -->
+      {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
     {:else if step === 2}
       <h4 class="step-title">{guideCopy.step2}</h4>
       <p class="fine">{guideCopy.step2Intro}</p>
