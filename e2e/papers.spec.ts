@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, talkThrough, waitForArea, warp } from './helpers'
+import { beginNewJourney, expectStage, settleWarden, talkThrough, waitForArea, warp } from './helpers'
 
 /** Found-text pickups still lying in the current area (read-only hook). */
 async function lying(page: Page): Promise<string[]> {
@@ -50,7 +50,7 @@ test('pick up a paper in the world, read it in the journal, and it stays found a
   await journalButton.click()
   const journal = page.getByRole('dialog', { name: 'Journal' })
   await journal.getByRole('tab', { name: /Papers/ }).click()
-  await expect(journal.getByText('1 of 28 found', { exact: false })).toBeVisible()
+  await expect(journal.getByText('1 of 39 found', { exact: false })).toBeVisible()
   // Unfound papers show only what kind of thing they are and where to look.
   await expect(journal.getByText('Mara keeps her grandmother’s ledger. Bring her news from Ashwatch.')).toBeVisible()
   await expect(journal.getByText('Amber-wick, 3rd')).toHaveCount(0)
@@ -85,7 +85,7 @@ test('the Hearthwick Library: read the starting shelf, donate a find, and the sh
   await page.keyboard.press('e')
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
   await expect(library).toBeVisible()
-  await expect(library.getByText('11 of 39')).toBeVisible()
+  await expect(library.getByText('13 of 52')).toBeVisible()
 
   // Everyone can read the starting shelf from day one.
   await library.getByRole('button', { name: /The Oak Hall Edict on the Stealing of Shade/ }).click()
@@ -95,7 +95,7 @@ test('the Hearthwick Library: read the starting shelf, donate a find, and the sh
 
   // Donate the page we found.
   await library.locator(`[data-donate="${PIP_PAGE}"]`).click()
-  await expect(library.getByText('12 of 39')).toBeVisible()
+  await expect(library.getByText('14 of 52')).toBeVisible()
   await expect(library.getByRole('button', { name: /A Page from Pip’s Copybook.*First donated by Wren/ })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(library).toBeHidden()
@@ -107,7 +107,7 @@ test('the Hearthwick Library: read the starting shelf, donate a find, and the sh
   await waitForArea(page, 'village')
   await warp(page, 'village', 3, 18)
   await page.keyboard.press('e')
-  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('12 of 39')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
   await page.keyboard.press('Escape')
   await page.keyboard.press('j')
   await page.getByRole('dialog', { name: 'Journal' }).getByRole('tab', { name: /Papers/ }).click()
@@ -124,4 +124,16 @@ test('Mara hands over the ledger pages once the closure mark is found', async ({
   await talkThrough(page, /Talk to Mara/)
   await expect(page.locator('.toast', { hasText: 'Found: The Ashwatch Ledger — Excerpts' })).toBeVisible()
   await expect.poll(() => savedFlags(page)).toContain('paper:ashwatch-ledger-excerpts')
+})
+
+test('settling the warden opens its chest: Orrin’s “Eleven Days” is found', async ({ page }) => {
+  await beginNewJourney(page)
+  await warp(page, 'village', 16, 14)
+  await talkThrough(page, /Talk to Mara/)
+  await warp(page, 'ruin', 15, 3)
+  await talkThrough(page, /rubbing of the marker/)
+  await settleWarden(page)
+  await expectStage(page, 'guardian-defeated')
+  await expect(page.locator('.toast', { hasText: 'Found: Eleven Days' })).toBeVisible({ timeout: 10_000 })
+  await expect.poll(() => savedFlags(page)).toContain('paper:eleven-days')
 })

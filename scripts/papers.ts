@@ -12,7 +12,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { PAPERS } from '../src/content/papers.ts';
+import { designedSource } from '../src/content/papers.ts';
 
 export interface PaperMeta {
   label: string;
@@ -172,8 +172,18 @@ export interface PaperCatalogRow {
 
 export const PAPERS_JSON_FILE = new URL('../content/papers.json', import.meta.url);
 
+/**
+ * Built from the markdown read fresh (not the generated module this
+ * process already imported), so one `npm run papers` is enough after
+ * adding a text.
+ */
 export function paperCatalog(): PaperCatalogRow[] {
-  return PAPERS.map((p) => ({ id: p.id, collection: p.collection, source: p.source.kind }));
+  const { readme, files } = readTexts(TEXTS_DIR);
+  return buildRecords(readme, files).map((r) => {
+    const source = designedSource(r.id);
+    if (!source) throw new Error(`[papers] no find source for ${r.id} in src/content/papers.ts`);
+    return { id: r.id, collection: r.collection, source: source.kind };
+  });
 }
 
 export function renderPapersJSON(): string {

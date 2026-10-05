@@ -18,7 +18,7 @@ func TestSharedContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(papers) != 39 || len(PapersByID) != 39 {
+	if len(papers) != 52 || len(PapersByID) != 52 {
 		t.Fatalf("paper catalog: %d rows", len(papers))
 	}
 	start := 0
@@ -27,7 +27,7 @@ func TestSharedContent(t *testing.T) {
 			start++
 		}
 	}
-	if start != 11 {
+	if start != 13 {
 		t.Fatalf("library-start papers: %d", start)
 	}
 }

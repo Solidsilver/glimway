@@ -36,6 +36,16 @@
       "source": "village-project"
     },
     {
+      "id": "the-hame-polishers-list",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "commons"
+    },
+    {
+      "id": "adas-oil-receipts",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "village-project"
+    },
+    {
       "id": "keepers-twists-recipe-card",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "gift"
@@ -66,6 +76,11 @@
       "source": "placed"
     },
     {
+      "id": "forty-one-and-holding",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "village-project"
+    },
+    {
       "id": "the-boy-who-ran-faster-than-the-wick",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "library-start"
@@ -91,6 +106,16 @@
       "source": "placed"
     },
     {
+      "id": "betts-flat-verse",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "echo"
+    },
+    {
+      "id": "the-twelve-wicks",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "library-start"
+    },
+    {
       "id": "failed-grid-of-sector-4",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "wilds-poi"
@@ -109,6 +134,11 @@
       "id": "guild-of-cartographers-invoice",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "library-start"
+    },
+    {
+      "id": "a-salting-drift-table",
+      "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+      "source": "turning"
     },
     {
       "id": "wandering-orchard-magistrate-ruling",
@@ -134,6 +164,21 @@
       "id": "the-blind-routes-smugglers-ledger",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "wilds-chest"
+    },
+    {
+      "id": "mary-fenns-cairn-slip",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "wilds-poi"
+    },
+    {
+      "id": "notices-from-the-board",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "turning"
+    },
+    {
+      "id": "the-carters-compact",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "library-start"
     },
     {
       "id": "remedies-of-the-oaker-hills",
@@ -176,6 +221,11 @@
       "source": "turning"
     },
     {
+      "id": "the-jackdaws-display",
+      "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+      "source": "wilds-poi"
+    },
+    {
       "id": "brackenwood-cutters-handbook",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "library-start"
@@ -194,6 +244,21 @@
       "id": "marens-notes-on-hubs-and-tyres",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "village-project"
+    },
+    {
+      "id": "dorrits-second-span",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "wilds-poi"
+    },
+    {
+      "id": "tams-ox-words",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "echo"
+    },
+    {
+      "id": "eleven-days",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "quest"
     }
   ]
 }

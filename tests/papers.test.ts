@@ -44,10 +44,10 @@ test('the shared catalog the server embeds matches the client papers (run `npm r
   }
 });
 
-test('all 39 texts, in the README’s 8 collections, each with a find source', () => {
-  assert.equal(PAPERS.length, 39);
+test('all 52 texts, in the README’s 8 collections, each with a find source', () => {
+  assert.equal(PAPERS.length, 52);
   assert.equal(PAPER_COLLECTIONS.length, 8);
-  assert.equal(new Set(PAPERS.map((p) => p.id)).size, 39);
+  assert.equal(new Set(PAPERS.map((p) => p.id)).size, 52);
   for (const p of PAPERS) {
     assert.ok(p.title && p.description && p.body.length > 100, `${p.id} has text`);
     assert.ok(PAPER_COLLECTIONS.includes(p.collection));
@@ -59,7 +59,7 @@ test('all 39 texts, in the README’s 8 collections, each with a find source', (
   }
 });
 
-const LATER: LaterKind[] = ['commons', 'wilds-poi', 'wilds-chest', 'village-project', 'turning'];
+const LATER: LaterKind[] = ['commons', 'wilds-poi', 'wilds-chest', 'village-project', 'turning', 'echo'];
 
 test('reveal order: the survival texts come late, never early', () => {
   const late = [
@@ -69,22 +69,38 @@ test('reveal order: the survival texts come late, never early', () => {
     'nan-greer-trail-journal',
     'joss-penhallow-field-notes-pencil-map',
     'silas-pine-offcut-scrap',
+    // The writer's thirteen: the river giving foxes back, the Whitequiet
+    // keeping the Six's things, Tam "almost to the light", Bett's Echo.
+    'forty-one-and-holding',
+    'the-jackdaws-display',
+    'tams-ox-words',
+    'betts-flat-verse',
   ];
   for (const id of late) {
     const p = PAPERS.find((x) => x.id === id)!;
     assert.ok((LATER as string[]).includes(p.source.kind), `${id} must wait for a later system, not ${p.source.kind}`);
   }
-  // Anything findable before the road is lit is free of those spoilers.
-  const early = PAPERS.filter((p) => p.source.kind === 'library-start' || (p.source.kind === 'placed' && !p.source.after));
+  // Anything findable before the road is lit (starting shelf, world
+  // pickups, quest beats before the lantern) is free of those spoilers.
+  const early = PAPERS.filter(
+    (p) =>
+      p.source.kind === 'library-start' ||
+      (p.source.kind === 'placed' && !p.source.after) ||
+      (p.source.kind === 'quest' && p.source.stage !== 'lantern-lit' && p.source.stage !== 'complete'),
+  );
+  assert.ok(early.some((p) => p.id === 'eleven-days'), 'the warden beat counts as early');
   for (const p of early) {
-    assert.ok(!/Sallow Ford lamp|Hollis keeps the lamp|Account 404/.test(p.body), `${p.id} spoils the Six`);
+    assert.ok(
+      !/Sallow Ford lamp|Hollis keeps the lamp|Account 404|almost to the light|walk back and pick them up|bringing things back|foxes in (the|this) box/i.test(p.body),
+      `${p.id} spoils the Six`,
+    );
   }
 });
 
 test('the library starts with public papers on its shelves', () => {
   const start = startingShelf();
-  assert.equal(start.length, 11);
-  for (const id of ['oak-hall-edict-on-the-stealing-of-shade', 'dangers-of-the-white-quiet-pamphlet', 'twoford-almanac-silas-copy', 'brackenwood-cutters-handbook', 'the-boy-who-ran-faster-than-the-wick']) {
+  assert.equal(start.length, 13);
+  for (const id of ['the-carters-compact', 'the-twelve-wicks', 'oak-hall-edict-on-the-stealing-of-shade', 'dangers-of-the-white-quiet-pamphlet', 'twoford-almanac-silas-copy', 'brackenwood-cutters-handbook', 'the-boy-who-ran-faster-than-the-wick']) {
     assert.ok(start.some((e) => e.paperId === id), `${id} on the starting shelf`);
   }
 });
@@ -191,10 +207,11 @@ test('gifts wait for the end of the main quest', () => {
   assert.equal(handoverFor('orrin', 'complete', [])?.paperId, 'orrins-workshop-rules');
 });
 
-test('the shrine-ledge beat arrives with the lantern', () => {
-  assert.deepEqual(beatsDue('guardian-defeated', []).map((p) => p.id), []);
-  assert.deepEqual(beatsDue('lantern-lit', []).map((p) => p.id), ['principia-memoria-excerpt']);
-  assert.deepEqual(beatsDue('complete', [paperFlag('principia-memoria-excerpt')]), []);
+test('the warden and shrine-ledge beats arrive with their quest stages', () => {
+  assert.deepEqual(beatsDue('clue-found', []).map((p) => p.id), []);
+  assert.deepEqual(beatsDue('guardian-defeated', []).map((p) => p.id), ['eleven-days']);
+  assert.deepEqual(beatsDue('lantern-lit', [paperFlag('eleven-days')]).map((p) => p.id), ['principia-memoria-excerpt']);
+  assert.deepEqual(beatsDue('complete', [paperFlag('eleven-days'), paperFlag('principia-memoria-excerpt')]), []);
 });
 
 // ------------------------------------------------------------ markup
@@ -237,7 +254,7 @@ test('the shelf: starting books, then the earliest donation of each paper', () =
       { paperId: 'not-a-paper', donatedBy: 'Wren', donatedAt: '2026-10-01' },
     ],
   );
-  assert.equal(shelf.size, 12);
+  assert.equal(shelf.size, 14);
   assert.equal(shelf.get('will-of-elias-fenn')?.donatedBy, 'Wren');
   assert.equal(shelf.get('oak-hall-edict-on-the-stealing-of-shade')?.donatedBy, null, 'the starting copy stays the credited one');
 });
