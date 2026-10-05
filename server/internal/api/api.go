@@ -1,4 +1,4 @@
-// Package api implements the phase-2 through phase-4 HTTP contracts. All gameplay commits,
+// Package api implements the HTTP and presence contracts. All gameplay commits,
 // authorization checks, ledger entries and idempotency responses share one tx.
 package api
 
@@ -37,6 +37,8 @@ type Config struct {
 	LoginWindow      time.Duration
 	// Zero uses the shared content default; stored epochs always retain their version.
 	WildsGeneratorVersion int
+	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
+	Presence *content.Presence
 }
 type Server struct {
 	Store       *store.Store
@@ -46,6 +48,7 @@ type Server struct {
 	loginLimit  *loginLimiter
 	loginGlobal *loginLimiter
 	loginProofs *proofLimiter
+	presence    *presenceHub
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
@@ -100,7 +103,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -130,16 +133,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.Config.Logger.Printf("request method=%s route=%s status=%d error_class=%s", safeMethod(r.Method), route, observed.status, class)
 	}()
 	if r.Method != "GET" && r.Method != "HEAD" {
-		if site := r.Header.Get("Sec-Fetch-Site"); site == "cross-site" {
+		if !sameOrigin(r, false) {
 			problem(w, fail(403, "cross-origin"))
 			return
-		}
-		if origin := r.Header.Get("Origin"); origin != "" {
-			u, err := url.Parse(origin)
-			if err != nil || u.Host != r.Host || (u.Scheme != "http" && u.Scheme != "https") {
-				problem(w, fail(403, "cross-origin"))
-				return
-			}
 		}
 		if r.Method != "DELETE" && !strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json") {
 			problem(w, fail(415, "json-required"))
@@ -148,6 +144,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	switch r.Method + " " + r.URL.Path {
+	case "GET /ws":
+		err = a.presenceSocket(w, r)
 	case "POST /api/invites":
 		err = a.createInvite(w, r)
 	case "GET /api/invites":
@@ -255,7 +253,7 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 	}
 	return tx, s, hash, nil
 }
-func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v any) error {
+func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v any, afterCommit ...func()) error {
 	var cookie *http.Cookie
 	var expiry int64
 	if c, err := r.Cookie(CookieName); err == nil {
@@ -266,6 +264,9 @@ func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v an
 	}
 	if err := tx.Commit(); err != nil {
 		return err
+	}
+	for _, notify := range afterCommit {
+		notify()
 	}
 	if cookie != nil {
 		a.cookie(w, cookie.Value, time.Unix(expiry, 0))
@@ -444,6 +445,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 // "<session hash>:<clientId>"; another session's lease is untouched. A lease
 // release does not change rev.
 func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
+	var id string
 	if c, err := r.Cookie(CookieName); err == nil {
 		hash := store.Hash(c.Value)
 		tx, err := a.Store.DB.BeginTx(r.Context(), nil)
@@ -451,6 +453,10 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		defer tx.Rollback()
+		err = tx.QueryRowContext(r.Context(), "SELECT habitica_id FROM sessions WHERE id_hash=?", hash).Scan(&id)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
 		if _, err = tx.ExecContext(r.Context(), "DELETE FROM sessions WHERE id_hash=?", hash); err != nil {
 			return err
 		}
@@ -461,6 +467,9 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 		if err = tx.Commit(); err != nil {
 			return err
 		}
+	}
+	if id != "" {
+		a.presenceChanged(id)
 	}
 	a.cookie(w, "", time.Unix(1, 0))
 	write(w, 200, map[string]bool{"ok": true})
@@ -518,7 +527,7 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	return a.finish(w, r, tx, struct {
 		store.Snapshot
 		Lease string `json:"lease"`
-	}{s, lease})
+	}{s, lease}, func() { a.presenceChanged(s.HabiticaID) })
 }
 
 type Mutation struct {
@@ -971,4 +980,18 @@ func (a *Server) origin(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.finish(w, r, tx, s)
+}
+
+// Browser WebSockets require an Origin; HTTP callers retain the established
+// optional-Origin contract. Do not trust a caller-supplied forwarded Host.
+func sameOrigin(r *http.Request, required bool) bool {
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		return false
+	}
+	raw := r.Header.Get("Origin")
+	if raw == "" {
+		return !required
+	}
+	u, err := url.Parse(raw)
+	return err == nil && u.Host == r.Host && (u.Scheme == "http" || u.Scheme == "https") && u.User == nil && u.Path == "" && u.RawQuery == "" && u.Fragment == ""
 }

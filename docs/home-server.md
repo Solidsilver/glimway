@@ -57,11 +57,15 @@ Go 1.26 or later in nixpkgs. `services.fingersnap-server.package` can select an
 alternate package if the server's pinned nixpkgs needs a newer Go builder.
 This work does not install or activate anything on the home server.
 
-Caddy's site block should route the API before the existing static listener:
+Caddy's site block should route the API and presence socket before the existing
+static listener:
 
 ```caddyfile
 fsnap.example.invalid {
     handle /api/* {
+        reverse_proxy 127.0.0.1:8090
+    }
+    handle /ws {
         reverse_proxy 127.0.0.1:8090
     }
     handle {
@@ -81,7 +85,7 @@ Build and local development (no deployment):
 ```sh
 go build -o /tmp/fingersnap-server ./server/cmd/fingersnap-server
 npm run server   # localhost:8090, local .data/ database, HTTP dev cookies
-npm run dev      # Vite proxies /api to localhost:8090
+npm run dev      # Vite proxies /api and WebSocket /ws to localhost:8090
 ```
 
 Configuration is available as flags or environment variables: `-listen` /
@@ -354,3 +358,29 @@ shared JSON and are starting values for playtesting.
 The exact additive API contract and ledger currency conventions are recorded in
 .agent/REPORT.md under “Phase 5 server”. All new gameplay POSTs use the existing
 lease/revision/idempotency transaction boundary. GETs do not bump revisions.
+
+### Phase 6 presence WebSockets
+
+The `/ws` route above needs no extra Caddy upgrade headers: `reverse_proxy`
+handles WebSocket upgrades by default. Preserve the browser Host (including its
+port) as described above. Production clients use `wss://` on the same site as the
+HTTP API; Vite's `/ws` proxy has `ws: true` and preserves Host for local development.
+No additional public port, service, environment variable, database migration, or
+NixOS firewall rule is needed. The Go dependency and Nix vendor hash are updated.
+
+Presence requires both the HttpOnly session cookie and the current play lease.
+Send the lease in the first JSON message, never in the URL: all `/ws` query strings
+are rejected, and request logs record only the fixed `/ws` label. A browser Origin
+is required and must match Host. The wire protocol and client integration details
+are in `.agent/REPORT.md`, under **Phase 6 server**; shared emotes and limits live
+in `content/presence.json`, with TypeScript wire types in `src/lib/presence.ts`.
+
+Presence is a bounded, in-process service (128 live sockets, 32 players per room).
+Use one server instance; separate processes do not share rooms. Restarting clears
+all presence and explicitly closes upgraded sockets, including clients waiting
+for authentication. There is no persisted room or position state. The server
+pings every 20 seconds, requires pong within 5 seconds, and expires application
+inactivity after 60 seconds; stationary clients send a JSON heartbeat about every
+20 seconds. Presence does not refresh sessions or the play lease: keep the normal
+HTTP state/progress/play heartbeat running. Play takeover and logout revoke
+sockets immediately; database-side revocations are detected within 10 seconds.

@@ -14,7 +14,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    proxy: { '/api': { target: env.FINGERSNAP_API || 'http://127.0.0.1:8090', changeOrigin: false } }
+    proxy: {
+      '/api': { target: env.FINGERSNAP_API || 'http://127.0.0.1:8090', changeOrigin: false },
+      '/ws': { target: env.FINGERSNAP_API || 'http://127.0.0.1:8090', changeOrigin: false, ws: true }
+    }
   },
   preview: { host: true, port: 4173 },
   build: { target: 'es2022' }

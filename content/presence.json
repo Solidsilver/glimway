@@ -1,0 +1,17 @@
+{
+  "emotes": ["wave", "nod", "cheer", "thanks", "lantern"],
+  "positionHz": 8,
+  "emoteCooldownMs": 2000,
+  "joinCooldownMs": 500,
+  "maxConnections": 128,
+  "maxRoomPlayers": 32,
+  "messageBytes": 1024,
+  "queueMessages": 64,
+  "authTimeoutMs": 5000,
+  "idleTimeoutMs": 60000,
+  "pingIntervalMs": 20000,
+  "pongTimeoutMs": 5000,
+  "leaveGraceMs": 2000,
+  "revalidateMs": 10000,
+  "writeTimeoutMs": 5000
+}

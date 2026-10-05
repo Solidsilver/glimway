@@ -10,7 +10,7 @@ let
       filter = path: type: lib.cleanSourceFilter path type
         && !(builtins.elem (builtins.baseNameOf path) [ "node_modules" "dist" ".data" ".agent" ]);
     };
-    vendorHash = "sha256-7IC/p5GlD2EZkDXQzkaZ7E19S/ABKEBsg68vt8pykis=";
+    vendorHash = "sha256-6q2leQnJ7FfPu9yqLeqFzdZKbsPKrsY12GkoBzjf4zg=";
     subPackages = [ "server/cmd/fingersnap-server" ];
     env.CGO_ENABLED = 0;
   };

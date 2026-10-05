@@ -188,6 +188,7 @@ func run(args []string) error {
 	}
 	logger := log.New(os.Stdout, "fingersnap ", log.LstdFlags|log.LUTC)
 	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate})
+	defer handler.ClosePresence()
 	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer done()
@@ -195,6 +196,7 @@ func run(args []string) error {
 		<-stop.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+		handler.ClosePresence()
 		_ = server.Shutdown(shutdown)
 	}()
 	logger.Printf("listening addr=%s", *addr)
