@@ -52,7 +52,7 @@ export type HomeRead<T> = { ok: true; value: T } | { ok: false; code: ApiErrorCo
 
 export type HomeActionResult =
   | { ok: true; home: HomeView; materials: Record<string, number>; itemId?: string }
-  | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' }
+  | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
 
 /**
  * A keyed gameplay POST, described as data so a lost one can be kept (in
@@ -72,6 +72,31 @@ export interface Unresolved {
   op: MutationOp
   body: Record<string, unknown>
   at: number
+}
+
+/**
+ * Failures that say nothing about whether a POST committed: no answer, an
+ * answer that isn't the Fingersnap server's (a proxy page), or a 200 whose
+ * body couldn't be read or validated.
+ */
+/** The server answered (2xx), but the body couldn't be read or validated. */
+export function answeredUnreadable(err: unknown): boolean {
+  const e = err as { code?: string; status?: number }
+  return e?.code === 'bad-response' || (e?.code === 'unavailable' && typeof e.status === 'number' && e.status >= 200 && e.status < 300)
+}
+
+export function outcomeUnknown(code: string): boolean {
+  return code === 'network' || code === 'unavailable' || code === 'bad-response'
+}
+
+/**
+ * Refusals the server makes before it looks up the idempotency key
+ * (server/internal/api/expansion.go keyedMutation: session, decode, lease,
+ * then the key): a replay refused like this proves nothing either way.
+ * `unknown` (a code this build doesn't know) is treated the same, to be safe.
+ */
+export function refusedBeforeReplay(code: string): boolean {
+  return ['unauthorized', 'access-denied', 'world-required', 'player-flagged', 'account-switch', 'origin-required', 'cross-origin', 'json-required', 'invalid-json', 'key-required', 'superseded', 'playing-elsewhere', 'invalid-client', 'unknown'].includes(code)
 }
 
 /** Send one described mutation through the raw API. */
@@ -96,7 +121,7 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
   }
 }
 
-export type MutateResult<R> = { ok: true; res: R } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' }
+export type MutateResult<R> = { ok: true; res: R } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
 
 export type RemoteSyncResult =
   | { ok: true; status: SyncResponse['status']; gained: number; welcome: number; credit: { hp: number; mana: number } }
@@ -481,8 +506,11 @@ export class Link {
     if (this.busy) return { ok: false, code: 'busy' }
     if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
     if (this.unresolved) {
-      await this.resolveUnresolved()
+      // Settle the earlier request first. If it had landed, stop: the player
+      // asked again believing it failed, so say so instead of doing it twice.
+      const earlier = await this.resolveUnresolved()
       if (this.unresolved) return { ok: false, code: 'pending' }
+      if (earlier === 'landed') return { ok: false, code: 'resolved' }
       const now = this.status as LinkStatus
       if (now !== 'online' || !this.lease) return { ok: false, code: now === 'superseded' ? 'superseded' : 'offline' }
     }
@@ -500,11 +528,20 @@ export class Link {
     } catch (err) {
       const code = errorCode(err)
       const fa = failureAction(code)
-      if (code === 'network' && sent) {
-        // No answer: it may have committed. Keep the exact request to resolve.
+      if (outcomeUnknown(code) && sent) {
+        // No trustworthy answer: it may have committed. Keep the exact request.
         this.unresolved = { op, body: sent, at: Date.now() }
-        this.onFailure(err, 'mutation')
         void this.saveLocal()
+        if (answeredUnreadable(err)) {
+          // The server did answer, we just couldn't read it: ask again at once
+          // with the same request. A committed one hands back its answer.
+          const r = await this.replay(false)
+          if (r.outcome === 'landed' && r.res) return { ok: true, res: r.res as R }
+          if (r.outcome === 'landed') return { ok: false, code: 'resolved' }
+          if (r.outcome === 'refused') return { ok: false, code: (r.code ?? 'unknown') as ApiErrorCode }
+          return { ok: false, code: 'pending' }
+        }
+        this.onFailure(err, 'mutation')
         return { ok: false, code: 'pending' }
       }
       if (isUnreachable(err) || fa === 'offline' || fa === 'superseded' || fa === 'elsewhere' || fa === 'signed-out') {
@@ -529,10 +566,19 @@ export class Link {
    * `unknown` (still no answer). Emits EV.mutationResolved for the features.
    */
   async resolveUnresolved(): Promise<'landed' | 'refused' | 'unknown' | 'none'> {
+    return (await this.replay(true)).outcome
+  }
+
+  /**
+   * One exact replay of the unresolved request. `announce` emits
+   * EV.mutationResolved (recovery the features hear about); an immediate
+   * replay inside `mutate` returns the answer to its caller instead.
+   */
+  private async replay(announce: boolean): Promise<{ outcome: 'landed' | 'refused' | 'unknown' | 'none'; res?: Snapshot; code?: string }> {
     const u = this.unresolved
     const s = this.session
-    if (!u || !s) return 'none'
-    if (this.status !== 'online' || !this.lease) return 'unknown'
+    if (!u || !s) return { outcome: 'none' }
+    if (this.status !== 'online' || !this.lease) return { outcome: 'unknown' }
     try {
       const res = await this.api.run((raw) => dispatchMutation(raw, u.op, { ...u.body, lease: this.lease! }))
       this.contact()
@@ -540,19 +586,31 @@ export class Link {
       this.apply(res, 'server')
       this.acked = docKey(s.state)
       void this.saveLocal()
-      this.emitter(EV.mutationResolved, { op: u.op, outcome: 'landed', res })
-      return 'landed'
+      if (announce) this.emitter(EV.mutationResolved, { op: u.op, outcome: 'landed', res })
+      return { outcome: 'landed', res }
     } catch (err) {
-      if (errorCode(err) === 'network' || isUnreachable(err)) {
-        this.onFailure(err, 'resolve')
-        return 'unknown'
+      const code = errorCode(err)
+      if (outcomeUnknown(code) || refusedBeforeReplay(code)) {
+        // No trustworthy answer, or refused before the server even looked up
+        // the key (signed out, taken over): still unknown. Keep it.
+        if (!answeredUnreadable(err) && (isUnreachable(err) || failureAction(code) !== 'refused')) this.onFailure(err, 'resolve')
+        return { outcome: 'unknown', code }
       }
-      // Refused now (stale revision, short of funds, already placed…): the
-      // original never committed, or its replay would have been served.
+      if (code === 'idempotency-mismatch') {
+        // The key is already spent on a committed request: it landed, but its
+        // answer isn't ours to read. The features re-read what they show.
+        this.unresolved = null
+        void this.saveLocal()
+        if (announce) this.emitter(EV.mutationResolved, { op: u.op, outcome: 'landed' })
+        return { outcome: 'landed' }
+      }
+      // Refused after the key lookup (stale revision, short of funds, already
+      // placed…): the original never committed, or its replay would have been
+      // served from the idempotency cache.
       this.unresolved = null
       void this.saveLocal()
-      this.emitter(EV.mutationResolved, { op: u.op, outcome: 'refused', code: errorCode(err) })
-      return 'refused'
+      if (announce) this.emitter(EV.mutationResolved, { op: u.op, outcome: 'refused', code })
+      return { outcome: 'refused', code }
     }
   }
 

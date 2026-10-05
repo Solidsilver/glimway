@@ -155,6 +155,8 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
       out.sent = { rev: sent.rev, key: sent.key };
     }
     if (r.importedProfile != null) out.importedProfile = validateHabiticaProfile(r.importedProfile);
+    const unresolved = normalizeUnresolved(r.unresolved);
+    if (unresolved) out.unresolved = unresolved;
     const rec = r.recovery as { state?: unknown; savedAt?: unknown } | undefined;
     if (rec && typeof rec === 'object') {
       out.recovery = { state: validateSave(rec.state), savedAt: typeof rec.savedAt === 'number' ? rec.savedAt : 0 };
@@ -163,6 +165,27 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
   } catch {
     return null;
   }
+}
+
+const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute'];
+const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade'];
+
+/**
+ * A lost mutation's exact request (game/link.ts `Unresolved`), kept so the
+ * next page replays it rather than paying twice. Malformed records are dropped.
+ */
+export function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const u = raw as { op?: Record<string, unknown>; body?: Record<string, unknown>; at?: unknown };
+  const op = u.op;
+  const body = u.body;
+  if (!op || typeof op !== 'object' || !body || typeof body !== 'object' || Array.isArray(body)) return undefined;
+  if (!MUTATION_KINDS.includes(op.kind as string)) return undefined;
+  if (op.kind === 'home' && !HOME_OPS.includes(op.op as string)) return undefined;
+  if (['mail-claim', 'mail-recall', 'contribute'].includes(op.kind as string) && (typeof op.id !== 'string' || !op.id)) return undefined;
+  if (op.fields !== undefined && (typeof op.fields !== 'object' || op.fields === null || Array.isArray(op.fields))) return undefined;
+  if (typeof body.key !== 'string' || !body.key || !Number.isInteger(body.baseRev)) return undefined;
+  return { op: structuredClone(op), body: structuredClone(body), at: typeof u.at === 'number' ? u.at : 0 };
 }
 
 export function normalizeOrphan(raw: unknown): OrphanCopy | null {

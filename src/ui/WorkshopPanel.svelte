@@ -4,7 +4,7 @@
   import { VILLAGE_EV, villageFor } from '../game/village'
   import { homesteadsFor } from '../game/homestead'
   import { bus } from '../game/events'
-  import { assetName, assetPhrase, batchesAffordable, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
+  import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
   import type { Asset } from '../lib/api/types'
   import { focusTrap } from './focus'
   import { home } from './home.svelte'
@@ -60,11 +60,15 @@
 
   async function craft(recipeId: string): Promise<void> {
     if (busy) return
-    const n = Math.max(1, batches[recipeId] ?? 1)
+    const recipe = RECIPES.find((x) => x.id === recipeId)
+    if (!recipe) return
+    // Exactly what the row shows: the chosen batch, clamped to what's affordable now.
+    const n = effectiveBatches(batches[recipeId], batchesAffordable(recipe, view.carried))
     busy = `craft:${recipeId}`
     message = null
     const r = await village.craft(recipeId, n)
     busy = null
+    if (r.ok) batches = { ...batches, [recipeId]: 1 }
     message = r.ok ? { text: `Made ${assetPhrase(r.value)}. ${r.value.kind === 'decoration' ? 'Arrange it at your place.' : 'It’s in your pack.'}`, kind: 'ok' } : { text: r.text, kind: 'error' }
   }
 
@@ -122,7 +126,7 @@
       <ul class="recipes">
         {#each RECIPES as r (r.id)}
           {@const can = batchesAffordable(r, view.carried)}
-          {@const n = Math.min(Math.max(1, batches[r.id] ?? 1), Math.max(1, can))}
+          {@const n = effectiveBatches(batches[r.id], can)}
           <li class="recipe" class:can={can > 0} data-recipe={r.id}>
             <span class="thumb" aria-hidden="true">
               {#if r.output.kind === 'decoration' && home.thumbs[r.output.id]}<img src={home.thumbs[r.output.id]} alt="" />{:else}<Icon name="sparkle" size={18} />{/if}

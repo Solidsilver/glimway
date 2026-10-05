@@ -532,7 +532,8 @@ test('a purchase whose answer is lost is pending, then replayed exactly before a
   server.on('POST /api/homestead/buy', (c) => ({ body: { ...snap(base({ embers: 8 }), 6), result: { home: homeView([stool]), materials: {}, itemId: 's1' } }, _seen: c } as Answer));
   server.on('POST /api/homestead/place', (c) => ({ body: { ...snap(base({ embers: 8 }), 7), result: { home: homeView([{ ...stool, scene: 'outdoor', x: 0, y: 0, rotation: 0 }], 1), materials: {}, itemId: 's1' } }, _seen: c } as Answer));
   const next = await link.homeAction({ op: 'place', itemId: 's1', scene: 'outdoor', x: 0, y: 0, rotation: 0 });
-  assert.equal(next.ok, true);
+  assert.deepEqual(next, { ok: false, code: 'resolved' }, 'the earlier buy had landed: stop and say so');
+  assert.equal(server.sent('POST /api/homestead/place').length, 0, 'nothing new is sent on top of it');
   const replay = server.sent('POST /api/homestead/buy')[1].body;
   assert.equal(replay.key, lost.key, 'same idempotency key');
   assert.equal(replay.baseRev, lost.baseRev, 'same revision');
@@ -541,6 +542,8 @@ test('a purchase whose answer is lost is pending, then replayed exactly before a
   assert.equal(server.sent('POST /api/homestead/buy').length, 2, 'never a second purchase with a new key');
   assert.equal(link.pendingOperation, null);
   assert.equal(session.state.embers, 8);
+  // Asked again now, it goes ahead.
+  assert.equal((await link.homeAction({ op: 'place', itemId: 's1', scene: 'outdoor', x: 0, y: 0, rotation: 0 })).ok, true);
   const resolved = events.find((e) => e.event === EV.mutationResolved)!;
   assert.equal(resolved.payload.outcome, 'landed');
 });

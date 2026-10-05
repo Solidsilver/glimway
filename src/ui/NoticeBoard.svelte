@@ -24,6 +24,7 @@
   onMount(() => {
     const bump = () => (version += 1)
     bus.on(VILLAGE_EV.changed, bump)
+    village.refreshIfStale() // the board may open just past midnight
     if (session.link) {
       void village.loadProjects()
       void village.loadMail() // carried counts
