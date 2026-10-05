@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { beginNewJourney, expectStage, hold, player, strikeAll, talkThrough, warp, waitForArea, world } from './helpers'
+import { beginNewJourney, expectStage, hold, player, settleWarden, talkThrough, warp, waitForArea, world } from './helpers'
 
 const TILE = 16
 
@@ -16,9 +16,8 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
   await talkThrough(page, /rubbing of the marker/)
   await expectStage(page, 'clue-found')
 
-  // The warden appears once the clue is found; skip the long fight.
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsEnemies: () => { texture: string }[] }).__fsEnemies().length)).toBeGreaterThan(0)
-  await strikeAll(page, 999)
+  // The warden wakes once the clue is found; skip the encounter.
+  await settleWarden(page)
   await expectStage(page, 'guardian-defeated')
 
   // Light the shrine lantern (plays a short cinematic).

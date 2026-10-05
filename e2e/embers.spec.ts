@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, strikeAll, talkThrough, warp } from './helpers'
+import { beginNewJourney, expectStage, settleWarden, talkThrough, warp } from './helpers'
 
 /** Read the save's ember balance and flags straight from IndexedDB. */
 async function savedEmbers(page: Page): Promise<{ embers: number; flags: string[]; hp: number; maxHp: number } | undefined> {
@@ -59,13 +59,15 @@ test('a sample hero brings welcome embers, and a warm rest spends them', async (
 })
 
 test('quest embers light a road lantern; the chest says what it needs', async ({ page }) => {
+  // The whole quest's dialogue is read through here; under a loaded run it
+  // can outlast the default timeout.
+  test.slow()
   await beginNewJourney(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /rubbing of the marker/)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsEnemies: () => unknown[] }).__fsEnemies().length)).toBeGreaterThan(0)
-  await strikeAll(page, 999)
+  await settleWarden(page)
   await expectStage(page, 'guardian-defeated')
   await expect(hud(page)).toHaveText('2')
 

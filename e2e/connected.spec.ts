@@ -12,7 +12,7 @@ import {
   syncFromMenu,
   waitForWorld
 } from './connected'
-import { beginNewJourney, expectStage, savedStage, strikeAll, talkThrough, warp, waitForArea } from './helpers'
+import { beginNewJourney, expectStage, savedStage, settleWarden, talkThrough, warp, waitForArea } from './helpers'
 
 /**
  * Connected play against the real Go server (playwright.config.ts starts it
@@ -197,8 +197,7 @@ test('quest embers come from the server once the story upload lands', async ({ p
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /rubbing of the marker/)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsEnemies: () => unknown[] }).__fsEnemies().length)).toBeGreaterThan(0)
-  await strikeAll(page, 999)
+  await settleWarden(page)
   await expect(page.locator('.toast', { hasText: '+2 embers — a little warmth from the road.' })).toBeVisible()
   await expect(hud(page)).toHaveText('2')
   const s = (await serverState(page)).body

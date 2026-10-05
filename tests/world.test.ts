@@ -165,3 +165,42 @@ test('DEMO_CHARACTER has the contract shape', () => {
     assert.ok(DEMO_CHARACTER.stats[key] > 0);
   }
 });
+
+/** Story text stays in-world: embers and warmth, never real-life apps or tallies. */
+const OUT_OF_WORLD = /\b(habitica|xp|habits?|tasks?|to-?dos?|dailies|streaks?|app)\b/i;
+
+test('story dialogue lines fit the box (160 characters) and stay in-world', async () => {
+  const expansion = await import('../src/content/expansion-writing.ts');
+  const lines: string[] = [];
+  for (const id of NPC_IDS) {
+    for (const stage of QUEST_STAGES) {
+      const d = dialogueFor(id, stage);
+      lines.push(...d.lines);
+      for (const c of d.choices ?? []) lines.push(c.text, ...(c.reply ?? []));
+    }
+  }
+  const builder = expansion.BUILDER_NPC_DATA.dialogue;
+  for (const d of [builder.firstMeeting, builder.offerCampsite, builder.sellDecorations, builder.notEnoughEmbers, builder.afterUpgrade]) {
+    lines.push(...d.lines);
+  }
+  lines.push(...builder.idleLines, ...Object.values(expansion.NEW_NPC_LINES).flat());
+  for (const line of lines) {
+    assert.ok(line.length <= 160, `${line.length} chars: ${line}`);
+    assert.doesNotMatch(line, OUT_OF_WORLD, line);
+  }
+  const prose = [
+    ...journalEntries('complete').flatMap((e) => [e.title, e.body]),
+    ...Object.values(locations).flatMap((l) => [l.name, l.eyebrow, l.tagline, l.description]),
+    ...[...expansion.POIS, ...expansion.TRINKETS, ...expansion.MORE_TRINKETS].map((t) => ('discoveryText' in t ? t.discoveryText : t.blurb)),
+  ];
+  for (const text of prose) assert.doesNotMatch(text, OUT_OF_WORLD, text);
+});
+
+test('the warden is settled, not slain, in every story beat', () => {
+  const text = [
+    ...QUEST_STAGES.flatMap((s) => NPC_IDS.flatMap((id) => dialogueFor(id, s).lines)),
+    ...journalEntries('complete').map((e) => e.body),
+  ].join('\n');
+  assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
+  assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
+});

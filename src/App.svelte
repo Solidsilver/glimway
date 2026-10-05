@@ -97,7 +97,7 @@
   const QUEST_BEATS: Partial<Record<QuestStage, { eyebrow: string; title: string }>> = {
     accepted: { eyebrow: 'Quest accepted', title: 'The Lantern Road' },
     'clue-found': { eyebrow: 'Clue found', title: 'The Closure Mark' },
-    'guardian-defeated': { eyebrow: 'Victory', title: 'The Warden Yields' },
+    'guardian-defeated': { eyebrow: 'Settled', title: 'The Warden Rests' },
     'lantern-lit': { eyebrow: 'The light returns', title: 'A Flame on the Hill' }
   }
 

@@ -8,6 +8,9 @@
  */
 
 export type SfxCue =
+  | 'clink'
+  | 'falter'
+  | 'settle'
   | 'click'
   | 'open'
   | 'close'
@@ -159,6 +162,25 @@ export function voiceBlip(speaker: string): void {
 
 export function sfx(cue: SfxCue): void {
   switch (cue) {
+    case 'clink':
+      // A blow ringing off stone that isn't fighting back.
+      noiseBurst(0.04, 0.25, 3200)
+      return playNotes([{ freq: 1180, dur: 0.07, type: 'triangle', vol: 0.12, slide: 1100 }])
+    case 'falter':
+      // The warden's heart-lamp flickers: a soft, wavering fall.
+      return playNotes([
+        { freq: 587, dur: 0.12, type: 'triangle', vol: 0.2 },
+        { freq: 523, at: 0.1, dur: 0.12, type: 'triangle', vol: 0.18 },
+        { freq: 440, at: 0.2, dur: 0.22, type: 'sine', vol: 0.16 }
+      ])
+    case 'settle':
+      // Stone coming to rest: low, warm, unhurried.
+      noiseBurst(0.18, 0.2, 500)
+      return playNotes([
+        { freq: 330, dur: 0.4, type: 'triangle', vol: 0.2 },
+        { freq: 262, at: 0.3, dur: 0.5, type: 'triangle', vol: 0.2 },
+        { freq: 196, at: 0.65, dur: 0.9, type: 'sine', vol: 0.2 }
+      ])
     case 'click':
       return playNotes([{ freq: 880, dur: 0.04, type: 'square', vol: 0.12 }])
     case 'open':

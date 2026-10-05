@@ -2,8 +2,9 @@ import { expect, type Page } from '@playwright/test'
 
 /**
  * Playtest helpers. Movement and interaction go through real keyboard input;
- * the dev hooks are only used to skip long walks (__fsDevWarp) and long fights
- * (__fsDevStrike), and the read-only hooks for assertions.
+ * the dev hooks are only used to skip long walks (__fsDevWarp), long fights
+ * (__fsDevStrike) and the warden encounter (__fsDevShowRubbing), and the
+ * read-only hooks for assertions.
  */
 
 type AreaId = 'village' | 'woodland' | 'ruin'
@@ -13,6 +14,21 @@ type Hooks = {
   __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
   __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
   __fsDevStrike?: (n: number, type?: string) => void
+  __fsDevShowRubbing?: (force?: boolean) => boolean
+  __fsWarden?: () => WardenView
+}
+
+/** window.__fsWarden(): the stone warden in the current area. */
+export type WardenView = {
+  state: 'absent' | 'dormant' | 'active' | 'settled'
+  x: number
+  y: number
+  texture: string
+  visible: boolean
+  phase: string | null
+  opening: boolean
+  showings: number
+  needed: number
 }
 
 /** Fresh start: title screen → "Wander as a guest" → world is live. */
@@ -48,6 +64,71 @@ export async function world(page: Page) {
 /** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). */
 export async function strikeAll(page: Page, n: number, type?: string): Promise<void> {
   await page.evaluate(([d, t]) => (window as unknown as Hooks).__fsDevStrike!(d as number, t as string | undefined), [n, type] as const)
+}
+
+export async function warden(page: Page): Promise<WardenView> {
+  return page.evaluate(() => (window as unknown as Hooks).__fsWarden!())
+}
+
+/**
+ * Skip the warden encounter: wait for it to wake, then hold up the rubbing
+ * (dev lever, ignoring the opening and reach) until it settles.
+ */
+export async function settleWarden(page: Page): Promise<void> {
+  await expect.poll(async () => (await warden(page)).state).toBe('active')
+  const needed = (await warden(page)).needed
+  for (let i = 0; i < needed; i++) {
+    await page.evaluate(() => (window as unknown as Hooks).__fsDevShowRubbing!(true))
+  }
+  await expect.poll(async () => (await warden(page)).state).toBe('settled')
+}
+
+/**
+ * Set the hero down `dist` px beside the warden on an open side (in-page, so
+ * it lands inside the same frame the warden is read). With `whenOpen`, wait
+ * for the warden to stand open after a lunge first.
+ */
+export async function stepToWarden(page: Page, dist: number, whenOpen: boolean): Promise<void> {
+  await page.evaluate(([d, open]) => new Promise<void>((resolve, reject) => {
+    type W = {
+      __fsWarden: () => { x: number; y: number; opening: boolean; phase: string | null }
+      __fsWorld: () => { solid: boolean[][]; widthPx: number; heightPx: number }
+      __fsDevPlace: (x: number, y: number) => void
+    }
+    const w = window as unknown as W
+    const until = performance.now() + 20_000
+    const tick = () => {
+      const g = w.__fsWarden()
+      if (open ? !g.opening : g.phase !== 'chase') {
+        if (performance.now() > until) reject(new Error(`the warden never got there: ${JSON.stringify({ ...g, hero: (window as unknown as { __fsPlayer: () => unknown }).__fsPlayer() })}`))
+        else requestAnimationFrame(tick)
+        return
+      }
+      const { solid, widthPx, heightPx } = w.__fsWorld()
+      const walkable = (x: number, y: number) =>
+        x > 12 && x < widthPx - 12 && y > 16 && y < heightPx - 4 && !solid[Math.floor(y / 16)]?.[Math.floor(x / 16)]
+      const free = (x: number, y: number) => [[-5, -3], [5, -3], [-5, 0], [5, 0]].every(([ox, oy]) => walkable(x + ox, y + oy))
+      // Nothing solid between the warden and the spot, so it can come at you.
+      const clear = (x: number, y: number) => {
+        for (let t = 0; t <= 1; t += 0.1) if (!walkable(g.x + (x - g.x) * t, g.y - 2 + (y - g.y) * t)) return false
+        return true
+      }
+      // Prefer stepping toward the middle of the map, away from walls.
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]
+        .sort((a, b) => Math.hypot(g.x + a[0] * d - widthPx / 2, g.y + a[1] * d - heightPx / 2) - Math.hypot(g.x + b[0] * d - widthPx / 2, g.y + b[1] * d - heightPx / 2))
+      for (const [dx, dy] of dirs) {
+        const x = g.x + dx * d
+        const y = g.y + dy * d
+        if (free(x, y) && clear(x, y)) {
+          w.__fsDevPlace(x, y)
+          resolve()
+          return
+        }
+      }
+      reject(new Error('no open ground beside the warden'))
+    }
+    tick()
+  }), [dist, whenOpen] as const)
 }
 
 /** Hold a key for a while (real keydown/keyup, so Phaser sees it held). */

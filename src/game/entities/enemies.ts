@@ -1,9 +1,15 @@
 /**
  * Enemies: wisps (telegraphed hops), beetles (telegraphed straight-line
- * charges that end dazed against walls), and the stone guardian (quest-driven
- * boss state machine). Every real attack is telegraphed; bumping into an
- * enemy that isn't attacking only stings. Includes knockback, poses, and the
- * floating HP bars.
+ * charges that end dazed against walls), and the stone warden (quest-driven
+ * encounter). Every real attack is telegraphed; bumping into an enemy that
+ * isn't attacking only stings. Includes knockback, poses, and the floating
+ * HP bars.
+ *
+ * The warden is not fought down. It is a lamp in a stone coat, homesick for
+ * one pose: blows only clink off it. After each lunge it stops to find its
+ * feet, and a hero within reach can hold up the closure-mark rubbing. Each
+ * showing makes it falter; after WARDEN.showings it settles into its pose and
+ * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
 import type { GameState } from '../../lib/state'
@@ -26,7 +32,7 @@ export interface Enemy {
   dirY: number
   wanderTimer: number
   attackTimer: number
-  state: 'chase' | 'telegraph' | 'lunge' | 'recover' | 'stunned'
+  state: 'chase' | 'telegraph' | 'lunge' | 'sweep' | 'recover' | 'stunned'
   stateTimer: number
   lungeX: number
   lungeY: number
@@ -41,6 +47,12 @@ export interface Enemy {
   /** Atlas art prefix for small enemies ('slime' | 'mushroom' | 'beetle'). */
   art: string
   dead: boolean
+  /** Warden only: which attack the current telegraph leads into. */
+  attack: 'lunge' | 'sweep'
+  /** Warden only: recovering after a lunge, so the rubbing can be shown. */
+  opening: boolean
+  /** Warden only: how many times it has been shown the rubbing. */
+  showings: number
 }
 
 /**
@@ -53,8 +65,52 @@ export const ENEMY_TUNING = {
   // the moment to step aside.
   wisp: { hp: 10, contact: 1, chase: 38, aggro: 90, hopRange: 46, windup: 0.5, lock: 0.18, hopSpeed: 175, hopTime: 0.24, hop: 2, recover: 0.65, cooldown: 1.4 },
   beetle: { hp: 18, contact: 1, walk: 30, aggro: 130, keepAway: 64, chargeRange: 120, windup: 0.8, lock: 0.3, chargeSpeed: 220, chargeTime: 0.85, charge: 3, stun: 1.4, recover: 0.5, cooldown: 2.1, stunnedTakes: 1.5 },
-  guardian: { hp: 44, contact: 2, lunge: 3, lungeSpeed: 250, telegraph: 0.65, cooldown: 3.2 }
+  guardian: { hp: 44, contact: 1, lunge: 3, lungeSpeed: 250, telegraph: 0.65, cooldown: 3.2 }
 } as const
+
+/**
+ * The warden encounter. Lunges come from range and leave an opening (it stops
+ * to find its feet); hugging it draws a quicker arm sweep with no opening.
+ * The dance: bait a lunge, sidestep, close in, hold up the rubbing.
+ */
+export const WARDEN = {
+  /** Showings of the rubbing before it settles. */
+  showings: 3,
+  /** Seconds it stands open after a lunge (hero walks 110 px/s; a lunge runs ~85 px). */
+  opening: 1.5,
+  /** Hero-to-warden distance (px) at which the rubbing can be shown. */
+  showReach: 36,
+  /** Seconds it reels after a showing before it walks again. */
+  falter: 0.9,
+  /** It walks up to this distance and holds the path there. */
+  holdAt: 60,
+  /** Farther than this, it gives up on you and walks back to its post. */
+  homesick: 170,
+  /** Inside this distance it sweeps instead of lunging. */
+  sweepRange: 34,
+  sweepWindup: 0.55,
+  sweepTime: 0.22,
+  sweepReach: 30,
+  sweep: 2,
+  sweepRecover: 0.45,
+  /** Re-arm after a sweep: crowding it gets swept often. */
+  sweepCooldown: 1.5,
+  /** Each showing slows its next attack a little: it is calming down. */
+  calmPerShowing: 0.35
+} as const
+
+/** Read-only warden snapshot for playtests. */
+export interface WardenView {
+  state: 'absent' | 'dormant' | 'active' | 'settled'
+  x: number
+  y: number
+  texture: string
+  visible: boolean
+  phase: string | null
+  opening: boolean
+  showings: number
+  needed: number
+}
 
 /** Knockback impulses (px/s) applied over KNOCK.time through physics. */
 export const KNOCK = { small: 170, guardian: 60, player: 150, time: 0.13 }
@@ -80,6 +136,13 @@ export class EnemySystem {
   private _enemies: Enemy[] = []
   private guardianSpawned = false
   private hpBars!: Phaser.GameObjects.Graphics
+  /** The warden at rest (before the clue it stands dormant; after, settled). */
+  private restingWarden: Phaser.GameObjects.Image | null = null
+  private restingState: 'dormant' | 'settled' | null = null
+  /** The amber heart-lamp glowing in the warden's chest. */
+  private heart: Phaser.GameObjects.Image | null = null
+  /** The first clink of a blow off the warden explains itself once. */
+  private clinkHinted = false
 
   constructor(private scene: Phaser.Scene, private deps: EnemyDeps, state: GameState) {
     const { world } = deps
@@ -88,8 +151,11 @@ export class EnemySystem {
       if (state.defeatedEnemies.includes(spot.id)) continue
       this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
     }
-    if (world.areaId === 'ruin' && state.quest === 'clue-found') {
-      this.spawnGuardian(false)
+    if (world.areaId === 'ruin' && world.shrine) {
+      // The warden is always on its path: standing in its pose before you
+      // carry the mark, awake while you do, resting in its pose afterwards.
+      if (state.quest === 'clue-found') this.spawnGuardian(false)
+      else this.placeRestingWarden(state.quest === 'new' || state.quest === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
   }
@@ -107,38 +173,227 @@ export class EnemySystem {
     if (!this.deps.world.shrine) return
     if (this.deps.session.questStage !== 'clue-found') return
     this.guardianSpawned = true
-    this.spawnEnemy('stone-warden', 'guardian', this.deps.world.shrine.tx + 1, this.deps.world.shrine.ty + 3)
+    this.clearRestingWarden()
+    const home = this.wardenHome()!
+    this.spawnEnemy('stone-warden', 'guardian', home.tx, home.ty)
+    this.heart = this.makeHeart()
     if (announce) {
-      bus.emit(EV.toast, { text: 'The air goes cold. The stone warden grinds awake!' })
+      bus.emit(EV.toast, { text: 'Stone grinds on stone. The warden turns from its post, arms out, the lamp in its chest burning.' })
       if (!this.deps.reducedMotion) this.scene.cameras.main.shake(260, 0.005)
     }
   }
 
+  /** The warden's post: a short way down the path from the shrine lantern. */
+  private wardenHome(): { tx: number; ty: number } | null {
+    const shrine = this.deps.world.shrine
+    return shrine ? { tx: shrine.tx + 1, ty: shrine.ty + 3 } : null
+  }
+
+  /** A small amber glow for the heart-lamp (follows the warden each frame). */
+  private makeHeart(): Phaser.GameObjects.Image {
+    return this.scene.add.image(0, 0, 'glow')
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xffb054)
+      .setScale(0.16)
+      .setAlpha(0.6)
+  }
+
+  /** Where the heart-lamp sits on a warden sprite (chest, a little forward). */
+  private placeHeart(sprite: Phaser.GameObjects.Image, settled: boolean): void {
+    if (!this.heart) return
+    const forward = sprite.flipX ? -1 : 1
+    this.heart.setPosition(sprite.x + forward * (settled ? 2 : 1), sprite.y - (settled ? 6 : 10)).setDepth(sprite.depth + 1)
+  }
+
+  /**
+   * The warden at rest on its post: standing in its pose (dormant, before the
+   * rubbing is taken) or settled, arms down and heart-lamp low. It isn't an
+   * enemy either way: no AI, no contact, no bar.
+   */
+  private placeRestingWarden(kind: 'dormant' | 'settled'): void {
+    const home = this.wardenHome()
+    if (!home) return
+    const tex = kind === 'settled' ? this.guardianPoseTexture('defeat', 'guardian0') : this.guardianPoseTexture('idle', 'guardian0')
+    const sprite = this.scene.add.image(home.tx * TILE + 8, home.ty * TILE + TILE, tex).setOrigin(0.5, 1)
+    sprite.setDepth(sprite.y)
+    this.restingWarden = sprite
+    this.restingState = kind
+    this.heart = this.makeHeart()
+    this.placeHeart(sprite, kind === 'settled')
+    if (kind === 'settled') this.gutterHeart(true)
+  }
+
+  private clearRestingWarden(): void {
+    this.restingWarden?.destroy()
+    this.restingWarden = null
+    this.restingState = null
+    this.heart?.destroy()
+    this.heart = null
+  }
+
+  /** The heart-lamp burned down to a coal: low, slow, still alive. */
+  private gutterHeart(instant: boolean): void {
+    const heart = this.heart
+    if (!heart) return
+    this.scene.tweens.killTweensOf(heart)
+    const rest = () => {
+      if (!heart.active) return
+      heart.setAlpha(0.42).setScale(0.12)
+      if (!this.deps.reducedMotion) {
+        this.scene.tweens.add({ targets: heart, alpha: 0.24, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+    }
+    if (instant || this.deps.reducedMotion) {
+      rest()
+      return
+    }
+    // Gutter: two bright catches, then down to a coal.
+    this.scene.tweens.chain({
+      targets: heart,
+      tweens: [
+        { alpha: 0.9, scale: 0.2, duration: 120 },
+        { alpha: 0.3, scale: 0.12, duration: 160 },
+        { alpha: 0.75, scale: 0.17, duration: 140 },
+        { alpha: 0.42, scale: 0.12, duration: 700, ease: 'Quad.easeOut' }
+      ],
+      onComplete: rest
+    })
+  }
+
+  /** The live warden, if it is up and unsettled in this area. */
+  private activeWarden(): Enemy | undefined {
+    return this.enemies.find((e) => e.type === 'guardian' && !e.dead)
+  }
+
+  /**
+   * Where to show the "Hold up the rubbing" prompt, or null: only while the
+   * warden stands open after a lunge and the hero is within reach.
+   */
+  showTarget(): { x: number; y: number } | null {
+    const w = this.activeWarden()
+    if (!w || w.state !== 'recover' || !w.opening || w.knockTimer > 0) return null
+    const hero = this.deps.hero().sprite
+    const dist = Math.hypot(hero.x - w.sprite.x, hero.y - 8 - (w.sprite.y - 6))
+    return dist < WARDEN.showReach ? { x: w.sprite.x, y: w.sprite.y - 36 } : null
+  }
+
+  /**
+   * Hold up the closure-mark rubbing. Returns true when it was shown (the
+   * interact press is used up). `force` skips the opening and reach checks
+   * (dev playtest lever only).
+   */
+  showRubbing(force = false): boolean {
+    const w = this.activeWarden()
+    if (!w) return false
+    if (!force && !this.showTarget()) return false
+    w.showings += 1
+    w.opening = false
+    const hero = this.deps.hero()
+    // The hero raises the rubbing: a small paper flash above their head.
+    this.deps.fx.floatText(hero.sprite.x, hero.sprite.y - 22, 'two weaves and a break', '#fff3c4', false)
+    if (w.showings >= WARDEN.showings) {
+      this.settleWarden(w)
+      return true
+    }
+    // Falter: it rocks back, the heart-lamp flickers, then it gathers itself.
+    sfx('falter')
+    w.state = 'recover'
+    w.stateTimer = WARDEN.falter
+    w.hurtTimer = 0.4
+    const away = new Phaser.Math.Vector2(w.sprite.x - hero.sprite.x, w.sprite.y - hero.sprite.y)
+    if (away.lengthSq() < 0.01) away.set(hero.facing.x, hero.facing.y)
+    away.normalize()
+    w.knockX = away.x * 90
+    w.knockY = away.y * 90
+    w.knockTimer = KNOCK.time
+    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'falters', '#ffd27a', false)
+    if (!this.deps.reducedMotion) this.scene.cameras.main.shake(120, 0.003)
+    if (this.heart && !this.deps.reducedMotion) {
+      this.scene.tweens.add({ targets: this.heart, alpha: 0.15, duration: 90, yoyo: true, repeat: 2 })
+    }
+    return true
+  }
+
+  /**
+   * Settled: arms down, the heart-lamp gutters, and it rests in its pose.
+   * No dissolve — the sprite stays where it stopped. (Come back later and
+   * it will be on its post: drift-stone walks home when nobody watches.)
+   */
+  private settleWarden(w: Enemy): void {
+    w.dead = true
+    this._enemies = this.enemies.filter((e) => e !== w)
+    const body = w.sprite.body as Phaser.Physics.Arcade.Body
+    body.setVelocity(0, 0)
+    body.enable = false
+    w.sprite.clearTint()
+    sfx('settle')
+    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'settles', '#ffd27a', true)
+    // Arms lower (the crouch), then down into its resting heap.
+    w.sprite.setTexture(this.guardianPoseTexture('windup', 'guardian1'))
+    this.scene.time.delayedCall(this.deps.reducedMotion ? 0 : 420, () => {
+      if (w.sprite.active) w.sprite.setTexture(this.guardianPoseTexture('defeat', 'guardian0'))
+    })
+    this.placeHeart(w.sprite, true)
+    this.gutterHeart(false)
+    this.restingWarden = w.sprite
+    this.restingState = 'settled'
+    // Same save effects as ever: the quest event and the defeated-enemy entry.
+    this.deps.session.recordDefeat(w.id)
+    this.deps.session.applyQuestEvent('defeat-guardian')
+  }
+
+  /** Read-only snapshot for playtests (window.__fsWarden). */
+  wardenView(): WardenView {
+    const w = this.activeWarden()
+    const sprite = w?.sprite ?? this.restingWarden
+    const state: WardenView['state'] = w ? 'active' : this.restingState ?? 'absent'
+    return {
+      state,
+      x: sprite?.x ?? 0,
+      y: sprite?.y ?? 0,
+      texture: sprite?.texture.key ?? '',
+      visible: !!sprite && sprite.active && sprite.visible && sprite.alpha > 0.5,
+      phase: w ? w.state : null,
+      opening: !!w && w.state === 'recover' && w.opening,
+      showings: w?.showings ?? (this.restingState === 'settled' ? WARDEN.showings : 0),
+      needed: WARDEN.showings
+    }
+  }
+
+  /**
+   * A blow (or bolt) on the warden: it rings off the stone and changes
+   * nothing but a small rock on its feet. The first one says why.
+   */
+  private clinkWarden(enemy: Enemy, fromX: number): void {
+    this.deps.fx.floatText(enemy.sprite.x, enemy.sprite.y - 26, 'clink', '#c9c2d6', false)
+    sfx('clink')
+    this.knockEnemy(enemy, fromX)
+    if (!this.clinkHinted) {
+      this.clinkHinted = true
+      bus.emit(EV.toast, { text: 'Your blow rings off the stone. It isn\u2019t fighting you; it\u2019s keeping a pose. Show it the mark.' })
+    }
+  }
+
   damageEnemy(enemy: Enemy, amount: number, fromX: number, crit = false): void {
+    if (enemy.type === 'guardian') {
+      this.clinkWarden(enemy, fromX)
+      return
+    }
     // A dazed beetle (charged into something) is wide open.
     if (enemy.type === 'beetle' && enemy.state === 'stunned') {
       amount *= ENEMY_TUNING.beetle.stunnedTakes
       crit = true
     }
     enemy.hp -= amount
-    this.deps.fx.floatText(enemy.sprite.x, enemy.sprite.y - (enemy.type === 'guardian' ? 26 : 16), crit ? `${Math.round(amount)}!` : `${Math.round(amount)}`, crit ? '#ffd24a' : '#fffbef', crit)
+    this.deps.fx.floatText(enemy.sprite.x, enemy.sprite.y - 16, crit ? `${Math.round(amount)}!` : `${Math.round(amount)}`, crit ? '#ffd24a' : '#fffbef', crit)
     sfx(crit ? 'crit' : 'hit')
     this.deps.fx.hitStop(crit ? 70 : 45)
     enemy.sprite.setTint(0xffe0d0)
     this.scene.time.delayedCall(90, () => {
-      if (!enemy.dead && enemy.sprite.active) {
-        // A hit during the windup must not erase the telegraph tell for the
-        // rest of the telegraph: re-apply it instead of clearing.
-        if (enemy.type === 'guardian' && enemy.state === 'telegraph') enemy.sprite.setTint(0xd0e8ff)
-        else enemy.sprite.clearTint()
-      }
+      if (!enemy.dead && enemy.sprite.active) enemy.sprite.clearTint()
     })
     this.knockEnemy(enemy, fromX)
-    if (enemy.hp <= 0) {
-      this.killEnemy(enemy)
-      return
-    }
-    if (enemy.type === 'guardian') this.flashGuardianHurt(enemy)
+    if (enemy.hp <= 0) this.killEnemy(enemy)
   }
 
   /** Per-frame AI + contact damage. */
@@ -174,6 +429,11 @@ export class EnemySystem {
       if (enemy.type === 'guardian' && enemy.state === 'lunge') {
         reach = 18
         dmg = ENEMY_TUNING.guardian.lunge
+      } else if (enemy.type === 'guardian' && enemy.state === 'sweep') {
+        reach = WARDEN.sweepReach
+        dmg = WARDEN.sweep
+      } else if (enemy.type === 'guardian' && enemy.state === 'recover') {
+        dmg = 0 // standing still to find its feet: walking up to it is safe
       } else if (enemy.type === 'wisp' && enemy.state === 'lunge') {
         reach = 14
         dmg = ENEMY_TUNING.wisp.hop
@@ -185,29 +445,66 @@ export class EnemySystem {
       }
       if (dmg > 0 && dist < reach) hero.damagePlayer(dmg, ex, enemy.sprite.y)
       enemy.sprite.setDepth(enemy.sprite.y)
+      if (enemy.type === 'guardian') this.updateHeart(enemy)
     }
+  }
+
+  /** The heart-lamp follows the warden and flares while it stands open. */
+  private updateHeart(w: Enemy): void {
+    if (!this.heart) return
+    this.placeHeart(w.sprite, false)
+    if (this.scene.tweens.isTweening(this.heart)) return
+    const open = w.state === 'recover' && w.opening
+    const t = this.scene.time.now
+    const pulse = this.deps.reducedMotion ? 0 : Math.sin(t * (open ? 0.018 : 0.006))
+    this.heart.setAlpha(open ? 0.85 + pulse * 0.12 : 0.55 + pulse * 0.08).setScale(open ? 0.2 : 0.16)
   }
 
   updateEnemyBars(): void {
     this.hpBars.clear()
     for (const enemy of this.enemies) {
-      const boss = enemy.type === 'guardian'
+      if (enemy.type === 'guardian') {
+        this.drawWardenPips(enemy)
+        continue
+      }
       // Small creatures only show a bar once hurt — less clutter, and no
       // bars floating over foliage for enemies the player hasn't met.
-      if (!boss && enemy.hp >= enemy.maxHp) continue
-      const w = boss ? 30 : 16
-      const h = boss ? 4 : 3
+      if (enemy.hp >= enemy.maxHp) continue
+      const w = 16
+      const h = 3
       const x = Math.round(enemy.sprite.x - w / 2)
-      const y = Math.round(enemy.sprite.y - (boss ? 31 : 19))
+      const y = Math.round(enemy.sprite.y - 19)
       const pct = Math.max(0, enemy.hp / enemy.maxHp)
       this.hpBars.fillStyle(0x2b1d1a, 0.9)
       this.hpBars.fillRect(x - 1, y - 1, w + 2, h + 2)
       this.hpBars.fillStyle(0x5a3a32, 1)
       this.hpBars.fillRect(x, y, w, h)
-      this.hpBars.fillStyle(boss ? 0xe8734f : 0xf2c14e, 1)
+      this.hpBars.fillStyle(0xf2c14e, 1)
       this.hpBars.fillRect(x, y, Math.max(0, Math.round(pct * w)), h)
       this.hpBars.fillStyle(0xffffff, 0.35)
       this.hpBars.fillRect(x, y, Math.max(0, Math.round(pct * w)), 1)
+    }
+  }
+
+  /**
+   * The warden has no health to lose. Instead: one pip per showing still
+   * needed, lit amber as the rubbing lands — how close it is to settling.
+   */
+  private drawWardenPips(w: Enemy): void {
+    const n = WARDEN.showings
+    const gap = 7
+    const x0 = Math.round(w.sprite.x - ((n - 1) * gap) / 2)
+    const y = Math.round(w.sprite.y - 30)
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * gap
+      this.hpBars.fillStyle(0x2b1d1a, 0.9)
+      this.hpBars.fillRect(x - 3, y - 3, 6, 6)
+      this.hpBars.fillStyle(i < w.showings ? 0xffc86a : 0x5a4a52, 1)
+      this.hpBars.fillRect(x - 2, y - 2, 4, 4)
+      if (i < w.showings) {
+        this.hpBars.fillStyle(0xffffff, 0.45)
+        this.hpBars.fillRect(x - 2, y - 2, 4, 1)
+      }
     }
   }
 
@@ -262,7 +559,10 @@ export class EnemySystem {
       knockX: 0,
       knockY: 0,
       art,
-      dead: false
+      dead: false,
+      attack: 'lunge',
+      opening: false,
+      showings: 0
     }
     // Enemies respect walls, trees and water: a charge can end in a tree.
     // They also stay on the map: an exit gap in the treeline is a way out
@@ -289,15 +589,7 @@ export class EnemySystem {
     })
     particles.explode(10)
     this.scene.time.delayedCall(700, () => particles.destroy())
-    if (enemy.type === 'guardian' && this.scene.textures.exists('guardian-defeat')) {
-      // Collapsed death pose, held visible and untinted through the dissolve
-      // (pose retires only when the sprite is destroyed below).
-      enemy.sprite.clearTint()
-      enemy.sprite.setTexture('guardian-defeat')
-    }
-    // Freeze the corpse: a mid-lunge guardian still holds ~250 px/s velocity,
-    // and the dynamic body's postUpdate would fight the sink tween. Disable
-    // the body so the dissolve tween owns the sprite fully.
+    // Freeze the body so the dissolve tween owns the sprite fully.
     const corpseBody = enemy.sprite.body as Phaser.Physics.Arcade.Body
     corpseBody.setVelocity(0, 0)
     corpseBody.enable = false
@@ -310,9 +602,6 @@ export class EnemySystem {
       onComplete: () => enemy.sprite.destroy()
     })
     this._enemies = this.enemies.filter((e) => e !== enemy)
-    if (enemy.type === 'guardian') {
-      this.deps.session.applyQuestEvent('defeat-guardian')
-    }
   }
 
   /**
@@ -338,7 +627,8 @@ export class EnemySystem {
       enemy.sprite.clearTint()
     }
     if (enemy.type !== 'guardian') this.setEnemyPose(enemy, 'hurt')
-    enemy.hurtTimer = 0.22
+    // A clink mid-windup must not hide the warden's telegraph pose.
+    if (!(enemy.type === 'guardian' && enemy.state === 'telegraph')) enemy.hurtTimer = 0.22
   }
 
   /** Small-enemy pose: the idle loop, or a held atlas frame. */
@@ -579,6 +869,11 @@ export class EnemySystem {
     }
   }
 
+  /**
+   * The warden: walks at you, lunges from range (then stops, open, to find its
+   * feet — the moment to show the rubbing), and sweeps its arms at anyone
+   * crowding it (no opening after a sweep). Showings slow it down.
+   */
   private updateGuardian(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
     enemy.attackTimer -= dt
@@ -587,31 +882,54 @@ export class EnemySystem {
     const tune = ENEMY_TUNING.guardian
     switch (enemy.state) {
       case 'chase': {
-        if (dist > 30) {
+        if (dist > WARDEN.homesick) {
+          // Nobody to hold back: it walks home to its post, and its pose.
+          const home = new Phaser.Math.Vector2(enemy.homeX - enemy.sprite.x, enemy.homeY - enemy.sprite.y)
+          if (home.length() > 4) {
+            home.normalize()
+            body.setVelocity(home.x * 30, home.y * 30)
+            if (Math.abs(home.x) > 0.2) enemy.sprite.setFlipX(home.x < 0)
+          } else {
+            body.setVelocity(0, 0)
+          }
+        } else if (dist > WARDEN.holdAt) {
+          // It closes to arm's-length-and-a-lunge and holds the path there.
           const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y).normalize()
           body.setVelocity(dir.x * 50, dir.y * 50)
           enemy.sprite.setFlipX(dir.x < 0)
         } else {
           body.setVelocity(0, 0)
+          if (Math.abs(px - enemy.sprite.x) > 4) enemy.sprite.setFlipX(px < enemy.sprite.x)
         }
         if (enemy.attackTimer <= 0 && dist < 150) {
+          enemy.attack = dist < WARDEN.sweepRange ? 'sweep' : 'lunge'
           enemy.state = 'telegraph'
           enemy.lungeX = 0
           enemy.lungeY = 0
-          enemy.stateTimer = tune.telegraph
-          enemy.sprite.setTint(0xd0e8ff)
+          enemy.stateTimer = enemy.attack === 'sweep' ? WARDEN.sweepWindup : tune.telegraph
+          body.setVelocity(0, 0)
+          this.telegraph(enemy, enemy.stateTimer)
+          enemy.sprite.setTint(enemy.attack === 'sweep' ? 0xffd0c0 : 0xd0e8ff)
         }
         break
       }
       case 'telegraph': {
         body.setVelocity(0, 0)
         if (enemy.stateTimer <= 0) {
+          enemy.sprite.clearTint()
+          if (enemy.attack === 'sweep') {
+            enemy.state = 'sweep'
+            enemy.stateTimer = WARDEN.sweepTime
+            if (Math.abs(px - enemy.sprite.x) > 2) enemy.sprite.setFlipX(px < enemy.sprite.x)
+            sfx('swing')
+            this.sweepArc(enemy)
+            break
+          }
           const dir = new Phaser.Math.Vector2(px - enemy.sprite.x, py - enemy.sprite.y).normalize()
           enemy.lungeX = dir.x * tune.lungeSpeed
           enemy.lungeY = dir.y * tune.lungeSpeed
           enemy.state = 'lunge'
           enemy.stateTimer = 0.34
-          enemy.sprite.clearTint()
           if (dir.x !== 0) enemy.sprite.setFlipX(dir.x < 0)
         }
         break
@@ -619,17 +937,32 @@ export class EnemySystem {
       case 'lunge': {
         body.setVelocity(enemy.lungeX, enemy.lungeY)
         if (enemy.stateTimer <= 0) {
+          // Overreached: it stops to find its feet, and stands open.
           enemy.state = 'recover'
-          enemy.stateTimer = 0.55
+          enemy.opening = true
+          enemy.stateTimer = WARDEN.opening
           body.setVelocity(0, 0)
+        }
+        break
+      }
+      case 'sweep': {
+        body.setVelocity(0, 0)
+        if (enemy.stateTimer <= 0) {
+          enemy.state = 'recover'
+          enemy.opening = false
+          enemy.stateTimer = WARDEN.sweepRecover
         }
         break
       }
       case 'recover': {
         body.setVelocity(0, 0)
         if (enemy.stateTimer <= 0) {
+          const swept = !enemy.opening && enemy.attack === 'sweep'
           enemy.state = 'chase'
-          enemy.attackTimer = enemy.hp < enemy.maxHp / 2 ? tune.cooldown * 0.7 : tune.cooldown
+          enemy.opening = false
+          const calm = enemy.showings * WARDEN.calmPerShowing
+          enemy.attackTimer = (swept ? WARDEN.sweepCooldown : tune.cooldown) + calm
+          enemy.attack = 'lunge'
         }
         break
       }
@@ -644,8 +977,8 @@ export class EnemySystem {
    * Single guardian pose selector: hurt wins while its timer is running, then
    * the pose of the current state-machine state. setTexture fires only on
    * change, so the 24x24 texture, the (0.5, 1) foot anchor, and the authored
-   * foot body stay stable across pose switches. Dead guardians are skipped —
-   * killEnemy owns the defeat pose through the dissolve.
+   * foot body stay stable across pose switches. A settled warden is skipped —
+   * settleWarden owns its resting pose from then on.
    */
   private applyGuardianPose(enemy: Enemy): void {
     if (enemy.dead || !enemy.sprite.active) return
@@ -672,17 +1005,15 @@ export class EnemySystem {
   private guardianStateTexture(enemy: Enemy): string {
     if (enemy.state === 'telegraph') return this.guardianPoseTexture('windup', 'guardian1')
     if (enemy.state === 'lunge') return this.guardianPoseTexture('lunge', 'guardian1')
+    if (enemy.state === 'sweep') return this.guardianPoseTexture('hurt', 'guardian1')
     return this.guardianPoseTexture('idle', 'guardian0')
   }
 
-  /**
-   * Brief hurt pose on a non-lethal hit: only arms a short visual timer that
-   * applyGuardianPose consumes. The state machine — including any lunge in
-   * progress — and the physics body are untouched, and a dying guardian can
-   * never re-select a pose (killEnemy owns the defeat pose).
-   */
-  private flashGuardianHurt(enemy: Enemy): void {
-    if (!this.scene.textures.exists('guardian-hurt')) return
-    enemy.hurtTimer = 0.16
+  /** The arm sweep's reach, drawn as a quick fading ring. */
+  private sweepArc(enemy: Enemy): void {
+    const g = this.scene.add.graphics().setDepth(enemy.sprite.depth + 2)
+    g.lineStyle(2, 0xffe2b0, 0.8)
+    g.strokeCircle(enemy.sprite.x, enemy.sprite.y - 6, WARDEN.sweepReach)
+    this.scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() })
   }
 }
