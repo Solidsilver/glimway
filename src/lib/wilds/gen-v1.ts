@@ -23,7 +23,8 @@
  * inside the commons gap on the entry chunk, else just inside the south,
  * north, west or east gap (first that exists).
  */
-import { TERRAIN, TILE } from '../../game/textures.ts';
+import { TILE } from '../../game/textures.ts';
+import { DECOR_ART, TANGLE_GROUND, tangleTerrain } from './tangle.ts';
 import { Rng, chunkSeed, lootSeed, type SeedEpoch } from './hash.ts';
 import { loadWilds } from './data.ts';
 import type {
@@ -120,10 +121,6 @@ export function exitInward(data: WildsData, e: ChunkExit): Tile {
     default:
       return { tx: mid + 1, ty: S - 2 };
   }
-}
-
-function inAnyExit(exits: readonly ChunkExit[], tx: number, ty: number): boolean {
-  return exits.some((e) => tx >= e.tx && tx < e.tx + e.tw && ty >= e.ty && ty < e.ty + e.th);
 }
 
 /** True on an exit tile or the one-tile margin around it (never occupied). */
@@ -248,133 +245,24 @@ export function rollLoot(epoch: Epoch, entityId: string, cycle: number): LootDro
 
 // ---------------------------------------------------------------- terrain
 
-/** Client-only terrain for one chunk. Deterministic (mulberry32 floats are
- *  fine here), but keeps every entity and exit reachable by construction and
- *  a final carve pass. */
+/** Client-only terrain for one chunk: the Tangle's woods (tangle.ts).
+ *  Deterministic (mulberry32 floats are fine here), and keeps every entity
+ *  and exit reachable by construction plus a final carve pass. */
 export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain {
   const data = loadWilds();
   const region = regionFor(data, epoch.regionId);
   const S = data.chunkSize;
-  const rng = mulberry32(chunkSeed(epoch as SeedEpoch, cx, cy));
+  const seed = chunkSeed(epoch as SeedEpoch, cx, cy);
   const exits = buildExits(data, region, cx, cy);
   const entities = chunkEntities(epoch, cx, cy);
   const spawn = spawnTile(data, exits);
-
-  const ground: number[][] = Array.from({ length: S }, () => Array.from({ length: S }, () => TERRAIN.grass_a));
-  const solid: boolean[][] = Array.from({ length: S }, () => Array.from({ length: S }, () => false));
-  const trees: Tile[] = [];
-  const bushes: Tile[] = [];
-  const rocks: Tile[] = [];
-
-  // Protected tiles: entity clearings, exit margins, spawn, and 3-wide
-  // corridors from spawn to every entity and exit mouth.
-  const clear = new Set<string>();
-  const mark = (tx: number, ty: number, radius: number) => {
-    for (let y = ty - radius; y <= ty + radius; y++) {
-      for (let x = tx - radius; x <= tx + radius; x++) {
-        if (x >= 0 && y >= 0 && x < S && y < S) clear.add(tileKey(x, y));
-      }
-    }
-  };
-  const markCorridor = (to: Tile) => {
-    const stepX = Math.sign(to.tx - spawn.tx);
-    for (let x = spawn.tx; x !== to.tx + stepX; x += stepX) mark(x, spawn.ty, 1);
-    const stepY = Math.sign(to.ty - spawn.ty);
-    for (let y = spawn.ty; y !== to.ty + stepY; y += stepY) mark(to.tx, y, 1);
-  };
-  for (const e of exits) {
-    for (let y = e.ty - 1; y <= e.ty + e.th; y++) {
-      for (let x = e.tx - 1; x <= e.tx + e.tw; x++) mark(x, y, 0);
-    }
-    markCorridor(exitInward(data, e));
-  }
-  for (const en of entities) {
-    mark(en.tx, en.ty, 1);
-    markCorridor({ tx: en.tx, ty: en.ty });
-  }
-  mark(spawn.tx, spawn.ty, 1);
-
-  // Base grass with variation (same feel as the curated areas).
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const r = rng();
-      ground[y][x] = r < 0.55 ? TERRAIN.grass_a : r < 0.85 ? TERRAIN.grass_b : TERRAIN.grass_c;
-    }
-  }
-
-  // Walkable decorative patches (flowers / dirt / sand), interior only.
-  const patchTiles = [TERRAIN.flowers, TERRAIN.dirt, TERRAIN.sand];
-  for (let p = 0; p < 3; p++) {
-    const tile = patchTiles[Math.floor(rng() * patchTiles.length)];
-    const w = 2 + Math.floor(rng() * 2);
-    const h = 2 + Math.floor(rng() * 2);
-    const x0 = 1 + Math.floor(rng() * Math.max(1, S - w - 2));
-    const y0 = 1 + Math.floor(rng() * Math.max(1, S - h - 2));
-    let free = true;
-    for (let y = y0; y < y0 + h && free; y++) for (let x = x0; x < x0 + w && free; x++) if (clear.has(tileKey(x, y))) free = false;
-    if (!free) continue;
-    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) ground[y][x] = tile;
-  }
-
-  // Occasional pond (solid water), interior only, never on a kept tile.
-  if (rng() < 0.5) {
-    const w = 3 + Math.floor(rng() * 2);
-    const h = 2 + Math.floor(rng() * 2);
-    const x0 = 1 + Math.floor(rng() * Math.max(1, S - w - 2));
-    const y0 = 1 + Math.floor(rng() * Math.max(1, S - h - 2));
-    let free = true;
-    for (let y = y0; y < y0 + h && free; y++) for (let x = x0; x < x0 + w && free; x++) if (clear.has(tileKey(x, y))) free = false;
-    if (free) {
-      for (let y = y0; y < y0 + h; y++) {
-        for (let x = x0; x < x0 + w; x++) {
-          ground[y][x] = x === x0 ? TERRAIN.water_b : TERRAIN.water_a;
-          solid[y][x] = true;
-        }
-      }
-    }
-  }
-
-  // Unbroken border trees; every border tile is a tree except the exit mouths.
-  for (let x = 0; x < S; x++) {
-    placeBorderTree(x, 0);
-    placeBorderTree(x, S - 1);
-  }
-  for (let y = 0; y < S; y++) {
-    placeBorderTree(0, y);
-    placeBorderTree(S - 1, y);
-  }
-  function placeBorderTree(tx: number, ty: number): void {
-    if (inAnyExit(exits, tx, ty)) return;
-    if (solid[ty][tx]) return;
-    solid[ty][tx] = true;
-    trees.push({ tx, ty });
-  }
-
-  // Interior groves and scatter, never on kept tiles, spaced apart.
-  const decoFree = (tx: number, ty: number): boolean => {
-    if (clear.has(tileKey(tx, ty)) || solid[ty][tx]) return false;
-    if (!isGrassLike(ground[ty][tx])) return false;
-    return ![...trees, ...bushes, ...rocks].some((p) => Math.abs(p.tx - tx) < 2 && Math.abs(p.ty - ty) < 2);
-  };
-  const scatter = (count: number, sink: Tile[]) => {
-    for (let i = 0; i < count * 10; i++) {
-      if (sink.length >= count) return;
-      const tx = 1 + Math.floor(rng() * (S - 2));
-      const ty = 1 + Math.floor(rng() * (S - 2));
-      if (!decoFree(tx, ty)) continue;
-      sink.push({ tx, ty });
-      if (sink === trees) solid[ty][tx] = true;
-    }
-  };
-  scatter(20, trees);
-  scatter(12, bushes);
-  scatter(8, rocks);
+  // Home is the Commons gap on the region's entry chunk (turncaps lean to it).
+  const home = { tx: (region.entryX - cx) * S + COMMONS_EXIT_TX + 1, ty: (region.entryY - cy) * S + S - 1 };
+  const { ground, solid, decor } = tangleTerrain({ size: S, rng: mulberry32(seed), seed, exits, entities, spawn, home });
 
   // Safety pass: guarantee every exit mouth and entity is reachable from
   // spawn even if a placement rule above ever slips. Clears an L-path.
-  const blocked = (tx: number, ty: number): boolean =>
-    solid[ty][tx] || trees.some((t) => t.tx === tx && t.ty === ty) || bushes.some((t) => t.tx === tx && t.ty === ty) || rocks.some((t) => t.tx === tx && t.ty === ty);
-  const walkable = (tx: number, ty: number): boolean => tx >= 0 && ty >= 0 && tx < S && ty < S && !blocked(tx, ty);
+  const walkable = (tx: number, ty: number): boolean => tx >= 0 && ty >= 0 && tx < S && ty < S && !solid[ty][tx];
   const reachSet = (): Set<string> => {
     const seen = new Set<string>([tileKey(spawn.tx, spawn.ty)]);
     const queue: Tile[] = [spawn];
@@ -399,10 +287,10 @@ export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain
     if (!stuck) break;
     const carve = (tx: number, ty: number) => {
       solid[ty][tx] = false;
-      ground[ty][tx] = TERRAIN.grass_a;
-      for (const list of [trees, bushes, rocks]) {
-        const i = list.findIndex((p) => p.tx === tx && p.ty === ty);
-        if (i >= 0) list.splice(i, 1);
+      ground[ty][tx] = TANGLE_GROUND.path;
+      for (let i = decor.length - 1; i >= 0; i--) {
+        const d = decor[i];
+        if (d.tx === tx && d.ty === ty && DECOR_ART[d.kind].blocking) decor.splice(i, 1);
       }
     };
     const stepX = Math.sign(stuck.tx - spawn.tx);
@@ -422,16 +310,13 @@ export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain
     heightPx: S * TILE,
     ground,
     solid,
-    trees,
-    bushes,
-    rocks,
+    trees: [],
+    bushes: [],
+    rocks: [],
+    decor,
     exits,
     spawn,
   };
-}
-
-function isGrassLike(tile: number): boolean {
-  return tile === TERRAIN.grass_a || tile === TERRAIN.grass_b || tile === TERRAIN.grass_c;
 }
 
 export const genV1: WildsGenerator = {

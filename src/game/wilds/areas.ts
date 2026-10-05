@@ -12,19 +12,16 @@
 import { chunkTerrain, toWorldData } from '../../lib/wilds/index.ts';
 import type { Epoch } from '../../lib/wilds/types.ts';
 import type { AreaId } from '../../lib/state.ts';
-import { registerAreaKind, type WorldData, type AreaKind, type ForegroundSpot } from '../worlds.ts';
+import { registerAreaKind, type AreaKind, type ForegroundSpot } from '../worlds.ts';
 import { WILDS_AREA, WILDS_REGION_ID, chunkAreaId, wildsRegion } from './regions.ts';
 
-/** Canopies over every 9th tree base (collisions stay the trees'), plus ferns. */
-function wildsForeground(world: WorldData): ForegroundSpot[] {
-  const spots: ForegroundSpot[] = [];
-  for (let i = 0; i < world.trees.length; i += 9) {
-    const t = world.trees[i];
-    spots.push({ frame: i % 18 === 0 ? 'oak-canopy' : 'pine-canopy', tx: t.tx, ty: t.ty, w: 56 });
-  }
-  const ferns = world.bushes.filter((_, i) => i % 5 === 0);
-  for (const f of ferns) spots.push({ frame: 'fern-cluster', tx: f.tx, ty: f.ty, w: 24 });
-  return spots;
+/**
+ * No delivered occluders: the Tangle's trees are code-drawn scenery
+ * (src/game/wilds/tangle-art.ts), and the ones that overhang a path fade
+ * through the generic foreground pass.
+ */
+function wildsForeground(): ForegroundSpot[] {
+  return [];
 }
 
 function wildsKind(epoch: Epoch, cx: number, cy: number): AreaKind {

@@ -8,6 +8,12 @@ import { TILE } from '../textures'
 import type { WorldData } from '../worlds'
 import type { LightProp } from './lanterns'
 import { ensureSceneryTexture } from '../commons-art'
+import { ensureTangleAtlas } from '../wilds/tangle-art'
+
+/** Code-drawn scenery textures: the Commons' runs, then the Tangle's woods. */
+export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
+  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key)
+}
 
 export function buildProps(
   scene: Phaser.Scene,
@@ -64,11 +70,13 @@ export function buildProps(
       lightProps.push({ id: p.light, sprite: img, gx: x, gy: y - p.h * 0.72, glow: null })
     }
   }
-  // Code-drawn scenery (the Commons): visual only, the solid grid collides.
+  // Code-drawn scenery (the Commons, the Tangle): visual only, the solid
+  // grid collides. Fading canopies are the foreground pass's (foreground.ts).
   for (const s of world.scenery ?? []) {
-    if (!ensureSceneryTexture(scene, s.key)) continue
-    const img = scene.add.image(s.x, s.y, s.key).setOrigin(s.originX ?? 0.5, 1)
+    if (s.fade || !ensureSceneryArt(scene, s.key)) continue
+    const img = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
     img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
+    if (s.tint !== undefined) img.setTint(s.tint)
   }
   return lightProps
 }

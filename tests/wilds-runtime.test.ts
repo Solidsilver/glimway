@@ -67,11 +67,14 @@ test('wildsSceneEntry: a saved region-wide position picks its chunk and local ti
   assert.equal(entry.tile.tx, Math.floor((arrival.x - 384) / 16));
   assert.equal(entry.tile.ty, Math.floor((arrival.y - 384) / 16));
   // A position in another chunk resolves there (reload keeps the chunk).
-  const far = toRegionPosition(2, 0, 100, 60);
+  // (Any walkable tile of that chunk: the woods are dense, so find one.)
+  const woods = chunkTerrain(epoch, 2, 0);
+  const open = woods.ground.flatMap((row, ty) => row.map((_, tx) => ({ tx, ty }))).find((t) => t.tx > 2 && t.ty > 2 && !woods.solid[t.ty][t.tx])!;
+  const far = toRegionPosition(2, 0, open.tx * 16 + 4, open.ty * 16 + 12);
   const chunk20 = wildsSceneEntry({ area: WILDS_AREA, position: far }, epoch);
   assert.ok(chunk20);
   assert.equal(chunk20.areaId, chunkAreaId(2, 0));
-  assert.deepEqual(chunk20.tile, { tx: Math.floor(100 / 16), ty: Math.floor(60 / 16) });
+  assert.deepEqual(chunk20.tile, open);
 });
 
 test('wildsSceneEntry: unconverted positions arrive at the region entry', () => {
