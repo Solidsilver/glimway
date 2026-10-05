@@ -111,8 +111,10 @@ export class Library {
     if (!paper) return { ok: false, text: 'That page isn’t one the library knows.' }
     if (!this.session.state.flags.includes(paperFlag(paperId))) return { ok: false, text: 'You can only donate papers you have found yourself.' }
     if (this.connected) {
-      // The server checks you hold it: make sure your latest finds are uploaded first.
+      // The server checks you hold it against your stored progress, so the
+      // upload carrying this find must land before the donation is sent.
       await this.session.save()
+      await this.session.link?.flush()
       const r = await this.remote.donate(paperId, newKey())
       if (r.ok) {
         lastShared = [...lastShared.filter((e) => e.paperId !== paperId), r.entry]

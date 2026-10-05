@@ -27,6 +27,9 @@ const donorNameCap = 60
 
 func capDonor(name string) string {
 	r := []rune(strings.TrimSpace(name))
+	if len(r) == 0 {
+		return "A Keeper"
+	}
 	if len(r) > donorNameCap {
 		r = r[:donorNameCap]
 	}

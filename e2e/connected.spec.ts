@@ -207,12 +207,18 @@ test('quest embers come from the server once the story upload lands', async ({ p
 
 test('the shared library shelf: a connected donation lands on the world shelf and stays', async ({ page }) => {
   await freshPlayer(page)
-  // Find a paper, let the save reach the server, then donate it at the library.
+  // Find a paper and donate it straight away: the donation must wait for the
+  // upload that carries the find, so there's no wait for the server here.
+  // Hold progress uploads for a while so the donation is sure to race the
+  // upload that carries the find (review: donate must flush first).
+  await page.route('**/api/progress', async (route) => {
+    await new Promise((r) => setTimeout(r, 4000))
+    await route.continue()
+  })
   await warp(page, 'village', 25, 15)
   await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
   await page.keyboard.press('e')
   await expect(page.locator('.toast', { hasText: 'Found: A Page from Pip’s Copybook' })).toBeVisible()
-  await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:pip-copybook-warden-corrections')
 
   await warp(page, 'village', 3, 18)
   await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
@@ -220,8 +226,10 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
   await expect(library).toBeVisible()
   await library.locator('[data-donate="pip-copybook-warden-corrections"]').click()
-  await expect(library.getByText('12 of 39')).toBeVisible()
+  // The donation waits for the held upload carrying the find.
+  await expect(library.getByText('12 of 39')).toBeVisible({ timeout: 20_000 })
   await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
+  await page.unroute('**/api/progress')
 
   // The world's shelf on the server: one donation, credited by the server.
   const shelf = await page.request.get('/api/library')

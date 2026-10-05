@@ -230,3 +230,12 @@ func TestLibraryNeedsSession(t *testing.T) {
 		t.Fatal("unauthenticated donation stored")
 	}
 }
+
+func TestCapDonorFallsBackForBlankNames(t *testing.T) {
+	if got := capDonor("   "); got != "A Keeper" {
+		t.Fatalf("blank name: got %q", got)
+	}
+	if got := capDonor("  Wren "); got != "Wren" {
+		t.Fatalf("trimmed name: got %q", got)
+	}
+}
