@@ -37,7 +37,7 @@
   // Newest first: the latest page is what the player wants to read.
   const entries = $derived([...journalEntries(stage)].reverse())
   const illustration = $derived(
-    ui.area.areaId === 'ruin' ? '/assets/fingersnap/fingersnap-shrine.png' : '/assets/fingersnap/fingersnap-village.png'
+    ui.area.areaId === 'ruin' ? '/assets/fingersnap/packed/fingersnap-shrine.webp' : '/assets/fingersnap/packed/fingersnap-village.webp'
   )
 </script>
 

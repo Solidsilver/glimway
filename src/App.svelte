@@ -796,7 +796,7 @@
 
   {#if phase !== 'playing'}
     <div class="title-screen">
-      <img class="bg" src="/assets/fingersnap/fingersnap-village.png" alt="" />
+      <img class="bg" src="/assets/fingersnap/packed/fingersnap-village.webp" alt="" />
       <div class="shade" aria-hidden="true"></div>
       <div class="fireflies" aria-hidden="true">
         {#each Array.from({ length: 16 }) as _, i}

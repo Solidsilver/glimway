@@ -1,15 +1,17 @@
 import type Phaser from 'phaser'
+import { PACKED_MANIFEST_KEY, blitKey, fitRect, type PackedManifest, type PackedRect } from './atlas-plan.ts'
 
 /**
  * Typed port of `assets/generated/commons-pass/integration.js`: the Commons
  * and Wilds art pass that replaces the code-drawn placeholders listed in
- * docs/art-requests.md. Like the runtime pass (./runtime-art.ts), the 21
- * source PNGs are high-resolution irregular atlases with individually
- * measured rectangles — never a fixed grid. Each manifest frame becomes one
- * native-size canvas texture (`commons-art:<frame>`), blitting its measured
- * `sourceRect` into its `destinationRect` with nearest-neighbour sampling, so
- * foot-anchored origins stay put between frames. Source PNGs are never
- * modified.
+ * docs/art-requests.md. The 21 source PNGs (assets/generated/commons-pass/)
+ * are high-resolution irregular atlases with individually measured
+ * rectangles — never a fixed grid. Each manifest frame becomes one
+ * native-size canvas texture (`commons-art:<frame>`): its measured
+ * `sourceRect` sampled nearest-neighbour into its `destinationRect`, so
+ * foot-anchored origins stay put between frames. That sampling now happens
+ * at build time (scripts/build-atlases.ts) and ships packed; the loader
+ * copies the baked pixels. Source PNGs are never modified.
  *
  * Code-drawn placeholders (./commons-art.ts, ./textures.ts, the Wilds art)
  * stay the fallback layer: every frame is optional, so a pack that fails to
@@ -26,31 +28,6 @@ export const COMMONS_PASS_MANIFEST_KEY = 'fingersnap-commons-pass'
 
 /** Namespace for every texture and animation this pack creates. */
 export const COMMONS_ART_PREFIX = 'commons-art:'
-
-/** Source sheet texture keys → files (must match manifest.json `sources`). */
-export const COMMONS_PASS_SOURCES: Readonly<Record<string, string>> = {
-  'commons-residents': 'fingersnap-residents-v2.png',
-  'commons-homes': 'fingersnap-homes.png',
-  'commons-interior-wall': 'fingersnap-interior-wall.png',
-  'commons-fire': 'fingersnap-fire.png',
-  'commons-camp-home': 'fingersnap-camp-home.png',
-  'commons-furniture': 'fingersnap-furniture.png',
-  'commons-commons': 'fingersnap-commons.png',
-  'commons-boundaries': 'fingersnap-boundaries.png',
-  'commons-yard': 'fingersnap-yard.png',
-  'commons-path-edges': 'fingersnap-path-edges.png',
-  'commons-village-buildings': 'fingersnap-village-buildings.png',
-  'commons-festivals': 'fingersnap-festivals.png',
-  'commons-papers': 'fingersnap-papers.png',
-  'commons-wilds-nature': 'fingersnap-wilds-nature.png',
-  'commons-resource-nodes': 'fingersnap-resource-nodes.png',
-  'commons-wilds-camp': 'fingersnap-wilds-camp.png',
-  'commons-echoes': 'fingersnap-echoes.png',
-  'commons-icons': 'fingersnap-icons.png',
-  'commons-plank-floor': 'fingersnap-plank-floor.png',
-  'commons-warden-settled': 'fingersnap-warden-settled.png',
-  'commons-portraits': 'fingersnap-portraits.png',
-}
 
 export interface CommonsPassRect {
   x: number
@@ -107,13 +84,20 @@ export interface CommonsPassManifest {
 
 export const artKey = (frame: string): string => COMMONS_ART_PREFIX + frame
 
+/** Texture key of the packed Commons-pass atlas (./packed.ts loads it). */
+export const COMMONS_PACKED_KEY = 'packed-commons'
+
+/**
+ * The manifest (frame metadata). The pixels come packed: see ./packed.ts
+ * and ./atlas-plan.ts — the full-resolution source sheets don't ship.
+ */
 export function preloadCommonsPass(scene: Phaser.Scene, base: string = COMMONS_PASS_BASE): void {
-  for (const [key, file] of Object.entries(COMMONS_PASS_SOURCES)) scene.load.image(key, `${base}${file}`)
   scene.load.json(COMMONS_PASS_MANIFEST_KEY, `${base}manifest.json`)
 }
 
 let aliases: Record<string, string> = {}
 let frames = new Map<string, CommonsPassFrame>()
+let packedBlits: Record<string, PackedRect> = {}
 
 /** The manifest entry for a frame or alias (null when the pack isn't loaded). */
 export function commonsFrame(key: string): CommonsPassFrame | null {
@@ -122,23 +106,31 @@ export function commonsFrame(key: string): CommonsPassFrame | null {
 
 /**
  * Build the native textures and the 11 looping animations. Idempotent
- * (existing keys are skipped). Frames whose sheet failed to load are left
- * out, and so are animations missing any frame. Returns the manifest, or
- * null when it didn't load (the placeholders carry on alone).
+ * (existing keys are skipped). Each native canvas is copied 1:1 from the
+ * packed atlas, which holds exactly what blitting the measured source rect
+ * into the native canvas produced (scripts/build-atlases.ts). Frames
+ * missing from the atlas are left out, and so are animations missing any
+ * frame. Returns the manifest, or null when the pack didn't load (the
+ * placeholders carry on alone).
  */
 export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | null {
   const manifest = scene.cache.json.get(COMMONS_PASS_MANIFEST_KEY) as CommonsPassManifest | undefined
-  if (!manifest || !Array.isArray(manifest.frames)) return null
+  const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.commons
+  if (!manifest || !Array.isArray(manifest.frames) || !packed || !scene.textures.exists(COMMONS_PACKED_KEY)) return null
+  const atlas = scene.textures.get(COMMONS_PACKED_KEY).getSourceImage() as CanvasImageSource
   aliases = { ...manifest.aliases }
   frames = new Map()
+  packedBlits = packed.blits ?? {}
   for (const item of manifest.frames) {
-    if (!scene.textures.exists(item.source)) continue
+    const r = packed.frames[item.key]
+    if (!r) continue
     frames.set(item.key, item)
     const key = artKey(item.key)
     if (scene.textures.exists(key)) continue
     const output = scene.textures.createCanvas(key, item.width, item.height)
     if (!output) continue
-    blitFrame(scene, item, output.context, item.destinationRect)
+    output.context.imageSmoothingEnabled = false
+    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3])
     output.refresh()
   }
   for (const definition of manifest.animations) {
@@ -154,31 +146,38 @@ export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | nu
   return manifest
 }
 
-/** Draw a frame's measured source rect into `dest` on `context`, nearest-neighbour. */
+/**
+ * Draw a frame's measured source crop into `dest` on `context`, as sampling
+ * the source sheet nearest-neighbour would: at its native destination size
+ * that's the native canvas's pixels; at other sizes (or mirrored) it's a
+ * sample baked into the atlas (`commonsBlitPlan`). A size nobody baked
+ * resamples the native frame instead — run `npm run atlases` after adding
+ * one to the plan.
+ */
 export function blitFrame(scene: Phaser.Scene, frame: CommonsPassFrame, context: CanvasRenderingContext2D, dest: CommonsPassRect, flipX = false): void {
-  const source = scene.textures.get(frame.source).getSourceImage() as CanvasImageSource
-  const s = frame.sourceRect
+  const key = artKey(frame.key)
+  if (!scene.textures.exists(key)) return
+  const native = scene.textures.get(key).getSourceImage() as CanvasImageSource
+  const d = frame.destinationRect
   context.save()
   context.imageSmoothingEnabled = false
-  if (flipX) {
-    context.translate(dest.x * 2 + dest.w, 0)
-    context.scale(-1, 1)
+  const baked = packedBlits[blitKey(frame.key, dest.w, dest.h, flipX)]
+  if (!flipX && dest.w === d.w && dest.h === d.h) {
+    context.drawImage(native, d.x, d.y, d.w, d.h, dest.x, dest.y, dest.w, dest.h)
+  } else if (baked && scene.textures.exists(COMMONS_PACKED_KEY)) {
+    const atlas = scene.textures.get(COMMONS_PACKED_KEY).getSourceImage() as CanvasImageSource
+    context.drawImage(atlas, baked[0], baked[1], baked[2], baked[3], dest.x, dest.y, dest.w, dest.h)
+  } else {
+    if (flipX) {
+      context.translate(dest.x * 2 + dest.w, 0)
+      context.scale(-1, 1)
+    }
+    context.drawImage(native, d.x, d.y, d.w, d.h, dest.x, dest.y, dest.w, dest.h)
   }
-  context.drawImage(source, s.x, s.y, s.w, s.h, dest.x, dest.y, dest.w, dest.h)
   context.restore()
 }
 
-/**
- * The largest aspect-true rect for `frame`'s source crop inside a `w`×`h`
- * box, bottom-centred (feet on the box's base). Used where a delivered slot
- * leaves art much smaller than the footprint it stands for.
- */
-export function fitRect(sourceRect: { w: number; h: number }, w: number, h: number): CommonsPassRect {
-  const scale = Math.min(w / sourceRect.w, h / sourceRect.h)
-  const dw = Math.max(1, Math.round(sourceRect.w * scale))
-  const dh = Math.max(1, Math.round(sourceRect.h * scale))
-  return { x: Math.floor((w - dw) / 2), y: h - dh, w: dw, h: dh }
-}
+export { fitRect }
 
 /** `commons-art:<frame>` when that delivered texture exists, else null. */
 export function commonsArt(scene: Phaser.Scene, frame: string): string | null {

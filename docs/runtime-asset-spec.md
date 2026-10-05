@@ -9,10 +9,51 @@ generated at boot in `src/game/textures.ts` remain the fallback layer; the
 **expansion pack** and the **runtime art pass** (below) are the primary art
 sources.
 
+## Packed atlases (what ships)
+
+Players never download the full-resolution sheets. `npm run atlases`
+(`scripts/build-atlases.ts`) reads every pack's sheets and manifests from
+`assets/generated/**` (never modified) and writes
+`public/assets/fingersnap/packed/`; `src/game/atlas-plan.ts` is the plan the
+build and the runtime share, `src/game/packed.ts` loads it in
+`BootScene.preload`. What `public/assets/fingersnap/` holds now: the four
+small JSON manifests (`commons-pass/manifest.json`,
+`runtime-pass/manifest.json`, `expansion/manifest.json`,
+`expansion/animations.json`) and `packed/` (~3.6 MB, was 43 MB):
+
+- **Canvas-blitted packs — pixel-identical.** The Commons pass (173 native
+  frames + 20 off-size samples), the runtime pass (27 frames) and the
+  expansion terrain tileset (4×4 cells of 32 px) are baked in headless
+  Chromium with the loaders' own canvas calls (native canvas, smoothing off,
+  `drawImage(sheet, sourceRect, destinationRect)`), packed, and copied back
+  out 1:1 at boot (`commons.png`, `runtime.png`, `terrain.png`). The build
+  reads every frame back from the encoded PNG and fails on any difference;
+  `e2e/atlases.spec.ts` redoes the old blits from the source sheets in the
+  browser and compares them with the game's textures. Off-size samples (the
+  refitted 2×1 decorations, the Wilds decor boxes, the mirrored fence corner)
+  come from `commonsBlitPlan`; `blitFrame` fetches them by key.
+- **GPU-scaled atlases — same look, re-sampled.** The hero walk, enemies,
+  foreground occluders and props are drawn with `setScale(display / frame
+  size)` and the camera zooms 1.5–5× (1.3× more in the lantern beat), so the
+  game samples them on screen at up to 5 (6.5) screen px per world px. Each
+  frame is baked at that largest on-screen size (never above its source;
+  sizes in `SCALED_ATLASES`) as a Phaser atlas under its old texture key and
+  frame names, trim and pivot kept, so call sites didn't change. They aren't
+  bit-identical (the screen samples a smaller texture), but read the same; a
+  frame drawn larger than its listed size would be upsampled.
+- **Illustrations.** `fingersnap-village` (title background, full screen:
+  every source pixel kept, 1536×1024) and `fingersnap-shrine` (journal header
+  only: 1200×800) ship as WebP (q 0.9). The game no longer loads them as
+  Phaser textures (nothing drew them).
+- **Committed output.** Baking needs a browser, so deploy builds don't run
+  it; `tests/atlases.test.ts` fails when any input's sha256, the plan, or the
+  generator version changed without a re-run, and when `public/assets/fingersnap/`
+  holds anything but the manifests and `packed/`.
+
 ## Expansion pack (delivered October 2, 2026)
 
-`assets/generated/expansion/` → runtime copies in
-`public/assets/fingersnap/expansion/`. Typed helpers live in
+`assets/generated/expansion/` → `public/assets/fingersnap/expansion/` keeps
+the manifest and animations; the art ships packed (see "Packed atlases"). Typed helpers live in
 `src/game/expansion.ts` (content agent's module, built from
 `assets/generated/expansion/integration.js`); the runtime agent owns the
 wiring in `BootScene`/`WorldScene`.
@@ -40,8 +81,8 @@ wiring in `BootScene`/`WorldScene`.
 
 ## Runtime art pass (delivered October 3, 2026)
 
-`assets/generated/runtime-pass/` → runtime copies in
-`public/assets/fingersnap/runtime-pass/`. Typed helpers live in
+`assets/generated/runtime-pass/` → `public/assets/fingersnap/runtime-pass/`
+keeps the manifest; the frames ship packed (see "Packed atlases"). Typed helpers live in
 `src/game/runtime-art.ts` (content agent's module, ported from
 `assets/generated/runtime-pass/integration.js`); the runtime agent owns the
 wiring in `BootScene`/`WorldScene`. Manifest contract is validated by
@@ -108,9 +149,8 @@ wiring in `BootScene`/`WorldScene`. Manifest contract is validated by
 ## Commons pass (delivered October 5, 2026)
 
 `assets/generated/commons-pass/` (archive of record: sheets, atlases,
-prompts, drafts, preview, validation) → runtime copy in
-`public/assets/fingersnap/commons-pass/` holding **only what the game
-loads**: the 21 source sheets and `manifest.json` (~25 MB). The pack answers
+prompts, drafts, preview, validation). `public/assets/fingersnap/commons-pass/`
+holds only `manifest.json`; the frames ship packed (see "Packed atlases"). The pack answers
 `docs/art-requests.md` and replaces the code-drawn placeholders, which stay
 the fallback layer. Typed helpers: `src/game/commons-pass.ts` (loader, port
 of the pack's `integration.js`) and `src/game/commons-pass-install.ts` (the
@@ -189,8 +229,9 @@ boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
 ## Delivered generated art (October 2, 2026)
 
 `assets/generated/` holds original generated art with provenance in
-`assets/generated/manifest.json` and `assets/generated/prompts.json`; runtime
-copies live in `public/assets/fingersnap/`. Loaded in `BootScene.preload`:
+`assets/generated/manifest.json` and `assets/generated/prompts.json`; the
+props ship as a packed atlas and the illustrations as WebP (see "Packed
+atlases"):
 
 | Key | Content | Runtime use |
 |---|---|---|

@@ -206,8 +206,9 @@ Delivered 2026-10-05 to `assets/generated/commons-pass/` (archive of
 record: 21 sheets, per-sheet atlases, `manifest.json`, `jobs.json` and
 `portrait-job.json` prompts, `drafts/`, `preview.html`, `validation.json`,
 `frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
-COVERAGE). The runtime copy `public/assets/fingersnap/commons-pass/` ships
-only the 21 sheets and `manifest.json` (same bytes, ~25 MB).
+COVERAGE). `public/assets/fingersnap/commons-pass/` ships only
+`manifest.json`; the frames ship baked into the packed atlas (see the
+2026-10-05 changelog entry on packed atlases).
 
 Provenance: original artwork generated 2026-10-05 with the built-in
 image-generation tool; prompts in `jobs.json` / `portrait-job.json`; no
@@ -353,3 +354,11 @@ record here):
   furniture, the Commons set, village life, paper pickups, Wilds props,
   nodes, camps, lanterns, Echo props and UI icons wired over the code-drawn
   placeholders (which remain the fallback). License still pending.
+- 2026-10-05 — Shipping copies replaced by packed atlases
+  (`scripts/build-atlases.ts` → `public/assets/fingersnap/packed/`, 3.6 MB;
+  `public/assets` 45.2 MB → 3.9 MB). Source PNGs in `assets/generated/**`
+  untouched and remain the archive of record; `public/` keeps only the
+  pack manifests. Canvas-blitted frames are pixel-identical; GPU-scaled
+  atlases are re-sampled at their largest on-screen size; the two
+  illustrations ship as WebP. See `docs/runtime-asset-spec.md` ("Packed
+  atlases").

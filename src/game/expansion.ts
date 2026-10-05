@@ -37,13 +37,16 @@ export interface FingersnapExpansionManifest {
   enemyFrames: string[]
 }
 
+/**
+ * The manifest and animation definitions. The art comes packed
+ * (./packed.ts): the walk, enemy and foreground atlases re-baked at their
+ * largest on-screen size under their old texture keys, and the terrain as
+ * the normalized runtime tileset `createFingersnapTerrain` used to build.
+ */
 export function preloadFingersnapExpansion(
   scene: Phaser.Scene,
   base: string = FINGERSNAP_EXPANSION_BASE,
 ): void {
-  for (const key of FINGERSNAP_EXPANSION_ATLASES) {
-    scene.load.atlas(key, `${base}${key}.png`, `${base}${key}.atlas.json`)
-  }
   scene.load.json('fingersnap-expansion-manifest', `${base}manifest.json`)
   scene.load.json('fingersnap-expansion-animations', `${base}animations.json`)
 }
@@ -51,9 +54,9 @@ export function preloadFingersnapExpansion(
 export function createFingersnapAnimations(scene: Phaser.Scene): void {
   const definitions = scene.cache.json.get(
     'fingersnap-expansion-animations',
-  ) as FingersnapAnimationDefinition[]
-  for (const definition of definitions) {
-    if (scene.anims.exists(definition.key)) continue
+  ) as FingersnapAnimationDefinition[] | undefined
+  for (const definition of definitions ?? []) {
+    if (scene.anims.exists(definition.key) || !scene.textures.exists(definition.texture)) continue
     scene.anims.create({
       key: definition.key,
       frames: definition.frames.map((frame) => ({
@@ -68,19 +71,22 @@ export function createFingersnapAnimations(scene: Phaser.Scene): void {
 
 /**
  * The generator produced a 1254px sheet, not an evenly divisible 4x4 grid.
- * Named atlas rectangles are authoritative. Construct a uniform tileset at
- * runtime for Phaser Tilemaps rather than treating the PNG as 32px source
- * cells. Idempotent: returns the existing runtime texture if already built.
+ * Named atlas rectangles are authoritative. Construct a uniform tileset for
+ * Phaser rather than treating the PNG as 32px source cells. The build bakes
+ * that tileset (scripts/build-atlases.ts) and it loads under the runtime key,
+ * so this returns it; it only builds one from a loaded `fingersnap-terrain`
+ * source atlas (none ships). Null when neither is there.
  */
 export function createFingersnapTerrain(
   scene: Phaser.Scene,
   tileSize: number = 32,
-): Phaser.Textures.CanvasTexture {
+): Phaser.Textures.Texture | null {
   const manifest = scene.cache.json.get(
     'fingersnap-expansion-manifest',
-  ) as FingersnapExpansionManifest
-  const key = manifest.terrain.runtimeTexture
-  if (scene.textures.exists(key)) return scene.textures.get(key) as Phaser.Textures.CanvasTexture
+  ) as FingersnapExpansionManifest | undefined
+  const key = manifest?.terrain.runtimeTexture ?? 'fingersnap-terrain-runtime'
+  if (scene.textures.exists(key)) return scene.textures.get(key)
+  if (!manifest || !scene.textures.exists('fingersnap-terrain')) return null
   const output = scene.textures.createCanvas(key, tileSize * 4, tileSize * 4)
   if (!output) throw new Error('Could not create Fingersnap terrain texture')
   const context = output.context

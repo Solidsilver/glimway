@@ -1,0 +1,302 @@
+{
+ "frames": {
+  "slime-idle": {
+   "frame": {
+    "x": 143,
+    "y": 2,
+    "w": 75,
+    "h": 70
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 4,
+    "y": 17,
+    "w": 75,
+    "h": 70
+   },
+   "sourceSize": {
+    "w": 83,
+    "h": 88
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "slime-squash": {
+   "frame": {
+    "x": 141,
+    "y": 223,
+    "w": 79,
+    "h": 51
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 2,
+    "y": 36,
+    "w": 79,
+    "h": 51
+   },
+   "sourceSize": {
+    "w": 83,
+    "h": 88
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "slime-windup": {
+   "frame": {
+    "x": 2,
+    "y": 2,
+    "w": 69,
+    "h": 87
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 7,
+    "y": 1,
+    "w": 69,
+    "h": 87
+   },
+   "sourceSize": {
+    "w": 83,
+    "h": 88
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "slime-hurt": {
+   "frame": {
+    "x": 77,
+    "y": 163,
+    "w": 78,
+    "h": 56
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 3,
+    "y": 31,
+    "w": 78,
+    "h": 56
+   },
+   "sourceSize": {
+    "w": 83,
+    "h": 88
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "mushroom-idle": {
+   "frame": {
+    "x": 2,
+    "y": 91,
+    "w": 72,
+    "h": 70
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 4,
+    "y": 15,
+    "w": 72,
+    "h": 70
+   },
+   "sourceSize": {
+    "w": 81,
+    "h": 86
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "mushroom-squash": {
+   "frame": {
+    "x": 2,
+    "y": 223,
+    "w": 71,
+    "h": 56
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 5,
+    "y": 29,
+    "w": 71,
+    "h": 56
+   },
+   "sourceSize": {
+    "w": 81,
+    "h": 86
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "mushroom-windup": {
+   "frame": {
+    "x": 73,
+    "y": 2,
+    "w": 68,
+    "h": 74
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 7,
+    "y": 11,
+    "w": 68,
+    "h": 74
+   },
+   "sourceSize": {
+    "w": 81,
+    "h": 86
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "mushroom-hurt": {
+   "frame": {
+    "x": 75,
+    "y": 223,
+    "w": 64,
+    "h": 56
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 8,
+    "y": 29,
+    "w": 64,
+    "h": 56
+   },
+   "sourceSize": {
+    "w": 81,
+    "h": 86
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "beetle-idle": {
+   "frame": {
+    "x": 149,
+    "y": 91,
+    "w": 76,
+    "h": 65
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 16,
+    "w": 76,
+    "h": 65
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 81
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "beetle-squash": {
+   "frame": {
+    "x": 157,
+    "y": 163,
+    "w": 74,
+    "h": 56
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 1,
+    "y": 25,
+    "w": 74,
+    "h": 56
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 81
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "beetle-windup": {
+   "frame": {
+    "x": 76,
+    "y": 91,
+    "w": 71,
+    "h": 69
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 3,
+    "y": 11,
+    "w": 71,
+    "h": 69
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 81
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "beetle-hurt": {
+   "frame": {
+    "x": 2,
+    "y": 163,
+    "w": 73,
+    "h": 58
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 2,
+    "y": 23,
+    "w": 73,
+    "h": 58
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 81
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  }
+ },
+ "meta": {
+  "app": "Fingersnap build-atlases",
+  "image": "fingersnap-enemies.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 279,
+   "h": 281
+  },
+  "scale": "1"
+ }
+}

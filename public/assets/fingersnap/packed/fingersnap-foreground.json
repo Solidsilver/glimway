@@ -1,0 +1,158 @@
+{
+ "frames": {
+  "oak-canopy": {
+   "frame": {
+    "x": 2,
+    "y": 794,
+    "w": 320,
+    "h": 333
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 320,
+    "h": 333
+   },
+   "sourceSize": {
+    "w": 320,
+    "h": 333
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "pine-canopy": {
+   "frame": {
+    "x": 426,
+    "y": 2,
+    "w": 315,
+    "h": 414
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 315,
+    "h": 414
+   },
+   "sourceSize": {
+    "w": 315,
+    "h": 414
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "leafy-arch": {
+   "frame": {
+    "x": 2,
+    "y": 418,
+    "w": 370,
+    "h": 374
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 370,
+    "h": 374
+   },
+   "sourceSize": {
+    "w": 370,
+    "h": 374
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "cottage-roof": {
+   "frame": {
+    "x": 2,
+    "y": 2,
+    "w": 422,
+    "h": 414
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 422,
+    "h": 414
+   },
+   "sourceSize": {
+    "w": 422,
+    "h": 414
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "stone-arch": {
+   "frame": {
+    "x": 374,
+    "y": 418,
+    "w": 312,
+    "h": 344
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 312,
+    "h": 344
+   },
+   "sourceSize": {
+    "w": 312,
+    "h": 344
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "fern-cluster": {
+   "frame": {
+    "x": 324,
+    "y": 794,
+    "w": 182,
+    "h": 149
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 182,
+    "h": 149
+   },
+   "sourceSize": {
+    "w": 182,
+    "h": 149
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  }
+ },
+ "meta": {
+  "app": "Fingersnap build-atlases",
+  "image": "fingersnap-foreground.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 957,
+   "h": 1129
+  },
+  "scale": "1"
+ }
+}

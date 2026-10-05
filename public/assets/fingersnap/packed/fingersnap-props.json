@@ -1,0 +1,302 @@
+{
+ "frames": {
+  "lantern-post": {
+   "frame": {
+    "x": 192,
+    "y": 2,
+    "w": 97,
+    "h": 160
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 97,
+    "h": 160
+   },
+   "sourceSize": {
+    "w": 97,
+    "h": 160
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "patched-bench": {
+   "frame": {
+    "x": 234,
+    "y": 264,
+    "w": 112,
+    "h": 90
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 112,
+    "h": 90
+   },
+   "sourceSize": {
+    "w": 112,
+    "h": 90
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "trail-sign": {
+   "frame": {
+    "x": 155,
+    "y": 264,
+    "w": 77,
+    "h": 120
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 77,
+    "h": 120
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 120
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "stone-milestone": {
+   "frame": {
+    "x": 291,
+    "y": 2,
+    "w": 100,
+    "h": 143
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 100,
+    "h": 143
+   },
+   "sourceSize": {
+    "w": 100,
+    "h": 143
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "bread-basket": {
+   "frame": {
+    "x": 288,
+    "y": 396,
+    "w": 61,
+    "h": 60
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 61,
+    "h": 60
+   },
+   "sourceSize": {
+    "w": 61,
+    "h": 60
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "flower-planter": {
+   "frame": {
+    "x": 81,
+    "y": 396,
+    "w": 76,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 76,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 76,
+    "h": 80
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "tool-crate": {
+   "frame": {
+    "x": 2,
+    "y": 396,
+    "w": 77,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 77,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 77,
+    "h": 80
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "expedition-backpack": {
+   "frame": {
+    "x": 348,
+    "y": 264,
+    "w": 80,
+    "h": 90
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 90
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 90
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "treasure-chest": {
+   "frame": {
+    "x": 2,
+    "y": 264,
+    "w": 151,
+    "h": 130
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 151,
+    "h": 130
+   },
+   "sourceSize": {
+    "w": 151,
+    "h": 130
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "lantern-shrine": {
+   "frame": {
+    "x": 2,
+    "y": 2,
+    "w": 188,
+    "h": 260
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 188,
+    "h": 260
+   },
+   "sourceSize": {
+    "w": 188,
+    "h": 260
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "mushroom-cluster": {
+   "frame": {
+    "x": 218,
+    "y": 396,
+    "w": 68,
+    "h": 60
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 60
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 60
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  },
+  "grappling-rope": {
+   "frame": {
+    "x": 159,
+    "y": 396,
+    "w": 57,
+    "h": 70
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 57,
+    "h": 70
+   },
+   "sourceSize": {
+    "w": 57,
+    "h": 70
+   },
+   "pivot": {
+    "x": 0.5,
+    "y": 1
+   }
+  }
+ },
+ "meta": {
+  "app": "Fingersnap build-atlases",
+  "image": "fingersnap-props.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 452,
+   "h": 478
+  },
+  "scale": "1"
+ }
+}

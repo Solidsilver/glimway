@@ -1,0 +1,1508 @@
+{
+ "version": 1,
+ "generator": "scripts/build-atlases.ts",
+ "generatorVersion": 1,
+ "inputs": {
+  "assets/generated/commons-pass/fingersnap-boundaries.png": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
+  "assets/generated/commons-pass/fingersnap-camp-home.png": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
+  "assets/generated/commons-pass/fingersnap-commons.png": "9fe2d2cc6bde7efb64f719d8bcc5644c8a11036be323e1591eade782147572ff",
+  "assets/generated/commons-pass/fingersnap-echoes.png": "f5ba9a91af2d1c109ac72ca8d725d385c0b92c789f9567fca89fd454e51606aa",
+  "assets/generated/commons-pass/fingersnap-festivals.png": "23ede32a4879cef7af8e1e4645c3900db741e47f383dcbeaf595271af1c89f7b",
+  "assets/generated/commons-pass/fingersnap-fire.png": "04bd16e7b9349d6ea9e6ff351e3227d8dad928332b9c0ebdf6f1af65952a2957",
+  "assets/generated/commons-pass/fingersnap-furniture.png": "22f4cf71d9c397c5a504b3b272faa5073c05f88a34a50805498b837007e60921",
+  "assets/generated/commons-pass/fingersnap-homes.png": "a0e3b009826a744debcdeca3daae78d571c91e40f5e27537e2088fffa6ce9ca7",
+  "assets/generated/commons-pass/fingersnap-icons.png": "3fb5f90337dc8e8536c11d33c4b58dbeab75152c52c8c86216d99e6e3649768c",
+  "assets/generated/commons-pass/fingersnap-interior-wall.png": "9c11cac395f831f570a5d24945f86686f4490d8d030792fd8036df49adb20648",
+  "assets/generated/commons-pass/fingersnap-papers.png": "f3e9598f34c44be92c5a5de8b75bb1ad2afdf2b6076aa4f2017142310d49261c",
+  "assets/generated/commons-pass/fingersnap-path-edges.png": "14fbf6d422f0164fe43a64cf9203832e601e186299e1302092b74fc4834cdba0",
+  "assets/generated/commons-pass/fingersnap-plank-floor.png": "a55c67f04960ea0c9cb56641507f997e1361ed4c57b34c676681cfd8e951c33d",
+  "assets/generated/commons-pass/fingersnap-portraits.png": "29f4a3e14ea9400042e348eeda25110eaff61269fe4dea5f5fe62db0c07dd88f",
+  "assets/generated/commons-pass/fingersnap-residents-v2.png": "c2573fe5488f18d0b9b3241ac8bc9b41dae4bff23f8c6a3e65de7b74bf8a7adf",
+  "assets/generated/commons-pass/fingersnap-resource-nodes.png": "f9b3ada08d3d10cf8a5a3af14cb12a8c77733b84dd6bf7e4aa98409c989e5384",
+  "assets/generated/commons-pass/fingersnap-village-buildings.png": "65662c1180644b603f97b30d3f9cdae92432e40a48164e9e7b918f5ad2aa957b",
+  "assets/generated/commons-pass/fingersnap-warden-settled.png": "22c7e424db559b91117192e1fa93fe517955cb6aa99b54060e30df2c5f67b637",
+  "assets/generated/commons-pass/fingersnap-wilds-camp.png": "c91a3214d593ce105a21f28b486cde09532cd496228d5196650edecaab8a18a6",
+  "assets/generated/commons-pass/fingersnap-wilds-nature.png": "5aa84a4244c8f6ef0a7b3180253b7caf0b6aab4bd7a5123866c836a01024f462",
+  "assets/generated/commons-pass/fingersnap-yard.png": "63ba0fc00b99625f707b5107f98138a7ef9618468f183e74aff7dbc90e7f3b53",
+  "assets/generated/commons-pass/manifest.json": "af5895de2ca6e221880910bd3b0137fe06f42f54ea659490a2bcb7f3e33520f1",
+  "assets/generated/expansion/fingersnap-demo-walk.atlas.json": "99cd4a015537c90d3f1f5736a84dfab6c51b88a11110fbc9f0018c985dd1fd78",
+  "assets/generated/expansion/fingersnap-demo-walk.png": "3ddb7ce037ba0ea5f589e9dbf5786ab77c5e228058f8b3c9a3e93528cddaa21c",
+  "assets/generated/expansion/fingersnap-enemies.atlas.json": "5e3bc43f96a60fa1194b53060bd998a3fbf9d62cc2c1141035c731a00625a495",
+  "assets/generated/expansion/fingersnap-enemies.png": "df22d187779e103fb93ca19473c962d4e8ec4b393d5f5daf49f017a3469110db",
+  "assets/generated/expansion/fingersnap-foreground.atlas.json": "cc6c90f59bcb78e104f048ccc7048afe16c83973677b0cba6ce4863019dd5e56",
+  "assets/generated/expansion/fingersnap-foreground.png": "13eaa4d181d138f3b44222727456b7509f03364b5a9c683c14fe72e95a4150cb",
+  "assets/generated/expansion/fingersnap-terrain.atlas.json": "ca9ebe12dfa00705019373328a6a2f1c093666b1337c4f761507257ecc7d383d",
+  "assets/generated/expansion/fingersnap-terrain.png": "b4ab9969a27634f61f528fb41376cbaf83ab1c4b9519f5382a581d576b19c743",
+  "assets/generated/expansion/manifest.json": "3a65642c40189c0ad7d5169cf81092d6f988645b6decfef32f6af4fb65d2b298",
+  "assets/generated/fingersnap-props.atlas.json": "729072dc85eefefa516fef6870ab7c1e186f3233dbeb30784b37eb4518dd66ea",
+  "assets/generated/fingersnap-props.png": "ad450ddc744b78fc9fcd74136b015974e106158a6f252436ffc89c4638f48bd2",
+  "assets/generated/fingersnap-shrine.png": "66410699ea96728c271e35edd907389757b027cda7ee8cf87fa63fb6b9d29292",
+  "assets/generated/fingersnap-village.png": "b14b4f2cfd9fa6b25712aea709e868d6a2a980f7d8923869043f19d408f46c8c",
+  "assets/generated/runtime-pass/fingersnap-class-effects.png": "d9f5dea940c4cc74e7d9489036c9ab01017475dc44d302a0149a0a23aaf05ea2",
+  "assets/generated/runtime-pass/fingersnap-guardian.png": "8d0c6fc4f5652202cc580356605281fffb11f550c00862bbb2e31ac118a8598f",
+  "assets/generated/runtime-pass/fingersnap-npcs.png": "7f19632c18daae28772e4f1ead8c835e9ca1ceae3b26b94cbc6d3edf3647576b",
+  "assets/generated/runtime-pass/manifest.json": "0d9ab39e655bf945dcdb4181b47db37370e68cdd1e74e12927a420e16627eda4"
+ },
+ "plan": {
+  "maxScreenScale": 5,
+  "blits": [
+   "bookshelf@32x31",
+   "cairn-white-stones@14x16",
+   "cairn-white-stones@14x16~f",
+   "cairn@14x14",
+   "cairn@14x14~f",
+   "drift-stone@20x14",
+   "drift-stone@20x14~f",
+   "fallen-log@26x13",
+   "fallen-log@26x13~f",
+   "fence-corner@16x16~f",
+   "iron-oak-stump@20x14",
+   "iron-oak-stump@20x14~f",
+   "mossy-boulder@20x14",
+   "mossy-boulder@20x14~f",
+   "reading-chair@17x16",
+   "stone-hearth@16x18",
+   "stone-hearth@29x32",
+   "tool-rack@16x12",
+   "tool-rack@32x25",
+   "turncaps-east@12x9"
+  ],
+  "scaled": {
+   "fingersnap-demo-walk": {
+    "walk-down-0": 0.570175,
+    "walk-down-1": 0.570175,
+    "walk-down-2": 0.570175,
+    "walk-down-3": 0.570175,
+    "walk-left-0": 0.570175,
+    "walk-left-1": 0.570175,
+    "walk-left-2": 0.570175,
+    "walk-left-3": 0.570175,
+    "walk-right-0": 0.570175,
+    "walk-right-1": 0.570175,
+    "walk-right-2": 0.570175,
+    "walk-right-3": 0.570175,
+    "walk-up-0": 0.570175,
+    "walk-up-1": 0.570175,
+    "walk-up-2": 0.570175,
+    "walk-up-3": 0.570175
+   },
+   "fingersnap-enemies": {
+    "slime-idle": 0.269231,
+    "slime-squash": 0.269231,
+    "slime-windup": 0.269231,
+    "slime-hurt": 0.269231,
+    "mushroom-idle": 0.263158,
+    "mushroom-squash": 0.263158,
+    "mushroom-windup": 0.263158,
+    "mushroom-hurt": 0.263158,
+    "beetle-idle": 0.249042,
+    "beetle-squash": 0.249042,
+    "beetle-windup": 0.249042,
+    "beetle-hurt": 0.249042
+   },
+   "fingersnap-foreground": {
+    "oak-canopy": 0.732265,
+    "pine-canopy": 0.879888,
+    "leafy-arch": 0.87886,
+    "cottage-roof": 1,
+    "stone-arch": 0.80829,
+    "fern-cluster": 0.459596
+   },
+   "fingersnap-props": {
+    "lantern-post": 0.39801,
+    "patched-bench": 0.315789,
+    "trail-sign": 0.30303,
+    "stone-milestone": 0.423077,
+    "bread-basket": 0.191693,
+    "flower-planter": 0.265781,
+    "tool-crate": 0.253165,
+    "expedition-backpack": 0.29703,
+    "treasure-chest": 0.472727,
+    "lantern-shrine": 0.720222,
+    "mushroom-cluster": 0.228137,
+    "grappling-rope": 0.22082
+   }
+  },
+  "backdrops": [
+   {
+    "key": "fingersnap-village",
+    "source": "assets/generated/fingersnap-village.png",
+    "width": 1536
+   },
+   {
+    "key": "fingersnap-shrine",
+    "source": "assets/generated/fingersnap-shrine.png",
+    "width": 1200
+   }
+  ]
+ },
+ "commons": {
+  "image": "commons.png",
+  "size": [
+   441,
+   395
+  ],
+  "frames": {
+   "silas-idle-0": [
+    384,
+    350,
+    16,
+    16
+   ],
+   "silas-idle-1": [
+    400,
+    350,
+    16,
+    16
+   ],
+   "elara-idle-0": [
+    225,
+    318,
+    16,
+    16
+   ],
+   "elara-idle-1": [
+    241,
+    318,
+    16,
+    16
+   ],
+   "finn-idle-0": [
+    337,
+    318,
+    16,
+    16
+   ],
+   "finn-idle-1": [
+    353,
+    318,
+    16,
+    16
+   ],
+   "hazel-idle-0": [
+    369,
+    318,
+    16,
+    16
+   ],
+   "hazel-idle-1": [
+    385,
+    318,
+    16,
+    16
+   ],
+   "ada-idle-0": [
+    145,
+    318,
+    16,
+    16
+   ],
+   "ada-idle-1": [
+    161,
+    318,
+    16,
+    16
+   ],
+   "cottage": [
+    0,
+    0,
+    96,
+    92
+   ],
+   "cottage-silas": [
+    96,
+    0,
+    96,
+    92
+   ],
+   "cottage-workshop": [
+    192,
+    0,
+    96,
+    92
+   ],
+   "workshop-addon": [
+    256,
+    92,
+    32,
+    60
+   ],
+   "interior-back-wall": [
+    0,
+    156,
+    224,
+    48
+   ],
+   "hearth-fire-0": [
+    123,
+    366,
+    24,
+    14
+   ],
+   "hearth-fire-1": [
+    147,
+    366,
+    24,
+    14
+   ],
+   "hearth-fire-2": [
+    171,
+    366,
+    24,
+    14
+   ],
+   "hearth-fire-3": [
+    195,
+    366,
+    24,
+    14
+   ],
+   "camp-flame-0": [
+    322,
+    382,
+    8,
+    9
+   ],
+   "camp-flame-1": [
+    330,
+    382,
+    8,
+    9
+   ],
+   "camp-flame-2": [
+    338,
+    382,
+    8,
+    9
+   ],
+   "campsite-0": [
+    76,
+    244,
+    32,
+    24
+   ],
+   "campsite-1": [
+    108,
+    244,
+    32,
+    24
+   ],
+   "campsite-2": [
+    140,
+    244,
+    32,
+    24
+   ],
+   "camp-windbreak": [
+    112,
+    294,
+    40,
+    23
+   ],
+   "camp-cot": [
+    92,
+    366,
+    31,
+    14
+   ],
+   "camp-ring": [
+    219,
+    366,
+    22,
+    14
+   ],
+   "wooden-stool": [
+    32,
+    366,
+    16,
+    16
+   ],
+   "reading-chair": [
+    269,
+    204,
+    16,
+    32
+   ],
+   "braided-rug": [
+    144,
+    204,
+    32,
+    32
+   ],
+   "iron-lantern": [
+    384,
+    334,
+    16,
+    16
+   ],
+   "oak-table": [
+    208,
+    204,
+    32,
+    32
+   ],
+   "potted-fern": [
+    368,
+    350,
+    16,
+    16
+   ],
+   "bookshelf": [
+    0,
+    318,
+    32,
+    16
+   ],
+   "wash-basin": [
+    0,
+    366,
+    16,
+    16
+   ],
+   "stone-hearth": [
+    64,
+    318,
+    32,
+    16
+   ],
+   "carved-bed": [
+    176,
+    204,
+    32,
+    32
+   ],
+   "woven-basket": [
+    48,
+    366,
+    16,
+    16
+   ],
+   "display-stand": [
+    193,
+    318,
+    16,
+    16
+   ],
+   "tool-rack": [
+    96,
+    318,
+    32,
+    16
+   ],
+   "amber-sconce": [
+    177,
+    318,
+    16,
+    16
+   ],
+   "workshop-chest": [
+    192,
+    294,
+    28,
+    22
+   ],
+   "workshop-bench": [
+    0,
+    244,
+    44,
+    26
+   ],
+   "mailbox": [
+    220,
+    294,
+    19,
+    22
+   ],
+   "hame": [
+    239,
+    294,
+    17,
+    22
+   ],
+   "gatepost": [
+    288,
+    156,
+    14,
+    44
+   ],
+   "gate-leaf": [
+    375,
+    294,
+    42,
+    16
+   ],
+   "plot-sign": [
+    152,
+    294,
+    40,
+    22
+   ],
+   "commons-well": [
+    302,
+    156,
+    32,
+    42
+   ],
+   "notice-board": [
+    317,
+    204,
+    24,
+    30
+   ],
+   "commons-gateway": [
+    224,
+    156,
+    64,
+    48
+   ],
+   "hedge-straight-h": [
+    64,
+    334,
+    16,
+    16
+   ],
+   "hedge-straight-v": [
+    80,
+    334,
+    16,
+    16
+   ],
+   "hedge-corner-ne": [
+    401,
+    318,
+    16,
+    16
+   ],
+   "hedge-corner-nw": [
+    417,
+    318,
+    16,
+    16
+   ],
+   "hedge-end-e": [
+    32,
+    334,
+    16,
+    16
+   ],
+   "hedge-end-w": [
+    48,
+    334,
+    16,
+    16
+   ],
+   "hedge-corner-se": [
+    0,
+    334,
+    16,
+    16
+   ],
+   "hedge-corner-sw": [
+    16,
+    334,
+    16,
+    16
+   ],
+   "fence-straight-h": [
+    305,
+    318,
+    16,
+    16
+   ],
+   "fence-straight-v": [
+    321,
+    318,
+    16,
+    16
+   ],
+   "fence-corner": [
+    257,
+    318,
+    16,
+    16
+   ],
+   "fence-gateway": [
+    289,
+    318,
+    16,
+    16
+   ],
+   "sawhorse": [
+    26,
+    382,
+    18,
+    12
+   ],
+   "timber-stack": [
+    256,
+    294,
+    31,
+    20
+   ],
+   "skids": [
+    334,
+    156,
+    86,
+    40
+   ],
+   "firebox": [
+    319,
+    294,
+    16,
+    18
+   ],
+   "toolbox": [
+    76,
+    382,
+    16,
+    12
+   ],
+   "woodpile": [
+    361,
+    366,
+    16,
+    14
+   ],
+   "path-dirt-edge-n": [
+    256,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-edge-e": [
+    240,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-edge-s": [
+    272,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-edge-w": [
+    288,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-end-n": [
+    320,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-end-e": [
+    304,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-corner-ne": [
+    176,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-corner-nw": [
+    192,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-corner-se": [
+    208,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-corner-sw": [
+    224,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-end-s": [
+    336,
+    350,
+    16,
+    16
+   ],
+   "path-dirt-end-w": [
+    352,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-edge-n": [
+    64,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-edge-e": [
+    48,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-edge-s": [
+    80,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-edge-w": [
+    96,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-end-n": [
+    128,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-end-e": [
+    112,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-corner-ne": [
+    416,
+    334,
+    16,
+    16
+   ],
+   "path-cobble-corner-nw": [
+    0,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-corner-se": [
+    16,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-corner-sw": [
+    32,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-end-s": [
+    144,
+    350,
+    16,
+    16
+   ],
+   "path-cobble-end-w": [
+    160,
+    350,
+    16,
+    16
+   ],
+   "hearthwick-library": [
+    288,
+    0,
+    80,
+    64
+   ],
+   "stall-a": [
+    24,
+    204,
+    40,
+    36
+   ],
+   "stall-b": [
+    64,
+    204,
+    40,
+    36
+   ],
+   "stall-c": [
+    104,
+    204,
+    40,
+    36
+   ],
+   "well-canopy": [
+    341,
+    204,
+    30,
+    28
+   ],
+   "mended-bridge": [
+    371,
+    204,
+    48,
+    26
+   ],
+   "candle-hull-0": [
+    280,
+    382,
+    10,
+    10
+   ],
+   "candle-hull-1": [
+    290,
+    382,
+    10,
+    10
+   ],
+   "candle-hull-2": [
+    300,
+    382,
+    10,
+    10
+   ],
+   "window-lamp-glow": [
+    32,
+    294,
+    32,
+    24
+   ],
+   "bunting": [
+    216,
+    382,
+    64,
+    10
+   ],
+   "library-sign": [
+    44,
+    382,
+    16,
+    12
+   ],
+   "paper-folded-0": [
+    108,
+    382,
+    12,
+    12
+   ],
+   "paper-folded-1": [
+    120,
+    382,
+    12,
+    12
+   ],
+   "paper-folded-2": [
+    132,
+    382,
+    12,
+    12
+   ],
+   "paper-scroll-0": [
+    144,
+    382,
+    12,
+    12
+   ],
+   "paper-scroll-1": [
+    156,
+    382,
+    12,
+    12
+   ],
+   "paper-scroll-2": [
+    168,
+    382,
+    12,
+    12
+   ],
+   "paper-slate-0": [
+    180,
+    382,
+    12,
+    12
+   ],
+   "paper-slate-1": [
+    192,
+    382,
+    12,
+    12
+   ],
+   "paper-slate-2": [
+    204,
+    382,
+    12,
+    12
+   ],
+   "turncaps-east": [
+    416,
+    350,
+    16,
+    16
+   ],
+   "cairn": [
+    287,
+    294,
+    16,
+    20
+   ],
+   "cairn-white-stones": [
+    303,
+    294,
+    16,
+    20
+   ],
+   "iron-oak-stump": [
+    400,
+    334,
+    16,
+    16
+   ],
+   "dead-birch-turncaps": [
+    0,
+    204,
+    24,
+    40
+   ],
+   "fallen-log": [
+    32,
+    318,
+    32,
+    16
+   ],
+   "mossy-boulder": [
+    88,
+    294,
+    24,
+    24
+   ],
+   "drift-stone": [
+    209,
+    318,
+    16,
+    16
+   ],
+   "reed-pool": [
+    128,
+    270,
+    32,
+    24
+   ],
+   "resource-timber-available": [
+    352,
+    270,
+    32,
+    24
+   ],
+   "resource-timber-depleted": [
+    384,
+    270,
+    32,
+    24
+   ],
+   "resource-stone-available": [
+    288,
+    270,
+    32,
+    24
+   ],
+   "resource-stone-depleted": [
+    320,
+    270,
+    32,
+    24
+   ],
+   "resource-fiber-available": [
+    224,
+    270,
+    32,
+    24
+   ],
+   "resource-fiber-depleted": [
+    256,
+    270,
+    32,
+    24
+   ],
+   "resource-amber-available": [
+    160,
+    270,
+    32,
+    24
+   ],
+   "resource-amber-depleted": [
+    192,
+    270,
+    32,
+    24
+   ],
+   "wilds-tent": [
+    0,
+    294,
+    32,
+    24
+   ],
+   "wilds-fire-ring": [
+    92,
+    382,
+    16,
+    12
+   ],
+   "wilds-pack": [
+    16,
+    366,
+    16,
+    16
+   ],
+   "fallen-hero-lantern-lit": [
+    351,
+    294,
+    12,
+    18
+   ],
+   "fallen-hero-lantern-unlit": [
+    363,
+    294,
+    12,
+    18
+   ],
+   "echo-hollis-solid": [
+    332,
+    244,
+    32,
+    24
+   ],
+   "echo-tam-solid": [
+    96,
+    270,
+    32,
+    24
+   ],
+   "echo-bett-solid": [
+    204,
+    244,
+    32,
+    24
+   ],
+   "echo-dorrit-solid": [
+    268,
+    244,
+    32,
+    24
+   ],
+   "echo-joss-solid": [
+    396,
+    244,
+    32,
+    24
+   ],
+   "echo-nan-solid": [
+    32,
+    270,
+    32,
+    24
+   ],
+   "echo-hollis-faint": [
+    300,
+    244,
+    32,
+    24
+   ],
+   "echo-tam-faint": [
+    64,
+    270,
+    32,
+    24
+   ],
+   "echo-bett-faint": [
+    172,
+    244,
+    32,
+    24
+   ],
+   "echo-dorrit-faint": [
+    236,
+    244,
+    32,
+    24
+   ],
+   "echo-joss-faint": [
+    364,
+    244,
+    32,
+    24
+   ],
+   "echo-nan-faint": [
+    0,
+    270,
+    32,
+    24
+   ],
+   "icon-timber": [
+    304,
+    334,
+    16,
+    16
+   ],
+   "icon-stone": [
+    288,
+    334,
+    16,
+    16
+   ],
+   "icon-fiber": [
+    208,
+    334,
+    16,
+    16
+   ],
+   "icon-amber": [
+    96,
+    334,
+    16,
+    16
+   ],
+   "icon-whittled-fox": [
+    336,
+    334,
+    16,
+    16
+   ],
+   "icon-beeswax-candle": [
+    112,
+    334,
+    16,
+    16
+   ],
+   "icon-river-glass-bead": [
+    256,
+    334,
+    16,
+    16
+   ],
+   "icon-spare-bootlace": [
+    272,
+    334,
+    16,
+    16
+   ],
+   "icon-tin-whistle": [
+    320,
+    334,
+    16,
+    16
+   ],
+   "icon-lamp-wick": [
+    224,
+    334,
+    16,
+    16
+   ],
+   "icon-oilcloth-wrap": [
+    240,
+    334,
+    16,
+    16
+   ],
+   "icon-wooden-peg": [
+    352,
+    334,
+    16,
+    16
+   ],
+   "icon-emote-wave": [
+    192,
+    334,
+    16,
+    16
+   ],
+   "icon-emote-nod": [
+    160,
+    334,
+    16,
+    16
+   ],
+   "icon-emote-cheer": [
+    128,
+    334,
+    16,
+    16
+   ],
+   "icon-emote-thanks": [
+    176,
+    334,
+    16,
+    16
+   ],
+   "icon-emote-lantern": [
+    144,
+    334,
+    16,
+    16
+   ],
+   "interior-floor": [
+    368,
+    334,
+    16,
+    16
+   ],
+   "guardian-settled": [
+    64,
+    294,
+    24,
+    24
+   ],
+   "portrait-silas": [
+    192,
+    92,
+    64,
+    64
+   ],
+   "portrait-elara": [
+    0,
+    92,
+    64,
+    64
+   ],
+   "portrait-finn": [
+    64,
+    92,
+    64,
+    64
+   ],
+   "portrait-hazel": [
+    128,
+    92,
+    64,
+    64
+   ],
+   "portrait-ada": [
+    368,
+    0,
+    64,
+    64
+   ]
+  },
+  "blits": {
+   "reading-chair@17x16": [
+    128,
+    318,
+    17,
+    16
+   ],
+   "bookshelf@32x31": [
+    285,
+    204,
+    32,
+    31
+   ],
+   "stone-hearth@29x32": [
+    240,
+    204,
+    29,
+    32
+   ],
+   "stone-hearth@16x18": [
+    335,
+    294,
+    16,
+    18
+   ],
+   "tool-rack@32x25": [
+    44,
+    244,
+    32,
+    25
+   ],
+   "tool-rack@16x12": [
+    60,
+    382,
+    16,
+    12
+   ],
+   "fallen-log@26x13": [
+    405,
+    366,
+    26,
+    13
+   ],
+   "fallen-log@26x13~f": [
+    0,
+    382,
+    26,
+    13
+   ],
+   "mossy-boulder@20x14": [
+    321,
+    366,
+    20,
+    14
+   ],
+   "mossy-boulder@20x14~f": [
+    341,
+    366,
+    20,
+    14
+   ],
+   "cairn@14x14": [
+    377,
+    366,
+    14,
+    14
+   ],
+   "cairn@14x14~f": [
+    391,
+    366,
+    14,
+    14
+   ],
+   "turncaps-east@12x9": [
+    310,
+    382,
+    12,
+    9
+   ],
+   "iron-oak-stump@20x14": [
+    281,
+    366,
+    20,
+    14
+   ],
+   "iron-oak-stump@20x14~f": [
+    301,
+    366,
+    20,
+    14
+   ],
+   "drift-stone@20x14": [
+    241,
+    366,
+    20,
+    14
+   ],
+   "drift-stone@20x14~f": [
+    261,
+    366,
+    20,
+    14
+   ],
+   "cairn-white-stones@14x16": [
+    64,
+    366,
+    14,
+    16
+   ],
+   "cairn-white-stones@14x16~f": [
+    78,
+    366,
+    14,
+    16
+   ],
+   "fence-corner@16x16~f": [
+    273,
+    318,
+    16,
+    16
+   ]
+  }
+ },
+ "runtime": {
+  "image": "runtime.png",
+  "size": [
+   123,
+   122
+  ],
+  "frames": {
+   "mara-idle-0": [
+    72,
+    88,
+    16,
+    16
+   ],
+   "mara-idle-1": [
+    88,
+    88,
+    16,
+    16
+   ],
+   "pip-idle-0": [
+    16,
+    106,
+    16,
+    16
+   ],
+   "pip-idle-1": [
+    32,
+    106,
+    16,
+    16
+   ],
+   "orrin-idle-0": [
+    104,
+    88,
+    16,
+    16
+   ],
+   "orrin-idle-1": [
+    0,
+    106,
+    16,
+    16
+   ],
+   "guardian-idle": [
+    80,
+    32,
+    24,
+    24
+   ],
+   "guardian-windup": [
+    24,
+    64,
+    24,
+    24
+   ],
+   "guardian-lunge": [
+    0,
+    64,
+    24,
+    24
+   ],
+   "guardian-hurt": [
+    56,
+    32,
+    24,
+    24
+   ],
+   "guardian-defeat": [
+    32,
+    32,
+    24,
+    24
+   ],
+   "cleave-0": [
+    48,
+    64,
+    18,
+    18
+   ],
+   "cleave-1": [
+    66,
+    64,
+    18,
+    18
+   ],
+   "cleave-2": [
+    84,
+    64,
+    18,
+    18
+   ],
+   "cleave-3": [
+    102,
+    64,
+    18,
+    18
+   ],
+   "magic-bolt-0": [
+    48,
+    106,
+    8,
+    8
+   ],
+   "magic-bolt-1": [
+    56,
+    106,
+    8,
+    8
+   ],
+   "magic-bolt-2": [
+    64,
+    106,
+    8,
+    8
+   ],
+   "magic-bolt-3": [
+    72,
+    106,
+    8,
+    8
+   ],
+   "dash-trail-0": [
+    0,
+    88,
+    18,
+    18
+   ],
+   "dash-trail-1": [
+    18,
+    88,
+    18,
+    18
+   ],
+   "dash-trail-2": [
+    36,
+    88,
+    18,
+    18
+   ],
+   "dash-trail-3": [
+    54,
+    88,
+    18,
+    18
+   ],
+   "healing-pulse-0": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "healing-pulse-1": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "healing-pulse-2": [
+    64,
+    0,
+    32,
+    32
+   ],
+   "healing-pulse-3": [
+    0,
+    32,
+    32,
+    32
+   ]
+  }
+ },
+ "terrain": {
+  "image": "terrain.png",
+  "size": [
+   128,
+   128
+  ]
+ },
+ "atlases": {
+  "fingersnap-demo-walk": {
+   "image": "fingersnap-demo-walk.png",
+   "json": "fingersnap-demo-walk.json"
+  },
+  "fingersnap-enemies": {
+   "image": "fingersnap-enemies.png",
+   "json": "fingersnap-enemies.json"
+  },
+  "fingersnap-foreground": {
+   "image": "fingersnap-foreground.png",
+   "json": "fingersnap-foreground.json"
+  },
+  "fingersnap-props": {
+   "image": "fingersnap-props.png",
+   "json": "fingersnap-props.json"
+  }
+ },
+ "backdrops": {
+  "fingersnap-village": "fingersnap-village.webp",
+  "fingersnap-shrine": "fingersnap-shrine.webp"
+ }
+}
