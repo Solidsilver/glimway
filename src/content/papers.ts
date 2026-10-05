@@ -30,7 +30,8 @@ export type PaperStyle =
 export type PickupLook = 'folded' | 'scroll' | 'slate';
 
 /** Sources the homestead/Wilds work will hook up (declared, not built yet). */
-export type LaterKind = 'commons' | 'wilds-poi' | 'wilds-chest' | 'village-project' | 'turning';
+/** echo: settling an Echo (an owed lamp at a phantom camp) gives its words back. */
+export type LaterKind = 'commons' | 'wilds-poi' | 'wilds-chest' | 'village-project' | 'turning' | 'echo';
 
 export type QuestNpc = 'mara' | 'pip' | 'orrin';
 
@@ -157,6 +158,24 @@ const DESIGN: Record<string, Design> = {
   },
   'twoford-almanac-silas-copy': { style: 'page', source: { kind: 'library-start' } },
   'marens-notes-on-hubs-and-tyres': { style: 'notebook', source: { kind: 'village-project', hook: 'Reopening the Wheel & Wick guildhouse' } },
+  // ---- The writer's thirteen (gaps filled after the first pass)
+  'the-hame-polishers-list': { style: 'record', source: { kind: 'commons', hook: 'Inside the Commons gate on Carting Day, once the Commons opens' } },
+  'adas-oil-receipts': { style: 'ledger', source: { kind: 'village-project', hook: 'Ada’s window: helping Mara ration the oil, she shows you the Cooley Window Fund leaf' } },
+  'forty-one-and-holding': { style: 'scrap', source: { kind: 'village-project', hook: 'The mill: Finn shows you the hopper tally, just before the linseed box (late)' } },
+  'betts-flat-verse': { style: 'song', source: { kind: 'echo', hook: 'Settling Bett’s Echo: the owed lamp at her phantom camp in the deep Wilds (late)' } },
+  'the-twelve-wicks': { style: 'song', source: { kind: 'library-start' } },
+  'a-salting-drift-table': { style: 'record', source: { kind: 'turning', hook: 'A Mudrise flood-drift: caught in the reeds of the Wend (after Mara’s gift of Elara’s notes)' } },
+  'mary-fenns-cairn-slip': { style: 'letter', source: { kind: 'wilds-poi', hook: 'The Amberwash forage cairn, under the third white river-stone' } },
+  'notices-from-the-board': { style: 'broadside', source: { kind: 'turning', hook: 'The Commons notice board, the first time a Turning is posted after the road is relit' } },
+  'the-carters-compact': { style: 'broadside', source: { kind: 'library-start' } },
+  'the-jackdaws-display': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A jackdaw’s nest in a dead iron-oak in the Whitequiet (late)' } },
+  'dorrits-second-span': { style: 'scrap', source: { kind: 'wilds-poi', hook: 'Half-buried at the Tangle crossing, where the bridge tore' } },
+  'tams-ox-words': { style: 'scrap', source: { kind: 'echo', hook: 'Settling Tam’s Echo near the Sallow Ford approach (late, deep east)' } },
+  'eleven-days': {
+    style: 'scrap',
+    source: { kind: 'quest', stage: 'guardian-defeated', spot: 'Charcoal on the inside of the Stone Warden’s chest, read when it settles and the latch opens' },
+    hint: 'Something is written where nobody was meant to look.',
+  },
 };
 
 const AREA_HINT: Record<AreaId, string> = {
@@ -171,6 +190,7 @@ const LATER_HINT: Record<LaterKind, string> = {
   'wilds-chest': 'Hidden in the Wilds.',
   'village-project': 'Part of a village project still to come.',
   turning: 'When the outer Wilds turn and give things back.',
+  echo: 'When an Echo in the Wilds is settled.',
 };
 
 function hintFor(source: FindSource): string {
@@ -186,6 +206,11 @@ function hintFor(source: FindSource): string {
     default:
       return LATER_HINT[source.kind];
   }
+}
+
+/** The hand-authored find source for an id (the generator reads this directly). */
+export function designedSource(id: string): FindSource | undefined {
+  return DESIGN[id]?.source;
 }
 
 export const PAPERS: readonly Paper[] = PAPER_TEXTS.map((t) => {

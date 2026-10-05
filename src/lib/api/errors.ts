@@ -89,6 +89,20 @@ export const SERVER_ERROR_CODES = [
   // 502
   'habitica-unavailable',
   'habitica-invalid-response',
+  // homesteads (phase 3): 400, 403, 404, 409
+  'invalid-item',
+  'invalid-placement',
+  'world-access-denied',
+  'item-not-owned',
+  'tier-required',
+  'tier-unavailable',
+  'insufficient-embers',
+  'insufficient-materials',
+  'already-placed',
+  'not-placed',
+  'out-of-bounds',
+  'placement-overlap',
+  'not-at-own-plot',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

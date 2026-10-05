@@ -19,6 +19,7 @@
  * (`chunk:<regionId>:<cx>:<cy>`, `commons`).
  */
 import { TILE } from '../textures.ts';
+import { COMMONS_FROM_WILDS } from '../commons.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import { chunkTerrain } from '../../lib/wilds/index.ts';
 import type { Epoch, WildsRegion } from '../../lib/wilds/types.ts';
@@ -121,6 +122,14 @@ export function wildsArrivalPosition(epoch: Epoch): { x: number; y: number } {
     (entry.tx + 0.5) * WILDS_TILE_PX,
     (entry.ty + 0.5) * WILDS_TILE_PX
   );
+}
+
+/**
+ * The Commons tile a player leaving the Wilds arrives at (just inside the
+ * north arch — the agreed handoff with the Commons; see src/game/commons.ts).
+ */
+export function wildsReturnTile(): { tx: number; ty: number } {
+  return { ...COMMONS_FROM_WILDS };
 }
 
 /**

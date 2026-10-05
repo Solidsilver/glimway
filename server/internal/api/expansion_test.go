@@ -119,6 +119,15 @@ func entityKind(t *testing.T, v expansionResponse, kind string) entityView {
 	t.Fatalf("no %s generated", kind)
 	return entityView{}
 }
+// The pixel rectangles the client draws (src/lib/homestead.ts has the same table).
+func TestPlotBoundsMatchTheClientLayout(t *testing.T) {
+	want := []plotRect{{64, 64, 256, 192}, {448, 64, 256, 192}, {64, 416, 256, 192}, {448, 416, 256, 192}, {64, 640, 256, 192}, {448, 640, 256, 192}, {64, 864, 256, 192}}
+	for i, w := range want {
+		if got := plotBounds(i); got != w {
+			t.Fatalf("plot %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
 func TestHomesteadAllocationAccessAndCommonsVisit(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -189,6 +198,9 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
 	place("bounds", fern, "outdoor", 16, 0, 0, 409)
 	place("rotation", fern, "outdoor", 0, 0, 45, 400)
+	if v := place("on-the-cottage", fern, "outdoor", 6, 2, 0, 409); v.Error.Code != "placement-overlap" {
+		t.Fatal("reserved cottage tiles", v.Error.Code)
+	}
 	x.exp("POST", "/api/homestead/place", body(s, "missing-coordinate", map[string]any{"itemId": fern, "scene": "outdoor", "rotation": 0}), c, 400)
 	update(&s, place("place", fern, "outdoor", 0, 0, 0, 200))
 	place("repeat", fern, "outdoor", 1, 1, 0, 409)
@@ -212,6 +224,9 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	update(&s, v)
 	place("chair-outside", chair, "outdoor", 0, 0, 0, 400)
 	place("rotated-bounds", chair, "indoor", 11, 9, 90, 409)
+	if v := place("doorway", chair, "indoor", 4, 9, 90, 409); v.Error.Code != "placement-overlap" {
+		t.Fatal("reserved doorway", v.Error.Code)
+	}
 	update(&s, place("rotated-fit", chair, "indoor", 10, 9, 90, 200))
 	before := s.Snapshot
 	x.exp("POST", "/api/homestead/move", body(s, "collide", map[string]any{"itemId": stool, "scene": "outdoor", "x": 16, "y": 0, "rotation": 0}), c, 409)
@@ -250,7 +265,8 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	if s.Rev != s0.Rev+1 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
 		t.Fatal("home rest")
 	}
-	for name, position := range map[string]rules.Position{"other-plot": {X: 768, Y: 128}, "edge": {X: 640, Y: 128}, "gap": {X: 700, Y: 200}} {
+	// Plot 0 is tiles (4,4) to (20,16) at 16 px: pixels 64..320 by 64..256.
+	for name, position := range map[string]rules.Position{"other-plot": {X: 500, Y: 128}, "edge": {X: 320, Y: 128}, "bottom-edge": {X: 128, Y: 256}, "lane": {X: 380, Y: 200}} {
 		doc = s.State
 		doc.HP = 1
 		doc.Position = position

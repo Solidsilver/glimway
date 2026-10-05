@@ -13,7 +13,12 @@ import { AREAS, type AreaId } from '../src/lib/state.ts';
 type Tile = { tx: number; ty: number };
 type Edge = 'west' | 'east' | 'north' | 'south';
 
-const worlds = Object.fromEntries(AREAS.map((a) => [a, buildArea(a)])) as Record<AreaId, WorldData>;
+/** Every area this build draws: the quest areas and the Commons. */
+const BUILT: AreaId[] = [...AREAS, 'commons'];
+/** Registered by another client module (the Wilds): exits may lead there. */
+const EXTERNAL = ['wilds'];
+
+const worlds = Object.fromEntries(BUILT.map((a) => [a, buildArea(a)])) as Record<AreaId, WorldData>;
 
 const key = (t: Tile) => `${t.tx},${t.ty}`;
 
@@ -72,7 +77,7 @@ function touchable(reach: Set<string>, t: Tile): boolean {
   return [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reach.has(key({ tx: t.tx + dx, ty: t.ty + dy })));
 }
 
-for (const area of AREAS) {
+for (const area of BUILT) {
   const w = worlds[area];
 
   test(`${area}: every border tile is blocked except the exits`, () => {
@@ -96,7 +101,7 @@ for (const area of AREAS) {
   test(`${area}: exit mouths are open and lead to a real area`, () => {
     const blocked = blockedTiles(w);
     for (const e of w.exits) {
-      assert.ok((AREAS as readonly string[]).includes(e.to), `exit to unknown area ${e.to}`);
+      assert.ok((BUILT as readonly string[]).includes(e.to) || EXTERNAL.includes(e.to), `exit to unknown area ${e.to}`);
       assert.notEqual(e.to, area, 'exit loops back into the same area');
       for (let y = e.ty; y < e.ty + e.th; y++)
         for (let x = e.tx; x < e.tx + e.tw; x++)
@@ -120,8 +125,9 @@ for (const area of AREAS) {
 }
 
 test('every exit has a way back, and you arrive beside it', () => {
-  for (const area of AREAS) {
+  for (const area of BUILT) {
     for (const e of worlds[area].exits) {
+      if (EXTERNAL.includes(e.to)) continue;
       const dest = worlds[e.to];
       const back = dest.exits.find((x) => x.to === area);
       if (!back) assert.fail(`${e.to} has no exit back to ${area}`);
@@ -136,9 +142,13 @@ test('every exit has a way back, and you arrive beside it', () => {
 });
 
 test('leaving through an edge brings you in from the opposite edge', () => {
-  for (const area of AREAS) {
+  for (const area of BUILT) {
     const w = worlds[area];
     for (const e of w.exits) {
+      if (EXTERNAL.includes(e.to)) {
+        edgeOf(w, e);
+        continue;
+      }
       const out = edgeOf(w, e);
       const arrive = edgeNearest(worlds[e.to], e.entry);
       assert.equal(arrive, OPPOSITE[out], `${area} exits ${out} to ${e.to}, but you arrive on its ${arrive} side`);

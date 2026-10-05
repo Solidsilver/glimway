@@ -4,12 +4,14 @@
  */
 import type { AreaId } from '../lib/state.ts'
 import { TERRAIN, TILE } from './textures.ts'
+import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
+import { buildRoom } from './cottage.ts'
 
 export type NpcId = 'mara' | 'pip' | 'orrin'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}`
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -33,6 +35,8 @@ export interface ExitDef {
   th: number
   to: AreaId
   entry: { tx: number; ty: number }
+  /** Sign text (default: the destination's name); null hides the sign (a doorway). */
+  label?: string | null
 }
 
 /** Supplied atlas props placed in the world at a consistent small-world scale. */
@@ -46,6 +50,21 @@ export interface PropSpot {
   body: [number, number]
   /** Light-capable prop: which flame this is ('village', 'shrine', or a road lantern id). */
   light?: string
+}
+
+/**
+ * Code-drawn scenery (src/game/commons-art.ts): hedges, fences, the Commons
+ * gate and well, Silas's yard. Visual only — collision is the solid grid.
+ */
+export interface ScenerySpot {
+  /** Texture key. */
+  key: string
+  /** Anchor in px (bottom-centre unless `originX` says otherwise). */
+  x: number
+  y: number
+  originX?: number
+  /** Fixed depth, or 'y' to sort by the anchor (the default). */
+  depth?: number | 'y'
 }
 
 export interface WorldData {
@@ -73,6 +92,8 @@ export interface WorldData {
   spawn: { tx: number; ty: number }
   /** The Hearthwick Library's door tile (village only): opens the reading room. */
   library?: { tx: number; ty: number }
+  /** Code-drawn scenery sprites (the Commons). */
+  scenery?: ScenerySpot[]
 }
 
 // ---------------------------------------------------------------- utilities
@@ -195,6 +216,9 @@ function buildVillage(): WorldData {
   g.col(20, 7, 3, TERRAIN.path_a)
   g.col(33, 8, 2, TERRAIN.path_a)
   g.col(13, 10, 3, TERRAIN.path_a)
+  // A lane off the road down to the Commons gate (east edge, below the road).
+  g.col(39, 11, 5, TERRAIN.path_a)
+  g.row(39, 15, 3, TERRAIN.path_a)
 
   // Garden fence with a gap
   g.row(24, 13, 7, TERRAIN.fence, true)
@@ -212,7 +236,7 @@ function buildVillage(): WorldData {
   }
   for (let y = 0; y < H; y++) {
     scatterOne(g, 0, y)
-    if (y < 9 || y > 11) scatterOne(g, W - 1, y)
+    if ((y < 9 || y > 11) && (y < 14 || y > 16)) scatterOne(g, W - 1, y)
   }
 
   const well = { tx: 13, ty: 12 }
@@ -225,7 +249,8 @@ function buildVillage(): WorldData {
   ]
 
   const villageExits: ExitDef[] = [
-    { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } }
+    { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } },
+    { tx: W - 1, ty: 14, tw: 1, th: 3, to: 'commons', entry: { ...COMMONS_FROM_VILLAGE } }
   ]
   const trees = collectTrees(g)
   const scatteredBushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
@@ -557,7 +582,17 @@ function ruinForeground(): ForegroundSpot[] {
 const AREA_KINDS: Record<string, AreaKind> = {
   village: { build: buildVillage, foreground: villageForeground },
   woodland: { build: buildWoodland, foreground: woodlandForeground },
-  ruin: { build: buildRuin, foreground: ruinForeground }
+  ruin: { build: buildRuin, foreground: ruinForeground },
+  // Rows follow the world's plot count (src/game/homestead.ts keeps it).
+  commons: { build: () => buildCommons(commonsPlotCount), foreground: commonsForeground },
+  // Inside a cottage (a view on the Commons save area; see cottage.ts).
+  home: { build: () => buildRoom(), foreground: () => [] }
+}
+
+/** How many plots the Commons map must show (the roster's size, once known). */
+let commonsPlotCount = 0
+export function setCommonsPlotCount(n: number): void {
+  commonsPlotCount = Math.max(0, Math.floor(n))
 }
 
 /** Look up an area kind (its data builder plus kind-specific decor). */

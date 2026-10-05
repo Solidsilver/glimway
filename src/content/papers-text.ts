@@ -179,6 +179,48 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "body": "Finn,\n\nIf you are reading this, I have gone to the earth and my promise is up.\n\nThere are twenty-seven foxes in this box. They come down the Wend every autumn, right around the first frost. They get caught in the iron grate. I clean them off and I put them in here.\n\nLook at the ears, Finn. Look at how they're carved. You know Silas’s work. You know this isn't his.\n\nI promised Wenna I would keep them safe. I promised her I would keep my mouth shut, because she was terrified of what the village would do if they knew someone was out there, throwing wood into the water.\n\nThis box is for Wenna Hale. Not for anyone else. Give it to her. She'll say when it's time to speak.\n\nIf Wenna is gone too... then I am sorry, my boy. You'll have to decide what a river owes a road.\n\n- Dad\n\n*(On the reverse, in the same hand, smaller:)*\n\nP.S. Clean the grate before the first frost, same as I always did. The counting is not ours to stop."
   },
   {
+    "id": "the-hame-polishers-list",
+    "title": "The Hame-Polishers’ List",
+    "description": "The roll of who polished the empty hame each Carting Day for thirty years.",
+    "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Anonymous (Various hands)"
+      },
+      {
+        "label": "Date",
+        "value": "Carting Day, annually for thirty years."
+      },
+      {
+        "label": "Material",
+        "value": "A long strip of rough canvas, tacked to the inside of the Commons gate, names stitched in heavy thread."
+      }
+    ],
+    "body": "*The Empty Hame — Polishers' Roll*\n\nYear 1: Silas\nYear 2: Silas\nYear 3: Keeper Wenna Hale\nYear 4: Master Orrin\nYear 5: Aldo Tolley\nYear 6: Silas\nYear 7: Hazel Penhallow\nYear 8: Ada Cooley\nYear 9: Maren Brack\nYear 10: Silas\n...\nYear 28: Finn Tolley\nYear 29: Pip Penhallow\nYear 30: Silas\n\n*Appended at the bottom, written in thick charcoal in Silas's unmistakable, heavy hand:*\nI don't care if the leather is wearing thin. The brass still shines. Maren built the wheels they went out on, and they were good wheels. The hame goes up on the gate tomorrow. Two weaves and a break, I will be the one to polish it until it comes down."
+  },
+  {
+    "id": "adas-oil-receipts",
+    "title": "Ada’s Oil Receipts",
+    "description": "Thirty years of the village quietly paying for a mother’s window lamp.",
+    "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Mara Hale (and Wenna Hale before her)"
+      },
+      {
+        "label": "Date",
+        "value": "Spanning thirty-one years."
+      },
+      {
+        "label": "Material",
+        "value": "A ledger leaf, heavily amended in two different Keeper's scripts."
+      }
+    ],
+    "body": "**THE COOLEY WINDOW FUND**\n\n*Wenna's Script, Thirty-one years ago, Leaf-wick 17th (One week after the storm):*\nAllocated: One pint, hearth-grade. Ada will not shut her door. She put a lamp in the window for the twins. The Guild says we cannot spare the oil for a private grief. I told the Guild to bill my own stipend. If a mother wants to hold her front step still for her children, the Keepers of this road will not be the ones to make it drift.\n\n*Wenna's Script, Twenty years ago:*\nAldo brought two extra drops of amber from the mill's share. Orrin quietly paid for the wicks. The village is paying for the Cooley window now. Nobody speaks of it.\n\n*Mara's Script, Today:*\nAllocated: One pint, hearth-grade.\nShe is eighty-eight now. She still trims it every twilight. Finn Tolley dropped off the amber this morning, paid in full from the mill. I logged it as 'Commons Lighting' so the Hall doesn't ask questions. We leave one for Ada. We always leave one for Ada."
+  },
+  {
     "id": "keepers-twists-recipe-card",
     "title": "Recipe Card: Keeper’s Twists",
     "description": "Hazel Penhallow’s bakery card, and the note about a boy who liked the ends burnt.",
@@ -305,6 +347,27 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "body": "**The Skipping Rhyme (What the village says):**\nStone-still, stone-still,\nWho goes over Ashwatch hill?\nBring a rubbing or bring a light,\nStone-still lets you through tonight!\n\n**My Scientific Corrections (by Pip Penhallow, Runner):**\n1. The warden is NOT \"stone-still.\" It moves at a rate of approximately one hand-span per unobserved hour, depending on the severity of the drift tide. (Source: Elara's tables and my own staring).\n2. It does not \"let you through.\" It is a jointed iron-oak frame built by Orrin. It simply reverts to a resting posture when the amber latch is engaged.\n3. Skipping to this song is historically inaccurate. You should walk at a steady, cautious pace because the ground is probably not where it was yesterday.\n4. \"Who goes over Ashwatch hill?\" is the wrong question. The hill itself has moved four hand-spans since Mudrise. (Source: the Pencil Map, revision six, and the fence post by the well, which does not wander. Elara checked my figures and only sighed once.)\n\n*P.S. I asked Orrin if I could grease the warden's knee hinges so it wouldn't creak if it moved. He looked like he wanted to throw me in the well.*\n\n*P.P.S. My whistle is still perfectly round. Uncle Joss dented his to one note you could hear clear across the square, which is the correct amount of dent. I am not going to dent mine until the right note finds me. Elara says you cannot hurry a note any more than you can hurry slack water, and she is usually right about moving things.*"
   },
   {
+    "id": "forty-one-and-holding",
+    "title": "Forty-One and Holding",
+    "description": "Finn Tolley’s wheel-turn tally and the secret of the linseed box.",
+    "collection": "Voices of the Drift: Found Texts, Vol. II",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Finn Tolley"
+      },
+      {
+        "label": "Date",
+        "value": "Spanning the two winters since Aldo died."
+      },
+      {
+        "label": "Material",
+        "value": "A tally scratched in clusters of five into the wooden side of the mill's hopper."
+      }
+    ],
+    "body": "*Forty-one.*\n\nThat's how many times the wheel turns while the Wend carries a stick from the upper bend down to the grate. Dad timed it the day before he died, two winters ago.\n\nHe made me promise to clean the grate before the frost. He handed me the linseed box, heavy and smelling of old oil, and he told me to count the turns of the river and think about how long it takes a piece of pine to float forty-one wandering turns in the dark.\n\nHe kept a scratch on this hopper for every fox he cleaned off the grate, and I've kept it up since he passed. Twenty-seven of the scratches are his. Twenty-seven carved foxes in the box.\n\nI don't open the box anymore. I just run my thumb over the lid. The box was meant for Wenna, and Wenna is gone. If I take it to Mara Hale, she'll know. And if she knows, the whole village will know that the river is bringing things back from the dark.\n\nI'm forty-one turns from the dark, and I'm holding. I'm just holding."
+  },
+  {
     "id": "the-boy-who-ran-faster-than-the-wick",
     "title": "The Boy Who Ran Faster Than the Wick",
     "description": "Cautionary tale: run ahead of the promise, and the ground has no reason to catch you.",
@@ -343,6 +406,48 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
     "meta": [],
     "body": "*Written in neat, adult handwriting beneath a child's drawing of a walking hill.*\n\nPip,\nYour mother told you the story of 'The Hill That Swallowed the Greedy Forager' to stop you from eating berries before they are washed.\n\nHills do not have mouths. They do not eat children who fail to wash their hands.\n\nHowever, if a hill is exhibiting a Fast Drift (look for the soil churning like boiling porridge and the smell of bruised roots), it will absolutely subduct you into the topsoil. It is not malicious; you are simply in the way of its geology.\n\nWash your berries because foxes walk on them. Avoid moving hills because of subduction.\n\nSincerely,\nE. Quill\n\n*(Beneath the signature, in the same hand:)*\n\n\"P.S. A drift-table is only paper that remembers on purpose. When the flood brings my own light up the road, I will fold you one—in exchange for the proper note for that whistle of yours. Pencil only, Pip. The ground forgets. Paper should not.\""
+  },
+  {
+    "id": "betts-flat-verse",
+    "title": "Bett’s Flat Verse",
+    "description": "A carter’s off-key song to annoy her brother, finally sung true.",
+    "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Bett Cooley"
+      },
+      {
+        "label": "Date",
+        "value": "Thirty-one years ago (sung), settled today."
+      },
+      {
+        "label": "Material",
+        "value": "An echo in the deep Wilds, finally resolved into memory."
+      }
+    ],
+    "body": "*(A phantom voice, singing slightly off-key to the rhythm of a walking ox)*\n\nOh, the wheel goes round and the mud comes up,\nAnd the Keeper pours from a bitter cup.\nThe road is long and the lantern's low,\nAnd Tam is as slow as the grass can grow.\n\n*(A pause, filled with the ghostly sound of an ox snorting and a man sighing in annoyance)*\n\nI know I'm flat, Tam! I'm singing it flat so you'll walk faster to get away from the sound of it!\n\n*(The voice resumes, catching the true note at last as the owed lamp flares to life)*\n\nBut the wick still draws and the flame still leaps,\nAnd the amber holds while the forest sleeps.\nSo pull on the yoke and steady the load,\nFor we're the last ones on the Lantern Road."
+  },
+  {
+    "id": "the-twelve-wicks",
+    "title": "The Twelve Wicks: A Primer",
+    "description": "A children’s rhyme teaching the months and the seasons of the road.",
+    "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Traditional"
+      },
+      {
+        "label": "Date",
+        "value": "Unknown."
+      },
+      {
+        "label": "Material",
+        "value": "A children's primer, painted on twelve wooden blocks kept in the Commons meeting hall."
+      }
+    ],
+    "body": "First comes **Thaw**, the river breaks,\nThen comes **Mud**, the wagon shakes.\nThird is **Bud**, the branches green,\nFourth is **Bloom**, the prettiest seen.\n\nFifth is **Light**, the longest day,\nSixth is **Cart**, we haul away!\nSeventh **Haze**, the summer heat,\nEighth is **Sap**, sticky and sweet.\n\nNinth is **Amber**, gold and bright,\nTenth is **Leaf**, the autumn's flight.\nEleventh **Smoke**, the chimneys blow,\nTwelfth is **Quiet**, under the snow.\n\nTwelve wicks burning in a line,\nKeep them lit and we'll be fine!"
   },
   {
     "id": "failed-grid-of-sector-4",
@@ -427,6 +532,27 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
       }
     ],
     "body": "**BILL TO:** The Magistrates of the Oak Hall\n\n**SERVICES RENDERED:**\n- One (1) Standardized Map of the River Reed from Tarrow to the Brackenwood edge.\n- Three (3) re-drawings of the Sennick Ferry crossing (due to the river moving the ferry).\n- Five (5) re-drawings of the Amberwash shoals.\n- Eleven (11) pencil amendments to the above, at the client's insistence, all rendered stale by the Leaf turn. No charge, the fault lying with the guild for inking them at all.\n\n**TOTAL DUE:** 40 Silver Weights.\n\n**ATTACHED NOTE:**\nDo not ask my guild to map the Eastern Reaches again.\nWe map to claim ownership. We draw borders to say \"this is ours.\" But the Drift rejects claims. To map the Wilds is to take a portrait of a stranger walking past your window and insist they will stand in that exact spot forever.\n\nPay the invoice, Magistrate. And the next time you need to know where the Brackenwood is, ask a woodcutter to point. It will be more accurate than my parchment.\n\n*(On the reverse, in a magistrate's blunt hand:)*\nPAID — 40 silver weights, drawn on the Count House.\nFor the record: we took your advice. A woodcutter pointed at the Brackenwood from the north gate, and he was right for a day and a half, which this Hall notes is the finest accuracy on file.\nThe next invoice will be settled sooner if it refrains from poetry. — For the Oak Hall"
+  },
+  {
+    "id": "a-salting-drift-table",
+    "title": "A Salting Drift-Table, Water-Stained",
+    "description": "Bryony Quill’s printed table, waiting for a sister to come down from the hills.",
+    "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Bryony Quill"
+      },
+      {
+        "label": "Date",
+        "value": "Unclear; arrived on the spring flood-drift."
+      },
+      {
+        "label": "Material",
+        "value": "A printed table on salt-stiffened canvas, heavily water-stained, found tangled in the reeds of the Wend."
+      }
+    ],
+    "body": "**THE MERROW SALTINGS — DRIFT PREDICTIONS (SPRING QUARTER)**\n\n*Tide-mark:* High Slack\n*Anchor Status:* Holding.\n*Drift Tendency:* Westward, toward the Reaches.\n\n*Notes for the Watcher:*\n\nElara, if the flood carries this up the hill to you, know that the house is exactly where you left it.\n\nI haven't let the window go dark. I trade two baskets of salt a week for hearth-grade amber just to keep your room anchored. The neighbors think I'm mad, paying to pin an empty room when the whole coast is riding the drift, but I don't care.\n\nWhen you're ready to come down from those stubborn hills, just look for the pinprick on the waterline. I'm keeping your space perfectly still. The door is exactly where it was. Come home.\n\n— B."
   },
   {
     "id": "wandering-orchard-magistrate-ruling",
@@ -534,6 +660,69 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "body": "*(...page begins mid-sentence...)*\n...cannot afford the Oak Hall's wheel-tax anymore. Two coppers a league is robbery. The Count Post sits on the only anchored road, but if you are willing to walk the Wilds in the dark, you can bypass the toll entirely. We call them the Blind Routes.\n\n**Rule 1: Borrow the Light.**\nDo not light your own lantern. The Wardens watch for moving light. Instead, wait for the slack water of the Green Hush. Use the \"turncaps\" (the grey mushrooms). They always tilt toward the nearest official lantern on the main road. If you keep the tilt of the caps exactly at a 90-degree angle to your left shoulder, you are walking parallel to the road, safely hidden in the dark, but close enough to avoid the worst of the deep drift.\n\n**Rule 2: The Amberwash Trick.**\nThe tollmen know the paths, so you must use the water. The Amberwash gravel is loose. If the Wilds shift, the gravel just shuffles; it rarely folds or snaps like the forest floor. Walk in the dry streambeds.\n\n**Rule 3: The Toll of the Dark.**\nYou save your silver, but the dark takes its own tax. Last week, we walked the Blind Route past Ashwatch. We didn't lose any amber, but Rennick forgot the name of his first dog, and I lost three days of memory from my childhood. The Wilds will pull the memory out of your head if you don't give it a flame to look at.\n\nWalk fast. Keep your mind on the tally. If you stop to rest in the unanchored dark, the woods won't kill you—they'll just quietly erase the reason you were traveling in the first place.\n\n*(...a second leaf, folded small and wedged into the spine. Same hand. More hurried.)*\n\n—and a fourth rule, for whoever carries this book after me. The first three only get you there.\n\n**Rule 4: Carry the Reason Outside Your Head.**\nThe dark takes the errand before it takes the man. Before you step onto a route, write in tar on the inside of your wrist what you are doing, and who is waiting for you to come back. Say it aloud at every third turncap. Ink is a small anchor, and a cheap one. The Wardens never learned that. They think light is the only rope in the world, and they charge like it is the last one.\n\n*(the leaf ends mid-word, as if the writer was interrupted—or forgot what came next)*"
   },
   {
+    "id": "mary-fenns-cairn-slip",
+    "title": "Mary Fenn’s Cairn Slip",
+    "description": "A daughter’s answer to her father’s will, measured in the rings of an iron-oak.",
+    "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Mary Fenn"
+      },
+      {
+        "label": "Date",
+        "value": "Two days ago."
+      },
+      {
+        "label": "Material",
+        "value": "A scrap of oiled paper, left under the third white river-stone of the Amberwash cairn."
+      }
+    ],
+    "body": "Dad,\n\nYour will begged the Keeper's pardon for the lamp you let go dark at the Mossy Arch, and I know you thought the cairn went with it — that a Fenn who let the chain go dark had no business claiming ground.\n\nI came out today with a scribe and the Magistrate's man to prove the bounds. We didn't need your lantern. We didn't need the light at all.\n\nI found the third white river-stone, where you said the ground was anchored once, long before you. There's no lamp left, of course. But the iron-oak down the bank came down in a storm, and I left three leafy branches at the stump like you said, and the rings on it are so tight you can't slide a needle between them. It grew while the anchor was burning. It grew perfectly still.\n\nThe Magistrate's man read the rings. He said only a named lamp holds the ground that tight. He struck the deed in our name, Dad. The light is long gone, but the wood remembers it burned. You didn't cost us anything.\n\n- Mary"
+  },
+  {
+    "id": "notices-from-the-board",
+    "title": "Notices from the Board",
+    "description": "Three decades of the Turning timetable, posted for a closed road.",
+    "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Keeper Wenna Hale, then Keeper Mara Hale"
+      },
+      {
+        "label": "Date",
+        "value": "Spanning the last three decades."
+      },
+      {
+        "label": "Material",
+        "value": "A stack of thin, brittle notice papers, impaled on a single rusted nail from the Commons board."
+      }
+    ],
+    "body": "*Amber-wick, 26th (Thirty-one years ago):*\n**NOTICE:** Dark of Amber-wick — the outer Wilds will turn. The Sapping Grounds will shuffle. Clear your cairns. — *Keeper W. Hale*\n\n*Leaf-wick, 4th (The day the mark was cut):*\n**NOTICE:** The Lantern Road is CLOSED. The mark is cut. Do not walk past the shrine. — *Keeper W. Hale*\n\n*Leaf-wick, 28th (Three weeks after the storm):*\n**NOTICE:** Dark of Leaf-wick — the Lantern Road will turn. The Tangle will drift. I know the road is closed. I know there are no lamps to hold it. But the timetable does not stop because we are grieving. — *Keeper W. Hale*\n\n*Smoke-wick, 14th (Twenty years ago):*\n**NOTICE:** The outer Wilds will turn. The Lantern Road, though dark, will shift its course. The eastern stretches remain unanchored. — *Keeper W. Hale*\n\n*Mud-wick, 4th (This year):*\n**NOTICE:** Spring freshet. The Tangle is restless. The Lantern Road is expected to turn at midnight. As always, the road is closed. As always, we mark its turning anyway. — *Keeper M. Hale*"
+  },
+  {
+    "id": "the-carters-compact",
+    "title": "The Carters’ Compact (Carting Day Copy)",
+    "description": "The oath of Light, Log and Leave that built the Lantern Road.",
+    "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "The Oak Hall and the Carters of the Reaches"
+      },
+      {
+        "label": "Date",
+        "value": "One hundred and fifty-five years ago."
+      },
+      {
+        "label": "Material",
+        "value": "Heavy vellum, worn to a soft velvet at the corners from a century and a half of hands."
+      }
+    ],
+    "body": "**THE OATH OF THE LANTERN ROAD**\n\nSworn this day by the Carters of Hearthwick and the Guild of Tarrow, in exchange for the safety of the anchored way. Let the wheel-tax be paid, and let the duties be kept.\n\n**I. LIGHT**\nNever shall two lamps stand dark in a row. The last cart of the train shall light the flame behind itself, and the first cart shall check the wick ahead. We buy our road with fire.\n\n**II. LOG**\nNo unlogged amber shall leave the Sapping Grounds. No unmarked oak shall be hauled from the shade. Every drop and every knee shall be tallied at the Count House. We buy our trade with truth.\n\n**III. LEAVE**\nLeave the road as you would wish to find it in the dark. Cairns topped, ruts drained, gates shut against the drift.\n\nTo break this Compact is to steal the road from those who follow. A carter is on the road until their tally is settled. We ride by the light, or we do not ride at all."
+  },
+  {
     "id": "remedies-of-the-oaker-hills",
     "title": "Remedies of the Oaker Hills",
     "description": "Mother Cotta’s treatments for the Vertigos and for ingested Blue Moss.",
@@ -636,7 +825,7 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
         "value": "A pristine, leather-bound copy in the Tarrow Count House archives."
       }
     ],
-    "body": "**Chapter IV: The Gravity of Light**\n\n...It is therefore the conclusion of this faculty that the substance known colloquially as \"Storm-Grade Amber\" possesses an innate, arcane gravitational mass that is activated only upon combustion. When ignited in the presence of an oxygenated airflow, the vaporized resins produce a heavy atmospheric pressure that we shall term \"Topographical Suspension.\"\n\nThe rustic inhabitants of the Lantern Road refer to this phenomenon as \"anchoring,\" attributing it to a mystical communion with the land itself. This is, of course, primitive superstition. The mechanics are strictly chemical. The burning amber emits a dense metaphysical exhaust that physically pins the topsoil and bedrock to the earth's mantle, preventing the geographic fluidity inherent to the Eastern Reaches.\n\nOne merely needs enough oil, a finely wrought iron lamp, and a sturdy wick to conquer any unstable terrain. The keepers of these lamps, though they mutter their quaint rhymes and \"namings\" over the flames, are little more than glorified stokers of a chemical engine...\n\nNor should the gentle reader be misled by the unevenness of results. Our trials upon the college green have shown that identical lamps, wicks, and stock will pin one plot of ground for a night and release another within the hour. The vulgar blame the stoker's muttering. The truth is a matter of purity: Candle-grade resin is laced with impurity and suspends only briefly, while clean Storm-grade stock outperforms it by an order of magnitude. We are confident that a refined distillation will render the human voice entirely redundant in the operation.\n\n*Marginalia, written in a sharp, impatient pencil (likely Keeper Hesper, Mara's grandmother):*\n`If it is only oil and iron, Vance, come stand in the Brackenwood with a full lamp and keep your mouth shut. Let us see how long the ground tolerates your 'metaphysical exhaust.'`\n\n*A second note in the same pencil, pressed hard enough to score the page:*\n`He has burned good amber into hollow lamps for a whole season and blames the stone for coming loose. Render the voice redundant! An unnamed flame is only warmth, Professor. The lamp is not deaf — it must be told what it is holding still.`"
+    "body": "**Chapter IV: The Gravity of Light**\n\n...It is therefore the conclusion of this faculty that the substance known colloquially as \"Storm-Grade Amber\" possesses an innate, arcane gravitational mass that is activated only upon combustion. When ignited in the presence of an oxygenated airflow, the vaporized resins produce a heavy atmospheric pressure that we shall term \"Topographical Suspension.\"\n\nThe rustic inhabitants of the Lantern Road refer to this phenomenon as \"anchoring,\" attributing it to a mystical communion with the land itself. This is, of course, primitive superstition. The mechanics are strictly chemical. The burning amber emits a dense metaphysical exhaust that physically pins the topsoil and bedrock to the earth's mantle, preventing the geographic fluidity inherent to the Eastern Reaches.\n\nOne merely needs enough oil, a finely wrought iron lamp, and a sturdy wick to conquer any unstable terrain. The keepers of these lamps, though they mutter their quaint rhymes and \"namings\" over the flames, are little more than glorified stokers of a chemical engine...\n\nNor should the gentle reader be misled by the unevenness of results. Our trials upon the college green have shown that identical lamps, wicks, and stock will pin one plot of ground for a night and release another within the hour. The vulgar blame the stoker's muttering. The truth is a matter of purity: Candle-grade resin is laced with impurity and suspends only briefly, while clean Storm-grade stock outperforms it by an order of magnitude. We are confident that a refined distillation will render the human voice entirely redundant in the operation.\n\n*Marginalia, written in a sharp, impatient pencil (likely Keeper Hesper, who kept the road before Wenna):*\n`If it is only oil and iron, Vance, come stand in the Brackenwood with a full lamp and keep your mouth shut. Let us see how long the ground tolerates your 'metaphysical exhaust.'`\n\n*A second note in the same pencil, pressed hard enough to score the page:*\n`He has burned good amber into hollow lamps for a whole season and blames the stone for coming loose. Render the voice redundant! An unnamed flame is only warmth, Professor. The lamp is not deaf — it must be told what it is holding still.`"
   },
   {
     "id": "fauna-of-the-slack-water",
@@ -702,6 +891,27 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "body": "**Abstract:**\nThe Lantern Road is a marvel of modern commerce, but it is a geographical catastrophe waiting to occur.\n\nFor two decades, we have praised the Carters' Compact and the Keepers of Hearthwick for holding the road rigid through all four seasons. Sallow Ford demands more amber; Tarrow demands more oak; and so the road is kept lit, straight, and unmoving.\n\nHowever, my recent measurements along the northern bounds of the Tangle (Grid Ref: 44-B) indicate a terrifying truth. The Drift is not being cancelled by the Anchor-lights; it is being *displaced*.\n\nImagine a rushing river. If one drives a massive, immovable iron plate into the center of the current, the water does not stop flowing. It accelerates around the edges of the plate, gouging deep into the banks. The Lantern Road is the iron plate.\n\nThe unanchored Wilds bordering the road are now shifting at nearly triple their historical rate. The flora is distressed; the topography is boiling. The pressure building up against the edges of the light is mathematically unsustainable. If a major storm were to hit while the road is fully pinned, the displaced drift will have nowhere to go but *over* the anchors. The land will snap back like a drawn bowstring.\n\nI humbly petition the Institute to beg the Hearthwick Keepers to let the road go dark for the winter. Let the pressure bleed off. If we do not allow the road to forget itself for a season, I fear the Wilds will force us to forget the road entirely.\n\n*Appendix — rejection docket of the Institute's Committee of Publications, filed with the draft:*\n`The Committee has read Scholar Hemlock's weir analogy with interest, and with some regret. His instruments are well made and his arithmetic is correct as far as arithmetic goes. But a model that foretells catastrophe on paper while the road has held rigid through twenty years of storms and seasons is a model with a flaw, and the flaw is the paper. The Committee is further bound to observe that the Carters' Compact is a standing benefactor of this Institute, and that speculation of this kind, printed, would be felt in Tarrow and in the oil yards before the ink was dry. The author is invited to resubmit with the final petition struck and the language of \"displacement\" reduced to \"local variation.\" He has declined. The draft is returned to his desk and, unless the Committee misjudges the man, there it will remain. — A. Fenwick, Registrar, for the Committee of Publications`\n\n*A later hand, undated, at the foot of the docket:*\n`The storms came the year after. The docket is still locked, and so is the drawer.`"
   },
   {
+    "id": "the-jackdaws-display",
+    "title": "The Jackdaw’s Display",
+    "description": "Elara Quill’s field notes on a nest built of things waiting to go home.",
+    "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Elara Quill"
+      },
+      {
+        "label": "Date",
+        "value": "Leaf-wick, this year."
+      },
+      {
+        "label": "Material",
+        "value": "Field-note page, torn at the edge, smelling faintly of damp soil."
+      }
+    ],
+    "body": "*Nest Inventory, Sector 7 (The Whitequiet)*\n\nThe corvids here do not collect shiny things. They collect things that are trying to go home.\n\nFound a jackdaw's nest built entirely of dry grass and drift-twigs, anchored in the crotch of a dead iron-oak. Inside, there was no egg. There was only a display.\n\nItem one: A leather work glove, right hand, sized for someone small. The index finger is stained with what looks like axle grease.\nItem two: A beeswax candle, unlit. The wick is still pristine. Someone tied a bit of red yarn around the middle of it, the way they do for birthdays up in the village.\nItem three: Eleven stamped road-nails. I checked the marks. They are heavy Tarrow iron, the kind the Compact stamped for pinning the iron-oak corduroy of the Lantern Road.\n\nThe Whitequiet spits out what it cannot digest. These aren't just lost things. The woods are keeping them pristine. The woods are holding their breath. Someone dropped these out there in the dark, and the land is simply waiting for them to walk back and pick them up."
+  },
+  {
     "id": "brackenwood-cutters-handbook",
     "title": "The Brackenwood Cutter’s Handbook",
     "description": "Oak Hall field manual on felling Iron-Oak and surviving the Memory Wake.",
@@ -759,12 +969,12 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
   {
     "id": "marens-notes-on-hubs-and-tyres",
     "title": "Maren’s Notes on Hubs and Tyres",
-    "description": "Wheelwright’s craft notes, and a last word left behind by a rider on the Lull Run.",
+    "description": "Wheelwright’s craft notes, and Maren Brack’s last word the night her wheels went out on the Lull Run.",
     "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
     "meta": [
       {
         "label": "Author",
-        "value": "Maren Brack (Wheelwright, lost in the Lull Run)"
+        "value": "Maren Brack (Wheelwright; Hollis Brack's sister)"
       },
       {
         "label": "Date",
@@ -775,6 +985,69 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
         "value": "Tucked inside a ledger in the old Wheel & Wick guildhouse."
       }
     ],
-    "body": "**On the Marrying of Iron and Wood:**\n\nA cart wheel is a promise you make to an ox. If the wheel fails, the ox dies, the carter dies, and the cargo feeds the moss.\n\nThe Lantern Road is brutal. It is paved with iron-oak corduroy and drift-stone. A standard Tarrow wheel will shatter in three leagues. To build a Compact wheel, you must use tension to your advantage.\n\n1.  **The Spokes:** Must be shaped from heartwood ash, but left *slightly* green. Not wet, but not kiln-dry.\n2.  **The Felloes (The Rim):** Elm is best. It won't split when the iron goes on.\n3.  **The Tyre:** The iron tyre must be forged a finger's width *smaller* than the wooden wheel.\n\n**The Setting:**\nYou must heat the iron tyre in a ring-fire until it expands and glows dull red. Drop it over the wooden wheel. It will immediately set the elm on fire. You have exactly ten heartbeats to hammer it into place and quench it with buckets of cold Wend-water.\n\nAs the iron cools, it shrinks with terrifying force, crushing the wooden joints together. Over the next month, the slightly green ash spokes will dry and expand outward against the shrinking iron.\n\nThey fight each other. The wood pushes out, the iron pulls in. That fight is what makes the wheel indestructible. It is the only way to carry storm-grade amber. It is the only way to carry Hollis home.\n\n**A Last Word, in Case This Page Outlives the Writer:**\n\nThey are giving the lull nine days, and the sky already looks shifty about the promise. Hollis means to run the road. Of course he does — he is my kin, and we Bracks are not built for standing still. My cart goes last, and it carries storm-grade amber: the overnight stuff, rare as a straight plank and twice as dear. Let the Count House call it payment, or surety, or folly. My part is the wheel, and the wheel is ready.\n\nIf I am not back to tuck this page where it belongs, say it plain at the Long Table: Maren Brack went out on good wheels, carrying a light meant to last until morning. The wood pushes out. The iron pulls in. Neither of them gives up, and neither, if anyone asks, did I."
+    "body": "**On the Marrying of Iron and Wood:**\n\nA cart wheel is a promise you make to an ox. If the wheel fails, the ox dies, the carter dies, and the cargo feeds the moss.\n\nThe Lantern Road is brutal. It is paved with iron-oak corduroy and drift-stone. A standard Tarrow wheel will shatter in three leagues. To build a Compact wheel, you must use tension to your advantage.\n\n1.  **The Spokes:** Must be shaped from heartwood ash, but left *slightly* green. Not wet, but not kiln-dry.\n2.  **The Felloes (The Rim):** Elm is best. It won't split when the iron goes on.\n3.  **The Tyre:** The iron tyre must be forged a finger's width *smaller* than the wooden wheel.\n\n**The Setting:**\nYou must heat the iron tyre in a ring-fire until it expands and glows dull red. Drop it over the wooden wheel. It will immediately set the elm on fire. You have exactly ten heartbeats to hammer it into place and quench it with buckets of cold Wend-water.\n\nAs the iron cools, it shrinks with terrifying force, crushing the wooden joints together. Over the next month, the slightly green ash spokes will dry and expand outward against the shrinking iron.\n\nThey fight each other. The wood pushes out, the iron pulls in. That fight is what makes the wheel indestructible. It is the only way to carry storm-grade amber. It is the only way to carry Hollis home.\n\n**A Last Word, the Night Before the Lull Run:**\n\nThey are giving the lull nine days, and the sky already looks shifty about the promise. Hollis means to run the road. Of course he does — he is my kin, and we Bracks are not built for standing still. My wheels go under the last cart, and it carries storm-grade amber: the overnight stuff, rare as a straight plank and twice as dear. Let the Count House call it payment, or surety, or folly. My part is the wheel, and the wheel is ready. I am not going. Somebody has to be here to mend what comes back.\n\nIf they are not back by Carting Day to see this page tucked where it belongs, say it plain at the Long Table: they went out on good wheels, carrying a light meant to last until morning. The wood pushes out. The iron pulls in. Neither of them gives up, and neither, if anyone asks, will I."
+  },
+  {
+    "id": "dorrits-second-span",
+    "title": "Dorrit’s Second Span",
+    "description": "A chalked sketch arguing whether to step with the hill or remind it.",
+    "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Dorrit Venn, Apprentice"
+      },
+      {
+        "label": "Date",
+        "value": "Thirty-two years ago (the summer before the storms)."
+      },
+      {
+        "label": "Material",
+        "value": "Chalked bridge sketch on a heavy iron-oak plank, found half-buried at the Tangle crossing."
+      }
+    ],
+    "body": "*Master Orrin,*\n\n*I drew the second span out like you asked. I know you said to use the iron brackets on the lower joint, but I've been watching the dirt here on the east bank. It doesn't settle; it breathes.*\n\n*If we bracket the lower joint tight, and the bank breathes out, the tension is going to tear the kingpost right out of its socket. It's the weakest point. It's too rigid.*\n\n*I keep thinking about the question I chalked on your shed door. If the hill wants to wander, do we step with it, or do we remind it to stay put? I think we should use oak trunnels on the lower joint, the way you peg the bench. Let the joint groan. Let it flex when the hill steps. If we make it too stubborn, the storm will just break it in half.*\n\n*I'll cut the trunnels in the morning before the next train comes through. If I'm wrong, you can deduct the oak from my wages.*\n\n*— D.V.*"
+  },
+  {
+    "id": "tams-ox-words",
+    "title": "Tam’s Ox-Words",
+    "description": "A carter’s commands to his beasts, scratched on a dropped yoke peg.",
+    "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Tam Cooley"
+      },
+      {
+        "label": "Date",
+        "value": "Thirty-one years ago."
+      },
+      {
+        "label": "Material",
+        "value": "Scratched on a heavy iron-oak yoke peg, found dropped in the deep woods near the Sallow Ford approach."
+      }
+    ],
+    "body": "*To be spoken to the beasts, not yelled.*\n\n*For the mud:* \"Easy now. Find the bottom.\"\n*For the steep:* \"Put your shoulders in the hill.\"\n*For the drift:* \"Listen to the light.\"\n\nIf they spook at a wandering tree, do not strike them. They have better sense than we do; they know the wood shouldn't be moving. Just hum to them. Bett's flat singing works best. It annoys them into focusing on the yoke instead of the woods.\n\n*Added in a hurried, frantic scratch on the reverse side:*\nHold the line. Please, just hold the line. We are almost to the light."
+  },
+  {
+    "id": "eleven-days",
+    "title": "Eleven Days",
+    "description": "Orrin’s build tally for the Warden, made of drift-stone and a broken bridge.",
+    "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Master Builder Orrin"
+      },
+      {
+        "label": "Date",
+        "value": "Thirty years ago (the spring after the storm)."
+      },
+      {
+        "label": "Material",
+        "value": "A build tally, written in thick charcoal on the inside of the Stone Warden's opened chest."
+      }
+    ],
+    "body": "Day 1: Hauled the drift-stone up the hill. My shoulders are gone.\nDay 2: Cut the frame. Iron-oak. I pulled it straight from Dorrit's ruined second span. The lower joint is pinned with her oak trunnels. It flexes. It flexes exactly like she said it would.\nDay 4: Hung the arms.\nDay 7: Wenna brought the heart. Storm-grade amber, the size of my fist. She looked like a ghost handing it over.\nDay 9: Set the stone over the frame. It wants to walk already.\nDay 11: Stood it up on the path. We watched it all night so it would learn its shape.\n\nI built it to be stubborn. I built it to keep Silas from throwing his life away in the dark.\n\nDorrit, if you're out there, and the stone walks toward you—don't be afraid. It's just your bridge, wearing a different coat. And it's waiting to come home."
   }
 ];

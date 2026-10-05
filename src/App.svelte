@@ -31,6 +31,10 @@
   import JournalPanel from './ui/JournalPanel.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { PAPER_EV } from './game/papers'
+  import { HOME_EV, type ArrangeView, type PlacementView } from './game/homestead'
+  import { home } from './ui/home.svelte'
+  import SilasShop from './ui/SilasShop.svelte'
+  import HomeBar from './ui/HomeBar.svelte'
   import CharacterPanel from './ui/CharacterPanel.svelte'
   import MenuPanel from './ui/MenuPanel.svelte'
   import TouchControls from './ui/TouchControls.svelte'
@@ -58,7 +62,7 @@
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
-  type Panel = 'journal' | 'character' | 'menu' | 'library' | null
+  type Panel = 'journal' | 'character' | 'menu' | 'library' | 'shop' | null
 
   let phase = $state<Phase>('loading')
   let hasSave = $state(false)
@@ -212,6 +216,21 @@
     const onOpenLibrary = () => {
       if (panel === null) toggle('library')
     }
+    const onOpenShop = () => {
+      if (panel === null) toggle('shop')
+    }
+    const onArrange = (v: ArrangeView) => {
+      home.arrange = v
+    }
+    const onPlacement = (v: PlacementView | null) => {
+      home.placement = v
+    }
+    const onThumbs = (v: Record<string, string>) => {
+      home.thumbs = { ...home.thumbs, ...v }
+    }
+    const onRoom = (v: { eyebrow: string; title: string; body: string }) => {
+      if (phase === 'playing') ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
+    }
     const pairs: [string, (...args: never[]) => void][] = [
       [EV.stats, onStats],
       [EV.quest, onQuest],
@@ -227,7 +246,12 @@
       [EV.link, onLink],
       [EV.linkNotice, onLinkNotice],
       [EV.wilds, onWilds],
-      [PAPER_EV.openLibrary, onOpenLibrary]
+      [PAPER_EV.openLibrary, onOpenLibrary],
+      [HOME_EV.openShop, onOpenShop],
+      [HOME_EV.arrange, onArrange],
+      [HOME_EV.placement, onPlacement],
+      [HOME_EV.thumbs, onThumbs],
+      [HOME_EV.room, onRoom]
     ]
     for (const [ev, fn] of pairs) bus.on(ev, fn)
     return () => {
@@ -635,6 +659,8 @@
     // closes (standard dismiss UX, including from a focused field).
     if (typing && e.code !== 'Escape') return
     if (ui.endingOpen) return
+    // Placement mode owns its keys (Escape steps back out of it).
+    if (home.placement && !panel) return
     if (e.code === 'KeyJ') toggle('journal')
     else if (e.code === 'KeyC') toggle('character')
     else if (e.code === 'Escape') {
@@ -647,7 +673,7 @@
     }
   }
 
-  const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen)
+  const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen && !home.placement)
 </script>
 
 <svelte:window onkeydown={onKeyGlobal} />
@@ -664,7 +690,8 @@
       </div>
     {/if}
     <DialoguePanel />
-    <TouchControls />
+    {#if !home.placement}<TouchControls />{/if}
+    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic} />
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -680,6 +707,8 @@
       <JournalPanel onClose={() => toggle('journal')} />
     {:else if panel === 'library'}
       <LibraryPanel {session} onClose={() => toggle('library')} />
+    {:else if panel === 'shop'}
+      <SilasShop {session} onClose={() => toggle('shop')} />
     {:else if panel === 'character'}
       <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} />
     {:else if panel === 'menu'}

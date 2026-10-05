@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
 import { beginNewJourney, hold, warp, waitForWilds, wilds, type WildsDump } from './helpers'
-import { chunkAreaId } from '../src/game/wilds/regions.ts'
+import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds/regions.ts'
 
 /**
  * The Tangle (the generated Wilds, region inner-1): chunk-to-chunk walking,
@@ -16,11 +16,20 @@ const TILE = 16
 const chunkOf = (dump: WildsDump) => dump.chunk
 const areaOfChunk = (c: { cx: number; cy: number }) => chunkAreaId(c.cx, c.cy)
 
-/** Warp next to an entity (its surroundings are kept clear by the generator). */
+/**
+ * Warp next to an entity (its surroundings are kept clear by the generator).
+ * The tile beside it is chosen so the TARGET is the nearest claimable thing
+ * — a second entity one tile over must not win the prompt.
+ */
 async function warpToEntity(page: Page, dump: WildsDump, pick: (d: WildsDump) => WildsDump['entities'][number] | undefined): Promise<WildsDump['entities'][number]> {
   const target = pick(dump)
   if (!target) throw new Error('no such entity in the Tangle')
-  await warp(page, areaOfChunk(target.chunk), target.tx + 1, target.ty)
+  const others = dump.entities.filter((e) => e.id !== target.id && e.claimable)
+  const candidates = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
+  const score = ([ox, oy]: number[]) =>
+    Math.min(...others.filter((e) => e.chunk.cx === target.chunk.cx && e.chunk.cy === target.chunk.cy).map((e) => Math.hypot(e.tx - target.tx - ox, e.ty - target.ty - oy)), 99)
+  const [ox, oy] = candidates.sort((a, b) => score(b) - score(a))[0]
+  await warp(page, areaOfChunk(target.chunk), target.tx + ox, target.ty + oy)
   const after = await wilds(page)
   const found = after.entities.find((e) => e.id === target.id)
   if (!found) throw new Error(`entity ${target.id} vanished after the warp`)
@@ -54,6 +63,37 @@ test('guest: the Tangle is explorable with local claims', async ({ page }) => {
   const after = await wilds(page)
   expect(materialSum(after.materials)).toBeGreaterThan(0)
   expect(after.entities.find((e) => e.id === node!.id)!.state).toBe('harvested')
+})
+
+test('connected: the Commons arch leads into the Tangle and back (handoff tiles)', async ({ page, context }) => {
+  const id = newUser()
+  allow(id)
+  await routeHabitica(context)
+  await openTitleGuide(page)
+  await pasteAndConnect(page, id)
+  await waitForWorld(page)
+
+  // North through the Commons arch: the Wilds entry chunk, at the agreed
+  // arrival tile ({2,22} — the region-wide position the server expects).
+  await warp(page, 'commons', 23, 2)
+  await hold(page, 'ArrowUp', 700)
+  await waitForWilds(page)
+  let dump = await wilds(page)
+  expect(dump.chunk).toEqual({ cx: 1, cy: 1 })
+  const arrival = wildsArrivalPosition(guestEpoch())
+  expect(dump.position.x).toBe(arrival.x)
+  expect(dump.position.y).toBe(arrival.y)
+
+  // Back south through the commons gap (tiles 1–3, NOT the chunk gap): the
+  // Commons, at the north arch. (2,22) is the gap's inward tile.
+  await warp(page, chunkAreaId(1, 1), 2, 22)
+  await hold(page, 'ArrowDown', 900)
+  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'commons', undefined, { timeout: 15_000 })
+  const hero = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer!())
+  expect(hero.x).toBe((23 + 0.5) * TILE)
+  expect(hero.y).toBe((2 + 0.5) * TILE)
+  dump = await wilds(page).catch(() => null)
+  expect(dump).toBeNull() // the Wilds dump is gone with the chunk scene
 })
 
 test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload', async ({ page, context }) => {
@@ -112,7 +152,12 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   // The camp's mix spawns around it; strike everything down.
   await page.evaluate(() => (window as unknown as { __fsDevStrike: (n: number) => void }).__fsDevStrike(999))
   await expect.poll(async () => (await wilds(page)).entities.find((e) => e.id === camp.id)!.claimable).toBe(true)
-  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [camp.tx * TILE + 8 + 20, camp.ty * TILE + 8])
+  // Stand where the camp (not a neighbouring node) owns the prompt.
+  const around = await wilds(page)
+  const spot = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    .map(([ox, oy]) => [ox, oy, Math.min(...around.entities.filter((e) => e.claimable && e.id !== camp.id && e.chunk.cx === camp.chunk.cx && e.chunk.cy === camp.chunk.cy).map((e) => Math.hypot(e.tx - camp.tx - ox, e.ty - camp.ty - oy)), 99)])
+    .sort((a, b) => (b[2] as number) - (a[2] as number))[0]
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [(camp.tx + (spot[0] as number)) * TILE + 8, (camp.ty + (spot[1] as number)) * TILE + 8])
   await act(page, /Claim the camp/i, /camp is yours/i)
   after = await wilds(page)
   expect(after.entities.find((e) => e.id === camp.id)!.state).toBe('cleared')
@@ -168,7 +213,7 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   const hurtAt = reloaded.position
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
   // Defeat wakes the hero in the village; walk back in and find the lantern.
-  await page.waitForFunction(() => window.__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
+  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
   await warp(page, 'wilds', 2, 22)
   await waitForWilds(page)
   await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)

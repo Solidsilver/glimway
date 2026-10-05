@@ -127,6 +127,7 @@ export const locations: Record<AreaId, LocationInfo> = {
     description:
       'The Keeper’s old waystation: grey blocks, heather through the floor, a route stone in the alcove. Past the broken arch the hilltop shrine waits, and a stone warden stands on the path, arms out.',
   },
+  commons: HEARTHWICK_COMMONS,
 };
 
 /**

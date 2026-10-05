@@ -71,7 +71,7 @@ test('shared wilds data loads with the complete typed shape', () => {
   const d = loadWilds();
   assert.equal(d.generatorVersion, 1);
   assert.ok(d.chunkSize >= 16 && d.chunkSize % 2 === 0);
-  assert.deepEqual(d.regions.map((r) => r.id), ['inner-1']);
+  assert.deepEqual(d.regions.map((r) => r.id), ['inner-1', 'outer-1']);
   assert.equal(d.regions[0].kind, 'inner');
   assert.deepEqual(d.entityKinds.map((k) => k.kind), ['camp', 'node', 'chest', 'poi']);
   assert.deepEqual(d.materials, ['timber', 'stone', 'fiber', 'amber']);

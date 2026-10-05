@@ -4,6 +4,7 @@
  */
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
+import type { HomeInstance } from '../homestead.ts';
 
 /** The client-writable progress document (`doc` / `progress`). */
 export interface Progress {
@@ -263,4 +264,73 @@ export interface WildsLanternResult {
 
 export interface WildsLanternResponse extends Snapshot {
   result: WildsLanternResult;
+}
+
+// ------------------------------------------------------------ homesteads
+
+/** A pixel rectangle on the Commons map. */
+export interface PlotBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** One member's homestead (GET /api/homestead/:id, and every homestead POST). */
+export interface HomeView {
+  ownerId: string;
+  displayName: string;
+  worldId: string;
+  /** null while the member has no plot yet (a reserved, empty plot). */
+  plotIndex: number | null;
+  tier: number;
+  bounds: PlotBounds | null;
+  /** null below the Cottage (tier 1). */
+  indoor: { width: number; height: number } | null;
+  items: HomeInstance[];
+}
+
+export interface HomeResponse extends Snapshot {
+  home: HomeView;
+  materials: Record<string, number>;
+}
+
+/** A Commons roster row (every world member; plotless members last). */
+export interface PlotInfo {
+  ownerId: string;
+  displayName: string;
+  tier: number;
+  plotIndex: number | null;
+  bounds: PlotBounds | null;
+}
+
+export interface CommonsResponse extends Snapshot {
+  plots: PlotInfo[];
+}
+
+export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade';
+
+/** The op-specific fields of a homestead POST (lease, rev, key and progress are added by the link). */
+export type HomeAction =
+  | { op: 'buy'; itemDef: string }
+  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor'; x: number; y: number; rotation: number }
+  | { op: 'remove'; itemId: string }
+  | { op: 'upgrade'; tier: number };
+
+export interface HomeActionRequest {
+  lease: string;
+  baseRev: number;
+  key: string;
+  progress?: Progress;
+  itemDef?: string;
+  itemId?: string;
+  scene?: 'indoor' | 'outdoor';
+  x?: number;
+  y?: number;
+  rotation?: number;
+  tier?: number;
+}
+
+export interface HomeActionResponse extends Snapshot {
+  result: { home: HomeView; materials: Record<string, number>; itemId?: string };
 }

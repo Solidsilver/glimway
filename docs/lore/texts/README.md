@@ -17,6 +17,8 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [Song: The Reed and Roll](the-reed-and-roll-mill-chant.md) | Mill-hand's call-and-response chant of the Tolley family, older than the road. |
 | [Scrap from the Count House Tally-Book](count-house-tally-book-scrap.md) | Clerk Vane's note: Account 404 stays open. We do not presume the fate of a convoy. |
 | [Note Found in a Linseed Box](note-in-the-linseed-box.md) | Aldo Tolley's sealed instruction to his son Finn, under twenty-seven wooden foxes. |
+| [The Hame-Polishers' List](the-hame-polishers-list.md) | The roll of who polished the empty hame each Carting Day for thirty years. |
+| [Ada's Oil Receipts](adas-oil-receipts.md) | Thirty years of the village quietly paying for a mother's window lamp. |
 
 ## Voices of the Drift: Found Texts, Vol. II
 
@@ -28,6 +30,7 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [Tarrow Count House Requisition Reply](tarrow-requisition-reply-hinges.md) | The Oak Hall's refusal on the "hall price of hinges," and Orrin's charcoal reply. |
 | [Scrap of Pine Offcut](silas-pine-offcut-scrap.md) | Silas's five charcoal foxes — four crossed out — and the words beneath the fifth. |
 | [A Page from Pip's Copybook](pip-copybook-warden-corrections.md) | Pip Penhallow's scientific corrections to the skipping rhyme. |
+| [Forty-One and Holding](forty-one-and-holding.md) | Finn Tolley's wheel-turn tally and the secret of the linseed box. |
 
 ## Bedtime Stories and Cautionary Tales of the Reaches
 
@@ -38,6 +41,8 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [The Mudrise Fleet (A Lullaby)](the-mudrise-fleet-lullaby.md) | Song for the eve of The Breaking, when walnut-shell boats go down the Wend. |
 | [The Ashwatch Skipping Game](the-ashwatch-skipping-game.md) | Playground rhyme and rules of the Stone Warden game. |
 | [Elara's Note in Pip's Copybook](elaras-note-in-pips-copybook.md) | E. Quill on hills, berries, subduction, and the difference between malice and geology. |
+| [Bett's Flat Verse](betts-flat-verse.md) | A carter's off-key song to annoy her brother, finally sung true. |
+| [The Twelve Wicks: A Primer](the-twelve-wicks.md) | A children's rhyme teaching the months and the seasons of the road. |
 
 ## The Liar's Art: Cartography and Exploration in the Reaches
 
@@ -47,6 +52,7 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [Joss Penhallow's Field Notes](joss-penhallow-field-notes-pencil-map.md) | The rules of the Pencil Map: map the anchor, map the tendency, never use ink. |
 | [Log of the Bark "Wind-Hewn"](log-of-the-bark-wind-hewn.md) | The Fog-Coast Expedition: when the land flows like the sea and resents your shape. |
 | [Invoice from the Guild of Cartographers](guild-of-cartographers-invoice.md) | Master Cartographer Hemlock's bill, and his refusal to ever map the Eastern Reaches again. |
+| [A Salting Drift-Table, Water-Stained](a-salting-drift-table.md) | Bryony Quill's printed table, waiting for a sister to come down from the hills. |
 
 ## Blood, Ink, and Timber: Legal and Architectural Records of the Reaches
 
@@ -57,6 +63,9 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [Last Will and Testament of Elias Fenn](will-of-elias-fenn.md) | A sapping-grounds worker's estate, including an apology for a lantern left dark. |
 | [Deed of Sale for a Commons Plot](deed-of-sale-commons-plot.md) | Silas's property line, measured in lantern-light instead of yards. |
 | [The Blind Routes](the-blind-routes-smugglers-ledger.md) | Smuggler's ledger: walking the unanchored dark, and the tax the dark collects from memory. |
+| [Mary Fenn's Cairn Slip](mary-fenns-cairn-slip.md) | A daughter's answer to her father's will, measured in the rings of an iron-oak. |
+| [Notices from the Board](notices-from-the-board.md) | Three decades of the Turning timetable, posted for a closed road. |
+| [The Carters' Compact (Carting Day Copy)](the-carters-compact.md) | The oath of Light, Log and Leave that built the Lantern Road. |
 
 ## Blood, Sap, and Memory: Medical and Survival Texts of the Reaches
 
@@ -75,6 +84,7 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | ["Fauna of the Slack Water"](fauna-of-the-slack-water.md) | Master Kaelen's guide: the Tide-Fox's larder and the False-Path Weaver's webs. |
 | [Assessing the Barge-Knee Yields](barge-knee-yields-report.md) | Oak Hall report: the hardest trees grow over old campfires. Nobody wants to write why. |
 | [Survey of the Weir Effect (Unpublished Draft)](weir-effect-survey-draft.md) | Scholar Hemlock's rejected warning, one year before the Winter of Two Storms. |
+| [The Jackdaw's Display](the-jackdaws-display.md) | Elara Quill's field notes on a nest built of things waiting to go home. |
 
 ## The Builders and the Breakers: Tradecraft of the Reaches
 
@@ -83,4 +93,7 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [The Brackenwood Cutter's Handbook](brackenwood-cutters-handbook.md) | Oak Hall field manual on felling Iron-Oak and surviving the Memory Wake. |
 | [Scraps from Orrin's Workshop](orrins-workshop-rules.md) | Rules for the bench, in thick angry charcoal. If it doesn't creak, it's going to snap. |
 | [The Twoford Almanac — Silas's Copy](twoford-almanac-silas-copy.md) | University astronomy annotated by a carter who knows the Drift doesn't care about the moon. |
-| [Maren's Notes on Hubs and Tyres](marens-notes-on-hubs-and-tyres.md) | Wheelwright's craft notes, and a last word left behind by a rider on the Lull Run. |
+| [Maren's Notes on Hubs and Tyres](marens-notes-on-hubs-and-tyres.md) | Wheelwright's craft notes, and Maren Brack's last word the night her wheels went out on the Lull Run. |
+| [Dorrit's Second Span](dorrits-second-span.md) | A chalked sketch arguing whether to step with the hill or remind it. |
+| [Tam's Ox-Words](tams-ox-words.md) | A carter's commands to his beasts, scratched on a dropped yoke peg. |
+| [Eleven Days](eleven-days.md) | Orrin's build tally for the Warden, made of drift-stone and a broken bridge. |

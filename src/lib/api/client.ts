@@ -11,6 +11,9 @@
  */
 import { ApiError, errorFromResponse } from './errors.ts';
 import {
+  parseCommons,
+  parseHome,
+  parseHomeAction,
   parseCreatedInvite,
   parseInviteList,
   parsePlay,
@@ -26,6 +29,11 @@ import {
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
 import type {
+  CommonsResponse,
+  HomeActionRequest,
+  HomeActionResponse,
+  HomeOp,
+  HomeResponse,
   CreatedInvite,
   InviteList,
   LoginRequest,
@@ -73,6 +81,13 @@ export interface RawApi {
   wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
   wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
   wildsLantern(req: WildsLanternRequest): Promise<WildsLanternResponse>;
+
+  /** An own or same-world member's homestead (read-only for visitors). */
+  home(habiticaId: string): Promise<HomeResponse>;
+  /** Every world member's plot (plotless members last, with null bounds). */
+  commons(): Promise<CommonsResponse>;
+  /** A keyed homestead mutation: buy, place, move, remove or upgrade. */
+  homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
 }
 
 export interface ApiClient extends RawApi {
@@ -180,6 +195,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async wildsLantern(req) {
       return parseWildsLantern(await request('POST', '/api/wilds/lantern', req));
     },
+    async home(habiticaId) {
+      return parseHome(await request('GET', `/api/homestead/${encodeURIComponent(habiticaId)}`));
+    },
+    async commons() {
+      return parseCommons(await request('GET', '/api/commons'));
+    },
+    async homeAction(op, req) {
+      return parseHomeAction(await request('POST', `/api/homestead/${op}`, req));
+    },
   };
 
   const run = <T>(task: (r: RawApi) => Promise<T>): Promise<T> => queue.run(() => task(raw));
@@ -203,6 +227,9 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     wildsClaim: (req) => run((r) => r.wildsClaim(req)),
     wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),
     wildsLantern: (req) => run((r) => r.wildsLantern(req)),
+    home: (id) => run((r) => r.home(id)),
+    commons: () => run((r) => r.commons()),
+    homeAction: (op, req) => run((r) => r.homeAction(op, req)),
   };
 }
 

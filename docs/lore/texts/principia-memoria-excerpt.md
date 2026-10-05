@@ -14,7 +14,7 @@ One merely needs enough oil, a finely wrought iron lamp, and a sturdy wick to co
 
 Nor should the gentle reader be misled by the unevenness of results. Our trials upon the college green have shown that identical lamps, wicks, and stock will pin one plot of ground for a night and release another within the hour. The vulgar blame the stoker's muttering. The truth is a matter of purity: Candle-grade resin is laced with impurity and suspends only briefly, while clean Storm-grade stock outperforms it by an order of magnitude. We are confident that a refined distillation will render the human voice entirely redundant in the operation.
 
-*Marginalia, written in a sharp, impatient pencil (likely Keeper Hesper, Mara's grandmother):*
+*Marginalia, written in a sharp, impatient pencil (likely Keeper Hesper, who kept the road before Wenna):*
 `If it is only oil and iron, Vance, come stand in the Brackenwood with a full lamp and keep your mouth shut. Let us see how long the ground tolerates your 'metaphysical exhaust.'`
 
 *A second note in the same pencil, pressed hard enough to score the page:*

@@ -7,6 +7,12 @@ import { validateSave } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
 import type {
+  CommonsResponse,
+  HomeActionResponse,
+  HomeResponse,
+  HomeView,
+  PlotBounds,
+  PlotInfo,
   CreatedInvite,
   InviteInfo,
   InviteList,
@@ -131,12 +137,6 @@ export function parseInviteList(raw: unknown): InviteList {
 }
 
 // ------------------------------------------------------------- the Wilds
-
-const int = (v: unknown): number => {
-  const n = num(v);
-  if (!Number.isInteger(n)) throw new ApiError('bad-response');
-  return n;
-};
 
 const nullableStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 
@@ -275,5 +275,87 @@ export function parseWildsLantern(raw: unknown): WildsLanternResponse {
       materials: parseMaterials(r.materials),
       lanterns: arr(r.lanterns).map(parseLantern),
     },
+  };
+}
+
+// ------------------------------------------------------------ homesteads
+
+const SCENES = ['indoor', 'outdoor'];
+const ROTATIONS = [0, 90, 180, 270];
+
+function int(v: unknown, min = 0): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < min) throw new ApiError('bad-response');
+  return v;
+}
+
+function bounds(v: unknown): PlotBounds | null {
+  if (v === null || v === undefined) return null;
+  const o = obj(v);
+  return { x: num(o.x), y: num(o.y), width: num(o.width), height: num(o.height) };
+}
+
+function plotIndex(v: unknown): number | null {
+  return v === null || v === undefined ? null : int(v);
+}
+
+function name(v: unknown): string {
+  return typeof v === 'string' ? v.slice(0, 64) : '';
+}
+
+export function parseHomeView(raw: unknown): HomeView {
+  const o = obj(raw);
+  if (!Array.isArray(o.items)) throw new ApiError('bad-response');
+  const items = o.items.map((row) => {
+    const r = obj(row);
+    const placed = r.scene !== null && r.scene !== undefined;
+    if (placed && (!SCENES.includes(r.scene as string) || !ROTATIONS.includes(r.rotation as number))) throw new ApiError('bad-response');
+    return {
+      id: str(r.id),
+      itemDef: str(r.itemDef),
+      scene: placed ? (r.scene as 'indoor' | 'outdoor') : null,
+      x: placed ? int(r.x) : null,
+      y: placed ? int(r.y) : null,
+      rotation: placed ? (r.rotation as 0 | 90 | 180 | 270) : null,
+    };
+  });
+  const indoor = o.indoor === null || o.indoor === undefined ? null : { width: int(obj(o.indoor).width, 1), height: int(obj(o.indoor).height, 1) };
+  return {
+    ownerId: str(o.ownerId),
+    displayName: name(o.displayName),
+    worldId: typeof o.worldId === 'string' ? o.worldId : '',
+    plotIndex: plotIndex(o.plotIndex),
+    tier: int(o.tier),
+    bounds: bounds(o.bounds),
+    indoor,
+    items,
+  };
+}
+
+function materials(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (v && typeof v === 'object' && !Array.isArray(v)) for (const [k, n] of Object.entries(v)) if (typeof n === 'number' && Number.isInteger(n) && n >= 0) out[k] = n;
+  return out;
+}
+
+export function parseHome(raw: unknown): HomeResponse {
+  const o = obj(raw);
+  return { ...parseSnapshot(raw), home: parseHomeView(o.home), materials: materials(o.materials) };
+}
+
+export function parseCommons(raw: unknown): CommonsResponse {
+  const o = obj(raw);
+  if (!Array.isArray(o.plots)) throw new ApiError('bad-response');
+  const plots: PlotInfo[] = o.plots.map((row) => {
+    const r = obj(row);
+    return { ownerId: str(r.ownerId), displayName: name(r.displayName), tier: int(r.tier), plotIndex: plotIndex(r.plotIndex), bounds: bounds(r.bounds) };
+  });
+  return { ...parseSnapshot(raw), plots };
+}
+
+export function parseHomeAction(raw: unknown): HomeActionResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: { home: parseHomeView(r.home), materials: materials(r.materials), ...(typeof r.itemId === 'string' ? { itemId: r.itemId } : {}) },
   };
 }

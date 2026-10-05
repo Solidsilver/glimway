@@ -220,9 +220,14 @@ Unsupported versions fail with `generator-unavailable` rather than silently
 regenerating land. No scheduled reset runs in this phase.
 
 Shared `content/homestead.json` contains the five tier identities and fourteen
-items. Only the free Campsite and the 15-ember Cottage ship now; higher upgrades
-remain unavailable. Decoration placement requires the Cottage; buying tier-0
-items is allowed. `rest`/`revive` require the village hearth; `home-rest` requires
+items. The free Campsite, 15-ember Cottage, and Workshop ship now. The Workshop
+costs 30 embers, 20 timber, 10 stone and 8 fiber; Garden and Hall remain unavailable. Decoration placement requires the Cottage; buying tier-0
+items is allowed. Its `commons` block is the one source of plot geometry, in the
+client's 16-pixel tiles: plot `i` sits in column `i % columns.length` and row
+`i / columns.length`, at the listed `rows`, then every `rowPitch` tiles down the
+lane. Plot bounds and the home-rest check use it, and the client draws the same
+plots from it. `outdoorReserved`/`indoorReserved` are the camp/cottage tiles and
+the inside doorway; placements covering them fail with `placement-overlap`. `rest`/`revive` require the village hearth; `home-rest` requires
 the caller's own Commons plot. Sync remains allowed in both safe areas.
 `content/economy.json` contains the one-ember home rest, twenty
 successful claims per minute, two fallen lantern creations per owner per UTC day,
@@ -314,3 +319,38 @@ successful read, so active read-only legacy sessions may need to sign in again
 on upgrade. Retained historical idempotency responses with snapshots gain a
 missing `displayName` from the player row; existing historical names and all
 request hashes remain unchanged. No economic grants or balances are rewritten.
+
+
+### Phase 5: workshop, mail, projects and the Turning
+
+Migration 008 preserves existing decoration ownership/placement and adds instance
+locations, count-based home storage, world-scoped mail in transit, project
+contributions/progress and durable completion paper records. Back up before
+upgrading using the procedure above. Restore tests cover all new tables.
+
+The shared calendar epoch is 2026-01-05 00:00:00 UTC (Thaw day 1). A wick is seven
+real days, controlled by content/calendar.json; twelve wicks form a year. Calendar
+clients use Unix seconds and the same pure function/vectors as Go. Closure Night
+is Quiet day 7. GET /api/calendar is public and includes a notice during the last
+24 hours of each wick. Outer-1 turns at each wick boundary: season is the absolute
+wick number, starts_at/ends_at are fixed UTC boundaries, and a new epoch is
+created lazily. Old claims fail with epoch-ended even before anyone reads the new
+region. Inner-1 stays permanent. Generator v1 and its generation data are unchanged.
+
+Storage/crafting require tier 2. Decorations move as original unplaced instances;
+placed instances must first be removed. Mail transfers only server-owned gathered
+materials, Wilds trinkets, crafted utilities and unplaced decorations, never
+embers, quest items or paid quest entitlements. Assets are debited immediately on
+send and remain unusable in transit until the named recipient claims them.
+World moves and return mail remain outside this release.
+
+Six projects cover the three written village works plus the Wheel & Wick
+guildhouse, Orrin's hinges and the Cooley Window Fund. Completion world flags
+are separate from client story flags. All contributing members can read their
+paper eligibility from GET /api/projects after completion and call grantPaper;
+no other player's revision is changed. Crafting recipes and project costs are
+shared JSON and are starting values for playtesting.
+
+The exact additive API contract and ledger currency conventions are recorded in
+.agent/REPORT.md under “Phase 5 server”. All new gameplay POSTs use the existing
+lease/revision/idempotency transaction boundary. GETs do not bump revisions.

@@ -27,6 +27,24 @@ import { EV, bus } from '../events';
 import type { Session } from '../session';
 import { WILDS_REGION_ID, guestEpoch, isWildsArea } from './regions.ts';
 import { registerWildsAreas } from './areas.ts';
+import { HOME_EV, currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
+
+/**
+ * One server-owned material balance everywhere: when the shop (homestead
+ * actions) moves it, this store's mirror follows.
+ */
+let homesteadWatch = false;
+function watchHomesteadMaterials(): void {
+  if (homesteadWatch) return;
+  homesteadWatch = true;
+  bus.on(HOME_EV.changed, () => {
+    const m = currentHomesteadMaterials();
+    if (m && view && !view.guest) {
+      view.materials = m;
+      emitMaterials();
+    }
+  });
+}
 
 /** Register the chunk area kinds for an epoch right now (scene safety). */
 export function ensureWildsAreaKinds(epoch: Epoch): void {
@@ -83,7 +101,10 @@ function materialsRecord(list: { id: string; qty: number }[]): Record<string, nu
 
 function emitMaterials(): void {
   if (!view) return;
-  bus.emit(EV.wilds, { materials: wildsMaterials() });
+  const materials = wildsMaterials();
+  bus.emit(EV.wilds, { materials });
+  // One server-owned balance everywhere: the shop's mirror follows.
+  if (!view.guest) syncWildsMaterials(materials);
 }
 
 function bump(): void {
@@ -309,6 +330,7 @@ export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<bool
     view = null;
     bus.emit(EV.wilds, { materials: null });
   }
+  watchHomesteadMaterials();
   if (isWildsArea(session.state.area)) return refreshWilds(session, maxAgeMs);
   return view !== null && !view.guest;
 }

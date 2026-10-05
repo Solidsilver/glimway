@@ -227,7 +227,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await expect(library).toBeVisible()
   await library.locator('[data-donate="pip-copybook-warden-corrections"]').click()
   // The donation waits for the held upload carrying the find.
-  await expect(library.getByText('12 of 39')).toBeVisible({ timeout: 20_000 })
+  await expect(library.getByText('14 of 52')).toBeVisible({ timeout: 20_000 })
   await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
   await page.unroute('**/api/progress')
 
@@ -247,7 +247,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await waitForArea(page, 'village')
   await warp(page, 'village', 3, 18)
   await page.keyboard.press('e')
-  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('12 of 39')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
 })
 
 test('a second tab finds the journey playing elsewhere, and either tab can take over', async ({ page, context }) => {

@@ -7,6 +7,7 @@ import type Phaser from 'phaser'
 import { TILE } from '../textures'
 import type { WorldData } from '../worlds'
 import type { LightProp } from './lanterns'
+import { ensureSceneryTexture } from '../commons-art'
 
 export function buildProps(
   scene: Phaser.Scene,
@@ -62,6 +63,12 @@ export function buildProps(
     if (p.light) {
       lightProps.push({ id: p.light, sprite: img, gx: x, gy: y - p.h * 0.72, glow: null })
     }
+  }
+  // Code-drawn scenery (the Commons): visual only, the solid grid collides.
+  for (const s of world.scenery ?? []) {
+    if (!ensureSceneryTexture(scene, s.key)) continue
+    const img = scene.add.image(s.x, s.y, s.key).setOrigin(s.originX ?? 0.5, 1)
+    img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
   }
   return lightProps
 }

@@ -1,6 +1,6 @@
 # Maren’s Notes on Hubs and Tyres
 
-**Author:** Maren Brack (Wheelwright, lost in the Lull Run)
+**Author:** Maren Brack (Wheelwright; Hollis Brack's sister)
 **Date:** Thirty-two years ago.
 **Location Found:** Tucked inside a ledger in the old Wheel & Wick guildhouse.
 
@@ -21,10 +21,10 @@ As the iron cools, it shrinks with terrifying force, crushing the wooden joints 
 
 They fight each other. The wood pushes out, the iron pulls in. That fight is what makes the wheel indestructible. It is the only way to carry storm-grade amber. It is the only way to carry Hollis home. 
 
-**A Last Word, in Case This Page Outlives the Writer:**
+**A Last Word, the Night Before the Lull Run:**
 
-They are giving the lull nine days, and the sky already looks shifty about the promise. Hollis means to run the road. Of course he does — he is my kin, and we Bracks are not built for standing still. My cart goes last, and it carries storm-grade amber: the overnight stuff, rare as a straight plank and twice as dear. Let the Count House call it payment, or surety, or folly. My part is the wheel, and the wheel is ready.
+They are giving the lull nine days, and the sky already looks shifty about the promise. Hollis means to run the road. Of course he does — he is my kin, and we Bracks are not built for standing still. My wheels go under the last cart, and it carries storm-grade amber: the overnight stuff, rare as a straight plank and twice as dear. Let the Count House call it payment, or surety, or folly. My part is the wheel, and the wheel is ready. I am not going. Somebody has to be here to mend what comes back.
 
-If I am not back to tuck this page where it belongs, say it plain at the Long Table: Maren Brack went out on good wheels, carrying a light meant to last until morning. The wood pushes out. The iron pulls in. Neither of them gives up, and neither, if anyone asks, did I.
+If they are not back by Carting Day to see this page tucked where it belongs, say it plain at the Long Table: they went out on good wheels, carrying a light meant to last until morning. The wood pushes out. The iron pulls in. Neither of them gives up, and neither, if anyone asks, will I.
 
 *From "The Builders and the Breakers: Tradecraft of the Reaches"*

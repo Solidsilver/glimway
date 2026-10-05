@@ -18,8 +18,13 @@
       "tier": 2,
       "id": "tier-2",
       "name": "Workshop",
-      "purchasable": false,
-      "embers": 0
+      "purchasable": true,
+      "embers": 30,
+      "materials": {
+        "timber": 20,
+        "stone": 10,
+        "fiber": 8
+      }
     },
     {
       "tier": 3,
@@ -45,12 +50,33 @@
     "height": 10
   },
   "commons": {
-    "tileSize": 32,
-    "columns": 4,
-    "gap": 4,
-    "originX": 4,
-    "originY": 4
+    "tileSize": 16,
+    "columns": [
+      4,
+      28
+    ],
+    "rows": [
+      4,
+      26
+    ],
+    "rowPitch": 14
   },
+  "outdoorReserved": [
+    {
+      "x": 4,
+      "y": 0,
+      "w": 8,
+      "h": 6
+    }
+  ],
+  "indoorReserved": [
+    {
+      "x": 5,
+      "y": 9,
+      "w": 2,
+      "h": 1
+    }
+  ],
   "items": [
     {
       "id": "wooden-stool",
