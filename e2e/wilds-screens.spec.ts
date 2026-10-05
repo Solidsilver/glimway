@@ -111,7 +111,14 @@ for (const [device, vp] of sizes) {
     await waitForWilds(page)
     await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)
     const lantern = (await wilds(page)).lanterns.find((l) => l.own && !l.lit)!
-    await warp(page, chunkAreaId(Math.floor(lantern.x / 24), Math.floor(lantern.y / 24)), (lantern.x % 24) - 1, lantern.y % 24)
+    // An adjacent tile inside the lantern's chunk (the defeat spot can sit
+    // on a chunk edge, where tile 0's neighbour would be out of bounds).
+    const lx = lantern.x % 24
+    const ly = lantern.y % 24
+    const beside = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+      .map(([ox, oy]) => [lx + ox, ly + oy])
+      .find(([tx, ty]) => tx >= 1 && ty >= 1 && tx <= 22 && ty <= 22)!
+    await warp(page, chunkAreaId(Math.floor(lantern.x / 24), Math.floor(lantern.y / 24)), beside[0], beside[1])
     await waitForWilds(page)
     await expect(page.locator('.prompt')).toContainText(/lantern/i)
     await shot(page, `27-wilds-lantern-${device}`)
