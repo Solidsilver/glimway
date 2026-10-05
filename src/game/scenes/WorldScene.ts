@@ -381,6 +381,21 @@ export class WorldScene extends Phaser.Scene {
         this.hero.damagePlayer(n, this.hero.sprite.x - 1)
       }
       w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
+      // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
+      // checks the packed atlases give the loaders the pixels they had).
+      w.__fsDevTextureHash = (key: string) => {
+        if (!this.textures.exists(key)) return null
+        const src = this.textures.get(key).getSourceImage() as HTMLCanvasElement | HTMLImageElement
+        const c = document.createElement('canvas')
+        c.width = src.width
+        c.height = src.height
+        const ctx = c.getContext('2d', { willReadFrequently: true })!
+        ctx.drawImage(src, 0, 0)
+        const d = ctx.getImageData(0, 0, c.width, c.height).data
+        let h = 2166136261
+        for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619)
+        return `${c.width}x${c.height}:${(h >>> 0).toString(16)}`
+      }
       // Roll in a given direction from inside the frame loop, so playtests can
       // react to an aim lock without input latency.
       w.__fsDevDodge = (dx: number, dy: number) => this.hero.tryDodge(new Phaser.Math.Vector2(dx, dy))

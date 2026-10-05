@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
   RUNTIME_ART_BASE,
@@ -13,6 +13,9 @@ import {
 } from '../src/game/runtime-art.ts'
 
 const RUNTIME_PASS_DIR = fileURLToPath(
+  new URL('../assets/generated/runtime-pass/', import.meta.url),
+)
+const PUBLIC_DIR = fileURLToPath(
   new URL('../public/assets/fingersnap/runtime-pass/', import.meta.url),
 )
 
@@ -166,7 +169,7 @@ test('manifest header matches the runtime base URL and source sheets', () => {
     assert.equal(
       source.file,
       EXPECTED_SOURCE_FILES[source.key],
-      `${source.key} must load as ${source.key}.png (preload derives URLs from keys)`,
+      `${source.key} is ${source.key}.png (the atlas build reads it by key)`,
     )
     const png = pngHeader(`${RUNTIME_PASS_DIR}${source.file}`)
     assert.equal(png.width, source.width, `${source.file} width drift`)
@@ -261,4 +264,12 @@ test('compatibility aliases map onto delivered frames', () => {
       `${alias} references unknown frame ${frameKey}`,
     )
   }
+})
+
+test('the public copy ships only the manifest (the frames come packed)', () => {
+  assert.deepEqual(readdirSync(PUBLIC_DIR), ['manifest.json'])
+  assert.ok(
+    readFileSync(`${PUBLIC_DIR}manifest.json`).equals(readFileSync(`${RUNTIME_PASS_DIR}manifest.json`)),
+    'public manifest is the delivered one',
+  )
 })

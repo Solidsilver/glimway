@@ -13,7 +13,8 @@ import type Phaser from 'phaser'
 import { DECOR_ART, TANGLE_GROUND, valueNoise } from '../../lib/wilds/tangle.ts'
 import type { DecorKind } from '../../lib/wilds/types.ts'
 import { TILE } from '../textures.ts'
-import { blitFrame, commonsFrame, fitRect } from '../commons-pass.ts'
+import { blitFrame, commonsFrame } from '../commons-pass.ts'
+import { DELIVERED_DECOR, DELIVERED_DECOR_QUIET, decorFlipped, fitRect } from '../atlas-plan.ts'
 import type { WorldData } from '../worlds.ts'
 import { TANGLE_VARIANTS, tangleFrame } from './tangle-key.ts'
 import { lookForAtlas, wildsLook, type DecorPalette, type GroundPalette, type Leaf } from './wilds-looks.ts'
@@ -532,29 +533,15 @@ const DRAW: Record<DecorKind, Draw> = {
 }
 
 /**
- * Delivered Wilds props (Commons pass) that take a decor kind's place, by
- * look. They're fitted into the kind's frame (the generator lays decor out
- * by those sizes), feet on its base. The White Quiet keeps its frosted
- * code-drawn woods but for the pale drift-stone and white cairns; turncaps
- * always lean east, so they're never mirrored.
+ * Delivered Wilds props (Commons pass) take some decor kinds' place, by look
+ * (DELIVERED_DECOR in ../atlas-plan.ts), fitted into the kind's frame (the
+ * generator lays decor out by those sizes), feet on its base.
  */
-const DELIVERED_DECOR: Partial<Record<DecorKind, string>> = {
-  log: 'fallen-log',
-  boulder: 'mossy-boulder',
-  cairn: 'cairn',
-  turncaps: 'turncaps-east',
-  'ring-stump': 'iron-oak-stump',
-}
-const DELIVERED_DECOR_QUIET: Partial<Record<DecorKind, string>> = {
-  boulder: 'drift-stone',
-  cairn: 'cairn-white-stones',
-}
-
 function drawDelivered(scene: Phaser.Scene, c: C, kind: DecorKind, v: number, w: number, h: number, atlasKey: string): boolean {
   const table = atlasKey.endsWith('-Quiet') ? DELIVERED_DECOR_QUIET : DELIVERED_DECOR
   const frame = table[kind] ? commonsFrame(table[kind]!) : null
   if (!frame) return false
-  blitFrame(scene, frame, c, fitRect(frame.sourceRect, w, h), kind !== 'turncaps' && v % 2 === 1)
+  blitFrame(scene, frame, c, fitRect(frame.sourceRect, w, h), decorFlipped(kind, v))
   return true
 }
 

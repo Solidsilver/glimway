@@ -1,0 +1,316 @@
+/**
+ * Bake the delivered art into game-size packed atlases:
+ *
+ *   node scripts/build-atlases.ts        (npm run atlases)
+ *
+ * Reads the source sheets and manifests under assets/generated/ (never
+ * modified) and writes public/assets/fingersnap/packed/: see
+ * src/game/atlas-plan.ts for what each atlas holds and why.
+ *
+ * The baking runs in headless Chromium (Playwright's, already a dev
+ * dependency) with the same canvas calls the loaders used at boot — a
+ * native-size canvas, `imageSmoothingEnabled = false`, `drawImage(source,
+ * sourceRect, destinationRect)` — so the packed pixels are exactly what the
+ * game drew before. After writing, every frame is read back from the encoded
+ * PNG and compared with the canvas it came from; any difference fails the
+ * build. The output is committed (deploy builds don't need a browser), and
+ * tests/atlases.test.ts fails when an input changed without a re-run.
+ */
+import { createHash } from 'node:crypto'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { chromium } from '@playwright/test'
+import {
+  ATLAS_GENERATOR_VERSION,
+  BACKDROPS,
+  MAX_SCREEN_SCALE,
+  SCALED_ATLASES,
+  blitKey,
+  commonsBlitPlan,
+  type PackedManifest,
+  type PackedRect,
+} from '../src/game/atlas-plan.ts'
+import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
+import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url))
+const OUT = join(ROOT, 'public/assets/fingersnap/packed')
+const ORIGIN = 'http://bake.local/'
+
+const inputs: Record<string, string> = {}
+function read(path: string): Buffer {
+  const data = readFileSync(join(ROOT, path))
+  inputs[path] = createHash('sha256').update(data).digest('hex')
+  return data
+}
+const readJson = <T>(path: string): T => JSON.parse(read(path).toString('utf8')) as T
+
+/** One canvas to bake: a source crop sampled into a `w`×`h` canvas. */
+interface Job {
+  id: string
+  src: string
+  s: [number, number, number, number]
+  w: number
+  h: number
+  d: [number, number, number, number]
+  flipX?: boolean
+}
+
+interface AtlasFrameJson {
+  frame: { x: number; y: number; w: number; h: number }
+  rotated: boolean
+  trimmed: boolean
+  spriteSourceSize: { x: number; y: number; w: number; h: number }
+  sourceSize: { w: number; h: number }
+  pivot?: { x: number; y: number }
+}
+
+/** Shelf-pack `w`×`h` boxes, tallest first, `pad` px apart. */
+function pack(boxes: { id: string; w: number; h: number }[], pad: number): { size: [number, number]; at: Map<string, [number, number]> } {
+  const area = boxes.reduce((a, b) => a + (b.w + pad) * (b.h + pad), 0)
+  const width = Math.max(Math.ceil(Math.sqrt(area) * 1.15), ...boxes.map((b) => b.w + pad * 2))
+  const at = new Map<string, [number, number]>()
+  let x = pad
+  let y = pad
+  let row = 0
+  for (const b of [...boxes].sort((a, b) => b.h - a.h || b.w - a.w || a.id.localeCompare(b.id))) {
+    if (x + b.w + pad > width) {
+      x = pad
+      y += row + pad
+      row = 0
+    }
+    at.set(b.id, [x, y])
+    x += b.w + pad
+    row = Math.max(row, b.h)
+  }
+  return { size: [width, y + row + pad], at }
+}
+
+async function main(): Promise<void> {
+  // ---- plan every canvas
+  const commons = readJson<CommonsPassManifest>('assets/generated/commons-pass/manifest.json')
+  const commonsSrc = new Map(commons.sources.map((s) => [s.key, `assets/generated/commons-pass/${s.file}`]))
+  for (const path of commonsSrc.values()) read(path)
+  const commonsJobs: Job[] = commons.frames.map((f) => ({
+    id: f.key,
+    src: commonsSrc.get(f.source)!,
+    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
+    w: f.width,
+    h: f.height,
+    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
+  }))
+  const byKey = new Map(commons.frames.map((f) => [f.key, f]))
+  const blits = commonsBlitPlan(commons.frames)
+  const blitJobs: Job[] = blits.map((b) => {
+    const f = byKey.get(b.frame)!
+    return { id: blitKey(b.frame, b.w, b.h, b.flipX), src: commonsSrc.get(f.source)!, s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], w: b.w, h: b.h, d: [0, 0, b.w, b.h], flipX: b.flipX }
+  })
+
+  const runtime = readJson<RuntimeArtManifest>('assets/generated/runtime-pass/manifest.json')
+  const runtimeSrc = new Map(runtime.sources.map((s) => [s.key, `assets/generated/runtime-pass/${s.file}`]))
+  for (const path of runtimeSrc.values()) read(path)
+  const runtimeJobs: Job[] = runtime.frames.map((f) => ({
+    id: f.key,
+    src: runtimeSrc.get(f.source)!,
+    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
+    w: f.width,
+    h: f.height,
+    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
+  }))
+
+  // The terrain tileset createFingersnapTerrain built: 16 named cells → 4×4 of 32 px.
+  const expansion = readJson<{ terrain: { tiles: Record<string, string> } }>('assets/generated/expansion/manifest.json')
+  const terrainAtlas = readJson<{ frames: Record<string, AtlasFrameJson> }>('assets/generated/expansion/fingersnap-terrain.atlas.json')
+  read('assets/generated/expansion/fingersnap-terrain.png')
+  const TILE = 32
+  const terrainJobs: Job[] = Array.from({ length: 16 }, (_, i) => {
+    const c = terrainAtlas.frames[expansion.terrain.tiles[i]].frame
+    return { id: `cell-${i}`, src: 'assets/generated/expansion/fingersnap-terrain.png', s: [c.x, c.y, c.w, c.h], w: TILE, h: TILE, d: [0, 0, TILE, TILE] }
+  })
+
+  // GPU-scaled atlases: each group at its largest on-screen size (never above source).
+  const scaled = SCALED_ATLASES.map((plan) => {
+    const atlas = readJson<{ frames: Record<string, AtlasFrameJson> }>(plan.json)
+    read(plan.source)
+    const frames: { name: string; k: number; f: AtlasFrameJson }[] = []
+    for (const [name, f] of Object.entries(atlas.frames)) {
+      const g = plan.groups.find((gr) => gr.frames.test(name))
+      if (!g) throw new Error(`${plan.key}: no display size for frame ${name}`)
+      const ref = atlas.frames[g.ref].frame
+      const screen = g.screen ?? MAX_SCREEN_SCALE
+      const k = Math.min(1, g.height ? (screen * g.height) / ref.h : (screen * g.width!) / ref.w)
+      frames.push({ name, k, f })
+    }
+    const jobs: Job[] = frames.map(({ name, k, f }) => {
+      const w = Math.max(1, Math.round(f.frame.w * k))
+      const h = Math.max(1, Math.round(f.frame.h * k))
+      return { id: name, src: plan.source, s: [f.frame.x, f.frame.y, f.frame.w, f.frame.h], w, h, d: [0, 0, w, h] }
+    })
+    return { plan, frames, jobs }
+  })
+
+  for (const b of BACKDROPS) read(b.source)
+
+  // ---- bake in Chromium
+  const browser = await chromium.launch()
+  const page = await browser.newPage()
+  await page.route(`${ORIGIN}**`, (route) => {
+    const path = decodeURIComponent(new URL(route.request().url()).pathname.slice(1))
+    if (path === '') return route.fulfill({ body: '<!doctype html><title>bake</title>', contentType: 'text/html' })
+    route.fulfill({ body: readFileSync(join(ROOT, path)), contentType: path.endsWith('.png') ? 'image/png' : 'application/octet-stream' })
+  })
+  await page.goto(ORIGIN)
+
+  /** Bake jobs, pack them, encode, read back and verify. Returns PNG bytes. */
+  const bake = async (jobs: Job[], positions: Map<string, [number, number]>, size: [number, number]): Promise<Buffer> => {
+    const placed = jobs.map((j) => ({ ...j, at: positions.get(j.id)! }))
+    const result = await page.evaluate(
+      async ({ placed, size, origin }) => {
+        const images = new Map<string, HTMLImageElement>()
+        const load = (url: string) =>
+          new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => resolve(img)
+            img.onerror = () => reject(new Error(`cannot load ${url}`))
+            img.src = url
+          })
+        for (const j of placed) if (!images.has(j.src)) images.set(j.src, await load(origin + j.src))
+        const atlas = document.createElement('canvas')
+        atlas.width = size[0]
+        atlas.height = size[1]
+        const actx = atlas.getContext('2d')!
+        actx.imageSmoothingEnabled = false
+        const canvases: HTMLCanvasElement[] = []
+        for (const j of placed) {
+          // Exactly the loaders' blit (commons-pass blitFrame / runtime-art / terrain).
+          const c = document.createElement('canvas')
+          c.width = j.w
+          c.height = j.h
+          const ctx = c.getContext('2d')!
+          ctx.imageSmoothingEnabled = false
+          if (j.flipX) {
+            ctx.translate(j.d[0] * 2 + j.d[2], 0)
+            ctx.scale(-1, 1)
+          }
+          ctx.drawImage(images.get(j.src)!, j.s[0], j.s[1], j.s[2], j.s[3], j.d[0], j.d[1], j.d[2], j.d[3])
+          actx.drawImage(c, j.at[0], j.at[1])
+          canvases.push(c)
+        }
+        const url = atlas.toDataURL('image/png')
+        // Read the encoded atlas back the way the loaders do (copy a rect into
+        // a fresh canvas) and compare with the canvas each frame came from.
+        const back = await load(url)
+        const bad: string[] = []
+        placed.forEach((j, i) => {
+          const c = document.createElement('canvas')
+          c.width = j.w
+          c.height = j.h
+          const ctx = c.getContext('2d', { willReadFrequently: true })!
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(back, j.at[0], j.at[1], j.w, j.h, 0, 0, j.w, j.h)
+          const a = ctx.getImageData(0, 0, j.w, j.h).data
+          const b = canvases[i].getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, j.w, j.h).data
+          for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) { bad.push(j.id); break }
+        })
+        return { url, bad }
+      },
+      { placed, size, origin: ORIGIN },
+    )
+    if (result.bad.length) throw new Error(`encoded atlas differs from its canvases: ${result.bad.join(', ')}`)
+    return Buffer.from(result.url.slice(result.url.indexOf(',') + 1), 'base64')
+  }
+
+  const rects = (jobs: Job[], at: Map<string, [number, number]>): Record<string, PackedRect> =>
+    Object.fromEntries(jobs.map((j) => [j.id, [...at.get(j.id)!, j.w, j.h] as PackedRect]))
+
+  rmSync(OUT, { recursive: true, force: true })
+  mkdirSync(OUT, { recursive: true })
+
+  // Canvas packs: frames are copied out whole, so no padding is needed.
+  const cAll = [...commonsJobs, ...blitJobs]
+  const cPack = pack(cAll.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  writeFileSync(join(OUT, 'commons.png'), await bake(cAll, cPack.at, cPack.size))
+  const rPack = pack(runtimeJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  writeFileSync(join(OUT, 'runtime.png'), await bake(runtimeJobs, rPack.at, rPack.size))
+  const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
+  writeFileSync(join(OUT, 'terrain.png'), await bake(terrainJobs, tAt, [TILE * 4, TILE * 4]))
+
+  // GPU-scaled atlases: 2 px apart so scaled sampling never reaches a neighbour.
+  const atlases: PackedManifest['atlases'] = {}
+  for (const { plan, frames, jobs } of scaled) {
+    const p = pack(jobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 2)
+    writeFileSync(join(OUT, `${plan.key}.png`), await bake(jobs, p.at, p.size))
+    const out: Record<string, AtlasFrameJson> = {}
+    for (const { name, k, f } of frames) {
+      const j = jobs.find((x) => x.id === name)!
+      const [x, y] = p.at.get(name)!
+      const sx = Math.round(f.spriteSourceSize.x * k)
+      const sy = Math.round(f.spriteSourceSize.y * k)
+      out[name] = {
+        frame: { x, y, w: j.w, h: j.h },
+        rotated: false,
+        trimmed: f.trimmed,
+        spriteSourceSize: { x: sx, y: sy, w: j.w, h: j.h },
+        sourceSize: { w: Math.max(Math.round(f.sourceSize.w * k), sx + j.w), h: Math.max(Math.round(f.sourceSize.h * k), sy + j.h) },
+        ...(f.pivot ? { pivot: f.pivot } : {}),
+      }
+    }
+    writeFileSync(
+      join(OUT, `${plan.key}.json`),
+      JSON.stringify({ frames: out, meta: { app: 'Fingersnap build-atlases', image: `${plan.key}.png`, format: 'RGBA8888', size: { w: p.size[0], h: p.size[1] }, scale: '1' } }, null, 1) + '\n',
+    )
+    atlases[plan.key] = { image: `${plan.key}.png`, json: `${plan.key}.json` }
+  }
+
+  // Illustrations: the largest size they're shown at, as WebP (they're
+  // painted scenes drawn smoothed, never pixel art).
+  const backdrops: Record<string, string> = {}
+  for (const b of BACKDROPS) {
+    const url = await page.evaluate(
+      async ({ src, width, origin }) => {
+        const img = new Image()
+        img.src = origin + src
+        await img.decode()
+        const w = Math.min(width, img.naturalWidth)
+        const h = Math.round((img.naturalHeight * w) / img.naturalWidth)
+        const c = document.createElement('canvas')
+        c.width = w
+        c.height = h
+        const ctx = c.getContext('2d')!
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(img, 0, 0, w, h)
+        return c.toDataURL('image/webp', 0.9)
+      },
+      { src: b.source, width: b.width, origin: ORIGIN },
+    )
+    if (!url.startsWith('data:image/webp')) throw new Error('this Chromium cannot encode WebP')
+    const file = `${b.key}.webp`
+    writeFileSync(join(OUT, file), Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'))
+    backdrops[b.key] = file
+  }
+  await browser.close()
+
+  const manifest: PackedManifest & { generatorVersion: number; plan: unknown } = {
+    version: 1,
+    generator: 'scripts/build-atlases.ts',
+    generatorVersion: ATLAS_GENERATOR_VERSION,
+    inputs: Object.fromEntries(Object.entries(inputs).sort(([a], [b]) => a.localeCompare(b))),
+    // What the plan asked for (the staleness test re-derives it).
+    plan: {
+      maxScreenScale: MAX_SCREEN_SCALE,
+      blits: blits.map((b) => blitKey(b.frame, b.w, b.h, b.flipX)).sort(),
+      scaled: Object.fromEntries(scaled.map(({ plan, frames }) => [plan.key, Object.fromEntries(frames.map(({ name, k }) => [name, Number(k.toFixed(6))]))])),
+      backdrops: BACKDROPS,
+    },
+    commons: { image: 'commons.png', size: cPack.size, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
+    runtime: { image: 'runtime.png', size: rPack.size, frames: rects(runtimeJobs, rPack.at) },
+    terrain: { image: 'terrain.png', size: [TILE * 4, TILE * 4] },
+    atlases,
+    backdrops,
+  }
+  writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, 16 terrain cells, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
+}
+
+await main()

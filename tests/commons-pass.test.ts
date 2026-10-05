@@ -6,7 +6,6 @@ import {
   COMMONS_ART_PREFIX,
   COMMONS_PASS_BASE,
   COMMONS_PASS_MANIFEST_KEY,
-  COMMONS_PASS_SOURCES,
   COMMONS_RESIDENT_PORTRAITS,
   artKey,
   createCommonsPass,
@@ -57,15 +56,12 @@ test('commons-pass exposes its loader and load keys', () => {
   assert.deepEqual(manifest.pendingSheets, [])
 })
 
-test('the source sheets the loader names are the manifest’s, as transparent RGBA PNGs of the stated size', () => {
+test('the manifest’s 21 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
   assert.equal(manifest.sources.length, 21)
-  assert.deepEqual(Object.fromEntries(manifest.sources.map((s) => [s.key, s.file])), COMMONS_PASS_SOURCES)
   for (const s of manifest.sources) {
-    const h = pngHeader(`${PUBLIC_DIR}${s.file}`)
+    const h = pngHeader(`${SOURCE_DIR}${s.file}`)
     assert.deepEqual([h.width, h.height], [s.width, s.height], s.file)
     assert.equal(h.colorType, 6, `${s.file} is RGBA`)
-    // The shipped sheet is the delivered one, byte for byte.
-    assert.ok(readFileSync(`${PUBLIC_DIR}${s.file}`).equals(readFileSync(`${SOURCE_DIR}${s.file}`)), `${s.file} unchanged`)
   }
 })
 
@@ -187,7 +183,7 @@ test('path edges: grass beside a path takes the overlay with material on that si
   }
 })
 
-test('the public copy ships only what the game loads: the sheets and the manifest', () => {
-  const shipped = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(shipped, [...Object.values(COMMONS_PASS_SOURCES), 'manifest.json'].sort())
+test('the public copy ships only the manifest (the frames come packed)', () => {
+  assert.deepEqual(readdirSync(PUBLIC_DIR), ['manifest.json'])
+  assert.ok(readFileSync(`${PUBLIC_DIR}manifest.json`).equals(readFileSync(`${SOURCE_DIR}manifest.json`)), 'public manifest is the delivered one')
 })

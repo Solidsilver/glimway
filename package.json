@@ -17,7 +17,8 @@
     "vectors": "node scripts/backend-vectors.ts",
     "vectors:wilds": "node scripts/wilds-vectors.ts",
     "vectors:calendar": "node scripts/calendar-vectors.ts",
-    "papers": "node scripts/papers.ts"
+    "papers": "node scripts/papers.ts",
+    "atlases": "node scripts/build-atlases.ts"
   },
   "dependencies": {
     "@fontsource-variable/nunito": "^5.3.0",

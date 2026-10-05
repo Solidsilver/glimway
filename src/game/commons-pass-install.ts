@@ -1,5 +1,8 @@
 import type Phaser from 'phaser'
-import { artKey, blitFrame, commonsFrame, fitRect, type CommonsPassFrame } from './commons-pass.ts'
+import { artKey, blitFrame, commonsFrame, type CommonsPassFrame } from './commons-pass.ts'
+import { decorationLayout } from './atlas-plan.ts'
+
+export { decorationLayout }
 import { ROOM_H, ROOM_W } from './commons-art.ts'
 
 /**
@@ -51,18 +54,6 @@ export const COMMONS_PLACEHOLDER_FRAMES: Readonly<Record<string, string>> = {
   'paper-folded': 'paper-folded-0',
   'paper-scroll': 'paper-scroll-0',
   'paper-slate': 'paper-slate-0',
-}
-
-/**
- * Two-tile pieces whose delivered slot squeezes the art into one tile's
- * width (bookshelf 16 of 32 px, hearth 15, tool rack 21): refit the measured
- * crop to the footprint's width, rising above it like the placeholders did.
- * Max height in px (footprint height + rise).
- */
-const DECO_REFIT: Readonly<Record<string, number>> = {
-  bookshelf: 32,
-  'stone-hearth': 32,
-  'tool-rack': 26,
 }
 
 function replaceCanvas(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement): void {
@@ -216,37 +207,6 @@ function installRoom(scene: Phaser.Scene): void {
  */
 export function floorTileOrientation(column: number, row: number): { flipX: boolean; flipY: boolean } {
   return { flipX: (column & 1) === 1, flipY: (row & 1) === 1 }
-}
-
-/**
- * Where a decoration's delivered art sits on its texture (anchored
- * bottom-left at the footprint's base, as `decoKey` textures are). The
- * delivered slots are footprint-sized; the two-tile pieces in DECO_REFIT are
- * refitted to the footprint's width. A quarter-turned view (90/270) is the
- * same front view fitted to the turned footprint.
- */
-export function decorationLayout(
-  id: string,
-  frame: Pick<CommonsPassFrame, 'width' | 'height' | 'sourceRect' | 'destinationRect'>,
-  footprint: [number, number],
-  quarter: boolean,
-): { width: number; height: number; dest: { x: number; y: number; w: number; h: number } } {
-  const [fw, fh] = quarter ? [footprint[1], footprint[0]] : footprint
-  const w = fw * 16
-  const h = fh * 16
-  const refit = DECO_REFIT[id]
-  if (!quarter && refit) {
-    const height = Math.max(h, refit)
-    return { width: w, height, dest: fitRect(frame.sourceRect, w, height) }
-  }
-  if (!quarter && frame.width === w) {
-    const height = Math.max(h, frame.height)
-    return { width: w, height, dest: { ...frame.destinationRect, y: frame.destinationRect.y + height - frame.height } }
-  }
-  const height = Math.max(h, refit ?? h)
-  const boxH = Math.min(height, Math.max(h, frame.destinationRect.h))
-  const r = fitRect(frame.sourceRect, w, boxH)
-  return { width: w, height, dest: { ...r, y: r.y + height - boxH } }
 }
 
 function installDecoration(scene: Phaser.Scene, id: string, footprint: [number, number]): void {
