@@ -72,7 +72,7 @@ func loadHome(ctx context.Context, tx *sql.Tx, id string) (homeView, error) {
 		g := content.HomeRules.Indoor
 		h.Indoor = &g
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation FROM homestead_items WHERE habitica_id=? ORDER BY id", id)
+	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation FROM homestead_items WHERE habitica_id=? AND location='inventory' ORDER BY id", id)
 	if err != nil {
 		return h, err
 	}
@@ -213,6 +213,9 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "tier-unavailable")
 			}
 			if err = debitEmbers(ctx, tx, s, content.HomeRules.Tiers[*req.Tier].Embers, "homestead-upgrade", content.HomeRules.Tiers[*req.Tier].ID, now); err != nil {
+				return nil, err
+			}
+			if err = debitMaterials(ctx, tx, s, content.HomeRules.Tiers[*req.Tier].Materials, 1, "homestead-upgrade", content.HomeRules.Tiers[*req.Tier].ID, now); err != nil {
 				return nil, err
 			}
 			_, err = tx.ExecContext(ctx, "UPDATE homesteads SET tier=? WHERE habitica_id=?", *req.Tier, s.HabiticaID)

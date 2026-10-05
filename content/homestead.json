@@ -18,8 +18,13 @@
       "tier": 2,
       "id": "tier-2",
       "name": "Workshop",
-      "purchasable": false,
-      "embers": 0
+      "purchasable": true,
+      "embers": 30,
+      "materials": {
+        "timber": 20,
+        "stone": 10,
+        "fiber": 8
+      }
     },
     {
       "tier": 3,

@@ -1,0 +1,153 @@
+{
+  "utilityItems": [
+    {
+      "id": "lamp-wick",
+      "name": "Lamp Wick"
+    },
+    {
+      "id": "oilcloth-wrap",
+      "name": "Oilcloth Wrap"
+    },
+    {
+      "id": "wooden-peg",
+      "name": "Wooden Peg"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "craft-wooden-stool",
+      "name": "Wooden Stool",
+      "minTier": 2,
+      "materials": {
+        "timber": 3
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "wooden-stool",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-potted-fern",
+      "name": "Potted Fern",
+      "minTier": 2,
+      "materials": {
+        "fiber": 3,
+        "stone": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "potted-fern",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-wash-basin",
+      "name": "Wash Basin",
+      "minTier": 2,
+      "materials": {
+        "stone": 4
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "wash-basin",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-woven-basket",
+      "name": "Woven Basket",
+      "minTier": 2,
+      "materials": {
+        "fiber": 4
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "woven-basket",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-oak-table",
+      "name": "Oak Table",
+      "minTier": 2,
+      "materials": {
+        "timber": 8,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "oak-table",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-reading-chair",
+      "name": "Reading Chair",
+      "minTier": 2,
+      "materials": {
+        "timber": 6,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "reading-chair",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-amber-sconce",
+      "name": "Amber Sconce",
+      "minTier": 2,
+      "materials": {
+        "stone": 3,
+        "amber": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "amber-sconce",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-lamp-wick",
+      "name": "Lamp Wick",
+      "minTier": 2,
+      "materials": {
+        "fiber": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "lamp-wick",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-oilcloth-wrap",
+      "name": "Oilcloth Wrap",
+      "minTier": 2,
+      "materials": {
+        "fiber": 4,
+        "amber": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "oilcloth-wrap",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-wooden-peg",
+      "name": "Wooden Peg",
+      "minTier": 2,
+      "materials": {
+        "timber": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "wooden-peg",
+        "qty": 1
+      }
+    }
+  ]
+}

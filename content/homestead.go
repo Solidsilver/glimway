@@ -11,11 +11,12 @@ type HomeGrid struct {
 	Height int `json:"height"`
 }
 type HomeTier struct {
-	Tier        int    `json:"tier"`
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Purchasable bool   `json:"purchasable"`
-	Embers      int    `json:"embers"`
+	Tier        int            `json:"tier"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Purchasable bool           `json:"purchasable"`
+	Embers      int            `json:"embers"`
+	Materials   map[string]int `json:"materials,omitempty"`
 }
 type HomeItem struct {
 	ID        string         `json:"id"`
@@ -47,7 +48,7 @@ func ValidateHomestead(h Homestead) error {
 		return bad
 	}
 	for i, t := range h.Tiers {
-		if t.Tier != i || t.ID != fmt.Sprintf("tier-%d", i) || t.Name == "" || t.Purchasable != (i == 1) || (i == 1 && t.Embers <= 0) || (i != 1 && t.Embers != 0) {
+		if t.Tier != i || t.ID != fmt.Sprintf("tier-%d", i) || t.Name == "" || t.Purchasable != (i == 1 || i == 2) || ((i == 1 || i == 2) && t.Embers <= 0) || ((i == 0 || i > 2) && t.Embers != 0) || (i == 2 && !ValidMaterialCosts(t.Materials)) || (i != 2 && len(t.Materials) != 0) {
 			return bad
 		}
 	}
