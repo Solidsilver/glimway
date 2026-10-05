@@ -158,7 +158,7 @@
         aria-label={ui.dialogueOpen ? 'Continue' : talkMode ? ui.prompt.label : kit.basicName}
       >
         <Icon name={ui.dialogueOpen ? 'check' : talkMode ? 'sparkle' : 'sword'} size={28} />
-        <span class="cap">{ui.dialogueOpen ? 'Next' : talkMode ? 'Talk' : kit.basicName}</span>
+        <span class="cap">{ui.dialogueOpen ? 'Next' : talkMode ? (ui.prompt.verb ?? 'Talk') : kit.basicName}</span>
       </button>
     </div>
   </div>

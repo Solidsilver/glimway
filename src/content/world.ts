@@ -64,17 +64,17 @@ export const ITEM_INFO: Record<string, ItemInfo> = {
   'field-journal': {
     name: 'Field Journal',
     icon: 'book',
-    blurb: 'Half-full of other people\u2019s roads. Press J to read it.',
+    blurb: 'Half-full of other people’s roads, all in pencil. Out here the ground forgets; paper shouldn’t. Press J to read it.',
   },
   'hearthwick-map': {
     name: 'Map of Hearthwick',
     icon: 'map',
-    blurb: 'Hand-inked by a carter. The east gate is circled twice.',
+    blurb: 'Sketched in pencil by a Low Road carter, because ink lies within a season. The east gate is circled twice.',
   },
   'ember-charm': {
     name: 'Ember Charm',
     icon: 'ember',
-    blurb: 'Still warm from the Ashwatch chest. Your strikes find the gaps more often.',
+    blurb: 'A chip of hearth-grade amber in a twist of wire, still warm from the Ashwatch chest. Your strikes find the gaps more often.',
   },
 };
 
@@ -83,7 +83,7 @@ export const DISCOVERY_INFO: Record<string, ItemInfo> = {
   'route-marker': {
     name: 'The Faded Route Marker',
     icon: 'stone',
-    blurb: 'A lichen-eaten waystone in Brackenwood, still pointing at the hill.',
+    blurb: 'A Brackenwood route stone furred with keeper’s moss, which only grows where a lamp burned for years. It still points at the hill.',
   },
   'old-route-marker': {
     name: 'The Closure Mark',
@@ -108,23 +108,23 @@ export const locations: Record<AreaId, LocationInfo> = {
   village: {
     name: 'Hearthwick',
     eyebrow: 'The village of',
-    tagline: 'Someone here is always mending something.',
+    tagline: 'The land forgets what it isn’t reminded of. Hearthwick reminds it.',
     description:
-      'A hillside village of patched slate roofs, kitchen gardens, and a square where someone is always mending something. The dark lantern road begins at the east gate.',
+      'A hillside village of patched slate roofs at the top of the Low Road. Every window keeps a lamp, and one has kept it lit all night for thirty years. The dark lantern road starts at the east gate.',
   },
   woodland: {
     name: 'Brackenwood Path',
     eyebrow: 'The old lantern road',
-    tagline: 'Cool shade, leaning stones — and things that hop. Watch for the wind-up.',
+    tagline: 'Iron-oak shade, leaning route stones — and things that hop. Watch for the wind-up.',
     description:
-      'A soft trail under oak and bracken, cool even at midday. Old route stones lean in the moss, and the canopy keeps the east gate visible behind you.',
+      'A soft trail under iron-oak and bracken, where the lantern road once ran east toward Sallow Ford. Route stones lean in the moss, and the lamps on their posts have been cold for thirty years.',
   },
   ruin: {
     name: 'Ashwatch Ruin',
     eyebrow: 'Beneath the hilltop shrine',
-    tagline: 'Something made of stone is still keeping watch.',
+    tagline: 'Something made of stone is still holding its pose.',
     description:
-      'A roofless waystation of grey blocks, heather pushing through the floor. The hilltop lantern shrine stands beyond its broken arch, watched over by a stone warden.',
+      'The Keeper’s old waystation: grey blocks, heather through the floor, a route stone in the alcove. Past the broken arch the hilltop shrine waits, and a stone warden stands on the path, arms out.',
   },
 };
 
@@ -133,8 +133,12 @@ type DialogueRule = Dialogue & { forStages: QuestStage[] };
 /**
  * NPC and interaction ids used by the runtime. This list is the agreement
  * point with docs/runtime-contract.md: mara, pip, orrin, clue, lantern.
- * The quest event 'defeat-guardian' is fired by runtime encounter logic, not
- * by dialogue.
+ * The quest event 'defeat-guardian' is fired by runtime encounter logic (the
+ * warden settling), not by dialogue.
+ *
+ * Canon: docs/lore/chronicle.md. The first quest hints at the village's
+ * secrets (Mara's unreadable last page, the crooked signpost, Pip's notches)
+ * and reveals none of them.
  */
 const DIALOGUE: Record<string, DialogueRule[]> = {
   mara: [
@@ -142,21 +146,21 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['new'],
       speaker: 'Mara',
       lines: [
-        'You must be the traveler the carters mentioned. Welcome to Hearthwick — mind the ladder, Orrin is mending the signpost again.',
-        "I'm Mara. My grandmother kept the lantern road when it still carried people home after dark. Now half the route stones are mossed over and the hilltop lantern has been cold since before I was born.",
-        'I would go myself, but the lamp oil ledger does not keep itself, and someone has to be here when the carters come through. Would you walk the old road for me? Brackenwood path, through the ruin, up to the shrine. Bring back whatever you find.',
+        "You came up the Low Road? Then the carters weren't fibbing. Welcome to Hearthwick. Mind the ladder — Orrin is resetting the signpost again.",
+        "I'm Mara Hale. My grandmother Wenna kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years. Longer than I've been alive.",
+        "I'd walk it myself, but the oil ledger doesn't keep itself. Would you go? East gate, Brackenwood, the ruin, up to the shrine. Tell me what's left of it.",
       ],
       event: 'accept',
       choices: [
         {
           text: 'Of course. Point me at the gate.',
-          reply: ['East gate, past the milestone. Thank you — truly. Grandmother would have liked you.'],
+          reply: ['East gate, past the milestone. Thank you. Truly. And if you mark anything down, use pencil. The ground out there forgets.'],
         },
         {
           text: '…Is there a reward?',
           reply: [
-            'Ha! A lit road, the gratitude of a small village, and as much of Orrin\u2019s complaining as you can stand.',
-            'Also soup. There is always soup. East gate, past the milestone.',
+            'Ha! A lit hill, a village in your debt, and as much of Orrin’s complaining as you can stand.',
+            "Also soup. Soup's on the ledger for anyone working for the village. East gate, past the milestone.",
           ],
         },
       ],
@@ -165,7 +169,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['accepted'],
       speaker: 'Mara',
       lines: [
-        'The east gate is the start of it. Follow the Brackenwood path and keep an eye out for the old route stones — my grandmother swore they still point the way.',
+        "East gate, then the Brackenwood path. Follow the route stones. The moss on them grows where lamps burned, and Gran swore they still point true.",
         'If you get turned around, ask Pip. That child knows every shortcut, mostly because they have taken all of them.',
       ],
     },
@@ -173,24 +177,25 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['clue-found'],
       speaker: 'Mara',
       lines: [
-        'A rubbing of the route marker — look at that, the pattern is still legible. Grandmother drew the same one in the front of her ledger.',
-        'So the road was not abandoned, it was closed. Something about a warden on the shrine path. Be careful up there — careful, not slow.',
+        'A rubbing of the Ashwatch stone. Two weaves and a break. Gran drew that mark inside the ledger cover and never once said what it meant.',
+        "So the road wasn't abandoned. She closed it. On purpose. ...Noted.",
+        "There's a warden on the shrine path, Orrin says. Be careful up there. Careful, not slow.",
       ],
     },
     {
       forStages: ['guardian-defeated'],
       speaker: 'Mara',
       lines: [
-        "You bested the stone warden? Orrin is going to pretend he never doubted you, but he did, loudly, over breakfast.",
-        'The shrine is just past the arch. If the lamp still has oil in it, the flint and steel are on the ledge where they have always been. Light it. Let us see the road again.',
+        "You settled the warden? Orrin is going to pretend he never doubted you. He did. Loudly. Over breakfast.",
+        "The shrine is past the arch. The flint should be on the ledge where it's always been. Light it. I want to see the hill the way she saw it.",
       ],
     },
     {
       forStages: ['lantern-lit'],
       speaker: 'Mara',
       lines: [
-        "Is that — I can see it from here. A point of gold on the hill, just like in the stories. Come inside, tell me everything.",
-        "You did it. The road is lit. When you are ready, meet me in the square — I want to hear it all from the beginning.",
+        "I can see it from here. A point of gold on the hill, right where her ledger says. Thirty years dark, and one traveler. I'm glad. I am.",
+        "I just need to sit a minute. Then come find me in the square. I want all of it, from the beginning.",
       ],
       event: 'return-village',
     },
@@ -198,8 +203,9 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['complete'],
       speaker: 'Mara',
       lines: [
-        'There. The square has not looked like this in thirty years — lantern light on the slate, and everyone pretending they are not staying out late to enjoy it.',
-        'Grandmother kept a line in her ledger: "A road is a promise people keep renewing." I think she would be glad to know it was renewed by a traveler who just kept walking.',
+        "The square hasn't looked like this in thirty years. Lamp on the post, and half the village pretending they aren't staying out late.",
+        "Gran kept a line in the ledger: 'A road is a promise people keep renewing.' It took someone off the Low Road to renew it. Noted, Gran.",
+        "There's a page at the back of her ledger I still can't read. Keeper's script. Not tonight. But I think I'm nearer to wanting to.",
       ],
     },
   ],
@@ -208,15 +214,16 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['new'],
       speaker: 'Pip',
       lines: [
-        "New face! I'm Pip. I run messages between here and the mill, which is the fastest job in the world and also the only one.",
-        "If you're heading into Brackenwood, do not eat the red berries no matter what anyone tells you. They are not poisonous, they just taste like soap and you will be annoyed for hours.",
+        "New face! I'm Pip Penhallow, runner. I run messages between the square and the mill, which is the fastest job in the world and also the only one.",
+        "Going into Brackenwood? Don't eat the red berries. Not poison, they just taste like soap. And wash anything you pick. Foxes walk on it.",
       ],
     },
     {
       forStages: ['accepted'],
       speaker: 'Pip',
       lines: [
-        "You're walking the old lantern road! Brilliant. Halfway along there is a fallen oak with a notch cut in it — that's where the path forks. Take the uphill side.",
+        "You're walking the old road! Halfway along there's a fallen oak with a notch cut in it. That's the fork. Take the uphill side.",
+        "Someone cut notches at every fork out there, all the same height. Not woodpeckers. Woodpeckers can't count. They're on my Pencil Map.",
         'I would come with you, but I have a delivery, and also Mara gave me a look. You know the look.',
       ],
     },
@@ -224,15 +231,16 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['clue-found'],
       speaker: 'Pip',
       lines: [
-        'Is that a rubbing? Let me see, let me see. The lines look like the ones on the mill sign, all curly at the ends.',
-        "A stone warden. That's what the miller's dad used to call it. He said it is not mean, it is just still doing its job. Which is a lot like Orrin, actually.",
+        "A rubbing! Two weaves and a break! That's the skipping game. 'Warden, Warden, do not frown, show the rubbing and sit down!'",
+        "You don't run at it. That's how you get caught. Wait till it lunges and stops to find its feet, creep in close, hold the rubbing up.",
+        "Hitting it is pointless, scientifically. It's not a monster, it's a jointed frame with a latch. I wrote that in my copybook. Orrin glared.",
       ],
     },
     {
       forStages: ['guardian-defeated'],
       speaker: 'Pip',
       lines: [
-        "You actually fought it? On purpose? I once ran past it and it did not even turn around and that was the most exciting day of my year.",
+        "You settled it? It sat down? In the game the Leader has to groan and sit and be a stone. Did it groan? Please say it groaned.",
         'Go light the lantern. I want to see it from the mill roof. I want to see it from the moon, but the mill roof is a start.',
       ],
     },
@@ -240,16 +248,16 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['lantern-lit'],
       speaker: 'Pip',
       lines: [
-        "There's a light on the hill! There is a light on the hill! I have to tell everyone, but first — did it make a sound? Lanterns in stories always make a sound.",
-        "I'm going to run the message route twice tonight just to look at it. Maybe three times. Do not tell Mara about the third time.",
+        "There's a light on the hill! There is a LIGHT on the HILL! Did it make a sound? Lanterns in stories always make a sound.",
+        "I'm running the message route twice tonight just to look at it. Maybe three times. Don't tell Mara about the third time.",
       ],
     },
     {
       forStages: ['complete'],
       speaker: 'Pip',
       lines: [
-        'People keep walking up the east gate road just to stand under the lantern glow and act like they are checking the fence. I have counted nine of them.',
-        "I am collecting string for a light-line of my own, between the signpost and the well. Orrin says the knotwork is wrong. The knotwork is fine.",
+        "People keep walking to the east gate to stand in the glow and pretend they're checking the fence. Nine so far. I'm counting for science.",
+        "Mum says Uncle Joss dented his whistle so you could hear it across the square. Mine's still round. The right note hasn't found me yet.",
       ],
     },
   ],
@@ -258,48 +266,49 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['new'],
       speaker: 'Orrin',
       lines: [
-        "Mind the shavings. And the ladder. And the signpost — it leans because the frost heaves the post every winter, not because I fitted it badly.",
-        "I'm Orrin. Built bridges for thirty years, now I build bridges and also signposts, and complain about both. You here about the lantern road? Hm. Thought someone would come eventually.",
+        'Mind the shavings. And the ladder. The signpost? Three fingers off plumb. Frost heaves it. I reset it every spring. Same lean. Don’t ask.',
+        "I'm Orrin. Built every bridge within a day of here, and complained about all of them. Here about the lantern road? Hm. Thought someone would come.",
       ],
     },
     {
       forStages: ['accepted'],
       speaker: 'Orrin',
       lines: [
-        "The warden on the shrine path is stone, and it is not cruel — it is dutiful, which is harder to deal with. It tests whether you know why the road was closed.",
-        "Take a rubbing of the route marker before you climb. The old pattern is the point. Anyone can wave a sword; the road wanted people who paid attention.",
+        "There's a warden on the shrine path. Drift-stone. Not cruel. Dutiful, which is worse. It doesn't care who you are. It cares where it stands.",
+        "Take a rubbing of the route stone in the ruin before you climb. The pattern is the point. Anyone can swing a stick. The road wanted people who looked.",
       ],
     },
     {
       forStages: ['clue-found'],
       speaker: 'Orrin',
       lines: [
-        "Let me see that rubbing. Aye — that is the closure mark, not a direction mark. Two weaves and a break. They closed the road on purpose after the winter of two storms.",
-        "Mara's grandmother wrote the same pattern in her ledger and never told a soul what it meant. Some people keep their promises quietly. Annoying habit. Good habit.",
+        "Let me see that. Aye. That's the closure mark, not a direction mark. Two weaves and a break. Cut after the Winter of Two Storms. Shut on purpose.",
+        "Don't bother hitting it. Stone doesn't mind. Show it that mark, up close, when it's stopped to find its feet. The break is the gap in its coat.",
+        "Mara's grandmother kept that mark in her ledger and never told a soul what it meant. Some people keep promises quietly. Annoying. Good, but annoying.",
       ],
     },
     {
       forStages: ['guardian-defeated'],
       speaker: 'Orrin',
       lines: [
-        "Huh. Thirty years that thing has been standing there and it took one traveler with a rubbing and a stubborn streak. I am not impressed. I am slightly impressed.",
-        "Go on then. Light the lamp. I will still be here, and the signpost will still lean, and that is fine.",
+        "Settled, is it. Thirty years on that path, and one traveler with a rubbing and a stubborn jaw. I'm not impressed. I'm slightly impressed.",
+        "...I'll go up tomorrow and look at it. Not to fuss. A man can look at his own — at a thing. Go on. Light the lamp.",
       ],
     },
     {
       forStages: ['lantern-lit'],
       speaker: 'Orrin',
       lines: [
-        "There is a light on the hill. Do not make a thing of it. I am not making a thing of it.",
-        "...I have a bracket in the workshop that would fit the square's old lamp post. Been saving it. Do not tell Mara I said that. It is going to be a surprise.",
+        "There's a light on the hill. Don't make a thing of it. I'm not making a thing of it.",
+        "...I've a bracket in the workshop that'd fit the square's old lamp post. Been keeping it. Don't tell Mara. It's going to be a surprise.",
       ],
     },
     {
       forStages: ['complete'],
       speaker: 'Orrin',
       lines: [
-        'Bracket held. Lamp post in the square is lit again, and the signpost is still leaning, and the world is in its proper order.',
-        "You did right by this road, traveler. If you ever need a bridge built — or a bridge complained about — you know where I am.",
+        'Bracket held. Lamp post in the square is lit again, the signpost still leans, and the world is in its proper order.',
+        "You did right by this road. If you ever need a bridge built — or complained about — you know where I am. Measure in fingers. They're yours.",
       ],
     },
   ],
@@ -308,15 +317,15 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['new', 'clue-found', 'guardian-defeated', 'lantern-lit', 'complete'],
       speaker: 'Route Marker',
       lines: [
-        'A weathered route stone, its carved pattern half swallowed by lichen. Without knowing what the pattern means, it is hard to make out where the carving ends and the wear begins.',
+        "A weathered route stone, its pattern furred with keeper's moss. Without knowing what you're looking for, it's hard to say where carving ends and wear begins.",
       ],
     },
     {
       forStages: ['accepted'],
       speaker: 'Route Marker',
       lines: [
-        'A weathered route stone stands here, its carved pattern half swallowed by lichen — but the weave of lines is still deep enough to copy.',
-        'You press paper to the stone and work charcoal over it. Two weaves and a break: a closure mark, pointing not along the road, but at why it was shut.',
+        "A route stone stands in the alcove, its pattern half under keeper's moss — but the cut lines are still deep enough to copy.",
+        'You press paper to the stone and work charcoal over it. Two weaves and a break: not a direction, but a fence. The road was closed here, on purpose.',
       ],
       event: 'find-clue',
     },
@@ -326,15 +335,16 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['new', 'accepted', 'clue-found'],
       speaker: 'Hilltop Lantern',
       lines: [
-        'The shrine lantern hangs cold in its iron frame, soot-streaked and patient. The stone warden stands between you and the lighting ledge, unmoving.',
+        'The shrine lantern hangs cold in its iron frame, soot-streaked and patient. The stone warden stands across the path to the ledge, arms out.',
       ],
     },
     {
       forStages: ['guardian-defeated'],
       speaker: 'Hilltop Lantern',
       lines: [
-        'The stone warden has stepped aside. The iron frame still holds a dry wick, and flint and steel wait on the ledge where they were left decades ago.',
-        'You strike a spark. The wick catches, then the oil, and the lantern fills with steady gold light. Somewhere far below, a village square turns its face toward the hill.',
+        'The warden rests now, its chest-lamp guttered to a coal. On the ledge: flint, steel, a dry wick, and words scratched in a small, neat hand.',
+        "'You are the shrine above Ashwatch. Behind you the ruin, before you the road east. Hold.' You read it aloud to the wick, feeling a little foolish.",
+        'You strike a spark. The wick catches, then the oil, and the lamp fills with steady gold. Far below, a village square turns its face toward the hill.',
       ],
       event: 'light-lantern',
     },
@@ -342,8 +352,8 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['lantern-lit', 'complete'],
       speaker: 'Hilltop Lantern',
       lines: [
-        'The lantern burns steadily, throwing a warm path of light down the hillside and across the dark weave of Brackenwood.',
-        'On clear evenings, Hearthwick will be able to see this flame from the square. The old road is a promise people keep renewing.',
+        'The lantern burns steady, laying a warm path down the hillside and over the dark weave of Brackenwood.',
+        'East of here the old road runs on toward Sallow Ford, lamp after cold lamp. This one, at least, the land will remember.',
       ],
     },
   ],
@@ -353,41 +363,41 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   new: [
     {
       title: 'Arrival in Hearthwick',
-      body: 'A hillside village of patched roofs and small kindnesses. The carters left me at the square, where Mara keeps her grandmother\u2019s lamp-oil ledger and Orrin keeps pretending his signpost does not lean.',
+      body: 'Came up the Low Road and over the last rise into Hearthwick: patched slate roofs, a lamp in every window, and one window they say has not gone dark at night in thirty years. Mara keeps her grandmother’s oil ledger. Orrin keeps resetting a signpost that leans.',
     },
   ],
   accepted: [
     {
       title: "Mara's Request",
-      body: 'Mara asked me to walk the old lantern road: through the east gate, along the Brackenwood path, past the Ashwatch ruin, up to the hilltop shrine. Her grandmother once kept that road lit. Find what is left of it.',
+      body: 'Mara asked me to walk the old lantern road: out the east gate, along the Brackenwood path, through Ashwatch Ruin, up to the hilltop shrine. Her grandmother Wenna kept that road. Find what is left of it.',
     },
     {
-      title: 'Orrin\u2019s Advice',
-      body: 'The stone warden on the shrine path is dutiful, not cruel. It wants proof that I know why the road was closed. The route marker in the ruin should carry the pattern.',
+      title: 'Orrin’s Advice',
+      body: 'A warden stands on the shrine path: drift-stone, dutiful, not cruel. Orrin says the road wanted people who looked closely. The route stone in the ruin should carry the pattern.',
     },
   ],
   'clue-found': [
     {
       title: 'The Closure Mark',
-      body: 'A charcoal rubbing from the ruin\u2019s route stone: two weaves and a break. Orrin says it is a closure mark, cut after the winter of two storms. The road was shut on purpose — and the warden is still keeping that decision.',
+      body: 'A charcoal rubbing from the Ashwatch route stone: two weaves and a break. Orrin calls it a closure mark, cut after the Winter of Two Storms. The road was shut on purpose. Orrin and Pip agree on one thing: don’t fight the warden. When it lunges and stops to find its feet, get close and hold up the rubbing.',
     },
   ],
   'guardian-defeated': [
     {
-      title: 'The Stone Warden',
-      body: 'The warden on the shrine path has yielded. It kept its post for decades longer than anyone in Hearthwick expected. The lighting ledge holds flint, steel, and a dry wick.',
+      title: 'The Warden Settled',
+      body: 'Each time I held up the rubbing it faltered, until its arms came down and the lamp in its chest guttered low. It isn’t broken. It is resting in its pose, the way it was made to. The ledge beyond holds flint, steel, and a dry wick.',
     },
   ],
   'lantern-lit': [
     {
       title: 'The Hilltop Lantern',
-      body: 'The shrine lantern is lit. Its light runs down the hillside toward Hearthwick, and the square turned to watch. Mara should hear it from me directly.',
+      body: 'The shrine lantern is lit, and named: the words were scratched on the ledge, and I said them aloud. Its light runs down toward Hearthwick, and the square turned to watch. Mara should hear it from me.',
     },
   ],
   complete: [
     {
       title: 'The Lantern Road',
-      body: 'Told Mara the whole story in the square, under a relit lamp post — Orrin\u2019s doing, and his surprise. The old road glows again, and Hearthwick is staying out late to enjoy it. As Mara\u2019s grandmother wrote: a road is a promise people keep renewing.',
+      body: 'Told Mara the whole of it in the square, under a lamp post Orrin relit as his surprise. The hill glows again. Mara says there is a page at the back of the ledger she still can’t read. Not tonight, she said.',
     },
   ],
 };
@@ -499,7 +509,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
   const short = (cost: number) => state.embers < cost;
 
   if (id === 'hearth') {
-    const lines = ['The village lantern hums with a low, patient warmth.', balance];
+    const lines = ['The square\u2019s lamp burns low and patient, named and tended every dusk. Its warmth reaches as far as the well.', balance];
     if (short(EMBER_COSTS.rest)) lines.push(emberHint(opts.connected));
     return {
       speaker: 'Hearth Lantern',
@@ -521,7 +531,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
       };
     }
     const lines = [
-      'An old iron-bound chest. Its lock is shaped like a lantern with no flame.',
+      'A Keeper\u2019s chest, oak pegged into oak: no Hall-price hinges here. Its lock is shaped like a lantern with no flame.',
       'It looks like it wants an ember, not a key.',
       balance,
     ];
@@ -531,7 +541,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
       lines,
       choices: [
         spendChoice(state, 'Kindle the lock', { kind: 'chest' }, 'chest', [
-          'The lock-flame flares and the lid sighs open. Inside, wrapped in oilcloth: a small charm, still warm.',
+          'The lock-flame flares and the lid sighs open. Inside, wrapped in green oilcloth: a chip of amber in a twist of wire, still warm.',
         ], opts.connected, opts.remote ?? null),
         { text: 'Not yet' },
       ],
@@ -542,17 +552,17 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
   if (isLit(state, id)) {
     return {
       speaker: 'Road Lantern',
-      lines: ['The lantern you lit burns steady. Resting in its light mends you.'],
+      lines: ['The lantern you lit burns steady, one link of the old chain held again. Resting in its light mends you.'],
     };
   }
-  const lines = ['A cold iron lantern leans over the path. Its wick is dry but whole.', balance];
+  const lines = ['A cold road lantern leans over the path, one of the old chain. Its wick is dry but whole.', balance];
   if (short(EMBER_COSTS.roadLantern)) lines.push(emberHint(opts.connected));
   return {
     speaker: 'Road Lantern',
     lines,
     choices: [
       spendChoice(state, 'Light it', { kind: 'road-lantern', id }, `light:${id}`, [
-        'The flame catches and steadies. Stand in its light to catch your breath.',
+        'You name it for the stretch it stands on, and the flame catches and steadies. Stand in its light to catch your breath.',
       ], opts.connected, opts.remote ?? null),
       { text: 'Leave it for now' },
     ],

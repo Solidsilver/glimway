@@ -22,6 +22,15 @@ export interface Interactable {
   label: string
 }
 
+/** A non-dialogue action the interact key does right now, and where to hint it. */
+export interface PromptAction {
+  label: string
+  /** Short word for the touch action button. */
+  verb: string
+  x: number
+  y: number
+}
+
 export interface InteractableDeps {
   world: WorldData
   session: Session
@@ -43,7 +52,8 @@ function isTouchFirst(): boolean {
 export class Interactables {
   readonly list: Interactable[] = []
   currentTarget: Interactable | null = null
-  private lastPrompt: string | null = null
+  /** Undefined until the first update, so a new scene always clears a stale prompt. */
+  private lastPrompt: string | null | undefined = undefined
   /** Floating "!" / "…" markers keyed by interactable id. */
   private markers = new Map<string, Phaser.GameObjects.Image>()
   /** Keycap hint floating above the current interaction target. */
@@ -116,11 +126,14 @@ export class Interactables {
     }
   }
 
-  /** Nearest interactable within reach drives the prompt, markers and key hint. */
-  updatePrompt(player: { x: number; y: number }, now: number): void {
+  /**
+   * Nearest interactable within reach drives the prompt, markers and key hint.
+   * An `action` (the warden standing open to the rubbing) outranks them all.
+   */
+  updatePrompt(player: { x: number; y: number }, now: number, action: PromptAction | null = null): void {
     // Nearest interactable within reach
     let best: Interactable | null = null
-    let bestDist = 34
+    let bestDist = action ? -1 : 34
     for (const it of this.list) {
       const d = Math.hypot(player.x - it.x, player.y - 8 - (it.y - 8))
       if (d < bestDist) {
@@ -134,14 +147,16 @@ export class Interactables {
     }
     // Recomputed every frame: the wording follows quest progress even while
     // the hero stands still next to the target.
-    const label = best ? this.promptLabel(best) : null
+    const label = action ? action.label : best ? this.promptLabel(best) : null
     if (label !== this.lastPrompt) {
       this.lastPrompt = label
-      const payload: PromptPayload = { label }
+      const payload: PromptPayload = action && label ? { label, verb: action.verb } : { label }
       bus.emit(EV.prompt, payload)
     }
     if (this.keyHint) {
-      if (best) {
+      if (action) {
+        this.keyHint.setPosition(action.x, action.y).setVisible(true)
+      } else if (best) {
         const bob = this.deps.reducedMotion ? 0 : Math.round(Math.sin(now * 0.008) * 1)
         this.keyHint.setPosition(best.x, best.y - this.markerOffset(best.id) + bob).setVisible(true)
       } else {
@@ -185,7 +200,7 @@ export class Interactables {
 
   /** Force the next updatePrompt to re-emit (an ember spend changed the wording). */
   invalidatePrompt(): void {
-    this.lastPrompt = null
+    this.lastPrompt = undefined
   }
 
   private isEmberSpot(id: InteractId): id is EmberSpotId {

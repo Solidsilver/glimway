@@ -78,6 +78,8 @@ export interface AreaPayload {
 
 export interface PromptPayload {
   label: string | null
+  /** Short word for the touch action button (default "Talk"). */
+  verb?: string
 }
 
 export interface ToastPayload {

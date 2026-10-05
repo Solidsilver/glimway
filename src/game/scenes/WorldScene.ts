@@ -229,6 +229,8 @@ export class WorldScene extends Phaser.Scene {
           tint: '0x' + e.sprite.tintTopLeft.toString(16).padStart(6, '0')
         }
       })
+    // Read-only warden snapshot: dormant, active (and whether it stands open), or settled.
+    ;(window as unknown as { __fsWarden?: () => ReturnType<EnemySystem['wardenView']> }).__fsWarden = () => this.enemies.wardenView()
     // Read-only map geometry, so playtests can check the hero is confined to it.
     ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; solid: boolean[][] } }).__fsWorld = () => {
       const b = this.physics.world.bounds
@@ -248,6 +250,15 @@ export class WorldScene extends Phaser.Scene {
       w.__fsDevDodge = (dx: number, dy: number) => this.hero.tryDodge(new Phaser.Math.Vector2(dx, dy))
       w.__fsDevStrike = (n: number, type?: EnemyType) => {
         for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
+      }
+      // Hold up the rubbing to the warden. `force` skips the opening/reach
+      // rules (skipping the encounter); without it, the real rules apply.
+      w.__fsDevShowRubbing = (force = false) => this.enemies.showRubbing(force)
+      // Set the hero down at a spot in this area (no scene restart), so a
+      // playtest can step up to the warden inside its opening.
+      w.__fsDevPlace = (x: number, y: number) => {
+        this.hero.sprite.setPosition(x, y)
+        this.hero.sprite.setVelocity(0, 0)
       }
     }
     // Connected-play status for playtests (read-only; null for guests).
@@ -335,7 +346,8 @@ export class WorldScene extends Phaser.Scene {
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
-    this.interactables.updatePrompt(this.hero.sprite, this.time.now)
+    const show = this.enemies.showTarget()
+    this.interactables.updatePrompt(this.hero.sprite, this.time.now, show ? { label: 'Hold up the rubbing', verb: 'Show', ...show } : null)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
     this.updateDepth()
@@ -384,6 +396,8 @@ export class WorldScene extends Phaser.Scene {
 
   private handleAction(): void {
     if (uiBlocked() || this.cinematic || this.transitioning || performance.now() < uiState.blockedUntil) return
+    // The warden standing open after a lunge, within reach: show it the mark.
+    if (this.enemies.showRubbing()) return
     if (this.interactables.currentTarget) {
       // Free village activities stay available at zero HP: talking is fine.
       this.interactables.open(this.interactables.currentTarget)
