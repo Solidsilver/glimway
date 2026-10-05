@@ -202,8 +202,10 @@ test('Mara hands over the ledger only once the clue is found, with words fit for
 });
 
 test('gifts wait for the end of the main quest', () => {
-  assert.equal(handoverFor('pip', 'lantern-lit', []), null);
-  assert.equal(handoverFor('pip', 'complete', [])?.paperId, 'keepers-twists-recipe-card');
+  assert.equal(handoverFor('hazel', 'lantern-lit', []), null);
+  // Hazel hands over her own card now (it was Pip's errand before she was in the world).
+  assert.equal(handoverFor('hazel', 'complete', [])?.paperId, 'keepers-twists-recipe-card');
+  assert.equal(handoverFor('pip', 'complete', []), null);
   assert.equal(handoverFor('orrin', 'complete', [])?.paperId, 'orrins-workshop-rules');
 });
 

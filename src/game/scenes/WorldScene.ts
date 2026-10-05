@@ -39,6 +39,7 @@ import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
 import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
+import { emitResidents } from '../residents'
 import { VillageLayer } from '../entities/village-life'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { COMMONS_FROM_WILDS } from '../commons'
@@ -306,6 +307,7 @@ export class WorldScene extends Phaser.Scene {
     this.session.emitArea()
     this.session.emitStats()
     this.session.emitQuest()
+    emitResidents(this.session)
     this.session.startAutosave()
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.interactables.buildMarkers()
@@ -726,6 +728,7 @@ export class WorldScene extends Phaser.Scene {
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.refreshMarkers()
     this.interactables.invalidatePrompt()
+    emitResidents(this.session)
   }
 
   /**

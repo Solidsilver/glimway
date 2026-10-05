@@ -2,6 +2,7 @@ import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER } from './echoes.ts';
+import { residentJournal } from './residents.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -497,8 +498,10 @@ export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
 /**
  * Cumulative journal entries unlocked up to and including the given stage.
  * Entries are ordered by unlock stage and never shrink as the quest advances.
+ * With the save's flags, the residents you have met (./residents.ts) join
+ * in after the entries of the stage you met them at.
  */
-export function journalEntries(stage: QuestStage): JournalEntry[] {
+export function journalEntries(stage: QuestStage, flags: readonly string[] = []): JournalEntry[] {
   const stageIndex = STAGE_ORDER.indexOf(stage);
   if (stageIndex === -1) {
     throw new Error(
@@ -510,6 +513,7 @@ export function journalEntries(stage: QuestStage): JournalEntry[] {
     for (const entry of JOURNAL_BY_STAGE[STAGE_ORDER[i]]) {
       entries.push({ title: entry.title, body: entry.body });
     }
+    entries.push(...residentJournal(flags, STAGE_ORDER[i]));
   }
   return entries;
 }

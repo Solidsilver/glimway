@@ -16,7 +16,8 @@
  *     the one source of plot geometry, shared with the server.
  *   - East edge: Silas's work yard: his own cottage, a sawhorse, timber, his
  *     toolbox and firebox, and skids laid out for the next house.
- *   - North: the lane runs out under a leafy arch toward the Wilds.
+ *   - North: the lane runs out under a leafy arch toward the Wilds. Elara
+ *     Quill camps on its east verge, just inside the arch.
  *
  * Pure data (no Phaser): the scene renders it through src/game/area/ and the
  * homestead layer (src/game/entities/homesteads.ts) adds what changes —
@@ -338,6 +339,16 @@ export function buildCommons(plotCount = 0): CommonsWorld {
   put('woodpile', 58, 26)
   block(58, 26)
 
+  // ---- Elara's camp, on the lane verge by the Wilds arch: her pack behind
+  // her, a cold fire ring in front, on trodden ground (no tall grass). She
+  // reads the drift from here and posts the Turning notices.
+  const elara = { tx: 26, ty: 5 }
+  for (let y = 4; y <= 6; y++) set(26, y, TERRAIN.dirt)
+  block(26, 4)
+  put('commons-art:wilds-pack', 26, 4)
+  block(26, 6)
+  put('commons-art:wilds-fire-ring', 26, 6)
+
   // ---- meadow details: stumps, tall grass, wildflowers (not on paths or plots)
   const inPlot = (x: number, y: number) => slots.some((p) => x >= p.tx - 1 && x <= p.tx + 16 && y >= p.ty - 1 && y <= p.ty + 12)
   const free = (x: number, y: number) =>
@@ -409,7 +420,7 @@ export function buildCommons(plotCount = 0): CommonsWorld {
     trees,
     bushes,
     rocks,
-    npcs: [],
+    npcs: [{ id: 'elara', ...elara }],
     enemies: [],
     exits,
     props,

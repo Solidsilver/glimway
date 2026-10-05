@@ -16,6 +16,10 @@ import { TILE } from '../textures'
 import type { EmberSpotId, InteractId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
+import { isResident, residentFullName, residentTalk } from '../../content/residents'
+import { meetResident, residentContext } from '../residents'
+import { VILLAGE_EV } from '../village'
+import { HOME_EV } from '../homestead'
 import type { PaperPickups } from './papers'
 
 export interface Interactable {
@@ -59,7 +63,11 @@ export interface InteractableDeps {
   extras?: InteractionProvider[]
 }
 
-/** Who the player has already heard from at each quest stage (this tab). */
+/**
+ * Who the player has already heard from at each quest stage (this tab). A
+ * resident's key also carries what their line about the day was, so a new
+ * festival, notice or project brings their "…" back.
+ */
 const heardAt = new Set<string>()
 
 /** Was this a touch-first device? Picks the in-world button hint. */
@@ -171,6 +179,18 @@ export class Interactables {
       .setDepth(6001)
       .setVisible(false)
     this.refreshMarkers()
+    // A new day, project or plot can give a resident something new to say.
+    const refresh = () => {
+      if (this.scene.sys?.isActive()) this.refreshMarkers()
+    }
+    bus.on(VILLAGE_EV.changed, refresh)
+    bus.on(HOME_EV.changed, refresh)
+    const off = () => {
+      bus.off(VILLAGE_EV.changed, refresh)
+      bus.off(HOME_EV.changed, refresh)
+    }
+    this.scene.events.once('shutdown', off)
+    this.scene.events.once('destroy', off)
   }
 
   refreshMarkers(): void {
@@ -185,6 +205,9 @@ export class Interactables {
         kind = this.extra(it.id)!.marker?.(it.id) ?? null
       } else if (this.isEmberSpot(it.id)) {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
+      } else if (isResident(it.id)) {
+        const talk = residentTalk(it.id, residentContext(this.deps.session))
+        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
       } else {
         try {
           const d = dialogueFor(it.id, stage)
@@ -252,8 +275,21 @@ export class Interactables {
       return
     }
     let payload: Dialogue
+    let heardKey = `${target.id}@${session.questStage}`
     try {
-      payload = this.isEmberSpot(target.id)
+      if (isResident(target.id)) {
+        // Residents talk around the quest: their words come from the save,
+        // the calendar, the world's projects and your plot.
+        const talk = residentTalk(target.id, residentContext(session))
+        payload = talk.dialogue
+        heardKey = `${target.id}@${talk.topic}`
+        if (talk.first) {
+          meetResident(session, target.id)
+          // What they'd say next time is old news by then, too.
+          heardAt.add(`${target.id}@${residentTalk(target.id, residentContext(session)).topic}`)
+          bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book' })
+        }
+      } else payload = this.isEmberSpot(target.id)
         ? emberDialogue(target.id, session.state, {
           connected: session.vitalsSource === 'imported',
           remote: session.link ? (session.link.online ? 'online' : 'offline') : null
@@ -267,7 +303,7 @@ export class Interactables {
     const handover = !this.isEmberSpot(target.id) && target.id in NPC_NAMES ? papers?.handover(target.id) : null
     if (handover) payload = { ...payload, lines: [...payload.lines, ...handover] }
     uiState.dialogueOpen = true
-    heardAt.add(`${target.id}@${session.questStage}`)
+    heardAt.add(heardKey)
     this.refreshMarkers()
     sfx('open')
     bus.emit(EV.dialogue, {

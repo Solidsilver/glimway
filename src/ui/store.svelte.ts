@@ -51,6 +51,8 @@ class UiStore {
   /** Mirrors of world/UI ownership flags, reactive for the interface. */
   dialogueOpen = $state(false)
   cinematic = $state(false)
+  /** The save's resident-meeting flags (`met:<id>@<stage>`): the journal's resident notes. */
+  residentsMet = $state<string[]>([])
   /** Speaker -> portrait data URL. */
   portraits = $state<Record<string, string>>({})
   /** Delivered UI icons by frame key (`icon-timber`, …): src/ui/ArtIcon.svelte. */

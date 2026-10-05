@@ -7,7 +7,8 @@ import { TERRAIN, TILE } from './textures.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
 import { buildRoom } from './cottage.ts'
 
-export type NpcId = 'mara' | 'pip' | 'orrin'
+/** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
+export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
@@ -301,6 +302,11 @@ function buildVillage(): WorldData {
   const clearOfBoard = (p: { tx: number; ty: number }) => Math.abs(p.tx - board.tx) > 1 || Math.abs(p.ty - board.ty) > 1
   const bushes = scatteredBushes.filter(clearOfLibrary).filter(clearOfBoard)
   const rocks = scatteredRocks.filter(clearOfLibrary).filter(clearOfBoard)
+  // The residents, placed after the scatter too (the seeded layout stays):
+  // Hazel in the square below the well with her basket, Finn on the pond's
+  // west rim watching the Wend come in, Ada under her window on the east
+  // house (village-life.ts ADA_HOUSE_WINDOW). All off the quest route.
+  npcs.push({ id: 'hazel', tx: 12, ty: 15 }, { id: 'finn', tx: 32, ty: 20 }, { id: 'ada', tx: 35, ty: 8 })
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [

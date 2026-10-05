@@ -17,6 +17,7 @@ import {
   validateSave,
   type QuestStage,
 } from '../src/lib/state.ts';
+import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
 
 const NPC_IDS = ['mara', 'pip', 'orrin', 'clue', 'lantern'];
 
@@ -188,12 +189,15 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     lines.push(...d.lines);
   }
   lines.push(...builder.idleLines, ...Object.values(expansion.NEW_NPC_LINES).flat());
+  // The residents (Elara, Finn, Hazel, Ada): every line they can say.
+  lines.push(...allResidentLines());
   for (const line of lines) {
     assert.ok(line.length <= 160, `${line.length} chars: ${line}`);
     assert.doesNotMatch(line, OUT_OF_WORLD, line);
   }
   const prose = [
     ...journalEntries('complete').flatMap((e) => [e.title, e.body]),
+    ...allResidentJournal().flatMap((e) => [e.title, e.body]),
     ...Object.values(locations).flatMap((l) => [l.name, l.eyebrow, l.tagline, l.description]),
     ...[...expansion.POIS, ...expansion.TRINKETS, ...expansion.MORE_TRINKETS].map((t) => ('discoveryText' in t ? t.discoveryText : t.blurb)),
   ];
@@ -204,6 +208,7 @@ test('the warden is settled, not slain, in every story beat', () => {
   const text = [
     ...QUEST_STAGES.flatMap((s) => NPC_IDS.flatMap((id) => dialogueFor(id, s).lines)),
     ...journalEntries('complete').map((e) => e.body),
+    ...allResidentLines(),
   ].join('\n');
   assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
   assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
@@ -237,6 +242,7 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
   for (const st of stages) {
     text.push(questObjective(st), ...journalEntries(st).flatMap((e) => [e.title, e.body]));
   }
+  text.push(...allResidentLines(), ...allResidentJournal().map((e) => e.body));
   text.push(...QUEST_STEPS.map((s) => s.label), itemInfo('lantern-route-rubbing').name, itemInfo('lantern-route-rubbing').blurb, discoveryInfo('old-route-marker').blurb);
   for (const t of text) assert.doesNotMatch(t, /\brub(bing|bed)?\b/i, t);
   assert.match(dialogueFor('clue', 'accepted').lines.join(' '), /The road is closed here/);

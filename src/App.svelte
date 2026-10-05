@@ -24,6 +24,7 @@
   import { clearSave, loadSaveRecord } from './lib/save'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
+  import { RESIDENT_EV, type ResidentsMetPayload } from './game/residents'
   import { uiState } from './game/input'
   import { sfx, unlockAudio } from './game/sfx'
   import { isTouchFirst } from './ui/device'
@@ -214,6 +215,9 @@
     const onPortraits = (p: PortraitsPayload) => {
       ui.portraits = { ...ui.portraits, ...p }
     }
+    const onResidentsMet = (p: ResidentsMetPayload) => {
+      ui.residentsMet = [...p.met]
+    }
     const onArtIcons = (p: Record<string, string>) => {
       ui.artIcons = { ...ui.artIcons, ...p }
     }
@@ -271,6 +275,7 @@
       [EV.rolled, onRolled],
       [EV.cinematic, onCinematic],
       [EV.portraits, onPortraits],
+      [RESIDENT_EV.met, onResidentsMet],
       [EV.artIcons, onArtIcons],
       [EV.discovery, onDiscovery],
       [EV.link, onLink],
