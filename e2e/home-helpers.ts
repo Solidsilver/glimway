@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { expect, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, syncFromMenu, waitForWorld } from './connected'
 import { beginNewJourney, waitForArea, player } from './helpers'
 
 /**
@@ -83,13 +83,28 @@ export async function freshPlayer(page: Page, name = 'Tansy', invite?: string): 
 
 /** Two syncs: the welcome, then a big Habitica day (three levels: about 30 embers). */
 export async function earnEmbers(page: Page, id: string): Promise<void> {
+  let balance = 0
   for (const [lvl, exp, toast] of [[2, 20, /embers into your hand/], [5, 100, /embers — from the XP you earned/]] as const) {
     await setHabitica(id, { lvl, exp })
-    await syncFromMenu(page)
+    balance = await syncEmberBalance(page)
     await expect(page.locator('.toast', { hasText: toast })).toBeVisible()
     await page.getByRole('button', { name: 'Back to the road' }).click()
   }
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBeGreaterThanOrEqual(20)
+  expect(balance).toBeGreaterThanOrEqual(20)
+}
+
+/**
+ * Confirm the real server's balance from the sync that earned it. A separate
+ * page.request read can spend the whole poll budget resolving localhost even
+ * after the browser has received the successful sync and shown its toast.
+ */
+async function syncEmberBalance(page: Page): Promise<number> {
+  const [response] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/api/sync') && r.request().method() === 'POST'),
+    syncFromMenu(page)
+  ])
+  expect(response.ok()).toBe(true)
+  return (await response.json()).state.embers as number
 }
 
 /** Read an open conversation (one the world opened on its own) to its end. */
@@ -138,8 +153,8 @@ export function fund(id: string, goods: { materials?: Record<string, number>; it
 export async function earnPlenty(page: Page, id: string): Promise<void> {
   await earnEmbers(page, id)
   await setHabitica(id, { lvl: 9, exp: 100 })
-  await syncFromMenu(page)
+  const balance = await syncEmberBalance(page)
   await expect(page.locator('.toast', { hasText: /embers — from the XP you earned/ }).last()).toBeVisible()
   await page.getByRole('button', { name: 'Back to the road' }).click()
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBeGreaterThanOrEqual(60)
+  expect(balance).toBeGreaterThanOrEqual(60)
 }
