@@ -163,10 +163,29 @@ export interface Light {
   radius: number;
 }
 
-/** The lights holding a homestead's ground: the start light plus every placed post. */
+/**
+ * The lights holding a homestead's ground: the home's own light, and every
+ * placed post whose light connects back to it — a post counts once its tile
+ * stands in the home's light or in the light of a post that already counts.
+ * Posts can't hold each other up out in the dark (server/internal/api
+ * connectedLights is the same rule).
+ */
 export function homeLights(posts: readonly { x: number; y: number }[], data: HomesteadData = HOMESTEAD_DATA): Light[] {
   const s = data.land.startLight;
-  return [{ x: s.x, y: s.y, radius: s.radius }, ...posts.map((p) => ({ x: p.x, y: p.y, radius: data.lanternPosts.radius }))];
+  const out: Light[] = [{ x: s.x, y: s.y, radius: s.radius }];
+  const waiting = [...posts];
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (let i = 0; i < waiting.length; i++) {
+      const p = waiting[i];
+      if (isLit(out, p.x, p.y)) {
+        out.push({ x: p.x, y: p.y, radius: data.lanternPosts.radius });
+        waiting.splice(i--, 1);
+        grew = true;
+      }
+    }
+  }
+  return out;
 }
 
 /** Is a tile within any light (integer distance, tile centres)? */

@@ -366,7 +366,7 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 func lanternSpots(t *testing.T, h homeView) (post, beyond [2]int) {
 	t.Helper()
 	g := groundOf(h)
-	start := lightsWithout(nil, "")
+	start := connectedLights(nil, "")
 	open := func(x, y int) bool {
 		if !land.Buildable(g.land.Effective(g.cleared, x, y)) {
 			return false
@@ -462,7 +462,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	}
 	// Trees take tiles until Silas clears them for embers.
 	g := groundOf(h)
-	start := lightsWithout(nil, "")
+	start := connectedLights(nil, "")
 	var tree, darkTree, grass [2]int
 	found := 0
 	for y := 0; y < g.land.Height; y++ {

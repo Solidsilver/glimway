@@ -256,6 +256,11 @@ export class Homesteads {
     return free.sort((a, b) => (a.gate === this.chosenGate ? -1 : b.gate === this.chosenGate ? 1 : a.gate - b.gate))
   }
 
+  /** Empty homes you were on the deed of: Silas gives them back, free, until the deed is lost. */
+  reclaimable(): GateInfo[] {
+    return this.gates.filter((g) => g.reclaim)
+  }
+
   /** Everyone on any deed but you (mail goes to their boxes). */
   neighbours(): { id: string; name: string }[] {
     const me = this.myId
