@@ -25,6 +25,7 @@
  */
 import { TILE } from '../../game/textures.ts';
 import { DECOR_ART, TANGLE_GROUND, tangleTerrain } from './tangle.ts';
+import { chunkSites, crossingExit, routeHome, seasonMark } from './outer.ts';
 import { Rng, chunkSeed, lootSeed, type SeedEpoch } from './hash.ts';
 import { loadWilds } from './data.ts';
 import type {
@@ -130,7 +131,8 @@ function nearAnyExit(exits: readonly ChunkExit[], tx: number, ty: number): boole
 
 function spawnTile(data: WildsData, exits: readonly ChunkExit[]): Tile {
   const order: ExitDir[] = ['south', 'north', 'west', 'east'];
-  const commons = exits.find((e) => e.to === 'commons');
+  // The way home (the Commons gap, or the outer entry's gap back over the crossing).
+  const commons = exits.find((e) => e.to === 'commons' || (e.toRegion !== undefined && e.dir === 'south' && e.tx === COMMONS_EXIT_TX));
   if (commons) return exitInward(data, commons);
   for (const dir of order) {
     const e = exits.find((x) => x.dir === dir && x.to !== 'commons');
@@ -253,12 +255,22 @@ export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain
   const region = regionFor(data, epoch.regionId);
   const S = data.chunkSize;
   const seed = chunkSeed(epoch as SeedEpoch, cx, cy);
-  const exits = buildExits(data, region, cx, cy);
+  // The generator's exits (they shaped entity placement), the way home over
+  // the crossing for the outer region, plus the crossing itself on the
+  // Tangle's far side — client-only, after entities are placed.
+  const crossing = crossingExit(region.id, cx, cy);
+  const exits = [...buildExits(data, region, cx, cy).map((e) => routeHome(region.id, e)), ...(crossing ? [crossing] : [])];
   const entities = chunkEntities(epoch, cx, cy);
   const spawn = spawnTile(data, exits);
-  // Home is the Commons gap on the region's entry chunk (turncaps lean to it).
-  const home = { tx: (region.entryX - cx) * S + COMMONS_EXIT_TX + 1, ty: (region.entryY - cy) * S + S - 1 };
-  const { ground, solid, decor } = tangleTerrain({ size: S, rng: mulberry32(seed), seed, exits, entities, spawn, home });
+  const outer = region.kind === 'outer';
+  // Turncaps lean toward a light that held: in the Tangle, home (the Commons
+  // gap on the entry chunk); past the crossing, east, toward Sallow Ford.
+  const home = outer
+    ? { tx: 100 * S, ty: 0 }
+    : { tx: (region.entryX - cx) * S + COMMONS_EXIT_TX + 1, ty: (region.entryY - cy) * S + S - 1 };
+  const sites = chunkSites(epoch, cx, cy, exits);
+  const look = outer ? 'outer' : 'tangle';
+  const { ground, solid, decor } = tangleTerrain({ size: S, rng: mulberry32(seed), seed, exits, entities, spawn, home, sites, look });
 
   // Safety pass: guarantee every exit mouth and entity is reachable from
   // spawn even if a placement rule above ever slips. Clears an L-path.
@@ -281,6 +293,7 @@ export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain
   const targets: Tile[] = [];
   for (const e of exits) for (let y = e.ty; y < e.ty + e.th; y++) for (let x = e.tx; x < e.tx + e.tw; x++) targets.push({ tx: x, ty: y });
   for (const en of entities) targets.push({ tx: en.tx, ty: en.ty });
+  for (const s of sites) targets.push({ tx: s.tx, ty: s.ty });
   for (let guard = 0; guard < targets.length + 2; guard++) {
     const reach = reachSet();
     const stuck = targets.find((t) => !reach.has(tileKey(t.tx, t.ty)));
@@ -316,6 +329,9 @@ export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain
     decor,
     exits,
     spawn,
+    sites,
+    look,
+    mark: outer ? seasonMark(epoch.season) : null,
   };
 }
 

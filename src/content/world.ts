@@ -1,6 +1,7 @@
 import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts';
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
+import { WILDS_OUTER } from './echoes.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -136,10 +137,19 @@ export const locations: Record<AreaId, LocationInfo> = {
  * entry). Unknown ids get a generic card, so a new area can never crash a
  * title or a banner.
  */
+/**
+ * The area id to name a save's place by: the outer Wilds (a `wilds` save past
+ * the crossing) read as their own region, everything else as saved.
+ */
+export function displayArea(state: { area: AreaId; wildsRegion?: string }): AreaId {
+  return state.area === 'wilds' && state.wildsRegion === 'outer-1' ? 'chunk:outer-1' : state.area;
+}
+
 export function areaInfo(areaId: AreaId): LocationInfo {
   const known = (locations as unknown as Record<string, LocationInfo | undefined>)[areaId];
   if (known) return known;
   if (areaId === 'commons') return HEARTHWICK_COMMONS;
+  if (areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
   if (areaId === 'wilds' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
   return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };
 }

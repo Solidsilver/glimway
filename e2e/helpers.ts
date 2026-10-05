@@ -23,6 +23,12 @@ type Hooks = {
 export type WildsDump = {
   guest: boolean
   epochId: string
+  /** `inner-1` (the Tangle) or `outer-1` (the Whitequiet). */
+  region: string
+  season: string
+  endsAt: number | null
+  /** Story sites in this chunk: Echo camps and given-back finds. */
+  sites: Array<{ id: string; kind: string; tx: number; ty: number; echo: string | null; settled: boolean; find: string | null }>
   chunk: { cx: number; cy: number }
   position: { x: number; y: number }
   entities: Array<{
@@ -78,12 +84,12 @@ export async function waitForArea(page: Page, area: AreaId): Promise<void> {
   await page.waitForTimeout(700)
 }
 
-/** The Wilds chunk scene that is live now (its chunk area id). */
-export async function waitForWilds(page: Page): Promise<string> {
-  const handle = await page.waitForFunction(() => {
+/** The Wilds chunk scene that is live now (its chunk area id); `region` narrows it. */
+export async function waitForWilds(page: Page, region = 'inner-1'): Promise<string> {
+  const handle = await page.waitForFunction((r) => {
     const s = (window as unknown as Hooks).__fsSafety?.()
-    return !!s && !s.transitioning && String(s.areaId).startsWith('chunk:inner-1') ? s.areaId : null
-  })
+    return !!s && !s.transitioning && String(s.areaId).startsWith(`chunk:${r}`) ? s.areaId : null
+  }, region)
   await page.waitForTimeout(700)
   return (await handle.jsonValue()) as string
 }
@@ -312,6 +318,60 @@ export async function savedRecordText(page: Page): Promise<string> {
         req.onsuccess = () => resolve(JSON.stringify(req.result ?? null))
         req.onerror = () => resolve('')
       })
+    } finally {
+      db.close()
+    }
+  })
+}
+
+/**
+ * Rewrite the saved guest game (story flags added, quest stage set), then
+ * reload and Continue: the quick way to a late-story save in a playtest.
+ */
+export async function seedSave(page: Page, flags: string[], quest: string): Promise<void> {
+  await page.waitForTimeout(800)
+  await page.evaluate(
+    async ([extra, stage]) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open('fingersnap')
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+      const store = () => db.transaction('saves', 'readwrite').objectStore('saves')
+      const rec = await new Promise<{ state: { flags: string[]; quest: string } }>((resolve) => {
+        const req = store().get('current')
+        req.onsuccess = () => resolve(req.result)
+      })
+      rec.state.flags = [...rec.state.flags, ...(extra as string[])]
+      rec.state.quest = stage as string
+      await new Promise((resolve) => {
+        const req = store().put(rec)
+        req.onsuccess = resolve
+      })
+      db.close()
+    },
+    [flags, quest] as const
+  )
+  await page.reload()
+  await page.getByRole('button', { name: /Continue/ }).click()
+  await waitForArea(page, 'village')
+}
+
+/** The saved story flags of the guest save, straight from IndexedDB. */
+export async function savedFlags(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('fingersnap')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+    try {
+      const rec = await new Promise<{ state?: { flags?: string[] } } | undefined>((resolve) => {
+        const req = db.transaction('saves').objectStore('saves').get('current')
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => resolve(undefined)
+      })
+      return rec?.state?.flags ?? []
     } finally {
       db.close()
     }

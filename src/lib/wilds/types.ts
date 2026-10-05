@@ -79,6 +79,8 @@ export interface ChunkExit {
   entry: Tile;
   dir: ExitDir;
   toChunk: ChunkCoord | null;
+  /** Set when the exit leads into another region (the Tangle crossing). */
+  toRegion?: string;
 }
 
 /**
@@ -103,6 +105,7 @@ export type DecorKind =
   | 'grass'
   | 'flowers'
   | 'turncaps'
+  | 'reeds'
   | 'roots'
   | 'litter'
   | 'pebbles';
@@ -148,7 +151,15 @@ export interface ChunkTerrain {
   decor: DecorSpot[];
   exits: ChunkExit[];
   spawn: Tile;
+  /** Story sites in this chunk (src/lib/wilds/outer.ts): Echo camps, given-back finds. */
+  sites: StorySite[];
+  /** 'outer': the deep drift's look; `mark` is its season's Mark (null when permanent). */
+  look: 'tangle' | 'outer';
+  mark: string | null;
 }
+
+export type { StorySite } from './outer.ts';
+import type { StorySite } from './outer.ts';
 
 /** The public API of one generator version. */
 export interface WildsGenerator {

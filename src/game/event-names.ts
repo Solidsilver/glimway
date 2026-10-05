@@ -40,6 +40,10 @@ export const EV = {
   worldRefresh: 'game:world-refresh',
   /** The Wilds region changed (loaded, claimed, materials moved): { materials }. */
   wilds: 'ui:wilds',
+  /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
+  clock: 'game:clock',
+  /** The outer Wilds turned under the player (an ended epoch): { reason }. */
+  turning: 'game:turning',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',

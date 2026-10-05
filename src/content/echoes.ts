@@ -1,0 +1,170 @@
+/**
+ * The outer Wilds' writing: the region's card, the Echoes of the Six, the
+ * places where the deep drift gives a text back, and the Turning.
+ *
+ * Canon: docs/lore/chronicle.md Part V. Echoes are not ghosts: the woods
+ * replaying a mundane, waiting moment of one of the Six. Settling one lets
+ * the moment finish kindly and file itself away. Reveal order
+ * (src/content/papers.ts): nothing here says who survived the Lull Run; the
+ * twins' Echoes (Bett's song, Tam's ox-words) wait until the road is lit.
+ */
+import type { LocationInfo } from './world.ts';
+
+export const WILDS_OUTER: { id: 'outer-1'; location: LocationInfo } = {
+  id: 'outer-1',
+  location: {
+    name: 'The Whitequiet',
+    eyebrow: 'Past the Tangle crossing',
+    tagline: 'The deep drift. It turns every wick and keeps what it is given.',
+    description: 'Pale woods past the place where the bridge tore. The land here is never the same two wicks running: the Keeper posts the Turning a day ahead, and the cairn-walkers clear their stones.',
+  },
+};
+
+/** The Six (docs/lore/chronicle.md Part IV). */
+export type EchoMember = 'hollis' | 'tam' | 'bett' | 'dorrit' | 'joss' | 'nan';
+
+/** What stands at the phantom camp. */
+export type EchoProp = 'kettle' | 'yoke' | 'song' | 'stake' | 'whistle' | 'wick';
+
+export interface EchoDef {
+  member: EchoMember;
+  /** Who the moment belongs to (shown once settled, never before). */
+  name: string;
+  prop: EchoProp;
+  /** Walking up to the camp: what the woods are replaying. */
+  scene: string;
+  /** The prompt over the owed lamp. */
+  verb: string;
+  /** Settling: the moment finishes. */
+  settle: string[];
+  /** Waits until the road is lit (the reveal order). */
+  late?: boolean;
+  /** Only in the far east, toward Sallow Ford. */
+  east?: boolean;
+  /** The found text this Echo gives back. */
+  paper?: string;
+}
+
+export const ECHOES: readonly EchoDef[] = [
+  {
+    member: 'hollis',
+    name: 'Hollis Brack',
+    prop: 'kettle',
+    scene: 'A kettle on cold stones, a half-whittled fox beside it. Somewhere a man laughs with his whole back, at a joke nobody here can hear. The kettle never boils.',
+    verb: 'Light the owed lamp',
+    settle: [
+      'You hang the lamp on the camp’s bent hook and strike it. The flame takes.',
+      'The kettle starts to tick, then sing. Beside it, the knife finishes the fox’s second ear.',
+      'The laugh comes once more, softer, and the camp is only a camp. The moment has gone where moments go.',
+    ],
+  },
+  {
+    member: 'tam',
+    name: 'Tam Cooley',
+    prop: 'yoke',
+    scene: 'A yoke peg in the moss, and a low voice talking a frightened ox through mud that isn’t there. The words come and go with the wind.',
+    verb: 'Light the owed lamp',
+    settle: [
+      'The lamp catches, and the voice steadies: “Easy now. Find the bottom.”',
+      'Something heavy settles in the dark, the way a beast does when it trusts the hand on its neck. The voice goes quiet, satisfied.',
+      'The yoke peg is still there when the light steadies. Words are scratched into it.',
+    ],
+    late: true,
+    east: true,
+    paper: 'tams-ox-words',
+  },
+  {
+    member: 'bett',
+    name: 'Bett Cooley',
+    prop: 'song',
+    scene: 'Someone is singing, deliberately flat, to the rhythm of a walking ox. The verse breaks off in the same place every time, and starts again.',
+    verb: 'Light the owed lamp',
+    settle: [
+      'You light the lamp. The voice reaches the place where it always stops, and does not stop.',
+      'It finds the true note at last, and sings the verse out to its end.',
+      'The woods hold the last line a moment longer than they need to. Then it is only birdsong.',
+    ],
+    late: true,
+    paper: 'betts-flat-verse',
+  },
+  {
+    member: 'dorrit',
+    name: 'Dorrit Venn',
+    prop: 'stake',
+    scene: 'Chalk lines on a plank: one joint, drawn and redrawn. A surveyor’s stake keeps leaning crooked, straightening, leaning crooked again.',
+    verb: 'Light the owed lamp',
+    settle: [
+      'In the lamplight the stake is left as it was: crooked, exactly.',
+      'Whoever was measuring is content with it. The chalk stops moving. The joint is drawn the flexing way, with oak pegs.',
+    ],
+  },
+  {
+    member: 'joss',
+    name: 'Joss Penhallow',
+    prop: 'whistle',
+    scene: 'One dented note from a tin whistle, cut off before it finishes. It tries again. And again, a little further each time.',
+    verb: 'Light the owed lamp',
+    settle: [
+      'The lamp catches, and the note runs out long and clear across the trees, all the way to its end.',
+      'For a moment you could swear it carried west.',
+    ],
+  },
+  {
+    member: 'nan',
+    name: 'Nan Greer',
+    prop: 'wick',
+    scene: 'A lamplighter’s pole leans on a stump beside an unlit lamp, its wick trimmed and waiting. Someone keeps reaching for the flint and not quite finding it.',
+    verb: 'Strike the light she was reaching for',
+    settle: [
+      'You strike the flint. The trimmed wick takes at the first spark, the way a well-kept wick does.',
+      'Close by, someone lets out a breath they have held a long time. A route mark in the bark beside the lamp reads, plainly: this way.',
+    ],
+  },
+];
+
+export const ECHO_UNSETTLED_EYEBROW = 'An Echo';
+export const ECHO_SETTLED_LINE = 'A settled camp. The owed lamp burns steady on its hook; nothing here is waiting any more.';
+
+/** Story flag for a settled Echo (one per member, kept forever). */
+export function echoFlag(member: EchoMember): string {
+  return `echo:${member}`;
+}
+
+// ------------------------------------------------------------ given-back places
+
+/** Lines for the places where the deep drift gives a text back. */
+export const SITE_TEXT = {
+  given: {
+    name: 'Drift-Caught Bundle',
+    look: 'Something oiled and bound, left where the land gave it up beside the crossing.',
+    verb: 'Pick up the bundle',
+  },
+  cairn: {
+    name: 'The Amberwash Cairn',
+    look: 'A forage cairn of river-stones, three of them white, topped and tended.',
+    verb: 'Lift the third white stone',
+  },
+  nest: {
+    name: 'Dead Iron-Oak',
+    look: 'A dead iron-oak, bare as bone. High in its crotch, a jackdaw’s nest of dry grass and drift-twigs.',
+    verb: 'Look into the nest',
+  },
+  reeds: {
+    name: 'A Backwater of the Wend',
+    look: 'Still water and reeds. The flood-drift leaves things here, caught in the stems.',
+    verb: 'Free what’s caught in the reeds',
+  },
+  plank: {
+    name: 'Half-Buried Plank',
+    look: 'A heavy iron-oak plank, half-buried where the bridge tore. Chalk still shows on it.',
+    verb: 'Brush off the plank',
+  },
+} as const;
+
+// ------------------------------------------------------------ the Turning
+
+/** The moment itself, over the screen. */
+export const TURNING_TITLE = 'The Wilds shift.';
+
+/** Entering after a Turning you weren't there for. */
+export const TURNED_SINCE_LINE = 'The outer Wilds have turned since you were last here. None of it is where you left it.';

@@ -23,6 +23,7 @@ import {
 } from '../src/lib/wilds/index.ts';
 import { TERRAIN } from '../src/game/textures.ts';
 import { DECOR_ART, TANGLE_GROUND } from '../src/lib/wilds/tangle.ts';
+import { CROSSING_CHUNK } from '../src/lib/wilds/outer.ts';
 import wildsJson from '../content/wilds.json' with { type: 'json' };
 
 const SEEDS = ['oak-7', '灰烬之路', 'ember:glade', 'plain'];
@@ -239,10 +240,12 @@ test('chunk exits mirror their neighbors and land beside the way back', () => {
       if (cx > 0) expect.push('west');
       const isEntry = cx === region.entryX && cy === region.entryY;
       if (isEntry) expect.push('south');
+      // The Tangle's far side opens onto the outer region (the crossing).
+      if (cx === CROSSING_CHUNK.cx && cy === CROSSING_CHUNK.cy) expect.push('north');
       assert.deepEqual(dirs, expect.sort(), `chunk ${cx},${cy} exit set`);
       assert.equal(w.exits.some((e) => e.to === 'commons'), isEntry, `chunk ${cx},${cy} commons exit`);
       for (const e of w.exits) {
-        if (e.to === 'commons') continue;
+        if (e.to === 'commons' || e.toRegion) continue;
         assert.equal(e.to, `chunk:inner-1:${e.toChunk!.cx}:${e.toChunk!.cy}`);
         const back = chunkTerrain(epoch, e.toChunk!.cx, e.toChunk!.cy);
         const mirror = back.exits.find((x) => x.to === `chunk:inner-1:${cx}:${cy}`);

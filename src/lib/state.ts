@@ -43,6 +43,15 @@ export interface GameState {
    * beats). Only these can revive an imported hero from 0 HP. Always <= embers.
    */
   xpEmbers: number;
+  /**
+   * Client-only (never uploaded): which Wilds region a saved `wilds`
+   * position is in. Absent means the Tangle; `outer-1` the outer Wilds.
+   * Positions are region-wide pixels and the server keeps `area: 'wilds'`
+   * for both regions, so this is how a reload knows which map to build.
+   */
+  wildsRegion?: string;
+  /** Client-only: the outer epoch (season) this player was last in. */
+  outerSeason?: string;
 }
 
 export class InvalidSaveError extends Error {
@@ -244,7 +253,14 @@ export function validateSave(data: unknown): GameState {
     data.xpEmbers === undefined ? 0 : Math.floor(requireFiniteNumber(data.xpEmbers, 'xpEmbers', { min: 0 })),
   );
 
+  // Client-only Wilds markers (added later): short strings, else dropped.
+  const marker = (v: unknown): string | undefined => (typeof v === 'string' && v.length > 0 && v.length <= 64 ? v : undefined);
+  const wildsRegion = data.area === 'wilds' ? marker(data.wildsRegion) : undefined;
+  const outerSeason = marker(data.outerSeason);
+
   return {
+    ...(wildsRegion ? { wildsRegion } : {}),
+    ...(outerSeason ? { outerSeason } : {}),
     version: SAVE_VERSION,
     area: data.area as AreaId,
     position: { x, y },

@@ -1,31 +1,38 @@
 /**
- * The Wilds region store: the client's picture of the Tangle, shared by the
- * chunk scenes and the character panel.
+ * The Wilds region store: the client's picture of the Tangle and the outer
+ * Wilds, shared by the chunk scenes and the character panel.
+ *
+ * Two regions, one active: the region the current scene plays in. Reads and
+ * claims go to the active region unless a region is named.
  *
  * Connected play — the server owns everything. `refreshWilds` reads
- * GET /api/wilds/region/inner-1 (epoch, entities with cycles, personal
- * claims, discoveries, lanterns, material balances) and claims go through
+ * GET /api/wilds/region/<id> (epoch, entities with cycles, personal claims,
+ * discoveries, lanterns, material balances) and claims go through
  * POST /api/wilds/claim. A claim is always preceded by a fresh read, because
  * a read is what advances a respawn cycle: claiming a node that regrew needs
- * the cycle the read produced (the server rejects the old one).
+ * the cycle the read produced (the server rejects the old one). The outer
+ * epoch carries its `endsAt`; past it the region has turned.
  *
- * Guests — no server, no shared state (brief item 7). The Tangle generates
- * from a fixed local epoch (regions.ts) and claims apply locally with the
- * same timers the server uses (content/wilds.json): a harvested node regrows
- * in 300s, a cleared camp returns in 600s, and each chest and POI pays its
- * personal loot once per visit (in memory only). Loot rolls use the same
- * `rollLoot` the server uses, so guest loot matches the generator. Guest
- * materials persist in the save as `material:<id>:<qty>` pack entries;
- * trinkets are ordinary pack entries.
+ * Guests — no server, no shared state (brief item 7). Both regions generate
+ * from local epochs: the Tangle's is fixed; the outer Wilds' season follows
+ * the shared calendar (lib/wilds/outer.ts), so it turns every wick exactly
+ * as it does for connected players. Claims apply locally with the same
+ * timers the server uses (content/wilds.json): a harvested node regrows in
+ * 300s, a cleared camp returns in 600s, and each chest and POI pays its
+ * personal loot once per epoch visit (in memory only). Loot rolls use the
+ * same `rollLoot` the server uses. Guest materials persist in the save as
+ * `material:<id>:<qty>` pack entries; trinkets are ordinary pack entries.
  */
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import { chunkEntities, rollLoot } from '../../lib/wilds/index.ts';
+import { epochEnded, guestOuterEpoch } from '../../lib/wilds/outer.ts';
 import type { Epoch, LootDrop, WildsEntityKind } from '../../lib/wilds/types.ts';
 import type { WildsEntityView, WildsLanternView, WildsMaterials } from '../../lib/api/types.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import { EV, bus } from '../events';
+import { gameNow } from '../clock';
 import type { Session } from '../session';
-import { WILDS_REGION_ID, guestEpoch, isWildsArea } from './regions.ts';
+import { OUTER_REGION_ID, WILDS_REGION_ID, guestEpoch, isWildsArea, regionOfState, wildsRegion } from './regions.ts';
 import { registerWildsAreas } from './areas.ts';
 import { HOME_EV, currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
 
@@ -39,8 +46,8 @@ function watchHomesteadMaterials(): void {
   homesteadWatch = true;
   bus.on(HOME_EV.changed, () => {
     const m = currentHomesteadMaterials();
-    if (m && view && !view.guest) {
-      view.materials = m;
+    if (m && anyConnectedView()) {
+      setMaterials(m);
       emitMaterials();
     }
   });
@@ -72,24 +79,81 @@ export interface WildsView {
   version: number;
 }
 
+interface RegionState {
+  epoch: Epoch;
+  /** Unix seconds the epoch ends (the outer Wilds); null when permanent. */
+  endsAt: number | null;
+  view: WildsView | null;
+  inflight: Promise<boolean> | null;
+  fetchedAt: number;
+}
+
 const TIMERS = loadWilds().timers;
 
-let view: WildsView | null = null;
-let epoch: Epoch = guestEpoch();
-let inflight: Promise<boolean> | null = null;
-let fetchedAt = 0;
+const regions = new Map<string, RegionState>();
+let active: string = WILDS_REGION_ID;
+
+function regionState(id: string): RegionState {
+  let r = regions.get(id);
+  if (!r) {
+    const epoch = id === OUTER_REGION_ID ? guestOuterEpoch(gameNow()) : guestEpoch();
+    r = { epoch, endsAt: null, view: null, inflight: null, fetchedAt: 0 };
+    regions.set(id, r);
+  }
+  return r;
+}
+
+function anyConnectedView(): boolean {
+  return [...regions.values()].some((r) => r.view && !r.view.guest);
+}
+
+/** The region the current scene plays in (reads and claims default to it). */
+export function setActiveWildsRegion(id: string): void {
+  active = id === OUTER_REGION_ID ? OUTER_REGION_ID : WILDS_REGION_ID;
+}
+
+export function activeWildsRegion(): string {
+  return active;
+}
 
 /** Wilds materials for the character panel (`null` until the Wilds load). */
 export function wildsMaterials(): Record<string, number> | null {
-  return view ? { ...view.materials } : null;
+  const v = regionState(active).view ?? [...regions.values()].find((r) => r.view)?.view ?? null;
+  return v ? { ...v.materials } : null;
 }
 
-export function wildsView(): WildsView | null {
-  return view;
+export function wildsView(region: string = active): WildsView | null {
+  return regionState(region).view;
 }
 
-export function wildsEpoch(): Epoch {
-  return epoch;
+export function wildsEpoch(region: string = active): Epoch {
+  return regionState(region).epoch;
+}
+
+/** When the region's epoch ends (Unix seconds), or null for the permanent Tangle. */
+export function wildsEpochEndsAt(region: string = active): number | null {
+  const r = regionState(region);
+  return r.endsAt;
+}
+
+/**
+ * Has the outer Wilds' epoch this store holds ended? Guests follow the game
+ * clock (the calendar, dev offset included); connected players the server's
+ * `endsAt` against the real clock (the server is what refuses an ended epoch).
+ */
+export function outerTurned(session: Session): boolean {
+  const r = regions.get(OUTER_REGION_ID);
+  if (!r) return false;
+  if (!session.link) return guestOuterEpoch(gameNow()).season !== r.epoch.season;
+  return r.view !== null && !r.view.guest && epochEnded(r.epoch.season, Math.floor(Date.now() / 1000), r.endsAt);
+}
+
+/**
+ * Forget a region's state (the Turning): the next read builds the new epoch.
+ * Guests regenerate; connected players refetch.
+ */
+export function resetWildsRegion(id: string): void {
+  regions.delete(id);
 }
 
 function materialsRecord(list: { id: string; qty: number }[]): Record<string, number> {
@@ -99,15 +163,20 @@ function materialsRecord(list: { id: string; qty: number }[]): Record<string, nu
   return out;
 }
 
-function emitMaterials(): void {
-  if (!view) return;
-  const materials = wildsMaterials();
-  bus.emit(EV.wilds, { materials });
-  // One server-owned balance everywhere: the shop's mirror follows.
-  if (!view.guest) syncWildsMaterials(materials);
+/** One balance across both regions' views. */
+function setMaterials(m: Record<string, number>): void {
+  for (const r of regions.values()) if (r.view) r.view.materials = { ...m };
 }
 
-function bump(): void {
+function emitMaterials(): void {
+  const materials = wildsMaterials();
+  if (!materials) return;
+  bus.emit(EV.wilds, { materials });
+  // One server-owned balance everywhere: the shop's mirror follows.
+  if (anyConnectedView()) syncWildsMaterials(materials);
+}
+
+function bump(view: WildsView | null): void {
   if (view) view.version += 1;
   emitMaterials();
 }
@@ -149,10 +218,9 @@ function inventoryWithMaterials(inventory: readonly string[], materials: Record<
 }
 
 /** An entity list generated locally, all available (guest mode). */
-function guestEntities(): WildsEntityView[] {
+function guestEntities(epoch: Epoch): WildsEntityView[] {
   const out: WildsEntityView[] = [];
-  const data = loadWilds();
-  const region = data.regions.find((r) => r.id === WILDS_REGION_ID)!;
+  const region = wildsRegion(epoch.regionId);
   for (let cy = 0; cy < region.gridHeight; cy++) {
     for (let cx = 0; cx < region.gridWidth; cx++) {
       for (const e of chunkEntities(epoch, cx, cy)) {
@@ -164,26 +232,31 @@ function guestEntities(): WildsEntityView[] {
 }
 
 /**
- * Make the store usable for a guest session (fixed epoch, entities from the
- * generator, materials read back from the pack). Safe to call again.
+ * Make a region usable for a guest session (local epoch, entities from the
+ * generator, materials read back from the pack). Safe to call again; a guest
+ * outer region whose wick has passed regenerates as the new epoch.
  */
-function guestInit(session: Session): void {
-  epoch = guestEpoch();
-  registerWildsAreas(epoch);
-  if (!view || !view.guest) {
+function guestInit(session: Session, id: string): void {
+  const r = regionState(id);
+  const epoch = id === OUTER_REGION_ID ? guestOuterEpoch(gameNow()) : guestEpoch();
+  const turned = epoch.season !== r.epoch.season;
+  if (!r.view || !r.view.guest || turned) {
+    r.epoch = epoch;
+    r.endsAt = null;
     const materials = materialsFromInventory(session.state.inventory);
-    view = {
+    r.view = {
       epochId: '',
       guest: true,
-      entities: guestEntities(),
+      entities: guestEntities(epoch),
       claims: [],
       discoveries: [],
       lanterns: [],
       materials,
-      version: 0,
+      version: (r.view?.version ?? 0) + 1,
     };
-    bump();
-  }
+    registerWildsAreas(epoch);
+    bump(r.view);
+  } else registerWildsAreas(r.epoch);
 }
 
 /**
@@ -192,12 +265,14 @@ function guestInit(session: Session): void {
  * a camp whose enemies are still up).
  */
 export function guestClaim(entityId: string, session: Session): LootDrop | null {
+  const r = regionState(active);
+  const view = r.view;
   if (!view || !view.guest) return null;
   const nowSec = Math.floor(Date.now() / 1000);
-  advanceReadyGuests(nowSec);
+  advanceReadyGuests(view, nowSec);
   const e = view.entities.find((x) => x.id === entityId);
   if (!e || isClaimed(entityId) || !entityAvailable(e, nowSec)) return null;
-  const drop = rollLoot(epoch, entityId, e.cycle);
+  const drop = rollLoot(r.epoch, entityId, e.cycle);
   if (e.kind === 'camp') {
     e.state = 'cleared';
     e.available_at = nowSec + TIMERS.campRespawnSeconds;
@@ -211,8 +286,8 @@ export function guestClaim(entityId: string, session: Session): LootDrop | null 
   }
   e.by = 'you';
   e.at = nowSec;
-  applyLoot(session, drop);
-  bump();
+  applyLoot(session, view, drop);
+  bump(view);
   return drop;
 }
 
@@ -221,12 +296,12 @@ export function guestClaim(entityId: string, session: Session): LootDrop | null 
  * this on read; guests do it locally). Called by the scene's tick.
  */
 export function tickWildsGuest(): void {
+  const view = regionState(active).view;
   if (!view || !view.guest) return;
-  advanceReadyGuests(Math.floor(Date.now() / 1000));
+  advanceReadyGuests(view, Math.floor(Date.now() / 1000));
 }
 
-function advanceReadyGuests(nowSec: number): void {
-  if (!view) return;
+function advanceReadyGuests(view: WildsView, nowSec: number): void {
   for (const e of view.entities) {
     if (e.kind !== 'camp' && e.kind !== 'node') continue;
     if (e.state === 'available' || e.available_at <= 0 || nowSec < e.available_at) continue;
@@ -239,9 +314,10 @@ function advanceReadyGuests(nowSec: number): void {
 }
 
 /** Guest loot lands in the pack (materials as balance entries, trinkets as items). */
-function applyLoot(session: Session, drop: LootDrop): void {
-  if (!view) return;
-  for (const m of drop.materials) view.materials[m.id] = (view.materials[m.id] ?? 0) + m.qty;
+function applyLoot(session: Session, view: WildsView, drop: LootDrop): void {
+  const materials = { ...view.materials };
+  for (const m of drop.materials) materials[m.id] = (materials[m.id] ?? 0) + m.qty;
+  setMaterials(materials);
   if (view.guest) {
     // Guests persist materials in the pack; connected play leaves balances
     // to the server (they arrive with each response).
@@ -251,7 +327,7 @@ function applyLoot(session: Session, drop: LootDrop): void {
         drop.trinket && !session.state.inventory.includes(drop.trinket)
           ? [...session.state.inventory, drop.trinket]
           : session.state.inventory,
-        view.materials
+        materials
       ),
     };
     session.saveSoon();
@@ -261,30 +337,33 @@ function applyLoot(session: Session, drop: LootDrop): void {
 // ------------------------------------------------------------ connected mode
 
 /**
- * Load/refresh the region. Connected: a GET (adopting a newer rev and
- * balances; never moving the hero). Guest: the local synth. Returns whether
- * the region is usable afterwards.
+ * Load/refresh a region (default: the active one). Connected: a GET
+ * (adopting a newer rev and balances; never moving the hero). Guest: the
+ * local synth. Returns whether the region is usable afterwards.
  */
-export async function refreshWilds(session: Session, maxAgeMs = 0): Promise<boolean> {
-  if (inflight) return inflight;
+export async function refreshWilds(session: Session, maxAgeMs = 0, region: string = active): Promise<boolean> {
+  const r = regionState(region);
+  if (r.inflight) return r.inflight;
   const run = async (): Promise<boolean> => {
     if (!session.link) {
-      guestInit(session);
-      fetchedAt = Date.now();
+      guestInit(session, region);
+      r.fetchedAt = Date.now();
       return true;
     }
-    if (view && !view.guest && Date.now() - fetchedAt < maxAgeMs) return true;
+    if (r.view && !r.view.guest && Date.now() - r.fetchedAt < maxAgeMs) return true;
     try {
-      const res = await session.link.wildsRegion(WILDS_REGION_ID);
-      epoch = {
+      const res = await session.link.wildsRegion(region);
+      const live = regionState(region);
+      live.epoch = {
         worldSeed: res.epoch.worldSeed,
         regionId: res.epoch.regionId,
         generatorVersion: res.epoch.generatorVersion,
         season: res.epoch.season,
       };
-      registerWildsAreas(epoch);
-      const prior = view && !view.guest ? view : null;
-      view = {
+      live.endsAt = typeof res.epoch.endsAt === 'number' ? res.epoch.endsAt : null;
+      registerWildsAreas(live.epoch);
+      const prior = live.view && !live.view.guest ? live.view : null;
+      live.view = {
         epochId: res.epoch.id,
         guest: false,
         entities: res.entities,
@@ -299,40 +378,46 @@ export async function refreshWilds(session: Session, maxAgeMs = 0): Promise<bool
         materials: materialsRecord(Object.entries(res.materials).map(([id, qty]) => ({ id, qty }))),
         version: (prior?.version ?? 0) + 1,
       };
-      fetchedAt = Date.now();
-      bump();
+      setMaterials(live.view.materials);
+      live.fetchedAt = Date.now();
+      bump(live.view);
       return true;
     } catch {
-      return view !== null && !view.guest;
+      const v = regionState(region).view;
+      return v !== null && !v.guest;
     }
   };
-  inflight = run().finally(() => {
-    inflight = null;
+  r.inflight = run().finally(() => {
+    const live = regions.get(region);
+    if (live) live.inflight = null;
   });
-  return inflight;
+  return r.inflight;
 }
 
 /**
- * Everything a connected session needs before it can play in the Wilds:
- * guests get their local region immediately; connected players fetch the
- * region (so terrain and entities share the server's epoch). Await this
- * before building a Wilds chunk scene. `maxAgeMs` lets chunk re-entries use
- * a recent read instead of refetching every walk between chunks.
+ * Everything a session needs before it can play in the Wilds: the region its
+ * save is in becomes active; guests get their local region immediately;
+ * connected players fetch it (so terrain and entities share the server's
+ * epoch). Await this before building a Wilds chunk scene. `maxAgeMs` lets
+ * chunk re-entries use a recent read instead of refetching every walk.
  */
 export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<boolean> {
+  const region = regionOfState(session.state);
+  if (isWildsArea(session.state.area)) setActiveWildsRegion(region);
   if (!session.link) {
-    guestInit(session);
+    guestInit(session, region);
     return true;
   }
   // Switching from a guest session to a connected one: the guest's local
-  // region (and its materials view) does not carry over.
-  if (view?.guest) {
-    view = null;
+  // regions (and their materials view) do not carry over.
+  if ([...regions.values()].some((r) => r.view?.guest)) {
+    regions.clear();
     bus.emit(EV.wilds, { materials: null });
   }
   watchHomesteadMaterials();
-  if (isWildsArea(session.state.area)) return refreshWilds(session, maxAgeMs);
-  return view !== null && !view.guest;
+  if (isWildsArea(session.state.area)) return refreshWilds(session, maxAgeMs, region);
+  const v = regionState(region).view;
+  return v !== null && !v.guest;
 }
 
 /** A server claim answer: entity state, loot, balances. */
@@ -341,6 +426,7 @@ export function applyClaim(result: {
   loot: { materials: { id: string; qty: number }[]; trinket: string | null };
   materials: WildsMaterials;
 }): LootDrop {
+  const view = regionState(active).view;
   if (!view) throw new Error('wilds: claim before the region loaded');
   const e = view.entities.find((x) => x.id === result.entity.id);
   if (e) Object.assign(e, result.entity);
@@ -348,24 +434,25 @@ export function applyClaim(result: {
     if (!view.claims.includes(result.entity.id)) view.claims.push(result.entity.id);
   }
   // The response carries the post-grant balances: replace the mirror.
-  view.materials = materialsRecord(Object.entries(result.materials).map(([id, qty]) => ({ id, qty: Number(qty) })));
-  bump();
+  setMaterials(materialsRecord(Object.entries(result.materials).map(([id, qty]) => ({ id, qty: Number(qty) }))));
+  bump(view);
   return { materials: result.loot.materials, trinket: result.loot.trinket };
 }
 
 export function applyLanterns(lanterns: WildsLanternView[]): void {
+  const view = regionState(active).view;
   if (!view) return;
   view.lanterns = lanterns;
-  bump();
+  bump(view);
 }
 
 /** A personal claim seen in a region read (chest/POI ids). */
 export function isClaimed(entityId: string): boolean {
-  return view?.claims.includes(entityId) ?? false;
+  return regionState(active).view?.claims.includes(entityId) ?? false;
 }
 
 export function discoveryFor(entityId: string): WildsDiscovery | null {
-  return view?.discoveries.find((d) => d.entityId === entityId) ?? null;
+  return regionState(active).view?.discoveries.find((d) => d.entityId === entityId) ?? null;
 }
 
 /** Display name of a material or trinket (for toasts). */

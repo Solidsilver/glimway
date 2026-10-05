@@ -5,9 +5,6 @@
  */
 import type { DecorKind } from '../../lib/wilds/types.ts'
 
-/** The atlas texture holding every decor frame. */
-export const TANGLE_ATLAS = 'tangle-decor'
-
 /** Variants drawn per decor kind. */
 export const TANGLE_VARIANTS = 4
 
