@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { beginNewJourney, warp, waitForWilds, wilds, type WildsDump } from './helpers'
+import { beginNewJourney, holdUntil, warp, waitForWilds, wilds, type WildsDump } from './helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
 
 /**
@@ -42,9 +42,7 @@ for (const [device, vp] of sizes) {
 
     // A neighboring chunk through the east gap.
     await warp(page, chunkAreaId(1, 1), 21, 12)
-    await page.keyboard.down('ArrowRight')
-    await page.waitForTimeout(900)
-    await page.keyboard.up('ArrowRight')
+    await holdUntil(page, 'ArrowRight', async () => (await wilds(page)).chunk.cx === 2)
     await waitForWilds(page)
     await shot(page, `21-wilds-east-chunk-${device}`)
 

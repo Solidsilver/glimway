@@ -186,6 +186,25 @@ export async function hold(page: Page, key: string, ms: number): Promise<void> {
   await page.keyboard.up(key)
 }
 
+/**
+ * Hold a key until a check passes (or a timeout): walks must survive a
+ * loaded machine, where a fixed-duration hold may only cross half a tile.
+ * The check runs between frames; the key lifts as soon as it passes.
+ */
+export async function holdUntil(page: Page, key: string, check: () => Promise<boolean>, ms = 25_000): Promise<void> {
+  const until = Date.now() + ms
+  await page.keyboard.down(key)
+  try {
+    while (Date.now() < until) {
+      if (await check()) return
+      await page.waitForTimeout(120)
+    }
+    throw new Error(`holdUntil: ${key} never got there`)
+  } finally {
+    await page.keyboard.up(key)
+  }
+}
+
 /** The saved quest stage, read straight from IndexedDB. */
 export async function savedStage(page: Page): Promise<string | undefined> {
   return page.evaluate(async () => {

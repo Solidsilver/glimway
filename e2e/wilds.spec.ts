@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { beginNewJourney, hold, warp, waitForWilds, wilds, type WildsDump } from './helpers'
+import { beginNewJourney, hold, holdUntil, warp, waitForWilds, wilds, type WildsDump } from './helpers'
 import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds/regions.ts'
 
 /**
@@ -76,7 +76,9 @@ test('connected: the Commons arch leads into the Tangle and back (handoff tiles)
   // North through the Commons arch: the Wilds entry chunk, at the agreed
   // arrival tile ({2,22} — the region-wide position the server expects).
   await warp(page, 'commons', 23, 2)
-  await hold(page, 'ArrowUp', 700)
+  const inWilds = () =>
+    page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId.startsWith('chunk:inner-1') === true)
+  await holdUntil(page, 'ArrowUp', inWilds)
   await waitForWilds(page)
   let dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 1 })
@@ -87,8 +89,9 @@ test('connected: the Commons arch leads into the Tangle and back (handoff tiles)
   // Back south through the commons gap (tiles 1–3, NOT the chunk gap): the
   // Commons, at the north arch. (2,22) is the gap's inward tile.
   await warp(page, chunkAreaId(1, 1), 2, 22)
-  await hold(page, 'ArrowDown', 900)
-  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'commons', undefined, { timeout: 15_000 })
+  const backInCommons = () =>
+    page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'commons')
+  await holdUntil(page, 'ArrowDown', backInCommons)
   const hero = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer!())
   expect(hero.x).toBe((23 + 0.5) * TILE)
   expect(hero.y).toBe((2 + 0.5) * TILE)
@@ -115,13 +118,13 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   // Walk chunk to chunk through the real exit gap: south into (1,2), then
   // east into (2,2). Exits sit 3 tiles wide, centered on each edge.
   await warp(page, entryChunk, 12, 21)
-  await hold(page, 'ArrowDown', 900)
+  await holdUntil(page, 'ArrowDown', async () => (await wilds(page)).chunk.cx === 1 && (await wilds(page)).chunk.cy === 2)
   const south = await waitForWilds(page)
   expect(south).toBe(chunkAreaId(1, 2))
   dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 2 })
   await warp(page, south, 21, 12)
-  await hold(page, 'ArrowRight', 900)
+  await holdUntil(page, 'ArrowRight', async () => (await wilds(page)).chunk.cx === 2 && (await wilds(page)).chunk.cy === 2)
   const east = await waitForWilds(page)
   expect(east).toBe(chunkAreaId(2, 2))
 
