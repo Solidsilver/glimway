@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { expect, type BrowserContext, type Page } from '@playwright/test'
 import { API_PORT, HABITICA_PORT } from '../playwright.config'
-import { waitForArea } from './helpers'
 
 /**
  * Helpers for the connected playtests: the real Go server (through Vite's
@@ -64,8 +63,11 @@ export async function openTitleGuide(page: Page): Promise<void> {
 }
 
 /** Wait for connected play: the world is live and the lease is held. */
-export async function waitForWorld(page: Page, area: 'village' | 'woodland' | 'ruin' = 'village'): Promise<void> {
-  await waitForArea(page, area)
+export async function waitForWorld(page: Page, area: string = 'village'): Promise<void> {
+  await page.waitForFunction((a) => {
+    const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
+    return !!s && !s.transitioning && (a === 'wilds' ? s.areaId.startsWith('chunk:inner-1') : s.areaId === a)
+  }, area)
   await expect.poll(() => linkStatus(page)).toBe('online')
 }
 

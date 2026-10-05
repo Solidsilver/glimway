@@ -37,7 +37,7 @@ import {
   type MergeMode
 } from '../lib/api/progress.ts'
 import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
-import type { Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
+import type { Snapshot, SpendRequest, SyncResponse, Progress, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
@@ -50,6 +50,9 @@ export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 
 export type RemoteSyncResult =
   | { ok: true; status: SyncResponse['status']; gained: number; welcome: number; credit: { hp: number; mana: number } }
   | { ok: false; code: ApiErrorCode | 'offline' | 'busy' }
+
+/** Wilds calls: the mapped result, or why not (ApiErrorCode, or no answer). */
+export type WildsOutcome<T> = { ok: true; result: T } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' }
 
 /** The part of a Session the link drives (Session implements it). */
 export interface LinkSession {
@@ -366,6 +369,112 @@ export class Link {
       const snap = await this.api.run((raw) => raw.state(this.lease))
       this.apply(snap, 'keep-local')
       return attempt()
+    }
+  }
+
+  // ------------------------------------------------------------ the Wilds
+
+  /**
+   * Region read (GET — no lease needed, but adopt a newer rev and balances).
+   * The world's shared Wilds state: epoch, entities with cycles, personal
+   * claims, discoveries, lanterns, material balances.
+   */
+  async wildsRegion(regionId: string): Promise<WildsRegionResponse> {
+    const res = await this.api.run((raw) => raw.wildsRegion(regionId))
+    this.contact()
+    // keep-local: a read must never move the hero or touch local vitals.
+    this.apply(res, 'keep-local')
+    void this.saveLocal()
+    return res
+  }
+
+  /**
+   * Claim a camp/node/chest/POI. The carried progress (area `wilds`,
+   * region-wide pixels) rides along, so the server's near-the-entity check
+   * sees where this tab is playing. It is captured before the request is
+   * queued — a defeat report must describe the fall, not the recovery.
+   * Returns the loot and post-grant state.
+   */
+  async wildsClaim(req: { epoch: string; entityId: string; cycle: number }): Promise<WildsOutcome<WildsClaimResult>> {
+    return this.wildsMutation(
+      req.epoch,
+      (key, progress) =>
+        this.api.run((raw) =>
+          raw.wildsClaim({
+            lease: this.lease!,
+            baseRev: this.rev,
+            epoch: req.epoch,
+            entityId: req.entityId,
+            cycle: req.cycle,
+            key,
+            progress
+          })
+        )
+    )
+  }
+
+  /**
+   * Report a defeat in the Wilds (before recovery): replaces this player's
+   * lantern at region tiles (x, y). No vitals come back from it, and the
+   * answer's state is not adopted (the local recovery owns vitals now).
+   */
+  async wildsDefeat(req: { epoch: string; x: number; y: number }): Promise<WildsOutcome<WildsDefeatResult>> {
+    return this.wildsMutation(
+      req.epoch,
+      (key, progress) =>
+        this.api.run((raw) =>
+          raw.wildsDefeat({ lease: this.lease!, baseRev: this.rev, epoch: req.epoch, x: req.x, y: req.y, key, progress })
+        ),
+      { adoptState: false }
+    )
+  }
+
+  /** Relight a fallen hero's lantern (the exact instance, by id). */
+  async wildsRelight(req: { epoch: string; ownerId: string; lanternId: string }): Promise<WildsOutcome<WildsLanternResult>> {
+    return this.wildsMutation(req.epoch, (key, progress) =>
+      this.api.run((raw) =>
+        raw.wildsLantern({
+          lease: this.lease!,
+          baseRev: this.rev,
+          epoch: req.epoch,
+          ownerId: req.ownerId,
+          lanternId: req.lanternId,
+          key,
+          progress
+        })
+      )
+    )
+  }
+
+  /** Shared body of the three Wilds mutations: busy/lease guards, stale retry, adopt. */
+  private async wildsMutation<T>(
+    epoch: string,
+    call: (key: string, progress: Progress) => Promise<Snapshot & { result: T }>,
+    opts: { adoptState?: boolean } = {}
+  ): Promise<WildsOutcome<T>> {
+    const s = this.session
+    if (!s || this.stopped) return { ok: false, code: 'unknown' }
+    if (this.busy) return { ok: false, code: 'busy' }
+    if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
+    if (!epoch) return { ok: false, code: 'epoch-not-found' }
+    // Captured now: the request must describe the moment it was made.
+    const progress = toProgress(s.state)
+    this.setBusy(true)
+    try {
+      const res = await this.withReload(() => call(newKey(), progress))
+      this.contact()
+      if (opts.adoptState !== false) this.apply(res, 'server')
+      else this.rev = res.rev
+      this.acked = docKey(s.state)
+      void this.saveLocal()
+      return { ok: true, result: res.result }
+    } catch (err) {
+      const code = errorCode(err)
+      const action = failureAction(code)
+      if (action === 'offline' || action === 'superseded' || action === 'signed-out') this.onFailure(err, 'wilds')
+      return { ok: false, code: action === 'offline' ? 'offline' : code }
+    } finally {
+      this.setBusy(false)
     }
   }
 

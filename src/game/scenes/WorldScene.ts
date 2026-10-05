@@ -34,6 +34,18 @@ import { PaperPickups } from '../entities/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
+import {
+  WILDS_AREA,
+  fromRegionPosition,
+  inRegion,
+  isWildsArea,
+  parseChunkArea,
+  toRegionPosition,
+  wildsArrivalPosition,
+  wildsSceneEntry,
+} from '../wilds/regions'
+import { ensureWildsAreaKinds, prepareWilds, wildsEpoch } from '../wilds/store'
+import { WildsEntities, type WildsAction } from '../wilds/entities'
 
 interface SceneData {
   entry?: { tx: number; ty: number }
@@ -45,6 +57,8 @@ export class WorldScene extends Phaser.Scene {
   private world!: WorldData
   private fx!: Effects
   private remotePlayers!: RemotePlayers
+  /** Wilds entities for a generated chunk scene (null in curated areas). */
+  private wilds: WildsEntities | null = null
   /** Collisions for terrain tiles and prop footprints (area/collision). */
   private solidGroup!: Phaser.Physics.Arcade.StaticGroup
   /** Atlas-prop lanterns that can glow when lit (area/lanterns owns visuals). */
@@ -82,7 +96,12 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    this.world = buildArea(state.area)
+    // Wilds: resolve the saved region-wide position into its chunk area and
+    // a chunk-local arrival tile (see src/game/wilds/regions.ts).
+    const wildsEntry = wildsSceneEntry(state, wildsEpoch())
+    this.wilds = null
+    if (wildsEntry) ensureWildsAreaKinds(wildsEpoch())
+    this.world = buildArea(wildsEntry ? wildsEntry.areaId : state.area)
     this.occluders = []
     this.cinematic = false
     this.captureReleased = false
@@ -115,7 +134,7 @@ export class WorldScene extends Phaser.Scene {
         cinematic: () => this.cinematic,
         onDefeat: () => this.defeatRecovery()
       },
-      this.pendingEntry
+      wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero })
     this.npcs = new Npcs(this, this.world)
@@ -135,6 +154,20 @@ export class WorldScene extends Phaser.Scene {
     this.occluders = buildForeground(this, this.world)
     buildExitSigns(this, this.world, this.reducedMotion)
     this.physics.add.collider(this.hero.sprite, this.solidGroup)
+
+    // The Wilds layer: camps, nodes, chests, POIs and lanterns (null in the
+    // curated areas). The region read refreshes in the background; entities
+    // render from the store and follow its changes.
+    if (wildsEntry) {
+      this.wilds = new WildsEntities(this, {
+        world: this.world,
+        session: this.session,
+        fx: this.fx,
+        enemies: this.enemies,
+        reducedMotion: this.reducedMotion
+      })
+      void prepareWilds(this.session, 60_000)
+    }
 
     // Arcade's world bounds default to the canvas size, which is larger than
     // small maps — without this the hero can walk off the map edge.
@@ -267,6 +300,8 @@ export class WorldScene extends Phaser.Scene {
     }
     // Connected-play status for playtests (read-only; null for guests).
     ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null
+    // Read-only Wilds snapshot for playtests (null outside the Wilds).
+    ;(window as unknown as { __fsWilds?: () => ReturnType<WildsEntities['debug']> }).__fsWilds = () => this.wilds?.debug() ?? null
     // Sync-safety snapshot for the UI gate (read-only).
     ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
       const px = this.hero.sprite.x
@@ -347,11 +382,14 @@ export class WorldScene extends Phaser.Scene {
     this.hero.move(dt, this.inputVector())
     this.enemies.update(dt)
     this.projectiles.update(dt)
+    this.wilds?.update()
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
     const show = this.enemies.showTarget()
-    this.interactables.updatePrompt(this.hero.sprite, this.time.now, show ? { label: 'Hold up the rubbing', verb: 'Show', ...show } : null)
+    const wildsAction: WildsAction | null = this.wilds?.promptAction(this.hero.sprite) ?? null
+    const action = wildsAction ?? (show ? { label: 'Hold up the rubbing', verb: 'Show', ...show } : null)
+    this.interactables.updatePrompt(this.hero.sprite, this.time.now, action)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
     this.updateDepth()
@@ -361,8 +399,23 @@ export class WorldScene extends Phaser.Scene {
     this.positionTimer += dt
     if (this.positionTimer > 1) {
       this.positionTimer = 0
-      this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+      // Wilds: saved progress is region-wide pixels (one convention for
+      // saves, reloads, claims and defeat reports).
+      this.session.state.position = this.wildsEntryNow()
+        ? this.wildsPosition(Math.round(this.hero.sprite.x), Math.round(this.hero.sprite.y))
+        : { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
     }
+  }
+
+  /** Is the scene playing a Wilds chunk right now (also true mid-transition). */
+  private wildsEntryNow(): boolean {
+    return isWildsArea(this.session.state.area) || parseChunkArea(this.world.areaId) !== null
+  }
+
+  /** Chunk-local scene pixels → the region-wide progress position. */
+  private wildsPosition(x: number, y: number): { x: number; y: number } {
+    const chunk = parseChunkArea(this.world.areaId) ?? { cx: 0, cy: 0 }
+    return toRegionPosition(chunk.cx, chunk.cy, x, y)
   }
 
   /** World input is live only while the hero actually has control. */
@@ -402,6 +455,8 @@ export class WorldScene extends Phaser.Scene {
     if (uiBlocked() || this.cinematic || this.transitioning || performance.now() < uiState.blockedUntil) return
     // The warden standing open after a lunge, within reach: show it the mark.
     if (this.enemies.showRubbing()) return
+    // Wilds claims (harvest, camp, chest, POI, lantern) outrank talking.
+    if (this.wilds?.handleAction()) return
     if (this.interactables.currentTarget) {
       // Free village activities stay available at zero HP: talking is fine.
       this.interactables.open(this.interactables.currentTarget)
@@ -432,10 +487,31 @@ export class WorldScene extends Phaser.Scene {
   /**
    * Connected play: the server's area/position won (a stale merge after
    * another device played). Same area: step there. Another area: rebuild the
-   * scene, which places the hero from the session state.
+   * scene, which places the hero from the session state. Wilds positions are
+   * region-wide pixels: the chunk they fall in decides.
    */
   private onRelocate(p: RelocatePayload): void {
     if (this.transitioning) return
+    if (isWildsArea(p.area)) {
+      const here = parseChunkArea(this.world.areaId)
+      const r = inRegion(p.x, p.y) ? fromRegionPosition(p.x, p.y) : null
+      if (here && r && r.cx === here.cx && r.cy === here.cy) {
+        this.hero.sprite.setPosition(r.x, r.y)
+        this.hero.sprite.setVelocity(0, 0)
+        return
+      }
+      // A different chunk (or a position outside the region): rebuild, and
+      // the wilds entry resolver places the hero (spawn as a fallback).
+      if (!r) {
+        this.session.state.position = wildsArrivalPosition(wildsEpoch())
+      }
+      this.transitioning = true
+      this.cameras.main.fade(240, 12, 12, 20, true)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        void prepareWilds(this.session, 60_000).finally(() => this.scene.restart({}))
+      })
+      return
+    }
     if (p.area === this.world.areaId) {
       this.hero.sprite.setPosition(p.x, p.y)
       this.hero.sprite.setVelocity(0, 0)
@@ -702,6 +778,34 @@ export class WorldScene extends Phaser.Scene {
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
     this.transitioning = true
     const state = this.session.state
+    const targetChunk = area === WILDS_AREA ? null : parseChunkArea(String(area))
+    if (area === WILDS_AREA || targetChunk) {
+      // Into the Wilds: the saved area stays `wilds` and the position is
+      // region-wide pixels. `wilds` (the Commons' exit, the dev warp)
+      // arrives at the region's entry point; chunk targets use their own
+      // exit's entry tile.
+      const epoch = wildsEpoch()
+      const dest = targetChunk ?? parseChunkArea(WILDS_AREA)!
+      // `wilds` (the Commons' exit, the dev warp) arrives at the region's
+      // entry point, and the scene restarts there.
+      const arrivalTile = targetChunk
+        ? entry
+        : (() => {
+            const r = fromRegionPosition(wildsArrivalPosition(epoch).x, wildsArrivalPosition(epoch).y)
+            return { tx: Math.floor(r.x / TILE), ty: Math.floor(r.y / TILE) }
+          })()
+      state.area = WILDS_AREA
+      state.position = targetChunk
+        ? toRegionPosition(dest.cx, dest.cy, (entry.tx + 0.5) * TILE, (entry.ty + 0.5) * TILE)
+        : wildsArrivalPosition(epoch)
+      this.session.saveSoon()
+      this.cameras.main.fade(240, 12, 12, 20, true)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        // The region must be loaded before the chunk builds (shared epoch).
+        void prepareWilds(this.session, 60_000).finally(() => this.scene.restart({ entry: arrivalTile }))
+      })
+      return
+    }
     state.area = area
     state.position = { x: (entry.tx + 0.5) * TILE, y: (entry.ty + 0.5) * TILE }
     this.session.saveSoon()
@@ -711,12 +815,17 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
-  /** Defeat: a short collapse beat, then wake at the village well. */
+  /**
+   * Defeat: a short collapse beat, then wake at the village well. In the
+   * Wilds the defeat is reported first (a fallen-hero lantern), before
+   * recovery touches vitals.
+   */
   private defeatRecovery(): void {
     this.transitioning = true
     // Tell the UI first: it holds the bars while the hero collapses, then
     // shows the recovered vitals once the screen is dark.
     bus.emit(EV.defeat, { phase: 'falling' })
+    const wildsReport = isWildsArea(this.session.state.area) ? this.wilds?.reportDefeat() ?? null : null
     this.session.defeat()
     sfx('defeat')
     this.hero.sprite.setVelocity(0, 0)
@@ -726,6 +835,9 @@ export class WorldScene extends Phaser.Scene {
     // this fade, or 'camerafadeoutcomplete' never fires and we soft-lock.
     this.cameras.main.fade(1100, 12, 12, 20, true)
     this.cameras.main.once('camerafadeoutcomplete', () => {
+      // The report is queued ahead of everything else this tab sends; the
+      // recovery never waits on it, but it must not be dropped either.
+      void wildsReport?.catch(() => undefined)
       this.scene.restart({ fromDefeat: true })
     })
   }

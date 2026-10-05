@@ -17,6 +17,16 @@ import type {
   StateResponse,
   SpendResponse,
   SyncResponse,
+  WildsClaimResponse,
+  WildsDefeatResponse,
+  WildsEntityState,
+  WildsEntityView,
+  WildsEpoch,
+  WildsLanternResponse,
+  WildsLanternView,
+  WildsLoot,
+  WildsMaterials,
+  WildsRegionResponse,
 } from './types.ts';
 
 type Obj = Record<string, unknown>;
@@ -118,4 +128,152 @@ export function parseInviteList(raw: unknown): InviteList {
   if (remaining !== undefined) out.remaining = remaining;
   if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
   return out;
+}
+
+// ------------------------------------------------------------- the Wilds
+
+const int = (v: unknown): number => {
+  const n = num(v);
+  if (!Number.isInteger(n)) throw new ApiError('bad-response');
+  return n;
+};
+
+const nullableStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+
+/** Materials map: the four known ids, nonnegative, unknown ids dropped. */
+export function parseMaterials(raw: unknown): WildsMaterials {
+  const o = raw === null || raw === undefined ? {} : obj(raw);
+  const out: WildsMaterials = { timber: 0, stone: 0, fiber: 0, amber: 0 };
+  for (const key of Object.keys(out) as (keyof WildsMaterials)[]) {
+    const v = o[key];
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) out[key] = Math.floor(v);
+  }
+  return out;
+}
+
+function parseEpoch(raw: unknown): WildsEpoch {
+  const o = obj(raw);
+  return {
+    worldSeed: str(o.worldSeed),
+    regionId: str(o.regionId),
+    generatorVersion: int(o.generatorVersion),
+    season: str(o.season),
+    id: str(o.id),
+    startsAt: int(o.startsAt),
+    endsAt: o.endsAt === null || o.endsAt === undefined ? null : int(o.endsAt),
+  };
+}
+
+const ENTITY_STATES = ['available', 'cleared', 'harvested', 'charted'];
+
+function parseEntity(raw: unknown): WildsEntityView {
+  const o = obj(raw);
+  const state = str(o.state) as WildsEntityState;
+  if (!ENTITY_STATES.includes(state)) throw new ApiError('bad-response');
+  return {
+    id: str(o.id),
+    kind: str(o.kind) as WildsEntityView['kind'],
+    tx: int(o.tx),
+    ty: int(o.ty),
+    enemies: Array.isArray(o.enemies) ? o.enemies.filter((e): e is string => typeof e === 'string') : [],
+    material: typeof o.material === 'string' ? o.material : '',
+    tier: int(o.tier),
+    poi: typeof o.poi === 'string' ? o.poi : '',
+    cycle: int(o.cycle),
+    state,
+    available_at: int(o.available_at),
+    by: nullableStr(o.by),
+    at: o.at === null || o.at === undefined ? null : int(o.at),
+  };
+}
+
+export function parseLoot(raw: unknown): WildsLoot {
+  const o = obj(raw);
+  const materials = Array.isArray(o.materials) ? o.materials : [];
+  return {
+    materials: materials.map((m) => {
+      const e = obj(m);
+      return { id: str(e.id), qty: Math.max(0, int(e.qty)) };
+    }),
+    trinket: nullableStr(o.trinket),
+  };
+}
+
+function parseLantern(raw: unknown): WildsLanternView {
+  const o = obj(raw);
+  return {
+    id: str(o.id),
+    ownerId: str(o.ownerId),
+    displayName: typeof o.displayName === 'string' ? o.displayName : '',
+    x: int(o.x),
+    y: int(o.y),
+    litBy: nullableStr(o.litBy),
+    at: int(o.at),
+    litAt: o.litAt === null || o.litAt === undefined ? null : int(o.litAt),
+  };
+}
+
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+
+export function parseWildsRegion(raw: unknown): WildsRegionResponse {
+  const o = obj(raw);
+  return {
+    ...parseSnapshot(raw),
+    epoch: parseEpoch(o.epoch),
+    entities: arr(o.entities).map(parseEntity),
+    personalClaims: arr(o.personalClaims).map((c) => {
+      const e = obj(c);
+      return { entityId: str(e.entityId), at: int(e.at) };
+    }),
+    discoveries: arr(o.discoveries).map((d) => {
+      const e = obj(d);
+      return {
+        entityId: str(e.entityId),
+        poiId: str(e.poiId),
+        discovererId: str(e.discovererId),
+        displayName: typeof e.displayName === 'string' ? e.displayName : '',
+        at: int(e.at),
+      };
+    }),
+    lanterns: arr(o.lanterns).map(parseLantern),
+    materials: parseMaterials(o.materials),
+  };
+}
+
+export function parseWildsClaim(raw: unknown): WildsClaimResponse {
+  const o = obj(raw);
+  const r = obj(o.result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      epoch: str(r.epoch),
+      entity: parseEntity(r.entity),
+      loot: parseLoot(r.loot),
+      materials: parseMaterials(r.materials),
+    },
+  };
+}
+
+export function parseWildsDefeat(raw: unknown): WildsDefeatResponse {
+  const o = obj(raw);
+  const r = obj(o.result);
+  return {
+    ...parseSnapshot(raw),
+    result: { epoch: str(r.epoch), lanternId: str(r.lanternId), lanterns: arr(r.lanterns).map(parseLantern) },
+  };
+}
+
+export function parseWildsLantern(raw: unknown): WildsLanternResponse {
+  const o = obj(raw);
+  const r = obj(o.result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      epoch: str(r.epoch),
+      rewarded: r.rewarded === true,
+      loot: parseLoot(r.loot),
+      materials: parseMaterials(r.materials),
+      lanterns: arr(r.lanterns).map(parseLantern),
+    },
+  };
 }

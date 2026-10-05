@@ -1,8 +1,10 @@
 <script lang="ts">
   import { DEMO_CHARACTER, discoveryInfo, itemInfo } from '../content/world'
+  import { MATERIALS, MORE_TRINKETS, TRINKETS } from '../content/expansion-writing'
   import { getCombatKit } from '../lib/combat'
   import { EMBER_COSTS, ROAD_LANTERNS, XP_PER_EMBER, chestOpened, isLit, withCharm } from '../lib/embers'
   import type { Session } from '../game/session'
+  import { MATERIAL_ITEM_PREFIX } from '../game/wilds/store'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
@@ -23,6 +25,11 @@
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))
 
+  /** Whole numbers only: "~8 damage", never "~8.13 dmg". */
+  const n = (v: number) => Math.max(1, Math.round(v))
+  const pct = (v: number) => Math.round(v * 100)
+  const secs = (v: number) => (Math.round(v * 10) / 10).toString()
+
   const STAT_ROWS = [
     { key: 'str', label: 'Strength', hint: 'Melee power' },
     { key: 'int', label: 'Intellect', hint: 'Magic power' },
@@ -30,10 +37,15 @@
     { key: 'per', label: 'Perception', hint: 'Finesse & crits' }
   ] as const
 
-  /** Whole numbers only: "~8 damage", never "~8.13 dmg". */
-  const n = (v: number) => Math.max(1, Math.round(v))
-  const pct = (v: number) => Math.round(v * 100)
-  const secs = (v: number) => (Math.round(v * 10) / 10).toString()
+  /** Pack entries, without the guest material balance entries (they have their own section). */
+  const pack = $derived(snapshot.inventory.filter((id) => !id.startsWith(MATERIAL_ITEM_PREFIX)))
+  /** Wilds materials: server balances once the Wilds load, or the guest pack. */
+  const materials = $derived(ui.materials)
+  const MATERIAL_ICONS: Record<string, string> = { timber: 'menu', stone: 'stone', fiber: 'roll', amber: 'ember' }
+  const trinketInfo = (id: string) => {
+    const t = TRINKETS.find((x) => x.id === id) ?? MORE_TRINKETS.find((x) => x.id === id)
+    return t ? { name: t.name, icon: 'sparkle', blurb: t.blurb } : itemInfo(id)
+  }
 </script>
 
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="char-title">
@@ -123,15 +135,29 @@
     </div>
 
     <h3 class="section-title">Pack</h3>
-    {#if snapshot.inventory.length === 0}
+    {#if pack.length === 0}
       <p class="empty">Your pack is empty — for now.</p>
     {:else}
       <ul class="items">
-        {#each snapshot.inventory as id}
-          {@const info = itemInfo(id)}
+        {#each pack as id}
+          {@const info = trinketInfo(id)}
           <li>
             <span class="ii"><Icon name={info.icon} size={20} /></span>
             <span><b>{info.name}</b>{#if info.blurb}<small>{info.blurb}</small>{/if}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if materials}
+      <h3 class="section-title">Materials</h3>
+      <p class="fine">Gathered out in the Wilds — the Tangle keeps what its camps and groves are holding.</p>
+      <ul class="items">
+        {#each MATERIALS as m}
+          <li>
+            <span class="ii mat"><Icon name={MATERIAL_ICONS[m.id] ?? 'sparkle'} size={20} /></span>
+            <span><b>{m.name}</b><small>{m.blurb}</small></span>
+            <span class="qty" data-testid={`material-${m.id}`}>{materials[m.id] ?? 0}</span>
           </li>
         {/each}
       </ul>
@@ -393,6 +419,23 @@
   .ii.found {
     background: #f5dc8a;
     color: #7a4a10;
+  }
+  .ii.mat {
+    background: #e4ecd8;
+    color: #3f5a34;
+  }
+  .items li .qty {
+    margin-left: auto;
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--wood-dark);
+  }
+  .items li {
+    flex-wrap: wrap;
+  }
+  .items li span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
   }
   .empty {
     margin: 0;

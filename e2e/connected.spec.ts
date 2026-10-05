@@ -414,7 +414,9 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   )
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
-  await expect(page.locator('.toast', { hasText: 'didn’t accept that save' })).toBeVisible()
+  // `.first()`: village regen keeps changing the document, so consecutive
+  // refusals can stack identical toasts while the route is up.
+  await expect(page.locator('.toast', { hasText: 'didn’t accept that save' }).first()).toBeVisible()
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   const dialog = page.getByRole('alertdialog')

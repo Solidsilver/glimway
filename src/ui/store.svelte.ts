@@ -41,6 +41,8 @@ class UiStore {
   link = $state<LinkPayload | null>(null)
   /** Connected play: the reconnect notice ("you played somewhere else"). */
   linkNotice = $state<'played-elsewhere' | null>(null)
+  /** Wilds materials (server balances, or the guest pack). Null until the Wilds load. */
+  materials = $state<Record<string, number> | null>(null)
 
   /** Mirrors of world/UI ownership flags, reactive for the interface. */
   dialogueOpen = $state(false)
