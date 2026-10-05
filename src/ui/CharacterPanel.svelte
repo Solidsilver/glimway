@@ -8,6 +8,7 @@
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   let { session, onClose, onMenu }: { session: Session; onClose: () => void; onMenu: () => void } = $props()
@@ -142,7 +143,7 @@
         {#each pack as id}
           {@const info = trinketInfo(id)}
           <li>
-            <span class="ii"><Icon name={info.icon} size={20} /></span>
+            <span class="ii"><ArtIcon art={`icon-${id}`} name={info.icon} size={20} /></span>
             <span><b>{info.name}</b>{#if info.blurb}<small>{info.blurb}</small>{/if}</span>
           </li>
         {/each}
@@ -155,7 +156,7 @@
       <ul class="items">
         {#each MATERIALS as m}
           <li>
-            <span class="ii mat"><Icon name={MATERIAL_ICONS[m.id] ?? 'sparkle'} size={20} /></span>
+            <span class="ii mat"><ArtIcon art={`icon-${m.id}`} name={MATERIAL_ICONS[m.id] ?? 'sparkle'} size={20} /></span>
             <span><b>{m.name}</b><small>{m.blurb}</small></span>
             <span class="qty" data-testid={`material-${m.id}`}>{materials[m.id] ?? 0}</span>
           </li>

@@ -16,6 +16,7 @@ import { FESTIVAL_NOTES } from '../../lib/village'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
+import { commonsArt } from '../commons-pass'
 import type { Session } from '../session'
 import { TERRAIN, TILE } from '../textures'
 import type { InteractId, WorldData } from '../worlds'
@@ -158,6 +159,17 @@ export class VillageLayer implements InteractionProvider {
     return g
   }
 
+  /** A window's lamp: the delivered glow overlay (Commons pass), else the soft glow. */
+  private windowGlow(x: number, y: number): void {
+    const key = commonsArt(this.scene, 'window-lamp-glow')
+    if (!key) {
+      this.glow(x, y, 0.75, 0.9)
+      return
+    }
+    const g = this.add(this.scene.add.image(x, y, key).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.85).setDepth(4001))
+    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: g, alpha: 0.6, duration: 1000 + Math.random() * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+  }
+
   /** Tiles of one terrain kind (window panes, the pond, the bridge). */
   private tilesOf(kind: number): { tx: number; ty: number }[] {
     const out: { tx: number; ty: number }[] = []
@@ -216,7 +228,7 @@ export class VillageLayer implements InteractionProvider {
     }
     if (name === 'Amberwake' || name === 'Closure Night') {
       // A hearth-grade lamp in every window.
-      for (const t of this.tilesOf(TERRAIN.window)) this.glow(t.tx * TILE + 8, t.ty * TILE + 6, 0.75, 0.9)
+      for (const t of this.tilesOf(TERRAIN.window)) this.windowGlow(t.tx * TILE + 8, t.ty * TILE + 6)
     }
     if (name === 'Closure Night') {
       // Night, and every lantern in the village lit. The road beyond stays dark.
@@ -234,7 +246,8 @@ export class VillageLayer implements InteractionProvider {
       for (let i = 0; i < 6; i++) {
         const x = x0 + 8 + ((i * 37) % Math.max(1, x1 - x0 - 16))
         const y = y0 + 8 + ((i * 23) % Math.max(1, y1 - y0 - 12))
-        const hull = this.add(this.scene.add.image(x, y, 'candle-hull').setOrigin(0.5, 1).setDepth(y))
+        // Three delivered hulls (Commons pass), taken in turn; else the placeholder.
+        const hull = this.add(this.scene.add.image(x, y, commonsArt(this.scene, `candle-hull-${i % 3}`) ?? 'candle-hull').setOrigin(0.5, 1).setDepth(y))
         const flame = this.glow(x, y - 9, 0.25, 0.9)
         if (!this.deps.reducedMotion) {
           this.scene.tweens.add({ targets: [hull, flame], x: `+=${10 + (i % 3) * 6}`, duration: 5000 + i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })

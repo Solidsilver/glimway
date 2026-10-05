@@ -3,6 +3,8 @@ import { generateTextures } from '../textures'
 import { createFingersnapAnimations, createFingersnapTerrain, preloadFingersnapExpansion } from '../expansion'
 import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../runtime-art'
 import { generateCommonsArt, generateDecorationArt } from '../commons-art'
+import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
+import { installCommonsPass } from '../commons-pass-install'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -12,7 +14,9 @@ import { HOMESTEAD_DATA } from '../../lib/homestead'
  * Drop-in files loaded in `preload` win over generated keys; the runtime-pass
  * helper builds native per-frame textures after the fallbacks and replaces
  * the shared alias keys (`mara`, `guardian0`, `slash`, `bolt`, …) before the
- * world starts. See docs/runtime-asset-spec.md.
+ * world starts. The Commons pass (Silas, homes, the Commons, village life,
+ * papers, the Wilds, UI icons) does the same over the code-drawn Commons
+ * placeholders. See docs/runtime-asset-spec.md.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -22,6 +26,7 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     preloadFingersnapExpansion(this)
     preloadRuntimeArt(this)
+    preloadCommonsPass(this)
     // Earlier delivered art: scene illustrations + props atlas.
     this.load.image('fingersnap-village', '/assets/fingersnap/fingersnap-village.png')
     this.load.image('fingersnap-shrine', '/assets/fingersnap/fingersnap-shrine.png')
@@ -41,6 +46,11 @@ export class BootScene extends Phaser.Scene {
     // The Commons and homesteads (code-drawn placeholders; see commons-art).
     generateCommonsArt(this)
     generateDecorationArt(this, HOMESTEAD_DATA.items)
+    // Commons pass: native `commons-art:` textures and animations, then the
+    // delivered frames copied onto the placeholder keys (before the
+    // breathing fallback below names them, and before any world sprite).
+    createCommonsPass(this)
+    installCommonsPass(this, HOMESTEAD_DATA.items)
     if (!this.anims.exists('silas-breathing')) {
       this.anims.create({ key: 'silas-breathing', frames: [{ key: 'silas-idle-0' }, { key: 'silas-idle-1' }], frameRate: 1.5, repeat: -1 })
     }

@@ -38,6 +38,7 @@ import { presence } from '../presence'
 import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
 import { HomesteadLayer } from '../entities/homesteads'
+import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
 import { VillageLayer } from '../entities/village-life'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { COMMONS_FROM_WILDS } from '../commons'
@@ -826,7 +827,13 @@ export class WorldScene extends Phaser.Scene {
     add('Road Lantern', 'fingersnap-props', 'lantern-post', false)
     add('Ashwatch Chest', 'fingersnap-props', 'treasure-chest', false)
     add('You', 'fingersnap-demo-walk', 'walk-down-0', true)
+    // Commons pass: the residents' delivered busts (64 px), and the UI icons.
+    for (const [name, frame] of Object.entries(COMMONS_RESIDENT_PORTRAITS)) {
+      const url = commonsDataUrl(this, frame)
+      if (url) out[name] = url
+    }
     bus.emit(EV.portraits, out)
+    bus.emit(EV.artIcons, commonsIconUrls(this))
   }
 
   // ------------------------------------------------------------- interaction

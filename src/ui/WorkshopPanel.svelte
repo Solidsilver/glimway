@@ -9,6 +9,7 @@
   import { focusTrap } from './focus'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   // The workshop at home: the storage chest (carried ⇄ stored) and the
   // crafting bench (recipes from content/crafting.json). Needs the Workshop.
@@ -101,7 +102,7 @@
         <tbody>
           {#each view.rows as r (r.kind + r.id)}
             <tr data-goods={`${r.kind}:${r.id}`}>
-              <th scope="row">{assetName(r)}</th>
+              <th scope="row"><ArtIcon art={r.kind === 'decoration' ? null : `icon-${r.id}`} size={16} /> {assetName(r)}</th>
               <td class="n">{r.carried}</td>
               <td class="moves">
                 <span class="dir">
@@ -122,14 +123,14 @@
       </table>
     {:else if tab === 'bench' && loaded === 'ready'}
       <p class="lede">Clean tools, a heavy bench. Each batch takes the materials shown from what you carry.</p>
-      <p class="carried">You carry: {#each MATERIAL_IDS as m (m)}<span>{view.carried[m] ?? 0} {m}</span>{/each}</p>
+      <p class="carried">You carry: {#each MATERIAL_IDS as m (m)}<span><ArtIcon art={`icon-${m}`} size={16} /> {view.carried[m] ?? 0} {m}</span>{/each}</p>
       <ul class="recipes">
         {#each RECIPES as r (r.id)}
           {@const can = batchesAffordable(r, view.carried)}
           {@const n = effectiveBatches(batches[r.id], can)}
           <li class="recipe" class:can={can > 0} data-recipe={r.id}>
             <span class="thumb" aria-hidden="true">
-              {#if r.output.kind === 'decoration' && home.thumbs[r.output.id]}<img src={home.thumbs[r.output.id]} alt="" />{:else}<Icon name="sparkle" size={18} />{/if}
+              {#if r.output.kind === 'decoration' && home.thumbs[r.output.id]}<img src={home.thumbs[r.output.id]} alt="" />{:else}<ArtIcon art={`icon-${r.output.id}`} name="sparkle" size={32} />{/if}
             </span>
             <span class="txt">
               <span class="name">{r.name}</span>

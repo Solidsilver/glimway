@@ -23,6 +23,7 @@ import { TILE } from '../textures'
 import type { InteractId, WorldData } from '../worlds'
 import type { CommonsWorld, PlotSlot } from '../commons'
 import { COTTAGE_H, decoFlat, decoKey } from '../commons-art'
+import { commonsAnim, commonsDataUrl } from '../commons-pass'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
@@ -151,11 +152,12 @@ export class HomesteadLayer implements InteractionProvider {
 
   private buildCommonsFixtures(): void {
     const f = this.commons!.features
-    // Silas, at his sawhorse. Code-drawn placeholder (see commons-art).
+    // Silas, at his sawhorse (the Commons pass; code-drawn fallback).
     const sx = f.silas.tx * TILE + 8
     const sy = f.silas.ty * TILE + TILE
     this.silas = this.scene.add.sprite(sx, sy, 'silas-idle-0').setOrigin(0.5, 1).setDepth(sy)
-    if (this.scene.anims.exists('silas-breathing')) this.silas.play('silas-breathing')
+    const breathing = commonsAnim(this.scene, 'silas-breathing') ?? 'silas-breathing'
+    if (this.scene.anims.exists(breathing)) this.silas.play(breathing)
     this.addBody(this.roomDrawn, sx, sy - 4, 12, 8)
     // The hame on the north gatepost, kept polished: a glint now and then.
     const hx = f.hame.tx * TILE + 8
@@ -174,13 +176,15 @@ export class HomesteadLayer implements InteractionProvider {
     for (const it of HOMESTEAD_DATA.items) {
       try {
         const src = this.scene.textures.get(decoKey(it.id, 0)).getSourceImage() as HTMLCanvasElement
-        const scale = Math.max(1, Math.floor(36 / Math.max(src.width, src.height)))
+        // Trimmed to the art (a chair stands in the bottom of its two-tile canvas).
+        const b = opaqueBounds(src)
+        const scale = Math.max(1, Math.floor(36 / Math.max(b.w, b.h)))
         const o = document.createElement('canvas')
-        o.width = src.width * scale
-        o.height = src.height * scale
+        o.width = b.w * scale
+        o.height = b.h * scale
         const ctx = o.getContext('2d')!
         ctx.imageSmoothingEnabled = false
-        ctx.drawImage(src, 0, 0, o.width, o.height)
+        ctx.drawImage(src, b.x, b.y, b.w, b.h, 0, 0, o.width, o.height)
         out[it.id] = o.toDataURL()
       } catch {
         /* thumbnails are decoration */
@@ -190,6 +194,12 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   private emitSilasPortrait(): void {
+    // The delivered dialogue bust, when the Commons pass loaded.
+    const bust = commonsDataUrl(this.scene, 'portrait-silas')
+    if (bust) {
+      bus.emit(EV.portraits, { [SILAS.name]: bust })
+      return
+    }
     try {
       const src = this.scene.textures.get('silas-idle-0').getSourceImage() as HTMLCanvasElement
       const o = document.createElement('canvas')
@@ -345,7 +355,9 @@ export class HomesteadLayer implements InteractionProvider {
     this.addBody(d, ox + 96, oy + 43, 30, 8)
     this.add(d, S.add.image(ox + 138, oy + 62, 'camp-ring').setOrigin(0.5, 1).setDepth(oy + 56))
     const flame = this.add(d, S.add.sprite(ox + 138, oy + 57, 'camp-flame-0').setOrigin(0.5, 1).setDepth(oy + 57))
-    if (!this.deps.reducedMotion) {
+    const flicker = commonsAnim(S, 'camp-flame-animation')
+    if (flicker && !this.deps.reducedMotion) flame.play({ key: flicker, startFrame: Math.floor(Math.random() * 3) })
+    else if (!this.deps.reducedMotion) {
       let f = 0
       const t = S.time.addEvent({ delay: 260, loop: true, callback: () => flame.active && flame.setTexture(`camp-flame-${(f = 1 - f)}`) })
       flame.once('destroy', () => t.remove())
@@ -414,8 +426,10 @@ export class HomesteadLayer implements InteractionProvider {
     this.clear(d)
     const S = this.scene
     // The hearth fire, flickering.
-    const fire = this.add(d, S.add.sprite(ROOM_HEARTH.x + 8, 46, 'room-fire-0').setOrigin(0.5, 1).setDepth(-4))
-    if (!this.deps.reducedMotion) {
+    const fire = this.add(d, S.add.sprite(ROOM_HEARTH.x + 8, ROOM_HEARTH.fireY, 'room-fire-0').setOrigin(0.5, 1).setDepth(-4))
+    const flicker = commonsAnim(S, 'hearth-fire-animation')
+    if (flicker && !this.deps.reducedMotion) fire.play(flicker)
+    else if (!this.deps.reducedMotion) {
       let f = 0
       const t = S.time.addEvent({ delay: 240, loop: true, callback: () => fire.active && fire.setTexture(`room-fire-${(f = 1 - f)}`) })
       fire.once('destroy', () => t.remove())
@@ -1131,4 +1145,22 @@ export function workshopShort(embers: number, materials: Record<string, number>)
 
 function short(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s
+}
+
+/** The rect of a canvas's non-transparent pixels (the whole canvas when empty). */
+function opaqueBounds(src: HTMLCanvasElement): { x: number; y: number; w: number; h: number } {
+  const data = src.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, src.width, src.height).data
+  let x0 = src.width
+  let y0 = src.height
+  let x1 = -1
+  let y1 = -1
+  for (let y = 0; y < src.height; y++)
+    for (let x = 0; x < src.width; x++)
+      if (data[(y * src.width + x) * 4 + 3] > 0) {
+        x0 = Math.min(x0, x)
+        y0 = Math.min(y0, y)
+        x1 = Math.max(x1, x)
+        y1 = Math.max(y1, y)
+      }
+  return x1 < 0 ? { x: 0, y: 0, w: src.width, h: src.height } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 }
 }

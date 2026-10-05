@@ -16,6 +16,7 @@ import Phaser from 'phaser'
 import type { GameState } from '../../lib/state'
 import { bus, EV } from '../events'
 import { sfx } from '../sfx'
+import { commonsArt } from '../commons-pass'
 import type { Session } from '../session'
 import { TILE } from '../textures'
 import type { EnemyType, WorldData } from '../worlds'
@@ -210,7 +211,9 @@ export class EnemySystem {
   private placeHeart(sprite: Phaser.GameObjects.Image, settled: boolean): void {
     if (!this.heart) return
     const forward = sprite.flipX ? -1 : 1
-    this.heart.setPosition(sprite.x + forward * (settled ? 2 : 1), sprite.y - (settled ? 6 : 10)).setDepth(sprite.depth + 1)
+    // The delivered resting pose carries its heart-lamp lower and further forward.
+    const [hx, hy] = settled ? (sprite.texture.key === commonsArt(this.scene, 'guardian-settled') ? [3, 9] : [2, 6]) : [1, 10]
+    this.heart.setPosition(sprite.x + forward * hx, sprite.y - hy).setDepth(sprite.depth + 1)
   }
 
   /**
@@ -221,7 +224,7 @@ export class EnemySystem {
   private placeRestingWarden(kind: 'dormant' | 'settled'): void {
     const home = this.wardenHome()
     if (!home) return
-    const tex = kind === 'settled' ? this.guardianPoseTexture('defeat', 'guardian0') : this.guardianPoseTexture('idle', 'guardian0')
+    const tex = kind === 'settled' ? this.settledTexture() : this.guardianPoseTexture('idle', 'guardian0')
     const sprite = this.scene.add.image(home.tx * TILE + 8, home.ty * TILE + TILE, tex).setOrigin(0.5, 1)
     sprite.setDepth(sprite.y)
     this.restingWarden = sprite
@@ -340,7 +343,9 @@ export class EnemySystem {
     // Arms lower (the crouch), then down into its resting heap.
     w.sprite.setTexture(this.guardianPoseTexture('windup', 'guardian1'))
     this.scene.time.delayedCall(this.deps.reducedMotion ? 0 : 420, () => {
-      if (w.sprite.active) w.sprite.setTexture(this.guardianPoseTexture('defeat', 'guardian0'))
+      if (!w.sprite.active) return
+      w.sprite.setTexture(this.settledTexture())
+      this.placeHeart(w.sprite, true)
     })
     this.placeHeart(w.sprite, true)
     this.gutterHeart(false)
@@ -1016,6 +1021,14 @@ export class EnemySystem {
    * frames share the 24x24 texture and (0.5, 1) foot anchor, so switching
    * poses keeps the body and baseline stable.
    */
+  /**
+   * The warden at rest after the naming: the delivered seated pose (Commons
+   * pass), else the runtime pass's collapsed defeat frame.
+   */
+  private settledTexture(): string {
+    return commonsArt(this.scene, 'guardian-settled') ?? this.guardianPoseTexture('defeat', 'guardian0')
+  }
+
   private guardianPoseTexture(pose: 'idle' | 'windup' | 'lunge' | 'hurt' | 'defeat', fallback: string): string {
     const key = `guardian-${pose}`
     return this.scene.textures.exists(key) ? key : fallback

@@ -20,6 +20,8 @@ export const EV = {
   cinematic: 'ui:cinematic',
   /** Native-size portrait images for dialogue, built once from loaded art. */
   portraits: 'ui:portraits',
+  /** Delivered 16-px UI icons (Commons pass) by frame key, as data URLs. */
+  artIcons: 'ui:art-icons',
   /** A discovery was written into the journal. */
   discovery: 'ui:discovery',
   /** The hero rolled (cooldown starts) — HUD/touch cooldown sweep. */
@@ -94,6 +96,8 @@ export interface ToastPayload {
   kind?: 'info' | 'error'
   /** Icon name (src/ui/Icon.svelte); defaults to a sparkle. */
   icon?: string
+  /** A delivered icon frame (`icon-timber`, …) shown instead, when loaded. */
+  art?: string
 }
 
 export interface AbilityPayload {

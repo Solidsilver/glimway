@@ -4,6 +4,7 @@
   import { presence } from '../game/presence'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   /**
    * The emote row (phase 6): five small gestures from shared content. Opens
@@ -32,7 +33,7 @@
   <div class="row">
     {#each EMOTES as e, i (e.id)}
       <button type="button" class="emote" onclick={() => onPick(e.id)} disabled={wait > 0} aria-label={e.label} title={e.say}>
-        <span class="ic"><Icon name={e.icon} size={18} /></span>
+        <span class="ic"><ArtIcon art={`icon-emote-${e.id}`} name={e.icon} size={18} /></span>
         <span class="label">{e.label}</span>
         {#if !touch}<span class="kbd">{i + 1}</span>{/if}
       </button>

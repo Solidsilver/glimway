@@ -40,6 +40,8 @@
   const atLastLine = $derived(idx + 1 >= lines.length)
   const showChoices = $derived(open && !typing && atLastLine && !!choices && !answered)
   const portrait = $derived(ui.portraits[speaker] ?? null)
+  /** A delivered 64-px bust (Commons pass) shows at 1:1, not stretched like the small crops. */
+  let bust = $state(false)
   const tagColor = $derived(TAG[speaker] ?? '#6b4c2e')
 
   function stopTyping(): void {
@@ -198,8 +200,8 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="panel box" class:has-portrait={!!portrait} onclick={() => !showChoices && advance()}>
       {#if portrait}
-        <div class="portrait" style={`--tag:${tagColor}`}>
-          <img class="pixel" src={portrait} alt="" />
+        <div class="portrait" class:bust style={`--tag:${tagColor}`}>
+          <img class="pixel" src={portrait} alt="" onload={(e) => (bust = (e.currentTarget as HTMLImageElement).naturalWidth >= 48)} />
         </div>
       {/if}
       <div class="content">
@@ -289,6 +291,11 @@
     margin-top: 6px;
     object-fit: contain;
     animation: breathe 2.4s ease-in-out infinite;
+  }
+  .portrait.bust img {
+    width: 64px;
+    height: 64px;
+    margin-top: 0;
   }
   .tag {
     display: inline-block;
@@ -400,6 +407,15 @@
       width: 56px;
       height: 56px;
       margin-top: 4px;
+    }
+    .portrait.bust {
+      width: 70px;
+      height: 70px;
+    }
+    .portrait.bust img {
+      width: 64px;
+      height: 64px;
+      margin-top: 0;
     }
     .line {
       font-size: 15.5px;

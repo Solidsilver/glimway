@@ -10,6 +10,7 @@
   import { focusTrap } from './focus'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   // The mailbox at your plot: parcels for you to collect, sending to a
   // neighbour in your world, and what you've sent (recall it while it waits).
@@ -90,6 +91,11 @@
   function art(a: Asset): string | null {
     return a.kind === 'decoration' ? home.thumbs[a.id] ?? null : null
   }
+
+  /** Materials, trinkets and crafted goods have delivered icons (src/ui/ArtIcon.svelte). */
+  function icon(a: Pick<Asset, 'kind' | 'id'>): string | null {
+    return a.kind === 'decoration' ? null : `icon-${a.id}`
+  }
 </script>
 
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="mail-title">
@@ -111,7 +117,7 @@
       <ul class="list">
         {#each view.buckets.waiting as m (m.id)}
           <li class="parcel" data-mail={m.id}>
-            <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<Icon name="sparkle" size={16} />{/if}</span>
+            <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<ArtIcon art={icon(m.asset)} name="sparkle" size={16} />{/if}</span>
             <span class="txt"><span class="what">{assetPhrase(m.asset)}</span><span class="from">from {m.fromName} · {when(m.sentAt)}</span></span>
             <button type="button" class="primary small" data-claim={m.id} disabled={busy !== null} onclick={() => claim(m)}>{busy === m.id ? 'Opening…' : 'Collect'}</button>
           </li>
@@ -122,7 +128,7 @@
       <ul class="list">
         {#each view.buckets.outgoing as m (m.id)}
           <li class="parcel" data-sent={m.id}>
-            <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<Icon name="sparkle" size={16} />{/if}</span>
+            <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<ArtIcon art={icon(m.asset)} name="sparkle" size={16} />{/if}</span>
             <span class="txt"><span class="what">{assetPhrase(m.asset)}</span><span class="from">to {m.toName} · {when(m.sentAt)}</span></span>
             {#if view.recall}
               <button type="button" class="small" data-recall={m.id} disabled={busy !== null} onclick={() => recall(m)}>{busy === m.id ? 'Recalling…' : 'Recall'}</button>
@@ -163,7 +169,7 @@
           {#each view.goods as g (g.kind + g.id)}
             <li>
               <button type="button" class="good" class:on={pick === `${g.kind}:${g.id}`} aria-pressed={pick === `${g.kind}:${g.id}`} data-pick={`${g.kind}:${g.id}`} onclick={() => ((pick = `${g.kind}:${g.id}`), (qty = 1))}>
-                <span class="thumb">{#if art(g)}<img src={art(g)} alt="" />{:else}<Icon name="sparkle" size={14} />{/if}</span>
+                <span class="thumb">{#if art(g)}<img src={art(g)} alt="" />{:else}<ArtIcon art={icon(g)} name="sparkle" size={16} />{/if}</span>
                 <span class="nm">{assetName(g)}</span>
                 <span class="have">{g.qty}</span>
               </button>

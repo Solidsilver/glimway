@@ -19,11 +19,14 @@ export const ROOM_GRID = { tx: 1, ty: 3 }
 /** The doorway in the near wall (two tiles), and where you stand coming in. */
 export const ROOM_DOOR = { tx: 6, ty: ROOM_ROWS - 1 }
 export const ROOM_ENTRY = { tx: 6, ty: ROOM_ROWS - 3 }
-/** The hearth in the back wall: rest beside it (px, the spot in front of the fire). */
-export const ROOM_HEARTH = { x: 7 * TILE, y: 3 * TILE + 4 }
+/**
+ * The hearth in the back wall, right of the shelf: rest beside it (px; the
+ * fire's centre is x + 8, its base fireY, the resting spot y).
+ */
+export const ROOM_HEARTH = { x: 173, y: 3 * TILE + 4, fireY: 42 }
 /** Workshop (tier 2): the storage chest under the window, the bench under the shelf. */
 export const ROOM_CHEST = { x: 40 }
-export const ROOM_BENCH = { x: 178 }
+export const ROOM_BENCH = { x: 115 }
 
 export function buildRoom(doorstep: { tx: number; ty: number } = { tx: 8, ty: 9 }): WorldData {
   const W = ROOM_COLS

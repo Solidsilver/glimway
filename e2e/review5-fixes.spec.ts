@@ -158,7 +158,7 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await page.waitForTimeout(200)
   await page.keyboard.press('e')
   await waitForArea(page, 'home' as Area)
-  await place(page, 178, 66)
+  await place(page, 115, 66)
   await expect(page.locator('.prompt')).toContainText('Work at the bench')
   await page.waitForTimeout(250)
   await page.keyboard.press('e')

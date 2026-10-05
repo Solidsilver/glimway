@@ -170,7 +170,7 @@ test('homestead: claim, buy, place, move, remove, raise the cottage, go in, rest
 
   // Rest by your own hearth (a home rest: the save is on your plot).
   await hurt(page, 4)
-  await place(page, 120, 66)
+  await place(page, 181, 66)
   await talk(page, /Rest by your hearth/, /Rest a while/)
   await expect(page.locator('.toast', { hasText: 'Home, and rested' }).last()).toBeVisible()
 
@@ -221,7 +221,7 @@ test('visiting: a second player sees the first one’s place and walks into thei
   await expect(other.getByTestId('arrange')).toHaveCount(0)
   await shot(other, 'visiting-interior-desktop')
   // Resting in someone else's home is not offered.
-  await place(other, 120, 66)
+  await place(other, 181, 66)
   await expect(other.locator('.prompt')).toContainText('Sit by the hearth')
   expect(await area(other)).toBe('home')
   expect(errors).toEqual([])

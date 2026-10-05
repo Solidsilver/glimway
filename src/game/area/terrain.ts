@@ -68,6 +68,13 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): void {
   const cell = manifest ? manifest.terrain.tileWidth : 32
   const cols = 4
   const sheet = scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLCanvasElement
+  // Tiles a delivered building stands in for (only when its art loaded).
+  const under = new Map<string, number>()
+  for (const s of world.scenery ?? []) {
+    const g = s.groundUnder
+    if (!g || !scene.textures.exists(s.key)) continue
+    for (let y = g.ty; y < g.ty + g.th; y++) for (let x = g.tx; x < g.tx + g.tw; x++) under.set(`${x},${y}`, g.tile)
+  }
   groundChunks(world.width, world.height).forEach((c, i) => {
     const canvas = document.createElement('canvas')
     canvas.width = c.tw * TILE
@@ -76,7 +83,7 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): void {
     ctx.imageSmoothingEnabled = false
     for (let y = c.ty; y < c.ty + c.th; y++) {
       for (let x = c.tx; x < c.tx + c.tw; x++) {
-        const id = world.ground[y][x]
+        const id = under.get(`${x},${y}`) ?? world.ground[y][x]
         const draw = (name: string) => {
           const idx = tileIndex[name] ?? 0
           ctx.drawImage(sheet, (idx % cols) * cell, Math.floor(idx / cols) * cell, cell, cell, (x - c.tx) * TILE, (y - c.ty) * TILE, TILE, TILE)
@@ -85,9 +92,61 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): void {
         draw(TERRAIN_TO_EXPANSION[id] ?? 'grass')
       }
     }
+    if (world.areaId === 'commons') paintPathEdges(scene, ctx, world, c)
     const key = `ground-${world.areaId}-${i}`
     if (scene.textures.exists(key)) scene.textures.remove(key)
     scene.textures.addCanvas(key, canvas)
     scene.add.image(c.tx * TILE, c.ty * TILE, key).setOrigin(0, 0).setDepth(-10)
   })
+}
+
+const GRASSY = new Set<number>([TERRAIN.grass_a, TERRAIN.grass_b, TERRAIN.grass_c, TERRAIN.flowers])
+const PATH_MATERIAL: Record<number, 'dirt' | 'cobble'> = {
+  [TERRAIN.dirt]: 'dirt',
+  [TERRAIN.path_a]: 'dirt',
+  [TERRAIN.path_b]: 'dirt',
+  [TERRAIN.cobble]: 'cobble',
+  [TERRAIN.cobble_moss]: 'cobble'
+}
+
+/**
+ * The Commons pass's 16-px path-to-grass transitions: each grass tile
+ * beside a dirt or cobble tile takes the overlay with material on that side
+ * (`edge-n`: material in its north half), and a corner overlay where the
+ * path only touches it diagonally. The expansion's path tiles have grass
+ * baked in, so without these the lanes stop on a hard tile edge. Skipped
+ * when the pack didn't load.
+ */
+export function pathEdgeOverlays(world: Pick<WorldData, 'ground' | 'width' | 'height'>, x: number, y: number): string[] {
+  const at = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= world.width || ty >= world.height ? undefined : PATH_MATERIAL[world.ground[ty][tx]])
+  if (!GRASSY.has(world.ground[y][x])) return []
+  const out: string[] = []
+  for (const m of ['cobble', 'dirt'] as const) {
+    const n = at(x, y - 1) === m
+    const s = at(x, y + 1) === m
+    const e = at(x + 1, y) === m
+    const w = at(x - 1, y) === m
+    if (n) out.push(`path-${m}-edge-n`)
+    if (s) out.push(`path-${m}-edge-s`)
+    if (e) out.push(`path-${m}-edge-e`)
+    if (w) out.push(`path-${m}-edge-w`)
+    if (!n && !e && at(x + 1, y - 1) === m) out.push(`path-${m}-corner-ne`)
+    if (!n && !w && at(x - 1, y - 1) === m) out.push(`path-${m}-corner-nw`)
+    if (!s && !e && at(x + 1, y + 1) === m) out.push(`path-${m}-corner-se`)
+    if (!s && !w && at(x - 1, y + 1) === m) out.push(`path-${m}-corner-sw`)
+  }
+  return out
+}
+
+function paintPathEdges(scene: Phaser.Scene, ctx: CanvasRenderingContext2D, world: WorldData, c: { tx: number; ty: number; tw: number; th: number }): void {
+  if (!scene.textures.exists('commons-art:path-dirt-edge-n')) return
+  for (let y = c.ty; y < c.ty + c.th; y++) {
+    for (let x = c.tx; x < c.tx + c.tw; x++) {
+      for (const frame of pathEdgeOverlays(world, x, y)) {
+        const key = `commons-art:${frame}`
+        if (!scene.textures.exists(key)) continue
+        ctx.drawImage(scene.textures.get(key).getSourceImage() as HTMLCanvasElement, (x - c.tx) * TILE, (y - c.ty) * TILE)
+      }
+    }
+  }
 }

@@ -208,7 +208,8 @@ export function buildCommons(plotCount = 0): CommonsWorld {
     const hx0 = Math.min(outerX, p.tx)
     const hx1 = Math.max(outerX, p.tx + 15)
     for (let x = hx0; x <= hx1; x++) block(x, backY)
-    scenery.push({ key: `hedge-h-${hx1 - hx0 + 1}`, x: hx0 * TILE, y: (backY + 1) * TILE, originX: 0 })
+    // The back hedge turns down the outer side at its outer end.
+    scenery.push({ key: `hedge-h-${hx1 - hx0 + 1}-${p.side === 'east' ? 'turnw' : 'turne'}`, x: hx0 * TILE, y: (backY + 1) * TILE, originX: 0 })
     for (let y = backY + 1; y <= p.ty + 11; y++) block(outerX, y)
     scenery.push({ key: `hedge-v-${p.ty + 11 - backY}`, x: outerX * TILE, y: (p.ty + 12) * TILE, originX: 0 })
     const frontY = p.ty + 12
@@ -285,6 +286,10 @@ export function buildCommons(plotCount = 0): CommonsWorld {
   scenery.push({ key: `fence-v-${BAND.y1 - 1 - (CROSS.y1 + 2) + 1}`, x: 3 * TILE, y: BAND.y1 * TILE, originX: 0 })
   put('gatepost', 3, CROSS.y0 - 1)
   put('gatepost', 3, CROSS.y1 + 1)
+  // The gate leaf, swung open inward against the north side of the lane.
+  block(4, CROSS.y0 - 1)
+  block(5, CROSS.y0 - 1)
+  scenery.push({ key: 'gate-leaf', x: 4 * TILE + 3, y: CROSS.y0 * TILE - 1, originX: 0 })
   put('commons-board', 3, CROSS.y1 + 1, { x: 3 * TILE + 8, y: (CROSS.y1 + 2) * TILE - 30 })
   props.push({ frame: 'lantern-post', tx: 4, ty: CROSS.y1 + 1, h: 28, body: [8, 6], light: 'commons' })
   lamps.push({ tx: 4, ty: CROSS.y1 + 1 })

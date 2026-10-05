@@ -71,6 +71,13 @@ export interface ScenerySpot {
   flipX?: boolean
   /** Multiply tint (deep woods sit in their own shade). */
   tint?: number
+  /**
+   * Delivered building art that stands in for tiles drawn into the ground:
+   * when the texture exists, these tiles are painted as `tile` instead
+   * (the solid grid is unchanged), so nothing of the tile house shows
+   * around the art's edges. Without the art the tile house stays.
+   */
+  groundUnder?: { tx: number; ty: number; tw: number; th: number; tile: number }
   /** A canopy someone can walk beneath: drawn by the foreground pass so it fades. */
   fade?: boolean
 }
@@ -280,7 +287,11 @@ function buildVillage(): WorldData {
   // rest of the village keeps its seeded layout; nothing may crowd its door.
   const libraryAt = { tx: 2, ty: 14, w: 5 }
   g.house(libraryAt.tx, libraryAt.ty, libraryAt.w)
-  const library = { tx: libraryAt.tx + Math.floor(libraryAt.w / 2) - 1, ty: libraryAt.ty + 3 }
+  // The door in the middle, under the open-book gable (where the delivered
+  // building has it).
+  const library = { tx: libraryAt.tx + Math.floor(libraryAt.w / 2), ty: libraryAt.ty + 3 }
+  g.set(library.tx - 1, library.ty, TERRAIN.wall_house, true)
+  g.set(library.tx, library.ty, TERRAIN.door, true)
   const clearOfLibrary = (p: { tx: number; ty: number }) =>
     !(p.tx >= libraryAt.tx - 1 && p.tx <= libraryAt.tx + libraryAt.w && p.ty >= libraryAt.ty - 1 && p.ty <= libraryAt.ty + 5)
   // The village notice board, by the road at the square: raised after the
@@ -325,7 +336,15 @@ function buildVillage(): WorldData {
     spawn: { tx: 7, ty: 11 },
     library,
     board,
-    scenery: [{ key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE }]
+    scenery: [
+      { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
+      {
+        key: 'commons-art:hearthwick-library',
+        x: (libraryAt.tx + libraryAt.w / 2) * TILE,
+        y: (libraryAt.ty + 4) * TILE,
+        groundUnder: { tx: libraryAt.tx, ty: libraryAt.ty, tw: libraryAt.w, th: 4, tile: TERRAIN.grass_a }
+      }
+    ]
   }
 }
 
