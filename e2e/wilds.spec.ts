@@ -152,10 +152,10 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   expect(nodeAfter.state).toBe('harvested')
   expect(nodeAfter.claimable).toBe(false)
 
-  // The character panel carries the balance.
-  await page.keyboard.press('c')
-  const panel = page.locator('.panel')
-  await expect(panel.getByText('Materials')).toBeVisible()
+  // The inventory's Supplies tab carries the balance.
+  await page.keyboard.press('i')
+  const panel = page.getByRole('dialog', { name: 'Inventory' })
+  await panel.getByRole('tab', { name: /Supplies/ }).click()
   const qty = await panel.getByTestId(`material-${node!.material}`).textContent()
   expect(Number(qty)).toBeGreaterThan(0)
   await page.keyboard.press('Escape')

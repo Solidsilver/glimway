@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { DEMO_CHARACTER, discoveryInfo, itemInfo } from '../content/world'
-  import { MATERIALS, MORE_TRINKETS, TRINKETS } from '../content/expansion-writing'
+  import { DEMO_CHARACTER, discoveryInfo } from '../content/world'
+  import { inventoryCopy } from '../content/inventory'
   import { getCombatKit } from '../lib/combat'
   import { EMBER_COSTS, ROAD_LANTERNS, XP_PER_EMBER, chestOpened, isLit, withCharm } from '../lib/embers'
   import type { Session } from '../game/session'
-  import { MATERIAL_ITEM_PREFIX } from '../game/wilds/store'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
-  import ArtIcon from './ArtIcon.svelte'
+  import { isTouchFirst } from './device'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
-  let { session, onClose, onMenu }: { session: Session; onClose: () => void; onMenu: () => void } = $props()
+  // The pack, materials and keepsakes live in the Inventory (I); this panel
+  // stays on the hero.
+  let { session, onClose, onMenu, onInventory }: { session: Session; onClose: () => void; onMenu: () => void; onInventory: () => void } = $props()
 
   // Tracks quest/inventory changes: advanceQuest replaces the state object.
   const snapshot = $derived(session.state)
@@ -38,15 +39,7 @@
     { key: 'per', label: 'Perception', hint: 'Finesse & crits' }
   ] as const
 
-  /** Pack entries, without the guest material balance entries (they have their own section). */
-  const pack = $derived(snapshot.inventory.filter((id) => !id.startsWith(MATERIAL_ITEM_PREFIX)))
-  /** Wilds materials: server balances once the Wilds load, or the guest pack. */
-  const materials = $derived(ui.materials)
-  const MATERIAL_ICONS: Record<string, string> = { timber: 'menu', stone: 'stone', fiber: 'roll', amber: 'ember' }
-  const trinketInfo = (id: string) => {
-    const t = TRINKETS.find((x) => x.id === id) ?? MORE_TRINKETS.find((x) => x.id === id)
-    return t ? { name: t.name, icon: 'sparkle', blurb: t.blurb } : itemInfo(id)
-  }
+  const touch = isTouchFirst()
 </script>
 
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="char-title">
@@ -135,34 +128,11 @@
       <span class="chip"><Icon name="heart" size={12} /> Shrugs off {pct(kit.mitigation)}% of damage</span>
     </div>
 
-    <h3 class="section-title">Pack</h3>
-    {#if pack.length === 0}
-      <p class="empty">Your pack is empty — for now.</p>
-    {:else}
-      <ul class="items">
-        {#each pack as id}
-          {@const info = trinketInfo(id)}
-          <li>
-            <span class="ii"><ArtIcon art={`icon-${id}`} name={info.icon} size={20} /></span>
-            <span><b>{info.name}</b>{#if info.blurb}<small>{info.blurb}</small>{/if}</span>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-
-    {#if materials}
-      <h3 class="section-title">Materials</h3>
-      <p class="fine">Gathered out in the Wilds — the Tangle keeps what its camps and groves are holding.</p>
-      <ul class="items">
-        {#each MATERIALS as m}
-          <li>
-            <span class="ii mat"><ArtIcon art={`icon-${m.id}`} name={MATERIAL_ICONS[m.id] ?? 'sparkle'} size={20} /></span>
-            <span><b>{m.name}</b><small>{m.blurb}</small></span>
-            <span class="qty" data-testid={`material-${m.id}`}>{materials[m.id] ?? 0}</span>
-          </li>
-        {/each}
-      </ul>
-    {/if}
+    <div class="to-inv">
+      <span class="ii"><Icon name="bag" size={20} /></span>
+      <p>{inventoryCopy.characterPointer}</p>
+      <button type="button" onclick={onInventory} data-testid="open-inventory">{inventoryCopy.open}{#if !touch} <span class="kbd">I</span>{/if}</button>
+    </div>
 
     <h3 class="section-title">Discoveries</h3>
     {#if snapshot.discoveries.length === 0}
@@ -421,15 +391,22 @@
     background: #f5dc8a;
     color: #7a4a10;
   }
-  .ii.mat {
-    background: #e4ecd8;
-    color: #3f5a34;
+  .to-inv {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 4px;
+    padding: 8px 10px;
+    border: 2px dashed var(--paper-line);
+    border-radius: 10px;
   }
-  .items li .qty {
-    margin-left: auto;
-    font-family: var(--font-display);
-    font-size: 20px;
-    color: var(--wood-dark);
+  .to-inv p {
+    flex: 1;
+    min-width: 160px;
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-soft);
   }
   .items li {
     flex-wrap: wrap;

@@ -43,6 +43,9 @@
   import { villageUi } from './ui/village.svelte'
   import HomeBar from './ui/HomeBar.svelte'
   import CharacterPanel from './ui/CharacterPanel.svelte'
+  import InventoryPanel from './ui/InventoryPanel.svelte'
+  import { inventory } from './ui/inventory.svelte'
+  import { inventoryEntries, unseen } from './lib/inventory'
   import MenuPanel from './ui/MenuPanel.svelte'
   import TouchControls from './ui/TouchControls.svelte'
   import Toasts from './ui/Toasts.svelte'
@@ -72,7 +75,7 @@
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
-  type Panel = 'journal' | 'character' | 'menu' | 'library' | 'shop' | VillagePanel | null
+  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
 
   let phase = $state<Phase>('loading')
   let hasSave = $state(false)
@@ -682,14 +685,26 @@
     uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null
   })
 
+  // The pack lives on the (non-reactive) save; mirror it for the HUD's bag
+  // dot. Cheap: syncPack only reassigns when something changed.
+  $effect(() => {
+    if (phase !== 'playing' || !session) return
+    const s = session
+    inventory.syncPack(s.state.inventory)
+    const t = setInterval(() => inventory.syncPack(s.state.inventory), 1500)
+    return () => clearInterval(t)
+  })
+  const inventoryNew = $derived(unseen(inventoryEntries({ pack: inventory.pack, materials: ui.materials }), inventory.seenSet).length)
+
   function toggle(p: Exclude<Panel, null>): void {
+    if (session) inventory.syncPack(session.state.inventory)
     const next = panel === p ? null : p
     sfx(next ? 'open' : 'close')
     panel = next
   }
 
   /**
-   * Single owner of panel open/close keys (J / C / Escape). Panels mount
+   * Single owner of panel open/close keys (J / C / I / Escape). Panels mount
    * already-open and close only through this state — their overlays and
    * uiState.panelOpen can never drift apart. Key events coming from text
    * fields (credentials, import codes) are ignored so typing never toggles.
@@ -706,7 +721,7 @@
     if (home.placement && !panel) return
     // One owner per key: anything handled here is marked, so the world
     // (placement mode included) doesn't act on the same press.
-    if (['KeyJ', 'KeyC', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+    if (['KeyJ', 'KeyC', 'KeyI', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     // Emotes: G opens the picker; 1–5 pick while it is open.
     if (ui.emoteOpen && !panel && /^Digit[1-9]$/.test(e.code)) {
       const pick = EMOTES[Number(e.code.slice(5)) - 1]
@@ -719,6 +734,7 @@
     }
     if (e.code === 'KeyJ') toggle('journal')
     else if (e.code === 'KeyC') toggle('character')
+    else if (e.code === 'KeyI') toggle('inventory')
     else if (e.code === 'Escape') {
       if (ui.emoteOpen && !panel) {
         ui.emoteOpen = false
@@ -747,7 +763,7 @@
   <div class="stage" bind:this={stageEl}></div>
 
   {#if phase === 'playing' && session}
-    <Hud onJournal={() => toggle('journal')} onCharacter={() => toggle('character')} onMenu={() => toggle('menu')} onEmote={() => (ui.emoteOpen = !ui.emoteOpen)} />
+    <Hud onJournal={() => toggle('journal')} onCharacter={() => toggle('character')} onInventory={() => toggle('inventory')} {inventoryNew} onMenu={() => toggle('menu')} onEmote={() => (ui.emoteOpen = !ui.emoteOpen)} />
     {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
       <EmotePicker onPick={sendEmote} onClose={() => (ui.emoteOpen = false)} />
     {/if}
@@ -784,7 +800,9 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} />
+      <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
+    {:else if panel === 'inventory'}
+      <InventoryPanel {session} onClose={() => toggle('inventory')} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}

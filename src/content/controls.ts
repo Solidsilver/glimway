@@ -18,6 +18,7 @@ export const CONTROLS: ControlRow[] = [
   { keys: ['F'], does: 'Signature ability', touch: 'The ✦ button (shows its mana cost)' },
   { keys: ['Shift'], does: 'Dodge roll — move when the enemy flashes white', touch: 'The Roll button' },
   { keys: ['J', 'C'], does: 'Journal · Character', touch: 'The book and person buttons, top right' },
+  { keys: ['I'], does: 'Inventory: tools, supplies, keepsakes, home goods, papers', touch: 'The bag button, top right' },
   { keys: ['B'], does: 'Arrange your home (on your plot or in your cottage)', touch: 'The Arrange button, top right' },
   { keys: ['G'], does: 'Emotes, then 1–5 (in a world)', touch: 'The speech button, top right (in a world)' },
   { keys: ['M'], does: 'Ride your mount (Habitica heroes, outdoors)', touch: null },

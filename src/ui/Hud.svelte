@@ -13,9 +13,19 @@
   let {
     onJournal,
     onCharacter,
+    onInventory,
+    inventoryNew = 0,
     onMenu,
     onEmote
-  }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void; onEmote?: () => void } = $props()
+  }: {
+    onJournal: () => void
+    onCharacter: () => void
+    onInventory: () => void
+    /** Items this device hasn't seen yet (the bag's dot). */
+    inventoryNew?: number
+    onMenu: () => void
+    onEmote?: () => void
+  } = $props()
   const presenceLive = $derived(ui.presence.status === 'live')
 
   const touch = isTouchFirst()
@@ -122,6 +132,11 @@
     <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
       <Icon name="person" size={20} />
       {#if !touch}<span class="kbd">C</span>{/if}
+    </button>
+    <button type="button" class="hb" onclick={onInventory} aria-label={inventoryNew ? `Inventory (I), ${inventoryNew} new` : 'Inventory (I)'} title="Inventory" data-testid="inventory-button">
+      <Icon name="bag" size={20} />
+      {#if inventoryNew > 0}<span class="newdot" aria-hidden="true"></span>{/if}
+      {#if !touch}<span class="kbd">I</span>{/if}
     </button>
     {#if presenceLive && onEmote}
       <button type="button" class="hb" class:on={ui.emoteOpen} onclick={onEmote} aria-label="Emote (G)" title="Emote" data-testid="emote-button">
