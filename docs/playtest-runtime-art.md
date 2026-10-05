@@ -1,5 +1,16 @@
 # Runtime-art playtest — NPC breathing, guardian poses, class FX (October 3, 2026)
 
+> **Update, October 4, 2026:** the guardian section below records the
+> October 3 fight-to-defeat encounter. The stone warden is now **settled**,
+> not killed. Blows clink, with a small knockback and no damage. It shows
+> three amber pips instead of an HP bar. After a lunge it stands open, and
+> holding up the rubbing makes it falter; the hurt pose now plays on a falter
+> and on its close-range arm sweep. The third showing lowers its arms into the
+> `guardian-defeat` pose and it stays on its post with no dissolve. The idle,
+> windup and lunge poses and the 20×10 foot body are unchanged. See the update
+> at the top of `docs/playtest.md` for the full flow and the tests that cover
+> it.
+
 Tester: snap_runtime via Playwright (Chromium) against the dev server
 (localhost:5173) and the production preview (localhost:4173). Movement and
 combat were driven with **real keyboard presses (held keys, 60–150 ms) and

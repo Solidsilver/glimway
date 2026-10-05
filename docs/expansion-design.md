@@ -3,6 +3,55 @@
 Status: revision 4 (2026-10-04), approved for implementation on the
 `expansion` branch.
 
+## Implementation status
+
+Phases 1–6 have shipped on `expansion` (October 2026). The sections below
+are still the design; where the build differs, this list says how.
+
+| Phase | Shipped |
+|---|---|
+| 1 Onboarding | Title choice; connect guide with website, iOS and Android steps; labeled and ordered paste with preview and Swap; opt-in Remember on this device with Forget; Pip's gate nudge. |
+| 2 Backend core | Go server (`server/`, SQLite) with the login-only identity check, allowlist, CLI and player invites, recorded client-side syncs with plausibility checks, verified checkpoints and pending credit, the ember ledger, the progress document with revisions and one play lease, guest-save migration, idempotent spends, nightly backups and the NixOS module. The browser's connected mode covers sign-in, the origin choice, takeover, offline play and reconnect, and spends through the server. |
+| 3 First home | `WorldScene` split; Hearthwick Commons as a second safe area with Silas; campsite → cottage (15 embers); 14 decorations with placement; home rest (1 ember); read-only visits to members' cottages. |
+| 4 Compact Wilds | The Tangle (`inner-1`, 3×3 permanent chunks) with camps, resource nodes, personal chests, charted points of interest, trinkets and fallen-hero lanterns. Materials have their first use in material-priced furniture. Guests get a fixed local Tangle. |
+| 5 Homestead expansion | Workshop tier (storage chest and crafting bench, 10 recipes), mail between world members (recall, 30-day return), six village projects with visible village changes and papers, and the game calendar with festivals. The outer region (`outer-1`) turns every wick on the server; **the client does not walk into it yet**. |
+| 6 Presence | `/ws` rooms per world and area (and per Wilds chunk), avatars with name tags and interpolated movement, five emotes. |
+
+Also shipped, outside the original phases: **papers** (52 found texts in eight
+collections, a Journal tab) and the **Hearthwick Library** (a local shelf for
+guests, one shared shelf per world); the canon text pass.
+
+Still to come: the outer Wilds in the client, Garden and Hall tiers,
+Habitica-driven decoration, the party boss mirror, co-op combat, world moves
+and checkpoint rewind.
+
+**Owner decisions after revision 4** (these override the text below where
+they differ):
+
+- **Syncs stay client-side; the server checks the token only at login.** The
+  browser fetches Habitica and reports the profile; the server makes one
+  read-only `GET /user` per sign-in and never stores the token. Sessions slide
+  for seven idle days, at most thirty days from login, so a verified
+  checkpoint happens at least monthly.
+- **Game-time calendar: one wick is seven real days.** Twelve wicks make a
+  year, four Marks name the seasons, festivals fall on fixed days, and the
+  outer Wilds turn at the end of every wick (the "Outer-region reset period"
+  question below is settled: weekly, by wick). The inner region never resets.
+- **The warden is village-built and is settled, not slain.** Blows clink off
+  it; holding up the route-stone rubbing three times, while it stands open
+  after a lunge, settles it. Quest ids, events and stages are unchanged.
+- **Papers and a shared library.** Found texts are a progression of their own;
+  in a world, the library shelf is shared and keeps the first donor's name.
+- **Persistent worlds with player invites.** A first login creates a solo
+  world or joins the inviter's; every member may have three codes
+  outstanding and create five in all. Worlds never move players on their own.
+- **Readable invite codes.** Six words from a fixed 256-word list plus four
+  digits (`amber-fox-river-lantern-moss-ivy-7392`, about 61 bits),
+  case-insensitive and tolerant of spaces; old hex codes still work.
+- **Costs set from the first build:** cottage 15 embers, workshop 30 embers
+  plus 20 timber, 10 stone and 8 fiber, home rest 1 ember. These are starting
+  values for playtesting. The migration cap stays at 30.
+
 Revision 4 records the owner's decisions:
 
 - **Syncs stay client-side** (browser → Habitica, as today). The server sees a
