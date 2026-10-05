@@ -9,10 +9,11 @@ import type { WorldData } from '../worlds'
 import type { LightProp } from './lanterns'
 import { ensureSceneryTexture } from '../commons-art'
 import { ensureTangleAtlas } from '../wilds/tangle-art'
+import { ensureMillTexture } from '../mill-art'
 
-/** Code-drawn scenery textures: the Commons' runs, then the Tangle's woods. */
+/** Code-drawn scenery textures: the Commons' runs, the Tangle's woods, the Tolley mill. */
 export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
-  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key)
+  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || ensureMillTexture(scene, key)
 }
 
 export function buildProps(

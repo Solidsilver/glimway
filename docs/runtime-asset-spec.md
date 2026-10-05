@@ -216,8 +216,9 @@ boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
   crafted goods in the Character panel, workshop, Silas's yard balance,
   mail and loot toasts (`ToastPayload.art`), emotes in the picker.
 - **Residents** — Elara (the Commons, by the Wilds arch, with the
-  `wilds-pack` and `wilds-fire-ring` as her camp), Finn (the pond's west
-  rim), Hazel (the square) and Ada (under her window) are NPCs in
+  `wilds-pack` and `wilds-fire-ring` as her camp), Finn (at the door of
+  the Tolley mill: code-drawn in `src/game/mill-art.ts` until the art pack
+  has one, see `docs/art-requests.md`), Hazel (the square) and Ada (under her window) are NPCs in
   `WorldData.npcs`, drawn from `commons-art:<name>-idle-0/1` with their
   breathing animations (`src/game/entities/npcs.ts`; a tinted quest-NPC
   placeholder if the pack didn't load). Their busts are emitted under their

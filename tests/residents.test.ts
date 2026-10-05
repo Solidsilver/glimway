@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  millHopperLines,
   allResidentJournal,
   allResidentLines,
   earlyResidentLines,
@@ -17,7 +18,7 @@ import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { TILE } from '../src/game/textures.ts';
+import { TERRAIN, TILE } from '../src/game/textures.ts';
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000;
 const DAY = 86400;
@@ -210,13 +211,57 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
     assert.ok(Math.hypot(w.spawn.tx - n.tx, w.spawn.ty - n.ty) * TILE > 48, `${id} is clear of the spawn`);
     for (const b of [...w.bushes, ...w.rocks]) assert.ok(b.tx !== n.tx || b.ty !== n.ty, `${id} not on a bush or rock`);
   }
-  // Finn by the water, Ada under her window, Elara by the Wilds arch.
+  // Finn at his mill door, Ada under her window, Elara by the Wilds arch.
   const finn = spot(village, 'finn');
-  assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => village.solid[finn.ty + dy][finn.tx + dx] && village.ground[finn.ty + dy][finn.tx + dx] !== village.ground[0][0]));
+  const mill = village.mill!;
+  assert.equal(finn.ty, mill.ty + mill.th, 'Finn stands on the ground in front of the mill');
+  assert.ok(Math.abs(finn.tx - mill.door.tx) <= 1, 'beside the door');
   assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8 });
   const arch = commons.exits.find((e) => e.to === 'wilds')!;
   const elara = spot(commons, 'elara');
   assert.ok(Math.abs(elara.ty - arch.ty) <= 6 && elara.tx >= arch.tx && elara.tx <= arch.tx + arch.tw + 1);
   // Off the lane's walk: the Wilds path stays clear.
   assert.ok(elara.tx > arch.tx + arch.tw - 1);
+});
+
+test('the Tolley mill sits on the pond’s edge, clear of the quest, the library, Ada and Hazel', () => {
+  const village = buildArea('village');
+  const m = village.mill!;
+  assert.ok(m, 'the village has a mill');
+  // Its footprint is solid, the wheel stands at the water's edge, and the
+  // hopper is solid against the west wall.
+  for (let y = m.ty; y < m.ty + m.th; y++) for (let x = m.tx; x < m.tx + m.tw; x++) assert.ok(village.solid[y][x], `${x},${y}`);
+  const wheel = { tx: Math.floor(m.wheel.x / TILE), ty: Math.floor(m.wheel.y / TILE) };
+  assert.ok(village.solid[wheel.ty][wheel.tx], 'the wheel blocks its own tile');
+  assert.equal(wheel.tx, m.tx + m.tw, 'on the east wall');
+  assert.ok([TERRAIN.water_a, TERRAIN.water_b].includes(village.ground[wheel.ty][wheel.tx + 1]), 'pond water beside the wheel');
+  assert.ok(village.solid[m.hopper.ty][m.hopper.tx]);
+  assert.ok(m.hopper.tx === m.tx - 1 && m.hopper.ty >= m.ty && m.hopper.ty < m.ty + m.th, 'hopper against the west wall');
+  // The door opens onto walkable ground, and the garden's gap above still opens onto grass.
+  assert.equal(village.solid[m.door.ty + 1][m.door.tx], false);
+  assert.equal(village.solid[19][27], false);
+  // Nothing of the quest, the library, Ada's house or Hazel in or against it.
+  const inMill = (p: { tx: number; ty: number }) => p.tx >= m.tx - 1 && p.tx <= m.tx + m.tw && p.ty >= m.ty - 1 && p.ty <= m.ty + m.th;
+  for (const n of village.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
+  for (const p of [village.library!, village.board!, village.well!, village.spawn]) assert.ok(!inMill(p), `${p.tx},${p.ty}`);
+  for (const b of [...village.bushes, ...village.rocks]) assert.ok(!inMill(b), `${b.tx},${b.ty}`);
+  for (const e of village.exits) assert.ok(!inMill({ tx: e.tx, ty: e.ty }));
+  const keys = (village.scenery ?? []).map((s) => s.key);
+  assert.ok(keys.includes('mill-house') && keys.includes('mill-hopper'));
+});
+
+test('the hopper’s tally is a mystery until Finn’s paper says what it counts', () => {
+  const before = millHopperLines([]).join(' ');
+  assert.match(before, /clusters of five/);
+  assert.doesNotMatch(before, /fox|Aldo|twenty-seven|grate/i);
+  const after = millHopperLines([paperFlag('forty-one-and-holding')]).join(' ');
+  assert.match(after, /twenty-seven/);
+  assert.match(after, /fox cleaned off the grate/);
+  for (const l of [...millHopperLines([]), ...millHopperLines([paperFlag('forty-one-and-holding')])]) assert.ok(l.length <= 160, l);
+});
+
+test('Finn has his mill: no line says he comes up to the pond between grindings', () => {
+  assert.ok(allResidentLines().some((l) => /This is the mill/.test(l)));
+  for (const l of allResidentLines()) assert.doesNotMatch(l, /between grindings|come up to (the pond|watch)/i, l);
+  assert.match(residentTalk('finn', ctx({ flags: MET, calendar: null, projects: { 'mill-wheel': 'complete' } })).dialogue.lines.at(-1)!, /No groan/);
 });

@@ -17,7 +17,7 @@ type Area = Parameters<typeof warp>[1]
 
 const RESIDENTS = [
   { id: 'hazel', name: 'Hazel', full: 'Hazel Penhallow', area: 'village', stand: [11, 15], intro: /Hazel Penhallow/ },
-  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'village', stand: [31, 20], intro: /Finn Tolley, the miller/ },
+  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'village', stand: [31, 23], intro: /Finn Tolley, the miller/ },
   { id: 'ada', name: 'Ada', full: 'Ada Cooley', area: 'village', stand: [34, 8], intro: /Ada Cooley\./ },
   { id: 'elara', name: 'Elara', full: 'Elara Quill', area: 'commons', stand: [25, 5], intro: /Elara Quill: forager/ }
 ] as const
