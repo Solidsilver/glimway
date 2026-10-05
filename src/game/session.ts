@@ -375,15 +375,19 @@ export class Session {
     }
   }
 
-  /** Immediate save — used at hard boundaries (page hide, teardown prep). */
-  flushSync(): void {
+  /**
+   * Immediate save — used at hard boundaries. `leaving` is for pagehide: a
+   * connected upload may then skip the queue. A tab that is only hidden
+   * (visibilitychange) keeps the queue's order.
+   */
+  flushSync(leaving = false): void {
     if (this.saveTimer !== null) {
       window.clearTimeout(this.saveTimer)
       this.saveTimer = null
     }
     // Connected: the upload starts before the cache write, so a closing tab
     // still sends it.
-    if (this.link && !this.destroyed) void this.link.persist({ urgent: true })
+    if (this.link && !this.destroyed) void this.link.persist({ urgent: true, leaving })
     else void this.save()
   }
 
@@ -405,7 +409,7 @@ export class Session {
     const finalProfile = this.importedProfile
     if (this.link) {
       const link = this.link
-      const last = skipSave ? Promise.resolve() : link.persist({ urgent: true })
+      const last = skipSave ? Promise.resolve() : link.persist({ urgent: true, leaving: true })
       this.destroyed = true
       void last.finally(() => link.stop())
       return

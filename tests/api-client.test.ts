@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createQueue } from '../src/lib/api/queue.ts';
 import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERROR_CODES } from '../src/lib/api/errors.ts';
-import { claimClientId, createApiClient, newKey } from '../src/lib/api/client.ts';
+import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
 import type { Progress } from '../src/lib/api/types.ts';
 
@@ -165,13 +165,13 @@ test('client: invites POST an empty JSON object and revoke by encoded id', async
     fetchImpl: (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       if (init.method === 'POST') return json(200, { id: 'h', createdAt: 1, expiresAt: 2, used: false, code: 'c0de' });
-      if (init.method === 'GET') return json(200, { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }] });
+      if (init.method === 'GET') return json(200, { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3 });
       return json(200, { ok: true });
     }) as typeof fetch,
   });
   assert.equal((await api.createInvite()).code, 'c0de');
   assert.equal(calls[0].init.body, '{}');
-  assert.deepEqual(await api.listInvites(), [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }]);
+  assert.deepEqual(await api.listInvites(), { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3 });
   await api.revokeInvite('a/b');
   assert.equal(calls[2].url, '/api/invites/a%2Fb');
   assert.equal(calls[2].init.method, 'DELETE');
@@ -185,6 +185,43 @@ test('client: responses are validated; a bad state is a bad-response, unknown fi
   });
   const s = await extra.state();
   assert.equal('token' in (s.state as GameState & { token?: string }), false);
+});
+
+test('state: displayName and leaseActive are kept; older servers leave them empty/undefined', async () => {
+  const api = createApiClient({
+    fetchImpl: (async () => json(200, { ...snapshot(), displayName: 'Lantern Keeper', leaseActive: false })) as typeof fetch,
+  });
+  const s = await api.state('L');
+  assert.equal(s.displayName, 'Lantern Keeper');
+  assert.equal(s.leaseActive, false);
+  const old = createApiClient({ fetchImpl: (async () => json(200, snapshot())) as typeof fetch });
+  const o = await old.state();
+  assert.equal(o.displayName, '');
+  assert.equal(o.leaseActive, undefined);
+});
+
+test('invites: older servers without quota fields still list', async () => {
+  const api = createApiClient({ fetchImpl: (async () => json(200, { invites: [], remaining: -1 })) as typeof fetch });
+  assert.deepEqual(await api.listInvites(), { invites: [] });
+});
+
+test('invite codes: typed or pasted any way, they become the canonical form', async () => {
+  assert.equal(normalizeInviteCode('  AMBER FOX river - LANTERN   moss ivy 7392  '), 'amber-fox-river-lantern-moss-ivy-7392');
+  assert.equal(normalizeInviteCode('amber–fox\nriver—lantern-moss-ivy-7392'), 'amber-fox-river-lantern-moss-ivy-7392');
+  assert.equal(normalizeInviteCode('   '), '');
+  assert.deepEqual(inviteCodeParts('amber-fox-river-lantern-moss-ivy-7392'), { words: ['amber', 'fox', 'river', 'lantern', 'moss', 'ivy'], number: '7392' });
+  assert.deepEqual(inviteCodeParts('ABCDEF0123'), { words: ['abcdef0123'], number: '' });
+  // Login sends the canonical form (and nothing for a blank field).
+  const bodies: unknown[] = [];
+  const api = createApiClient({
+    fetchImpl: (async (_u: string, init: RequestInit) => (bodies.push(JSON.parse(String(init.body))), json(200, snapshot()))) as typeof fetch,
+  });
+  await api.login({ userId: 'u', token: 't', invite: 'Amber Fox River Lantern Moss Ivy 7392' });
+  await api.login({ userId: 'u', token: 't', invite: ' - ' });
+  assert.deepEqual(bodies, [
+    { userId: 'u', token: 't', invite: 'amber-fox-river-lantern-moss-ivy-7392' },
+    { userId: 'u', token: 't' },
+  ]);
 });
 
 test('ids: idempotency keys are unique', () => {
@@ -235,6 +272,44 @@ test('client id: two pages claiming the same id at once end up different', async
   ).map(track);
   assert.notEqual(a.id, b.id);
   assert.ok(a.id === 'same' || b.id === 'same', 'one of them keeps it');
+});
+
+/** A BroadcastChannel that can be "frozen": it hears nothing while frozen, like a frozen or bfcached page. */
+function freezable(name: string) {
+  const ch = new BroadcastChannel(name);
+  const box = { frozen: false };
+  let handler: ((ev: { data: unknown }) => void) | null = null;
+  ch.onmessage = (ev) => {
+    if (!box.frozen) handler?.(ev);
+  };
+  const like = {
+    postMessage: (m: unknown) => ch.postMessage(m),
+    get onmessage() {
+      return handler;
+    },
+    set onmessage(h) {
+      handler = h;
+    },
+    close: () => ch.close(),
+  };
+  return { like, box };
+}
+
+test('client id: a page frozen during the duplicate\'s claim re-claims on resume and moves to a fresh id (re-review N2)', async () => {
+  const channelName = freshChannel();
+  const f = freezable(channelName);
+  const original = track(await claimClientId({ storage: memoryStorage('shared'), channelName, waitMs: 60, makeChannel: () => f.like }));
+  assert.equal(original.id, 'shared');
+  f.box.frozen = true; // the original tab is frozen in the background
+  const duplicate = track(await claimClientId({ storage: memoryStorage('shared'), channelName, waitMs: 100 }));
+  assert.equal(duplicate.id, 'shared', 'nobody answered, so the duplicate kept it');
+  f.box.frozen = false; // it resumes and checks again
+  const now = await original.reclaim();
+  assert.notEqual(now, 'shared');
+  assert.equal(original.id, now);
+  assert.equal(duplicate.id, 'shared');
+  // With nobody else holding it, a re-claim keeps the id.
+  assert.equal(await duplicate.reclaim(), 'shared');
 });
 
 test('client id: without BroadcastChannel or storage it still works', async () => {

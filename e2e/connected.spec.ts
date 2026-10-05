@@ -132,7 +132,10 @@ test('invite-only: denied without a code, then joins with one', async ({ page, c
   await box.getByLabel('Invite code').fill('not-a-real-code')
   await box.getByRole('button', { name: 'Join with this code' }).click()
   await expect(box).toContainText('That invite code didn’t work')
-  await box.getByLabel('Invite code').fill(adminInvite())
+  // Readable codes work in any case, with spaces instead of hyphens.
+  const code = adminInvite()
+  expect(code).toMatch(/^[a-z]+(-[a-z]+){5}-\d{4}$/)
+  await box.getByLabel('Invite code').fill(`  ${code.toUpperCase().replace(/-/g, ' ')} `)
   await box.getByRole('button', { name: 'Join with this code' }).click()
   await waitForWorld(page)
   expect((await serverState(page)).body.habiticaId).toBe(id)
@@ -300,18 +303,33 @@ test('invites: create a code (shown once), list it, revoke it, and respect the l
   await freshPlayer(page)
   await page.keyboard.press('Escape')
   const card = page.getByTestId('invites-card')
+  // The quota shows up front.
+  await expect(card.getByTestId('invite-budget')).toContainText('5 of 5 invite codes left')
+  await expect(card.getByTestId('invite-budget')).toContainText('Up to 3 can wait at once.')
   await card.getByRole('button', { name: 'Create an invite code' }).click()
   await expect(card.getByTestId('invite-code')).toContainText('only shown once')
-  const code = (await card.locator('code').textContent())?.trim() ?? ''
-  expect(code.length).toBeGreaterThan(20)
+  // A readable code, shown as words; selecting the text gives the real code.
+  const code = (await card.locator('code').textContent())?.replace(/\s+/g, '') ?? ''
+  expect(code).toMatch(/^[a-z]+(-[a-z]+){5}-\d{4}$/)
+  await expect(card.locator('code .w')).toHaveCount(6)
+  await expect(card.getByTestId('invite-budget')).toContainText('4 of 5 invite codes left')
   await expect(card.locator('.list:not(.used) li')).toHaveCount(1)
   await card.getByRole('button', { name: 'Create an invite code' }).click()
   await card.getByRole('button', { name: 'Create an invite code' }).click()
   await expect(card.locator('.list:not(.used) li')).toHaveCount(3)
-  await card.getByRole('button', { name: 'Create an invite code' }).click()
-  await expect(card.getByRole('alert')).toContainText('You have 3 codes waiting already')
+  // At the waiting limit the button says why instead of failing.
+  await expect(card.getByRole('button', { name: 'Create an invite code' })).toBeDisabled()
+  await expect(card.getByTestId('invite-why')).toContainText('You have 3 codes waiting already')
   await card.getByRole('button', { name: 'Revoke' }).first().click()
   await expect(card.locator('.list:not(.used) li')).toHaveCount(2)
+  // Revoked codes still count against the lifetime budget.
+  await expect(card.getByTestId('invite-budget')).toContainText('2 of 5 invite codes left')
+  await card.getByRole('button', { name: 'Create an invite code' }).click()
+  await card.getByRole('button', { name: 'Revoke' }).first().click()
+  await card.getByRole('button', { name: 'Create an invite code' }).click()
+  await expect(card.getByTestId('invite-budget')).toContainText('0 of 5 invite codes left')
+  await expect(card.getByRole('button', { name: 'Create an invite code' })).toBeDisabled()
+  await expect(card.getByTestId('invite-why')).toContainText('made all 5')
 })
 
 test('logout ends the session and returns to guest play', async ({ page }) => {
@@ -370,11 +388,9 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   await page.getByRole('button', { name: 'Sign in to your world' }).click()
   await page.getByRole('button', { name: 'I have them' }).click()
   await pasteAndConnect(page, id)
-  // Logout doesn't release the old session's lease (contract issue), and it
-  // was active moments ago: the new sign-in has to take over.
-  await expect(leaseGate(page)).toBeVisible()
-  await page.getByRole('button', { name: 'Take over here' }).click()
+  // Logout released that session's lease, so signing straight back in plays at once.
   await waitForWorld(page)
+  await expect(leaseGate(page)).toHaveCount(0)
   await expect.poll(async () => (await serverState(page)).body.state.quest).toBe('accepted')
 })
 

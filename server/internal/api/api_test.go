@@ -836,3 +836,40 @@ func TestOwnedUploadTypesAreIgnoredAndUnknownCredentialsStripped(t *testing.T) {
 		t.Fatal("unknown credentials persisted")
 	}
 }
+
+// Logout releases the play lease held through that session (and only that
+// one), so signing straight back in on the same device can play at once.
+func TestLogoutReleasesThatSessionsLease(t *testing.T) {
+	x := newRig(t)
+	first, s := x.ready("alice")
+	other := x.login("alice", "")
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, other, 409)
+	// Another session logging out leaves the first session's lease alone.
+	x.expect("DELETE", "/api/session", nil, other, 200)
+	again := x.login("alice", "")
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, again, 409)
+	if n := count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='alice' AND lease_id=?", s.Lease); n != 1 {
+		t.Fatal("foreign logout released the lease")
+	}
+
+	// The holder logs out: the lease goes with its session, rev unchanged.
+	x.expect("DELETE", "/api/session", nil, first, 200)
+	if n := count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='alice' AND lease_id IS NULL AND lease_client IS NULL AND lease_seen_at IS NULL"); n != 1 {
+		t.Fatal("lease not released on logout")
+	}
+	back := x.login("alice", "")
+	fresh := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, back, 200)
+	if fresh.Lease == s.Lease || fresh.Rev != s.Rev {
+		t.Fatal("re-login should get a new lease without a rev change")
+	}
+	// The released lease is dead for any writer.
+	status, _, code, _ := x.request("PUT", "/api/progress", mutation(s, s.State), back)
+	if status != 409 || code != "superseded" {
+		t.Fatalf("old lease accepted after logout: %d %s", status, code)
+	}
+	x.expect("PUT", "/api/progress", mutation(fresh, fresh.State), back, 200)
+
+	// Logging out with no cookie, or twice, is still harmless.
+	x.expect("DELETE", "/api/session", nil, nil, 200)
+	x.expect("DELETE", "/api/session", nil, first, 200)
+}

@@ -14,7 +14,8 @@ export const INVITE_LIFETIME = economy.lifetimeInvites
 export const signInCopy = {
   inviteToggle: 'Have an invite code?',
   inviteLabel: 'Invite code',
-  invitePlaceholder: 'Paste the code from your friend',
+  invitePlaceholder: 'e.g. amber-fox-river-lantern-moss-ivy-7392',
+  inviteHint: 'Any case; spaces or hyphens are fine.',
   inviteOnlyTitle: 'This world is invite-only',
   inviteOnlyBody: 'Your Habitica hero is fine. To join the shared world you need an invite code from someone already in it.',
   inviteJoin: 'Join with this code',
@@ -95,7 +96,10 @@ export const accountCopy = {
 
 export const inviteCopy = {
   section: 'Invite a friend',
-  intro: `Invite codes let a friend join your world. Each works once and lasts 30 days. You can make ${INVITE_LIFETIME} in all.`,
+  intro: 'Invite codes let a friend join your world. Each works once and lasts 30 days.',
+  budgetLine: (left: number, total: number) => `${left} of ${total} invite codes left`,
+  waitingLine: (limit: number) => `Up to ${limit} can wait at once.`,
+  pasteHint: 'Your friend pastes it in “Have an invite code?” when they connect.',
   create: 'Create an invite code',
   creating: 'Making a code…',
   shownOnce: 'Copy it now: it’s only shown once.',
@@ -104,7 +108,7 @@ export const inviteCopy = {
   outstanding: 'Waiting to be used',
   none: 'No codes waiting.',
   revoke: 'Revoke',
-  limit: `You have ${INVITE_LIMIT} codes waiting already. Revoke one to make another.`,
+  limit: (n: number = INVITE_LIMIT) => `You have ${n} codes waiting already. Revoke one to make another.`,
   budget: `You’ve made all ${INVITE_LIFETIME} of your invite codes. Ask the world’s owner for more.`,
   flagged: 'Invites are paused for this account. The world’s owner can help.',
   signedOut: 'Your sign-in ended. Sign in again to manage invites.',

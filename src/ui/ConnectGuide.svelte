@@ -627,8 +627,9 @@
           <summary><Icon name="key" size={12} /> {signInCopy.inviteToggle}</summary>
           <label class="field">
             <span>{signInCopy.inviteLabel}</span>
-            <input type="text" bind:value={inviteCode} autocomplete="off" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
+            <input type="text" bind:value={inviteCode} autocomplete="off" autocapitalize="none" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
           </label>
+          <p class="tiny">{signInCopy.inviteHint}</p>
         </details>
       {/if}
 
@@ -638,7 +639,7 @@
           <p>{signInCopy.inviteOnlyBody}</p>
           <label class="field">
             <span>{signInCopy.inviteLabel}</span>
-            <input type="text" bind:value={inviteCode} autocomplete="off" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
+            <input type="text" bind:value={inviteCode} autocomplete="off" autocapitalize="none" spellcheck="false" placeholder={signInCopy.invitePlaceholder} onkeydown={keepKeys} />
           </label>
           {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
           <div class="row">

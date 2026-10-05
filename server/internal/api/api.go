@@ -408,9 +408,27 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	write(w, 200, s)
 	return nil
 }
+// logout revokes this session and releases a play lease held through it, in
+// one transaction, so signing straight back in on the same device does not
+// meet its own old lease as "playing elsewhere". Lease clients are
+// "<session hash>:<clientId>"; another session's lease is untouched. A lease
+// release does not change rev.
 func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 	if c, err := r.Cookie(CookieName); err == nil {
-		if _, err = a.Store.DB.ExecContext(r.Context(), "DELETE FROM sessions WHERE id_hash=?", store.Hash(c.Value)); err != nil {
+		hash := store.Hash(c.Value)
+		tx, err := a.Store.DB.BeginTx(r.Context(), nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		if _, err = tx.ExecContext(r.Context(), "DELETE FROM sessions WHERE id_hash=?", hash); err != nil {
+			return err
+		}
+		prefix := hash + ":"
+		if _, err = tx.ExecContext(r.Context(), "UPDATE players SET lease_id=NULL,lease_client=NULL,lease_seen_at=NULL WHERE lease_client IS NOT NULL AND substr(lease_client,1,?)=?", len(prefix), prefix); err != nil {
+			return err
+		}
+		if err = tx.Commit(); err != nil {
 			return err
 		}
 	}

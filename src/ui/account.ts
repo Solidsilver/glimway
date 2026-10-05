@@ -22,7 +22,35 @@ export const api = createApiClient()
  * hear that this one holds it.
  */
 const claim = claimClientId()
-export const clientIdReady: Promise<string> = claim.then((c) => c.id)
+
+/** Links that should follow this page's client id (one per connected session). */
+const links = new Set<Link>()
+
+/**
+ * A frozen or back-forward-cached page can't answer a duplicate's claim, so
+ * both may end up holding one id. When this page comes back, claim again; if
+ * a live page answers, take a fresh id and move the running link to it.
+ */
+async function recheckClientId(): Promise<void> {
+  const c = await claim
+  const before = c.id
+  const after = await c.reclaim()
+  if (after === before) return
+  for (const link of [...links]) {
+    if (!link.active) links.delete(link)
+    else void link.changeClient(after)
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (e) => {
+    if ((e as PageTransitionEvent).persisted) void recheckClientId()
+  })
+  document.addEventListener('resume', () => void recheckClientId())
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void recheckClientId()
+  })
+}
 
 export type Probe = { kind: 'signed-in'; snapshot: Snapshot } | { kind: 'signed-out' } | { kind: 'unavailable' }
 
@@ -35,10 +63,10 @@ export async function probeServer(): Promise<Probe> {
   }
 }
 
-/** Display name for an account: the imported hero, else the cache, else a fallback. */
+/** Display name for an account: the server's verified name, else the hero, else the cache. */
 export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | null, fallback = 'Your hero'): string {
   const cached = cache && (!snapshot || cache.habiticaId === snapshot.habiticaId) ? cache.name : ''
-  return snapshot?.importedProfile?.name || cached || fallback
+  return snapshot?.displayName || snapshot?.importedProfile?.name || cached || fallback
 }
 
 /**
@@ -49,7 +77,7 @@ export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | n
  */
 export async function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<Session> {
   const { snapshot } = opts
-  const clientId = await clientIdReady
+  const clientId = (await claim).id // current, even after a re-claim
   const habiticaId = snapshot?.habiticaId ?? opts.cache?.habiticaId
   if (!habiticaId) throw new Error('connectedSession needs a snapshot or a cache')
   const cache = opts.cache?.habiticaId === habiticaId ? opts.cache : null
@@ -71,5 +99,7 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
     recovery: cache?.recovery,
     emit: (event, payload) => bus.emit(event, payload)
   })
+  for (const old of [...links]) if (!old.active) links.delete(old)
+  links.add(link)
   return new Session(base.state, { vitalsSource: base.vitalsSource, importedProfile: base.importedProfile }, link)
 }

@@ -83,7 +83,8 @@ export interface LinkInit {
 
 export class Link {
   readonly api: ApiClient
-  readonly clientId: string
+  /** This page's play-client id (changes only via `changeClient`). */
+  clientId: string
   readonly habiticaId: string
   name: string
   /** Server revision the local copy is based on. */
@@ -158,10 +159,14 @@ export class Link {
 
   /**
    * Session.save for connected play: cache always, upload while online.
-   * `urgent` (page hide / close): the upload starts before the cache write,
-   * because a closing page rarely lives to see IndexedDB finish.
+   * `urgent` (tab hidden, page leaving): the upload starts before the cache
+   * write, because a closing page rarely lives to see IndexedDB finish.
+   * `leaving` (pagehide only): if the queue is busy, send out of turn rather
+   * than wait behind it. A merely hidden tab keeps the queue's order: an
+   * out-of-turn write could land second as a stale write, bump the rev, and
+   * leave this tab a rev behind (re-review N1).
    */
-  async persist(opts: { urgent?: boolean } = {}): Promise<void> {
+  async persist(opts: { urgent?: boolean; leaving?: boolean } = {}): Promise<void> {
     if (this.stopped || !this.session) return
     if (this.status === 'superseded') {
       // Another tab holds the lease: our unsent story goes to the orphan
@@ -170,7 +175,7 @@ export class Link {
       return
     }
     if (this.status === 'offline' && this.dirty) this.offlineProgress = true
-    if (opts.urgent) this.scheduleUpload(true)
+    if (opts.urgent || opts.leaving) this.scheduleUpload(opts.leaving === true)
     await this.saveLocal()
     this.scheduleUpload()
   }
@@ -200,15 +205,19 @@ export class Link {
     }
   }
 
-  private scheduleUpload(urgent = false): void {
+  private scheduleUpload(outOfTurn = false): void {
     if (this.status !== 'online' || !this.lease || !this.dirty) return
     if (this.session && docKey(this.session.state) === this.refused) return
-    if (urgent && (this.uploadQueued || this.api.queue.size > 0)) {
+    if (outOfTurn && (this.uploadQueued || this.api.queue.size > 0)) {
       // The queue is busy and the page is going: send now, out of turn. At
       // worst it lands as a stale write, which still keeps its story.
       const s = this.session!
-      this.sent = { rev: this.rev, key: docKey(s.state) }
-      void this.api.raw.progress({ lease: this.lease, baseRev: this.rev, doc: toProgress(s.state) }, { keepalive: true }).catch(() => undefined)
+      const mine = { rev: this.rev, key: docKey(s.state) }
+      this.sent = mine
+      void this.api.raw
+        .progress({ lease: this.lease, baseRev: this.rev, doc: toProgress(s.state) }, { keepalive: true })
+        .catch(() => undefined)
+        .then(() => this.afterOutOfTurn(mine))
       return
     }
     if (this.uploadQueued) return
@@ -220,10 +229,12 @@ export class Link {
         if (!s || this.status !== 'online' || !this.lease || !this.dirty) return
         const key = docKey(s.state)
         if (key === this.refused) return
-        this.sent = { rev: this.rev, key }
+        const mine = { rev: this.rev, key }
+        this.sent = mine
         const res = await raw.progress({ lease: this.lease, baseRev: this.rev, doc: toProgress(s.state) }, { keepalive: true })
         this.contact()
-        this.sent = undefined
+        // Only clear our own marker; an out-of-turn request may have set its own.
+        if (this.sent === mine) this.sent = undefined
         const before = s.state
         this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
         this.acked = res.status === 'current' ? key : docKey(s.state)
@@ -240,6 +251,19 @@ export class Link {
       .finally(() => void this.saveLocal())
   }
 
+  /**
+   * The page outlived its out-of-turn upload (pagehide into the back-forward
+   * cache, say). That request may have bumped the server's rev without this
+   * link adopting it, so check in: our own lease with a newer rev is adopted
+   * keep-local and re-sent as a current write (see `beat`).
+   */
+  private async afterOutOfTurn(marker: { rev: number; key: string }): Promise<void> {
+    if (this.sent === marker) this.sent = undefined
+    if (this.stopped) return
+    await this.api.queue.idle()
+    await this.beat(true)
+  }
+
   /** Upload anything pending now (logout, tests). */
   async flush(): Promise<void> {
     this.scheduleUpload()
@@ -252,7 +276,8 @@ export class Link {
     if (!s) return
     const merged = mergeServerState(s.state, snapshot.state, mode)
     this.rev = snapshot.rev
-    if (snapshot.importedProfile?.name) this.name = snapshot.importedProfile.name
+    const name = snapshot.displayName || snapshot.importedProfile?.name
+    if (name) this.name = name
     s.applyServer(merged, { vitalsSource: snapshot.vitalsSource, importedProfile: snapshot.importedProfile ?? null }, mode === 'server')
   }
 
@@ -460,6 +485,25 @@ export class Link {
     }
   }
 
+  /**
+   * This page turned out to share its client id with another live page (it
+   * was frozen when the other claimed it) and took a fresh one. The old lease
+   * belongs to that other page now: drop it and reconnect as a new client,
+   * which meets the normal playing-elsewhere / take-over flow.
+   */
+  changeClient(id: string): Promise<void> {
+    if (this.stopped || id === this.clientId) return Promise.resolve()
+    this.clientId = id
+    this.lease = null
+    this.stopHeartbeat()
+    void this.saveLocal()
+    return this.reconnect(false)
+  }
+
+  get active(): boolean {
+    return !this.stopped
+  }
+
   /** The player chose Take over on the "Playing on another device" screen. */
   takeOver(): Promise<void> {
     return this.reconnect(true)
@@ -476,36 +520,30 @@ export class Link {
     this.heartbeat = null
   }
 
-  /** Keep the lease alive while idle, and notice a takeover elsewhere. */
+  /**
+   * Keep the lease alive while idle, and notice a takeover elsewhere: the GET
+   * says whether the lease we sent is still the player's (`leaseActive`).
+   */
   async beat(force = false): Promise<void> {
     if (this.status !== 'online' || this.busy || this.api.queue.size > 0) return
     if (!force && Date.now() - this.lastContact < HEARTBEAT_MS - 5_000) return
     try {
       const snap = await this.api.run((raw) => raw.state(this.lease))
       this.contact()
-      if (snap.rev === this.rev) return
-      // Something else wrote. A GET can't say whose lease is live, so ask for
-      // ours back without taking over: another active tab answers
-      // playing-elsewhere.
-      const play = await this.api.run((raw) => raw.play({ clientId: this.clientId }))
-      const sameLease = play.lease === this.lease
-      this.lease = play.lease
-      if (sameLease) {
-        // Still ours (clientIds are unique per page), so nobody else played:
-        // the rev moved for bookkeeping (a login settling credit, an owner
-        // action). Keep local vitals and position, adopt the rev, and send
-        // what we have as a current write.
-        this.apply(play, 'keep-local')
-        this.scheduleUpload()
-      } else {
-        // The lease had lapsed to someone else and come back: theirs is newer.
-        this.apply(play, 'server')
-        this.acked = docKey(this.session!.state)
+      if (snap.leaseActive === false) {
+        // Another tab or device took over. Taking it back is the player's call.
+        this.setStatus('superseded')
+        return
       }
+      if (snap.rev === this.rev) return
+      // Still our lease, so nobody else played: the rev moved for bookkeeping
+      // (a login settling credit, an owner action). Keep local vitals and
+      // position, adopt the rev, and send what we have as a current write.
+      this.apply(snap, 'keep-local')
+      this.scheduleUpload()
       void this.saveLocal()
     } catch (err) {
-      if (errorCode(err) === 'playing-elsewhere') this.setStatus('superseded')
-      else this.onFailure(err, 'heartbeat')
+      this.onFailure(err, 'heartbeat')
     }
   }
 

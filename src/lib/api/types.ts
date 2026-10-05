@@ -31,6 +31,8 @@ export interface Snapshot {
   /** Omitted before origin selection. */
   importedProfile?: HabiticaProfile;
   habiticaId: string;
+  /** The verified player's name, present even before the origin choice ('' from older servers). */
+  displayName: string;
   habiticaPartyId: string | null;
   worldId: string;
   /** null until the player picks how to start. */
@@ -42,6 +44,15 @@ export interface Snapshot {
 
 export interface PlayResponse extends Snapshot {
   lease: string;
+}
+
+/** GET /api/state. */
+export interface StateResponse extends Snapshot {
+  /**
+   * Whether the `X-Play-Lease` sent is the player's current lease. False for
+   * a superseded tab (or no header). Undefined from servers before round 3.
+   */
+  leaseActive?: boolean;
 }
 
 export interface ProgressResponse extends Snapshot {
@@ -105,5 +116,15 @@ export interface InviteInfo {
 
 /** Only creation returns the raw code, once. */
 export interface CreatedInvite extends InviteInfo {
+  /** Readable words plus digits, e.g. `amber-fox-river-lantern-moss-ivy-7392`. Shown once. */
   code: string;
+}
+
+export interface InviteList {
+  /** Waiting codes plus used history (hash metadata only). */
+  invites: InviteInfo[];
+  /** Lifetime creations left (CLI codes don't count). Undefined from older servers. */
+  remaining?: number;
+  /** How many unused codes may wait at once. */
+  outstandingLimit?: number;
 }

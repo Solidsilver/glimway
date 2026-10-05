@@ -180,13 +180,19 @@ test('retryDelay: steady for no network, backing off for server trouble', () => 
   assert.equal(isTrouble('network'), false);
 });
 
-test('spendLanded: outcomes for lanterns and the chest, the balance for a rest', () => {
+test('spendLanded: outcomes for lanterns and the chest; for a rest, restored vitals and the balance', () => {
   const before = base({ embers: 6, flags: [] });
   assert.equal(spendLanded({ kind: 'road-lantern', id: 'road-1' }, before, base({ embers: 3, flags: ['lit:road-1'] })), true);
   assert.equal(spendLanded({ kind: 'road-lantern', id: 'road-1' }, before, base({ embers: 6, flags: ['lit:road-2'] })), false);
   assert.equal(spendLanded({ kind: 'chest' }, before, base({ embers: 1, flags: ['opened:ashwatch-chest'] })), true);
-  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 4 })), true);
-  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 6 })), false);
+  const rested = { hp: 50, maxHp: 50, mana: 36, maxMana: 36 };
+  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 4, ...rested })), true);
+  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 6, ...rested })), false, 'nothing paid');
+  // Re-review N3: another device spent embers, but this rest never landed.
+  assert.equal(spendLanded({ kind: 'rest' }, before, base({ embers: 3, flags: ['lit:road-2'] })), false, 'vitals not restored');
+  // Already full before: a full result proves nothing.
+  assert.equal(spendLanded({ kind: 'rest' }, base({ embers: 6, ...rested }), base({ embers: 3, ...rested })), false);
+  assert.equal(spendLanded({ kind: 'home-rest' }, before, base({ embers: 5, ...rested })), true);
 });
 
 const record = (id: string, over: Partial<ConnectedCache> = {}): ConnectedCache => ({
