@@ -9,7 +9,8 @@
  *  - Amberwake: a lamp in every window.
  *  - Closure Night: night falls; every lantern in the village is lit.
  *  - Projects: the well gets its canopy, the north bridge (the stream bridge
- *    in Brackenwood) is mended with rails, Ada's window is lit for good.
+ *    in Brackenwood) is mended with rails, Ada's window is lit for good,
+ *    and the Tolley mill's groaning wheel is mended and turns smooth.
  */
 import Phaser from 'phaser'
 import { FESTIVAL_NOTES } from '../../lib/village'
@@ -17,6 +18,8 @@ import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
+import { ensureMillTexture, millWheelKeys, MILL_WHEEL_SIZE } from '../mill-art'
+import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
 import { TERRAIN, TILE } from '../textures'
 import type { InteractId, WorldData } from '../worlds'
@@ -59,6 +62,8 @@ export class VillageLayer implements InteractionProvider {
     if (import.meta.env.DEV) {
       ;(window as unknown as Record<string, unknown>).__fsDevCalendar = (unix: number | null) => this.village.setDevNow(unix)
     }
+    // Read-only: the mill wheel (playtests).
+    ;(window as unknown as { __fsMill?: () => unknown }).__fsMill = () => this.millView && { ...this.millView }
     ;(window as unknown as { __fsVillage?: () => unknown }).__fsVillage = () => ({
       calendar: this.village.calendar,
       source: this.village.calendarSource,
@@ -79,21 +84,31 @@ export class VillageLayer implements InteractionProvider {
     return id.startsWith('village:')
   }
 
-  markerOffset(): number {
-    return 32
+  markerOffset(id: InteractId): number {
+    return id === 'village:hopper' ? 24 : 32
   }
 
-  marker(): 'quest' | 'talk' | null {
+  marker(id: InteractId): 'quest' | 'talk' | null {
+    if (id === 'village:hopper') return null
     return this.village.calendar.notice ? 'talk' : null
   }
 
-  verb(): string {
-    return 'Read'
+  verb(id: InteractId): string {
+    return id === 'village:hopper' ? 'Look' : 'Read'
   }
 
   activate(id: InteractId): void {
     if (id === 'village:board') openBoard()
     if (id === 'village:hame') this.readHameRoll()
+    if (id === 'village:hopper') this.lookAtHopper()
+  }
+
+  /** The Tolley mill's hopper, with the tally scratched in its side. */
+  private lookAtHopper(): void {
+    const s = this.deps.session.state
+    uiState.dialogueOpen = true
+    sfx('open')
+    bus.emit(EV.dialogue, { id: 'village', speaker: 'Mill Hopper', lines: millHopperLines(s.flags) })
   }
 
   /**
@@ -105,6 +120,10 @@ export class VillageLayer implements InteractionProvider {
     const list: Interactable[] = []
     if (w.board && w.areaId === 'village') {
       list.push({ id: 'village:board', x: w.board.tx * TILE + 8, y: w.board.ty * TILE + TILE + 2, label: 'Read the notice board' })
+    }
+    if (w.mill && w.areaId === 'village') {
+      const h = w.mill.hopper
+      list.push({ id: 'village:hopper', x: h.tx * TILE + 8, y: h.ty * TILE + TILE + 2, label: 'Look at the hopper' })
     }
     const c = w as CommonsWorld
     const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
@@ -142,6 +161,8 @@ export class VillageLayer implements InteractionProvider {
       o.destroy()
     }
     this.drawn = []
+    this.millTimer?.remove()
+    this.millTimer = null
     this.syncInteractions()
     const w = this.deps.world
     if (w.areaId === 'village') this.villageChanges()
@@ -178,7 +199,56 @@ export class VillageLayer implements InteractionProvider {
     return out
   }
 
+  private millTimer: Phaser.Time.TimerEvent | null = null
+  private millView: { mended: boolean; frame: number; turns: number; x: number; y: number } | null = null
+
+  /**
+   * The Tolley mill's waterwheel, turning on the pond's edge. The old wheel
+   * groans: it turns in fits, catching every few paddles with a jolt. Once
+   * the mill-wheel project is done it is mended (new paddles, rope
+   * lashings, an iron band) and turns smooth and a little quicker.
+   */
+  private millWheel(): void {
+    const m = this.deps.world.mill
+    if (!m) return
+    const mended = this.village.hasWorldFlag('project:mill-wheel:complete')
+    const keys = millWheelKeys(this.scene, mended)
+    const depth = m.wheel.y + MILL_WHEEL_SIZE / 2
+    const wheel = this.add(this.scene.add.image(m.wheel.x, m.wheel.y, keys[0]).setDepth(depth))
+    ensureMillTexture(this.scene, 'mill-froth-0')
+    ensureMillTexture(this.scene, 'mill-froth-1')
+    const froth = this.add(this.scene.add.image(m.wheel.x + 6, m.wheel.y + 12, 'mill-froth-0').setDepth(depth + 1).setAlpha(0.85))
+    const view = { mended, frame: 0, turns: 0, x: m.wheel.x, y: m.wheel.y }
+    this.millView = view
+    if (this.deps.reducedMotion) return
+    let step = 0
+    let hold = 0
+    this.millTimer = this.scene.time.addEvent({
+      delay: mended ? 140 : 190,
+      loop: true,
+      callback: () => {
+        if (!wheel.active) return
+        if (hold > 0) {
+          hold--
+          return
+        }
+        step++
+        view.frame = step % keys.length
+        if (view.frame === 0) view.turns++
+        wheel.setTexture(keys[view.frame])
+        froth.setTexture(`mill-froth-${step % 2}`)
+        // The old wheel catches on its split paddle: a pause, then a jolt.
+        if (!mended && step % 6 === 0) {
+          hold = 3
+          wheel.setY(m.wheel.y + 1)
+          this.scene.time.delayedCall(570, () => wheel.active && wheel.setY(m.wheel.y))
+        }
+      }
+    })
+  }
+
   private villageChanges(): void {
+    this.millWheel()
     const w = this.deps.world
     if (this.village.hasWorldFlag('project:well-canopy:complete') && w.well) {
       const x = w.well.tx * TILE + 6
@@ -237,7 +307,9 @@ export class VillageLayer implements InteractionProvider {
       for (const p of w.props) if (p.light) this.glow(p.tx * TILE + 8, p.ty * TILE + TILE - p.h * 0.72, 1.1, 0.9)
     }
     if (name === 'The Breaking' && w.areaId === 'village') {
-      const water = this.tilesOf(TERRAIN.water_a).concat(this.tilesOf(TERRAIN.water_b))
+      // The pond, not the mill-race under the wheel.
+      const race = w.mill ? w.mill.tx + w.mill.tw : -1
+      const water = this.tilesOf(TERRAIN.water_a).concat(this.tilesOf(TERRAIN.water_b)).filter((t) => t.tx !== race)
       if (water.length === 0) return
       const x0 = Math.min(...water.map((t) => t.tx)) * TILE
       const x1 = (Math.max(...water.map((t) => t.tx)) + 1) * TILE

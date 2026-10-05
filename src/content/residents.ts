@@ -145,7 +145,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
     name: 'Finn',
     fullName: 'Finn Tolley',
     intro: [
-      'Oh! Sorry. I was counting. Finn Tolley, the miller. The pond’s fed off the Wend, so I come up between grindings to watch it run.',
+      'Oh! Sorry. I was counting. Finn Tolley, the miller. This is the mill: Dad’s, then mine. The pond’s fed off the Wend, and the wheel turns on it.',
       'Forty-one. That’s how many turns the wheel makes while a stick floats from the upper bend to the grate. Dad timed it. I keep checking.',
     ],
     stages: {
@@ -198,9 +198,9 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
       },
       projects: {
         'mill-wheel': {
-          open: 'The wheel’s groaning. There’s a notice on the board: timber and fiber to lash the paddles. If you’ve any. No pressure. Some pressure.',
+          open: 'Hear that? The wheel’s groaning. There’s a notice on the board: timber and fiber to lash the paddles. No pressure. Some pressure.',
           'in-progress': 'Half the paddles are lashed! I’m down to counting every other turn. Hazel calls that progress.',
-          complete: 'The wheel turns smooth and quiet now. Forty-one and holding. For once I mean the wheel.',
+          complete: 'Listen. No groan. New paddles, lashed tight, and she turns smooth. Forty-one and holding. For once I mean the wheel.',
         },
         'cooley-window-fund': {
           'in-progress': 'The mill pays toward Ada’s amber. Dad did, before me. We don’t talk about it, so I’d be grateful if you didn’t either.',
@@ -214,7 +214,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
     },
     journal: {
       title: 'Finn Tolley',
-      body: 'The miller, standing by the village pond to watch the Wend run in. He counts the turns of his wheel under his breath, and carries a small box that smells of linseed. He doesn’t open it.',
+      body: 'The miller, at the door of the Tolley mill on the pond’s edge, where the wheel turns on water the Wend brings in. He counts its turns under his breath, and carries a small box that smells of linseed. He doesn’t open it.',
     },
   },
 
@@ -342,6 +342,25 @@ export function residentFullName(id: ResidentId): string {
   return RESIDENTS[id].fullName;
 }
 
+// ------------------------------------------------------------ the mill
+
+/**
+ * What the Tolley mill's hopper shows you. The tally on its side is a
+ * mystery until Finn's own paper (forty-one-and-holding) says what it counts.
+ */
+export function millHopperLines(flags: readonly string[]): string[] {
+  if (flags.includes('paper:forty-one-and-holding')) {
+    return [
+      'The hopper. Tallies in fives down its side, and the first twenty-seven cut in a heavier hand: Aldo’s.',
+      'The rest are Finn’s. One for every fox cleaned off the grate since. He hasn’t missed an autumn.',
+    ];
+  }
+  return [
+    'A grain hopper on splayed legs, flour in every seam. Its side is scratched with tallies in clusters of five, a good many of them.',
+    'Not grain sacks. Not turns of the wheel. Whatever they count, someone has kept count for years.',
+  ];
+}
+
 // ------------------------------------------------------------ meeting
 
 const MET_PREFIX = 'met:';
@@ -445,6 +464,7 @@ export function allResidentLines(): string[] {
   for (const id of RESIDENT_IDS) {
     const d = RESIDENTS[id];
     out.push(...d.intro, ...Object.values(d.stages).flat(), ...(d.papers ?? []).flatMap((p) => p.lines), ...topicalLines(d));
+    if (id === 'finn') out.push(...millHopperLines([]), ...millHopperLines(['paper:forty-one-and-holding']));
   }
   return out;
 }

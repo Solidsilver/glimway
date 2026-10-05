@@ -113,6 +113,17 @@ Plus the workshop furniture: **storage chest** (1×1, banded), **crafting bench*
   village well) and the **mended north bridge** (oak and stone).
 - **Paper pickups** (8–12 px, with a 2–3 frame glint): a folded page, a tied
   scroll, a child's slate.
+- **Tolley mill** (new; code-drawn stand-in in `src/game/mill-art.ts`). Finn
+  Tolley's small watermill on the west edge of the village pond, which the
+  river Wend feeds. Seen from the front like the other village buildings.
+
+  | Piece | Native size | Frames | Look |
+  |---|---|---|---|
+  | `mill-house` | 64×64 (4×4 tiles, bottom-centre origin) | 1 | Weathered upright-board timber walls on a coursed stone footing, slate roof gable-end on, a loft door high in the gable with a **sack-hoist beam and rope**, a plank front door in the **second tile column** (the walk-up tile), a small warm-lit shuttered window, two flour sacks by the door, **flour dust on the step**. Damp, mossy stone where the wall meets the water side. |
+  | `mill-wheel` | 32×32, centred | 4 (an eighth-turn; 8 paddles, so it loops) | An undershot wheel on the east wall, its lower edge in the pond: grey, weathered paddles, **one split**, the rim patched. It **groans**: the runtime turns it in fits with a catch and a 1 px jolt, so a frame where a paddle visibly drags would help. |
+  | `mill-wheel-mended` | 32×32, centred | 4 | The same wheel after the mill-wheel village project: **new pale paddles**, **rope lashings** at every spoke and an iron band round the rim. Turns smooth. |
+  | `mill-froth` | ~14×6 | 2 | White water where the paddles bite the pond (blue-white, light). |
+  | `mill-hopper` | 16×20 | 1 | A grain hopper on splayed legs beside the west wall, grain heaped in the top, flour at the spout, and **tallies scratched in clusters of five** down its side (Finn's "Forty-One and Holding" count). |
 
 ## Priority 4: the Wilds (optional)
 

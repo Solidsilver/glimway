@@ -110,6 +110,12 @@ export interface WorldData {
   library?: { tx: number; ty: number }
   /** A notice board (village, Commons): Turning notices and village projects. */
   board?: { tx: number; ty: number }
+  /**
+   * The Tolley mill (village): its footprint, the waterwheel's centre in px
+   * (it turns on the pond's edge; src/game/entities/village-life.ts draws and
+   * turns it), and the hopper beside it.
+   */
+  mill?: { tx: number; ty: number; tw: number; th: number; door: { tx: number; ty: number }; wheel: { x: number; y: number }; hopper: { tx: number; ty: number } }
   /** Code-drawn scenery sprites (the Commons, the Tangle's woods). */
   scenery?: ScenerySpot[]
   /**
@@ -302,11 +308,27 @@ function buildVillage(): WorldData {
   const clearOfBoard = (p: { tx: number; ty: number }) => Math.abs(p.tx - board.tx) > 1 || Math.abs(p.ty - board.ty) > 1
   const bushes = scatteredBushes.filter(clearOfLibrary).filter(clearOfBoard)
   const rocks = scatteredRocks.filter(clearOfLibrary).filter(clearOfBoard)
+  // The Tolley mill: a small watermill on the pond's west edge, below the
+  // garden fence (its gap at 27,18 still opens onto the grass), its wheel
+  // on the east wall dipping into the pond the Wend feeds. Raised after the
+  // scatter too, so the seeded layout stays; code-drawn (src/game/mill-art.ts).
+  const millAt = { tx: 28, ty: 19, tw: 4, th: 4 }
+  g.rect(millAt.tx, millAt.ty, millAt.tw, millAt.th, TERRAIN.grass_a, true)
+  // The wheel turns in a short mill-race cut through the pond's sandy rim.
+  for (let y = 20; y <= 22; y++) g.set(32, y, TERRAIN.water_b, true)
+  const millHopper = { tx: 27, ty: 22 }
+  g.solid[millHopper.ty][millHopper.tx] = true
+  const mill = {
+    ...millAt,
+    door: { tx: 29, ty: 22 },
+    wheel: { x: 32 * TILE + 9, y: 21 * TILE + 4 },
+    hopper: millHopper
+  }
   // The residents, placed after the scatter too (the seeded layout stays):
-  // Hazel in the square below the well with her basket, Finn on the pond's
-  // west rim watching the Wend come in, Ada under her window on the east
-  // house (village-life.ts ADA_HOUSE_WINDOW). All off the quest route.
-  npcs.push({ id: 'hazel', tx: 12, ty: 15 }, { id: 'finn', tx: 32, ty: 20 }, { id: 'ada', tx: 35, ty: 8 })
+  // Hazel in the square below the well with her basket, Finn at his mill
+  // door, Ada under her window on the east house (village-life.ts
+  // ADA_HOUSE_WINDOW). All off the quest route.
+  npcs.push({ id: 'hazel', tx: 12, ty: 15 }, { id: 'finn', tx: 30, ty: 23 }, { id: 'ada', tx: 35, ty: 8 })
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
@@ -342,8 +364,11 @@ function buildVillage(): WorldData {
     spawn: { tx: 7, ty: 11 },
     library,
     board,
+    mill,
     scenery: [
       { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
+      { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
+      { key: 'mill-hopper', x: millHopper.tx * TILE + 8, y: (millHopper.ty + 1) * TILE },
       {
         key: 'commons-art:hearthwick-library',
         x: (libraryAt.tx + libraryAt.w / 2) * TILE,
