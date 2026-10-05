@@ -94,6 +94,13 @@ export function mergeServerState(local: GameState, server: GameState, mode: Merg
     merged.hp = Math.min(l.hp, s.maxHp);
     merged.mana = Math.min(l.mana, s.maxMana);
   }
+  // Client-only Wilds markers: the region belongs to the position it was
+  // saved with, so it survives only when that position does.
+  delete merged.wildsRegion;
+  delete merged.outerSeason;
+  const samePlace = merged.area === l.area && Math.round(merged.position.x) === Math.round(l.position.x) && Math.round(merged.position.y) === Math.round(l.position.y);
+  if (l.wildsRegion && samePlace) merged.wildsRegion = l.wildsRegion;
+  if (l.outerSeason) merged.outerSeason = l.outerSeason;
   return validateSave(merged);
 }
 

@@ -15,8 +15,10 @@ import type { Asset, AssetCounts, ContributeResponse, CraftResponse, Mail, MailA
 import type { ApiErrorCode } from '../lib/api/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
+import { clockMoved, gameNow, setGameNow } from './clock'
 import type { MutationOp } from './link'
 import { grantPaper } from './papers'
+import { calendarFind } from '../lib/wilds/stories'
 import { homesteadsFor } from './homestead'
 import type { Session } from './session'
 
@@ -95,8 +97,6 @@ export function villageErrorText(code: ApiErrorCode | string): string {
   }
 }
 
-/** Dev/playtest offset of "now" (seconds), so festivals can be seen any day. */
-let devOffset = 0
 
 export class Village {
   calendar: CalendarDay
@@ -117,13 +117,21 @@ export class Village {
     bus.on(EV.mutationResolved, (p: { op: MutationOp; outcome: 'landed' | 'refused' }) => {
       if (current?.village === this) void this.onResolved(p)
     })
+    // Reading a notice board after you have seen the outer Wilds turn (with
+    // the road lit): the old notices, kept on one rusted nail.
+    bus.on(VILLAGE_EV.open, (p: { panel: VillagePanel }) => {
+      if (current?.village !== this || p.panel !== 'board') return
+      const s = this.session.state
+      const paper = calendarFind('board', { flags: s.flags, late: s.quest === 'complete', mark: null })
+      if (paper) grantPaper(this.session, paper)
+    })
     this.calendar = calendarAt(this.now())
     this.projectsStatus = session.link ? 'idle' : 'guest'
     this.mailStatus = session.link ? 'idle' : 'guest'
   }
 
   now(): number {
-    return Math.floor(Date.now() / 1000) + devOffset
+    return gameNow()
   }
 
   /** One of ours whose answer was lost is now known: re-read and say so. */
@@ -178,7 +186,7 @@ export class Village {
 
   private async readCalendar(): Promise<CalendarDay> {
     const link = this.session.link
-    if (link && devOffset === 0) {
+    if (link && !clockMoved()) {
       try {
         this.calendar = await link.api.calendar()
         this.calendarSource = 'server'
@@ -233,8 +241,9 @@ export class Village {
 
   /** Dev/playtest clock: pretend it is `unix` now, and let time run on from there. */
   setDevNow(unix: number | null): void {
-    devOffset = unix === null ? 0 : unix - Math.floor(Date.now() / 1000)
+    setGameNow(unix)
     void this.loadCalendar()
+    bus.emit(EV.clock, {})
   }
 
   // ------------------------------------------------------------ projects

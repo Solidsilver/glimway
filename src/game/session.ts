@@ -19,6 +19,7 @@ import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, typ
 import { saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
 import type { Link } from './link'
+import { displayArea } from '../content/world'
 
 /** advanceQuest is only called when the current stage matches this gate. */
 const QUEST_GATE: Record<QuestEvent, QuestStage> = {
@@ -249,7 +250,7 @@ export class Session {
   }
 
   emitArea(): void {
-    bus.emit(EV.area, { areaId: this.state.area })
+    bus.emit(EV.area, { areaId: displayArea(this.state) })
   }
 
   /**

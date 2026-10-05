@@ -42,17 +42,24 @@ import { VillageLayer } from '../entities/village-life'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { COMMONS_FROM_WILDS } from '../commons'
 import {
+  OUTER_REGION_ID,
   WILDS_AREA,
   fromRegionPosition,
   inRegion,
   isWildsArea,
   parseChunkArea,
+  regionOfState,
   toRegionPosition,
   wildsArrivalPosition,
   wildsReturnTile,
   wildsSceneEntry,
 } from '../wilds/regions'
-import { ensureWildsAreaKinds, prepareWilds, wildsEpoch } from '../wilds/store'
+import { ensureWildsAreaKinds, outerTurned, prepareWilds, resetWildsRegion, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
+import { SEASON_SHIFT_NOTICE } from '../../content/expansion-writing'
+import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
+import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
+import { seasonMark } from '../../lib/wilds/outer'
+import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
 
 interface SceneData {
@@ -60,6 +67,8 @@ interface SceneData {
   fromDefeat?: boolean
   /** Inside a cottage on the Commons: whose, and the doorstep outside it. */
   room?: { owner: string; doorstep: { tx: number; ty: number } }
+  /** Rebuilt by the Turning: the outer Wilds just shifted under the player. */
+  turned?: boolean
 }
 
 /** Keyboard focus is on a control in the placement tray. */
@@ -122,7 +131,13 @@ export class WorldScene extends Phaser.Scene {
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
     this.room = data?.room ?? null
+    this.pendingTurned = data?.turned === true
   }
+
+  /** The scene was rebuilt by a live Turning (show what happened). */
+  private pendingTurned = false
+  /** Seconds until the next "has the outer Wilds turned?" check. */
+  private turningCheck = 0
 
   private pendingEntry: { tx: number; ty: number } | null = null
   private pendingDefeatToast = false
@@ -132,8 +147,21 @@ export class WorldScene extends Phaser.Scene {
     const state = this.session.state
     // A cottage is a view on the Commons: the save keeps saying Commons.
     if (this.room && state.area !== 'commons') this.room = null
-    // Wilds: resolve the saved region-wide position into its chunk area and
-    // a chunk-local arrival tile (see src/game/wilds/regions.ts).
+    // Wilds: the save's region (the Tangle, or past the crossing) is the one
+    // this scene plays in; resolve the region-wide position into its chunk
+    // area and a chunk-local arrival tile (see src/game/wilds/regions.ts).
+    if (isWildsArea(state.area)) setActiveWildsRegion(regionOfState(state))
+    // Back in the outer Wilds after they turned: the place you left is gone,
+    // so you arrive at the region's entrance in the new epoch.
+    let turnedAway = false
+    if (isWildsArea(state.area) && regionOfState(state) === OUTER_REGION_ID) {
+      const season = wildsEpoch().season
+      if (state.outerSeason && state.outerSeason !== season) {
+        turnedAway = !this.pendingTurned
+        state.position = wildsArrivalPosition(wildsEpoch())
+      }
+      state.outerSeason = season
+    }
     const wildsEntry = wildsSceneEntry(state, wildsEpoch())
     this.wilds = null
     if (wildsEntry) ensureWildsAreaKinds(wildsEpoch())
@@ -427,6 +455,99 @@ export class WorldScene extends Phaser.Scene {
       this.pendingDefeatToast = false
       bus.emit(EV.defeat, { phase: 'woke' })
     }
+
+    // The Turning: an ended epoch (a claim refused, or the clock passing the
+    // wick's end while we stand here) shifts the outer Wilds under us.
+    bus.on(EV.turning, this.onTurning, this)
+    bus.on(EV.clock, this.onClock, this)
+    const offTurning = () => {
+      bus.off(EV.turning, this.onTurning, this)
+      bus.off(EV.clock, this.onClock, this)
+    }
+    this.events.once('shutdown', offTurning)
+    this.events.once('destroy', offTurning)
+    if (this.pendingTurned || turnedAway) {
+      const live = this.pendingTurned
+      this.pendingTurned = false
+      this.time.delayedCall(600, () => this.noteTurning(live))
+    }
+  }
+
+  // ------------------------------------------------------------- the Turning
+
+  private inOuterWilds(): boolean {
+    return parseChunkArea(this.world.areaId)?.region === OUTER_REGION_ID
+  }
+
+  private onTurning(): void {
+    if (this.inOuterWilds()) this.playTurning()
+  }
+
+  private onClock(): void {
+    this.turningCheck = 0
+  }
+
+  /** Once a second in the outer Wilds: has its epoch ended? */
+  private checkTurning(dt: number): void {
+    if (!this.inOuterWilds()) return
+    this.turningCheck -= dt
+    if (this.turningCheck > 0) return
+    this.turningCheck = 1
+    if (outerTurned(this.session)) this.playTurning()
+  }
+
+  /**
+   * "The Wilds shift": the screen pales and shakes, the canon notice is
+   * posted, and the player comes to at the outer region's entrance in the
+   * new epoch (guests: the calendar's next wick; connected: the server's).
+   */
+  private playTurning(): void {
+    if (this.transitioning) return
+    this.transitioning = true
+    this.hero.halt()
+    const cam = this.cameras.main
+    const cx = cam.width / 2
+    const cy = cam.height / 2
+    const veil = this.add.rectangle(cx, cy, cam.width * 2, cam.height * 2, 0xdfe8ec, 0).setScrollFactor(0).setDepth(9000)
+    const title = this.add
+      .text(cx, cy - 6, TURNING_TITLE, { fontFamily: '"Pixelify Sans", monospace', fontSize: '12px', color: '#2b2238', resolution: 8 })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(9001)
+      .setAlpha(0)
+    const notice = this.add
+      .text(cx, cy + 10, SEASON_SHIFT_NOTICE, { fontFamily: 'Nunito, sans-serif', fontSize: '6px', color: '#4a4058', resolution: 8, align: 'center', wordWrap: { width: Math.min(220, cam.width / cam.zoom - 24) } })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(9001)
+      .setAlpha(0)
+    if (!this.reducedMotion) cam.shake(900, 0.006)
+    sfx('settle')
+    this.tweens.add({ targets: veil, fillAlpha: 0.92, duration: this.reducedMotion ? 200 : 900 })
+    this.tweens.add({ targets: [title, notice], alpha: 1, duration: 500, delay: 300 })
+    this.time.delayedCall(this.reducedMotion ? 1200 : 1900, () => {
+      resetWildsRegion(OUTER_REGION_ID)
+      const state = this.session.state
+      state.area = WILDS_AREA
+      state.wildsRegion = OUTER_REGION_ID
+      void prepareWilds(this.session, 0).finally(() => {
+        // The entrance of the region as it is now.
+        state.position = wildsArrivalPosition(wildsEpoch(OUTER_REGION_ID))
+        state.outerSeason = wildsEpoch(OUTER_REGION_ID).season
+        this.session.saveSoon()
+        this.scene.restart({ turned: true })
+      })
+    })
+  }
+
+  /** You saw the outer Wilds turn: the canon notice, and what a Turning gives. */
+  private noteTurning(live: boolean): void {
+    const s = this.session
+    s.addFlag(TURNED_FLAG)
+    bus.emit(EV.toast, { text: live ? SEASON_SHIFT_NOTICE : `${TURNED_SINCE_LINE} ${SEASON_SHIFT_NOTICE}`, icon: 'map' })
+    const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
+    const paper = calendarFind('turning', ctx)
+    if (paper) this.time.delayedCall(1400, () => grantPaper(s, paper))
   }
 
   // ------------------------------------------------------------- update loop
@@ -465,6 +586,7 @@ export class WorldScene extends Phaser.Scene {
     this.enemies.update(dt)
     this.projectiles.update(dt)
     this.wilds?.update()
+    this.checkTurning(dt)
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
@@ -600,7 +722,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.transitioning) return
     if (isWildsArea(p.area)) {
       const here = parseChunkArea(this.world.areaId)
-      const r = inRegion(p.x, p.y) ? fromRegionPosition(p.x, p.y) : null
+      const r = inRegion(p.x, p.y, regionOfState(this.session.state)) ? fromRegionPosition(p.x, p.y) : null
       if (here && r && r.cx === here.cx && r.cy === here.cy) {
         this.hero.sprite.setPosition(r.x, r.y)
         this.hero.sprite.setVelocity(0, 0)
@@ -927,8 +1049,12 @@ export class WorldScene extends Phaser.Scene {
       // region-wide pixels. `wilds` (the Commons' exit, the dev warp)
       // arrives at the region's entry point; chunk targets use their own
       // exit's entry tile.
-      const epoch = wildsEpoch()
       const dest = targetChunk ?? parseChunkArea(WILDS_AREA)!
+      // Which region the save is in now (over the crossing, or back).
+      if (dest.region === OUTER_REGION_ID) state.wildsRegion = OUTER_REGION_ID
+      else delete state.wildsRegion
+      setActiveWildsRegion(dest.region)
+      const epoch = wildsEpoch(dest.region)
       // `wilds` (the Commons' exit, the dev warp) arrives at the region's
       // entry point, and the scene restarts there.
       const arrivalTile = targetChunk
@@ -949,6 +1075,7 @@ export class WorldScene extends Phaser.Scene {
       })
       return
     }
+    if (leavingWilds) delete state.wildsRegion
     if (leavingWilds && area === 'commons') {
       // The agreed handoff: back through the north arch.
       const tile = wildsReturnTile()

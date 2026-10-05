@@ -1,13 +1,15 @@
 /**
- * Wilds area kinds. Each chunk of the region is an area kind built from the
- * generator library's `chunkTerrain` (via `toWorldData`); `wilds` resolves to
- * the region's entry chunk. Exits carry the generator's raw targets —
- * `chunk:<regionId>:<cx>:<cy>` between neighbors and `commons` on the entry
- * chunk — which WorldScene's transitions resolve (WorldScene.transitionTo
- * keeps `area: 'wilds'` and region-wide pixels for chunk targets).
+ * Wilds area kinds. Each chunk of a region (the Tangle, the outer Wilds) is
+ * an area kind built from the generator library's `chunkTerrain` (via
+ * `toWorldData`); `wilds` resolves to the Tangle's entry chunk. Exits carry
+ * the generator's raw targets — `chunk:<regionId>:<cx>:<cy>` between
+ * neighbors and over the crossing, `commons` on the Tangle's entry chunk —
+ * which WorldScene's transitions resolve (WorldScene.transitionTo keeps
+ * `area: 'wilds'` and region-wide pixels for chunk targets).
  *
- * Registered per epoch (guests: a fixed local epoch; connected: the server's
- * frozen epoch), because terrain seeds come from the epoch's world seed.
+ * Registered per epoch (guests: fixed local epochs, the outer one turning
+ * with the calendar; connected: the server's frozen epochs), because terrain
+ * seeds come from the epoch's world seed and season.
  */
 import { chunkTerrain, toWorldData } from '../../lib/wilds/index.ts';
 import type { Epoch } from '../../lib/wilds/types.ts';
@@ -25,7 +27,7 @@ function wildsForeground(): ForegroundSpot[] {
 }
 
 function wildsKind(epoch: Epoch, cx: number, cy: number): AreaKind {
-  const areaId = chunkAreaId(cx, cy);
+  const areaId = chunkAreaId(cx, cy, epoch.regionId);
   return {
     build: () => {
       const chunk = chunkTerrain(epoch, cx, cy);
@@ -38,17 +40,18 @@ function wildsKind(epoch: Epoch, cx: number, cy: number): AreaKind {
 }
 
 /**
- * Register `wilds` (the region's entry chunk — what the Commons' exit
- * targets) and every chunk area. Idempotent; the newest epoch wins.
+ * Register every chunk area of the epoch's region; for the Tangle also
+ * `wilds` (its entry chunk — what the Commons' exit targets). Idempotent;
+ * the newest epoch of a region wins.
  */
 export function registerWildsAreas(epoch: Epoch): void {
-  const region = wildsRegion();
+  const region = wildsRegion(epoch.regionId);
   for (let cy = 0; cy < region.gridHeight; cy++) {
     for (let cx = 0; cx < region.gridWidth; cx++) {
-      register(chunkAreaId(cx, cy), epoch, cx, cy);
+      register(chunkAreaId(cx, cy, epoch.regionId), epoch, cx, cy);
     }
   }
-  register(WILDS_AREA, epoch, region.entryX, region.entryY);
+  if (epoch.regionId === WILDS_REGION_ID) register(WILDS_AREA, epoch, region.entryX, region.entryY);
 }
 
 function register(areaId: AreaId, epoch: Epoch, cx: number, cy: number): void {

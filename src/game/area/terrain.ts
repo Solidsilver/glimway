@@ -57,7 +57,7 @@ export function groundChunks(width: number, height: number, max = GROUND_CHUNK_T
 
 export function buildGround(scene: Phaser.Scene, world: WorldData): void {
   // The Wilds paint their woods floor per pixel (ragged path edges, shade).
-  if (world.groundStyle === 'tangle') return buildTangleGround(scene, world)
+  if (world.groundStyle) return buildTangleGround(scene, world)
   const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as {
     terrain: { tileWidth: number; tiles: Record<string, string> }
   } | null

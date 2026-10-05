@@ -8,7 +8,8 @@
 import type { AreaId } from '../state.ts';
 import type { WorldData } from '../../game/worlds.ts';
 import { TILE } from '../../game/textures.ts';
-import { TANGLE_ATLAS, tangleFrame } from '../../game/wilds/tangle-key.ts';
+import { tangleFrame } from '../../game/wilds/tangle-key.ts';
+import { lookAtlasKey } from '../../game/wilds/wilds-looks.ts';
 import { DECOR_ART } from './tangle.ts';
 import type { ChunkTerrain } from './types.ts';
 
@@ -31,6 +32,7 @@ function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
 }
 
 export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
+  const atlas = lookAtlasKey(chunk.look, chunk.mark);
   return {
     areaId,
     width: chunk.width,
@@ -57,7 +59,7 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
     // The woods: every decor piece is code-drawn scenery standing on its
     // tile's bottom edge; pieces that overhang a path fade when walked under.
     scenery: chunk.decor.map((d) => ({
-      key: TANGLE_ATLAS,
+      key: atlas,
       frame: tangleFrame(d.kind, d.variant),
       x: d.tx * TILE + TILE / 2 + d.ox,
       y: (d.ty + 1) * TILE + d.oy,
@@ -66,7 +68,9 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
       fade: d.overhang,
       tint: DEPTH_TINT[woodsDepth(chunk, d.tx, d.ty)],
     })),
-    groundStyle: 'tangle',
+    storySites: chunk.sites.map((s) => ({ id: s.id, kind: s.kind, tx: s.tx, ty: s.ty })),
+    groundStyle: chunk.look,
+    groundMark: chunk.mark,
     well: null,
     mural: null,
     shrine: null,

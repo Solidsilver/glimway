@@ -30,8 +30,13 @@ import type { Epoch } from '../src/lib/wilds/types.ts';
 const epoch: Epoch = guestEpoch();
 
 test('wilds area ids: wilds resolves to the entry chunk, chunks round-trip', () => {
-  assert.deepEqual(parseChunkArea(WILDS_AREA), { cx: 1, cy: 1 });
-  assert.deepEqual(parseChunkArea('chunk:inner-1:0:2'), { cx: 0, cy: 2 });
+  assert.deepEqual(parseChunkArea(WILDS_AREA), { region: 'inner-1', cx: 1, cy: 1 });
+  assert.deepEqual(parseChunkArea('chunk:inner-1:0:2'), { region: 'inner-1', cx: 0, cy: 2 });
+  // The outer Wilds: their own chunk ids, same grid rules.
+  assert.deepEqual(parseChunkArea('chunk:outer-1:2:0'), { region: 'outer-1', cx: 2, cy: 0 });
+  assert.equal(parseChunkArea('chunk:outer-1:3:0'), null);
+  assert.equal(chunkAreaId(1, 1, 'outer-1'), 'chunk:outer-1:1:1');
+  assert.equal(isWildsArea('chunk:outer-1:1:1'), true);
   assert.equal(parseChunkArea('chunk:other:0:0'), null);
   assert.equal(parseChunkArea('chunk:inner-1:3:0'), null); // outside the 3×3 grid
   assert.equal(parseChunkArea('village'), null);

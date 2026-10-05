@@ -22,7 +22,7 @@
   import { Session } from './game/session'
   import { createNewGame, questObjective, type GameState, type QuestStage } from './lib/state'
   import { clearSave, loadSaveRecord } from './lib/save'
-  import { discoveryInfo, areaInfo } from './content/world'
+  import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
   import { uiState } from './game/input'
   import { sfx, unlockAudio } from './game/sfx'
@@ -124,7 +124,7 @@
     const s = session.state
     const mins = Math.floor(s.playSeconds / 60)
     return {
-      place: areaInfo(s.area).name,
+      place: areaInfo(displayArea(s)).name,
       goal: questObjective(s.quest),
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
@@ -141,7 +141,7 @@
     if (!st) return null
     const mins = Math.floor(st.playSeconds / 60)
     return {
-      place: areaInfo(st.area).name,
+      place: areaInfo(displayArea(st)).name,
       goal: questObjective(st.quest),
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }

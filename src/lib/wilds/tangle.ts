@@ -43,6 +43,8 @@ export const TANGLE_GROUND = {
   trodden: TERRAIN.dirt,
   /** Broken cobbles of the old road. */
   road: TERRAIN.cobble_moss,
+  /** Still water (a backwater of the Wend): solid. */
+  water: TERRAIN.water_a,
 } as const;
 
 const GROUND_RANK: Record<number, number> = {
@@ -52,6 +54,7 @@ const GROUND_RANK: Record<number, number> = {
   [TANGLE_GROUND.path]: 2,
   [TANGLE_GROUND.trodden]: 3,
   [TANGLE_GROUND.road]: 4,
+  [TANGLE_GROUND.water]: 5,
 };
 
 /**
@@ -76,6 +79,7 @@ export const DECOR_ART: Record<DecorKind, { w: number; h: number; blocking: bool
   grass: { w: 11, h: 9, blocking: false, flat: false },
   flowers: { w: 11, h: 7, blocking: false, flat: false },
   turncaps: { w: 13, h: 9, blocking: false, flat: false },
+  reeds: { w: 14, h: 15, blocking: false, flat: false },
   roots: { w: 16, h: 12, blocking: false, flat: true },
   litter: { w: 14, h: 9, blocking: false, flat: true },
   pebbles: { w: 11, h: 7, blocking: false, flat: true },
@@ -90,8 +94,15 @@ export interface TangleInput {
   exits: readonly ChunkExit[];
   entities: readonly WildsEntity[];
   spawn: Tile;
-  /** Home (the Commons gap) in chunk-local tiles; may lie outside the chunk. */
+  /** Where turncaps lean, in chunk-local tiles (may lie outside the chunk). */
   home: Tile;
+  /**
+   * Story sites (src/lib/wilds/outer.ts): cleared and reached like an
+   * entity. A `reeds` site gets a still pool two tiles north of it.
+   */
+  sites?: readonly { tx: number; ty: number; kind: string }[];
+  /** 'outer': the deep drift — wilder woods, more drift cues. */
+  look?: 'tangle' | 'outer';
 }
 
 export interface TangleTerrain {
@@ -170,6 +181,8 @@ class Heap {
 
 export function tangleTerrain(input: TangleInput): TangleTerrain {
   const { size: S, rng, exits, entities, spawn, home } = input;
+  const sites = input.sites ?? [];
+  const outer = input.look === 'outer';
   const wind = valueNoise(input.seed);
   const jag = valueNoise(input.seed ^ 0x5bd1e995);
   const brush = valueNoise(input.seed ^ 0x2545f491);
@@ -181,7 +194,9 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
   const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < S && y < S;
   const interior = (x: number, y: number) => x >= 1 && y >= 1 && x <= S - 2 && y <= S - 2;
   const exitTile = (x: number, y: number) => exits.some((e) => x >= e.tx && x < e.tx + e.tw && y >= e.ty && y < e.ty + e.th);
-  const openable = (x: number, y: number) => interior(x, y) || exitTile(x, y);
+  /** Tiles nothing may open (a reed pool). */
+  const blocked = new Set<string>();
+  const openable = (x: number, y: number) => !blocked.has(key(x, y)) && (interior(x, y) || exitTile(x, y));
   const carve = (x: number, y: number, g: number): void => {
     if (!openable(x, y)) return;
     walk[y][x] = true;
@@ -235,10 +250,42 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
     for (let y = en.ty - 1; y <= en.ty + 1; y++) for (let x = en.tx - (camp ? 2 : 1); x <= en.tx + 1; x++) bare.add(key(x, y));
   }
 
+  // Story-site clearings (5×5 core), each reed site behind its still pool.
+  for (const s of sites) {
+    if (s.kind === 'reeds') {
+      for (let y = s.ty - 2; y <= s.ty - 1; y++) {
+        for (let x = s.tx - 1; x <= s.tx + 1; x++) {
+          if (!interior(x, y)) continue;
+          blocked.add(key(x, y));
+          ground[y][x] = TANGLE_GROUND.water;
+        }
+      }
+    }
+    const reach = 4;
+    for (let y = s.ty - reach; y <= s.ty + reach; y++) {
+      for (let x = s.tx - reach; x <= s.tx + reach; x++) {
+        const cheb = Math.max(Math.abs(x - s.tx), Math.abs(y - s.ty));
+        const d = Math.hypot(x - s.tx, y - s.ty) + (jag(x * 0.8 + 7, y * 0.8) - 0.5) * 1.6;
+        if (cheb <= 2 || d <= 2.6) carve(x, y, s.kind === 'echo' && cheb <= 1 ? TANGLE_GROUND.trodden : TANGLE_GROUND.moss);
+      }
+    }
+    for (let y = s.ty - 2; y <= s.ty + 1; y++) for (let x = s.tx - 2; x <= s.tx + 2; x++) bare.add(key(x, y));
+  }
+
   // ---------------------------------------------------------- 2. paths
 
   const clampHub = (v: number) => Math.max(5, Math.min(S - 6, Math.round(v)));
-  const hub: Tile = { tx: clampHub(S / 2 - 0.5 + (rng() - 0.5) * 7), ty: clampHub(S / 2 - 0.5 + (rng() - 0.5) * 7) };
+  let hub: Tile = { tx: clampHub(S / 2 - 0.5 + (rng() - 0.5) * 7), ty: clampHub(S / 2 - 0.5 + (rng() - 0.5) * 7) };
+  // Never in (or touching) a still pool: the hub must be openable ground.
+  const hubFits = (t: Tile) => [[0, 0], ...DIRS].every(([dx, dy]) => !blocked.has(key(t.tx + dx, t.ty + dy)));
+  if (!hubFits(hub)) {
+    let best: Tile | null = null;
+    for (let y = 5; y <= S - 6; y++) for (let x = 5; x <= S - 6; x++) {
+      const t = { tx: x, ty: y };
+      if (hubFits(t) && (!best || Math.hypot(x - hub.tx, y - hub.ty) < Math.hypot(best.tx - hub.tx, best.ty - hub.ty))) best = t;
+    }
+    if (best) hub = best;
+  }
   const network = new Set<string>();
   for (const [dx, dy] of [[0, 0], ...DIRS]) {
     carve(hub.tx + dx, hub.ty + dy, dx === 0 && dy === 0 ? TANGLE_GROUND.path : TANGLE_GROUND.verge);
@@ -305,8 +352,13 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
       const w = { tx: Math.round(mid.tx - (ay / len) * push), ty: Math.round(mid.ty + (ax / len) * push) };
       w.tx = Math.max(2, Math.min(S - 3, w.tx));
       w.ty = Math.max(2, Math.min(S - 3, w.ty));
-      const first = route(from, (x, y) => x === w.tx && y === w.ty);
-      line = [...first.slice(0, -1), ...route(w)];
+      // Only through open ground (never a still pool), and only if the
+      // detour really arrives; otherwise the direct route stands.
+      if (openable(w.tx, w.ty)) {
+        const first = route(from, (x, y) => x === w.tx && y === w.ty);
+        const end = first[first.length - 1];
+        if (end.tx === w.tx && end.ty === w.ty) line = [...first.slice(0, -1), ...route(w)];
+      }
     }
     const join = line[line.length - 1];
     if (line.length > 2) forks.push(join);
@@ -326,9 +378,10 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
 
   const byHub = (a: Tile, b: Tile) => Math.hypot(a.tx - hub.tx, a.ty - hub.ty) - Math.hypot(b.tx - hub.tx, b.ty - hub.ty);
   for (const t of [...throats].sort(byHub)) lay(t, true);
-  for (const en of [...entities].sort(byHub)) lay({ tx: en.tx, ty: en.ty }, false);
+  for (const en of [...entities, ...sites].sort(byHub)) lay({ tx: en.tx, ty: en.ty }, false);
 
-  const nearEntity = (x: number, y: number, r: number) => entities.some((en) => Math.abs(en.tx - x) <= r && Math.abs(en.ty - y) <= r);
+  const points: readonly Tile[] = [...entities, ...sites];
+  const nearEntity = (x: number, y: number, r: number) => points.some((en) => Math.abs(en.tx - x) <= r && Math.abs(en.ty - y) <= r);
   const nearThroat = (x: number, y: number, r: number) => throats.some((t) => Math.abs(t.tx - x) <= r && Math.abs(t.ty - y) <= r);
   const pick = <T>(list: readonly T[]): T => list[Math.floor(rng() * list.length)];
 
@@ -358,7 +411,7 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
     const center = { tx: c.tx + dx * 3, ty: c.ty + dy * 3 };
     if (center.tx < 2 || center.ty < 2 || center.tx > S - 3 || center.ty > S - 3) continue;
     let fresh = true;
-    for (let y = center.ty - 1; y <= center.ty + 1 && fresh; y++) for (let x = center.tx - 1; x <= center.tx + 1 && fresh; x++) if (walk[y][x]) fresh = false;
+    for (let y = center.ty - 1; y <= center.ty + 1 && fresh; y++) for (let x = center.tx - 1; x <= center.tx + 1 && fresh; x++) if (walk[y][x] || blocked.has(key(x, y))) fresh = false;
     if (!fresh || nearEntity(center.tx, center.ty, 3) || nearThroat(center.tx, center.ty, 3)) continue;
     // The way in, then the ragged ring around the glade's centre.
     carve(c.tx + dx, c.ty + dy, TANGLE_GROUND.moss);
@@ -392,7 +445,9 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
   // ---------------------------------------------------------- 4. drift cues
 
   // A spur: a path into the woods that ends at a tree standing on it.
-  if (rng() < 0.8) {
+  // The outer drift leaves several.
+  const spurs = outer ? 2 + (rng() < 0.5 ? 1 : 0) : rng() < 0.8 ? 1 : 0;
+  for (let n = 0; n < spurs; n++) {
     for (let tries = 0; tries < 80; tries++) {
       const c = pick(coreTiles);
       const [dx, dy] = pick(DIRS);
@@ -403,7 +458,7 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
       for (let k = 1; k <= len + 1 && ok; k++) {
         const x = c.tx + dx * k;
         const y = c.ty + dy * k;
-        if (!interior(x, y) || (k > 1 && walk[y][x])) ok = false;
+        if (!interior(x, y) || blocked.has(key(x, y)) || (k > 1 && walk[y][x])) ok = false;
         // Woods on both sides past the first step, so it reads as its own lane.
         if (ok && k > 1 && (isWalk(x + dy, y + dx) || isWalk(x - dy, y - dx))) ok = false;
         if (ok && nearEntity(x, y, 2)) ok = false;
@@ -419,7 +474,9 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
   }
 
   // The old road: a straight two-wide run of cobbles, cut off by the woods.
-  if (rng() < 0.6) {
+  // Out in the drift it lies in broken pieces.
+  const roads = outer ? 2 : rng() < 0.6 ? 1 : 0;
+  for (let n = 0; n < roads; n++) {
     for (let tries = 0; tries < 40; tries++) {
       const horiz = rng() < 0.5;
       const len = 6 + Math.floor(rng() * 5);
@@ -428,7 +485,7 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
       const tiles: Tile[] = [];
       for (let a = along0; a < along0 + len; a++) for (let b = across; b < across + 2; b++) tiles.push(horiz ? { tx: a, ty: b } : { tx: b, ty: a });
       if (!tiles.some((t) => walk[t.ty][t.tx]) || !tiles.some((t) => !walk[t.ty][t.tx])) continue;
-      if (tiles.some((t) => bare.has(key(t.tx, t.ty)) || special.has(key(t.tx, t.ty)))) continue;
+      if (tiles.some((t) => bare.has(key(t.tx, t.ty)) || blocked.has(key(t.tx, t.ty)) || special.has(key(t.tx, t.ty)))) continue;
       for (const t of tiles) ground[t.ty][t.tx] = TANGLE_GROUND.road;
       break;
     }
@@ -438,7 +495,8 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
 
   const solid: boolean[][] = walk.map((row) => row.map((w) => !w));
   const decor: DecorSpot[] = [];
-  const taken = new Set<string>();
+  /** Tiles already dressed (pools are water, never woods). */
+  const taken = new Set<string>(blocked);
   const art = (k: DecorKind) => DECOR_ART[k];
   const overhangs = (d: DecorSpot): boolean => {
     const a = art(d.kind);
@@ -476,7 +534,7 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
     let bestD = Infinity;
     for (let y = f.ty - 2; y <= f.ty + 2; y++) {
       for (let x = f.tx - 2; x <= f.tx + 2; x++) {
-        if (!interior(x, y) || walk[y][x] || special.has(key(x, y)) || !faces(x, y)) continue;
+        if (!interior(x, y) || walk[y][x] || blocked.has(key(x, y)) || special.has(key(x, y)) || !faces(x, y)) continue;
         const d = Math.hypot(x - f.tx, y - f.ty) + rng() * 0.3;
         if (d < bestD) {
           bestD = d;
@@ -516,9 +574,18 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
       const big = spot('iron-oak', x, y, ox, oy, rng() < 0.5);
       if (!overhangs(big)) return big;
     }
-    const kind: DecorKind = r < 0.36 ? 'pine' : r < 0.43 ? 'birch' : 'oak';
+    // The outer drift is paler and stranger: birch and dead wood among the oaks.
+    const kind: DecorKind = outer
+      ? r < 0.3 ? 'birch' : r < 0.44 ? 'pine' : r < 0.5 && !edge ? 'snag' : 'oak'
+      : r < 0.36 ? 'pine' : r < 0.43 ? 'birch' : 'oak';
     return spot(kind, x, y, ox, oy, rng() < 0.5);
   };
+
+  // Reeds stand round the still pools (and in their shallows).
+  for (const k of blocked) {
+    const [x, y] = k.split(',').map(Number);
+    for (const [ox, oy] of [[-5, 1], [5, -6]]) if (rng() < 0.7) undergrowth.push(spot('reeds', x, y, ox + Math.round((rng() - 0.5) * 4), oy, rng() < 0.5));
+  }
 
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
@@ -531,6 +598,8 @@ export function tangleTerrain(input: TangleInput): TangleTerrain {
         if (r < (underPath ? 0.3 : 0.1)) place(spot('thicket', x, y, Math.round((rng() - 0.5) * 4), 0, rng() < 0.5));
         else if (r < (underPath ? 0.36 : 0.14)) place(spot('boulder', x, y, Math.round((rng() - 0.5) * 4), -1, rng() < 0.5));
         else if (r < (underPath ? 0.42 : 0.18)) place(spot('stump', x, y, Math.round((rng() - 0.5) * 4), -2, rng() < 0.5));
+        // Drift-stone and dead birches stand about in the outer Wilds.
+        else if (outer && r < (underPath ? 0.5 : 0.28)) place(spot(rng() < 0.5 ? 'boulder' : 'snag', x, y, Math.round((rng() - 0.5) * 4), -1, rng() < 0.5));
         else place(tree(x, y, true, underPath));
         // Undergrowth at the foot of the woods, in front of the trunks.
         if (isWalk(x, y + 1) && !bare.has(key(x, y + 1)) && rng() < 0.45) {

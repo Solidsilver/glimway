@@ -36,9 +36,12 @@ import {
   lootText,
   refreshWilds,
   tickWildsGuest,
+  wildsEpoch,
+  wildsEpochEndsAt,
   wildsView,
   type WildsView,
 } from './store.ts'
+import { WildsSites } from './sites.ts'
 import { grantPaper } from '../papers'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
@@ -214,7 +217,9 @@ const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? i
 const materialOf = (id: string) => MATERIALS.find((m) => m.id === id)
 
 export class WildsEntities {
-  private chunk: { cx: number; cy: number }
+  private chunk: { region: string; cx: number; cy: number }
+  /** Story sites in this chunk: Echo camps and given-back finds. */
+  private sites: WildsSites
   private heroPx = { x: 0, y: 0 }
   private rendered = new Map<string, Rendered>()
   private spawnedCamps = new Set<string>()
@@ -224,8 +229,9 @@ export class WildsEntities {
   private lastVersion = -1
 
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
-    this.chunk = parseChunkArea(deps.world.areaId) ?? { cx: 0, cy: 0 }
+    this.chunk = parseChunkArea(deps.world.areaId) ?? { region: 'inner-1', cx: 0, cy: 0 }
     ensureArt(scene)
+    this.sites = new WildsSites(scene, { session: deps.session, fx: deps.fx, reducedMotion: deps.reducedMotion }, wildsEpoch(this.chunk.region), this.chunk.cx, this.chunk.cy, deps.world.storySites ?? [])
     scene.events.once('shutdown', () => {
       this.rendered.clear()
       this.current = null
@@ -245,6 +251,7 @@ export class WildsEntities {
     }
     this.spawnCampEnemies(view)
     this.greetCamps(view)
+    this.sites.update()
   }
 
   /** The nearest claimable thing within reach, for the scene's prompt. */
@@ -269,6 +276,12 @@ export class WildsEntities {
       if (d > 44) continue
       const action = this.relightAction(l, at)
       if (action && (!best || d < best.d)) best = { d, at, action }
+    }
+    // Story sites (Echo camps, finds) share the prompt: the nearest wins.
+    const site = this.sites.promptAction(hero)
+    if (site && (!best || site.d < best.d)) {
+      this.current = site.action
+      return this.current
     }
     this.current = best?.action ?? null
     return this.current
@@ -386,6 +399,11 @@ export class WildsEntities {
   }
 
   private claimError(code: string): void {
+    // The epoch ended under us: the outer Wilds have turned (the scene plays it).
+    if (code === 'epoch-ended') {
+      bus.emit(EV.turning, { reason: 'epoch-ended' })
+      return
+    }
     bus.emit(EV.toast, { text: CLAIM_ERROR[code] ?? CLAIM_ERROR.unknown, kind: 'error' })
   }
 
@@ -426,7 +444,7 @@ export class WildsEntities {
     if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle' })
 
     // Found texts ride their personal claim (see ./placements.ts).
-    const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion().gridWidth)
+    const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
     if (paperId) grantPaper(this.deps.session, paperId)
 
     if (entity.kind === 'poi') this.poiDiscovery(entity)
@@ -463,6 +481,7 @@ export class WildsEntities {
     const epochId = view.epochId
     return session.link.wildsDefeat({ epoch: epochId, x: t.x, y: t.y }).then((res) => {
       if (res.ok) applyLanterns(res.result.lanterns)
+      else if (res.code === 'epoch-ended') bus.emit(EV.turning, { reason: 'epoch-ended' })
       else if (res.code === 'lantern-creation-limited') {
         bus.emit(EV.toast, { text: 'The Wilds are full of your lanterns today. They will keep this spot in mind.', kind: 'error' })
       }
@@ -616,6 +635,10 @@ export class WildsEntities {
   debug(): {
     guest: boolean
     epochId: string
+    region: string
+    season: string
+    endsAt: number | null
+    sites: ReturnType<WildsSites['debug']>
     chunk: { cx: number; cy: number }
     position: { x: number; y: number }
     entities: Array<{
@@ -646,7 +669,11 @@ export class WildsEntities {
     return {
       guest: view.guest,
       epochId: view.epochId,
-      chunk: this.chunk,
+      region: this.chunk.region,
+      season: wildsEpoch(this.chunk.region).season,
+      endsAt: wildsEpochEndsAt(this.chunk.region),
+      sites: this.sites.debug(),
+      chunk: { cx: this.chunk.cx, cy: this.chunk.cy },
       position: p,
       entities: view.entities.map((e) => {
         const parts = e.id.split(':')

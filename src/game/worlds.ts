@@ -104,8 +104,15 @@ export interface WorldData {
   board?: { tx: number; ty: number }
   /** Code-drawn scenery sprites (the Commons, the Tangle's woods). */
   scenery?: ScenerySpot[]
-  /** Ground painter: 'tangle' paints the Wilds' woods floor per pixel (src/game/wilds/tangle-art.ts). */
-  groundStyle?: 'tangle'
+  /**
+   * Ground painter: the Wilds paint their woods floor per pixel
+   * (src/game/wilds/tangle-art.ts) — 'tangle', or 'outer' (the deep drift)
+   * coloured by `groundMark`, the Mark its wick falls in.
+   */
+  groundStyle?: 'tangle' | 'outer'
+  groundMark?: string | null
+  /** Wilds story sites in this chunk (Echo camps, given-back finds): src/game/wilds/sites.ts. */
+  storySites?: { id: string; kind: string; tx: number; ty: number }[]
 }
 
 // ---------------------------------------------------------------- utilities

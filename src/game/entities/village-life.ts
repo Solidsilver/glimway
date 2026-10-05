@@ -21,6 +21,8 @@ import { TERRAIN, TILE } from '../textures'
 import type { InteractId, WorldData } from '../worlds'
 import type { CommonsWorld } from '../commons'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
+import { calendarFind } from '../../lib/wilds/stories'
+import { grantPaper } from '../papers'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
 
 export interface VillageDeps {
@@ -44,13 +46,15 @@ export class VillageLayer implements InteractionProvider {
 
   constructor(private scene: Phaser.Scene, private deps: VillageDeps) {
     this.village = villageFor(deps.session)
-    const onChange = () => this.redraw()
+    // A destroyed game (a session swap) never shuts its scene down: drop the
+    // listener either way, and never draw into a scene that is gone.
+    const onChange = () => {
+      if (this.scene.sys?.isActive()) this.redraw()
+    }
     bus.on(VILLAGE_EV.changed, onChange)
     scene.events.once('shutdown', () => bus.off(VILLAGE_EV.changed, onChange))
-    if (deps.world.board && deps.world.areaId === 'village') {
-      const b = deps.world.board
-      deps.interactables.setDynamic([{ id: 'village:board', x: b.tx * TILE + 8, y: b.ty * TILE + TILE + 2, label: 'Read the notice board' }], this)
-    }
+    scene.events.once('destroy', () => bus.off(VILLAGE_EV.changed, onChange))
+    this.syncInteractions()
     if (import.meta.env.DEV) {
       ;(window as unknown as Record<string, unknown>).__fsDevCalendar = (unix: number | null) => this.village.setDevNow(unix)
     }
@@ -88,6 +92,40 @@ export class VillageLayer implements InteractionProvider {
 
   activate(id: InteractId): void {
     if (id === 'village:board') openBoard()
+    if (id === 'village:hame') this.readHameRoll()
+  }
+
+  /**
+   * What can be used here: the village notice board, and on Carting Day the
+   * polishers' roll tacked inside the Commons gate (until you have read it).
+   */
+  private syncInteractions(): void {
+    const w = this.deps.world
+    const list: Interactable[] = []
+    if (w.board && w.areaId === 'village') {
+      list.push({ id: 'village:board', x: w.board.tx * TILE + 8, y: w.board.ty * TILE + TILE + 2, label: 'Read the notice board' })
+    }
+    const c = w as CommonsWorld
+    const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
+    if (w.areaId === 'commons' && c.features && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
+      const h = c.features.hame
+      list.push({ id: 'village:hame', x: h.tx * TILE + 8, y: (h.ty + 1) * TILE + 6, label: 'Read the polishers’ roll' })
+    }
+    // Only when it changed: replacing the list rebuilds its markers.
+    const key = list.map((i) => i.id).join(',')
+    if (key === this.interactionKey) return
+    this.interactionKey = key
+    this.deps.interactables.setDynamic(list, this)
+  }
+
+  private interactionKey: string | null = null
+
+  /** The Hame-Polishers' List: thirty years of names, stitched inside the gate. */
+  private readHameRoll(): void {
+    const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
+    const paper = calendarFind('hame', ctx)
+    if (paper) grantPaper(this.deps.session, paper)
+    this.syncInteractions()
   }
 
   // ------------------------------------------------------------ drawing
@@ -103,6 +141,7 @@ export class VillageLayer implements InteractionProvider {
       o.destroy()
     }
     this.drawn = []
+    this.syncInteractions()
     const w = this.deps.world
     if (w.areaId === 'village') this.villageChanges()
     if (w.areaId === 'woodland' && this.village.hasWorldFlag('project:north-bridge:complete')) this.mendedBridge()
