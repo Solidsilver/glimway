@@ -367,6 +367,13 @@ export class WorldScene extends Phaser.Scene {
         this.hero.sprite.setPosition(x, y)
         this.hero.sprite.setVelocity(0, 0)
       }
+      // Add an exit to this area until the scene restarts, so a playtest can
+      // walk into a destination no area kind is registered for (the guard).
+      w.__fsDevAddExit = (exit: { tx: number; ty: number; tw: number; th: number; to: string }) => {
+        this.world.exits.push({ ...exit, entry: { tx: 1, ty: 1 } })
+      }
+      // Read-only: where the save says the hero is (area and position).
+      w.__fsDevSaved = () => ({ area: this.session.state.area, position: { ...this.session.state.position } })
     }
     // Connected-play status for playtests (read-only; null for guests).
     ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null

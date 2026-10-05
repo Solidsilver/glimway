@@ -143,7 +143,9 @@ for (const [name, vp] of sizes) {
     await shot(page, '09-hud-pending')
     await expect(page.getByTestId('net-pending')).toBeHidden()
 
-    // Offline.
+    // Offline. (Remember the revision this tab is based on: the other device
+    // must write past it for the reconnect to count as "played elsewhere".)
+    const ourRev = (await page.request.get('/api/state').then((r) => r.json())).rev as number
     await context.setOffline(true)
     await hurt(page, 3)
     await expect(page.getByTestId('net-offline')).toBeVisible()
@@ -165,7 +167,7 @@ for (const [name, vp] of sizes) {
     await other.getByRole('button', { name: 'Take over here' }).click()
     await waitForWorld(other)
     await hurt(other, 8)
-    await expect.poll(async () => (await other.request.get('/api/state').then((r) => r.json())).rev).toBeGreaterThan(1)
+    await expect.poll(async () => (await other.request.get('/api/state').then((r) => r.json())).rev).toBeGreaterThan(ourRev)
 
     await context.setOffline(false)
     const gate = page.getByRole('alertdialog', { name: 'Playing on another device' })

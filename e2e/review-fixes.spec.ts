@@ -51,23 +51,42 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   expect((await serverState(page)).body.state.embers).toBe(before - 2)
 
   // A lost upgrade: tier 1 lands, and Orrin's foundation paper still arrives.
+  // (Let the purchase's toast go first, so the next one is the upgrade's own.)
+  const recovered = page.locator('.toast', { hasText: 'went through after all' })
+  await expect(recovered).toHaveCount(0, { timeout: 10_000 })
   await loseNextAnswer(page, '/api/homestead/upgrade')
   await silasSays(page, /Raise a cottage/)
   await expect(page.locator('.toast', { hasText: 'may have gone through' })).toBeVisible()
-  await expect(page.locator('.toast', { hasText: 'went through after all' }).last()).toBeVisible({ timeout: 30_000 })
+  // The server has it at once; the client learns on the reconnect (8 s retry) and says so.
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:orrins-drift-slap-foundation-standard')
+  await expect(recovered).toBeVisible({ timeout: 30_000 })
+  await expect.poll(async () => (await homes(page)).mine?.tier, { timeout: 15_000 }).toBe(1)
+  // The paper is granted on recovery and reaches the server with the next upload.
+  await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 15_000 }).toContain('paper:orrins-drift-slap-foundation-standard')
   expect((await serverState(page)).body.state.embers).toBe(before - 2 - 15)
 })
 
-test('finding 2: the Wilds arch is overgrown (no crash, the save stays in the Commons)', async ({ page, pageErrors }) => {
+test('finding 2: an exit to an unregistered area is overgrown (no crash, the save stays put)', async ({ page, pageErrors }) => {
+  // The Commons arch leads into the Wilds now; a test-only exit stands in for
+  // any destination this build has no area kind for.
   await beginNewJourney(page)
-  await go(page, 'commons', 23, 3)
-  await page.keyboard.down('ArrowUp')
+  await go(page, 'commons', 21, 19)
+  const saved = () => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved())
+  const before = await saved()
+  expect(before.area).toBe('commons')
+  await page.evaluate(() => (window as unknown as { __fsDevAddExit: (e: unknown) => void }).__fsDevAddExit({ tx: 22, ty: 19, tw: 1, th: 1, to: 'nowhere-yet' }))
+  await page.keyboard.down('ArrowRight')
   await expect(page.locator('.toast', { hasText: 'The way is overgrown' }).first()).toBeVisible({ timeout: 10_000 })
-  await page.keyboard.up('ArrowUp')
+  await page.keyboard.up('ArrowRight')
+  await page.waitForTimeout(400)
   const s = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string; transitioning: boolean } }).__fsSafety())
   expect(s).toEqual(expect.objectContaining({ areaId: 'commons', transitioning: false }))
+  // The save never named the unregistered area.
+  const after = await saved()
+  expect(after.area).toBe('commons')
+  // The hero was stepped back off the exit tile.
+  const p = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number } }).__fsPlayer())
+  expect(Math.floor(p.x / 16)).toBeLessThan(22)
   expect(pageErrors).toEqual([])
 })
 

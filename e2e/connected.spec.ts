@@ -480,6 +480,9 @@ test('a duplicated tab gets its own play id, so it must take over like any other
 test('closing the tab still sends the last steps (review 6)', async ({ page, context }) => {
   await freshPlayer(page)
   const before = Math.ceil((await serverState(page)).body.state.hp)
+  // Playwright's request interception (the Habitica route) can drop a closing
+  // page's keepalive request: lift it, so the test sees what a browser sends.
+  await page.context().unrouteAll({ behavior: 'ignoreErrors' })
   await hurt(page, 6)
   // Close inside the 350 ms save debounce: only the page-hide upload can carry it.
   await page.close({ runBeforeUnload: true })
