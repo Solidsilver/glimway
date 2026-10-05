@@ -459,6 +459,22 @@ const TILE_ART: Record<string, Art> = {
   fence: {
     rows: ['aaaaaaaa', 'wwwwwwww', 'aaaaaaaa', 'ww.w.www', 'aaaaaaaa', 'ww.w.www', 'aaaaaaaa', 'aaaaaaaa'],
     pal: { a: ' ', w: '#8a6642' }
+  },
+  cobble: {
+    rows: ['abbaabba', 'baabbaab', 'abbaabba', 'aaaaaaaa', 'bbaabbaa', 'aabbaabb', 'bbaabbaa', 'aaaaaaaa'],
+    pal: { a: '#c9a878', b: '#b08e60' }
+  },
+  cobble_moss: {
+    rows: ['abbaabca', 'baabbaab', 'acbaabba', 'aaaaaaca', 'bbaabbaa', 'aacbaabb', 'bbaabbca', 'acaaaaaa'],
+    pal: { a: '#c9a878', b: '#b08e60', c: '#6f9a4c' }
+  },
+  planks: {
+    rows: ['aaaaaaaa', 'bbbbbbbb', 'aaaaaaaa', 'aaaaaaaa', 'bbbbbbbb', 'aaaaaaaa', 'aaaaaaaa', 'bbbbbbbb'],
+    pal: { a: '#a8764a', b: '#7e5434' }
+  },
+  planks_dark: {
+    rows: ['aaaaaaaa', 'bbbbbbbb', 'aaaaaaaa', 'aaaaaaaa', 'bbbbbbbb', 'aaaaaaaa', 'aaaaaaaa', 'bbbbbbbb'],
+    pal: { a: '#6b4a30', b: '#4a3220' }
   }
 }
 
@@ -602,7 +618,11 @@ export const TERRAIN = {
   wall_house: 18,
   door: 19,
   window: 20,
-  fence: 21
+  fence: 21,
+  cobble: 22,
+  cobble_moss: 23,
+  planks: 24,
+  planks_dark: 25
 } as const
 
 export function generateTextures(scene: Phaser.Scene): void {

@@ -222,7 +222,12 @@ regenerating land. No scheduled reset runs in this phase.
 Shared `content/homestead.json` contains the five tier identities and fourteen
 items. The free Campsite, 15-ember Cottage, and Workshop ship now. The Workshop
 costs 30 embers, 20 timber, 10 stone and 8 fiber; Garden and Hall remain unavailable. Decoration placement requires the Cottage; buying tier-0
-items is allowed. `rest`/`revive` require the village hearth; `home-rest` requires
+items is allowed. Its `commons` block is the one source of plot geometry, in the
+client's 16-pixel tiles: plot `i` sits in column `i % columns.length` and row
+`i / columns.length`, at the listed `rows`, then every `rowPitch` tiles down the
+lane. Plot bounds and the home-rest check use it, and the client draws the same
+plots from it. `outdoorReserved`/`indoorReserved` are the camp/cottage tiles and
+the inside doorway; placements covering them fail with `placement-overlap`. `rest`/`revive` require the village hearth; `home-rest` requires
 the caller's own Commons plot. Sync remains allowed in both safe areas.
 `content/economy.json` contains the one-ember home rest, twenty
 successful claims per minute, two fallen lantern creations per owner per UTC day,

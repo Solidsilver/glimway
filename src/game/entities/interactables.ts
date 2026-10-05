@@ -34,12 +34,29 @@ export interface PromptAction {
   y: number
 }
 
+/**
+ * A feature that owns some interaction points and changes them at runtime
+ * (the homesteads: Silas, signs, doors, the bedroll). It answers for its own
+ * ids; the list itself is pushed with `Interactables.setDynamic`.
+ */
+export interface InteractionProvider {
+  owns(id: InteractId): boolean
+  activate(id: InteractId): void
+  label?(id: InteractId): string | null
+  marker?(id: InteractId): 'quest' | 'talk' | null
+  markerOffset?(id: InteractId): number | null
+  /** Short word for the touch action button. */
+  verb?(id: InteractId): string | null
+}
+
 export interface InteractableDeps {
   world: WorldData
   session: Session
   reducedMotion: boolean
   /** Found-text pickups and the library door (they handle their own interactions). */
   papers?: PaperPickups
+  /** Runtime interaction points owned by a feature (homesteads). */
+  extra?: InteractionProvider
 }
 
 /** Who the player has already heard from at each quest stage (this tab). */
@@ -91,8 +108,47 @@ export class Interactables {
     if (deps.papers) this.list.push(...deps.papers.interactions())
   }
 
+  /** Attach the runtime provider (it is built after this, since it pushes points here). */
+  setExtra(extra: InteractionProvider): void {
+    this.deps.extra = extra
+  }
+
+  /** Interaction points the `extra` provider pushes; replaced wholesale. */
+  private dynamic: Interactable[] = []
+  private markersBuilt = false
+
+  /** Replace the provider's interaction points (and their markers). */
+  setDynamic(list: Interactable[]): void {
+    for (const it of this.dynamic) {
+      const i = this.list.indexOf(it)
+      if (i >= 0) this.list.splice(i, 1)
+      this.markers.get(it.id)?.destroy()
+      this.markers.delete(it.id)
+      if (this.currentTarget === it) this.currentTarget = null
+    }
+    this.dynamic = list
+    this.list.push(...list)
+    if (this.markersBuilt) {
+      for (const it of list) this.addMarker(it)
+      this.refreshMarkers()
+    }
+    this.lastPrompt = undefined
+  }
+
+  private addMarker(it: Interactable): void {
+    const img = this.scene.add.image(it.x, it.y - this.markerOffset(it.id), 'mark-quest')
+      .setOrigin(0.5, 1)
+      .setDepth(6000)
+      .setVisible(false)
+    if (!this.deps.reducedMotion) {
+      this.scene.tweens.add({ targets: img, y: img.y - 2, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    }
+    this.markers.set(it.id, img)
+  }
+
   /** "!" over whoever moves the story on, "…" over anyone with news. */
   buildMarkers(): void {
+    this.markersBuilt = true
     for (const it of this.list) {
       const img = this.scene.add.image(it.x, it.y - this.markerOffset(it.id), 'mark-quest')
         .setOrigin(0.5, 1)
@@ -118,6 +174,8 @@ export class Interactables {
       let kind: 'quest' | 'talk' | null = null
       if (this.deps.papers?.owns(it.id)) {
         kind = null // pickups sparkle instead; the library is a building
+      } else if (this.deps.extra?.owns(it.id)) {
+        kind = this.deps.extra.marker?.(it.id) ?? null
       } else if (this.isEmberSpot(it.id)) {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else {
@@ -159,7 +217,8 @@ export class Interactables {
     const label = action ? action.label : best ? this.promptLabel(best) : null
     if (label !== this.lastPrompt) {
       this.lastPrompt = label
-      const payload: PromptPayload = action && label ? { label, verb: action.verb } : { label }
+      const verb = !action && best && this.deps.extra?.owns(best.id) ? this.deps.extra.verb?.(best.id) : null
+      const payload: PromptPayload = action && label ? { label, verb: action.verb } : verb && label ? { label, verb } : { label }
       bus.emit(EV.prompt, payload)
     }
     if (this.keyHint) {
@@ -179,6 +238,10 @@ export class Interactables {
     const { session, papers } = this.deps
     if (papers?.owns(target.id)) {
       if (papers.activate(target.id)) this.remove(target)
+      return
+    }
+    if (this.deps.extra?.owns(target.id)) {
+      this.deps.extra.activate(target.id)
       return
     }
     let payload: Dialogue
@@ -246,6 +309,7 @@ export class Interactables {
   private promptLabel(it: Interactable): string {
     const { session } = this.deps
     const stage = session.questStage
+    if (this.deps.extra?.owns(it.id)) return this.deps.extra.label?.(it.id) ?? it.label
     if (it.id === 'clue') return stage === 'accepted' ? 'Take a rubbing of the marker' : it.label
     if (it.id === 'lantern') return stage === 'guardian-defeated' ? 'Light the lantern' : it.label
     if (it.id === 'chest') return session.state.flags.includes('opened:ashwatch-chest') ? it.label : `Open the chest · ${EMBER_COSTS.chest} embers`
@@ -258,6 +322,8 @@ export class Interactables {
 
   /** Height above an interactable's base where its marker floats. */
   private markerOffset(id: InteractId): number {
+    const extra = this.deps.extra?.owns(id) ? this.deps.extra.markerOffset?.(id) : null
+    if (typeof extra === 'number') return extra
     if (id === 'lantern') return 44
     if (id === 'hearth') return 36
     if (id === 'road-1' || id === 'road-2' || id === 'road-3') return 32

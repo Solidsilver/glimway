@@ -1,5 +1,6 @@
 import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts';
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
+import { HEARTHWICK_COMMONS } from './expansion-writing.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -126,6 +127,7 @@ export const locations: Record<AreaId, LocationInfo> = {
     description:
       'The Keeper’s old waystation: grey blocks, heather through the floor, a route stone in the alcove. Past the broken arch the hilltop shrine waits, and a stone warden stands on the path, arms out.',
   },
+  commons: HEARTHWICK_COMMONS,
 };
 
 type DialogueRule = Dialogue & { forStages: QuestStage[] };

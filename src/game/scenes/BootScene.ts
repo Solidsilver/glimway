@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 import { generateTextures } from '../textures'
 import { createFingersnapAnimations, createFingersnapTerrain, preloadFingersnapExpansion } from '../expansion'
 import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../runtime-art'
+import { generateCommonsArt, generateDecorationArt } from '../commons-art'
+import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
  * Boot: loads the delivered expansion atlases (terrain, hero walk, enemies,
@@ -36,6 +38,12 @@ export class BootScene extends Phaser.Scene {
     createFingersnapTerrain(this, 32)
     createFingersnapAnimations(this)
     generateTextures(this)
+    // The Commons and homesteads (code-drawn placeholders; see commons-art).
+    generateCommonsArt(this)
+    generateDecorationArt(this, HOMESTEAD_DATA.items)
+    if (!this.anims.exists('silas-breathing')) {
+      this.anims.create({ key: 'silas-breathing', frames: [{ key: 'silas-idle-0' }, { key: 'silas-idle-1' }], frameRate: 1.5, repeat: -1 })
+    }
     // Native runtime-pass textures + breathing/effect animations, then alias
     // replacement (fallback keys get the delivered art) — both BEFORE any
     // world sprite is created.

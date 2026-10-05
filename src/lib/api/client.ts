@@ -11,6 +11,9 @@
  */
 import { ApiError, errorFromResponse } from './errors.ts';
 import {
+  parseCommons,
+  parseHome,
+  parseHomeAction,
   parseCreatedInvite,
   parseInviteList,
   parsePlay,
@@ -22,6 +25,11 @@ import {
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
 import type {
+  CommonsResponse,
+  HomeActionRequest,
+  HomeActionResponse,
+  HomeOp,
+  HomeResponse,
   CreatedInvite,
   InviteList,
   LoginRequest,
@@ -58,6 +66,12 @@ export interface RawApi {
   createInvite(): Promise<CreatedInvite>;
   listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
+  /** An own or same-world member's homestead (read-only for visitors). */
+  home(habiticaId: string): Promise<HomeResponse>;
+  /** Every world member's plot (plotless members last, with null bounds). */
+  commons(): Promise<CommonsResponse>;
+  /** A keyed homestead mutation: buy, place, move, remove or upgrade. */
+  homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
 }
 
 export interface ApiClient extends RawApi {
@@ -153,6 +167,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async revokeInvite(id) {
       await request('DELETE', `/api/invites/${encodeURIComponent(id)}`);
     },
+    async home(habiticaId) {
+      return parseHome(await request('GET', `/api/homestead/${encodeURIComponent(habiticaId)}`));
+    },
+    async commons() {
+      return parseCommons(await request('GET', '/api/commons'));
+    },
+    async homeAction(op, req) {
+      return parseHomeAction(await request('POST', `/api/homestead/${op}`, req));
+    },
   };
 
   const run = <T>(task: (r: RawApi) => Promise<T>): Promise<T> => queue.run(() => task(raw));
@@ -172,6 +195,9 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     createInvite: () => run((r) => r.createInvite()),
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
+    home: (id) => run((r) => r.home(id)),
+    commons: () => run((r) => r.commons()),
+    homeAction: (op, req) => run((r) => r.homeAction(op, req)),
   };
 }
 

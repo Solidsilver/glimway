@@ -35,7 +35,9 @@ export function refreshLanternVisuals(
       ? shrineLit
       : lp.id === 'village'
         ? villageLit
-        : (ROAD_LANTERNS as readonly string[]).includes(lp.id) && isLit(state, lp.id as RoadLanternId)
+        : lp.id === 'commons'
+          ? true // the Commons' lamps are named and kept by the neighbours
+          : (ROAD_LANTERNS as readonly string[]).includes(lp.id) && isLit(state, lp.id as RoadLanternId)
     // The delivered art is drawn lit; dim it until the flame is relit so
     // lighting it is a visible change, not just an added halo.
     if (shouldGlow) lp.sprite.clearTint()
@@ -43,7 +45,7 @@ export function refreshLanternVisuals(
     if (shouldGlow && !lp.glow) {
       lp.glow = scene.add.image(lp.gx, lp.gy, 'glow')
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setScale(isShrine ? 1.4 : 1.1)
+        .setScale(isShrine ? 1.4 : lp.id === 'commons' ? 0.8 : 1.1)
         .setDepth(4001)
       scene.tweens.add({
         targets: lp.glow,

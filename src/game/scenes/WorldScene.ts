@@ -34,11 +34,18 @@ import { PaperPickups } from '../entities/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
+import { HomesteadLayer } from '../entities/homesteads'
+import { buildRoom, ROOM_ENTRY } from '../cottage'
 
 interface SceneData {
   entry?: { tx: number; ty: number }
   fromDefeat?: boolean
+  /** Inside a cottage on the Commons: whose, and the doorstep outside it. */
+  room?: { owner: string; doorstep: { tx: number; ty: number } }
 }
+
+/** Areas where the zero-HP lock still lets you walk (home to rest). */
+const SAFE_AREAS = ['village', 'commons']
 
 export class WorldScene extends Phaser.Scene {
   private session!: Session
@@ -65,6 +72,9 @@ export class WorldScene extends Phaser.Scene {
   private captureReleased = false
   private cinematic = false
   private positionTimer = 0
+  /** The Commons/cottage homestead layer (null elsewhere). */
+  private homesteads: HomesteadLayer | null = null
+  private room: SceneData['room'] | null = null
 
   constructor() {
     super('World')
@@ -74,6 +84,7 @@ export class WorldScene extends Phaser.Scene {
     this.transitioning = false
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
+    this.room = data?.room ?? null
   }
 
   private pendingEntry: { tx: number; ty: number } | null = null
@@ -82,7 +93,9 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    this.world = buildArea(state.area)
+    // A cottage is a view on the Commons: the save keeps saying Commons.
+    if (this.room && state.area !== 'commons') this.room = null
+    this.world = this.room ? buildRoom(this.room.doorstep) : buildArea(state.area)
     this.occluders = []
     this.cinematic = false
     this.captureReleased = false
@@ -132,6 +145,22 @@ export class WorldScene extends Phaser.Scene {
       },
       state
     )
+    this.homesteads = null
+    if (this.world.areaId === 'commons' || this.room) {
+      this.homesteads = new HomesteadLayer(this, {
+        world: this.world,
+        session: this.session,
+        fx: this.fx,
+        reducedMotion: this.reducedMotion,
+        solidGroup: this.solidGroup,
+        interactables: this.interactables,
+        hero: () => this.hero.sprite,
+        room: this.room ? { owner: this.room.owner } : null,
+        enterRoom: (owner, doorstep) => this.enterRoom(owner, doorstep),
+        rebuild: () => this.rebuildArea()
+      })
+      this.interactables.setExtra(this.homesteads)
+    }
     this.occluders = buildForeground(this, this.world)
     buildExitSigns(this, this.world, this.reducedMotion)
     this.physics.add.collider(this.hero.sprite, this.solidGroup)
@@ -139,7 +168,6 @@ export class WorldScene extends Phaser.Scene {
     // Arcade's world bounds default to the canvas size, which is larger than
     // small maps — without this the hero can walk off the map edge.
     this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
-    this.cameras.main.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
     this.applyZoom(this.scale.width, this.scale.height)
     const onResize = (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height)
@@ -336,7 +364,8 @@ export class WorldScene extends Phaser.Scene {
     // resource/combat mutations: the committed snapshot must never revert a
     // mid-flight enemy hit, regen tick, or position write. The panel closes
     // normally; this gate only covers the brief disk write.
-    if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight) {
+    this.homesteads?.update(dt)
+    if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       this.interactables.hideKeyHint()
       this.enemies.updateEnemyBars()
@@ -359,7 +388,8 @@ export class WorldScene extends Phaser.Scene {
     this.remotePlayers.update(dt)
 
     this.positionTimer += dt
-    if (this.positionTimer > 1) {
+    // In a cottage the save keeps the doorstep (set on the way in).
+    if (this.positionTimer > 1 && !this.room) {
       this.positionTimer = 0
       this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
     }
@@ -368,7 +398,7 @@ export class WorldScene extends Phaser.Scene {
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {
     return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
-      performance.now() >= uiState.blockedUntil
+      !this.homesteads?.placing && performance.now() >= uiState.blockedUntil
   }
 
   private onActionKey(): void {
@@ -399,7 +429,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private handleAction(): void {
-    if (uiBlocked() || this.cinematic || this.transitioning || performance.now() < uiState.blockedUntil) return
+    if (uiBlocked() || this.cinematic || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
     // The warden standing open after a lunge, within reach: show it the mark.
     if (this.enemies.showRubbing()) return
     if (this.interactables.currentTarget) {
@@ -547,8 +577,13 @@ export class WorldScene extends Phaser.Scene {
 
   /** A spend picked in an ember-spot conversation; the payoff is visible. */
   private applyEmberAction(action: string): void {
+    if (action.startsWith('home:')) {
+      void this.homesteads?.onAction(action)
+      return
+    }
     const spend: EmberSpend | null =
       action === 'rest' ? { kind: 'rest' }
+        : action === 'home-rest' ? { kind: 'home-rest' }
         : action === 'chest' ? { kind: 'chest' }
           : action.startsWith('light:') && (ROAD_LANTERNS as readonly string[]).includes(action.slice(6))
             ? { kind: 'road-lantern', id: action.slice(6) as RoadLanternId }
@@ -593,6 +628,7 @@ export class WorldScene extends Phaser.Scene {
               : result === 'done' ? 'That’s already done.'
                 : result === 'needs-earned' ? 'Only embers earned on Habitica can get you back on your feet.'
                   : result === 'unsafe' ? 'Resting only works in Hearthwick.'
+                    : result === 'not-home' ? 'You can only rest at your own place.'
                     : result === 'busy' ? 'Hold on — the last one is still on its way.'
                       : 'The lantern didn’t answer. Nothing was spent — try again in a moment.'
     bus.emit(EV.toast, { text, kind: 'error' })
@@ -601,12 +637,15 @@ export class WorldScene extends Phaser.Scene {
   /** The visible reward for a spend that went through. */
   private spendPayoff(spend: EmberSpend): void {
     sfx('lantern')
-    if (spend.kind === 'rest') {
+    if (spend.kind === 'rest' || spend.kind === 'home-rest') {
       this.hero.sprite.setTint(0xffe2a8)
       this.time.delayedCall(260, () => this.hero.sprite.clearTint())
       this.fx.sparkBurst(this.hero.sprite.x, this.hero.sprite.y - 10, 10)
       this.fx.floatText(this.hero.sprite.x, this.hero.sprite.y - 24, 'Rested', '#ffd27a', false)
-      bus.emit(EV.toast, { text: 'Warm and rested. Health and mana restored.', icon: 'ember' })
+      bus.emit(EV.toast, {
+        text: spend.kind === 'home-rest' ? 'Home, and rested. Health and mana restored.' : 'Warm and rested. Health and mana restored.',
+        icon: 'ember'
+      })
     } else if (spend.kind === 'road-lantern') {
       const lp = this.lightProps.find((l) => l.id === spend.id)
       refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
@@ -688,10 +727,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.transitioning) return
     // Zero-HP gates expeditions only from the village; a legacy zero-HP save
     // found outside may travel home freely (nothing heals en route).
-    if (this.session.zeroHpLocked && this.world.areaId === 'village') return
+    // The Commons counts as home: a hurt hero may walk there to rest.
+    const locked = this.session.zeroHpLocked && (SAFE_AREAS.includes(this.world.areaId) || !!this.room)
     const tx = Math.floor(this.hero.sprite.x / TILE)
     const ty = Math.floor(this.hero.sprite.y / TILE)
     for (const exit of this.world.exits) {
+      if (locked && !SAFE_AREAS.includes(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
         this.transitionTo(exit.to, exit.entry)
         return
@@ -709,6 +750,32 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.restart({ entry })
     })
+  }
+
+  /**
+   * Walk into a cottage. The save stays in the Commons, on the doorstep
+   * (inside the plot), and the scene rebuilds as the room.
+   */
+  private enterRoom(owner: string, doorstep: { tx: number; ty: number }): void {
+    if (this.transitioning) return
+    this.transitioning = true
+    const state = this.session.state
+    state.area = 'commons'
+    state.position = { x: (doorstep.tx + 0.5) * TILE, y: (doorstep.ty + 0.5) * TILE }
+    this.session.saveSoon()
+    this.cameras.main.fade(240, 12, 12, 20, true)
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.restart({ entry: ROOM_ENTRY, room: { owner, doorstep } })
+    })
+  }
+
+  /** The Commons grew a row (a new neighbour): rebuild it where we stand. */
+  private rebuildArea(): void {
+    if (this.transitioning || this.room) return
+    this.transitioning = true
+    this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+    const entry = { tx: Math.floor(this.hero.sprite.x / TILE), ty: Math.floor(this.hero.sprite.y / TILE) }
+    this.time.delayedCall(0, () => this.scene.restart({ entry }))
   }
 
   /** Defeat: a short collapse beat, then wake at the village well. */
@@ -736,8 +803,15 @@ export class WorldScene extends Phaser.Scene {
     return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, 5)
   }
 
-  private applyZoom(_w: number, h: number): void {
-    this.cameras.main.setZoom(this.zoomFor(h))
+  private applyZoom(w: number, h: number): void {
+    const zoom = this.zoomFor(h)
+    this.cameras.main.setZoom(zoom)
+    // A map smaller than the view (a cottage room) sits centred in it.
+    const vw = w / zoom
+    const vh = h / zoom
+    const bx = Math.min(0, (this.world.widthPx - vw) / 2)
+    const by = Math.min(0, (this.world.heightPx - vh) / 2)
+    this.cameras.main.setBounds(bx, by, Math.max(this.world.widthPx, vw), Math.max(this.world.heightPx, vh))
   }
 
   // ------------------------------------------------------------- world upkeep
