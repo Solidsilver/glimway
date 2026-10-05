@@ -203,6 +203,43 @@ test('quest embers come from the server once the story upload lands', async ({ p
   expect(s.state.embers).toBe(2)
 })
 
+test('the shared library shelf: a connected donation lands on the world shelf and stays', async ({ page }) => {
+  await freshPlayer(page)
+  // Find a paper, let the save reach the server, then donate it at the library.
+  await warp(page, 'village', 25, 15)
+  await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
+  await page.keyboard.press('e')
+  await expect(page.locator('.toast', { hasText: 'Found: A Page from Pip’s Copybook' })).toBeVisible()
+  await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:pip-copybook-warden-corrections')
+
+  await warp(page, 'village', 3, 18)
+  await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
+  await page.keyboard.press('e')
+  const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
+  await expect(library).toBeVisible()
+  await library.locator('[data-donate="pip-copybook-warden-corrections"]').click()
+  await expect(library.getByText('12 of 39')).toBeVisible()
+  await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
+
+  // The world's shelf on the server: one donation, credited by the server.
+  const shelf = await page.request.get('/api/library')
+  expect(shelf.status()).toBe(200)
+  const body = await shelf.json()
+  expect(body.shelves).toHaveLength(1)
+  expect(body.shelves[0].paperId).toBe('pip-copybook-warden-corrections')
+  expect(body.shelves[0].donatedBy).toBe('Tansy')
+  expect(Number.isNaN(Date.parse(body.shelves[0].donatedAt))).toBe(false)
+
+  // The shared shelf survives a reload without a local donation flag.
+  await page.keyboard.press('Escape')
+  await page.reload()
+  await page.getByRole('button', { name: /Continue/ }).click()
+  await waitForArea(page, 'village')
+  await warp(page, 'village', 3, 18)
+  await page.keyboard.press('e')
+  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('12 of 39')).toBeVisible()
+})
+
 test('a second tab finds the journey playing elsewhere, and either tab can take over', async ({ page, context }) => {
   await freshPlayer(page)
   const other = await context.newPage()

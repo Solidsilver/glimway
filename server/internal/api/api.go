@@ -99,7 +99,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/library", "/api/library/donate"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -161,6 +161,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.sync(w, r)
 	case "GET /api/commons":
 		err = a.commons(w, r)
+	case "GET /api/library":
+		err = a.libraryRead(w, r)
+	case "POST /api/library/donate":
+		err = a.libraryDonate(w, r)
 	case "POST /api/wilds/claim", "POST /api/wilds/lantern", "POST /api/wilds/defeat":
 		err = a.wildsMutation(w, r)
 	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade":

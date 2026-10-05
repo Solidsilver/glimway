@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { generate, OUT_FILE } from '../scripts/papers.ts';
+import { generate, OUT_FILE, paperCatalog, PAPERS_JSON_FILE, renderPapersJSON } from '../scripts/papers.ts';
 import {
   allPlacements,
   beatsDue,
@@ -31,6 +31,17 @@ import { createNewGame } from '../src/lib/state.ts';
 
 test('the generated papers module matches docs/lore/texts (run `npm run papers`)', () => {
   assert.equal(readFileSync(OUT_FILE, 'utf8'), generate());
+});
+
+test('the shared catalog the server embeds matches the client papers (run `npm run papers`)', () => {
+  // Byte-for-byte against a fresh regeneration, so an edited find source or a
+  // new paper cannot reach the server without `content/papers.json` following.
+  assert.equal(readFileSync(PAPERS_JSON_FILE, 'utf8'), renderPapersJSON());
+  const rows = paperCatalog();
+  assert.equal(rows.length, PAPERS.length);
+  for (const [i, p] of PAPERS.entries()) {
+    assert.deepEqual(rows[i], { id: p.id, collection: p.collection, source: p.source.kind });
+  }
 });
 
 test('all 39 texts, in the README’s 8 collections, each with a find source', () => {
