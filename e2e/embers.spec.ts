@@ -66,7 +66,7 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
-  await talkThrough(page, /rubbing of the marker/)
+  await talkThrough(page, /Copy the naming from the stone/)
   await settleWarden(page)
   await expectStage(page, 'guardian-defeated')
   await expect(hud(page)).toHaveText('2')

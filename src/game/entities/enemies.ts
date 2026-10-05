@@ -7,8 +7,9 @@
  *
  * The warden is not fought down. It is a lamp in a stone coat, homesick for
  * one pose: blows only clink off it. After each lunge it stops to find its
- * feet, and a hero within reach can hold up the closure-mark rubbing. Each
- * showing makes it falter; after WARDEN.showings it settles into its pose and
+ * feet, and a hero within reach can speak the naming to its heart-lamp —
+ * Wenna's closure naming turned around: the road is held again, rest. Each
+ * speaking makes it falter; after WARDEN.speakings it settles into its pose and
  * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
@@ -49,10 +50,10 @@ export interface Enemy {
   dead: boolean
   /** Warden only: which attack the current telegraph leads into. */
   attack: 'lunge' | 'sweep'
-  /** Warden only: recovering after a lunge, so the rubbing can be shown. */
+  /** Warden only: recovering after a lunge, so the naming can be spoken. */
   opening: boolean
-  /** Warden only: how many times it has been shown the rubbing. */
-  showings: number
+  /** Warden only: how many times the naming has been spoken to it. */
+  speakings: number
 }
 
 /**
@@ -69,18 +70,25 @@ export const ENEMY_TUNING = {
 } as const
 
 /**
+ * What the hero says to the heart-lamp, one line per speaking: Wenna cut
+ * "the road is closed here" into it; the new naming tells it the road is
+ * held again. The last line settles it.
+ */
+const WARDEN_WORDS = ['the road is held again', 'two weaves, and the break mended', 'rest now: the road is kept'] as const
+
+/**
  * The warden encounter. Lunges come from range and leave an opening (it stops
  * to find its feet); hugging it draws a quicker arm sweep with no opening.
- * The dance: bait a lunge, sidestep, close in, hold up the rubbing.
+ * The dance: bait a lunge, sidestep, close in, speak the naming.
  */
 export const WARDEN = {
-  /** Showings of the rubbing before it settles. */
-  showings: 3,
+  /** Speakings of the naming before it settles. */
+  speakings: 3,
   /** Seconds it stands open after a lunge (hero walks 110 px/s; a lunge runs ~85 px). */
   opening: 1.5,
-  /** Hero-to-warden distance (px) at which the rubbing can be shown. */
-  showReach: 36,
-  /** Seconds it reels after a showing before it walks again. */
+  /** Hero-to-warden distance (px) at which the naming can be spoken. */
+  speakReach: 36,
+  /** Seconds it reels after a speaking before it walks again. */
   falter: 0.9,
   /** It walks up to this distance and holds the path there. */
   holdAt: 60,
@@ -95,8 +103,8 @@ export const WARDEN = {
   sweepRecover: 0.45,
   /** Re-arm after a sweep: crowding it gets swept often. */
   sweepCooldown: 1.5,
-  /** Each showing slows its next attack a little: it is calming down. */
-  calmPerShowing: 0.35
+  /** Each speaking slows its next attack a little: it is calming down. */
+  calmPerSpeaking: 0.35
 } as const
 
 /** Read-only warden snapshot for playtests. */
@@ -108,7 +116,7 @@ export interface WardenView {
   visible: boolean
   phase: string | null
   opening: boolean
-  showings: number
+  speakings: number
   needed: number
 }
 
@@ -207,7 +215,7 @@ export class EnemySystem {
 
   /**
    * The warden at rest on its post: standing in its pose (dormant, before the
-   * rubbing is taken) or settled, arms down and heart-lamp low. It isn't an
+   * naming is copied) or settled, arms down and heart-lamp low. It isn't an
    * enemy either way: no AI, no contact, no bar.
    */
   private placeRestingWarden(kind: 'dormant' | 'settled'): void {
@@ -266,32 +274,33 @@ export class EnemySystem {
   }
 
   /**
-   * Where to show the "Hold up the rubbing" prompt, or null: only while the
+   * Where to show the "Speak the naming" prompt, or null: only while the
    * warden stands open after a lunge and the hero is within reach.
    */
-  showTarget(): { x: number; y: number } | null {
+  speakTarget(): { x: number; y: number } | null {
     const w = this.activeWarden()
     if (!w || w.state !== 'recover' || !w.opening || w.knockTimer > 0) return null
     const hero = this.deps.hero().sprite
     const dist = Math.hypot(hero.x - w.sprite.x, hero.y - 8 - (w.sprite.y - 6))
-    return dist < WARDEN.showReach ? { x: w.sprite.x, y: w.sprite.y - 36 } : null
+    return dist < WARDEN.speakReach ? { x: w.sprite.x, y: w.sprite.y - 36 } : null
   }
 
   /**
-   * Hold up the closure-mark rubbing. Returns true when it was shown (the
+   * Speak the naming to the heart-lamp. Returns true when it was spoken (the
    * interact press is used up). `force` skips the opening and reach checks
    * (dev playtest lever only).
    */
-  showRubbing(force = false): boolean {
+  speakNaming(force = false): boolean {
     const w = this.activeWarden()
     if (!w) return false
-    if (!force && !this.showTarget()) return false
-    w.showings += 1
+    if (!force && !this.speakTarget()) return false
+    w.speakings += 1
     w.opening = false
     const hero = this.deps.hero()
-    // The hero raises the rubbing: a small paper flash above their head.
-    this.deps.fx.floatText(hero.sprite.x, hero.sprite.y - 22, 'two weaves and a break', '#fff3c4', false)
-    if (w.showings >= WARDEN.showings) {
+    // The hero speaks the naming: the words float up toward the lamp.
+    const words = WARDEN_WORDS[Math.min(w.speakings, WARDEN_WORDS.length) - 1]
+    this.deps.fx.floatText(hero.sprite.x, hero.sprite.y - 22, words, '#fff3c4', false)
+    if (w.speakings >= WARDEN.speakings) {
       this.settleWarden(w)
       return true
     }
@@ -306,7 +315,7 @@ export class EnemySystem {
     w.knockX = away.x * 90
     w.knockY = away.y * 90
     w.knockTimer = KNOCK.time
-    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'falters', '#ffd27a', false)
+    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'the flame listens', '#ffd27a', false)
     if (!this.deps.reducedMotion) this.scene.cameras.main.shake(120, 0.003)
     if (this.heart && !this.deps.reducedMotion) {
       this.scene.tweens.add({ targets: this.heart, alpha: 0.15, duration: 90, yoyo: true, repeat: 2 })
@@ -327,7 +336,7 @@ export class EnemySystem {
     body.enable = false
     w.sprite.clearTint()
     sfx('settle')
-    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'settles', '#ffd27a', true)
+    this.deps.fx.floatText(w.sprite.x, w.sprite.y - 28, 'it rests', '#ffd27a', true)
     // Arms lower (the crouch), then down into its resting heap.
     w.sprite.setTexture(this.guardianPoseTexture('windup', 'guardian1'))
     this.scene.time.delayedCall(this.deps.reducedMotion ? 0 : 420, () => {
@@ -355,8 +364,8 @@ export class EnemySystem {
       visible: !!sprite && sprite.active && sprite.visible && sprite.alpha > 0.5,
       phase: w ? w.state : null,
       opening: !!w && w.state === 'recover' && w.opening,
-      showings: w?.showings ?? (this.restingState === 'settled' ? WARDEN.showings : 0),
-      needed: WARDEN.showings
+      speakings: w?.speakings ?? (this.restingState === 'settled' ? WARDEN.speakings : 0),
+      needed: WARDEN.speakings
     }
   }
 
@@ -370,7 +379,7 @@ export class EnemySystem {
     this.knockEnemy(enemy, fromX)
     if (!this.clinkHinted) {
       this.clinkHinted = true
-      bus.emit(EV.toast, { text: 'Your blow rings off the stone. It isn\u2019t fighting you; it\u2019s keeping a pose. Show it the mark.' })
+      bus.emit(EV.toast, { text: 'Your blow rings off the stone. It isn\u2019t fighting you; it\u2019s keeping a pose. Speak it the naming.' })
     }
   }
 
@@ -487,11 +496,11 @@ export class EnemySystem {
   }
 
   /**
-   * The warden has no health to lose. Instead: one pip per showing still
-   * needed, lit amber as the rubbing lands — how close it is to settling.
+   * The warden has no health to lose. Instead: one pip per speaking still
+   * needed, lit amber as each speaking lands — how close it is to settling.
    */
   private drawWardenPips(w: Enemy): void {
-    const n = WARDEN.showings
+    const n = WARDEN.speakings
     const gap = 7
     const x0 = Math.round(w.sprite.x - ((n - 1) * gap) / 2)
     const y = Math.round(w.sprite.y - 30)
@@ -499,9 +508,9 @@ export class EnemySystem {
       const x = x0 + i * gap
       this.hpBars.fillStyle(0x2b1d1a, 0.9)
       this.hpBars.fillRect(x - 3, y - 3, 6, 6)
-      this.hpBars.fillStyle(i < w.showings ? 0xffc86a : 0x5a4a52, 1)
+      this.hpBars.fillStyle(i < w.speakings ? 0xffc86a : 0x5a4a52, 1)
       this.hpBars.fillRect(x - 2, y - 2, 4, 4)
-      if (i < w.showings) {
+      if (i < w.speakings) {
         this.hpBars.fillStyle(0xffffff, 0.45)
         this.hpBars.fillRect(x - 2, y - 2, 4, 1)
       }
@@ -571,7 +580,7 @@ export class EnemySystem {
       dead: false,
       attack: 'lunge',
       opening: false,
-      showings: 0
+      speakings: 0
     }
     // Enemies respect walls, trees and water: a charge can end in a tree.
     // They also stay on the map: an exit gap in the treeline is a way out
@@ -882,7 +891,7 @@ export class EnemySystem {
 
   /**
    * The warden: walks at you, lunges from range (then stops, open, to find its
-   * feet — the moment to show the rubbing), and sweeps its arms at anyone
+   * feet — the moment to speak the naming), and sweeps its arms at anyone
    * crowding it (no opening after a sweep). Showings slow it down.
    */
   private updateGuardian(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
@@ -971,7 +980,7 @@ export class EnemySystem {
           const swept = !enemy.opening && enemy.attack === 'sweep'
           enemy.state = 'chase'
           enemy.opening = false
-          const calm = enemy.showings * WARDEN.calmPerShowing
+          const calm = enemy.speakings * WARDEN.calmPerSpeaking
           enemy.attackTimer = (swept ? WARDEN.sweepCooldown : tune.cooldown) + calm
           enemy.attack = 'lunge'
         }

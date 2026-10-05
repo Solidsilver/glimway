@@ -196,7 +196,7 @@ test('quest embers come from the server once the story upload lands', async ({ p
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
-  await talkThrough(page, /rubbing of the marker/)
+  await talkThrough(page, /Copy the naming from the stone/)
   await settleWarden(page)
   await expect(page.locator('.toast', { hasText: '+2 embers — a little warmth from the road.' })).toBeVisible()
   await expect(hud(page)).toHaveText('2')

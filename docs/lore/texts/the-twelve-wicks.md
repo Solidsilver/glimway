@@ -2,7 +2,7 @@
 
 **Author:** Traditional
 **Date:** Unknown.
-**Material:** A children's primer, painted on twelve wooden blocks kept in the Commons meeting hall.
+**Material:** A children's primer, pressed from the twelve painted blocks kept in the Commons meeting hall. This copy lives in the Keepers' reading room, where Hearthwick children learn their wicks.
 
 First comes **Thaw**, the river breaks,
 Then comes **Mud**, the wagon shakes.

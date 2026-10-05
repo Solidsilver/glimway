@@ -7,7 +7,7 @@
 **The Skipping Rhyme (What the village says):**
 Stone-still, stone-still, 
 Who goes over Ashwatch hill?
-Bring a rubbing or bring a light,
+Bring the words or bring a light,
 Stone-still lets you through tonight!
 
 **My Scientific Corrections (by Pip Penhallow, Runner):**

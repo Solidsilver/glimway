@@ -73,6 +73,13 @@ export const ITEM_INFO: Record<string, ItemInfo> = {
     icon: 'map',
     blurb: 'Sketched in pencil by a Low Road carter, because ink lies within a season. The east gate is circled twice.',
   },
+  // The id keeps its old name for save compatibility (and the server's
+  // quest-item list); only the words changed.
+  'lantern-route-rubbing': {
+    name: 'Wenna’s Naming, Copied Out',
+    icon: 'scroll',
+    blurb: 'Copied from the Ashwatch route stone, beside the closure mark: “The road is closed here. Behind you the village, ahead the dark. Hold the break.” Turned round, it is a naming the warden can rest on.',
+  },
   'ember-charm': {
     name: 'Ember Charm',
     icon: 'ember',
@@ -90,7 +97,7 @@ export const DISCOVERY_INFO: Record<string, ItemInfo> = {
   'old-route-marker': {
     name: 'The Closure Mark',
     icon: 'scroll',
-    blurb: 'A charcoal rubbing: two weaves and a break. The road was shut on purpose.',
+    blurb: 'Two weaves and a break, and beside it Wenna’s naming: the road is closed here. The road was shut on purpose.',
   },
 };
 
@@ -203,7 +210,8 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['clue-found'],
       speaker: 'Mara',
       lines: [
-        'A rubbing of the Ashwatch stone. Two weaves and a break. Gran drew that mark inside the ledger cover and never once said what it meant.',
+        'You copied the words off the Ashwatch stone. Two weaves and a break, and a naming in a Keeper’s hand.',
+        'Gran drew that mark inside the ledger cover and never once said what it meant.',
         "So the road wasn't abandoned. She closed it. On purpose. ...Noted.",
         "There's a warden on the shrine path, Orrin says. Be careful up there. Careful, not slow.",
       ],
@@ -257,8 +265,8 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['clue-found'],
       speaker: 'Pip',
       lines: [
-        "A rubbing! Two weaves and a break! That's the skipping game. 'Warden, Warden, do not frown, show the rubbing and sit down!'",
-        "You don't run at it. That's how you get caught. Wait till it lunges and stops to find its feet, creep in close, hold the rubbing up.",
+        "Two weaves and a break! And words! That's the skipping game. 'Warden, Warden, do not frown, say the words and sit down!'",
+        "You don't run at it. That's how you get caught. Wait till it lunges and stops to find its feet, creep in close, and say the naming to the lamp in its chest.",
         "Hitting it is pointless, scientifically. It's not a monster, it's a jointed frame with a latch. I wrote that in my copybook. Orrin glared.",
       ],
     },
@@ -301,7 +309,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Orrin',
       lines: [
         "There's a warden on the shrine path. Drift-stone. Not cruel. Dutiful, which is worse. It doesn't care who you are. It cares where it stands.",
-        "Take a rubbing of the route stone in the ruin before you climb. The pattern is the point. Anyone can swing a stick. The road wanted people who looked.",
+        "Copy down what's cut on the route stone in the ruin before you climb. The words are the point. Anyone can swing a stick. The road wanted people who read.",
       ],
     },
     {
@@ -309,7 +317,8 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Orrin',
       lines: [
         "Let me see that. Aye. That's the closure mark, not a direction mark. Two weaves and a break. Cut after the Winter of Two Storms. Shut on purpose.",
-        "Don't bother hitting it. Stone doesn't mind. Show it that mark, up close, when it's stopped to find its feet. The break is the gap in its coat.",
+        "Don't bother hitting it. Stone doesn't mind. It's a lamp in a stone coat, and a lamp listens. Wenna told it the road is closed here.",
+        "Tell it the road is held again. Up close, when it's stopped to find its feet. Say it plain.",
         "Mara's grandmother kept that mark in her ledger and never told a soul what it meant. Some people keep promises quietly. Annoying. Good, but annoying.",
       ],
     },
@@ -317,7 +326,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       forStages: ['guardian-defeated'],
       speaker: 'Orrin',
       lines: [
-        "Settled, is it. Thirty years on that path, and one traveler with a rubbing and a stubborn jaw. I'm not impressed. I'm slightly impressed.",
+        "Settled, is it. Thirty years on that path, and one traveler with a few good words and a stubborn jaw. I'm not impressed. I'm slightly impressed.",
         "...I'll go up tomorrow and look at it. Not to fuss. A man can look at his own — at a thing. Go on. Light the lamp.",
       ],
     },
@@ -351,7 +360,9 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Route Marker',
       lines: [
         "A route stone stands in the alcove, its pattern half under keeper's moss — but the cut lines are still deep enough to copy.",
-        'You press paper to the stone and work charcoal over it. Two weaves and a break: not a direction, but a fence. The road was closed here, on purpose.',
+        'Two weaves and a break: not a direction, but a fence. Beside it, smaller, a naming cut in a Keeper’s hand:',
+        '“The road is closed here. Behind you the village, ahead the dark. Hold the break.”',
+        'You copy the words down. The road was closed here, on purpose — and told to stay closed.',
       ],
       event: 'find-clue',
     },
@@ -405,13 +416,13 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   'clue-found': [
     {
       title: 'The Closure Mark',
-      body: 'A charcoal rubbing from the Ashwatch route stone: two weaves and a break. Orrin calls it a closure mark, cut after the Winter of Two Storms. The road was shut on purpose. Orrin and Pip agree on one thing: don’t fight the warden. When it lunges and stops to find its feet, get close and hold up the rubbing.',
+      body: 'Two weaves and a break on the Ashwatch route stone, and beside it a naming cut in a Keeper’s hand: “The road is closed here. Behind you the village, ahead the dark. Hold the break.” I copied it down. Orrin calls it a closure mark, cut after the Winter of Two Storms. The road was shut on purpose. Orrin and Pip agree on one thing: don’t fight the warden. When it lunges and stops to find its feet, get close and speak the naming to its lamp, turned round: the road is held again.',
     },
   ],
   'guardian-defeated': [
     {
       title: 'The Warden Settled',
-      body: 'Each time I held up the rubbing it faltered, until its arms came down and the lamp in its chest guttered low. It isn’t broken. It is resting in its pose, the way it was made to. The ledge beyond holds flint, steel, and a dry wick.',
+      body: 'Each time I spoke the naming to its heart-lamp it faltered, until its arms came down and the lamp in its chest guttered low. It isn’t broken. It is resting in its pose, the way it was made to. The ledge beyond holds flint, steel, and a dry wick.',
     },
   ],
   'lantern-lit': [
@@ -434,7 +445,7 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
  */
 export const QUEST_STEPS: { stage: QuestStage; label: string }[] = [
   { stage: 'new', label: 'Hear Mara out' },
-  { stage: 'accepted', label: 'Take a rubbing of the route stone' },
+  { stage: 'accepted', label: 'Copy the naming from the route stone' },
   { stage: 'clue-found', label: 'Settle the stone warden' },
   { stage: 'guardian-defeated', label: 'Light the hilltop lantern' },
   { stage: 'lantern-lit', label: 'Tell Mara the road is lit' }

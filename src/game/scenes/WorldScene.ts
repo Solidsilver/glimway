@@ -386,9 +386,9 @@ export class WorldScene extends Phaser.Scene {
       w.__fsDevStrike = (n: number, type?: EnemyType) => {
         for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
       }
-      // Hold up the rubbing to the warden. `force` skips the opening/reach
+      // Speak the naming to the warden. `force` skips the opening/reach
       // rules (skipping the encounter); without it, the real rules apply.
-      w.__fsDevShowRubbing = (force = false) => this.enemies.showRubbing(force)
+      w.__fsDevSpeakNaming = (force = false) => this.enemies.speakNaming(force)
       // Set the hero down at a spot in this area (no scene restart), so a
       // playtest can step up to the warden inside its opening.
       w.__fsDevPlace = (x: number, y: number) => {
@@ -590,9 +590,9 @@ export class WorldScene extends Phaser.Scene {
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
-    const show = this.enemies.showTarget()
+    const speak = this.enemies.speakTarget()
     const wildsAction: WildsAction | null = this.wilds?.promptAction(this.hero.sprite) ?? null
-    const action = wildsAction ?? (show ? { label: 'Hold up the rubbing', verb: 'Show', ...show } : null)
+    const action = wildsAction ?? (speak ? { label: 'Speak the naming', verb: 'Speak', ...speak } : null)
     this.interactables.updatePrompt(this.hero.sprite, this.time.now, action)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
@@ -681,8 +681,8 @@ export class WorldScene extends Phaser.Scene {
 
   private handleAction(): void {
     if (uiBlocked() || this.cinematic || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
-    // The warden standing open after a lunge, within reach: show it the mark.
-    if (this.enemies.showRubbing()) return
+    // The warden standing open after a lunge, within reach: speak it the naming.
+    if (this.enemies.speakNaming()) return
     // Wilds claims (harvest, camp, chest, POI, lantern) outrank talking.
     if (this.wilds?.handleAction()) return
     if (this.interactables.currentTarget) {

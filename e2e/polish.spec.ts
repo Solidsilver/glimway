@@ -31,16 +31,16 @@ test.describe('guest', () => {
     await expect(page.locator('.hud .embers')).toHaveText('3')
   })
 
-  test('the journal checklist takes a rubbing and settles the warden', async ({ page }) => {
+  test('the journal checklist copies the naming and settles the warden', async ({ page }) => {
     await beginNewJourney(page)
-    // Steps show as they are reached: accept the quest, take the rubbing.
+    // Steps show as they are reached: accept the quest, copy the naming.
     await go(page, 'village', 16, 14)
     await talkThrough(page, /Talk to Mara/)
     await go(page, 'ruin', 15, 3)
-    await talkThrough(page, /rubbing of the marker/)
+    await talkThrough(page, /Copy the naming from the stone/)
     await page.keyboard.press('j')
     const journal = page.getByRole('dialog', { name: /Journal/ })
-    await expect(journal).toContainText('Take a rubbing of the route stone')
+    await expect(journal).toContainText('Copy the naming from the route stone')
     await expect(journal).toContainText('Settle the stone warden')
     await expect(journal).not.toContainText('Face the stone warden')
     await expect(journal).not.toContainText('Find the old route marker')

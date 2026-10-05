@@ -362,8 +362,8 @@ export function advanceQuest(state: GameState, event: QuestEvent): GameState {
 
 const OBJECTIVES: Record<QuestStage, string> = {
   new: 'Speak with Mara in the Hearthwick square about the dark lantern road.',
-  accepted: 'Leave by the east gate, cross Brackenwood, and take a rubbing of the route stone in Ashwatch Ruin.',
-  'clue-found': 'Settle the stone warden: when it stops after a lunge, get close and hold up the rubbing.',
+  accepted: 'Leave by the east gate, cross Brackenwood, and copy the naming cut on the route stone in Ashwatch Ruin.',
+  'clue-found': 'Settle the stone warden: when it stops after a lunge, get close and speak the naming.',
   'guardian-defeated': 'Light the hilltop lantern at the old shrine.',
   'lantern-lit': 'Return to Mara in Hearthwick and tell her the light is back.',
   complete:
