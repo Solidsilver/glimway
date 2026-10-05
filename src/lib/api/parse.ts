@@ -385,6 +385,7 @@ export function parseCommons(raw: unknown): CommonsResponse {
       desolate: r.desolate === true,
       mine: r.mine === true,
       price: nullableInt(r.price),
+      reclaim: r.reclaim === true,
     };
   });
   const mine = o.mine && typeof o.mine === 'object' ? { homeId: str(obj(o.mine).homeId), gate: int(obj(o.mine).gate) } : null;

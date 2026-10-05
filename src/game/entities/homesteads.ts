@@ -961,6 +961,7 @@ export class HomesteadLayer implements InteractionProvider {
       const invite = this.homes.inviteForMe()
       const choices: DialogueChoice[] = []
       if (invite) choices.push({ text: `Sign ${short(invite.from.name, 14)}’s deed`, note: `${lotName(invite.gate)} · together, at the table`, action: `home:sign:${invite.homeId}` })
+      for (const g of this.homes.reclaimable().slice(0, 2)) choices.push({ text: `Take back ${lotName(g.gate)}`, note: 'Your old deed, as it stands · free', action: `home:claim:${g.gate}` })
       for (const g of this.homes.unclaimed().slice(0, 4)) {
         const price = g.price ?? HOMESTEAD_DATA.deeds.embers
         const short = price > s.state.embers
@@ -973,6 +974,8 @@ export class HomesteadLayer implements InteractionProvider {
           ...(first ? lines.firstMeeting.lines : ['There you are, neighbour.']),
           invite
             ? `${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`
+            : this.homes.reclaimable().length
+              ? `Your old page’s still in the book: ${lotName(this.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`
             : 'I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'
         ],
         choices
@@ -1071,6 +1074,7 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   private async claim(gate: number): Promise<void> {
+    const back = this.homes.gateInfo(gate)?.reclaim ?? false
     const r = await this.homes.claim(gate)
     if (!this.scene.sys.isActive()) return
     if (!r.ok) {
@@ -1079,6 +1083,11 @@ export class HomesteadLayer implements InteractionProvider {
     }
     sfx('quest')
     this.scheduleRedraw()
+    if (back) {
+      this.say({ speaker: SILAS.name, lines: [`There. Your name’s back on ${lotName(gate)}, same ink. It’s all as you left it, give or take the weeds.`] })
+      bus.emit(EV.toast, { text: `${lotName(gate)} is yours again.`, icon: 'lantern' })
+      return
+    }
     this.say({
       speaker: SILAS.name,
       lines: [

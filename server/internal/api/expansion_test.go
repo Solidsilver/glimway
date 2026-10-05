@@ -143,7 +143,7 @@ func (x *rig) claimGate(c *http.Cookie, s *response, gate int) homeView {
 // reserved site and path, in reading order.
 func litSpots(h homeView) [][2]int {
 	g := groundOf(h)
-	lights := lightsWithout(placedItems(h), "")
+	lights := connectedLights(placedItems(h), "")
 	out := [][2]int{}
 	for y := 0; y < g.land.Height; y++ {
 		for x := 0; x < g.land.Width; x++ {

@@ -499,3 +499,37 @@ result retries, with 1011 `auth-unavailable` only after three consecutive unknow
 results. A successful validation clears that counter. Shared policy values are
 in `content/presence.json`; REPORT.md under “Fix round 6” contains the client
 handoff and regression evidence. No new NixOS service, public port or dependency.
+
+### Homesteads v2: a lane of gates (migrations 010–011)
+
+> **Warning: migration 010 resets all homestead data and must not run
+> against a database with real players.** No deployment exists yet, so the
+> homestead model was reset rather than migrated. If a database with players
+> on it ever exists before this ships, write a preserving migration first
+> (pack decorations back to their owners, chest goods into personal chests,
+> decoration mail back to senders) and do not run 010 as written.
+
+On first start, migration 010:
+
+- deletes every decoration parcel in the mail;
+- drops `homesteads`, `homestead_items` and `home_storage` (phase-3/5
+  homes, every bought or crafted decoration, and every shared-chest material,
+  trinket and decoration);
+- creates the v2 tables (`homesteads` by world and gate,
+  `homestead_members` with one homestead per player, `player_deeds`,
+  `lost_gates`, `homestead_invites`, `homestead_cleared`, a rebuilt
+  `homestead_items`, `home_storage` by homestead, `personal_storage`).
+
+The old goods' ledger rows stay behind, so on an existing database the
+per-currency sums for `decoration:*` and `storage:*` would no longer match
+holdings after 010. Take a backup before upgrading any database you care
+about.
+
+Migration 011 adds `homestead_departures`. When the last member of a
+homestead leaves, they can take their deed back free until the deed is lost.
+A lost deed writes its goods off on the last member's ledger (reason
+`deed-lost`): offsetting `storage:*` rows for the home chest, a zero row per
+placed piece (`decoration:<id>`, ref `<home>:gate:<g>:<instance>`), and a
+zero `homestead` row for the deed. Per-currency sums therefore still balance
+after a loss. The contract is in `.agent/HOMES2-CONTRACT.md`; the review
+fixes are in `.agent/REPORT-HOMES2.md`.

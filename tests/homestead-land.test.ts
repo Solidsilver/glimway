@@ -79,3 +79,37 @@ test('post names are tidied and bounded', () => {
   assert.equal(cleanPostName('x'.repeat(HOMESTEAD_DATA.lanternPosts.nameMax + 1)), null);
   assert.equal(cleanPostName('bell\u0007'), null);
 });
+
+test('posts cannot hold each other up away from the home’s light (review finding 2)', () => {
+  const s = HOMESTEAD_DATA.land.startLight;
+  const r = HOMESTEAD_DATA.lanternPosts.radius;
+  const { width: W, height: H } = HOMESTEAD_DATA.land;
+  const d2 = (ax: number, ay: number, bx: number, by: number) => (ax - bx) ** 2 + (ay - by) ** 2;
+  const reserved = (x: number, y: number) => HOMESTEAD_DATA.outdoorReserved.some((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);
+  for (let seed = 1; seed < 400; seed++) {
+    const land = generateLand(seed);
+    const ground = { land, cleared: new Set<string>() };
+    const open = (x: number, y: number) => landAt(land, x, y) === LAND.GRASS && !reserved(x, y);
+    for (let ax = 1; ax < W - 1; ax++)
+      for (let ay = 1; ay < H - 1; ay++) {
+        const da = d2(ax, ay, s.x, s.y);
+        if (da > s.radius ** 2 || da <= (s.radius - 1) ** 2 || !open(ax, ay)) continue;
+        for (let bx = 1; bx < W - 1; bx++)
+          for (let by = 1; by < H - 1; by++) {
+            if (d2(bx, by, ax, ay) > r * r || d2(bx, by, s.x, s.y) <= s.radius ** 2 || !open(bx, by)) continue;
+            for (let cx = 1; cx < W - 1; cx++)
+              for (let cy = 1; cy < H - 1; cy++) {
+                if ((cx === bx && cy === by) || d2(cx, cy, bx, by) > r * r || d2(cx, cy, s.x, s.y) <= s.radius ** 2 || d2(cx, cy, ax, ay) <= r * r || !open(cx, cy)) continue;
+                const a = post('a', ax, ay);
+                const b = post('b', bx, by);
+                // A walks off to ground lit only by B, which only A lit: refused.
+                assert.equal(checkPlacement({ tier: 1, items: [a, b] }, a, 'outdoor', cx, cy, 0, HOMESTEAD_DATA, ground), 'unlit');
+                // A chain back to the home's light still extends it.
+                assert.equal(checkPlacement({ tier: 1, items: [a] }, post('b', null, null), 'outdoor', bx, by, 0, HOMESTEAD_DATA, ground), null);
+                return;
+              }
+          }
+      }
+  }
+  assert.fail('no land with the floating-pair layout');
+});

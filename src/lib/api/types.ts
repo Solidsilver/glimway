@@ -319,6 +319,8 @@ export interface GateInfo {
   mine: boolean;
   /** Unclaimed: what the deed costs the caller in embers. */
   price: number | null;
+  /** The caller was on this empty home's deed and can take it back, free, until the deed is lost. */
+  reclaim: boolean;
 }
 
 /** A joint-deed invitation the caller is part of. */
