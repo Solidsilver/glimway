@@ -239,7 +239,7 @@ in, everything stays local exactly as before.
 | Dodge roll | Shift | Roll button |
 | Pick a dialogue reply | 1–9, or arrows + Enter | Tap the reply |
 | Mount up / dismount | M (outdoors, imported heroes) | — |
-| Journal / Character / Menu | J / C / Esc | HUD buttons |
+| Journal / Character / Inventory / Menu | J / C / I / Esc | HUD buttons (book, person, bag, menu) |
 | Arrange your home | B, then arrows, R, E, X, Esc | Arrange button and tray |
 | Emotes (in a world) | G, then 1–5 | Speech button |
 
@@ -258,7 +258,9 @@ devices; the layout is responsive with safe-area insets for phones.
 - **Moments:** quest-beat ribbons, area title cards, the lantern camera beat,
   the defeat collapse and wake card, and the closing card.
 - **Panels:** Journal (the road and your papers), Character (vitals, stats,
-  abilities, pack, materials), Menu (save codes for guests, your world and
+  abilities, discoveries), Inventory (tabs for Tools, Supplies, Keepsakes, Home
+  goods and Papers, with quest things under "For the road" and a "new" dot for
+  items this device hasn't seen), Menu (save codes for guests, your world and
   invites, the Habitica connection, sound, controls), plus the Library, notice
   board, Silas's yard, workshop and mailbox in the world. Panels trap focus;
   hard choices use in-game confirms.

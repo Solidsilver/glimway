@@ -190,22 +190,10 @@ export function entityAvailable(e: WildsEntityView, nowSec: number): boolean {
 
 // ------------------------------------------------------------ guest mode
 
-/** Pack entries that carry a guest's material balance. */
-export const MATERIAL_ITEM_PREFIX = 'material:';
-
-export function materialsFromInventory(inventory: readonly string[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const m of MATERIALS) out[m.id] = 0;
-  for (const entry of inventory) {
-    if (!entry.startsWith(MATERIAL_ITEM_PREFIX)) continue;
-    const rest = entry.slice(MATERIAL_ITEM_PREFIX.length);
-    const at = rest.lastIndexOf(':');
-    const id = rest.slice(0, at);
-    const qty = Number(rest.slice(at + 1));
-    if (id in out && Number.isInteger(qty) && qty > 0) out[id] = qty;
-  }
-  return out;
-}
+/** Pack entries that carry a guest's material balance (parser in src/lib/inventory.ts). */
+export { MATERIAL_ITEM_PREFIX } from '../../lib/inventory.ts';
+export { materialsFromPack as materialsFromInventory } from '../../lib/inventory.ts';
+import { MATERIAL_ITEM_PREFIX, materialsFromPack as materialsFromInventory } from '../../lib/inventory.ts';
 
 function inventoryWithMaterials(inventory: readonly string[], materials: Record<string, number>): string[] {
   const kept = inventory.filter((i) => !i.startsWith(MATERIAL_ITEM_PREFIX));

@@ -7,7 +7,7 @@ test('the controls list names B (arrange your home) and G (emotes)', () => {
   assert.match(row('B')?.does ?? '', /Arrange your home/);
   assert.match(row('G')?.does ?? '', /Emotes/);
   // The whole keyboard surface is there.
-  for (const key of ['W', 'E', 'Space', 'F', 'Shift', 'J', 'C', 'M', 'Esc']) assert.ok(row(key), key);
+  for (const key of ['W', 'E', 'Space', 'F', 'Shift', 'J', 'C', 'I', 'M', 'Esc']) assert.ok(row(key), key);
 });
 
 test('every control has a touch equivalent, except riding (keyboard only)', () => {
