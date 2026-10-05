@@ -39,8 +39,8 @@ expansion pack and the runtime art pass were integrated
 ## Priority 1: characters
 
 These are the most visible placeholders. Elara and Finn are written into the
-canon and the papers but **aren't in the world yet**; their art unblocks adding
-them as NPCs.
+canon and the papers; their art unblocked adding them as NPCs (delivered in
+the Commons pass; all four residents are in the world now).
 
 | Sprite | Native size | Frames | Description |
 |---|---|---|---|

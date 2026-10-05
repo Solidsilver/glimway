@@ -35,7 +35,7 @@
   const stage = $derived(ui.quest.stage as QuestStage)
   const current = $derived(ORDER.indexOf(stage))
   // Newest first: the latest page is what the player wants to read.
-  const entries = $derived([...journalEntries(stage)].reverse())
+  const entries = $derived([...journalEntries(stage, ui.residentsMet)].reverse())
   const illustration = $derived(
     ui.area.areaId === 'ruin' ? '/assets/fingersnap/fingersnap-shrine.png' : '/assets/fingersnap/fingersnap-village.png'
   )

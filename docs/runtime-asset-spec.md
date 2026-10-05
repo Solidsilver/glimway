@@ -175,10 +175,14 @@ boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
   16 px, falling back to the code-drawn `Icon`: materials, trinkets and
   crafted goods in the Character panel, workshop, Silas's yard balance,
   mail and loot toasts (`ToastPayload.art`), emotes in the picker.
-- **Residents not yet in the world** — Elara, Finn, Hazel and Ada load as
-  `commons-art:<name>-idle-0/1` with breathing animations; their busts are
-  emitted under their speaker names (`COMMONS_RESIDENT_PORTRAITS`) for the
-  follow-up that adds them as NPCs.
+- **Residents** — Elara (the Commons, by the Wilds arch, with the
+  `wilds-pack` and `wilds-fire-ring` as her camp), Finn (the pond's west
+  rim), Hazel (the square) and Ada (under her window) are NPCs in
+  `WorldData.npcs`, drawn from `commons-art:<name>-idle-0/1` with their
+  breathing animations (`src/game/entities/npcs.ts`; a tinted quest-NPC
+  placeholder if the pack didn't load). Their busts are emitted under their
+  first-name speaker names (`COMMONS_RESIDENT_PORTRAITS`). Words:
+  `src/content/residents.ts`.
 - **Loaded but not placed** — `commons-gateway` (a front-facing arch; the
   Commons gate is crossed east–west, so it keeps the side-on gateposts and
   gate leaf), the campsite composite and its animation (the plot keeps the

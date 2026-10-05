@@ -207,16 +207,15 @@ export function commonsDataUrl(scene: Phaser.Scene, frame: string, scale = 1): s
 }
 
 /**
- * Residents with delivered dialogue busts who aren't in the world yet (a
- * follow-up adds them as NPCs): their textures load with the pack, and the
- * dialogue box finds these portraits by speaker name. Silas's comes from
- * the homestead layer.
+ * The residents' delivered dialogue busts (src/content/residents.ts): the
+ * dialogue box finds portraits by speaker name, and they speak by first
+ * name like Mara and Pip. Silas's comes from the homestead layer.
  */
 export const COMMONS_RESIDENT_PORTRAITS: Readonly<Record<string, string>> = {
-  'Elara Quill': 'portrait-elara',
-  'Finn Tolley': 'portrait-finn',
-  'Hazel Penhallow': 'portrait-hazel',
-  'Ada Cooley': 'portrait-ada',
+  Elara: 'portrait-elara',
+  Finn: 'portrait-finn',
+  Hazel: 'portrait-hazel',
+  Ada: 'portrait-ada',
 }
 
 /** Every delivered 16-px UI icon (`icon-*` frames) as a data URL. */

@@ -33,7 +33,8 @@ export type PickupLook = 'folded' | 'scroll' | 'slate';
 /** echo: settling an Echo (an owed lamp at a phantom camp) gives its words back. */
 export type LaterKind = 'commons' | 'wilds-poi' | 'wilds-chest' | 'village-project' | 'turning' | 'echo';
 
-export type QuestNpc = 'mara' | 'pip' | 'orrin';
+/** Who can hand a paper over: the quest NPCs, and Hazel (./residents.ts). */
+export type QuestNpc = 'mara' | 'pip' | 'orrin' | 'hazel';
 
 export type FindSource =
   /** On the Hearthwick Library's shelves from day one: public, no spoilers. */
@@ -83,8 +84,8 @@ const DESIGN: Record<string, Design> = {
   // ---- Vol. II
   'keepers-twists-recipe-card': {
     style: 'card',
-    source: { kind: 'gift', from: 'pip', stage: 'complete' },
-    hint: 'Pip runs errands for the bakery. Ask after the road is lit.',
+    source: { kind: 'gift', from: 'hazel', stage: 'complete' },
+    hint: 'It hangs on the bakery wall. Ask Hazel after the road is lit.',
   },
   'joss-penhallow-letter-map-case': { style: 'letter', source: { kind: 'turning', hook: 'The finale: the Sallow Ford lamp answers, and the map case comes west' } },
   'annotated-flora-of-the-eastern-reaches': {
@@ -292,8 +293,8 @@ const HANDOVER: Record<string, { lines: string[]; laterLines?: string[] }> = {
   },
   'keepers-twists-recipe-card': {
     lines: [
-      'Oh! Before I forget — Mum says you can have this. It’s the card off the bakery wall. She says she knows it by heart and it’s about time someone used it.',
-      'There’s a note on the back about my uncle. I’m not supposed to have read it. I have read it eleven times.',
+      'Here. Take the card off my wall: Keeper’s Twists. I know it by heart, and it’s about time someone else used it.',
+      'There’s a note on the back about my brother. Pip has read it eleven times when they think I’m not looking. You may as well read it once.',
     ],
   },
   'orrins-workshop-rules': {
