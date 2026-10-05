@@ -1,15 +1,18 @@
 /**
  * Papers generator: docs/lore/texts/*.md (the owner's found texts) →
  * src/content/papers-text.ts (titles, descriptions, collections, provenance
- * and bodies as data). Run `npm run papers` after editing a text; the
- * generated file is committed, and tests/papers.test.ts fails if it drifts
- * from the markdown, so the docs stay the single source of the words.
+ * and bodies as data), plus content/papers.json (the shared catalog the Go
+ * server embeds: ids, collections, source kinds). Run `npm run papers` after
+ * editing a text or a find source; both generated files are committed, and
+ * tests/papers.test.ts fails if they drift from the sources, so the docs
+ * stay the single source of the words.
  *
  * Where each paper is found (and how it looks when read) is hand-authored
  * in src/content/papers.ts — that is design, not text.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { PAPERS } from '../src/content/papers.ts';
 
 export interface PaperMeta {
   label: string;
@@ -155,7 +158,30 @@ export function generate(): string {
   return renderModule(records);
 }
 
+/**
+ * The shared catalog the Go server embeds (content/papers.json): every
+ * paper's id, collection and where it is found (source kind). Generated
+ * from the same design layer the client plays with, so the server's
+ * "known paper" and "starting shelf" checks can never drift from it.
+ */
+export interface PaperCatalogRow {
+  id: string;
+  collection: string;
+  source: string;
+}
+
+export const PAPERS_JSON_FILE = new URL('../content/papers.json', import.meta.url);
+
+export function paperCatalog(): PaperCatalogRow[] {
+  return PAPERS.map((p) => ({ id: p.id, collection: p.collection, source: p.source.kind }));
+}
+
+export function renderPapersJSON(): string {
+  return JSON.stringify({ papers: paperCatalog() }, null, 2) + '\n';
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   writeFileSync(OUT_FILE, generate());
-  console.log('Wrote src/content/papers-text.ts');
+  writeFileSync(PAPERS_JSON_FILE, renderPapersJSON());
+  console.log('Wrote src/content/papers-text.ts and content/papers.json');
 }

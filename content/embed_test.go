@@ -14,4 +14,20 @@ func TestSharedContent(t *testing.T) {
 	if err != nil || len(gear) == 0 {
 		t.Fatalf("gear catalog: %v", err)
 	}
+	papers, err := LoadPapers()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(papers) != 39 || len(PapersByID) != 39 {
+		t.Fatalf("paper catalog: %d rows", len(papers))
+	}
+	start := 0
+	for _, p := range papers {
+		if p.Source == "library-start" {
+			start++
+		}
+	}
+	if start != 11 {
+		t.Fatalf("library-start papers: %d", start)
+	}
 }

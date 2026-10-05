@@ -1,0 +1,199 @@
+{
+  "papers": [
+    {
+      "id": "ashwatch-ledger-excerpts",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "quest"
+    },
+    {
+      "id": "to-the-bench-across",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "commons"
+    },
+    {
+      "id": "oak-hall-edict-on-the-stealing-of-shade",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "library-start"
+    },
+    {
+      "id": "elara-quill-field-notes-turncaps",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "gift"
+    },
+    {
+      "id": "the-reed-and-roll-mill-chant",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "library-start"
+    },
+    {
+      "id": "count-house-tally-book-scrap",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "village-project"
+    },
+    {
+      "id": "note-in-the-linseed-box",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "village-project"
+    },
+    {
+      "id": "keepers-twists-recipe-card",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "gift"
+    },
+    {
+      "id": "joss-penhallow-letter-map-case",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "turning"
+    },
+    {
+      "id": "annotated-flora-of-the-eastern-reaches",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "placed"
+    },
+    {
+      "id": "tarrow-requisition-reply-hinges",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "village-project"
+    },
+    {
+      "id": "silas-pine-offcut-scrap",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "commons"
+    },
+    {
+      "id": "pip-copybook-warden-corrections",
+      "collection": "Voices of the Drift: Found Texts, Vol. II",
+      "source": "placed"
+    },
+    {
+      "id": "the-boy-who-ran-faster-than-the-wick",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "why-the-tide-fox-has-one-long-ear",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "placed"
+    },
+    {
+      "id": "the-mudrise-fleet-lullaby",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "the-ashwatch-skipping-game",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "placed"
+    },
+    {
+      "id": "elaras-note-in-pips-copybook",
+      "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
+      "source": "placed"
+    },
+    {
+      "id": "failed-grid-of-sector-4",
+      "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+      "source": "wilds-poi"
+    },
+    {
+      "id": "joss-penhallow-field-notes-pencil-map",
+      "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+      "source": "wilds-poi"
+    },
+    {
+      "id": "log-of-the-bark-wind-hewn",
+      "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "guild-of-cartographers-invoice",
+      "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "wandering-orchard-magistrate-ruling",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "orrins-drift-slap-foundation-standard",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "commons"
+    },
+    {
+      "id": "will-of-elias-fenn",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "placed"
+    },
+    {
+      "id": "deed-of-sale-commons-plot",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "commons"
+    },
+    {
+      "id": "the-blind-routes-smugglers-ledger",
+      "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
+      "source": "wilds-chest"
+    },
+    {
+      "id": "remedies-of-the-oaker-hills",
+      "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "sallow-ford-chirurgeons-field-book",
+      "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
+      "source": "placed"
+    },
+    {
+      "id": "dangers-of-the-white-quiet-pamphlet",
+      "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "nan-greer-trail-journal",
+      "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
+      "source": "turning"
+    },
+    {
+      "id": "principia-memoria-excerpt",
+      "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+      "source": "quest"
+    },
+    {
+      "id": "fauna-of-the-slack-water",
+      "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+      "source": "placed"
+    },
+    {
+      "id": "barge-knee-yields-report",
+      "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+      "source": "placed"
+    },
+    {
+      "id": "weir-effect-survey-draft",
+      "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
+      "source": "turning"
+    },
+    {
+      "id": "brackenwood-cutters-handbook",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "orrins-workshop-rules",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "gift"
+    },
+    {
+      "id": "twoford-almanac-silas-copy",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "library-start"
+    },
+    {
+      "id": "marens-notes-on-hubs-and-tyres",
+      "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
+      "source": "village-project"
+    }
+  ]
+}

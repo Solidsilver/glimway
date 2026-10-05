@@ -216,3 +216,55 @@ var WildsRules = func() Wilds {
 	}
 	return w
 }()
+
+// Shared paper catalog (content/papers.json), generated from the same
+// design layer the client plays with (npm run papers). Typed loaders on
+// both sides: this one for Go, src/content/papers.ts for TypeScript.
+type Paper struct {
+	ID         string `json:"id"`
+	Collection string `json:"collection"`
+	Source     string `json:"source"`
+}
+
+var paperSources = map[string]bool{
+	"library-start": true, "placed": true, "quest": true, "gift": true,
+	"commons": true, "wilds-poi": true, "wilds-chest": true,
+	"village-project": true, "turning": true,
+}
+
+func LoadPapers() ([]Paper, error) {
+	var doc struct {
+		Papers []Paper `json:"papers"`
+	}
+	b, err := FS.ReadFile("papers.json")
+	if err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal(b, &doc); err != nil {
+		return nil, err
+	}
+	if len(doc.Papers) == 0 {
+		return nil, fmt.Errorf("invalid papers: empty")
+	}
+	seen := make(map[string]bool, len(doc.Papers))
+	for _, p := range doc.Papers {
+		// A find is the story flag "paper:<id>"; story flags cap at 128 characters.
+		if p.ID == "" || len(p.ID) > 128-len("paper:") || p.Collection == "" || !paperSources[p.Source] || seen[p.ID] {
+			return nil, fmt.Errorf("invalid papers: row %+v", p)
+		}
+		seen[p.ID] = true
+	}
+	return doc.Papers, nil
+}
+
+var PapersByID = func() map[string]Paper {
+	ps, err := LoadPapers()
+	if err != nil {
+		panic(err)
+	}
+	m := make(map[string]Paper, len(ps))
+	for _, p := range ps {
+		m[p.ID] = p
+	}
+	return m
+}()
