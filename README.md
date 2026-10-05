@@ -1,269 +1,447 @@
-# Fingersnap — first playable demo
+# Fingersnap
 
-A cozy, lantern-restoring web RPG demo. Svelte 5 + TypeScript + Phaser 3 + Vite.
-Runs entirely in the browser. The demo adventure needs no accounts and makes no
-network requests; optionally, you can connect a Habitica account **read-only**
-(see below) to play as your own character.
+A cozy, lantern-restoring web RPG where real-life progress on
+[Habitica](https://habitica.com) lights the road. Svelte 5 + TypeScript +
+Phaser 3 + Vite in the browser; an optional Go server for shared worlds.
 
-Source of truth: [Fingersnap Plan.md](Fingersnap%20Plan.md). Demo scope:
-[BUILD_KICKOFF.md](BUILD_KICKOFF.md).
+You can play three ways:
 
-## Run it
+- **As a guest.** No account, no server, no network requests. Everything
+  saves in this browser.
+- **As your Habitica hero.** Connect Habitica (read-only) and play as your own
+  character: your class, gear, look and health come along, and every 10 XP
+  you earn on Habitica becomes an ember to spend in the world.
+- **In a world.** If a Fingersnap server is running, sign in with the same
+  Habitica details to join an invite-only world with friends: homesteads,
+  shared Wilds, a shared library, village projects, mail, and seeing each
+  other walk around.
 
-```sh
-npm install
-npm run dev        # http://localhost:5173
-```
+Source of truth for the original game: [Fingersnap Plan.md](Fingersnap%20Plan.md).
+The expansion (worlds, homes, the Wilds) is designed in
+[docs/expansion-design.md](docs/expansion-design.md).
 
-Other scripts:
+## The lantern road
 
-```sh
-npm run typecheck  # tsc --noEmit
-npm run check      # svelte-check
-npm run build      # production bundle in dist/
-npm run preview    # serve the production build
-npm test           # unit tests (node --test)
-npm run test:e2e   # browser playtests (Playwright, starts its own dev server)
-npm run verify     # typecheck + check + unit tests + build
-npm run verify:all # verify, then the browser playtests
-```
+Meet **Mara** in the village of Hearthwick, accept the lantern quest, follow
+the **Brackenwood Path** east (mind the wisps), take a rubbing of the route
+stone in **Ashwatch Ruin**, settle the **stone warden**, light the hilltop
+lantern, then walk home and see the village lantern glowing again.
 
-First time running the browser playtests: `npx playwright install chromium`.
+**The warden is not a fight.** Hearthwick built it, long ago, and it is still
+keeping its pose. Blows ring off the stone. It holds the path, lunges from
+range and sweeps its arms up close; after a lunge it stops to find its feet
+for a moment. Step in then and **hold up the rubbing** (E / Space, or the
+**Show** button on touch). Three showings settle it: its arms lower, the lamp
+in its chest gutters to a coal, and it rests on its post for good.
 
-## The demo adventure
+- Three explorable quest areas with collisions, transitions and NPCs (Mara,
+  Pip, Orrin) whose lines follow the story.
+- Light real-time combat against wisps, slimes and beetles: a basic attack
+  (E / Space), a signature ability (F, costs mana) and a dodge roll (Shift).
+  Every enemy attack is telegraphed: a windup pose, a "!", a rising tone, then
+  a white flash when its aim locks. An imported hero's class picks the kit
+  (warrior slash and cleave, mage bolt and fingersnap, rogue stab and
+  shadowstep dash, healer tap and mending pulse), and their effective stats
+  drive the numbers, with bounded diminishing returns.
+- HP, mana, position, quest stage and defeated enemies persist across
+  reloads. Reloading is **never** a heal. Falling wakes you by the village
+  well with your story kept.
 
-Meet **Mara** in the village of Hearthwick, accept the lantern quest, follow the
-**Brackenwood Path** (mind the wisps), find the clue in the **Ashwatch Ruin**,
-overcome the **stone warden**, light the hilltop lantern — then return home and
-see the village lantern glowing again.
+## Embers: real-life progress lights the road
 
-- Three explorable areas with collisions, scene transitions, and NPCs
-  (`mara`, `pip`, `orrin`) with stage-aware dialogue.
-- Light real-time combat: melee attacks (E / Space) and a signature ability
-  (F / ✦, costs mana). Telegraphed lunges on the warden. An imported
-  character's class picks the kit — warrior slash + cleave, mage ranged bolt +
-  fingersnap, rogue stab + shadowstep dash, healer tap + mending pulse — and
-  its effective stats (gear and level included) drive the numbers with bounded
-  diminishing returns for extreme imports.
-- Quest journal, character sheet, and dialogue in Svelte; the frame loop and
-  world stay in Phaser. They talk through a small event bus of meaningful
-  state changes only.
-- Saves are versioned, local (IndexedDB), with clipboard export/import of save
-  codes — no credentials inside saves.
-- HP, mana, position, quest stage, and defeated enemies persist across
-  reloads. Reloading is **never** a heal.
+Every 10 XP you earn **on Habitica** becomes an ember the next time you sync.
+Each XP pays once: the game remembers the highest lifetime XP it has paid and
+credits only XP above it, so unchecking and re-checking a task pays nothing
+new. The first import pays a one-off welcome of 3 embers (not your past XP),
+and two story beats leave a few embers so guests can try spending them too.
 
-### Your Habitica character (optional, read-only)
+| Where | Cost | What you get |
+|---|---|---|
+| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana. At 0 HP an imported hero needs embers earned from XP. |
+| Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone, health for demo heroes |
+| The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
+| Your bedroll or hearth at home (in a world) | 1 | Rest at your own place |
+| Silas in the Commons (in a world) | 15 / 30 + materials | Raise a cottage, then a workshop; furniture from 2 embers |
+
+Rules: `src/lib/embers.ts` and `content/economy.json` (shared with the server).
+
+## Beyond the village
+
+### Hearthwick Commons and homesteads
+
+Hearthwick's east edge has a second gate, below the Brackenwood road, into
+**Hearthwick Commons**: a safe green with a well, a notice board, a lane of
+plots, and **Silas**, a retired carter who stakes the plots. Guests can walk
+the Commons and meet Silas; plots belong to people with a world.
+
+In a world, each member gets a plot. Talk to Silas to claim yours (a campsite,
+free), then raise it:
+
+| Tier | Cost | What it adds |
+|---|---|---|
+| Campsite | free | Fire ring, cot, lamp post; rest at your bedroll |
+| Cottage | 15 embers | A room to go into, a hearth to rest by, and decorations to set out |
+| Workshop | 30 embers, 20 timber, 10 stone, 8 fiber | A storage chest and a crafting bench inside |
+
+Silas's yard sells fourteen pieces of furniture, some for embers and some for
+materials from the Wilds. Press **B** (or the Arrange button) on your plot or
+in your cottage to set them out: pick a piece, nudge it (arrows / WASD), turn
+it (R), set it (E), put it away (X); Esc steps back out. Resting at home costs
+1 ember and needs you on your own plot. Neighbours' places are visible on the
+lane: walk into their cottage to look around (read-only), or leave something
+in their mailbox.
+
+### The Wilds: the Tangle
+
+North of the Commons, under a leafy arch, lies **the Tangle**: a 3×3 grid of
+generated forest chunks, the same for everyone in a world (the generator is
+shared between the browser and the server, with parity tests). In it:
+
+- **Camps** of wisps and beetles; clear one, then claim it for materials.
+  Camps come back after 10 minutes.
+- **Resource nodes** for timber, stone, fiber and amber; they regrow after
+  5 minutes.
+- **Chests** (personal: each player opens each one once) and **points of
+  interest** (the first to find one charts it for the world).
+- Now and then a **trinket**.
+- **Fallen-hero lanterns**: fall in the Wilds and you leave a lantern behind;
+  anyone in your world can relight it, and relighting a friend's pays amber.
+
+Guests can walk a fixed local Tangle and gather into their pack; their chest
+and point-of-interest claims last until the page reloads. In a world, claims,
+materials and lanterns are kept by the server and shared as described.
+
+### The calendar and the Turning
+
+Fingersnap keeps its own calendar: a **wick** is seven real days, twelve wicks
+make a year, and four Marks (Mudrise, Carting, Amberfall, Quiet) name the
+seasons. The HUD shows today ("Sap-wick, 3rd day — Amberfall"), and festivals
+change the village for a day: candle hulls on the pond at the Breaking,
+bunting for Carting Day, a lamp in every window at Amberwake, and every
+lantern lit on Closure Night.
+
+The **Turning** happens at the end of each wick: the **outer Wilds** reset to
+new land, while the Tangle stays as it is. The notice board posts when the next
+Turning is due. The server already runs the outer region and its Turnings; the
+client doesn't walk you into the outer Wilds yet, so for now they appear on
+the notice board and in papers.
+
+### Papers and the Hearthwick Library
+
+**Papers** are found texts: ledgers, letters, notices, songs, recipe cards. 52
+in eight collections; 13 start on the library shelves and the rest are found
+around Hearthwick, Brackenwood and the ruin, along the quest, as gifts from
+the villagers, in the Commons, in the Tangle and from village projects. Read
+them in the Journal's **Papers** tab (J).
+
+The **Hearthwick Library** is the small reading house in the village's
+south-west corner. Anyone can read every paper on its shelves. Donate a paper
+you've found to put it there: a guest's donations fill their own shelf; in a
+world, there is one shared shelf and the first donor's name stays with the
+paper.
+
+### Village projects and mail (in a world)
+
+The notice board (village or Commons) lists **village projects**: mend the
+north bridge, build a well canopy, reinforce the mill wheel, and more. Anyone
+in the world can give materials; when a project is complete the village
+changes (a canopy on the well, rails on the Brackenwood bridge, Ada's window
+lit) and everyone who gave something gets the project's papers.
+
+**Mail** sends materials, trinkets, crafted pieces and unplaced furniture to
+someone in your world: use your mailbox on the Commons, or theirs to address
+it to them. Parcels wait until claimed, can be recalled while unclaimed, and
+come back after 30 days. Embers and quest items can't be mailed.
+
+### Seeing each other
+
+In a world, other players in the same area appear as their Habitica avatars,
+with name tags, walking and facing as they move. Press **G** (or the speech
+button) for emotes (wave, nod, cheer, thanks, lantern); they show as a bubble
+over your head. Presence is presentation only: other players never block you
+and have no effect on play.
+
+## Your Habitica character (read-only)
 
 On a new game the title screen asks how you want to play: **Play as your
 Habitica hero** or **Wander as a guest**. The first opens a three-step connect
 guide (also in the Menu): where to find your User ID and API Token (website,
-iOS, Android; the app steps are still unverified and say so), a paste step, and
-a connected card with your hero's name, class and level. You can paste both
-values at once: labeled text (`User ID: … API Token: …`, any order) is read by
-its labels; two unlabeled codes are filled in order with a preview and a
-**Swap** button, and nothing is sent until you confirm. From then on every
-10 XP you earn on Habitica becomes an ember. Guide copy lives in
-`src/content/connect-guide.ts`; the parser in `src/lib/habitica/paste.ts`.
+iOS, Android), a paste step, and a card with your hero's name, class and
+level. You can paste both values at once: labeled text (`User ID: … API
+Token: …`, any order) is read by its labels; two unlabeled codes are filled in
+order with a preview and a **Swap** button, and nothing is sent until you
+confirm. Guide copy lives in `src/content/connect-guide.ts`; the parser in
+`src/lib/habitica/paste.ts`.
 
-The adapter is strictly read-only: one explicit `GET /user` per sign-in or
-Sync press, and **nothing in the game ever writes to your account**. (The
-token itself *can* write to your account; the game limits itself to reads, in
-public code.) Credentials stay in this tab's memory and are never in saves,
-save codes, or logs, **unless** you tick **Remember on this device**: then
-they are kept in this browser in a separate IndexedDB database
-(`fingersnap-credentials`), apart from your save. Script injected into this
-site could read them, so leave it off if you'd rather paste per visit.
-**Forget** deletes them, and Disconnect offers to. A guest who walks to the
-Hearthwick gate gets one nudge from Pip, once per save. The `X-Client` header
-identifies the tool's creator, never you.
+**What the game reads, and what it never does.** The game makes one explicit
+`GET /user` per connect or **Sync** press, from your browser, and **nothing
+ever writes to your Habitica account**. (The token itself *can* write to your
+account; the game limits itself to reads, in public code.) The `X-Client`
+header identifies the tool's creator, never you.
 
-Health policy: importing replaces the demo vitals once; later syncs credit
-genuine external HP/MP changes **exactly once** (damage + unchanged profile
-never refills) and only in the village. Imported vitals get no passive
-healing (lit road lanterns give them mana only); defeat wakes you at capped
-vitals (zero stays zero) and locks expeditions until a genuine external heal
-or a warm rest paid with embers earned from Habitica XP — village life (NPCs,
-journal, sync) keeps working. See [docs/import-contract.md](docs/import-contract.md).
+**Where your token goes.**
 
-### Embers: real-life progress lights the road
+- It stays in this tab's memory, and is never in saves, save codes, the
+  connected cache or logs.
+- **Remember on this device** is opt-in. If you tick it, the User ID and token
+  are kept in this browser in their own IndexedDB database
+  (`fingersnap-credentials`), apart from your save. Script injected into this
+  site could read them, so leave it off if you'd rather paste per visit.
+  **Forget** deletes them, and Disconnect offers to.
+- **Signing in to a world** sends the token to the Fingersnap server once, at
+  login, so the server can make one read-only `GET /user` to prove the account
+  is yours. The server never stores, logs or returns it. Every later sync
+  still goes from your browser to Habitica, and the browser reports the
+  result to the server.
 
-Every 10 XP you earn **on Habitica** becomes an ember the next time you sync
-in Hearthwick. It's still read-only: the game keeps the highest lifetime XP
-it has ever paid out and credits only XP above that, so each XP pays once —
-losing XP and earning it back (unchecking and re-checking a task) pays
-nothing new. The first
-import pays a one-off welcome of 3 embers (not your past XP), and two story
-beats leave a few embers so demo players can try spending them too.
+**Health.** Importing replaces the demo vitals once; later syncs credit
+genuine external HP/MP changes **exactly once** (damage plus an unchanged
+profile never refills), and only in Hearthwick. Imported vitals get no
+passive healing (lit road lanterns give them mana only). Defeat wakes you at
+capped vitals (zero stays zero) and locks expeditions until a genuine heal on
+Habitica or a warm rest paid with embers earned from XP. See [docs/import-contract.md](docs/import-contract.md).
 
-Spend them in the world:
+## Playing in a world
 
-| Where | Cost | What you get |
-|---|---|---|
-| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana (at 0 HP, an imported hero needs embers earned from XP) |
-| Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone, health for demo heroes |
-| The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
+When a Fingersnap server answers, connecting Habitica in the guide also signs
+you in to your world (with an optional invite code). Worlds are invite-only:
+the server owner allowlists people or hands out single-use codes, and every
+member can invite up to three friends at a time (five in all) from the Menu.
+Codes look like `amber-fox-river-lantern-moss-ivy-7392`; case, spaces and
+hyphens don't matter.
 
-Rules live in `src/lib/embers.ts`, with tests in `tests/embers.test.ts`.
+- **First sign-in:** bring this device's journey into your world (story and
+  place carry over; embers come along as gifts, up to 30) or start fresh.
+- **One place at a time:** if your journey is open in another tab or device,
+  you're asked before taking over.
+- **Offline:** play goes on in the curated areas and saves on the device;
+  spends and syncs wait for a connection. Reconnecting uploads what you did;
+  if you also played somewhere else meanwhile, story from both is kept and
+  health, mana and place come from the latest session.
+- A session lasts up to seven idle days and at most thirty days in all; then
+  you sign in again.
+- **Log out** in the Menu. Progress that hasn't reached the world yet stays on
+  the device for your next sign-in.
 
-### Defeat (demo vs imported rule)
-
-Falling in battle wakes you by the village well with restored demo vitals; all
-story progress is kept. This is explicitly a placeholder for real
-imported-Habitica health rules, which arrive with account integration. The
-recovery lives in the shared module (`recoverFromDefeat` in `src/lib/state.ts`)
-so the rule is testable and single-sourced.
+Guest play is unaffected: with no server (a static build) or without signing
+in, everything stays local exactly as before.
 
 ## Controls
 
 | Action | Desktop | Touch |
 |---|---|---|
 | Move | WASD / arrow keys | Joystick (bottom left) |
-| Talk / use / attack | E or Space | Big button (bottom right; shows Talk near people) |
-| Cast signature ability | F | ✦ button (shows mana cost and cooldown) |
-| Dodge roll | Shift | Small green button above ✦ |
-| Pick a dialogue reply | 1 / 2 or arrows + Enter | Tap the reply |
-| Mount up / dismount | M | (outdoors, imported characters) |
+| Talk / use / attack / show the rubbing | E or Space | Big action button (its label says what it will do) |
+| Signature ability | F | ✦ button (shows mana cost and cooldown) |
+| Dodge roll | Shift | Roll button |
+| Pick a dialogue reply | 1–9, or arrows + Enter | Tap the reply |
+| Mount up / dismount | M (outdoors, imported heroes) | — |
 | Journal / Character / Menu | J / C / Esc | HUD buttons |
-
-Every real enemy attack is telegraphed: a windup pose, a "!" and a rising
-tone, then a white flash when its aim locks, which is your cue to step aside
-or roll. Slimes and mushrooms hop at you; beetles back off and then charge in
-a straight line, and a beetle that charges into a tree or wall is dazed and
-takes extra damage. Hits knock enemies (and you) back through physics, so
-nothing gets shoved through a wall.
+| Arrange your home | B, then arrows, R, E, X, Esc | Arrange button and tray |
+| Emotes (in a world) | G, then 1–5 | Speech button |
 
 Dialogue pauses movement and combat. Touch controls appear on coarse-pointer
 devices; the layout is responsive with safe-area insets for phones.
 
 ## Interface
 
-- **HUD:** area, current goal (tap to expand), health and mana with icons; a
-  desktop action bar shows the E action (it follows context: Slash / Talk /
-  Use) and the signature ability with its mana cost, cooldown sweep and a
-  shake when you can't afford it. Low health pulses the bar and adds a red
-  vignette.
-- **In the world:** a gold **!** floats over whoever moves the story on, a
-  **…** bubble over anyone with something new to say, and a keycap over the
-  current interaction target. Exits are labelled with their destination and
-  pulse with chevrons. Canopies and arches fade when anything walks beneath.
-- **Moments:** quest beats arrive as a ribbon banner, new areas get a title
-  card, lighting a lantern plays a short camera beat, defeat has a "You
-  stumble…" collapse and a wake-up card, and finishing the quest shows a
-  closing card with your play time and finds.
-- **Panels:** Journal (goal, quest-step checklist, notes newest first),
-  Character (portrait, vitals, stat tiles, ability cards, pack with item
-  names), and Menu (save codes, Habitica connection, sound, controls,
-  credits, start over). Panels trap focus; hard choices use in-game
-  confirms rather than browser popups.
-- **Sound:** small procedural Web Audio cues (no files, no network): UI
-  clicks, per-speaker dialogue blips, hits, casts, quest chimes, the lantern
-  sting. Toggle in the Menu; the choice is remembered on this device.
-- **Fonts:** Pixelify Sans (display) and Nunito (body), bundled locally via
-  Fontsource. `prefers-reduced-motion` turns off shakes, hit-stop and big
-  tweens.
+- **HUD:** area, current goal (tap to expand), health and mana, embers, the
+  calendar line, and small chips for "Offline", "Server trouble" or how many
+  others are here. A desktop action bar shows the E action, the signature
+  ability with its mana cost and cooldown, and the roll.
+- **In the world:** a gold **!** over whoever moves the story on, a **…**
+  bubble over anyone with something new to say, a keycap over the current
+  target, and labelled exits.
+- **Moments:** quest-beat ribbons, area title cards, the lantern camera beat,
+  the defeat collapse and wake card, and the closing card.
+- **Panels:** Journal (the road and your papers), Character (vitals, stats,
+  abilities, pack, materials), Menu (save codes for guests, your world and
+  invites, the Habitica connection, sound, controls), plus the Library, notice
+  board, Silas's yard, workshop and mailbox in the world. Panels trap focus;
+  hard choices use in-game confirms.
+- **Sound:** small procedural Web Audio cues (no files, no network). Toggle in
+  the Menu.
+- **Fonts:** Pixelify Sans and Nunito, bundled locally. `prefers-reduced-motion`
+  turns off shakes, hit-stop and big tweens.
 
-Dev builds expose read-only playtest hooks (`__fsPlayer`, `__fsEnemies`,
-`__fsSafety`, `__fsWorld`, `__fsDebug`) plus dev-only levers (`__fsDevHurt(n)`,
-`__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`) for checking the
-low-health, defeat and quest beats without a full playthrough.
+## Run it locally
+
+Requirements: Node 24+ (the unit tests run TypeScript directly) and, for the
+server, Go 1.26+.
+
+**Guest play only** (no server needed):
+
+```sh
+npm install
+npm run dev        # http://localhost:5173
+```
+
+**With a local world server**, in two terminals:
+
+```sh
+npm run server     # Go server on 127.0.0.1:8090, database in .data/, HTTP cookies
+npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
+```
+
+Point Vite at another server with `FINGERSNAP_API=http://127.0.0.1:PORT npm run dev`.
+Extra server flags go after `--`, for example
+`npm run server -- -listen 127.0.0.1:8091 -db /tmp/fs.sqlite`. With no
+server running, the dev proxy fails and the game plays as a guest.
+
+Server flags and environment variables (flags win; flags come before any
+subcommand):
+
+| Flag | Environment | Default |
+|---|---|---|
+| `-listen` | `FINGERSNAP_LISTEN` | `127.0.0.1:8090` |
+| `-db` | `FINGERSNAP_DB` | `.data/fingersnap.sqlite` |
+| `-habitica-url` | `FINGERSNAP_HABITICA_URL` | `https://habitica.com` |
+| `-x-client` | `FINGERSNAP_X_CLIENT` | the creator's public client id |
+| `-cookie-secure` | `FINGERSNAP_COOKIE_SECURE` | `true` (`npm run server` sets false for local HTTP) |
+| `-trusted-proxies` | `FINGERSNAP_TRUSTED_PROXIES` | `127.0.0.1,::1` |
+| `-login-concurrency` / `-login-rate` / `-login-global-rate` | — | `4` / `10` per IP per minute / `60` per minute |
+
+**Letting people in.** A world is invite-only, so before you can sign in
+locally, allowlist your Habitica User ID or make an invite code with the
+admin CLI (same binary, same database):
+
+```sh
+go run ./server/cmd/fingersnap-server allowlist add YOUR_HABITICA_USER_ID
+go run ./server/cmd/fingersnap-server allowlist list
+go run ./server/cmd/fingersnap-server invite            # prints a code for a new solo world
+go run ./server/cmd/fingersnap-server invite WORLD_ID   # a code that joins an existing world
+go run ./server/cmd/fingersnap-server invites           # hash-only records, one JSON line each
+go run ./server/cmd/fingersnap-server invite revoke HASH
+go run ./server/cmd/fingersnap-server allowlist remove HABITICA_USER_ID
+go run ./server/cmd/fingersnap-server flagged          # accounts flagged by a login check
+go run ./server/cmd/fingersnap-server notes            # rebirth and large-loss audit notes
+go run ./server/cmd/fingersnap-server flag clear HABITICA_USER_ID
+go run ./server/cmd/fingersnap-server backup /tmp/fingersnap-backup.sqlite
+```
+
+Add `-db PATH` before the subcommand to use another database. Deployment,
+Caddy routes, backups and restore: [docs/home-server.md](docs/home-server.md).
+
+## Tests
+
+```sh
+npm run typecheck   # tsc --noEmit
+npm run check       # svelte-check
+npm test            # unit tests: node --test tests/*.test.ts
+npm run build       # production bundle in dist/
+npm run verify      # all four of the above
+go vet ./... && go test ./...   # the server, shared content and parity vectors
+npm run test:e2e    # browser playtests (Playwright)
+npm run verify:all  # verify, then the playtests
+```
+
+First time running the playtests: `npx playwright install chromium`.
+
+The playtests start their own servers: Vite with the dev-only playtest levers,
+the real Go server with a throwaway database under `.e2e-server/`, and a fake
+habitica.com for its login check. Guest specs block `/api` in the browser, so
+they still play as if no server existed. Give each git worktree its own ports:
+
+```sh
+E2E_PORT=5203 E2E_API_PORT=18203 E2E_HABITICA_PORT=18303 npm run test:e2e
+E2E_PORT=5203 npx playwright test e2e/presence.spec.ts   # one spec
+```
+
+Defaults are 5199, 18203 and 18303. The config runs **one worker**: the
+playtests drive real-time movement, and two browsers on one busy machine drop
+enough frames to miss timed walks. On a heavily loaded machine an occasional
+90-second timeout can still happen; rerun with `npx playwright test --last-failed`.
+
+The playtests in `e2e/` cover the whole quest including settling the warden,
+combat and dodging, embers, onboarding and its layout, the Commons and
+homesteads, papers and the library, the Tangle, the calendar, notice board,
+workshop and mail, connected play (sign-in, invites, takeover, offline,
+logout), presence with two players, and touch. `*-screens.spec.ts` specs
+check layouts and, with `SCREENS=1`, save screenshots.
+
+Generated shared data (run after changing the inputs; the tests fail if it
+drifts):
+
+```sh
+npm run vectors            # economy/sync parity vectors (TypeScript → content/vectors)
+npm run vectors:wilds      # Wilds generator parity vectors
+npm run vectors:calendar   # calendar parity vectors
+npm run papers             # docs/lore/texts → src/content/papers-text.ts + content/papers.json
+```
 
 ## Architecture
 
 ```
-src/
-  game/           Phaser runtime (owned by the runtime agent)
-    main.ts        game bootstrap
-    events.ts      bus: meaningful state events game ↔ UI
-    session.ts     owns GameState; quest events; debounced saves
-    input.ts       shared touch vector + UI-blocking flags
-    textures.ts    procedural placeholder art (see below)
-    worlds.ts      deterministic code-native area builders + collisions
-    scenes/        BootScene, WorldScene
-  ui/             Svelte interface (HUD, dialogue, journal, character, touch)
-  lib/            shared quest state + IndexedDB saves
-  content/        dialogue, journal, locations, demo character
-  App.svelte      shell: title screen, HUD wiring, panels
+src/                 the browser game
+  game/              Phaser runtime: scenes, entities, areas, the Wilds, homes,
+                     the server link (link.ts) and presence (presence*.ts)
+  ui/                Svelte interface: HUD, panels, connect guide, gates
+  lib/               shared rules and clients: state, saves, embers, Habitica
+                     import, Wilds generator, calendar, API client (lib/api),
+                     presence protocol
+  content/           dialogue, places, papers, copy
+server/              Go server (one module at the repository root)
+  cmd/fingersnap-server   HTTP + WebSocket server and admin CLI
+  internal/          api, store (SQLite, migrations), rules, wilds, habitica
+content/             shared JSON the browser imports and the server embeds:
+                     economy, homesteads, wilds, calendar, mail, projects,
+                     papers, presence, invite words; vectors/ for parity tests
+e2e/                 Playwright playtests (+ the fake Habitica server)
+tests/               unit tests (node --test)
+deploy/nixos/        NixOS modules for the static site and the server
 ```
 
-`GameState` (versioned) is the single persisted truth: area, position, quest
-stage, HP/mana, inventory, discoveries, defeated enemies, play time.
+- **The browser owns the frame loop.** Movement, combat and animation stay in
+  Phaser; the Svelte UI and the game talk over a small event bus of meaningful
+  state changes only.
+- **Guests keep everything local.** `GameState` (versioned) is the persisted
+  truth in IndexedDB, with clipboard save codes and no credentials inside.
+- **In a world, the server owns what matters to others.** That means balances,
+  the XP mark, paid outcomes, materials, homes, the Wilds, mail, projects and
+  the library. The browser uploads its story-and-vitals progress document with
+  revisions and a single play lease, and spends go through the server. Writes
+  are idempotent and ledger-backed, and the server checks reported Habitica
+  profiles for plausibility.
+- **One copy of shared data.** `content/` is the single source for rules both
+  sides need. Logic that must agree exactly (sync and ember rules, the Wilds
+  generator, the calendar) has generated **parity vectors** that both the
+  TypeScript and Go test suites replay.
 
 ## Art
 
 In-game sprites start from original placeholder art generated at runtime in
-`src/game/textures.ts` (pixel-art strings → canvas). Delivered original
-generated art is integrated alongside and on top of it: a twelve-frame props
-atlas supplies world props (lantern post, shrine, bench, sign, crates,
-mushrooms…) with explicit collisions and deliberate small-world sizing; two
-flattened scene illustrations serve the title screen and journal — UI only,
-never walkable maps; the expansion pack provides terrain tiles, a 4-direction
-demo walk, enemy idle sets, and foreground occluders; and the runtime-art pass
-(delivered October 3, 2026) adds NPC **breathing animations**, the stone
-guardian's five discrete poses (idle/windup/lunge/hurt/defeat, wired into the
-combat state machine), and per-class effect animations (magic bolt, cleave,
-dash trail, healing pulse). A typed helper (`src/game/runtime-art.ts`) builds
-exact native-size canvas textures from the delivered sheets' measured
-rectangles at boot; procedural placeholders remain as the fallback layer.
+`src/game/textures.ts`, with delivered original generated art layered on top:
+a props atlas, terrain tiles, a 4-direction walk, enemy idle sets, foreground
+occluders, NPC breathing animations, the warden's poses and per-class effects,
+the Commons and the Tangle. `src/game/runtime-art.ts` builds native-size
+textures from the delivered sheets at boot; procedural placeholders remain the
+fallback.
 
-Imported characters render as layered avatars composed from official Habitica
-sprites — a small same-origin cached subset ships in
-`public/assets/habitica/` (WebGL-safe); layers that exist only upstream are
-skipped and honestly reported, never fetched cross-origin. Pets follow as
-separate sprites; mounts require their layers to be cached before riding is
-granted. Provenance, licenses, and attribution:
-[ASSETS.md](ASSETS.md), [docs/habitica-assets.md](docs/habitica-assets.md),
-and `assets/ASSETS_GUIDE.md`. Slot/dimension contract for future art:
-[docs/runtime-asset-spec.md](docs/runtime-asset-spec.md).
+Imported characters (and other players) render as layered avatars composed
+from official Habitica sprites; a small same-origin cached subset ships in
+`public/assets/habitica/` (WebGL-safe). Layers that exist only upstream are
+skipped and reported, never fetched cross-origin. Pets follow as separate
+sprites; mounts need their layers cached before riding is granted.
+Provenance, licenses and attribution: [ASSETS.md](ASSETS.md),
+[docs/habitica-assets.md](docs/habitica-assets.md) and
+`assets/ASSETS_GUIDE.md`.
 
-Import flow and Habitica runtime wiring:
-[docs/runtime-import-notes.md](docs/runtime-import-notes.md). Purchases,
-account writes, and checkpoint rewind remain out of scope.
+## Playtest hooks
 
-## Verification
-
-- `npm run verify` — typecheck + svelte-check + unit tests + production build.
-- `npm test` — Node's built-in test runner (`node --test tests/*.test.ts`)
-  covering shared quest state, save validation, and content contracts.
-  `tests/worlds.test.ts` checks every map's layout rules: the border is closed
-  except at exits, exits come back on the opposite edge beside the way home,
-  the journey runs village → woodland → ruin left to right, and every NPC,
-  enemy, exit and quest target is reachable from the spawn.
-- `npm run test:e2e` — Playwright playtests in `e2e/` (real keyboard and touch
-  input; warps and the dev strike skip long walks and fights):
-  - `quest.spec.ts`: the whole quest from a fresh start to the ending card,
-    exits round-tripping in the right direction, the hero staying inside every
-    map, and area title cards naming the current area.
-  - `embers.spec.ts`: welcome embers from a sample hero, a warm rest, a
-    greyed-out chest, and lighting a road lantern with quest embers.
-  - `combat.spec.ts`: slime windups and hops, a beetle charge that hurts if
-    you stand still and misses if you roll when it flashes, and knockback that
-    never leaves an enemy off the map.
-  - `touch.spec.ts`: the phone layout's controls fit without overlapping, and
-    the roll button works.
-- Manual smoke test: full quest playthrough, scene transitions, collisions,
-  dialogue pausing, resize/portrait layout, reload resume, save
-  export/import, defeat recovery. Results and screenshots:
-  [docs/playtest.md](docs/playtest.md).
+The page exposes read-only hooks for playtests: `__fsPlayer`, `__fsEnemies`,
+`__fsWarden`, `__fsWorld`, `__fsSafety`, `__fsDebug`, `__fsLink`, `__fsWilds`,
+`__fsPapers`, `__fsHomes`, `__fsVillage`, `__fsRemote` and `__fsPresence`.
+Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
+`__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`, `__fsDevDodge(dx, dy)`,
+`__fsDevShowRubbing(force)`, `__fsDevPlace(x, y)` and `__fsDevCalendar(unix)`.
 
 ## Known limitations
 
-- Demo art is placeholder; imported avatars render only from the small cached
-  official-art subset (uncached layers are skipped and reported).
-- Procedural sound effects only (no music), no gamepad, no installable/offline mode.
-- Saves are local to one browser; export codes are the manual backup path.
-- The generated art pack has no distribution license selected yet; the bundled
-  Habitica art subset and gear catalog are non-commercial/attribution-bound —
-  see `ASSETS.md` "Third-party use boundaries" (public redistribution blocked
-  until corresponding source is published).
-
-## Optional connected backend
-
-Guest play remains local. The phase-2 Go backend lives in `server/` with shared
-JSON in `content/`; run it locally with `npm run server` (Go 1.26+), alongside
-`npm run dev`. Server access is allowlist/invite-only. The server sees a
-Habitica token only during login and makes one read-only `GET /user` to prove
-account ownership (one retry on 429). It never stores, logs, or returns the
-token. Later sync fetches remain browser-to-Habitica. The backend owns
-connected balances, sync baselines and paid outcomes; frontend integration
-is a later phase. See [deployment and backups](docs/home-server.md).
+- The outer Wilds run on the server but aren't walkable in the client yet.
+  Garden and Hall home tiers, world moves and co-op combat are later work.
+- Imported avatars render only from the small cached official-art subset.
+- Procedural sound effects only (no music), no gamepad, no installable app.
+- Guest saves are local to one browser; save codes are the manual backup.
+- The generated art pack has no distribution license yet; the bundled
+  Habitica art and gear catalog are non-commercial and attribution-bound. See
+  `ASSETS.md` "Third-party use boundaries".

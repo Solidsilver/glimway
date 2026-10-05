@@ -1,5 +1,32 @@
 # Fingersnap demo playtest — October 2, 2026
 
+> **Update, October 4, 2026: the warden is now settled, not fought.** Since
+> the canon pass, the stone warden is something Hearthwick built, and it is
+> keeping its pose. The current encounter:
+>
+> 1. Taking the rubbing at the route stone (`find-clue`) wakes it: "Stone
+>    grinds on stone. The warden turns from its post…"
+> 2. It holds the path about 60 px from you, lunges from range (0.65 s blue
+>    telegraph, 3 damage) and sweeps its arms if you crowd it (0.55 s windup,
+>    2 damage). Past 170 px it walks home.
+> 3. Blows only clink. The first one says "Your blow rings off the stone. It
+>    isn't fighting you; it's keeping a pose. Show it the mark."
+> 4. After a lunge it stands open for 1.5 s. Step within reach and the prompt
+>    reads **Hold up the rubbing** (E / Space; **Show** on touch). It falters,
+>    and one of three amber pips lights.
+> 5. The third showing settles it: arms lowered, the heart-lamp a coal, no
+>    dissolve. The `defeat-guardian` event applies, the ribbon reads
+>    "Settled — The Warden Rests", and the paper "Eleven Days" is found. On
+>    later visits it rests on its post.
+>
+> Covered by `e2e/combat.spec.ts` ("the warden: blows never settle it,
+> holding up the rubbing does"), `e2e/touch.spec.ts` (the Show button),
+> `e2e/papers.spec.ts` (Eleven Days) and `e2e/quest.spec.ts` (full quest).
+> The table rows and tuning notes below that describe a fight to defeat are
+> the October 2 record. Two other details below are also out of date: the road
+> to Brackenwood is now the **east** gate, and the touch controls are a
+> joystick plus roll, ✦ and action buttons.
+
 Tester: game-runtime agent, via Playwright (Chromium) against the dev server.
 Movement, interaction, and combat were driven with **real keyboard events**
 (held arrow keys, E, Space, F) and real touch-button presses on the emulated
@@ -19,8 +46,8 @@ A single fresh run ("New journey") completed the entire quest:
 | West gate → Brackenwood Path (fade transition) | ✅ area toast, correct west entry |
 | Woodland wisps: melee + bolt combat | ✅ wisps deal damage; leash tune applied |
 | East exit → Ashwatch Ruin | ✅ |
-| Mural in alcove → clue dialogue → discovery | ✅ stage clue-found; warden spawns once (announce gated) |
-| Stone warden real-time fight | ✅ won with melee + telegraph-retreat at 18→34 HP; objective advanced |
+| Mural in alcove → clue dialogue → discovery | ✅ stage clue-found; warden spawns once (announce gated) — now "Take a rubbing of the marker" at the route stone |
+| Stone warden real-time fight | ✅ won with melee + telegraph-retreat at 18→34 HP; objective advanced — *historical: since Oct 4 the warden is settled by holding up the rubbing three times (see the update above)* |
 | Shrine lantern → light it | ✅ stage lantern-lit, additive glow over the shrine |
 | Return west through Brackenwood | ✅ |
 | Home → Mara's "the light is back" dialogue | ✅ fires return-village → stage complete |
@@ -71,6 +98,8 @@ Damage, position, and enemy defeats persisted across every reload.
 - Wisp: contact 2→1, aggro radius 120→90, chase 52→40, HP 12→10.
 - Warden: HP 60→44, contact 3→2, lunge 4→3, lunge speed 300→250, telegraph
   0.55s→0.65s, cooldown 2.6s→3.2s. Player attack 6→8, iframes 0.9s→1.1s.
+  (Since Oct 4 its HP no longer matters, since blows only clink; the lunge,
+  telegraph and cooldown values still apply, and bump contact is now 1.)
 - Village rest regen ~1.2 HP/s (full recovery observed during the return walk).
 
 ## Known quirks (non-blocking)

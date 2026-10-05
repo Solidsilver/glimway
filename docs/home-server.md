@@ -9,6 +9,55 @@ The NixOS module in `deploy/nixos/fingersnap.nix` is installed at
 `127.0.0.1:4173`. The main Caddy config at `/etc/nixos/services/caddy.nix`
 maps `fsnap.example.invalid` to this listener and handles HTTPS.
 
+## Deploy checklist
+
+Owner steps, in order. Nothing here has been run on the server by an agent;
+each step points to the detail further down.
+
+1. **Copy the source** to `~/code/fingersnap` with the `rsync` command in
+   "Update the app" (it skips `node_modules`, `dist`, `.env*` secrets and test
+   output).
+2. **Build the static site** on the server with Node from the pinned nixpkgs
+   (`npm ci && npm run verify`, also under "Update the app"). The static
+   service serves `dist/` directly, so a rebuild needs no OS switch.
+3. **Enable the Go server** in `/etc/nixos`. Import both
+   `deploy/nixos/fingersnap.nix` (static site, Caddy file server on
+   `127.0.0.1:4173`) and `deploy/nixos/fingersnap-server.nix`, then set
+   `services.fingersnap-server.enable = true;`. The package builds from the
+   repository root, so `content/` is embedded, and needs Go 1.26+. Options and
+   defaults:
+
+   | Option | Default | Notes |
+   |---|---|---|
+   | `package` | built from this repository | Swap in a package if the pinned nixpkgs' Go is too old |
+   | `listen` | `127.0.0.1:8090` | Localhost only; Caddy fronts it |
+   | `database` | `/var/lib/fingersnap-server/fingersnap.sqlite` | WAL mode; state dir mode 0700 |
+   | `habiticaUrl` | `https://habitica.com` | Used only for the login identity check |
+   | `xClient` | the creator's public client id | Habitica `X-Client` header |
+   | `trustedProxies` | `[ "127.0.0.1" "::1" ]` | Peers allowed to supply `X-Forwarded-For`; empty trusts none |
+   | `backupRetentionDays` | `30` | Nightly `VACUUM INTO` at 03:15 (±10 min) |
+
+   The service runs as the `fingersnap-server` system user with Secure
+   cookies, needs no token file or credential environment variable, and
+   applies its embedded database migrations on start. Login rate flags
+   (`-login-concurrency`, `-login-rate`, `-login-global-rate`) keep their
+   built-in defaults unless you add them to `ExecStart`.
+4. **Route `/api/*` and `/ws` to the server in Caddy**, before the static
+   handler (see the `caddyfile` block under "Go backend (phase 2)"). Use
+   `handle`, not `handle_path`, and keep the browser's Host header (Caddy's
+   default). WebSocket upgrades need no extra configuration.
+5. **Build and switch NixOS** (`nh os build …`, then `nh os switch …`, under
+   "Build and activate NixOS"), and check `systemctl status fingersnap-server`
+   and `curl -s https://fsnap.example.invalid/api/calendar` (a public JSON
+   endpoint).
+6. **Let people in** with the admin CLI (under "Go backend (phase 2)"). Run it
+   as the service user against the live database: add yourself with
+   `allowlist add`, then hand out `invite` codes (readable six-word codes,
+   single use, 30 days). Members can then invite friends from the in-game Menu.
+7. **Backups** run nightly from the module. Take a manual `backup` before any
+   upgrade that adds migrations, and follow the restore procedure below if
+   you need it.
+
 ## Update the app
 
 From the local repo, copy source without credentials or machine-specific files:
