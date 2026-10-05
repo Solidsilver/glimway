@@ -220,7 +220,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.keyboard.press('e')
   await expect(page.locator('.toast', { hasText: 'Found: A Page from Pip’s Copybook' })).toBeVisible()
 
-  await warp(page, 'village', 3, 18)
+  await warp(page, 'village', 4, 18)
   await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
   await page.keyboard.press('e')
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
@@ -245,7 +245,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
   await waitForArea(page, 'village')
-  await warp(page, 'village', 3, 18)
+  await warp(page, 'village', 4, 18)
   await page.keyboard.press('e')
   await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
 })

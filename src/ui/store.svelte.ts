@@ -53,6 +53,8 @@ class UiStore {
   cinematic = $state(false)
   /** Speaker -> portrait data URL. */
   portraits = $state<Record<string, string>>({})
+  /** Delivered UI icons by frame key (`icon-timber`, …): src/ui/ArtIcon.svelte. */
+  artIcons = $state<Record<string, string>>({})
   /** Signature ability readiness for the HUD slot / touch button. */
   ability = $state<{ readyAt: number; cooldown: number; deniedAt: number }>({ readyAt: 0, cooldown: 1, deniedAt: 0 })
   /** Dodge roll cooldown for the HUD slot / touch button. */

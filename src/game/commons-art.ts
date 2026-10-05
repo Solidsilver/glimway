@@ -3,14 +3,17 @@
  * style (src/game/textures.ts): 1 px dark outlines, warm palette, crisp
  * nearest-neighbour. Nothing here is a third-party asset.
  *
- * Placeholders that want real art (see .agent/REPORT.md "Art requests"):
- * Silas, the cottage, the decorations, and the cottage interior.
+ * These are the fallback layer now: the Commons pass (./commons-pass.ts,
+ * ./commons-pass-install.ts) copies its delivered frames onto these keys at
+ * boot, and hedge/fence runs compose its modular pieces when they loaded.
  *
  * Textures are generated once at boot (BootScene) except the hedge and fence
  * runs, which are made on demand for their length (`ensureSceneryTexture`).
  * If a texture with the same key was loaded from a file first, it wins.
  */
 import type Phaser from 'phaser'
+import { blitFrame, commonsFrame } from './commons-pass.ts'
+import { ROOM_HEARTH } from './cottage.ts'
 
 type C = CanvasRenderingContext2D
 
@@ -162,7 +165,12 @@ function drawFenceV(c: C, h: number): void {
   }
 }
 
-const RUN = /^(hedge|fence)-(h|v)-(\d+)$/
+/**
+ * Run keys: `hedge-h-<n>`, `hedge-v-<n>`, `fence-h-<n>`, `fence-v-<n>`. A
+ * back hedge that turns down the plot's outer side says which end turns:
+ * `-turnw` (its west end) or `-turne` (its east end).
+ */
+const RUN = /^(hedge|fence)-(h|v)-(\d+)(?:-(turnw|turne))?$/
 
 /** Hedge and fence runs are drawn for their length the first time they're used. */
 export function ensureSceneryTexture(scene: Phaser.Scene, key: string): boolean {
@@ -170,11 +178,87 @@ export function ensureSceneryTexture(scene: Phaser.Scene, key: string): boolean 
   const m = RUN.exec(key)
   if (!m) return false
   const n = Math.max(1, Math.min(64, Number(m[3])))
-  if (m[1] === 'hedge') {
-    if (m[2] === 'h') makeTexture(scene, key, n * 16, 22, (c) => drawHedge(c, n * 16, 22, false))
+  const kind = m[1] as 'hedge' | 'fence'
+  const dir = m[2] as 'h' | 'v'
+  if (deliveredRun(scene, key, kind, dir, n, m[4] as 'turnw' | 'turne' | undefined)) return true
+  if (kind === 'hedge') {
+    if (dir === 'h') makeTexture(scene, key, n * 16, 22, (c) => drawHedge(c, n * 16, 22, false))
     else makeTexture(scene, key, 16, n * 16 + 6, (c) => drawHedge(c, 16, n * 16 + 6, true))
-  } else if (m[2] === 'h') makeTexture(scene, key, n * 16, 16, (c) => drawFenceH(c, n * 16))
+  } else if (dir === 'h') makeTexture(scene, key, n * 16, 16, (c) => drawFenceH(c, n * 16))
   else makeTexture(scene, key, 16, n * 16, (c) => drawFenceV(c, n * 16))
+  return true
+}
+
+/**
+ * A run from the delivered modular pieces (commons pass), at the same size
+ * and anchor as the code-drawn run. Horizontal runs set one piece a tile
+ * (corner or end caps at the ends), with the outline each piece carries at
+ * a join painted over from its own interior so the run reads as one hedge,
+ * or one rail with a post a tile. Vertical runs repeat the middle of the
+ * upright piece between its top and its foot (the delivered upright fence
+ * piece is a stacked spool, so the fence uses the corner piece's post).
+ * False when the pieces didn't load.
+ */
+function deliveredRun(scene: Phaser.Scene, key: string, kind: 'hedge' | 'fence', dir: 'h' | 'v', n: number, turn?: 'turnw' | 'turne'): boolean {
+  const piece = (name: string) => commonsFrame(`${kind}-${name}`)
+  // Hedges keep the code-drawn run's 6 px of crown above the top tile.
+  const lift = kind === 'hedge' ? 6 : 0
+  if (dir === 'v') {
+    const upright = piece(kind === 'hedge' ? 'straight-v' : 'corner')
+    if (!upright || !scene.textures.exists(`commons-art:${upright.key}`)) return false
+    const src = scene.textures.get(`commons-art:${upright.key}`).getSourceImage() as HTMLCanvasElement
+    const h = n * 16
+    makeTexture(scene, key, 16, h + lift, (c) => {
+      if (kind === 'fence') {
+        // The corner piece's post (its left 4 px), one a tile, on the old line.
+        for (let i = 0; i < n; i++) c.drawImage(src, 0, 0, 4, 16, 6, i * 16, 4, 16)
+        return
+      }
+      // Hedge: the piece's crown, its leafy middle repeated, then its foot.
+      c.drawImage(src, 0, 0, 16, 4, 0, lift, 16, 4)
+      for (let y = 4; y < h - 4; y += 8) {
+        const rows = Math.min(8, h - 4 - y)
+        c.drawImage(src, 0, 4, 16, rows, 0, lift + y, 16, rows)
+      }
+      c.drawImage(src, 0, 12, 16, 4, 0, lift + h - 4, 16, 4)
+    })
+    return true
+  }
+  const pieces: { name: string; flip?: boolean }[] = []
+  for (let i = 0; i < n; i++) {
+    if (kind === 'fence') pieces.push(i === 0 && n > 1 ? { name: 'corner' } : i === n - 1 && n > 1 ? { name: 'corner', flip: true } : { name: 'straight-h' })
+    else if (n === 1) pieces.push({ name: 'straight-h' })
+    else if (i === 0) pieces.push({ name: turn === 'turnw' ? 'corner-se' : 'end-w' })
+    else if (i === n - 1) pieces.push({ name: turn === 'turne' ? 'corner-sw' : 'end-e' })
+    else pieces.push({ name: 'straight-h' })
+  }
+  if (!pieces.every((p) => piece(p.name))) return false
+  const w = n * 16
+  const h = 16 + lift
+  makeTexture(scene, key, w, h, (c) => {
+    pieces.forEach((p, i) => {
+      const f = piece(p.name)!
+      const d = f.destinationRect
+      blitFrame(scene, f, c, { x: i * 16 + d.x, y: lift + d.y, w: d.w, h: d.h }, p.flip)
+    })
+    const img = c.getImageData(0, 0, w, h)
+    const px = img.data
+    const copy = (fx: number, tx: number, y: number) => {
+      const a = (y * w + fx) * 4
+      const b = (y * w + tx) * 4
+      for (let k = 0; k < 4; k++) px[b + k] = px[a + k]
+    }
+    for (let j = 1; j < n; j++) {
+      const at = j * 16
+      for (let y = lift; y < h; y++) {
+        if (kind === 'hedge') {
+          copy(at - 2, at - 1, y)
+          copy(at + 1, at, y)
+        } else for (let x = at; x < at + 3; x++) copy(at + 3, x, y)
+      }
+    }
+    c.putImageData(img, 0, 0)
+  })
   return true
 }
 
@@ -967,13 +1051,14 @@ function drawRoomWalls(c: C): void {
   rect(c, 28, 22, 24, 1, OAK.dk)
   box(c, 24, 33, 32, 4, OAK.md)
   box(c, 46, 29, 5, 5, '#8fb8d8')
-  // Shelf (right) with crocks and a folded blanket.
-  box(c, 162, 20, 34, 4, OAK.md)
-  box(c, 166, 12, 7, 8, '#c4a074')
-  box(c, 176, 14, 6, 6, '#8c3f3a')
-  box(c, 185, 11, 8, 9, '#6b8a3a')
-  // The hearth: quarried stone, never drift-stone.
-  const hx = 88
+  // Shelf (middle) with crocks and a folded blanket.
+  box(c, 98, 20, 34, 4, OAK.md)
+  box(c, 102, 12, 7, 8, '#c4a074')
+  box(c, 112, 14, 6, 6, '#8c3f3a')
+  box(c, 121, 11, 8, 9, '#6b8a3a')
+  // The hearth (right, where the delivered wall has it): quarried stone,
+  // never drift-stone.
+  const hx = ROOM_HEARTH.x - 16
   box(c, hx, 2, 48, 46, STONE.md)
   for (let y = 4; y < 46; y += 6) for (let x = hx + 1 + ((y / 6) % 2) * 4; x < hx + 47; x += 9) rect(c, x, y, 1, 5, STONE.dk)
   for (let y = 9; y < 46; y += 6) rect(c, hx + 1, y, 46, 1, STONE.dk)

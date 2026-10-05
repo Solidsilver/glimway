@@ -170,7 +170,7 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   expect(g.state).toBe('settled')
   expect(g.visible).toBe(true)
   await page.waitForTimeout(800)
-  expect((await warden(page)).texture).toBe('guardian-defeat')
+  expect((await warden(page)).texture).toBe('commons-art:guardian-settled')
   expect(await enemies(page)).toHaveLength(0)
 
   // Come back later: it is on its post, at rest.
@@ -179,5 +179,5 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   g = await warden(page)
   expect(g.state).toBe('settled')
   expect(g.visible).toBe(true)
-  expect(g.texture).toBe('guardian-defeat')
+  expect(g.texture).toBe('commons-art:guardian-settled')
 })

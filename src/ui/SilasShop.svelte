@@ -8,6 +8,7 @@
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
   import { home } from './home.svelte'
   import { workshopShort } from '../game/entities/homesteads'
   import { costPhrase } from '../lib/village'
@@ -103,7 +104,7 @@
       <p class="balance" aria-live="polite">
         <span><Icon name="ember" size={14} /> {ui.stats.embers} embers</span>
         {#each MATERIALS as m (m.id)}
-          {#if (view.materials[m.id] ?? 0) > 0}<span>{view.materials[m.id]} {m.name.toLowerCase()}</span>{/if}
+          {#if (view.materials[m.id] ?? 0) > 0}<span><ArtIcon art={`icon-${m.id}`} size={16} /> {view.materials[m.id]} {m.name.toLowerCase()}</span>{/if}
         {/each}
       </p>
       {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
@@ -178,8 +179,8 @@
     font-size: 14px;
   }
   .portrait {
-    width: 42px;
-    height: 42px;
+    width: 64px;
+    height: 64px;
     image-rendering: pixelated;
     border: 2px solid var(--wood);
     border-radius: 8px;

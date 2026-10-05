@@ -1,12 +1,12 @@
 <script lang="ts">
   import { ui } from './store.svelte'
-  import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 </script>
 
 <div class="toasts" aria-live="polite">
   {#each ui.toasts as toast (toast.id)}
     <div class="toast {toast.kind}">
-      <span class="ico"><Icon name={toast.kind === 'error' ? 'close' : (toast.icon ?? 'sparkle')} size={14} /></span>
+      <span class="ico"><ArtIcon art={toast.kind === 'error' ? null : toast.art} name={toast.kind === 'error' ? 'close' : (toast.icon ?? 'sparkle')} size={14} /></span>
       <span>{toast.text}</span>
     </div>
   {/each}

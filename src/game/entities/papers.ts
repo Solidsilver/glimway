@@ -12,6 +12,7 @@ import { beatsDue, handoverFor, LOOK_LABEL, paperById, placedPapersIn, type Pick
 import { bus, EV, type DialogueClosedPayload, type QuestPayload } from '../events'
 import type { Session } from '../session'
 import { TILE } from '../textures'
+import { commonsAnim } from '../commons-pass'
 import type { InteractId, WorldData } from '../worlds'
 import type { Effects } from './fx'
 import { emitPapers, grantPaper, PAPER_EV } from '../papers'
@@ -33,7 +34,7 @@ export interface PaperInteraction {
 
 interface Pickup {
   paperId: string
-  image: Phaser.GameObjects.Image
+  image: Phaser.GameObjects.Sprite
   twinkle: Phaser.GameObjects.Image
   timer: Phaser.Time.TimerEvent | null
 }
@@ -170,7 +171,14 @@ export class PaperPickups {
     this.build()
     if (deps.world.library) {
       const d = deps.world.library
-      scene.add.image(d.tx * TILE + 8, d.ty * TILE - 1, 'library-sign').setOrigin(0.5, 1).setDepth(d.ty * TILE + TILE + 1)
+      if (scene.textures.exists('commons-art:hearthwick-library')) {
+        // The delivered building carries its open book over the door: the
+        // hanging sign stands out front, beside the step.
+        const y = (d.ty + 1) * TILE + 9
+        scene.add.image(d.tx * TILE + 8 + 22, y, 'library-sign').setOrigin(0.5, 1).setDepth(y)
+      } else {
+        scene.add.image(d.tx * TILE + 8, d.ty * TILE - 1, 'library-sign').setOrigin(0.5, 1).setDepth(d.ty * TILE + TILE + 1)
+      }
     }
     bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     bus.on(EV.quest, this.onQuest, this)
@@ -231,7 +239,10 @@ export class PaperPickups {
     for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) {
       const x = p.source.tx * TILE + 8
       const y = p.source.ty * TILE + TILE - 3
-      const image = this.scene.add.image(x, y, LOOK_TEXTURE[p.source.look]).setOrigin(0.5, 1).setDepth(y - 6)
+      const image = this.scene.add.sprite(x, y, LOOK_TEXTURE[p.source.look]).setOrigin(0.5, 1).setDepth(y - 6)
+      // The delivered pickups glint on their own (Commons pass), out of step.
+      const glinting = commonsAnim(this.scene, `${LOOK_TEXTURE[p.source.look]}-animation`)
+      if (glinting && !reducedMotion) image.play({ key: glinting, startFrame: Math.floor(Math.random() * 3) })
       const twinkle = this.scene.add.image(x + 3, y - 8, 'spark').setDepth(y + 1).setBlendMode(1 /* ADD */)
       let timer: Phaser.Time.TimerEvent | null = null
       if (reducedMotion) {

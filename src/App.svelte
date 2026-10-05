@@ -214,6 +214,9 @@
     const onPortraits = (p: PortraitsPayload) => {
       ui.portraits = { ...ui.portraits, ...p }
     }
+    const onArtIcons = (p: Record<string, string>) => {
+      ui.artIcons = { ...ui.artIcons, ...p }
+    }
     const onDiscovery = (p: DiscoveryPayload) => {
       sfx('discover')
       ui.toast({ text: `New in your journal: ${discoveryInfo(p.id).name}`, icon: 'scroll' })
@@ -268,6 +271,7 @@
       [EV.rolled, onRolled],
       [EV.cinematic, onCinematic],
       [EV.portraits, onPortraits],
+      [EV.artIcons, onArtIcons],
       [EV.discovery, onDiscovery],
       [EV.link, onLink],
       [EV.presence, onPresence],

@@ -46,6 +46,7 @@ import { grantPaper } from '../papers'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
+import { commonsAnim, commonsArt } from '../commons-pass'
 import { TILE } from '../textures'
 import type { Session } from '../session'
 import type { Effects } from '../entities/fx'
@@ -212,6 +213,10 @@ const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
   'abandoned-cart': { tex: 'wilds-cart', h: 14 },
   'mossy-arch': { tex: 'fingersnap-foreground', frame: 'stone-arch', h: 30 },
 }
+
+/** The delivered icon for a loot toast: the find, else the first material. */
+const lootArt = (drop: { materials: { id: string }[]; trinket: string | null }): string | undefined =>
+  drop.trinket ? `icon-${drop.trinket}` : drop.materials[0] ? `icon-${drop.materials[0].id}` : undefined
 
 const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? id
 const materialOf = (id: string) => MATERIALS.find((m) => m.id === id)
@@ -427,7 +432,7 @@ export class WildsEntities {
     const text = own ? FALLEN_HERO_LANTERNS.yourOwnLantern : FALLEN_HERO_LANTERNS.relitByFriend
     bus.emit(EV.toast, { text, icon: 'lantern' })
     if (res.result.rewarded && lootText(res.result.loot)) {
-      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle' })
+      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle', art: lootArt(res.result.loot) })
     }
   }
 
@@ -441,7 +446,7 @@ export class WildsEntities {
     else if (entity.kind === 'chest') text = loot ? `${pick(CHEST_OPEN_FLAVOR, entity.id)} ${loot}.` : pick(CHEST_OPEN_FLAVOR, entity.id) + '.'
     else if (entity.kind === 'node') text = `Harvested: ${loot}.`
     else text = loot ? `The Wilds give back: ${loot}.` : ''
-    if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle' })
+    if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop) })
 
     // Found texts ride their personal claim (see ./placements.ts).
     const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
@@ -549,14 +554,41 @@ export class WildsEntities {
       img.setOrigin(0.5, 1).setScale(h / f.height).setDepth(at.y + dy - 2)
       images.push(img)
     }
+    /** A delivered Commons-pass frame at its native size; null when it didn't load. */
+    const native = (frame: string, dy = 0, dx = 0): Phaser.GameObjects.Image | null => {
+      const key = commonsArt(scene, frame)
+      if (!key) return null
+      const img = scene.add.image(at.x + dx, at.y + dy, key).setOrigin(0.5, 1).setDepth(at.y + dy - 2)
+      images.push(img)
+      return img
+    }
     const depleted = (e.kind === 'camp' || e.kind === 'node') && !entityAvailable(e, nowSec)
+    // Delivered art that already shows its spent state isn't faded as well.
+    let showsSpent = false
     if (e.kind === 'camp') {
-      // The fire sits beside the pack (the cot), not behind it.
-      add('wilds-campfire', undefined, 12, 0, -13)
-      add('fingersnap-props', 'expedition-backpack', 18, -2)
+      if (commonsArt(scene, 'wilds-tent') && commonsArt(scene, 'wilds-fire-ring') && commonsArt(scene, 'wilds-pack')) {
+        // A small tent behind, the fire ring beside the scattered pack.
+        native('wilds-tent', -6, 2)
+        native('wilds-fire-ring', 0, -14)
+        native('wilds-pack', 1, 13)
+        // Someone's camp: a small flame in the ring until it's cleared.
+        const flicker = commonsAnim(scene, 'camp-flame-animation')
+        if (!depleted && flicker) {
+          const flame = scene.add.sprite(at.x - 14, at.y - 3, 'commons-art:camp-flame-0').setOrigin(0.5, 1).setDepth(at.y - 1)
+          if (!this.deps.reducedMotion) flame.play({ key: flicker, startFrame: Math.floor(Math.random() * 3) })
+          images.push(flame)
+        }
+      } else {
+        // The fire sits beside the pack (the cot), not behind it.
+        add('wilds-campfire', undefined, 12, 0, -13)
+        add('fingersnap-props', 'expedition-backpack', 18, -2)
+      }
     } else if (e.kind === 'node') {
-      const frame = NODE_FRAME[e.material] ?? NODE_FRAME.fiber
-      add(frame.tex, frame.frame, frame.h)
+      if (native(`resource-${e.material}-${depleted ? 'depleted' : 'available'}`)) showsSpent = true
+      else {
+        const frame = NODE_FRAME[e.material] ?? NODE_FRAME.fiber
+        add(frame.tex, frame.frame, frame.h)
+      }
     } else if (e.kind === 'chest') {
       add('fingersnap-props', 'treasure-chest', 16)
     } else {
@@ -565,9 +597,10 @@ export class WildsEntities {
     }
     // Depleted and already-claimed things read as spent.
     const spent = depleted || ((e.kind === 'chest' || e.kind === 'poi') && isClaimed(e.id))
-    if (spent) for (const img of images) img.setAlpha(0.45)
-    // A small glint over anything claimable, so attention finds it.
-    else if (e.kind !== 'camp') {
+    if (spent) {
+      if (!showsSpent) for (const img of images) img.setAlpha(0.45)
+    } else if (e.kind !== 'camp') {
+      // A small glint over anything claimable, so attention finds it.
       const glint = scene.add.image(at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1)
       if (this.deps.reducedMotion) glint.setAlpha(0.7)
       else scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -579,18 +612,22 @@ export class WildsEntities {
   private renderLantern(l: WildsLanternView): Phaser.GameObjects.Image[] {
     const scene = this.scene
     const at = this.lanternPx(l)
-    const post = scene.add.image(at.x, at.y, 'fingersnap-props', 'lantern-post')
-      .setOrigin(0.5, 1)
-      .setScale(28 / scene.textures.get('fingersnap-props').get('lantern-post')!.height)
-      .setDepth(at.y)
+    // A fallen hero's lantern (Commons pass), lit or dark; else a road post.
+    const delivered = commonsArt(scene, `fallen-hero-lantern-${l.litBy ? 'lit' : 'unlit'}`)
+    const post = delivered
+      ? scene.add.image(at.x, at.y, delivered).setOrigin(0.5, 1).setDepth(at.y)
+      : scene.add.image(at.x, at.y, 'fingersnap-props', 'lantern-post')
+        .setOrigin(0.5, 1)
+        .setScale(28 / scene.textures.get('fingersnap-props').get('lantern-post')!.height)
+        .setDepth(at.y)
     const images = [post]
     if (l.litBy) {
-      const glow = scene.add.image(at.x, at.y - 18, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.5).setAlpha(0.75).setDepth(at.y + 2)
+      const glow = scene.add.image(at.x, at.y - (delivered ? 10 : 18), 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.5).setAlpha(0.75).setDepth(at.y + 2)
       if (!this.deps.reducedMotion) {
         scene.tweens.add({ targets: glow, alpha: { from: 0.65, to: 0.4 }, scale: { from: 0.48, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
       }
       images.push(glow)
-    } else {
+    } else if (!delivered) {
       post.setAlpha(0.8)
     }
     return images

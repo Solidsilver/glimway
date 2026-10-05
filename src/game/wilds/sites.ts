@@ -24,6 +24,7 @@ import { uiState } from '../input'
 import { grantPaper } from '../papers'
 import { sfx } from '../sfx'
 import { TILE } from '../textures'
+import { commonsArt } from '../commons-pass'
 import type { Session } from '../session'
 import type { Effects } from '../entities/fx'
 import type { PromptAction } from '../entities/interactables'
@@ -283,13 +284,29 @@ export class WildsSites {
     const at = this.sitePx(s)
     const settled = def ? echoSettled(this.deps.session.state.flags, def.member) : true
     const parts: Phaser.GameObjects.Image[] = []
+    /** The delivered faint prop is pale already: it wavers less. */
+    let faint: Phaser.GameObjects.Image | null = null
     const fire = this.img('wilds-campfire', at.x - 12, at.y)
     fire.setScale(12 / fire.height)
     parts.push(fire)
-    if (def) parts.push(this.img(PROP_ART[def.prop], at.x + 4, at.y + 1))
-    // The owed lamp: a road lantern post, dark until it is lit.
+    if (def) {
+      // The delivered prop (Commons pass): the faint replay until it's
+      // settled, then the thing itself. Never flipped: Hollis's fox keeps
+      // its long ear on the viewer's right.
+      const prop = commonsArt(this.scene, `echo-${def.member}-${settled ? 'solid' : 'faint'}`)
+      if (prop && !settled) faint = this.img(prop, at.x + 6, at.y + 2)
+      else parts.push(prop ? this.img(prop, at.x + 6, at.y + 2) : this.img(PROP_ART[def.prop], at.x + 4, at.y + 1))
+    }
+    // The owed lamp: a fallen hero's lantern, dark until it is lit.
     const props = this.scene.textures.get('fingersnap-props')
-    if (props.has('lantern-post')) {
+    const lamp = commonsArt(this.scene, `fallen-hero-lantern-${settled ? 'lit' : 'unlit'}`)
+    if (lamp) {
+      this.img(lamp, at.x + 18, at.y - 4)
+      if (settled) {
+        const glow = this.add(this.scene.add.image(at.x + 18, at.y - 14, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.45).setAlpha(0.75).setDepth(at.y + 2))
+        if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glow, alpha: { from: 0.7, to: 0.45 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+    } else if (props.has('lantern-post')) {
       const post = this.img('fingersnap-props', at.x + 16, at.y - 2, 'lantern-post')
       post.setScale(24 / props.get('lantern-post')!.height)
       if (!settled) post.setTint(0x5e5a70)
@@ -306,15 +323,21 @@ export class WildsSites {
     const haze = this.add(this.scene.add.image(at.x, at.y - 6, 'glow').setBlendMode(1).setTint(0xa8c4ff).setScale(1.1).setAlpha(0.32).setDepth(at.y - 4))
     if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: haze, alpha: { from: 0.34, to: 0.16 }, scale: { from: 1.05, to: 1.2 }, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     for (const p of parts) p.setTint(PHANTOM)
-    if (this.deps.reducedMotion) for (const p of parts) p.setAlpha(0.6)
-    else this.scene.tweens.add({ targets: parts, alpha: { from: 0.72, to: 0.32 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    faint?.setTint(PHANTOM)
+    if (this.deps.reducedMotion) {
+      for (const p of parts) p.setAlpha(0.6)
+      faint?.setAlpha(0.85)
+    } else {
+      this.scene.tweens.add({ targets: parts, alpha: { from: 0.72, to: 0.32 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      if (faint) this.scene.tweens.add({ targets: faint, alpha: { from: 1, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    }
     const glint = this.add(this.scene.add.image(at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1).setTint(PHANTOM))
     if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.3 }, duration: 1100, yoyo: true, repeat: -1 })
   }
 
   private renderLook(s: StorySite, c: StoryContext): void {
     const at = this.sitePx(s)
-    const art = LOOK_ART[s.kind]
+    const art = s.kind === 'cairn' ? commonsArt(this.scene, 'cairn-white-stones') ?? LOOK_ART.cairn : LOOK_ART[s.kind]
     if (art) this.img(art, at.x, at.y)
     const find = siteFind(s.kind, c)
     if (!find) return

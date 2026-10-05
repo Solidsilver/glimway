@@ -1,5 +1,9 @@
 # Art requests for the expansion
 
+> **Delivered 2026-10-05** as the Commons pass (`assets/generated/commons-pass/`)
+> and wired into the game; see `docs/runtime-asset-spec.md` ("Commons pass")
+> for what replaced which placeholder and what was loaded but not placed.
+
 Everything listed here currently ships as **code-drawn placeholder art** (pixel
 art painted in TypeScript), mostly in `src/game/commons-art.ts`,
 `src/game/wilds/wilds-looks.ts`, `src/game/area/foreground.ts` and

@@ -105,6 +105,87 @@ wiring in `BootScene`/`WorldScene`. Manifest contract is validated by
   is a `flipX` away (sheets are authored facing right/down as noted in the
   pack README).
 
+## Commons pass (delivered October 5, 2026)
+
+`assets/generated/commons-pass/` (archive of record: sheets, atlases,
+prompts, drafts, preview, validation) → runtime copy in
+`public/assets/fingersnap/commons-pass/` holding **only what the game
+loads**: the 21 source sheets and `manifest.json` (~25 MB). The pack answers
+`docs/art-requests.md` and replaces the code-drawn placeholders, which stay
+the fallback layer. Typed helpers: `src/game/commons-pass.ts` (loader, port
+of the pack's `integration.js`) and `src/game/commons-pass-install.ts` (the
+boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
+
+- **Native textures** — `createCommonsPass(scene)` builds one canvas per
+  manifest frame (173) at its native size under `commons-art:<frame>`,
+  measured `sourceRect` → `destinationRect`, nearest-neighbour, origins as
+  the manifest gives them (standing art `(0.5, 1)`, icons `(0.5, 0.5)`, the
+  floor tile `(0, 0)`), and the 11 looping animations as
+  `commons-art:<animation>` (`silas/elara/finn/hazel/ada-breathing`,
+  `hearth-fire-animation`, `camp-flame-animation`, `campsite-animation`,
+  `paper-folded/scroll/slate-animation`). A frame whose sheet failed to load
+  is skipped, so is an animation missing a frame. Ask for them with
+  `commonsArt(scene, frame)` / `commonsAnim(scene, animation)` (null when
+  absent) and fall back to the placeholder.
+- **Boot order** (`BootScene.create`): placeholders (`generateTextures`,
+  `generateCommonsArt`, `generateDecorationArt`) → `createCommonsPass` →
+  `installCommonsPass(scene, HOMESTEAD_DATA.items)` → the `silas-breathing`
+  fallback animation → the runtime pass. The swap copies delivered frames
+  onto the placeholder keys the scenes use (`silas`, `cottage*`, `camp-*`,
+  `room-fire-*`, `workshop-*`, `mailbox-flag`, `gatepost`, `gate-leaf`,
+  `hame`, `commons-well`, `notice-board`, yard props, `stall-*`,
+  `well-canopy`, `mended-bridge`, `candle-hull`, `library-sign`,
+  `paper-*`) and builds composites: `bunting-64/96` (the swag repeated),
+  `room-walls` (plank floor with the 2×2 flip pattern under the grid and
+  doorway, code-drawn side/near walls, delivered back wall on top),
+  `deco-<id>` / `deco-<id>-q` (delivered furniture; the 2×1 bookshelf, hearth
+  and tool rack refitted to their footprint width, rising above it like the
+  placeholders), `plot-sign(-reserved)` (board widened to the placeholder's
+  40 px so the 5-px name fits), and `mailbox` (the flag taken down).
+  Hedge/fence runs (`ensureSceneryTexture`) compose the modular pieces:
+  horizontal runs one piece a tile with joins painted over, a back hedge's
+  outer end turning down the plot side (`hedge-h-<n>-turnw|turne`); vertical
+  hedges repeat the upright piece's middle; vertical fences use the corner
+  piece's post (the delivered upright fence piece is a stacked spool).
+- **Scene wiring** (collision bodies, interaction spots, depths unchanged
+  unless noted): Silas plays `commons-art:silas-breathing` and his dialogue
+  bust is `portrait-silas` (64 px, shown 1:1); the settled warden rests in
+  `guardian-settled` (heart-lamp glow moved onto its chest), not the defeat
+  frame; tier 2 is the complete `cottage-workshop` (never stacked on
+  tier 1); the room's hearth moved right to where the delivered wall has it
+  (`ROOM_HEARTH.x` 173, bench under the shelf at x 115) with the 4-frame
+  hearth fire; the camp flame and paper pickups animate (static with reduced
+  motion); the Hearthwick Library is the delivered building (scenery with
+  `groundUnder`, door moved to the middle tile, sign standing out front);
+  Amberwake/Closure Night windows use `window-lamp-glow`; The Breaking
+  floats the three candle hulls; Commons path edges are painted into the
+  ground (`pathEdgeOverlays`, dirt and cobble, grass side). Wilds: resource
+  nodes show available/depleted art (no fade), camps are tent + fire ring +
+  pack with a flame until cleared, player and Echo lanterns are the
+  fallen-hero lantern lit/unlit, Echo props are `echo-<member>-faint` until
+  settled then `-solid` (never flipped: Hollis's fox keeps its long ear on
+  the viewer's right), the Amberwash cairn is `cairn-white-stones`, and the
+  decor atlas takes the delivered log, mossy boulder, cairn, turncaps
+  (never mirrored) and iron-oak stump fitted to the generator's frame sizes
+  (the White Quiet keeps its frosted woods but for drift-stone and white
+  cairns). Dead birch and reed pool are loaded but the code-drawn snag and
+  reeds fit the generator better.
+- **UI icons** — `WorldScene` emits every `icon-*` frame as a data URL
+  (`EV.artIcons`); `src/ui/ArtIcon.svelte` shows it at a whole multiple of
+  16 px, falling back to the code-drawn `Icon`: materials, trinkets and
+  crafted goods in the Character panel, workshop, Silas's yard balance,
+  mail and loot toasts (`ToastPayload.art`), emotes in the picker.
+- **Residents not yet in the world** — Elara, Finn, Hazel and Ada load as
+  `commons-art:<name>-idle-0/1` with breathing animations; their busts are
+  emitted under their speaker names (`COMMONS_RESIDENT_PORTRAITS`) for the
+  follow-up that adds them as NPCs.
+- **Loaded but not placed** — `commons-gateway` (a front-facing arch; the
+  Commons gate is crossed east–west, so it keeps the side-on gateposts and
+  gate leaf), the campsite composite and its animation (the plot keeps the
+  detached windbreak, cot and ring at their authored spots and bodies),
+  `workshop-addon`, `dead-birch-turncaps`, `reed-pool`, `fence-straight-v`, `fence-gateway`, `hedge-corner-ne/nw`,
+  path `end-*` pieces.
+
 ## Delivered generated art (October 2, 2026)
 
 `assets/generated/` holds original generated art with provenance in

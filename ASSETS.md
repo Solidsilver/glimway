@@ -200,6 +200,32 @@ textures are derived at load time (not files). **License** — pending (same
 decision as Register A; this original generated pack does not inherit
 Habitica's artwork license). **Attribution text** — TBD with license choice.
 
+## Register F — Commons pass (Commons, homes, village life, Wilds, icons)
+
+Delivered 2026-10-05 to `assets/generated/commons-pass/` (archive of
+record: 21 sheets, per-sheet atlases, `manifest.json`, `jobs.json` and
+`portrait-job.json` prompts, `drafts/`, `preview.html`, `validation.json`,
+`frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
+COVERAGE). The runtime copy `public/assets/fingersnap/commons-pass/` ships
+only the 21 sheets and `manifest.json` (same bytes, ~25 MB).
+
+Provenance: original artwork generated 2026-10-05 with the built-in
+image-generation tool; prompts in `jobs.json` / `portrait-job.json`; no
+Habitica artwork copied (pack README). 173 measured frames, 11 looping
+animations, 11 aliases; answers `docs/art-requests.md` in full including
+the optional Hazel, Ada and Wilds sets. Integration: `src/game/commons-pass.ts`
+(loader, `commons-art:` native textures) and
+`src/game/commons-pass-install.ts` (boot swap onto placeholder keys);
+contract in `tests/commons-pass.test.ts`; wiring notes in
+`docs/runtime-asset-spec.md`. Register B placeholders stay as the fallback.
+
+Recorded limits/quirks: sources are irregular high-resolution atlases
+(never a grid); native canvases are tiny, so detail simplifies at 16 px;
+transparent pixels can carry backdrop RGB; the delivered upright fence piece
+and the front-facing gateway don't fit the Commons layout (loaded, not
+placed); 2×1 decorations and the plot sign board are refitted/widened at
+runtime from the measured crops (source bytes untouched).
+
 ## Register C — pending delivered art (not yet in repo)
 
 Expected from the external asset agent; **not present, not licensed, not
@@ -320,3 +346,10 @@ record here):
   priority now delivered; wanted list re-set (side-facing NPC frames, enemy
   move sets, audio). License still pending; this pack keeps separate
   provenance from Habitica's artwork license.
+- 2026-10-05 — Register F added for the Commons pass
+  (`assets/generated/commons-pass/` + a trimmed
+  `public/assets/fingersnap/commons-pass/`): residents and busts, the
+  settled warden, homes and the cottage room, decorations and workshop
+  furniture, the Commons set, village life, paper pickups, Wilds props,
+  nodes, camps, lanterns, Echo props and UI icons wired over the code-drawn
+  placeholders (which remain the fallback). License still pending.

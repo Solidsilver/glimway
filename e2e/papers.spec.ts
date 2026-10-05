@@ -80,7 +80,7 @@ test('the Hearthwick Library: read the starting shelf, donate a find, and the sh
   await pickUpPipsPage(page)
 
   // The library door, on the square's south-west corner.
-  await warp(page, 'village', 3, 18)
+  await warp(page, 'village', 4, 18)
   await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
   await page.keyboard.press('e')
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
@@ -105,7 +105,7 @@ test('the Hearthwick Library: read the starting shelf, donate a find, and the sh
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
   await waitForArea(page, 'village')
-  await warp(page, 'village', 3, 18)
+  await warp(page, 'village', 4, 18)
   await page.keyboard.press('e')
   await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
   await page.keyboard.press('Escape')
