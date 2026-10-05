@@ -150,3 +150,180 @@ polish. Items, all at the 16-px tile scale:
   yarn, river-glass bead, spare bootlace, dented tin whistle.
 - **Crafted utility items**: lamp wick, oilcloth wrap, wooden peg.
 - **Emotes**: wave, nod, cheer, thanks, lantern.
+
+---
+
+## Items pass
+
+New item art requested for the items and crafting expansion (`docs/items/catalogue.md`, `docs/items/crafting-and-repair.md`, `docs/items/overview.md`). Items with art already delivered in the Commons pass (`assets/generated/commons-pass/COVERAGE.md`) are skipped.
+
+Priorities follow the brief:
+- **P1**: Tools, the inventory's most common supplies, keepsakes, and early papers/recipes.
+- **P2**: Home goods, lantern posts and their parts, and village world sprites.
+- **P3**: Seasonal pieces and seasonal materials.
+
+### Tools
+
+All tool items read at **16×16 native pixels** in the inventory. Cheap tools break at zero wear (~30 uses); heirloom tools become blunt or cracked at zero wear (~80 uses) until mended at a bench. Off-hand items provide visual and functional aids while held.
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P1 | `bench-axe` | Bench axe | 16×16 | 2 (whole, worn) | Short axe, pale haft, dull grey head |
+| P1 | `bench-pick` | Bench pick | 16×16 | 2 (whole, worn) | Pick with a pale haft |
+| P1 | `bench-spade` | Bench spade | 16×16 | 2 (whole, worn) | Spade, worn wooden grip |
+| P1 | `stave-bucket` | Stave bucket | 16×16 | 2 (whole, worn [loosened hoops]) | Small wooden bucket, two dark hoops |
+| P1 | `watering-can` | Tin watering can | 16×16 | 1 | Squat tin can with a long spout |
+| P1 | `brack-felling-axe` | Brack felling axe | 16×16 | 3 (whole, worn, blunt) | Long axe, dark ash haft, bright bit |
+| P1 | `orrins-mason-pick` | Orrin's mason pick | 16×16 | 3 (whole, worn, blunt) | Pick with a notched haft |
+| P1 | `ada-garden-spade` | Ada's garden spade | 16×16 | 3 (whole, worn, blunt) | Short spade, dark polished grip |
+| P1 | `nans-lamplighter-pole` | Nan's lamplighter pole | 16×16 | 3 (whole, worn, cracked) | Long pole, brass hook at the top |
+| P1 | `oak-mark-punch` | Oak-mark punch | 16×16 | 1 (never wears) | Stubby iron punch, wheel-and-wave face |
+| P1 | `carters-lantern` | Carter's lantern | 16×16 | 2 (lit, unlit) | Lantern on a short pole, lit |
+| P1 | `turncap-jar` | Jar of turncaps | 16×16 | 2 (fresh [tilted caps], dried out) | Glass jar, three pale caps leaning one way |
+| P1 | `salve-satchel` | Salve satchel | 16×16 | 1 | Small leather satchel, a jar lid peeking out |
+| P1 | `runners-whistle` | Your own whistle | 16×16 | 1 | Tin whistle with a dent |
+| P1 | `forager-satchel` | Forager's satchel | 16×16 | 1 | Canvas satchel |
+| P1 | `work-apron` | Work apron | 16×16 | 1 | Leather apron |
+| P1 | `carting-coat` | Carting coat | 16×16 | 1 | Long brown coat |
+
+### Supplies
+
+Supplies include craft materials, seasonal forage, tool fittings, building parts, seeds, food, remedies, and lamp oils. (Already covered in `COVERAGE.md`: `timber`, `stone`, `fiber`, `amber`, `lamp-wick`, `oilcloth-wrap`, `wooden-peg`.)
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P1 | `seasoned-timber` | Seasoned timber | 16×16 | 1 | Split log, paler, a crack in the end grain |
+| P1 | `drift-stone` | Drift-stone | 16×16 | 1 | Rounded stone with a faint swirl |
+| P1 | `iron-oak` | Iron-oak | 16×16 | 1 | Dark tight-ringed log end |
+| P1 | `willow-bark` | Willow bark | 16×16 | 1 | Curl of bark |
+| P1 | `beeswax` | Beeswax | 16×16 | 1 | Yellow wax block |
+| P1 | `storm-grade-drop` | Storm-grade drop | 16×16 | 1 | Amber drop with a bright core |
+| P1 | `tallow` | Tallow | 16×16 | 1 | Pale lump in paper |
+| P1 | `flour` | Flour | 16×16 | 1 | Small sack |
+| P1 | `wild-honey` | Wild honey | 16×16 | 1 | Comb drip |
+| P3 | `walnut-shells` | Walnut shells | 16×16 | 1 | Two half shells |
+| P3 | `madder-scraps` | Madder scraps | 16×16 | 1 | Red cloth scraps |
+| P3 | `amberfall-sap` | Amberfall sap | 16×16 | 1 | Thin amber trickle on bark |
+| P3 | `frost-glass` | Frost-glass | 16×16 | 1 | Pale blue shard |
+| P3 | `bloom-flowers` | Bloom flowers / dried flowers | 16×16 | 2 (fresh, dried) | Posy (fresh) / brown posy (dried) |
+| P1 | `tarrow-edge-strip` | Tarrow-steel edge strip | 16×16 | 1 | Thin bright metal strip |
+| P1 | `loose-road-nail` | Loose road-nail | 16×16 | 1 | Single square nail |
+| P1 | `iron-oak-wedge` | Iron-oak wedge | 16×16 | 1 | Small dark wedge |
+| P1 | `tyre-iron-hoop` | Hoop of tyre-iron | 16×16 | 1 | Small iron ring |
+| P1 | `green-ash-haft` | Green-ash haft | 16×16 | 1 | Pale straight haft |
+| P1 | `amber-bead` | Amber bead | 16×16 | 1 | Glowing orange bead |
+| P1 | `waxed-cord` | Waxed cord | 16×16 | 1 | Coil of cord |
+| P1 | `warden-sliver` | Warden-stone sliver | 16×16 | 1 | Grey stone chip with an amber fleck |
+| P1 | `fibre-rope` | Fibre rope | 16×16 | 1 | Coiled rope |
+| P1 | `split-rail` | Split rail | 16×16 | 1 | Rough rail |
+| P1 | `slates` | Slates | 16×16 | 1 | Three stacked slates |
+| P1 | `oak-slat` | Oak slat | 16×16 | 1 | Smooth plank |
+| P1 | `lamp-head` | Lamp head | 16×16 | 1 | Small iron lamp head, glass panes |
+| P1 | `wax-seal` | Wax seal | 16×16 | 1 | Red-brown wax disc, wheel and wave |
+| P1 | `hazel-whip` | Hazel whip | 16×16 | 1 | Thin sapling, round leaves |
+| P1 | `birch-sapling` | Birch sapling | 16×16 | 1 | White-barked sapling |
+| P1 | `rowan-sapling` | Rowan sapling | 16×16 | 1 | Sapling with a red cluster |
+| P1 | `comfrey-root` | Comfrey root | 16×16 | 1 | Knobbly root, two leaves |
+| P1 | `wild-thyme` | Wild thyme | 16×16 | 1 | Tiny-leaved sprig |
+| P1 | `turncap-spawn` | Turncap spawn | 16×16 | 1 | Pale cap on a sliver of wood |
+| P1 | `iron-oak-acorn` | Iron-oak acorn | 16×16 | 1 | Dark heavy acorn |
+| P1 | `keepers-twists` | Keeper's Twists (butter batch) | 16×16 | 1 | Twisted bread, golden |
+| P1 | `oil-twists` | Keeper's Twists (oil) | 16×16 | 1 | Twisted bread, darker, burnt end |
+| P1 | `saltings-tea` | Saltings tea | 16×16 | 1 | Cup, grey-green tea |
+| P1 | `oatcakes` | Finn's oatcakes | 16×16 | 1 | Stack of round oatcakes |
+| P1 | `comfrey-salve` | Comfrey salve | 16×16 | 1 | Small tin, pale salve |
+| P1 | `willow-bark-tea` | Willow-bark tea | 16×16 | 1 | Cup, brown tea |
+| P1 | `blue-moss` | A pinch of Blue Moss | 16×16 | 1 | Twist of paper, blue moss poking out |
+| P1 | `candle-oil` | Candle oil | 16×16 | 1 | Small corked vial, pale amber |
+| P1 | `hearth-oil` | Hearth oil | 16×16 | 1 | Squat flask, warm amber |
+| P1 | `storm-oil` | Storm oil | 16×16 | 1 | Stoppered flask with a bright core |
+
+### Keepsakes
+
+Trinkets carried in pockets or displayed. (Already covered in `COVERAGE.md`: `whittled-fox` [Hollis's, right ear long], `river-glass-bead`, `tin-whistle`, `beeswax-candle`, `spare-bootlace`.)
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P1 | `knotted-halter` | Knotted ox-halter | 16×16 | 1 | Rope halter, knotted |
+| P1 | `work-glove` | Work glove | 16×16 | 1 | Single leather glove |
+| P1 | `road-nails` | Stamped road-nails | 16×16 | 1 | Small bundle of nails |
+| P1 | `mirror-fox` | A mirror-wise fox | 16×16 | 1 | Pine fox, left ear long (Silas's carving; distinct from Hollis's right-ear whittled fox) |
+
+### Home goods
+
+Inventory icons (16×16) for new placeable furniture, working pieces, lovely wall pieces, and seasonal festival goods. Placed world sprites are detailed in the World sprites section below. (The 14 original homestead decorations in `content/homestead.json` already have sprites in `fingersnap-furniture.png`.)
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P2 | `door-fox` | Door-fox | 16×16 | 1 | Small fox over a door, left ear long |
+| P2 | `window-lamp` | Window lamp | 16×16 | 2 (lit, unlit) | Warm square of light in a window |
+| P2 | `gate-shelf` | Gate shelf | 16×16 | 1 | Small roofed shelf on a post, jars on it |
+| P2 | `writing-desk` | Writing desk | 16×16 | 1 | Slant-top desk, inkpot |
+| P2 | `keepsake-cabinet` | Keepsake cabinet | 16×16 | 1 | Glass-front cabinet, small shapes inside |
+| P2 | `drying-rack` | Herb drying rack | 16×16 | 1 | Wooden rack, bundles hanging |
+| P2 | `apothecary-shelf` | Apothecary shelf | 16×16 | 1 | Shelf of jars, some full |
+| P2 | `woodpile` | Woodpile | 16×16 | 1 | Stacked split logs under a little roof |
+| P2 | `lantern-post` | Lantern post | 16×16 | 2 (lit, unlit) | Timber post, iron lamp head, lit / unlit |
+| P2 | `raised-bed` | Raised bed | 16×16 | 1 | Timber-edged bed of dark soil |
+| P2 | `naming-frame` | Naming-slip frame | 16×16 | 1 | Small frame with a slip of paper |
+| P2 | `pencil-map` | Pip's pencil map | 16×16 | 1 | Pinned map, pencil lines |
+| P2 | `pressed-flowers` | Pressed-flower frame | 16×16 | 1 | Frame with flat flowers |
+| P3 | `candle-hulls` | Candle hulls | 16×16 | 1 | Walnut-shell boats with leaf sails |
+| P3 | `carting-bunting` | Carting bunting | 16×16 | 1 | Red and cream bunting |
+| P3 | `empty-chair` | The Empty Chair | 16×16 | 1 | Plain chair, a sap-gold cushion |
+| P3 | `closure-lamp` | Closure Night lamp | 16×16 | 2 (lit, unlit) | Frost-glass lamp, pale light |
+
+### Papers
+
+Inventory icons (16×16) for the Papers tab: naming slips from lantern posts, recipe pages and cards copyable at the writing desk, and found document icons. (In-world pickup sprites are already covered in `fingersnap-papers.png`.)
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P1 | `naming-slip` | Naming slip | 16×16 | 1 | Narrow paper slip with two lines of ink and post name, your own Ledger of the Road |
+| P1 | `recipe-page-tea` | Recipe page: Saltings tea | 16×16 | 1 | Rag paper slip with cup sketch, from Elara |
+| P1 | `recipe-page-salve` | Recipe page: Comfrey salve | 16×16 | 1 | Aged book leaf with botanical comfrey sketch, via Mara |
+| P1 | `recipe-page-candle-oil` | Recipe page: Candle oil | 16×16 | 1 | Neat library slip with oil flask notation, from Mara |
+| P1 | `recipe-page-willow-tea` | Recipe page: Willow-bark tea | 16×16 | 1 | Book leaf of Mother Cotta's herbal with curl-of-bark sketch |
+| P1 | `recipe-card-twists` | Recipe card: Keeper's Twists | 16×16 | 1 | Flour-dusted bakery card from Hazel's wall |
+| P1 | `recipe-card-oil-twists` | Recipe card: Oil twists | 16×16 | 1 | Darker stained bakery card from Hazel with note on back |
+| P1 | `recipe-page-hearth-oil` | Recipe page: Hearth oil | 16×16 | 1 | Ruled ledger receipt leaf from Ada Cooley's window fund |
+| P1 | `recipe-page-wax-seal` | Recipe page: Wax seal | 16×16 | 1 | Printed page from Brackenwood handbook, wheel-and-wave stamp |
+| P1 | `recipe-page-storm-oil` | Recipe page: Storm oil | 16×16 | 1 | Torn margin from Wenna's ledger, dense dark script |
+| P1 | `paper-icon-folded` | Found paper: folded letter | 16×16 | 1 | Folded letter with creased edges and broken seal |
+| P1 | `paper-icon-scroll` | Found paper: tied scroll | 16×16 | 1 | Rolled parchment scroll tied with twine |
+| P1 | `paper-icon-slate` | Found paper: slate | 16×16 | 1 | Small framed slate tablet with chalked letters |
+
+### World sprites
+
+Sprites placed in the world, sized to their tile footprint (16 px per tile). Covers placed home goods, lantern post assembly stages and variants, and gathering nodes/results (stumps, dug patches, herb clumps, bee trees, windfalls).
+
+*(Already covered in `COVERAGE.md`: `woodpile` world sprite in `fingersnap-yard.png`; `bunting`, `candle-hull-0/1/2` water sprites, and `window-lamp-glow` overlay in `fingersnap-festivals.png`; `iron-oak-stump`, `turncaps-east`, `cairn`, `cairn-white-stones`, `dead-birch-turncaps`, `fallen-log`, `mossy-boulder`, `drift-stone`, and `reed-pool` in `fingersnap-wilds-nature.png`; base resource nodes in `fingersnap-resource-nodes.png`.)*
+
+| Priority | Id | Name | Native size | Frames | Look |
+|---|---|---|---|---|---|
+| P2 | `door-fox` | Door-fox | 16×16 (lintel) | 1 | Small carved pine fox mounted over cottage door lintel, left ear long |
+| P2 | `window-lamp` | Window lamp | 16×16 (window) | 2 (unlit pane, lit warm glow) | Warm square of hearth-light set into cottage window frame; bright amber-gold |
+| P2 | `gate-shelf` | Gate shelf | 16×16 (1×1) | 2 (empty, stocked with jars) | Small roofed wooden shelf on a post at the plot gate; jars placed on shelf |
+| P2 | `writing-desk` | Writing desk | 32×16 (2×1) | 1 | Slant-top wooden writing desk with open inkpot and copy paper |
+| P2 | `keepsake-cabinet` | Keepsake cabinet | 16×16 (1×1) | 2 (empty, displaying trinkets) | Glass-front wooden cabinet with tiny keepsake silhouettes displayed inside |
+| P2 | `drying-rack` | Herb drying rack | 16×16 (1×1) | 2 (bare rack, hanging herbs) | Upright timber frame rack with bundled herbs hanging upside down to dry |
+| P2 | `apothecary-shelf` | Apothecary shelf | 32×16 (2×1) | 2 (half stocked, full shelves) | Two-tier shelf of glass apothecary jars, showing stock of salves and teas |
+| P2 | `raised-bed` | Raised bed | 32×16 (2×1) | 3 (dry dark soil, watered soil, sprouting) | Timber-bordered garden bed filled with rich dark planting soil |
+| P2 | `naming-frame` | Naming-slip frame | 16×16 (1×1 wall) | 1 | Small timber wall frame holding your first handwritten naming slip |
+| P2 | `pencil-map` | Pip's pencil map | 32×16 (2×1 wall) | 2 (crisp pencil, smudged drift) | Wall-pinned route map drawn in pencil; lines smudge and drift over seasons |
+| P2 | `pressed-flowers` | Pressed-flower frame | 16×16 (1×1 wall) | 2 (fresh Bloom colors, dried brown) | Small wooden frame enclosing flat pressed blossom arrangements |
+| P3 | `empty-chair` | The Empty Chair | 16×16 (1×1) | 1 | Plain wooden dining chair with an amberfall sap-gold cushion, set for Amberwake |
+| P3 | `closure-lamp` | Closure Night lamp | 16×16 (1×1) | 2 (unlit, lit pale blue) | Frost-glass outdoor lantern casting pale cold blue light facing the dark |
+| P2 | `lantern-post` | Lantern post | 16×32 (1×1 footprint) | 3 (unlit, lit warm amber, Amberwake glow) | Upright green timber post with drift-stone packed base and iron lamp head; lit burns steady amber; Amberwake burns with wider brilliant halo |
+| P2 | `lantern-post-footing` | Post footing with drift-stone | 16×16 (1×1 footprint) | 1 | Timber post stub set in excavated ground packed tightly with drift-stone (construction stage 1) |
+| P2 | `lantern-post-head-unlit` | Post with unlit lamp head | 16×32 (1×1 footprint) | 1 | Complete timber post fitted with iron lamp head and dry wick, awaiting hearth oil (construction stage 2) |
+| P2 | `old-lamp-stone` | Old lamp-stone | 16×16 (1×1) | 2 (intact weathered, pick-broken) | Ancient weathered stone lamp base in the Tangle containing loose road-nails and salvaged lamp head |
+| P1 | `dug-patch` | Dug patch | 16×16 (1×1) | 2 (fresh dark earth hole, settled earth) | Churned dark dirt hole left after harvesting saplings, herbs, or turncap spawn with the spade |
+| P1 | `tree-stump` | Cleared tree stump | 16×16 (1×1) | 2 (fresh cut with pale sawdust, weathered) | Flat plain tree stump remaining after chopping pine, birch, hazel, or ash on homestead land |
+| P1 | `herb-patch-comfrey` | Wild comfrey patch | 16×16 (1×1) | 2 (lush leafy plant, dug earth patch) | Low leafy comfrey clump with knobbly roots and small bell flowers |
+| P1 | `herb-patch-thyme` | Wild thyme patch | 16×16 (1×1) | 2 (purple thyme sprigs, dug earth patch) | Low creeping fragrant thyme clump with tiny leaves and mauve flowers |
+| P1 | `hollow-tree` | Hollow bee tree | 16×32 (1×1 footprint, 2 tiles high) | 2 (intact tree with hive hole and bees, opened hollow with comb drips) | Gnarled hollow woodland trunk sheltering a wild hive; dug with spade for wild honey and beeswax |
+| P1 | `standing-iron-oak` | Standing iron-oak | 32×48 (2×2 footprint, 3 tiles high) | 2 (unmarked ancient trunk, stamped with wax seal) | Massive ancient iron-oak tree; struck with oak-mark punch before warden-felling |
+| P1 | `iron-oak-windfall` | Iron-oak windfall | 32×32 (2×2 footprint) | 2 (mossy fallen trunk, harvested stump with 3 leafy branches) | Heavy storm-felled iron-oak log; leaves three leafy branches at stump when felled |
+| P1 | `stump-turncaps` | Homestead turncap stump | 16×16 (1×1) | 2 (sprouting caps, mature leaning caps) | Wood stump seeded with turncap spawn that tilt toward the player's home lantern post |
+| P2 | `ledger-soup-pot` | Ledger soup pot | 16×16 (1×1) | 2 (bubbling steaming pot over fire, cold/empty pot) | Large black iron cauldron simmering over embers in the village square for project workers |
