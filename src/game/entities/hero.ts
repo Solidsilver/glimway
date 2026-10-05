@@ -33,6 +33,9 @@ const CONTACT_IFRAMES = 1.1
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
 const DODGE = { speed: 240, time: 0.2, iframes: 0.32, cooldown: 0.75 }
 
+/** Extra mana a second while seated (a bench in the square, a lit lantern's rest). */
+export const SEATED_MANA_BONUS = 5
+
 /** State carried across area changes and defeat recovery (per tab). */
 const carried = { attackCooldown: 0, castCooldown: 0, dashTime: 0, iframes: 0, facingX: 0, facingY: 1 }
 
@@ -64,6 +67,18 @@ export class Hero {
   dashTime = 0
   iframes = 0
   dodgeCooldown = 0
+  /** The bench seat while seated: where the hero sits, and where they stood. */
+  seat: { x: number; y: number; fromX: number; fromY: number; scaleY: number } | null = null
+
+  /** Seated at a bench (the visible body is the still pose; see sit). */
+  get isSeated(): boolean {
+    return this.seat !== null
+  }
+
+  /** Mana a second added while seated (the scene's playtests read this). */
+  get seatedBonus(): number {
+    return this.seat ? SEATED_MANA_BONUS : 0
+  }
 
   constructor(private scene: Phaser.Scene, private deps: HeroDeps, entry: { tx: number; ty: number } | null) {
     this.attackCooldown = carried.attackCooldown
@@ -100,11 +115,42 @@ export class Hero {
   }
 
   /**
+   * Sit down at a seat spot (a bench's front edge): a small offset, a still
+   * down-facing frame and a slight slump. Mana returns a little faster while
+   * seated (see move). Any movement input stands the hero back up.
+   */
+  sit(at: { x: number; y: number }): void {
+    if (this.seat) return
+    const visual = this.deps.avatar().container ?? this.sprite
+    this.seat = { x: at.x, y: at.y, fromX: this.sprite.x, fromY: this.sprite.y, scaleY: visual.scaleY }
+    this.sprite.setVelocity(0, 0)
+    this.sprite.setPosition(at.x, at.y)
+    this.sprite.anims.stop()
+    if (this.scene.textures.get('fingersnap-demo-walk').has('walk-down-0')) {
+      this.sprite.setTexture('fingersnap-demo-walk', 'walk-down-0')
+    }
+    visual.setScale(visual.scaleX, visual.scaleY * 0.78)
+    this.updateDepth()
+  }
+
+  /** Stand up from a bench: back to the spot you sat down from. */
+  standUp(): void {
+    const seat = this.seat
+    if (!seat) return
+    this.seat = null
+    const visual = this.deps.avatar().container ?? this.sprite
+    visual.setScale(visual.scaleX, seat.scaleY)
+    this.sprite.setPosition(seat.fromX, seat.fromY)
+    this.updateDepth()
+  }
+
+  /**
    * Dodge roll: a quick burst the way you're heading (or facing), with a
    * short window of invulnerability. Physics-driven, so walls still stop it.
    */
   tryDodge(towards: Phaser.Math.Vector2): void {
     if (uiBlocked() || this.deps.cinematic() || this.deps.transitioning() || this.deps.session.persistenceInFlight) return
+    if (this.seat) return // no rolling out of a bench; move to stand up
     if (this.dodgeCooldown > 0 || this.dashTime > 0) return
     const dir = towards
     if (dir.lengthSq() < 0.01) dir.set(this.facing.x, this.facing.y)
@@ -144,6 +190,20 @@ export class Hero {
     if (len > 1) {
       dx /= len
       dy /= len
+    }
+    // Seated: hold the pose, regen a little mana, and stand on any movement.
+    if (this.seat) {
+      if (len > 0.1) {
+        this.standUp()
+      } else {
+        this.sprite.setVelocity(0, 0)
+        this.sprite.anims.stop()
+        const state = this.deps.session.state
+        const rest = this.deps.restRate()
+        const mana = Math.min(state.maxMana, state.mana + (5 + this.seatedBonus + 6 * rest) * dt)
+        this.deps.session.setVitals(state.hp, mana)
+        return
+      }
     }
     // During the shadowstep dash window the dash velocity owns the body —
     // ordinary movement (including the idle 0,0) must not cancel it.
@@ -188,6 +248,7 @@ export class Hero {
 
   /** Melee (or the mage's ranged basic) on the action button. */
   tryAttack(): void {
+    if (this.seat) return // no fighting from a bench; move to stand up
     const kit = this.kit()
     if (this.attackCooldown > 0 || this.deps.transitioning()) return
     this.attackCooldown = kit.cooldown
@@ -226,6 +287,7 @@ export class Hero {
   handleCast(): void {
     const kit = this.kit()
     if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return
+    if (this.seat) return // no casting from a bench; move to stand up
     if (this.deps.session.zeroHpLocked) return
     if (this.castCooldown > 0 || this.attackCooldown > kit.cooldown) {
       bus.emit(EV.ability, { status: 'cooldown' } satisfies AbilityPayload)

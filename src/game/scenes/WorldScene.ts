@@ -41,6 +41,7 @@ import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
 import { emitResidents } from '../residents'
 import { VillageLayer } from '../entities/village-life'
+import { Touches } from '../entities/touches'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { COMMONS_FROM_WILDS } from '../commons'
 import {
@@ -228,6 +229,8 @@ export class WorldScene extends Phaser.Scene {
     )
     // Village life (calendar, festivals, notice boards, project changes) everywhere.
     this.interactables.setExtra(new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables }))
+    // Small world touches: smell the flowers, sit on a bench, read the signs.
+    this.interactables.setExtra(new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx }))
     this.homesteads = null
     if (this.world.areaId === 'commons' || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -436,6 +439,15 @@ export class WorldScene extends Phaser.Scene {
         enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.sprite.x - px, e.sprite.y - py) < 200)
       }
     }
+    // Read-only seat snapshot for playtests (a bench in the village or Commons).
+    ;(window as unknown as { __fsSeat?: () => { seated: boolean; bonus: number; mana: number; maxMana: number; x: number; y: number } }).__fsSeat = () => ({
+      seated: this.hero.isSeated,
+      bonus: this.hero.seatedBonus,
+      mana: Math.floor(this.session.state.mana),
+      maxMana: this.session.state.maxMana,
+      x: this.hero.sprite.x,
+      y: this.hero.sprite.y
+    })
     // Read-only avatar/combat diagnostics for verification (no mutation).
     ;(window as unknown as { __fsDebug?: () => Record<string, unknown> }).__fsDebug = () => ({
       avatar: !!this.avatar.container,
