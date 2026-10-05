@@ -43,6 +43,7 @@ import {
   type AssetRef
 } from '../lib/habitica/avatar.ts'
 import type { HabiticaProfile } from '../lib/habitica/types.ts'
+import type { PresenceAvatar } from '../lib/presence.ts'
 
 export { assetSourceFor }
 
@@ -153,6 +154,22 @@ export async function loadWorldAvatar(scene: Phaser.Scene, profile: HabiticaProf
     return { layerKeys, fallback: layerKeys.length === 0, remoteOnly, failedKeys }
   } catch {
     return { layerKeys: [], fallback: true, remoteOnly: [], failedKeys: [] }
+  }
+}
+
+/**
+ * Another player's walking avatar (presence, phase 6) from the compact
+ * visual shape the server relays: same layer stack and local-cache rule as
+ * the hero's, on foot, with no companions baked in.
+ */
+export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAvatar): Promise<string[]> {
+  try {
+    const profile = { ...avatar, selectedPet: undefined, selectedMount: undefined } as unknown as AvatarProfileFull
+    const { local } = localOnly(avatarLayersFor(profile))
+    if (local.length === 0) return []
+    return await queueImages(scene, local)
+  } catch {
+    return []
   }
 }
 

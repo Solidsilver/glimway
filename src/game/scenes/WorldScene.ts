@@ -33,7 +33,10 @@ import { Interactables } from '../entities/interactables'
 import { PaperPickups } from '../entities/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
-import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
+import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
+import { presence } from '../presence'
+import { presenceAreaFor } from '../../lib/presence-client'
+import type { EmotePayload } from '../events'
 import { HomesteadLayer } from '../entities/homesteads'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 
@@ -72,6 +75,8 @@ export class WorldScene extends Phaser.Scene {
   private captureReleased = false
   private cinematic = false
   private positionTimer = 0
+  /** This area's presence room (null where presence doesn't reach). */
+  private presenceArea: string | null = null
   /** The Commons/cottage homestead layer (null elsewhere). */
   private homesteads: HomesteadLayer | null = null
   private room: SceneData['room'] | null = null
@@ -229,10 +234,18 @@ export class WorldScene extends Phaser.Scene {
       this.hero.carry()
       this.avatar.invalidate()
     })
-    // Remote players (presence seam): no-op layer, wired so phase 6 can
-    // slot the real renderer in without touching the scene loop.
-    this.remotePlayers = createRemotePlayers(this)
-    this.events.once('shutdown', () => this.remotePlayers.clear())
+    // Remote players (phase 6 presence): join this area's room and draw the
+    // others in it. A cottage is part of the Commons room, but its map is not:
+    // inside, nobody is drawn and we stand at our door for the others.
+    const feed = presence()
+    this.presenceArea = presenceAreaFor(this.room ? 'commons' : this.world.areaId)
+    feed?.setArea(this.presenceArea)
+    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, !!this.room)
+    bus.on(EV.emote, this.onOwnEmote, this)
+    this.events.once('shutdown', () => {
+      this.remotePlayers.clear()
+      bus.off(EV.emote, this.onOwnEmote, this)
+    })
     void this.avatar.build() // imported layered avatar (if any)
 
     // Read-only handle for automated playtesting (docs/playtest.md).
@@ -365,6 +378,9 @@ export class WorldScene extends Phaser.Scene {
     // mid-flight enemy hit, regen tick, or position write. The panel closes
     // normally; this gate only covers the brief disk write.
     this.homesteads?.update(dt)
+    // Others keep walking while a panel or dialogue holds the screen.
+    this.remotePlayers.update(dt)
+    this.samplePresence()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       this.interactables.hideKeyHint()
@@ -385,7 +401,6 @@ export class WorldScene extends Phaser.Scene {
     this.updateOccluders(dt)
     this.updateDepth()
     this.avatar.update(time)
-    this.remotePlayers.update(dt)
 
     this.positionTimer += dt
     // In a cottage the save keeps the doorstep (set on the way in).
@@ -394,6 +409,30 @@ export class WorldScene extends Phaser.Scene {
       this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
     }
   }
+
+  /** Tell the presence feed where the hero is (it paces the wire itself). */
+  private samplePresence(): void {
+    const feed = presence()
+    if (!feed || !this.presenceArea) return
+    if (this.room) {
+      // Indoors: the others see us at our door.
+      const door = this.session.state.position
+      feed.position({ x: door.x, y: door.y, facing: { x: 0, y: 1 }, moving: false })
+      return
+    }
+    const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
+    const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
+    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving })
+  }
+
+  /** Our own emote: a bubble over the hero (the server doesn't echo it back). */
+  private onOwnEmote(p: EmotePayload): void {
+    if (p.habiticaId !== null) return
+    this.ownBubble?.destroy()
+    this.ownBubble = showEmoteBubble(this, this.hero.sprite, p.id, -32)
+  }
+
+  private ownBubble: Phaser.GameObjects.Container | null = null
 
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {

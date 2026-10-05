@@ -5,9 +5,16 @@
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
   import { offlineCopy } from '../content/connected'
+  import { presenceCopy } from '../content/presence'
   import { papers } from './papers.svelte'
 
-  let { onJournal, onCharacter, onMenu }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void } = $props()
+  let {
+    onJournal,
+    onCharacter,
+    onMenu,
+    onEmote
+  }: { onJournal: () => void; onCharacter: () => void; onMenu: () => void; onEmote?: () => void } = $props()
+  const presenceLive = $derived(ui.presence.status === 'live')
 
   const touch = isTouchFirst()
   const showBars = $derived(ui.stats.maxHp > 0)
@@ -44,6 +51,11 @@
         {/key}
       {/if}
     </div>
+    {#if presenceLive && ui.presence.here > 0}
+      <div class="net">
+        <span class="pill here" title={presenceCopy.hereTitle} data-testid="presence-here"><Icon name="person" size={12} />{presenceCopy.here(ui.presence.here)}</span>
+      </div>
+    {/if}
     {#if ui.link && (ui.link.status === 'offline' || ui.link.busy)}
       <div class="net" role="status" aria-live="polite">
         {#if ui.link.busy}
@@ -102,6 +114,12 @@
       <Icon name="person" size={20} />
       {#if !touch}<span class="kbd">C</span>{/if}
     </button>
+    {#if presenceLive && onEmote}
+      <button type="button" class="hb" class:on={ui.emoteOpen} onclick={onEmote} aria-label="Emote (G)" title="Emote" data-testid="emote-button">
+        <Icon name="speech" size={20} />
+        {#if !touch}<span class="kbd">G</span>{/if}
+      </button>
+    {/if}
     <button type="button" class="hb" onclick={onMenu} aria-label="Menu (Esc)" title="Menu">
       <Icon name="menu" size={20} />
       {#if !touch}<span class="kbd">Esc</span>{/if}
@@ -230,6 +248,10 @@
   .pill.off {
     color: #1f3c66;
     background: linear-gradient(180deg, #dbe8ff, #b5cdf5);
+  }
+  .pill.here {
+    color: #173f3c;
+    background: linear-gradient(180deg, #d6f2ee, #a9dcd5);
   }
   .pill.trouble {
     color: #5a1a0e;
@@ -366,6 +388,9 @@
     display: flex;
     gap: 8px;
     pointer-events: auto;
+  }
+  .hb.on {
+    background: linear-gradient(180deg, #ffe58a 0%, #f2b93a 100%);
   }
   .hb {
     position: relative;

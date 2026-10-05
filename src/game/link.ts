@@ -242,6 +242,7 @@ export class Link {
         this.contact()
         // Only clear our own marker; an out-of-turn request may have set its own.
         if (this.sent === mine) this.sent = undefined
+        this.refused = ''
         const before = s.state
         this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
         this.acked = res.status === 'current' ? key : docKey(s.state)
@@ -666,8 +667,10 @@ export class Link {
     if (what === 'upload' && this.session) {
       // Don't resend the same refused document in a loop; the next change
       // tries again. It stays dirty: the cache keeps it.
+      const firstRefusal = this.refused === ''
       this.refused = docKey(this.session.state)
-      this.emitter(EV.toast, { text: 'The server didn’t accept that save. Your progress is kept on this device.', kind: 'error' })
+      // Once per run of refusals: further changes may be refused too.
+      if (firstRefusal) this.emitter(EV.toast, { text: 'The server didn’t accept that save. Your progress is kept on this device.', kind: 'error' })
     }
     return action
   }

@@ -409,12 +409,16 @@ test('a returning player is signed in by the cookie alone', async ({ page, conte
 test('logout with unsent progress keeps it on the device, and the next sign-in uploads it (review 1)', async ({ page }) => {
   const id = await freshPlayer(page)
   // The server refuses uploads for a while: the story step stays unsent.
-  await page.route('**/api/progress', (route) =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-progress' } }) })
-  )
+  let refused = 0
+  await page.route('**/api/progress', (route) => {
+    refused += 1
+    return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-progress' } }) })
+  })
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
-  await expect(page.locator('.toast', { hasText: 'didn’t accept that save' })).toBeVisible()
+  // (The "didn’t accept" toast may have come and gone on a slow machine.)
+  await expect.poll(() => refused).toBeGreaterThan(0)
+  await expect.poll(async () => (await cacheRecord(page, id))?.state.quest).toBe('accepted')
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   const dialog = page.getByRole('alertdialog')

@@ -10,6 +10,7 @@
     type DefeatPayload,
     type DiscoveryPayload,
     type LinkPayload,
+    type PresencePayload,
     type PortraitsPayload,
     type PromptPayload,
     type QuestPayload,
@@ -57,6 +58,9 @@
   import OriginChoice from './ui/OriginChoice.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
+  import EmotePicker from './ui/EmotePicker.svelte'
+  import { presence, startPresence, stopPresence } from './game/presence'
+  import { EMOTES } from './content/presence'
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
@@ -202,6 +206,10 @@
       sfx('discover')
       ui.toast({ text: `New in your journal: ${discoveryInfo(p.id).name}`, icon: 'scroll' })
     }
+    const onPresence = (p: PresencePayload) => {
+      ui.presence = p
+      if (p.status !== 'live') ui.emoteOpen = false
+    }
     const onLink = (p: LinkPayload) => {
       ui.link = p
     }
@@ -239,6 +247,7 @@
       [EV.portraits, onPortraits],
       [EV.discovery, onDiscovery],
       [EV.link, onLink],
+      [EV.presence, onPresence],
       [EV.linkNotice, onLinkNotice],
       [PAPER_EV.openLibrary, onOpenLibrary],
       [HOME_EV.openShop, onOpenShop],
@@ -508,6 +517,9 @@
     hasSave = true
     // The guest journey saves itself one last time and stays on this device.
     if (prev && prev !== next) prev.destroy()
+    // Presence follows connected play (and its lease); guests have none.
+    if (next.link) startPresence(next.link)
+    else stopPresence()
     if (phase === 'playing') {
       panel = null
       stopGame(game)
@@ -651,16 +663,35 @@
     if (ui.endingOpen) return
     // Placement mode owns its keys (Escape steps back out of it).
     if (home.placement && !panel) return
+    // Emotes: G opens the picker; 1–5 pick while it is open.
+    if (ui.emoteOpen && !panel && /^Digit[1-9]$/.test(e.code)) {
+      const pick = EMOTES[Number(e.code.slice(5)) - 1]
+      if (pick) sendEmote(pick.id)
+      return
+    }
+    if (e.code === 'KeyG' && !panel) {
+      if (ui.presence.status === 'live') ui.emoteOpen = !ui.emoteOpen
+      return
+    }
     if (e.code === 'KeyJ') toggle('journal')
     else if (e.code === 'KeyC') toggle('character')
     else if (e.code === 'Escape') {
-      if (panel) {
+      if (ui.emoteOpen && !panel) {
+        ui.emoteOpen = false
+      } else if (panel) {
         sfx('close')
         panel = null
       } else {
         toggle('menu')
       }
     }
+  }
+
+  /** Send an emote through the presence feed (the picker closes after a pick). */
+  function sendEmote(id: string): void {
+    const feed = presence()
+    if (!feed || !feed.emote(id)) return
+    ui.emoteOpen = false
   }
 
   const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen && !home.placement)
@@ -672,7 +703,10 @@
   <div class="stage" bind:this={stageEl}></div>
 
   {#if phase === 'playing' && session}
-    <Hud onJournal={() => toggle('journal')} onCharacter={() => toggle('character')} onMenu={() => toggle('menu')} />
+    <Hud onJournal={() => toggle('journal')} onCharacter={() => toggle('character')} onMenu={() => toggle('menu')} onEmote={() => (ui.emoteOpen = !ui.emoteOpen)} />
+    {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
+      <EmotePicker onPick={sendEmote} onClose={() => (ui.emoteOpen = false)} />
+    {/if}
     {#if showPrompt}
       <div class="prompt" class:touch>
         {#if !touch}<span class="kbd">E</span>{/if}
