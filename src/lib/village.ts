@@ -163,6 +163,14 @@ export function batchesAffordable(r: Recipe, carried: Record<string, number>): n
   return Number.isFinite(n) ? Math.min(100, n) : 0;
 }
 
+/**
+ * The batch count to show and to send: the chosen one, clamped to what can
+ * be paid for now (at least 1, so an unaffordable recipe still shows its cost).
+ */
+export function effectiveBatches(chosen: number | undefined, affordable: number): number {
+  return Math.min(Math.max(1, chosen ?? 1), Math.max(1, affordable))
+}
+
 export function recipeCost(r: Recipe, batches = 1): Record<string, number> {
   return Object.fromEntries(Object.entries(r.materials).map(([m, n]) => [m, n * batches]));
 }

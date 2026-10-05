@@ -14,6 +14,7 @@ import type { MutationOp } from './link'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing'
 import { setCommonsPlotCount } from './worlds'
+import { villageFor } from './village'
 import { bus, EV } from './events'
 import { grantPaper } from './papers'
 import type { Session } from './session'
@@ -130,6 +131,8 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'Another device took over this journey.'
     case 'busy':
       return 'Hold on — the last one is still on its way.'
+    case 'resolved':
+      return 'Your last order with Silas went through after all. Check what you have before trying again.'
     case 'pending':
       return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
     default:
@@ -147,7 +150,17 @@ export class Homesteads {
   status: HomeStatus
   roster: PlotInfo[] = []
   readonly homes = new Map<string, HomeView>()
-  materials: Record<string, number> = {}
+  /**
+   * The caller's carried materials. One view for the whole game: it lives in
+   * Village's carried counts (shop, board, mail and workshop all read it).
+   */
+  get materials(): Record<string, number> {
+    return villageFor(this.session).carriedMaterials()
+  }
+
+  set materials(m: Record<string, number>) {
+    villageFor(this.session).setCarriedMaterials(m)
+  }
   private loading: Promise<void> | null = null
 
   constructor(private session: Session) {

@@ -4,6 +4,7 @@ import { calendarAt } from '../src/lib/calendar.ts';
 import {
   assetPhrase,
   batchesAffordable,
+  effectiveBatches,
   blankProjects,
   calendarLine,
   contributionLimits,
@@ -105,4 +106,11 @@ test('settled mail says how it ended', () => {
   assert.equal(settledLine(m(null, 'recalled')), 'recalled');
   assert.equal(settledLine(m(null, 'expired')), 'returned after 30 days');
   assert.equal(settledLine(m(null, 'recipient-removed')), 'returned: they left the world');
+});
+
+test('the craft batch sent is the one shown, clamped to what is affordable now', () => {
+  assert.equal(effectiveBatches(3, 4), 3);
+  assert.equal(effectiveBatches(3, 1), 1, 'stock ran low: the stale choice of 3 is not sent');
+  assert.equal(effectiveBatches(undefined, 0), 1, 'unaffordable still shows one batch');
+  assert.equal(effectiveBatches(0, 5), 1);
 });

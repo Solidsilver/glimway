@@ -97,7 +97,8 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
     offlineProgress: useCache ? cache!.offlineProgress : false,
     sent: useCache ? cache!.sent : undefined,
     recovery: cache?.recovery,
-    unresolved: useCache ? (cache!.unresolved as Unresolved | undefined) : undefined,
+    // The same account's lost request is replayed whichever state snapshot wins.
+    unresolved: cache?.unresolved as Unresolved | undefined,
     emit: (event, payload) => bus.emit(event, payload)
   })
   for (const old of [...links]) if (!old.active) links.delete(old)

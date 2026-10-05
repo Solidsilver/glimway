@@ -9,7 +9,7 @@
  * same function the server uses); everything else needs a world.
  */
 import { calendarAt, type CalendarDay } from '../lib/calendar'
-import { blankProjects, papersDue } from '../lib/village'
+import { blankProjects, emptyCounts, papersDue } from '../lib/village'
 import { MAIL } from '../lib/mail'
 import type { Asset, AssetCounts, ContributeResponse, CraftResponse, Mail, MailActionResponse, ProjectView, ProjectsView, StorageMoveResponse } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
@@ -84,6 +84,8 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'Another device took over this journey.'
     case 'busy':
       return 'Hold on — the last one is still on its way.'
+    case 'resolved':
+      return 'Your last request went through after all. Check what you have before trying again.'
     case 'pending':
       return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.'
     case 'guest':
@@ -93,8 +95,8 @@ export function villageErrorText(code: ApiErrorCode | string): string {
   }
 }
 
-/** Dev/playtest override of "now" (seconds), so festivals can be seen any day. */
-let devNow: number | null = null
+/** Dev/playtest offset of "now" (seconds), so festivals can be seen any day. */
+let devOffset = 0
 
 export class Village {
   calendar: CalendarDay
@@ -121,26 +123,62 @@ export class Village {
   }
 
   now(): number {
-    return devNow ?? Math.floor(Date.now() / 1000)
+    return Math.floor(Date.now() / 1000) + devOffset
   }
 
   /** One of ours whose answer was lost is now known: re-read and say so. */
   private async onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused' }): Promise<void> {
     const k = p.op.kind
     if (k === 'home') return
-    if (k === 'contribute') await this.loadProjects()
-    else if (k === 'storage' || k === 'craft') await this.loadStorage()
-    else await this.loadMail()
+    // Re-read everything the operation could have changed before saying so.
+    if (k === 'contribute') {
+      await this.loadProjects()
+      await this.loadMail() // carried counts
+    } else if (k === 'storage' || k === 'craft') await this.loadStorage()
+    else {
+      await this.loadMail()
+      await this.loadHomeAfterMail() // a piece sent, claimed or recalled
+    }
     const what = k === 'contribute' ? 'gift to the project' : k === 'craft' ? 'work at the bench' : k === 'storage' ? 'trip to the chest' : 'parcel'
     bus.emit(EV.toast, { text: p.outcome === 'landed' ? `Your last ${what} went through after all.` : `Your last ${what} didn’t go through. Nothing changed.`, icon: 'scroll' })
   }
 
+  // ------------------------------------------------------------ carried goods
+
+  /** What the caller carries, by material (missing = 0). */
+  carriedMaterials(): Record<string, number> {
+    return this.inventory?.materials ?? {}
+  }
+
+  /** Adopt authoritative material balances (any server answer that carries them). */
+  setCarriedMaterials(m: Record<string, number>): void {
+    const inv = this.inventory ?? emptyCounts()
+    this.inventory = { ...inv, materials: { ...m } }
+    this.emit('goods')
+  }
+
   // ------------------------------------------------------------ calendar
 
-  /** Today, from the server when connected (its clock rules), else locally. */
-  async loadCalendar(): Promise<CalendarDay> {
+  private calendarRead: Promise<CalendarDay> | null = null
+  private dayTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Today, from the server when connected (its clock rules), else locally.
+   * Concurrent calls share one read; each read schedules the next at the
+   * coming UTC day boundary, so the date turns without leaving the scene.
+   */
+  loadCalendar(): Promise<CalendarDay> {
+    if (this.calendarRead) return this.calendarRead
+    this.calendarRead = this.readCalendar().finally(() => {
+      this.calendarRead = null
+      this.scheduleDayTurn()
+    })
+    return this.calendarRead
+  }
+
+  private async readCalendar(): Promise<CalendarDay> {
     const link = this.session.link
-    if (link && devNow === null) {
+    if (link && devOffset === 0) {
       try {
         this.calendar = await link.api.calendar()
         this.calendarSource = 'server'
@@ -156,6 +194,22 @@ export class Village {
     return this.calendar
   }
 
+  /** Seconds until the current calendar day ends (UTC midnight; also the Turning's notice window). */
+  private secondsLeftToday(): number {
+    return this.calendar.startsAt + this.calendar.day * 86400 - this.now()
+  }
+
+  private scheduleDayTurn(): void {
+    if (this.dayTimer !== null) clearTimeout(this.dayTimer)
+    if (current?.village !== this) return
+    // A little past the boundary; never a tight loop if a server clock lags.
+    const ms = Math.max(5_000, (this.secondsLeftToday() + 1) * 1000)
+    this.dayTimer = setTimeout(() => {
+      this.dayTimer = null
+      if (current?.village === this) void this.loadCalendar()
+    }, Math.min(ms, 6 * 3600 * 1000))
+  }
+
   private calendarLoaded = false
 
   /** The first read this session (server when connected); later, only when stale. */
@@ -163,17 +217,23 @@ export class Village {
     if (!this.calendarLoaded) {
       this.calendarLoaded = true
       void this.loadCalendar()
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && current?.village === this) this.refreshIfStale()
+        })
+      }
     } else this.refreshIfStale()
   }
 
   /** Re-read when the day has turned (cheap: compares against the next midnight UTC). */
   refreshIfStale(): void {
     const now = this.now()
-    if (now >= this.calendar.startsAt + this.calendar.day * 86400 || now < this.calendar.startsAt) void this.loadCalendar()
+    if (this.secondsLeftToday() <= 0 || now < this.calendar.startsAt) void this.loadCalendar()
   }
 
+  /** Dev/playtest clock: pretend it is `unix` now, and let time run on from there. */
   setDevNow(unix: number | null): void {
-    devNow = unix
+    devOffset = unix === null ? 0 : unix - Math.floor(Date.now() / 1000)
     void this.loadCalendar()
   }
 
@@ -225,7 +285,7 @@ export class Village {
     const r = await link.mutate<ContributeResponse>({ kind: 'contribute', id: projectId, fields: { materials: given } })
     if (!r.ok) return fail(r.code)
     this.adoptProjects(r.res.result)
-    homesteadsFor(this.session).materials = r.res.result.materials
+    this.setCarriedMaterials(r.res.result.materials)
     const completed = before !== 'complete' && r.res.result.projects.find((p) => p.id === projectId)?.stage === 'complete'
     return { ok: true, value: { completed } }
   }
@@ -271,7 +331,6 @@ export class Village {
   private adoptHome(home: import('../lib/api/types').HomeView): void {
     const homes = homesteadsFor(this.session)
     homes.homes.set(home.ownerId, home)
-    if (this.inventory) homes.materials = { ...this.inventory.materials }
     bus.emit('home:changed', { reason: 'goods' })
   }
 
@@ -287,6 +346,7 @@ export class Village {
       this.emit('mail')
       return fail(r.code)
     }
+    const before = new Map(this.mail.map((m) => [m.id, m]))
     this.mail = r.value.mail
     this.mailCursor = r.value.nextCursor ?? null
     // Legacy pending backlogs past the current caps come in further pages.
@@ -299,11 +359,18 @@ export class Village {
     }
     if (r.value.inventory) {
       this.inventory = r.value.inventory
-      homesteadsFor(this.session).materials = { ...r.value.inventory.materials }
       this.emit('goods')
     }
     this.mailStatus = 'ready'
     this.emit('mail')
+    // A read can settle decoration mail (claimed elsewhere, returned after
+    // 30 days, recipient removed): the pieces move, so the home must follow.
+    const moved = this.mail.some((m) => {
+      if (m.asset.kind !== 'decoration') return false
+      const was = before.get(m.id)
+      return !was || was.claimedAt !== m.claimedAt || (was.returnedAt ?? null) !== (m.returnedAt ?? null)
+    })
+    if (moved && before.size > 0) await this.loadHomeAfterMail()
     return { ok: true, value: undefined }
   }
 
@@ -376,7 +443,6 @@ export class Village {
     // A mutation returns the first page: merge it, keeping older history.
     this.upsertMail(res.mail)
     this.inventory = res.inventory
-    homesteadsFor(this.session).materials = { ...res.inventory.materials }
     this.mailStatus = 'ready'
     this.emit('mail')
     this.emit('goods')
