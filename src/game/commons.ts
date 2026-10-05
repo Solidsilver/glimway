@@ -9,11 +9,13 @@
  *     post. The way back to Hearthwick.
  *   - The heart: an old cobbled staging square at the crossing of two lanes,
  *     with the carters' well, a notice board, benches and lamps.
- *   - The plot lane runs north–south through the square. Plots sit in two
- *     columns either side of it, hedged at the back and the outer side, open
- *     to the lane where each has its sign. More plots continue down the lane
- *     (the map grows a row at a time) — content/homestead.json "commons" is
- *     the one source of plot geometry, shared with the server.
+ *   - The lane runs north–south through the square, fenced on both sides.
+ *     In the fences are the homestead gates, each with a signpost on the
+ *     verge: walk through a gate and you are on that homestead's own land
+ *     (src/game/homeland.ts). Woods stand behind the fences. More gates
+ *     continue down the lane (the map grows a row at a time) —
+ *     content/homestead.json "commons" is the one source of gate geometry,
+ *     shared with the server.
  *   - East edge: Silas's work yard: his own cottage, a sawhorse, timber, his
  *     toolbox and firebox, and skids laid out for the next house.
  *   - North: the lane runs out under a leafy arch toward the Wilds. Elara
@@ -21,26 +23,25 @@
  *
  * Pure data (no Phaser): the scene renders it through src/game/area/ and the
  * homestead layer (src/game/entities/homesteads.ts) adds what changes —
- * camps, cottages, decorations, signs.
+ * the signs on the gates, Silas, the way to your own gate.
  */
-import { HOMESTEAD_DATA, plotRows, plotTile } from '../lib/homestead.ts'
+import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../lib/homestead.ts'
+import { landEntry } from './homeland.ts'
 import { TERRAIN, TILE } from './textures.ts'
 import type { ExitDef, ForegroundSpot, PropSpot, ScenerySpot, WorldData } from './worlds.ts'
 
-/** One plot slot on the map, in Commons tiles. */
-export interface PlotSlot {
-  index: number
-  /** Top-left tile of the plot's placement grid. */
+/** One homestead gate on the lane, in Commons tiles. */
+export interface GateSlot {
+  gate: number
+  /** The gap in the fence (two tiles tall: ty and ty + 1). */
   tx: number
   ty: number
-  /** The lane side (where the sign and the walk are). */
+  /** Which fence: the land lies west (or east) of the lane. */
   side: 'east' | 'west'
-  /** Sign post on the lane verge, outside the grid. */
+  /** The signpost on the lane verge beside the gate. */
   sign: { tx: number; ty: number }
-  /** Front door tile (cottage) / bedroll (camp), in Commons tiles. */
-  door: { tx: number; ty: number }
-  /** Where you stand when you come out of the cottage. */
-  doorstep: { tx: number; ty: number }
+  /** Where you stand on the lane coming back out. */
+  entry: { tx: number; ty: number }
 }
 
 /** Fixed things in the Commons the homestead layer talks about. */
@@ -58,7 +59,7 @@ export interface CommonsFeatures {
 }
 
 export interface CommonsWorld extends WorldData {
-  plots: PlotSlot[]
+  gates: GateSlot[]
   features: CommonsFeatures
   rows: number
 }
@@ -70,7 +71,7 @@ export const LANE = { x0: 20, x1: 27, path0: 22, path1: 25 }
 const BAND = { y0: 16, y1: 25 }
 /** The east–west lane through the heart: gate to Silas's yard. */
 const CROSS = { y0: 19, y1: 22 }
-/** Silas's work yard (fenced), east of the plots. */
+/** Silas's work yard (fenced), east of the lane. */
 const YARD = { x0: 46, x1: 59, y0: 12, y1: 28 }
 
 /** Arriving from Hearthwick (just inside the gate). */
@@ -107,40 +108,30 @@ function patch(x: number, y: number, cell: number, seed: number): number {
   return top + (bottom - top) * s(fy)
 }
 
-// ---------------------------------------------------------------- plots
+// ---------------------------------------------------------------- gates
 
-/** Slot geometry for plot `index` (shared layout, plus the lane-side details). */
-export function plotSlot(index: number): PlotSlot {
-  const { tx, ty } = plotTile(index)
-  const side = tx < LANE.x0 ? 'east' : 'west'
-  const r = HOMESTEAD_DATA.outdoorReserved[0]
-  // The door is the middle of the reserved strip's bottom wall row.
-  const doorX = tx + r.x + Math.floor(r.w / 2) - 1
-  const doorY = ty + r.y + r.h - 2
-  return {
-    index,
-    tx,
-    ty,
-    side,
-    sign: { tx: side === 'east' ? LANE.x0 + 1 : LANE.x1 - 1, ty: ty + 4 },
-    door: { tx: doorX, ty: doorY },
-    doorstep: { tx: doorX, ty: doorY + 1 }
-  }
+/** Slot geometry for gate `gate` (shared layout, plus the lane-side details). */
+export function gateSlot(gate: number): GateSlot {
+  const { tx, ty, side } = gateTile(gate)
+  const laneX = side === 'west' ? tx + 1 : tx - 1
+  // The signpost stands on the verge a step out from the fence, just up the lane.
+  const signX = side === 'west' ? tx + 2 : tx - 2
+  return { gate, tx, ty, side, sign: { tx: signX, ty: ty - 1 }, entry: { tx: laneX, ty } }
 }
 
-/** Rows of plots a Commons needs for `plotCount` plots. */
-export function commonsRows(plotCount: number): number {
-  return plotRows(plotCount)
+/** Gate rows a Commons needs for `gateCount` gates. */
+export function commonsRows(gateCount: number): number {
+  return gateRowCount(gateCount)
 }
 
 // ---------------------------------------------------------------- builder
 
-export function buildCommons(plotCount = 0): CommonsWorld {
-  const rows = commonsRows(plotCount)
-  const slots = Array.from({ length: rows * HOMESTEAD_DATA.commons.columns.length }, (_, i) => plotSlot(i))
-  const lastRowY = Math.max(...slots.map((p) => p.ty))
+export function buildCommons(gateCount = 0): CommonsWorld {
+  const rows = commonsRows(gateCount)
+  const gates = Array.from({ length: Math.max(gateCount, HOMESTEAD_DATA.commons.spareGates) }, (_, i) => gateSlot(i))
+  const lastRowY = Math.max(...Array.from({ length: rows * 2 }, (_, i) => gateTile(i).ty))
   const W = COMMONS_W
-  const H = lastRowY + HOMESTEAD_DATA.outdoor.height + 4
+  const H = lastRowY + 9
   const ground: number[][] = []
   const solid: boolean[][] = []
   const seed = 1150
@@ -181,55 +172,44 @@ export function buildCommons(plotCount = 0): CommonsWorld {
   const put = (key: string, tx: number, ty: number, opts: Partial<ScenerySpot> = {}) =>
     scenery.push({ key, x: tx * TILE + TILE / 2, y: ty * TILE + TILE, ...opts })
 
-  // ---- plots: tended grass inside, hedges at the back and the outer side
-  for (const p of slots) {
-    fill(p.tx, p.ty, p.tx + 15, p.ty + 11, TERRAIN.grass_a)
-    for (let y = p.ty; y < p.ty + 12; y++) for (let x = p.tx; x < p.tx + 16; x++) if (hash(x, y, 77) < 0.35) ground[y][x] = TERRAIN.grass_c
-    // A worn flagstone apron at the door, a soft clover drift in the far
-    // corner, a flower border down the outer hedge: ground only, so every
-    // tile stays free to furnish.
-    for (let y = p.doorstep.ty; y <= p.doorstep.ty + 1; y++)
-      for (let x = p.door.tx - 1; x <= p.door.tx + 2; x++) if (hash(x, y, 23) < 0.8) set(x, y, TERRAIN.cobble_moss)
-    for (let y = p.ty + 7; y < p.ty + 11; y++)
-      for (let x = p.tx; x < p.tx + 16; x++) if (patch(x, y, 3, 29) > 0.68) set(x, y, TERRAIN.grass_b)
-    const borderX = p.side === 'east' ? p.tx : p.tx + 15
-    for (let y = p.ty + 6; y < p.ty + 11; y++) if (hash(borderX, y, 27) < 0.7) set(borderX, y, TERRAIN.flowers)
-    // Stepping stones from the doorstep to the lane.
-    const walkY = p.doorstep.ty + 1
-    const stepX = p.door.tx + (p.side === 'east' ? 1 : 0)
-    set(stepX, p.doorstep.ty, TERRAIN.cobble_moss)
-    const [wx0, wx1] = p.side === 'east' ? [stepX, LANE.path0 - 1] : [LANE.path1 + 1, stepX]
-    for (let x = wx0; x <= wx1; x++) set(x, walkY, hash(x, walkY, 3) < 0.7 ? TERRAIN.cobble_moss : TERRAIN.grass_a)
-    // Hedges at the back (north) and the outer side, a post-and-rail fence
-    // along the front and the lane side with a gap for the walk: all one
-    // tile outside the grid, so every grid tile stays free to furnish.
-    const backY = p.ty - 1
-    const outerX = p.side === 'east' ? p.tx - 1 : p.tx + 16
-    const laneX = p.side === 'east' ? p.tx + 16 : p.tx - 1
-    const hx0 = Math.min(outerX, p.tx)
-    const hx1 = Math.max(outerX, p.tx + 15)
-    for (let x = hx0; x <= hx1; x++) block(x, backY)
-    // The back hedge turns down the outer side at its outer end.
-    scenery.push({ key: `hedge-h-${hx1 - hx0 + 1}-${p.side === 'east' ? 'turnw' : 'turne'}`, x: hx0 * TILE, y: (backY + 1) * TILE, originX: 0 })
-    for (let y = backY + 1; y <= p.ty + 11; y++) block(outerX, y)
-    scenery.push({ key: `hedge-v-${p.ty + 11 - backY}`, x: outerX * TILE, y: (p.ty + 12) * TILE, originX: 0 })
-    const frontY = p.ty + 12
-    const fx0 = Math.min(outerX, laneX)
-    const fx1 = Math.max(outerX, laneX)
-    for (let x = fx0; x <= fx1; x++) block(x, frontY)
-    scenery.push({ key: `fence-h-${fx1 - fx0 + 1}`, x: fx0 * TILE, y: (frontY + 1) * TILE, originX: 0 })
-    // Lane side: fence above and below the gateway (the walk's row and the one above it).
-    const gate0 = walkY - 1
-    for (let y = backY; y < gate0; y++) block(laneX, y)
-    for (let y = walkY + 1; y < frontY; y++) block(laneX, y)
-    scenery.push({ key: `fence-v-${gate0 - backY}`, x: laneX * TILE, y: gate0 * TILE, originX: 0 })
-    scenery.push({ key: `fence-v-${frontY - walkY - 1}`, x: laneX * TILE, y: frontY * TILE, originX: 0 })
-    set(laneX, walkY, TERRAIN.cobble_moss)
-    set(laneX, gate0, TERRAIN.grass_a)
-    put('gatepost-small', laneX, gate0 - 1, { x: laneX * TILE + 8 })
-    put('gatepost-small', laneX, walkY + 1, { x: laneX * TILE + 8, y: (walkY + 1) * TILE + 6 })
-    // A cottage-garden border along the front fence: flowers, nothing in the way.
-    for (let x = p.tx; x < p.tx + 16; x++) if (hash(x, frontY - 1, 19) < 0.55) set(x, frontY - 1, TERRAIN.flowers)
+  // ---- the fences along the lane, with a gate in them for every homestead.
+  // Behind the fences the land is wild: the homesteads lie out there, each
+  // through its own gate. The heart band (the square and the cross lane) is
+  // left open.
+  const [westX, eastX] = HOMESTEAD_DATA.commons.fenceX
+  const fenceTop = 3
+  const fenceBottom = H - 5
+  const gapAt = (x: number, y: number) => gates.some((g) => g.tx === x && (y === g.ty || y === g.ty + 1))
+  const inBand = (y: number) => y >= BAND.y0 && y <= BAND.y1
+  for (const fx of [westX, eastX]) {
+    let run: number | null = null
+    const flush = (end: number) => {
+      if (run !== null && end >= run) scenery.push({ key: `fence-v-${end - run + 1}`, x: fx * TILE, y: (end + 1) * TILE, originX: 0 })
+      run = null
+    }
+    for (let y = fenceTop; y <= fenceBottom; y++) {
+      if (inBand(y) || gapAt(fx, y)) {
+        flush(y - 1)
+        continue
+      }
+      block(fx, y)
+      if (run === null) run = y
+    }
+    flush(fenceBottom)
+  }
+  for (const g of gates) {
+    // The gateway: worn ground through the gap and a little way in, posts either side.
+    for (let y = g.ty; y <= g.ty + 1; y++) {
+      set(g.tx, y, TERRAIN.cobble_moss)
+      // A worn track running off into the trees behind the gate.
+      for (let d = 1; d <= 3; d++) if (hash(g.tx + d * 7, y, 33) < 0.85 - d * 0.2) set(g.side === 'west' ? g.tx - d : g.tx + d, y, d === 1 ? TERRAIN.dirt : TERRAIN.grass_b)
+      set(g.entry.tx, y, TERRAIN.cobble_moss)
+    }
+    put('gatepost-small', g.tx, g.ty - 1, { x: g.tx * TILE + 8 })
+    put('gatepost-small', g.tx, g.ty + 2, { x: g.tx * TILE + 8, y: (g.ty + 2) * TILE + 6 })
+    block(g.tx, g.ty - 1)
+    block(g.tx, g.ty + 2)
+    block(g.sign.tx, g.sign.ty)
   }
 
   // ---- the plot lane, north to south: the old carting lane, worn cobbles
@@ -264,8 +244,12 @@ export function buildCommons(plotCount = 0): CommonsWorld {
 
   // Lamps on the square's corners and along the lane, each named and kept.
   const lamps: { tx: number; ty: number }[] = [{ tx: 20, ty: 17 }, { tx: 27, ty: 24 }]
-  for (const p of slots) if (p.side === 'east') lamps.push({ tx: LANE.x0 + 1, ty: p.ty + 1 })
-  for (const p of slots) if (p.side === 'west') lamps.push({ tx: LANE.x1 - 1, ty: p.ty + 9 })
+  // One lamp a gate row, on the verge between the gates, alternating sides.
+  for (let r = 0; r < rows; r++) {
+    const y = gateTile(r * 2).ty + 3
+    if (y >= BAND.y0 - 1 && y <= BAND.y1 + 1) continue
+    lamps.push({ tx: r % 2 === 0 ? LANE.x0 : LANE.x1, ty: y })
+  }
   for (const l of lamps) props.push({ frame: 'lantern-post', tx: l.tx, ty: l.ty, h: 28, body: [8, 6], light: 'commons' })
 
   // Two old oaks frame the square (their canopies are foreground).
@@ -349,10 +333,28 @@ export function buildCommons(plotCount = 0): CommonsWorld {
   block(26, 6)
   put('commons-art:wilds-fire-ring', 26, 6)
 
-  // ---- meadow details: stumps, tall grass, wildflowers (not on paths or plots)
-  const inPlot = (x: number, y: number) => slots.some((p) => x >= p.tx - 1 && x <= p.tx + 16 && y >= p.ty - 1 && y <= p.ty + 12)
+  // ---- the woods behind the fences: wild land, the homesteads out past it.
+  // A strip of meadow along each fence; the trees thicken further back. The
+  // heart band, the yard and every gateway stay open.
+  const nearGate = (x: number, y: number) => gates.some((g) => y >= g.ty - 1 && y <= g.ty + 2 && Math.abs(x - g.tx) <= 4)
+  for (let y = 3; y < H - 3; y++) {
+    for (let x = 3; x < W - 3; x++) {
+      const west = x < westX - 1
+      const east = x > eastX + 1
+      if ((!west && !east) || solid[y][x] || inBand(y) || nearGate(x, y)) continue
+      if (x >= YARD.x0 - 1 && x <= YARD.x1 + 1 && y >= YARD.y0 - 1 && y <= YARD.y1 + 1) continue
+      const depth = west ? westX - x : x - eastX
+      if (hash(x, y, 61) < (depth <= 3 ? 0.22 : 0.55)) {
+        set(x, y, TERRAIN.grass_b)
+        block(x, y)
+        trees.push({ tx: x, ty: y })
+      }
+    }
+  }
+
+  // ---- meadow details: stumps, tall grass, wildflowers (not on paths)
   const free = (x: number, y: number) =>
-    !solid[y][x] && (ground[y][x] === TERRAIN.grass_a || ground[y][x] === TERRAIN.grass_b || ground[y][x] === TERRAIN.grass_c || ground[y][x] === TERRAIN.flowers) && !inPlot(x, y)
+    !solid[y][x] && (ground[y][x] === TERRAIN.grass_a || ground[y][x] === TERRAIN.grass_b || ground[y][x] === TERRAIN.grass_c || ground[y][x] === TERRAIN.flowers)
   for (let y = 3; y < H - 2; y++) {
     for (let x = 3; x < W - 2; x++) {
       if (!free(x, y)) continue
@@ -374,7 +376,9 @@ export function buildCommons(plotCount = 0): CommonsWorld {
   // ---- framing trees: a thick border, gaps only for the gate and the arch
   const exits: ExitDef[] = [
     { tx: 0, ty: CROSS.y0, tw: 1, th: CROSS.y1 - CROSS.y0 + 1, to: 'village', entry: { tx: 39, ty: 15 } },
-    { tx: LANE.path0, ty: 0, tw: LANE.path1 - LANE.path0 + 1, th: 1, to: 'wilds', entry: { ...WILDS_ENTRY } }
+    { tx: LANE.path0, ty: 0, tw: LANE.path1 - LANE.path0 + 1, th: 1, to: 'wilds', entry: { ...WILDS_ENTRY } },
+    // Every gate leads onto its homestead's land (signs are the homestead layer's).
+    ...gates.map((g) => ({ tx: g.tx, ty: g.ty, tw: 1, th: 2, to: homeArea(g.gate), entry: landEntry(), label: null }))
   ]
   const laneGap = (x: number, y: number) => x >= LANE.path0 && x <= LANE.path1 && y <= 3
   const gateGap = (x: number, y: number) => y >= CROSS.y0 && y <= CROSS.y1 && x <= 2
@@ -433,7 +437,7 @@ export function buildCommons(plotCount = 0): CommonsWorld {
     emberSpots: [],
     spawn: { ...COMMONS_FROM_VILLAGE },
     board: { ...board },
-    plots: slots,
+    gates,
     features: { gate, hame, well, board, silas, toolbox, firebox, skids, lamps },
     rows
   }

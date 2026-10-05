@@ -2,17 +2,18 @@
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
   import { VILLAGE_EV, villageFor } from '../game/village'
-  import { homesteadsFor } from '../game/homestead'
   import { bus } from '../game/events'
   import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
-  import type { Asset } from '../lib/api/types'
+  import type { Asset, ChestId } from '../lib/api/types'
+  import { HOMESTEAD_DATA } from '../lib/homestead'
   import { focusTrap } from './focus'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
-  // The workshop at home: the storage chest (carried ⇄ stored) and the
-  // crafting bench (recipes from content/crafting.json). Needs the Workshop.
+  // The workshop at home: the chests (carried ⇄ stored: the shared home
+  // chest, or your own small one that goes with you if you leave the deed)
+  // and the crafting bench (recipes from content/crafting.json). Needs the Workshop.
   let { session, mode, onClose }: { session: Session; mode: 'chest' | 'bench'; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
@@ -22,6 +23,7 @@
   let busy = $state<string | null>(null)
   let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
   let batches = $state<Record<string, number>>({})
+  let chest = $state<ChestId>('shared')
 
   onMount(() => {
     tab = mode
@@ -33,9 +35,8 @@
 
   const view = $derived.by(() => {
     void version
-    const placed = homesteadsFor(session).mine?.items ?? []
     const inv = village.inventory
-    const sto = village.storage
+    const sto = chest === 'shared' ? village.storage : village.personal
     const rows: { kind: Asset['kind']; id: string; carried: number; stored: number }[] = []
     const add = (kind: Asset['kind'], id: string, carried: number, stored: number) => {
       if (carried > 0 || stored > 0) rows.push({ kind, id, carried, stored })
@@ -43,10 +44,12 @@
     for (const id of MATERIAL_IDS) add('material', id, countOf(inv, 'material', id), countOf(sto, 'material', id))
     const items = new Set([...Object.keys(inv?.items ?? {}), ...Object.keys(sto?.items ?? {})])
     for (const id of [...items].sort()) add('item', id, countOf(inv, 'item', id), countOf(sto, 'item', id))
-    const movable = movableDecorations(inv, placed)
+    const movable = movableDecorations(inv)
     const decos = new Set([...Object.keys(movable), ...Object.keys(sto?.decorations ?? {})])
     for (const id of [...decos].sort()) add('decoration', id, movable[id] ?? 0, countOf(sto, 'decoration', id))
-    return { rows, carried: inv?.materials ?? {} }
+    const own = village.personal
+    const ownUnits = own ? [own.materials, own.items, own.decorations].reduce((n, m) => n + Object.values(m).reduce((a, b) => a + b, 0), 0) : 0
+    return { rows, carried: inv?.materials ?? {}, ownUnits }
   })
 
   async function move(direction: 'deposit' | 'withdraw', kind: Asset['kind'], id: string, qty: number): Promise<void> {
@@ -54,9 +57,9 @@
     busy = `${direction}:${kind}:${id}`
     message = null
     const asset = { kind, id, qty }
-    const r = await village.move(direction, asset)
+    const r = await village.move(direction, asset, chest)
     busy = null
-    message = r.ok ? { text: `${direction === 'deposit' ? 'Stored' : 'Took out'} ${assetPhrase(asset)}.`, kind: 'ok' } : { text: r.text, kind: 'error' }
+    message = r.ok ? { text: `${direction === 'deposit' ? 'Stored' : 'Took out'} ${assetPhrase(asset)}${chest === 'personal' ? ' (your own chest)' : ''}.`, kind: 'ok' } : { text: r.text, kind: 'error' }
   }
 
   async function craft(recipeId: string): Promise<void> {
@@ -79,9 +82,9 @@
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="workshop-title">
   <div class="panel" use:focusTrap>
     <button type="button" class="modal-close" onclick={onClose} aria-label="Close the workshop"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="workshop-title"><Icon name="home" size={20} /> Your Workshop</h2>
+    <h2 class="panel-title" id="workshop-title"><Icon name="home" size={20} /> The Workshop</h2>
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'chest'} class:on={tab === 'chest'} onclick={() => ((tab = 'chest'), (message = null))}>Storage chest</button>
+      <button type="button" role="tab" aria-selected={tab === 'chest'} class:on={tab === 'chest'} onclick={() => ((tab = 'chest'), (message = null))}>Chests</button>
       <button type="button" role="tab" aria-selected={tab === 'bench'} class:on={tab === 'bench'} onclick={() => ((tab = 'bench'), (message = null))}>Crafting bench</button>
     </div>
 
@@ -93,7 +96,15 @@
     {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
 
     {#if tab === 'chest' && loaded === 'ready'}
-      <p class="lede">Oak and iron, waxed against the damp. What’s stored stays home; you can’t send it or build with it until you take it out.</p>
+      <div class="chests" role="radiogroup" aria-label="Which chest">
+        <button type="button" role="radio" aria-checked={chest === 'shared'} class:on={chest === 'shared'} data-chest="shared" onclick={() => ((chest = 'shared'), (message = null))}>Home chest</button>
+        <button type="button" role="radio" aria-checked={chest === 'personal'} class:on={chest === 'personal'} data-chest="personal" onclick={() => ((chest = 'personal'), (message = null))}>Your own chest · {view.ownUnits}/{HOMESTEAD_DATA.personalChest.maxUnits}</button>
+      </div>
+      {#if chest === 'shared'}
+        <p class="lede">Oak and iron, waxed against the damp. Everyone on the deed can open it. What’s stored stays home; you can’t send it or build with it until you take it out.</p>
+      {:else}
+        <p class="lede">Your own small chest, with your mark burned in the lid. Only you open it, and it goes with you if you ever give up your place on the deed.</p>
+      {/if}
       {#if view.rows.length === 0}
         <p class="msg">Nothing to store yet. Bring things back from the Wilds.</p>
       {/if}
@@ -167,6 +178,20 @@
     padding: 6px 8px;
   }
   .tabs button.on {
+    background: #fff1c2;
+    border-color: var(--gold-deep);
+  }
+  .chests {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 8px;
+  }
+  .chests button {
+    flex: 1;
+    padding: 4px 8px;
+    font-size: 0.85em;
+  }
+  .chests button.on {
     background: #fff1c2;
     border-color: var(--gold-deep);
   }

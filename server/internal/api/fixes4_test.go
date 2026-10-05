@@ -31,18 +31,19 @@ func TestFix4ReadOnlyHomeRevisions(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	v := x.exp("GET", "/api/homestead/bob", nil, c, 200)
-	if v.Rev != s.Rev || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='bob'") != int(b.Rev) || count(t, x.db, "SELECT count(*) FROM homesteads WHERE habitica_id='bob'") != 0 {
+	x.claimGate(bc, &b, 0)
+	v := x.exp("GET", "/api/homestead/gate/0", nil, c, 200)
+	if v.Rev != s.Rev || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='bob'") != int(b.Rev) || count(t, x.db, "SELECT count(*) FROM homestead_members WHERE habitica_id='alice'") != 0 {
 		t.Fatal("visitor changed owner")
 	}
-	if v.Home.PlotIndex != nil || v.Home.Bounds != nil || v.Home.Tier != 0 {
-		t.Fatal("missing virtual campsite")
+	if v.Home == nil || v.Home.Member || v.Home.Tier != 0 {
+		t.Fatal("visited campsite")
 	}
 	commons := x.exp("GET", "/api/commons", nil, c, 200)
-	if commons.Rev != s.Rev || len(commons.Plots) != 2 {
+	if commons.Rev != s.Rev || commons.Gates[0].HomeID == nil {
 		t.Fatal("read bumped revision or omitted member")
 	}
-	own := x.exp("GET", "/api/homestead/bob", nil, bc, 200)
+	own := x.exp("GET", "/api/homestead/gate/0", nil, bc, 200)
 	if own.Rev != b.Rev {
 		t.Fatal("own read bumped revision")
 	}
@@ -54,20 +55,20 @@ func TestFix4ReadOnlyHomeRevisions(t *testing.T) {
 	if saved.State.HP != 12 || saved.State.Position != doc.Position {
 		t.Fatal("neighbor read made damage stale")
 	}
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='homestead-grant'") != 2 {
-		t.Fatal("grant duplicated")
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='homestead-deed'") != 1 {
+		t.Fatal("deed duplicated")
 	}
 }
-func TestFix4PlacementNeedsCottage(t *testing.T) {
+func TestFix4PlacementNeedsTierForIndoors(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.fund("alice", 30, 0)
-	update(&s, x.exp("GET", "/api/homestead/alice", nil, c, 200))
+	x.claimGate(c, &s, 0)
 	v := x.exp("POST", "/api/homestead/buy", body(s, "stool", map[string]any{"itemDef": "wooden-stool"}), c, 200)
 	update(&s, v)
-	req := body(s, "place", map[string]any{"itemId": v.Result.ItemID, "scene": "outdoor", "x": 0, "y": 0, "rotation": 0})
+	req := body(s, "place", map[string]any{"itemId": v.Result.ItemID, "scene": "indoor", "x": 0, "y": 0, "rotation": 0})
 	if x.exp("POST", "/api/homestead/place", req, c, 409).Error.Code != "tier-required" {
-		t.Fatal("campsite placement")
+		t.Fatal("campsite has no indoors")
 	}
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
 	req["baseRev"] = s.Rev

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState } from './connected'
-import { beginNewJourney, waitForArea } from './helpers'
-import { earnPlenty, freshPlayer, fund, go, homes, myHome, place, readOn, shot, silasSays, type Area } from './home-helpers'
+import { beginNewJourney } from './helpers'
+import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, readOn, shot, silasSays } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
 import { dateLine } from '../src/lib/village'
 
@@ -32,12 +32,9 @@ async function giveAll(board: ReturnType<Page['getByRole']>, project: string): P
   await card.locator(`[data-contribute="${project}"]`).click()
 }
 
-/** Claim a plot through Silas (and read his reply). */
+/** Claim a deed through Silas (and read his reply). */
 async function claim(page: Page): Promise<void> {
-  await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).status).toBe('ready')
-  await silasSays(page, /Show me my plot/)
-  await expect.poll(async () => (await homes(page)).claimed).toBe(true)
+  await claimDeed(page)
 }
 
 test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commons', async ({ page }) => {
@@ -127,22 +124,16 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await silasSays(page, /Build on a workshop/)
   await readOn(page, /Steady|eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
-  const v = await homes(page)
-  const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(page, 'commons', slot.doorstep.tx + 2, slot.doorstep.ty + 2)
-  await shot(page, 'plot-workshop-desktop')
-  await go(page, 'commons', slot.doorstep.tx, slot.doorstep.ty)
-  await expect(page.locator('.prompt')).toContainText('Go inside')
-  await page.waitForTimeout(200)
-  await page.keyboard.press('e')
-  await waitForArea(page, 'home' as Area)
+  await onMyLand(page, 2, 2)
+  await shot(page, 'land-workshop-desktop')
+  await intoCottage(page)
 
-  // The storage chest.
+  // The chests: the home chest everyone on the deed shares, and your own.
   await place(page, 40, 66)
-  await expect(page.locator('.prompt')).toContainText('Open the storage chest')
+  await expect(page.locator('.prompt')).toContainText('Open the chests')
   await page.waitForTimeout(200)
   await page.keyboard.press('e')
-  const panel = page.getByRole('dialog', { name: 'Your Workshop' })
+  const panel = page.getByRole('dialog', { name: 'The Workshop' })
   await expect(panel).toBeVisible()
   await expect(panel.locator('[data-goods="material:timber"]')).toContainText('40')
   await panel.locator('[data-store="timber:5"]').click()
@@ -153,6 +144,15 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await panel.locator('[data-take="timber:1"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Took out 1 timber')
   st = await (await page.request.get('/api/storage')).json()
+  expect(st.storage.materials.timber).toBe(4)
+  // Your own chest: small, yours alone, and it goes with you if you ever leave the deed.
+  await panel.locator('[data-chest="personal"]').click()
+  await panel.locator('[data-store="timber:5"]').click()
+  await expect(panel.locator('.msg.ok')).toContainText('Stored 5 timber (your own chest)')
+  await expect(panel.locator('[data-chest="personal"]')).toContainText('5/')
+  await shot(page, 'personal-chest-desktop')
+  st = await (await page.request.get('/api/storage')).json()
+  expect(st.personal.materials.timber).toBe(5)
   expect(st.storage.materials.timber).toBe(4)
 
   // The crafting bench.
@@ -185,12 +185,10 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   const b = await freshPlayer(other, 'Bram', code)
   await claim(other)
 
-  // Tansy posts 3 timber from her own mailbox.
+  // Tansy posts 3 timber from her own mailbox (by the path on her land).
   await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).plots.length).toBe(2)
-  let v = await homes(page)
-  let slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(page, 'commons', slot.sign.tx, slot.ty + 8)
+  await expect.poll(async () => (await homes(page)).gates.filter((g) => g.names.length > 0).length).toBeGreaterThanOrEqual(2)
+  await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
   await page.waitForTimeout(200)
   await page.keyboard.press('e')
@@ -221,10 +219,8 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
 
   // Bram's flag is up; he collects the timber.
   await go(other, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(other)).plots.length).toBe(2)
-  v = await homes(other)
-  slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(other, 'commons', slot.sign.tx, slot.ty + 8)
+  await expect.poll(async () => (await homes(other)).status).toBe('ready')
+  await atMyMailbox(other)
   await shot(other, 'mailbox-flag-desktop')
   await expect(other.locator('.prompt')).toContainText('Check your mailbox')
   await other.waitForTimeout(200)

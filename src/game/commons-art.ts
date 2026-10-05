@@ -838,6 +838,21 @@ const DECO: Record<string, DecoArt> = {
       rect(c, 7, 0, 2, 3, O)
     }
   },
+  // A homestead's lantern post: a squared oak post, a crossbar for the name,
+  // an amber lamp hung from it (the light that holds the land).
+  'lantern-post': {
+    rise: 22,
+    draw(c) {
+      box(c, 4, 34, 8, 4, STONE.md)
+      box(c, 6, 6, 4, 30, WOOD.dk)
+      rect(c, 7, 7, 1, 28, WOOD.md)
+      box(c, 2, 6, 12, 3, WOOD.md)
+      rect(c, 11, 9, 1, 3, O)
+      box(c, 9, 12, 5, 7, '#4a4452')
+      rect(c, 10, 13, 3, 5, GLOW)
+      rect(c, 11, 14, 1, 2, '#fff3c4')
+    }
+  },
   'oak-table': {
     rise: 2,
     draw(c) {

@@ -1,26 +1,30 @@
 /**
- * Homesteads, game side: what the Commons knows about the world's plots and
- * homes, and every homestead action (claim, buy, place, move, remove,
- * upgrade, rest). No Phaser here — the scene layer
- * (src/game/entities/homesteads.ts) draws from it, the UI (Silas's shop, the
- * placement tray) calls it, and both hear about changes on the bus.
+ * Homesteads, game side: the Commons lane of gates (who holds each one),
+ * the homesteads seen so far (one map each, behind its gate), and every
+ * homestead action: claim a deed, buy, place, move, remove, upgrade, clear a
+ * tile, share the deed (invite and sign at Silas's table), leave. No Phaser
+ * here — the scene layer (src/game/entities/homesteads.ts) draws from it,
+ * the UI (Silas's shop, the placement tray) calls it, and both hear about
+ * changes on the bus.
  *
  * Guests and connected players who can't reach the server get a walkable
- * Commons with no homes: building needs a world.
+ * Commons and wild land behind every gate, with no homes: building needs a
+ * world.
  */
 import { HOMESTEAD_DATA, homeItem, type HomeInstance } from '../lib/homestead'
-import type { HomeAction, HomeActionResponse, HomeView, PlotInfo } from '../lib/api/types'
-import type { MutationOp } from './link'
+import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types'
+import type { CommonsLaneView, MutationOp } from './link'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing'
-import { setCommonsPlotCount } from './worlds'
+import { setCommonsGateCount } from './worlds'
+import { setLandSource } from './homeland'
 import { villageFor } from './village'
 import { bus, EV } from './events'
 import { grantPaper } from './papers'
 import type { Session } from './session'
 
 export const HOME_EV = {
-  /** The roster or a home changed: { reason }. */
+  /** The lane or a home changed: { reason, gate? }. */
   changed: 'home:changed',
   /** The UI should open Silas's shop. */
   openShop: 'ui:home-shop',
@@ -32,14 +36,32 @@ export const HOME_EV = {
   arrange: 'ui:home-arrange',
   /** Decoration art as data URLs: Record<itemId, string>. */
   thumbs: 'ui:home-thumbs',
-  /** Entered someone's cottage: { title, eyebrow, body }. */
-  room: 'ui:home-room'
+  /** Entered a homestead or a cottage: { title, eyebrow, body }. */
+  room: 'ui:home-room',
+  /** The homestead goal for the journal and HUD: { text } | null. */
+  goal: 'ui:home-goal',
+  /** Ask the player to name a lantern post: NamePrompt; answered on `named`. */
+  namePrompt: 'ui:home-name-prompt',
+  /** The name given (null: cancelled). */
+  named: 'game:home-named',
+  /** Ask the player to confirm leaving the deed. */
+  confirmLeave: 'ui:home-confirm-leave',
+  /** UI → scene: a homestead action decided outside a conversation: { action }. */
+  action: 'game:home-action'
 } as const
+
+export interface NamePrompt {
+  title: string
+  body: string
+  placeholder: string
+  max: number
+}
 
 /** Story flags (synced with progress). */
 export const HOME_FLAGS = {
   met: 'home:met-silas',
-  claimed: 'home:claimed'
+  /** Walked through your own gate since the deed (the guidance is done). */
+  arrived: 'home:arrived'
 } as const
 
 export const PAPERS = {
@@ -51,20 +73,8 @@ export const PAPERS = {
 
 export type HomeStatus = 'guest' | 'loading' | 'ready' | 'offline'
 
-/** A slot on the Commons map and who it belongs to. */
-export interface PlotView {
-  /** Map slot (the plot index, or the next free slot for a plotless member). */
-  slot: number
-  ownerId: string
-  name: string
-  tier: number
-  /** False for members who haven't been given a plot yet (a reserved, empty plot). */
-  allocated: boolean
-  mine: boolean
-}
-
 export interface ArrangeView {
-  /** Standing on your own plot or in your own cottage. */
+  /** Standing on your own land or in your own cottage. */
   available: boolean
   scene: 'outdoor' | 'indoor' | null
   tier: number
@@ -76,6 +86,7 @@ export type PlacementCommand =
   | { kind: 'rotate' }
   | { kind: 'confirm' }
   | { kind: 'remove' }
+  | { kind: 'clear' }
   | { kind: 'cancel' }
   | { kind: 'exit' }
 
@@ -100,6 +111,10 @@ export interface PlacementView {
   canRotate: boolean
   busy: boolean
   message: { text: string; kind: 'ok' | 'error' } | null
+  /** A tree, stump or boulder picked on lit ground: Silas can clear it. */
+  clearing: { x: number; y: number; what: string; cost: number } | null
+  /** Where the piece in hand stands (grid tiles), if one is. */
+  spot: { x: number; y: number; rotation: number } | null
 }
 
 /** Player-facing words for a homestead refusal. */
@@ -112,9 +127,19 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
     case 'placement-overlap':
       return 'Something’s already there.'
     case 'out-of-bounds':
-      return 'That’s past the edge of your plot.'
+      return 'That’s past the edge of your land.'
     case 'invalid-placement':
       return 'That one doesn’t belong there.'
+    case 'land-blocked':
+      return 'A tree or a rock is in the way. Build around it, or have Silas clear it.'
+    case 'unlit':
+      return 'That ground is past your lamplight. Set a lantern post nearer to hold it.'
+    case 'post-holds-land':
+      return 'That lamp is holding up ground you’ve built on. Move those pieces first.'
+    case 'name-required':
+      return 'A lamp needs a name before it holds anything.'
+    case 'not-clearable':
+      return 'There’s nothing there for Silas to clear.'
     case 'insufficient-embers':
       return 'Not enough embers for that.'
     case 'insufficient-materials':
@@ -125,6 +150,20 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'That’s already put away.'
     case 'item-not-owned':
       return 'That isn’t yours to move.'
+    case 'not-a-member':
+      return 'That’s for the folk on this deed.'
+    case 'already-homesteaded':
+      return 'One place on the Commons each. You’d have to give up your deed first.'
+    case 'gate-taken':
+      return 'Someone has that deed already.'
+    case 'not-at-table':
+      return 'Silas signs deeds at his table. Stand by it.'
+    case 'partner-not-at-table':
+      return 'Both names go on at once. Your partner needs to be at the table too.'
+    case 'invite-not-found':
+      return 'That offer has lapsed. Ask again.'
+    case 'chest-full':
+      return 'Your own chest is full.'
     case 'offline':
       return 'Needs a connection. Nothing changed — try again when you’re back online.'
     case 'superseded':
@@ -140,16 +179,29 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
   }
 }
 
-export type ActResult = { ok: true; itemId?: string } | { ok: false; code: string; text: string }
+export type ActResult = { ok: true; itemId?: string; status?: 'joined' | 'waiting' } | { ok: false; code: string; text: string }
+
+/** "Lot 3": how a gate is named to players (gates count from 0). */
+export function lotName(gate: number): string {
+  return `Lot ${gate + 1}`
+}
 
 /**
- * One per session. Holds the world's plots and the homes seen so far, and
+ * One per session. Holds the lane and the homesteads seen so far, and
  * performs homestead actions through the session's server link.
  */
 export class Homesteads {
   status: HomeStatus
-  roster: PlotInfo[] = []
-  readonly homes = new Map<string, HomeView>()
+  gates: GateInfo[] = []
+  gateCount: number = HOMESTEAD_DATA.commons.spareGates
+  invites: DeedInvite[] = []
+  private myGateValue: number | null = null
+  /** Homesteads by gate (null: known to be unclaimed land). */
+  readonly homes = new Map<number, HomeView | null>()
+  /** Land seeds the server sent, by gate. */
+  readonly seeds = new Map<number, number>()
+  /** Last unclaimed gate whose sign the player read (Silas offers it first). */
+  chosenGate: number | null = null
   /**
    * The caller's carried materials. One view for the whole game: it lives in
    * Village's carried counts (shop, board, mail and workshop all read it).
@@ -162,6 +214,7 @@ export class Homesteads {
     villageFor(this.session).setCarriedMaterials(m)
   }
   private loading: Promise<void> | null = null
+  private polling = 0
 
   constructor(private session: Session) {
     this.status = session.link ? 'loading' : 'guest'
@@ -178,45 +231,52 @@ export class Homesteads {
     return this.session.link?.habiticaId ?? null
   }
 
+  /** Your gate (null: no deed). */
+  get myGate(): number | null {
+    return this.myGateValue
+  }
+
   get mine(): HomeView | null {
-    const id = this.myId
-    return id ? this.homes.get(id) ?? null : null
+    const g = this.myGate
+    return g === null ? null : this.homes.get(g) ?? null
   }
 
+  /** You hold a deed (alone or jointly). */
   get claimed(): boolean {
-    return this.session.state.flags.includes(HOME_FLAGS.claimed)
+    return this.myGate !== null
   }
 
-  /** The plot views for the map, by slot. Plotless members take the next free slots. */
-  plots(): PlotView[] {
+  gateInfo(gate: number): GateInfo | null {
+    return this.gates.find((g) => g.gate === gate) ?? null
+  }
+
+  /** Unclaimed gates on the lane, the chosen one first. */
+  unclaimed(): GateInfo[] {
+    const free = this.gates.filter((g) => g.homeId === null)
+    return free.sort((a, b) => (a.gate === this.chosenGate ? -1 : b.gate === this.chosenGate ? 1 : a.gate - b.gate))
+  }
+
+  /** Everyone on any deed but you (mail goes to their boxes). */
+  neighbours(): { id: string; name: string }[] {
     const me = this.myId
-    const out: PlotView[] = []
-    let next = Math.max(-1, ...this.roster.map((p) => p.plotIndex ?? -1)) + 1
-    for (const p of this.roster) {
-      const allocated = p.plotIndex !== null
-      const home = this.homes.get(p.ownerId)
-      out.push({
-        slot: allocated ? p.plotIndex! : next++,
-        ownerId: p.ownerId,
-        name: home?.displayName || p.displayName || 'A neighbour',
-        tier: home?.tier ?? p.tier,
-        allocated,
-        mine: p.ownerId === me
-      })
-    }
+    const out: { id: string; name: string }[] = []
+    for (const g of this.gates) for (const m of g.members) if (m.id !== me && !out.some((o) => o.id === m.id)) out.push({ id: m.id, name: m.displayName || 'A neighbour' })
     return out
   }
 
-  /** Slots the map must have room for. */
-  slotCount(): number {
-    return this.plots().reduce((n, p) => Math.max(n, p.slot + 1), 0)
+  /** An invitation waiting for you to sign (someone wants to share their deed). */
+  inviteForMe(): DeedInvite | null {
+    const me = this.myId
+    return this.invites.find((i) => i.to.id === me && i.expiresAt * 1000 > Date.now()) ?? null
   }
 
-  myPlot(): PlotView | null {
-    return this.plots().find((p) => p.mine) ?? null
+  /** Invitations you've offered (as a member of your homestead). */
+  invitesFromMe(): DeedInvite[] {
+    const me = this.myId
+    return this.invites.filter((i) => i.from.id === me && i.expiresAt * 1000 > Date.now())
   }
 
-  /** Read the roster and every member's home (in order). Safe to call repeatedly. */
+  /** Read the lane, then your own homestead. Safe to call repeatedly. */
   load(): Promise<void> {
     if (!this.session.link) {
       this.status = 'guest'
@@ -231,42 +291,69 @@ export class Homesteads {
 
   private async doLoad(): Promise<void> {
     const link = this.session.link!
-    const roster = await link.readCommons()
-    if (!roster.ok) {
+    const lane = await link.readCommons()
+    if (!lane.ok) {
       this.status = 'offline'
       this.emit('offline')
       return
     }
-    this.roster = roster.value
-    setCommonsPlotCount(this.slotCount())
+    const before = JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status])
+    this.adoptLane(lane.value)
     this.status = 'ready'
-    this.emit('roster')
-    // Your own home first (Silas needs it to walk you to your plot), then the neighbours.
-    const me = this.myId
-    const order = [...this.roster].sort((a, b) => (a.ownerId === me ? -1 : b.ownerId === me ? 1 : 0))
-    for (const p of order) {
-      const r = await link.readHome(p.ownerId)
-      if (!r.ok) continue
-      this.adoptRead(r.value)
-    }
+    // Only a lane that changed is redrawn (Silas re-reads it every conversation).
+    if (JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status]) !== before) this.emit('roster')
+    const g = this.myGate
+    if (g !== null) await this.fetchHome(g)
+    this.emitGoal()
   }
 
-  /** A home read: the owner's home, and always the caller's own materials. */
-  private adoptRead(v: { home: HomeView; materials: Record<string, number> }): void {
-    const before = this.homes.get(v.home.ownerId)
-    this.homes.set(v.home.ownerId, v.home)
+  private adoptLane(v: CommonsLaneView): void {
+    const before = this.myGateValue
+    this.gates = v.gates
+    this.gateCount = v.gateCount
+    this.invites = v.invites
+    this.myGateValue = v.mine?.gate ?? null
+    for (const g of v.gates) {
+      const known = this.homes.get(g.gate)
+      if (g.homeId === null) this.homes.set(g.gate, null)
+      else if (known === null || (known && known.id !== g.homeId)) this.homes.delete(g.gate)
+    }
+    setCommonsGateCount(this.gateCount)
+    if (before !== this.myGateValue) this.emitGoal()
+  }
+
+  /** A gate read: the home behind it (or none), and always the caller's own materials. */
+  private adoptRead(v: { gate: number; landSeed?: number; home: HomeView | null; materials: Record<string, number> }): void {
+    const before = this.homes.get(v.gate)
+    if (v.landSeed !== undefined) this.seeds.set(v.gate, v.landSeed)
+    this.homes.set(v.gate, v.home)
     this.materials = v.materials
     this.reconcilePapers()
-    // Only the plot that changed is redrawn (and only if it did change).
-    if (!before || JSON.stringify(before) !== JSON.stringify(v.home)) this.emit('home', v.home.ownerId)
+    if (before === undefined || JSON.stringify(before) !== JSON.stringify(v.home)) this.emit('home', v.gate)
+  }
+
+  /** A home the server just sent (an action's answer, a workshop read). */
+  adoptHome(home: HomeView | null): void {
+    if (!home) return
+    this.homes.set(home.gate, home)
+    this.seeds.set(home.gate, home.landSeed)
+    if (home.member) this.myGateValue = home.gate
+    const row = this.gateInfo(home.gate)
+    if (row) {
+      row.tier = home.tier
+      row.desolate = home.desolate
+    }
+    this.reconcilePapers()
+    this.emit('home', home.gate)
   }
 
   /**
-   * Papers that follow from the home's state, not from one answer: a cottage
-   * means a laid foundation (a lost upgrade answer must still bring Orrin's
-   * standard once the home reads tier 1).
+   * Papers that follow from the home's state, not from one answer: a deed
+   * means Silas's deed paper; a cottage means a laid foundation (a lost
+   * upgrade answer must still bring Orrin's standard once the home reads tier 1).
    */
   private reconcilePapers(): void {
+    if (this.myGate !== null) grantPaper(this.session, PAPERS.deed)
     if ((this.mine?.tier ?? 0) >= 1) grantPaper(this.session, PAPERS.foundation)
   }
 
@@ -274,26 +361,22 @@ export class Homesteads {
   private onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused'; res?: HomeActionResponse }): void {
     if (p.op.kind !== 'home') return
     if (p.outcome === 'landed' && p.res?.result) {
-      this.homes.set(p.res.result.home.ownerId, p.res.result.home)
+      this.adoptHome(p.res.result.home)
       this.materials = p.res.result.materials
-      this.reconcilePapers()
-      this.emit(p.op.op, p.res.result.home.ownerId)
-    } else {
-      const me = this.myId
-      if (me) void this.fetchHome(me)
     }
+    void this.load()
     bus.emit(EV.toast, {
       text: p.outcome === 'landed' ? 'Your last order with Silas went through after all.' : 'Your last order with Silas didn’t go through. Nothing was charged.',
       icon: 'ember'
     })
   }
 
-  /** A member's home, fresh from the server (visiting their cottage). */
-  async fetchHome(ownerId: string): Promise<HomeView | null> {
+  /** The homestead behind a gate, fresh from the server (walking through it). */
+  async fetchHome(gate: number): Promise<HomeView | null> {
     const link = this.session.link
     if (!link) return null
-    const r = await link.readHome(ownerId)
-    if (!r.ok) return this.homes.get(ownerId) ?? null
+    const r = await link.readHome(gate)
+    if (!r.ok) return this.homes.get(gate) ?? null
     this.adoptRead(r.value)
     return r.value.home
   }
@@ -302,16 +385,24 @@ export class Homesteads {
 
   async act(action: HomeAction): Promise<ActResult> {
     const link = this.session.link
-    if (!link) return { ok: false, code: 'guest', text: 'Plots are for people with a world. Sign in to your world to claim one.' }
+    if (!link) return { ok: false, code: 'guest', text: 'Deeds are for people with a world. Sign in to your world to claim land.' }
     const r = await link.homeAction(action)
-    if (!r.ok) return { ok: false, code: r.code, text: homeErrorText(r.code) }
-    this.homes.set(r.home.ownerId, r.home)
+    if (!r.ok) {
+      if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found') void this.load()
+      return { ok: false, code: r.code, text: homeErrorText(r.code) }
+    }
     this.materials = r.materials
-    const row = this.roster.find((p) => p.ownerId === r.home.ownerId)
-    if (row) row.tier = r.home.tier
-    this.reconcilePapers()
-    this.emit(action.op, r.home.ownerId)
-    return { ok: true, itemId: r.itemId }
+    if (r.home) this.adoptHome(r.home)
+    if (action.op === 'claim' || action.op === 'leave' || action.op === 'joint' || action.op === 'invite') {
+      if (action.op === 'leave') {
+        const g = this.myGateValue
+        this.myGateValue = null
+        if (g !== null) this.homes.delete(g)
+      }
+      await this.load()
+    }
+    this.emit(action.op, r.home?.gate)
+    return { ok: true, itemId: r.itemId, status: r.status }
   }
 
   buy(itemDef: string): Promise<ActResult> {
@@ -322,16 +413,69 @@ export class Homesteads {
     return this.act({ op: 'upgrade', tier: (this.mine?.tier ?? 0) + 1 })
   }
 
-  /** Talking Silas through it: your plot becomes yours (the deed is his, shown to you). */
-  claim(): boolean {
-    if (!this.mine || this.claimed) return false
-    this.session.addFlag(HOME_FLAGS.claimed)
-    grantPaper(this.session, PAPERS.deed)
-    this.emit('claim', this.myId ?? undefined)
-    return true
+  /** Buy the deed to a gate's land from Silas. */
+  async claim(gate: number): Promise<ActResult> {
+    const r = await this.act({ op: 'claim', gate })
+    if (r.ok) {
+      grantPaper(this.session, PAPERS.deed)
+      this.emitGoal()
+    }
+    return r
   }
 
-  /** Owned instances (all of them, placed or not). */
+  leave(): Promise<ActResult> {
+    return this.act({ op: 'leave' })
+  }
+
+  clear(x: number, y: number): Promise<ActResult> {
+    return this.act({ op: 'clear', x, y })
+  }
+
+  /**
+   * Offer to share your deed with someone at Silas's table, and sign your
+   * side at once. The deed is amended when they sign too (within the window).
+   */
+  async offerDeed(to: string): Promise<ActResult> {
+    const mine = this.mine
+    if (!mine) return { ok: false, code: 'not-a-member', text: homeErrorText('not-a-member') }
+    const r = await this.act({ op: 'invite', to })
+    if (!r.ok) return r
+    return this.sign(mine.id, to)
+  }
+
+  /** Sign a joint deed at the table (yours to offer, or theirs to accept). */
+  async sign(homeId: string, to: string): Promise<ActResult> {
+    const r = await this.act({ op: 'joint', homeId, to })
+    if (r.ok && r.status === 'waiting') this.pollDeed()
+    return r
+  }
+
+  /**
+   * While a joint deed waits on the other signature, watch the lane: the
+   * deed is amended when the partner signs (or the offer lapses).
+   */
+  private pollDeed(): void {
+    const id = ++this.polling
+    const until = Date.now() + HOMESTEAD_DATA.jointDeed.confirmWindowSeconds * 1000 + 2000
+    const tick = async () => {
+      if (id !== this.polling || current?.homes !== this || Date.now() > until) return
+      const before = this.myGate !== null ? (this.mine?.members.length ?? 0) : 0
+      const gateBefore = this.myGate
+      await this.load()
+      if (this.myGate !== null) await this.fetchHome(this.myGate)
+      const after = this.myGate !== null ? (this.mine?.members.length ?? 0) : 0
+      if (this.myGate !== gateBefore || after !== before) {
+        this.polling++
+        this.emit('joint', this.myGate ?? undefined)
+        bus.emit(EV.toast, { text: 'Silas amends the deed. Both names, in his square hand.', icon: 'lantern' })
+        return
+      }
+      setTimeout(() => void tick(), 2000)
+    }
+    setTimeout(() => void tick(), 1500)
+  }
+
+  /** Owned decorations: everything on your land and in your pack. */
   owned(): HomeInstance[] {
     return this.mine?.items ?? []
   }
@@ -344,17 +488,51 @@ export class Homesteads {
     return HOMESTEAD_DATA.tiers[1].embers
   }
 
-  /** `ownerId`: only that plot changed (the scene redraws just it). */
-  private emit(reason: string, ownerId?: string): void {
-    bus.emit(HOME_EV.changed, { reason, ownerId })
+  /** What the deed to this gate costs you (null: not for sale). */
+  deedPrice(gate: number): number | null {
+    return this.gateInfo(gate)?.price ?? null
+  }
+
+  /** The homestead goal: walk to your gate once you have the deed. */
+  goal(): string | null {
+    const g = this.myGate
+    if (g === null || this.session.state.flags.includes(HOME_FLAGS.arrived)) return null
+    return `Find ${lotName(g)} on the Commons lane: your gate. Follow the marker.`
+  }
+
+  emitGoal(): void {
+    bus.emit(HOME_EV.goal, { text: this.goal() })
+  }
+
+  /** You walked through your own gate: the guidance is done. */
+  arrived(gate: number): void {
+    if (gate !== this.myGate || this.session.state.flags.includes(HOME_FLAGS.arrived)) return
+    this.session.addFlag(HOME_FLAGS.arrived)
+    this.emitGoal()
+  }
+
+  /** `gate`: only that gate changed (the scene redraws just it). */
+  private emit(reason: string, gate?: number): void {
+    bus.emit(HOME_EV.changed, { reason, gate })
   }
 }
 
 let current: { session: Session; homes: Homesteads } | null = null
 
-/** The homestead state for this session (made on first use). */
+/** The homestead state for this session (made on first use; it feeds the land maps). */
 export function homesteadsFor(session: Session): Homesteads {
-  if (!current || current.session !== session) current = { session, homes: new Homesteads(session) }
+  if (!current || current.session !== session) {
+    const homes = new Homesteads(session)
+    current = { session, homes }
+    setLandSource({
+      worldId: () => session.link?.worldId || 'guest',
+      state: (gate) => {
+        const h = homes.homes.get(gate)
+        return h ? { cleared: h.cleared, desolate: h.desolate } : null
+      },
+      seed: (gate) => homes.seeds.get(gate) ?? null
+    })
+  }
   return current.homes
 }
 

@@ -126,6 +126,24 @@ export const SERVER_ERROR_CODES = [
   'invalid-contribution',
   'project-complete',
   'project-overfilled',
+  // homesteads v2: land, deeds, joint deeds, chests
+  'land-blocked',
+  'unlit',
+  'post-holds-land',
+  'name-required',
+  'not-clearable',
+  'already-cleared',
+  'not-a-member',
+  'already-homesteaded',
+  'already-member',
+  'gate-taken',
+  'invalid-gate',
+  'self-invite',
+  'not-at-table',
+  'partner-not-at-table',
+  'invite-not-found',
+  'chest-full',
+  'invalid-chest',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

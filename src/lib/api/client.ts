@@ -46,6 +46,7 @@ import type {
   ProjectsResponse,
   StorageMoveResponse,
   StorageResponse,
+  ChestId,
   CommonsResponse,
   HomeActionRequest,
   HomeActionResponse,
@@ -99,17 +100,17 @@ export interface RawApi {
   wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
   wildsLantern(req: WildsLanternRequest): Promise<WildsLanternResponse>;
 
-  /** An own or same-world member's homestead (read-only for visitors). */
-  home(habiticaId: string): Promise<HomeResponse>;
-  /** Every world member's plot (plotless members last, with null bounds). */
+  /** The homestead behind a Commons gate (null home: unclaimed land; read-only for visitors). */
+  home(gate: number): Promise<HomeResponse>;
+  /** The Commons lane: every gate shown, who holds it, and deed invitations. */
   commons(): Promise<CommonsResponse>;
-  /** A keyed homestead mutation: buy, place, move, remove or upgrade. */
+  /** A keyed homestead mutation (claim, buy, place, …, joint, leave). */
   homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
   /** The Hearthwick calendar (public, no session). */
   calendar(): Promise<CalendarResponse>;
   /** Workshop storage: carried and stored counts. */
   storage(): Promise<StorageResponse>;
-  storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset }): Promise<StorageMoveResponse>;
+  storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId }): Promise<StorageMoveResponse>;
   craft(req: Envelope & { recipeId: string; qty: number }): Promise<CraftResponse>;
   mail(page?: { cursor?: string; pendingCursor?: string }): Promise<MailResponse>;
   mailSend(req: Envelope & { toId: string; asset: Asset }): Promise<MailActionResponse>;
@@ -233,8 +234,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async wildsLantern(req) {
       return parseWildsLantern(await request('POST', '/api/wilds/lantern', req));
     },
-    async home(habiticaId) {
-      return parseHome(await request('GET', `/api/homestead/${encodeURIComponent(habiticaId)}`));
+    async home(gate) {
+      return parseHome(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`));
     },
     async commons() {
       return parseCommons(await request('GET', '/api/commons'));

@@ -372,8 +372,22 @@ func (a *Server) presenceRevalidator(p *presencePeer) {
 		}
 	}
 }
+
+// near reports whether a player is connected to presence in this world, in
+// the given room, and last stood within radius px of (x, y). A socket in its
+// reconnect grace (detached) does not count: nobody is standing there.
+func (h *presenceHub) near(world, id, room string, x, y, radius float64) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	p := h.peers[id]
+	if p == nil || p.detached || p.identity.World != world || p.area != room || p.pos == nil {
+		return false
+	}
+	dx, dy := p.pos.X-x, p.pos.Y-y
+	return dx*dx+dy*dy <= radius*radius
+}
 func validPresenceRoom(area string) bool {
-	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) {
+	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 {
 		return true
 	}
 	parts := strings.Split(area, ":")

@@ -268,54 +268,90 @@ export interface WildsLanternResponse extends Snapshot {
 
 // ------------------------------------------------------------ homesteads
 
-/** A pixel rectangle on the Commons map. */
-export interface PlotBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+/** A homestead member (everyone on a deed is equal). */
+export interface HomeMember {
+  id: string;
+  displayName: string;
 }
 
-/** One member's homestead (GET /api/homestead/:id, and every homestead POST). */
+/**
+ * A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
+ * land's changes, its placed pieces, and the caller's own pack of
+ * decorations when the caller is a member.
+ */
 export interface HomeView {
-  ownerId: string;
-  displayName: string;
+  id: string;
+  gate: number;
   worldId: string;
-  /** null while the member has no plot yet (a reserved, empty plot). */
-  plotIndex: number | null;
   tier: number;
-  bounds: PlotBounds | null;
+  members: HomeMember[];
+  /** The caller is on the deed. */
+  member: boolean;
+  /** No members for a while: overgrown, dark windows, a weathered sign. */
+  desolate: boolean;
+  vacantSince: number | null;
+  landSeed: number;
+  /** Tiles Silas has cleared (trees, stumps, boulders gone). */
+  cleared: [number, number][];
+  postsBought: number;
+  /** What the next lantern post costs. */
+  nextPost: Record<string, number>;
   /** null below the Cottage (tier 1). */
   indoor: { width: number; height: number } | null;
   items: HomeInstance[];
 }
 
 export interface HomeResponse extends Snapshot {
-  home: HomeView;
+  gate: number;
+  landSeed: number;
+  home: HomeView | null;
   materials: Record<string, number>;
 }
 
-/** A Commons roster row (every world member; plotless members last). */
-export interface PlotInfo {
-  ownerId: string;
-  displayName: string;
+/** One gate on the Commons lane. */
+export interface GateInfo {
+  gate: number;
+  homeId: string | null;
+  names: string[];
+  members: HomeMember[];
   tier: number;
-  plotIndex: number | null;
-  bounds: PlotBounds | null;
+  desolate: boolean;
+  mine: boolean;
+  /** Unclaimed: what the deed costs the caller in embers. */
+  price: number | null;
+}
+
+/** A joint-deed invitation the caller is part of. */
+export interface DeedInvite {
+  homeId: string;
+  gate: number;
+  from: { id: string; name: string };
+  to: { id: string; name: string };
+  expiresAt: number;
+  fromConfirmedAt: number | null;
+  toConfirmedAt: number | null;
 }
 
 export interface CommonsResponse extends Snapshot {
-  plots: PlotInfo[];
+  gates: GateInfo[];
+  gateCount: number;
+  mine: { homeId: string; gate: number } | null;
+  invites: DeedInvite[];
 }
 
-export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade';
+export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade' | 'claim' | 'clear' | 'invite' | 'joint' | 'leave';
 
 /** The op-specific fields of a homestead POST (lease, rev, key and progress are added by the link). */
 export type HomeAction =
   | { op: 'buy'; itemDef: string }
-  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor'; x: number; y: number; rotation: number }
+  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor'; x: number; y: number; rotation: number; name?: string }
   | { op: 'remove'; itemId: string }
-  | { op: 'upgrade'; tier: number };
+  | { op: 'upgrade'; tier: number }
+  | { op: 'claim'; gate: number }
+  | { op: 'clear'; x: number; y: number }
+  | { op: 'invite'; to: string }
+  | { op: 'joint'; homeId: string; to: string }
+  | { op: 'leave' };
 
 export interface HomeActionRequest {
   lease: string;
@@ -329,10 +365,14 @@ export interface HomeActionRequest {
   y?: number;
   rotation?: number;
   tier?: number;
+  name?: string;
+  gate?: number;
+  to?: string;
+  homeId?: string;
 }
 
 export interface HomeActionResponse extends Snapshot {
-  result: { home: HomeView; materials: Record<string, number>; itemId?: string };
+  result: { home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' };
 }
 
 // ------------------------------------------------------------ phase 5
@@ -344,7 +384,7 @@ export interface Asset {
   qty: number;
 }
 
-/** Counts by kind; a missing key means zero. Decorations include placed ones. */
+/** Counts by kind; a missing key means zero. Carried decorations are the pack's (placed ones belong to the homestead). */
 export interface AssetCounts {
   materials: Record<string, number>;
   items: Record<string, number>;
@@ -365,18 +405,22 @@ export interface CalendarResponse {
   wickDays: number;
 }
 
+/** Which chest at home: the shared one, or the caller's own small one. */
+export type ChestId = 'shared' | 'personal';
+
 export interface StorageResponse extends Snapshot {
   home: HomeView;
   inventory: AssetCounts;
   storage: AssetCounts;
+  personal: AssetCounts;
 }
 
 export interface StorageMoveResponse extends Snapshot {
-  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts };
+  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; personal: AssetCounts };
 }
 
 export interface CraftResponse extends Snapshot {
-  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; recipeId: string; output: Asset; instanceIds: string[] };
+  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; personal: AssetCounts; recipeId: string; output: Asset; instanceIds: string[] };
 }
 
 export interface Mail {

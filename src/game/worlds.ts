@@ -5,6 +5,7 @@
 import type { AreaId } from '../lib/state.ts'
 import { TERRAIN, TILE } from './textures.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
+import { homeLandKind } from './homeland.ts'
 import { buildRoom } from './cottage.ts'
 
 /** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
@@ -659,28 +660,34 @@ const AREA_KINDS: Record<string, AreaKind> = {
   village: { build: buildVillage, foreground: villageForeground },
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
-  // Rows follow the world's plot count (src/game/homestead.ts keeps it).
-  commons: { build: () => buildCommons(commonsPlotCount), foreground: commonsForeground },
-  // Inside a cottage (a view on the Commons save area; see cottage.ts).
-  home: { build: () => buildRoom(), foreground: () => [] }
+  // The lane's length follows the world's gate count (src/game/homestead.ts keeps it).
+  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground },
+  // Inside a homestead's cottage (a view on its land's save area; see cottage.ts).
+  cottage: { build: () => buildRoom(0, { tx: 19, ty: 11 }), foreground: () => [] }
 }
 
-/** How many plots the Commons map must show (the roster's size, once known). */
-let commonsPlotCount = 0
-export function setCommonsPlotCount(n: number): void {
-  commonsPlotCount = Math.max(0, Math.floor(n))
+/** How many gates the Commons lane must show (the roster's count, once known). */
+let commonsGateCount = 0
+export function setCommonsGateCount(n: number): void {
+  commonsGateCount = Math.max(0, Math.floor(n))
+}
+
+/** Registered kinds, then families resolved by id (a homestead's land behind each gate: `home:<gate>`). */
+function resolveKind(id: string): AreaKind | null {
+  if (Object.prototype.hasOwnProperty.call(AREA_KINDS, id)) return AREA_KINDS[id]
+  return homeLandKind(id)
 }
 
 /** Look up an area kind (its data builder plus kind-specific decor). */
 export function areaKind(id: string): AreaKind {
-  const kind = AREA_KINDS[id]
+  const kind = resolveKind(id)
   if (!kind) throw new Error(`[fingersnap] unknown area kind: ${id}`)
   return kind
 }
 
 /** Whether this build can draw an area (an exit to anything else is closed). */
 export function hasAreaKind(id: string): boolean {
-  return Object.prototype.hasOwnProperty.call(AREA_KINDS, id)
+  return resolveKind(id) !== null
 }
 
 /** Register an area kind — how the Commons and the Wilds will arrive. */

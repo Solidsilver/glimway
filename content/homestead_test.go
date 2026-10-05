@@ -16,10 +16,13 @@ func TestHomesteadContent(t *testing.T) {
 			t.Fatal("tier identity")
 		}
 	}
-	if h.Tiers[1].Embers != 15 || len(h.Items) != 14 {
+	if h.Tiers[1].Embers != 15 || len(h.Items) != 15 {
 		t.Fatal("starting content")
 	}
 	for _, v := range h.Items {
+		if v.ID == h.LanternPosts.Item {
+			continue
+		}
 		if v.Embers > 0 && (v.Embers < 2 || v.Embers > 6) {
 			t.Fatal("ember price")
 		}
@@ -32,7 +35,10 @@ func TestHomesteadContent(t *testing.T) {
 }
 func TestHomesteadRejectsMalformed(t *testing.T) {
 	for name, mutate := range map[string]func(*Homestead){
-		"grid": func(h *Homestead) { h.Indoor.Width = 0 }, "duplicate": func(h *Homestead) { h.Items[1].ID = h.Items[0].ID }, "price": func(h *Homestead) { h.Items[0].Embers = -1 }, "mixed-price": func(h *Homestead) { h.Items[0].Materials = map[string]int{"stone": 1} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Commons.Columns = nil }, "overlapping-columns": func(h *Homestead) { h.Commons.Columns = []int{4, 10} }, "short-pitch": func(h *Homestead) { h.Commons.RowPitch = 4 }, "reserved": func(h *Homestead) { h.OutdoorReserved = []HomeRect{{X: 15, Y: 0, W: 2, H: 1}} },
+		"grid": func(h *Homestead) { h.Indoor.Width = 0 }, "duplicate": func(h *Homestead) { h.Items[1].ID = h.Items[0].ID }, "price": func(h *Homestead) { h.Items[0].Embers = -1 }, "mixed-price": func(h *Homestead) { h.Items[0].Materials = map[string]int{"stone": 1} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Lane.FenceX = nil }, "crowded-rows": func(h *Homestead) { h.Lane.GateRows = []int{4, 5} }, "short-pitch": func(h *Homestead) { h.Lane.RowPitch = 1 }, "no-spares": func(h *Homestead) { h.Lane.SpareGates = 0 }, "reserved": func(h *Homestead) { h.OutdoorReserved = []HomeRect{{X: 39, Y: 0, W: 2, H: 1}} },
+		"land-size": func(h *Homestead) { h.Land.Width = 4 }, "generator": func(h *Homestead) { h.Land.Generator = 2 }, "gate": func(h *Homestead) { h.Land.Gate.X = 39 }, "permille": func(h *Homestead) { h.Land.StreamPermille = 1001 },
+		"post-item": func(h *Homestead) { h.LanternPosts.Item = "nope" }, "post-cost": func(h *Homestead) { h.LanternPosts.Costs = nil }, "post-material": func(h *Homestead) { h.LanternPosts.Growth = map[string]int{"gold": 1} },
+		"deed": func(h *Homestead) { h.Deeds.Embers = 0 }, "desolation": func(h *Homestead) { h.Desolation.DeedLostAfterDays = h.Desolation.DesolateAfterDays }, "window": func(h *Homestead) { h.JointDeed.ConfirmWindowSeconds = 0 }, "chest": func(h *Homestead) { h.PersonalChest.MaxUnits = 0 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			var h Homestead
@@ -45,5 +51,20 @@ func TestHomesteadRejectsMalformed(t *testing.T) {
 				t.Fatal("accepted invalid content")
 			}
 		})
+	}
+}
+
+func TestPostCostGrows(t *testing.T) {
+	h := HomeRules
+	prev := 0
+	for n := 0; n < 6; n++ {
+		total := 0
+		for _, v := range h.PostCost(n) {
+			total += v
+		}
+		if total <= prev {
+			t.Fatalf("post %d costs %d, not more than %d", n, total, prev)
+		}
+		prev = total
 	}
 }

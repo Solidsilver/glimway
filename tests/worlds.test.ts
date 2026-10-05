@@ -13,8 +13,11 @@ import { AREAS, type AreaId } from '../src/lib/state.ts';
 type Tile = { tx: number; ty: number };
 type Edge = 'west' | 'east' | 'north' | 'south';
 
-/** Every area this build draws: the quest areas and the Commons. */
-const BUILT: AreaId[] = [...AREAS, 'commons'];
+/** Every area this build draws: the quest areas, the Commons, and the lands behind its first gates. */
+const BUILT: AreaId[] = [...AREAS, 'commons', 'home:0', 'home:1'];
+
+/** A homestead gate in a Commons fence is a door in the map, not an edge (and so is its way back). */
+const isGateDoor = (from: string, e: ExitDef) => /^home:/.test(e.to) || /^home:/.test(from);
 /** Registered by another client module (the Wilds): exits may lead there. */
 const EXTERNAL = ['wilds'];
 
@@ -149,6 +152,7 @@ test('leaving through an edge brings you in from the opposite edge', () => {
         edgeOf(w, e);
         continue;
       }
+      if (isGateDoor(area, e)) continue;
       const out = edgeOf(w, e);
       const arrive = edgeNearest(worlds[e.to], e.entry);
       assert.equal(arrive, OPPOSITE[out], `${area} exits ${out} to ${e.to}, but you arrive on its ${arrive} side`);

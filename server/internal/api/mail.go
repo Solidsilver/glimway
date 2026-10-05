@@ -139,7 +139,7 @@ func (a *Server) mailRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	// Carried counts, so a sender without a Workshop knows what they can send.
-	inventory, err := counts(r.Context(), tx, s.HabiticaID, false)
+	inventory, err := packCounts(r.Context(), tx, s.HabiticaID)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		ids, err := takeAsset(ctx, tx, s, req.Asset, "mail", "mail-send", id, now)
+		ids, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.HabiticaID, ""}, "mail-send", id, now)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,7 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := counts(ctx, tx, s.HabiticaID, false)
+		inventory, err := packCounts(ctx, tx, s.HabiticaID)
 		if err != nil {
 			return nil, err
 		}
@@ -273,7 +273,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err = json.Unmarshal([]byte(raw), &ids); err != nil {
 			return nil, err
 		}
-		if err = giveAsset(ctx, tx, s, v, ids, from, "mail", "mail-claim", id, now); err != nil {
+		if err = giveAsset(ctx, tx, s, v, ids, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
 			return nil, err
 		}
 		if err = currency(ctx, tx, from, "mail:"+v.Kind+":"+v.ID, -v.Qty, "mail-claim", id, now); err != nil {
@@ -286,7 +286,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := counts(ctx, tx, s.HabiticaID, false)
+		inventory, err := packCounts(ctx, tx, s.HabiticaID)
 		if err != nil {
 			return nil, err
 		}
@@ -368,7 +368,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := counts(ctx, tx, s.HabiticaID, false)
+		inventory, err := packCounts(ctx, tx, s.HabiticaID)
 		if err != nil {
 			return nil, err
 		}

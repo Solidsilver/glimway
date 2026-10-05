@@ -157,6 +157,9 @@ export function areaInfo(areaId: AreaId): LocationInfo {
   const known = (locations as unknown as Record<string, LocationInfo | undefined>)[areaId];
   if (known) return known;
   if (areaId === 'commons') return HEARTHWICK_COMMONS;
+  if (areaId === 'cottage') return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
+  const lot = /^home:(\d+)$/.exec(areaId);
+  if (lot) return { name: `Lot ${Number(lot[1]) + 1}`, eyebrow: 'Behind the Commons gates', tagline: 'Wild land, held by lamplight.', description: 'Land past a Commons gate: trees, stumps and stones, and whatever the deed-holders have built where their lamps reach.' };
   if (areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
   if (areaId === 'wilds' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
   return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };

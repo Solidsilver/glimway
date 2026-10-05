@@ -13,6 +13,28 @@ import (
 
 var E = content.Rules
 var SafeAreas = map[string]bool{"village": true, "commons": true}
+
+// HomeGate is the gate number of a homestead map's area id ("home:<g>",
+// canonical 0..9999), or -1 for anything else.
+func HomeGate(area string) int {
+	s, ok := strings.CutPrefix(area, "home:")
+	if !ok || s == "" || len(s) > 4 || (len(s) > 1 && s[0] == '0') {
+		return -1
+	}
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return -1
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
+}
+
+// IsSafeArea: where syncs and rests may happen (the village, the Commons
+// and every homestead map).
+func IsSafeArea(area string) bool { return SafeAreas[area] || HomeGate(area) >= 0 }
+
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
 var QuestItems = []string{"field-journal", "hearthwick-map", "lantern-route-rubbing", "warden-seal"}
 
@@ -218,7 +240,7 @@ type SyncResult struct {
 
 func Sync(save Save, p Profile, atSafe bool) SyncResult {
 	r := SyncResult{Save: save}
-	if !SafeAreas[save.State.Area] || !atSafe {
+	if !IsSafeArea(save.State.Area) || !atSafe {
 		r.Status = "rejected"
 		r.Reason = "not-at-safe-boundary"
 		return r
@@ -366,7 +388,7 @@ func DecodeProgress(b json.RawMessage, maxHP, maxMana float64) (State, error) {
 		Flags           []string `json:"flags"`
 	}
 	bad := errors.New("invalid-progress")
-	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin", "commons", "wilds"}, p.Area) || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
+	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin", "commons", "wilds"}, p.Area) && HomeGate(p.Area) < 0 || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
 		return State{}, bad
 	}
 	for _, n := range []float64{*p.Position.X, *p.Position.Y, *p.HP, *p.Mana, *p.PlaySeconds} {

@@ -16,6 +16,7 @@
     "server": "go run ./server/cmd/fingersnap-server -cookie-secure=false",
     "vectors": "node scripts/backend-vectors.ts",
     "vectors:wilds": "node scripts/wilds-vectors.ts",
+    "vectors:homestead": "node scripts/homestead-vectors.ts",
     "vectors:calendar": "node scripts/calendar-vectors.ts",
     "papers": "node scripts/papers.ts",
     "atlases": "node scripts/build-atlases.ts"

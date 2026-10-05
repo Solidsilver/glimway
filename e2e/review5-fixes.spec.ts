@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState } from './connected'
-import { beginNewJourney, waitForArea } from './helpers'
-import { earnEmbers, earnPlenty, freshPlayer, fund, go, homes, myHome, place, readOn, silasSays, type Area } from './home-helpers'
+import { beginNewJourney } from './helpers'
+import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
  * Regressions for the phase 5 review (.agent/REVIEW-5.md), against the real
@@ -13,10 +13,7 @@ test.use({ server: true })
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000
 
 async function claim(page: Page): Promise<void> {
-  await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).status).toBe('ready')
-  await silasSays(page, /Show me my plot/)
-  await expect.poll(async () => (await homes(page)).claimed).toBe(true)
+  await claimDeed(page)
 }
 
 /** Let the server commit the next matching POST, then hand the page a broken body. */
@@ -111,14 +108,14 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   const ctx = await browser.newContext({ baseURL })
   const other = await ctx.newPage()
   await freshPlayer(other, 'Bram', code)
+  // Mail goes between homesteads: Bram takes up a deed too.
+  await claimDeed(other)
   await ctx.close()
 
   await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).plots.length).toBe(2)
+  await expect.poll(async () => (await homes(page)).gates.filter((g) => g.names.length > 0).length).toBeGreaterThanOrEqual(2)
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
-  const v = await homes(page)
-  const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(page, 'commons', slot.sign.tx, slot.ty + 8)
+  await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
   await page.waitForTimeout(200)
   await page.keyboard.press('e')
@@ -151,18 +148,12 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await readOn(page, /eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
   fund(id, { materials: { timber: 12 } })
-  const v = await homes(page)
-  const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(page, 'commons', slot.doorstep.tx, slot.doorstep.ty)
-  await expect(page.locator('.prompt')).toContainText('Go inside')
-  await page.waitForTimeout(200)
-  await page.keyboard.press('e')
-  await waitForArea(page, 'home' as Area)
+  await intoCottage(page)
   await place(page, 115, 66)
   await expect(page.locator('.prompt')).toContainText('Work at the bench')
   await page.waitForTimeout(250)
   await page.keyboard.press('e')
-  const panel = page.getByRole('dialog', { name: 'Your Workshop' })
+  const panel = page.getByRole('dialog', { name: 'The Workshop' })
   const stool = panel.locator('[data-recipe="craft-wooden-stool"]')
   await expect(stool).toContainText('You can make 4')
   await stool.getByRole('button', { name: 'More' }).click()

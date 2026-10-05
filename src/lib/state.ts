@@ -68,6 +68,14 @@ export class InvalidSaveError extends Error {
 export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
 export const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'wilds'];
 
+/** A homestead's land behind Commons gate g: `home:<g>` (0..9999, no leading zeros). */
+export const HOME_AREA_RE = /^home:(0|[1-9]\d{0,3})$/;
+
+/** Can a save say it is here? The fixed areas, plus any homestead's land. */
+export function isSaveArea(area: unknown): area is AreaId {
+  return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || HOME_AREA_RE.test(area));
+}
+
 export const QUEST_STAGES: readonly QuestStage[] = [
   'new',
   'accepted',
@@ -199,9 +207,9 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
-  if (typeof data.area !== 'string' || !(SAVE_AREAS as readonly string[]).includes(data.area)) {
+  if (!isSaveArea(data.area)) {
     throw new InvalidSaveError(
-      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')}, got ${describe(data.area)}`,
+      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} or home:<gate>, got ${describe(data.area)}`,
       'area',
     );
   }

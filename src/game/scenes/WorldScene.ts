@@ -42,6 +42,9 @@ import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../
 import { emitResidents } from '../residents'
 import { VillageLayer } from '../entities/village-life'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
+import { homeArea, parseHomeArea } from '../../lib/homestead'
+import { homesteadsFor } from '../homestead'
+import { isSafeArea } from '../../lib/habitica/sync'
 import { COMMONS_FROM_WILDS } from '../commons'
 import {
   OUTER_REGION_ID,
@@ -67,8 +70,8 @@ import { WildsEntities, type WildsAction } from '../wilds/entities'
 interface SceneData {
   entry?: { tx: number; ty: number }
   fromDefeat?: boolean
-  /** Inside a cottage on the Commons: whose, and the doorstep outside it. */
-  room?: { owner: string; doorstep: { tx: number; ty: number } }
+  /** Inside a homestead's cottage: which gate's, and the doorstep outside it. */
+  room?: { gate: number; doorstep: { tx: number; ty: number } }
   /** Rebuilt by the Turning: the outer Wilds just shifted under the player. */
   turned?: boolean
 }
@@ -79,8 +82,8 @@ function trayFocused(): boolean {
   return !!el && el !== document.body && !!el.closest?.('[data-testid="placement-tray"]')
 }
 
-/** Areas where the zero-HP lock still lets you walk (home to rest). */
-const SAFE_AREAS = ['village', 'commons']
+/** Areas where the zero-HP lock still lets you walk (home to rest): the village, the Commons, homesteads. */
+const safeArea = (area: string) => isSafeArea(area)
 
 /**
  * Can the scene go here? Registered areas, plus the Wilds: its chunk kinds
@@ -147,8 +150,8 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    // A cottage is a view on the Commons: the save keeps saying Commons.
-    if (this.room && state.area !== 'commons') this.room = null
+    // A cottage is a view on its homestead: the save keeps saying `home:<gate>`.
+    if (this.room && state.area !== homeArea(this.room.gate)) this.room = null
     // Wilds: the save's region (the Tangle, or past the crossing) is the one
     // this scene plays in; resolve the region-wide position into its chunk
     // area and a chunk-local arrival tile (see src/game/wilds/regions.ts).
@@ -164,6 +167,8 @@ export class WorldScene extends Phaser.Scene {
       }
       state.outerSeason = season
     }
+    // Homestead lands read the session's homestead state (world, cleared tiles, desolation).
+    homesteadsFor(this.session)
     const wildsEntry = wildsSceneEntry(state, wildsEpoch())
     this.wilds = null
     if (wildsEntry) ensureWildsAreaKinds(wildsEpoch())
@@ -176,7 +181,7 @@ export class WorldScene extends Phaser.Scene {
       this.pendingEntry = { ...back.at }
       this.session.saveSoon()
     }
-    this.world = this.room ? buildRoom(this.room.doorstep) : wildsEntry ? buildArea(wildsEntry.areaId) : buildArea(state.area)
+    this.world = this.room ? buildRoom(this.room.gate, this.room.doorstep) : wildsEntry ? buildArea(wildsEntry.areaId) : buildArea(state.area)
     this.occluders = []
     this.cinematic = false
     this.captureReleased = false
@@ -229,7 +234,7 @@ export class WorldScene extends Phaser.Scene {
     // Village life (calendar, festivals, notice boards, project changes) everywhere.
     this.interactables.setExtra(new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables }))
     this.homesteads = null
-    if (this.world.areaId === 'commons' || this.room) {
+    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
         world: this.world,
         session: this.session,
@@ -238,8 +243,8 @@ export class WorldScene extends Phaser.Scene {
         solidGroup: this.solidGroup,
         interactables: this.interactables,
         hero: () => this.hero.sprite,
-        room: this.room ? { owner: this.room.owner } : null,
-        enterRoom: (owner, doorstep) => this.enterRoom(owner, doorstep),
+        room: this.room ? { gate: this.room.gate } : null,
+        enterRoom: (gate, doorstep) => this.enterRoom(gate, doorstep),
         rebuild: () => this.rebuildArea()
       })
       this.interactables.setExtra(this.homesteads)
@@ -328,10 +333,10 @@ export class WorldScene extends Phaser.Scene {
       this.avatar.invalidate()
     })
     // Remote players (phase 6 presence): join this area's room and draw the
-    // others in it. A cottage is part of the Commons room, but its map is not:
-    // inside, nobody is drawn and we stand at our door for the others.
+    // others in it. A cottage is part of its homestead's room, but its map is
+    // not: inside, nobody is drawn and we stand at our door for the others.
     const feed = presence()
-    this.presenceArea = presenceAreaFor(this.room ? 'commons' : this.world.areaId)
+    this.presenceArea = presenceAreaFor(this.room ? homeArea(this.room.gate) : this.world.areaId)
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, !!this.room)
     bus.on(EV.emote, this.onOwnEmote, this)
@@ -1027,11 +1032,11 @@ export class WorldScene extends Phaser.Scene {
     // Zero-HP gates expeditions only from the village; a legacy zero-HP save
     // found outside may travel home freely (nothing heals en route).
     // The Commons counts as home: a hurt hero may walk there to rest.
-    const locked = this.session.zeroHpLocked && (SAFE_AREAS.includes(this.world.areaId) || !!this.room)
+    const locked = this.session.zeroHpLocked && (safeArea(this.world.areaId) || !!this.room)
     const tx = Math.floor(this.hero.sprite.x / TILE)
     const ty = Math.floor(this.hero.sprite.y / TILE)
     for (const exit of this.world.exits) {
-      if (locked && !SAFE_AREAS.includes(exit.to)) continue
+      if (locked && !safeArea(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
         if (!canEnter(exit.to)) {
           this.overgrown(exit)
@@ -1116,23 +1121,23 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Walk into a cottage. The save stays in the Commons, on the doorstep
-   * (inside the plot), and the scene rebuilds as the room.
+   * Walk into a cottage. The save stays on the homestead's land, on the
+   * doorstep, and the scene rebuilds as the room.
    */
-  private enterRoom(owner: string, doorstep: { tx: number; ty: number }): void {
+  private enterRoom(gate: number, doorstep: { tx: number; ty: number }): void {
     if (this.transitioning) return
     this.transitioning = true
     const state = this.session.state
-    state.area = 'commons'
+    state.area = homeArea(gate)
     state.position = { x: (doorstep.tx + 0.5) * TILE, y: (doorstep.ty + 0.5) * TILE }
     this.session.saveSoon()
     this.cameras.main.fade(240, 12, 12, 20, true)
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({ entry: ROOM_ENTRY, room: { owner, doorstep } })
+      this.scene.restart({ entry: ROOM_ENTRY, room: { gate, doorstep } })
     })
   }
 
-  /** The Commons grew a row (a new neighbour): rebuild it where we stand. */
+  /** The map changed under us (the lane grew, land was cleared): rebuild it where we stand. */
   private rebuildArea(): void {
     if (this.transitioning || this.room) return
     this.transitioning = true
