@@ -196,6 +196,17 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE invites SET revoked_at=COALESCE(revoked_at,?) WHERE created_by=? AND used_by IS NULL", now, id); err != nil {
 			return err
 		}
+		// Return all of this recipient's unclaimed goods in the same transaction
+		// as removal, including any legacy backlog beyond current admission caps.
+		for {
+			n, err := returnMailBatch(ctx, tx, now, "m.to_id=?", []any{id})
+			if err != nil {
+				return err
+			}
+			if n == 0 {
+				break
+			}
+		}
 	}
 	return tx.Commit()
 }

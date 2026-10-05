@@ -336,8 +336,8 @@ The shared calendar epoch is 2026-01-05 00:00:00 UTC (Thaw day 1). A wick is sev
 real days, controlled by content/calendar.json; twelve wicks form a year. Calendar
 clients use Unix seconds and the same pure function/vectors as Go. Closure Night
 is Quiet day 7. GET /api/calendar is public and includes a notice during the last
-24 hours of each wick. Outer-1 turns at each wick boundary: season is the absolute
-wick number, starts_at/ends_at are fixed UTC boundaries, and a new epoch is
+24 hours of each wick. Outer-1 turns at each wick boundary: new season keys are
+`t:<starts_at>:<ends_at>`, starts_at/ends_at are fixed UTC boundaries, and an epoch is
 created lazily. Old claims fail with epoch-ended even before anyone reads the new
 region. Inner-1 stays permanent. Generator v1 and its generation data are unchanged.
 
@@ -345,8 +345,9 @@ Storage/crafting require tier 2. Decorations move as original unplaced instances
 placed instances must first be removed. Mail transfers only server-owned gathered
 materials, Wilds trinkets, crafted utilities and unplaced decorations, never
 embers, quest items or paid quest entitlements. Assets are debited immediately on
-send and remain unusable in transit until the named recipient claims them.
-World moves and return mail remain outside this release.
+send and remain unusable in transit until the named recipient claims them or the
+sender recalls them. Unclaimed mail returns after 30 days or recipient removal.
+World moves remain outside this release.
 
 Six projects cover the three written village works plus the Wheel & Wick
 guildhouse, Orrin's hinges and the Cooley Window Fund. Completion world flags
@@ -357,7 +358,48 @@ shared JSON and are starting values for playtesting.
 
 The exact additive API contract and ledger currency conventions are recorded in
 .agent/REPORT.md under “Phase 5 server”. All new gameplay POSTs use the existing
-lease/revision/idempotency transaction boundary. GETs do not bump revisions.
+lease/revision/idempotency transaction boundary. An authenticated request can
+settle due mail and bump the sender's revision before loading its snapshot.
+
+### Round 5: calendar tuning, mail safety and project tuning
+
+Changing `wickDays` or `epoch` in `content/calendar.json` starts a new calendar
+numbering. Outer epoch identity uses both absolute interval boundaries, so it
+cannot collide with an old ended wick number or a differently sized interval
+with the same start. Existing epochs keep their frozen season/generator inputs
+and deadlines; an existing numeric-season epoch is reused when its exact
+interval matches. Clients should treat `epoch.season` as an opaque string.
+
+Migration 009 adds mail return metadata and indexes without changing existing
+claims, goods, decoration IDs or player revisions. Senders can use keyed
+`POST /api/mail/:id/recall` to recover unclaimed goods. CLI `allowlist remove`
+returns that recipient's pending mail atomically with removal. The executable
+sweeps expired or unavailable recipients' mail at startup and every 60 seconds;
+authenticated HTTP transactions also settle the caller's due mail. Maintenance
+uses batches of 100 rows and a 10-second sweep deadline; large backlogs resume on
+the next interval. Expiry is exactly 30×24 hours after send. Both paths credit
+the original goods, settle transit ledger entries, and bump the sender's revision
+without touching their progress or last-seen time. Only explicit recalls use the
+normal gameplay mutation's progress/Persist flow.
+
+`content/mail.json` shares and validates these defaults with TypeScript: 50
+outstanding sent and 50 outstanding received messages per player, 10 sends per
+rolling 60 seconds (claimed/returned messages still count), and 50 completed
+history entries per page. Capacity errors are 409 `mail-sender-limit` or
+`mail-recipient-limit`; send-rate errors are 429 `mail-rate-limited` with
+`Retry-After`. Removed/unadmitted recipients reject with 403
+`recipient-unavailable`. Every response keeps pending mail plus a bounded history
+slice; `GET /api/mail?cursor=...` follows `nextCursor`. A separate
+`pendingCursor`/`nextPendingCursor` covers legacy pending backlogs exceeding the
+current combined caps, so even those responses remain bounded. Cursor values
+are opaque and remain scoped to the authenticated world/player.
+
+Project totals at or above a tuned requirement satisfy that material. Additional
+amounts of a satisfied material are rejected; other required materials can still
+complete the project. GET /api/projects also reconciles already-satisfied costs,
+recording completion/papers once without changing any player's revision. Existing
+completed projects stay complete when costs rise. The precise new contracts and
+failing-first regressions are in REPORT.md under “Fix round 5”.
 
 ### Phase 6 presence WebSockets
 
@@ -384,3 +426,27 @@ inactivity after 60 seconds; stationary clients send a JSON heartbeat about ever
 20 seconds. Presence does not refresh sessions or the play lease: keep the normal
 HTTP state/progress/play heartbeat running. Play takeover and logout revoke
 sockets immediately; database-side revocations are detected within 10 seconds.
+
+### Round 6 presence admission and database isolation
+
+Physical presence sockets now also have shared limits of **2 per session** and
+**4 per player**, including pending-auth and closing connections. Rejected
+upgrades use 429 `presence-session-limit` / `presence-player-limit` with
+`Retry-After: 5`; the global cap still uses 503 `presence-full`. Send first-message
+auth promptly. The auth-message deadline remains five seconds. Session/player
+reservation and generation maps are removed when their last socket releases.
+
+A reader-owned token bucket limits aggregate application messages before JSON
+parsing or the hub mutex: 30/s with a burst of 60. Brief excess is dropped;
+sustained excess for five seconds closes 1008 `rate-limited`. These limits are
+above normal eight-Hz positions, joins, emotes, and stationary heartbeats.
+
+Presence DB checks run outside the hub mutex. Per-player generations prevent
+stale auth/notification results from registering or removing the wrong peer.
+Periodic checks run in a separate cancellable goroutine per socket, so even that
+socket's writer, ping/pong and idle checks continue during DB contention. A
+confirmed revoked session, lease or world still closes promptly; an unknown DB
+result retries, with 1011 `auth-unavailable` only after three consecutive unknown
+results. A successful validation clears that counter. Shared policy values are
+in `content/presence.json`; REPORT.md under “Fix round 6” contains the client
+handoff and regression evidence. No new NixOS service, public port or dependency.

@@ -192,6 +192,7 @@ func run(args []string) error {
 	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer done()
+	go handler.RunMailMaintenance(stop)
 	go func() {
 		<-stop.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

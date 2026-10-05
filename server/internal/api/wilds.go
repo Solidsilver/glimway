@@ -46,9 +46,16 @@ func (a *Server) ensureEpoch(ctx context.Context, tx *sql.Tx, s store.Snapshot, 
 	season := "0"
 	day := content.CalendarAt(content.CalendarRules, now)
 	if r.Kind == "outer" {
-		season = strconv.FormatInt(day.WickNumber, 10)
+		// Both boundaries matter: changing wickDays can keep a start while
+		// extending its end. The prefix also avoids collisions with old numbers.
+		season = "t:" + strconv.FormatInt(day.StartsAt, 10) + ":" + strconv.FormatInt(day.NextTurning, 10)
 	}
 	e, _, err := scanEpoch(ctx, tx, "SELECT "+epochColumns+" FROM region_epochs WHERE world_id=? AND region_id=? AND season=?", s.WorldID, id, season)
+	if err == sql.ErrNoRows && r.Kind == "outer" {
+		// Preserve an existing numeric-season epoch for this exact interval.
+		// Rewriting its frozen season would change generator input and loot IDs.
+		e, _, err = scanEpoch(ctx, tx, "SELECT "+epochColumns+" FROM region_epochs WHERE world_id=? AND region_id=? AND starts_at=? AND ends_at=? ORDER BY id LIMIT 1", s.WorldID, id, day.StartsAt, day.NextTurning)
+	}
 	if err == sql.ErrNoRows {
 		v := a.Config.WildsGeneratorVersion
 		if v == 0 {
