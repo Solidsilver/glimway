@@ -1,11 +1,13 @@
 /**
  * Area construction — foreground. Delivered occluders (canopies over tree
  * bases, arches over gates, ferns) placed per the area-kind registry in
- * worlds.ts, plus the fade update when something walks beneath them.
+ * worlds.ts, code-drawn scenery marked `fade`, plus the fade update when
+ * something walks beneath them.
  */
 import { placeFingersnapOccluder } from '../expansion'
 import { TILE } from '../textures'
 import { areaKind, type WorldData } from '../worlds'
+import { ensureSceneryArt } from './props'
 
 /** Foreground occluder: canopy/arch image, its bounds, and its ground foot. */
 export interface Occluder {
@@ -26,6 +28,13 @@ export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder
     const footY = s.ty * TILE + TILE
     const image = placeFingersnapOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w)
     occluders.push({ image, bounds: image.getBounds(), footY })
+  }
+  // Code-drawn canopies over a walkable tile (the Tangle's path-side trees).
+  for (const s of world.scenery ?? []) {
+    if (!s.fade || !ensureSceneryArt(scene, s.key)) continue
+    const image = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y)
+    if (s.tint !== undefined) image.setTint(s.tint)
+    occluders.push({ image, bounds: image.getBounds(), footY: s.y })
   }
   return occluders
 }

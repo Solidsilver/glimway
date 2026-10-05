@@ -22,6 +22,7 @@ import {
   type WildsEntity,
 } from '../src/lib/wilds/index.ts';
 import { TERRAIN } from '../src/game/textures.ts';
+import { DECOR_ART, TANGLE_GROUND } from '../src/lib/wilds/tangle.ts';
 import wildsJson from '../content/wilds.json' with { type: 'json' };
 
 const SEEDS = ['oak-7', '灰烬之路', 'ember:glade', 'plain'];
@@ -277,6 +278,65 @@ test('chunkTerrain is WorldData-shaped', () => {
   assert.deepEqual(world.exits.map((e) => e.to), w.exits.map((e) => e.to));
   assert.deepEqual(world.npcs, []);
   assert.ok(w.exits.every((e) => e.to === 'commons' || /^chunk:inner-1:\d+:\d+$/.test(e.to)));
+});
+
+test('the woods dress themselves: blocking decor on solid tiles, interactables left clear', () => {
+  for (const epoch of epochs()) {
+    for (let cy = 0; cy < 3; cy++) {
+      for (let cx = 0; cx < 3; cx++) {
+        const where = `${epoch.worldSeed}/${epoch.season} chunk ${cx},${cy}`;
+        const w = chunkTerrain(epoch, cx, cy);
+        assert.deepEqual([w.trees, w.bushes, w.rocks], [[], [], []], `${where}: generated chunks dress through decor`);
+        const entities = chunkEntities(epoch, cx, cy);
+        for (const d of w.decor) {
+          const at = `${where}: ${d.kind} at ${d.tx},${d.ty}`;
+          assert.ok(d.tx >= 0 && d.ty >= 0 && d.tx < w.width && d.ty < w.height, `${at} outside the chunk`);
+          if (DECOR_ART[d.kind].blocking) assert.ok(w.solid[d.ty][d.tx], `${at} blocks a walkable tile`);
+          else assert.equal(d.overhang, false, `${at}: only blocking pieces fade`);
+          // Entities keep a bare 3×3 (nothing standing over them or beside them).
+          for (const en of entities) {
+            assert.ok(Math.abs(en.tx - d.tx) > 1 || Math.abs(en.ty - d.ty) > 1, `${at} crowds ${en.id}`);
+          }
+          assert.ok(!inAnyExit(w.exits, d), `${at} sits in an exit`);
+        }
+        // Path-side pieces whose art reaches over a walkable tile are flagged to fade.
+        for (const d of w.decor.filter((x) => DECOR_ART[x.kind].blocking && !x.overhang)) {
+          const a = DECOR_ART[d.kind];
+          const x0 = d.tx * 16 + 8 + d.ox - a.w / 2;
+          const y1 = (d.ty + 1) * 16 + d.oy;
+          for (let ty = Math.floor((y1 - a.h) / 16); ty <= Math.floor((y1 - 1) / 16); ty++) {
+            for (let tx = Math.floor(x0 / 16); tx <= Math.floor((x0 + a.w - 1) / 16); tx++) {
+              if (tx < 0 || ty < 0 || tx >= w.width || ty >= w.height || w.solid[ty][tx]) continue;
+              const ix = Math.min(x0 + a.w, tx * 16 + 16) - Math.max(x0, tx * 16);
+              const iy = Math.min(y1, ty * 16 + 16) - Math.max(y1 - a.h, ty * 16);
+              assert.ok(ix < 3 || iy < 3, `${where}: ${d.kind} at ${d.tx},${d.ty} hangs over ${tx},${ty} without fading`);
+            }
+          }
+        }
+        // Turncaps lean toward home (the Commons gap on the entry chunk, tx 2 there).
+        const homeX = (1 - cx) * w.width + 2;
+        for (const d of w.decor.filter((x) => x.kind === 'turncaps')) assert.equal(d.flip, homeX > d.tx, `${where}: turncap at ${d.tx},${d.ty} leans away from home`);
+      }
+    }
+  }
+});
+
+test('the woods are dense and the paths ground-marked', () => {
+  const epoch: Epoch = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' };
+  for (let cy = 0; cy < 3; cy++) {
+    for (let cx = 0; cx < 3; cx++) {
+      const w = chunkTerrain(epoch, cx, cy);
+      const tiles = w.width * w.height;
+      const solid = w.solid.flat().filter(Boolean).length;
+      assert.ok(solid / tiles > 0.45, `chunk ${cx},${cy}: only ${solid}/${tiles} tiles of woods`);
+      // Every walkable tile is path, verge, clearing or old road — never bare woods floor.
+      for (let y = 0; y < w.height; y++) {
+        for (let x = 0; x < w.width; x++) {
+          if (!w.solid[y][x]) assert.notEqual(w.ground[y][x], TANGLE_GROUND.woods, `chunk ${cx},${cy}: walkable woods floor at ${x},${y}`);
+        }
+      }
+    }
+  }
 });
 
 // ---------------------------------------------------------------- loot

@@ -82,9 +82,55 @@ export interface ChunkExit {
 }
 
 /**
+ * Visual dressing for a generated chunk. Blocking pieces (trees, thickets,
+ * stumps, logs, boulders, cairns, snags) always stand on solid tiles — the
+ * solid grid carries their collision; everything else is walk-through
+ * undergrowth or a flat decal on the ground.
+ */
+export type DecorKind =
+  | 'oak'
+  | 'pine'
+  | 'birch'
+  | 'iron-oak'
+  | 'snag'
+  | 'thicket'
+  | 'stump'
+  | 'ring-stump'
+  | 'log'
+  | 'boulder'
+  | 'cairn'
+  | 'fern'
+  | 'grass'
+  | 'flowers'
+  | 'turncaps'
+  | 'roots'
+  | 'litter'
+  | 'pebbles';
+
+export interface DecorSpot {
+  kind: DecorKind;
+  /** Anchor tile: the art stands on this tile's bottom edge, centred. */
+  tx: number;
+  ty: number;
+  /** Pixel nudge from that anchor. */
+  ox: number;
+  oy: number;
+  /** Art variant (any non-negative integer; the art seeds from it). */
+  variant: number;
+  /** Mirror the art (turncaps: lean east instead of west). */
+  flip: boolean;
+  /** The art overhangs a walkable tile, so it fades when someone walks beneath. */
+  overhang: boolean;
+}
+
+/**
  * Client-only terrain for one chunk: the WorldData terrain fields (ground,
  * solid, trees, bushes, rocks, exits, spawn) plus its position in the region.
  * Use `toWorldData` (world-data.ts) to adapt it for the game runtime.
+ *
+ * Generated chunks dress themselves through `decor` (trees included), so
+ * `trees`/`bushes`/`rocks` — the curated areas' prop bodies — stay empty and
+ * the solid grid carries all collision.
  */
 export interface ChunkTerrain {
   regionId: string;
@@ -99,6 +145,7 @@ export interface ChunkTerrain {
   trees: Tile[];
   bushes: Tile[];
   rocks: Tile[];
+  decor: DecorSpot[];
   exits: ChunkExit[];
   spawn: Tile;
 }

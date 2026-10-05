@@ -59,12 +59,20 @@ export interface PropSpot {
 export interface ScenerySpot {
   /** Texture key. */
   key: string
+  /** Frame within the texture (an atlas such as the Tangle's decor). */
+  frame?: string
   /** Anchor in px (bottom-centre unless `originX` says otherwise). */
   x: number
   y: number
   originX?: number
   /** Fixed depth, or 'y' to sort by the anchor (the default). */
   depth?: number | 'y'
+  /** Mirror the art. */
+  flipX?: boolean
+  /** Multiply tint (deep woods sit in their own shade). */
+  tint?: number
+  /** A canopy someone can walk beneath: drawn by the foreground pass so it fades. */
+  fade?: boolean
 }
 
 export interface WorldData {
@@ -94,8 +102,10 @@ export interface WorldData {
   library?: { tx: number; ty: number }
   /** A notice board (village, Commons): Turning notices and village projects. */
   board?: { tx: number; ty: number }
-  /** Code-drawn scenery sprites (the Commons). */
+  /** Code-drawn scenery sprites (the Commons, the Tangle's woods). */
   scenery?: ScenerySpot[]
+  /** Ground painter: 'tangle' paints the Wilds' woods floor per pixel (src/game/wilds/tangle-art.ts). */
+  groundStyle?: 'tangle'
 }
 
 // ---------------------------------------------------------------- utilities
