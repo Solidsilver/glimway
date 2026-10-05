@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fingersnap/content"
 	"fingersnap/server/internal/habitica"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
@@ -99,7 +100,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/library", "/api/library/donate"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -109,6 +110,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/homestead/") {
 		route = "/api/homestead/:action"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/mail/") {
+		route = "/api/mail/:id/claim"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/projects/") {
+		route = "/api/projects/:id/contribute"
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/wilds/") {
 		route = "/api/wilds/:action"
@@ -161,6 +168,20 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.sync(w, r)
 	case "GET /api/commons":
 		err = a.commons(w, r)
+	case "GET /api/calendar":
+		write(w, 200, content.CalendarAt(content.CalendarRules, a.Config.Now().Unix()))
+	case "GET /api/storage":
+		err = a.storageRead(w, r)
+	case "POST /api/storage":
+		err = a.storageMutation(w, r)
+	case "POST /api/craft":
+		err = a.craft(w, r)
+	case "GET /api/mail":
+		err = a.mailRead(w, r)
+	case "POST /api/mail":
+		err = a.mailSend(w, r)
+	case "GET /api/projects":
+		err = a.projectsRead(w, r)
 	case "GET /api/library":
 		err = a.libraryRead(w, r)
 	case "POST /api/library/donate":
@@ -172,7 +193,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST /api/spend":
 		err = a.spend(w, r)
 	default:
-		if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
+		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
+			err = a.mailClaim(w, r)
+		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/projects/") {
+			err = a.projectContribute(w, r)
+		} else if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
 			err = a.revokeInvite(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/") {
 			err = a.homeRead(w, r)
@@ -412,6 +437,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	write(w, 200, s)
 	return nil
 }
+
 // logout revokes this session and releases a play lease held through it, in
 // one transaction, so signing straight back in on the same device does not
 // meet its own old lease as "playing elsewhere". Lease clients are

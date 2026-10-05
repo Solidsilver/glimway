@@ -1,0 +1,78 @@
+{
+  "projects": [
+    {
+      "id": "north-bridge",
+      "name": "Repair the north bridge",
+      "materials": {
+        "timber": 200,
+        "stone": 80
+      },
+      "papers": [
+        "count-house-tally-book-scrap"
+      ],
+      "worldFlag": "project:north-bridge:complete"
+    },
+    {
+      "id": "well-canopy",
+      "name": "Build a well canopy",
+      "materials": {
+        "timber": 60,
+        "stone": 40,
+        "fiber": 20
+      },
+      "papers": [],
+      "worldFlag": "project:well-canopy:complete"
+    },
+    {
+      "id": "mill-wheel",
+      "name": "Reinforce the mill wheel",
+      "materials": {
+        "timber": 120,
+        "fiber": 60
+      },
+      "papers": [
+        "forty-one-and-holding",
+        "note-in-the-linseed-box"
+      ],
+      "worldFlag": "project:mill-wheel:complete"
+    },
+    {
+      "id": "wheel-wick-guildhouse",
+      "name": "Reopen the Wheel & Wick guildhouse",
+      "materials": {
+        "timber": 160,
+        "stone": 60,
+        "fiber": 40
+      },
+      "papers": [
+        "marens-notes-on-hubs-and-tyres"
+      ],
+      "worldFlag": "project:wheel-wick-guildhouse:complete"
+    },
+    {
+      "id": "orrins-hinges",
+      "name": "Fit Orrin’s hinges",
+      "materials": {
+        "timber": 50,
+        "stone": 30,
+        "amber": 10
+      },
+      "papers": [
+        "tarrow-requisition-reply-hinges"
+      ],
+      "worldFlag": "project:orrins-hinges:complete"
+    },
+    {
+      "id": "cooley-window-fund",
+      "name": "Keep Ada’s window lit",
+      "materials": {
+        "fiber": 40,
+        "amber": 20
+      },
+      "papers": [
+        "adas-oil-receipts"
+      ],
+      "worldFlag": "project:cooley-window-fund:complete"
+    }
+  ]
+}

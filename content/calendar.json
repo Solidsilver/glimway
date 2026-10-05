@@ -1,0 +1,12 @@
+{
+  "epoch": "2026-01-05T00:00:00Z",
+  "wickDays": 7,
+  "wicks": ["Thaw", "Mud", "Bud", "Bloom", "Light", "Cart", "Haze", "Sap", "Amber", "Leaf", "Smoke", "Quiet"],
+  "marks": ["Mudrise", "Mudrise", "Mudrise", "Carting", "Carting", "Carting", "Amberfall", "Amberfall", "Amberfall", "Quiet", "Quiet", "Quiet"],
+  "festivals": [
+    {"name": "The Breaking", "wick": "Thaw", "day": 1},
+    {"name": "Carting Day", "wick": "Cart", "day": 6},
+    {"name": "Amberwake", "wick": "Amber", "day": 1},
+    {"name": "Closure Night", "wick": "Quiet", "day": 7}
+  ]
+}

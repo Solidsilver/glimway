@@ -2,7 +2,8 @@
   "generatorVersion": 1,
   "chunkSize": 24,
   "regions": [
-    { "id": "inner-1", "kind": "inner", "gridWidth": 3, "gridHeight": 3, "entryX": 1, "entryY": 1 }
+    { "id": "inner-1", "kind": "inner", "gridWidth": 3, "gridHeight": 3, "entryX": 1, "entryY": 1 },
+    { "id": "outer-1", "kind": "outer", "gridWidth": 3, "gridHeight": 3, "entryX": 1, "entryY": 1 }
   ],
   "enemyKinds": ["wisp", "beetle"],
   "campMixes": [

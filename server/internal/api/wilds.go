@@ -40,10 +40,15 @@ const epochColumns = "id,world_id,region_id,world_seed,generator_version,season,
 
 func (a *Server) ensureEpoch(ctx context.Context, tx *sql.Tx, s store.Snapshot, id string, now int64) (regionEpoch, error) {
 	r, ok := regionDefinition(id)
-	if !ok || r.Kind != "inner" {
+	if !ok {
 		return regionEpoch{}, fail(404, "region-not-found")
 	}
-	e, _, err := scanEpoch(ctx, tx, "SELECT "+epochColumns+" FROM region_epochs WHERE world_id=? AND region_id=? AND season='0'", s.WorldID, id)
+	season := "0"
+	day := content.CalendarAt(content.CalendarRules, now)
+	if r.Kind == "outer" {
+		season = strconv.FormatInt(day.WickNumber, 10)
+	}
+	e, _, err := scanEpoch(ctx, tx, "SELECT "+epochColumns+" FROM region_epochs WHERE world_id=? AND region_id=? AND season=?", s.WorldID, id, season)
 	if err == sql.ErrNoRows {
 		v := a.Config.WildsGeneratorVersion
 		if v == 0 {
@@ -58,12 +63,17 @@ func (a *Server) ensureEpoch(ctx context.Context, tx *sql.Tx, s store.Snapshot, 
 		}
 		e.RegionID = id
 		e.GeneratorVersion = v
-		e.Season = "0"
+		e.Season = season
 		e.StartsAt = now
+		if r.Kind == "outer" {
+			e.StartsAt = day.StartsAt
+			end := day.NextTurning
+			e.EndsAt = &end
+		}
 		if err = tx.QueryRowContext(ctx, "SELECT seed FROM worlds WHERE id=?", s.WorldID).Scan(&e.WorldSeed); err != nil {
 			return e, err
 		}
-		_, err = tx.ExecContext(ctx, "INSERT INTO region_epochs VALUES(?,?,?,?,?,?,?,NULL)", e.ID, s.WorldID, id, e.WorldSeed, v, e.Season, now)
+		_, err = tx.ExecContext(ctx, "INSERT INTO region_epochs VALUES(?,?,?,?,?,?,?,?)", e.ID, s.WorldID, id, e.WorldSeed, v, e.Season, e.StartsAt, e.EndsAt)
 	}
 	if err != nil {
 		return e, err

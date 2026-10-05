@@ -16,7 +16,7 @@ test('shared homes preserve writing identities, categories and footprints', () =
     else { assert.equal(v.embers, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
   assert.equal(HOMESTEAD_DATA.items.length, DECORATIONS_EMBER.length + DECORATIONS_MATERIAL.length);
-  assert.deepEqual(HOMESTEAD_DATA.tiers.filter(t => t.purchasable).map(t => t.tier), [1]);
+  assert.deepEqual(HOMESTEAD_DATA.tiers.filter(t => t.purchasable).map(t => t.tier), [1, 2]);
 });
 
 test('typed homestead loader rejects malformed definitions', () => {
@@ -29,7 +29,7 @@ test('typed homestead loader rejects malformed definitions', () => {
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { stone: 0 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].footprint = [1, 1, 1] as unknown as [number, number]; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].where = ['attic'] as never; },
-    (h: typeof HOMESTEAD_DATA) => { h.tiers[2].purchasable = true; },
+    (h: typeof HOMESTEAD_DATA) => { h.tiers[3].purchasable = true; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].minTier = 5; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].category = 'weapon' as never; },
     (h: typeof HOMESTEAD_DATA) => { h.commons.columns = 0; },
