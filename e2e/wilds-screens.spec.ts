@@ -46,21 +46,29 @@ for (const [device, vp] of sizes) {
     await waitForWilds(page)
     await shot(page, `21-wilds-east-chunk-${device}`)
 
-    const dump = await wilds(page)
     const pickOne = (d: WildsDump, kind: string, where: (e: WildsDump['entities'][number]) => boolean = () => true) => {
       const target = d.entities.find((e) => e.kind === kind && where(e))
       if (!target) throw new Error(`no ${kind} generated in this epoch`)
       return target
     }
-    /** Warp to the spot beside `target` where it (not a neighbour) owns the prompt. */
-    const warpTo = async (target: WildsDump['entities'][number]) => {
+    /** Keep the target nearest, with room for combat knockback before an exit. */
+    const approach = async (target: WildsDump['entities'][number]) => {
       const d = await wilds(page)
       const others = d.entities.filter((e) => e.claimable && e.id !== target.id && e.chunk.cx === target.chunk.cx && e.chunk.cy === target.chunk.cy)
       const spot = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
+        // Camps can spawn at tile 21. Its south neighbour is next to an
+        // exit; a hit there can change chunks during the settling wait.
+        .filter(([ox, oy]) => target.tx + ox >= 3 && target.tx + ox <= 20 && target.ty + oy >= 3 && target.ty + oy <= 20)
         .map(([ox, oy]) => [ox, oy, Math.min(...others.map((e) => Math.hypot(e.tx - target.tx - ox, e.ty - target.ty - oy)), 99)])
         .sort((a, b) => (b[2] as number) - (a[2] as number))[0]
+      expect(spot, `safe approach to ${target.id}`).toBeDefined()
+      return spot
+    }
+    const warpTo = async (target: WildsDump['entities'][number]) => {
+      const spot = await approach(target)
       await warp(page, chunkAreaId(target.chunk.cx, target.chunk.cy), target.tx + (spot[0] as number), target.ty + (spot[1] as number))
       await waitForWilds(page)
+      expect((await wilds(page)).chunk).toEqual(target.chunk)
     }
 
     // A camp with its people (the walk-in line) and, after the fight, the claim.
@@ -69,10 +77,8 @@ for (const [device, vp] of sizes) {
     await shot(page, `22-wilds-camp-${device}`)
     await page.evaluate(() => (window as unknown as { __fsDevStrike: (n: number) => void }).__fsDevStrike(999))
     // Stand where the camp (not a neighbouring node) owns the prompt.
-    const others = (await wilds(page)).entities.filter((e) => e.claimable && e.id !== camp.id && e.chunk.cx === camp.chunk.cx && e.chunk.cy === camp.chunk.cy)
-    const spot = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-      .map(([ox, oy]) => [ox, oy, Math.min(...others.map((e) => Math.hypot(e.tx - camp.tx - ox, e.ty - camp.ty - oy)), 99)])
-      .sort((a, b) => (b[2] as number) - (a[2] as number))[0]
+    expect((await wilds(page)).chunk).toEqual(camp.chunk)
+    const spot = await approach(camp)
     await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [(camp.tx + (spot[0] as number)) * TILE + 8, (camp.ty + (spot[1] as number)) * TILE + 8])
     await expect(page.locator('.prompt')).toContainText(/Claim the camp/i)
     await shot(page, `23-wilds-camp-claim-${device}`)

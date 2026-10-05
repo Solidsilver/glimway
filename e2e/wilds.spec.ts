@@ -1,5 +1,6 @@
+import { execFileSync } from 'node:child_process'
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld, serverState } from './connected'
 import { beginNewJourney, hold, holdUntil, warp, waitForWilds, wilds, type WildsDump } from './helpers'
 import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds/regions.ts'
 
@@ -72,6 +73,18 @@ test('connected: the Commons arch leads into the Tangle and back (handoff tiles)
   await openTitleGuide(page)
   await pasteAndConnect(page, id)
   await waitForWorld(page)
+
+  // This checks handoff coordinates, so keep combat away from the entry.
+  // A random camp at (2,20) can knock us south through the return exit
+  // while waitForWilds lets the scene settle. Keep random worlds in the
+  // exploration/claim tests below; only this traversal fixture is seeded.
+  const worldId = (await serverState(page)).body.worldId as string
+  expect(worldId).toMatch(/^[a-f0-9]+$/)
+  execFileSync('sqlite3', ['-cmd', '.timeout 5000', '.e2e-server/fingersnap.sqlite',
+    `UPDATE worlds SET seed='handoff-tiles' WHERE id='${worldId}' AND id NOT IN (SELECT world_id FROM region_epochs);`])
+  const region = await page.request.get('/api/wilds/region/inner-1')
+  expect(region.ok()).toBe(true)
+  expect((await region.json()).epoch.worldSeed).toBe('handoff-tiles')
 
   // North through the Commons arch: the Wilds entry chunk, at the agreed
   // arrival tile ({2,22} — the region-wide position the server expects).
