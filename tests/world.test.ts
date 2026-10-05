@@ -176,7 +176,13 @@ const OUT_OF_WORLD = /\b(habitica|xp|habits?|tasks?|to-?dos?|dailies|streaks?|ap
 
 test('story dialogue lines fit the box (160 characters) and stay in-world', async () => {
   const expansion = await import('../src/content/expansion-writing.ts');
-  const lines: string[] = [];
+  // The world touches (flowers, benches, signs) read as lines too.
+  const touches = await import('../src/content/touches.ts');
+  const lines: string[] = [
+    ...touches.FLOWER_LINES,
+    ...touches.SIT_LINES,
+    ...Object.values(touches.SIGN_COPY).flatMap((s) => s.lines),
+  ];
   for (const id of NPC_IDS) {
     for (const stage of QUEST_STAGES) {
       const d = dialogueFor(id, stage);
@@ -202,6 +208,46 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     ...[...expansion.POIS, ...expansion.TRINKETS, ...expansion.MORE_TRINKETS].map((t) => ('discoveryText' in t ? t.discoveryText : t.blurb)),
   ];
   for (const text of prose) assert.doesNotMatch(text, OUT_OF_WORLD, text);
+});
+
+test('the world-touch lines are varied, in-world, and every sign resolves', async () => {
+  const touches = await import('../src/content/touches.ts');
+  const pools: Array<[string, readonly string[]]> = [
+    ['flowers', touches.FLOWER_LINES],
+    ['sit', touches.SIT_LINES],
+    ...Object.entries(touches.SIGN_COPY).map(([key, s]) => [key, s.lines] as [string, readonly string[]]),
+  ];
+  for (const [key, pool] of pools) {
+    assert.ok(pool.length >= 2, `${key} pool needs at least two lines to vary`);
+    assert.equal(new Set(pool).size, pool.length, `${key} pool repeats a line`);
+    for (const line of pool) {
+      assert.ok(line.length > 0 && line.length <= 160, `${key}: ${line.length} chars: ${line}`);
+      assert.doesNotMatch(line, OUT_OF_WORLD, line);
+    }
+  }
+  // Cycling a pool never says the same line twice in a row.
+  for (const pool of [touches.FLOWER_LINES, touches.SIT_LINES]) {
+    for (let i = 1; i < pool.length * 2; i += 1) {
+      assert.notEqual(touches.nextLine(pool, i), touches.nextLine(pool, i - 1));
+    }
+  }
+  // Every road the game can signpost has its own copy; anything else falls back.
+  const fallback = touches.signCopy('no-such-sign');
+  const gates = [
+    'gate:village:woodland',
+    'gate:village:commons',
+    'gate:woodland:village',
+    'gate:woodland:ruin',
+    'gate:ruin:woodland',
+    'gate:commons:village',
+    'gate:commons:wilds',
+  ];
+  for (const key of [...gates, 'post', 'route', 'milestone']) {
+    const copy = touches.signCopy(key);
+    assert.ok(copy.speaker.length > 0, `${key} has no speaker`);
+    assert.notDeepEqual(copy, fallback, `${key} fell back to the plain sign`);
+  }
+  assert.deepEqual(touches.signCopy('gate:nowhere'), fallback);
 });
 
 test('the warden is settled, not slain, in every story beat', () => {

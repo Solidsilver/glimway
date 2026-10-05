@@ -12,7 +12,7 @@ export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}`
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}` | `touch:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -337,7 +337,9 @@ function buildVillage(): WorldData {
     { frame: 'bread-basket', tx: 6, ty: 8, h: 12, body: [12, 6] },
     { frame: 'flower-planter', tx: 22, ty: 7, h: 16, body: [14, 6] },
     { frame: 'tool-crate', tx: 24, ty: 8, h: 16, body: [12, 8] },
-    { frame: 'stone-milestone', tx: 38, ty: 12, h: 18, body: [10, 6] }
+    { frame: 'stone-milestone', tx: 38, ty: 12, h: 18, body: [10, 6] },
+    // The square's signpost: Orrin resets it every spring to the same lean.
+    { frame: 'trail-sign', tx: 15, ty: 11, h: 24, body: [10, 6] }
   ]
 
   return {
