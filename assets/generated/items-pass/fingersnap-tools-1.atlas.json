@@ -1,0 +1,411 @@
+{
+  "frames": {
+    "item-bench-axe-whole": {
+      "frame": {
+        "x": 60,
+        "y": 89,
+        "w": 196,
+        "h": 177
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 196,
+        "h": 177
+      },
+      "sourceSize": {
+        "w": 196,
+        "h": 177
+      }
+    },
+    "item-bench-axe-worn": {
+      "frame": {
+        "x": 329,
+        "y": 89,
+        "w": 196,
+        "h": 177
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 196,
+        "h": 177
+      },
+      "sourceSize": {
+        "w": 196,
+        "h": 177
+      }
+    },
+    "item-bench-pick-whole": {
+      "frame": {
+        "x": 618,
+        "y": 78,
+        "w": 187,
+        "h": 193
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 187,
+        "h": 193
+      },
+      "sourceSize": {
+        "w": 187,
+        "h": 193
+      }
+    },
+    "item-bench-pick-worn": {
+      "frame": {
+        "x": 905,
+        "y": 78,
+        "w": 186,
+        "h": 193
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 186,
+        "h": 193
+      },
+      "sourceSize": {
+        "w": 186,
+        "h": 193
+      }
+    },
+    "item-bench-spade-whole": {
+      "frame": {
+        "x": 62,
+        "y": 320,
+        "w": 188,
+        "h": 217
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 188,
+        "h": 217
+      },
+      "sourceSize": {
+        "w": 188,
+        "h": 217
+      }
+    },
+    "item-bench-spade-worn": {
+      "frame": {
+        "x": 332,
+        "y": 320,
+        "w": 188,
+        "h": 217
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 188,
+        "h": 217
+      },
+      "sourceSize": {
+        "w": 188,
+        "h": 217
+      }
+    },
+    "item-stave-bucket-whole": {
+      "frame": {
+        "x": 633,
+        "y": 358,
+        "w": 151,
+        "h": 178
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 178
+      },
+      "sourceSize": {
+        "w": 151,
+        "h": 178
+      }
+    },
+    "item-stave-bucket-worn": {
+      "frame": {
+        "x": 919,
+        "y": 358,
+        "w": 149,
+        "h": 177
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 149,
+        "h": 177
+      },
+      "sourceSize": {
+        "w": 149,
+        "h": 177
+      }
+    },
+    "item-watering-can": {
+      "frame": {
+        "x": 39,
+        "y": 622,
+        "w": 241,
+        "h": 168
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 241,
+        "h": 168
+      },
+      "sourceSize": {
+        "w": 241,
+        "h": 168
+      }
+    },
+    "item-brack-felling-axe-whole": {
+      "frame": {
+        "x": 320,
+        "y": 581,
+        "w": 225,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 225,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 225,
+        "h": 221
+      }
+    },
+    "item-brack-felling-axe-worn": {
+      "frame": {
+        "x": 593,
+        "y": 581,
+        "w": 227,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 227,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 227,
+        "h": 221
+      }
+    },
+    "item-brack-felling-axe-blunt": {
+      "frame": {
+        "x": 880,
+        "y": 580,
+        "w": 218,
+        "h": 222
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 218,
+        "h": 222
+      },
+      "sourceSize": {
+        "w": 218,
+        "h": 222
+      }
+    },
+    "item-orrins-mason-pick-whole": {
+      "frame": {
+        "x": 61,
+        "y": 863,
+        "w": 202,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 201
+      },
+      "sourceSize": {
+        "w": 202,
+        "h": 201
+      }
+    },
+    "item-orrins-mason-pick-worn": {
+      "frame": {
+        "x": 334,
+        "y": 864,
+        "w": 204,
+        "h": 200
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 204,
+        "h": 200
+      },
+      "sourceSize": {
+        "w": 204,
+        "h": 200
+      }
+    },
+    "item-orrins-mason-pick-blunt": {
+      "frame": {
+        "x": 606,
+        "y": 863,
+        "w": 201,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 201
+      },
+      "sourceSize": {
+        "w": 201,
+        "h": 201
+      }
+    },
+    "item-ada-garden-spade-whole": {
+      "frame": {
+        "x": 892,
+        "y": 851,
+        "w": 185,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 185,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 185,
+        "h": 208
+      }
+    },
+    "item-ada-garden-spade-worn": {
+      "frame": {
+        "x": 62,
+        "y": 1119,
+        "w": 185,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 185,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 185,
+        "h": 209
+      }
+    },
+    "item-ada-garden-spade-blunt": {
+      "frame": {
+        "x": 332,
+        "y": 1119,
+        "w": 184,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 184,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 184,
+        "h": 209
+      }
+    },
+    "item-nans-lamplighter-pole-whole": {
+      "frame": {
+        "x": 607,
+        "y": 1093,
+        "w": 192,
+        "h": 247
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 247
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 247
+      }
+    },
+    "item-nans-lamplighter-pole-worn": {
+      "frame": {
+        "x": 892,
+        "y": 1093,
+        "w": 194,
+        "h": 247
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 247
+      },
+      "sourceSize": {
+        "w": 194,
+        "h": 247
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-tools-1.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

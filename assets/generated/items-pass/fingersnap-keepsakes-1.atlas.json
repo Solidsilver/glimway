@@ -1,0 +1,71 @@
+{
+  "frames": {
+    "item-knotted-halter": {
+      "frame": {
+        "x": 35,
+        "y": 50,
+        "w": 216,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 216,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 216,
+        "h": 224
+      }
+    },
+    "item-work-glove": {
+      "frame": {
+        "x": 45,
+        "y": 319,
+        "w": 220,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 220,
+        "h": 237
+      },
+      "sourceSize": {
+        "w": 220,
+        "h": 237
+      }
+    },
+    "item-road-nails": {
+      "frame": {
+        "x": 30,
+        "y": 606,
+        "w": 230,
+        "h": 178
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 230,
+        "h": 178
+      },
+      "sourceSize": {
+        "w": 230,
+        "h": 178
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-keepsakes-1.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

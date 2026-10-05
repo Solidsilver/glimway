@@ -1,0 +1,231 @@
+{
+  "frames": {
+    "item-nans-lamplighter-pole-cracked": {
+      "frame": {
+        "x": 114,
+        "y": 34,
+        "w": 156,
+        "h": 341
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 341
+      },
+      "sourceSize": {
+        "w": 156,
+        "h": 341
+      }
+    },
+    "item-oak-mark-punch": {
+      "frame": {
+        "x": 342,
+        "y": 170,
+        "w": 158,
+        "h": 205
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 158,
+        "h": 205
+      },
+      "sourceSize": {
+        "w": 158,
+        "h": 205
+      }
+    },
+    "item-carters-lantern-lit": {
+      "frame": {
+        "x": 612,
+        "y": 93,
+        "w": 190,
+        "h": 282
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 190,
+        "h": 282
+      },
+      "sourceSize": {
+        "w": 190,
+        "h": 282
+      }
+    },
+    "item-carters-lantern-unlit": {
+      "frame": {
+        "x": 892,
+        "y": 93,
+        "w": 189,
+        "h": 282
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 189,
+        "h": 282
+      },
+      "sourceSize": {
+        "w": 189,
+        "h": 282
+      }
+    },
+    "item-turncap-jar-fresh": {
+      "frame": {
+        "x": 80,
+        "y": 375,
+        "w": 149,
+        "h": 92
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 149,
+        "h": 92
+      },
+      "sourceSize": {
+        "w": 149,
+        "h": 92
+      }
+    },
+    "item-turncap-jar-dried-out": {
+      "frame": {
+        "x": 364,
+        "y": 375,
+        "w": 149,
+        "h": 92
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 149,
+        "h": 92
+      },
+      "sourceSize": {
+        "w": 149,
+        "h": 92
+      }
+    },
+    "item-salve-satchel": {
+      "frame": {
+        "x": 619,
+        "y": 375,
+        "w": 162,
+        "h": 92
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 162,
+        "h": 92
+      },
+      "sourceSize": {
+        "w": 162,
+        "h": 92
+      }
+    },
+    "item-runners-whistle": {
+      "frame": {
+        "x": 898,
+        "y": 375,
+        "w": 41,
+        "h": 13
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 41,
+        "h": 13
+      },
+      "sourceSize": {
+        "w": 41,
+        "h": 13
+      }
+    },
+    "item-forager-satchel": {
+      "frame": {
+        "x": 58,
+        "y": 467,
+        "w": 193,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 193,
+        "h": 220
+      },
+      "sourceSize": {
+        "w": 193,
+        "h": 220
+      }
+    },
+    "item-work-apron": {
+      "frame": {
+        "x": 342,
+        "y": 467,
+        "w": 191,
+        "h": 279
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 279
+      },
+      "sourceSize": {
+        "w": 191,
+        "h": 279
+      }
+    },
+    "item-carting-coat": {
+      "frame": {
+        "x": 582,
+        "y": 467,
+        "w": 247,
+        "h": 279
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 247,
+        "h": 279
+      },
+      "sourceSize": {
+        "w": 247,
+        "h": 279
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-tools-2.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

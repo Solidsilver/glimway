@@ -1,0 +1,2552 @@
+[
+  {
+    "key": "item-bench-axe-whole",
+    "region": [
+      0,
+      0,
+      280,
+      280
+    ],
+    "sourceRect": {
+      "x": 60,
+      "y": 89,
+      "w": 196,
+      "h": 177
+    }
+  },
+  {
+    "key": "item-bench-axe-worn",
+    "region": [
+      280,
+      0,
+      561,
+      280
+    ],
+    "sourceRect": {
+      "x": 329,
+      "y": 89,
+      "w": 196,
+      "h": 177
+    }
+  },
+  {
+    "key": "item-bench-pick-whole",
+    "region": [
+      561,
+      0,
+      842,
+      280
+    ],
+    "sourceRect": {
+      "x": 618,
+      "y": 78,
+      "w": 187,
+      "h": 193
+    }
+  },
+  {
+    "key": "item-bench-pick-worn",
+    "region": [
+      842,
+      0,
+      1122,
+      280
+    ],
+    "sourceRect": {
+      "x": 905,
+      "y": 78,
+      "w": 186,
+      "h": 193
+    }
+  },
+  {
+    "key": "item-bench-spade-whole",
+    "region": [
+      0,
+      280,
+      280,
+      561
+    ],
+    "sourceRect": {
+      "x": 62,
+      "y": 320,
+      "w": 188,
+      "h": 217
+    }
+  },
+  {
+    "key": "item-bench-spade-worn",
+    "region": [
+      280,
+      280,
+      561,
+      561
+    ],
+    "sourceRect": {
+      "x": 332,
+      "y": 320,
+      "w": 188,
+      "h": 217
+    }
+  },
+  {
+    "key": "item-stave-bucket-whole",
+    "region": [
+      561,
+      280,
+      842,
+      561
+    ],
+    "sourceRect": {
+      "x": 633,
+      "y": 358,
+      "w": 151,
+      "h": 178
+    }
+  },
+  {
+    "key": "item-stave-bucket-worn",
+    "region": [
+      842,
+      280,
+      1122,
+      561
+    ],
+    "sourceRect": {
+      "x": 919,
+      "y": 358,
+      "w": 149,
+      "h": 177
+    }
+  },
+  {
+    "key": "item-watering-can",
+    "region": [
+      0,
+      561,
+      280,
+      841
+    ],
+    "sourceRect": {
+      "x": 39,
+      "y": 622,
+      "w": 241,
+      "h": 168
+    }
+  },
+  {
+    "key": "item-brack-felling-axe-whole",
+    "region": [
+      280,
+      561,
+      561,
+      841
+    ],
+    "sourceRect": {
+      "x": 320,
+      "y": 581,
+      "w": 225,
+      "h": 221
+    }
+  },
+  {
+    "key": "item-brack-felling-axe-worn",
+    "region": [
+      561,
+      561,
+      842,
+      841
+    ],
+    "sourceRect": {
+      "x": 593,
+      "y": 581,
+      "w": 227,
+      "h": 221
+    }
+  },
+  {
+    "key": "item-brack-felling-axe-blunt",
+    "region": [
+      842,
+      561,
+      1122,
+      841
+    ],
+    "sourceRect": {
+      "x": 880,
+      "y": 580,
+      "w": 218,
+      "h": 222
+    }
+  },
+  {
+    "key": "item-orrins-mason-pick-whole",
+    "region": [
+      0,
+      841,
+      280,
+      1093
+    ],
+    "sourceRect": {
+      "x": 61,
+      "y": 863,
+      "w": 202,
+      "h": 201
+    }
+  },
+  {
+    "key": "item-orrins-mason-pick-worn",
+    "region": [
+      280,
+      841,
+      561,
+      1093
+    ],
+    "sourceRect": {
+      "x": 334,
+      "y": 864,
+      "w": 204,
+      "h": 200
+    }
+  },
+  {
+    "key": "item-orrins-mason-pick-blunt",
+    "region": [
+      561,
+      841,
+      842,
+      1093
+    ],
+    "sourceRect": {
+      "x": 606,
+      "y": 863,
+      "w": 201,
+      "h": 201
+    }
+  },
+  {
+    "key": "item-ada-garden-spade-whole",
+    "region": [
+      842,
+      841,
+      1122,
+      1093
+    ],
+    "sourceRect": {
+      "x": 892,
+      "y": 851,
+      "w": 185,
+      "h": 208
+    }
+  },
+  {
+    "key": "item-ada-garden-spade-worn",
+    "region": [
+      0,
+      1093,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 62,
+      "y": 1119,
+      "w": 185,
+      "h": 209
+    }
+  },
+  {
+    "key": "item-ada-garden-spade-blunt",
+    "region": [
+      280,
+      1093,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 332,
+      "y": 1119,
+      "w": 184,
+      "h": 209
+    }
+  },
+  {
+    "key": "item-nans-lamplighter-pole-whole",
+    "region": [
+      561,
+      1093,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 607,
+      "y": 1093,
+      "w": 192,
+      "h": 247
+    }
+  },
+  {
+    "key": "item-nans-lamplighter-pole-worn",
+    "region": [
+      842,
+      1093,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 892,
+      "y": 1093,
+      "w": 194,
+      "h": 247
+    }
+  },
+  {
+    "key": "item-nans-lamplighter-pole-cracked",
+    "region": [
+      0,
+      0,
+      280,
+      400
+    ],
+    "sourceRect": {
+      "x": 111,
+      "y": 32,
+      "w": 160,
+      "h": 357
+    }
+  },
+  {
+    "key": "item-oak-mark-punch",
+    "region": [
+      280,
+      0,
+      561,
+      400
+    ],
+    "sourceRect": {
+      "x": 339,
+      "y": 169,
+      "w": 161,
+      "h": 214
+    }
+  },
+  {
+    "key": "item-carters-lantern-lit",
+    "region": [
+      561,
+      0,
+      842,
+      400
+    ],
+    "sourceRect": {
+      "x": 610,
+      "y": 89,
+      "w": 193,
+      "h": 301
+    }
+  },
+  {
+    "key": "item-carters-lantern-unlit",
+    "region": [
+      842,
+      0,
+      1122,
+      400
+    ],
+    "sourceRect": {
+      "x": 891,
+      "y": 89,
+      "w": 191,
+      "h": 301
+    }
+  },
+  {
+    "key": "item-turncap-jar-fresh",
+    "region": [
+      0,
+      400,
+      280,
+      704
+    ],
+    "sourceRect": {
+      "x": 56,
+      "y": 417,
+      "w": 195,
+      "h": 271
+    }
+  },
+  {
+    "key": "item-turncap-jar-dried-out",
+    "region": [
+      280,
+      400,
+      561,
+      704
+    ],
+    "sourceRect": {
+      "x": 339,
+      "y": 417,
+      "w": 194,
+      "h": 271
+    }
+  },
+  {
+    "key": "item-salve-satchel",
+    "region": [
+      561,
+      400,
+      842,
+      704
+    ],
+    "sourceRect": {
+      "x": 581,
+      "y": 446,
+      "w": 249,
+      "h": 237
+    }
+  },
+  {
+    "key": "item-runners-whistle",
+    "region": [
+      842,
+      400,
+      1122,
+      704
+    ],
+    "sourceRect": {
+      "x": 865,
+      "y": 466,
+      "w": 226,
+      "h": 222
+    }
+  },
+  {
+    "key": "item-forager-satchel",
+    "region": [
+      0,
+      704,
+      293,
+      1402
+    ],
+    "sourceRect": {
+      "x": 15,
+      "y": 780,
+      "w": 278,
+      "h": 243
+    }
+  },
+  {
+    "key": "item-work-apron",
+    "region": [
+      293,
+      704,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 316,
+      "y": 734,
+      "w": 237,
+      "h": 294
+    }
+  },
+  {
+    "key": "item-carting-coat",
+    "region": [
+      561,
+      704,
+      847,
+      1402
+    ],
+    "sourceRect": {
+      "x": 568,
+      "y": 716,
+      "w": 279,
+      "h": 306
+    }
+  },
+  {
+    "key": "item-seasoned-timber",
+    "region": [
+      0,
+      0,
+      280,
+      280
+    ],
+    "sourceRect": {
+      "x": 39,
+      "y": 62,
+      "w": 221,
+      "h": 215
+    }
+  },
+  {
+    "key": "item-drift-stone",
+    "region": [
+      280,
+      0,
+      561,
+      280
+    ],
+    "sourceRect": {
+      "x": 311,
+      "y": 83,
+      "w": 219,
+      "h": 182
+    }
+  },
+  {
+    "key": "item-iron-oak",
+    "region": [
+      561,
+      0,
+      842,
+      280
+    ],
+    "sourceRect": {
+      "x": 603,
+      "y": 67,
+      "w": 203,
+      "h": 210
+    }
+  },
+  {
+    "key": "item-willow-bark",
+    "region": [
+      842,
+      0,
+      1122,
+      280
+    ],
+    "sourceRect": {
+      "x": 872,
+      "y": 77,
+      "w": 211,
+      "h": 185
+    }
+  },
+  {
+    "key": "item-beeswax",
+    "region": [
+      0,
+      280,
+      280,
+      561
+    ],
+    "sourceRect": {
+      "x": 37,
+      "y": 346,
+      "w": 225,
+      "h": 190
+    }
+  },
+  {
+    "key": "item-storm-grade-drop",
+    "region": [
+      280,
+      280,
+      561,
+      561
+    ],
+    "sourceRect": {
+      "x": 343,
+      "y": 327,
+      "w": 162,
+      "h": 216
+    }
+  },
+  {
+    "key": "item-tallow",
+    "region": [
+      561,
+      280,
+      842,
+      561
+    ],
+    "sourceRect": {
+      "x": 581,
+      "y": 336,
+      "w": 237,
+      "h": 210
+    }
+  },
+  {
+    "key": "item-flour",
+    "region": [
+      842,
+      280,
+      1122,
+      561
+    ],
+    "sourceRect": {
+      "x": 865,
+      "y": 307,
+      "w": 218,
+      "h": 243
+    }
+  },
+  {
+    "key": "item-wild-honey",
+    "region": [
+      0,
+      561,
+      280,
+      841
+    ],
+    "sourceRect": {
+      "x": 46,
+      "y": 604,
+      "w": 206,
+      "h": 216
+    }
+  },
+  {
+    "key": "item-walnut-shells",
+    "region": [
+      280,
+      561,
+      561,
+      841
+    ],
+    "sourceRect": {
+      "x": 303,
+      "y": 635,
+      "w": 231,
+      "h": 177
+    }
+  },
+  {
+    "key": "item-madder-scraps",
+    "region": [
+      561,
+      561,
+      842,
+      841
+    ],
+    "sourceRect": {
+      "x": 581,
+      "y": 604,
+      "w": 244,
+      "h": 214
+    }
+  },
+  {
+    "key": "item-amberfall-sap",
+    "region": [
+      842,
+      561,
+      1122,
+      841
+    ],
+    "sourceRect": {
+      "x": 878,
+      "y": 589,
+      "w": 201,
+      "h": 235
+    }
+  },
+  {
+    "key": "item-frost-glass",
+    "region": [
+      0,
+      841,
+      280,
+      1107
+    ],
+    "sourceRect": {
+      "x": 62,
+      "y": 865,
+      "w": 162,
+      "h": 218
+    }
+  },
+  {
+    "key": "item-bloom-flowers-fresh",
+    "region": [
+      280,
+      841,
+      561,
+      1107
+    ],
+    "sourceRect": {
+      "x": 311,
+      "y": 848,
+      "w": 218,
+      "h": 245
+    }
+  },
+  {
+    "key": "item-bloom-flowers-dried",
+    "region": [
+      561,
+      841,
+      842,
+      1107
+    ],
+    "sourceRect": {
+      "x": 592,
+      "y": 849,
+      "w": 216,
+      "h": 245
+    }
+  },
+  {
+    "key": "item-tarrow-edge-strip",
+    "region": [
+      842,
+      841,
+      1122,
+      1107
+    ],
+    "sourceRect": {
+      "x": 880,
+      "y": 872,
+      "w": 201,
+      "h": 199
+    }
+  },
+  {
+    "key": "item-loose-road-nail",
+    "region": [
+      0,
+      1107,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 74,
+      "y": 1128,
+      "w": 154,
+      "h": 208
+    }
+  },
+  {
+    "key": "item-iron-oak-wedge",
+    "region": [
+      280,
+      1107,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 311,
+      "y": 1147,
+      "w": 220,
+      "h": 189
+    }
+  },
+  {
+    "key": "item-tyre-iron-hoop",
+    "region": [
+      561,
+      1107,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 596,
+      "y": 1143,
+      "w": 212,
+      "h": 198
+    }
+  },
+  {
+    "key": "item-green-ash-haft",
+    "region": [
+      842,
+      1107,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 876,
+      "y": 1107,
+      "w": 199,
+      "h": 248
+    }
+  },
+  {
+    "key": "item-amber-bead",
+    "region": [
+      0,
+      0,
+      280,
+      280
+    ],
+    "sourceRect": {
+      "x": 55,
+      "y": 81,
+      "w": 155,
+      "h": 155
+    }
+  },
+  {
+    "key": "item-waxed-cord",
+    "region": [
+      280,
+      0,
+      561,
+      280
+    ],
+    "sourceRect": {
+      "x": 296,
+      "y": 56,
+      "w": 234,
+      "h": 194
+    }
+  },
+  {
+    "key": "item-warden-sliver",
+    "region": [
+      561,
+      0,
+      842,
+      280
+    ],
+    "sourceRect": {
+      "x": 599,
+      "y": 68,
+      "w": 188,
+      "h": 175
+    }
+  },
+  {
+    "key": "item-fibre-rope",
+    "region": [
+      842,
+      0,
+      1122,
+      280
+    ],
+    "sourceRect": {
+      "x": 850,
+      "y": 50,
+      "w": 239,
+      "h": 196
+    }
+  },
+  {
+    "key": "item-split-rail",
+    "region": [
+      0,
+      280,
+      280,
+      561
+    ],
+    "sourceRect": {
+      "x": 33,
+      "y": 336,
+      "w": 232,
+      "h": 188
+    }
+  },
+  {
+    "key": "item-slates",
+    "region": [
+      280,
+      280,
+      561,
+      561
+    ],
+    "sourceRect": {
+      "x": 304,
+      "y": 322,
+      "w": 228,
+      "h": 208
+    }
+  },
+  {
+    "key": "item-oak-slat",
+    "region": [
+      561,
+      280,
+      842,
+      561
+    ],
+    "sourceRect": {
+      "x": 590,
+      "y": 313,
+      "w": 234,
+      "h": 224
+    }
+  },
+  {
+    "key": "item-lamp-head",
+    "region": [
+      842,
+      280,
+      1122,
+      561
+    ],
+    "sourceRect": {
+      "x": 904,
+      "y": 286,
+      "w": 163,
+      "h": 257
+    }
+  },
+  {
+    "key": "item-wax-seal",
+    "region": [
+      0,
+      561,
+      280,
+      840
+    ],
+    "sourceRect": {
+      "x": 31,
+      "y": 589,
+      "w": 230,
+      "h": 217
+    }
+  },
+  {
+    "key": "item-hazel-whip",
+    "region": [
+      280,
+      561,
+      561,
+      840
+    ],
+    "sourceRect": {
+      "x": 330,
+      "y": 567,
+      "w": 194,
+      "h": 248
+    }
+  },
+  {
+    "key": "item-birch-sapling",
+    "region": [
+      561,
+      561,
+      842,
+      840
+    ],
+    "sourceRect": {
+      "x": 594,
+      "y": 567,
+      "w": 207,
+      "h": 249
+    }
+  },
+  {
+    "key": "item-rowan-sapling",
+    "region": [
+      842,
+      561,
+      1122,
+      840
+    ],
+    "sourceRect": {
+      "x": 865,
+      "y": 567,
+      "w": 228,
+      "h": 247
+    }
+  },
+  {
+    "key": "item-comfrey-root",
+    "region": [
+      0,
+      840,
+      280,
+      1118
+    ],
+    "sourceRect": {
+      "x": 31,
+      "y": 844,
+      "w": 231,
+      "h": 242
+    }
+  },
+  {
+    "key": "item-wild-thyme",
+    "region": [
+      280,
+      840,
+      561,
+      1118
+    ],
+    "sourceRect": {
+      "x": 323,
+      "y": 844,
+      "w": 199,
+      "h": 235
+    }
+  },
+  {
+    "key": "item-turncap-spawn",
+    "region": [
+      561,
+      840,
+      842,
+      1118
+    ],
+    "sourceRect": {
+      "x": 602,
+      "y": 862,
+      "w": 205,
+      "h": 214
+    }
+  },
+  {
+    "key": "item-iron-oak-acorn",
+    "region": [
+      842,
+      840,
+      1122,
+      1118
+    ],
+    "sourceRect": {
+      "x": 892,
+      "y": 840,
+      "w": 192,
+      "h": 231
+    }
+  },
+  {
+    "key": "item-keepers-twists",
+    "region": [
+      0,
+      1118,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 33,
+      "y": 1122,
+      "w": 226,
+      "h": 224
+    }
+  },
+  {
+    "key": "item-oil-twists",
+    "region": [
+      280,
+      1118,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 304,
+      "y": 1118,
+      "w": 226,
+      "h": 228
+    }
+  },
+  {
+    "key": "item-saltings-tea",
+    "region": [
+      561,
+      1118,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 591,
+      "y": 1129,
+      "w": 218,
+      "h": 208
+    }
+  },
+  {
+    "key": "item-oatcakes",
+    "region": [
+      842,
+      1118,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 874,
+      "y": 1123,
+      "w": 214,
+      "h": 215
+    }
+  },
+  {
+    "key": "item-comfrey-salve",
+    "region": [
+      0,
+      0,
+      280,
+      269
+    ],
+    "sourceRect": {
+      "x": 52,
+      "y": 78,
+      "w": 219,
+      "h": 153
+    }
+  },
+  {
+    "key": "item-willow-bark-tea",
+    "region": [
+      280,
+      0,
+      561,
+      269
+    ],
+    "sourceRect": {
+      "x": 320,
+      "y": 56,
+      "w": 209,
+      "h": 182
+    }
+  },
+  {
+    "key": "item-blue-moss",
+    "region": [
+      561,
+      0,
+      842,
+      269
+    ],
+    "sourceRect": {
+      "x": 576,
+      "y": 75,
+      "w": 250,
+      "h": 166
+    }
+  },
+  {
+    "key": "item-candle-oil",
+    "region": [
+      842,
+      0,
+      1122,
+      269
+    ],
+    "sourceRect": {
+      "x": 904,
+      "y": 42,
+      "w": 147,
+      "h": 205
+    }
+  },
+  {
+    "key": "item-hearth-oil",
+    "region": [
+      0,
+      269,
+      280,
+      498
+    ],
+    "sourceRect": {
+      "x": 74,
+      "y": 276,
+      "w": 176,
+      "h": 217
+    }
+  },
+  {
+    "key": "item-storm-oil",
+    "region": [
+      280,
+      269,
+      561,
+      498
+    ],
+    "sourceRect": {
+      "x": 348,
+      "y": 272,
+      "w": 144,
+      "h": 216
+    }
+  },
+  {
+    "key": "item-knotted-halter",
+    "region": [
+      0,
+      0,
+      280,
+      280
+    ],
+    "sourceRect": {
+      "x": 35,
+      "y": 50,
+      "w": 216,
+      "h": 224
+    }
+  },
+  {
+    "key": "item-work-glove",
+    "region": [
+      0,
+      280,
+      280,
+      561
+    ],
+    "sourceRect": {
+      "x": 45,
+      "y": 319,
+      "w": 220,
+      "h": 237
+    }
+  },
+  {
+    "key": "item-road-nails",
+    "region": [
+      0,
+      561,
+      280,
+      828
+    ],
+    "sourceRect": {
+      "x": 30,
+      "y": 606,
+      "w": 230,
+      "h": 178
+    }
+  },
+  {
+    "key": "item-door-fox",
+    "region": [
+      0,
+      0,
+      280,
+      322
+    ],
+    "sourceRect": {
+      "x": 30,
+      "y": 17,
+      "w": 241,
+      "h": 300
+    }
+  },
+  {
+    "key": "item-window-lamp-lit",
+    "region": [
+      280,
+      0,
+      563,
+      322
+    ],
+    "sourceRect": {
+      "x": 299,
+      "y": 89,
+      "w": 264,
+      "h": 217
+    }
+  },
+  {
+    "key": "item-window-lamp-unlit",
+    "region": [
+      563,
+      0,
+      843,
+      322
+    ],
+    "sourceRect": {
+      "x": 586,
+      "y": 89,
+      "w": 257,
+      "h": 222
+    }
+  },
+  {
+    "key": "item-gate-shelf",
+    "region": [
+      843,
+      0,
+      1122,
+      322
+    ],
+    "sourceRect": {
+      "x": 874,
+      "y": 37,
+      "w": 224,
+      "h": 285
+    }
+  },
+  {
+    "key": "item-writing-desk",
+    "region": [
+      0,
+      322,
+      280,
+      604
+    ],
+    "sourceRect": {
+      "x": 30,
+      "y": 354,
+      "w": 240,
+      "h": 237
+    }
+  },
+  {
+    "key": "item-keepsake-cabinet",
+    "region": [
+      280,
+      322,
+      561,
+      604
+    ],
+    "sourceRect": {
+      "x": 306,
+      "y": 331,
+      "w": 244,
+      "h": 273
+    }
+  },
+  {
+    "key": "item-drying-rack",
+    "region": [
+      561,
+      322,
+      852,
+      604
+    ],
+    "sourceRect": {
+      "x": 575,
+      "y": 388,
+      "w": 277,
+      "h": 208
+    }
+  },
+  {
+    "key": "item-apothecary-shelf",
+    "region": [
+      852,
+      322,
+      1122,
+      604
+    ],
+    "sourceRect": {
+      "x": 866,
+      "y": 351,
+      "w": 226,
+      "h": 251
+    }
+  },
+  {
+    "key": "item-lantern-post-lit",
+    "region": [
+      0,
+      604,
+      280,
+      867
+    ],
+    "sourceRect": {
+      "x": 56,
+      "y": 621,
+      "w": 185,
+      "h": 246
+    }
+  },
+  {
+    "key": "item-lantern-post-unlit",
+    "region": [
+      280,
+      604,
+      561,
+      867
+    ],
+    "sourceRect": {
+      "x": 320,
+      "y": 621,
+      "w": 186,
+      "h": 246
+    }
+  },
+  {
+    "key": "item-raised-bed",
+    "region": [
+      561,
+      604,
+      844,
+      867
+    ],
+    "sourceRect": {
+      "x": 564,
+      "y": 661,
+      "w": 280,
+      "h": 197
+    }
+  },
+  {
+    "key": "item-naming-frame",
+    "region": [
+      844,
+      604,
+      1122,
+      867
+    ],
+    "sourceRect": {
+      "x": 897,
+      "y": 650,
+      "w": 198,
+      "h": 205
+    }
+  },
+  {
+    "key": "item-pencil-map",
+    "region": [
+      0,
+      867,
+      293,
+      1122
+    ],
+    "sourceRect": {
+      "x": 49,
+      "y": 903,
+      "w": 244,
+      "h": 203
+    }
+  },
+  {
+    "key": "item-pressed-flowers",
+    "region": [
+      293,
+      867,
+      561,
+      1122
+    ],
+    "sourceRect": {
+      "x": 341,
+      "y": 894,
+      "w": 191,
+      "h": 220
+    }
+  },
+  {
+    "key": "item-empty-chair",
+    "region": [
+      561,
+      867,
+      842,
+      1122
+    ],
+    "sourceRect": {
+      "x": 613,
+      "y": 882,
+      "w": 163,
+      "h": 237
+    }
+  },
+  {
+    "key": "item-closure-lamp-lit",
+    "region": [
+      842,
+      867,
+      1122,
+      1122
+    ],
+    "sourceRect": {
+      "x": 916,
+      "y": 881,
+      "w": 137,
+      "h": 238
+    }
+  },
+  {
+    "key": "item-closure-lamp-unlit",
+    "region": [
+      0,
+      1122,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 91,
+      "y": 1123,
+      "w": 135,
+      "h": 237
+    }
+  },
+  {
+    "key": "item-naming-slip",
+    "region": [
+      0,
+      0,
+      280,
+      350
+    ],
+    "sourceRect": {
+      "x": 48,
+      "y": 87,
+      "w": 181,
+      "h": 255
+    }
+  },
+  {
+    "key": "item-recipe-page-tea",
+    "region": [
+      280,
+      0,
+      561,
+      350
+    ],
+    "sourceRect": {
+      "x": 297,
+      "y": 91,
+      "w": 235,
+      "h": 259
+    }
+  },
+  {
+    "key": "item-recipe-page-salve",
+    "region": [
+      561,
+      0,
+      842,
+      350
+    ],
+    "sourceRect": {
+      "x": 564,
+      "y": 91,
+      "w": 261,
+      "h": 259
+    }
+  },
+  {
+    "key": "item-recipe-page-candle-oil",
+    "region": [
+      842,
+      0,
+      1122,
+      350
+    ],
+    "sourceRect": {
+      "x": 870,
+      "y": 87,
+      "w": 228,
+      "h": 263
+    }
+  },
+  {
+    "key": "item-recipe-page-willow-tea",
+    "region": [
+      0,
+      350,
+      280,
+      700
+    ],
+    "sourceRect": {
+      "x": 23,
+      "y": 391,
+      "w": 244,
+      "h": 290
+    }
+  },
+  {
+    "key": "item-recipe-card-twists",
+    "region": [
+      280,
+      350,
+      561,
+      700
+    ],
+    "sourceRect": {
+      "x": 286,
+      "y": 350,
+      "w": 273,
+      "h": 305
+    }
+  },
+  {
+    "key": "item-recipe-card-oil-twists",
+    "region": [
+      561,
+      350,
+      845,
+      700
+    ],
+    "sourceRect": {
+      "x": 561,
+      "y": 350,
+      "w": 284,
+      "h": 310
+    }
+  },
+  {
+    "key": "item-recipe-page-hearth-oil",
+    "region": [
+      845,
+      350,
+      1122,
+      700
+    ],
+    "sourceRect": {
+      "x": 862,
+      "y": 350,
+      "w": 239,
+      "h": 330
+    }
+  },
+  {
+    "key": "item-recipe-page-wax-seal",
+    "region": [
+      0,
+      700,
+      280,
+      1050
+    ],
+    "sourceRect": {
+      "x": 25,
+      "y": 715,
+      "w": 251,
+      "h": 288
+    }
+  },
+  {
+    "key": "item-recipe-page-storm-oil",
+    "region": [
+      280,
+      700,
+      561,
+      1050
+    ],
+    "sourceRect": {
+      "x": 300,
+      "y": 715,
+      "w": 242,
+      "h": 288
+    }
+  },
+  {
+    "key": "item-paper-icon-folded",
+    "region": [
+      561,
+      700,
+      842,
+      1050
+    ],
+    "sourceRect": {
+      "x": 562,
+      "y": 766,
+      "w": 265,
+      "h": 205
+    }
+  },
+  {
+    "key": "item-paper-icon-scroll",
+    "region": [
+      842,
+      700,
+      1122,
+      1050
+    ],
+    "sourceRect": {
+      "x": 847,
+      "y": 739,
+      "w": 251,
+      "h": 242
+    }
+  },
+  {
+    "key": "item-paper-icon-slate",
+    "region": [
+      0,
+      1050,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 39,
+      "y": 1073,
+      "w": 240,
+      "h": 270
+    }
+  },
+  {
+    "key": "world-door-fox",
+    "region": [
+      0,
+      0,
+      280,
+      280
+    ],
+    "sourceRect": {
+      "x": 31,
+      "y": 60,
+      "w": 246,
+      "h": 213
+    }
+  },
+  {
+    "key": "world-window-lamp-unlit-pane",
+    "region": [
+      280,
+      0,
+      561,
+      280
+    ],
+    "sourceRect": {
+      "x": 337,
+      "y": 63,
+      "w": 191,
+      "h": 217
+    }
+  },
+  {
+    "key": "world-window-lamp-lit-warm-glow",
+    "region": [
+      561,
+      0,
+      842,
+      280
+    ],
+    "sourceRect": {
+      "x": 601,
+      "y": 63,
+      "w": 191,
+      "h": 217
+    }
+  },
+  {
+    "key": "world-gate-shelf-empty",
+    "region": [
+      842,
+      0,
+      1122,
+      280
+    ],
+    "sourceRect": {
+      "x": 859,
+      "y": 40,
+      "w": 229,
+      "h": 240
+    }
+  },
+  {
+    "key": "world-gate-shelf-stocked-with-jars",
+    "region": [
+      0,
+      280,
+      280,
+      561
+    ],
+    "sourceRect": {
+      "x": 39,
+      "y": 310,
+      "w": 231,
+      "h": 242
+    }
+  },
+  {
+    "key": "world-writing-desk",
+    "region": [
+      280,
+      280,
+      561,
+      561
+    ],
+    "sourceRect": {
+      "x": 319,
+      "y": 327,
+      "w": 220,
+      "h": 228
+    }
+  },
+  {
+    "key": "world-keepsake-cabinet-empty",
+    "region": [
+      561,
+      280,
+      842,
+      561
+    ],
+    "sourceRect": {
+      "x": 598,
+      "y": 306,
+      "w": 208,
+      "h": 255
+    }
+  },
+  {
+    "key": "world-keepsake-cabinet-displaying-trinkets",
+    "region": [
+      842,
+      280,
+      1122,
+      561
+    ],
+    "sourceRect": {
+      "x": 873,
+      "y": 306,
+      "w": 208,
+      "h": 254
+    }
+  },
+  {
+    "key": "world-drying-rack-bare-rack",
+    "region": [
+      0,
+      561,
+      280,
+      841
+    ],
+    "sourceRect": {
+      "x": 40,
+      "y": 592,
+      "w": 227,
+      "h": 211
+    }
+  },
+  {
+    "key": "world-drying-rack-hanging-herbs",
+    "region": [
+      280,
+      561,
+      561,
+      841
+    ],
+    "sourceRect": {
+      "x": 316,
+      "y": 591,
+      "w": 228,
+      "h": 211
+    }
+  },
+  {
+    "key": "world-apothecary-shelf-half-stocked",
+    "region": [
+      561,
+      561,
+      842,
+      841
+    ],
+    "sourceRect": {
+      "x": 592,
+      "y": 606,
+      "w": 229,
+      "h": 202
+    }
+  },
+  {
+    "key": "world-apothecary-shelf-full-shelves",
+    "region": [
+      842,
+      561,
+      1122,
+      841
+    ],
+    "sourceRect": {
+      "x": 861,
+      "y": 603,
+      "w": 233,
+      "h": 205
+    }
+  },
+  {
+    "key": "world-raised-bed-dry-dark-soil",
+    "region": [
+      0,
+      841,
+      280,
+      1106
+    ],
+    "sourceRect": {
+      "x": 30,
+      "y": 867,
+      "w": 247,
+      "h": 203
+    }
+  },
+  {
+    "key": "world-raised-bed-watered-soil",
+    "region": [
+      280,
+      841,
+      561,
+      1106
+    ],
+    "sourceRect": {
+      "x": 306,
+      "y": 867,
+      "w": 250,
+      "h": 203
+    }
+  },
+  {
+    "key": "world-raised-bed-sprouting",
+    "region": [
+      561,
+      841,
+      842,
+      1106
+    ],
+    "sourceRect": {
+      "x": 580,
+      "y": 866,
+      "w": 246,
+      "h": 204
+    }
+  },
+  {
+    "key": "world-naming-frame",
+    "region": [
+      842,
+      841,
+      1122,
+      1106
+    ],
+    "sourceRect": {
+      "x": 896,
+      "y": 861,
+      "w": 168,
+      "h": 214
+    }
+  },
+  {
+    "key": "world-pencil-map-crisp-pencil",
+    "region": [
+      0,
+      1106,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 36,
+      "y": 1122,
+      "w": 236,
+      "h": 223
+    }
+  },
+  {
+    "key": "world-pencil-map-smudged-drift",
+    "region": [
+      280,
+      1106,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 311,
+      "y": 1119,
+      "w": 237,
+      "h": 226
+    }
+  },
+  {
+    "key": "world-pressed-flowers-fresh-bloom-colors",
+    "region": [
+      561,
+      1106,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 606,
+      "y": 1106,
+      "w": 196,
+      "h": 244
+    }
+  },
+  {
+    "key": "world-pressed-flowers-dried-brown",
+    "region": [
+      842,
+      1106,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 874,
+      "y": 1106,
+      "w": 197,
+      "h": 244
+    }
+  },
+  {
+    "key": "world-empty-chair",
+    "region": [
+      0,
+      0,
+      280,
+      288
+    ],
+    "sourceRect": {
+      "x": 84,
+      "y": 66,
+      "w": 156,
+      "h": 219
+    }
+  },
+  {
+    "key": "world-closure-lamp-unlit",
+    "region": [
+      280,
+      0,
+      561,
+      288
+    ],
+    "sourceRect": {
+      "x": 359,
+      "y": 68,
+      "w": 148,
+      "h": 206
+    }
+  },
+  {
+    "key": "world-closure-lamp-lit-pale-blue",
+    "region": [
+      561,
+      0,
+      842,
+      288
+    ],
+    "sourceRect": {
+      "x": 631,
+      "y": 69,
+      "w": 148,
+      "h": 206
+    }
+  },
+  {
+    "key": "world-lantern-post-unlit",
+    "region": [
+      842,
+      0,
+      1122,
+      288
+    ],
+    "sourceRect": {
+      "x": 901,
+      "y": 28,
+      "w": 145,
+      "h": 260
+    }
+  },
+  {
+    "key": "world-lantern-post-lit-warm-amber",
+    "region": [
+      0,
+      288,
+      280,
+      577
+    ],
+    "sourceRect": {
+      "x": 89,
+      "y": 303,
+      "w": 144,
+      "h": 271
+    }
+  },
+  {
+    "key": "world-lantern-post-amberwake-glow",
+    "region": [
+      280,
+      288,
+      561,
+      577
+    ],
+    "sourceRect": {
+      "x": 377,
+      "y": 303,
+      "w": 149,
+      "h": 270
+    }
+  },
+  {
+    "key": "world-lantern-post-footing",
+    "region": [
+      561,
+      288,
+      842,
+      577
+    ],
+    "sourceRect": {
+      "x": 631,
+      "y": 406,
+      "w": 161,
+      "h": 171
+    }
+  },
+  {
+    "key": "world-lantern-post-head-unlit",
+    "region": [
+      842,
+      288,
+      1122,
+      577
+    ],
+    "sourceRect": {
+      "x": 899,
+      "y": 306,
+      "w": 147,
+      "h": 271
+    }
+  },
+  {
+    "key": "world-old-lamp-stone-intact-weathered",
+    "region": [
+      0,
+      577,
+      280,
+      843
+    ],
+    "sourceRect": {
+      "x": 50,
+      "y": 615,
+      "w": 230,
+      "h": 223
+    }
+  },
+  {
+    "key": "world-old-lamp-stone-pick-broken",
+    "region": [
+      280,
+      577,
+      561,
+      843
+    ],
+    "sourceRect": {
+      "x": 332,
+      "y": 624,
+      "w": 214,
+      "h": 219
+    }
+  },
+  {
+    "key": "world-dug-patch-fresh-dark-earth-hole",
+    "region": [
+      561,
+      577,
+      842,
+      843
+    ],
+    "sourceRect": {
+      "x": 594,
+      "y": 659,
+      "w": 228,
+      "h": 168
+    }
+  },
+  {
+    "key": "world-dug-patch-settled-earth",
+    "region": [
+      842,
+      577,
+      1122,
+      843
+    ],
+    "sourceRect": {
+      "x": 869,
+      "y": 663,
+      "w": 217,
+      "h": 165
+    }
+  },
+  {
+    "key": "world-tree-stump-fresh-cut-with-pale-sawdust",
+    "region": [
+      0,
+      843,
+      284,
+      1099
+    ],
+    "sourceRect": {
+      "x": 40,
+      "y": 899,
+      "w": 244,
+      "h": 190
+    }
+  },
+  {
+    "key": "world-tree-stump-weathered",
+    "region": [
+      284,
+      843,
+      561,
+      1099
+    ],
+    "sourceRect": {
+      "x": 324,
+      "y": 843,
+      "w": 229,
+      "h": 241
+    }
+  },
+  {
+    "key": "world-herb-patch-comfrey-lush-leafy-plant",
+    "region": [
+      561,
+      843,
+      842,
+      1099
+    ],
+    "sourceRect": {
+      "x": 577,
+      "y": 883,
+      "w": 249,
+      "h": 204
+    }
+  },
+  {
+    "key": "world-herb-patch-comfrey-dug-earth-patch",
+    "region": [
+      842,
+      843,
+      1122,
+      1099
+    ],
+    "sourceRect": {
+      "x": 866,
+      "y": 877,
+      "w": 224,
+      "h": 210
+    }
+  },
+  {
+    "key": "world-herb-patch-thyme-purple-thyme-sprigs",
+    "region": [
+      0,
+      1099,
+      280,
+      1402
+    ],
+    "sourceRect": {
+      "x": 42,
+      "y": 1176,
+      "w": 238,
+      "h": 171
+    }
+  },
+  {
+    "key": "world-herb-patch-thyme-dug-earth-patch",
+    "region": [
+      280,
+      1099,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 313,
+      "y": 1173,
+      "w": 233,
+      "h": 174
+    }
+  },
+  {
+    "key": "world-hollow-tree-intact-tree-with-hive-hole-and-bees",
+    "region": [
+      561,
+      1099,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 577,
+      "y": 1099,
+      "w": 240,
+      "h": 278
+    }
+  },
+  {
+    "key": "world-hollow-tree-opened-hollow-with-comb-drips",
+    "region": [
+      842,
+      1099,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 857,
+      "y": 1099,
+      "w": 233,
+      "h": 278
+    }
+  },
+  {
+    "key": "world-standing-iron-oak-unmarked-ancient-trunk",
+    "region": [
+      0,
+      0,
+      280,
+      251
+    ],
+    "sourceRect": {
+      "x": 12,
+      "y": 30,
+      "w": 266,
+      "h": 221
+    }
+  },
+  {
+    "key": "world-standing-iron-oak-stamped-with-wax-seal",
+    "region": [
+      280,
+      0,
+      561,
+      251
+    ],
+    "sourceRect": {
+      "x": 283,
+      "y": 30,
+      "w": 265,
+      "h": 221
+    }
+  },
+  {
+    "key": "world-iron-oak-windfall-mossy-fallen-trunk",
+    "region": [
+      561,
+      0,
+      842,
+      251
+    ],
+    "sourceRect": {
+      "x": 584,
+      "y": 156,
+      "w": 242,
+      "h": 95
+    }
+  },
+  {
+    "key": "world-iron-oak-windfall-harvested-stump-with-3-leafy-branches",
+    "region": [
+      842,
+      0,
+      1122,
+      251
+    ],
+    "sourceRect": {
+      "x": 893,
+      "y": 125,
+      "w": 203,
+      "h": 126
+    }
+  },
+  {
+    "key": "world-stump-turncaps-sprouting-caps",
+    "region": [
+      0,
+      251,
+      280,
+      466
+    ],
+    "sourceRect": {
+      "x": 24,
+      "y": 251,
+      "w": 247,
+      "h": 135
+    }
+  },
+  {
+    "key": "world-stump-turncaps-mature-leaning-caps",
+    "region": [
+      280,
+      251,
+      561,
+      466
+    ],
+    "sourceRect": {
+      "x": 296,
+      "y": 251,
+      "w": 242,
+      "h": 215
+    }
+  },
+  {
+    "key": "world-ledger-soup-pot-bubbling-steaming-pot-over-fire",
+    "region": [
+      561,
+      251,
+      853,
+      466
+    ],
+    "sourceRect": {
+      "x": 567,
+      "y": 251,
+      "w": 286,
+      "h": 215
+    }
+  },
+  {
+    "key": "world-ledger-soup-pot-coldempty-pot",
+    "region": [
+      853,
+      251,
+      1122,
+      466
+    ],
+    "sourceRect": {
+      "x": 875,
+      "y": 251,
+      "w": 225,
+      "h": 215
+    }
+  },
+  {
+    "key": "mill-house",
+    "region": [
+      0,
+      0,
+      331,
+      390
+    ],
+    "sourceRect": {
+      "x": 14,
+      "y": 9,
+      "w": 317,
+      "h": 366
+    }
+  },
+  {
+    "key": "mill-wheel-0",
+    "region": [
+      331,
+      0,
+      577,
+      390
+    ],
+    "sourceRect": {
+      "x": 332,
+      "y": 135,
+      "w": 245,
+      "h": 239
+    }
+  },
+  {
+    "key": "mill-wheel-1",
+    "region": [
+      577,
+      0,
+      846,
+      390
+    ],
+    "sourceRect": {
+      "x": 594,
+      "y": 132,
+      "w": 252,
+      "h": 242
+    }
+  },
+  {
+    "key": "mill-wheel-2",
+    "region": [
+      846,
+      0,
+      1122,
+      390
+    ],
+    "sourceRect": {
+      "x": 864,
+      "y": 132,
+      "w": 250,
+      "h": 242
+    }
+  },
+  {
+    "key": "mill-wheel-3",
+    "region": [
+      0,
+      390,
+      291,
+      680
+    ],
+    "sourceRect": {
+      "x": 21,
+      "y": 409,
+      "w": 270,
+      "h": 259
+    }
+  },
+  {
+    "key": "mill-wheel-mended-0",
+    "region": [
+      291,
+      390,
+      574,
+      680
+    ],
+    "sourceRect": {
+      "x": 291,
+      "y": 411,
+      "w": 283,
+      "h": 256
+    }
+  },
+  {
+    "key": "mill-wheel-mended-1",
+    "region": [
+      574,
+      390,
+      846,
+      680
+    ],
+    "sourceRect": {
+      "x": 593,
+      "y": 411,
+      "w": 253,
+      "h": 256
+    }
+  },
+  {
+    "key": "mill-wheel-mended-2",
+    "region": [
+      846,
+      390,
+      1122,
+      680
+    ],
+    "sourceRect": {
+      "x": 867,
+      "y": 412,
+      "w": 247,
+      "h": 255
+    }
+  },
+  {
+    "key": "mill-wheel-mended-3",
+    "region": [
+      0,
+      680,
+      314,
+      1402
+    ],
+    "sourceRect": {
+      "x": 34,
+      "y": 695,
+      "w": 280,
+      "h": 257
+    }
+  },
+  {
+    "key": "mill-froth-0",
+    "region": [
+      314,
+      680,
+      561,
+      1402
+    ],
+    "sourceRect": {
+      "x": 363,
+      "y": 830,
+      "w": 194,
+      "h": 93
+    }
+  },
+  {
+    "key": "mill-froth-1",
+    "region": [
+      561,
+      680,
+      842,
+      1402
+    ],
+    "sourceRect": {
+      "x": 632,
+      "y": 837,
+      "w": 204,
+      "h": 90
+    }
+  },
+  {
+    "key": "mill-hopper",
+    "region": [
+      842,
+      680,
+      1122,
+      1402
+    ],
+    "sourceRect": {
+      "x": 873,
+      "y": 703,
+      "w": 229,
+      "h": 243
+    }
+  }
+]

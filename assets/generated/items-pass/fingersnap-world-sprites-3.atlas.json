@@ -1,0 +1,171 @@
+{
+  "frames": {
+    "world-standing-iron-oak-unmarked-ancient-trunk": {
+      "frame": {
+        "x": 12,
+        "y": 30,
+        "w": 266,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 266,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 266,
+        "h": 221
+      }
+    },
+    "world-standing-iron-oak-stamped-with-wax-seal": {
+      "frame": {
+        "x": 283,
+        "y": 30,
+        "w": 265,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 265,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 265,
+        "h": 221
+      }
+    },
+    "world-iron-oak-windfall-mossy-fallen-trunk": {
+      "frame": {
+        "x": 584,
+        "y": 156,
+        "w": 242,
+        "h": 95
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 242,
+        "h": 95
+      },
+      "sourceSize": {
+        "w": 242,
+        "h": 95
+      }
+    },
+    "world-iron-oak-windfall-harvested-stump-with-3-leafy-branches": {
+      "frame": {
+        "x": 893,
+        "y": 125,
+        "w": 203,
+        "h": 126
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 203,
+        "h": 126
+      },
+      "sourceSize": {
+        "w": 203,
+        "h": 126
+      }
+    },
+    "world-stump-turncaps-sprouting-caps": {
+      "frame": {
+        "x": 24,
+        "y": 251,
+        "w": 247,
+        "h": 135
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 247,
+        "h": 135
+      },
+      "sourceSize": {
+        "w": 247,
+        "h": 135
+      }
+    },
+    "world-stump-turncaps-mature-leaning-caps": {
+      "frame": {
+        "x": 296,
+        "y": 251,
+        "w": 242,
+        "h": 215
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 242,
+        "h": 215
+      },
+      "sourceSize": {
+        "w": 242,
+        "h": 215
+      }
+    },
+    "world-ledger-soup-pot-bubbling-steaming-pot-over-fire": {
+      "frame": {
+        "x": 567,
+        "y": 251,
+        "w": 286,
+        "h": 215
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 286,
+        "h": 215
+      },
+      "sourceSize": {
+        "w": 286,
+        "h": 215
+      }
+    },
+    "world-ledger-soup-pot-coldempty-pot": {
+      "frame": {
+        "x": 875,
+        "y": 251,
+        "w": 225,
+        "h": 215
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 225,
+        "h": 215
+      },
+      "sourceSize": {
+        "w": 225,
+        "h": 215
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-world-sprites-3.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

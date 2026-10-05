@@ -1,0 +1,251 @@
+{
+  "frames": {
+    "mill-house": {
+      "frame": {
+        "x": 14,
+        "y": 9,
+        "w": 317,
+        "h": 366
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 317,
+        "h": 366
+      },
+      "sourceSize": {
+        "w": 317,
+        "h": 366
+      }
+    },
+    "mill-wheel-0": {
+      "frame": {
+        "x": 332,
+        "y": 135,
+        "w": 245,
+        "h": 239
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 245,
+        "h": 239
+      },
+      "sourceSize": {
+        "w": 245,
+        "h": 239
+      }
+    },
+    "mill-wheel-1": {
+      "frame": {
+        "x": 594,
+        "y": 132,
+        "w": 252,
+        "h": 242
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 252,
+        "h": 242
+      },
+      "sourceSize": {
+        "w": 252,
+        "h": 242
+      }
+    },
+    "mill-wheel-2": {
+      "frame": {
+        "x": 864,
+        "y": 132,
+        "w": 250,
+        "h": 242
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 250,
+        "h": 242
+      },
+      "sourceSize": {
+        "w": 250,
+        "h": 242
+      }
+    },
+    "mill-wheel-3": {
+      "frame": {
+        "x": 21,
+        "y": 409,
+        "w": 270,
+        "h": 259
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 270,
+        "h": 259
+      },
+      "sourceSize": {
+        "w": 270,
+        "h": 259
+      }
+    },
+    "mill-wheel-mended-0": {
+      "frame": {
+        "x": 291,
+        "y": 411,
+        "w": 283,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 283,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 283,
+        "h": 256
+      }
+    },
+    "mill-wheel-mended-1": {
+      "frame": {
+        "x": 593,
+        "y": 411,
+        "w": 253,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 253,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 253,
+        "h": 256
+      }
+    },
+    "mill-wheel-mended-2": {
+      "frame": {
+        "x": 867,
+        "y": 412,
+        "w": 247,
+        "h": 255
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 247,
+        "h": 255
+      },
+      "sourceSize": {
+        "w": 247,
+        "h": 255
+      }
+    },
+    "mill-wheel-mended-3": {
+      "frame": {
+        "x": 34,
+        "y": 695,
+        "w": 280,
+        "h": 257
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 257
+      },
+      "sourceSize": {
+        "w": 280,
+        "h": 257
+      }
+    },
+    "mill-froth-0": {
+      "frame": {
+        "x": 363,
+        "y": 830,
+        "w": 194,
+        "h": 93
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 93
+      },
+      "sourceSize": {
+        "w": 194,
+        "h": 93
+      }
+    },
+    "mill-froth-1": {
+      "frame": {
+        "x": 632,
+        "y": 837,
+        "w": 204,
+        "h": 90
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 204,
+        "h": 90
+      },
+      "sourceSize": {
+        "w": 204,
+        "h": 90
+      }
+    },
+    "mill-hopper": {
+      "frame": {
+        "x": 873,
+        "y": 703,
+        "w": 229,
+        "h": 243
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 229,
+        "h": 243
+      },
+      "sourceSize": {
+        "w": 229,
+        "h": 243
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-tolley-mill-1.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

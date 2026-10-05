@@ -1,0 +1,131 @@
+{
+  "frames": {
+    "item-comfrey-salve": {
+      "frame": {
+        "x": 52,
+        "y": 78,
+        "w": 219,
+        "h": 153
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 219,
+        "h": 153
+      },
+      "sourceSize": {
+        "w": 219,
+        "h": 153
+      }
+    },
+    "item-willow-bark-tea": {
+      "frame": {
+        "x": 320,
+        "y": 56,
+        "w": 209,
+        "h": 182
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 209,
+        "h": 182
+      },
+      "sourceSize": {
+        "w": 209,
+        "h": 182
+      }
+    },
+    "item-blue-moss": {
+      "frame": {
+        "x": 576,
+        "y": 75,
+        "w": 250,
+        "h": 166
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 250,
+        "h": 166
+      },
+      "sourceSize": {
+        "w": 250,
+        "h": 166
+      }
+    },
+    "item-candle-oil": {
+      "frame": {
+        "x": 904,
+        "y": 42,
+        "w": 147,
+        "h": 205
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 147,
+        "h": 205
+      },
+      "sourceSize": {
+        "w": 147,
+        "h": 205
+      }
+    },
+    "item-hearth-oil": {
+      "frame": {
+        "x": 74,
+        "y": 276,
+        "w": 176,
+        "h": 217
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 217
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 217
+      }
+    },
+    "item-storm-oil": {
+      "frame": {
+        "x": 348,
+        "y": 272,
+        "w": 144,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 144,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 144,
+        "h": 216
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-supplies-3.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

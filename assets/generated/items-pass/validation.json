@@ -1,0 +1,161 @@
+{
+  "status": "passed",
+  "sheets": 12,
+  "frames": 170,
+  "animations": 3,
+  "stateGroups": 31,
+  "checks": [
+    "transparent RGBA sheets",
+    "source crop and destination canvas bounds",
+    "unique frame keys",
+    "animation and state group references",
+    "default aliases resolve to intact states"
+  ],
+  "inGameScenesTested": false,
+  "sourceSheets": [
+    {
+      "file": "fingersnap-tools-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "b8369a304ef272c62e84e91a812f8eaccc7e781806fa0df44e7a6641cd1085c5"
+    },
+    {
+      "file": "fingersnap-tools-2-v2.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "ff94321561de4f36471ce0e8b23fb3d772a6b6884cc279c83d50c4deb2f6012b"
+    },
+    {
+      "file": "fingersnap-supplies-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "c8e93e15b6e319090df586a05316407f977dacd918009ae899e35697d1c5b5c3"
+    },
+    {
+      "file": "fingersnap-supplies-2.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "42fc72d9358e21e95d875abd28d3de05c781f668cc53d460b74727ba94cf12bc"
+    },
+    {
+      "file": "fingersnap-supplies-3.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "ac78d2f37fd5dce37a9bee205022efa9927a407041eff8478f38b907df1501cf"
+    },
+    {
+      "file": "fingersnap-keepsakes-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f"
+    },
+    {
+      "file": "fingersnap-home-goods-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129"
+    },
+    {
+      "file": "fingersnap-papers-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad"
+    },
+    {
+      "file": "fingersnap-world-sprites-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "d3a1e70de525b1bc01ebb1e1698b82b837fb7fa28643985e6dd757c0263260bb"
+    },
+    {
+      "file": "fingersnap-world-sprites-2.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153"
+    },
+    {
+      "file": "fingersnap-world-sprites-3.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98"
+    },
+    {
+      "file": "fingersnap-tolley-mill-1.png",
+      "dimensions": [
+        1122,
+        1402
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "8d957603d3c10c6920297c9a89e40e8360ccdb64411b7ab5c3712963878ee05d"
+    }
+  ]
+}

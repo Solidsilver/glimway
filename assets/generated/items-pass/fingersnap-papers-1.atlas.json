@@ -1,0 +1,271 @@
+{
+  "frames": {
+    "item-naming-slip": {
+      "frame": {
+        "x": 48,
+        "y": 87,
+        "w": 181,
+        "h": 255
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 181,
+        "h": 255
+      },
+      "sourceSize": {
+        "w": 181,
+        "h": 255
+      }
+    },
+    "item-recipe-page-tea": {
+      "frame": {
+        "x": 297,
+        "y": 91,
+        "w": 235,
+        "h": 259
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 235,
+        "h": 259
+      },
+      "sourceSize": {
+        "w": 235,
+        "h": 259
+      }
+    },
+    "item-recipe-page-salve": {
+      "frame": {
+        "x": 564,
+        "y": 91,
+        "w": 261,
+        "h": 259
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 261,
+        "h": 259
+      },
+      "sourceSize": {
+        "w": 261,
+        "h": 259
+      }
+    },
+    "item-recipe-page-candle-oil": {
+      "frame": {
+        "x": 870,
+        "y": 87,
+        "w": 228,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 263
+      }
+    },
+    "item-recipe-page-willow-tea": {
+      "frame": {
+        "x": 23,
+        "y": 391,
+        "w": 244,
+        "h": 290
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 290
+      },
+      "sourceSize": {
+        "w": 244,
+        "h": 290
+      }
+    },
+    "item-recipe-card-twists": {
+      "frame": {
+        "x": 286,
+        "y": 350,
+        "w": 273,
+        "h": 305
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 273,
+        "h": 305
+      },
+      "sourceSize": {
+        "w": 273,
+        "h": 305
+      }
+    },
+    "item-recipe-card-oil-twists": {
+      "frame": {
+        "x": 561,
+        "y": 350,
+        "w": 284,
+        "h": 310
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 310
+      },
+      "sourceSize": {
+        "w": 284,
+        "h": 310
+      }
+    },
+    "item-recipe-page-hearth-oil": {
+      "frame": {
+        "x": 862,
+        "y": 350,
+        "w": 239,
+        "h": 330
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 330
+      },
+      "sourceSize": {
+        "w": 239,
+        "h": 330
+      }
+    },
+    "item-recipe-page-wax-seal": {
+      "frame": {
+        "x": 25,
+        "y": 715,
+        "w": 251,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 251,
+        "h": 288
+      },
+      "sourceSize": {
+        "w": 251,
+        "h": 288
+      }
+    },
+    "item-recipe-page-storm-oil": {
+      "frame": {
+        "x": 300,
+        "y": 715,
+        "w": 242,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 242,
+        "h": 288
+      },
+      "sourceSize": {
+        "w": 242,
+        "h": 288
+      }
+    },
+    "item-paper-icon-folded": {
+      "frame": {
+        "x": 562,
+        "y": 766,
+        "w": 265,
+        "h": 205
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 265,
+        "h": 205
+      },
+      "sourceSize": {
+        "w": 265,
+        "h": 205
+      }
+    },
+    "item-paper-icon-scroll": {
+      "frame": {
+        "x": 847,
+        "y": 739,
+        "w": 251,
+        "h": 242
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 251,
+        "h": 242
+      },
+      "sourceSize": {
+        "w": 251,
+        "h": 242
+      }
+    },
+    "item-paper-icon-slate": {
+      "frame": {
+        "x": 39,
+        "y": 1073,
+        "w": 240,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 270
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-papers-1.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

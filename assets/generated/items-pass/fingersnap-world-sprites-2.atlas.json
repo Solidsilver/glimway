@@ -1,0 +1,411 @@
+{
+  "frames": {
+    "world-empty-chair": {
+      "frame": {
+        "x": 84,
+        "y": 66,
+        "w": 156,
+        "h": 219
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 219
+      },
+      "sourceSize": {
+        "w": 156,
+        "h": 219
+      }
+    },
+    "world-closure-lamp-unlit": {
+      "frame": {
+        "x": 359,
+        "y": 68,
+        "w": 148,
+        "h": 206
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 148,
+        "h": 206
+      },
+      "sourceSize": {
+        "w": 148,
+        "h": 206
+      }
+    },
+    "world-closure-lamp-lit-pale-blue": {
+      "frame": {
+        "x": 631,
+        "y": 69,
+        "w": 148,
+        "h": 206
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 148,
+        "h": 206
+      },
+      "sourceSize": {
+        "w": 148,
+        "h": 206
+      }
+    },
+    "world-lantern-post-unlit": {
+      "frame": {
+        "x": 901,
+        "y": 28,
+        "w": 145,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 145,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 145,
+        "h": 260
+      }
+    },
+    "world-lantern-post-lit-warm-amber": {
+      "frame": {
+        "x": 89,
+        "y": 303,
+        "w": 144,
+        "h": 271
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 144,
+        "h": 271
+      },
+      "sourceSize": {
+        "w": 144,
+        "h": 271
+      }
+    },
+    "world-lantern-post-amberwake-glow": {
+      "frame": {
+        "x": 377,
+        "y": 303,
+        "w": 149,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 149,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 149,
+        "h": 270
+      }
+    },
+    "world-lantern-post-footing": {
+      "frame": {
+        "x": 631,
+        "y": 406,
+        "w": 161,
+        "h": 171
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 161,
+        "h": 171
+      },
+      "sourceSize": {
+        "w": 161,
+        "h": 171
+      }
+    },
+    "world-lantern-post-head-unlit": {
+      "frame": {
+        "x": 899,
+        "y": 306,
+        "w": 147,
+        "h": 271
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 147,
+        "h": 271
+      },
+      "sourceSize": {
+        "w": 147,
+        "h": 271
+      }
+    },
+    "world-old-lamp-stone-intact-weathered": {
+      "frame": {
+        "x": 50,
+        "y": 615,
+        "w": 230,
+        "h": 223
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 230,
+        "h": 223
+      },
+      "sourceSize": {
+        "w": 230,
+        "h": 223
+      }
+    },
+    "world-old-lamp-stone-pick-broken": {
+      "frame": {
+        "x": 332,
+        "y": 624,
+        "w": 214,
+        "h": 219
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 214,
+        "h": 219
+      },
+      "sourceSize": {
+        "w": 214,
+        "h": 219
+      }
+    },
+    "world-dug-patch-fresh-dark-earth-hole": {
+      "frame": {
+        "x": 594,
+        "y": 659,
+        "w": 228,
+        "h": 168
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 168
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 168
+      }
+    },
+    "world-dug-patch-settled-earth": {
+      "frame": {
+        "x": 869,
+        "y": 663,
+        "w": 217,
+        "h": 165
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 217,
+        "h": 165
+      },
+      "sourceSize": {
+        "w": 217,
+        "h": 165
+      }
+    },
+    "world-tree-stump-fresh-cut-with-pale-sawdust": {
+      "frame": {
+        "x": 40,
+        "y": 899,
+        "w": 244,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 190
+      },
+      "sourceSize": {
+        "w": 244,
+        "h": 190
+      }
+    },
+    "world-tree-stump-weathered": {
+      "frame": {
+        "x": 324,
+        "y": 843,
+        "w": 229,
+        "h": 241
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 229,
+        "h": 241
+      },
+      "sourceSize": {
+        "w": 229,
+        "h": 241
+      }
+    },
+    "world-herb-patch-comfrey-lush-leafy-plant": {
+      "frame": {
+        "x": 577,
+        "y": 883,
+        "w": 249,
+        "h": 204
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 249,
+        "h": 204
+      },
+      "sourceSize": {
+        "w": 249,
+        "h": 204
+      }
+    },
+    "world-herb-patch-comfrey-dug-earth-patch": {
+      "frame": {
+        "x": 866,
+        "y": 877,
+        "w": 224,
+        "h": 210
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 210
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 210
+      }
+    },
+    "world-herb-patch-thyme-purple-thyme-sprigs": {
+      "frame": {
+        "x": 42,
+        "y": 1176,
+        "w": 238,
+        "h": 171
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 238,
+        "h": 171
+      },
+      "sourceSize": {
+        "w": 238,
+        "h": 171
+      }
+    },
+    "world-herb-patch-thyme-dug-earth-patch": {
+      "frame": {
+        "x": 313,
+        "y": 1173,
+        "w": 233,
+        "h": 174
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 174
+      },
+      "sourceSize": {
+        "w": 233,
+        "h": 174
+      }
+    },
+    "world-hollow-tree-intact-tree-with-hive-hole-and-bees": {
+      "frame": {
+        "x": 577,
+        "y": 1099,
+        "w": 240,
+        "h": 278
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 278
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 278
+      }
+    },
+    "world-hollow-tree-opened-hollow-with-comb-drips": {
+      "frame": {
+        "x": 857,
+        "y": 1099,
+        "w": 233,
+        "h": 278
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 278
+      },
+      "sourceSize": {
+        "w": 233,
+        "h": 278
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-world-sprites-2.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

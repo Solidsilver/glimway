@@ -1,0 +1,411 @@
+{
+  "frames": {
+    "item-amber-bead": {
+      "frame": {
+        "x": 55,
+        "y": 81,
+        "w": 155,
+        "h": 155
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 155
+      },
+      "sourceSize": {
+        "w": 155,
+        "h": 155
+      }
+    },
+    "item-waxed-cord": {
+      "frame": {
+        "x": 296,
+        "y": 56,
+        "w": 234,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 234,
+        "h": 194
+      },
+      "sourceSize": {
+        "w": 234,
+        "h": 194
+      }
+    },
+    "item-warden-sliver": {
+      "frame": {
+        "x": 599,
+        "y": 68,
+        "w": 188,
+        "h": 175
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 188,
+        "h": 175
+      },
+      "sourceSize": {
+        "w": 188,
+        "h": 175
+      }
+    },
+    "item-fibre-rope": {
+      "frame": {
+        "x": 850,
+        "y": 50,
+        "w": 239,
+        "h": 196
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 196
+      },
+      "sourceSize": {
+        "w": 239,
+        "h": 196
+      }
+    },
+    "item-split-rail": {
+      "frame": {
+        "x": 33,
+        "y": 336,
+        "w": 232,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 188
+      },
+      "sourceSize": {
+        "w": 232,
+        "h": 188
+      }
+    },
+    "item-slates": {
+      "frame": {
+        "x": 304,
+        "y": 322,
+        "w": 228,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 208
+      }
+    },
+    "item-oak-slat": {
+      "frame": {
+        "x": 590,
+        "y": 313,
+        "w": 234,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 234,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 234,
+        "h": 224
+      }
+    },
+    "item-lamp-head": {
+      "frame": {
+        "x": 904,
+        "y": 286,
+        "w": 163,
+        "h": 257
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 257
+      },
+      "sourceSize": {
+        "w": 163,
+        "h": 257
+      }
+    },
+    "item-wax-seal": {
+      "frame": {
+        "x": 31,
+        "y": 589,
+        "w": 230,
+        "h": 217
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 230,
+        "h": 217
+      },
+      "sourceSize": {
+        "w": 230,
+        "h": 217
+      }
+    },
+    "item-hazel-whip": {
+      "frame": {
+        "x": 330,
+        "y": 567,
+        "w": 194,
+        "h": 248
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 248
+      },
+      "sourceSize": {
+        "w": 194,
+        "h": 248
+      }
+    },
+    "item-birch-sapling": {
+      "frame": {
+        "x": 594,
+        "y": 567,
+        "w": 207,
+        "h": 249
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 207,
+        "h": 249
+      },
+      "sourceSize": {
+        "w": 207,
+        "h": 249
+      }
+    },
+    "item-rowan-sapling": {
+      "frame": {
+        "x": 865,
+        "y": 567,
+        "w": 228,
+        "h": 247
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 247
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 247
+      }
+    },
+    "item-comfrey-root": {
+      "frame": {
+        "x": 31,
+        "y": 844,
+        "w": 231,
+        "h": 242
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 231,
+        "h": 242
+      },
+      "sourceSize": {
+        "w": 231,
+        "h": 242
+      }
+    },
+    "item-wild-thyme": {
+      "frame": {
+        "x": 323,
+        "y": 844,
+        "w": 199,
+        "h": 235
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 235
+      },
+      "sourceSize": {
+        "w": 199,
+        "h": 235
+      }
+    },
+    "item-turncap-spawn": {
+      "frame": {
+        "x": 602,
+        "y": 862,
+        "w": 205,
+        "h": 214
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 205,
+        "h": 214
+      },
+      "sourceSize": {
+        "w": 205,
+        "h": 214
+      }
+    },
+    "item-iron-oak-acorn": {
+      "frame": {
+        "x": 892,
+        "y": 840,
+        "w": 192,
+        "h": 231
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 231
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 231
+      }
+    },
+    "item-keepers-twists": {
+      "frame": {
+        "x": 33,
+        "y": 1122,
+        "w": 226,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 226,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 226,
+        "h": 224
+      }
+    },
+    "item-oil-twists": {
+      "frame": {
+        "x": 304,
+        "y": 1118,
+        "w": 226,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 226,
+        "h": 228
+      },
+      "sourceSize": {
+        "w": 226,
+        "h": 228
+      }
+    },
+    "item-saltings-tea": {
+      "frame": {
+        "x": 591,
+        "y": 1129,
+        "w": 218,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 218,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 218,
+        "h": 208
+      }
+    },
+    "item-oatcakes": {
+      "frame": {
+        "x": 874,
+        "y": 1123,
+        "w": 214,
+        "h": 215
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 214,
+        "h": 215
+      },
+      "sourceSize": {
+        "w": 214,
+        "h": 215
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-supplies-2.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "frames": {
+    "item-door-fox": {
+      "frame": {
+        "x": 30,
+        "y": 17,
+        "w": 241,
+        "h": 300
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 241,
+        "h": 300
+      },
+      "sourceSize": {
+        "w": 241,
+        "h": 300
+      }
+    },
+    "item-window-lamp-lit": {
+      "frame": {
+        "x": 299,
+        "y": 89,
+        "w": 264,
+        "h": 217
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 217
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 217
+      }
+    },
+    "item-window-lamp-unlit": {
+      "frame": {
+        "x": 586,
+        "y": 89,
+        "w": 257,
+        "h": 222
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 257,
+        "h": 222
+      },
+      "sourceSize": {
+        "w": 257,
+        "h": 222
+      }
+    },
+    "item-gate-shelf": {
+      "frame": {
+        "x": 874,
+        "y": 37,
+        "w": 224,
+        "h": 285
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 285
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 285
+      }
+    },
+    "item-writing-desk": {
+      "frame": {
+        "x": 30,
+        "y": 354,
+        "w": 240,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 237
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 237
+      }
+    },
+    "item-keepsake-cabinet": {
+      "frame": {
+        "x": 306,
+        "y": 331,
+        "w": 244,
+        "h": 273
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 273
+      },
+      "sourceSize": {
+        "w": 244,
+        "h": 273
+      }
+    },
+    "item-drying-rack": {
+      "frame": {
+        "x": 575,
+        "y": 388,
+        "w": 277,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 277,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 277,
+        "h": 208
+      }
+    },
+    "item-apothecary-shelf": {
+      "frame": {
+        "x": 866,
+        "y": 351,
+        "w": 226,
+        "h": 251
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 226,
+        "h": 251
+      },
+      "sourceSize": {
+        "w": 226,
+        "h": 251
+      }
+    },
+    "item-lantern-post-lit": {
+      "frame": {
+        "x": 56,
+        "y": 621,
+        "w": 185,
+        "h": 246
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 185,
+        "h": 246
+      },
+      "sourceSize": {
+        "w": 185,
+        "h": 246
+      }
+    },
+    "item-lantern-post-unlit": {
+      "frame": {
+        "x": 320,
+        "y": 621,
+        "w": 186,
+        "h": 246
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 186,
+        "h": 246
+      },
+      "sourceSize": {
+        "w": 186,
+        "h": 246
+      }
+    },
+    "item-raised-bed": {
+      "frame": {
+        "x": 564,
+        "y": 661,
+        "w": 280,
+        "h": 197
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 197
+      },
+      "sourceSize": {
+        "w": 280,
+        "h": 197
+      }
+    },
+    "item-naming-frame": {
+      "frame": {
+        "x": 897,
+        "y": 650,
+        "w": 198,
+        "h": 205
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 205
+      },
+      "sourceSize": {
+        "w": 198,
+        "h": 205
+      }
+    },
+    "item-pencil-map": {
+      "frame": {
+        "x": 49,
+        "y": 903,
+        "w": 244,
+        "h": 203
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 203
+      },
+      "sourceSize": {
+        "w": 244,
+        "h": 203
+      }
+    },
+    "item-pressed-flowers": {
+      "frame": {
+        "x": 341,
+        "y": 894,
+        "w": 191,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 220
+      },
+      "sourceSize": {
+        "w": 191,
+        "h": 220
+      }
+    },
+    "item-empty-chair": {
+      "frame": {
+        "x": 613,
+        "y": 882,
+        "w": 163,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 237
+      },
+      "sourceSize": {
+        "w": 163,
+        "h": 237
+      }
+    },
+    "item-closure-lamp-lit": {
+      "frame": {
+        "x": 916,
+        "y": 881,
+        "w": 137,
+        "h": 238
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 137,
+        "h": 238
+      },
+      "sourceSize": {
+        "w": 137,
+        "h": 238
+      }
+    },
+    "item-closure-lamp-unlit": {
+      "frame": {
+        "x": 91,
+        "y": 1123,
+        "w": 135,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 135,
+        "h": 237
+      },
+      "sourceSize": {
+        "w": 135,
+        "h": 237
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-home-goods-1.png",
+    "size": {
+      "w": 1122,
+      "h": 1402
+    }
+  }
+}
