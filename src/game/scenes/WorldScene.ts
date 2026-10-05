@@ -71,6 +71,15 @@ function trayFocused(): boolean {
 /** Areas where the zero-HP lock still lets you walk (home to rest). */
 const SAFE_AREAS = ['village', 'commons']
 
+/**
+ * Can the scene go here? Registered areas, plus the Wilds: its chunk kinds
+ * register lazily once the region loads (prepareWilds), so `wilds` and
+ * `chunk:…` targets count before that.
+ */
+function canEnter(area: string): boolean {
+  return hasAreaKind(area) || area === WILDS_AREA || parseChunkArea(area) !== null
+}
+
 export class WorldScene extends Phaser.Scene {
   private session!: Session
   private world!: WorldData
@@ -870,7 +879,7 @@ export class WorldScene extends Phaser.Scene {
     for (const exit of this.world.exits) {
       if (locked && !SAFE_AREAS.includes(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
-        if (!hasAreaKind(exit.to)) {
+        if (!canEnter(exit.to)) {
           this.overgrown(exit)
           return
         }
@@ -901,7 +910,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
-    if (!hasAreaKind(area)) return
+    if (!canEnter(area)) return
     this.transitioning = true
     const state = this.session.state
     const leavingWilds = isWildsArea(state.area)
