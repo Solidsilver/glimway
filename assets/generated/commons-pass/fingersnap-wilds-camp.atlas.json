@@ -1,0 +1,111 @@
+{
+  "frames": {
+    "wilds-tent": {
+      "frame": {
+        "x": 44,
+        "y": 68,
+        "w": 468,
+        "h": 401
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 468,
+        "h": 401
+      },
+      "sourceSize": {
+        "w": 468,
+        "h": 401
+      }
+    },
+    "wilds-fire-ring": {
+      "frame": {
+        "x": 572,
+        "y": 220,
+        "w": 400,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 400,
+        "h": 237
+      },
+      "sourceSize": {
+        "w": 400,
+        "h": 237
+      }
+    },
+    "wilds-pack": {
+      "frame": {
+        "x": 1070,
+        "y": 104,
+        "w": 431,
+        "h": 334
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 431,
+        "h": 334
+      },
+      "sourceSize": {
+        "w": 431,
+        "h": 334
+      }
+    },
+    "fallen-hero-lantern-lit": {
+      "frame": {
+        "x": 144,
+        "y": 547,
+        "w": 238,
+        "h": 428
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 238,
+        "h": 428
+      },
+      "sourceSize": {
+        "w": 238,
+        "h": 428
+      }
+    },
+    "fallen-hero-lantern-unlit": {
+      "frame": {
+        "x": 646,
+        "y": 547,
+        "w": 239,
+        "h": 430
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 430
+      },
+      "sourceSize": {
+        "w": 239,
+        "h": 430
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-wilds-camp.png",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    }
+  }
+}

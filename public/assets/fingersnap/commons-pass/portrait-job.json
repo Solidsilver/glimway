@@ -1,0 +1,59 @@
+{
+  "id": "portraits",
+  "file": "fingersnap-portraits.png",
+  "columns": 3,
+  "rows": 2,
+  "frames": [
+    {
+      "key": "portrait-silas",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait"
+    },
+    {
+      "key": "portrait-elara",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait"
+    },
+    {
+      "key": "portrait-finn",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait"
+    },
+    {
+      "key": "portrait-hazel",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait"
+    },
+    {
+      "key": "portrait-ada",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait"
+    }
+  ],
+  "prompt": "Use case: stylized-concept. Asset type: transparent dialogue bust portraits for Fingersnap. Input image is IDENTITY REFERENCE for five residents, in rows Silas, Elara, Finn, Hazel, Ada. Create square sheet EXACT three columns by two rows, FIVE separate head-and-shoulders bust portraits, final bottomright cell empty. ORDER left-to-righttop-to-bottom Silas,Elara,Finn,Hazel,Ada. Match the reference faces, hairstyles and costumes exactly. Silas oldflatcapgreymoustacheblue-shirtleatherapron kindtiredeyes;Elara tiedbackdarkhair pencilbehindeargrey-greenforagercoat curious;Finnsandyhaircap flourapron slightlyanxious;Hazelroundauburnbakercreamapronwarm;Ada88greyhairmaroonshawlsmalluprightelder holdingwindowlamp edgeofbust. Front facing gentlethreequarter angle. Crisp chunky pixel art 64x64nativeportraitreadability, warmbrown #3a2a28 outlines, flat3toneclusters, no painterlydetail, no antialias, no halos, no lightinghaze. Keep headandupperchestfullyinsideeachcellwithlarge transparent gutters; alignbustbottoms. True transparentalpha, no backgroundgroundorframe, no text labels or watermark."
+}

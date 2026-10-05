@@ -1,0 +1,131 @@
+{
+  "frames": {
+    "candle-hull-0": {
+      "frame": {
+        "x": 173,
+        "y": 115,
+        "w": 274,
+        "h": 353
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 274,
+        "h": 353
+      },
+      "sourceSize": {
+        "w": 274,
+        "h": 353
+      }
+    },
+    "candle-hull-1": {
+      "frame": {
+        "x": 651,
+        "y": 115,
+        "w": 272,
+        "h": 363
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 272,
+        "h": 363
+      },
+      "sourceSize": {
+        "w": 272,
+        "h": 363
+      }
+    },
+    "candle-hull-2": {
+      "frame": {
+        "x": 1126,
+        "y": 106,
+        "w": 290,
+        "h": 373
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 290,
+        "h": 373
+      },
+      "sourceSize": {
+        "w": 290,
+        "h": 373
+      }
+    },
+    "window-lamp-glow": {
+      "frame": {
+        "x": 143,
+        "y": 629,
+        "w": 229,
+        "h": 233
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 229,
+        "h": 233
+      },
+      "sourceSize": {
+        "w": 229,
+        "h": 233
+      }
+    },
+    "bunting": {
+      "frame": {
+        "x": 541,
+        "y": 637,
+        "w": 463,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 463,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 463,
+        "h": 209
+      }
+    },
+    "library-sign": {
+      "frame": {
+        "x": 1107,
+        "y": 577,
+        "w": 364,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 364,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 364,
+        "h": 320
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-festivals.png",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    }
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "frames": {
+    "hearthwick-library": {
+      "frame": {
+        "x": 30,
+        "y": 59,
+        "w": 537,
+        "h": 443
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 537,
+        "h": 443
+      },
+      "sourceSize": {
+        "w": 537,
+        "h": 443
+      }
+    },
+    "stall-a": {
+      "frame": {
+        "x": 633,
+        "y": 136,
+        "w": 376,
+        "h": 377
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 376,
+        "h": 377
+      },
+      "sourceSize": {
+        "w": 376,
+        "h": 377
+      }
+    },
+    "stall-b": {
+      "frame": {
+        "x": 1107,
+        "y": 136,
+        "w": 381,
+        "h": 377
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 381,
+        "h": 377
+      },
+      "sourceSize": {
+        "w": 381,
+        "h": 377
+      }
+    },
+    "stall-c": {
+      "frame": {
+        "x": 84,
+        "y": 577,
+        "w": 407,
+        "h": 368
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 407,
+        "h": 368
+      },
+      "sourceSize": {
+        "w": 407,
+        "h": 368
+      }
+    },
+    "well-canopy": {
+      "frame": {
+        "x": 575,
+        "y": 582,
+        "w": 385,
+        "h": 359
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 385,
+        "h": 359
+      },
+      "sourceSize": {
+        "w": 385,
+        "h": 359
+      }
+    },
+    "mended-bridge": {
+      "frame": {
+        "x": 1007,
+        "y": 684,
+        "w": 487,
+        "h": 261
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 487,
+        "h": 261
+      },
+      "sourceSize": {
+        "w": 487,
+        "h": 261
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-village-buildings.png",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    }
+  }
+}

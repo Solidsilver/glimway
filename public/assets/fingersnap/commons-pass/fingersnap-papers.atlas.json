@@ -1,0 +1,191 @@
+{
+  "frames": {
+    "paper-folded-0": {
+      "frame": {
+        "x": 171,
+        "y": 135,
+        "w": 241,
+        "h": 202
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 241,
+        "h": 202
+      },
+      "sourceSize": {
+        "w": 241,
+        "h": 202
+      }
+    },
+    "paper-folded-1": {
+      "frame": {
+        "x": 643,
+        "y": 118,
+        "w": 256,
+        "h": 219
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 219
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 219
+      }
+    },
+    "paper-folded-2": {
+      "frame": {
+        "x": 1134,
+        "y": 135,
+        "w": 240,
+        "h": 202
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 202
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 202
+      }
+    },
+    "paper-scroll-0": {
+      "frame": {
+        "x": 158,
+        "y": 473,
+        "w": 264,
+        "h": 173
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 173
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 173
+      }
+    },
+    "paper-scroll-1": {
+      "frame": {
+        "x": 631,
+        "y": 442,
+        "w": 264,
+        "h": 204
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 204
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 204
+      }
+    },
+    "paper-scroll-2": {
+      "frame": {
+        "x": 1121,
+        "y": 473,
+        "w": 262,
+        "h": 173
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 262,
+        "h": 173
+      },
+      "sourceSize": {
+        "w": 262,
+        "h": 173
+      }
+    },
+    "paper-slate-0": {
+      "frame": {
+        "x": 169,
+        "y": 748,
+        "w": 243,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 243,
+        "h": 194
+      },
+      "sourceSize": {
+        "w": 243,
+        "h": 194
+      }
+    },
+    "paper-slate-1": {
+      "frame": {
+        "x": 643,
+        "y": 731,
+        "w": 257,
+        "h": 211
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 257,
+        "h": 211
+      },
+      "sourceSize": {
+        "w": 257,
+        "h": 211
+      }
+    },
+    "paper-slate-2": {
+      "frame": {
+        "x": 1136,
+        "y": 748,
+        "w": 247,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 247,
+        "h": 194
+      },
+      "sourceSize": {
+        "w": 247,
+        "h": 194
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-papers.png",
+    "size": {
+      "w": 1536,
+      "h": 1024
+    }
+  }
+}

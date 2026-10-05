@@ -1,0 +1,4375 @@
+{
+  "version": 1,
+  "date": "2026-10-05",
+  "baseUrl": "/assets/fingersnap/commons-pass/",
+  "sources": [
+    {
+      "key": "commons-residents",
+      "file": "fingersnap-residents-v2.png",
+      "width": 1024,
+      "height": 1536
+    },
+    {
+      "key": "commons-homes",
+      "file": "fingersnap-homes.png",
+      "width": 1312,
+      "height": 1199
+    },
+    {
+      "key": "commons-interior-wall",
+      "file": "fingersnap-interior-wall.png",
+      "width": 1916,
+      "height": 821
+    },
+    {
+      "key": "commons-fire",
+      "file": "fingersnap-fire.png",
+      "width": 1774,
+      "height": 887
+    },
+    {
+      "key": "commons-camp-home",
+      "file": "fingersnap-camp-home.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-furniture",
+      "file": "fingersnap-furniture.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "commons-commons",
+      "file": "fingersnap-commons.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-boundaries",
+      "file": "fingersnap-boundaries.png",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "key": "commons-yard",
+      "file": "fingersnap-yard.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-path-edges",
+      "file": "fingersnap-path-edges.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-village-buildings",
+      "file": "fingersnap-village-buildings.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-festivals",
+      "file": "fingersnap-festivals.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-papers",
+      "file": "fingersnap-papers.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-wilds-nature",
+      "file": "fingersnap-wilds-nature.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-resource-nodes",
+      "file": "fingersnap-resource-nodes.png",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "key": "commons-wilds-camp",
+      "file": "fingersnap-wilds-camp.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-echoes",
+      "file": "fingersnap-echoes.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-icons",
+      "file": "fingersnap-icons.png",
+      "width": 1402,
+      "height": 1122
+    },
+    {
+      "key": "commons-plank-floor",
+      "file": "fingersnap-plank-floor.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "key": "commons-warden-settled",
+      "file": "fingersnap-warden-settled.png",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "key": "commons-portraits",
+      "file": "fingersnap-portraits.png",
+      "width": 1536,
+      "height": 1024
+    }
+  ],
+  "frames": [
+    {
+      "key": "silas-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 260,
+        "y": 38,
+        "w": 186,
+        "h": 283
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 3,
+        "w": 9,
+        "h": 13
+      }
+    },
+    {
+      "key": "silas-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 579,
+        "y": 38,
+        "w": 186,
+        "h": 283
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 3,
+        "w": 9,
+        "h": 13
+      }
+    },
+    {
+      "key": "elara-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 259,
+        "y": 332,
+        "w": 186,
+        "h": 316
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 1,
+        "w": 9,
+        "h": 15
+      }
+    },
+    {
+      "key": "elara-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 578,
+        "y": 332,
+        "w": 187,
+        "h": 316
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 1,
+        "w": 9,
+        "h": 15
+      }
+    },
+    {
+      "key": "finn-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 243,
+        "y": 661,
+        "w": 199,
+        "h": 298
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 2,
+        "w": 9,
+        "h": 14
+      }
+    },
+    {
+      "key": "finn-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 562,
+        "y": 661,
+        "w": 200,
+        "h": 298
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 3,
+        "y": 2,
+        "w": 9,
+        "h": 14
+      }
+    },
+    {
+      "key": "hazel-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 231,
+        "y": 975,
+        "w": 231,
+        "h": 313
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 11,
+        "h": 15
+      }
+    },
+    {
+      "key": "hazel-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 562,
+        "y": 975,
+        "w": 230,
+        "h": 313
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 11,
+        "h": 15
+      }
+    },
+    {
+      "key": "ada-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 271,
+        "y": 1303,
+        "w": 141,
+        "h": 221
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 4,
+        "y": 6,
+        "w": 7,
+        "h": 10
+      }
+    },
+    {
+      "key": "ada-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "commons-residents",
+      "sourceRect": {
+        "x": 594,
+        "y": 1303,
+        "w": 141,
+        "h": 221
+      },
+      "sheet": "residents",
+      "destinationRect": {
+        "x": 4,
+        "y": 6,
+        "w": 7,
+        "h": 10
+      }
+    },
+    {
+      "key": "cottage",
+      "width": 96,
+      "height": 92,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "cottages",
+      "source": "commons-homes",
+      "sourceRect": {
+        "x": 50,
+        "y": 68,
+        "w": 575,
+        "h": 503
+      },
+      "sheet": "homes",
+      "destinationRect": {
+        "x": 11,
+        "y": 28,
+        "w": 74,
+        "h": 64
+      }
+    },
+    {
+      "key": "cottage-silas",
+      "width": 96,
+      "height": 92,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "cottages",
+      "source": "commons-homes",
+      "sourceRect": {
+        "x": 735,
+        "y": 68,
+        "w": 555,
+        "h": 514
+      },
+      "sheet": "homes",
+      "destinationRect": {
+        "x": 12,
+        "y": 26,
+        "w": 71,
+        "h": 66
+      }
+    },
+    {
+      "key": "cottage-workshop",
+      "width": 96,
+      "height": 92,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "cottages",
+      "source": "commons-homes",
+      "sourceRect": {
+        "x": 41,
+        "y": 650,
+        "w": 742,
+        "h": 485
+      },
+      "sheet": "homes",
+      "destinationRect": {
+        "x": 0,
+        "y": 30,
+        "w": 95,
+        "h": 62
+      }
+    },
+    {
+      "key": "workshop-addon",
+      "width": 32,
+      "height": 60,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-homes",
+      "sourceRect": {
+        "x": 909,
+        "y": 752,
+        "w": 372,
+        "h": 361
+      },
+      "sheet": "homes",
+      "destinationRect": {
+        "x": 0,
+        "y": 29,
+        "w": 32,
+        "h": 31
+      }
+    },
+    {
+      "key": "interior-back-wall",
+      "width": 224,
+      "height": 48,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-interior-wall",
+      "sourceRect": {
+        "x": 63,
+        "y": 198,
+        "w": 1791,
+        "h": 403
+      },
+      "sheet": "interior-wall",
+      "destinationRect": {
+        "x": 5,
+        "y": 0,
+        "w": 213,
+        "h": 48
+      }
+    },
+    {
+      "key": "hearth-fire-0",
+      "width": 24,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hearth-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 70,
+        "y": 64,
+        "w": 322,
+        "h": 373
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 6,
+        "y": 1,
+        "w": 11,
+        "h": 13
+      }
+    },
+    {
+      "key": "hearth-fire-1",
+      "width": 24,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hearth-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 524,
+        "y": 61,
+        "w": 306,
+        "h": 376
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 6,
+        "y": 1,
+        "w": 11,
+        "h": 13
+      }
+    },
+    {
+      "key": "hearth-fire-2",
+      "width": 24,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hearth-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 971,
+        "y": 61,
+        "w": 284,
+        "h": 376
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 7,
+        "y": 1,
+        "w": 10,
+        "h": 13
+      }
+    },
+    {
+      "key": "hearth-fire-3",
+      "width": 24,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hearth-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 1404,
+        "y": 75,
+        "w": 306,
+        "h": 363
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 6,
+        "y": 1,
+        "w": 11,
+        "h": 13
+      }
+    },
+    {
+      "key": "camp-flame-0",
+      "width": 8,
+      "height": 9,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "camp-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 139,
+        "y": 590,
+        "w": 202,
+        "h": 240
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 1,
+        "y": 2,
+        "w": 6,
+        "h": 7
+      }
+    },
+    {
+      "key": "camp-flame-1",
+      "width": 8,
+      "height": 9,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "camp-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 584,
+        "y": 571,
+        "w": 203,
+        "h": 259
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 6,
+        "h": 8
+      }
+    },
+    {
+      "key": "camp-flame-2",
+      "width": 8,
+      "height": 9,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "camp-flame",
+      "source": "commons-fire",
+      "sourceRect": {
+        "x": 1022,
+        "y": 589,
+        "w": 202,
+        "h": 241
+      },
+      "sheet": "fire",
+      "destinationRect": {
+        "x": 1,
+        "y": 2,
+        "w": 6,
+        "h": 7
+      }
+    },
+    {
+      "key": "campsite-0",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "campsites",
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 21,
+        "y": 126,
+        "w": 467,
+        "h": 380
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 28,
+        "h": 23
+      }
+    },
+    {
+      "key": "campsite-1",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "campsites",
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 548,
+        "y": 126,
+        "w": 462,
+        "h": 380
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 28,
+        "h": 23
+      }
+    },
+    {
+      "key": "campsite-2",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "campsites",
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 1058,
+        "y": 127,
+        "w": 458,
+        "h": 379
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 28,
+        "h": 23
+      }
+    },
+    {
+      "key": "camp-windbreak",
+      "width": 40,
+      "height": 23,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 38,
+        "y": 609,
+        "w": 451,
+        "h": 312
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 33,
+        "h": 23
+      }
+    },
+    {
+      "key": "camp-cot",
+      "width": 31,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 571,
+        "y": 648,
+        "w": 374,
+        "h": 281
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 6,
+        "y": 0,
+        "w": 19,
+        "h": 14
+      }
+    },
+    {
+      "key": "camp-ring",
+      "width": 22,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-camp-home",
+      "sourceRect": {
+        "x": 1103,
+        "y": 701,
+        "w": 365,
+        "h": 221
+      },
+      "sheet": "camp-home",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 22,
+        "h": 13
+      }
+    },
+    {
+      "key": "wooden-stool",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 61,
+        "y": 90,
+        "w": 147,
+        "h": 162
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 15,
+        "h": 16
+      }
+    },
+    {
+      "key": "reading-chair",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 278,
+        "y": 23,
+        "w": 261,
+        "h": 251
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 17,
+        "w": 16,
+        "h": 15
+      }
+    },
+    {
+      "key": "braided-rug",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 569,
+        "y": 74,
+        "w": 285,
+        "h": 196
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 10,
+        "w": 32,
+        "h": 22
+      }
+    },
+    {
+      "key": "iron-lantern",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 932,
+        "y": 47,
+        "w": 112,
+        "h": 213
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 8,
+        "h": 16
+      }
+    },
+    {
+      "key": "oak-table",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 23,
+        "y": 318,
+        "w": 248,
+        "h": 225
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 32,
+        "h": 29
+      }
+    },
+    {
+      "key": "potted-fern",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 301,
+        "y": 310,
+        "w": 237,
+        "h": 236
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "bookshelf",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 588,
+        "y": 312,
+        "w": 236,
+        "h": 232
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "wash-basin",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 906,
+        "y": 319,
+        "w": 170,
+        "h": 226
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 12,
+        "h": 16
+      }
+    },
+    {
+      "key": "stone-hearth",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 28,
+        "y": 576,
+        "w": 227,
+        "h": 250
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 15,
+        "h": 16
+      }
+    },
+    {
+      "key": "carved-bed",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 294,
+        "y": 576,
+        "w": 251,
+        "h": 250
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      }
+    },
+    {
+      "key": "woven-basket",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 615,
+        "y": 637,
+        "w": 189,
+        "h": 173
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 15
+      }
+    },
+    {
+      "key": "display-stand",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 921,
+        "y": 583,
+        "w": 150,
+        "h": 239
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 10,
+        "h": 16
+      }
+    },
+    {
+      "key": "tool-rack",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 28,
+        "y": 889,
+        "w": 235,
+        "h": 181
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 5,
+        "y": 0,
+        "w": 21,
+        "h": 16
+      }
+    },
+    {
+      "key": "amber-sconce",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 343,
+        "y": 870,
+        "w": 160,
+        "h": 196
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 13,
+        "h": 16
+      }
+    },
+    {
+      "key": "workshop-chest",
+      "width": 28,
+      "height": 22,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 568,
+        "y": 891,
+        "w": 234,
+        "h": 175
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 28,
+        "h": 21
+      }
+    },
+    {
+      "key": "workshop-bench",
+      "width": 44,
+      "height": 26,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 831,
+        "y": 864,
+        "w": 271,
+        "h": 213
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 5,
+        "y": 0,
+        "w": 33,
+        "h": 26
+      }
+    },
+    {
+      "key": "mailbox",
+      "width": 19,
+      "height": 22,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-furniture",
+      "sourceRect": {
+        "x": 53,
+        "y": 1095,
+        "w": 172,
+        "h": 287
+      },
+      "sheet": "furniture",
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 13,
+        "h": 22
+      }
+    },
+    {
+      "key": "hame",
+      "width": 17,
+      "height": 22,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 114,
+        "y": 11,
+        "w": 332,
+        "h": 322
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 17,
+        "h": 16
+      }
+    },
+    {
+      "key": "gatepost",
+      "width": 14,
+      "height": 44,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 677,
+        "y": 4,
+        "w": 136,
+        "h": 322
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 0,
+        "y": 11,
+        "w": 14,
+        "h": 33
+      }
+    },
+    {
+      "key": "gate-leaf",
+      "width": 42,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 1084,
+        "y": 56,
+        "w": 425,
+        "h": 237
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 6,
+        "y": 0,
+        "w": 29,
+        "h": 16
+      }
+    },
+    {
+      "key": "plot-sign",
+      "width": 40,
+      "height": 22,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 118,
+        "y": 361,
+        "w": 262,
+        "h": 306
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 10,
+        "y": 0,
+        "w": 19,
+        "h": 22
+      }
+    },
+    {
+      "key": "commons-well",
+      "width": 32,
+      "height": 42,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 593,
+        "y": 351,
+        "w": 307,
+        "h": 320
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 0,
+        "y": 9,
+        "w": 32,
+        "h": 33
+      }
+    },
+    {
+      "key": "notice-board",
+      "width": 24,
+      "height": 30,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 1107,
+        "y": 354,
+        "w": 350,
+        "h": 320
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 22
+      }
+    },
+    {
+      "key": "commons-gateway",
+      "width": 64,
+      "height": 48,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-commons",
+      "sourceRect": {
+        "x": 20,
+        "y": 687,
+        "w": 480,
+        "h": 312
+      },
+      "sheet": "commons",
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 64,
+        "h": 42
+      }
+    },
+    {
+      "key": "hedge-straight-h",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 45,
+        "y": 171,
+        "w": 310,
+        "h": 164
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-straight-v",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 490,
+        "y": 73,
+        "w": 123,
+        "h": 277
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-corner-ne",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 772,
+        "y": 89,
+        "w": 286,
+        "h": 261
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-corner-nw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 1109,
+        "y": 93,
+        "w": 289,
+        "h": 257
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-end-e",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 45,
+        "y": 491,
+        "w": 303,
+        "h": 156
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-end-w",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 402,
+        "y": 491,
+        "w": 288,
+        "h": 156
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-corner-se",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 772,
+        "y": 429,
+        "w": 282,
+        "h": 256
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "hedge-corner-sw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 1109,
+        "y": 431,
+        "w": 284,
+        "h": 257
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fence-straight-h",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 48,
+        "y": 822,
+        "w": 300,
+        "h": 163
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fence-straight-v",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 514,
+        "y": 730,
+        "w": 69,
+        "h": 276
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fence-corner",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 765,
+        "y": 777,
+        "w": 280,
+        "h": 208
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fence-gateway",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "source": "commons-boundaries",
+      "sourceRect": {
+        "x": 1109,
+        "y": 828,
+        "w": 281,
+        "h": 157
+      },
+      "sheet": "boundaries",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "sawhorse",
+      "width": 18,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 59,
+        "y": 170,
+        "w": 402,
+        "h": 287
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 17,
+        "h": 12
+      }
+    },
+    {
+      "key": "timber-stack",
+      "width": 31,
+      "height": 20,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 556,
+        "y": 158,
+        "w": 419,
+        "h": 305
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 27,
+        "h": 20
+      }
+    },
+    {
+      "key": "skids",
+      "width": 86,
+      "height": 40,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 1021,
+        "y": 201,
+        "w": 494,
+        "h": 288
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 69,
+        "h": 40
+      }
+    },
+    {
+      "key": "firebox",
+      "width": 16,
+      "height": 18,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 84,
+        "y": 561,
+        "w": 326,
+        "h": 363
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 18
+      }
+    },
+    {
+      "key": "toolbox",
+      "width": 16,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 562,
+        "y": 612,
+        "w": 381,
+        "h": 319
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 14,
+        "h": 12
+      }
+    },
+    {
+      "key": "woodpile",
+      "width": 16,
+      "height": 14,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-yard",
+      "sourceRect": {
+        "x": 1067,
+        "y": 612,
+        "w": 391,
+        "h": 320
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 13
+      }
+    },
+    {
+      "key": "path-dirt-edge-n",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 50,
+        "y": 76,
+        "w": 176,
+        "h": 142
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-edge-e",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 346,
+        "y": 76,
+        "w": 128,
+        "h": 176
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 16
+      }
+    },
+    {
+      "key": "path-dirt-edge-s",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 552,
+        "y": 120,
+        "w": 177,
+        "h": 132
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-edge-w",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 810,
+        "y": 76,
+        "w": 121,
+        "h": 176
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 16
+      }
+    },
+    {
+      "key": "path-dirt-end-n",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1058,
+        "y": 76,
+        "w": 173,
+        "h": 135
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 8,
+        "h": 12
+      }
+    },
+    {
+      "key": "path-dirt-end-e",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1343,
+        "y": 76,
+        "w": 142,
+        "h": 171
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-corner-ne",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 94,
+        "y": 310,
+        "w": 132,
+        "h": 142
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-corner-nw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 307,
+        "y": 310,
+        "w": 125,
+        "h": 154
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-corner-se",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 565,
+        "y": 321,
+        "w": 159,
+        "h": 160
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-corner-sw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 807,
+        "y": 321,
+        "w": 144,
+        "h": 160
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-dirt-end-s",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1062,
+        "y": 346,
+        "w": 174,
+        "h": 135
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 8,
+        "h": 12
+      }
+    },
+    {
+      "key": "path-dirt-end-w",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1312,
+        "y": 316,
+        "w": 137,
+        "h": 166
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-edge-n",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 52,
+        "y": 550,
+        "w": 176,
+        "h": 149
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-edge-e",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 346,
+        "y": 550,
+        "w": 129,
+        "h": 177
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 16
+      }
+    },
+    {
+      "key": "path-cobble-edge-s",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 553,
+        "y": 602,
+        "w": 176,
+        "h": 125
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-edge-w",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 808,
+        "y": 550,
+        "w": 125,
+        "h": 177
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 16
+      }
+    },
+    {
+      "key": "path-cobble-end-n",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1061,
+        "y": 550,
+        "w": 170,
+        "h": 145
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 8,
+        "h": 12
+      }
+    },
+    {
+      "key": "path-cobble-end-e",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1336,
+        "y": 550,
+        "w": 150,
+        "h": 177
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-corner-ne",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 92,
+        "y": 775,
+        "w": 139,
+        "h": 154
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-corner-nw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 308,
+        "y": 775,
+        "w": 130,
+        "h": 154
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-corner-se",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 569,
+        "y": 788,
+        "w": 160,
+        "h": 169
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-corner-sw",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 808,
+        "y": 789,
+        "w": 154,
+        "h": 168
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "path-cobble-end-s",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1061,
+        "y": 819,
+        "w": 170,
+        "h": 138
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 4,
+        "y": 4,
+        "w": 8,
+        "h": 12
+      }
+    },
+    {
+      "key": "path-cobble-end-w",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "transition",
+      "source": "commons-path-edges",
+      "sourceRect": {
+        "x": 1311,
+        "y": 787,
+        "w": 146,
+        "h": 170
+      },
+      "sheet": "path-edges",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "key": "hearthwick-library",
+      "width": 80,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 30,
+        "y": 59,
+        "w": 537,
+        "h": 443
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 78,
+        "h": 64
+      }
+    },
+    {
+      "key": "stall-a",
+      "width": 40,
+      "height": 36,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 633,
+        "y": 136,
+        "w": 376,
+        "h": 377
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 36,
+        "h": 36
+      }
+    },
+    {
+      "key": "stall-b",
+      "width": 40,
+      "height": 36,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 1107,
+        "y": 136,
+        "w": 381,
+        "h": 377
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 36,
+        "h": 36
+      }
+    },
+    {
+      "key": "stall-c",
+      "width": 40,
+      "height": 36,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 84,
+        "y": 577,
+        "w": 407,
+        "h": 368
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 40,
+        "h": 36
+      }
+    },
+    {
+      "key": "well-canopy",
+      "width": 30,
+      "height": 28,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 575,
+        "y": 582,
+        "w": 385,
+        "h": 359
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 30,
+        "h": 28
+      }
+    },
+    {
+      "key": "mended-bridge",
+      "width": 48,
+      "height": 26,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-village-buildings",
+      "sourceRect": {
+        "x": 1007,
+        "y": 684,
+        "w": 487,
+        "h": 261
+      },
+      "sheet": "village-buildings",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 26
+      }
+    },
+    {
+      "key": "candle-hull-0",
+      "width": 10,
+      "height": 10,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hulls",
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 173,
+        "y": 115,
+        "w": 274,
+        "h": 353
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 7,
+        "h": 9
+      }
+    },
+    {
+      "key": "candle-hull-1",
+      "width": 10,
+      "height": 10,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hulls",
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 651,
+        "y": 115,
+        "w": 272,
+        "h": 363
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 7,
+        "h": 9
+      }
+    },
+    {
+      "key": "candle-hull-2",
+      "width": 10,
+      "height": 10,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hulls",
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 1126,
+        "y": 106,
+        "w": 290,
+        "h": 373
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 7,
+        "h": 9
+      }
+    },
+    {
+      "key": "window-lamp-glow",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "fit": "cell",
+      "role": "glow",
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 143,
+        "y": 629,
+        "w": 229,
+        "h": 233
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 24
+      }
+    },
+    {
+      "key": "bunting",
+      "width": 64,
+      "height": 10,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 541,
+        "y": 637,
+        "w": 463,
+        "h": 209
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 21,
+        "y": 0,
+        "w": 22,
+        "h": 10
+      }
+    },
+    {
+      "key": "library-sign",
+      "width": 16,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-festivals",
+      "sourceRect": {
+        "x": 1107,
+        "y": 577,
+        "w": 364,
+        "h": 320
+      },
+      "sheet": "festivals",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 14,
+        "h": 12
+      }
+    },
+    {
+      "key": "paper-folded-0",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-folded",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 171,
+        "y": 135,
+        "w": 241,
+        "h": 202
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 1,
+        "y": 3,
+        "w": 10,
+        "h": 9
+      }
+    },
+    {
+      "key": "paper-folded-1",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-folded",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 643,
+        "y": 118,
+        "w": 256,
+        "h": 219
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 11,
+        "h": 9
+      }
+    },
+    {
+      "key": "paper-folded-2",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-folded",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 1134,
+        "y": 135,
+        "w": 240,
+        "h": 202
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 1,
+        "y": 3,
+        "w": 10,
+        "h": 9
+      }
+    },
+    {
+      "key": "paper-scroll-0",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-scroll",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 158,
+        "y": 473,
+        "w": 264,
+        "h": 173
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 11,
+        "h": 7
+      }
+    },
+    {
+      "key": "paper-scroll-1",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-scroll",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 631,
+        "y": 442,
+        "w": 264,
+        "h": 204
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 11,
+        "h": 8
+      }
+    },
+    {
+      "key": "paper-scroll-2",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-scroll",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 1121,
+        "y": 473,
+        "w": 262,
+        "h": 173
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 11,
+        "h": 7
+      }
+    },
+    {
+      "key": "paper-slate-0",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-slate",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 169,
+        "y": 748,
+        "w": 243,
+        "h": 194
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 1,
+        "y": 4,
+        "w": 10,
+        "h": 8
+      }
+    },
+    {
+      "key": "paper-slate-1",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-slate",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 643,
+        "y": 731,
+        "w": 257,
+        "h": 211
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 11,
+        "h": 9
+      }
+    },
+    {
+      "key": "paper-slate-2",
+      "width": 12,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "paper-slate",
+      "source": "commons-papers",
+      "sourceRect": {
+        "x": 1136,
+        "y": 748,
+        "w": 247,
+        "h": 194
+      },
+      "sheet": "papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 11,
+        "h": 8
+      }
+    },
+    {
+      "key": "turncaps-east",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 125,
+        "y": 53,
+        "w": 381,
+        "h": 277
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 12
+      }
+    },
+    {
+      "key": "cairn",
+      "width": 16,
+      "height": 20,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 642,
+        "y": 70,
+        "w": 257,
+        "h": 249
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "cairn-white-stones",
+      "width": 16,
+      "height": 20,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 1095,
+        "y": 37,
+        "w": 270,
+        "h": 300
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 16,
+        "h": 18
+      }
+    },
+    {
+      "key": "iron-oak-stump",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 89,
+        "y": 385,
+        "w": 393,
+        "h": 277
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 11
+      }
+    },
+    {
+      "key": "dead-birch-turncaps",
+      "width": 24,
+      "height": 40,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 662,
+        "y": 340,
+        "w": 207,
+        "h": 334
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 24,
+        "h": 39
+      }
+    },
+    {
+      "key": "fallen-log",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 1021,
+        "y": 435,
+        "w": 445,
+        "h": 226
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 16
+      }
+    },
+    {
+      "key": "mossy-boulder",
+      "width": 24,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 85,
+        "y": 694,
+        "w": 396,
+        "h": 286
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 17
+      }
+    },
+    {
+      "key": "drift-stone",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 607,
+        "y": 747,
+        "w": 306,
+        "h": 212
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 11
+      }
+    },
+    {
+      "key": "reed-pool",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-nature",
+      "sourceRect": {
+        "x": 1004,
+        "y": 674,
+        "w": 473,
+        "h": 320
+      },
+      "sheet": "wilds-nature",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 32,
+        "h": 22
+      }
+    },
+    {
+      "key": "resource-timber-available",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-timber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 8,
+        "y": 196,
+        "w": 357,
+        "h": 282
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 29,
+        "h": 23
+      }
+    },
+    {
+      "key": "resource-timber-depleted",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-timber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 377,
+        "y": 256,
+        "w": 339,
+        "h": 219
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 2,
+        "y": 6,
+        "w": 28,
+        "h": 18
+      }
+    },
+    {
+      "key": "resource-stone-available",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-stone",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 731,
+        "y": 177,
+        "w": 348,
+        "h": 304
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 3,
+        "y": 1,
+        "w": 26,
+        "h": 23
+      }
+    },
+    {
+      "key": "resource-stone-depleted",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-stone",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 1092,
+        "y": 298,
+        "w": 347,
+        "h": 180
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 3,
+        "y": 10,
+        "w": 26,
+        "h": 14
+      }
+    },
+    {
+      "key": "resource-fiber-available",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-fiber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 10,
+        "y": 597,
+        "w": 349,
+        "h": 352
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 4,
+        "y": 1,
+        "w": 23,
+        "h": 23
+      }
+    },
+    {
+      "key": "resource-fiber-depleted",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-fiber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 391,
+        "y": 774,
+        "w": 316,
+        "h": 175
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 5,
+        "y": 13,
+        "w": 21,
+        "h": 11
+      }
+    },
+    {
+      "key": "resource-amber-available",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-amber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 732,
+        "y": 669,
+        "w": 341,
+        "h": 280
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 28,
+        "h": 23
+      }
+    },
+    {
+      "key": "resource-amber-depleted",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "resource-amber",
+      "source": "commons-resource-nodes",
+      "sourceRect": {
+        "x": 1093,
+        "y": 702,
+        "w": 346,
+        "h": 247
+      },
+      "sheet": "resource-nodes",
+      "destinationRect": {
+        "x": 2,
+        "y": 4,
+        "w": 28,
+        "h": 20
+      }
+    },
+    {
+      "key": "wilds-tent",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-camp",
+      "sourceRect": {
+        "x": 44,
+        "y": 68,
+        "w": 468,
+        "h": 401
+      },
+      "sheet": "wilds-camp",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 28,
+        "h": 24
+      }
+    },
+    {
+      "key": "wilds-fire-ring",
+      "width": 16,
+      "height": 12,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-camp",
+      "sourceRect": {
+        "x": 572,
+        "y": 220,
+        "w": 400,
+        "h": 237
+      },
+      "sheet": "wilds-camp",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 16,
+        "h": 9
+      }
+    },
+    {
+      "key": "wilds-pack",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-wilds-camp",
+      "sourceRect": {
+        "x": 1070,
+        "y": 104,
+        "w": 431,
+        "h": 334
+      },
+      "sheet": "wilds-camp",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 12
+      }
+    },
+    {
+      "key": "fallen-hero-lantern-lit",
+      "width": 12,
+      "height": 18,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hero-lantern",
+      "source": "commons-wilds-camp",
+      "sourceRect": {
+        "x": 144,
+        "y": 547,
+        "w": 238,
+        "h": 428
+      },
+      "sheet": "wilds-camp",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 9,
+        "h": 17
+      }
+    },
+    {
+      "key": "fallen-hero-lantern-unlit",
+      "width": 12,
+      "height": 18,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "hero-lantern",
+      "source": "commons-wilds-camp",
+      "sourceRect": {
+        "x": 646,
+        "y": 547,
+        "w": 239,
+        "h": 430
+      },
+      "sheet": "wilds-camp",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 9,
+        "h": 17
+      }
+    },
+    {
+      "key": "echo-hollis-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-hollis",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 120,
+        "y": 31,
+        "w": 370,
+        "h": 241
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 31,
+        "h": 20
+      }
+    },
+    {
+      "key": "echo-tam-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-tam",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 637,
+        "y": 38,
+        "w": 225,
+        "h": 217
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 4,
+        "y": 1,
+        "w": 24,
+        "h": 23
+      }
+    },
+    {
+      "key": "echo-bett-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-bett",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 1071,
+        "y": 113,
+        "w": 337,
+        "h": 149
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 10,
+        "w": 31,
+        "h": 14
+      }
+    },
+    {
+      "key": "echo-dorrit-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-dorrit",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 150,
+        "y": 272,
+        "w": 284,
+        "h": 258
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 3,
+        "y": 1,
+        "w": 25,
+        "h": 23
+      }
+    },
+    {
+      "key": "echo-joss-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-joss",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 661,
+        "y": 298,
+        "w": 215,
+        "h": 231
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 5,
+        "y": 1,
+        "w": 21,
+        "h": 23
+      }
+    },
+    {
+      "key": "echo-nan-solid",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "echo-nan",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 1075,
+        "y": 298,
+        "w": 367,
+        "h": 231
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 31,
+        "h": 19
+      }
+    },
+    {
+      "key": "echo-hollis-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-hollis",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 121,
+        "y": 543,
+        "w": 370,
+        "h": 235
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 31,
+        "h": 20
+      }
+    },
+    {
+      "key": "echo-tam-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-tam",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 639,
+        "y": 553,
+        "w": 223,
+        "h": 211
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 4,
+        "y": 2,
+        "w": 24,
+        "h": 22
+      }
+    },
+    {
+      "key": "echo-bett-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-bett",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 1072,
+        "y": 617,
+        "w": 336,
+        "h": 149
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 10,
+        "w": 31,
+        "h": 14
+      }
+    },
+    {
+      "key": "echo-dorrit-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-dorrit",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 150,
+        "y": 778,
+        "w": 283,
+        "h": 230
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 3,
+        "y": 3,
+        "w": 25,
+        "h": 21
+      }
+    },
+    {
+      "key": "echo-joss-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-joss",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 661,
+        "y": 779,
+        "w": 216,
+        "h": 229
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 5,
+        "y": 1,
+        "w": 22,
+        "h": 23
+      }
+    },
+    {
+      "key": "echo-nan-faint",
+      "width": 32,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "alphaMultiplier": 0.45,
+      "scaleGroup": "echo-nan",
+      "source": "commons-echoes",
+      "sourceRect": {
+        "x": 1074,
+        "y": 779,
+        "w": 369,
+        "h": 229
+      },
+      "sheet": "echoes",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 31,
+        "h": 19
+      }
+    },
+    {
+      "key": "icon-timber",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 43,
+        "y": 67,
+        "w": 228,
+        "h": 205
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 14
+      }
+    },
+    {
+      "key": "icon-stone",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 325,
+        "y": 86,
+        "w": 201,
+        "h": 181
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 14
+      }
+    },
+    {
+      "key": "icon-fiber",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 584,
+        "y": 72,
+        "w": 240,
+        "h": 202
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 13
+      }
+    },
+    {
+      "key": "icon-amber",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 886,
+        "y": 86,
+        "w": 192,
+        "h": 178
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 15
+      }
+    },
+    {
+      "key": "icon-whittled-fox",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 1159,
+        "y": 35,
+        "w": 183,
+        "h": 239
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 12,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-beeswax-candle",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 76,
+        "y": 314,
+        "w": 165,
+        "h": 244
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 11,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-river-glass-bead",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 351,
+        "y": 384,
+        "w": 145,
+        "h": 149
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-spare-bootlace",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 595,
+        "y": 382,
+        "w": 222,
+        "h": 176
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 13
+      }
+    },
+    {
+      "key": "icon-tin-whistle",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 884,
+        "y": 334,
+        "w": 196,
+        "h": 216
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 15,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-lamp-wick",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 1150,
+        "y": 368,
+        "w": 215,
+        "h": 188
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 14
+      }
+    },
+    {
+      "key": "icon-oilcloth-wrap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 36,
+        "y": 629,
+        "w": 244,
+        "h": 190
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 16,
+        "h": 12
+      }
+    },
+    {
+      "key": "icon-wooden-peg",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 351,
+        "y": 608,
+        "w": 153,
+        "h": 210
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 12,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-emote-wave",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 583,
+        "y": 614,
+        "w": 233,
+        "h": 210
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 16,
+        "h": 14
+      }
+    },
+    {
+      "key": "icon-emote-nod",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 866,
+        "y": 614,
+        "w": 211,
+        "h": 210
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-emote-cheer",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 1134,
+        "y": 593,
+        "w": 235,
+        "h": 230
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "icon-emote-thanks",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 36,
+        "y": 863,
+        "w": 238,
+        "h": 228
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 15
+      }
+    },
+    {
+      "key": "icon-emote-lantern",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "commons-icons",
+      "sourceRect": {
+        "x": 352,
+        "y": 849,
+        "w": 144,
+        "h": 242
+      },
+      "sheet": "icons",
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 10,
+        "h": 16
+      }
+    },
+    {
+      "key": "interior-floor",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0,
+        0
+      ],
+      "fit": "cell",
+      "role": "tile",
+      "source": "commons-plank-floor",
+      "sourceRect": {
+        "x": 307,
+        "y": 307,
+        "w": 640,
+        "h": 643
+      },
+      "sheet": "plank-floor",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "guardian-settled",
+      "width": 24,
+      "height": 24,
+      "origin": [
+        0.5,
+        1
+      ],
+      "source": "commons-warden-settled",
+      "sourceRect": {
+        "x": 388,
+        "y": 216,
+        "w": 763,
+        "h": 675
+      },
+      "sheet": "warden-settled",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 21
+      }
+    },
+    {
+      "key": "portrait-silas",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits",
+      "sourceRect": {
+        "x": 38,
+        "y": 31,
+        "w": 469,
+        "h": 474
+      },
+      "sheet": "portraits",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 63,
+        "h": 64
+      }
+    },
+    {
+      "key": "portrait-elara",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits",
+      "sourceRect": {
+        "x": 552,
+        "y": 25,
+        "w": 419,
+        "h": 480
+      },
+      "sheet": "portraits",
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 64
+      }
+    },
+    {
+      "key": "portrait-finn",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits",
+      "sourceRect": {
+        "x": 1022,
+        "y": 48,
+        "w": 475,
+        "h": 457
+      },
+      "sheet": "portraits",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 64,
+        "h": 62
+      }
+    },
+    {
+      "key": "portrait-hazel",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits",
+      "sourceRect": {
+        "x": 42,
+        "y": 526,
+        "w": 480,
+        "h": 461
+      },
+      "sheet": "portraits",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 64,
+        "h": 61
+      }
+    },
+    {
+      "key": "portrait-ada",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits",
+      "sourceRect": {
+        "x": 569,
+        "y": 514,
+        "w": 424,
+        "h": 480
+      },
+      "sheet": "portraits",
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 57,
+        "h": 64
+      }
+    }
+  ],
+  "animations": [
+    {
+      "key": "silas-breathing",
+      "frames": [
+        "silas-idle-0",
+        "silas-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "elara-breathing",
+      "frames": [
+        "elara-idle-0",
+        "elara-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "finn-breathing",
+      "frames": [
+        "finn-idle-0",
+        "finn-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "hazel-breathing",
+      "frames": [
+        "hazel-idle-0",
+        "hazel-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "ada-breathing",
+      "frames": [
+        "ada-idle-0",
+        "ada-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "hearth-fire-animation",
+      "frames": [
+        "hearth-fire-0",
+        "hearth-fire-1",
+        "hearth-fire-2",
+        "hearth-fire-3"
+      ],
+      "frameRate": 6,
+      "repeat": -1
+    },
+    {
+      "key": "camp-flame-animation",
+      "frames": [
+        "camp-flame-0",
+        "camp-flame-1",
+        "camp-flame-2"
+      ],
+      "frameRate": 6,
+      "repeat": -1
+    },
+    {
+      "key": "campsite-animation",
+      "frames": [
+        "campsite-0",
+        "campsite-1",
+        "campsite-2"
+      ],
+      "frameRate": 5,
+      "repeat": -1
+    },
+    {
+      "key": "paper-folded-animation",
+      "frames": [
+        "paper-folded-0",
+        "paper-folded-1",
+        "paper-folded-2"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "paper-scroll-animation",
+      "frames": [
+        "paper-scroll-0",
+        "paper-scroll-1",
+        "paper-scroll-2"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "paper-slate-animation",
+      "frames": [
+        "paper-slate-0",
+        "paper-slate-1",
+        "paper-slate-2"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    }
+  ],
+  "aliases": {
+    "silas": "silas-idle-0",
+    "elara": "elara-idle-0",
+    "finn": "finn-idle-0",
+    "hazel": "hazel-idle-0",
+    "ada": "ada-idle-0",
+    "paper-folded": "paper-folded-0",
+    "paper-scroll": "paper-scroll-0",
+    "paper-slate": "paper-slate-0",
+    "candle-hull": "candle-hull-0",
+    "room-fire-0": "hearth-fire-0",
+    "room-fire-1": "hearth-fire-1"
+  },
+  "pendingSheets": [],
+  "specSource": "docs/art-requests.md",
+  "notes": [
+    "Source rectangles are measured, never fixed-grid.",
+    "Native texture rectangles preserve standing bases.",
+    "Path overlay orientation denotes the material-filled side or connecting direction, not the outward normal.",
+    "Source artwork, collisions, and game-state wiring are separate."
+  ]
+}

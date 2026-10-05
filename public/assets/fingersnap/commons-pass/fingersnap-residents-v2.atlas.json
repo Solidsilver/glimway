@@ -1,0 +1,211 @@
+{
+  "frames": {
+    "silas-idle-0": {
+      "frame": {
+        "x": 260,
+        "y": 38,
+        "w": 186,
+        "h": 283
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 186,
+        "h": 283
+      },
+      "sourceSize": {
+        "w": 186,
+        "h": 283
+      }
+    },
+    "silas-idle-1": {
+      "frame": {
+        "x": 579,
+        "y": 38,
+        "w": 186,
+        "h": 283
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 186,
+        "h": 283
+      },
+      "sourceSize": {
+        "w": 186,
+        "h": 283
+      }
+    },
+    "elara-idle-0": {
+      "frame": {
+        "x": 259,
+        "y": 332,
+        "w": 186,
+        "h": 316
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 186,
+        "h": 316
+      },
+      "sourceSize": {
+        "w": 186,
+        "h": 316
+      }
+    },
+    "elara-idle-1": {
+      "frame": {
+        "x": 578,
+        "y": 332,
+        "w": 187,
+        "h": 316
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 187,
+        "h": 316
+      },
+      "sourceSize": {
+        "w": 187,
+        "h": 316
+      }
+    },
+    "finn-idle-0": {
+      "frame": {
+        "x": 243,
+        "y": 661,
+        "w": 199,
+        "h": 298
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 298
+      },
+      "sourceSize": {
+        "w": 199,
+        "h": 298
+      }
+    },
+    "finn-idle-1": {
+      "frame": {
+        "x": 562,
+        "y": 661,
+        "w": 200,
+        "h": 298
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 200,
+        "h": 298
+      },
+      "sourceSize": {
+        "w": 200,
+        "h": 298
+      }
+    },
+    "hazel-idle-0": {
+      "frame": {
+        "x": 231,
+        "y": 975,
+        "w": 231,
+        "h": 313
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 231,
+        "h": 313
+      },
+      "sourceSize": {
+        "w": 231,
+        "h": 313
+      }
+    },
+    "hazel-idle-1": {
+      "frame": {
+        "x": 562,
+        "y": 975,
+        "w": 230,
+        "h": 313
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 230,
+        "h": 313
+      },
+      "sourceSize": {
+        "w": 230,
+        "h": 313
+      }
+    },
+    "ada-idle-0": {
+      "frame": {
+        "x": 271,
+        "y": 1303,
+        "w": 141,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 141,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 141,
+        "h": 221
+      }
+    },
+    "ada-idle-1": {
+      "frame": {
+        "x": 594,
+        "y": 1303,
+        "w": 141,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 141,
+        "h": 221
+      },
+      "sourceSize": {
+        "w": 141,
+        "h": 221
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-residents-v2.png",
+    "size": {
+      "w": 1024,
+      "h": 1536
+    }
+  }
+}

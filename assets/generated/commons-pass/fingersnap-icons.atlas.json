@@ -1,0 +1,351 @@
+{
+  "frames": {
+    "icon-timber": {
+      "frame": {
+        "x": 43,
+        "y": 67,
+        "w": 228,
+        "h": 205
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 205
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 205
+      }
+    },
+    "icon-stone": {
+      "frame": {
+        "x": 325,
+        "y": 86,
+        "w": 201,
+        "h": 181
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 181
+      },
+      "sourceSize": {
+        "w": 201,
+        "h": 181
+      }
+    },
+    "icon-fiber": {
+      "frame": {
+        "x": 584,
+        "y": 72,
+        "w": 240,
+        "h": 202
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 240,
+        "h": 202
+      },
+      "sourceSize": {
+        "w": 240,
+        "h": 202
+      }
+    },
+    "icon-amber": {
+      "frame": {
+        "x": 886,
+        "y": 86,
+        "w": 192,
+        "h": 178
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 178
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 178
+      }
+    },
+    "icon-whittled-fox": {
+      "frame": {
+        "x": 1159,
+        "y": 35,
+        "w": 183,
+        "h": 239
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 183,
+        "h": 239
+      },
+      "sourceSize": {
+        "w": 183,
+        "h": 239
+      }
+    },
+    "icon-beeswax-candle": {
+      "frame": {
+        "x": 76,
+        "y": 314,
+        "w": 165,
+        "h": 244
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 165,
+        "h": 244
+      },
+      "sourceSize": {
+        "w": 165,
+        "h": 244
+      }
+    },
+    "icon-river-glass-bead": {
+      "frame": {
+        "x": 351,
+        "y": 384,
+        "w": 145,
+        "h": 149
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 145,
+        "h": 149
+      },
+      "sourceSize": {
+        "w": 145,
+        "h": 149
+      }
+    },
+    "icon-spare-bootlace": {
+      "frame": {
+        "x": 595,
+        "y": 382,
+        "w": 222,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 222,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 222,
+        "h": 176
+      }
+    },
+    "icon-tin-whistle": {
+      "frame": {
+        "x": 884,
+        "y": 334,
+        "w": 196,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 196,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 196,
+        "h": 216
+      }
+    },
+    "icon-lamp-wick": {
+      "frame": {
+        "x": 1150,
+        "y": 368,
+        "w": 215,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 215,
+        "h": 188
+      },
+      "sourceSize": {
+        "w": 215,
+        "h": 188
+      }
+    },
+    "icon-oilcloth-wrap": {
+      "frame": {
+        "x": 36,
+        "y": 629,
+        "w": 244,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 190
+      },
+      "sourceSize": {
+        "w": 244,
+        "h": 190
+      }
+    },
+    "icon-wooden-peg": {
+      "frame": {
+        "x": 351,
+        "y": 608,
+        "w": 153,
+        "h": 210
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 210
+      },
+      "sourceSize": {
+        "w": 153,
+        "h": 210
+      }
+    },
+    "icon-emote-wave": {
+      "frame": {
+        "x": 583,
+        "y": 614,
+        "w": 233,
+        "h": 210
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 210
+      },
+      "sourceSize": {
+        "w": 233,
+        "h": 210
+      }
+    },
+    "icon-emote-nod": {
+      "frame": {
+        "x": 866,
+        "y": 614,
+        "w": 211,
+        "h": 210
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 211,
+        "h": 210
+      },
+      "sourceSize": {
+        "w": 211,
+        "h": 210
+      }
+    },
+    "icon-emote-cheer": {
+      "frame": {
+        "x": 1134,
+        "y": 593,
+        "w": 235,
+        "h": 230
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 235,
+        "h": 230
+      },
+      "sourceSize": {
+        "w": 235,
+        "h": 230
+      }
+    },
+    "icon-emote-thanks": {
+      "frame": {
+        "x": 36,
+        "y": 863,
+        "w": 238,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 238,
+        "h": 228
+      },
+      "sourceSize": {
+        "w": 238,
+        "h": 228
+      }
+    },
+    "icon-emote-lantern": {
+      "frame": {
+        "x": 352,
+        "y": 849,
+        "w": 144,
+        "h": 242
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 144,
+        "h": 242
+      },
+      "sourceSize": {
+        "w": 144,
+        "h": 242
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-icons.png",
+    "size": {
+      "w": 1402,
+      "h": 1122
+    }
+  }
+}

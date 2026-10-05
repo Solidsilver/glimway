@@ -1,0 +1,31 @@
+{
+  "frames": {
+    "interior-floor": {
+      "frame": {
+        "x": 307,
+        "y": 307,
+        "w": 640,
+        "h": 643
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 640,
+        "h": 643
+      },
+      "sourceSize": {
+        "w": 640,
+        "h": 643
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-plank-floor.png",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    }
+  }
+}

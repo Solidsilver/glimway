@@ -1,0 +1,151 @@
+{
+  "frames": {
+    "hearth-fire-0": {
+      "frame": {
+        "x": 70,
+        "y": 64,
+        "w": 322,
+        "h": 373
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 322,
+        "h": 373
+      },
+      "sourceSize": {
+        "w": 322,
+        "h": 373
+      }
+    },
+    "hearth-fire-1": {
+      "frame": {
+        "x": 524,
+        "y": 61,
+        "w": 306,
+        "h": 376
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 306,
+        "h": 376
+      },
+      "sourceSize": {
+        "w": 306,
+        "h": 376
+      }
+    },
+    "hearth-fire-2": {
+      "frame": {
+        "x": 971,
+        "y": 61,
+        "w": 284,
+        "h": 376
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 376
+      },
+      "sourceSize": {
+        "w": 284,
+        "h": 376
+      }
+    },
+    "hearth-fire-3": {
+      "frame": {
+        "x": 1404,
+        "y": 75,
+        "w": 306,
+        "h": 363
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 306,
+        "h": 363
+      },
+      "sourceSize": {
+        "w": 306,
+        "h": 363
+      }
+    },
+    "camp-flame-0": {
+      "frame": {
+        "x": 139,
+        "y": 590,
+        "w": 202,
+        "h": 240
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 240
+      },
+      "sourceSize": {
+        "w": 202,
+        "h": 240
+      }
+    },
+    "camp-flame-1": {
+      "frame": {
+        "x": 584,
+        "y": 571,
+        "w": 203,
+        "h": 259
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 203,
+        "h": 259
+      },
+      "sourceSize": {
+        "w": 203,
+        "h": 259
+      }
+    },
+    "camp-flame-2": {
+      "frame": {
+        "x": 1022,
+        "y": 589,
+        "w": 202,
+        "h": 241
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 241
+      },
+      "sourceSize": {
+        "w": 202,
+        "h": 241
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-fire.png",
+    "size": {
+      "w": 1774,
+      "h": 887
+    }
+  }
+}

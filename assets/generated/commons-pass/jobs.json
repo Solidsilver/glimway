@@ -1,0 +1,1823 @@
+[
+  {
+    "id": "residents",
+    "file": "fingersnap-residents-v2.png",
+    "columns": 2,
+    "rows": 5,
+    "frames": [
+      {
+        "key": "silas-idle-0",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "silas-idle-1",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "elara-idle-0",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "elara-idle-1",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "finn-idle-0",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "finn-idle-1",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "hazel-idle-0",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "hazel-idle-1",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "ada-idle-0",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      },
+      {
+        "key": "ada-idle-1",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "residents"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 2 columns by 5 rows in equal cells. Read cells left-to-right, top-to-bottom. 10 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Ten front-facing full-body poses. Each row same person in TWO very subtle breathing poses, feet planted and face/costume unchanged; second shoulders slightly raised. Row1 Silas, retired carter age64: flat cap over grey hair, grey moustache, tired kind eyes, faded blue shirt under leather apron with carpenter pencil, gentle lean taking weight off HIS LEFT knee (viewer right). Row2 Elara Quill age30s: tied-back dark hair with twine, practical salt-stained grey-green oilskin coat, rolled sleeves, reed-brown satchel of jars/string, pencil behind ear, curious sharp face. Row3 Finn Tolley age36: sandy hair cap pushed back, floury apron and forearms, anxious slight hunch, counting fingers. Row4 Hazel baker: round warm floury woman, russet hair, basket of twisted loaves. Row5 Ada age88: small upright elderly woman grey hair, shawl, holds small warm window lamp. All designed to read in 16x16 native pixels; same scale across adults, Ada smaller. No large carried objects obscuring silhouettes.",
+    "refinement": "Identity-preserve edit: five rows and two columns, same characters and costumes. Each pair front-facing with fixed feet, head angle, arms, and held props; second frame shoulders/chest subtly raised only. Ada at least 80 percent Silas height. Dark warm brown outlines, chunky native 16px readability, true alpha, no halos or labels."
+  },
+  {
+    "id": "homes",
+    "file": "fingersnap-homes.png",
+    "columns": 2,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "cottage",
+        "width": 96,
+        "height": 92,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "cottages"
+      },
+      {
+        "key": "cottage-silas",
+        "width": 96,
+        "height": 92,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "cottages"
+      },
+      {
+        "key": "cottage-workshop",
+        "width": 96,
+        "height": 92,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "cottages"
+      },
+      {
+        "key": "workshop-addon",
+        "width": 32,
+        "height": 60,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 2 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 4 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Four elements. Cell1 timber cottage: slate roof in mossy courses, plank walls, exactly FOUR iron-oak skid ends below sill like a grounded barge, warm windows with flowerboxes, doorlamp, tiny carved fox above door with LONG EAR ON VIEWER LEFT. Cell2 same cottage build and proportions but russet shingle roof and sawdust on step; same left-long-ear fox. Cell3 same slate cottage with lean-to eave along RIGHT side sheltering bench/toolrack, keeping complete building same scale. Cell4 ONLY detached right-hand lean-to eave, small workbench, tool rack, vertical supports, NO cottage/background. It is an overlay add-on, transparent to its left. Matching slate/moss roof, amber windows, ochre wood, restrained 96x92-native readable shapes. Not an isometric house."
+  },
+  {
+    "id": "interior-wall",
+    "file": "fingersnap-interior-wall.png",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "interior-back-wall",
+        "width": 224,
+        "height": 48,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 1 columns by 1 rows in equal cells. Read cells left-to-right, top-to-bottom. 1 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. ONE very wide low timber-framed limewash INTERIOR BACK WALL, roughly 4.7 times wider than tall, centered in landscape canvas with transparent space outside wall. Window with small sill on left; shelf of jars near middle; quarried-stone hearth on right, fire cavity EMPTY dark with NO fire so flame frames layer over it; carved fox on mantel with long ear VIEWER LEFT. Straight wall elevation consistent with top-down game's back wall, not an entire room, no floor or side walls. Readable224x48native. No text."
+  },
+  {
+    "id": "fire",
+    "file": "fingersnap-fire.png",
+    "columns": 4,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "hearth-fire-0",
+        "width": 24,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hearth-flame"
+      },
+      {
+        "key": "hearth-fire-1",
+        "width": 24,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hearth-flame"
+      },
+      {
+        "key": "hearth-fire-2",
+        "width": 24,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hearth-flame"
+      },
+      {
+        "key": "hearth-fire-3",
+        "width": 24,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hearth-flame"
+      },
+      {
+        "key": "camp-flame-0",
+        "width": 8,
+        "height": 9,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "camp-flame"
+      },
+      {
+        "key": "camp-flame-1",
+        "width": 8,
+        "height": 9,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "camp-flame"
+      },
+      {
+        "key": "camp-flame-2",
+        "width": 8,
+        "height": 9,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "camp-flame"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 4 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 7 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Seven individual isolated flames, no hearth/firewood/ground. Row1 FOUR sequential fireplace flame poses, warm orange amber ivory pixel tongues dancing subtly with fixed base and same scale. Row2 first THREE cells sequential smaller campfire flame poses, fixed base. Last cell empty. No haze, sparks outside cells, smoke or glow halos. Only solid colored flame pixels, transparency in gaps."
+  },
+  {
+    "id": "camp-home",
+    "file": "fingersnap-camp-home.png",
+    "columns": 3,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "campsite-0",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "campsites"
+      },
+      {
+        "key": "campsite-1",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "campsites"
+      },
+      {
+        "key": "campsite-2",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "campsites"
+      },
+      {
+        "key": "camp-windbreak",
+        "width": 40,
+        "height": 23,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "camp-cot",
+        "width": 31,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "camp-ring",
+        "width": 22,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 6 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Row1 THREE nearly identical full campsite stages: small canvas windbreak, cot on wooden blocks, stone fire ring; identical equipment and geometry across frames, only flame flickers for three-frame animation. Whole compact campsite reads32x24native. Row2 isolated parts: cell1 canvas windbreak only; cell2 cot on wood blocks only; cell3 stone fire ring with dark interior and NO fire. No dirt backdrop or shadow. Warm canvas oatcream russet wood grey stones."
+  },
+  {
+    "id": "furniture",
+    "file": "fingersnap-furniture.png",
+    "columns": 4,
+    "rows": 5,
+    "frames": [
+      {
+        "key": "wooden-stool",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "reading-chair",
+        "width": 16,
+        "height": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "braided-rug",
+        "width": 32,
+        "height": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "iron-lantern",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "oak-table",
+        "width": 32,
+        "height": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "potted-fern",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "bookshelf",
+        "width": 32,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "wash-basin",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "stone-hearth",
+        "width": 32,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "carved-bed",
+        "width": 32,
+        "height": 32,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "woven-basket",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "display-stand",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "tool-rack",
+        "width": 32,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "amber-sconce",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "workshop-chest",
+        "width": 28,
+        "height": 22,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "workshop-bench",
+        "width": 44,
+        "height": 26,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "mailbox",
+        "width": 19,
+        "height": 22,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 4 columns by 5 rows in equal cells. Read cells left-to-right, top-to-bottom. 17 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. 17 objects in exact order: row1 three-legged uneven but balanced wooden stool; frayed overstuffed armchair; oval thick braided wool rug viewed from above; small lit indoor iron lantern. Row2 scrubbed square oak table with tea rings; lush clay-pot fern; short field-journal bookshelf; enamel basin on stand. Row3 small stone hearth with embers; carved bed with patchwork quilt; woven fiber basket; little stand holding whittled fox. Row4 hand-tool wall rack; amber wall sconce; iron-banded storage chest; crafting bench with vise and offcuts. Row5 cell1 post mailbox with little raised flag; other3EMPTY. Flat large colorclusters no tiny decoration. Objects independently framed, warm cozy, ground-facing silhouettes. Rugs full oval isolated, transparent outside."
+  },
+  {
+    "id": "commons",
+    "file": "fingersnap-commons.png",
+    "columns": 3,
+    "rows": 3,
+    "frames": [
+      {
+        "key": "hame",
+        "width": 17,
+        "height": 22,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "gatepost",
+        "width": 14,
+        "height": 44,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "gate-leaf",
+        "width": 42,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "plot-sign",
+        "width": 40,
+        "height": 22,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "commons-well",
+        "width": 32,
+        "height": 42,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "notice-board",
+        "width": 24,
+        "height": 30,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "commons-gateway",
+        "width": 64,
+        "height": 48,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 3 rows in equal cells. Read cells left-to-right, top-to-bottom. 7 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Seven sprites ordered cells:1 polished empty HORSE COLLAR/hame: padded leather oval horseshoe harness with two brass capped rigid arms, NOT a horseshoe or necklace;2 timber gateway post upright;3 horizontal timber crossbar gate leaf;4 blank wooden plot name board on post NO LETTERS;5 stone carters well with wooden roof and hanging bucket;6 roofed noticeboard with pinned blank papers;7 complete Commons gateway with paired posts crossbar and same polished empty horse collar hanging prominently in center. Last2 cells empty. Readable simple 16pxworldscale. No terrain outside objects."
+  },
+  {
+    "id": "boundaries",
+    "file": "fingersnap-boundaries.png",
+    "columns": 4,
+    "rows": 3,
+    "frames": [
+      {
+        "key": "hedge-straight-h",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-straight-v",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-corner-ne",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-corner-nw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-end-e",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-end-w",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-corner-se",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "hedge-corner-sw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "fence-straight-h",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "fence-straight-v",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "fence-corner",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      },
+      {
+        "key": "fence-gateway",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 4 columns by 3 rows in equal cells. Read cells left-to-right, top-to-bottom. 12 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Twelve 16x16 tile modules. Row1: hedge straight horizontal; hedge straight vertical; L hedge joining NORTH and EAST; L hedge joining NORTH and WEST. Row2: hedge ending east with flat open connection west; hedge ending west with connection east; L hedge joining SOUTH and EAST; L hedge joining SOUTH and WEST. Row3: post-and-rail fence horizontal; fence vertical; L fence corner; tiny fence gateway with open center. Green clipped leafy hedge on brown woody core, warm russet oak fence. Every module drawn in conceptual square with consistent connection thickness and color. Cells include transparent margins OUTSIDE conceptual tile only; connecting arms reach conceptual tile boundary. Absolutely NO ground/grass square. Crisp simple. No labels."
+  },
+  {
+    "id": "yard",
+    "file": "fingersnap-yard.png",
+    "columns": 3,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "sawhorse",
+        "width": 18,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "timber-stack",
+        "width": 31,
+        "height": 20,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "skids",
+        "width": 86,
+        "height": 40,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "firebox",
+        "width": 16,
+        "height": 18,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "toolbox",
+        "width": 16,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "woodpile",
+        "width": 16,
+        "height": 14,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 6 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Six separate yard props row1: wooden sawhorse; neatly stacked squared timber beams; EXACTLY FOUR long parallel iron-oak skid timbers lying flat, with a small irregular dirt footprint directly underneath. Row2: iron firebox with warm ember slit; simple carpenter toolbox; stacked split firewood pile. Rough cared-for materials, sawdust minimal color clusters, perspective topdownthreequarter, not isometric. Skids wide horizontal asset, others small. No extraneous terrain except small dirt footprint under4skids."
+  },
+  {
+    "id": "path-edges",
+    "file": "fingersnap-path-edges.png",
+    "columns": 6,
+    "rows": 4,
+    "frames": [
+      {
+        "key": "path-dirt-edge-n",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-edge-e",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-edge-s",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-edge-w",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-end-n",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-end-e",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-corner-ne",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-corner-nw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-corner-se",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-corner-sw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-end-s",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-dirt-end-w",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-edge-n",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-edge-e",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-edge-s",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-edge-w",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-end-n",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-end-e",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-corner-ne",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-corner-nw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-corner-se",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-corner-sw",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-end-s",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      },
+      {
+        "key": "path-cobble-end-w",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "transition"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 6 columns by 4 rows in equal cells. Read cells left-to-right, top-to-bottom. 24 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. 24 ground TRANSITION OVERLAYS, orthographic straight top-down, each a conceptual square16x16 tile. NO baked-in grass. Amber dirt or warm golden cobble on one part; other part genuinely transparent for underlying grass. First12cells are DIRT: cells1-4 fill upper/right/lower/left half respectively, ragged material edge near center; cells5-8 material outer-corner quarter at northeast,northwest,southeast,southwest respectively;cells9-12 short rounded path END extending from north,east,south,west boundary to center respectively. Next12cells repeat EXACT same geometries with small golden COBBLES. Keep common thickness and edgecolors within each material so connections match. Large transparent gutter between conceptual squares, each conceptual square same centered size. No drop shadow. Simple coarse pixel clusters, no perspective, outlines ONLY along transition not artificial full square border."
+  },
+  {
+    "id": "village-buildings",
+    "file": "fingersnap-village-buildings.png",
+    "columns": 3,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "hearthwick-library",
+        "width": 80,
+        "height": 64,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "stall-a",
+        "width": 40,
+        "height": 36,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "stall-b",
+        "width": 40,
+        "height": 36,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "stall-c",
+        "width": 40,
+        "height": 36,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "well-canopy",
+        "width": 30,
+        "height": 28,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "mended-bridge",
+        "width": 48,
+        "height": 26,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 6 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Six separate structures: row1cell1 Hearthwick Library, 5tile-wide stone-and-timber reading room with open-book sign over warm door, cozy windows, no lettering;cell2 market stall russet/cream striped awning with loaves and tiny bunting;cell3 market stall teal/cream awning with jars/bunting. Row2cell1 market stall amber/cream awning with produce/bunting;cell2 slate-roof canopy on two oak posts, NO well below so overlay fits villagewell;cell3 mended north bridge, horizontal oakplanks with oakrails and stone abutments, no waterbackground. Topdownthreequarter frontdoor visible, not isometric. Complete structures no cropping."
+  },
+  {
+    "id": "festivals",
+    "file": "fingersnap-festivals.png",
+    "columns": 3,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "candle-hull-0",
+        "width": 10,
+        "height": 10,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hulls"
+      },
+      {
+        "key": "candle-hull-1",
+        "width": 10,
+        "height": 10,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hulls"
+      },
+      {
+        "key": "candle-hull-2",
+        "width": 10,
+        "height": 10,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hulls"
+      },
+      {
+        "key": "window-lamp-glow",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          0.5
+        ],
+        "fit": "cell",
+        "role": "glow"
+      },
+      {
+        "key": "bunting",
+        "width": 64,
+        "height": 10,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "library-sign",
+        "width": 16,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 6 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Six isolated festival sprites: row1 THREE walnut-shell boat candle hulls, tiny leaf sails, small candle flames, subtle sail/boat variants same tiny scale, simple read10nativepixels. Row2cell1 WINDOW LAMP GLOW OVERLAY ONLY: warm amber/ivory pixel-block radial/rectangular light centered, translucent alpha fading through2-3 discrete pixel bands, no window building or frame;cell2 sagging string of russet teal amber cream pennant bunting, no poles;cell3 wooden hanging sign with clear open book symbol, no lettering. NO halos outside boat sprites. Transparent around all, lightoverlay intentionally translucent."
+  },
+  {
+    "id": "papers",
+    "file": "fingersnap-papers.png",
+    "columns": 3,
+    "rows": 3,
+    "frames": [
+      {
+        "key": "paper-folded-0",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-folded"
+      },
+      {
+        "key": "paper-folded-1",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-folded"
+      },
+      {
+        "key": "paper-folded-2",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-folded"
+      },
+      {
+        "key": "paper-scroll-0",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-scroll"
+      },
+      {
+        "key": "paper-scroll-1",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-scroll"
+      },
+      {
+        "key": "paper-scroll-2",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-scroll"
+      },
+      {
+        "key": "paper-slate-0",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-slate"
+      },
+      {
+        "key": "paper-slate-1",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-slate"
+      },
+      {
+        "key": "paper-slate-2",
+        "width": 12,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "paper-slate"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 3 rows in equal cells. Read cells left-to-right, top-to-bottom. 9 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Nine pickup sprites: row1 same folded parchment page in3 sequential glint stages;row2 same tied rolledscroll with russetstring in3glintstages;row3 same small wooden-framed child's dark slate in3glintstages. Object unchanged within row, glint tiny gold2pixel spark appears near upperright in middleframe, disappears last. Same ground baseline and scale within eachrow, designedread12x12native. Blank page texture only no legible writing. Very simple coarse shapes, no floor shadows, no halo."
+  },
+  {
+    "id": "wilds-nature",
+    "file": "fingersnap-wilds-nature.png",
+    "columns": 3,
+    "rows": 3,
+    "frames": [
+      {
+        "key": "turncaps-east",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "cairn",
+        "width": 16,
+        "height": 20,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "cairn-white-stones",
+        "width": 16,
+        "height": 20,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "iron-oak-stump",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "dead-birch-turncaps",
+        "width": 24,
+        "height": 40,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "fallen-log",
+        "width": 32,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "mossy-boulder",
+        "width": 24,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "drift-stone",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "reed-pool",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 3 rows in equal cells. Read cells left-to-right, top-to-bottom. 9 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Nine Wilds props:row1 russet turncap mushroom cluster leaning EAST/right;small stacked stone cairn;matching cairn with THREE WHITE RIVER STONES prominent. Row2 tight concentric-ring iron-oak stump viewed above;dead whitebirch snag with turncaps attached;fallen mossy log. Row3 mossyboulder;rounded pale driftstone;small irregular teal reedpool with rim of reeds and stones, transparent OUTSIDE pool. Palette deep teal moss mutedwhite grey reedbrown amber. Cozy mysterious not horror. No terrainunder objects except water containedwithinpool."
+  },
+  {
+    "id": "resource-nodes",
+    "file": "fingersnap-resource-nodes.png",
+    "columns": 4,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "resource-timber-available",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-timber"
+      },
+      {
+        "key": "resource-timber-depleted",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-timber"
+      },
+      {
+        "key": "resource-stone-available",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-stone"
+      },
+      {
+        "key": "resource-stone-depleted",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-stone"
+      },
+      {
+        "key": "resource-fiber-available",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-fiber"
+      },
+      {
+        "key": "resource-fiber-depleted",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-fiber"
+      },
+      {
+        "key": "resource-amber-available",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-amber"
+      },
+      {
+        "key": "resource-amber-depleted",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "resource-amber"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 4 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 8 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Eight resource sprites arranged pairs:row1cells1/2 SAME fallen timber trunk available substantialwood, depleted sawnlowremnant;cells3/4 SAME stone outcrop availablechunky, depleted lowstonechips. Row2cells1/2 SAME fiber reed/bramble clump availablelush, depleted cutshortstalks;cells3/4 SAME amber sap-weeping stump availablegoldensapnodules, depleted stumpwithdrysapscar. Both states each pair same ground footprint and position, depleted no glow. Coarse32x24readability, meaningful silhouettes, standalonealpha no background, no labels."
+  },
+  {
+    "id": "wilds-camp",
+    "file": "fingersnap-wilds-camp.png",
+    "columns": 3,
+    "rows": 2,
+    "frames": [
+      {
+        "key": "wilds-tent",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "wilds-fire-ring",
+        "width": 16,
+        "height": 12,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "wilds-pack",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ]
+      },
+      {
+        "key": "fallen-hero-lantern-lit",
+        "width": 12,
+        "height": 18,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hero-lantern"
+      },
+      {
+        "key": "fallen-hero-lantern-unlit",
+        "width": 12,
+        "height": 18,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "hero-lantern"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 2 rows in equal cells. Read cells left-to-right, top-to-bottom. 5 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Five props:row1 small worn travel tent;COLD stone fire ring noflame;scattered travel backpack with rolledblanket. Row2 first2cells IDENTICAL old fallen-hero handheld lantern, litamberglass first and unlitdarkglass second, exactlysame silhouette andsize;thirdempty. No body, ghost orcharacter, no scary imagery. Alpha noground. Simplecoarsepixelreading16worldtile."
+  },
+  {
+    "id": "echoes",
+    "file": "fingersnap-echoes.png",
+    "columns": 3,
+    "rows": 4,
+    "frames": [
+      {
+        "key": "echo-hollis-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-hollis"
+      },
+      {
+        "key": "echo-tam-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-tam"
+      },
+      {
+        "key": "echo-bett-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-bett"
+      },
+      {
+        "key": "echo-dorrit-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-dorrit"
+      },
+      {
+        "key": "echo-joss-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-joss"
+      },
+      {
+        "key": "echo-nan-solid",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "scaleGroup": "echo-nan"
+      },
+      {
+        "key": "echo-hollis-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-hollis"
+      },
+      {
+        "key": "echo-tam-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-tam"
+      },
+      {
+        "key": "echo-bett-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-bett"
+      },
+      {
+        "key": "echo-dorrit-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-dorrit"
+      },
+      {
+        "key": "echo-joss-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-joss"
+      },
+      {
+        "key": "echo-nan-faint",
+        "width": 32,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ],
+        "alphaMultiplier": 0.45,
+        "scaleGroup": "echo-nan"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 3 columns by 4 rows in equal cells. Read cells left-to-right, top-to-bottom. 12 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Twelve props. FIRST SIX cells normal tangible objects, next SIX EXACT same respectiveobjects in paler slightlytransparent echo variants, notghostpeople. Orderwithin6:1 Hollis kettle on cold stones beside half-whittledfox;2 Tam wooden yokepeg;3 Bett small wornflatstone singer'sstanding spot with droppedkerchief;4 Dorrit leaning surveyor stake and chalk-marked plank;5 Joss dented tinwhistle;6 Nan long lamplighterpole beside unlitlamp. Paleechos retainall shapes, colorlighterlesssaturated. Foxwhittling long ear VIEWER RIGHT. Every groupinsideowncellwithgutter, poles fullyvisible choose diagonals ifneeded, no terrain beyond smallstandingstone/coldstones, no text, no people."
+  },
+  {
+    "id": "icons",
+    "file": "fingersnap-icons.png",
+    "columns": 5,
+    "rows": 4,
+    "frames": [
+      {
+        "key": "icon-timber",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-stone",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-fiber",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-amber",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-whittled-fox",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-beeswax-candle",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-river-glass-bead",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-spare-bootlace",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-tin-whistle",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-lamp-wick",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-oilcloth-wrap",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-wooden-peg",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-emote-wave",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-emote-nod",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-emote-cheer",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-emote-thanks",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "key": "icon-emote-lantern",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          0.5
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 5 columns by 4 rows in equal cells. Read cells left-to-right, top-to-bottom. 17 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. 17 inventory/emoteicons ordered left-to-righttop-to-bottom:timberbeam;stonechunk;bundlereedfiber;amberchunk;whittledfox with LONG EAR VIEWER RIGHT (Hollis carving);beeswaxcandle with RED YARN;riverglassbead;sparebootlace;dentedtinwhistle;lampwick;foldedoilclothwrap;woodenpeg;wavinghand;simplefriendlyface nodding;raisedhands cheer;handsheldheartgesture thanks;smalllitlantern. Last3cells empty. Singleveryreadablesilhouetteeach16x16native, transparentbackground no circularbadges. Differentiate oilclothfrompage, bootlacefromwick. No labels."
+  },
+  {
+    "id": "plank-floor",
+    "file": "fingersnap-plank-floor.png",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "interior-floor",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0,
+          0
+        ],
+        "fit": "cell",
+        "role": "tile"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 1 columns by 1 rows in equal cells. Read cells left-to-right, top-to-bottom. 1 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. ONE fully opaque warm horizontal oak plank FLOOR TEXTURE square centered with large transparentgutteroutside. Flat orthographic topdown, notperspective. Interior texture noobviouscenterfeature, minimalgrain, regular coarsehorizontal courses. Opposite conceptualsquare edges match for seamless repetition; no artificialoutlineborder orshadow. Onlyfloor16x16native, no otherobjects."
+  },
+  {
+    "id": "warden-settled",
+    "file": "fingersnap-warden-settled.png",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "guardian-settled",
+        "width": 24,
+        "height": 24,
+        "origin": [
+          0.5,
+          1
+        ]
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: original low resolution RPG sprites for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine alpha transparent background, isolated fully visible objects, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint facing viewer, NOT isometric. STRICT ultra simple chunky pixel style designed for tiny native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit upper left, NO gradients, antialiasing, painterly texture, tiny details, drop shadows, ambient halos, text or watermark. Important: this is actual game art, not a presentation board. Canvas layout EXACT 1 columns by 1 rows in equal cells. Read cells left-to-right, top-to-bottom. 1 occupied cells; remaining cells empty transparent. Every object entirely within cell, separated from neighbors. Foot/base anchored at 85% of cell height. Input image is STYLE AND IDENTITY REFERENCE ONLY for stoneguardian. Create ONE NEW resting pose of same mossy purple-grey squat quadruped stonewarden with smallhorns/cyaneye identity. It sits as a SEATED HEAP of smooth drift-stone over a visible dark iron-oak frame, frontlimbs lowered calmly, headbowed, small AMBER HEART-LAMP in chest glowing low likecoal. Alive and resting, NOT broken, no scattered rubble, no cracks or dead darkeyes. Same24x24nativelevel chunkyshape, frontthreequarterviewfacingright. Fullbody alpha cleangutter nohalo. Match existing stone design but warm settled expression.",
+    "reference": "/path/to/glimway"
+  }
+]

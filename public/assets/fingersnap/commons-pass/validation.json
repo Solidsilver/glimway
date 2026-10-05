@@ -1,0 +1,269 @@
+{
+  "status": "passed",
+  "sheets": 21,
+  "frames": 173,
+  "animations": 11,
+  "checks": [
+    "RGBA transparent gutters",
+    "source dimensions and rectangles",
+    "destination canvas bounds",
+    "resident foot baselines",
+    "unique frame keys",
+    "animation and alias references"
+  ],
+  "sources": [
+    {
+      "file": "fingersnap-residents-v2.png",
+      "sha256": "c2573fe5488f18d0b9b3241ac8bc9b41dae4bff23f8c6a3e65de7b74bf8a7adf",
+      "size": [
+        1024,
+        1536
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-homes.png",
+      "sha256": "a0e3b009826a744debcdeca3daae78d571c91e40f5e27537e2088fffa6ce9ca7",
+      "size": [
+        1312,
+        1199
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-interior-wall.png",
+      "sha256": "9c11cac395f831f570a5d24945f86686f4490d8d030792fd8036df49adb20648",
+      "size": [
+        1916,
+        821
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-fire.png",
+      "sha256": "04bd16e7b9349d6ea9e6ff351e3227d8dad928332b9c0ebdf6f1af65952a2957",
+      "size": [
+        1774,
+        887
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-camp-home.png",
+      "sha256": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-furniture.png",
+      "sha256": "22f4cf71d9c397c5a504b3b272faa5073c05f88a34a50805498b837007e60921",
+      "size": [
+        1122,
+        1402
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-commons.png",
+      "sha256": "9fe2d2cc6bde7efb64f719d8bcc5644c8a11036be323e1591eade782147572ff",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-boundaries.png",
+      "sha256": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
+      "size": [
+        1448,
+        1086
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-yard.png",
+      "sha256": "63ba0fc00b99625f707b5107f98138a7ef9618468f183e74aff7dbc90e7f3b53",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-path-edges.png",
+      "sha256": "14fbf6d422f0164fe43a64cf9203832e601e186299e1302092b74fc4834cdba0",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-village-buildings.png",
+      "sha256": "65662c1180644b603f97b30d3f9cdae92432e40a48164e9e7b918f5ad2aa957b",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-festivals.png",
+      "sha256": "23ede32a4879cef7af8e1e4645c3900db741e47f383dcbeaf595271af1c89f7b",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-papers.png",
+      "sha256": "f3e9598f34c44be92c5a5de8b75bb1ad2afdf2b6076aa4f2017142310d49261c",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-wilds-nature.png",
+      "sha256": "5aa84a4244c8f6ef0a7b3180253b7caf0b6aab4bd7a5123866c836a01024f462",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-resource-nodes.png",
+      "sha256": "f9b3ada08d3d10cf8a5a3af14cb12a8c77733b84dd6bf7e4aa98409c989e5384",
+      "size": [
+        1448,
+        1086
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-wilds-camp.png",
+      "sha256": "c91a3214d593ce105a21f28b486cde09532cd496228d5196650edecaab8a18a6",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-echoes.png",
+      "sha256": "f5ba9a91af2d1c109ac72ca8d725d385c0b92c789f9567fca89fd454e51606aa",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-icons.png",
+      "sha256": "3fb5f90337dc8e8536c11d33c4b58dbeab75152c52c8c86216d99e6e3649768c",
+      "size": [
+        1402,
+        1122
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-plank-floor.png",
+      "sha256": "a55c67f04960ea0c9cb56641507f997e1361ed4c57b34c676681cfd8e951c33d",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "fingersnap-warden-settled.png",
+      "sha256": "22c7e424db559b91117192e1fa93fe517955cb6aa99b54060e30df2c5f67b637",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "fingersnap-portraits.png",
+      "sha256": "29f4a3e14ea9400042e348eeda25110eaff61269fe4dea5f5fe62db0c07dd88f",
+      "size": [
+        1536,
+        1024
+      ],
+      "alpha": [
+        0,
+        254
+      ]
+    }
+  ],
+  "inGameWiringTested": false
+}

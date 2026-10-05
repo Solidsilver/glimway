@@ -1,0 +1,31 @@
+{
+  "frames": {
+    "interior-back-wall": {
+      "frame": {
+        "x": 63,
+        "y": 198,
+        "w": 1791,
+        "h": 403
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1791,
+        "h": 403
+      },
+      "sourceSize": {
+        "w": 1791,
+        "h": 403
+      }
+    }
+  },
+  "meta": {
+    "image": "fingersnap-interior-wall.png",
+    "size": {
+      "w": 1916,
+      "h": 821
+    }
+  }
+}
