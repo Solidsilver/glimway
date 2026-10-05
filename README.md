@@ -196,8 +196,8 @@ header identifies the tool's creator, never you.
 
 **Health.** Importing replaces the demo vitals once; later syncs credit
 genuine external HP/MP changes **exactly once** (damage plus an unchanged
-profile never refills), and only in Hearthwick. Imported vitals get no
-passive healing (lit road lanterns give them mana only). Defeat wakes you at
+profile never refills), and only somewhere safe: Hearthwick, or the Commons
+(your cottage included). Imported vitals get no passive healing (lit road lanterns give them mana only). Defeat wakes you at
 capped vitals (zero stays zero) and locks expeditions until a genuine heal on
 Habitica or a warm rest paid with embers earned from XP. See [docs/import-contract.md](docs/import-contract.md).
 

@@ -61,6 +61,15 @@ export const guideTabs: GuideTab[] = [
 /** Shown above the steps of any tab flagged `unverified: true`. */
 export const unverifiedNote = 'These steps may differ in your app version. If you can’t find them, use the website.'
 
+/** Where syncing can happen (Hearthwick or the Commons, src/lib/habitica/sync.ts SAFE_AREAS). */
+export const syncCopy = {
+  goSafe: 'Head back to Hearthwick or the Commons first — syncing only happens somewhere safe.',
+  midSync: 'Something happened mid-sync. Try again from a quiet spot in Hearthwick or the Commons.',
+  unsafeUnchanged: 'Syncing only works in Hearthwick or the Commons. Your save is unchanged.',
+  unsafeNothing: 'Syncing only works in Hearthwick or the Commons. Nothing changed.',
+  sampleUnsafe: 'Sample heroes follow the same rules: head back to Hearthwick or the Commons first.'
+}
+
 export const guideCopy = {
   title: 'Play as your Habitica hero',
   step1: 'Find your User ID and API Token',

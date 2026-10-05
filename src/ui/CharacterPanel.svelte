@@ -88,7 +88,7 @@
         <span class="count">{ui.stats.embers}</span>
         <span class="what">
           {#if profile}
-            Every {XP_PER_EMBER} XP you earn on Habitica becomes an ember when you sync in Hearthwick.
+            Every {XP_PER_EMBER} XP you earn on Habitica becomes an ember when you sync in Hearthwick or the Commons.
           {:else}
             Connect Habitica in the Menu and every {XP_PER_EMBER} XP you earn there becomes an ember.
           {/if}

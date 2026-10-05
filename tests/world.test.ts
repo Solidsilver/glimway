@@ -5,11 +5,13 @@ import {
   dialogueFor,
   journalEntries,
   locations,
+  QUEST_STEPS,
 } from '../src/content/world.ts';
 import {
   advanceQuest,
   createNewGame,
   QUEST_STAGES,
+  questObjective,
   validateSave,
   type QuestStage,
 } from '../src/lib/state.ts';
@@ -203,4 +205,16 @@ test('the warden is settled, not slain, in every story beat', () => {
   ].join('\n');
   assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
   assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
+});
+
+test('the journal checklist follows the objectives: a rubbing, then settling the warden', () => {
+  const step = (stage: QuestStage) => QUEST_STEPS.find((s) => s.stage === stage)!.label;
+  // One step per stage before the ending, in story order.
+  assert.deepEqual(QUEST_STEPS.map((s) => s.stage), QUEST_STAGES.slice(0, -1));
+  assert.equal(step('accepted'), 'Take a rubbing of the route stone');
+  assert.match(questObjective('accepted'), /take a rubbing of the route stone/);
+  assert.equal(step('clue-found'), 'Settle the stone warden');
+  assert.match(questObjective('clue-found'), /^Settle the stone warden/);
+  assert.match(questObjective('guardian-defeated'), new RegExp(`^${step('guardian-defeated')}`));
+  for (const s of QUEST_STEPS) assert.doesNotMatch(s.label, /\b(face|fight|defeat|slay|kill)\b/i, s.label);
 });

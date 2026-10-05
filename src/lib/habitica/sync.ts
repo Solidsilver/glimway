@@ -14,7 +14,7 @@ import type {
  * approved health policy 2026-10-03).
  *
  * Pure logic only — no network, no Habitica writes, ever. Sync is explicit,
- * user-triggered and village-only. The imported profile in the save is the
+ * user-triggered and only in a safe area (Hearthwick or the Commons). The imported profile in the save is the
  * baseline that makes external healing creditable exactly once; a rejected
  * sync leaves the ENTIRE save (including that baseline) unchanged.
  */
@@ -49,16 +49,26 @@ export class SyncRejectedError extends Error {
     super(
       reason === 'account-switch'
         ? 'This save is tied to a different Habitica account. Start a new journey to import another account.'
-        : 'Sync only applies in the village (safe boundary). The save is unchanged.',
+        : 'Sync only applies in Hearthwick or the Commons (safe areas). The save is unchanged.',
     );
     this.name = 'SyncRejectedError';
     this.reason = reason;
   }
 }
 
-/** The only safe boundary in the demo: Hearthwick village. */
+/**
+ * Safe areas, where syncs (and rests) may happen: Hearthwick village and
+ * Hearthwick Commons. Matches the server's `rules.SafeAreas`. A cottage is
+ * part of the Commons (the save keeps saying `commons` inside one).
+ */
+export const SAFE_AREAS: readonly string[] = ['village', 'commons'];
+
+export function isSafeArea(area: string): boolean {
+  return SAFE_AREAS.includes(area);
+}
+
 export function isSafeBoundary(state: GameState): boolean {
-  return ['village', 'commons'].includes(state.area);
+  return isSafeArea(state.area);
 }
 
 /**
@@ -107,8 +117,9 @@ export function applyImportedProfile(current: GameState, profile: HabiticaProfil
  * Explicit user-triggered sync against a freshly fetched profile.
  *
  * Rules:
- * - Village only. The caller cannot override this: opts.atSafeBoundary may
- *   only further restrict, never grant a non-village sync. Outside the safe
+ * - Safe areas only (Hearthwick or the Commons). The caller cannot override
+ *   this: opts.atSafeBoundary may only further restrict, never grant a sync
+ *   elsewhere. Outside the safe
  *   boundary the ENTIRE save is returned unchanged — baseline changes are not
  *   consumed (they credit later).
  * - Account id switches are rejected: another account needs a new journey.
