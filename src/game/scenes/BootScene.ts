@@ -5,6 +5,7 @@ import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../r
 import { generateCommonsArt, generateDecorationArt } from '../commons-art'
 import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
 import { installCommonsPass } from '../commons-pass-install'
+import { createItemsPass, installItemsPass, preloadItemsPass } from '../items-pass'
 import { preloadPacked } from '../packed'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
@@ -30,6 +31,7 @@ export class BootScene extends Phaser.Scene {
     preloadFingersnapExpansion(this)
     preloadRuntimeArt(this)
     preloadCommonsPass(this)
+    preloadItemsPass(this)
     preloadPacked(this)
   }
 
@@ -55,6 +57,11 @@ export class BootScene extends Phaser.Scene {
     // world sprite is created.
     createRuntimeArt(this)
     installRuntimeAliases(this, { replaceExisting: true })
+
+    // Native items-pass textures, mill animations, and mill art replacement
+    createItemsPass(this)
+    installItemsPass(this)
+
     this.scene.start('World')
   }
 }

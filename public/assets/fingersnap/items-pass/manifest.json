@@ -1,0 +1,5724 @@
+{
+  "version": 1,
+  "baseUrl": "/assets/fingersnap/items-pass/",
+  "sources": [
+    {
+      "key": "items-tools-1",
+      "file": "fingersnap-tools-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-tools-2",
+      "file": "fingersnap-tools-2-v2.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-supplies-1",
+      "file": "fingersnap-supplies-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-supplies-2",
+      "file": "fingersnap-supplies-2.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-supplies-3",
+      "file": "fingersnap-supplies-3.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-keepsakes-1",
+      "file": "fingersnap-keepsakes-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-home-goods-1",
+      "file": "fingersnap-home-goods-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-papers-1",
+      "file": "fingersnap-papers-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-world-sprites-1",
+      "file": "fingersnap-world-sprites-1.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-world-sprites-2",
+      "file": "fingersnap-world-sprites-2.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-world-sprites-3",
+      "file": "fingersnap-world-sprites-3.png",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "key": "items-tolley-mill-1",
+      "file": "fingersnap-tolley-mill-1.png",
+      "width": 1122,
+      "height": 1402
+    }
+  ],
+  "frames": [
+    {
+      "key": "item-bench-axe-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 60,
+        "y": 89,
+        "w": 196,
+        "h": 177
+      },
+      "itemId": "bench-axe",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench axe",
+      "state": "whole",
+      "look": "Short axe, pale haft, dull grey head",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-axe-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 329,
+        "y": 89,
+        "w": 196,
+        "h": 177
+      },
+      "itemId": "bench-axe",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench axe",
+      "state": "worn",
+      "look": "Short axe, pale haft, dull grey head",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-pick-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 618,
+        "y": 78,
+        "w": 187,
+        "h": 193
+      },
+      "itemId": "bench-pick",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench pick",
+      "state": "whole",
+      "look": "Pick with a pale haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-pick-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 905,
+        "y": 78,
+        "w": 186,
+        "h": 193
+      },
+      "itemId": "bench-pick",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench pick",
+      "state": "worn",
+      "look": "Pick with a pale haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-spade-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 62,
+        "y": 320,
+        "w": 188,
+        "h": 217
+      },
+      "itemId": "bench-spade",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench spade",
+      "state": "whole",
+      "look": "Spade, worn wooden grip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-spade-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 332,
+        "y": 320,
+        "w": 188,
+        "h": 217
+      },
+      "itemId": "bench-spade",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench spade",
+      "state": "worn",
+      "look": "Spade, worn wooden grip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-stave-bucket-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 633,
+        "y": 358,
+        "w": 151,
+        "h": 178
+      },
+      "itemId": "stave-bucket",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Stave bucket",
+      "state": "whole",
+      "look": "Small wooden bucket, two dark hoops",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-stave-bucket-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 919,
+        "y": 358,
+        "w": 149,
+        "h": 177
+      },
+      "itemId": "stave-bucket",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Stave bucket",
+      "state": "worn",
+      "look": "Small wooden bucket, two dark hoops",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-watering-can",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 39,
+        "y": 622,
+        "w": 241,
+        "h": 168
+      },
+      "itemId": "watering-can",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Tin watering can",
+      "state": null,
+      "look": "Squat tin can with a long spout",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-brack-felling-axe-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 320,
+        "y": 581,
+        "w": 225,
+        "h": 221
+      },
+      "itemId": "brack-felling-axe",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Brack felling axe",
+      "state": "whole",
+      "look": "Long axe, dark ash haft, bright bit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-brack-felling-axe-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 593,
+        "y": 581,
+        "w": 227,
+        "h": 221
+      },
+      "itemId": "brack-felling-axe",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Brack felling axe",
+      "state": "worn",
+      "look": "Long axe, dark ash haft, bright bit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-brack-felling-axe-blunt",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 880,
+        "y": 580,
+        "w": 218,
+        "h": 222
+      },
+      "itemId": "brack-felling-axe",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Brack felling axe",
+      "state": "blunt",
+      "look": "Long axe, dark ash haft, bright bit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-orrins-mason-pick-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 61,
+        "y": 863,
+        "w": 202,
+        "h": 201
+      },
+      "itemId": "orrins-mason-pick",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Orrin's mason pick",
+      "state": "whole",
+      "look": "Pick with a notched haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-orrins-mason-pick-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 334,
+        "y": 864,
+        "w": 204,
+        "h": 200
+      },
+      "itemId": "orrins-mason-pick",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Orrin's mason pick",
+      "state": "worn",
+      "look": "Pick with a notched haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-orrins-mason-pick-blunt",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 606,
+        "y": 863,
+        "w": 201,
+        "h": 201
+      },
+      "itemId": "orrins-mason-pick",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Orrin's mason pick",
+      "state": "blunt",
+      "look": "Pick with a notched haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-ada-garden-spade-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 892,
+        "y": 851,
+        "w": 185,
+        "h": 208
+      },
+      "itemId": "ada-garden-spade",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Ada's garden spade",
+      "state": "whole",
+      "look": "Short spade, dark polished grip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-ada-garden-spade-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 62,
+        "y": 1119,
+        "w": 185,
+        "h": 209
+      },
+      "itemId": "ada-garden-spade",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Ada's garden spade",
+      "state": "worn",
+      "look": "Short spade, dark polished grip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-ada-garden-spade-blunt",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 332,
+        "y": 1119,
+        "w": 184,
+        "h": 209
+      },
+      "itemId": "ada-garden-spade",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Ada's garden spade",
+      "state": "blunt",
+      "look": "Short spade, dark polished grip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-nans-lamplighter-pole-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 607,
+        "y": 1093,
+        "w": 192,
+        "h": 247
+      },
+      "itemId": "nans-lamplighter-pole",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Nan's lamplighter pole",
+      "state": "whole",
+      "look": "Long pole, brass hook at the top",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-nans-lamplighter-pole-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-1",
+      "sheet": "tools-1",
+      "sourceRect": {
+        "x": 892,
+        "y": 1093,
+        "w": 194,
+        "h": 247
+      },
+      "itemId": "nans-lamplighter-pole",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Nan's lamplighter pole",
+      "state": "worn",
+      "look": "Long pole, brass hook at the top",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-nans-lamplighter-pole-cracked",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 111,
+        "y": 32,
+        "w": 160,
+        "h": 357
+      },
+      "itemId": "nans-lamplighter-pole",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Nan's lamplighter pole",
+      "state": "cracked",
+      "look": "Long pole, brass hook at the top",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-oak-mark-punch",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 339,
+        "y": 169,
+        "w": 161,
+        "h": 214
+      },
+      "itemId": "oak-mark-punch",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Oak-mark punch",
+      "state": null,
+      "look": "Stubby iron punch, wheel-and-wave face",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-carters-lantern-lit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 610,
+        "y": 89,
+        "w": 193,
+        "h": 301
+      },
+      "itemId": "carters-lantern",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Carter's lantern",
+      "state": "lit",
+      "look": "Lantern on a short pole, lit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-carters-lantern-unlit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 891,
+        "y": 89,
+        "w": 191,
+        "h": 301
+      },
+      "itemId": "carters-lantern",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Carter's lantern",
+      "state": "unlit",
+      "look": "Lantern on a short pole, lit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-turncap-jar-fresh",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 56,
+        "y": 417,
+        "w": 195,
+        "h": 271
+      },
+      "itemId": "turncap-jar",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Jar of turncaps",
+      "state": "fresh",
+      "look": "Glass jar, three pale caps leaning one way",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-turncap-jar-dried-out",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 339,
+        "y": 417,
+        "w": 194,
+        "h": 271
+      },
+      "itemId": "turncap-jar",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Jar of turncaps",
+      "state": "dried-out",
+      "look": "Glass jar, three pale caps leaning one way",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-salve-satchel",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 581,
+        "y": 446,
+        "w": 249,
+        "h": 237
+      },
+      "itemId": "salve-satchel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Salve satchel",
+      "state": null,
+      "look": "Small leather satchel, a jar lid peeking out",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-runners-whistle",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 865,
+        "y": 466,
+        "w": 226,
+        "h": 222
+      },
+      "itemId": "runners-whistle",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Your own whistle",
+      "state": null,
+      "look": "Tin whistle with a dent",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-forager-satchel",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 15,
+        "y": 780,
+        "w": 278,
+        "h": 243
+      },
+      "itemId": "forager-satchel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Forager's satchel",
+      "state": null,
+      "look": "Canvas satchel",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-work-apron",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 316,
+        "y": 734,
+        "w": 237,
+        "h": 294
+      },
+      "itemId": "work-apron",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Work apron",
+      "state": null,
+      "look": "Leather apron",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-carting-coat",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-tools-2",
+      "sheet": "tools-2",
+      "sourceRect": {
+        "x": 568,
+        "y": 716,
+        "w": 279,
+        "h": 306
+      },
+      "itemId": "carting-coat",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Carting coat",
+      "state": null,
+      "look": "Long brown coat",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-seasoned-timber",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 39,
+        "y": 62,
+        "w": 221,
+        "h": 215
+      },
+      "itemId": "seasoned-timber",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Seasoned timber",
+      "state": null,
+      "look": "Split log, paler, a crack in the end grain",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-drift-stone",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 311,
+        "y": 83,
+        "w": 219,
+        "h": 182
+      },
+      "itemId": "drift-stone",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Drift-stone",
+      "state": null,
+      "look": "Rounded stone with a faint swirl",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-iron-oak",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 603,
+        "y": 67,
+        "w": 203,
+        "h": 210
+      },
+      "itemId": "iron-oak",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Iron-oak",
+      "state": null,
+      "look": "Dark tight-ringed log end",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-willow-bark",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 872,
+        "y": 77,
+        "w": 211,
+        "h": 185
+      },
+      "itemId": "willow-bark",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Willow bark",
+      "state": null,
+      "look": "Curl of bark",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-beeswax",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 37,
+        "y": 346,
+        "w": 225,
+        "h": 190
+      },
+      "itemId": "beeswax",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Beeswax",
+      "state": null,
+      "look": "Yellow wax block",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-storm-grade-drop",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 343,
+        "y": 327,
+        "w": 162,
+        "h": 216
+      },
+      "itemId": "storm-grade-drop",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Storm-grade drop",
+      "state": null,
+      "look": "Amber drop with a bright core",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-tallow",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 581,
+        "y": 336,
+        "w": 237,
+        "h": 210
+      },
+      "itemId": "tallow",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Tallow",
+      "state": null,
+      "look": "Pale lump in paper",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-flour",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 865,
+        "y": 307,
+        "w": 218,
+        "h": 243
+      },
+      "itemId": "flour",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Flour",
+      "state": null,
+      "look": "Small sack",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-wild-honey",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 46,
+        "y": 604,
+        "w": 206,
+        "h": 216
+      },
+      "itemId": "wild-honey",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Wild honey",
+      "state": null,
+      "look": "Comb drip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-walnut-shells",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 303,
+        "y": 635,
+        "w": 231,
+        "h": 177
+      },
+      "itemId": "walnut-shells",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Walnut shells",
+      "state": null,
+      "look": "Two half shells",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-madder-scraps",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 581,
+        "y": 604,
+        "w": 244,
+        "h": 214
+      },
+      "itemId": "madder-scraps",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Madder scraps",
+      "state": null,
+      "look": "Red cloth scraps",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-amberfall-sap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 878,
+        "y": 589,
+        "w": 201,
+        "h": 235
+      },
+      "itemId": "amberfall-sap",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Amberfall sap",
+      "state": null,
+      "look": "Thin amber trickle on bark",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-frost-glass",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 62,
+        "y": 865,
+        "w": 162,
+        "h": 218
+      },
+      "itemId": "frost-glass",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Frost-glass",
+      "state": null,
+      "look": "Pale blue shard",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bloom-flowers-fresh",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 311,
+        "y": 848,
+        "w": 218,
+        "h": 245
+      },
+      "itemId": "bloom-flowers",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Bloom flowers / dried flowers",
+      "state": "fresh",
+      "look": "Posy (fresh) / brown posy (dried)",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bloom-flowers-dried",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 592,
+        "y": 849,
+        "w": 216,
+        "h": 245
+      },
+      "itemId": "bloom-flowers",
+      "category": "Supplies",
+      "priority": "P3",
+      "name": "Bloom flowers / dried flowers",
+      "state": "dried",
+      "look": "Posy (fresh) / brown posy (dried)",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-tarrow-edge-strip",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 880,
+        "y": 872,
+        "w": 201,
+        "h": 199
+      },
+      "itemId": "tarrow-edge-strip",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Tarrow-steel edge strip",
+      "state": null,
+      "look": "Thin bright metal strip",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-loose-road-nail",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 74,
+        "y": 1128,
+        "w": 154,
+        "h": 208
+      },
+      "itemId": "loose-road-nail",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Loose road-nail",
+      "state": null,
+      "look": "Single square nail",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-iron-oak-wedge",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 311,
+        "y": 1147,
+        "w": 220,
+        "h": 189
+      },
+      "itemId": "iron-oak-wedge",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Iron-oak wedge",
+      "state": null,
+      "look": "Small dark wedge",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-tyre-iron-hoop",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 596,
+        "y": 1143,
+        "w": 212,
+        "h": 198
+      },
+      "itemId": "tyre-iron-hoop",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Hoop of tyre-iron",
+      "state": null,
+      "look": "Small iron ring",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-green-ash-haft",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-1",
+      "sheet": "supplies-1",
+      "sourceRect": {
+        "x": 876,
+        "y": 1107,
+        "w": 199,
+        "h": 248
+      },
+      "itemId": "green-ash-haft",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Green-ash haft",
+      "state": null,
+      "look": "Pale straight haft",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-amber-bead",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 55,
+        "y": 81,
+        "w": 155,
+        "h": 155
+      },
+      "itemId": "amber-bead",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Amber bead",
+      "state": null,
+      "look": "Glowing orange bead",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-waxed-cord",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 296,
+        "y": 56,
+        "w": 234,
+        "h": 194
+      },
+      "itemId": "waxed-cord",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Waxed cord",
+      "state": null,
+      "look": "Coil of cord",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-warden-sliver",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 599,
+        "y": 68,
+        "w": 188,
+        "h": 175
+      },
+      "itemId": "warden-sliver",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Warden-stone sliver",
+      "state": null,
+      "look": "Grey stone chip with an amber fleck",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-fibre-rope",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 850,
+        "y": 50,
+        "w": 239,
+        "h": 196
+      },
+      "itemId": "fibre-rope",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Fibre rope",
+      "state": null,
+      "look": "Coiled rope",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-split-rail",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 33,
+        "y": 336,
+        "w": 232,
+        "h": 188
+      },
+      "itemId": "split-rail",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Split rail",
+      "state": null,
+      "look": "Rough rail",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-slates",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 304,
+        "y": 322,
+        "w": 228,
+        "h": 208
+      },
+      "itemId": "slates",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Slates",
+      "state": null,
+      "look": "Three stacked slates",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-oak-slat",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 590,
+        "y": 313,
+        "w": 234,
+        "h": 224
+      },
+      "itemId": "oak-slat",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Oak slat",
+      "state": null,
+      "look": "Smooth plank",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lamp-head",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 904,
+        "y": 286,
+        "w": 163,
+        "h": 257
+      },
+      "itemId": "lamp-head",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Lamp head",
+      "state": null,
+      "look": "Small iron lamp head, glass panes",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-wax-seal",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 31,
+        "y": 589,
+        "w": 230,
+        "h": 217
+      },
+      "itemId": "wax-seal",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Wax seal",
+      "state": null,
+      "look": "Red-brown wax disc, wheel and wave",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-hazel-whip",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 330,
+        "y": 567,
+        "w": 194,
+        "h": 248
+      },
+      "itemId": "hazel-whip",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Hazel whip",
+      "state": null,
+      "look": "Thin sapling, round leaves",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-birch-sapling",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 594,
+        "y": 567,
+        "w": 207,
+        "h": 249
+      },
+      "itemId": "birch-sapling",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Birch sapling",
+      "state": null,
+      "look": "White-barked sapling",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-rowan-sapling",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 865,
+        "y": 567,
+        "w": 228,
+        "h": 247
+      },
+      "itemId": "rowan-sapling",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Rowan sapling",
+      "state": null,
+      "look": "Sapling with a red cluster",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-comfrey-root",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 31,
+        "y": 844,
+        "w": 231,
+        "h": 242
+      },
+      "itemId": "comfrey-root",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Comfrey root",
+      "state": null,
+      "look": "Knobbly root, two leaves",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-wild-thyme",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 323,
+        "y": 844,
+        "w": 199,
+        "h": 235
+      },
+      "itemId": "wild-thyme",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Wild thyme",
+      "state": null,
+      "look": "Tiny-leaved sprig",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-turncap-spawn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 602,
+        "y": 862,
+        "w": 205,
+        "h": 214
+      },
+      "itemId": "turncap-spawn",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Turncap spawn",
+      "state": null,
+      "look": "Pale cap on a sliver of wood",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-iron-oak-acorn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 892,
+        "y": 840,
+        "w": 192,
+        "h": 231
+      },
+      "itemId": "iron-oak-acorn",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Iron-oak acorn",
+      "state": null,
+      "look": "Dark heavy acorn",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-keepers-twists",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 33,
+        "y": 1122,
+        "w": 226,
+        "h": 224
+      },
+      "itemId": "keepers-twists",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Keeper's Twists (butter batch)",
+      "state": null,
+      "look": "Twisted bread, golden",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-oil-twists",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 304,
+        "y": 1118,
+        "w": 226,
+        "h": 228
+      },
+      "itemId": "oil-twists",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Keeper's Twists (oil)",
+      "state": null,
+      "look": "Twisted bread, darker, burnt end",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-saltings-tea",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 591,
+        "y": 1129,
+        "w": 218,
+        "h": 208
+      },
+      "itemId": "saltings-tea",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Saltings tea",
+      "state": null,
+      "look": "Cup, grey-green tea",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-oatcakes",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-2",
+      "sheet": "supplies-2",
+      "sourceRect": {
+        "x": 874,
+        "y": 1123,
+        "w": 214,
+        "h": 215
+      },
+      "itemId": "oatcakes",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Finn's oatcakes",
+      "state": null,
+      "look": "Stack of round oatcakes",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-comfrey-salve",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 52,
+        "y": 78,
+        "w": 219,
+        "h": 153
+      },
+      "itemId": "comfrey-salve",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Comfrey salve",
+      "state": null,
+      "look": "Small tin, pale salve",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-willow-bark-tea",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 320,
+        "y": 56,
+        "w": 209,
+        "h": 182
+      },
+      "itemId": "willow-bark-tea",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Willow-bark tea",
+      "state": null,
+      "look": "Cup, brown tea",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-blue-moss",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 576,
+        "y": 75,
+        "w": 250,
+        "h": 166
+      },
+      "itemId": "blue-moss",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "A pinch of Blue Moss",
+      "state": null,
+      "look": "Twist of paper, blue moss poking out",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-candle-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 904,
+        "y": 42,
+        "w": 147,
+        "h": 205
+      },
+      "itemId": "candle-oil",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Candle oil",
+      "state": null,
+      "look": "Small corked vial, pale amber",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-hearth-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 74,
+        "y": 276,
+        "w": 176,
+        "h": 217
+      },
+      "itemId": "hearth-oil",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Hearth oil",
+      "state": null,
+      "look": "Squat flask, warm amber",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-storm-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-supplies-3",
+      "sheet": "supplies-3",
+      "sourceRect": {
+        "x": 348,
+        "y": 272,
+        "w": 144,
+        "h": 216
+      },
+      "itemId": "storm-oil",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Storm oil",
+      "state": null,
+      "look": "Stoppered flask with a bright core",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-knotted-halter",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-keepsakes-1",
+      "sheet": "keepsakes-1",
+      "sourceRect": {
+        "x": 35,
+        "y": 50,
+        "w": 216,
+        "h": 224
+      },
+      "itemId": "knotted-halter",
+      "category": "Keepsakes",
+      "priority": "P1",
+      "name": "Knotted ox-halter",
+      "state": null,
+      "look": "Rope halter, knotted",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-work-glove",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-keepsakes-1",
+      "sheet": "keepsakes-1",
+      "sourceRect": {
+        "x": 45,
+        "y": 319,
+        "w": 220,
+        "h": 237
+      },
+      "itemId": "work-glove",
+      "category": "Keepsakes",
+      "priority": "P1",
+      "name": "Work glove",
+      "state": null,
+      "look": "Single leather glove",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-road-nails",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-keepsakes-1",
+      "sheet": "keepsakes-1",
+      "sourceRect": {
+        "x": 30,
+        "y": 606,
+        "w": 230,
+        "h": 178
+      },
+      "itemId": "road-nails",
+      "category": "Keepsakes",
+      "priority": "P1",
+      "name": "Stamped road-nails",
+      "state": null,
+      "look": "Small bundle of nails",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-door-fox",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 30,
+        "y": 17,
+        "w": 241,
+        "h": 300
+      },
+      "itemId": "door-fox",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Door-fox",
+      "state": null,
+      "look": "Small fox over a door, left ear long",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-window-lamp-lit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 299,
+        "y": 89,
+        "w": 264,
+        "h": 217
+      },
+      "itemId": "window-lamp",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Window lamp",
+      "state": "lit",
+      "look": "Warm square of light in a window",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-window-lamp-unlit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 586,
+        "y": 89,
+        "w": 257,
+        "h": 222
+      },
+      "itemId": "window-lamp",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Window lamp",
+      "state": "unlit",
+      "look": "Warm square of light in a window",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-gate-shelf",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 874,
+        "y": 37,
+        "w": 224,
+        "h": 285
+      },
+      "itemId": "gate-shelf",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Gate shelf",
+      "state": null,
+      "look": "Small roofed shelf on a post, jars on it",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-writing-desk",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 30,
+        "y": 354,
+        "w": 240,
+        "h": 237
+      },
+      "itemId": "writing-desk",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Writing desk",
+      "state": null,
+      "look": "Slant-top desk, inkpot",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-keepsake-cabinet",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 306,
+        "y": 331,
+        "w": 244,
+        "h": 273
+      },
+      "itemId": "keepsake-cabinet",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Keepsake cabinet",
+      "state": null,
+      "look": "Glass-front cabinet, small shapes inside",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-drying-rack",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 575,
+        "y": 388,
+        "w": 277,
+        "h": 208
+      },
+      "itemId": "drying-rack",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Herb drying rack",
+      "state": null,
+      "look": "Wooden rack, bundles hanging",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-apothecary-shelf",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 866,
+        "y": 351,
+        "w": 226,
+        "h": 251
+      },
+      "itemId": "apothecary-shelf",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Apothecary shelf",
+      "state": null,
+      "look": "Shelf of jars, some full",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lantern-post-lit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 56,
+        "y": 621,
+        "w": 185,
+        "h": 246
+      },
+      "itemId": "lantern-post",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Lantern post",
+      "state": "lit",
+      "look": "Timber post, iron lamp head, lit / unlit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lantern-post-unlit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 320,
+        "y": 621,
+        "w": 186,
+        "h": 246
+      },
+      "itemId": "lantern-post",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Lantern post",
+      "state": "unlit",
+      "look": "Timber post, iron lamp head, lit / unlit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-raised-bed",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 564,
+        "y": 661,
+        "w": 280,
+        "h": 197
+      },
+      "itemId": "raised-bed",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Raised bed",
+      "state": null,
+      "look": "Timber-edged bed of dark soil",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-naming-frame",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 897,
+        "y": 650,
+        "w": 198,
+        "h": 205
+      },
+      "itemId": "naming-frame",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Naming-slip frame",
+      "state": null,
+      "look": "Small frame with a slip of paper",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-pencil-map",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 49,
+        "y": 903,
+        "w": 244,
+        "h": 203
+      },
+      "itemId": "pencil-map",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Pip's pencil map",
+      "state": null,
+      "look": "Pinned map, pencil lines",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-pressed-flowers",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 341,
+        "y": 894,
+        "w": 191,
+        "h": 220
+      },
+      "itemId": "pressed-flowers",
+      "category": "Home goods",
+      "priority": "P2",
+      "name": "Pressed-flower frame",
+      "state": null,
+      "look": "Frame with flat flowers",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-empty-chair",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 613,
+        "y": 882,
+        "w": 163,
+        "h": 237
+      },
+      "itemId": "empty-chair",
+      "category": "Home goods",
+      "priority": "P3",
+      "name": "The Empty Chair",
+      "state": null,
+      "look": "Plain chair, a sap-gold cushion",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-closure-lamp-lit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 916,
+        "y": 881,
+        "w": 137,
+        "h": 238
+      },
+      "itemId": "closure-lamp",
+      "category": "Home goods",
+      "priority": "P3",
+      "name": "Closure Night lamp",
+      "state": "lit",
+      "look": "Frost-glass lamp, pale light",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-closure-lamp-unlit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-home-goods-1",
+      "sheet": "home-goods-1",
+      "sourceRect": {
+        "x": 91,
+        "y": 1123,
+        "w": 135,
+        "h": 237
+      },
+      "itemId": "closure-lamp",
+      "category": "Home goods",
+      "priority": "P3",
+      "name": "Closure Night lamp",
+      "state": "unlit",
+      "look": "Frost-glass lamp, pale light",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-naming-slip",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 48,
+        "y": 87,
+        "w": 181,
+        "h": 255
+      },
+      "itemId": "naming-slip",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Naming slip",
+      "state": null,
+      "look": "Narrow paper slip with two lines of ink and post name, your own Ledger of the Road",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-tea",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 297,
+        "y": 91,
+        "w": 235,
+        "h": 259
+      },
+      "itemId": "recipe-page-tea",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Saltings tea",
+      "state": null,
+      "look": "Rag paper slip with cup sketch, from Elara",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-salve",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 564,
+        "y": 91,
+        "w": 261,
+        "h": 259
+      },
+      "itemId": "recipe-page-salve",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Comfrey salve",
+      "state": null,
+      "look": "Aged book leaf with botanical comfrey sketch, via Mara",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-candle-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 870,
+        "y": 87,
+        "w": 228,
+        "h": 263
+      },
+      "itemId": "recipe-page-candle-oil",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Candle oil",
+      "state": null,
+      "look": "Neat library slip with oil flask notation, from Mara",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-willow-tea",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 23,
+        "y": 391,
+        "w": 244,
+        "h": 290
+      },
+      "itemId": "recipe-page-willow-tea",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Willow-bark tea",
+      "state": null,
+      "look": "Book leaf of Mother Cotta's herbal with curl-of-bark sketch",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-card-twists",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 286,
+        "y": 350,
+        "w": 273,
+        "h": 305
+      },
+      "itemId": "recipe-card-twists",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe card: Keeper's Twists",
+      "state": null,
+      "look": "Flour-dusted bakery card from Hazel's wall",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-card-oil-twists",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 561,
+        "y": 350,
+        "w": 284,
+        "h": 310
+      },
+      "itemId": "recipe-card-oil-twists",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe card: Oil twists",
+      "state": null,
+      "look": "Darker stained bakery card from Hazel with note on back",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-hearth-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 862,
+        "y": 350,
+        "w": 239,
+        "h": 330
+      },
+      "itemId": "recipe-page-hearth-oil",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Hearth oil",
+      "state": null,
+      "look": "Ruled ledger receipt leaf from Ada Cooley's window fund",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-wax-seal",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 25,
+        "y": 715,
+        "w": 251,
+        "h": 288
+      },
+      "itemId": "recipe-page-wax-seal",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Wax seal",
+      "state": null,
+      "look": "Printed page from Brackenwood handbook, wheel-and-wave stamp",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-page-storm-oil",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 300,
+        "y": 715,
+        "w": 242,
+        "h": 288
+      },
+      "itemId": "recipe-page-storm-oil",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Recipe page: Storm oil",
+      "state": null,
+      "look": "Torn margin from Wenna's ledger, dense dark script",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-paper-icon-folded",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 562,
+        "y": 766,
+        "w": 265,
+        "h": 205
+      },
+      "itemId": "paper-icon-folded",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Found paper: folded letter",
+      "state": null,
+      "look": "Folded letter with creased edges and broken seal",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-paper-icon-scroll",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 847,
+        "y": 739,
+        "w": 251,
+        "h": 242
+      },
+      "itemId": "paper-icon-scroll",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Found paper: tied scroll",
+      "state": null,
+      "look": "Rolled parchment scroll tied with twine",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-paper-icon-slate",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-papers-1",
+      "sheet": "papers-1",
+      "sourceRect": {
+        "x": 39,
+        "y": 1073,
+        "w": 240,
+        "h": 270
+      },
+      "itemId": "paper-icon-slate",
+      "category": "Papers",
+      "priority": "P1",
+      "name": "Found paper: slate",
+      "state": null,
+      "look": "Small framed slate tablet with chalked letters",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-door-fox",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 31,
+        "y": 60,
+        "w": 246,
+        "h": 213
+      },
+      "itemId": "door-fox",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Door-fox",
+      "state": null,
+      "look": "Small carved pine fox mounted over cottage door lintel, left ear long",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 16,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-window-lamp-unlit-pane",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 337,
+        "y": 63,
+        "w": 191,
+        "h": 217
+      },
+      "itemId": "window-lamp",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Window lamp",
+      "state": "unlit-pane",
+      "look": "Warm square of hearth-light set into cottage window frame; bright amber-gold",
+      "destinationRect": {
+        "x": 2,
+        "y": 4,
+        "w": 11,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-window-lamp-lit-warm-glow",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 601,
+        "y": 63,
+        "w": 191,
+        "h": 217
+      },
+      "itemId": "window-lamp",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Window lamp",
+      "state": "lit-warm-glow",
+      "look": "Warm square of hearth-light set into cottage window frame; bright amber-gold",
+      "destinationRect": {
+        "x": 2,
+        "y": 4,
+        "w": 11,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-gate-shelf-empty",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 859,
+        "y": 40,
+        "w": 229,
+        "h": 240
+      },
+      "itemId": "gate-shelf",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Gate shelf",
+      "state": "empty",
+      "look": "Small roofed wooden shelf on a post at the plot gate; jars placed on shelf",
+      "destinationRect": {
+        "x": 2,
+        "y": 3,
+        "w": 12,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-gate-shelf-stocked-with-jars",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 39,
+        "y": 310,
+        "w": 231,
+        "h": 242
+      },
+      "itemId": "gate-shelf",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Gate shelf",
+      "state": "stocked-with-jars",
+      "look": "Small roofed wooden shelf on a post at the plot gate; jars placed on shelf",
+      "destinationRect": {
+        "x": 2,
+        "y": 3,
+        "w": 12,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-writing-desk",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 319,
+        "y": 327,
+        "w": 220,
+        "h": 228
+      },
+      "itemId": "writing-desk",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Writing desk",
+      "state": null,
+      "look": "Slant-top wooden writing desk with open inkpot and copy paper",
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 15,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-keepsake-cabinet-empty",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 598,
+        "y": 306,
+        "w": 208,
+        "h": 255
+      },
+      "itemId": "keepsake-cabinet",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Keepsake cabinet",
+      "state": "empty",
+      "look": "Glass-front wooden cabinet with tiny keepsake silhouettes displayed inside",
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 11,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-keepsake-cabinet-displaying-trinkets",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 873,
+        "y": 306,
+        "w": 208,
+        "h": 254
+      },
+      "itemId": "keepsake-cabinet",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Keepsake cabinet",
+      "state": "displaying-trinkets",
+      "look": "Glass-front wooden cabinet with tiny keepsake silhouettes displayed inside",
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 11,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-drying-rack-bare-rack",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 40,
+        "y": 592,
+        "w": 227,
+        "h": 211
+      },
+      "itemId": "drying-rack",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Herb drying rack",
+      "state": "bare-rack",
+      "look": "Upright timber frame rack with bundled herbs hanging upside down to dry",
+      "destinationRect": {
+        "x": 2,
+        "y": 5,
+        "w": 12,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-drying-rack-hanging-herbs",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 316,
+        "y": 591,
+        "w": 228,
+        "h": 211
+      },
+      "itemId": "drying-rack",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Herb drying rack",
+      "state": "hanging-herbs",
+      "look": "Upright timber frame rack with bundled herbs hanging upside down to dry",
+      "destinationRect": {
+        "x": 2,
+        "y": 5,
+        "w": 12,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-apothecary-shelf-half-stocked",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 592,
+        "y": 606,
+        "w": 229,
+        "h": 202
+      },
+      "itemId": "apothecary-shelf",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Apothecary shelf",
+      "state": "half-stocked",
+      "look": "Two-tier shelf of glass apothecary jars, showing stock of salves and teas",
+      "destinationRect": {
+        "x": 9,
+        "y": 4,
+        "w": 14,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-apothecary-shelf-full-shelves",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 861,
+        "y": 603,
+        "w": 233,
+        "h": 205
+      },
+      "itemId": "apothecary-shelf",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Apothecary shelf",
+      "state": "full-shelves",
+      "look": "Two-tier shelf of glass apothecary jars, showing stock of salves and teas",
+      "destinationRect": {
+        "x": 9,
+        "y": 4,
+        "w": 14,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-raised-bed-dry-dark-soil",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 30,
+        "y": 867,
+        "w": 247,
+        "h": 203
+      },
+      "itemId": "raised-bed",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Raised bed",
+      "state": "dry-dark-soil",
+      "look": "Timber-bordered garden bed filled with rich dark planting soil",
+      "destinationRect": {
+        "x": 9,
+        "y": 5,
+        "w": 13,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-raised-bed-watered-soil",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 306,
+        "y": 867,
+        "w": 250,
+        "h": 203
+      },
+      "itemId": "raised-bed",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Raised bed",
+      "state": "watered-soil",
+      "look": "Timber-bordered garden bed filled with rich dark planting soil",
+      "destinationRect": {
+        "x": 9,
+        "y": 5,
+        "w": 13,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-raised-bed-sprouting",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 580,
+        "y": 866,
+        "w": 246,
+        "h": 204
+      },
+      "itemId": "raised-bed",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Raised bed",
+      "state": "sprouting",
+      "look": "Timber-bordered garden bed filled with rich dark planting soil",
+      "destinationRect": {
+        "x": 9,
+        "y": 5,
+        "w": 13,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-naming-frame",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 896,
+        "y": 861,
+        "w": 168,
+        "h": 214
+      },
+      "itemId": "naming-frame",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Naming-slip frame",
+      "state": null,
+      "look": "Small timber wall frame holding your first handwritten naming slip",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 13,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-pencil-map-crisp-pencil",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 36,
+        "y": 1122,
+        "w": 236,
+        "h": 223
+      },
+      "itemId": "pencil-map",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Pip's pencil map",
+      "state": "crisp-pencil",
+      "look": "Wall-pinned route map drawn in pencil; lines smudge and drift over seasons",
+      "destinationRect": {
+        "x": 8,
+        "y": 2,
+        "w": 15,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-pencil-map-smudged-drift",
+      "width": 32,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 311,
+        "y": 1119,
+        "w": 237,
+        "h": 226
+      },
+      "itemId": "pencil-map",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Pip's pencil map",
+      "state": "smudged-drift",
+      "look": "Wall-pinned route map drawn in pencil; lines smudge and drift over seasons",
+      "destinationRect": {
+        "x": 8,
+        "y": 2,
+        "w": 15,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-pressed-flowers-fresh-bloom-colors",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 606,
+        "y": 1106,
+        "w": 196,
+        "h": 244
+      },
+      "itemId": "pressed-flowers",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Pressed-flower frame",
+      "state": "fresh-bloom-colors",
+      "look": "Small wooden frame enclosing flat pressed blossom arrangements",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 12,
+        "h": 15
+      }
+    },
+    {
+      "key": "world-pressed-flowers-dried-brown",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-1",
+      "sheet": "world-sprites-1",
+      "sourceRect": {
+        "x": 874,
+        "y": 1106,
+        "w": 197,
+        "h": 244
+      },
+      "itemId": "pressed-flowers",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Pressed-flower frame",
+      "state": "dried-brown",
+      "look": "Small wooden frame enclosing flat pressed blossom arrangements",
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 12,
+        "h": 15
+      }
+    },
+    {
+      "key": "world-empty-chair",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 84,
+        "y": 66,
+        "w": 156,
+        "h": 219
+      },
+      "itemId": "empty-chair",
+      "category": "World sprites",
+      "priority": "P3",
+      "name": "The Empty Chair",
+      "state": null,
+      "look": "Plain wooden dining chair with an amberfall sap-gold cushion, set for Amberwake",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 11,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-closure-lamp-unlit",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 359,
+        "y": 68,
+        "w": 148,
+        "h": 206
+      },
+      "itemId": "closure-lamp",
+      "category": "World sprites",
+      "priority": "P3",
+      "name": "Closure Night lamp",
+      "state": "unlit",
+      "look": "Frost-glass outdoor lantern casting pale cold blue light facing the dark",
+      "destinationRect": {
+        "x": 3,
+        "y": 3,
+        "w": 9,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-closure-lamp-lit-pale-blue",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 631,
+        "y": 69,
+        "w": 148,
+        "h": 206
+      },
+      "itemId": "closure-lamp",
+      "category": "World sprites",
+      "priority": "P3",
+      "name": "Closure Night lamp",
+      "state": "lit-pale-blue",
+      "look": "Frost-glass outdoor lantern casting pale cold blue light facing the dark",
+      "destinationRect": {
+        "x": 3,
+        "y": 3,
+        "w": 9,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-lantern-post-unlit",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 901,
+        "y": 28,
+        "w": 145,
+        "h": 260
+      },
+      "itemId": "lantern-post",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Lantern post",
+      "state": "unlit",
+      "look": "Upright green timber post with drift-stone packed base and iron lamp head; lit burns steady amber; Amberwake burns with wider brilliant halo",
+      "destinationRect": {
+        "x": 3,
+        "y": 16,
+        "w": 9,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-lantern-post-lit-warm-amber",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 89,
+        "y": 303,
+        "w": 144,
+        "h": 271
+      },
+      "itemId": "lantern-post",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Lantern post",
+      "state": "lit-warm-amber",
+      "look": "Upright green timber post with drift-stone packed base and iron lamp head; lit burns steady amber; Amberwake burns with wider brilliant halo",
+      "destinationRect": {
+        "x": 3,
+        "y": 15,
+        "w": 9,
+        "h": 17
+      }
+    },
+    {
+      "key": "world-lantern-post-amberwake-glow",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 377,
+        "y": 303,
+        "w": 149,
+        "h": 270
+      },
+      "itemId": "lantern-post",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Lantern post",
+      "state": "amberwake-glow",
+      "look": "Upright green timber post with drift-stone packed base and iron lamp head; lit burns steady amber; Amberwake burns with wider brilliant halo",
+      "destinationRect": {
+        "x": 3,
+        "y": 16,
+        "w": 9,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-lantern-post-footing",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 631,
+        "y": 406,
+        "w": 161,
+        "h": 171
+      },
+      "itemId": "lantern-post-footing",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Post footing with drift-stone",
+      "state": null,
+      "look": "Timber post stub set in excavated ground packed tightly with drift-stone (construction stage 1)",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 15,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-lantern-post-head-unlit",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 899,
+        "y": 306,
+        "w": 147,
+        "h": 271
+      },
+      "itemId": "lantern-post-head-unlit",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Post with unlit lamp head",
+      "state": null,
+      "look": "Complete timber post fitted with iron lamp head and dry wick, awaiting hearth oil (construction stage 2)",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 16,
+        "h": 29
+      }
+    },
+    {
+      "key": "world-old-lamp-stone-intact-weathered",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 50,
+        "y": 615,
+        "w": 230,
+        "h": 223
+      },
+      "itemId": "old-lamp-stone",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Old lamp-stone",
+      "state": "intact-weathered",
+      "look": "Ancient weathered stone lamp base in the Tangle containing loose road-nails and salvaged lamp head",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 15,
+        "h": 15
+      }
+    },
+    {
+      "key": "world-old-lamp-stone-pick-broken",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 332,
+        "y": 624,
+        "w": 214,
+        "h": 219
+      },
+      "itemId": "old-lamp-stone",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Old lamp-stone",
+      "state": "pick-broken",
+      "look": "Ancient weathered stone lamp base in the Tangle containing loose road-nails and salvaged lamp head",
+      "destinationRect": {
+        "x": 1,
+        "y": 2,
+        "w": 14,
+        "h": 14
+      }
+    },
+    {
+      "key": "world-dug-patch-fresh-dark-earth-hole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 594,
+        "y": 659,
+        "w": 228,
+        "h": 168
+      },
+      "itemId": "dug-patch",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Dug patch",
+      "state": "fresh-dark-earth-hole",
+      "look": "Churned dark dirt hole left after harvesting saplings, herbs, or turncap spawn with the spade",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-dug-patch-settled-earth",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 869,
+        "y": 663,
+        "w": 217,
+        "h": 165
+      },
+      "itemId": "dug-patch",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Dug patch",
+      "state": "settled-earth",
+      "look": "Churned dark dirt hole left after harvesting saplings, herbs, or turncap spawn with the spade",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-tree-stump-fresh-cut-with-pale-sawdust",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 40,
+        "y": 899,
+        "w": 244,
+        "h": 190
+      },
+      "itemId": "tree-stump",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Cleared tree stump",
+      "state": "fresh-cut-with-pale-sawdust",
+      "look": "Flat plain tree stump remaining after chopping pine, birch, hazel, or ash on homestead land",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 15,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-tree-stump-weathered",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 324,
+        "y": 843,
+        "w": 229,
+        "h": 241
+      },
+      "itemId": "tree-stump",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Cleared tree stump",
+      "state": "weathered",
+      "look": "Flat plain tree stump remaining after chopping pine, birch, hazel, or ash on homestead land",
+      "destinationRect": {
+        "x": 1,
+        "y": 1,
+        "w": 14,
+        "h": 15
+      }
+    },
+    {
+      "key": "world-herb-patch-comfrey-lush-leafy-plant",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 577,
+        "y": 883,
+        "w": 249,
+        "h": 204
+      },
+      "itemId": "herb-patch-comfrey",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Wild comfrey patch",
+      "state": "lush-leafy-plant",
+      "look": "Low leafy comfrey clump with knobbly roots and small bell flowers",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 15,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-herb-patch-comfrey-dug-earth-patch",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 866,
+        "y": 877,
+        "w": 224,
+        "h": 210
+      },
+      "itemId": "herb-patch-comfrey",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Wild comfrey patch",
+      "state": "dug-earth-patch",
+      "look": "Low leafy comfrey clump with knobbly roots and small bell flowers",
+      "destinationRect": {
+        "x": 1,
+        "y": 3,
+        "w": 13,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-herb-patch-thyme-purple-thyme-sprigs",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 42,
+        "y": 1176,
+        "w": 238,
+        "h": 171
+      },
+      "itemId": "herb-patch-thyme",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Wild thyme patch",
+      "state": "purple-thyme-sprigs",
+      "look": "Low creeping fragrant thyme clump with tiny leaves and mauve flowers",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 15,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-herb-patch-thyme-dug-earth-patch",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 313,
+        "y": 1173,
+        "w": 233,
+        "h": 174
+      },
+      "itemId": "herb-patch-thyme",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Wild thyme patch",
+      "state": "dug-earth-patch",
+      "look": "Low creeping fragrant thyme clump with tiny leaves and mauve flowers",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 15,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-hollow-tree-intact-tree-with-hive-hole-and-bees",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 577,
+        "y": 1099,
+        "w": 240,
+        "h": 278
+      },
+      "itemId": "hollow-tree",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Hollow bee tree",
+      "state": "intact-tree-with-hive-hole-and-bees",
+      "look": "Gnarled hollow woodland trunk sheltering a wild hive; dug with spade for wild honey and beeswax",
+      "destinationRect": {
+        "x": 0,
+        "y": 15,
+        "w": 15,
+        "h": 17
+      }
+    },
+    {
+      "key": "world-hollow-tree-opened-hollow-with-comb-drips",
+      "width": 16,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-2",
+      "sheet": "world-sprites-2",
+      "sourceRect": {
+        "x": 857,
+        "y": 1099,
+        "w": 233,
+        "h": 278
+      },
+      "itemId": "hollow-tree",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Hollow bee tree",
+      "state": "opened-hollow-with-comb-drips",
+      "look": "Gnarled hollow woodland trunk sheltering a wild hive; dug with spade for wild honey and beeswax",
+      "destinationRect": {
+        "x": 0,
+        "y": 15,
+        "w": 15,
+        "h": 17
+      }
+    },
+    {
+      "key": "world-standing-iron-oak-unmarked-ancient-trunk",
+      "width": 32,
+      "height": 48,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 12,
+        "y": 30,
+        "w": 266,
+        "h": 221
+      },
+      "itemId": "standing-iron-oak",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Standing iron-oak",
+      "state": "unmarked-ancient-trunk",
+      "look": "Massive ancient iron-oak tree; struck with oak-mark punch before warden-felling",
+      "destinationRect": {
+        "x": 0,
+        "y": 22,
+        "w": 31,
+        "h": 26
+      }
+    },
+    {
+      "key": "world-standing-iron-oak-stamped-with-wax-seal",
+      "width": 32,
+      "height": 48,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 283,
+        "y": 30,
+        "w": 265,
+        "h": 221
+      },
+      "itemId": "standing-iron-oak",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Standing iron-oak",
+      "state": "stamped-with-wax-seal",
+      "look": "Massive ancient iron-oak tree; struck with oak-mark punch before warden-felling",
+      "destinationRect": {
+        "x": 0,
+        "y": 22,
+        "w": 31,
+        "h": 26
+      }
+    },
+    {
+      "key": "world-iron-oak-windfall-mossy-fallen-trunk",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 584,
+        "y": 156,
+        "w": 242,
+        "h": 95
+      },
+      "itemId": "iron-oak-windfall",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Iron-oak windfall",
+      "state": "mossy-fallen-trunk",
+      "look": "Heavy storm-felled iron-oak log; leaves three leafy branches at stump when felled",
+      "destinationRect": {
+        "x": 0,
+        "y": 20,
+        "w": 31,
+        "h": 12
+      }
+    },
+    {
+      "key": "world-iron-oak-windfall-harvested-stump-with-3-leafy-branches",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 893,
+        "y": 125,
+        "w": 203,
+        "h": 126
+      },
+      "itemId": "iron-oak-windfall",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Iron-oak windfall",
+      "state": "harvested-stump-with-3-leafy-branches",
+      "look": "Heavy storm-felled iron-oak log; leaves three leafy branches at stump when felled",
+      "destinationRect": {
+        "x": 3,
+        "y": 16,
+        "w": 26,
+        "h": 16
+      }
+    },
+    {
+      "key": "world-stump-turncaps-sprouting-caps",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 24,
+        "y": 251,
+        "w": 247,
+        "h": 135
+      },
+      "itemId": "stump-turncaps",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Homestead turncap stump",
+      "state": "sprouting-caps",
+      "look": "Wood stump seeded with turncap spawn that tilt toward the player's home lantern post",
+      "destinationRect": {
+        "x": 0,
+        "y": 8,
+        "w": 15,
+        "h": 8
+      }
+    },
+    {
+      "key": "world-stump-turncaps-mature-leaning-caps",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 296,
+        "y": 251,
+        "w": 242,
+        "h": 215
+      },
+      "itemId": "stump-turncaps",
+      "category": "World sprites",
+      "priority": "P1",
+      "name": "Homestead turncap stump",
+      "state": "mature-leaning-caps",
+      "look": "Wood stump seeded with turncap spawn that tilt toward the player's home lantern post",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 15,
+        "h": 13
+      }
+    },
+    {
+      "key": "world-ledger-soup-pot-bubbling-steaming-pot-over-fire",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 567,
+        "y": 251,
+        "w": 286,
+        "h": 215
+      },
+      "itemId": "ledger-soup-pot",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Ledger soup pot",
+      "state": "bubbling-steaming-pot-over-fire",
+      "look": "Large black iron cauldron simmering over embers in the village square for project workers",
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 15,
+        "h": 11
+      }
+    },
+    {
+      "key": "world-ledger-soup-pot-coldempty-pot",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "source": "items-world-sprites-3",
+      "sheet": "world-sprites-3",
+      "sourceRect": {
+        "x": 875,
+        "y": 251,
+        "w": 225,
+        "h": 215
+      },
+      "itemId": "ledger-soup-pot",
+      "category": "World sprites",
+      "priority": "P2",
+      "name": "Ledger soup pot",
+      "state": "coldempty-pot",
+      "look": "Large black iron cauldron simmering over embers in the village square for project workers",
+      "destinationRect": {
+        "x": 2,
+        "y": 5,
+        "w": 12,
+        "h": 11
+      }
+    },
+    {
+      "key": "mill-house",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-house",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 14,
+        "y": 9,
+        "w": 317,
+        "h": 366
+      },
+      "itemId": "mill-house",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-house",
+      "state": null,
+      "look": "Weathered upright-board timber walls on coursed stone footing, slate roof with gable facing viewer, high loft door with a sack-hoist beam and rope, plank front door in SECOND tile column from left, small warm-lit shuttered window, two flour sacks by door, flour dust on the step, damp mossy stone along water side. Front view like Hearthwick buildings. Keep door walk-up tile clear.",
+      "destinationRect": {
+        "x": 4,
+        "y": 1,
+        "w": 55,
+        "h": 63
+      }
+    },
+    {
+      "key": "mill-wheel-0",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 332,
+        "y": 135,
+        "w": 245,
+        "h": 239
+      },
+      "itemId": "mill-wheel",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel",
+      "state": "0",
+      "look": "Undershot wooden waterwheel, east-wall mounting, lower edge submerged. Eight visible paddles, one visibly split, patched rim, one subtly dragging paddle suggests it catches. Muted weathered grey-brown wood.",
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 28,
+        "h": 27
+      }
+    },
+    {
+      "key": "mill-wheel-1",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 594,
+        "y": 132,
+        "w": 252,
+        "h": 242
+      },
+      "itemId": "mill-wheel",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel",
+      "state": "1",
+      "look": "Undershot wooden waterwheel, east-wall mounting, lower edge submerged. Eight visible paddles, one visibly split, patched rim, one subtly dragging paddle suggests it catches. Muted weathered grey-brown wood.",
+      "destinationRect": {
+        "x": 1,
+        "y": 2,
+        "w": 29,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-wheel-2",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 864,
+        "y": 132,
+        "w": 250,
+        "h": 242
+      },
+      "itemId": "mill-wheel",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel",
+      "state": "2",
+      "look": "Undershot wooden waterwheel, east-wall mounting, lower edge submerged. Eight visible paddles, one visibly split, patched rim, one subtly dragging paddle suggests it catches. Muted weathered grey-brown wood.",
+      "destinationRect": {
+        "x": 1,
+        "y": 2,
+        "w": 29,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-wheel-3",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 21,
+        "y": 409,
+        "w": 270,
+        "h": 259
+      },
+      "itemId": "mill-wheel",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel",
+      "state": "3",
+      "look": "Undershot wooden waterwheel, east-wall mounting, lower edge submerged. Eight visible paddles, one visibly split, patched rim, one subtly dragging paddle suggests it catches. Muted weathered grey-brown wood.",
+      "destinationRect": {
+        "x": 0,
+        "y": 1,
+        "w": 31,
+        "h": 30
+      }
+    },
+    {
+      "key": "mill-wheel-mended-0",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel-mended",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 291,
+        "y": 411,
+        "w": 283,
+        "h": 256
+      },
+      "itemId": "mill-wheel-mended",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel-mended",
+      "state": "0",
+      "look": "The repaired same-size same-angle same-count undershot waterwheel as its broken counterpart: fresh pale paddles, rope lashings at every spoke, iron band around rim. Straight aligned paddles for smooth turning.",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 31,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-wheel-mended-1",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel-mended",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 593,
+        "y": 411,
+        "w": 253,
+        "h": 256
+      },
+      "itemId": "mill-wheel-mended",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel-mended",
+      "state": "1",
+      "look": "The repaired same-size same-angle same-count undershot waterwheel as its broken counterpart: fresh pale paddles, rope lashings at every spoke, iron band around rim. Straight aligned paddles for smooth turning.",
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 28,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-wheel-mended-2",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel-mended",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 867,
+        "y": 412,
+        "w": 247,
+        "h": 255
+      },
+      "itemId": "mill-wheel-mended",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel-mended",
+      "state": "2",
+      "look": "The repaired same-size same-angle same-count undershot waterwheel as its broken counterpart: fresh pale paddles, rope lashings at every spoke, iron band around rim. Straight aligned paddles for smooth turning.",
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 27,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-wheel-mended-3",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-wheel-mended",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 34,
+        "y": 695,
+        "w": 280,
+        "h": 257
+      },
+      "itemId": "mill-wheel-mended",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-wheel-mended",
+      "state": "3",
+      "look": "The repaired same-size same-angle same-count undershot waterwheel as its broken counterpart: fresh pale paddles, rope lashings at every spoke, iron band around rim. Straight aligned paddles for smooth turning.",
+      "destinationRect": {
+        "x": 0,
+        "y": 2,
+        "w": 31,
+        "h": 28
+      }
+    },
+    {
+      "key": "mill-froth-0",
+      "width": 14,
+      "height": 6,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-froth",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 363,
+        "y": 830,
+        "w": 194,
+        "h": 93
+      },
+      "itemId": "mill-froth",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-froth",
+      "state": "0",
+      "look": "Tiny isolated blue-white foam splashes where waterwheel paddles bite water. Low flat horizontal water crest, two subtly different frames.",
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 10,
+        "h": 5
+      }
+    },
+    {
+      "key": "mill-froth-1",
+      "width": 14,
+      "height": 6,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-froth",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 632,
+        "y": 837,
+        "w": 204,
+        "h": 90
+      },
+      "itemId": "mill-froth",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-froth",
+      "state": "1",
+      "look": "Tiny isolated blue-white foam splashes where waterwheel paddles bite water. Low flat horizontal water crest, two subtly different frames.",
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 11,
+        "h": 5
+      }
+    },
+    {
+      "key": "mill-hopper",
+      "width": 16,
+      "height": 20,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "world-sprite",
+      "scaleGroup": "mill-hopper",
+      "source": "items-tolley-mill-1",
+      "sheet": "tolley-mill-1",
+      "sourceRect": {
+        "x": 873,
+        "y": 703,
+        "w": 229,
+        "h": 243
+      },
+      "itemId": "mill-hopper",
+      "category": "Tolley Mill",
+      "priority": "P1",
+      "name": "mill-hopper",
+      "state": null,
+      "look": "Small grain hopper on splayed legs, grain heaped in top, flour at its spout, many compact tally marks grouped clearly in fives scratched down its side. Simple side-facing prop.",
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 15,
+        "h": 16
+      }
+    }
+  ],
+  "animations": [
+    {
+      "key": "mill-wheel",
+      "frames": [
+        "mill-wheel-0",
+        "mill-wheel-1",
+        "mill-wheel-2",
+        "mill-wheel-3"
+      ],
+      "frameRate": 4,
+      "repeat": -1
+    },
+    {
+      "key": "mill-wheel-mended",
+      "frames": [
+        "mill-wheel-mended-0",
+        "mill-wheel-mended-1",
+        "mill-wheel-mended-2",
+        "mill-wheel-mended-3"
+      ],
+      "frameRate": 4,
+      "repeat": -1
+    },
+    {
+      "key": "mill-froth",
+      "frames": [
+        "mill-froth-0",
+        "mill-froth-1"
+      ],
+      "frameRate": 6,
+      "repeat": -1
+    }
+  ],
+  "stateGroups": [
+    {
+      "key": "bench-axe-states",
+      "frames": [
+        "item-bench-axe-whole",
+        "item-bench-axe-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "bench-pick-states",
+      "frames": [
+        "item-bench-pick-whole",
+        "item-bench-pick-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "bench-spade-states",
+      "frames": [
+        "item-bench-spade-whole",
+        "item-bench-spade-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "stave-bucket-states",
+      "frames": [
+        "item-stave-bucket-whole",
+        "item-stave-bucket-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "brack-felling-axe-states",
+      "frames": [
+        "item-brack-felling-axe-whole",
+        "item-brack-felling-axe-worn",
+        "item-brack-felling-axe-blunt"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "orrins-mason-pick-states",
+      "frames": [
+        "item-orrins-mason-pick-whole",
+        "item-orrins-mason-pick-worn",
+        "item-orrins-mason-pick-blunt"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "ada-garden-spade-states",
+      "frames": [
+        "item-ada-garden-spade-whole",
+        "item-ada-garden-spade-worn",
+        "item-ada-garden-spade-blunt"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "nans-lamplighter-pole-states",
+      "frames": [
+        "item-nans-lamplighter-pole-whole",
+        "item-nans-lamplighter-pole-worn",
+        "item-nans-lamplighter-pole-cracked"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "carters-lantern-states",
+      "frames": [
+        "item-carters-lantern-lit",
+        "item-carters-lantern-unlit"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "turncap-jar-states",
+      "frames": [
+        "item-turncap-jar-fresh",
+        "item-turncap-jar-dried-out"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "bloom-flowers-states",
+      "frames": [
+        "item-bloom-flowers-fresh",
+        "item-bloom-flowers-dried"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "window-lamp-states",
+      "frames": [
+        "item-window-lamp-lit",
+        "item-window-lamp-unlit",
+        "world-window-lamp-unlit-pane",
+        "world-window-lamp-lit-warm-glow"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "gate-shelf-states",
+      "frames": [
+        "world-gate-shelf-empty",
+        "world-gate-shelf-stocked-with-jars"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "keepsake-cabinet-states",
+      "frames": [
+        "world-keepsake-cabinet-empty",
+        "world-keepsake-cabinet-displaying-trinkets"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "drying-rack-states",
+      "frames": [
+        "world-drying-rack-bare-rack",
+        "world-drying-rack-hanging-herbs"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "apothecary-shelf-states",
+      "frames": [
+        "world-apothecary-shelf-half-stocked",
+        "world-apothecary-shelf-full-shelves"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "lantern-post-states",
+      "frames": [
+        "item-lantern-post-lit",
+        "item-lantern-post-unlit",
+        "world-lantern-post-unlit",
+        "world-lantern-post-lit-warm-amber",
+        "world-lantern-post-amberwake-glow"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "raised-bed-states",
+      "frames": [
+        "world-raised-bed-dry-dark-soil",
+        "world-raised-bed-watered-soil",
+        "world-raised-bed-sprouting"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "pencil-map-states",
+      "frames": [
+        "world-pencil-map-crisp-pencil",
+        "world-pencil-map-smudged-drift"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "pressed-flowers-states",
+      "frames": [
+        "world-pressed-flowers-fresh-bloom-colors",
+        "world-pressed-flowers-dried-brown"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "closure-lamp-states",
+      "frames": [
+        "item-closure-lamp-lit",
+        "item-closure-lamp-unlit",
+        "world-closure-lamp-unlit",
+        "world-closure-lamp-lit-pale-blue"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "old-lamp-stone-states",
+      "frames": [
+        "world-old-lamp-stone-intact-weathered",
+        "world-old-lamp-stone-pick-broken"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "dug-patch-states",
+      "frames": [
+        "world-dug-patch-fresh-dark-earth-hole",
+        "world-dug-patch-settled-earth"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "tree-stump-states",
+      "frames": [
+        "world-tree-stump-fresh-cut-with-pale-sawdust",
+        "world-tree-stump-weathered"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "herb-patch-comfrey-states",
+      "frames": [
+        "world-herb-patch-comfrey-lush-leafy-plant",
+        "world-herb-patch-comfrey-dug-earth-patch"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "herb-patch-thyme-states",
+      "frames": [
+        "world-herb-patch-thyme-purple-thyme-sprigs",
+        "world-herb-patch-thyme-dug-earth-patch"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "hollow-tree-states",
+      "frames": [
+        "world-hollow-tree-intact-tree-with-hive-hole-and-bees",
+        "world-hollow-tree-opened-hollow-with-comb-drips"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "standing-iron-oak-states",
+      "frames": [
+        "world-standing-iron-oak-unmarked-ancient-trunk",
+        "world-standing-iron-oak-stamped-with-wax-seal"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "iron-oak-windfall-states",
+      "frames": [
+        "world-iron-oak-windfall-mossy-fallen-trunk",
+        "world-iron-oak-windfall-harvested-stump-with-3-leafy-branches"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "stump-turncaps-states",
+      "frames": [
+        "world-stump-turncaps-sprouting-caps",
+        "world-stump-turncaps-mature-leaning-caps"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "ledger-soup-pot-states",
+      "frames": [
+        "world-ledger-soup-pot-bubbling-steaming-pot-over-fire",
+        "world-ledger-soup-pot-coldempty-pot"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
+    }
+  ],
+  "aliases": {
+    "bench-axe": "item-bench-axe-whole",
+    "bench-pick": "item-bench-pick-whole",
+    "bench-spade": "item-bench-spade-whole",
+    "stave-bucket": "item-stave-bucket-whole",
+    "watering-can": "item-watering-can",
+    "brack-felling-axe": "item-brack-felling-axe-whole",
+    "orrins-mason-pick": "item-orrins-mason-pick-whole",
+    "ada-garden-spade": "item-ada-garden-spade-whole",
+    "nans-lamplighter-pole": "item-nans-lamplighter-pole-whole",
+    "oak-mark-punch": "item-oak-mark-punch",
+    "carters-lantern": "item-carters-lantern-lit",
+    "turncap-jar": "item-turncap-jar-fresh",
+    "salve-satchel": "item-salve-satchel",
+    "runners-whistle": "item-runners-whistle",
+    "forager-satchel": "item-forager-satchel",
+    "work-apron": "item-work-apron",
+    "carting-coat": "item-carting-coat",
+    "seasoned-timber": "item-seasoned-timber",
+    "drift-stone": "item-drift-stone",
+    "iron-oak": "item-iron-oak",
+    "willow-bark": "item-willow-bark",
+    "beeswax": "item-beeswax",
+    "storm-grade-drop": "item-storm-grade-drop",
+    "tallow": "item-tallow",
+    "flour": "item-flour",
+    "wild-honey": "item-wild-honey",
+    "walnut-shells": "item-walnut-shells",
+    "madder-scraps": "item-madder-scraps",
+    "amberfall-sap": "item-amberfall-sap",
+    "frost-glass": "item-frost-glass",
+    "bloom-flowers": "item-bloom-flowers-fresh",
+    "tarrow-edge-strip": "item-tarrow-edge-strip",
+    "loose-road-nail": "item-loose-road-nail",
+    "iron-oak-wedge": "item-iron-oak-wedge",
+    "tyre-iron-hoop": "item-tyre-iron-hoop",
+    "green-ash-haft": "item-green-ash-haft",
+    "amber-bead": "item-amber-bead",
+    "waxed-cord": "item-waxed-cord",
+    "warden-sliver": "item-warden-sliver",
+    "fibre-rope": "item-fibre-rope",
+    "split-rail": "item-split-rail",
+    "slates": "item-slates",
+    "oak-slat": "item-oak-slat",
+    "lamp-head": "item-lamp-head",
+    "wax-seal": "item-wax-seal",
+    "hazel-whip": "item-hazel-whip",
+    "birch-sapling": "item-birch-sapling",
+    "rowan-sapling": "item-rowan-sapling",
+    "comfrey-root": "item-comfrey-root",
+    "wild-thyme": "item-wild-thyme",
+    "turncap-spawn": "item-turncap-spawn",
+    "iron-oak-acorn": "item-iron-oak-acorn",
+    "keepers-twists": "item-keepers-twists",
+    "oil-twists": "item-oil-twists",
+    "saltings-tea": "item-saltings-tea",
+    "oatcakes": "item-oatcakes",
+    "comfrey-salve": "item-comfrey-salve",
+    "willow-bark-tea": "item-willow-bark-tea",
+    "blue-moss": "item-blue-moss",
+    "candle-oil": "item-candle-oil",
+    "hearth-oil": "item-hearth-oil",
+    "storm-oil": "item-storm-oil",
+    "knotted-halter": "item-knotted-halter",
+    "work-glove": "item-work-glove",
+    "road-nails": "item-road-nails",
+    "door-fox": "item-door-fox",
+    "window-lamp": "item-window-lamp-lit",
+    "gate-shelf": "item-gate-shelf",
+    "writing-desk": "item-writing-desk",
+    "keepsake-cabinet": "item-keepsake-cabinet",
+    "drying-rack": "item-drying-rack",
+    "apothecary-shelf": "item-apothecary-shelf",
+    "lantern-post": "item-lantern-post-lit",
+    "raised-bed": "item-raised-bed",
+    "naming-frame": "item-naming-frame",
+    "pencil-map": "item-pencil-map",
+    "pressed-flowers": "item-pressed-flowers",
+    "empty-chair": "item-empty-chair",
+    "closure-lamp": "item-closure-lamp-lit",
+    "naming-slip": "item-naming-slip",
+    "recipe-page-tea": "item-recipe-page-tea",
+    "recipe-page-salve": "item-recipe-page-salve",
+    "recipe-page-candle-oil": "item-recipe-page-candle-oil",
+    "recipe-page-willow-tea": "item-recipe-page-willow-tea",
+    "recipe-card-twists": "item-recipe-card-twists",
+    "recipe-card-oil-twists": "item-recipe-card-oil-twists",
+    "recipe-page-hearth-oil": "item-recipe-page-hearth-oil",
+    "recipe-page-wax-seal": "item-recipe-page-wax-seal",
+    "recipe-page-storm-oil": "item-recipe-page-storm-oil",
+    "paper-icon-folded": "item-paper-icon-folded",
+    "paper-icon-scroll": "item-paper-icon-scroll",
+    "paper-icon-slate": "item-paper-icon-slate",
+    "lantern-post-footing": "world-lantern-post-footing",
+    "lantern-post-head-unlit": "world-lantern-post-head-unlit",
+    "old-lamp-stone": "world-old-lamp-stone-intact-weathered",
+    "dug-patch": "world-dug-patch-fresh-dark-earth-hole",
+    "tree-stump": "world-tree-stump-fresh-cut-with-pale-sawdust",
+    "herb-patch-comfrey": "world-herb-patch-comfrey-lush-leafy-plant",
+    "herb-patch-thyme": "world-herb-patch-thyme-purple-thyme-sprigs",
+    "hollow-tree": "world-hollow-tree-intact-tree-with-hive-hole-and-bees",
+    "standing-iron-oak": "world-standing-iron-oak-unmarked-ancient-trunk",
+    "iron-oak-windfall": "world-iron-oak-windfall-mossy-fallen-trunk",
+    "stump-turncaps": "world-stump-turncaps-sprouting-caps",
+    "ledger-soup-pot": "world-ledger-soup-pot-bubbling-steaming-pot-over-fire",
+    "mill-house": "mill-house",
+    "mill-wheel": "mill-wheel-0",
+    "mill-wheel-mended": "mill-wheel-mended-0",
+    "mill-froth": "mill-froth-0",
+    "mill-hopper": "mill-hopper",
+    "timber": "commons:icon-timber",
+    "woodpile": "commons:woodpile",
+    "candle-hulls": "commons:candle-hull-0",
+    "carting-bunting": "commons:bunting",
+    "whittled-fox": "commons:icon-whittled-fox",
+    "river-glass-bead": "commons:icon-river-glass-bead",
+    "tin-whistle": "commons:icon-tin-whistle",
+    "beeswax-candle": "commons:icon-beeswax-candle",
+    "spare-bootlace": "commons:icon-spare-bootlace"
+  },
+  "notes": [
+    "All source rectangles are measured; no fixed source cell dimensions are assumed.",
+    "Use the manifest exact native canvas dimensions.",
+    "Inventory wear and world condition frames are discrete gameplay states, not looping animations.",
+    "Existing Commons frames are referenced with the commons: alias prefix.",
+    "Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions."
+  ]
+}

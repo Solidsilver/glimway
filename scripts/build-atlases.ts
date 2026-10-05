@@ -33,6 +33,7 @@ import {
 } from '../src/game/atlas-plan.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
+import type { ItemsPassManifest } from '../src/game/items-pass.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const OUT = join(ROOT, 'public/assets/fingersnap/packed')
@@ -113,6 +114,18 @@ async function main(): Promise<void> {
   const runtimeJobs: Job[] = runtime.frames.map((f) => ({
     id: f.key,
     src: runtimeSrc.get(f.source)!,
+    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
+    w: f.width,
+    h: f.height,
+    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
+  }))
+
+  const items = readJson<ItemsPassManifest>('assets/generated/items-pass/manifest.json')
+  const itemsSrc = new Map(items.sources.map((s) => [s.key, `assets/generated/items-pass/${s.file}`]))
+  for (const path of itemsSrc.values()) read(path)
+  const itemsJobs: Job[] = items.frames.map((f) => ({
+    id: f.key,
+    src: itemsSrc.get(f.source)!,
     s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
     w: f.width,
     h: f.height,
@@ -233,6 +246,8 @@ async function main(): Promise<void> {
   writeFileSync(join(OUT, 'commons.png'), await bake(cAll, cPack.at, cPack.size))
   const rPack = pack(runtimeJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   writeFileSync(join(OUT, 'runtime.png'), await bake(runtimeJobs, rPack.at, rPack.size))
+  const iPack = pack(itemsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  writeFileSync(join(OUT, 'items.png'), await bake(itemsJobs, iPack.at, iPack.size))
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
   writeFileSync(join(OUT, 'terrain.png'), await bake(terrainJobs, tAt, [TILE * 4, TILE * 4]))
 
@@ -305,12 +320,13 @@ async function main(): Promise<void> {
     },
     commons: { image: 'commons.png', size: cPack.size, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
     runtime: { image: 'runtime.png', size: rPack.size, frames: rects(runtimeJobs, rPack.at) },
+    items: { image: 'items.png', size: iPack.size, frames: rects(itemsJobs, iPack.at) },
     terrain: { image: 'terrain.png', size: [TILE * 4, TILE * 4] },
     atlases,
     backdrops,
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, 16 terrain cells, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
 }
 
 await main()

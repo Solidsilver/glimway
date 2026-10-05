@@ -57,7 +57,11 @@ test('packed atlases hold exactly what the loaders blitted from the source sheet
       if (want !== got) bad.push(`${what}: want ${want}, got ${got}`)
     }
 
-    for (const [dir, prefix] of [['commons-pass', 'commons-art:'], ['runtime-pass', '']] as const) {
+    for (const [dir, prefix] of [
+      ['commons-pass', 'commons-art:'],
+      ['runtime-pass', ''],
+      ['items-pass', 'items-art:'],
+    ] as const) {
       const m = await json<Manifest>(`/assets/generated/${dir}/manifest.json`)
       const files = new Map(m.sources.map((s) => [s.key, `/assets/generated/${dir}/${s.file}`]))
       for (const f of m.frames) {
@@ -96,5 +100,5 @@ test('packed atlases hold exactly what the loaders blitted from the source sheet
     return { bad, checked }
   })
   expect(result.bad).toEqual([])
-  expect(result.checked).toBeGreaterThan(220)
+  expect(result.checked).toBeGreaterThan(380)
 })

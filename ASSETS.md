@@ -227,6 +227,31 @@ and the front-facing gateway don't fit the Commons layout (loaded, not
 placed); 2×1 decorations and the plot sign board are refitted/widened at
 runtime from the measured crops (source bytes untouched).
 
+## Register G — Items pass (tools, supplies, keepsakes, home goods, papers, world sprites, mill)
+
+Delivered 2026-10-05 to `assets/generated/items-pass/` (archive of
+record: 12 sheets, per-sheet atlases, `manifest.json`, `jobs.json`,
+`request-index.json`, `drafts/`, `preview.html`, `validation.json`,
+`frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
+COVERAGE). `public/assets/fingersnap/items-pass/` ships only `manifest.json`;
+the frames ship baked into the packed atlas (`items.png`, 144 KB).
+
+Provenance: original artwork generated 2026-10-05 with the built-in
+image-generation tool; prompts in `jobs.json` / `request-index.json`; no
+Habitica artwork copied (pack README). 170 measured frames, 3 looping
+mill animations, 31 state groups, 118 aliases (including 9 `commons:`
+aliases); answers `docs/art-requests.md` items pass in full. Integration:
+`src/game/items-pass.ts` (loader, `items-art:` native textures, `itemIcon`
+helper with discrete states and fallbacks, `itemIconUrls`); Tolley mill
+replacement in `installItemsPass`; contract in `tests/items-pass.test.ts`;
+wiring notes in `docs/runtime-asset-spec.md`. Register B placeholders stay
+as the fallback.
+
+Recorded limits/quirks: sources are irregular high-resolution sheets
+(never a grid); native canvases are tiny (16×16 for item icons); tool
+conditions and variants are discrete states (never auto-looping); the Tolley
+Mill waterwheel and froth are the three authored looping animations.
+
 ## Register C — pending delivered art (not yet in repo)
 
 Expected from the external asset agent; **not present, not licensed, not
@@ -362,3 +387,10 @@ record here):
   atlases are re-sampled at their largest on-screen size; the two
   illustrations ship as WebP. See `docs/runtime-asset-spec.md` ("Packed
   atlases").
+- 2026-10-05 — Register G added for the Items pass
+  (`assets/generated/items-pass/` + a trimmed
+  `public/assets/fingersnap/items-pass/`): inventory icons for tools,
+  supplies, keepsakes, home goods, papers, plus world sprites and the
+  Tolley mill with its running waterwheel and mended wheel animations.
+  Frames ship packed into `items.png` (144 KB); `public/assets` remains
+  ~4.1 MB (~17 MB source copy removed from public). License still pending.

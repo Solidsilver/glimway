@@ -39,6 +39,7 @@ import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
 import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
+import { itemIconUrls } from '../items-pass'
 import { emitResidents } from '../residents'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
@@ -863,7 +864,7 @@ export class WorldScene extends Phaser.Scene {
       if (url) out[name] = url
     }
     bus.emit(EV.portraits, out)
-    bus.emit(EV.artIcons, commonsIconUrls(this))
+    bus.emit(EV.artIcons, { ...commonsIconUrls(this), ...itemIconUrls(this) })
   }
 
   // ------------------------------------------------------------- interaction

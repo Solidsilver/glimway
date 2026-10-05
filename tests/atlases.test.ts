@@ -15,6 +15,7 @@ import {
 } from '../src/game/atlas-plan.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
+import type { ItemsPassManifest } from '../src/game/items-pass.ts'
 
 /**
  * The packed atlases are committed build output (scripts/build-atlases.ts,
@@ -31,6 +32,7 @@ type Built = PackedManifest & { generatorVersion: number; plan: { maxScreenScale
 const built = JSON.parse(readFileSync(join(PACKED, 'atlases.json'), 'utf8')) as Built
 const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pass/manifest.json'), 'utf8')) as CommonsPassManifest
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
+const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
 
 const sha = (path: string) => createHash('sha256').update(readFileSync(join(ROOT, path))).digest('hex')
 
@@ -47,6 +49,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...commons.sources.map((s) => `assets/generated/commons-pass/${s.file}`),
     'assets/generated/runtime-pass/manifest.json',
     ...runtime.sources.map((s) => `assets/generated/runtime-pass/${s.file}`),
+    'assets/generated/items-pass/manifest.json',
+    ...items.sources.map((s) => `assets/generated/items-pass/${s.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
@@ -81,6 +85,7 @@ test('canvas packs hold every native frame whole, inside their atlas', () => {
   for (const [pack, frames] of [
     [built.commons, commons.frames],
     [built.runtime, runtime.frames],
+    [built.items, items.frames],
   ] as const) {
     const [w, h, color] = pngSize(join(PACKED, pack.image))
     assert.deepEqual([w, h], pack.size, `${pack.image} size`)
@@ -125,9 +130,11 @@ test('public/assets/fingersnap ships manifests and packed art only — no full-r
     'runtime-pass/manifest.json',
     'expansion/manifest.json',
     'expansion/animations.json',
+    'items-pass/manifest.json',
     'packed/atlases.json',
     `packed/${built.commons.image}`,
     `packed/${built.runtime.image}`,
+    `packed/${built.items.image}`,
     `packed/${built.terrain.image}`,
     ...Object.values(built.atlases).flatMap((a) => [`packed/${a.image}`, `packed/${a.json}`]),
     ...Object.values(built.backdrops).map((f) => `packed/${f}`),
@@ -137,7 +144,7 @@ test('public/assets/fingersnap ships manifests and packed art only — no full-r
     const d = readFileSync(join(PACKED, f))
     assert.equal(d.subarray(0, 4).toString('latin1') + d.subarray(8, 12).toString('latin1'), 'RIFFWEBP', `${f} is WebP`)
   }
-  for (const m of ['expansion/manifest.json', 'expansion/animations.json', 'commons-pass/manifest.json', 'runtime-pass/manifest.json']) {
+  for (const m of ['expansion/manifest.json', 'expansion/animations.json', 'commons-pass/manifest.json', 'runtime-pass/manifest.json', 'items-pass/manifest.json']) {
     assert.ok(readFileSync(join(dir, m)).equals(readFileSync(join(ROOT, 'assets/generated', m))), `${m} is the delivered one`)
   }
 })
