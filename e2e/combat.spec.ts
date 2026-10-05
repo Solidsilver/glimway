@@ -133,12 +133,12 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
   expect(hits).toBeGreaterThan(0)
 })
 
-test('the warden: blows never settle it, holding up the rubbing does', async ({ page }) => {
+test('the warden: blows never settle it, speaking the naming does', async ({ page }) => {
   await beginNewJourney(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
-  await talkThrough(page, /rubbing of the marker/)
+  await talkThrough(page, /Copy the naming from the stone/)
   await expect.poll(async () => (await warden(page)).state).toBe('active')
 
   // Blows ring off the stone: any number, any size, and a real swing.
@@ -150,18 +150,18 @@ test('the warden: blows never settle it, holding up the rubbing does', async ({ 
   await expect(page.locator('.toast', { hasText: 'rings off the stone' })).toBeVisible()
   let g = await warden(page)
   expect(g.state).toBe('active')
-  expect(g.showings).toBe(0)
+  expect(g.speakings).toBe(0)
   expect(await savedStage(page)).toBe('clue-found')
 
   // Bait a lunge from a few steps off; when it stops to find its feet,
-  // step in and hold up the rubbing. Each showing makes it falter.
+  // step in and speak the naming. Each speaking makes it falter.
   for (let i = 1; i <= g.needed; i++) {
     await stepToWarden(page, 84, false)
     await stepToWarden(page, 20, true)
-    await expect(page.locator('.prompt')).toContainText('Hold up the rubbing')
-    if (i === 1) await page.screenshot({ path: 'test-results/warden-showing.png' })
+    await expect(page.locator('.prompt')).toContainText('Speak the naming')
+    if (i === 1) await page.screenshot({ path: 'test-results/warden-speaking.png' })
     await page.keyboard.press('e')
-    await expect.poll(async () => (await warden(page)).showings).toBe(i)
+    await expect.poll(async () => (await warden(page)).speakings).toBe(i)
   }
 
   // Settled: resting in its pose, still there, and the quest moves on.

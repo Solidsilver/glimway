@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test'
 /**
  * Playtest helpers. Movement and interaction go through real keyboard input;
  * the dev hooks are only used to skip long walks (__fsDevWarp), long fights
- * (__fsDevStrike) and the warden encounter (__fsDevShowRubbing), and the
+ * (__fsDevStrike) and the warden encounter (__fsDevSpeakNaming), and the
  * read-only hooks for assertions.
  */
 
@@ -14,7 +14,7 @@ type Hooks = {
   __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
   __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
   __fsDevStrike?: (n: number, type?: string) => void
-  __fsDevShowRubbing?: (force?: boolean) => boolean
+  __fsDevSpeakNaming?: (force?: boolean) => boolean
   __fsWarden?: () => WardenView
   __fsWilds?: () => WildsDump | null
 }
@@ -62,7 +62,7 @@ export type WardenView = {
   visible: boolean
   phase: string | null
   opening: boolean
-  showings: number
+  speakings: number
   needed: number
 }
 
@@ -125,14 +125,14 @@ export async function warden(page: Page): Promise<WardenView> {
 }
 
 /**
- * Skip the warden encounter: wait for it to wake, then hold up the rubbing
+ * Skip the warden encounter: wait for it to wake, then speak the naming
  * (dev lever, ignoring the opening and reach) until it settles.
  */
 export async function settleWarden(page: Page): Promise<void> {
   await expect.poll(async () => (await warden(page)).state).toBe('active')
   const needed = (await warden(page)).needed
   for (let i = 0; i < needed; i++) {
-    await page.evaluate(() => (window as unknown as Hooks).__fsDevShowRubbing!(true))
+    await page.evaluate(() => (window as unknown as Hooks).__fsDevSpeakNaming!(true))
   }
   await expect.poll(async () => (await warden(page)).state).toBe('settled')
 }

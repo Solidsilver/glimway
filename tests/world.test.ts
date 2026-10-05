@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   DEMO_CHARACTER,
   dialogueFor,
+  discoveryInfo,
+  itemInfo,
   journalEntries,
   locations,
   QUEST_STEPS,
@@ -207,14 +209,36 @@ test('the warden is settled, not slain, in every story beat', () => {
   assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
 });
 
-test('the journal checklist follows the objectives: a rubbing, then settling the warden', () => {
+test('the journal checklist follows the objectives: copy the naming, then settle the warden', () => {
   const step = (stage: QuestStage) => QUEST_STEPS.find((s) => s.stage === stage)!.label;
   // One step per stage before the ending, in story order.
   assert.deepEqual(QUEST_STEPS.map((s) => s.stage), QUEST_STAGES.slice(0, -1));
-  assert.equal(step('accepted'), 'Take a rubbing of the route stone');
-  assert.match(questObjective('accepted'), /take a rubbing of the route stone/);
+  assert.equal(step('accepted'), 'Copy the naming from the route stone');
+  assert.match(questObjective('accepted'), /copy the naming cut on the route stone/);
   assert.equal(step('clue-found'), 'Settle the stone warden');
   assert.match(questObjective('clue-found'), /^Settle the stone warden/);
   assert.match(questObjective('guardian-defeated'), new RegExp(`^${step('guardian-defeated')}`));
   for (const s of QUEST_STEPS) assert.doesNotMatch(s.label, /\b(face|fight|defeat|slay|kill)\b/i, s.label);
+});
+
+test('the warden is settled by a naming: no "rubbing" in anything a player reads', () => {
+  const stages = QUEST_STAGES;
+  const text: string[] = [];
+  for (const id of ['mara', 'pip', 'orrin', 'clue', 'lantern']) {
+    for (const st of stages) {
+      try {
+        const d = dialogueFor(id, st);
+        text.push(...d.lines, ...(d.choices ?? []).flatMap((c) => [c.text, ...(c.reply ?? [])]));
+      } catch {
+        /* not every id speaks at every stage */
+      }
+    }
+  }
+  for (const st of stages) {
+    text.push(questObjective(st), ...journalEntries(st).flatMap((e) => [e.title, e.body]));
+  }
+  text.push(...QUEST_STEPS.map((s) => s.label), itemInfo('lantern-route-rubbing').name, itemInfo('lantern-route-rubbing').blurb, discoveryInfo('old-route-marker').blurb);
+  for (const t of text) assert.doesNotMatch(t, /\brub(bing|bed)?\b/i, t);
+  assert.match(dialogueFor('clue', 'accepted').lines.join(' '), /The road is closed here/);
+  assert.equal(itemInfo('lantern-route-rubbing').name, 'Wenna’s Naming, Copied Out');
 });

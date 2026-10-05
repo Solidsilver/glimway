@@ -1,26 +1,33 @@
 # Fingersnap demo playtest — October 2, 2026
 
+> **Update, October 5, 2026: the warden is settled by speaking a naming.**
+> The clue beat copies Wenna's closure naming ("The road is closed here…")
+> off the route stone; the prompt at the warden is **Speak the naming**
+> (**Speak** on touch), and the floats read "the flame listens" / "it rests".
+> There is no "rubbing" any more (the inventory id `lantern-route-rubbing`
+> stays for saves; it displays as "Wenna's Naming, Copied Out").
+>
 > **Update, October 4, 2026: the warden is now settled, not fought.** Since
 > the canon pass, the stone warden is something Hearthwick built, and it is
 > keeping its pose. The current encounter:
 >
-> 1. Taking the rubbing at the route stone (`find-clue`) wakes it: "Stone
+> 1. Copying the naming at the route stone (`find-clue`) wakes it: "Stone
 >    grinds on stone. The warden turns from its post…"
 > 2. It holds the path about 60 px from you, lunges from range (0.65 s blue
 >    telegraph, 3 damage) and sweeps its arms if you crowd it (0.55 s windup,
 >    2 damage). Past 170 px it walks home.
 > 3. Blows only clink. The first one says "Your blow rings off the stone. It
->    isn't fighting you; it's keeping a pose. Show it the mark."
+>    isn't fighting you; it's keeping a pose. Speak it the naming."
 > 4. After a lunge it stands open for 1.5 s. Step within reach and the prompt
->    reads **Hold up the rubbing** (E / Space; **Show** on touch). It falters,
+>    reads **Speak the naming** (E / Space; **Speak** on touch). It falters,
 >    and one of three amber pips lights.
-> 5. The third showing settles it: arms lowered, the heart-lamp a coal, no
+> 5. The third speaking settles it: arms lowered, the heart-lamp a coal, no
 >    dissolve. The `defeat-guardian` event applies, the ribbon reads
 >    "Settled — The Warden Rests", and the paper "Eleven Days" is found. On
 >    later visits it rests on its post.
 >
 > Covered by `e2e/combat.spec.ts` ("the warden: blows never settle it,
-> holding up the rubbing does"), `e2e/touch.spec.ts` (the Show button),
+> speaking the naming does"), `e2e/touch.spec.ts` (the Speak button),
 > `e2e/papers.spec.ts` (Eleven Days) and `e2e/quest.spec.ts` (full quest).
 > The table rows and tuning notes below that describe a fight to defeat are
 > the October 2 record. Two other details below are also out of date: the road
@@ -46,8 +53,8 @@ A single fresh run ("New journey") completed the entire quest:
 | West gate → Brackenwood Path (fade transition) | ✅ area toast, correct west entry |
 | Woodland wisps: melee + bolt combat | ✅ wisps deal damage; leash tune applied |
 | East exit → Ashwatch Ruin | ✅ |
-| Mural in alcove → clue dialogue → discovery | ✅ stage clue-found; warden spawns once (announce gated) — now "Take a rubbing of the marker" at the route stone |
-| Stone warden real-time fight | ✅ won with melee + telegraph-retreat at 18→34 HP; objective advanced — *historical: since Oct 4 the warden is settled by holding up the rubbing three times (see the update above)* |
+| Mural in alcove → clue dialogue → discovery | ✅ stage clue-found; warden spawns once (announce gated) — now "Copy the naming from the stone" at the route stone |
+| Stone warden real-time fight | ✅ won with melee + telegraph-retreat at 18→34 HP; objective advanced — *historical: since Oct 4 the warden is settled by speaking the naming three times (see the updates above)* |
 | Shrine lantern → light it | ✅ stage lantern-lit, additive glow over the shrine |
 | Return west through Brackenwood | ✅ |
 | Home → Mara's "the light is back" dialogue | ✅ fires return-village → stage complete |

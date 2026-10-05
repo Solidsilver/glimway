@@ -23,16 +23,19 @@ The expansion (worlds, homes, the Wilds) is designed in
 ## The lantern road
 
 Meet **Mara** in the village of Hearthwick, accept the lantern quest, follow
-the **Brackenwood Path** east (mind the wisps), take a rubbing of the route
-stone in **Ashwatch Ruin**, settle the **stone warden**, light the hilltop
+the **Brackenwood Path** east (mind the wisps), copy the naming cut on the
+route stone in **Ashwatch Ruin**, settle the **stone warden**, light the hilltop
 lantern, then walk home and see the village lantern glowing again.
 
-**The warden is not a fight.** Hearthwick built it, long ago, and it is still
+**The warden is not a fight.** Hearthwick built it, long ago: a lamp in a
+stone coat whose one naming is "the road is closed here", and it is still
 keeping its pose. Blows ring off the stone. It holds the path, lunges from
 range and sweeps its arms up close; after a lunge it stops to find its feet
-for a moment. Step in then and **hold up the rubbing** (E / Space, or the
-**Show** button on touch). Three showings settle it: its arms lower, the lamp
-in its chest gutters to a coal, and it rests on its post for good.
+for a moment. Step in then and **speak the naming** to its heart-lamp (E /
+Space, or the **Speak** button on touch): Wenna's words from the route stone,
+turned round to say the road is held again. Three speakings settle it: its
+arms lower, the lamp in its chest gutters to a coal, and it rests on its post
+for good.
 
 - Three explorable quest areas with collisions, transitions and NPCs (Mara,
   Pip, Orrin) whose lines follow the story.
@@ -231,7 +234,7 @@ in, everything stays local exactly as before.
 | Action | Desktop | Touch |
 |---|---|---|
 | Move | WASD / arrow keys | Joystick (bottom left) |
-| Talk / use / attack / show the rubbing | E or Space | Big action button (its label says what it will do) |
+| Talk / use / attack / speak the naming | E or Space | Big action button (its label says what it will do) |
 | Signature ability | F | ✦ button (shows mana cost and cooldown) |
 | Dodge roll | Shift | Roll button |
 | Pick a dialogue reply | 1–9, or arrows + Enter | Tap the reply |
@@ -433,7 +436,7 @@ The page exposes read-only hooks for playtests: `__fsPlayer`, `__fsEnemies`,
 `__fsPapers`, `__fsHomes`, `__fsVillage`, `__fsRemote` and `__fsPresence`.
 Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
 `__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`, `__fsDevDodge(dx, dy)`,
-`__fsDevShowRubbing(force)`, `__fsDevPlace(x, y)` and `__fsDevCalendar(unix)`.
+`__fsDevSpeakNaming(force)`, `__fsDevPlace(x, y)` and `__fsDevCalendar(unix)`.
 
 ## Known limitations
 

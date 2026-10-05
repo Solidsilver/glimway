@@ -13,7 +13,7 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
 
   // The route marker in the ruin's alcove.
   await warp(page, 'ruin', 15, 3)
-  await talkThrough(page, /rubbing of the marker/)
+  await talkThrough(page, /Copy the naming from the stone/)
   await expectStage(page, 'clue-found')
 
   // The warden wakes once the clue is found; skip the encounter.

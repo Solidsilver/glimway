@@ -202,7 +202,7 @@ export class Interactables {
 
   /**
    * Nearest interactable within reach drives the prompt, markers and key hint.
-   * An `action` (the warden standing open to the rubbing) outranks them all.
+   * An `action` (the warden standing open to the naming) outranks them all.
    */
   updatePrompt(player: { x: number; y: number }, now: number, action: PromptAction | null = null): void {
     // Nearest interactable within reach
@@ -317,7 +317,7 @@ export class Interactables {
     const { session } = this.deps
     const stage = session.questStage
     if (this.extra(it.id)) return this.extra(it.id)!.label?.(it.id) ?? it.label
-    if (it.id === 'clue') return stage === 'accepted' ? 'Take a rubbing of the marker' : it.label
+    if (it.id === 'clue') return stage === 'accepted' ? 'Copy the naming from the stone' : it.label
     if (it.id === 'lantern') return stage === 'guardian-defeated' ? 'Light the lantern' : it.label
     if (it.id === 'chest') return session.state.flags.includes('opened:ashwatch-chest') ? it.label : `Open the chest · ${EMBER_COSTS.chest} embers`
     if (it.id === 'hearth') return `Rest by the lantern · ${EMBER_COSTS.rest} embers`

@@ -38,8 +38,9 @@ they differ):
   outer Wilds turn at the end of every wick (the "Outer-region reset period"
   question below is settled: weekly, by wick). The inner region never resets.
 - **The warden is village-built and is settled, not slain.** Blows clink off
-  it; holding up the route-stone rubbing three times, while it stands open
-  after a lunge, settles it. Quest ids, events and stages are unchanged.
+  it; speaking the naming to its heart-lamp three times (Wenna's closure
+  naming from the route stone, turned round: the road is held again), while
+  it stands open after a lunge, settles it. Quest ids, events and stages are unchanged.
 - **Papers and a shared library.** Found texts are a progression of their own;
   in a world, the library shelf is shared and keeps the first donor's name.
 - **Persistent worlds with player invites.** A first login creates a solo
