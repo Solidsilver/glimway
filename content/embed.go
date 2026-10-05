@@ -229,7 +229,7 @@ type Paper struct {
 var paperSources = map[string]bool{
 	"library-start": true, "placed": true, "quest": true, "gift": true,
 	"commons": true, "wilds-poi": true, "wilds-chest": true,
-	"village-project": true, "turning": true,
+	"village-project": true, "turning": true, "echo": true,
 }
 
 func LoadPapers() ([]Paper, error) {
