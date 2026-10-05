@@ -58,6 +58,7 @@ type presenceIdentity struct {
 
 type presencePeer struct {
 	identity    presenceIdentity
+	account     *presenceAccount
 	conn        *websocket.Conn
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -71,6 +72,8 @@ type presencePeer struct {
 	pos                          *presencePosition
 	lastPos, lastJoin, lastEmote time.Time
 	lastActivity                 time.Time
+	authFailures                 int
+	authCheck, authApplied       uint64
 	detached                     bool
 	grace                        *time.Timer
 }
@@ -84,12 +87,25 @@ func (p *presencePeer) stop(code websocket.StatusCode, reason string) {
 type presenceHub struct {
 	mu        sync.Mutex
 	peers     map[string]*presencePeer
+	accounts  map[string]*presenceAccount
+	sessions  map[string]int
 	sockets   map[*websocket.Conn]struct{}
 	drained   chan struct{}
 	drainOnce sync.Once
 	slots     int
 	closing   bool
 	config    content.Presence
+}
+
+// Account generations live only while physical reservations exist. A socket
+// keeps its account pointer, so no unbounded generation tombstone map is needed.
+type presenceAccount struct {
+	slots      int
+	generation uint64
+}
+type presenceReservation struct {
+	session, id string
+	account     *presenceAccount
 }
 
 func newPresenceHub(c *content.Presence) *presenceHub {
@@ -101,21 +117,45 @@ func newPresenceHub(c *content.Presence) *presenceHub {
 		}
 	}
 	config.Emotes = slices.Clone(config.Emotes)
-	return &presenceHub{peers: map[string]*presencePeer{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config}
+	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config}
 }
-func (h *presenceHub) reserve() bool {
+func (h *presenceHub) reserve(session, id string) (presenceReservation, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.closing || h.slots >= h.config.MaxConnections {
-		return false
+	if h.closing {
+		return presenceReservation{}, fail(503, "presence-full")
 	}
+	if h.sessions[session] >= h.config.MaxSessionConnections {
+		return presenceReservation{}, fail(429, "presence-session-limit")
+	}
+	account := h.accounts[id]
+	if account != nil && account.slots >= h.config.MaxPlayerConnections {
+		return presenceReservation{}, fail(429, "presence-player-limit")
+	}
+	if h.slots >= h.config.MaxConnections {
+		return presenceReservation{}, fail(503, "presence-full")
+	}
+	if account == nil {
+		account = &presenceAccount{}
+		h.accounts[id] = account
+	}
+	account.slots++
+	h.sessions[session]++
 	h.slots++
-	return true
+	return presenceReservation{session, id, account}, nil
 }
-func (h *presenceHub) release() {
+func (h *presenceHub) release(reservation presenceReservation) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.slots--
+	h.sessions[reservation.session]--
+	if h.sessions[reservation.session] == 0 {
+		delete(h.sessions, reservation.session)
+	}
+	reservation.account.slots--
+	if reservation.account.slots == 0 {
+		delete(h.accounts, reservation.id)
+	}
 	if h.closing && h.slots == 0 {
 		h.drainOnce.Do(func() { close(h.drained) })
 	}
@@ -210,13 +250,17 @@ func (a *Server) ClosePresence() {
 
 // Read-only authentication: presence never slides sessions, touches leases,
 // changes revisions or writes progress. HTTP play/progress retains that role.
-func (a *Server) presenceIdentity(ctx context.Context, session string) (presenceIdentity, error) {
+func (a *Server) presenceIdentity(ctx context.Context, session string, withAvatar bool) (presenceIdentity, error) {
 	var v presenceIdentity
 	v.Session = session
 	var profile sql.NullString
 	var origin, lease sql.NullString
 	now := a.Config.Now().Unix()
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.display_name,p.save_origin,p.lease_id,b.profile_json FROM sessions s JOIN allowlist l USING(habitica_id) JOIN players p USING(habitica_id) JOIN sync_baselines b USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &origin, &lease, &profile)
+	profileColumn := "NULL"
+	if withAvatar {
+		profileColumn = "b.profile_json"
+	}
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.display_name,p.save_origin,p.lease_id,`+profileColumn+` FROM sessions s JOIN allowlist l USING(habitica_id) JOIN players p USING(habitica_id) JOIN sync_baselines b USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &origin, &lease, &profile)
 	if err == sql.ErrNoRows {
 		return v, fail(401, "unauthorized")
 	}
@@ -240,41 +284,91 @@ func (a *Server) presenceIdentity(ctx context.Context, session string) (presence
 	}
 	return v, nil
 }
-func (a *Server) revalidatePresence(p *presencePeer) (websocket.StatusCode, string) {
-	ctx, cancel := context.WithTimeout(context.Background(), millis(a.presence.config.WriteTimeoutMs))
-	defer cancel()
-	v, err := a.presenceIdentity(ctx, p.identity.Session)
+
+// Query outside the hub lock. An error is unknown, not proof of revocation.
+func (a *Server) revalidatePresence(ctx context.Context, p *presencePeer) (websocket.StatusCode, string, error) {
+	v, err := a.presenceIdentity(ctx, p.identity.Session, false)
 	if err != nil {
 		var f *failure
 		if errors.As(err, &f) {
 			if f.code == "superseded" {
-				return presenceSuperseded, "superseded"
+				return presenceSuperseded, "superseded", nil
 			}
-			return presenceUnauthorized, "unauthorized"
+			return presenceUnauthorized, "unauthorized", nil
 		}
-		return websocket.StatusInternalError, "internal"
+		return 0, "", err
 	}
 	if v.Lease != p.identity.Lease {
-		return presenceSuperseded, "superseded"
+		return presenceSuperseded, "superseded", nil
 	}
 	if v.ID != p.identity.ID || v.World != p.identity.World {
-		return presenceUnauthorized, "unauthorized"
+		return presenceUnauthorized, "unauthorized", nil
 	}
-	return 0, ""
+	return 0, "", nil
+}
+func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
+	h := a.presence
+	h.mu.Lock()
+	if h.peers[p.identity.ID] != p {
+		h.mu.Unlock()
+		return
+	}
+	generation := p.account.generation
+	p.authCheck++
+	check := p.authCheck
+	h.mu.Unlock()
+	ctx, cancel := context.WithTimeout(parent, millis(h.config.WriteTimeoutMs))
+	code, reason, err := a.revalidatePresence(ctx, p)
+	cancel()
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	// A newer play/logout or registration invalidates this query's result.
+	if h.peers[p.identity.ID] != p || p.account.generation != generation || check < p.authApplied {
+		return
+	}
+	p.authApplied = check
+	if err != nil {
+		if p.ctx.Err() != nil {
+			return
+		}
+		p.authFailures++
+		if p.authFailures < h.config.RevalidateFailures {
+			return
+		}
+		code = websocket.StatusInternalError
+		reason = "auth-unavailable"
+	} else {
+		p.authFailures = 0
+	}
+	if code != 0 {
+		p.stop(code, reason)
+		h.remove(p)
+	}
 }
 
-// Called after play/logout commits. Locking registration with the DB check
-// prevents a stale first-message auth from racing a takeover notification.
+// Bump before querying so in-flight first-message auth must re-check. Pointer
+// and generation checks also prevent an older notification revoking a new peer.
 func (a *Server) presenceChanged(id string) {
 	h := a.presence
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	for _, p := range h.peers {
-		if p.identity.ID == id {
-			if code, reason := a.revalidatePresence(p); code != 0 {
-				p.stop(code, reason)
-				h.remove(p)
-			}
+	if account := h.accounts[id]; account != nil {
+		account.generation++
+	}
+	p := h.peers[id]
+	h.mu.Unlock()
+	if p != nil {
+		a.checkPresence(context.Background(), p)
+	}
+}
+func (a *Server) presenceRevalidator(p *presencePeer) {
+	ticker := time.NewTicker(millis(a.presence.config.RevalidateMs))
+	defer ticker.Stop()
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-ticker.C:
+			a.checkPresence(p.ctx, p)
 		}
 	}
 }
@@ -317,18 +411,27 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		return fail(401, "unauthorized")
 	}
 	session := store.Hash(cookie.Value)
+	h := a.presence
+	// Already-full sessions need no additional DB proof query.
+	h.mu.Lock()
+	sessionFull := h.sessions[session] >= h.config.MaxSessionConnections
+	h.mu.Unlock()
+	if sessionFull {
+		w.Header().Set("Retry-After", "5")
+		return fail(429, "presence-session-limit")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), millis(a.presence.config.AuthTimeoutMs))
-	_, err = a.presenceIdentity(ctx, session)
+	identity, err := a.presenceIdentity(ctx, session, false)
 	cancel()
 	if err != nil {
 		return err
 	}
-	h := a.presence
-	if !h.reserve() {
+	reservation, err := h.reserve(session, identity.ID)
+	if err != nil {
 		w.Header().Set("Retry-After", "5")
-		return fail(503, "presence-full")
+		return err
 	}
-	defer h.release()
+	defer h.release(reservation)
 	// net/http deadlines survive hijacking; network lifetimes are owned here.
 	controller := http.NewResponseController(w)
 	_ = controller.SetReadDeadline(time.Time{})
@@ -362,20 +465,50 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		_ = conn.Close(presenceUnauthorized, "unauthorized")
 		return nil
 	}
-	h.mu.Lock()
 	ctx, cancel = context.WithTimeout(context.Background(), millis(h.config.AuthTimeoutMs))
-	identity, err := a.presenceIdentity(ctx, session)
-	cancel()
-	if err != nil || identity.Lease != auth.Lease || h.closing {
+	defer cancel()
+	for {
+		h.mu.Lock()
+		generation := reservation.account.generation
+		closing := h.closing
 		h.mu.Unlock()
-		code := presenceUnauthorized
-		reason := "unauthorized"
-		if err == nil && identity.Lease != auth.Lease {
-			code = presenceSuperseded
-			reason = "superseded"
+		if closing {
+			_ = conn.Close(websocket.StatusGoingAway, "server-shutdown")
+			return nil
 		}
-		_ = conn.Close(code, reason)
-		return nil
+		identity, err = a.presenceIdentity(ctx, session, true)
+		h.mu.Lock()
+		if h.closing {
+			h.mu.Unlock()
+			_ = conn.Close(websocket.StatusGoingAway, "server-shutdown")
+			return nil
+		}
+		if generation != reservation.account.generation {
+			h.mu.Unlock()
+			if ctx.Err() != nil {
+				_ = conn.Close(websocket.StatusInternalError, "auth-unavailable")
+				return nil
+			}
+			continue
+		}
+		if err != nil || identity.Lease != auth.Lease || identity.ID != reservation.id {
+			h.mu.Unlock()
+			code := presenceUnauthorized
+			reason := "unauthorized"
+			var f *failure
+			if err != nil && !errors.As(err, &f) {
+				code = websocket.StatusInternalError
+				reason = "auth-unavailable"
+			}
+			if err == nil && identity.Lease != auth.Lease {
+				code = presenceSuperseded
+				reason = "superseded"
+			}
+			_ = conn.Close(code, reason)
+			return nil
+		}
+		// Successful registration continues with the lock held and a current generation.
+		break
 	}
 	if len(h.peers) >= h.config.MaxConnections && h.peers[identity.ID] == nil {
 		h.mu.Unlock()
@@ -383,7 +516,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	peerCtx, peerCancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: identity, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, h.config.QueueMessages), lastActivity: time.Now()}
+	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, h.config.QueueMessages), lastActivity: time.Now()}
 	if old := h.peers[identity.ID]; old != nil {
 		if old.identity.Lease == identity.Lease && old.identity.World == identity.World {
 			if old.grace != nil {
@@ -416,11 +549,14 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	h.mu.Unlock()
 	done := make(chan struct{})
 	go func() { defer close(done); a.presenceWriter(p) }()
+	authDone := make(chan struct{})
+	go func() { defer close(authDone); a.presenceRevalidator(p) }()
 	// The writer owns termination deadlines; this read stays alive for ping/pong
 	// and close handshakes even after cancellation of application work.
 	a.presenceReader(p)
 	p.stop(websocket.StatusNormalClosure, "disconnected")
 	<-done
+	<-authDone
 	h.detach(p)
 	return nil
 }
@@ -444,6 +580,7 @@ func (h *presenceHub) room(p *presencePeer) {
 }
 func (a *Server) presenceReader(p *presencePeer) {
 	h := a.presence
+	ingress := newPresenceIngress(h.config)
 	for {
 		typ, b, err := p.conn.Read(context.Background())
 		if err != nil {
@@ -455,6 +592,14 @@ func (a *Server) presenceReader(p *presencePeer) {
 		if typ != websocket.MessageText {
 			p.stop(websocket.StatusUnsupportedData, "text-required")
 			return
+		}
+		admitted, sustained := ingress.admit(time.Now(), h.config)
+		if !admitted {
+			if sustained {
+				p.stop(websocket.StatusPolicyViolation, "rate-limited")
+				return
+			}
+			continue
 		}
 		var message struct {
 			Type   string   `json:"type"`
@@ -583,8 +728,6 @@ func (a *Server) presenceWriter(p *presencePeer) {
 	defer idle.Stop()
 	ping := time.NewTicker(millis(h.config.PingIntervalMs))
 	defer ping.Stop()
-	auth := time.NewTicker(millis(h.config.RevalidateMs))
-	defer auth.Stop()
 	for {
 		if p.ctx.Err() != nil {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
@@ -620,13 +763,7 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			if expired {
 				p.stop(presenceIdle, "idle-timeout")
 			}
-		case <-auth.C:
-			if code, reason := a.revalidatePresence(p); code != 0 {
-				p.stop(code, reason)
-				h.mu.Lock()
-				h.remove(p)
-				h.mu.Unlock()
-			}
+
 		}
 	}
 }
@@ -671,4 +808,30 @@ func visualAvatar(p rules.Profile) *presenceAvatar {
 		return &copy
 	}
 	return &presenceAvatar{visual, cleanMap(p.Equipped), cleanMap(p.Costume), p.UseCostume, selected(p.SelectedPet), selected(p.SelectedMount)}
+}
+
+// Reader-owned token bucket: denied messages never parse JSON or take h.mu.
+type presenceIngress struct {
+	tokens                        float64
+	last, excessSince, lastExcess time.Time
+}
+
+func newPresenceIngress(c content.Presence) presenceIngress {
+	return presenceIngress{tokens: float64(c.IncomingBurst), last: time.Now()}
+}
+func (b *presenceIngress) admit(now time.Time, c content.Presence) (bool, bool) {
+	b.tokens = min(float64(c.IncomingBurst), b.tokens+max(0, now.Sub(b.last).Seconds())*float64(c.IncomingMessagesPerSecond))
+	b.last = now
+	if b.tokens >= float64(c.IncomingBurst) || now.Sub(b.lastExcess) >= time.Second {
+		b.excessSince = time.Time{}
+	}
+	if b.tokens >= 1 {
+		b.tokens--
+		return true, false
+	}
+	if b.excessSince.IsZero() {
+		b.excessSince = now
+	}
+	b.lastExcess = now
+	return false, now.Sub(b.excessSince) >= millis(c.IncomingExcessMs)
 }

@@ -192,7 +192,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.spend(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
-			err = a.mailClaim(w, r)
+			if strings.HasSuffix(r.URL.Path, "/recall") {
+				err = a.mailRecall(w, r)
+			} else {
+				err = a.mailClaim(w, r)
+			}
 		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/projects/") {
 			err = a.projectContribute(w, r)
 		} else if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
@@ -243,6 +247,10 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 	}
 	id, hash, err := a.auth(r.Context(), tx, r)
 	if err != nil {
+		tx.Rollback()
+		return nil, store.Snapshot{}, "", err
+	}
+	if _, err = store.ReturnDueMailTx(r.Context(), tx, a.Config.Now().Unix(), id); err != nil {
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err
 	}

@@ -354,7 +354,7 @@ func TestPresenceRateLimitsAndEmotes(t *testing.T) {
 	bob.join("village")
 	a.expect("join")
 	start := time.Now()
-	for i := 0; i < 80; i++ {
+	for i := 0; i < 40; i++ {
 		a.send(positionMessage(float64(i)))
 	}
 	a.send(map[string]any{"type": "emote", "id": "wave"})
@@ -370,7 +370,7 @@ func TestPresenceRateLimitsAndEmotes(t *testing.T) {
 		n++
 	}
 	limit := 1 + int(math.Ceil(time.Since(start).Seconds()*8))
-	if n < 1 || n > limit || n >= 80 {
+	if n < 1 || n > limit || n >= 40 {
 		t.Fatal("position limiter", n, limit)
 	}
 	a.send(map[string]any{"type": "emote", "id": "nod"})

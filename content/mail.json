@@ -1,0 +1,10 @@
+{
+  "maxOutstandingSent": 50,
+  "maxOutstandingReceived": 50,
+  "maxSendsPerWindow": 10,
+  "sendWindowSeconds": 60,
+  "historyPageSize": 50,
+  "returnAfterDays": 30,
+  "maintenanceBatch": 100,
+  "maintenanceIntervalSeconds": 60
+}

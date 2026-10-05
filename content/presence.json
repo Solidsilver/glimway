@@ -1,5 +1,11 @@
 {
-  "emotes": ["wave", "nod", "cheer", "thanks", "lantern"],
+  "emotes": [
+    "wave",
+    "nod",
+    "cheer",
+    "thanks",
+    "lantern"
+  ],
   "positionHz": 8,
   "emoteCooldownMs": 2000,
   "joinCooldownMs": 500,
@@ -13,5 +19,11 @@
   "pongTimeoutMs": 5000,
   "leaveGraceMs": 2000,
   "revalidateMs": 10000,
-  "writeTimeoutMs": 5000
+  "writeTimeoutMs": 5000,
+  "maxSessionConnections": 2,
+  "maxPlayerConnections": 4,
+  "revalidateFailures": 3,
+  "incomingMessagesPerSecond": 30,
+  "incomingBurst": 60,
+  "incomingExcessMs": 5000
 }

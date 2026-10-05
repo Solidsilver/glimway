@@ -89,6 +89,11 @@ func (a *Server) projectsRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
+	for _, def := range content.ProjectRules.Projects {
+		if err = completeProject(r.Context(), tx, s.WorldID, def, a.Config.Now().Unix()); err != nil {
+			return err
+		}
+	}
 	v, err := readProjects(r.Context(), tx, s)
 	if err != nil {
 		return err
@@ -149,7 +154,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
-			if n > def.Materials[material]-current {
+			if n > max(0, def.Materials[material]-current) {
 				return nil, fail(409, "project-overfilled")
 			}
 			if err = materialChange(ctx, tx, s.HabiticaID, material, -n, "project-contribute", s.WorldID+":"+id+":"+ref, now); err != nil {
@@ -166,26 +171,8 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 				return nil, err
 			}
 		}
-		finished := true
-		for material, required := range def.Materials {
-			var n int
-			err = tx.QueryRowContext(ctx, "SELECT qty FROM project_materials WHERE world_id=? AND project_def=? AND material=?", s.WorldID, id, material).Scan(&n)
-			if err != nil && err != sql.ErrNoRows {
-				return nil, err
-			}
-			if n != required {
-				finished = false
-			}
-		}
-		if finished {
-			if _, err = tx.ExecContext(ctx, "UPDATE projects SET completed_at=?,world_flag=? WHERE world_id=? AND project_def=? AND completed_at IS NULL", now, def.WorldFlag, s.WorldID, id); err != nil {
-				return nil, err
-			}
-			for _, paper := range def.Papers {
-				if _, err = tx.ExecContext(ctx, "INSERT INTO project_papers VALUES(?,?,?,?)", s.WorldID, id, paper, now); err != nil {
-					return nil, err
-				}
-			}
+		if err = completeProject(ctx, tx, s.WorldID, def, now); err != nil {
+			return nil, err
 		}
 		v, err := readProjects(ctx, tx, *s)
 		if err != nil {
@@ -201,4 +188,33 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			Materials map[string]int `json:"materials"`
 		}{v, id, m}, nil
 	})
+}
+
+// Reconcile tuned requirements against durable totals without changing any
+// player revision. Existing completion records and paper grants remain frozen.
+func completeProject(ctx context.Context, tx *sql.Tx, world string, def content.Project, now int64) error {
+	for material, required := range def.Materials {
+		var n int
+		err := tx.QueryRowContext(ctx, "SELECT qty FROM project_materials WHERE world_id=? AND project_def=? AND material=?", world, def.ID, material).Scan(&n)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if n < required {
+			return nil
+		}
+	}
+	res, err := tx.ExecContext(ctx, "UPDATE projects SET completed_at=?,world_flag=? WHERE world_id=? AND project_def=? AND completed_at IS NULL", now, def.WorldFlag, world, def.ID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil || n == 0 {
+		return err
+	}
+	for _, paper := range def.Papers {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO project_papers VALUES(?,?,?,?)", world, def.ID, paper, now); err != nil {
+			return err
+		}
+	}
+	return nil
 }

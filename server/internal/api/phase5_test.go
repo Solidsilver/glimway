@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
-	"strconv"
 	"sync"
 	"testing"
 )
@@ -21,15 +20,19 @@ type phase5Response struct {
 	store.Snapshot
 	workshopView
 	projectsView
-	Mail   []mailView `json:"mail"`
-	Result struct {
+	Mail              []mailView `json:"mail"`
+	NextCursor        *string    `json:"nextCursor"`
+	NextPendingCursor *string    `json:"nextPendingCursor"`
+	Result            struct {
 		workshopView
 		projectsView
-		Mail        []mailView     `json:"mail"`
-		MailID      string         `json:"mailId"`
-		InstanceIDs []string       `json:"instanceIds"`
-		Output      content.Asset  `json:"output"`
-		Materials   map[string]int `json:"materials"`
+		Mail              []mailView     `json:"mail"`
+		NextCursor        *string        `json:"nextCursor"`
+		NextPendingCursor *string        `json:"nextPendingCursor"`
+		MailID            string         `json:"mailId"`
+		InstanceIDs       []string       `json:"instanceIds"`
+		Output            content.Asset  `json:"output"`
+		Materials         map[string]int `json:"materials"`
 	}
 	Error struct {
 		Code string `json:"code"`
@@ -106,7 +109,7 @@ func TestPhase5CalendarAndOuterTurning(t *testing.T) {
 	}
 	inner := x.region(c)
 	outer := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if outer.Epoch.Season != strconv.FormatInt(day.WickNumber, 10) || outer.Epoch.StartsAt != day.StartsAt || outer.Epoch.EndsAt == nil || *outer.Epoch.EndsAt != day.NextTurning {
+	if outer.Epoch.Season != fmt.Sprintf("t:%d:%d", day.StartsAt, day.NextTurning) || outer.Epoch.StartsAt != day.StartsAt || outer.Epoch.EndsAt == nil || *outer.Epoch.EndsAt != day.NextTurning {
 		t.Fatal("outer schedule")
 	}
 	node := entityKind(t, outer, "node")
