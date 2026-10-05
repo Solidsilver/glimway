@@ -22,7 +22,7 @@ import { prefersReducedMotion, sfx } from '../sfx'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { TILE } from '../textures'
 import type { Session } from '../session'
-import { buildArea, type EnemyType, type WorldData } from '../worlds'
+import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
 import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
@@ -35,13 +35,21 @@ import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
 import { HomesteadLayer } from '../entities/homesteads'
+import { VillageLayer } from '../entities/village-life'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
+import { COMMONS_FROM_WILDS } from '../commons'
 
 interface SceneData {
   entry?: { tx: number; ty: number }
   fromDefeat?: boolean
   /** Inside a cottage on the Commons: whose, and the doorstep outside it. */
   room?: { owner: string; doorstep: { tx: number; ty: number } }
+}
+
+/** Keyboard focus is on a control in the placement tray. */
+function trayFocused(): boolean {
+  const el = typeof document !== 'undefined' ? document.activeElement : null
+  return !!el && el !== document.body && !!el.closest?.('[data-testid="placement-tray"]')
 }
 
 /** Areas where the zero-HP lock still lets you walk (home to rest). */
@@ -95,6 +103,15 @@ export class WorldScene extends Phaser.Scene {
     const state = this.session.state
     // A cottage is a view on the Commons: the save keeps saying Commons.
     if (this.room && state.area !== 'commons') this.room = null
+    // A save (or a server relocation) in an area this build can't draw — the
+    // Wilds before its client ships — comes back in at the Commons arch.
+    if (!hasAreaKind(state.area)) {
+      const back = hasAreaKind('commons') ? { area: 'commons', at: COMMONS_FROM_WILDS } : { area: 'village', at: { tx: 7, ty: 11 } }
+      state.area = back.area
+      state.position = { x: (back.at.tx + 0.5) * TILE, y: (back.at.ty + 0.5) * TILE }
+      this.pendingEntry = { ...back.at }
+      this.session.saveSoon()
+    }
     this.world = this.room ? buildRoom(this.room.doorstep) : buildArea(state.area)
     this.occluders = []
     this.cinematic = false
@@ -145,6 +162,8 @@ export class WorldScene extends Phaser.Scene {
       },
       state
     )
+    // Village life (calendar, festivals, notice boards, project changes) everywhere.
+    this.interactables.setExtra(new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables }))
     this.homesteads = null
     if (this.world.areaId === 'commons' || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -351,7 +370,8 @@ export class WorldScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 0.05)
     // While a panel/dialogue owns the screen, stop preventDefault-ing Space
     // etc. so focused buttons (replies, confirms) activate natively.
-    const uiOwns = uiBlocked()
+    // A focused placement-tray control gets its keys natively (Space presses it).
+    const uiOwns = uiBlocked() || trayFocused()
     if (uiOwns !== this.captureReleased) {
       this.captureReleased = uiOwns
       if (uiOwns) this.input.keyboard?.disableGlobalCapture()
@@ -734,13 +754,38 @@ export class WorldScene extends Phaser.Scene {
     for (const exit of this.world.exits) {
       if (locked && !SAFE_AREAS.includes(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
+        if (!hasAreaKind(exit.to)) {
+          this.overgrown(exit)
+          return
+        }
         this.transitionTo(exit.to, exit.entry)
         return
       }
     }
   }
 
+  private overgrownAt = 0
+
+  /**
+   * An exit to an area this build can't draw (the Wilds before its client
+   * is here): the save is never touched; the hero steps back and is told.
+   */
+  private overgrown(exit: { tx: number; ty: number; tw: number; th: number }): void {
+    const h = this.hero.sprite
+    const cx = (exit.tx + exit.tw / 2) * TILE
+    const cy = (exit.ty + exit.th / 2) * TILE
+    const horizontal = exit.tw > exit.th
+    h.setVelocity(0, 0)
+    if (horizontal) h.setY(cy + (h.y >= cy ? 1 : -1) * (exit.th / 2 + 1) * TILE)
+    else h.setX(cx + (h.x >= cx ? 1 : -1) * (exit.tw / 2 + 1) * TILE)
+    if (performance.now() - this.overgrownAt < 2500) return
+    this.overgrownAt = performance.now()
+    this.fx.floatText(h.x, h.y - 24, 'Overgrown', '#fff3c4', false)
+    bus.emit(EV.toast, { text: 'The way is overgrown. Brambles and fallen iron-oak — nobody has cleared it yet.', icon: 'map' })
+  }
+
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
+    if (!hasAreaKind(area)) return
     this.transitioning = true
     const state = this.session.state
     state.area = area

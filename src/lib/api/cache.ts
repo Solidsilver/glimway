@@ -48,6 +48,8 @@ export interface ConnectedCache {
   loggedOut?: boolean;
   /** The offline copy that a reconnect merged into newer server progress. */
   recovery?: { state: GameState; savedAt: number };
+  /** A keyed mutation whose answer was lost: resolved by exact replay (game/link.ts). */
+  unresolved?: { op: unknown; body: Record<string, unknown>; at: number };
   savedAt: number;
 }
 

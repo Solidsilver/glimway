@@ -30,6 +30,8 @@ export const EV = {
   linkNotice: 'ui:link-notice',
   /** Connected play: the server moved the hero (a stale merge) — the scene follows. */
   relocate: 'game:relocate',
+  /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
+  mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
   // ui -> game (and dialogue panel -> scene)

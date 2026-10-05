@@ -1,0 +1,136 @@
+import { expect, test, type Page } from './fixtures'
+import { linkStatus, serverState } from './connected'
+import { beginNewJourney } from './helpers'
+import { earnEmbers, freshPlayer, fund, go, homes, myHome, silasSays } from './home-helpers'
+
+/**
+ * Regressions for the phase 3 review (.agent/REVIEW.md), against the real
+ * Go server: lost answers, the closed Wilds arch, redraw/tween hygiene,
+ * modal input ownership, materials on home reads, and Space on the tray.
+ */
+test.use({ server: true })
+
+type Stats = { plotDraws: number; tweens: number; deadTweens: number }
+const stats = (page: Page) => page.evaluate(() => (window as unknown as { __fsHomes: () => { stats: Stats } }).__fsHomes().stats)
+
+async function claim(page: Page): Promise<void> {
+  await go(page, 'commons', 23, 19)
+  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  await silasSays(page, /Show me my plot/)
+  await expect.poll(async () => (await homes(page)).claimed).toBe(true)
+}
+
+/** Let the server commit the next matching POST, then lose its answer. */
+async function loseNextAnswer(page: Page, path: string): Promise<void> {
+  let done = false
+  await page.route(`**${path}`, async (route) => {
+    if (done || route.request().method() !== 'POST') return route.continue()
+    done = true
+    await route.fetch() // the server commits it…
+    await route.abort('failed') // …and the browser never hears back
+  })
+}
+
+test('finding 1: a purchase and an upgrade whose answers are lost resolve on reconnect, never charged twice', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page)
+  await earnEmbers(page, id)
+  await claim(page)
+  const before = (await serverState(page)).body.state.embers
+  await loseNextAnswer(page, '/api/homestead/buy')
+  await silasSays(page, /See what you’ve finished/)
+  const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.locator('[data-buy="wooden-stool"]').click()
+  await expect(shop.locator('.msg.error')).toContainText('may have gone through')
+  await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  // The link reconnects by itself and replays the same request: it landed.
+  await expect(page.locator('.toast', { hasText: 'went through after all' })).toBeVisible({ timeout: 30_000 })
+  await expect.poll(() => linkStatus(page)).toBe('online')
+  expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(1)
+  await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
+  expect((await serverState(page)).body.state.embers).toBe(before - 2)
+
+  // A lost upgrade: tier 1 lands, and Orrin's foundation paper still arrives.
+  await loseNextAnswer(page, '/api/homestead/upgrade')
+  await silasSays(page, /Raise a cottage/)
+  await expect(page.locator('.toast', { hasText: 'may have gone through' })).toBeVisible()
+  await expect(page.locator('.toast', { hasText: 'went through after all' }).last()).toBeVisible({ timeout: 30_000 })
+  await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
+  await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:orrins-drift-slap-foundation-standard')
+  expect((await serverState(page)).body.state.embers).toBe(before - 2 - 15)
+})
+
+test('finding 2: the Wilds arch is overgrown (no crash, the save stays in the Commons)', async ({ page, pageErrors }) => {
+  await beginNewJourney(page)
+  await go(page, 'commons', 23, 3)
+  await page.keyboard.down('ArrowUp')
+  await expect(page.locator('.toast', { hasText: 'The way is overgrown' }).first()).toBeVisible({ timeout: 10_000 })
+  await page.keyboard.up('ArrowUp')
+  const s = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string; transitioning: boolean } }).__fsSafety())
+  expect(s).toEqual(expect.objectContaining({ areaId: 'commons', transitioning: false }))
+  expect(pageErrors).toEqual([])
+})
+
+test('findings 4 and 6: materials show on a fresh read; purchases redraw one plot and leave no orphaned tweens', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page)
+  await earnEmbers(page, id)
+  fund(id, { materials: { fiber: 20 } })
+  await claim(page)
+  const loaded = await stats(page)
+  // Four slots drawn once at start, plus the claimed plot: never N² rebuilds.
+  expect(loaded.plotDraws).toBeLessThanOrEqual(12)
+  await silasSays(page, /See what you’ve finished/)
+  const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  // The basket costs 4 fiber: the read's materials (20) make it buyable straight away.
+  await expect(shop.locator('[data-buy="woven-basket"]')).toHaveText('Buy')
+  for (const item of ['wooden-stool', 'wooden-stool', 'potted-fern', 'woven-basket']) {
+    await shop.locator(`[data-buy="${item}"]`).click()
+    await expect(shop.locator('.msg.ok')).toBeVisible()
+    await page.waitForTimeout(150)
+  }
+  await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  await page.waitForTimeout(300)
+  const after = await stats(page)
+  expect(after.deadTweens).toBe(0)
+  expect(after.plotDraws - loaded.plotDraws).toBeLessThanOrEqual(4)
+})
+
+test('findings 5 and 7: placement ignores keys under a modal; Space presses a focused tray button', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page)
+  await earnEmbers(page, id)
+  await claim(page)
+  await silasSays(page, /Raise a cottage/)
+  await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
+  await page.waitForTimeout(600)
+  if (await page.getByRole('dialog', { name: /Conversation with/ }).isVisible()) {
+    for (let i = 0; i < 6; i++) await page.keyboard.press('e')
+  }
+  await silasSays(page, /See what you’ve finished/)
+  const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.locator('[data-buy="wooden-stool"]').click()
+  await expect(shop.locator('.msg.ok')).toBeVisible()
+  await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+
+  const v = await homes(page)
+  const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
+  await go(page, 'commons', slot.doorstep.tx + 2, slot.doorstep.ty + 2)
+  await page.getByTestId('arrange').click()
+  const tray = page.getByTestId('placement-tray')
+  await tray.locator('[data-piece="wooden-stool"]').click()
+  // Open the Menu from the HUD, press E: nothing is placed underneath it.
+  await page.getByRole('button', { name: /^Menu/ }).click()
+  await expect(tray).toBeHidden()
+  await page.keyboard.press('e')
+  await page.waitForTimeout(800)
+  expect((await myHome(page, id)).items.find((i) => i.itemDef === 'wooden-stool')!.scene).toBeNull()
+  // Escape closes the Menu only: the piece is still in hand.
+  await page.keyboard.press('Escape')
+  await expect(tray).toBeVisible()
+  await expect(tray.locator('[data-piece="wooden-stool"]')).toHaveAttribute('aria-pressed', 'true')
+  // Space on the focused Done button presses it.
+  await tray.getByRole('button', { name: /Done/ }).focus()
+  await page.keyboard.press('Space')
+  await expect(tray).toBeHidden()
+})

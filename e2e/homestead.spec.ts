@@ -1,6 +1,7 @@
-import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
+import { expect, test } from './fixtures'
+import { serverState } from './connected'
 import { beginNewJourney, waitForArea, player } from './helpers'
+import { area, earnEmbers, freshPlayer, go, homes, hurt, myHome, place, readOn, shot, silasSays, talk, type Area } from './home-helpers'
 
 /**
  * The Hearthwick Commons and homesteads, against the real Go server
@@ -10,116 +11,6 @@ import { beginNewJourney, waitForArea, player } from './helpers'
  * SCREENS=1 also saves review screenshots to .agent/screens/.
  */
 test.use({ server: true })
-
-const OUT = '.agent/screens'
-type Area = 'village' | 'woodland' | 'ruin'
-
-interface HomesView {
-  status: string
-  claimed: boolean
-  plots: { slot: number; ownerId: string; name: string; tier: number; allocated: boolean; mine: boolean }[]
-  mine: { tier: number; items: { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null }[] } | null
-  slots: { index: number; tx: number; ty: number; door: { tx: number; ty: number }; doorstep: { tx: number; ty: number }; sign: { tx: number; ty: number } }[]
-  features: { silas: { tx: number; ty: number } } | null
-  placing: boolean
-}
-
-const homes = (page: Page) => page.evaluate(() => (window as unknown as { __fsHomes: () => HomesView }).__fsHomes())
-const area = (page: Page) => page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)
-const hurt = (page: Page, n: number) => page.evaluate((d) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(d), n)
-const place = (page: Page, x: number, y: number) => page.evaluate(([px, py]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(px, py), [x, y] as const)
-
-/** Desktop and phone screenshots of the same moment (names end -desktop / -phone). */
-async function shot(page: Page, name: string): Promise<void> {
-  if (!process.env.SCREENS) return
-  const base = name.replace(/-desktop$/, '')
-  const size = page.viewportSize()!
-  await page.waitForTimeout(600)
-  await page.screenshot({ path: `${OUT}/${base}-desktop.png` })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(700)
-  await page.screenshot({ path: `${OUT}/${base}-phone.png` })
-  await page.setViewportSize(size)
-  await page.waitForTimeout(400)
-}
-
-/** Dev warp, for any area id (the Commons included). */
-async function go(page: Page, to: string, tx: number, ty: number): Promise<void> {
-  await page.evaluate(([a, x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp(a as string, x as number, y as number), [to, tx, ty] as const)
-  await page.waitForFunction(() => (window as unknown as { __fsSafety: () => { transitioning: boolean } }).__fsSafety().transitioning === true).catch(() => {})
-  await waitForArea(page, to as Area)
-}
-
-/** Talk at the prompt; pick the choice named `pick` (if any), and read to the end. */
-async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
-  await expect(dialogue).toBeVisible()
-  let picked = !pick
-  for (let i = 0; i < 40 && (await dialogue.isVisible()); i++) {
-    const choice = page.locator('.choice').first()
-    if (!picked && (await choice.isVisible().catch(() => false))) {
-      await page.locator('.choice', { hasText: pick! }).click()
-      picked = true
-    } else {
-      if (await choice.isVisible().catch(() => false)) await page.keyboard.press('Escape')
-      else await page.keyboard.press('e')
-    }
-    await page.waitForTimeout(220)
-  }
-  await expect(dialogue).toBeHidden()
-}
-
-/** Sign in from the title as a new allowlisted player. */
-async function freshPlayer(page: Page, name = 'Tansy', invite?: string): Promise<string> {
-  const id = newUser()
-  if (!invite) allow(id)
-  await setHabitica(id, { name })
-  await routeHabitica(page.context())
-  await openTitleGuide(page)
-  await pasteAndConnect(page, id, invite ? { invite } : {})
-  await waitForWorld(page)
-  return id
-}
-
-/** Two syncs: the welcome, then a big Habitica day (three levels: about 30 embers). */
-async function earnEmbers(page: Page, id: string): Promise<void> {
-  for (const [lvl, exp, toast] of [[2, 20, /embers into your hand/], [5, 100, /embers — from the XP you earned/]] as const) {
-    await setHabitica(id, { lvl, exp })
-    await syncFromMenu(page)
-    await expect(page.locator('.toast', { hasText: toast })).toBeVisible()
-    await page.getByRole('button', { name: 'Back to the road' }).click()
-  }
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBeGreaterThanOrEqual(20)
-}
-
-/** Read an open conversation (one the world opened on its own) to its end. */
-async function readOn(page: Page, says: RegExp): Promise<void> {
-  const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
-  // The talk loop may already have read it (it follows the answer closely).
-  await dialogue.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {})
-  if (!(await dialogue.isVisible())) return
-  await expect(dialogue).toContainText(says)
-  for (let i = 0; i < 12 && (await dialogue.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(220)
-  }
-  await expect(dialogue).toBeHidden()
-}
-
-async function silasSays(page: Page, pick?: RegExp): Promise<void> {
-  const v = await homes(page)
-  await go(page, 'commons', v.features!.silas.tx, v.features!.silas.ty + 1)
-  await talk(page, /Talk to Silas/, pick)
-}
-
-async function myHome(page: Page, id: string) {
-  const res = await page.request.get(`/api/homestead/${id}`)
-  expect(res.ok()).toBe(true)
-  return (await res.json()).home as { tier: number; plotIndex: number; items: { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null }[] }
-}
 
 test('the Commons gate: walk in from Hearthwick and back; Silas tells a guest to sign in', async ({ page }) => {
   await beginNewJourney(page)

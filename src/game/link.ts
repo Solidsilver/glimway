@@ -19,7 +19,7 @@
  * All calls share the API client's queue, so nothing overlaps. No Phaser
  * here: events go out through the injected `emit`, so this runs in tests.
  */
-import type { ApiClient } from '../lib/api/client.ts'
+import type { ApiClient, Envelope, RawApi } from '../lib/api/client.ts'
 import { newKey } from '../lib/api/client.ts'
 import { errorCode, isUnreachable, type ApiErrorCode } from '../lib/api/errors.ts'
 import {
@@ -37,7 +37,7 @@ import {
   type MergeMode
 } from '../lib/api/progress.ts'
 import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
-import type { HomeAction, HomeActionRequest, HomeView, PlotInfo, Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeView, PlotInfo, Snapshot, SpendRequest, SyncResponse } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
@@ -52,7 +52,51 @@ export type HomeRead<T> = { ok: true; value: T } | { ok: false; code: ApiErrorCo
 
 export type HomeActionResult =
   | { ok: true; home: HomeView; materials: Record<string, number>; itemId?: string }
-  | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' }
+  | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' }
+
+/**
+ * A keyed gameplay POST, described as data so a lost one can be kept (in
+ * memory and the connected cache) and replayed exactly.
+ */
+export type MutationOp =
+  | { kind: 'home'; op: HomeOp; fields: Record<string, unknown> }
+  | { kind: 'storage'; fields: Record<string, unknown> }
+  | { kind: 'craft'; fields: Record<string, unknown> }
+  | { kind: 'mail-send'; fields: Record<string, unknown> }
+  | { kind: 'mail-claim'; id: string; fields?: Record<string, unknown> }
+  | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
+  | { kind: 'contribute'; id: string; fields: Record<string, unknown> }
+
+/** A mutation sent whose answer never came: the exact body, key and all. */
+export interface Unresolved {
+  op: MutationOp
+  body: Record<string, unknown>
+  at: number
+}
+
+/** Send one described mutation through the raw API. */
+export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<string, unknown>): Promise<Snapshot> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const req = body as Envelope & any
+  switch (op.kind) {
+    case 'home':
+      return raw.homeAction(op.op, body as unknown as HomeActionRequest)
+    case 'storage':
+      return raw.storageMove(req)
+    case 'craft':
+      return raw.craft(req)
+    case 'mail-send':
+      return raw.mailSend(req)
+    case 'mail-claim':
+      return raw.mailClaim(op.id, req)
+    case 'mail-recall':
+      return raw.mailRecall(op.id, req)
+    case 'contribute':
+      return raw.contribute(op.id, req)
+  }
+}
+
+export type MutateResult<R> = { ok: true; res: R } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' }
 
 export type RemoteSyncResult =
   | { ok: true; status: SyncResponse['status']; gained: number; welcome: number; credit: { hp: number; mana: number } }
@@ -82,6 +126,8 @@ export interface LinkInit {
   /** The last upload sent before the page went away (cache). */
   sent?: { rev: number; key: string }
   recovery?: ConnectedCache['recovery']
+  /** A mutation whose answer was lost before the page went away (cache). */
+  unresolved?: Unresolved | null
   /** Bus emit (src/game/events.ts); injectable for tests. */
   emit: (event: string, payload?: unknown) => void
   /** Injectable for tests. */
@@ -114,6 +160,8 @@ export class Link {
   private offlineProgress: boolean
   /** A spend whose answer never came: the reconnect says whether it happened. */
   private lostSpend: EmberSpend | null = null
+  /** A keyed mutation whose answer was lost (see `mutate`). */
+  private unresolved: Unresolved | null
   private failures = 0
   private uploadQueued = false
   private heartbeat: ReturnType<typeof setInterval> | null = null
@@ -140,6 +188,7 @@ export class Link {
     this.acked = init.dirty ? '' : 'pending'
     this.offlineProgress = init.dirty === true && init.offlineProgress === true
     this.sent = init.sent
+    this.unresolved = init.unresolved ?? null
     this.store = init.store ?? idbLinkStore
     this.emitter = init.emit
     if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline)
@@ -205,6 +254,7 @@ export class Link {
       sent: this.sent,
       loggedOut: this.loggedOut || undefined,
       recovery: this.recovery,
+      unresolved: this.unresolved ?? undefined,
       savedAt: Date.now()
     })
     if (!ok && this.status === 'offline') {
@@ -368,8 +418,12 @@ export class Link {
   // ------------------------------------------------------------ homesteads
 
   /** Read a member's homestead (own or same world). Reads never move the revision. */
-  async readHome(habiticaId: string): Promise<HomeRead<HomeView>> {
-    return this.read(async () => (await this.api.run((raw) => raw.home(habiticaId))).home)
+  async readHome(habiticaId: string): Promise<HomeRead<{ home: HomeView; materials: Record<string, number> }>> {
+    // `materials` are always the caller's own, even when visiting a neighbour.
+    return this.read(async () => {
+      const r = await this.api.run((raw) => raw.home(habiticaId))
+      return { home: r.home, materials: r.materials }
+    })
   }
 
   /** The world's Commons roster. */
@@ -400,32 +454,110 @@ export class Link {
    * locally on a no.
    */
   async homeAction(action: HomeAction): Promise<HomeActionResult> {
+    const { op, ...fields } = action
+    const r = await this.mutate<HomeActionResponse>({ kind: 'home', op, fields })
+    if (!r.ok) return r
+    return { ok: true, home: r.res.result.home, materials: r.res.result.materials, itemId: r.res.result.itemId }
+  }
+
+  /**
+   * One keyed gameplay POST (homesteads, storage, crafting, mail, projects):
+   * the current lease, revision and progress ride along with a fresh
+   * idempotency key, the world waits for the answer, and the merged
+   * snapshot is adopted on a yes. Nothing changes locally on a no.
+   *
+   * When the answer is lost (the request may have landed), the exact request
+   * is kept as `unresolved` (and in the cache) and the result is `pending`:
+   * the outcome is unknown, not "nothing changed". Before any later mutation,
+   * and after a reconnect, the same request is replayed with the same key,
+   * revision and progress (the server's idempotency hash ignores only the
+   * lease): a committed one answers with its original response, one that
+   * never landed is refused or runs once. Nothing can be paid for twice.
+   */
+  async mutate<R extends Snapshot>(op: MutationOp): Promise<MutateResult<R>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
     if (this.busy) return { ok: false, code: 'busy' }
     if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
+    if (this.unresolved) {
+      await this.resolveUnresolved()
+      if (this.unresolved) return { ok: false, code: 'pending' }
+      const now = this.status as LinkStatus
+      if (now !== 'online' || !this.lease) return { ok: false, code: now === 'superseded' ? 'superseded' : 'offline' }
+    }
     const key = newKey()
-    const { op, ...fields } = action
-    const build = (): HomeActionRequest => ({ lease: this.lease!, baseRev: this.rev, key, progress: toProgress(s.state), ...fields })
+    let sent: Record<string, unknown> | null = null
+    const body = (): Record<string, unknown> => (sent = { lease: this.lease!, baseRev: this.rev, key, progress: toProgress(s.state), ...op.fields })
     this.setBusy(true)
     try {
-      const res = await this.withReload(() => this.api.run((raw) => raw.homeAction(op, build())))
+      const res = await this.withReload(() => this.api.run((raw) => dispatchMutation(raw, op, body()))) as R
       this.contact()
       this.apply(res, 'server')
       this.acked = docKey(s.state)
       void this.saveLocal()
-      return { ok: true, home: res.result.home, materials: res.result.materials, itemId: res.result.itemId }
+      return { ok: true, res }
     } catch (err) {
       const code = errorCode(err)
       const fa = failureAction(code)
+      if (code === 'network' && sent) {
+        // No answer: it may have committed. Keep the exact request to resolve.
+        this.unresolved = { op, body: sent, at: Date.now() }
+        this.onFailure(err, 'mutation')
+        void this.saveLocal()
+        return { ok: false, code: 'pending' }
+      }
       if (isUnreachable(err) || fa === 'offline' || fa === 'superseded' || fa === 'elsewhere' || fa === 'signed-out') {
-        const action = this.onFailure(err, 'home')
+        const action = this.onFailure(err, 'mutation')
         return { ok: false, code: action === 'superseded' ? 'superseded' : action === 'offline' ? 'offline' : code }
       }
       return { ok: false, code }
     } finally {
       this.setBusy(false)
     }
+  }
+
+  /** A mutation whose answer was lost, if any (read-only). */
+  get pendingOperation(): Unresolved | null {
+    return this.unresolved
+  }
+
+  /**
+   * Replay the unresolved mutation exactly (only the lease is current) and
+   * report what happened: `landed` (now or before; the original response
+   * comes back), `refused` (it never committed: nothing changed), or
+   * `unknown` (still no answer). Emits EV.mutationResolved for the features.
+   */
+  async resolveUnresolved(): Promise<'landed' | 'refused' | 'unknown' | 'none'> {
+    const u = this.unresolved
+    const s = this.session
+    if (!u || !s) return 'none'
+    if (this.status !== 'online' || !this.lease) return 'unknown'
+    try {
+      const res = await this.api.run((raw) => dispatchMutation(raw, u.op, { ...u.body, lease: this.lease! }))
+      this.contact()
+      this.unresolved = null
+      this.apply(res, 'server')
+      this.acked = docKey(s.state)
+      void this.saveLocal()
+      this.emitter(EV.mutationResolved, { op: u.op, outcome: 'landed', res })
+      return 'landed'
+    } catch (err) {
+      if (errorCode(err) === 'network' || isUnreachable(err)) {
+        this.onFailure(err, 'resolve')
+        return 'unknown'
+      }
+      // Refused now (stale revision, short of funds, already placed…): the
+      // original never committed, or its replay would have been served.
+      this.unresolved = null
+      void this.saveLocal()
+      this.emitter(EV.mutationResolved, { op: u.op, outcome: 'refused', code: errorCode(err) })
+      return 'refused'
+    }
+  }
+
+  /** A GET that needs the session (storage, mail, projects). Never moves the revision. */
+  readWith<T>(get: (raw: RawApi) => Promise<T>): Promise<HomeRead<T>> {
+    return this.read(() => this.api.run(get))
   }
 
   /** stale-revision: re-read state (keeping local progress) and retry once. */
@@ -504,6 +636,8 @@ export class Link {
       this.lostSpendToast(before)
       this.setStatus('online')
       this.startHeartbeat()
+      // A mutation whose answer was lost: replay it exactly, now we can.
+      if (this.unresolved) await this.resolveUnresolved()
       await this.adoptOrphans()
       // Anything that changed while the reconnect was out goes up next.
       this.scheduleUpload()

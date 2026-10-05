@@ -10,7 +10,7 @@ import { claimClientId, createApiClient } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
 import type { ConnectedCache } from '../lib/api/cache'
 import type { Snapshot } from '../lib/api/types'
-import { Link } from '../game/link'
+import { Link, type Unresolved } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
 
@@ -97,6 +97,7 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
     offlineProgress: useCache ? cache!.offlineProgress : false,
     sent: useCache ? cache!.sent : undefined,
     recovery: cache?.recovery,
+    unresolved: useCache ? (cache!.unresolved as Unresolved | undefined) : undefined,
     emit: (event, payload) => bus.emit(event, payload)
   })
   for (const old of [...links]) if (!old.active) links.delete(old)

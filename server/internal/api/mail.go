@@ -138,10 +138,16 @@ func (a *Server) mailRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// Carried counts, so a sender without a Workshop knows what they can send.
+	inventory, err := counts(r.Context(), tx, s.HabiticaID, false)
+	if err != nil {
+		return err
+	}
 	return a.finish(w, r, tx, struct {
 		store.Snapshot
 		mailPage
-	}{s, list})
+		Inventory assetCounts `json:"inventory"`
+	}{s, list, inventory})
 }
 func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 	var req struct {

@@ -12,19 +12,22 @@ import Phaser from 'phaser'
 import { HOMESTEAD_DATA, canRotate, checkPlacement, homeItem, rotatedFootprint, type HomeInstance, type HomeScene, type Rotation } from '../../lib/homestead'
 import { checkSpend } from '../../lib/embers'
 import type { HomeView } from '../../lib/api/types'
-import { CARTING_DAY_NOTICE, SEASON_SHIFT_NOTICE } from '../../content/expansion-writing'
+import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
 import { paperFlag } from '../../content/papers'
 import { bus, EV } from '../events'
-import { touchVec, uiState } from '../input'
+import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
 import type { Session } from '../session'
 import { TILE } from '../textures'
 import type { InteractId, WorldData } from '../worlds'
 import type { CommonsWorld, PlotSlot } from '../commons'
 import { COTTAGE_H, decoFlat, decoKey } from '../commons-art'
-import { ROOM_GRID, ROOM_HEARTH } from '../cottage'
+import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
+import { VILLAGE_EV, villageFor, type Village } from '../village'
+import { openBoard } from './village-life'
+import { costPhrase, WORKSHOP_TIER } from '../../lib/village'
 import {
   HOME_EV,
   HOME_FLAGS,
@@ -85,6 +88,7 @@ interface Placement {
 
 export class HomesteadLayer implements InteractionProvider {
   private readonly homes: Homesteads
+  private readonly village: Village
   private readonly commons: CommonsWorld | null
   private plotDrawn = new Map<number, Drawn>()
   private roomDrawn: Drawn = { objects: [], bodies: [] }
@@ -96,13 +100,18 @@ export class HomesteadLayer implements InteractionProvider {
 
   constructor(private scene: Phaser.Scene, private deps: HomesteadDeps) {
     this.homes = homesteadsFor(deps.session)
+    this.village = villageFor(deps.session)
     this.commons = deps.world.areaId === 'commons' ? (deps.world as CommonsWorld) : null
     if (this.commons) this.buildCommonsFixtures()
     this.emitThumbs()
-    const onChange = () => this.redraw()
+    const onChange = (p?: { ownerId?: string }) => this.scheduleRedraw(p?.ownerId)
     const onCommand = (c: PlacementCommand) => this.command(c)
     const onArrange = () => this.startPlacement()
     bus.on(HOME_EV.changed, onChange)
+    // Mail changes your mailbox flag: just your plot.
+    const onVillage = (p: { what: string }) => p?.what === 'mail' && this.scheduleRedraw(this.homes.myId ?? undefined)
+    bus.on(VILLAGE_EV.changed, onVillage)
+    scene.events.once('shutdown', () => bus.off(VILLAGE_EV.changed, onVillage))
     bus.on(HOME_EV.command, onCommand)
     bus.on('game:home-arrange', onArrange)
     scene.events.once('shutdown', () => {
@@ -120,10 +129,16 @@ export class HomesteadLayer implements InteractionProvider {
       mine: this.homes.mine,
       slots: this.commons?.plots.map((p) => ({ index: p.index, tx: p.tx, ty: p.ty, door: p.door, doorstep: p.doorstep, sign: p.sign })) ?? [],
       features: this.commons?.features ?? null,
-      placing: !!this.placement
+      placing: !!this.placement,
+      stats: {
+        plotDraws: this.plotDraws,
+        tweens: this.scene.tweens.getTweens().length,
+        deadTweens: this.scene.tweens.getTweens().filter((t) => t.targets.some((o) => !(o as Phaser.GameObjects.GameObject).active)).length
+      }
     })
     this.redraw()
     if (this.commons) void this.homes.load()
+    if (this.commons && this.homes.connected) void this.village.loadMail()
     if (deps.room) this.announceRoom()
   }
 
@@ -191,22 +206,50 @@ export class HomesteadLayer implements InteractionProvider {
 
   // ------------------------------------------------------------ drawing
 
-  private redraw(): void {
+  /** Owners whose plots need drawing, or 'all'; flushed once per frame. */
+  private pending: Set<string> | 'all' | null = null
+  /** Plots drawn since the scene started (playtests check redraws stay linear). */
+  private plotDraws = 0
+
+  /** Coalesce change events: one redraw a frame, only of the plots that changed. */
+  private scheduleRedraw(ownerId?: string): void {
+    const first = this.pending === null
+    if (!ownerId || this.pending === 'all') this.pending = 'all'
+    else {
+      const set: Set<string> = this.pending ?? new Set()
+      set.add(ownerId)
+      this.pending = set
+    }
+    if (first) this.scene.time.delayedCall(0, () => this.flushRedraw())
+  }
+
+  private flushRedraw(): void {
+    const p = this.pending
+    this.pending = null
+    if (!p || !this.scene.sys.isActive()) return
+    this.redraw(p === 'all' ? undefined : p)
+  }
+
+  private redraw(owners?: Set<string>): void {
     if (this.commons) {
       if (this.homes.slotCount() > this.commons.plots.length) {
         this.deps.rebuild()
         return
       }
-      this.drawPlots()
+      this.drawPlots(owners)
     } else if (this.deps.room) {
       this.drawRoom()
     }
-    this.deps.interactables.setDynamic(this.interactionList())
+    this.deps.interactables.setDynamic(this.interactionList(), this)
     if (this.placement) this.refreshPlacement()
   }
 
   private clear(d: Drawn): void {
-    for (const o of d.objects) o.destroy()
+    // Repeating glow/flicker tweens die with their objects, never orphaned.
+    for (const o of d.objects) {
+      this.scene.tweens.killTweensOf(o)
+      o.destroy()
+    }
     for (const b of d.bodies) {
       this.deps.solidGroup.remove(b, true, true)
     }
@@ -226,10 +269,13 @@ export class HomesteadLayer implements InteractionProvider {
     return o
   }
 
-  private drawPlots(): void {
+  private drawPlots(owners?: Set<string>): void {
     const views = new Map<number, PlotView>()
     for (const p of this.homes.plots()) views.set(p.slot, p)
     for (const slot of this.commons!.plots) {
+      const view = views.get(slot.index) ?? null
+      if (owners && (!view || !owners.has(view.ownerId))) continue
+      this.plotDraws++
       const d = this.plotDrawn.get(slot.index) ?? { objects: [], bodies: [] }
       this.clear(d)
       this.plotDrawn.set(slot.index, d)
@@ -249,9 +295,10 @@ export class HomesteadLayer implements InteractionProvider {
       return
     }
     const tier = home?.tier ?? view!.tier
-    if (tier >= 1) this.drawCottage(d, ox, oy)
+    if (tier >= 1) this.drawCottage(d, ox, oy, tier)
     else this.drawCamp(d, ox, oy)
     this.drawSign(d, slot, signText(short(view!.name, 11)).replace(' Place', '\nPlace'), false)
+    this.drawMailbox(d, slot, !!view!.mine && this.village.waitingCount() > 0)
     if (home && tier >= 1) this.drawItems(d, home, 'outdoor', ox, oy)
   }
 
@@ -312,8 +359,19 @@ export class HomesteadLayer implements InteractionProvider {
     this.drawLamp(d, ox + 184, oy + 48)
   }
 
-  private drawCottage(d: Drawn, ox: number, oy: number): void {
-    this.add(d, this.scene.add.image(ox + 128, oy + 80, 'cottage').setOrigin(0.5, 1).setDepth(oy + 80))
+  /** The post box below the gateway, its flag up when a parcel waits for you. */
+  private drawMailbox(d: Drawn, slot: PlotSlot, flag: boolean): void {
+    const at = this.mailboxSpot(slot)
+    this.add(d, this.scene.add.image(at.x, at.y, flag ? 'mailbox-flag' : 'mailbox').setOrigin(0.5, 1).setDepth(at.y))
+    this.addBody(d, at.x, at.y - 3, 6, 6)
+  }
+
+  private mailboxSpot(slot: PlotSlot): { x: number; y: number } {
+    return { x: slot.sign.tx * TILE + 8, y: (slot.ty + 8) * TILE }
+  }
+
+  private drawCottage(d: Drawn, ox: number, oy: number, tier = 1): void {
+    this.add(d, this.scene.add.image(ox + 128, oy + 80, tier >= 2 ? 'cottage-workshop' : 'cottage').setOrigin(0.5, 1).setDepth(oy + 80))
     this.addBody(d, ox + 128, oy + 80 - (COTTAGE_H - 20) / 2 - 2, 92, COTTAGE_H - 24)
     this.drawLamp(d, ox + 184, oy + 80)
   }
@@ -366,6 +424,11 @@ export class HomesteadLayer implements InteractionProvider {
     if (!this.deps.reducedMotion) S.tweens.add({ targets: glow, alpha: 0.55, duration: 800, yoyo: true, repeat: -1 })
     const home = this.homes.homes.get(this.deps.room!.owner)
     if (home) this.drawItems(d, home, 'indoor', ROOM_GRID.tx * TILE, ROOM_GRID.ty * TILE)
+    if (home && home.tier >= 2) {
+      // The workshop's chest and bench stand against the back wall, off the floor grid.
+      this.add(d, S.add.image(ROOM_CHEST.x, 50, 'workshop-chest').setOrigin(0.5, 1).setDepth(49))
+      this.add(d, S.add.image(ROOM_BENCH.x, 52, 'workshop-bench').setOrigin(0.5, 1).setDepth(49))
+    }
   }
 
   private announceRoom(): void {
@@ -385,6 +448,11 @@ export class HomesteadLayer implements InteractionProvider {
     const out: Interactable[] = []
     if (this.deps.room) {
       out.push({ id: 'home:hearth', x: ROOM_HEARTH.x + 8, y: ROOM_HEARTH.y + 10, label: 'Sit by the hearth' })
+      const home = this.homes.homes.get(this.deps.room.owner)
+      if (home && home.tier >= 2) {
+        out.push({ id: 'home:chest', x: ROOM_CHEST.x, y: 60, label: this.ownRoom() ? 'Open the storage chest' : 'Look at the chest' })
+        out.push({ id: 'home:bench', x: ROOM_BENCH.x, y: 60, label: this.ownRoom() ? 'Work at the bench' : 'Look at the bench' })
+      }
       return out
     }
     if (!this.commons) return out
@@ -402,6 +470,8 @@ export class HomesteadLayer implements InteractionProvider {
       const home = this.homes.homes.get(p.ownerId)
       const tier = home?.tier ?? p.tier
       const door = { x: slot.door.tx * TILE + 16, y: slot.doorstep.ty * TILE + 4 }
+      const box = this.mailboxSpot(slot)
+      out.push({ id: `home:mail:${p.ownerId}`, x: box.x, y: box.y + 2, label: p.mine ? 'Check your mailbox' : `Leave something for ${short(p.name, 16)}` })
       if (tier >= 1) out.push({ id: `home:door:${p.ownerId}`, ...door, label: p.mine ? 'Go inside' : `Visit ${short(p.name, 16)}’s cottage` })
       else if (p.mine) out.push({ id: 'home:bed', x: slot.tx * TILE + 96, y: slot.ty * TILE + 52, label: 'Your bedroll' })
     }
@@ -445,6 +515,13 @@ export class HomesteadLayer implements InteractionProvider {
     if (id === SILAS_ID) return this.talkToSilas()
     if (id === 'home:bed' || (id === 'home:hearth' && this.ownRoom())) return this.offerRest(id === 'home:bed' ? 'Your bedroll' : 'Your hearth')
     if (id.startsWith('home:door:')) return void this.visit(id.slice('home:door:'.length))
+    if (id.startsWith('home:mail:')) {
+      const owner = id.slice('home:mail:'.length)
+      if (!this.homes.connected) return this.say({ speaker: 'Mailbox', lines: ['A carter’s post box. Parcels go between neighbours in a world. Sign in to yours from the Menu.'] })
+      sfx('open')
+      bus.emit(VILLAGE_EV.open, owner === this.homes.myId ? { panel: 'mail' } : { panel: 'mail', to: owner })
+      return
+    }
     const say = (speaker: string, lines: string[]) => this.say({ speaker, lines })
     switch (id) {
       case 'home:hearth': {
@@ -457,11 +534,17 @@ export class HomesteadLayer implements InteractionProvider {
           CARTING_DAY_NOTICE
         ])
       case 'home:board':
-        return say('Notice Board', [
-          'PLOTS ON THE COMMONS. Ask Silas at the east yard. No deep footings. Peg, don’t nail.',
-          SEASON_SHIFT_NOTICE,
-          'Beneath it, a price list in a careful hand: “Pegged, not nailed. Iron at the Hall price.”'
-        ])
+        return openBoard()
+      case 'home:chest':
+      case 'home:bench': {
+        if (this.ownRoom()) {
+          sfx('open')
+          bus.emit(VILLAGE_EV.open, { panel: id === 'home:chest' ? 'chest' : 'bench' })
+          return
+        }
+        const name = this.homes.homes.get(this.deps.room?.owner ?? '')?.displayName || 'your neighbour'
+        return say(id === 'home:chest' ? 'The chest' : 'The bench', [id === 'home:chest' ? `Oak and iron, waxed against the damp. It’s ${name}’s, and shut.` : `A heavy bench, clean tools racked over it. ${name} keeps it tidy.`])
+      }
       case 'home:well':
         return say('The Carters’ Well', ['The old staging well. Every cart filled its casks here before the lantern road. The rope is new; the bucket isn’t.'])
       case 'home:toolbox': {
@@ -542,11 +625,17 @@ export class HomesteadLayer implements InteractionProvider {
           : { text: 'Raise a cottage', note: `${cost} embers`, action: 'home:upgrade' }
       )
     }
+    if (mine.tier === 1) {
+      const why = workshopShort(s.state.embers, this.homes.materials)
+      choices.push(why ? { text: 'Build on a workshop', note: why, disabled: true } : { text: 'Build on a workshop', note: workshopPrice(), action: 'home:upgrade' })
+    }
     choices.push({ text: 'See what you’ve finished', action: 'home:shop' })
     choices.push({ text: 'Just passing' })
     const intro = mine.tier === 0
       ? [s.state.embers < this.homes.cottagePrice() ? lines.notEnoughEmbers.lines[0] : 'Your camp’s holding. Four skids and a slate roof, and you’d have a door to hang a fox over. Say the word.']
-      : [lines.sellDecorations.lines[0]]
+      : mine.tier === 1
+        ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
+        : [lines.sellDecorations.lines[0]]
     this.say({ speaker: SILAS.name, lines: mine.tier === 0 ? intro : [lines.idleLines[this.nextIdle()], ...intro], choices })
   }
 
@@ -602,7 +691,13 @@ export class HomesteadLayer implements InteractionProvider {
         sfx('lantern')
         const slot = this.myslot()
         if (slot) this.deps.fx.sparkBurst((slot.tx + 8) * TILE, (slot.ty + 3) * TILE, 18)
-        this.say({ speaker: SILAS.name, lines: SILAS.dialogue.afterUpgrade.lines })
+        const workshop = (this.homes.mine?.tier ?? 0) >= 2
+        this.say({
+          speaker: SILAS.name,
+          lines: workshop
+            ? ['There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Clean your tools. Rust is just iron forgetting it is a saw.']
+            : SILAS.dialogue.afterUpgrade.lines
+        })
       } else if (r.code === 'insufficient-embers') {
         this.say({ speaker: SILAS.name, lines: SILAS.dialogue.notEnoughEmbers.lines })
       } else {
@@ -692,6 +787,11 @@ export class HomesteadLayer implements InteractionProvider {
 
   /** The screen changed shape mid-arrange: frame the piece (or the grid) again. */
   private reframe(): void {
+    // After this frame: the camera's own viewport and zoom update on resize too.
+    this.scene.time.delayedCall(0, () => this.reframeNow())
+  }
+
+  private reframeNow(): void {
     const p = this.placement
     if (!p) return
     const it = p.selected ? this.instance(p.selected) : undefined
@@ -735,6 +835,9 @@ export class HomesteadLayer implements InteractionProvider {
   private onKey(e: KeyboardEvent): void {
     const p = this.placement
     if (!p) return
+    // A modal, dialogue or lease gate owns input: placement waits. A key the
+    // interface already handled (Escape closing a panel) is not ours too.
+    if (uiBlocked() || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
     const k = e.code
@@ -751,7 +854,7 @@ export class HomesteadLayer implements InteractionProvider {
 
   private onPointer(pointer: Phaser.Input.Pointer): void {
     const p = this.placement
-    if (!p || p.busy) return
+    if (!p || p.busy || uiBlocked()) return
     const gx = Math.floor((pointer.worldX - p.ox) / TILE)
     const gy = Math.floor((pointer.worldY - p.oy) / TILE)
     if (gx < 0 || gy < 0 || gx >= p.cols || gy >= p.rows) return
@@ -831,6 +934,7 @@ export class HomesteadLayer implements InteractionProvider {
   private command(c: PlacementCommand): void {
     const p = this.placement
     if (!p) return
+    if (uiBlocked() && c.kind !== 'exit') return
     if (c.kind === 'exit') return this.endPlacement()
     if (p.busy) return
     switch (c.kind) {
@@ -1011,6 +1115,18 @@ export class HomesteadLayer implements InteractionProvider {
     }
     bus.emit(HOME_EV.placement, view)
   }
+}
+
+/** "30 embers, 20 timber, 10 stone, 8 fiber" */
+function workshopPrice(): string {
+  return `${WORKSHOP_TIER.embers} embers, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
+}
+
+/** Why the workshop can't be built yet (null: it can). */
+export function workshopShort(embers: number, materials: Record<string, number>): string | null {
+  if (embers < WORKSHOP_TIER.embers) return `Needs ${WORKSHOP_TIER.embers} embers`
+  for (const [m, n] of Object.entries(WORKSHOP_TIER.materials ?? {})) if ((materials[m] ?? 0) < n) return `Needs ${n} ${m}`
+  return null
 }
 
 function short(s: string, n: number): string {

@@ -33,6 +33,11 @@
   import { HOME_EV, type ArrangeView, type PlacementView } from './game/homestead'
   import { home } from './ui/home.svelte'
   import SilasShop from './ui/SilasShop.svelte'
+  import NoticeBoard from './ui/NoticeBoard.svelte'
+  import WorkshopPanel from './ui/WorkshopPanel.svelte'
+  import MailPanel from './ui/MailPanel.svelte'
+  import { VILLAGE_EV, villageFor, type VillagePanel } from './game/village'
+  import { villageUi } from './ui/village.svelte'
   import HomeBar from './ui/HomeBar.svelte'
   import CharacterPanel from './ui/CharacterPanel.svelte'
   import MenuPanel from './ui/MenuPanel.svelte'
@@ -60,11 +65,13 @@
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
-  type Panel = 'journal' | 'character' | 'menu' | 'library' | 'shop' | null
+  type Panel = 'journal' | 'character' | 'menu' | 'library' | 'shop' | VillagePanel | null
 
   let phase = $state<Phase>('loading')
   let hasSave = $state(false)
   let panel = $state<Panel>(null)
+  /** Mail panel opened at a neighbour's mailbox: who to send to. */
+  let mailTo = $state<string | null>(null)
   let recovery = $state<{ message: string; raw: string } | null>(null)
   let rawCopied = $state(false)
   let confirm = $state<'new' | 'discard' | 'overwrite' | null>(null)
@@ -223,6 +230,17 @@
     const onThumbs = (v: Record<string, string>) => {
       home.thumbs = { ...home.thumbs, ...v }
     }
+    const onVillageOpen = (v: { panel: VillagePanel; to?: string }) => {
+      if (panel !== null) return
+      mailTo = v.to ?? null
+      toggle(v.panel)
+    }
+    const onVillageChanged = () => {
+      if (!session) return
+      const v = villageFor(session)
+      villageUi.calendar = v.calendar
+      villageUi.waiting = v.waitingCount()
+    }
     const onRoom = (v: { eyebrow: string; title: string; body: string }) => {
       if (phase === 'playing') ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
     }
@@ -245,7 +263,9 @@
       [HOME_EV.arrange, onArrange],
       [HOME_EV.placement, onPlacement],
       [HOME_EV.thumbs, onThumbs],
-      [HOME_EV.room, onRoom]
+      [HOME_EV.room, onRoom],
+      [VILLAGE_EV.open, onVillageOpen],
+      [VILLAGE_EV.changed, onVillageChanged]
     ]
     for (const [ev, fn] of pairs) bus.on(ev, fn)
     return () => {
@@ -651,6 +671,9 @@
     if (ui.endingOpen) return
     // Placement mode owns its keys (Escape steps back out of it).
     if (home.placement && !panel) return
+    // One owner per key: anything handled here is marked, so the world
+    // (placement mode included) doesn't act on the same press.
+    if (['KeyJ', 'KeyC', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     if (e.code === 'KeyJ') toggle('journal')
     else if (e.code === 'KeyC') toggle('character')
     else if (e.code === 'Escape') {
@@ -681,7 +704,7 @@
     {/if}
     <DialoguePanel />
     {#if !home.placement}<TouchControls />{/if}
-    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic} />
+    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic || gate !== null || leaseBlock !== null} />
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -699,6 +722,12 @@
       <LibraryPanel {session} onClose={() => toggle('library')} />
     {:else if panel === 'shop'}
       <SilasShop {session} onClose={() => toggle('shop')} />
+    {:else if panel === 'board'}
+      <NoticeBoard {session} onClose={() => toggle('board')} />
+    {:else if panel === 'chest' || panel === 'bench'}
+      <WorkshopPanel {session} mode={panel} onClose={() => (panel = null)} />
+    {:else if panel === 'mail'}
+      <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
       <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} />
     {:else if panel === 'menu'}

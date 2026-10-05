@@ -198,3 +198,101 @@ export interface HomeActionRequest {
 export interface HomeActionResponse extends Snapshot {
   result: { home: HomeView; materials: Record<string, number>; itemId?: string };
 }
+
+// ------------------------------------------------------------ phase 5
+
+/** One kind of goods (a catalogue id, never a decoration instance). */
+export interface Asset {
+  kind: 'material' | 'item' | 'decoration';
+  id: string;
+  qty: number;
+}
+
+/** Counts by kind; a missing key means zero. Decorations include placed ones. */
+export interface AssetCounts {
+  materials: Record<string, number>;
+  items: Record<string, number>;
+  decorations: Record<string, number>;
+}
+
+/** GET /api/calendar (public; Unix seconds). */
+export interface CalendarResponse {
+  wick: string;
+  wickNumber: number;
+  year: number;
+  day: number;
+  mark: string;
+  festival: string | null;
+  startsAt: number;
+  nextTurning: number;
+  notice: string | null;
+  wickDays: number;
+}
+
+export interface StorageResponse extends Snapshot {
+  home: HomeView;
+  inventory: AssetCounts;
+  storage: AssetCounts;
+}
+
+export interface StorageMoveResponse extends Snapshot {
+  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts };
+}
+
+export interface CraftResponse extends Snapshot {
+  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; recipeId: string; output: Asset; instanceIds: string[] };
+}
+
+export interface Mail {
+  id: string;
+  worldId: string;
+  fromId: string;
+  toId: string;
+  fromName: string;
+  toName: string;
+  asset: Asset;
+  sentAt: number;
+  claimedAt: number | null;
+  /** Set when it went back to the sender (recall, 30-day return, recipient removed). */
+  returnedAt?: number | null;
+  returnReason?: 'recalled' | 'expired' | 'recipient-removed' | null;
+}
+
+export interface MailResponse extends Snapshot {
+  mail: Mail[];
+  /** History continues at `?cursor=` (opaque); pending mail repeats on every page. */
+  nextCursor?: string | null;
+  /** Only for legacy pending backlogs past the current caps: `?pendingCursor=`. */
+  nextPendingCursor?: string | null;
+  /** Carried counts (this client's server addition); absent from older servers. */
+  inventory?: AssetCounts;
+}
+
+export interface MailActionResponse extends Snapshot {
+  result: { mailId: string; mail: Mail[]; inventory: AssetCounts; asset?: Asset };
+}
+
+export interface ProjectView {
+  id: string;
+  name: string;
+  stage: 'open' | 'in-progress' | 'complete';
+  required: Record<string, number>;
+  contributed: Record<string, number>;
+  /** The caller's own share (this client's server addition). */
+  mine: Record<string, number>;
+  completedAt: number | null;
+  worldFlag: string | null;
+  grantablePapers: string[];
+}
+
+export interface ProjectsView {
+  projects: ProjectView[];
+  worldFlags: string[];
+  grantablePapers: string[];
+}
+
+export interface ProjectsResponse extends Snapshot, ProjectsView {}
+
+export interface ContributeResponse extends Snapshot {
+  result: ProjectsView & { projectId: string; materials: Record<string, number> };
+}

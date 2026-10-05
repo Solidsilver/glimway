@@ -16,6 +16,8 @@ type projectView struct {
 	Stage           string         `json:"stage"`
 	Required        map[string]int `json:"required"`
 	Contributed     map[string]int `json:"contributed"`
+	// Mine is the caller's own running contribution per material.
+	Mine            map[string]int `json:"mine"`
 	CompletedAt     *int64         `json:"completedAt"`
 	WorldFlag       *string        `json:"worldFlag"`
 	GrantablePapers []string       `json:"grantablePapers"`
@@ -29,11 +31,30 @@ type projectsView struct {
 func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsView, error) {
 	out := projectsView{Projects: []projectView{}, WorldFlags: []string{}, GrantablePapers: []string{}}
 	for _, def := range content.ProjectRules.Projects {
-		v := projectView{ID: def.ID, Name: def.Name, Stage: "open", Required: def.Materials, Contributed: map[string]int{}, GrantablePapers: []string{}}
+		v := projectView{ID: def.ID, Name: def.Name, Stage: "open", Required: def.Materials, Contributed: map[string]int{}, Mine: map[string]int{}, GrantablePapers: []string{}}
 		for id := range def.Materials {
 			v.Contributed[id] = 0
+			v.Mine[id] = 0
 		}
-		err := tx.QueryRowContext(ctx, "SELECT completed_at,world_flag FROM projects WHERE world_id=? AND project_def=?", s.WorldID, def.ID).Scan(&v.CompletedAt, &v.WorldFlag)
+		mine, err := tx.QueryContext(ctx, "SELECT material,SUM(qty) FROM contributions WHERE world_id=? AND project_def=? AND habitica_id=? GROUP BY material", s.WorldID, def.ID, s.HabiticaID)
+		if err != nil {
+			return out, err
+		}
+		for mine.Next() {
+			var id string
+			var n int
+			if err = mine.Scan(&id, &n); err != nil {
+				mine.Close()
+				return out, err
+			}
+			v.Mine[id] = n
+		}
+		err = mine.Err()
+		mine.Close()
+		if err != nil {
+			return out, err
+		}
+		err = tx.QueryRowContext(ctx, "SELECT completed_at,world_flag FROM projects WHERE world_id=? AND project_def=?", s.WorldID, def.ID).Scan(&v.CompletedAt, &v.WorldFlag)
 		if err != nil && err != sql.ErrNoRows {
 			return out, err
 		}

@@ -112,3 +112,14 @@ test('inside a cottage: the floor is the 12×10 grid, the door leads to the door
   assert.ok(ROOM_GRID.tx + mat.x <= ROOM_DOOR.tx && ROOM_GRID.tx + mat.x + mat.w >= ROOM_DOOR.tx + 2);
   assert.equal(ROOM_GRID.ty + mat.y + mat.h, ROOM_DOOR.ty);
 });
+
+test('a huge Commons is drawn in ground chunks no texture limit can refuse', async () => {
+  const { groundChunks, GROUND_CHUNK_TILES } = await import('../src/game/area/terrain.ts');
+  const w = buildCommons(160); // the review's 160-member world: 992×18144 px
+  assert.ok(w.heightPx > 8192);
+  const chunks = groundChunks(w.width, w.height);
+  for (const c of chunks) assert.ok(c.tw * TILE <= 1024 && c.th * TILE <= 1024 && c.tw <= GROUND_CHUNK_TILES);
+  // Every tile is covered exactly once.
+  const covered = chunks.reduce((n, c) => n + c.tw * c.th, 0);
+  assert.equal(covered, w.width * w.height);
+});
