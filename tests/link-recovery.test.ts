@@ -20,7 +20,7 @@ const base = (over: Partial<GameState> = {}): GameState => ({ ...createNewGame()
 const snap = (state: GameState, rev: number, extra: Record<string, unknown> = {}) => ({
   state, rev, vitalsSource: 'imported', habiticaId: 'hero', habiticaPartyId: null, worldId: 'w', saveOrigin: 'fresh', pending: 0, verifiedXp: 0, flagged: false, ...extra,
 });
-const home = (items: unknown[] = []) => ({ ownerId: 'hero', displayName: 'Tansy', worldId: 'w', plotIndex: 0, tier: 0, bounds: { x: 64, y: 64, width: 256, height: 192 }, indoor: null, items });
+const home = (items: unknown[] = []) => ({ id: 'h1', gate: 0, worldId: 'w', tier: 0, members: [{ id: 'hero', displayName: 'Tansy' }], member: true, desolate: false, vacantSince: null, landSeed: 7, cleared: [], postsBought: 0, nextPost: {}, indoor: null, items });
 const bought = (rev: number) => ({ body: { ...snap(base({ embers: 8 }), rev), result: { home: home([{ id: 's1', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null }]), materials: {}, itemId: 's1' } } });
 
 type Answer = { status?: number; body?: unknown; raw?: string } | 'network';

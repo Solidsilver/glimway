@@ -89,6 +89,7 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
     api,
     clientId,
     habiticaId,
+    worldId: snapshot?.worldId || cache?.worldId,
     name: opts.name,
     rev: base.rev,
     lease: useCache && cache!.clientId === clientId ? cache!.lease : null,

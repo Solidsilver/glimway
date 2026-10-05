@@ -46,6 +46,8 @@ export interface ConnectedCache {
   sent?: { rev: number; key: string };
   /** The player logged out with unsent progress: kept for their next sign-in only. */
   loggedOut?: boolean;
+  /** The account's world (seeds homestead land offline). */
+  worldId?: string;
   /** The offline copy that a reconnect merged into newer server progress. */
   recovery?: { state: GameState; savedAt: number };
   /** A keyed mutation whose answer was lost: resolved by exact replay (game/link.ts). */
@@ -150,6 +152,7 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
       savedAt: typeof r.savedAt === 'number' ? r.savedAt : 0,
     };
     if (r.loggedOut === true) out.loggedOut = true;
+    if (typeof r.worldId === 'string' && r.worldId.length > 0 && r.worldId.length <= 128) out.worldId = r.worldId;
     const sent = r.sent as { rev?: unknown; key?: unknown } | undefined;
     if (sent && typeof sent === 'object' && typeof sent.rev === 'number' && Number.isInteger(sent.rev) && typeof sent.key === 'string') {
       out.sent = { rev: sent.rev, key: sent.key };
@@ -168,7 +171,7 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
 }
 
 const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute'];
-const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade'];
+const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade', 'claim', 'clear', 'invite', 'joint', 'leave'];
 
 /**
  * A lost mutation's exact request (game/link.ts `Unresolved`), kept so the

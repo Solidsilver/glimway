@@ -6,7 +6,7 @@
  * use these; tests run them directly.
  */
 import { CALENDAR, calendarAt, type CalendarDay } from './calendar.ts';
-import { HOMESTEAD_DATA, homeItem, type HomeInstance } from './homestead.ts';
+import { HOMESTEAD_DATA, homeItem } from './homestead.ts';
 import { CRAFTING, PROJECTS, type Recipe } from './workshop.ts';
 import type { Asset, AssetCounts, Mail, ProjectView } from './api/types.ts';
 
@@ -81,22 +81,22 @@ export function countOf(c: AssetCounts | null | undefined, kind: Asset['kind'], 
   return map[id] ?? 0;
 }
 
-/** Decorations you can move (store, mail): carried ones that aren't set out. */
-export function movableDecorations(c: AssetCounts | null | undefined, placed: readonly HomeInstance[]): Record<string, number> {
+/**
+ * Decorations you can move (store, mail): the ones in your pack. Pieces set
+ * out belong to the homestead and are never counted as carried.
+ */
+export function movableDecorations(c: AssetCounts | null | undefined): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const [id, n] of Object.entries(c?.decorations ?? {})) {
-    const set = placed.filter((i) => i.itemDef === id && i.scene !== null).length;
-    if (n - set > 0) out[id] = n - set;
-  }
+  for (const [id, n] of Object.entries(c?.decorations ?? {})) if (n > 0) out[id] = n;
   return out;
 }
 
 /** Everything you could send or store, as a flat list (materials first). */
-export function movableAssets(c: AssetCounts | null | undefined, placed: readonly HomeInstance[]): Asset[] {
+export function movableAssets(c: AssetCounts | null | undefined): Asset[] {
   const out: Asset[] = [];
   for (const id of MATERIAL_IDS) if (countOf(c, 'material', id) > 0) out.push({ kind: 'material', id, qty: countOf(c, 'material', id) });
   for (const [id, n] of Object.entries(c?.items ?? {}).sort()) if (n > 0) out.push({ kind: 'item', id, qty: n });
-  for (const [id, n] of Object.entries(movableDecorations(c, placed)).sort()) out.push({ kind: 'decoration', id, qty: n });
+  for (const [id, n] of Object.entries(movableDecorations(c)).sort()) out.push({ kind: 'decoration', id, qty: n });
   return out;
 }
 

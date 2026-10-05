@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { home } from './home.svelte'
   import { villageUi } from './village.svelte'
   import { dateLine, MARK_NOTES } from '../lib/village'
   import { ui } from './store.svelte'
@@ -100,6 +101,9 @@
       <span class="goal-icon"><Icon name="star" size={12} /></span>
       <span class="goal-text">{ui.quest.objective}</span>
     </button>
+    {#if home.goal}
+      <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> {home.goal}</p>
+    {/if}
     {#if showBars}
       <div class="bars">
         <div class="vital" class:low={lowHp} title="Health">
@@ -326,6 +330,19 @@
   @keyframes net-pulse {
     0%, 100% { opacity: 0.35; transform: scale(0.8); }
     50% { opacity: 1; transform: scale(1); }
+  }
+  .home-goal {
+    margin: 4px 0 0;
+    padding: 3px 8px;
+    font-size: 11px;
+    line-height: 1.3;
+    border-radius: 6px;
+    background: rgba(255, 243, 196, 0.92);
+    color: var(--wood-dark);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    max-width: 260px;
   }
   .objective {
     all: unset;

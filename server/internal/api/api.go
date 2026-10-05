@@ -186,7 +186,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.libraryDonate(w, r)
 	case "POST /api/wilds/claim", "POST /api/wilds/lantern", "POST /api/wilds/defeat":
 		err = a.wildsMutation(w, r)
-	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade":
+	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade",
+		"POST /api/homestead/claim", "POST /api/homestead/clear", "POST /api/homestead/invite", "POST /api/homestead/joint", "POST /api/homestead/leave":
 		err = a.homeMutation(w, r)
 	case "POST /api/spend":
 		err = a.spend(w, r)
@@ -579,11 +580,6 @@ func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMess
 	if !rules.ValidMerged(s.State) {
 		return fail(400, "invalid-progress")
 	}
-	if s.State.Area == "commons" {
-		if _, err := ensureHome(ctx, tx, s, now); err != nil {
-			return err
-		}
-	}
 	return gifts(ctx, tx, s, now)
 }
 func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
@@ -674,7 +670,7 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
 		return err
 	}
-	if !rules.SafeAreas[s.State.Area] {
+	if !rules.IsSafeArea(s.State.Area) {
 		return fail(409, "not-at-safe-boundary")
 	}
 	p.MP = math.Min(p.MP, p.MaxMP)

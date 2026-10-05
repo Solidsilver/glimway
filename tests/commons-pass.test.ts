@@ -13,7 +13,7 @@ import {
   preloadCommonsPass,
   type CommonsPassManifest,
 } from '../src/game/commons-pass.ts'
-import { COMMONS_PLACEHOLDER_FRAMES, decorationLayout, floorTileOrientation } from '../src/game/commons-pass-install.ts'
+import { COMMONS_PLACEHOLDER_FRAMES, PROP_DECORATIONS, decorationLayout, floorTileOrientation } from '../src/game/commons-pass-install.ts'
 import { pathEdgeOverlays } from '../src/game/area/terrain.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { TERRAIN } from '../src/game/textures.ts'
@@ -129,7 +129,7 @@ test('the 11 looping animations and the aliases name real frames', () => {
 
 test('every placeholder the scenes draw has a delivered frame of a sane size', () => {
   for (const [key, f] of Object.entries(COMMONS_PLACEHOLDER_FRAMES)) assert.ok(frameByKey.has(f), `${key} → ${f}`)
-  for (const it of HOMESTEAD_DATA.items) assert.ok(frameByKey.has(it.id), `decoration ${it.id}`)
+  for (const it of HOMESTEAD_DATA.items) assert.ok(frameByKey.has(it.id) || it.id in PROP_DECORATIONS, `decoration ${it.id}`)
   for (const id of ['whittled-fox', 'beeswax-candle', 'river-glass-bead', 'spare-bootlace', 'tin-whistle', 'timber', 'stone', 'fiber', 'amber', 'lamp-wick', 'oilcloth-wrap', 'wooden-peg']) {
     assert.ok(frameByKey.has(`icon-${id}`), `icon-${id}`)
   }
@@ -141,6 +141,8 @@ test('every placeholder the scenes draw has a delivered frame of a sane size', (
 
 test('decorations fill their footprints: two-tile pieces are refitted, never squeezed into one tile', () => {
   for (const it of HOMESTEAD_DATA.items) {
+    // Lantern posts come from the props atlas (the Commons lane's own posts).
+    if (it.id in PROP_DECORATIONS) continue
     const f = frameByKey.get(it.id)!
     for (const quarter of [false, true]) {
       const { width, height, dest } = decorationLayout(it.id, f, it.footprint, quarter)

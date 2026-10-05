@@ -11,7 +11,7 @@
 import { calendarAt, type CalendarDay } from '../lib/calendar'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village'
 import { MAIL } from '../lib/mail'
-import type { Asset, AssetCounts, ContributeResponse, CraftResponse, Mail, MailActionResponse, ProjectView, ProjectsView, StorageMoveResponse } from '../lib/api/types'
+import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, Mail, MailActionResponse, ProjectView, ProjectsView, StorageMoveResponse } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
@@ -46,6 +46,10 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'You don’t have that many to move. Anything set out has to be put away first.'
     case 'insufficient-storage':
       return 'The chest doesn’t hold that many.'
+    case 'chest-full':
+      return 'Your own chest is full. It’s a small one.'
+    case 'not-a-member':
+      return 'That chest belongs to the folk on this deed.'
     case 'item-not-available':
       return 'That piece isn’t free to move just now.'
     case 'invalid-quantity':
@@ -107,6 +111,8 @@ export class Village {
   projectsStatus: Status
   inventory: AssetCounts | null = null
   storage: AssetCounts | null = null
+  /** Your own small chest at home (goes with you if you leave the deed). */
+  personal: AssetCounts | null = null
   mail: Mail[] = []
   mailStatus: Status
   /** The server answered "no recall here" once: stop offering it. */
@@ -308,18 +314,21 @@ export class Village {
     if (!r.ok) return fail(r.code)
     this.inventory = r.value.inventory
     this.storage = r.value.storage
+    this.personal = r.value.personal
     this.adoptHome(r.value.home)
     this.emit('goods')
     return { ok: true, value: undefined }
   }
 
-  async move(direction: 'deposit' | 'withdraw', asset: Asset): Promise<VillageResult> {
+  /** Move goods between your pack and a chest at home (the shared one, or your own). */
+  async move(direction: 'deposit' | 'withdraw', asset: Asset, chest: ChestId = 'shared'): Promise<VillageResult> {
     const link = this.session.link
     if (!link) return fail('guest')
-    const r = await link.mutate<StorageMoveResponse>({ kind: 'storage', fields: { direction, asset } })
+    const r = await link.mutate<StorageMoveResponse>({ kind: 'storage', fields: { direction, asset, chest } })
     if (!r.ok) return fail(r.code)
     this.inventory = r.res.result.inventory
     this.storage = r.res.result.storage
+    this.personal = r.res.result.personal
     this.adoptHome(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: undefined }
@@ -332,15 +341,14 @@ export class Village {
     if (!r.ok) return fail(r.code)
     this.inventory = r.res.result.inventory
     this.storage = r.res.result.storage
+    this.personal = r.res.result.personal
     this.adoptHome(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: r.res.result.output }
   }
 
   private adoptHome(home: import('../lib/api/types').HomeView): void {
-    const homes = homesteadsFor(this.session)
-    homes.homes.set(home.ownerId, home)
-    bus.emit('home:changed', { reason: 'goods' })
+    homesteadsFor(this.session).adoptHome(home)
   }
 
   // ------------------------------------------------------------ mail
@@ -461,8 +469,8 @@ export class Village {
   /** Decorations moved by mail change what can be placed: refresh the home. */
   private async loadHomeAfterMail(): Promise<void> {
     const homes = homesteadsFor(this.session)
-    const me = this.session.link?.habiticaId
-    if (me) await homes.fetchHome(me)
+    const gate = homes.myGate
+    if (gate !== null) await homes.fetchHome(gate)
   }
 
   private emit(what: string): void {

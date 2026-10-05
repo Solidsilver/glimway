@@ -37,7 +37,7 @@ import {
   type MergeMode
 } from '../lib/api/progress.ts'
 import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
-import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeView, PlotInfo, Snapshot, SpendRequest, SyncResponse, Progress, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeView, CommonsResponse, Snapshot, SpendRequest, SyncResponse, Progress, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
@@ -50,8 +50,11 @@ export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 
 /** A homestead read: the view, or why there isn't one right now. */
 export type HomeRead<T> = { ok: true; value: T } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' }
 
+/** The Commons lane as the game keeps it. */
+export type CommonsLaneView = Pick<CommonsResponse, 'gates' | 'gateCount' | 'mine' | 'invites'>
+
 export type HomeActionResult =
-  | { ok: true; home: HomeView; materials: Record<string, number>; itemId?: string }
+  | { ok: true; home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' }
   | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
 
 /**
@@ -143,6 +146,8 @@ export interface LinkInit {
   api: ApiClient
   clientId: string
   habiticaId: string
+  /** The account's world, when known (snapshot or cache). */
+  worldId?: string
   name: string
   rev: number
   lease: string | null
@@ -167,6 +172,8 @@ export class Link {
   /** This page's play-client id (changes only via `changeClient`). */
   clientId: string
   readonly habiticaId: string
+  /** The account's world ('' until a snapshot or the cache says). */
+  worldId: string
   name: string
   /** Server revision the local copy is based on. */
   rev: number
@@ -208,6 +215,7 @@ export class Link {
     this.api = init.api
     this.clientId = init.clientId
     this.habiticaId = init.habiticaId
+    this.worldId = init.worldId ?? ''
     this.name = init.name
     this.rev = init.rev
     this.lease = init.lease
@@ -281,6 +289,7 @@ export class Link {
       offlineProgress: this.offlineProgress,
       sent: this.sent,
       loggedOut: this.loggedOut || undefined,
+      worldId: this.worldId || undefined,
       recovery: this.recovery,
       unresolved: this.unresolved ?? undefined,
       savedAt: Date.now()
@@ -362,6 +371,7 @@ export class Link {
     if (!s) return
     const merged = mergeServerState(s.state, snapshot.state, mode)
     this.rev = snapshot.rev
+    if (snapshot.worldId) this.worldId = snapshot.worldId
     const name = snapshot.displayName || snapshot.importedProfile?.name
     if (name) this.name = name
     s.applyServer(merged, { vitalsSource: snapshot.vitalsSource, importedProfile: snapshot.importedProfile ?? null }, mode === 'server')
@@ -446,18 +456,21 @@ export class Link {
 
   // ------------------------------------------------------------ homesteads
 
-  /** Read a member's homestead (own or same world). Reads never move the revision. */
-  async readHome(habiticaId: string): Promise<HomeRead<{ home: HomeView; materials: Record<string, number> }>> {
+  /** Read the homestead behind a gate (null: unclaimed land). Reads never move the revision. */
+  async readHome(gate: number): Promise<HomeRead<{ gate: number; landSeed: number; home: HomeView | null; materials: Record<string, number> }>> {
     // `materials` are always the caller's own, even when visiting a neighbour.
     return this.read(async () => {
-      const r = await this.api.run((raw) => raw.home(habiticaId))
-      return { home: r.home, materials: r.materials }
+      const r = await this.api.run((raw) => raw.home(gate))
+      return { gate: r.gate, landSeed: r.landSeed, home: r.home, materials: r.materials }
     })
   }
 
-  /** The world's Commons roster. */
-  async readCommons(): Promise<HomeRead<PlotInfo[]>> {
-    return this.read(async () => (await this.api.run((raw) => raw.commons())).plots)
+  /** The world's Commons lane: gates, holders, invitations. */
+  async readCommons(): Promise<HomeRead<CommonsLaneView>> {
+    return this.read(async () => {
+      const r = await this.api.run((raw) => raw.commons())
+      return { gates: r.gates, gateCount: r.gateCount, mine: r.mine, invites: r.invites }
+    })
   }
 
   private async read<T>(get: () => Promise<T>): Promise<HomeRead<T>> {
@@ -486,7 +499,7 @@ export class Link {
     const { op, ...fields } = action
     const r = await this.mutate<HomeActionResponse>({ kind: 'home', op, fields })
     if (!r.ok) return r
-    return { ok: true, home: r.res.result.home, materials: r.res.result.materials, itemId: r.res.result.itemId }
+    return { ok: true, home: r.res.result.home, materials: r.res.result.materials, itemId: r.res.result.itemId, status: r.res.result.status }
   }
 
   /**

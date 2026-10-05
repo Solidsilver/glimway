@@ -24,8 +24,8 @@ import type {
   HomeActionResponse,
   HomeResponse,
   HomeView,
-  PlotBounds,
-  PlotInfo,
+  GateInfo,
+  DeedInvite,
   CreatedInvite,
   InviteInfo,
   InviteList,
@@ -301,23 +301,17 @@ function int(v: unknown, min = 0): number {
   return v;
 }
 
-function bounds(v: unknown): PlotBounds | null {
-  if (v === null || v === undefined) return null;
-  const o = obj(v);
-  return { x: num(o.x), y: num(o.y), width: num(o.width), height: num(o.height) };
-}
-
-function plotIndex(v: unknown): number | null {
-  return v === null || v === undefined ? null : int(v);
-}
-
 function name(v: unknown): string {
   return typeof v === 'string' ? v.slice(0, 64) : '';
 }
 
+function nullableInt(v: unknown): number | null {
+  return v === null || v === undefined ? null : int(v);
+}
+
 export function parseHomeView(raw: unknown): HomeView {
   const o = obj(raw);
-  if (!Array.isArray(o.items)) throw new ApiError('bad-response');
+  if (!Array.isArray(o.items) || !Array.isArray(o.members)) throw new ApiError('bad-response');
   const items = o.items.map((row) => {
     const r = obj(row);
     const placed = r.scene !== null && r.scene !== undefined;
@@ -329,16 +323,29 @@ export function parseHomeView(raw: unknown): HomeView {
       x: placed ? int(r.x) : null,
       y: placed ? int(r.y) : null,
       rotation: placed ? (r.rotation as 0 | 90 | 180 | 270) : null,
+      name: typeof r.name === 'string' && r.name ? r.name.slice(0, 80) : null,
     };
   });
   const indoor = o.indoor === null || o.indoor === undefined ? null : { width: int(obj(o.indoor).width, 1), height: int(obj(o.indoor).height, 1) };
+  const cleared = Array.isArray(o.cleared)
+    ? o.cleared.map((c): [number, number] => {
+        if (!Array.isArray(c) || c.length !== 2) throw new ApiError('bad-response');
+        return [int(c[0]), int(c[1])];
+      })
+    : [];
   return {
-    ownerId: str(o.ownerId),
-    displayName: name(o.displayName),
+    id: str(o.id),
+    gate: int(o.gate),
     worldId: typeof o.worldId === 'string' ? o.worldId : '',
-    plotIndex: plotIndex(o.plotIndex),
     tier: int(o.tier),
-    bounds: bounds(o.bounds),
+    members: o.members.map((m) => ({ id: str(obj(m).id), displayName: name(obj(m).displayName) })),
+    member: o.member === true,
+    desolate: o.desolate === true,
+    vacantSince: nullableInt(o.vacantSince),
+    landSeed: int(o.landSeed),
+    cleared,
+    postsBought: int(o.postsBought ?? 0),
+    nextPost: materials(o.nextPost),
     indoor,
     items,
   };
@@ -350,26 +357,62 @@ function materials(v: unknown): Record<string, number> {
   return out;
 }
 
+function maybeHome(v: unknown): HomeView | null {
+  return v === null || v === undefined ? null : parseHomeView(v);
+}
+
 export function parseHome(raw: unknown): HomeResponse {
   const o = obj(raw);
-  return { ...parseSnapshot(raw), home: parseHomeView(o.home), materials: materials(o.materials) };
+  return { ...parseSnapshot(raw), gate: int(o.gate), landSeed: int(o.landSeed), home: maybeHome(o.home), materials: materials(o.materials) };
+}
+
+function person(v: unknown): { id: string; name: string } {
+  const o = obj(v);
+  return { id: str(o.id), name: name(o.name) };
 }
 
 export function parseCommons(raw: unknown): CommonsResponse {
   const o = obj(raw);
-  if (!Array.isArray(o.plots)) throw new ApiError('bad-response');
-  const plots: PlotInfo[] = o.plots.map((row) => {
+  if (!Array.isArray(o.gates)) throw new ApiError('bad-response');
+  const gates: GateInfo[] = o.gates.map((row) => {
     const r = obj(row);
-    return { ownerId: str(r.ownerId), displayName: name(r.displayName), tier: int(r.tier), plotIndex: plotIndex(r.plotIndex), bounds: bounds(r.bounds) };
+    return {
+      gate: int(r.gate),
+      homeId: typeof r.homeId === 'string' && r.homeId ? r.homeId : null,
+      names: Array.isArray(r.names) ? r.names.map(name) : [],
+      members: Array.isArray(r.members) ? r.members.map((m) => ({ id: str(obj(m).id), displayName: name(obj(m).displayName) })) : [],
+      tier: int(r.tier ?? 0),
+      desolate: r.desolate === true,
+      mine: r.mine === true,
+      price: nullableInt(r.price),
+    };
   });
-  return { ...parseSnapshot(raw), plots };
+  const mine = o.mine && typeof o.mine === 'object' ? { homeId: str(obj(o.mine).homeId), gate: int(obj(o.mine).gate) } : null;
+  const invites: DeedInvite[] = (Array.isArray(o.invites) ? o.invites : []).map((row) => {
+    const r = obj(row);
+    return {
+      homeId: str(r.homeId),
+      gate: int(r.gate),
+      from: person(r.from),
+      to: person(r.to),
+      expiresAt: num(r.expiresAt),
+      fromConfirmedAt: nullableInt(r.fromConfirmedAt),
+      toConfirmedAt: nullableInt(r.toConfirmedAt),
+    };
+  });
+  return { ...parseSnapshot(raw), gates, gateCount: int(o.gateCount ?? gates.length), mine, invites };
 }
 
 export function parseHomeAction(raw: unknown): HomeActionResponse {
   const r = obj(obj(raw).result);
   return {
     ...parseSnapshot(raw),
-    result: { home: parseHomeView(r.home), materials: materials(r.materials), ...(typeof r.itemId === 'string' ? { itemId: r.itemId } : {}) },
+    result: {
+      home: maybeHome(r.home),
+      materials: materials(r.materials),
+      ...(typeof r.itemId === 'string' ? { itemId: r.itemId } : {}),
+      ...(r.status === 'joined' || r.status === 'waiting' ? { status: r.status } : {}),
+    },
   };
 }
 
@@ -410,12 +453,12 @@ export function parseCalendar(raw: unknown): CalendarResponse {
 
 export function parseStorage(raw: unknown): StorageResponse {
   const o = obj(raw);
-  return { ...parseSnapshot(raw), home: parseHomeView(o.home), inventory: parseCounts(o.inventory), storage: parseCounts(o.storage) };
+  return { ...parseSnapshot(raw), home: parseHomeView(o.home), inventory: parseCounts(o.inventory), storage: parseCounts(o.storage), personal: parseCounts(o.personal) };
 }
 
 export function parseStorageMove(raw: unknown): StorageMoveResponse {
   const r = obj(obj(raw).result);
-  return { ...parseSnapshot(raw), result: { home: parseHomeView(r.home), inventory: parseCounts(r.inventory), storage: parseCounts(r.storage) } };
+  return { ...parseSnapshot(raw), result: { home: parseHomeView(r.home), inventory: parseCounts(r.inventory), storage: parseCounts(r.storage), personal: parseCounts(r.personal) } };
 }
 
 export function parseCraft(raw: unknown): CraftResponse {
@@ -426,6 +469,7 @@ export function parseCraft(raw: unknown): CraftResponse {
       home: parseHomeView(r.home),
       inventory: parseCounts(r.inventory),
       storage: parseCounts(r.storage),
+      personal: parseCounts(r.personal),
       recipeId: str(r.recipeId),
       output: parseAsset(r.output),
       instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],

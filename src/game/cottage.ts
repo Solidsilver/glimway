@@ -4,11 +4,11 @@
  * hearth set into it, and the door in the near wall.
  *
  * The room is a view, not a save area: while you are inside, the save still
- * says you are in the Commons, standing on your doorstep (inside your plot,
- * so a home rest by the hearth is a rest at your own plot). Reloading puts
- * you outside your door.
+ * says you are on the homestead's land (`home:<gate>`), standing on the
+ * doorstep, so a home rest by the hearth is a rest at your own place.
+ * Reloading puts you outside your door.
  */
-import { HOMESTEAD_DATA } from '../lib/homestead.ts'
+import { HOMESTEAD_DATA, homeArea } from '../lib/homestead.ts'
 import { TERRAIN, TILE } from './textures.ts'
 import type { WorldData } from './worlds.ts'
 
@@ -28,7 +28,7 @@ export const ROOM_HEARTH = { x: 173, y: 3 * TILE + 4, fireY: 42 }
 export const ROOM_CHEST = { x: 40 }
 export const ROOM_BENCH = { x: 115 }
 
-export function buildRoom(doorstep: { tx: number; ty: number } = { tx: 8, ty: 9 }): WorldData {
+export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): WorldData {
   const W = ROOM_COLS
   const H = ROOM_ROWS
   const ground: number[][] = []
@@ -46,7 +46,7 @@ export function buildRoom(doorstep: { tx: number; ty: number } = { tx: 8, ty: 9 
     solid.push(s)
   }
   return {
-    areaId: 'home',
+    areaId: 'cottage',
     width: W,
     height: H,
     widthPx: W * TILE,
@@ -58,7 +58,7 @@ export function buildRoom(doorstep: { tx: number; ty: number } = { tx: 8, ty: 9 
     rocks: [],
     npcs: [],
     enemies: [],
-    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: 'commons', entry: { ...doorstep }, label: null }],
+    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: homeArea(gate), entry: { ...doorstep }, label: null }],
     props: [],
     scenery: [{ key: 'room-walls', x: 0, y: H * TILE, originX: 0, depth: -5 }],
     discoverySpots: [],

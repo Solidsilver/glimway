@@ -12,7 +12,7 @@
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
-  // The mailbox at your plot: parcels for you to collect, sending to a
+  // The mailbox at your place: parcels for you to collect, sending to a
   // neighbour in your world, and what you've sent (recall it while it waits).
   let { session, to = null, onClose }: { session: Session; to?: string | null; onClose: () => void } = $props()
 
@@ -35,7 +35,7 @@
     bus.on(VILLAGE_EV.changed, bump)
     bus.on(HOME_EV.changed, bump)
     void village.loadMail()
-    if (homes.roster.length === 0) void homes.load()
+    if (homes.gates.length === 0) void homes.load()
     return () => {
       bus.off(VILLAGE_EV.changed, bump)
       bus.off(HOME_EV.changed, bump)
@@ -45,8 +45,8 @@
   const me = $derived(session.link?.habiticaId ?? '')
   const view = $derived.by(() => {
     void version
-    const neighbours = homes.roster.filter((p) => p.ownerId !== me).map((p) => ({ id: p.ownerId, name: homes.homes.get(p.ownerId)?.displayName || p.displayName || 'A neighbour' }))
-    const goods = movableAssets(village.inventory, homes.mine?.items ?? [])
+    const neighbours = homes.neighbours()
+    const goods = movableAssets(village.inventory)
     const buckets = mailBuckets(village.mail, me)
     return { buckets, neighbours, goods, status: village.mailStatus, recall: !village.recallUnsupported, more: !!village.mailCursor, full: buckets.outgoing.length >= MAIL.maxOutstandingSent }
   })

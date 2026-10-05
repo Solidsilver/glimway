@@ -87,10 +87,23 @@ func (x *rig) seedAssets(id string) {
 		x.t.Fatal(err)
 	}
 }
+
+// claimFree claims the first unclaimed gate on the caller's lane.
+func (x *rig) claimFree(c *http.Cookie, s *response) homeView {
+	x.t.Helper()
+	for _, g := range x.exp("GET", "/api/commons", nil, c, 200).Gates {
+		if g.HomeID == nil {
+			return x.claimGate(c, s, g.Gate)
+		}
+	}
+	x.t.Fatal("no free gate")
+	return homeView{}
+}
 func (x *rig) openWorkshop(c *http.Cookie, s response) response {
 	x.t.Helper()
 	x.seedAssets(s.HabiticaID)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
+	x.claimFree(c, &s)
 	for _, tier := range []int{1, 2} {
 		v := x.exp("POST", "/api/homestead/upgrade", body(s, fmt.Sprintf("tier%d", tier), map[string]any{"tier": tier}), c, 200)
 		update(&s, v)
@@ -148,11 +161,16 @@ func TestPhase5CalendarAndOuterTurning(t *testing.T) {
 func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	if x.p5("POST", "/api/craft", body(s, "homeless", map[string]any{"recipeId": "craft-wooden-stool", "qty": 1}), c, 409).Error.Code != "not-a-member" {
+		t.Fatal("homeless craft")
+	}
+	x.p5("GET", "/api/storage", nil, c, 409)
+	x.fund("alice", 100, 0)
+	x.claimFree(c, &s)
 	if x.p5("POST", "/api/craft", body(s, "early", map[string]any{"recipeId": "craft-wooden-stool", "qty": 1}), c, 409).Error.Code != "tier-required" {
 		t.Fatal("ungated craft")
 	}
 	x.p5("GET", "/api/storage", nil, c, 409)
-	x.fund("alice", 100, 0)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
 	before := s.Snapshot
@@ -217,7 +235,8 @@ func TestPhase5StorageConservationAndPlacement(t *testing.T) {
 	crafted := x.p5("POST", "/api/craft", body(s, "stools", map[string]any{"recipeId": "craft-wooden-stool", "qty": 2}), c, 200)
 	s.Snapshot = crafted.Snapshot
 	ids := crafted.Result.InstanceIDs
-	place := body(s, "place", map[string]any{"itemId": ids[0], "scene": "outdoor", "x": 0, "y": 0, "rotation": 0})
+	spot := litSpots(crafted.Result.Home)[0]
+	place := body(s, "place", map[string]any{"itemId": ids[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0})
 	update(&s, x.exp("POST", "/api/homestead/place", place, c, 200))
 	assets := []content.Asset{{Kind: "material", ID: "timber", Qty: 7}, {Kind: "item", ID: content.WildsRules.Trinkets[0], Qty: 5}, {Kind: "decoration", ID: "wooden-stool", Qty: 1}}
 	original := x.p5("GET", "/api/storage", nil, c, 200)
@@ -242,7 +261,7 @@ func TestPhase5StorageConservationAndPlacement(t *testing.T) {
 	if !reflect.DeepEqual(original.Inventory, final.Inventory) || !reflect.DeepEqual(original.Storage, final.Storage) {
 		t.Fatal("storage didn't conserve", store.JSON(final))
 	}
-	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE habitica_id='alice'") != 2 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items") != 2 || count(t, x.db, "SELECT count(*) FROM homestead_items WHERE location='placed'") != 1 {
 		t.Fatal("duplicated instances")
 	}
 	x.p5("POST", "/api/storage", body(s, "both", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "decoration", ID: "wooden-stool", Qty: 2}}), c, 409)
@@ -306,8 +325,7 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 	if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='bob' AND material='timber'") != 9 || count(t, x.db, "SELECT qty FROM inventory WHERE habitica_id='bob' AND item_def='"+content.WildsRules.Trinkets[0]+"'") != 5 {
 		t.Fatal("mail balances")
 	}
-	home := x.exp("GET", "/api/homestead/bob", nil, bc, 200)
-	if len(home.Home.Items) != 1 || home.Home.Items[0].ID != chair {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND habitica_id='bob' AND location='inventory'", chair) != 1 {
 		t.Fatal("decoration identity lost")
 	}
 	x.p5("POST", "/api/mail", body(s, "cross-world", map[string]any{"toId": "outsider", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)

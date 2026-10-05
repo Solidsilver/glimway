@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 import { beginNewJourney, settleWarden, talkThrough, waitForArea, waitForWilds, warden, warp } from './helpers'
-import { earnPlenty, freshPlayer, fund, homes, myHome, place, readOn, shot as snap, silasSays, type Area } from './home-helpers'
+import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, homes, intoCottage, myHome, onMyLand, place, readOn, shot as snap, silasSays, type Area } from './home-helpers'
 import type { Page } from './fixtures'
 
 /** Screens, then let the scene settle again (the phone resize relays out the game). */
@@ -32,17 +32,13 @@ test.describe('connected', () => {
       materials: { timber: 60, stone: 30, fiber: 30, amber: 8 },
       items: { 'lamp-wick': 2, 'oilcloth-wrap': 1, 'wooden-peg': 3, 'whittled-fox': 1, 'tin-whistle': 1, 'beeswax-candle': 1 }
     })
-    await go(page, 'commons', 23, 19)
-    await expect.poll(async () => (await homes(page)).status).toBe('ready')
-    await silasSays(page, /Show me my plot/)
-    await expect.poll(async () => (await homes(page)).claimed).toBe(true)
+    await claimDeed(page)
     const v = await homes(page)
-    const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-    await go(page, 'commons', slot.doorstep.tx + 3, slot.doorstep.ty + 2)
+    const s = v.features!.silas
+    await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier0-desktop')
 
     // Silas, in conversation: the delivered bust.
-    const s = v.features!.silas
     await go(page, 'commons', s.tx, s.ty + 1)
     await expect(page.locator('.prompt')).toContainText('Talk to Silas')
     await page.keyboard.press('e')
@@ -62,29 +58,25 @@ test.describe('connected', () => {
     await silasSays(page, /Raise a cottage/)
     await readOn(page, /Steady as a route stone/)
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-    await go(page, 'commons', slot.doorstep.tx + 3, slot.doorstep.ty + 2)
+    await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier1-desktop')
     await page.waitForTimeout(400)
     await silasSays(page, /Build on a workshop/)
     await readOn(page, /Steady|eaves/)
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
-    await go(page, 'commons', slot.doorstep.tx + 3, slot.doorstep.ty + 2)
+    await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier2-desktop')
 
     // Inside: the back wall, the hearth fire, the plank floor, chest and bench.
-    await go(page, 'commons', slot.doorstep.tx, slot.doorstep.ty)
-    await expect(page.locator('.prompt')).toContainText('Go inside')
-    await page.waitForTimeout(200)
-    await page.keyboard.press('e')
-    await waitForArea(page, 'home' as Area)
+    await intoCottage(page)
     await place(page, 112, 120)
     await page.waitForTimeout(2500)
     await shot(page, 'art-interior-workshop-desktop')
     await place(page, 40, 66)
-    await expect(page.locator('.prompt')).toContainText('Open the storage chest')
+    await expect(page.locator('.prompt')).toContainText('Open the chests')
     await page.waitForTimeout(200)
     await page.keyboard.press('e')
-    const panel = page.getByRole('dialog', { name: 'Your Workshop' })
+    const panel = page.getByRole('dialog', { name: 'The Workshop' })
     await expect(panel).toBeVisible()
     await shot(page, 'art-ui-storage-desktop')
     await panel.getByRole('tab', { name: 'Crafting bench' }).click()
@@ -92,7 +84,7 @@ test.describe('connected', () => {
     await page.keyboard.press('Escape')
 
     // The mailbox's goods, the Character panel's pack and materials.
-    await go(page, 'commons', slot.sign.tx, slot.ty + 8)
+    await atMyMailbox(page)
     await expect(page.locator('.prompt')).toContainText('Check your mailbox')
     await page.waitForTimeout(200)
     await page.keyboard.press('e')

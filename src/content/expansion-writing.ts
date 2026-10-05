@@ -155,6 +155,7 @@ export const DECORATIONS_EMBER: Decoration[] = [
 ];
 
 export const DECORATIONS_MATERIAL: Decoration[] = [
+  { id: 'lantern-post', name: 'Lantern Post', blurb: 'Squared oak, an amber lamp on the crossbar. Set it at the edge of your light and give it a name: land only stays put where a named lamp holds it. Each one costs more than the last.', category: 'utility', footprint: [1, 1] },
   { id: 'stone-hearth', name: 'Stone Hearth', blurb: 'Quarried stone, never drift-stone, or it steps into the kitchen while you sleep. Keeps a glow till morning.', category: 'utility', footprint: [2, 1] },
   { id: 'carved-bed', name: 'Carved Bed', blurb: 'Raised well off the floor and stuffed with hay and dried mint. Sleep high.', category: 'furniture', footprint: [2, 2] },
   { id: 'woven-basket', name: 'Woven Basket', blurb: 'For spare bootlaces, twine, and whatever the Wilds hand back.', category: 'decor', footprint: [1, 1] },

@@ -102,7 +102,7 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
 }
 
 /** Server-accepted presence areas (curated areas and Wilds chunks). */
-const AREA_RE = /^(village|woodland|ruin|commons|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
+const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
   return AREA_RE.test(area);

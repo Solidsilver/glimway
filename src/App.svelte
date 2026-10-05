@@ -33,7 +33,8 @@
   import JournalPanel from './ui/JournalPanel.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { PAPER_EV } from './game/papers'
-  import { HOME_EV, type ArrangeView, type PlacementView } from './game/homestead'
+  import { HOME_EV, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
+  import NamePrompt from './ui/NamePrompt.svelte'
   import { home } from './ui/home.svelte'
   import SilasShop from './ui/SilasShop.svelte'
   import NoticeBoard from './ui/NoticeBoard.svelte'
@@ -185,7 +186,9 @@
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       ui.area = { areaId: p.areaId, name: info.name, description: info.description }
-      if (phase === 'playing' && moved) {
+      // A homestead's land and its cottage announce themselves (whose place, in words).
+      const homestead = /^home:\d+$/.test(p.areaId) || p.areaId === 'cottage'
+      if (phase === 'playing' && moved && !homestead) {
         areaShown = true
         ui.banner({ kind: 'area', eyebrow: info.eyebrow, title: info.name, body: info.tagline })
       }
@@ -253,6 +256,15 @@
     const onThumbs = (v: Record<string, string>) => {
       home.thumbs = { ...home.thumbs, ...v }
     }
+    const onNamePrompt = (v: NamePromptView) => {
+      home.namePrompt = v
+    }
+    const onConfirmLeave = (v: { place: string; shared: boolean }) => {
+      home.leaveAsk = v
+    }
+    const onHomeGoal = (v: { text: string | null }) => {
+      home.goal = v?.text ?? null
+    }
     const onVillageOpen = (v: { panel: VillagePanel; to?: string }) => {
       if (panel !== null) return
       mailTo = v.to ?? null
@@ -290,6 +302,9 @@
       [HOME_EV.arrange, onArrange],
       [HOME_EV.placement, onPlacement],
       [HOME_EV.thumbs, onThumbs],
+      [HOME_EV.namePrompt, onNamePrompt],
+      [HOME_EV.confirmLeave, onConfirmLeave],
+      [HOME_EV.goal, onHomeGoal],
       [HOME_EV.room, onRoom],
       [VILLAGE_EV.open, onVillageOpen],
       [VILLAGE_EV.changed, onVillageChanged]
@@ -682,7 +697,7 @@
   }
 
   $effect(() => {
-    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null
+    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null || home.namePrompt !== null || home.leaveAsk !== null
   })
 
   // The pack lives on the (non-reactive) save; mirror it for the HUD's bag
@@ -966,6 +981,39 @@
       confirmLabel={accountCopy.logout}
       onConfirm={logout}
       onCancel={() => (confirmLogout = false)}
+    />
+  {/if}
+
+  {#if home.namePrompt}
+    <NamePrompt
+      title={home.namePrompt.title}
+      body={home.namePrompt.body}
+      placeholder={home.namePrompt.placeholder}
+      max={home.namePrompt.max}
+      onName={(name) => {
+        home.namePrompt = null
+        bus.emit(HOME_EV.named, { name })
+      }}
+      onCancel={() => {
+        home.namePrompt = null
+        bus.emit(HOME_EV.named, { name: null })
+      }}
+    />
+  {/if}
+
+  {#if home.leaveAsk}
+    <ConfirmDialog
+      title="Give up your place on the deed?"
+      body={home.leaveAsk.shared
+        ? `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the others.`
+        : `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the land. With nobody on the deed, it will go wild, and in a while the deed is lost.`}
+      confirmLabel="Strike my name"
+      danger
+      onConfirm={() => {
+        home.leaveAsk = null
+        bus.emit(HOME_EV.action, { action: 'home:leave-confirmed' })
+      }}
+      onCancel={() => (home.leaveAsk = null)}
     />
   {/if}
 

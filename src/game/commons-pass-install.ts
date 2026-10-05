@@ -88,6 +88,33 @@ export function installCommonsPass(scene: Phaser.Scene, items: readonly { id: st
   for (const w of [64, 96]) installBunting(scene, w)
   installRoom(scene)
   for (const it of items) installDecoration(scene, it.id, it.footprint)
+  installPropDecorations(scene)
+}
+
+/**
+ * Decorations the Commons pass has no frame for, drawn from the props atlas
+ * instead (the same lantern post that stands along the Commons lane). The
+ * code-drawn placeholder stays when the atlas is missing.
+ */
+export const PROP_DECORATIONS: Record<string, string> = { 'lantern-post': 'lantern-post' }
+
+function installPropDecorations(scene: Phaser.Scene): void {
+  if (!scene.textures.exists('fingersnap-props')) return
+  const props = scene.textures.get('fingersnap-props')
+  for (const [id, name] of Object.entries(PROP_DECORATIONS)) {
+    if (!props.has(name) || !scene.textures.exists(`deco-${id}`)) continue
+    const f = props.get(name)
+    const src = f.source.image as HTMLImageElement | HTMLCanvasElement
+    for (const key of [`deco-${id}`, `deco-${id}-q`]) {
+      const old = scene.textures.get(key).getSourceImage() as HTMLCanvasElement
+      const [c, ctx] = canvas(old.width, old.height)
+      const scale = Math.min((old.height - 1) / f.cutHeight, old.width / f.cutWidth)
+      const w = Math.round(f.cutWidth * scale)
+      const h = Math.round(f.cutHeight * scale)
+      ctx.drawImage(src, f.cutX, f.cutY, f.cutWidth, f.cutHeight, Math.round((old.width - w) / 2), old.height - h, w, h)
+      replaceCanvas(scene, key, c)
+    }
+  }
 }
 
 /** No post waiting: the same box with its red flag taken down. */

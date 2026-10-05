@@ -5,9 +5,10 @@
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
 
-  // Your place: the "Arrange" button while you stand on your plot or in your
+  // Your place: the "Arrange" button while you stand on your land or in your
   // cottage, and the tray for placement mode (pick a piece, nudge it, turn
-  // it, set it down or put it away). Keyboard: arrows/WASD, R, E, X, Esc.
+  // it, set it down or put it away; outdoors, tap a tree, stump or boulder in
+  // your light and Silas clears it). Keyboard: arrows/WASD, R, E, X, Esc.
   let { hidden = false }: { hidden?: boolean } = $props()
 
   const touch = isTouchFirst()
@@ -16,14 +17,14 @@
   const selected = $derived(p?.items.find((i) => i.id === p.selected) ?? null)
   const here = $derived(p ? p.items.filter((i) => i.fits) : [])
   const elsewhere = $derived(p ? p.items.filter((i) => !i.fits) : [])
-  const stateOf = (i: { placed: boolean; elsewhere: boolean }) => (i.placed ? 'Set out' : i.elsewhere ? (p?.scene === 'indoor' ? 'Outdoors' : 'Indoors') : 'In storage')
-  const needsCottage = $derived(!!p && p.tier < 1)
+  const stateOf = (i: { placed: boolean; elsewhere: boolean }) => (i.placed ? 'Set out' : i.elsewhere ? (p?.scene === 'indoor' ? 'Outdoors' : 'Indoors') : 'In your pack')
+  const needsCottage = $derived(!!p && p.scene === 'indoor' && p.tier < 1)
 </script>
 
 {#if p && !hidden}
   <div class="tray panel" role="region" aria-label="Arranging your place" data-testid="placement-tray">
     <div class="head">
-      <h2><Icon name="home" size={16} /> {p.scene === 'indoor' ? 'Arranging your cottage' : 'Arranging your plot'}</h2>
+      <h2><Icon name="home" size={16} /> {p.scene === 'indoor' ? 'Arranging your cottage' : 'Arranging your land'}</h2>
       <button type="button" class="done" onclick={() => send({ kind: 'exit' })}>Done{#if !touch}<span class="kbd">Esc</span>{/if}</button>
     </div>
 
@@ -67,10 +68,21 @@
         {p.message.text}
       {:else if selected}
         {touch ? 'Tap a spot on the grid, or nudge it.' : 'Arrows to move, R to turn, E to set it down.'}
+      {:else if p.clearing}
+        A {p.clearing.what} in your light. Silas can clear it for {p.clearing.cost} ember{p.clearing.cost === 1 ? '' : 's'}.
+      {:else if p.scene === 'outdoor'}
+        {touch ? 'Pick a piece, tap one that’s set out to move it, or tap a tree or rock in your light to clear it.' : 'Pick a piece, click one that’s set out to move it, or click a tree or rock in your light to clear it.'}
       {:else}
         {touch ? 'Pick a piece, or tap one that’s set out to move it.' : 'Pick a piece, or click one that’s set out to move it.'}
       {/if}
     </p>
+
+    {#if p.clearing && !selected}
+      <div class="controls">
+        <button type="button" class="primary" disabled={p.busy} data-testid="clear-tile" onclick={() => send({ kind: 'clear' })}>Have Silas clear it · {p.clearing.cost} ember{p.clearing.cost === 1 ? '' : 's'}</button>
+        <button type="button" class="ghost" onclick={() => send({ kind: 'cancel' })}>Leave it</button>
+      </div>
+    {/if}
 
     {#if selected}
       <div class="controls">

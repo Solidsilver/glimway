@@ -41,32 +41,73 @@
       "embers": 0
     }
   ],
-  "outdoor": {
-    "width": 16,
-    "height": 12
-  },
   "indoor": {
     "width": 12,
     "height": 10
   },
+  "land": {
+    "generator": 1,
+    "width": 40,
+    "height": 30,
+    "site": {
+      "x": 16,
+      "y": 6,
+      "w": 8,
+      "h": 6
+    },
+    "gate": {
+      "x": 19,
+      "w": 2
+    },
+    "startLight": {
+      "x": 20,
+      "y": 10,
+      "radius": 7
+    },
+    "trees": 130,
+    "stumps": 14,
+    "boulders": 8,
+    "streamPermille": 350,
+    "slopePermille": 350
+  },
   "commons": {
     "tileSize": 16,
-    "columns": [
-      4,
+    "fenceX": [
+      19,
       28
     ],
-    "rows": [
-      4,
-      26
+    "gateRows": [
+      9,
+      13,
+      28,
+      33
     ],
-    "rowPitch": 14
+    "rowPitch": 5,
+    "spareGates": 2,
+    "silasTable": {
+      "x": 824,
+      "y": 344,
+      "radius": 56
+    }
   },
   "outdoorReserved": [
     {
-      "x": 4,
-      "y": 0,
+      "x": 16,
+      "y": 6,
       "w": 8,
       "h": 6
+    },
+    {
+      "x": 19,
+      "y": 12,
+      "w": 2,
+      "h": 18
+    },
+    {
+      "x": 21,
+      "y": 12,
+      "w": 1,
+      "h": 1
     }
   ],
   "indoorReserved": [
@@ -77,6 +118,49 @@
       "h": 1
     }
   ],
+  "lanternPosts": {
+    "item": "lantern-post",
+    "radius": 5,
+    "nameMax": 40,
+    "costs": [
+      {
+        "timber": 6,
+        "stone": 4,
+        "amber": 1
+      },
+      {
+        "timber": 10,
+        "stone": 6,
+        "amber": 2
+      },
+      {
+        "timber": 16,
+        "stone": 10,
+        "amber": 3
+      }
+    ],
+    "growth": {
+      "timber": 6,
+      "stone": 4,
+      "amber": 1
+    }
+  },
+  "deeds": {
+    "firstFree": true,
+    "embers": 10
+  },
+  "clearTileEmbers": 1,
+  "desolation": {
+    "desolateAfterDays": 3,
+    "deedLostAfterDays": 14
+  },
+  "jointDeed": {
+    "confirmWindowSeconds": 60,
+    "inviteHours": 24
+  },
+  "personalChest": {
+    "maxUnits": 40
+  },
   "items": [
     {
       "id": "wooden-stool",
@@ -308,6 +392,25 @@
       "materials": {
         "amber": 4,
         "stone": 4
+      }
+    },
+    {
+      "id": "lantern-post",
+      "name": "Lantern Post",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 0,
+      "embers": 0,
+      "materials": {
+        "timber": 6,
+        "stone": 4,
+        "amber": 1
       }
     }
   ]

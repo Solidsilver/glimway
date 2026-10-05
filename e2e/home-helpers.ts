@@ -9,16 +9,38 @@ import { beginNewJourney, waitForArea, player } from './helpers'
  */
 
 export const OUT = '.agent/screens'
-export type Area = 'village' | 'woodland' | 'ruin'
+export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'cottage' | `home:${number}`
 
+export type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
+export interface Home {
+  id: string
+  gate: number
+  tier: number
+  members: { id: string; displayName: string }[]
+  member: boolean
+  desolate: boolean
+  landSeed: number
+  cleared: [number, number][]
+  postsBought: number
+  nextPost: Record<string, number>
+  items: Item[]
+}
 export interface HomesView {
   status: string
   claimed: boolean
-  plots: { slot: number; ownerId: string; name: string; tier: number; allocated: boolean; mine: boolean }[]
-  mine: { tier: number; items: { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null }[] } | null
-  slots: { index: number; tx: number; ty: number; door: { tx: number; ty: number }; doorstep: { tx: number; ty: number }; sign: { tx: number; ty: number } }[]
+  myGate: number | null
+  gateCount: number
+  gates: { gate: number; homeId: string | null; names: string[]; tier: number; desolate: boolean; mine: boolean; price: number | null }[]
+  invites: { homeId: string; gate: number; from: { id: string; name: string }; to: { id: string; name: string } }[]
+  mine: Home | null
+  here: Home | null
+  goal: string | null
+  slots: { gate: number; tx: number; ty: number; side: 'west' | 'east'; sign: { tx: number; ty: number }; entry: { tx: number; ty: number } }[]
   features: { silas: { tx: number; ty: number } } | null
+  land: { gate: number; door: { tx: number; ty: number }; doorstep: { tx: number; ty: number }; mailbox: { tx: number; ty: number }; site: { x: number; y: number; w: number; h: number }; desolate: boolean } | null
+  guide: { x: number; y: number; arrow: boolean } | null
   placing: boolean
+  placement: { selected: string | null; problem: string | null; spot: { x: number; y: number } | null; clearing: { x: number; y: number } | null; message: { text: string } | null } | null
 }
 
 export const homes = (page: Page) => page.evaluate(() => (window as unknown as { __fsHomes: () => HomesView }).__fsHomes())
@@ -121,16 +143,45 @@ export async function readOn(page: Page, says: RegExp): Promise<void> {
   await expect(dialogue).toBeHidden()
 }
 
+/** Silas's spot in his yard (the Commons map; fixed). */
+export const SILAS_AT = { tx: 51, ty: 21 }
+
 export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
-  const v = await homes(page)
-  await go(page, 'commons', v.features!.silas.tx, v.features!.silas.ty + 1)
+  const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT
+  await go(page, 'commons', silas.tx, silas.ty + 1)
   await talk(page, /Talk to Silas/, pick)
 }
 
-export async function myHome(page: Page, id: string) {
-  const res = await page.request.get(`/api/homestead/${id}`)
+/** The homestead behind a gate, as the server tells this player (null: unclaimed). */
+export async function homeAt(page: Page, gate: number): Promise<Home | null> {
+  const res = await page.request.get(`/api/homestead/gate/${gate}`)
   expect(res.ok()).toBe(true)
-  return (await res.json()).home as { tier: number; plotIndex: number; items: { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null }[] }
+  return (await res.json()).home as Home | null
+}
+
+/** The Commons lane as the server tells this player. */
+export async function lane(page: Page): Promise<{ gates: HomesView['gates']; gateCount: number; mine: { homeId: string; gate: number } | null; invites: HomesView['invites'] }> {
+  const res = await page.request.get('/api/commons')
+  expect(res.ok()).toBe(true)
+  return res.json()
+}
+
+/** Your own homestead (the server's word). The id argument is accepted for older call sites. */
+export async function myHome(page: Page, _id?: string): Promise<Home> {
+  const l = await lane(page)
+  expect(l.mine).not.toBeNull()
+  return (await homeAt(page, l.mine!.gate))!
+}
+
+/** Walk through gate g from the lane in front of it, onto its land. */
+export async function throughGate(page: Page, gate: number): Promise<void> {
+  const v = await homes(page)
+  const slot = v.slots.find((s) => s.gate === gate)!
+  await go(page, 'commons', slot.entry.tx, slot.entry.ty)
+  const key = slot.side === 'west' ? 'ArrowLeft' : 'ArrowRight'
+  await page.keyboard.down(key)
+  await waitForArea(page, `home:${gate}` as Area)
+  await page.keyboard.up(key)
 }
 
 
@@ -157,4 +208,46 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
   await expect(page.locator('.toast', { hasText: /embers — from the XP you earned/ }).last()).toBeVisible()
   await page.getByRole('button', { name: 'Back to the road' }).click()
   expect(balance).toBeGreaterThanOrEqual(60)
+}
+
+/** Claim the first unclaimed gate on the lane from Silas (read his reply); returns the gate. */
+export async function claimDeed(page: Page): Promise<number> {
+  await go(page, 'commons', 23, 19)
+  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  const free = (await homes(page)).gates.find((g) => g.homeId === null)!
+  await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  return free.gate
+}
+
+/** Through your own gate onto your land; the land's fixed spots (door, doorstep, mailbox, site). */
+export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {
+  const gate = (await lane(page)).mine!.gate
+  if ((await area(page)) !== 'commons') await go(page, 'commons', 23, 19)
+  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  await throughGate(page, gate)
+  await expect.poll(async () => (await homes(page)).land).not.toBeNull()
+  return (await homes(page)).land!
+}
+
+/** Stand at a tile of your land (relative to the doorstep). */
+export async function onMyLand(page: Page, dx = 0, dy = 0): Promise<NonNullable<HomesView['land']>> {
+  const land = await toMyLand(page)
+  await go(page, `home:${land.gate}`, land.doorstep.tx + dx, land.doorstep.ty + dy)
+  return land
+}
+
+/** Into your own cottage (it must be built). */
+export async function intoCottage(page: Page): Promise<void> {
+  await onMyLand(page)
+  await expect(page.locator('.prompt')).toContainText('Go inside')
+  await page.waitForTimeout(200)
+  await page.keyboard.press('e')
+  await waitForArea(page, 'cottage')
+}
+
+/** Stand at your mailbox (on your land). */
+export async function atMyMailbox(page: Page): Promise<void> {
+  const land = await toMyLand(page)
+  await go(page, `home:${land.gate}`, land.mailbox.tx, land.mailbox.ty + 1)
 }

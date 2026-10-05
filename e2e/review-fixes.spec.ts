@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState } from './connected'
 import { beginNewJourney } from './helpers'
-import { earnEmbers, freshPlayer, fund, go, homes, myHome, silasSays } from './home-helpers'
+import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, silasSays } from './home-helpers'
 
 /**
  * Regressions for the phase 3 review (.agent/REVIEW.md), against the real
@@ -10,14 +10,11 @@ import { earnEmbers, freshPlayer, fund, go, homes, myHome, silasSays } from './h
  */
 test.use({ server: true })
 
-type Stats = { plotDraws: number; tweens: number; deadTweens: number }
+type Stats = { gateDraws: number; tweens: number; deadTweens: number }
 const stats = (page: Page) => page.evaluate(() => (window as unknown as { __fsHomes: () => { stats: Stats } }).__fsHomes().stats)
 
 async function claim(page: Page): Promise<void> {
-  await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).status).toBe('ready')
-  await silasSays(page, /Show me my plot/)
-  await expect.poll(async () => (await homes(page)).claimed).toBe(true)
+  await claimDeed(page)
 }
 
 /** Let the server commit the next matching POST, then lose its answer. */
@@ -97,8 +94,8 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   fund(id, { materials: { fiber: 20 } })
   await claim(page)
   const loaded = await stats(page)
-  // Four slots drawn once at start, plus the claimed plot: never N² rebuilds.
-  expect(loaded.plotDraws).toBeLessThanOrEqual(12)
+  // The lane's gates drawn once at start, plus the claimed gate: never N² rebuilds.
+  expect(loaded.gateDraws).toBeLessThanOrEqual(12)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   // The basket costs 4 fiber: the read's materials (20) make it buyable straight away.
@@ -112,7 +109,7 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   await page.waitForTimeout(300)
   const after = await stats(page)
   expect(after.deadTweens).toBe(0)
-  expect(after.plotDraws - loaded.plotDraws).toBeLessThanOrEqual(4)
+  expect(after.gateDraws - loaded.gateDraws).toBeLessThanOrEqual(4)
 })
 
 test('findings 5 and 7: placement ignores keys under a modal; Space presses a focused tray button', async ({ page }) => {
@@ -132,9 +129,7 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await expect(shop.locator('.msg.ok')).toBeVisible()
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
-  const v = await homes(page)
-  const slot = v.slots[v.plots.find((p) => p.mine)!.slot]
-  await go(page, 'commons', slot.doorstep.tx + 2, slot.doorstep.ty + 2)
+  await onMyLand(page, 2, 2)
   await page.getByTestId('arrange').click()
   const tray = page.getByTestId('placement-tray')
   await tray.locator('[data-piece="wooden-stool"]').click()

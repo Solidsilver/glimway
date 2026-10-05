@@ -6,6 +6,7 @@
   import Icon from './Icon.svelte'
   import PapersTab from './PapersTab.svelte'
   import { papers } from './papers.svelte'
+  import { home } from './home.svelte'
 
   // Mounted only while open (App owns journalOpen + the J/Escape keys). Quest
   // state comes from the shared store, which App keeps current from the
@@ -78,6 +79,12 @@
         <span class="text">{ui.quest.objective}</span>
       </div>
     </div>
+    {#if home.goal}
+      <div class="home-goal" data-testid="journal-home-goal">
+        <span class="eyebrow"><Icon name="home" size={12} /> Your homestead</span>
+        <span class="text">{home.goal}</span>
+      </div>
+    {/if}
 
     <h3 class="section-title">The Lantern Road</h3>
     <ol class="steps">
@@ -103,6 +110,25 @@
 </div>
 
 <style>
+  .home-goal {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: -4px 0 12px;
+    padding: 8px 10px;
+    border: 2px dashed var(--paper-line);
+    border-radius: 8px;
+    background: #fff8e4;
+  }
+  .home-goal .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+  }
   .tabs {
     display: flex;
     gap: 6px;

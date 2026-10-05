@@ -74,13 +74,9 @@ test('recipes: batches the pack pays for, capped at the server’s 100', () => {
   assert.equal(batchesAffordable(peg, { timber: 10_000 }), 100);
 });
 
-test('only unplaced decorations can move; materials list first', () => {
-  const counts = { materials: { timber: 4, stone: 0 }, items: { 'tin-whistle': 1 }, decorations: { 'wooden-stool': 2, 'potted-fern': 1 } };
-  const placed = [
-    { id: 'a', itemDef: 'wooden-stool', scene: 'outdoor' as const, x: 0, y: 0, rotation: 0 as const },
-    { id: 'b', itemDef: 'potted-fern', scene: 'indoor' as const, x: 0, y: 0, rotation: 0 as const },
-  ];
-  assert.deepEqual(movableAssets(counts, placed), [
+test('pack decorations can move (placed ones belong to the homestead); materials list first', () => {
+  const counts = { materials: { timber: 4, stone: 0 }, items: { 'tin-whistle': 1 }, decorations: { 'wooden-stool': 1, 'potted-fern': 0 } };
+  assert.deepEqual(movableAssets(counts), [
     { kind: 'material', id: 'timber', qty: 4 },
     { kind: 'item', id: 'tin-whistle', qty: 1 },
     { kind: 'decoration', id: 'wooden-stool', qty: 1 },

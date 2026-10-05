@@ -55,10 +55,16 @@
     return workshopShort(ui.stats.embers, homes.materials)
   })
 
+  /** What a piece costs right now: a lantern post costs more for each one the home has bought. */
+  function price(it: HomeItem): Record<string, number> {
+    void version
+    return it.id === HOMESTEAD_DATA.lanternPosts.item ? homes.mine?.nextPost ?? it.materials : it.materials
+  }
+
   function why(it: HomeItem): string | null {
     if (view.tier < it.minTier) return 'Needs the cottage'
     if (it.embers > 0 && ui.stats.embers < it.embers) return `Needs ${it.embers} embers`
-    for (const [m, n] of Object.entries(it.materials)) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
+    for (const [m, n] of Object.entries(price(it))) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
     return null
   }
 
@@ -69,7 +75,7 @@
     const r = await homes.buy(it.id)
     busy = null
     message = r.ok
-      ? { text: `${it.name} is yours. It’s in your storage: arrange it at your place.`, kind: 'ok' }
+      ? { text: it.id === HOMESTEAD_DATA.lanternPosts.item ? `${it.name} is yours. Set it at the edge of your light and give it a name: the ground it lights is yours.` : `${it.name} is yours. It’s in your pack: arrange it at your place.`, kind: 'ok' }
       : { text: r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text, kind: 'error' }
   }
 
@@ -83,7 +89,7 @@
   }
 
   const cost = (it: HomeItem) =>
-    it.embers > 0 ? `${it.embers} embers` : Object.entries(it.materials).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
+    it.embers > 0 ? `${it.embers} embers` : Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
 </script>
 
 <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title">
@@ -97,9 +103,9 @@
     </div>
 
     {#if !view.connected}
-      <p class="msg">Plots on the Commons are for people with a world. Sign in to your world from the Menu, and Silas will stake you one.</p>
+      <p class="msg">Deeds on the Commons are for people with a world. Sign in to your world from the Menu, and Silas will sell you one.</p>
     {:else if !view.ready}
-      <p class="msg">Talk to Silas about your plot first: he likes to walk it with you.</p>
+      <p class="msg">Talk to Silas about a deed first: pick a gate on the lane, and he’ll draw it up.</p>
     {:else}
       <p class="balance" aria-live="polite">
         <span><Icon name="ember" size={14} /> {ui.stats.embers} embers</span>

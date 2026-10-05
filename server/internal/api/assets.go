@@ -80,8 +80,22 @@ func refreshItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 	s.State.Inventory = out
 	return nil
 }
-func decorationIDs(ctx context.Context, tx *sql.Tx, id, def, location string, n int) ([]string, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE habitica_id=? AND item_def=? AND location=? AND scene IS NULL ORDER BY id LIMIT ?", id, def, location, n)
+
+// holder is where a decoration instance sits: a player's pack ('inventory'),
+// personal chest or parcel (player set), or a homestead's shared chest or
+// grounds (home set).
+type holder struct{ location, player, home string }
+
+func pack(id string) holder { return holder{"inventory", id, ""} }
+
+func nullable(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+func decorationIDs(ctx context.Context, tx *sql.Tx, from holder, def string, n int) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE location=? AND habitica_id IS ? AND homestead_id IS ? AND item_def=? AND scene IS NULL ORDER BY id LIMIT ?", from.location, nullable(from.player), nullable(from.home), def, n)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +116,9 @@ func decorationIDs(ctx context.Context, tx *sql.Tx, id, def, location string, n 
 	}
 	return out, nil
 }
-func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, fromOwner, toOwner, from, to string) error {
+func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to holder) error {
 	for _, id := range ids {
-		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET habitica_id=?,location=? WHERE id=? AND habitica_id=? AND location=? AND scene IS NULL", toOwner, to, id, fromOwner, from)
+		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,habitica_id=?,homestead_id=? WHERE id=? AND location=? AND habitica_id IS ? AND homestead_id IS ? AND scene IS NULL", to.location, nullable(to.player), nullable(to.home), id, from.location, nullable(from.player), nullable(from.home))
 		if err != nil {
 			return err
 		}
@@ -118,7 +132,9 @@ func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, fromOwner, t
 	}
 	return nil
 }
-func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, destination, reason, ref string, now int64) ([]string, error) {
+
+// takeAsset takes goods out of the caller's pack; decorations go to `to`.
+func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, to holder, reason, ref string, now int64) ([]string, error) {
 	if err := validAsset(v); err != nil {
 		return nil, err
 	}
@@ -128,17 +144,19 @@ func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 	case "item":
 		return []string{}, itemChange(ctx, tx, s, v.ID, -v.Qty, reason, ref, now)
 	default:
-		ids, err := decorationIDs(ctx, tx, s.HabiticaID, v.ID, "inventory", v.Qty)
+		ids, err := decorationIDs(ctx, tx, pack(s.HabiticaID), v.ID, v.Qty)
 		if err != nil {
 			return nil, err
 		}
-		if err = moveDecorations(ctx, tx, ids, s.HabiticaID, s.HabiticaID, "inventory", destination); err != nil {
+		if err = moveDecorations(ctx, tx, ids, pack(s.HabiticaID), to); err != nil {
 			return nil, err
 		}
 		return ids, currency(ctx, tx, s.HabiticaID, "decoration:"+v.ID, -v.Qty, reason, ref, now)
 	}
 }
-func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, ids []string, fromOwner, source, reason, ref string, now int64) error {
+
+// giveAsset puts goods into the caller's pack; decorations come from `from`.
+func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, ids []string, from holder, reason, ref string, now int64) error {
 	switch v.Kind {
 	case "material":
 		return materialChange(ctx, tx, s.HabiticaID, v.ID, v.Qty, reason, ref, now)
@@ -148,84 +166,92 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 		if len(ids) != v.Qty {
 			return fail(409, "item-not-available")
 		}
-		if _, err := ensureHome(ctx, tx, s, now); err != nil {
-			return err
-		}
-		if err := moveDecorations(ctx, tx, ids, fromOwner, s.HabiticaID, source, "inventory"); err != nil {
+		if err := moveDecorations(ctx, tx, ids, from, pack(s.HabiticaID)); err != nil {
 			return err
 		}
 		return currency(ctx, tx, s.HabiticaID, "decoration:"+v.ID, v.Qty, reason, ref, now)
 	}
 	return fail(400, "invalid-asset")
 }
-func counts(ctx context.Context, tx *sql.Tx, id string, storage bool) (assetCounts, error) {
+
+// packCounts is what a player carries: materials, adventure items, decorations.
+func packCounts(ctx context.Context, tx *sql.Tx, id string) (assetCounts, error) {
 	v := assetCounts{Materials: map[string]int{}, Items: map[string]int{}, Decorations: map[string]int{}}
-	location := "inventory"
-	if !storage {
-		var err error
-		v.Materials, err = materials(ctx, tx, id)
-		if err != nil {
-			return v, err
-		}
-		rows, err := tx.QueryContext(ctx, "SELECT item_def,qty FROM inventory WHERE habitica_id=? ORDER BY item_def", id)
-		if err != nil {
-			return v, err
-		}
-		for rows.Next() {
-			var def string
-			var n int
-			if err = rows.Scan(&def, &n); err != nil {
-				rows.Close()
-				return v, err
-			}
-			if content.KnownAdventureItem(def) {
-				v.Items[def] = n
-			}
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return v, err
-		}
-	} else {
-		location = "storage"
-		rows, err := tx.QueryContext(ctx, "SELECT kind,item_def,qty FROM home_storage WHERE habitica_id=? ORDER BY kind,item_def", id)
-		if err != nil {
-			return v, err
-		}
-		for rows.Next() {
-			var kind, def string
-			var n int
-			if err = rows.Scan(&kind, &def, &n); err != nil {
-				rows.Close()
-				return v, err
-			}
-			if kind == "material" {
-				v.Materials[def] = n
-			} else {
-				v.Items[def] = n
-			}
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return v, err
-		}
-	}
-	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE habitica_id=? AND location=? GROUP BY item_def ORDER BY item_def", id, location)
+	var err error
+	v.Materials, err = materials(ctx, tx, id)
 	if err != nil {
 		return v, err
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT item_def,qty FROM inventory WHERE habitica_id=? ORDER BY item_def", id)
+	if err != nil {
+		return v, err
+	}
+	for rows.Next() {
+		var def string
+		var n int
+		if err = rows.Scan(&def, &n); err != nil {
+			rows.Close()
+			return v, err
+		}
+		if content.KnownAdventureItem(def) {
+			v.Items[def] = n
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return v, err
+	}
+	return v, decorationCounts(ctx, tx, pack(id), v.Decorations)
+}
+
+// chestCounts is a chest's contents: the shared home chest (home id) or a
+// player's personal chest.
+func chestCounts(ctx context.Context, tx *sql.Tx, chest holder) (assetCounts, error) {
+	v := assetCounts{Materials: map[string]int{}, Items: map[string]int{}, Decorations: map[string]int{}}
+	table, key, owner := "home_storage", "homestead_id", chest.home
+	if chest.location == "personal" {
+		table, key, owner = "personal_storage", "habitica_id", chest.player
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT kind,item_def,qty FROM "+table+" WHERE "+key+"=? ORDER BY kind,item_def", owner)
+	if err != nil {
+		return v, err
+	}
+	for rows.Next() {
+		var kind, def string
+		var n int
+		if err = rows.Scan(&kind, &def, &n); err != nil {
+			rows.Close()
+			return v, err
+		}
+		if kind == "material" {
+			v.Materials[def] = n
+		} else {
+			v.Items[def] = n
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return v, err
+	}
+	return v, decorationCounts(ctx, tx, chest, v.Decorations)
+}
+func decorationCounts(ctx context.Context, tx *sql.Tx, at holder, out map[string]int) error {
+	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND habitica_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, nullable(at.player), nullable(at.home))
+	if err != nil {
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var def string
 		var n int
 		if err = rows.Scan(&def, &n); err != nil {
-			return v, err
+			return err
 		}
-		v.Decorations[def] = n
+		out[def] = n
 	}
-	return v, rows.Err()
+	return rows.Err()
 }
 func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int, qty int, reason, ref string, now int64) error {
 	for _, id := range content.WildsRules.Materials {
@@ -237,16 +263,23 @@ func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs ma
 	}
 	return nil
 }
-func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
-	if _, err := ensureHome(ctx, tx, s, now); err != nil {
-		return err
+
+// workshop is the caller's homestead when it has a workshop (tier 2+):
+// the chests and the bench live there.
+func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
+	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", fail(409, "not-a-member")
 	}
 	var tier int
-	if err := tx.QueryRowContext(ctx, "SELECT tier FROM homesteads WHERE habitica_id=?", s.HabiticaID).Scan(&tier); err != nil {
-		return err
+	if err = tx.QueryRowContext(ctx, "SELECT tier FROM homesteads WHERE id=?", home).Scan(&tier); err != nil {
+		return "", err
 	}
 	if tier < 2 {
-		return fail(409, "tier-required")
+		return "", fail(409, "tier-required")
 	}
-	return nil
+	return home, nil
 }

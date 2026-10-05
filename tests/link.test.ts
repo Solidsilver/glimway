@@ -511,7 +511,7 @@ test('sync and spend send the local progress as it is (a 0 HP hero sends hp 0)',
 
 // ---------------------------------------------------------------- lost mutation answers (phase 3 review, finding 1)
 
-const homeView = (items: unknown[] = [], tier = 0) => ({ ownerId: 'hero', displayName: 'Tansy', worldId: 'w', plotIndex: 0, tier, bounds: { x: 64, y: 64, width: 256, height: 192 }, indoor: null, items });
+const homeView = (items: unknown[] = [], tier = 0) => ({ id: 'h1', gate: 0, worldId: 'w', tier, members: [{ id: 'hero', displayName: 'Tansy' }], member: true, desolate: false, vacantSince: null, landSeed: 7, cleared: [], postsBought: 0, nextPost: { timber: 6, stone: 4, amber: 1 }, indoor: null, items });
 const stool = { id: 's1', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null };
 
 test('a purchase whose answer is lost is pending, then replayed exactly before anything else is bought', async () => {
@@ -575,10 +575,11 @@ test('still no answer on replay: the new purchase waits (pending) instead of ris
 test('a home read carries the caller’s materials (phase 3 review, finding 6)', async () => {
   const server = fakeServer();
   const { link } = makeLink(server, { rev: 5 });
-  server.on('GET /api/homestead/bob', { body: { ...snap(base(), 5), home: { ...homeView(), ownerId: 'bob' }, materials: { timber: 3, stone: 0, fiber: 20, amber: 1 } } });
-  const r = await link.readHome('bob');
+  server.on('GET /api/homestead/gate/2', { body: { ...snap(base(), 5), gate: 2, landSeed: 9, home: { ...homeView(), id: 'h2', gate: 2, member: false, members: [{ id: 'bob', displayName: 'Bob' }] }, materials: { timber: 3, stone: 0, fiber: 20, amber: 1 } } });
+  const r = await link.readHome(2);
   assert.ok(r.ok);
-  assert.equal(r.value.home.ownerId, 'bob');
+  assert.equal(r.value.home?.members[0].id, 'bob');
+  assert.equal(r.value.home?.member, false);
   assert.deepEqual(r.value.materials, { timber: 3, stone: 0, fiber: 20, amber: 1 });
 });
 
