@@ -7,7 +7,7 @@ import { expect, type Page } from '@playwright/test'
  * read-only hooks for assertions.
  */
 
-type AreaId = 'village' | 'woodland' | 'ruin'
+type AreaId = 'village' | 'woodland' | 'ruin' | (string & {})
 type Hooks = {
   __fsPlayer?: () => { x: number; y: number }
   __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number } }
@@ -16,6 +16,35 @@ type Hooks = {
   __fsDevStrike?: (n: number, type?: string) => void
   __fsDevShowRubbing?: (force?: boolean) => boolean
   __fsWarden?: () => WardenView
+  __fsWilds?: () => WildsDump | null
+}
+
+/** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug). */
+export type WildsDump = {
+  guest: boolean
+  epochId: string
+  chunk: { cx: number; cy: number }
+  position: { x: number; y: number }
+  entities: Array<{
+    id: string
+    kind: string
+    chunk: { cx: number; cy: number }
+    tx: number
+    ty: number
+    regionPx: { x: number; y: number }
+    state: string
+    cycle: number
+    availableIn: number
+    claimable: boolean
+    material: string
+    tier: number
+    poi: string
+    enemies: string[]
+  }>
+  lanterns: Array<{ id: string; ownerId: string; own: boolean; lit: boolean; x: number; y: number }>
+  materials: Record<string, number>
+  claims: string[]
+  discoveries: Array<{ entityId: string; poiId: string; by: string }>
 }
 
 /** window.__fsWarden(): the stone warden in the current area. */
@@ -39,12 +68,31 @@ export async function beginNewJourney(page: Page): Promise<void> {
 }
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
-  await page.waitForFunction((a) => {
+  const wilds = typeof area === 'string' && (area === 'wilds' || area.startsWith('chunk:inner-1'))
+  await page.waitForFunction(([a, inWilds]) => {
     const s = (window as unknown as Hooks).__fsSafety?.()
-    return !!s && s.areaId === a && !s.transitioning
-  }, area)
+    if (!s || s.transitioning) return false
+    return inWilds ? String(s.areaId).startsWith('chunk:inner-1') : s.areaId === a
+  }, [String(area), wilds] as const)
   // Let the fade-in and the input cool-down settle before driving keys.
   await page.waitForTimeout(700)
+}
+
+/** The Wilds chunk scene that is live now (its chunk area id). */
+export async function waitForWilds(page: Page): Promise<string> {
+  const handle = await page.waitForFunction(() => {
+    const s = (window as unknown as Hooks).__fsSafety?.()
+    return !!s && !s.transitioning && String(s.areaId).startsWith('chunk:inner-1') ? s.areaId : null
+  })
+  await page.waitForTimeout(700)
+  return (await handle.jsonValue()) as string
+}
+
+/** The read-only Wilds dump (null outside the Wilds). */
+export async function wilds(page: Page): Promise<WildsDump> {
+  const dump = await page.evaluate(() => (window as unknown as Hooks).__fsWilds?.() ?? null)
+  if (!dump) throw new Error('no Wilds dump — the scene is not a Wilds chunk')
+  return dump
 }
 
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
@@ -136,6 +184,25 @@ export async function hold(page: Page, key: string, ms: number): Promise<void> {
   await page.keyboard.down(key)
   await page.waitForTimeout(ms)
   await page.keyboard.up(key)
+}
+
+/**
+ * Hold a key until a check passes (or a timeout): walks must survive a
+ * loaded machine, where a fixed-duration hold may only cross half a tile.
+ * The check runs between frames; the key lifts as soon as it passes.
+ */
+export async function holdUntil(page: Page, key: string, check: () => Promise<boolean>, ms = 25_000): Promise<void> {
+  const until = Date.now() + ms
+  await page.keyboard.down(key)
+  try {
+    while (Date.now() < until) {
+      if (await check()) return
+      await page.waitForTimeout(120)
+    }
+    throw new Error(`holdUntil: ${key} never got there`)
+  } finally {
+    await page.keyboard.up(key)
+  }
 }
 
 /** The saved quest stage, read straight from IndexedDB. */

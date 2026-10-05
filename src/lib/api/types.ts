@@ -130,6 +130,142 @@ export interface InviteList {
   outstandingLimit?: number;
 }
 
+// ------------------------------------------------------------- the Wilds
+
+/** The frozen epoch a region is generated from (server: `region_epochs`). */
+export interface WildsEpoch {
+  worldSeed: string;
+  regionId: string;
+  generatorVersion: number;
+  season: string;
+  /** Opaque epoch id, sent as `epoch` on every Wilds mutation. */
+  id: string;
+  startsAt: number;
+  endsAt: number | null;
+}
+
+export type WildsEntityKind = 'camp' | 'node' | 'chest' | 'poi';
+export type WildsEntityState = 'available' | 'cleared' | 'harvested' | 'charted';
+
+/**
+ * One generated entity plus its shared state. `tx`/`ty` are chunk-local
+ * tiles; the chunk is encoded in the id (`<kind>:<cx>:<cy>:<index>`).
+ * Timestamps are Unix seconds; `available_at` 0 means available now.
+ */
+export interface WildsEntityView {
+  id: string;
+  kind: WildsEntityKind;
+  tx: number;
+  ty: number;
+  enemies: string[];
+  material: string;
+  tier: number;
+  poi: string;
+  cycle: number;
+  state: WildsEntityState;
+  available_at: number;
+  by: string | null;
+  at: number | null;
+}
+
+export interface WildsLoot {
+  materials: { id: string; qty: number }[];
+  trinket: string | null;
+}
+
+/** A fallen hero's lantern, at region-wide tile coordinates. */
+export interface WildsLanternView {
+  id: string;
+  ownerId: string;
+  displayName: string;
+  x: number;
+  y: number;
+  litBy: string | null;
+  at: number;
+  litAt: number | null;
+}
+
+export interface WildsMaterials {
+  timber: number;
+  stone: number;
+  fiber: number;
+  amber: number;
+}
+
+/** GET /api/wilds/region/:id — everything the client renders from. */
+export interface WildsRegionResponse extends Snapshot {
+  epoch: WildsEpoch;
+  entities: WildsEntityView[];
+  personalClaims: { entityId: string; at: number }[];
+  discoveries: { entityId: string; poiId: string; discovererId: string; displayName: string; at: number }[];
+  lanterns: WildsLanternView[];
+  materials: WildsMaterials;
+}
+
+export interface WildsClaimRequest {
+  lease: string;
+  baseRev: number;
+  epoch: string;
+  entityId: string;
+  cycle: number;
+  key: string;
+  progress?: Progress;
+}
+
+export interface WildsClaimResult {
+  epoch: string;
+  entity: WildsEntityView;
+  loot: WildsLoot;
+  materials: WildsMaterials;
+}
+
+export interface WildsClaimResponse extends Snapshot {
+  result: WildsClaimResult;
+}
+
+export interface WildsDefeatRequest {
+  lease: string;
+  baseRev: number;
+  epoch: string;
+  /** Region-wide tile coordinates ([0,72) for inner-1). */
+  x: number;
+  y: number;
+  key: string;
+  progress?: Progress;
+}
+
+export interface WildsDefeatResult {
+  epoch: string;
+  lanternId: string;
+  lanterns: WildsLanternView[];
+}
+
+export interface WildsDefeatResponse extends Snapshot {
+  result: WildsDefeatResult;
+}
+
+export interface WildsLanternRequest {
+  lease: string;
+  baseRev: number;
+  epoch: string;
+  ownerId: string;
+  lanternId: string;
+  key: string;
+  progress?: Progress;
+}
+
+export interface WildsLanternResult {
+  epoch: string;
+  rewarded: boolean;
+  loot: WildsLoot;
+  materials: WildsMaterials;
+  lanterns: WildsLanternView[];
+}
+
+export interface WildsLanternResponse extends Snapshot {
+  result: WildsLanternResult;
+}
+
 // ------------------------------------------------------------ homesteads
 
 /** A pixel rectangle on the Commons map. */

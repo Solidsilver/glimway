@@ -27,9 +27,13 @@ import {
   parsePlay,
   parseProgress,
   parseSnapshot,
-  parseSpend,
   parseState,
+  parseSpend,
   parseSync,
+  parseWildsClaim,
+  parseWildsDefeat,
+  parseWildsLantern,
+  parseWildsRegion,
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
 import type {
@@ -60,6 +64,13 @@ import type {
   SpendResponse,
   SyncRequest,
   SyncResponse,
+  WildsClaimRequest,
+  WildsClaimResponse,
+  WildsDefeatRequest,
+  WildsDefeatResponse,
+  WildsLanternRequest,
+  WildsLanternResponse,
+  WildsRegionResponse,
 } from './types.ts';
 
 export interface ApiClientOptions {
@@ -83,6 +94,11 @@ export interface RawApi {
   createInvite(): Promise<CreatedInvite>;
   listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
+  wildsRegion(regionId: string): Promise<WildsRegionResponse>;
+  wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
+  wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
+  wildsLantern(req: WildsLanternRequest): Promise<WildsLanternResponse>;
+
   /** An own or same-world member's homestead (read-only for visitors). */
   home(habiticaId: string): Promise<HomeResponse>;
   /** Every world member's plot (plotless members last, with null bounds). */
@@ -205,6 +221,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async revokeInvite(id) {
       await request('DELETE', `/api/invites/${encodeURIComponent(id)}`);
     },
+    async wildsRegion(regionId) {
+      return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
+    },
+    async wildsClaim(req) {
+      return parseWildsClaim(await request('POST', '/api/wilds/claim', req));
+    },
+    async wildsDefeat(req) {
+      return parseWildsDefeat(await request('POST', '/api/wilds/defeat', req));
+    },
+    async wildsLantern(req) {
+      return parseWildsLantern(await request('POST', '/api/wilds/lantern', req));
+    },
     async home(habiticaId) {
       return parseHome(await request('GET', `/api/homestead/${encodeURIComponent(habiticaId)}`));
     },
@@ -267,6 +295,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     createInvite: () => run((r) => r.createInvite()),
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
+    wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
+    wildsClaim: (req) => run((r) => r.wildsClaim(req)),
+    wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),
+    wildsLantern: (req) => run((r) => r.wildsLantern(req)),
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
     homeAction: (op, req) => run((r) => r.homeAction(op, req)),

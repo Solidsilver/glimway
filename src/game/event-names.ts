@@ -38,6 +38,8 @@ export const EV = {
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
+  /** The Wilds region changed (loaded, claimed, materials moved): { materials }. */
+  wilds: 'ui:wilds',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -71,7 +73,8 @@ export interface DialoguePayload {
 }
 
 export interface AreaPayload {
-  areaId: 'village' | 'woodland' | 'ruin'
+  /** Any registered area id (the Wilds report `wilds`). */
+  areaId: string
   name: string
   description: string
 }
@@ -140,8 +143,13 @@ export interface LinkPayload {
   trouble: boolean
 }
 
+export interface WildsPayload {
+  /** Materials the player holds (server balances, or the guest pack). */
+  materials: Record<string, number> | null
+}
+
 export interface RelocatePayload {
-  area: 'village' | 'woodland' | 'ruin'
+  area: string
   x: number
   y: number
 }

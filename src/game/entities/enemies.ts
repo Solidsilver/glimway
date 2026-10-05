@@ -508,6 +508,15 @@ export class EnemySystem {
     }
   }
 
+  /**
+   * A Wilds camp enemy, spawned by the region's entity layer (not WorldData).
+   * Their deaths are the camp's own lifecycle — never recorded in
+   * defeatedEnemies (camps respawn on their cycle, unlike curated enemies).
+   */
+  spawnWilds(id: string, type: EnemyType, tx: number, ty: number): Enemy {
+    return this.spawnEnemy(id, type, tx, ty)
+  }
+
   private spawnEnemy(id: string, type: EnemyType, tx: number, ty: number): Enemy {
     // Woodland enemies use the delivered slime/mushroom art; the guardian
     // uses the delivered native 24x24 pose textures when present (procedural
@@ -576,7 +585,9 @@ export class EnemySystem {
   private killEnemy(enemy: Enemy): void {
     enemy.dead = true
     sfx('pop')
-    this.deps.session.recordDefeat(enemy.id)
+    // Wilds camp enemies belong to their camp's respawn cycle, not to the
+    // permanent defeated list (wilds:*, see src/game/wilds/entities.ts).
+    if (!enemy.id.startsWith('wilds:')) this.deps.session.recordDefeat(enemy.id)
     // Spark burst
     const bx = enemy.sprite.x
     const by = enemy.sprite.y - 6

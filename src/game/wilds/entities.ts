@@ -1,0 +1,689 @@
+/**
+ * Wilds entities — the generated things inside one chunk scene: camps (their
+ * enemies spawn from the camp's mix; when all are down the camp is
+ * claimable), resource nodes (harvest prompt with the material's verb),
+ * personal chests, points of interest (discovery text; "Charted by {name}"
+ * for the world's first discoverer), and other members' fallen-hero
+ * lanterns (relightable).
+ *
+ * Everything renders from the region store (src/game/wilds/store.ts) — the
+ * server's cycles and claims when connected, the local rules for guests —
+ * and re-renders when the store's version moves. Interactions ride the
+ * scene's prompt/action pipeline: promptAction() proposes the nearest
+ * claimable thing; the scene's action key claims it.
+ *
+ * Papers: two POIs and the tier-3 chests carry found texts (papers.ts
+ * sources `wilds-poi` / `wilds-chest`), granted on their claim — see
+ * WILDS_PAPER_PLACEMENTS for the deterministic placements.
+ */
+import type Phaser from 'phaser'
+import {
+  CAMP_WALK_IN_LINES,
+  CHEST_OPEN_FLAVOR,
+  FALLEN_HERO_LANTERNS,
+  MATERIALS,
+  POIS,
+} from '../../content/expansion-writing.ts'
+import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts'
+import { CHUNK_TILES, parseChunkArea, regionTile, toRegionPosition, wildsRegion } from './regions.ts'
+import {
+  applyClaim,
+  applyLanterns,
+  discoveryFor,
+  entityAvailable,
+  guestClaim,
+  isClaimed,
+  lootText,
+  refreshWilds,
+  tickWildsGuest,
+  wildsView,
+  type WildsView,
+} from './store.ts'
+import { grantPaper } from '../papers'
+import { bus, EV } from '../events'
+import { uiState } from '../input'
+import { sfx } from '../sfx'
+import { TILE } from '../textures'
+import type { Session } from '../session'
+import type { Effects } from '../entities/fx'
+import type { EnemySystem } from '../entities/enemies'
+import type { PromptAction } from '../entities/interactables'
+import type { EnemyType, WorldData } from '../worlds'
+
+/** Server error code → what the player reads. All text is static. */
+const CLAIM_ERROR: Record<string, string> = {
+  'old-cycle': 'Someone got there first — it will come back.',
+  'entity-unavailable': 'Someone got there first — it will come back.',
+  'already-claimed': 'You have already claimed this one.',
+  'too-far-away': 'Too far away — step closer.',
+  'not-in-wilds': 'That only works out in the Wilds.',
+  'epoch-ended': 'The Wilds shift. Make your way back to the entrance.',
+  'claim-rate-limited': 'That is plenty of gathering for one minute. Take a breath.',
+  offline: 'Needs a connection. The Wilds keep what you have not claimed.',
+  superseded: 'Another device took over this journey.',
+  busy: 'Hold on — the last one is still on its way.',
+  unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
+}
+
+/**
+ * Deterministic paper placements live in ./placements.ts (with the reasoning);
+ * claimed POIs and tier-3 chests carry their find.
+ */
+import { wildsPaperFor } from './placements.ts'
+
+export interface WildsDeps {
+  world: WorldData
+  session: Session
+  fx: Effects
+  enemies: EnemySystem
+  reducedMotion: boolean
+}
+
+/** The claim prompt the scene merges into its interaction pipeline. */
+export interface WildsAction extends PromptAction {
+  entityId: string
+  claim: () => void
+}
+
+interface Rendered {
+  images: Phaser.GameObjects.Image[]
+}
+
+/** Small pixel art for the entities the prop atlas has no frame for. */
+const ART: Record<string, { rows: string[]; pal: Record<string, string> }> = {
+  'wilds-campfire': {
+    rows: [
+      '...o..o.....',
+      '..ofo.ofo...',
+      '..offoffo...',
+      '.oifyyiifo..',
+      '.oiyyyyifo..',
+      'ooffwwffoo..',
+      'offffffffffo',
+      'oFFFFFFFFFfo',
+      '.oooooooooo.'
+    ],
+    pal: { o: '#3a2a28', f: '#8a5a34', F: '#b07a48', y: '#ffd24a', i: '#e07a52', w: '#fffbef' }
+  },
+  'wilds-amber': {
+    rows: [
+      '...o..o....',
+      '..oYo..oYo.',
+      '.oYAAYoAYo.',
+      '.oYAAAYAYo.',
+      'oYAAAYAAYo.',
+      'oYAAYAAYYo.',
+      '.oYYYYYYo..',
+      '.oooooooo..'
+    ],
+    pal: { o: '#3a2a28', Y: '#e8a53c', A: '#ffd98a' }
+  },
+  'wilds-stone': {
+    rows: [
+      '...oooooo....',
+      '..oGGGGGGo...',
+      '.oGGLGGGLGGo.',
+      'oGGGLLGGLGGo.',
+      'oGLGGGGGGGGo.',
+      'oGGGLLGGLLGo.',
+      'oGoGGLGGGLGo.',
+      '.oooooooooo..'
+    ],
+    pal: { o: '#3a2a28', G: '#8d948f', L: '#c6cec8' }
+  },
+  'wilds-fiber': {
+    rows: [
+      '..o..o..o....',
+      '.oFo.oFo.oFo.',
+      '.oFFoFFoFFo..',
+      'oFFFoFFFoFFo.',
+      'oFFFoFFFoFFFo',
+      'oFFFoFFFoFFFo',
+      '.oFFoFFoFFFo.',
+      '..ooo.oo.oo..'
+    ],
+    pal: { o: '#3a2a28', F: '#7a9a4a', f: '#a8bf6a' }
+  },
+  'wilds-pond': {
+    rows: [
+      '...oooooo....',
+      '.oiIIIIIIio..',
+      'oIIWIIIIIIMo.',
+      'oIIIWIIIIMMo.',
+      'oIIIIIWIIIMo.',
+      '.oiIIIIIIio..',
+      '...oooooo....'
+    ],
+    pal: { o: '#3a2a28', i: '#9cc3d8', I: '#c3dcea', W: '#fffbef', M: '#7fa8c0' }
+  },
+  'wilds-cart': {
+    rows: [
+      '.o..........o.',
+      'offfo..oofffo.',
+      'offffoofffffo.',
+      'offffoofffffo.',
+      '.oooooooooooo.',
+      '..oFo....oFo..',
+      '..oFo....oFo..',
+      '..ooo....ooo..'
+    ],
+    pal: { o: '#3a2a28', f: '#8a5a34', F: '#5a4a3a' }
+  }
+}
+
+function ensureArt(scene: Phaser.Scene): void {
+  for (const [key, art] of Object.entries(ART)) {
+    if (scene.textures.exists(key)) continue
+    const w = Math.max(...art.rows.map((r) => r.length))
+    const h = art.rows.length
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')!
+    art.rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const c = art.pal[row[x]]
+        if (!c) continue
+        ctx.fillStyle = c
+        ctx.fillRect(x, y, 1, 1)
+      }
+    })
+    scene.textures.addCanvas(key, canvas)
+  }
+}
+
+/** Node props by material — distinct from the scatter decor, so a node reads
+ * as something to work, not as scenery. */
+const NODE_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
+  timber: { tex: 'fingersnap-props', frame: 'tool-crate', h: 16 },
+  stone: { tex: 'wilds-stone', h: 14 },
+  fiber: { tex: 'wilds-fiber', h: 15 },
+  amber: { tex: 'wilds-amber', h: 12 },
+}
+
+/** POI props by POI definition id. */
+const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
+  'old-shrine': { tex: 'fingersnap-props', frame: 'lantern-shrine', h: 26 },
+  waystone: { tex: 'fingersnap-props', frame: 'stone-milestone', h: 18 },
+  'frozen-pond': { tex: 'wilds-pond', h: 10 },
+  'abandoned-cart': { tex: 'wilds-cart', h: 14 },
+  'mossy-arch': { tex: 'fingersnap-foreground', frame: 'stone-arch', h: 30 },
+}
+
+const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? id
+const materialOf = (id: string) => MATERIALS.find((m) => m.id === id)
+
+export class WildsEntities {
+  private chunk: { cx: number; cy: number }
+  private heroPx = { x: 0, y: 0 }
+  private rendered = new Map<string, Rendered>()
+  private spawnedCamps = new Set<string>()
+  private greeted = new Set<string>()
+  private current: WildsAction | null = null
+  private claiming = false
+  private lastVersion = -1
+
+  constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
+    this.chunk = parseChunkArea(deps.world.areaId) ?? { cx: 0, cy: 0 }
+    ensureArt(scene)
+    scene.events.once('shutdown', () => {
+      this.rendered.clear()
+      this.current = null
+    })
+    this.render(wildsView())
+  }
+
+  // ------------------------------------------------------------ per frame
+
+  update(): void {
+    const view = wildsView()
+    if (!view) return
+    if (view.guest) tickWildsGuest()
+    if (view.version !== this.lastVersion) {
+      this.lastVersion = view.version
+      this.render(view)
+    }
+    this.spawnCampEnemies(view)
+    this.greetCamps(view)
+  }
+
+  /** The nearest claimable thing within reach, for the scene's prompt. */
+  promptAction(hero: { x: number; y: number }): WildsAction | null {
+    this.heroPx = { x: hero.x, y: hero.y }
+    const view = wildsView()
+    if (!view) return null
+    const nowSec = Math.floor(Date.now() / 1000)
+    let best: { d: number; at: { x: number; y: number }; action: WildsAction } | null = null
+    for (const e of this.chunkEntities(view)) {
+      if (!this.claimable(e, view, nowSec)) continue
+      const at = this.entityPx(e)
+      const d = Math.hypot(hero.x - at.x, hero.y - at.y)
+      if (d > 44) continue
+      const action = this.actionFor(e, at)
+      if (action && (!best || d < best.d)) best = { d, at, action }
+    }
+    for (const l of this.chunkLanterns(view)) {
+      if (l.litBy) continue
+      const at = this.lanternPx(l)
+      const d = Math.hypot(hero.x - at.x, hero.y - at.y)
+      if (d > 44) continue
+      const action = this.relightAction(l, at)
+      if (action && (!best || d < best.d)) best = { d, at, action }
+    }
+    this.current = best?.action ?? null
+    return this.current
+  }
+
+  /** The action key while a Wilds prompt is up. True when it was used. */
+  handleAction(): boolean {
+    if (!this.current) return false
+    this.current.claim()
+    return true
+  }
+
+  // ------------------------------------------------------------ claims
+
+  private actionFor(e: WildsEntityView, at: { x: number; y: number }): WildsAction | null {
+    const spot = { x: Math.round(at.x), y: Math.round(at.y - 20) }
+    if (e.kind === 'node') {
+      const m = materialOf(e.material)
+      if (!m) return null
+      return { entityId: e.id, label: `${m.harvestVerb} the ${m.name.toLowerCase()}`, verb: m.harvestVerb, x: spot.x, y: spot.y, claim: () => void this.claim(e.id) }
+    }
+    if (e.kind === 'camp') {
+      return { entityId: e.id, label: 'Claim the camp', verb: 'Claim', x: spot.x, y: spot.y, claim: () => void this.claim(e.id) }
+    }
+    if (e.kind === 'chest') {
+      return { entityId: e.id, label: 'Open the chest', verb: 'Open', x: spot.x, y: spot.y, claim: () => void this.claim(e.id) }
+    }
+    return { entityId: e.id, label: `Study the ${poiName(e.poi).toLowerCase()}`, verb: 'Study', x: spot.x, y: spot.y, claim: () => void this.claim(e.id) }
+  }
+
+  private relightAction(l: WildsLanternView, at: { x: number; y: number }): WildsAction {
+    const own = this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false
+    return {
+      entityId: l.id,
+      label: own ? 'Relight your lantern' : 'Relight the fallen lantern',
+      verb: 'Relight',
+      x: Math.round(at.x),
+      y: Math.round(at.y - 32),
+      claim: () => void this.relight(l)
+    }
+  }
+
+  /**
+   * Claimable right now: nodes and camps while their cycle is available
+   * (camps additionally only once their enemies are down), chests and POIs
+   * once per player per epoch.
+   */
+  private claimable(e: WildsEntityView, _view: WildsView, nowSec: number): boolean {
+    if (isClaimed(e.id)) return false
+    if (e.kind === 'poi' || e.kind === 'chest') return true
+    if (!entityAvailable(e, nowSec)) return false
+    if (e.kind === 'camp') return this.campCleared(e.id)
+    return true
+  }
+
+  /** A camp is claimable when every enemy it spawned is down. */
+  private campCleared(campId: string): boolean {
+    const prefix = `wilds:${campId}`
+    const live = this.deps.enemies.enemies.some((e) => !e.dead && e.id.startsWith(prefix))
+    return this.spawnedCamps.has(campId) && !live
+  }
+
+  private async claim(entityId: string): Promise<void> {
+    if (this.claiming) return
+    const session = this.deps.session
+    const view = wildsView()
+    const entity = view?.entities.find((e) => e.id === entityId)
+    if (!view || !entity) return
+    this.claiming = true
+    try {
+      if (session.link) {
+        await this.claimConnected(entity)
+      } else {
+        this.claimGuest(entity)
+      }
+    } finally {
+      this.claiming = false
+    }
+  }
+
+  private async claimConnected(entity: WildsEntityView): Promise<void> {
+    const session = this.deps.session
+    // A fresh read advances respawn cycles; the claim needs the current one.
+    const ok = await refreshWilds(session)
+    const fresh = wildsView()
+    if (!ok || !fresh) {
+      bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
+      return
+    }
+    const target = fresh.entities.find((e) => e.id === entity.id)
+    const nowSec = Math.floor(Date.now() / 1000)
+    if (!target || !this.claimable(target, fresh, nowSec)) {
+      if (target && (target.kind === 'camp' || target.kind === 'node') && !entityAvailable(target, nowSec)) {
+        bus.emit(EV.toast, { text: CLAIM_ERROR['entity-unavailable'], kind: 'error' })
+      }
+      return
+    }
+    // The near-the-entity check reads carried progress: write this frame's spot.
+    this.syncProgressPosition()
+    const res = await session.link!.wildsClaim({ epoch: fresh.epochId, entityId: entity.id, cycle: target.cycle })
+    if (!res.ok) {
+      this.claimError(res.code)
+      return
+    }
+    const drop = applyClaim(res.result)
+    this.lootFeedback(target, drop)
+    // Personal claims and discoveries lists, complete.
+    void refreshWilds(session, 0)
+  }
+
+  private claimGuest(entity: WildsEntityView): void {
+    const drop = guestClaim(entity.id, this.deps.session)
+    if (!drop) return
+    this.lootFeedback(entity, drop)
+  }
+
+  private claimError(code: string): void {
+    bus.emit(EV.toast, { text: CLAIM_ERROR[code] ?? CLAIM_ERROR.unknown, kind: 'error' })
+  }
+
+  /** Relight a fallen hero's lantern (own ones too — the warm act, no reward). */
+  private async relight(l: WildsLanternView): Promise<void> {
+    const session = this.deps.session
+    const view = wildsView()
+    if (!session.link || !view) return
+    // The near-the-lantern check reads carried progress: write this frame's spot.
+    this.syncProgressPosition()
+    const res = await session.link.wildsRelight({ epoch: view.epochId, ownerId: l.ownerId, lanternId: l.id })
+    if (!res.ok) {
+      this.claimError(res.code)
+      return
+    }
+    applyLanterns(res.result.lanterns)
+    sfx('lantern')
+    const at = this.lanternPx(l)
+    this.deps.fx.sparkBurst(at.x, at.y - 20, 10)
+    const own = l.ownerId === session.link.habiticaId
+    const text = own ? FALLEN_HERO_LANTERNS.yourOwnLantern : FALLEN_HERO_LANTERNS.relitByFriend
+    bus.emit(EV.toast, { text, icon: 'lantern' })
+    if (res.result.rewarded && lootText(res.result.loot)) {
+      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle' })
+    }
+  }
+
+  /** The visible payoff of a claim: chest flavor, loot, papers. */
+  private lootFeedback(entity: WildsEntityView, drop: { materials: { id: string; qty: number }[]; trinket: string | null }): void {
+    const at = this.entityPx(entity)
+    if (drop.materials.length > 0 || drop.trinket) this.deps.fx.sparkBurst(at.x, at.y - 8, 12)
+    const loot = lootText(drop)
+    let text: string
+    if (entity.kind === 'camp') text = loot ? `The camp is yours to rest at: ${loot}.` : 'The camp is yours to rest at.'
+    else if (entity.kind === 'chest') text = loot ? `${pick(CHEST_OPEN_FLAVOR, entity.id)} ${loot}.` : pick(CHEST_OPEN_FLAVOR, entity.id) + '.'
+    else if (entity.kind === 'node') text = `Harvested: ${loot}.`
+    else text = loot ? `The Wilds give back: ${loot}.` : ''
+    if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle' })
+
+    // Found texts ride their personal claim (see ./placements.ts).
+    const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion().gridWidth)
+    if (paperId) grantPaper(this.deps.session, paperId)
+
+    if (entity.kind === 'poi') this.poiDiscovery(entity)
+  }
+
+  /** POI discovery: the text in the reading panel, with the world's chart. */
+  private poiDiscovery(entity: WildsEntityView): void {
+    const info = POIS.find((p) => p.id === entity.poi)
+    if (!info) return
+    const disc = discoveryFor(entity.id)
+    const by = disc?.displayName || this.deps.session.link?.name || 'you'
+    sfx('discover')
+    uiState.dialogueOpen = true
+    bus.emit(EV.dialogue, {
+      id: `wilds-poi:${entity.id}`,
+      speaker: info.name,
+      lines: [info.discoveryText, `Charted by ${by}.`]
+    })
+  }
+
+  // ------------------------------------------------------------ defeat
+
+  /**
+   * Report this defeat (a lantern) before recovery — the request captures
+   * the fallen progress (area `wilds`, HP 0) as it is built. Guests keep no
+   * lanterns (there is no shared state to light them from).
+   */
+  reportDefeat(): Promise<void> | null {
+    const session = this.deps.session
+    const view = wildsView()
+    if (!session.link || !view || view.guest || !view.epochId) return null
+    this.syncProgressPosition()
+    const t = regionTile(this.regionPosition().x, this.regionPosition().y)
+    const epochId = view.epochId
+    return session.link.wildsDefeat({ epoch: epochId, x: t.x, y: t.y }).then((res) => {
+      if (res.ok) applyLanterns(res.result.lanterns)
+      else if (res.code === 'lantern-creation-limited') {
+        bus.emit(EV.toast, { text: 'The Wilds are full of your lanterns today. They will keep this spot in mind.', kind: 'error' })
+      }
+      return
+    })
+  }
+
+  // ------------------------------------------------------------ internals
+
+  /** Carried progress in region-wide pixels (the one conversion claims need). */
+  private syncProgressPosition(): void {
+    this.deps.session.state.position = this.regionPosition()
+  }
+
+  private regionPosition(): { x: number; y: number } {
+    return toRegionPosition(this.chunk.cx, this.chunk.cy, this.heroPx.x, this.heroPx.y)
+  }
+
+  private chunkEntities(view: WildsView): WildsEntityView[] {
+    return view.entities.filter((e) => this.ownEntity(e))
+  }
+
+  private ownEntity(e: WildsEntityView): boolean {
+    const parts = e.id.split(':')
+    if (parts.length !== 4) return false
+    return Number(parts[1]) === this.chunk.cx && Number(parts[2]) === this.chunk.cy
+  }
+
+  private chunkLanterns(view: WildsView): WildsLanternView[] {
+    return view.lanterns.filter((l) => Math.floor(l.x / CHUNK_TILES) === this.chunk.cx && Math.floor(l.y / CHUNK_TILES) === this.chunk.cy)
+  }
+
+  private entityPx(e: WildsEntityView): { x: number; y: number } {
+    return { x: e.tx * TILE + 8, y: e.ty * TILE + TILE }
+  }
+
+  private lanternPx(l: WildsLanternView): { x: number; y: number } {
+    const lx = (l.x - this.chunk.cx * CHUNK_TILES) * TILE + 8
+    const ly = (l.y - this.chunk.cy * CHUNK_TILES) * TILE + TILE
+    return { x: lx, y: ly }
+  }
+
+  // ------------------------------------------------------------ rendering
+
+  private render(view: WildsView | null): void {
+    for (const r of this.rendered.values()) for (const img of r.images) img.destroy()
+    this.rendered.clear()
+    if (!view) return
+    const nowSec = Math.floor(Date.now() / 1000)
+    for (const e of this.chunkEntities(view)) {
+      this.rendered.set(e.id, { images: this.renderEntity(e, nowSec) })
+    }
+    for (const l of this.chunkLanterns(view)) {
+      this.rendered.set(l.id, { images: this.renderLantern(l) })
+    }
+  }
+
+  private renderEntity(e: WildsEntityView, nowSec: number): Phaser.GameObjects.Image[] {
+    const scene = this.scene
+    const at = this.entityPx(e)
+    const images: Phaser.GameObjects.Image[] = []
+    const add = (tex: string, frame: string | undefined, h: number, dy = 0, dx = 0): void => {
+      const img = frame ? scene.add.image(at.x + dx, at.y + dy, tex, frame) : scene.add.image(at.x + dx, at.y + dy, tex)
+      const f = frame ? scene.textures.get(tex).get(frame)! : scene.textures.get(tex).get()
+      img.setOrigin(0.5, 1).setScale(h / f.height).setDepth(at.y + dy - 2)
+      images.push(img)
+    }
+    const depleted = (e.kind === 'camp' || e.kind === 'node') && !entityAvailable(e, nowSec)
+    if (e.kind === 'camp') {
+      // The fire sits beside the pack (the cot), not behind it.
+      add('wilds-campfire', undefined, 12, 0, -13)
+      add('fingersnap-props', 'expedition-backpack', 18, -2)
+    } else if (e.kind === 'node') {
+      const frame = NODE_FRAME[e.material] ?? NODE_FRAME.fiber
+      add(frame.tex, frame.frame, frame.h)
+    } else if (e.kind === 'chest') {
+      add('fingersnap-props', 'treasure-chest', 16)
+    } else {
+      const frame = POI_FRAME[e.poi] ?? POI_FRAME.waystone
+      add(frame.tex, frame.frame, frame.h)
+    }
+    // Depleted and already-claimed things read as spent.
+    const spent = depleted || ((e.kind === 'chest' || e.kind === 'poi') && isClaimed(e.id))
+    if (spent) for (const img of images) img.setAlpha(0.45)
+    // A small glint over anything claimable, so attention finds it.
+    else if (e.kind !== 'camp') {
+      const glint = scene.add.image(at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1)
+      if (this.deps.reducedMotion) glint.setAlpha(0.7)
+      else scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      images.push(glint)
+    }
+    return images
+  }
+
+  private renderLantern(l: WildsLanternView): Phaser.GameObjects.Image[] {
+    const scene = this.scene
+    const at = this.lanternPx(l)
+    const post = scene.add.image(at.x, at.y, 'fingersnap-props', 'lantern-post')
+      .setOrigin(0.5, 1)
+      .setScale(28 / scene.textures.get('fingersnap-props').get('lantern-post')!.height)
+      .setDepth(at.y)
+    const images = [post]
+    if (l.litBy) {
+      const glow = scene.add.image(at.x, at.y - 18, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.5).setAlpha(0.75).setDepth(at.y + 2)
+      if (!this.deps.reducedMotion) {
+        scene.tweens.add({ targets: glow, alpha: { from: 0.65, to: 0.4 }, scale: { from: 0.48, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+      images.push(glow)
+    } else {
+      post.setAlpha(0.8)
+    }
+    return images
+  }
+
+  // ------------------------------------------------------------ camps
+
+  /** Spawn an available camp's enemies from its generated mix (once per camp). */
+  private spawnCampEnemies(view: WildsView): void {
+    const nowSec = Math.floor(Date.now() / 1000)
+    for (const e of this.chunkEntities(view)) {
+      if (e.kind !== 'camp') continue
+      if (this.spawnedCamps.has(e.id) || !entityAvailable(e, nowSec)) continue
+      this.spawnedCamps.add(e.id)
+      const offsets = [
+        [0, 0],
+        [1, 0],
+        [0, 1]
+      ]
+      e.enemies.slice(0, 3).forEach((type, i) => {
+        const [ox, oy] = offsets[i % offsets.length]
+        this.deps.enemies.spawnWilds(`wilds:${e.id}:${i}`, type as EnemyType, e.tx + ox, e.ty + oy)
+      })
+    }
+  }
+
+  /** A walk-in line the first time the hero nears a lived-in camp. */
+  private greetCamps(view: WildsView): void {
+    const nowSec = Math.floor(Date.now() / 1000)
+    for (const e of this.chunkEntities(view)) {
+      if (e.kind !== 'camp' || this.greeted.has(e.id) || !entityAvailable(e, nowSec)) continue
+      const at = this.entityPx(e)
+      if (Math.hypot(this.heroPx.x - at.x, this.heroPx.y - at.y) > 56) continue
+      this.greeted.add(e.id)
+      bus.emit(EV.toast, { text: pick(CAMP_WALK_IN_LINES, e.id), icon: 'sparkle' })
+    }
+  }
+
+  // ------------------------------------------------------------ e2e hooks
+
+  /** Read-only dump for playtests: what the Wilds look like right now. */
+  debug(): {
+    guest: boolean
+    epochId: string
+    chunk: { cx: number; cy: number }
+    position: { x: number; y: number }
+    entities: Array<{
+      id: string
+      kind: string
+      chunk: { cx: number; cy: number }
+      tx: number
+      ty: number
+      regionPx: { x: number; y: number }
+      state: string
+      cycle: number
+      availableIn: number
+      claimable: boolean
+      material: string
+      tier: number
+      poi: string
+      enemies: string[]
+    }>
+    lanterns: Array<{ id: string; ownerId: string; own: boolean; lit: boolean; x: number; y: number }>
+    materials: Record<string, number>
+    claims: string[]
+    discoveries: Array<{ entityId: string; poiId: string; by: string }>
+  } | null {
+    const view = wildsView()
+    if (!view) return null
+    const nowSec = Math.floor(Date.now() / 1000)
+    const p = this.regionPosition()
+    return {
+      guest: view.guest,
+      epochId: view.epochId,
+      chunk: this.chunk,
+      position: p,
+      entities: view.entities.map((e) => {
+        const parts = e.id.split(':')
+        return {
+          id: e.id,
+          kind: e.kind,
+          chunk: { cx: Number(parts[1]), cy: Number(parts[2]) },
+          tx: e.tx,
+          ty: e.ty,
+          regionPx: toRegionPosition(Number(parts[1]), Number(parts[2]), e.tx * TILE + 8, e.ty * TILE + 8),
+          state: e.state,
+          cycle: e.cycle,
+          availableIn: Math.max(0, e.available_at - nowSec),
+          claimable: this.claimable(e, view, nowSec),
+          material: e.material,
+          tier: e.tier,
+          poi: e.poi,
+          enemies: e.enemies
+        }
+      }),
+      lanterns: view.lanterns.map((l) => ({
+        id: l.id,
+        ownerId: l.ownerId,
+        own: this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false,
+        lit: !!l.litBy,
+        x: l.x,
+        y: l.y
+      })),
+      materials: { ...view.materials },
+      claims: [...view.claims],
+      discoveries: view.discoveries.map((d) => ({ entityId: d.entityId, poiId: d.poiId, by: d.displayName }))
+    }
+  }
+}
+
+function pick(list: readonly string[], seed: string): string {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return list[h % list.length]
+}

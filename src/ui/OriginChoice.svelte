@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GameState } from '../lib/state'
   import { questObjective } from '../lib/state'
-  import { locations } from '../content/world'
+  import { areaInfo } from '../content/world'
   import { MIGRATION_CAP, originCopy } from '../content/connected'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
@@ -27,7 +27,7 @@
     onCancel?: () => void
   } = $props()
 
-  const place = $derived(locations[local.area].name)
+  const place = $derived(areaInfo(local.area).name)
   const goal = $derived(questObjective(local.quest))
   const carried = $derived(Math.min(local.embers, MIGRATION_CAP))
 </script>

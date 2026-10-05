@@ -15,13 +15,14 @@
     type PromptPayload,
     type QuestPayload,
     type StatsPayload,
-    type ToastPayload
+    type ToastPayload,
+    type WildsPayload
   } from './game/events'
   import { ui } from './ui/store.svelte'
   import { Session } from './game/session'
   import { createNewGame, questObjective, type GameState, type QuestStage } from './lib/state'
   import { clearSave, loadSaveRecord } from './lib/save'
-  import { discoveryInfo, locations } from './content/world'
+  import { discoveryInfo, areaInfo } from './content/world'
   import { startGame, stopGame } from './game/main'
   import { uiState } from './game/input'
   import { sfx, unlockAudio } from './game/sfx'
@@ -54,6 +55,7 @@
   import { emberLine, titleChoice } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
   import { accountName, api, connectedSession, probeServer } from './ui/account'
+  import { prepareWilds } from './game/wilds/store'
   import { clearCache, loadCache, loadLatestCache, saveCache, type ConnectedCache } from './lib/api/cache'
   import { newKey } from './lib/api/client'
   import { errorCode, isUnreachable } from './lib/api/errors'
@@ -122,7 +124,7 @@
     const s = session.state
     const mins = Math.floor(s.playSeconds / 60)
     return {
-      place: locations[s.area].name,
+      place: areaInfo(s.area).name,
       goal: questObjective(s.quest),
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
@@ -139,7 +141,7 @@
     if (!st) return null
     const mins = Math.floor(st.playSeconds / 60)
     return {
-      place: locations[st.area].name,
+      place: areaInfo(st.area).name,
       goal: questObjective(st.quest),
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
@@ -176,13 +178,16 @@
       if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.objective })
     }
     const onArea = (p: AreaPayload) => {
-      const info = locations[p.areaId]
+      const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       ui.area = { areaId: p.areaId, name: info.name, description: info.description }
       if (phase === 'playing' && moved) {
         areaShown = true
         ui.banner({ kind: 'area', eyebrow: info.eyebrow, title: info.name, body: info.tagline })
       }
+    }
+    const onWilds = (p: WildsPayload) => {
+      ui.materials = p.materials
     }
     const onPrompt = (p: PromptPayload) => {
       ui.prompt = p
@@ -267,6 +272,7 @@
       [EV.link, onLink],
       [EV.presence, onPresence],
       [EV.linkNotice, onLinkNotice],
+      [EV.wilds, onWilds],
       [PAPER_EV.openLibrary, onOpenLibrary],
       [HOME_EV.openShop, onOpenShop],
       [HOME_EV.arrange, onArrange],
@@ -343,6 +349,9 @@
     starting = true
     unlockAudio()
     sfx('open')
+    // The Wilds need their region before the first chunk builds: guests get
+    // the local epoch, connected players the world's frozen one.
+    await prepareWilds(session)
     // World text (damage numbers, exit labels) uses the display font: make
     // sure it is ready before the first frame draws any.
     try {
@@ -544,6 +553,7 @@
       panel = null
       stopGame(game)
       areaShown = false
+      await prepareWilds(next)
       game = startGame(stageEl, next)
     } else {
       await begin()

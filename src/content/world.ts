@@ -1,6 +1,6 @@
 import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts';
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
-import { HEARTHWICK_COMMONS } from './expansion-writing.ts';
+import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -129,6 +129,20 @@ export const locations: Record<AreaId, LocationInfo> = {
   },
   commons: HEARTHWICK_COMMONS,
 };
+
+/**
+ * Location info for any area id — including the generated ones (Wilds saves
+ * report `wilds` and their `chunk:…` areas; the Commons before its own
+ * entry). Unknown ids get a generic card, so a new area can never crash a
+ * title or a banner.
+ */
+export function areaInfo(areaId: AreaId): LocationInfo {
+  const known = (locations as unknown as Record<string, LocationInfo | undefined>)[areaId];
+  if (known) return known;
+  if (areaId === 'commons') return HEARTHWICK_COMMONS;
+  if (areaId === 'wilds' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
+  return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };
+}
 
 type DialogueRule = Dialogue & { forStages: QuestStage[] };
 

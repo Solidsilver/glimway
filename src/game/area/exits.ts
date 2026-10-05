@@ -4,13 +4,13 @@
  * map edge the exit sits.
  */
 import type Phaser from 'phaser'
-import { locations } from '../../content/world'
+import { areaInfo } from '../../content/world'
 import { TILE } from '../textures'
 import type { ExitDef, WorldData } from '../worlds'
 
 /** Destination name for an exit label (areas registered later may lack an entry). */
 export function exitName(to: string): string {
-  return locations[to]?.name ?? (to === 'wilds' ? 'The Wilds' : to.replace(/[-_:]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
+  return areaInfo(to).name
 }
 
 type Edge = 'west' | 'east' | 'north' | 'south'

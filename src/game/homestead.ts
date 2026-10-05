@@ -345,6 +345,20 @@ export function homesteadsFor(session: Session): Homesteads {
   return current.homes
 }
 
+/**
+ * The Wilds' claims and the shop share one server-owned balance: when the
+ * Wilds side moves it, the shop's mirror follows (the reverse rides
+ * HOME_EV.changed, which the Wilds store watches).
+ */
+export function syncWildsMaterials(materials: Record<string, number> | null): void {
+  if (current) current.homes.materials = { ...(materials ?? {}) }
+}
+
+/** The shop's current material mirror, for the Wilds store to follow. */
+export function currentHomesteadMaterials(): Record<string, number> | null {
+  return current ? { ...current.homes.materials } : null;
+}
+
 // ------------------------------------------------------------ Silas's words
 
 export const SILAS = BUILDER_NPC_DATA

@@ -21,6 +21,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   fullyParallel: false,
+  // One worker: the playtests drive real-time movement, and two browsers
+  // under one machine's load drop enough frames to miss timed walks.
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {

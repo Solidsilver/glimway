@@ -45,6 +45,8 @@ class UiStore {
   presence = $state<PresencePayload>({ status: 'off', here: 0 })
   /** The emote picker is open. */
   emoteOpen = $state(false)
+  /** Wilds materials (server balances, or the guest pack). Null until the Wilds load. */
+  materials = $state<Record<string, number> | null>(null)
 
   /** Mirrors of world/UI ownership flags, reactive for the interface. */
   dialogueOpen = $state(false)
