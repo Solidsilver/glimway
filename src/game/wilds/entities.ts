@@ -300,6 +300,11 @@ export class WildsEntities {
     return true
   }
 
+  /** A settle picked in an Echo camp conversation (the keep's offer keeps the lamp open). */
+  settleEcho(siteId: string): boolean {
+    return this.sites.settleEcho(siteId)
+  }
+
   // ------------------------------------------------------------ claims
 
   private actionFor(e: WildsEntityView, at: { x: number; y: number }): WildsAction | null {

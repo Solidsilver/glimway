@@ -13,7 +13,15 @@
  * model and what's already been returned from the save's flags. The give
  * itself is the server's `return` item op, wired through the dialogue
  * action `keep:return:<def>:<target>`.
+ *
+ * The keepsakes with no living owner (Bett's candle, Nan's road-nails) are
+ * offered to their Echo camps here too: `echoKeepsakeOffer` builds the
+ * camp's leave offer (docs/items/overview.md, "Returning keepsakes"); the
+ * camp's own words live with the echoes (src/content/echoes.ts) and the
+ * Wilds side's prompts and dialogues are the Wilds layer's work
+ * (src/game/wilds/sites.ts).
  */
+import { echoKeepsakeOf, type EchoMember } from '../content/echoes.ts'
 import type { DialogueChoice } from './events'
 
 interface Ask {
@@ -109,4 +117,44 @@ export function keepsakeAsk(resident: string, flags: readonly string[], carried:
 /** Every keepsake line (tests: canon voice, length, no real-life words). */
 export function allKeepsakeLines(): string[] {
   return Object.values(ASKS).flatMap((a) => [a.line, ...a.giveReply, ...a.notYetReply])
+}
+
+// ------------------------------------------------------------ the Echo camps
+
+/** What an Echo camp offers while you carry its person's keepsake. */
+export interface EchoKeepsakeOffer {
+  member: EchoMember
+  /** The keepsake item def (content/items.json `belongsTo`). */
+  def: string
+  /** The prompt at the camp, and the leave choice's text ("Leave the … here"). */
+  label: string
+  /** The camp's lines while you carry it and haven't left it yet. */
+  lines: string[]
+  /** The one short line for guests: the leave waits until they're signed in. */
+  guest: string
+  /** The leave choice's action (the server's `return` item op). */
+  action: string
+}
+
+/**
+ * What an Echo camp offers while you carry its person's keepsake and
+ * haven't left it yet: the leave choice and "not yet", which never closes
+ * the door. Null when nothing is carried, it has been left already
+ * (`returned:<def>`), or the camp keeps no keepsake (Dorrit has none).
+ * Guests get the offer's words but not the leave itself: the caller answers
+ * with `guest` instead of the choices, like the heirloom beats.
+ */
+export function echoKeepsakeOffer(member: EchoMember, flags: readonly string[], carried: readonly string[]): EchoKeepsakeOffer | null {
+  const keep = echoKeepsakeOf(member)
+  if (!keep) return null
+  if (!carried.includes(keep.def)) return null
+  if (flags.includes(`returned:${keep.def}`)) return null
+  return {
+    member,
+    def: keep.def,
+    label: keep.label,
+    lines: keep.offer,
+    guest: keep.guest,
+    action: keepsakeReturnAction(keep.def, member)
+  }
 }

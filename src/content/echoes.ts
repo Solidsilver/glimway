@@ -8,7 +8,7 @@
  * (src/content/papers.ts): nothing here says who survived the Lull Run; the
  * twins' Echoes (Bett's song, Tam's ox-words) wait until the road is lit.
  */
-import type { LocationInfo } from './world.ts';
+import type { JournalEntry, LocationInfo } from './world.ts';
 
 export const WILDS_OUTER: { id: 'outer-1'; location: LocationInfo } = {
   id: 'outer-1',
@@ -43,6 +43,32 @@ export interface EchoDef {
   east?: boolean;
   /** The found text this Echo gives back. */
   paper?: string;
+  /** A keepsake with no living owner that can be left at this camp. */
+  keepsake?: EchoKeepsake;
+}
+
+/**
+ * A keepsake with no living owner in the village, left at the person's Echo
+ * camp (docs/items/overview.md, "Returning keepsakes"): the camp's
+ * interaction offers to take it, the leave itself is the server's `return`
+ * item op (`keep:return:<def>:<member>`), and the echo settles a little
+ * softer for it. Only Bett's and Nan's keepsakes exist; Dorrit has none yet.
+ */
+export interface EchoKeepsake {
+  /** The keepsake item (content/items.json `belongsTo`). */
+  def: string;
+  /** The prompt at the camp, and the leave choice ("Leave the … here"). */
+  label: string;
+  /** The camp's lines while you carry it and haven't left it yet. */
+  offer: string[];
+  /** The one short line for guests: the leave waits until they're signed in. */
+  guest: string;
+  /** When the keep is left (the server's yes): the echo's own register. */
+  leave: string[];
+  /** The settle adds this when the keep came before the settling. */
+  softened: string;
+  /** The journal entry written the first time you leave it. */
+  journal: JournalEntry;
 }
 
 export const ECHOES: readonly EchoDef[] = [
@@ -86,6 +112,24 @@ export const ECHOES: readonly EchoDef[] = [
     ],
     late: true,
     paper: 'betts-flat-verse',
+    keepsake: {
+      def: 'beeswax-candle',
+      label: 'Leave the beeswax candle here',
+      offer: [
+        'Someone kept this bedroll, and keeps it still. In your pocket, the beeswax candle sits warm as a held hand, red yarn round its middle.',
+        'Never lit, saved for a birthday. It has come the long way round, and this is where it was going.',
+      ],
+      guest: 'The candle will keep in your pocket until you’re signed in to your world.',
+      leave: [
+        'You set the candle by the bedroll, wick towards the lamp, and the red yarn round its middle catches the light.',
+        'The song hums on, flat and content, and somewhere it is a birthday after all. The candle got where it was going.',
+      ],
+      softened: 'And by the bedroll, the candle stands where you left it — saved for a birthday, and the birthday kept.',
+      journal: {
+        title: 'Bett’s Candle',
+        body: 'Left at Bett Cooley’s camp in the Whitequiet: a beeswax candle saved for a birthday and never lit, red yarn round its middle. The verse hummed on, flat and content, and the camp felt less like waiting.',
+      },
+    },
   },
   {
     member: 'dorrit',
@@ -119,6 +163,24 @@ export const ECHOES: readonly EchoDef[] = [
       'You strike the flint. The trimmed wick takes at the first spark, the way a well-kept wick does.',
       'Close by, someone lets out a breath they have held a long time. A route mark in the bark beside the lamp reads, plainly: this way.',
     ],
+    keepsake: {
+      def: 'road-nails',
+      label: 'Leave the eleven road-nails here',
+      offer: [
+        'The wick is trimmed and the flint lies ready by the lamp. In your pack: eleven road-nails, stamped wheel and wave, lantern-post nails.',
+        'Nails for the posts of a road that still wants its posts. They could rest here, where the mending would start.',
+      ],
+      guest: 'The road-nails will keep in your pack until you’re signed in to your world.',
+      leave: [
+        'You lay the eleven road-nails out by the lamp, stamps up where the light can find them: wheel and wave, eleven times over.',
+        'The reaching hand stills. There is mending in the world again, and it knows where the nails are.',
+      ],
+      softened: 'By the lamp, the eleven road-nails lie counted and kept. Her stretch will hold, every post of it.',
+      journal: {
+        title: 'Nan’s Road-Nails',
+        body: 'Left at Nan Greer’s camp in the Whitequiet: eleven stamped road-nails, wheel and wave, laid by the lamp with the trimmed wick. The reaching hand stilled, as if the mending were promised.',
+      },
+    },
   },
 ];
 
@@ -128,6 +190,55 @@ export const ECHO_SETTLED_LINE = 'A settled camp. The owed lamp burns steady on 
 /** Story flag for a settled Echo (one per member, kept forever). */
 export function echoFlag(member: EchoMember): string {
   return `echo:${member}`;
+}
+
+/** Story flag for a keepsake left at the person's camp (the server sets it with `returned:`). */
+export function echoSoftenedFlag(member: EchoMember): string {
+  return `echo:${member}:softened`;
+}
+
+// ------------------------------------------------------------ left keepsakes
+
+/** The keep that can be left at this member's camp, if any (Dorrit has none yet). */
+export function echoKeepsakeOf(member: EchoMember): EchoKeepsake | null {
+  return ECHOES.find((e) => e.member === member)?.keepsake ?? null;
+}
+
+/** The echo and its keep, by item def (null for the living owners' keepsakes). */
+export function echoForKeepsake(def: string): { echo: EchoDef; keep: EchoKeepsake } | null {
+  for (const e of ECHOES) if (e.keepsake && e.keepsake.def === def) return { echo: e, keep: e.keepsake };
+  return null;
+}
+
+/** Who speaks when a keep is left: the echo while it still waits, the camp after. */
+export function echoCampSpeaker(member: EchoMember, settled: boolean): string {
+  const name = ECHOES.find((e) => e.member === member)?.name ?? member;
+  return settled ? `${name}’s Echo Camp` : `An Echo — ${name}`;
+}
+
+/**
+ * Journal entries for keepsakes already left (the `returned:<def>` flags;
+ * one per keep, and leaving is one-time). Pure: callers pass the save's flags.
+ */
+export function echoKeepsakeJournalEntries(flags: readonly string[]): JournalEntry[] {
+  const out: JournalEntry[] = [];
+  for (const e of ECHOES) {
+    if (e.keepsake && flags.includes(`returned:${e.keepsake.def}`)) out.push({ ...e.keepsake.journal });
+  }
+  return out;
+}
+
+/** Every line authored for the camps' keepsakes (tests: canon voice, length, in-world). */
+export function allEchoKeepsakeLines(): string[] {
+  return ECHOES.flatMap((e) => {
+    const k = e.keepsake;
+    return k ? [k.label, ...k.offer, k.guest, ...k.leave, k.softened] : [];
+  });
+}
+
+/** Every keepsake journal entry (tests). */
+export function allEchoKeepsakeJournal(): JournalEntry[] {
+  return ECHOES.flatMap((e) => (e.keepsake ? [{ ...e.keepsake.journal }] : []));
 }
 
 // ------------------------------------------------------------ given-back places
