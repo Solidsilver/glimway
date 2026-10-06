@@ -250,6 +250,10 @@
     {
       "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/content/residents.ts", "src/game/entities/homesteads.ts"],
       "specs": ["talk.spec.ts"]
+    },
+    {
+      "paths": ["src/game/heirloom-beats.ts", "src/game/seats.ts", "src/game/hero-motion.ts", "src/lib/habitica/sprite-cache.ts", "server/internal/api/sprites.go"],
+      "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
     }
   ]
 }

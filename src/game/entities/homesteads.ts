@@ -25,7 +25,10 @@ import type { Dialogue, DialogueChoice } from '../../content/world'
 import { shortTalk } from '../../content/talk'
 import { heardStory, markStory } from '../heard'
 import { paperFlag } from '../../content/papers'
-import { HEIRLOOMS, HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
+import { HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
+import { heirloomBeat } from '../heirloom-beats'
+import { EMPTY_CHAIR_LINE, SEAT_LINES } from '../../content/touches'
+import { KEPT_EMPTY, decoSeat, isSeatItem, type ArtBox, type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
@@ -71,6 +74,8 @@ export interface HomesteadDeps {
   solidGroup: Phaser.Physics.Arcade.StaticGroup
   interactables: Interactables
   hero: () => Phaser.Physics.Arcade.Sprite
+  /** The hero, to sit on a placed seat (and stand back up). */
+  sitter: () => { readonly isSeated: boolean; sit(pose: SeatPose): void; standUp(): void }
   /** In a cottage: which gate's homestead it stands on. */
   room: { gate: number } | null
   /** Walk into a cottage (the scene fades and rebuilds). */
@@ -123,6 +128,10 @@ export class HomesteadLayer implements InteractionProvider {
   private arrange: ArrangeView = { available: false, scene: null, tier: 0 }
   private arrangeTimer = 0
   private idleLine = Math.floor(Math.random() * SILAS.dialogue.idleLines.length)
+  /** The next sit line for a placed seat (cycling). */
+  private seatLine = 0
+  /** Each seat art's opaque box, by texture and frame (seatPose). */
+  private opaque = new Map<string, { l: number; t: number; r: number; b: number }>()
   /** The way to your gate (Commons): a bobbing marker over it and an arrow at the screen's edge. */
   private guide: { marker: Phaser.GameObjects.Image; arrow: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text } | null = null
   private shade: Phaser.GameObjects.Graphics | null = null
@@ -744,6 +753,66 @@ export class HomesteadLayer implements InteractionProvider {
     return { x: ox + (it.x ?? 0) * TILE + (fw * TILE) / 2, y: oy + ((it.y ?? 0) + fh) * TILE - 4 }
   }
 
+  /**
+   * Placed seats (stools, chairs) anyone here can sit on, like the village
+   * benches; the Empty Chair is only looked at.
+   */
+  private seatPoints(home: HomeView, scene: HomeScene): Interactable[] {
+    const out: Interactable[] = []
+    for (const it of home.items) {
+      if (it.scene !== scene || it.x === null || it.y === null) continue
+      if (it.itemDef === KEPT_EMPTY) {
+        out.push({ id: `home:seat:${it.id}`, ...this.decoSpot(it, scene), label: 'Look at the Empty Chair' })
+      } else if (isSeatItem(it.itemDef)) {
+        out.push({ id: `home:seat:${it.id}`, ...this.decoSpot(it, scene), label: `Sit ${it.itemDef === 'wooden-stool' ? 'on the stool' : 'in the reading chair'}` })
+      }
+    }
+    return out
+  }
+
+  /** Where the hero sits on a placed seat (src/game/seats.ts): on the art drawn for it. */
+  private seatPose(it: HomeInstance): SeatPose | null {
+    const img = this.homeDrawn.objects.find((o): o is Phaser.GameObjects.Image => o instanceof Phaser.GameObjects.Image && o.getData('instance') === it.id)
+    return img ? decoSeat(it.itemDef, this.artBox(img), img.depth) : null
+  }
+
+  /** The opaque part of a drawn image, in world px (the texture's alpha, read once per frame name). */
+  private artBox(img: Phaser.GameObjects.Image): ArtBox {
+    const f = img.frame
+    const id = `${img.texture.key}:${f.name}`
+    let b = this.opaque.get(id)
+    if (!b) {
+      b = { l: f.width, t: f.height, r: 0, b: 0 }
+      for (let y = 0; y < f.height; y++)
+        for (let x = 0; x < f.width; x++) {
+          if ((this.scene.textures.getPixelAlpha(x, y, img.texture.key, f.name) ?? 0) === 0) continue
+          b = { l: Math.min(b.l, x), t: Math.min(b.t, y), r: Math.max(b.r, x + 1), b: Math.max(b.b, y + 1) }
+        }
+      if (b.r <= b.l) b = { l: 0, t: 0, r: f.width, b: f.height }
+      this.opaque.set(id, b)
+    }
+    const x0 = img.x - img.displayWidth * img.originX
+    const y0 = img.y - img.displayHeight * img.originY
+    const [l, r] = img.flipX ? [f.width - b.r, f.width - b.l] : [b.l, b.r]
+    return { left: x0 + l * img.scaleX, right: x0 + r * img.scaleX, top: y0 + b.t * img.scaleY, bottom: y0 + b.b * img.scaleY }
+  }
+
+  /** Sit on a placed seat, or stand back up from it. */
+  private useSeat(itemId: string): void {
+    const sitter = this.deps.sitter()
+    if (sitter.isSeated) return sitter.standUp()
+    const it = this.here()?.items.find((i) => i.id === itemId)
+    if (!it || it.scene === null) return
+    if (it.itemDef === KEPT_EMPTY) return this.say({ speaker: 'The Empty Chair', lines: [EMPTY_CHAIR_LINE] })
+    const pose = this.seatPose(it)
+    if (!pose) return
+    sitter.sit(pose)
+    sfx('settle')
+    const lines = SEAT_LINES[it.itemDef] ?? []
+    const n = this.seatLine++
+    if (lines.length) bus.emit(EV.toast, { text: lines[n % lines.length], icon: 'sparkle', kind: 'thought' })
+  }
+
   private interactionList(): Interactable[] {
     const out: Interactable[] = []
     if (this.deps.room) {
@@ -757,6 +826,7 @@ export class HomesteadLayer implements InteractionProvider {
           if (it.itemDef !== 'writing-desk' || it.scene !== 'indoor' || it.x === null || it.y === null) continue
           out.push({ id: `home:desk:${it.id}`, ...this.decoSpot(it, 'indoor'), label: 'Sit at the desk' })
         }
+        out.push(...this.seatPoints(home, 'indoor'))
       }
       if (home && home.tier >= 2) {
         out.push({ id: 'home:chest', x: ROOM_CHEST.x, y: 60, label: home.member ? 'Open the chests' : 'Look at the chest' })
@@ -787,6 +857,7 @@ export class HomesteadLayer implements InteractionProvider {
         if (it.itemDef !== 'woodpile' || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
         out.push({ id: `home:woodpile:${it.id}`, ...this.decoSpot(it, 'outdoor'), label: 'Tend the woodpile' })
       }
+      out.push(...this.seatPoints(home, 'outdoor'))
       return out
     }
     if (!this.commons) return out
@@ -877,6 +948,7 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   label(id: InteractId): string | null {
+    if (id.startsWith('home:seat:') && this.deps.sitter().isSeated) return 'Stand up'
     if (id === 'home:bed') return `Rest at your bedroll · ${checkSpend(this.deps.session.state, { kind: 'home-rest' }).cost} ember`
     if (id === 'home:hearth' && this.ownRoom()) return `Rest by your hearth · ${checkSpend(this.deps.session.state, { kind: 'home-rest' }).cost} ember`
     return null
@@ -887,6 +959,10 @@ export class HomesteadLayer implements InteractionProvider {
     if (id === 'home:bed' || id === 'home:hearth') return 'Rest'
     if (id === 'home:cook') return 'Cook'
     if (id.startsWith('home:desk:')) return 'Sit'
+    if (id.startsWith('home:seat:')) {
+      if (this.deps.sitter().isSeated) return 'Stand'
+      return this.here()?.items.find((i) => `home:seat:${i.id}` === id)?.itemDef === KEPT_EMPTY ? 'Look' : 'Sit'
+    }
     if (id.startsWith('home:woodpile:')) return 'Stack'
     if (id === SILAS_ID) return 'Talk'
     if (id.startsWith('home:shelf:')) return 'Look'
@@ -938,6 +1014,7 @@ export class HomesteadLayer implements InteractionProvider {
       bus.emit(VILLAGE_EV.open, home?.member || !other ? { panel: 'mail' } : { panel: 'mail', to: other.id })
       return
     }
+    if (id.startsWith('home:seat:')) return this.useSeat(id.slice('home:seat:'.length))
     if (id.startsWith('home:desk:')) {
       if (!this.ownRoom() || !this.homes.connected) {
         return this.say({ speaker: 'A writing desk', lines: ['A slant-top desk, a jar of quills, rag paper. Its owner copies out pages here.'] })
@@ -1103,18 +1180,22 @@ export class HomesteadLayer implements InteractionProvider {
     const first = !s.state.flags.includes(HOME_FLAGS.met)
     s.addFlag(HOME_FLAGS.met)
 
-    const canAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe') && !itemsFor(s).isGrantInFlight('brack-felling-axe')
-    const axeChoice: DialogueChoice = { text: 'Take the Brack felling axe', action: 'heirloom:grant:brack-felling-axe' }
-    const axeLines = canAxe ? HEIRLOOMS['brack-felling-axe'].dialogueLines : []
+    // The axe is offered only when Silas can hand it over now (the server's
+    // checks, from where you stand); otherwise he says why instead.
+    const axe = this.homes.connected ? heirloomBeat(s, 'brack-felling-axe', 'Take the Brack felling axe') : null
+    const canAxe = !!axe?.choices.length
+    const axeChoice = axe?.choices[0] as DialogueChoice
+    const axeLines = axe?.lines ?? []
 
     if (!this.homes.connected) {
+      const guestAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe')
       const deeds = ['Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.']
       const told = this.toldBefore('guest', first, deeds)
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : [lines.idleLines[this.nextIdle()]]),
-          ...(canAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
+          ...(guestAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
           ...told.lines
         ],
         choices: told.choices

@@ -137,6 +137,32 @@ behavior). `avatarLayersFor` implements exactly this split.
   runtime can enforce the boundary. URL builders apply
   `encodeURIComponent` to sprite names.
 
+### Outfit pieces the bundle lacks (playtest 1)
+
+Every real account wears something the 41-file bundle doesn't have, so
+'remote' pieces are fetched, not left off:
+
+- **Server:** `GET /api/sprites/{name}.{png|gif}`
+  (`server/internal/api/sprites.go`) fetches the sprite from Habitica's
+  sprite host the first time anyone needs it and keeps it on disk
+  (`-sprite-cache`, default `habitica-sprites/` beside the database).
+  Allow-listed: one host (`-habitica-assets-url`, redirects never
+  followed); only sprite names the catalog knows (`knownSprites`, the same
+  rules as `assetSourceFor`, with the upstream extension); only PNG/GIF
+  bytes (checked by signature; some GIFs come typed `octet-stream`), at
+  most 256 KB. Upstream 403/404 is remembered for an hour; concurrent asks
+  share one fetch; at most four upstream fetches at once. Answers are
+  `Cache-Control: public, max-age=31536000, immutable`. Nothing from the
+  player's request goes upstream: no cookies, no headers, no Habitica
+  credentials.
+- **Client:** `src/lib/habitica/sprite-cache.ts` asks the proxy (same
+  origin, so WebGL-safe) and keeps each piece in Cache Storage
+  (`fs-habitica-sprites-v1`), so a reload or a new visit draws it without
+  asking again. `src/game/avatar-render.ts resolveLayers` uses it for every
+  'remote' layer of the hero, other players and companions; only a piece
+  that can't be had (no server, or none upstream) is left off, with the
+  notice.
+
 ## Tests
 
 `tests/habitica-assets.test.ts` (15 tests): catalog provenance/completeness,

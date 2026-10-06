@@ -18,6 +18,7 @@ import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoCampSpeaker, echoFlag, echoSo
 import { paperFlag } from '../../content/papers.ts'
 import { HEIRLOOMS, HEIRLOOM_GUEST_LINES } from '../../content/heirlooms.ts'
 import { itemsFor } from '../items'
+import { heirloomBeat } from '../heirloom-beats'
 import { echoKeepsakeOffer, type EchoKeepsakeOffer } from '../keepsakes'
 import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
 import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
@@ -490,16 +491,15 @@ export class WildsSites {
       })
       return
     }
-    if (itemsFor(session).isGrantInFlight('nans-lamplighter-pole')) return
+    // Offered only when the pole can come away now; otherwise the camp says why.
+    const beat = heirloomBeat(session, 'nans-lamplighter-pole', 'Take the lamplighter pole')
+    if (!beat) return
     uiState.dialogueOpen = true
     bus.emit(EV.dialogue, {
       id: 'wilds-heirloom:nans-lamplighter-pole',
       speaker: h.speaker,
-      lines: [...h.dialogueLines],
-      choices: [
-        { text: 'Take the lamplighter pole', action: 'heirloom:grant:nans-lamplighter-pole' },
-        { text: 'Not yet' }
-      ]
+      lines: beat.lines,
+      choices: beat.choices.length ? [...beat.choices, { text: 'Not yet' }] : undefined
     })
   }
 

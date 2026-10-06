@@ -26,7 +26,8 @@ import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
 import { HOME_EV } from '../homestead'
-import { HEIRLOOMS, HEIRLOOM_GUEST_LINES, countAdaOilGifts } from '../../content/heirlooms'
+import { HEIRLOOM_GUEST_LINES, NORTH_BRIDGE_DONE, countAdaOilGifts } from '../../content/heirlooms'
+import { heirloomBeat } from '../heirloom-beats'
 import type { PaperPickups } from './papers'
 
 export interface Interactable {
@@ -344,18 +345,21 @@ export class Interactables {
     }
 
     // Heirloom beats: Orrin's mason pick and Ada's garden spade
-    if (target.id === 'orrin' && this.village.hasWorldFlag('project:north-bridge:complete') && !session.state.flags.includes('heirloom:orrins-mason-pick')) {
+    if (target.id === 'orrin' && this.village.hasWorldFlag(NORTH_BRIDGE_DONE) && !session.state.flags.includes('heirloom:orrins-mason-pick')) {
       if (!session.link) {
         payload = {
           ...payload,
           lines: [...payload.lines, HEIRLOOM_GUEST_LINES.orrin]
         }
-      } else if (!itemsFor(session).isGrantInFlight('orrins-mason-pick')) {
-        const h = HEIRLOOMS['orrins-mason-pick']
-        payload = {
-          ...payload,
-          lines: [...payload.lines, ...h.dialogueLines],
-          choices: withChoiceAndNotYet(payload.choices, { text: 'Take Orrin’s mason pick', action: 'heirloom:grant:orrins-mason-pick' })
+      } else {
+        // Offered only when Orrin can hand it over now; otherwise he says why.
+        const beat = heirloomBeat(session, 'orrins-mason-pick', 'Take Orrin’s mason pick', [NORTH_BRIDGE_DONE])
+        if (beat) {
+          payload = {
+            ...payload,
+            lines: [...payload.lines, ...beat.lines],
+            choices: beat.choices.length ? withChoiceAndNotYet(payload.choices, beat.choices[0]) : payload.choices
+          }
         }
       }
     } else if (target.id === 'ada') {
@@ -366,12 +370,14 @@ export class Interactables {
             ...payload,
             lines: [...payload.lines, HEIRLOOM_GUEST_LINES.adaSpade]
           }
-        } else if (!itemsFor(session).isGrantInFlight('ada-garden-spade')) {
-          const h = HEIRLOOMS['ada-garden-spade']
-          payload = {
-            ...payload,
-            lines: [...payload.lines, ...h.dialogueLines],
-            choices: withChoiceAndNotYet(payload.choices, { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' })
+        } else {
+          const beat = heirloomBeat(session, 'ada-garden-spade', 'Take Ada’s garden spade')
+          if (beat) {
+            payload = {
+              ...payload,
+              lines: [...payload.lines, ...beat.lines],
+              choices: beat.choices.length ? withChoiceAndNotYet(payload.choices, beat.choices[0]) : payload.choices
+            }
           }
         }
       } else if (gifts < 3) {

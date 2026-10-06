@@ -43,7 +43,8 @@ import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { echoSettled } from '../../lib/wilds/stories'
 import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
-import { HEIRLOOMS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
+import { HEIRLOOMS, HEIRLOOM_IDS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
+import { heirloomBeat, sayHeirloomRefusal } from '../heirloom-beats'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
 import { Thoughts } from '../entities/thoughts'
@@ -265,7 +266,7 @@ export class WorldScene extends Phaser.Scene {
       },
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
-    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero })
+    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero)
     ;(window as unknown as { __fsOffHand?: () => string | null }).__fsOffHand = () => this.offHand?.showing ?? null
     this.npcs = new Npcs(this, this.world)
@@ -320,6 +321,7 @@ export class WorldScene extends Phaser.Scene {
         solidGroup: this.solidGroup,
         interactables: this.interactables,
         hero: () => this.hero.sprite,
+        sitter: () => this.hero,
         room: this.room ? { gate: this.room.gate } : null,
         enterRoom: (gate, doorstep) => this.enterRoom(gate, doorstep),
         rebuild: () => this.rebuildArea()
@@ -579,6 +581,11 @@ export class WorldScene extends Phaser.Scene {
           : { x: Math.round(x), y: Math.round(y) }
         this.session.saveSoon()
       }
+      // Write a spot into the save without moving the hero: the stale sample
+      // an open conversation leaves behind (playtest 1, Silas's axe).
+      w.__fsDevStalePosition = (x: number, y: number) => {
+        this.session.state.position = { x: Math.round(x), y: Math.round(y) }
+      }
       // Take the saved-position sample every frame, so a playtest can make
       // the exit check and the sample meet in one frame (bugs #2).
       w.__fsDevSampleEveryFrame = (on: boolean) => {
@@ -656,13 +663,22 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     // Read-only seat snapshot for playtests (a bench in the village or Commons).
-    ;(window as unknown as { __fsSeat?: () => { seated: boolean; bonus: number; mana: number; maxMana: number; x: number; y: number } }).__fsSeat = () => ({
+    // Seated: the seat's pose and the depths drawn at (the hero's and the
+    // layered avatar's), so a playtest can check the hero sits on the seat.
+    ;(window as unknown as { __fsSeat?: () => unknown }).__fsSeat = () => ({
       seated: this.hero.isSeated,
       bonus: this.hero.seatedBonus,
       mana: Math.floor(this.session.state.mana),
       maxMana: this.session.state.maxMana,
       x: this.hero.sprite.x,
-      y: this.hero.sprite.y
+      y: this.hero.sprite.y,
+      seat: this.hero.seat ? { x: this.hero.seat.x, y: this.hero.seat.y, depth: this.hero.seat.depth, facing: this.hero.seat.facing } : null,
+      heroDepth: this.hero.sprite.depth,
+      heroScale: { x: this.hero.sprite.scaleX, y: this.hero.sprite.scaleY },
+      heroCrop: this.hero.sprite.isCropped,
+      avatar: this.avatar.container
+        ? { x: this.avatar.container.x, y: this.avatar.container.y, depth: this.avatar.container.depth, scaleX: this.avatar.container.scaleX, scaleY: this.avatar.container.scaleY, ...this.avatar.pose }
+        : null
     })
     // Read-only avatar/combat diagnostics for verification (no mutation).
     ;(window as unknown as { __fsDebug?: () => Record<string, unknown> }).__fsDebug = () => ({
@@ -980,6 +996,8 @@ export class WorldScene extends Phaser.Scene {
     this.samplePresence()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
+      // Still breathing while a conversation or panel holds the screen.
+      this.avatar.update(time)
       this.interactables.hideKeyHint()
       this.goalGuide.update(dt, this.hero.sprite, false)
       this.gathering?.updateHint(dt, this.hero.sprite, false, false)
@@ -1489,11 +1507,15 @@ export class WorldScene extends Phaser.Scene {
 
   private grantHeirloom(id: string): void {
     const items = itemsFor(this.session)
-    if (!this.session.link) return
+    if (!this.session.link || !(HEIRLOOM_IDS as readonly string[]).includes(id)) return
+    // The server measures reach from where you stand: that rides along now,
+    // not the spot noted before the conversation opened.
+    this.notePosition()
     void items.grantHeirloom(id).then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        // The giver says why, in the conversation.
+        sayHeirloomRefusal(id as HeirloomId, r.code)
         return
       }
       const h = HEIRLOOMS[id as HeirloomId]
@@ -1524,6 +1546,8 @@ export class WorldScene extends Phaser.Scene {
   private giveAdaOil(): void {
     const items = itemsFor(this.session)
     if (!this.session.link) return
+    // Ada checks you stand by her window: where you stand now rides along.
+    this.notePosition()
     void items.giveAdaOil().then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
@@ -1532,16 +1556,16 @@ export class WorldScene extends Phaser.Scene {
       }
       const count = r.value.adaOilCount ?? countAdaOilGifts(this.session.state.flags)
       if (count >= 3) {
-        const h = HEIRLOOMS['ada-garden-spade']
-        bus.emit(EV.dialogue, {
-          id: 'ada-spade-grant',
-          speaker: h.speaker,
-          lines: [...h.dialogueLines],
-          choices: [
-            { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' },
-            { text: 'Not yet' }
-          ]
-        })
+        // The third flask: the spade, offered only if it can be handed over now.
+        const beat = heirloomBeat(this.session, 'ada-garden-spade', 'Take Ada’s garden spade')
+        if (beat) {
+          bus.emit(EV.dialogue, {
+            id: 'ada-spade-grant',
+            speaker: HEIRLOOMS['ada-garden-spade'].speaker,
+            lines: beat.lines,
+            choices: beat.choices.length ? [...beat.choices, { text: 'Not yet' }] : undefined
+          })
+        }
       } else {
         const reply = ADA_OIL_REPLIES[count] ?? ['Good oil for the window. Thank you.']
         bus.emit(EV.dialogue, {
