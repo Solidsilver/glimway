@@ -265,45 +265,33 @@ func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
 	}
 }
 
-func TestWardenSliverStoryGrantOnGuardianDefeated(t *testing.T) {
+// Settling the Warden is a story beat only (owner's pacing decision): the
+// quest gift still lands, but no warden-stone sliver comes with it, then or
+// on any later upload. Slivers are deep-country finds.
+func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
 	doc := s.State
-	doc.Quest = "guardian-defeated"
-
-	// Uploading progress with quest stage "guardian-defeated" triggers sliver grant.
-	res := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
-	s.Snapshot = res.Snapshot
-
-	items := x.items("GET", "/api/items", nil, c, 200)
-	sliverCount := 0
-	for _, inst := range items.Items.Instances {
-		if inst.ItemDef == "warden-sliver" {
-			sliverCount++
+	for _, stage := range []string{"guardian-defeated", "complete"} {
+		doc.Quest = stage
+		res := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
+		s.Snapshot = res.Snapshot
+		items := x.items("GET", "/api/items", nil, c, 200)
+		for _, inst := range items.Items.Instances {
+			if inst.ItemDef == "warden-sliver" {
+				t.Fatalf("%s: settling the Warden granted a sliver", stage)
+			}
 		}
 	}
-	if sliverCount != 1 {
-		t.Fatalf("expected 1 warden-sliver granted from story, found %d", sliverCount)
+	if count(t, x.db, "SELECT count(*) FROM outcomes WHERE habitica_id='alice' AND outcome_id='quest-gift:warden-sliver'") != 0 {
+		t.Fatal("a story sliver outcome was recorded")
 	}
-
-	// Verify outcome recorded.
-	if count(t, x.db, "SELECT count(*) FROM outcomes WHERE habitica_id='alice' AND outcome_id='quest-gift:warden-sliver'") != 1 {
-		t.Fatal("expected outcome quest-gift:warden-sliver recorded")
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND currency=?", content.StackCurrency("warden-sliver")) != 0 {
+		t.Fatal("a sliver ledger row was written")
 	}
-
-	// Progress upload again does not grant a second sliver.
-	res2 := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
-	s.Snapshot = res2.Snapshot
-	items2 := x.items("GET", "/api/items", nil, c, 200)
-	sliverCount2 := 0
-	for _, inst := range items2.Items.Instances {
-		if inst.ItemDef == "warden-sliver" {
-			sliverCount2++
-		}
-	}
-	if sliverCount2 != 1 {
-		t.Fatalf("sliver was duplicated: %d", sliverCount2)
+	if count(t, x.db, "SELECT count(*) FROM outcomes WHERE habitica_id='alice' AND outcome_id='quest-gift:defeat-guardian'") != 1 {
+		t.Fatal("the quest's ember gift should still land")
 	}
 
 	x.conserved("alice")

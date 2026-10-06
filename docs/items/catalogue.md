@@ -107,7 +107,7 @@ All three do the same thing (second pocket); the choice is looks. One is enough.
 | `green-ash-haft` | Green-ash haft | **Heft** (lighter, faster, less tiring) | Ash trees, now and then, when chopping | Pale straight haft |
 | `amber-bead` | Amber bead | **Glow** (a faint light in the dark) | Polished at the bench from amber | Glowing orange bead |
 | `waxed-cord` | Waxed cord | **Grip** (rarely dropped; quieter near wisps) | Bench: fiber and beeswax | Coil of cord |
-| `warden-sliver` | Warden-stone sliver | **Remember** (never breaks; dulls and heals) | Very rare: deep Tangle, the Whitequiet; perhaps one when the Warden is settled | Grey stone chip with an amber fleck |
+| `warden-sliver` | Warden-stone sliver | **Remember** (never breaks; dulls and heals) | Very rare: deep Tangle, the Whitequiet only (settling the Warden is a story beat; it gives none) | Grey stone chip with an amber fleck |
 
 ### Repair parts and building parts (bench)
 

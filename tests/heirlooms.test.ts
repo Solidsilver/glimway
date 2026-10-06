@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   HEIRLOOMS,
   HEIRLOOM_IDS,
@@ -11,7 +12,15 @@ import {
   allHeirloomLines,
   allHeirloomJournal,
   type HeirloomId,
+  HEIRLOOM_REFUSALS,
+  NORTH_BRIDGE_DONE,
+  RESIDENT_REACH_TILES,
+  heirloomReadiness,
+  heirloomRefusalFor,
+  heirloomRefusalLine,
+  type HeirloomContext,
 } from '../src/content/heirlooms.ts';
+import { ITEM_RULES } from '../src/lib/items.ts';
 
 test('all four heirlooms are defined with canon details', () => {
   assert.equal(HEIRLOOM_IDS.length, 4);
@@ -99,4 +108,69 @@ test('allHeirloomLines and allHeirloomJournal gather all authored text', () => {
 
   const journals = allHeirloomJournal();
   assert.equal(journals.length, 4);
+});
+
+// ------------------------------------------------------------ playtest 1: offers the server will grant
+
+
+const centre = (t: { tx: number; ty: number }) => ({ x: t.tx * 16 + 8, y: t.ty * 16 + 8 });
+const silasRow = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
+const orrinRow = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;
+const adaRow = ITEM_RULES.residents.find((r) => r.id === 'ada')!;
+
+function ctx(over: Partial<HeirloomContext>): HeirloomContext {
+  return { area: 'commons', ...centre(silasRow), flags: [], worldFlags: [], online: true, inFlight: false, ...over };
+}
+
+test('Silas offers the axe only where and when the server grants it', () => {
+  const knows = ['echo:hollis'];
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows })), { ok: true });
+  // No beat at all before Hollis's name is known, or once the axe is given.
+  assert.equal(heirloomReadiness('brack-felling-axe', ctx({})), null);
+  assert.equal(heirloomReadiness('brack-felling-axe', ctx({ flags: [...knows, 'heirloom:brack-felling-axe'] })), null);
+  // The server's radius (the mender row's radiusTiles), measured from the row's tile centre.
+  const at = centre(silasRow);
+  const r = silasRow.radiusTiles * 16;
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, x: at.x + r, y: at.y })), { ok: true });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, x: at.x + r + 1, y: at.y })), { ok: false, why: 'too-far' });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, area: 'village' })), { ok: false, why: 'too-far' });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, online: false })), { ok: false, why: 'offline' });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, inFlight: true })), { ok: false, why: 'busy' });
+});
+
+test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', () => {
+  const orrin = { area: orrinRow.area, ...centre(orrinRow) };
+  assert.equal(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin })), null, 'the bridge must stand first');
+  assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: true });
+  assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, x: orrin.x, y: orrin.y + orrinRow.radiusTiles * 16 + 2, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: false, why: 'too-far' });
+
+  const ada = { area: adaRow.area, ...centre(adaRow) };
+  assert.equal(heirloomReadiness('ada-garden-spade', ctx({ ...ada, flags: ['ada-oil-gifts:2'] })), null);
+  assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, flags: ['ada-oil-gifts:3'] })), { ok: true });
+  assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, x: ada.x - RESIDENT_REACH_TILES * 16 - 1, flags: ['ada-oil-gifts:3'] })), { ok: false, why: 'too-far' });
+
+  assert.equal(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'wilds' })), null, 'Nan\'s echo must be settled');
+  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'wilds', flags: ['echo:nan'] })), { ok: true });
+  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'village', flags: ['echo:nan'] })), { ok: false, why: 'too-far' });
+});
+
+test('the resident reach is the server\'s, and every server refusal has a giver\'s reply', () => {
+  const go = readFileSync(new URL('../server/internal/api/items.go', import.meta.url), 'utf8');
+  assert.equal(Number(/const residentReachTiles = (\d+)/.exec(go)?.[1]), RESIDENT_REACH_TILES);
+  // grantHeirloom's codes, as the giver hears them.
+  assert.equal(heirloomRefusalFor('too-far-away'), 'too-far');
+  assert.equal(heirloomRefusalFor('condition-unmet'), 'not-yet');
+  assert.equal(heirloomRefusalFor('already-granted'), 'granted');
+  assert.equal(heirloomRefusalFor('offline'), 'offline');
+  assert.equal(heirloomRefusalFor('busy'), 'busy');
+  assert.equal(heirloomRefusalFor('internal'), 'failed');
+  for (const id of HEIRLOOM_IDS) {
+    for (const why of ['too-far', 'not-yet', 'granted', 'offline', 'busy', 'failed'] as const) {
+      const { speaker, line } = heirloomRefusalLine(id, why);
+      assert.equal(speaker, HEIRLOOMS[id].speaker, 'the giver says it, in the conversation');
+      assert.ok(line.length > 0 && line.length <= 160, `${id}/${why}: ${line}`);
+      assert.ok(allHeirloomLines().includes(line));
+    }
+    assert.equal(Object.keys(HEIRLOOM_REFUSALS[id]).length, 6);
+  }
 });
