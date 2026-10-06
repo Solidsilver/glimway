@@ -52,3 +52,23 @@ at hundreds of busy sockets.
 
 Before any of these, measure: a small load test that simulates N players heartbeating,
 uploading progress and walking around with presence.
+
+## Wire format: protobuf or shared schemas (idea, 2026-10-06)
+
+The owner asked about protobuf for bandwidth, speed and shared FE/BE types.
+
+- **Where it helps:** presence is the one hot path (positions at 8 Hz, fanned out to up
+  to 31 others per room). A JSON position message is maybe 60–100 bytes, and protobuf
+  would make it perhaps 15–25, which cuts bytes and server encoding CPU at full rooms.
+  Shared generated types would also stop Go/TS drift. This week's bugs included new
+  error codes the client didn't know and response fields parsed differently.
+- **Where it helps little or costs:** REST traffic is low-frequency and dominated by
+  latency and SQLite commits; gzip already shrinks JSON well. Idempotent replays store
+  byte-identical JSON responses, progress is JSON in SQLite, and the parity vectors are
+  JSON. JSON is readable in dev tools, logs and e2e tests. Protobuf adds a browser
+  runtime and a codegen step for both sides.
+- **Suggested path if ever done:** (1) binary presence only, as protobuf or a tiny
+  hand-packed format, which is where nearly all the bytes are; (2) shared types for the
+  REST API from one schema, either protobuf with its JSON mapping on the wire (keeps
+  stored replays and debuggability) or a JSON-native schema (JSON Schema or TypeSpec)
+  that generates Go and TypeScript.
