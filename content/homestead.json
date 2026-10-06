@@ -423,7 +423,7 @@
         1
       ],
       "where": [
-        "outdoor"
+        "gate"
       ],
       "minTier": 1,
       "embers": 3,

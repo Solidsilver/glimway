@@ -44,6 +44,14 @@
     },
     {
       "paths": [
+        "src/ui/GateShelfPanel.svelte",
+        "server/internal/api/gifts_test.go",
+        "e2e/gifts.spec.ts"
+      ],
+      "specs": ["gifts.spec.ts"]
+    },
+    {
+      "paths": [
         "server/internal/api/crafting.go",
         "src/ui/HearthPanel.svelte",
         "src/ui/DeskPanel.svelte",

@@ -56,6 +56,12 @@ test('gate slots sit exactly where the shared layout (and the server) put them, 
   }
 });
 
+test('west gate shelf and neighbouring gate sign have separate prompt positions', () => {
+  const shelf = gateSlot(0).shelf;
+  const sign = gateSlot(2).sign;
+  assert.ok(Math.hypot(shelf.tx - sign.tx, shelf.ty - sign.ty) > 1);
+});
+
 test('the lane grows a row of gates at a time and always shows spares', () => {
   const rows = HOMESTEAD_DATA.commons.gateRows.length;
   assert.equal(commonsRows(0), rows);

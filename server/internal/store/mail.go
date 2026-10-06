@@ -23,6 +23,9 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if claimed.Valid || returned.Valid {
 		return false, nil
 	}
+	if kind == "thanks" {
+		return false, nil
+	}
 	result, err := tx.ExecContext(ctx, "UPDATE mail SET returned_at=?,return_reason=? WHERE id=? AND claimed_at IS NULL AND returned_at IS NULL", now, reason, id)
 	if err != nil {
 		return false, err
@@ -123,6 +126,8 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 				}
 			}
 		}
+	case "thanks":
+		// Thanks mail has no items or instances attached.
 	default:
 		return false, fmt.Errorf("invalid mail asset")
 	}
@@ -130,12 +135,14 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if reason == "recalled" {
 		ledgerReason = "mail-recall"
 	}
-	for _, delta := range []struct {
-		currency string
-		amount   int
-	}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
-		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
-			return false, err
+	if kind != "thanks" {
+		for _, delta := range []struct {
+			currency string
+			amount   int
+		}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
+				return false, err
+			}
 		}
 	}
 	if bumpRevision {
@@ -159,7 +166,7 @@ func ReturnDueMailTx(ctx context.Context, tx *sql.Tx, now int64, participant str
 		filter = " AND (m.from_id=? OR m.to_id=?)"
 		args = append(args, participant, participant)
 	}
-	returnDue := `(m.sent_at<=? OR NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=m.to_id) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=m.to_id))`
+	returnDue := `m.kind!='thanks' AND (m.sent_at<=? OR NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=m.to_id) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=m.to_id))`
 	return returnMailBatch(ctx, tx, now, returnDue+filter, args)
 }
 func returnMailBatch(ctx context.Context, tx *sql.Tx, now int64, filter string, args []any) (int, error) {

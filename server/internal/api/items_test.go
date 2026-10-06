@@ -460,15 +460,18 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	if v.Result.Used != "keepers-twists" || v.State.HP != hp+10 || stackQty(v.Result.Items, "keepers-twists") != 2 {
 		t.Fatal("twist", v.State.HP)
 	}
-	// Bob was away: a quiet thank-you waits for him.
-	if th := x.items("GET", "/api/items", nil, bc, 200).Items.Thanks; len(th) != 1 || th[0].FromName != "Hero" || th[0].ItemDef != "keepers-twists" {
-		t.Fatal("thanks", th)
+	// Bob was away: one quiet thank-you waits in his mail.
+	if th := x.items("GET", "/api/items", nil, bc, 200).Items.Thanks; len(th) != 0 {
+		t.Fatal("thank-you should arrive by mail", th)
+	}
+	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='bob' AND kind='thanks'") != 1 {
+		t.Fatal("missing maker thank-you mail")
 	}
 	// Together, nothing is sent.
 	x.stand("alice", s.WorldID, "village", 100, 100)
 	x.stand("bob", s.WorldID, "village", 120, 100)
 	x.op(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 200)
-	if count(t, x.db, "SELECT count(*) FROM item_thanks") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='bob' AND kind='thanks'") != 1 {
 		t.Fatal("thanked while together")
 	}
 	if x.op(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 409).Error.Code != "insufficient-items" {

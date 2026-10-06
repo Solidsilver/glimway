@@ -218,7 +218,7 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 		// Return all of this recipient's unclaimed goods in the same transaction
 		// as removal, including any legacy backlog beyond current admission caps.
 		for {
-			n, err := returnMailBatch(ctx, tx, now, "m.to_id=?", []any{id})
+			n, err := returnMailBatch(ctx, tx, now, "m.to_id=? AND m.kind!='thanks'", []any{id})
 			if err != nil {
 				return err
 			}

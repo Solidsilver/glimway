@@ -182,6 +182,23 @@ test('a reconnect roster moves peers who moved while we were away, and clears un
   r.feed.stop();
 });
 
+test('maker heart range uses the same six tile radius as the server', () => {
+  const r = rig();
+  r.feed.setArea('village');
+  r.ready();
+  r.feed.position({ x: 0, y: 0, facing: { x: 0, y: 1 }, moving: false });
+  r.sock().push({
+    type: 'room', area: 'village', players: [
+      { habiticaId: 'near', displayName: 'Near', avatar: null, pos: { x: 96, y: 0, facing: { x: 0, y: 1 }, moving: false } },
+      { habiticaId: 'far', displayName: 'Far', avatar: null, pos: { x: 97, y: 0, facing: { x: 0, y: 1 }, moving: false } },
+    ],
+  });
+  r.c.advance(RENDER_DELAY_MS + 10);
+  assert.equal(r.feed.isWithin('near', 6 * 16), true);
+  assert.equal(r.feed.isWithin('far', 6 * 16), false);
+  r.feed.stop();
+});
+
 test('stop closes the socket and removes the poll and the bus listener (review-6 #4)', () => {
   const r = rig();
   r.ready();
