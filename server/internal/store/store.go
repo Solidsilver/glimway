@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fingersnap/content"
 	"fingersnap/server/internal/rules"
 	"fmt"
 	"modernc.org/sqlite"
@@ -303,21 +304,32 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	if err != nil {
 		return s, err
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT item_def FROM inventory WHERE habitica_id=? ORDER BY item_def", id)
-	if err != nil {
-		return s, err
+	items, err := PackItems(ctx, tx, id)
+	for _, v := range items {
+		s.State.Inventory = rules.AddUnique(s.State.Inventory, v)
 	}
+	return s, err
+}
+
+// PackItems: the carried items that join the save's inventory list, every
+// stack in the pack except materials (which the client counts on their own).
+func PackItems(ctx context.Context, tx *sql.Tx, id string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT DISTINCT item_def FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
 	for rows.Next() {
 		var v string
 		if err = rows.Scan(&v); err != nil {
-			rows.Close()
-			return s, err
+			return nil, err
 		}
-		s.State.Inventory = rules.AddUnique(s.State.Inventory, v)
+		if d, ok := content.ItemFor(v); ok && d.Kind != "material" {
+			out = append(out, v)
+		}
 	}
-	err = rows.Err()
-	rows.Close()
-	return s, err
+	return out, rows.Err()
 }
 func Outcome(ctx context.Context, tx *sql.Tx, id, outcome, reason string, now int64) (bool, error) {
 	res, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO outcomes VALUES(?,?,?,?)", id, outcome, reason, now)

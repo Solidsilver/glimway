@@ -6,6 +6,7 @@
   import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
+  import { itemName } from '../lib/items'
   import { focusTrap } from './focus'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
@@ -14,7 +15,7 @@
   // The workshop at home: the chests (carried ⇄ stored: the shared home
   // chest, or your own small one that goes with you if you leave the deed)
   // and the crafting bench (recipes from content/crafting.json). Needs the Workshop.
-  let { session, mode, onClose }: { session: Session; mode: 'chest' | 'bench'; onClose: () => void } = $props()
+  let { session, mode, initialChest = 'shared', onClose }: { session: Session; mode: 'chest' | 'bench'; initialChest?: ChestId; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
   let tab = $state<'chest' | 'bench'>('chest')
@@ -27,10 +28,25 @@
 
   onMount(() => {
     tab = mode
+    chest = initialChest
     const bump = () => (version += 1)
     bus.on(VILLAGE_EV.changed, bump)
-    void village.loadStorage().then((r) => (loaded = r.ok ? 'ready' : r.text))
+    void village.loadStorage().then((r) => {
+      loaded = r.ok ? 'ready' : r.text
+      // No shared chest here (no home, or no Workshop yet): your own chest still opens.
+      if (r.ok && village.shared !== 'open') chest = 'personal'
+    })
     return () => bus.off(VILLAGE_EV.changed, bump)
+  })
+
+  /** The shared chest and the bench need a Workshop home; your own chest never does. */
+  const sharedOpen = $derived.by(() => {
+    void version
+    return village.shared === 'open'
+  })
+  const homeless = $derived.by(() => {
+    void version
+    return village.shared === 'not-a-member'
   })
 
   const view = $derived.by(() => {
@@ -48,9 +64,23 @@
     const decos = new Set([...Object.keys(movable), ...Object.keys(sto?.decorations ?? {})])
     for (const id of [...decos].sort()) add('decoration', id, movable[id] ?? 0, countOf(sto, 'decoration', id))
     const own = village.personal
-    const ownUnits = own ? [own.materials, own.items, own.decorations].reduce((n, m) => n + Object.values(m).reduce((a, b) => a + b, 0), 0) : 0
-    return { rows, carried: inv?.materials ?? {}, ownUnits }
+    const ownUnits = own ? [own.materials, own.items, own.decorations].reduce((n, m) => n + Object.values(m).reduce((a, b) => a + b, 0), 0) + (own.instances?.length ?? 0) : 0
+    // Tools and gear, one by one.
+    const tools = [
+      ...(inv?.instances ?? []).map((i) => ({ instance: i, where: 'carried' as const })),
+      ...(sto?.instances ?? []).map((i) => ({ instance: i, where: 'stored' as const }))
+    ]
+    return { rows, tools, carried: { ...(inv?.items ?? {}), ...(inv?.materials ?? {}) }, ownUnits }
   })
+
+  async function moveInstance(direction: 'deposit' | 'withdraw', id: string, instance: string): Promise<void> {
+    if (busy) return
+    busy = `${direction}:instance:${instance}`
+    message = null
+    const r = await village.move(direction, { kind: 'instance', id, qty: 1, instance }, chest)
+    busy = null
+    message = r.ok ? { text: `${direction === 'deposit' ? 'Stored' : 'Took out'} the ${itemName(id).toLowerCase()}${chest === 'personal' ? ' (your own chest)' : ''}.`, kind: 'ok' } : { text: r.text, kind: 'error' }
+  }
 
   async function move(direction: 'deposit' | 'withdraw', kind: Asset['kind'], id: string, qty: number): Promise<void> {
     if (busy || qty <= 0) return
@@ -97,13 +127,14 @@
 
     {#if tab === 'chest' && loaded === 'ready'}
       <div class="chests" role="radiogroup" aria-label="Which chest">
-        <button type="button" role="radio" aria-checked={chest === 'shared'} class:on={chest === 'shared'} data-chest="shared" onclick={() => ((chest = 'shared'), (message = null))}>Home chest</button>
+        <button type="button" role="radio" aria-checked={chest === 'shared'} class:on={chest === 'shared'} data-chest="shared" disabled={!sharedOpen} onclick={() => ((chest = 'shared'), (message = null))}>Home chest</button>
         <button type="button" role="radio" aria-checked={chest === 'personal'} class:on={chest === 'personal'} data-chest="personal" onclick={() => ((chest = 'personal'), (message = null))}>Your own chest · {view.ownUnits}/{HOMESTEAD_DATA.personalChest.maxUnits}</button>
       </div>
       {#if chest === 'shared'}
         <p class="lede">Oak and iron, waxed against the damp. Everyone on the deed can open it. What’s stored stays home; you can’t send it or build with it until you take it out.</p>
       {:else}
         <p class="lede">Your own small chest, with your mark burned in the lid. Only you open it, and it goes with you if you ever give up your place on the deed.</p>
+        {#if homeless}<p class="msg" data-testid="homeless-chest">You have no place on a deed just now, so you can only take things out. Put things in again once you have a home.</p>{/if}
       {/if}
       {#if view.rows.length === 0}
         <p class="msg">Nothing to store yet. Bring things back from the Wilds.</p>
@@ -117,7 +148,7 @@
               <td class="n">{r.carried}</td>
               <td class="moves">
                 <span class="dir">
-                  {#each steps(r.carried) as q (q)}
+                  {#each chest === 'personal' && homeless ? [] : steps(r.carried) as q (q)}
                     <button type="button" class="tiny" data-store={`${r.id}:${q}`} disabled={busy !== null} onclick={() => move('deposit', r.kind, r.id, q)} aria-label={`Store ${q} ${assetName(r)}`}>{q === r.carried && q > 1 ? 'All' : q} ›</button>
                   {/each}
                 </span>
@@ -130,8 +161,25 @@
               <td class="n">{r.stored}</td>
             </tr>
           {/each}
+          {#each view.tools as t (t.instance.id)}
+            <tr data-goods={`instance:${t.instance.id}`}>
+              <th scope="row"><ArtIcon art={t.instance.itemDef} size={16} /> {itemName(t.instance.itemDef)}{t.instance.maxCondition > 0 ? ` · ${Math.round((100 * t.instance.condition) / t.instance.maxCondition)}%` : ''}</th>
+              <td class="n">{t.where === 'carried' ? 1 : 0}</td>
+              <td class="moves">
+                <span class="dir">
+                  {#if t.where === 'carried' && !(chest === 'personal' && homeless)}<button type="button" class="tiny" data-store={`instance:${t.instance.id}`} disabled={busy !== null} onclick={() => moveInstance('deposit', t.instance.itemDef, t.instance.id)} aria-label={`Store the ${itemName(t.instance.itemDef)}`}>1 ›</button>{/if}
+                </span>
+                <span class="dir">
+                  {#if t.where === 'stored'}<button type="button" class="tiny" data-take={`instance:${t.instance.id}`} disabled={busy !== null} onclick={() => moveInstance('withdraw', t.instance.itemDef, t.instance.id)} aria-label={`Take out the ${itemName(t.instance.itemDef)}`}>‹ 1</button>{/if}
+                </span>
+              </td>
+              <td class="n">{t.where === 'stored' ? 1 : 0}</td>
+            </tr>
+          {/each}
         </tbody>
       </table>
+    {:else if tab === 'bench' && loaded === 'ready' && !sharedOpen}
+      <p class="msg" data-testid="bench-closed">{homeless ? 'The bench is at home. You need a place on a deed, with a Workshop.' : 'The bench comes with the Workshop. Silas can build it on.'}</p>
     {:else if tab === 'bench' && loaded === 'ready'}
       <p class="lede">Clean tools, a heavy bench. Each batch takes the materials shown from what you carry.</p>
       <p class="carried">You carry: {#each MATERIAL_IDS as m (m)}<span><ArtIcon art={`icon-${m}`} size={16} /> {view.carried[m] ?? 0} {m}</span>{/each}</p>

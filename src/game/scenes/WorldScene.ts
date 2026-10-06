@@ -31,6 +31,9 @@ import { EnemySystem } from '../entities/enemies'
 import { Projectiles } from '../entities/projectiles'
 import { Interactables } from '../entities/interactables'
 import { PaperPickups } from '../entities/papers'
+import { ItemPickups } from '../entities/item-pickups'
+import { OffHandVisual } from '../entities/off-hand'
+import { itemsFor } from '../items'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
@@ -115,6 +118,7 @@ export class WorldScene extends Phaser.Scene {
   private enemies!: EnemySystem
   private projectiles!: Projectiles
   private avatar!: AvatarVisual
+  private offHand: OffHandVisual | null = null
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private actionKeys!: Record<string, Phaser.Input.Keyboard.Key>
@@ -219,6 +223,8 @@ export class WorldScene extends Phaser.Scene {
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero })
+    this.offHand = new OffHandVisual(this, this.session, () => this.hero)
+    ;(window as unknown as { __fsOffHand?: () => string | null }).__fsOffHand = () => this.offHand?.showing ?? null
     this.npcs = new Npcs(this, this.world)
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
     this.enemies = new EnemySystem(
@@ -237,6 +243,10 @@ export class WorldScene extends Phaser.Scene {
     this.interactables.setExtra(new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables }))
     // Small world touches: smell the flowers, sit on a bench, read the signs.
     this.interactables.setExtra(new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx }))
+    // Things lying about to pick up (a world's; the server keeps who took what).
+    const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    this.interactables.setExtra(pickups)
+    ;(window as unknown as { __fsPickups?: () => string[] }).__fsPickups = () => pickups.ids()
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -410,6 +420,8 @@ export class WorldScene extends Phaser.Scene {
       // Roll in a given direction from inside the frame loop, so playtests can
       // react to an aim lock without input latency.
       w.__fsDevDodge = (dx: number, dy: number) => this.hero.tryDodge(new Phaser.Math.Vector2(dx, dy))
+      // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
+      w.__fsDevAttack = () => this.hero.tryAttack()
       w.__fsDevStrike = (n: number, type?: EnemyType) => {
         for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
       }
@@ -429,6 +441,24 @@ export class WorldScene extends Phaser.Scene {
       }
       // Read-only: where the save says the hero is (area and position).
       w.__fsDevSaved = () => ({ area: this.session.state.area, position: { ...this.session.state.position } })
+      // One use of a carried tool through the real server path (gathering,
+      // which will use tools, isn't in the game yet). Resolves to the wear result.
+      w.__fsDevUseTool = async (instance: string, n = 1) => {
+        let last: unknown = null
+        for (let i = 0; i < n; i++) {
+          const r = await itemsFor(this.session).useTool(instance)
+          if (!r.ok) return { error: r.code }
+          last = r.value.wear
+        }
+        return last
+      }
+    }
+    // Read-only: the item model as last read (null for guests or before a read).
+    ;(window as unknown as { __fsItems?: () => unknown }).__fsItems = () => itemsFor(this.session).view
+    // Read-only: the hero's vitals as the save holds them.
+    ;(window as unknown as { __fsVitals?: () => { hp: number; maxHp: number; mana: number; maxMana: number } }).__fsVitals = () => {
+      const st = this.session.state
+      return { hp: st.hp, maxHp: st.maxHp, mana: st.mana, maxMana: st.maxMana }
     }
     // Connected-play status for playtests (read-only; null for guests).
     ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null
@@ -634,6 +664,7 @@ export class WorldScene extends Phaser.Scene {
     this.updateOccluders(dt)
     this.updateDepth()
     this.avatar.update(time)
+    this.offHand?.update(time)
 
     this.positionTimer += dt
     // In a cottage the save keeps the doorstep (set on the way in).

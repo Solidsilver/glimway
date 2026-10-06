@@ -74,10 +74,11 @@ func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 	if err = s.DB.QueryRow("SELECT count(*) FROM homesteads").Scan(&n); err != nil || n != 0 {
 		t.Fatal("homestead reset", err)
 	}
-	if err = s.DB.QueryRow("SELECT qty FROM inventory WHERE habitica_id='alice'").Scan(&n); err != nil || n != 3 {
+	// 020 moves carried goods into the stack table, unmarked.
+	if err = s.DB.QueryRow("SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='beeswax-candle' AND maker_id=''").Scan(&n); err != nil || n != 3 {
 		t.Fatal("lost trinkets", err)
 	}
-	if err = s.DB.QueryRow("SELECT qty FROM materials WHERE habitica_id='alice'").Scan(&n); err != nil || n != 40 {
+	if err = s.DB.QueryRow("SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber' AND maker_id=''").Scan(&n); err != nil || n != 40 {
 		t.Fatal("lost materials", err)
 	}
 }

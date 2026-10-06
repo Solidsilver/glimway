@@ -273,22 +273,43 @@ func TestHomes2LeavingKeepsPackAndPersonalChest(t *testing.T) {
 		t.Fatal("left home answer")
 	}
 	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND habitica_id='bob' AND location='inventory'", bstool.Result.InstanceIDs[0]) != 1 ||
-		count(t, x.db, "SELECT qty FROM personal_storage WHERE habitica_id='bob' AND item_def='stone'") != 5 {
+		count(t, x.db, "SELECT qty FROM item_stacks WHERE location='personal' AND owner='bob' AND item_def='stone'") != 5 {
 		t.Fatal("leaver lost their pack or personal chest")
 	}
-	if count(t, x.db, "SELECT qty FROM home_storage WHERE homestead_id=? AND item_def='timber'", h.ID) != 7 || count(t, x.db, "SELECT count(*) FROM homestead_items WHERE homestead_id=? AND location='placed'", h.ID) != 1 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='storage' AND owner=? AND item_def='timber'", h.ID) != 7 || count(t, x.db, "SELECT count(*) FROM homestead_items WHERE homestead_id=? AND location='placed'", h.ID) != 1 {
 		t.Fatal("shared chest or placed pieces left with the leaver")
 	}
 	if count(t, x.db, "SELECT count(*) FROM homesteads WHERE vacant_since IS NOT NULL") != 0 {
 		t.Fatal("vacant with a member left")
 	}
-	x.p5("GET", "/api/storage", nil, bc, 409)
-	// Bob takes his personal chest to his next home.
+	// The personal chest goes with him: readable and emptied anywhere, even
+	// with no home at all; only putting things in needs a home.
+	if v := x.p5("GET", "/api/storage", nil, bc, 200); v.Personal.Materials["stone"] != 5 || v.Storage != nil || v.Home != nil || v.Shared != "not-a-member" {
+		t.Fatal("homeless personal chest", v.Shared)
+	}
+	x.refresh(bc, &b)
+	stone := map[string]any{"kind": "material", "id": "stone", "qty": 2}
+	if v := x.p5("POST", "/api/storage", body(b, "homeless-withdraw", map[string]any{"direction": "withdraw", "chest": "personal", "asset": stone}), bc, 200); v.Result.Personal.Materials["stone"] != 3 {
+		t.Fatal("withdraw without a home")
+	} else {
+		b.Snapshot = v.Snapshot
+	}
+	if x.p5("POST", "/api/storage", body(b, "homeless-deposit", map[string]any{"direction": "deposit", "chest": "personal", "asset": stone}), bc, 409).Error.Code != "not-a-member" {
+		t.Fatal("deposit without a home")
+	}
+	if x.p5("POST", "/api/storage", body(b, "homeless-shared", map[string]any{"direction": "withdraw", "chest": "shared", "asset": timber}), bc, 409).Error.Code != "not-a-member" {
+		t.Fatal("a shared chest without a home")
+	}
+	// Bob takes his personal chest to his next home, at any tier.
 	x.claimGate(bc, &b, 1)
+	x.refresh(bc, &b)
+	if v := x.p5("POST", "/api/storage", body(b, "tier0-deposit", map[string]any{"direction": "deposit", "chest": "personal", "asset": stone}), bc, 200); v.Result.Personal.Materials["stone"] != 5 || v.Result.Storage != nil || v.Result.Shared != "tier-required" {
+		t.Fatal("personal chest at a tier-0 home")
+	}
 	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=2 WHERE gate=1"); err != nil {
 		t.Fatal(err)
 	}
-	if v := x.p5("GET", "/api/storage", nil, bc, 200); v.Personal.Materials["stone"] != 5 || v.Storage.Materials["timber"] != 0 {
+	if v := x.p5("GET", "/api/storage", nil, bc, 200); v.Personal.Materials["stone"] != 5 || v.Storage == nil || v.Storage.Materials["timber"] != 0 {
 		t.Fatal("personal chest moved with bob")
 	}
 	x.homeOp(ac, &a, "leave", nil, 200)
@@ -340,7 +361,7 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	check("not yet lost", true, true)
 	x.now.Add(1)
 	check("lost", false, false)
-	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE location IN ('placed','storage')") != 0 || count(t, x.db, "SELECT count(*) FROM home_storage") != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates WHERE gate=?", gate) != 1 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE location IN ('placed','storage')") != 0 || count(t, x.db, "SELECT count(*) FROM item_stacks WHERE location='storage'") != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates WHERE gate=?", gate) != 1 {
 		t.Fatal("lost deed contents")
 	}
 	// Dora has never held a deed, but this land's was lost: it costs embers.

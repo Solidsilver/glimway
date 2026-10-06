@@ -83,6 +83,8 @@
   let panel = $state<Panel>(null)
   /** Mail panel opened at a neighbour's mailbox: who to send to. */
   let mailTo = $state<string | null>(null)
+  /** Which chest the workshop opens on (the inventory's "your own chest" asks for the personal one). */
+  let chestPick = $state<'shared' | 'personal'>('shared')
   let recovery = $state<{ message: string; raw: string } | null>(null)
   let rawCopied = $state(false)
   let confirm = $state<'new' | 'discard' | 'overwrite' | null>(null)
@@ -811,13 +813,22 @@
     {:else if panel === 'board'}
       <NoticeBoard {session} onClose={() => toggle('board')} />
     {:else if panel === 'chest' || panel === 'bench'}
-      <WorkshopPanel {session} mode={panel} onClose={() => (panel = null)} />
+      <WorkshopPanel {session} mode={panel} initialChest={chestPick} onClose={() => ((panel = null), (chestPick = 'shared'))} />
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
       <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
-      <InventoryPanel {session} onClose={() => toggle('inventory')} />
+      <InventoryPanel
+        {session}
+        onClose={() => toggle('inventory')}
+        onOwnChest={session?.link
+          ? () => {
+              chestPick = 'personal'
+              panel = 'chest'
+            }
+          : undefined}
+      />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}

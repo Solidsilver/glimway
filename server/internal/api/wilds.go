@@ -522,12 +522,10 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		}
 	}
 	if loot.Trinket != nil {
-		_, err := tx.ExecContext(ctx, "INSERT INTO inventory VALUES(?,?,1) ON CONFLICT(habitica_id,item_def) DO UPDATE SET qty=qty+1", s.HabiticaID, *loot.Trinket)
-		if err != nil {
+		if err := packPut(ctx, tx, s.HabiticaID, *loot.Trinket, []makerQty{{"", 1}}, reason, ref, now); err != nil {
 			return err
 		}
 		s.State.Inventory = appendUnique(s.State.Inventory, *loot.Trinket)
-		return currency(ctx, tx, s.HabiticaID, "item:"+*loot.Trinket, 1, reason, ref, now)
 	}
 	return nil
 }

@@ -353,8 +353,11 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   await readOn(other, /I’ll strike your name/)
   await expect.poll(async () => (await lane(other)).mine).toBeNull()
   expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
-  // Not on a deed any more: no home chest for him; his post is still in his pack (mail can send it).
-  expect((await other.request.get('/api/storage')).status()).toBe(409)
+  // Not on a deed any more: no home chest for him (his own chest goes with him);
+  // his post is still in his pack (mail can send it).
+  const storage = await other.request.get('/api/storage')
+  expect(storage.status()).toBe(200)
+  expect(await storage.json()).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
   const carried = await (await other.request.get('/api/mail')).json()
   expect(carried.inventory.decorations['lantern-post']).toBe(1)
   expect(errors).toEqual([])

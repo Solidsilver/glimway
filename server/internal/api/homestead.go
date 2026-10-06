@@ -101,7 +101,9 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 		for _, q := range []string{
 			"DELETE FROM homestead_invites WHERE homestead_id=?",
 			"DELETE FROM homestead_cleared WHERE homestead_id=?",
-			"DELETE FROM home_storage WHERE homestead_id=?",
+			"DELETE FROM item_stacks WHERE location='storage' AND owner=?",
+			"DELETE FROM item_instances WHERE location='fitted' AND owner IN (SELECT id FROM item_instances WHERE location='storage' AND owner=?)",
+			"DELETE FROM item_instances WHERE location='storage' AND owner=?",
 			"DELETE FROM homestead_items WHERE homestead_id=?",
 			"DELETE FROM homestead_members WHERE homestead_id=?",
 			"DELETE FROM homesteads WHERE id=?",
@@ -620,20 +622,6 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 		return "", err
 	}
 	return id, currency(ctx, tx, s.HabiticaID, "decoration:"+def.ID, 1, "homestead-buy", id, now)
-}
-
-// checkMaterials refuses before any ledger row is written.
-func checkMaterials(ctx context.Context, tx *sql.Tx, id string, cost map[string]int) error {
-	m, err := materials(ctx, tx, id)
-	if err != nil {
-		return err
-	}
-	for material, n := range cost {
-		if m[material] < n {
-			return fail(409, "insufficient-materials")
-		}
-	}
-	return nil
 }
 
 // ground is a homestead's land as the server validates it.

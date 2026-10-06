@@ -148,6 +148,146 @@
         "id": "wooden-peg",
         "qty": 1
       }
+    },
+    {
+      "id": "craft-bench-axe",
+      "name": "Bench axe",
+      "minTier": 2,
+      "materials": {
+        "timber": 2,
+        "stone": 2,
+        "fiber": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "bench-axe",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-bench-pick",
+      "name": "Bench pick",
+      "minTier": 2,
+      "materials": {
+        "timber": 2,
+        "stone": 3
+      },
+      "output": {
+        "kind": "instance",
+        "id": "bench-pick",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-bench-spade",
+      "name": "Bench spade",
+      "minTier": 2,
+      "materials": {
+        "timber": 2,
+        "stone": 2
+      },
+      "output": {
+        "kind": "instance",
+        "id": "bench-spade",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-stave-bucket",
+      "name": "Stave bucket",
+      "minTier": 2,
+      "materials": {
+        "timber": 3,
+        "fiber": 1,
+        "wooden-peg": 2
+      },
+      "output": {
+        "kind": "instance",
+        "id": "stave-bucket",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-amber-bead",
+      "name": "Amber bead",
+      "minTier": 2,
+      "materials": {
+        "amber": 2
+      },
+      "output": {
+        "kind": "instance",
+        "id": "amber-bead",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-waxed-cord",
+      "name": "Waxed cord",
+      "minTier": 2,
+      "materials": {
+        "fiber": 2,
+        "beeswax": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "waxed-cord",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-fibre-rope",
+      "name": "Fibre rope",
+      "minTier": 2,
+      "materials": {
+        "fiber": 4
+      },
+      "output": {
+        "kind": "item",
+        "id": "fibre-rope",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-forager-satchel",
+      "name": "Forager's satchel",
+      "minTier": 2,
+      "materials": {
+        "fiber": 8,
+        "beeswax": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "forager-satchel",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-work-apron",
+      "name": "Work apron",
+      "minTier": 2,
+      "materials": {
+        "fiber": 8,
+        "beeswax": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "work-apron",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-carting-coat",
+      "name": "Carting coat",
+      "minTier": 2,
+      "materials": {
+        "fiber": 8,
+        "beeswax": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "carting-coat",
+        "qty": 1
+      }
     }
   ]
 }

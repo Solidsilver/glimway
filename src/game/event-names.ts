@@ -36,6 +36,8 @@ export const EV = {
   presence: 'ui:presence',
   /** Presence: someone (or you) emoted — the scene shows a bubble. */
   emote: 'game:emote',
+  /** Presence: someone standing by you handed you something: { fromName, kind, itemDef, qty }. */
+  gift: 'game:gift',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */

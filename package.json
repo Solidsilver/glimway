@@ -19,7 +19,8 @@
     "vectors:homestead": "node scripts/homestead-vectors.ts",
     "vectors:calendar": "node scripts/calendar-vectors.ts",
     "papers": "node scripts/papers.ts",
-    "atlases": "node scripts/build-atlases.ts"
+    "atlases": "node scripts/build-atlases.ts",
+    "vectors:items": "node scripts/items-vectors.ts"
   },
   "dependencies": {
     "@fontsource-variable/nunito": "^5.3.0",

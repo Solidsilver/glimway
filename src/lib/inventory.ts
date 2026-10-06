@@ -19,10 +19,28 @@ import { CRAFTED_BLURBS } from '../content/inventory.ts';
 import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './embers.ts';
+import type { InstanceView, ItemsView, MakerView } from './api/types.ts';
+import { atZeroRule, effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
 export type InventoryTab = 'tools' | 'supplies' | 'keepsakes' | 'home' | 'papers';
 export type ItemTab = Exclude<InventoryTab, 'papers'>;
-export type ItemKind = 'material' | 'crafted' | 'trinket' | 'charm' | 'quest' | 'decoration' | 'other';
+export type ItemKind =
+  | 'material'
+  | 'crafted'
+  | 'trinket'
+  | 'charm'
+  | 'quest'
+  | 'decoration'
+  | 'other'
+  // The item model (a world): content/items.json kinds.
+  | 'tool'
+  | 'off-hand'
+  | 'carry-gear'
+  | 'fitting'
+  | 'consumable'
+  | 'part'
+  | 'seed'
+  | 'keepsake';
 
 export interface InventoryEntry {
   /** Stable per device: what the "new" dot remembers. */
@@ -42,6 +60,24 @@ export interface InventoryEntry {
   /** Home goods: how many are set out and how many are put away. */
   placed?: number;
   stored?: number;
+  /** The item model (in a world): one instance (tools, gear, fittings). */
+  instance?: InstanceView;
+  /** Who made it (a maker's mark), when anyone did. */
+  maker?: MakerView | null;
+  /** The art frame for its current wear state (item-bench-axe-worn), when there is one. */
+  stateArt?: string | null;
+  /** What it can do here: one use, a pocket, the off hand, a hand-over, mending. */
+  usable?: boolean;
+  pocketable?: boolean;
+  carryable?: boolean;
+  giveable?: boolean;
+  mendable?: boolean;
+  /** Which pocket holds it (1, 2), or whether the off hand does. */
+  pocket?: number | null;
+  inHand?: boolean;
+  /** Its helps and rules, in words. */
+  helps?: string[];
+  rule?: string;
 }
 
 export interface InventorySource {
@@ -158,14 +194,142 @@ export function inventoryEntries(src: InventorySource): InventoryEntry[] {
   return out;
 }
 
+// ------------------------------------------------------------ the item model (a world)
+
+const KIND_OF: Record<string, ItemKind> = {
+  tool: 'tool',
+  'off-hand': 'off-hand',
+  'carry-gear': 'carry-gear',
+  fitting: 'fitting',
+  consumable: 'consumable',
+  material: 'material',
+  part: 'part',
+  seed: 'seed',
+  keepsake: 'keepsake',
+};
+
+function modelEntry(d: ItemDef, base: Partial<InventoryEntry> & { key: string; qty: number }, view: ItemsView): InventoryEntry {
+  const pocket = view.pockets.findIndex((p) => p.itemDef === d.id && !base.instance);
+  const hand = view.offHand.open && (base.instance ? view.offHand.instance === base.instance.id : !view.offHand.instance && view.offHand.itemDef === d.id);
+  const helps = [...(d.pocket ?? []), ...(d.use ?? []), ...(offHandable(d) ? heldEffects(d, view.offHand.class) : [])].map(effectLine);
+  // Each class has an affinity item that works a little better in their hands.
+  if (d.affinity && view.offHand.class === d.affinity.class) helps.push(`A little better in a ${d.affinity.class}’s hands`);
+  const legacyArt = MATERIAL_ICON[d.id] ? `icon-${d.id}` : ART_ICONS.has(d.id) ? `icon-${d.id}` : null;
+  return {
+    tab: d.tab === 'papers' ? 'supplies' : d.tab,
+    section: 'main',
+    kind: KIND_OF[d.kind] ?? 'other',
+    id: d.id,
+    name: d.name,
+    blurb: d.blurb,
+    art: legacyArt ?? iconId(d.id),
+    icon: d.kind === 'material' ? (MATERIAL_ICON[d.id] ?? 'stone') : d.kind === 'tool' ? 'sword' : d.kind === 'keepsake' ? 'sparkle' : 'bag',
+    maker: null,
+    usable: usableNow(d),
+    pocketable: d.kind === 'keepsake',
+    carryable: offHandable(d) && view.offHand.open,
+    giveable: giveable(d),
+    mendable: false,
+    pocket: pocket >= 0 ? pocket + 1 : null,
+    inHand: hand,
+    helps,
+    rule: wearRuleLine(d),
+    ...base,
+  };
+}
+
+/**
+ * Everything carried in a world, from the server's item model: stacks (one
+ * row per maker), instances (one row each, with condition and fittings),
+ * plus the save's quest things and your home's decorations.
+ */
+export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' | 'decorations'>): InventoryEntry[] {
+  const out: InventoryEntry[] = [];
+  for (const st of view.stacks) {
+    const d = itemDef(st.itemDef);
+    if (!d) continue;
+    const key = d.kind === 'material' ? `material:${d.id}` : st.maker ? `item:${d.id}@${st.maker.id}` : `item:${d.id}`;
+    const prior = out.find((e) => e.key === key);
+    if (prior) {
+      prior.qty += st.qty;
+      continue;
+    }
+    out.push(modelEntry(d, { key, qty: st.qty, maker: st.maker }, view));
+  }
+  for (const inst of view.instances) {
+    const d = itemDef(inst.itemDef);
+    if (!d) continue;
+    const state = iconState(d.id, inst.state);
+    const zero = atZeroRule(d);
+    out.push(
+      modelEntry(
+        d,
+        {
+          key: `inst:${inst.id}`,
+          qty: 1,
+          instance: inst,
+          maker: inst.maker,
+          stateArt: state ? `item-${iconId(d.id)}-${state}` : null,
+          mendable: !!d.repair && inst.condition < inst.maxCondition,
+          rule: inst.wardenSet ? 'Warden-set: it never breaks. It dulls with use and is sharp again by morning.' : zero === 'never' ? wearRuleLine(d) : wearRuleLine(d),
+        },
+        view,
+      ),
+    );
+  }
+  // Quest things ride in the save, as before.
+  const seen = new Set<string>();
+  for (const id of src.pack) {
+    if (!QUEST_ITEMS.includes(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(describe(id, 1));
+  }
+  for (const e of inventoryEntries({ pack: [], materials: {}, decorations: src.decorations })) out.push(e);
+  return out;
+}
+
+/** Which instances could take this fitting (tools in the pack with a free slot and no fitting of its kind). */
+export function fitTargets(view: ItemsView, fitting: InstanceView): InstanceView[] {
+  const kind = itemDef(fitting.itemDef)?.fitting;
+  return view.instances.filter((t) => {
+    const d = itemDef(t.itemDef);
+    if (!d || d.kind !== 'tool' || t.id === fitting.id) return false;
+    return t.fittings.length < slotCount(d) && !t.fittings.some((f) => f.fitting === kind);
+  });
+}
+
+export const isModelInstance = (id: string): boolean => {
+  const d = itemDef(id);
+  return !!d && isInstanced(d);
+};
+
 const MATERIAL_ORDER = MATERIALS.map((m) => m.id);
-const KIND_ORDER: Record<ItemKind, number> = { material: 0, crafted: 1, charm: 0, trinket: 1, other: 2, quest: 0, decoration: 0 };
+const KIND_ORDER: Record<ItemKind, number> = {
+  material: 0,
+  crafted: 1,
+  charm: 0,
+  trinket: 1,
+  other: 2,
+  quest: 0,
+  decoration: 0,
+  tool: 0,
+  'off-hand': 1,
+  'carry-gear': 2,
+  consumable: 2,
+  fitting: 3,
+  part: 4,
+  seed: 5,
+  keepsake: 1,
+};
 
 function compare(a: InventoryEntry, b: InventoryEntry): number {
   if (a.section === 'road' && b.section === 'road') return QUEST_ITEMS.indexOf(a.id) - QUEST_ITEMS.indexOf(b.id);
   const k = KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
   if (k !== 0) return k;
-  if (a.kind === 'material' && b.kind === 'material') return MATERIAL_ORDER.indexOf(a.id) - MATERIAL_ORDER.indexOf(b.id);
+  if (a.kind === 'material' && b.kind === 'material') {
+    const rank = (id: string) => (MATERIAL_ORDER.indexOf(id) + MATERIAL_ORDER.length + 1) % (MATERIAL_ORDER.length + 1);
+    return rank(a.id) - rank(b.id) || a.name.localeCompare(b.name);
+  }
   return a.name.localeCompare(b.name);
 }
 

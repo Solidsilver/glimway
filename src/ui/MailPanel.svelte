@@ -4,7 +4,7 @@
   import { VILLAGE_EV, villageFor } from '../game/village'
   import { HOME_EV, homesteadsFor } from '../game/homestead'
   import { bus } from '../game/events'
-  import { assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
+  import { assetKey, assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
   import { MAIL } from '../lib/mail'
   import type { Asset, Mail } from '../lib/api/types'
   import { focusTrap } from './focus'
@@ -50,7 +50,7 @@
     const buckets = mailBuckets(village.mail, me)
     return { buckets, neighbours, goods, status: village.mailStatus, recall: !village.recallUnsupported, more: !!village.mailCursor, full: buckets.outgoing.length >= MAIL.maxOutstandingSent }
   })
-  const chosen = $derived(view.goods.find((g) => `${g.kind}:${g.id}` === pick) ?? null)
+  const chosen = $derived(view.goods.find((g) => assetKey(g) === pick) ?? null)
 
   const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
   const when = (unix: number) => new Date(unix * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -75,7 +75,7 @@
 
   async function send(): Promise<void> {
     if (busy || !chosen || !recipient) return
-    const asset: Asset = { kind: chosen.kind, id: chosen.id, qty: Math.max(1, Math.min(chosen.qty, Math.round(qty) || 1)) }
+    const asset: Asset = { kind: chosen.kind, id: chosen.id, qty: Math.max(1, Math.min(chosen.qty, Math.round(qty) || 1)), ...(chosen.instance ? { instance: chosen.instance } : {}) }
     busy = 'send'
     message = null
     const r = await village.send(recipient, asset)
@@ -166,9 +166,9 @@
         <p class="hint">Materials, things the Wilds gave back, crafted goods and pieces that aren’t set out can be posted. Embers and keepsakes stay with you. Uncollected parcels come back after {MAIL.returnAfterDays} days.</p>
         {#if view.goods.length === 0}<p class="none">Nothing in your pack to send.</p>{/if}
         <ul class="goods" aria-label="What to send">
-          {#each view.goods as g (g.kind + g.id)}
+          {#each view.goods as g (assetKey(g))}
             <li>
-              <button type="button" class="good" class:on={pick === `${g.kind}:${g.id}`} aria-pressed={pick === `${g.kind}:${g.id}`} data-pick={`${g.kind}:${g.id}`} onclick={() => ((pick = `${g.kind}:${g.id}`), (qty = 1))}>
+              <button type="button" class="good" class:on={pick === assetKey(g)} aria-pressed={pick === assetKey(g)} data-pick={assetKey(g)} onclick={() => ((pick = assetKey(g)), (qty = 1))}>
                 <span class="thumb">{#if art(g)}<img src={art(g)} alt="" />{:else}<ArtIcon art={icon(g)} name="sparkle" size={16} />{/if}</span>
                 <span class="nm">{assetName(g)}</span>
                 <span class="have">{g.qty}</span>
