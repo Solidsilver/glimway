@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, settleWarden, talkThrough, waitForArea, warp } from './helpers'
+import { beginNewJourney, expectStage, settleWarden, talkThrough, waitForArea, warp, expectToast } from './helpers'
 
 /** Found-text pickups still lying in the current area (read-only hook). */
 async function lying(page: Page): Promise<string[]> {
@@ -35,7 +35,7 @@ async function pickUpPipsPage(page: Page): Promise<void> {
   expect(await lying(page)).toContain(PIP_PAGE)
   await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: 'Found: A Page from Pip’s Copybook' })).toBeVisible()
+  await expectToast(page, 'Found: A Page from Pip’s Copybook')
   expect(await lying(page)).not.toContain(PIP_PAGE)
   await expect.poll(() => savedFlags(page)).toContain(`paper:${PIP_PAGE}`)
 }
@@ -122,7 +122,7 @@ test('Mara hands over the ledger pages once the closure mark is found', async ({
   await talkThrough(page, /Copy the naming from the stone/)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
-  await expect(page.locator('.toast', { hasText: 'Found: The Ashwatch Ledger — Excerpts' })).toBeVisible()
+  await expectToast(page, 'Found: The Ashwatch Ledger — Excerpts')
   await expect.poll(() => savedFlags(page)).toContain('paper:ashwatch-ledger-excerpts')
 })
 
@@ -134,6 +134,6 @@ test('settling the warden opens its chest: Orrin’s “Eleven Days” is found'
   await talkThrough(page, /Copy the naming from the stone/)
   await settleWarden(page)
   await expectStage(page, 'guardian-defeated')
-  await expect(page.locator('.toast', { hasText: 'Found: Eleven Days' })).toBeVisible({ timeout: 10_000 })
+  await expectToast(page, 'Found: Eleven Days', { timeout: 10_000 })
   await expect.poll(() => savedFlags(page)).toContain('paper:eleven-days')
 })

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState } from './connected'
-import { beginNewJourney } from './helpers'
+import { beginNewJourney, waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
@@ -79,7 +79,7 @@ test('finding 3: giving to a project updates the board’s carried balance at on
   fund(id, { materials: { timber: 10 } })
   await go(page, 'village', 15, 10)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const board = page.getByRole('dialog', { name: 'Notice Board' })
   await expect(board.locator('.carried')).toContainText('10 timber')
@@ -117,7 +117,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
   await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const mail = page.getByRole('dialog', { name: 'Mailbox' })
   await mail.getByRole('tab', { name: 'Send something' }).click()
@@ -127,7 +127,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   await mail.getByTestId('mail-send').click()
   await expect(mail.locator('.msg.error')).toContainText('may have gone through')
   await page.keyboard.press('Escape')
-  await expect(page.locator('.toast', { hasText: 'parcel went through after all' })).toBeVisible({ timeout: 30_000 })
+  await expectToast(page, 'parcel went through after all', { timeout: 30_000 })
   await expect.poll(() => linkStatus(page)).toBe('online')
   expect((await myHome(page, a)).items).toHaveLength(0)
   // The client's home agrees by the time recovery is announced.
@@ -143,7 +143,6 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await page.waitForTimeout(400)
   await silasSays(page, /Build on a workshop/)
   await readOn(page, /eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
@@ -151,7 +150,7 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await intoCottage(page)
   await place(page, 115, 66)
   await expect(page.locator('.prompt')).toContainText('Work at the bench')
-  await page.waitForTimeout(250)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const panel = page.getByRole('dialog', { name: 'The Workshop' })
   const stool = panel.locator('[data-recipe="craft-wooden-stool"]')

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, player, savedStage, stepToWarden, strikeAll, talkThrough, warden, warp } from './helpers'
+import { beginNewJourney, expectStage, frames, player, savedStage, stepToWarden, strikeAll, talkThrough, waitForLive, waitFrames, warden, warp, expectToast, savedToDisk } from './helpers'
 
 type EnemyView = { x: number; y: number; state: string; hp: number; type: string; locked: boolean; body: { x: number; y: number; w: number; h: number } }
 
@@ -9,16 +9,34 @@ const enemies = (page: Page) =>
 const hp = (page: Page) =>
   page.evaluate(() => Number(document.querySelector('.hud .bar.hp')?.getAttribute('aria-valuenow') ?? NaN))
 
-/** Poll until an enemy (optionally of one type) matches; returns it. */
+/**
+ * Wait until an enemy (optionally of one type) matches; returns it. Checked
+ * every frame in the page, with the timeout in game time (see waitFrames).
+ * `match` runs in the page: it may only use its argument.
+ */
 async function waitForEnemy(page: Page, match: (e: EnemyView) => boolean, timeout = 8000): Promise<EnemyView> {
-  let found: EnemyView | undefined
-  await expect
-    .poll(async () => {
-      found = (await enemies(page)).find(match)
-      return !!found
-    }, { timeout, intervals: [30] })
-    .toBe(true)
-  return found!
+  return waitFrames(
+    page,
+    (src: string) => {
+      const m = (0, eval)(`(${src})`) as (e: unknown) => boolean
+      return ((window as unknown as { __fsEnemies: () => EnemyView[] }).__fsEnemies().find(m) ?? null) as EnemyView | null
+    },
+    match.toString(),
+    { seconds: timeout / 1000, message: `an enemy matching ${match}` }
+  )
+}
+
+/** The hero's shown health drops below `below` (or to `atMost`) within `seconds` of game time. */
+async function hurtWithin(page: Page, limit: { below: number } | { atMost: number }, seconds: number): Promise<void> {
+  await waitFrames(
+    page,
+    (l: { below?: number; atMost?: number }) => {
+      const hp = Number(document.querySelector('.hud .bar.hp')?.getAttribute('aria-valuenow') ?? NaN)
+      return l.below !== undefined ? hp < l.below : hp <= l.atMost!
+    },
+    limit as { below?: number; atMost?: number },
+    { seconds, message: `health ${JSON.stringify(limit)}` }
+  )
 }
 
 /** Alone with beetle-a on the long straight at row 12: the slimes are cleared
@@ -38,7 +56,7 @@ test('slimes wind up before they hop, and the hop hurts', async ({ page }) => {
   await waitForEnemy(page, (e) => e.type === 'wisp' && e.state === 'telegraph')
   await page.screenshot({ path: 'test-results/combat-slime-windup.png' })
   await waitForEnemy(page, (e) => e.type === 'wisp' && e.state === 'lunge', 2000)
-  await expect.poll(() => hp(page), { timeout: 3000 }).toBeLessThan(before)
+  await hurtWithin(page, { below: before }, 3)
 })
 
 test('standing still in a beetle charge hurts', async ({ page }) => {
@@ -46,7 +64,7 @@ test('standing still in a beetle charge hurts', async ({ page }) => {
   const start = await hp(page)
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state === 'lunge', 10_000)
   // The charge (3, less mitigation) lands — more than a bump's sting.
-  await expect.poll(async () => start - (await hp(page)), { timeout: 3000 }).toBeGreaterThanOrEqual(2)
+  await hurtWithin(page, { atMost: start - 2 }, 3)
 })
 
 test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ page }) => {
@@ -85,7 +103,8 @@ test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ pa
   }))
   // The charge really launched, and finished without connecting.
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state !== 'telegraph' && e.state !== 'chase', 2000)
-  await page.waitForTimeout(900)
+  // …and has run its course (any hit would have landed by now).
+  await waitForEnemy(page, (e) => e.type === 'beetle' && e.state !== 'lunge')
   await page.screenshot({ path: 'test-results/combat-beetle-after.png' })
   expect(start - (await hp(page))).toBeLessThan(2)
 })
@@ -93,12 +112,12 @@ test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ pa
 test('Shift rolls the hero and starts the roll cooldown', async ({ page }) => {
   await beginNewJourney(page)
   const before = await player(page)
+  await waitForLive(page)
   await page.keyboard.down('ArrowRight')
   await page.keyboard.press('Shift')
-  await page.waitForTimeout(150)
-  await page.keyboard.up('ArrowRight')
   await expect(page.locator('.actionbar .slot.roll .sweep')).toBeVisible()
-  expect((await player(page)).x).toBeGreaterThan(before.x + 10)
+  await page.keyboard.up('ArrowRight')
+  await expect.poll(async () => (await player(page)).x).toBeGreaterThan(before.x + 10)
 })
 
 test('knockback never leaves an enemy on a wall, tree or water tile', async ({ page }) => {
@@ -117,7 +136,7 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
     if (!e) break
     await page.keyboard.press(Math.abs(e.x - p.x) > Math.abs(e.y - p.y) ? (e.x > p.x ? 'ArrowRight' : 'ArrowLeft') : (e.y > p.y ? 'ArrowDown' : 'ArrowUp'))
     await page.keyboard.press('e')
-    await page.waitForTimeout(250)
+    await frames(page, 15)
     // Mid-shove and after: the collision box's center is never inside a
     // solid tile (the drawn feet may overhang a tree's edge by a pixel).
     for (const en of await enemies(page)) {
@@ -128,7 +147,7 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
       expect(w.solid[ty]?.[tx], `enemy at tile ${tx},${ty} is inside a solid`).toBe(false)
       hits++
     }
-    await page.waitForTimeout(200)
+    await frames(page, 12)
   }
   expect(hits).toBeGreaterThan(0)
 })
@@ -147,10 +166,11 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   // Let a frame pass so nothing near the old spot still claims the press.
   await expect(page.locator('.prompt')).toBeHidden()
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: 'rings off the stone' })).toBeVisible()
+  await expectToast(page, 'rings off the stone')
   let g = await warden(page)
   expect(g.state).toBe('active')
   expect(g.speakings).toBe(0)
+  await savedToDisk(page)
   expect(await savedStage(page)).toBe('clue-found')
 
   // Bait a lunge from a few steps off; when it stops to find its feet,
@@ -169,8 +189,7 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   g = await warden(page)
   expect(g.state).toBe('settled')
   expect(g.visible).toBe(true)
-  await page.waitForTimeout(800)
-  expect((await warden(page)).texture).toBe('commons-art:guardian-settled')
+  await expect.poll(async () => (await warden(page)).texture).toBe('commons-art:guardian-settled')
   expect(await enemies(page)).toHaveLength(0)
 
   // Come back later: it is on its post, at rest.

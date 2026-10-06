@@ -1,7 +1,9 @@
-import { expect, test } from './fixtures'
-import { beginNewJourney, expectStage, hold, player, settleWarden, talkThrough, warp, waitForArea, world } from './helpers'
+import { expect, test, type Page } from './fixtures'
+import { beginNewJourney, expectStage, frames, holdUntil, player, settleWarden, talkThrough, warp, waitForArea, world, expectAreaCard } from './helpers'
 
 const TILE = 16
+
+const areaNow = (page: Page) => page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)
 
 test('the whole quest can be played from a fresh start to the ending', async ({ page }) => {
   await beginNewJourney(page)
@@ -32,17 +34,17 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
   await expect(page.getByRole('dialog', { name: 'The Road Is Lit' })).toBeVisible({ timeout: 15_000 })
 })
 
-test('exits connect left-to-right and you come back the way you came', async ({ page }) => {
+test('exits connect left-to-right and you come back the way you came', { tag: '@smoke' }, async ({ page }) => {
   await beginNewJourney(page)
 
   // Village east gate → arrive on Brackenwood's west side.
   await warp(page, 'village', 38, 10)
-  await hold(page, 'ArrowRight', 1200)
+  await holdUntil(page, 'ArrowRight', async () => (await areaNow(page)) !== 'village')
   await waitForArea(page, 'woodland')
   expect((await player(page)).x).toBeLessThan(6 * TILE)
 
   // Brackenwood west edge → arrive on the village's east side.
-  await hold(page, 'ArrowLeft', 1500)
+  await holdUntil(page, 'ArrowLeft', async () => (await areaNow(page)) !== 'woodland')
   await waitForArea(page, 'village')
   const w = await world(page)
   expect((await player(page)).x).toBeGreaterThan(w.widthPx - 6 * TILE)
@@ -54,7 +56,15 @@ test('the hero is confined to each map', async ({ page }) => {
     await warp(page, area, tx, ty)
     const w = await world(page)
     expect(w.bounds).toEqual({ x: 0, y: 0, w: w.widthPx, h: w.heightPx })
-    await hold(page, 'ArrowUp', 1500)
+    // Walk north until the hero stops (the map edge or a wall).
+    let last = NaN
+    await holdUntil(page, 'ArrowUp', async () => {
+      await frames(page, 8)
+      const y = (await player(page)).y
+      const still = y === last
+      last = y
+      return still
+    })
     const p = await player(page)
     expect(p.y).toBeGreaterThan(0)
     expect(p.y).toBeLessThanOrEqual(w.heightPx)
@@ -64,9 +74,9 @@ test('the hero is confined to each map', async ({ page }) => {
 test('the area title card always names the area you are in', async ({ page }) => {
   await beginNewJourney(page)
   // Leave while Hearthwick's card is still up, then again while Brackenwood's is.
-  await expect(page.locator('.area .title')).toHaveText('Hearthwick')
+  await expectAreaCard(page, 'Hearthwick')
   await warp(page, 'woodland', 15, 20)
-  await expect(page.locator('.area .title')).toHaveText('Brackenwood Path')
+  await expectAreaCard(page, 'Brackenwood Path')
   await warp(page, 'ruin', 3, 13)
-  await expect(page.locator('.area .title')).toHaveText('Ashwatch Ruin')
+  await expectAreaCard(page, 'Ashwatch Ruin')
 })

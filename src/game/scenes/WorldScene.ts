@@ -397,6 +397,22 @@ export class WorldScene extends Phaser.Scene {
     // low-health and defeat beats can be checked without a long fight.
     if (import.meta.env.DEV) {
       const w = window as unknown as Record<string, unknown>
+      // Read-only: how settled this area is, so playtests wait on the game
+      // instead of the clock: frames drawn since it was built, the camera
+      // fade, and whether world input is live right now.
+      const builtAt = this.game.loop.frame
+      w.__fsFrame = () => ({
+        areaId: this.world.areaId,
+        frames: this.game.loop.frame - builtAt,
+        loop: this.game.loop.frame,
+        fading: this.cameras.main.fadeEffect.isRunning,
+        transitioning: this.transitioning,
+        cinematic: this.cinematic,
+        live: this.worldLive()
+      })
+      // Read-only: the server revision this tab's link is based on (null for
+      // guests), so a playtest can wait for the link to catch up.
+      w.__fsLinkRev = () => this.session.link?.rev ?? null
       w.__fsDevHurt = (n: number) => {
         this.hero.iframes = 0
         this.hero.damagePlayer(n, this.hero.sprite.x - 1)
@@ -439,8 +455,12 @@ export class WorldScene extends Phaser.Scene {
       w.__fsDevAddExit = (exit: { tx: number; ty: number; tw: number; th: number; to: string }) => {
         this.world.exits.push({ ...exit, entry: { tx: 1, ty: 1 } })
       }
-      // Read-only: where the save says the hero is (area and position).
-      w.__fsDevSaved = () => ({ area: this.session.state.area, position: { ...this.session.state.position } })
+      // Read-only: where the save says the hero is (area and position), and
+      // whether a debounced save is still waiting to be written.
+      w.__fsDevSaved = () => {
+        const s = this.session as unknown as { saveTimer: number | null; pendingSave: boolean }
+        return { area: this.session.state.area, position: { ...this.session.state.position }, pending: s.saveTimer !== null || s.pendingSave }
+      }
       // One use of a carried tool through the real server path (gathering,
       // which will use tools, isn't in the game yet). Resolves to the wear result.
       w.__fsDevUseTool = async (instance: string, n = 1) => {

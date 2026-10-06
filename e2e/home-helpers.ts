@@ -1,7 +1,6 @@
-import { execFileSync } from 'node:child_process'
 import { expect, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, syncFromMenu, waitForWorld } from './connected'
-import { beginNewJourney, waitForArea, player } from './helpers'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld } from './connected'
+import { beginNewJourney, dialogueState, frames, readDialogue, waitForArea, waitForLive, player, expectToast } from './helpers'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -64,31 +63,41 @@ export async function shot(page: Page, name: string): Promise<void> {
 
 /** Dev warp, for any area id (the Commons included). */
 export async function go(page: Page, to: string, tx: number, ty: number): Promise<void> {
+  // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp(a as string, x as number, y as number), [to, tx, ty] as const)
-  await page.waitForFunction(() => (window as unknown as { __fsSafety: () => { transitioning: boolean } }).__fsSafety().transitioning === true, undefined, { timeout: 2000 }).catch(() => {})
   await waitForArea(page, to as Area)
 }
 
+/** Conversations opened on a page before its latest talk() (readOn looks after it). */
+const talkedFrom = new WeakMap<Page, number>()
+
 /** Talk at the prompt; pick the choice named `pick` (if any), and read to the end. */
 export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
-  await expect(dialogue).toBeVisible()
-  let picked = !pick
-  for (let i = 0; i < 40 && (await dialogue.isVisible()); i++) {
-    const choice = page.locator('.choice').first()
-    if (!picked && (await choice.isVisible().catch(() => false))) {
-      await page.locator('.choice', { hasText: pick! }).click()
-      picked = true
-    } else {
-      if (await choice.isVisible().catch(() => false)) await page.keyboard.press('Escape')
-      else await page.keyboard.press('e')
+  // With a reply to pick: someone not ready yet ("Hold on, I'm finding your
+  // page") is asked again, as a player would.
+  for (let attempt = 1; ; attempt++) {
+    await expect(page.locator('.prompt')).toContainText(prompt)
+    await waitForLive(page)
+    const mark = (await dialogueState(page)).opened
+    talkedFrom.set(page, mark)
+    await page.keyboard.press('e')
+    await expect(dialogue).toBeVisible()
+    let picked = false
+    await readDialogue(page, { pick, picked: () => (picked = true) })
+    // A word more the world adds straight away is read too (as a person
+    // would); one that comes later is readOn's.
+    for (let i = 0; i < 5; i++) {
+      await frames(page, 8)
+      const d = await dialogueState(page)
+      if (!d.open) break
+      await readDialogue(page)
     }
-    await page.waitForTimeout(220)
+    await expect.poll(async () => (await dialogueState(page)).opened).toBeGreaterThan(mark)
+    if (!pick || picked) return
+    if (attempt >= 3) throw new Error(`no reply matching ${pick} was offered at ${prompt}`)
+    await frames(page, 30)
   }
-  await expect(dialogue).toBeHidden()
 }
 
 /** Sign in from the title as a new allowlisted player. */
@@ -109,7 +118,7 @@ export async function earnEmbers(page: Page, id: string): Promise<void> {
   for (const [lvl, exp, toast] of [[2, 20, /embers into your hand/], [5, 100, /embers — from the XP you earned/]] as const) {
     await setHabitica(id, { lvl, exp })
     balance = await syncEmberBalance(page)
-    await expect(page.locator('.toast', { hasText: toast })).toBeVisible()
+    await expectToast(page, toast)
     await page.getByRole('button', { name: 'Back to the road' }).click()
   }
   expect(balance).toBeGreaterThanOrEqual(20)
@@ -132,14 +141,20 @@ async function syncEmberBalance(page: Page): Promise<number> {
 /** Read an open conversation (one the world opened on its own) to its end. */
 export async function readOn(page: Page, says: RegExp): Promise<void> {
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
-  // The talk loop may already have read it (it follows the answer closely).
-  await dialogue.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {})
-  if (!(await dialogue.isVisible())) return
-  await expect(dialogue).toContainText(says)
-  for (let i = 0; i < 12 && (await dialogue.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(220)
-  }
+  // The talk loop may already have read it (it follows the answer closely):
+  // wait until a conversation saying it has opened since the last talk(),
+  // whether or not it is still on screen.
+  const from = talkedFrom.get(page) ?? 0
+  await expect
+    .poll(async () => {
+      const d = await dialogueState(page)
+      return d.seen.some((x, i) => d.opened - d.seen.length + i >= from && says.test(x.text))
+    }, { message: `a conversation saying ${says}` })
+    .toBe(true)
+  if (!(await dialogueState(page)).open) return
+  // The open one is it (its whole text: the typewriter may still be going).
+  expect((await dialogueState(page)).said.join('\n')).toMatch(says)
+  await readDialogue(page)
   await expect(dialogue).toBeHidden()
 }
 
@@ -194,13 +209,13 @@ export async function throughGate(page: Page, gate: number): Promise<void> {
 export function fund(id: string, goods: { materials?: Record<string, number>; items?: Record<string, number>; maker?: string; personal?: Record<string, number> }): void {
   const esc = (v: string) => v.replace(/'/g, "''")
   const maker = esc(goods.maker ?? '')
-  const sql: string[] = []
+  const statements: string[] = []
   const put = (location: string, def: string, n: number, by: string) =>
-    sql.push(`INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('${location}','${esc(id)}','${esc(def)}','${by}',${n}) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=excluded.qty;`)
+    statements.push(`INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('${location}','${esc(id)}','${esc(def)}','${by}',${n}) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=excluded.qty;`)
   for (const [m, n] of Object.entries(goods.materials ?? {})) put('pack', m, n, '')
   for (const [i, n] of Object.entries(goods.items ?? {})) put('pack', i, n, maker)
   for (const [i, n] of Object.entries(goods.personal ?? {})) put('personal', i, n, '')
-  execFileSync('sqlite3', ['-cmd', '.timeout 5000', '.e2e-server/fingersnap.sqlite', sql.join('\n')])
+  sql(statements.join('\n'))
 }
 
 /**
@@ -211,12 +226,7 @@ export function fund(id: string, goods: { materials?: Record<string, number>; it
 export function giveInstance(id: string, def: string, opts: { uses?: number; max: number; maker?: string }): string {
   const instance = `${def}-${Math.random().toString(36).slice(2, 10)}`
   const condition = opts.uses === undefined ? opts.max : opts.uses * 3
-  execFileSync('sqlite3', [
-    '-cmd',
-    '.timeout 5000',
-    '.e2e-server/fingersnap.sqlite',
-    `INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${id.replace(/'/g, "''")}',${condition},${opts.max},'${opts.maker ?? ''}',0);`
-  ])
+  sql(`INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${id.replace(/'/g, "''")}',${condition},${opts.max},'${opts.maker ?? ''}',0);`)
   return instance
 }
 
@@ -225,7 +235,7 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
   await earnEmbers(page, id)
   await setHabitica(id, { lvl: 9, exp: 100 })
   const balance = await syncEmberBalance(page)
-  await expect(page.locator('.toast', { hasText: /embers — from the XP you earned/ }).last()).toBeVisible()
+  await expectToast(page, /embers — from the XP you earned/)
   await page.getByRole('button', { name: 'Back to the road' }).click()
   expect(balance).toBeGreaterThanOrEqual(60)
 }
@@ -237,6 +247,8 @@ export async function claimDeed(page: Page): Promise<number> {
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
   await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  // Silas answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, /in my square hand/)
   return free.gate
 }
 
@@ -261,7 +273,7 @@ export async function onMyLand(page: Page, dx = 0, dy = 0): Promise<NonNullable<
 export async function intoCottage(page: Page): Promise<void> {
   await onMyLand(page)
   await expect(page.locator('.prompt')).toContainText('Go inside')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   await waitForArea(page, 'cottage')
 }

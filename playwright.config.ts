@@ -1,64 +1,71 @@
+import { cpus } from 'node:os'
 import { defineConfig, devices } from '@playwright/test'
 
 /**
  * End-to-end playtests against the Vite dev server (the dev-only playtest
  * hooks — __fsDevWarp, __fsDevStrike — are stripped from production builds).
- * Runs on its own port so it never collides with a running `npm run dev`.
- * Set E2E_PORT to give each git worktree its own server; with the shared
- * default, a second worktree would reuse the first one's dev server.
+ * See docs/testing.md for the tiers, workers and ports.
  *
- * Connected playtests (e2e/connected*.spec.ts) also need the real Go server
- * and a fake Habitica for its login proof. Both start here on their own
- * ports (E2E_API_PORT, E2E_HABITICA_PORT) with a throwaway database under
- * .e2e-server/; Vite proxies /api to that server. Guest specs block /api in
+ * Parallel and isolated: every worker gets its own Go server, SQLite
+ * database and fake Habitica (e2e/server/backend.ts), started the first time
+ * that worker runs a `server: true` test, on free ports. One Vite dev server
+ * on E2E_PORT is shared; it sends each browser's /api and /ws to its worker's
+ * server by a cookie (e2e/server/vite-routing.mjs). Guest specs block /api in
  * the browser (e2e/fixtures.ts), so they still play with no server at all.
+ *
+ * E2E_PORT gives each git worktree its own Vite (the default, 5199, would be
+ * shared by two worktrees). E2E_WORKERS (or --workers) sets the worker count.
+ * E2E_API_PORT and E2E_HABITICA_PORT are no longer used: those servers pick
+ * free ports per worker.
  */
 const PORT = Number(process.env.E2E_PORT) || 5199
+/** @deprecated Per-worker servers pick free ports; see e2e/server/backend.ts. */
 export const API_PORT = Number(process.env.E2E_API_PORT) || 18203
+/** @deprecated Per-worker servers pick free ports; see e2e/server/backend.ts. */
 export const HABITICA_PORT = Number(process.env.E2E_HABITICA_PORT) || 18303
+
+// Render WebGL on the GPU (macOS: ANGLE over Metal). Headless Chromium's
+// default is SwiftShader, software GL on the CPU: on a busy machine the game
+// drew ~8 frames a second that way against 60 on the GPU, and every timing
+// flake got worse. E2E_GPU=0 goes back to SwiftShader. 2D canvases stay in
+// software: e2e/atlases.spec.ts compares their pixels exactly.
+const GPU = process.env.E2E_GPU !== '0' && process.platform === 'darwin'
+const GPU_ARGS = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-accelerated-2d-canvas']
+
+// Half the cores, 2–6: each worker drives a Phaser canvas and a Go server.
+const WORKERS = Number(process.env.E2E_WORKERS) || Math.min(6, Math.max(2, Math.floor(cpus().length / 2)))
 
 export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
-  fullyParallel: false,
-  // One worker: the playtests drive real-time movement, and two browsers
-  // under one machine's load drop enough frames to miss timed walks.
-  workers: 1,
+  // Every test makes its own player and world, so tests spread across workers.
+  fullyParallel: true,
+  workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  globalSetup: './e2e/global-setup.ts',
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    // 127.0.0.1, not localhost: page.request resolves the host in Node, and
+    // under load a localhost lookup has stalled for seconds.
+    baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1200, height: 760 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1200, height: 760 } } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1200, height: 760 }, launchOptions: { args: GPU ? GPU_ARGS : [] } }
+    }
+  ],
   webServer: [
     {
-      command: `node e2e/server/fake-habitica.ts ${HABITICA_PORT}`,
-      url: `http://127.0.0.1:${HABITICA_PORT}/__health`,
-      reuseExistingServer: false,
-      timeout: 30_000
-    },
-    {
-      // Built, then run directly (same as `go run`, but the admin CLI the
-      // tests call reuses the binary). Insecure cookies: the tests use http.
-      command:
-        `sh -c 'rm -rf .e2e-server && mkdir -p .e2e-server && go build -o .e2e-server/fingersnap-server ./server/cmd/fingersnap-server && ` +
-        `exec .e2e-server/fingersnap-server -listen 127.0.0.1:${API_PORT} -db .e2e-server/fingersnap.sqlite -cookie-secure=false ` +
-        `-habitica-url http://127.0.0.1:${HABITICA_PORT} -login-rate 10000'`,
-      url: `http://127.0.0.1:${API_PORT}/api/state`,
-      reuseExistingServer: false,
-      timeout: 180_000,
-      stdout: 'ignore'
-    },
-    {
       command: `npx vite --port ${PORT} --strictPort`,
-      url: `http://localhost:${PORT}`,
-      // Never reuse: an existing Vite would not proxy /api to the test server.
+      url: `http://127.0.0.1:${PORT}`,
+      // Never reuse: an existing Vite would not route /api to the workers' servers.
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { FINGERSNAP_API: `http://127.0.0.1:${API_PORT}` }
+      env: { FINGERSNAP_E2E_ROUTING: '1' }
     }
   ]
 })

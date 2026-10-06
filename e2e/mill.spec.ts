@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState } from './connected'
-import { beginNewJourney, warp } from './helpers'
+import { beginNewJourney, talkText, warp, waitForLive } from './helpers'
 import { freshPlayer, fund, go, shot } from './home-helpers'
 
 /**
@@ -14,23 +14,8 @@ import { freshPlayer, fund, go, shot } from './home-helpers'
 type MillView = { mended: boolean; frame: number; turns: number; x: number; y: number }
 const mill = (page: Page) => page.evaluate(() => (window as unknown as { __fsMill: () => MillView | null }).__fsMill())
 
-async function readThrough(page: Page, prompt: RegExp): Promise<string> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await page.waitForTimeout(200)
-  await page.keyboard.press('e')
-  const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
-  await expect(dialogue).toBeVisible()
-  let text = ''
-  for (let i = 0; i < 20 && (await dialogue.isVisible()); i++) {
-    if (await dialogue.locator('.caret.on').count()) await page.keyboard.press('e')
-    await page.waitForTimeout(150)
-    text += ' ' + ((await dialogue.locator('.line').textContent()) ?? '')
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
-  await expect(dialogue).toBeHidden()
-  return text
-}
+/** Talk at the prompt and read it through; returns what was said. */
+const readThrough = (page: Page, prompt: RegExp): Promise<string> => talkText(page, prompt)
 
 test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper keeps a tally', async ({ page }) => {
   test.setTimeout(90_000)
@@ -63,7 +48,7 @@ test.describe('connected', () => {
     fund(id, { materials: { timber: 120, fiber: 60 } })
     await go(page, 'village', 15, 10)
     await expect(page.locator('.prompt')).toContainText('Read the notice board')
-    await page.waitForTimeout(200)
+    await waitForLive(page)
     await page.keyboard.press('e')
     const board = page.getByRole('dialog', { name: 'Notice Board' })
     await expect(board).toBeVisible()

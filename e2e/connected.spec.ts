@@ -12,7 +12,7 @@ import {
   syncFromMenu,
   waitForWorld
 } from './connected'
-import { beginNewJourney, expectStage, savedStage, settleWarden, talkThrough, warp, waitForArea } from './helpers'
+import { beginNewJourney, expectStage, readDialogue, savedStage, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
 
 /**
  * Connected play against the real Go server (playwright.config.ts starts it
@@ -51,12 +51,17 @@ async function cacheRecord(page: Page, id: string): Promise<Record<string, any> 
 
 /** Read a conversation to its end (replies included). */
 async function finishTalking(page: Page): Promise<void> {
-  const dialogue = page.getByRole('dialog', { name: /Conversation/ })
-  for (let i = 0; i < 12 && (await dialogue.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
-  await expect(dialogue).toBeHidden()
+  await readDialogue(page)
+  await expect(page.getByRole('dialog', { name: /Conversation/ })).toBeHidden()
+}
+
+/** Open the lantern's conversation (its prompt must be up) and read on to the replies. */
+async function lanternReplies(page: Page): Promise<void> {
+  await expect(page.locator('.prompt')).toContainText('Rest by the lantern')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(page.getByRole('dialog', { name: /Conversation/ })).toBeVisible()
+  await untilChoices(page)
 }
 
 /** Sign in from the title as a new allowlisted player and start fresh. */
@@ -73,11 +78,11 @@ async function freshPlayer(page: Page): Promise<string> {
 /** Sync from the Menu, wait for the toast, and go back to the road. */
 async function sync(page: Page, toast: RegExp): Promise<void> {
   await syncFromMenu(page)
-  await expect(page.locator('.toast', { hasText: toast })).toBeVisible()
+  await expectToast(page, toast)
   await page.getByRole('button', { name: 'Back to the road' }).click()
 }
 
-test('login + fresh start: the guide signs in, the world starts fresh, a sync pays the welcome', async ({ page }) => {
+test('login + fresh start: the guide signs in, the world starts fresh, a sync pays the welcome', { tag: '@smoke' }, async ({ page }) => {
   const id = await freshPlayer(page)
   const s = await serverState(page)
   expect(s.status).toBe(200)
@@ -95,7 +100,7 @@ test('login + fresh start: the guide signs in, the world starts fresh, a sync pa
   expect(cache).not.toContain('99999999-ffff')
 })
 
-test('login + bring save: a guest journey moves into the world and the guest save stays', async ({ page, context }) => {
+test('login + bring save: a guest journey moves into the world and the guest save stays', { tag: '@smoke' }, async ({ page, context }) => {
   const id = newUser()
   allow(id)
   await routeHabitica(context)
@@ -113,7 +118,7 @@ test('login + bring save: a guest journey moves into the world and the guest sav
   await expect(origin).toContainText('Start fresh')
   await origin.getByRole('button', { name: /Bring this device’s save/ }).click()
   await waitForWorld(page)
-  await expect(page.locator('.toast', { hasText: 'came with you' })).toBeVisible()
+  await expectToast(page, 'came with you')
 
   const s = await serverState(page)
   expect(s.body.saveOrigin).toBe('migrated')
@@ -175,16 +180,11 @@ test('a rest is paid on the server, and the world waits for its answer', async (
   await hurt(page, 6)
   await expect.poll(async () => (await serverState(page)).body.state.hp).toBeLessThan(41)
   await warp(page, 'village', 11, 13)
-  await expect(page.locator('.prompt')).toContainText('Rest by the lantern')
-  await page.keyboard.press('e')
+  await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
-  for (let i = 0; i < 10 && !(await choice.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
   await expect(choice).toBeEnabled()
   await page.keyboard.press('1')
-  await expect(page.locator('.toast', { hasText: 'Warm and rested' })).toBeVisible()
+  await expectToast(page, 'Warm and rested')
   await expect(hud(page)).toHaveText('1')
   const s = (await serverState(page)).body
   expect(s.state.embers).toBe(1)
@@ -198,7 +198,7 @@ test('quest embers come from the server once the story upload lands', async ({ p
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
   await settleWarden(page)
-  await expect(page.locator('.toast', { hasText: '+2 embers — a little warmth from the road.' })).toBeVisible()
+  await expectToast(page, '+2 embers — a little warmth from the road.')
   await expect(hud(page)).toHaveText('2')
   const s = (await serverState(page)).body
   expect(s.state.quest).toBe('guardian-defeated')
@@ -218,7 +218,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await warp(page, 'village', 25, 15)
   await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: 'Found: A Page from Pip’s Copybook' })).toBeVisible()
+  await expectToast(page, 'Found: A Page from Pip’s Copybook')
 
   await warp(page, 'village', 4, 18)
   await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
@@ -284,12 +284,8 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   await talkThrough(page, /Talk to Mara/)
   // Spends say they need a connection.
   await warp(page, 'village', 11, 13)
-  await page.keyboard.press('e')
+  await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
-  for (let i = 0; i < 10 && !(await choice.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
   await expect(choice).toBeDisabled()
   await expect(choice).toContainText('Needs a connection')
   await page.keyboard.press('2')

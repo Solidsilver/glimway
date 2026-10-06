@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { beginNewJourney, holdUntil, savedFlags, seedSave, warp, waitForWilds, wilds, type WildsDump } from './helpers'
+import { beginNewJourney, holdUntil, savedFlags, seedSave, warp, waitForWilds, wilds, type WildsDump, waitForLive, readDialogue, settled, savedToDisk, toastAfter, expectToast } from './helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
 import { chunkTerrain, type Epoch } from '../src/lib/wilds/index.ts'
 import { siteChunks } from '../src/lib/wilds/outer.ts'
@@ -42,10 +42,7 @@ async function outerEpoch(page: Page): Promise<Epoch> {
 async function readThrough(page: Page): Promise<void> {
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
   await expect(dialogue).toBeVisible()
-  for (let i = 0; i < 12 && (await dialogue.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(250)
-  }
+  await readDialogue(page)
   await expect(dialogue).toBeHidden()
 }
 
@@ -61,7 +58,7 @@ async function waitTurning(page: Page, from: string): Promise<WildsDump> {
     from,
     { timeout: 20_000 }
   )
-  await page.waitForTimeout(700)
+  await settled(page)
   return wilds(page)
 }
 
@@ -110,25 +107,25 @@ test('guest: over the crossing, an Echo settled, the Wilds turn and give a text 
   const end = Number(before.season.split(':')[2])
   await page.evaluate((n) => (window as unknown as { __fsDevCalendar: (n: number) => void }).__fsDevCalendar(n), end - 2)
   await page.waitForFunction(() => (window as unknown as { __fsSafety: () => { transitioning: boolean } }).__fsSafety().transitioning === true, undefined, { timeout: 10_000 })
-  await page.waitForTimeout(1200)
+  if (process.env.SCREENS) await page.waitForTimeout(1200)
   await shot(page, '45-outer-turning-desktop')
   const after = await waitTurning(page, before.season)
   expect(after.region).toBe(OUTER)
   expect(after.season).toBe(`t:${end}:${end + 7 * 86400}`)
   expect(await areaNow(page)).toBe(chunkAreaId(1, 1, OUTER))
-  await expect(page.locator('.toast', { hasText: SEASON_SHIFT_NOTICE }).first()).toBeVisible()
+  await toastAfter(page, 0, SEASON_SHIFT_NOTICE)
   // Seeing the Turning with the road lit: the weir survey is given back.
   await expect.poll(() => savedFlags(page), { timeout: 10_000 }).toContain('wilds:turned')
   await expect.poll(() => savedFlags(page), { timeout: 10_000 }).toContain('paper:weir-effect-survey-draft')
   await shot(page, '46-outer-turned-desktop')
 
   // And by the crossing, the deep drift gives back Nan Greer's journal.
-  const given = after.sites.find((s) => s.kind === 'given')
-  expect(given?.find).toBe('nan-greer-trail-journal')
+  await expect.poll(async () => (await wilds(page)).sites.find((s) => s.kind === 'given')?.find).toBe('nan-greer-trail-journal')
+  const given = (await wilds(page)).sites.find((s) => s.kind === 'given')
   await warp(page, chunkAreaId(1, 1, OUTER), given!.tx, given!.ty + 1)
   await expect(page.locator('.prompt')).toContainText('Pick up the bundle')
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: /Found: .*Nan Greer/ }).first()).toBeVisible()
+  await expectToast(page, /Found: .*Nan Greer/)
   await expect.poll(() => savedFlags(page)).toContain('paper:nan-greer-trail-journal')
   await shot(page, '47-outer-given-back-desktop')
 
@@ -141,7 +138,7 @@ test('guest: over the crossing, an Echo settled, the Wilds turn and give a text 
   // Back in Hearthwick, the notice board's old notices, now you've seen a Turning.
   await warp(page, 'village', 15, 10)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   await expect(page.getByRole('dialog', { name: 'Notice Board' })).toBeVisible()
   await expect.poll(() => savedFlags(page)).toContain('paper:notices-from-the-board')
@@ -153,7 +150,7 @@ test('guest: a save in the outer Wilds reloads there, and a turned wick brings y
   await crossOver(page)
   // Step off the entrance, let the position save, and reload.
   await warp(page, chunkAreaId(1, 0, OUTER), 12, 21)
-  await page.waitForTimeout(2200)
+  await savedToDisk(page)
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
   expect(await waitForWilds(page, OUTER)).toBe(chunkAreaId(1, 0, OUTER))
@@ -161,7 +158,7 @@ test('guest: a save in the outer Wilds reloads there, and a turned wick brings y
 
   // The save was made in a wick that has since ended: the land you left is
   // gone, so you come to at the region's entrance, told it has turned.
-  await page.waitForTimeout(1500)
+  await savedToDisk(page)
   await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open('fingersnap')
@@ -183,7 +180,7 @@ test('guest: a save in the outer Wilds reloads there, and a turned wick brings y
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
   expect(await waitForWilds(page, OUTER)).toBe(chunkAreaId(1, 1, OUTER))
-  await expect(page.locator('.toast', { hasText: /turned since you were last here/ }).first()).toBeVisible()
+  await expectToast(page, /turned since you were last here/)
   await expect.poll(() => savedFlags(page)).toContain('wilds:turned')
 })
 
@@ -218,7 +215,7 @@ test.describe('connected', () => {
     await warp(page, chunkAreaId(node.chunk.cx, node.chunk.cy, OUTER), node.tx + offsets[0][0], node.ty + offsets[0][1])
     await expect(page.locator('.prompt')).toContainText(/chop|cut|gather|pry/i)
     await page.keyboard.press('e')
-    await expect(page.locator('.toast', { hasText: /harvested/i }).first()).toBeVisible()
+    await expectToast(page, /harvested/i)
     dump = await wilds(page)
     expect(dump.entities.find((e) => e.id === node.id)!.state).toBe('harvested')
     await shot(page, '48-outer-connected-harvest-desktop')
@@ -235,7 +232,7 @@ test.describe('connected', () => {
     await page.keyboard.press('e')
     await waitTurning(page, null as unknown as string)
     expect(await areaNow(page)).toBe(chunkAreaId(1, 1, OUTER))
-    await expect(page.locator('.toast', { hasText: SEASON_SHIFT_NOTICE }).first()).toBeVisible()
+    await expectToast(page, SEASON_SHIFT_NOTICE)
     await page.unroute('**/api/wilds/claim')
     expect((await wilds(page)).guest).toBe(false)
   })
