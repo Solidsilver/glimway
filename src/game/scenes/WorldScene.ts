@@ -683,6 +683,8 @@ export class WorldScene extends Phaser.Scene {
     // Read-only avatar/combat diagnostics for verification (no mutation).
     ;(window as unknown as { __fsDebug?: () => Record<string, unknown> }).__fsDebug = () => ({
       avatar: !!this.avatar.container,
+      /** What the layered avatar is drawn holding ('' = its own weapon). */
+      holding: this.avatar.holding,
       pet: !!this.avatar.pet,
       riding: this.avatar.riding,
       playerAlpha: this.hero.sprite.alpha,

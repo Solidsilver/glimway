@@ -73,6 +73,9 @@ test('keys take the belt in hand; only the held tool’s pieces prompt, the wron
   await expect.poll(async () => (await gather(page))?.prompt?.target).toBe('tree')
   await expect(page.locator('.prompt')).toContainText('Chop the tree')
   expect((await gather(page))?.hint).toBeNull()
+  // The hero holds it: a layered avatar puts its own weapon away and shows the axe.
+  const drawn = () => page.evaluate(() => (window as unknown as { __fsDebug: () => { avatar: boolean; holding: string } }).__fsDebug())
+  if ((await drawn()).avatar) await expect.poll(async () => (await drawn()).holding).toBe('bench-axe')
 
   // 3: the pick. Trees aren't its work.
   await page.keyboard.press('3')
