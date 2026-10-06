@@ -70,11 +70,14 @@
   import { newKey } from './lib/api/client'
   import { errorCode, isUnreachable } from './lib/api/errors'
   import { hasProgress } from './lib/api/progress'
-  import type { Snapshot } from './lib/api/types'
+  import type { Snapshot, WorldMoveResponse, WorldRef, WorldView } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
   import OriginChoice from './ui/OriginChoice.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
+  import PartyPrompt from './ui/PartyPrompt.svelte'
+  import WorldMove from './ui/WorldMove.svelte'
+  import { worldCopy } from './content/world-moves'
   import EmotePicker from './ui/EmotePicker.svelte'
   import { presence, startPresence, stopPresence } from './game/presence'
   import { EMOTES } from './content/presence'
@@ -118,6 +121,10 @@
   let leaseBusy = $state(false)
   let leaseError = $state('')
   let confirmLogout = $state(false)
+  /** Your party plays in a world that isn't yours: the one-time prompt. */
+  let partyPrompt = $state<WorldView | null>(null)
+  /** The move confirmation (from the prompt or the Menu). */
+  let moving = $state<{ target: WorldRef; home: boolean; view: WorldView | null } | null>(null)
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
@@ -247,6 +254,14 @@
     const onLink = (p: LinkPayload) => {
       ui.link = p
     }
+    const onResolved = (p: { op: { kind: string }; outcome: string }) => {
+      if (p?.op?.kind !== 'world-move' || p.outcome !== 'landed' || !session?.link) return
+      // A move whose answer was lost, replayed and found to have landed.
+      void api
+        .state()
+        .then((snap) => afterMove(snap, worldCopy.landed))
+        .catch(() => undefined)
+    }
     const onLinkNotice = () => {
       ui.linkNotice = 'played-elsewhere'
     }
@@ -306,6 +321,7 @@
       [EV.link, onLink],
       [EV.presence, onPresence],
       [EV.linkNotice, onLinkNotice],
+      [EV.mutationResolved, onResolved],
       [EV.wilds, onWilds],
       [PAPER_EV.openLibrary, onOpenLibrary],
       [HOME_EV.openShop, onOpenShop],
@@ -597,6 +613,53 @@
     } else {
       await begin()
     }
+    void checkPartyPrompt(next)
+  }
+
+  /**
+   * Your party plays in another world: say so once (the server remembers it
+   * was shown; the Menu keeps the offer). Reads need only the session.
+   */
+  async function checkPartyPrompt(s: Session): Promise<void> {
+    if (!s.link || s.link.status !== 'online') return
+    try {
+      const v = await api.world()
+      if (session !== s || !v.prompt || !v.partyWorld) return
+      partyPrompt = v
+      void api.worldPrompt(v.partyWorld.id).catch(() => undefined)
+    } catch {
+      /* the Menu still offers it */
+    }
+  }
+
+  function openMove(target: WorldRef, home: boolean, view: WorldView | null): void {
+    panel = null
+    partyPrompt = null
+    moving = { target, home, view }
+  }
+
+  /**
+   * After a move: a fresh connected session from the server's answer, so
+   * every per-world view (the lane, homesteads, the village, the Wilds)
+   * starts over in the new world. The lease is the same one: this page and
+   * this sign-in still hold it.
+   */
+  async function afterMove(snapshot: Snapshot, line: string): Promise<void> {
+    moving = null
+    partyPrompt = null
+    const prev = session
+    // Its link already adopted the move's answer; nothing is left to upload.
+    prev?.destroy(true)
+    const name = ui.account?.name ?? snapshot.displayName
+    const s = await connectedSession({ snapshot, cache: null, name })
+    await s.link!.reconnect(false)
+    await settle(s)
+    ui.toast({ text: line, icon: 'world' })
+  }
+
+  function onMoved(res: WorldMoveResponse): void {
+    const m = moving
+    void afterMove(res, m?.home ? worldCopy.doneHome : worldCopy.done(m?.target.ownerName ?? res.result.world.world.ownerName))
   }
 
   async function takeOverInPlay(): Promise<void> {
@@ -707,7 +770,7 @@
   }
 
   $effect(() => {
-    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null || home.namePrompt !== null || home.leaveAsk !== null
+    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null || home.namePrompt !== null || home.leaveAsk !== null || moving !== null
   })
 
   // The pack lives on the (non-reactive) save; mirror it for the HUD's bag
@@ -735,7 +798,7 @@
    * fields (credentials, import codes) are ignored so typing never toggles.
    */
   function onKeyGlobal(e: KeyboardEvent): void {
-    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock) return
+    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
@@ -812,6 +875,13 @@
         }}
       />
     {/if}
+    {#if partyPrompt?.partyWorld && !moving && !ui.linkNotice && panel === null && !ui.cinematic && !ui.dialogueOpen && !leaseBlock}
+      {@const pw = partyPrompt.partyWorld}
+      <PartyPrompt owner={pw.ownerName} members={pw.members} onJoin={() => openMove(pw, false, partyPrompt)} onLater={() => (partyPrompt = null)} />
+    {/if}
+    {#if moving}
+      <WorldMove {session} target={moving.target} home={moving.home} view={moving.view} {onMoved} onCancel={() => (moving = null)} />
+    {/if}
     {#if panel === 'journal'}
       <JournalPanel onClose={() => toggle('journal')} />
     {:else if panel === 'library'}
@@ -855,6 +925,7 @@
           panel = null
           void continueAccount()
         }}
+        onMove={openMove}
       />
     {/if}
   {/if}

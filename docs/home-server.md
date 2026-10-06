@@ -213,6 +213,41 @@ returned only at creation. Admin CLI invites also expire after 30 days, and are
 under the owner's control rather than the player budget. Invites admit new
 players to the inviter's world and preserve existing players' world membership.
 
+### Party-linked worlds and world moves
+
+Being in the same Habitica party counts as an invite to a world linked to that
+party; the allowlist still decides who may sign in at all. The party id comes
+from the one identity read at sign-in (`players.habitica_party_id`) and is
+never read in between; leaving a party moves no one.
+
+- **New worlds** are linked to their creator's party. The owner links or
+  unlinks with `POST /api/world/party {"link": true|false}` (session only, no
+  lease; linking uses the party from the owner's last sign-in).
+- **First sign-in:** a valid invite code decides the world (the one it names,
+  else a new solo world), also for an already allowlisted newcomer, whose code
+  is then used up. Without one, an allowlisted newcomer whose party is linked
+  joins that party's world: the oldest world linked to it. Otherwise a solo
+  world.
+- **Settled players** see `GET /api/world` report their party's world when it
+  isn't theirs, with `prompt: true` until `POST /api/world/prompt {"worldId"}`
+  records that the join prompt was shown (once per player and party world;
+  table `party_prompts`, migration 021). The offer stays in the Menu.
+- **Moving:** `POST /api/world/move {worldId, lease, baseRev, key, progress}`
+  is one keyed, idempotent transaction under the usual lease and current-
+  revision rules. Allowed targets: a world linked to your party, or one you
+  own (moving back). Only from the village or the Commons, and only with no
+  goods parcels you sent still in transit (`mail-in-flight`: recall them
+  first; a recall can land a tool in the old homestead's storage, so the move
+  doesn't recall for you). Your character, story, embers, pack and personal
+  chest come along (they belong to the player, not the world). Your homestead
+  membership ends as a "leave" does (the last member out starts desolation);
+  placed furniture, the shared chest, gate shelf stock, Wilds claims and
+  project contributions stay. Parcels waiting for you go back to their senders
+  (`recipient-removed`); thank-you notes you sent stay readable. The ledger
+  records a zero-delta `world-move` row (`ref` = `from>to`). A live presence
+  socket is moved to the new world's rooms (the old room sees `leave`). A
+  replay with the same key returns the first answer and moves nothing.
+
 `invites [player]` prints one JSON metadata record per code, optionally filtered
 by creator, including creator, recipient, world, expiry and revocation timestamps.
 `invite revoke HASH` revokes any unused code; the CLI can inspect player-made
@@ -395,8 +430,8 @@ placed instances must first be removed. Mail transfers only server-owned gathere
 materials, Wilds trinkets, crafted utilities and unplaced decorations, never
 embers, quest items or paid quest entitlements. Assets are debited immediately on
 send and remain unusable in transit until the named recipient claims them or the
-sender recalls them. Unclaimed mail returns after 30 days or recipient removal.
-World moves remain outside this release.
+sender recalls them. Unclaimed mail returns after 30 days, on recipient
+removal, or when the recipient moves to another world.
 
 Six projects cover the three written village works plus the Wheel & Wick
 guildhouse, Orrin's hinges and the Cooley Window Fund. Completion world flags

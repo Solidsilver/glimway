@@ -21,9 +21,12 @@ Also shipped, outside the original phases: **papers** (52 found texts in eight
 collections, a Journal tab) and the **Hearthwick Library** (a local shelf for
 guests, one shared shelf per world); the canon text pass.
 
+Also shipped: **party-linked worlds and world moves** (owner decisions
+below; server details in [home-server.md](home-server.md#party-linked-worlds-and-world-moves)).
+
 Still to come: the outer Wilds in the client, Garden and Hall tiers,
-Habitica-driven decoration, the party boss mirror, co-op combat, world moves
-and checkpoint rewind.
+Habitica-driven decoration, the party boss mirror, co-op combat and
+checkpoint rewind.
 
 **Owner decisions after revision 4** (these override the text below where
 they differ):
@@ -46,6 +49,20 @@ they differ):
 - **Persistent worlds with player invites.** A first login creates a solo
   world or joins the inviter's; every member may have three codes
   outstanding and create five in all. Worlds never move players on their own.
+- **The party counts as an invite.** An allowlisted newcomer with no invite
+  code joins their party's world (the oldest world linked to the party); a
+  code still wins. New worlds link to the creator's party and the owner can
+  link or unlink. A settled member whose party plays elsewhere is asked once
+  ("Your party plays in <owner>'s world. Join them?"), and the Menu keeps the
+  offer. Leaving a party never moves anyone.
+- **Moving takes only what's yours.** This replaces the move rules under
+  "Worlds" below: the homestead does **not** move. You keep your character,
+  story, embers, pack and personal chest; your deed membership ends as
+  leaving does (desolation for a last member), and furniture, the shared
+  chest, shelf stock, Wilds claims and project contributions stay. Moves start
+  from the village or the Commons with nothing pending and no parcels of yours
+  on the road (recall them first); parcels waiting for you go back to their
+  senders. Moving back is the same flow.
 - **Readable invite codes.** Six words from a fixed 256-word list plus four
   digits (`amber-fox-river-lantern-moss-ivy-7392`, about 61 bits),
   case-insensitive and tolerant of spaces; old hex codes still work.

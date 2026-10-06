@@ -267,12 +267,14 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if sentAt <= now-int64(content.MailRules.ReturnAfterDays)*86400 {
 			return nil, fail(409, "mail-expired")
 		}
-		// Senders must still belong to the recorded world; world moves are not shipped.
+		// Senders of goods must still belong to the recorded world (a move
+		// waits until their parcels are recalled). A thank-you note has no
+		// goods, so it can still be read after its sender moved on.
 		var senderWorld string
 		if err = tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=?", from).Scan(&senderWorld); err != nil {
 			return nil, err
 		}
-		if senderWorld != world {
+		if senderWorld != world && v.Kind != "thanks" {
 			return nil, fail(403, "world-access-denied")
 		}
 		got := moved{}

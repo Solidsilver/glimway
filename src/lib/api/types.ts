@@ -130,6 +130,51 @@ export interface InviteList {
   outstandingLimit?: number;
 }
 
+// ------------------------------------------------------------- worlds
+
+/** A world as the server names it: its owner and how many live there. */
+export interface WorldRef {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  members: number;
+}
+
+/** What a move would leave behind (GET /api/world). */
+export interface WorldLeaving {
+  /** Your homestead's gate (-1: none). */
+  gate: number;
+  /** You are its only member: it goes quiet after you leave. */
+  last: boolean;
+  /** Parcels you sent that are still on the road (recall them first). */
+  outgoing: number;
+  /** Parcels waiting for you (they go back to their senders). */
+  incoming: number;
+}
+
+/** GET /api/world: your world, its party link, and the party's world. */
+export interface WorldView {
+  world: WorldRef;
+  isOwner: boolean;
+  /** Your last sign-in reported a party. */
+  inParty: boolean;
+  /** This world is linked to a party; `linkedToMine`: to yours. */
+  linked: boolean;
+  linkedToMine: boolean;
+  /** Your party's world, when it is somewhere else. */
+  partyWorld: WorldRef | null;
+  /** A world you own, when you live somewhere else. */
+  ownWorld: WorldRef | null;
+  /** The party world's join prompt hasn't been shown yet. */
+  prompt: boolean;
+  leaving: WorldLeaving;
+}
+
+/** POST /api/world/move (keyed). */
+export interface WorldMoveResponse extends Snapshot {
+  result: { world: WorldView; from: string; leftHome: boolean; returned: number };
+}
+
 // ------------------------------------------------------------- the Wilds
 
 /** The frozen epoch a region is generated from (server: `region_epochs`). */

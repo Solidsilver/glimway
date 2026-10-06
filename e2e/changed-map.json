@@ -124,6 +124,25 @@
       "specs": ["connected.spec.ts", "connected-screens.spec.ts", "onboarding.spec.ts", "polish.spec.ts"]
     },
     {
+      "paths": [
+        "src/content/world-moves.ts",
+        "src/lib/world-moves.ts",
+        "src/ui/PartyPrompt.svelte",
+        "src/ui/WorldMove.svelte",
+        "src/ui/WorldCard.svelte",
+        "src/ui/MenuPanel.svelte",
+        "src/App.svelte",
+        "src/game/link.ts",
+        "src/lib/api/**",
+        "server/internal/api/worlds.go",
+        "server/internal/api/presence.go",
+        "server/internal/api/api.go",
+        "server/internal/store/migrations/**",
+        "e2e/party-helpers.ts"
+      ],
+      "specs": ["party-worlds.spec.ts", "party-worlds-screens.spec.ts", "presence.spec.ts"]
+    },
+    {
       "paths": ["server/internal/rules/**", "src/lib/embers.ts", "src/lib/economy.ts"],
       "specs": ["embers.spec.ts", "connected.spec.ts"]
     },

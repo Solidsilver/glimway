@@ -286,25 +286,30 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 }
 
 // Query outside the hub lock. An error is unknown, not proof of revocation.
-func (a *Server) revalidatePresence(ctx context.Context, p *presencePeer) (websocket.StatusCode, string, error) {
+// A player who moved worlds under the same lease keeps the socket: the new
+// world comes back for checkPresence to move them into its rooms.
+func (a *Server) revalidatePresence(ctx context.Context, p *presencePeer, world string) (websocket.StatusCode, string, string, error) {
 	v, err := a.presenceIdentity(ctx, p.identity.Session, false)
 	if err != nil {
 		var f *failure
 		if errors.As(err, &f) {
 			if f.code == "superseded" {
-				return presenceSuperseded, "superseded", nil
+				return presenceSuperseded, "superseded", "", nil
 			}
-			return presenceUnauthorized, "unauthorized", nil
+			return presenceUnauthorized, "unauthorized", "", nil
 		}
-		return 0, "", err
+		return 0, "", "", err
 	}
 	if v.Lease != p.identity.Lease {
-		return presenceSuperseded, "superseded", nil
+		return presenceSuperseded, "superseded", "", nil
 	}
-	if v.ID != p.identity.ID || v.World != p.identity.World {
-		return presenceUnauthorized, "unauthorized", nil
+	if v.ID != p.identity.ID {
+		return presenceUnauthorized, "unauthorized", "", nil
 	}
-	return 0, "", nil
+	if v.World != world {
+		return 0, "", v.World, nil
+	}
+	return 0, "", "", nil
 }
 func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	h := a.presence
@@ -314,11 +319,13 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 		return
 	}
 	generation := p.account.generation
+	// The world can change (a move) under the hub lock: read it here.
+	known := p.identity.World
 	p.authCheck++
 	check := p.authCheck
 	h.mu.Unlock()
 	ctx, cancel := context.WithTimeout(parent, millis(h.config.WriteTimeoutMs))
-	code, reason, err := a.revalidatePresence(ctx, p)
+	code, reason, world, err := a.revalidatePresence(ctx, p, known)
 	cancel()
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -343,7 +350,43 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	if code != 0 {
 		p.stop(code, reason)
 		h.remove(p)
+		return
 	}
+	if world != "" && world != p.identity.World {
+		h.moveWorld(p, world)
+	}
+}
+
+// moveWorld: the old room sees the player leave; they rejoin their area's
+// room in the new world (or wait for their next join if it is full).
+func (h *presenceHub) moveWorld(p *presencePeer, world string) {
+	if p.area != "" {
+		h.broadcast(p, struct {
+			Type       string `json:"type"`
+			HabiticaID string `json:"habiticaId"`
+		}{"leave", p.identity.ID})
+	}
+	p.identity.World = world
+	p.pos = nil
+	if p.area == "" {
+		return
+	}
+	n := 0
+	for _, other := range h.peers {
+		if other != p && other.identity.World == world && other.area == p.area {
+			n++
+		}
+	}
+	if n >= h.config.MaxRoomPlayers {
+		p.area = ""
+		return
+	}
+	h.room(p)
+	h.broadcast(p, struct {
+		Type   string         `json:"type"`
+		Area   string         `json:"area"`
+		Player presencePlayer `json:"player"`
+	}{"join", p.area, p.player()})
 }
 
 // Bump before querying so in-flight first-message auth must re-check. Pointer
