@@ -242,6 +242,10 @@
     {
       "paths": ["src/game/entities/goal-guide.ts", "src/lib/state.ts", "src/ui/Hud.svelte"],
       "specs": ["goal.spec.ts"]
+    },
+    {
+      "paths": ["src/game/heirloom-beats.ts", "src/game/seats.ts", "src/game/hero-motion.ts", "src/lib/habitica/sprite-cache.ts", "server/internal/api/sprites.go"],
+      "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
     }
   ]
 }

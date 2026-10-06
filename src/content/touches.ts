@@ -25,6 +25,22 @@ export const SIT_LINES: readonly string[] = [
   'You sit. Wood, iron and lamplight, all holding still together.',
 ];
 
+/** Sitting on a placed seat at home (src/game/seats.ts): one line each time, cycling, per piece. */
+export const SEAT_LINES: Readonly<Record<string, readonly string[]>> = {
+  'wooden-stool': [
+    'You sit on the stool. Three legs, and not one of them wobbles.',
+    'A short sit on a plain stool. Rest you made room for keeps best.',
+  ],
+  'reading-chair': [
+    'You sink into the reading chair. The arms are worn exactly where hands go.',
+    'The reading chair takes you in. The lamp hums. Nothing needs you for a while.',
+  ],
+};
+
+/** The Empty Chair, placed: set for the ones the Tangle kept, and never sat in. */
+export const EMPTY_CHAIR_LINE =
+  'Set for the ones the Tangle kept, sap-gold cushion and all. You leave it empty, the way it’s meant to be.';
+
 /** What a sign says, by speaker, cycling through its lines per read. */
 export interface SignCopy {
   speaker: string;

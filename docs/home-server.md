@@ -139,9 +139,12 @@ npm run dev      # Vite proxies /api and WebSocket /ws to localhost:8090
 
 Configuration is available as flags or environment variables: `-listen` /
 `FINGERSNAP_LISTEN`, `-db` / `FINGERSNAP_DB`, `-habitica-url` /
-`FINGERSNAP_HABITICA_URL`, `-x-client` / `FINGERSNAP_X_CLIENT`, and
-`-cookie-secure` / `FINGERSNAP_COOKIE_SECURE` (default true; false only for
-local HTTP). Flags precede CLI subcommands. Examples on the server:
+`FINGERSNAP_HABITICA_URL`, `-x-client` / `FINGERSNAP_X_CLIENT`,
+`-habitica-assets-url` / `FINGERSNAP_HABITICA_ASSETS_URL` and `-sprite-cache` /
+`FINGERSNAP_SPRITE_CACHE` (Habitica outfit art fetched for players, kept in
+`habitica-sprites/` beside the database by default: the service's state
+directory, already writable), and `-cookie-secure` / `FINGERSNAP_COOKIE_SECURE`
+(default true; false only for local HTTP). Flags precede CLI subcommands. Examples on the server:
 
 ```sh
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist add HABITICA_USER_ID

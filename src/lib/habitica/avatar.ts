@@ -12,7 +12,9 @@
  * Access-Control-Allow-Origin header, so remote URLs are NOT safe to load
  * as Phaser WebGL textures. The scoped same-origin cache under
  * public/assets/habitica/ is the WebGL-safe path; `assetSourceFor` reports
- * which one a name resolves to.
+ * which one a name resolves to. A 'remote' piece reaches the game through
+ * our server's sprite proxy instead (`proxiedSpriteUrl`, same origin; see
+ * ./sprite-cache.ts and server/internal/api/sprites.go).
  *
  * Art license: CC BY-NC-SA 3.0 (HabitRPG/Weirdly Wonderful) — attribution
  * in ASSETS.md. This module holds no credentials and never performs I/O.
@@ -88,6 +90,15 @@ export const LOCAL_SPRITE_BASE = '/assets/habitica/';
 export function upstreamSpriteUrl(name: string): string {
   const ext = isGifSprite(name) ? 'gif' : 'png';
   return `${UPSTREAM_SPRITE_BASE}${encodeURIComponent(name)}.${ext}`;
+}
+
+/** Our server's sprite proxy (same origin, WebGL-safe; it fetches from upstream once). */
+export const PROXY_SPRITE_BASE = '/api/sprites/';
+
+/** Same-origin proxy URL for an upstream sprite, with its upstream extension (no validation). */
+export function proxiedSpriteUrl(name: string): string {
+  const ext = isGifSprite(name) ? 'gif' : 'png';
+  return `${PROXY_SPRITE_BASE}${encodeURIComponent(name)}.${ext}`;
 }
 
 /** Percent-encoded same-origin cache URL for a sprite name (no validation). */

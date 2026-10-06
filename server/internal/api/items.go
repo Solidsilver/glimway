@@ -606,6 +606,11 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 // ------------------------------------------------------------ position
 
 // near: the caller's last uploaded spot is in an area, within r tiles of a tile.
+// residentReachTiles: how near a named resident (Ada, Hazel) you stand to
+// hand them something or take something from them. The client offers the
+// same beats at the same reach (src/content/heirlooms.ts RESIDENT_REACH_TILES).
+const residentReachTiles = 4
+
 func nearTile(s *store.Snapshot, area string, tx, ty, r int) bool {
 	if s.State.Area != area {
 		return false
@@ -1942,7 +1947,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	switch target {
 	case "ada", "hazel":
 		spot, ok := content.ResidentFor(target)
-		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
 			return fail(409, "too-far-away")
 		}
 	case "silas":
@@ -2013,7 +2018,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 		}
 	case "ada-garden-spade":
 		spot, ok := content.ResidentFor("ada")
-		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
 			return fail(409, "too-far-away")
 		}
 	case "nans-lamplighter-pole":
@@ -2105,7 +2110,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 // giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
 func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
 	spot, ok := content.ResidentFor("ada")
-	if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+	if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
 		return fail(409, "too-far-away")
 	}
 

@@ -161,8 +161,8 @@ Warden-stone is drift-stone that has learned one shape and always walks back to 
 - If it's dropped or left in the Tangle, it **walks home** to your tool rack.
 - **You can carry one warden-set tool at a time.** Two slivers in one pack pull
   toward each other's pose and grind. Others wait on the rack; you choose at home.
-- Slivers are very rare (deep Tangle, the Whitequiet), with perhaps one from the
-  story when the Warden is settled.
+- Slivers are very rare, and found only out deep: the deep Tangle and the
+  Whitequiet. Settling the Warden is a story beat; it gives no sliver.
 
 ### Mending heirlooms
 
