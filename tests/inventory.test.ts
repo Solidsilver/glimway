@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { groupInventory, inventoryEntries, materialsFromPack, newTabs, unseen } from '../src/lib/inventory.ts';
+import { groupInventory, inventoryEntries, materialsFromPack, newestFirst, newTabs, unseen } from '../src/lib/inventory.ts';
 
 const names = (list: { name: string }[]) => list.map((e) => e.name);
 
@@ -74,4 +74,15 @@ test('new dots: what this device has not seen, by tab', () => {
 
 test('the guest material parser reads the pack format', () => {
   assert.deepEqual(materialsFromPack(['material:amber:3', 'material:bogus:9', 'material:stone:x', 'tin-whistle']), { timber: 0, stone: 0, fiber: 0, amber: 3 });
+});
+
+test('newest first: unseen things lead, then the most recently seen, quest things last', () => {
+  const entries = inventoryEntries({ pack: ['field-journal', 'material:timber:4', 'material:amber:1', 'lamp-wick', 'whittled-fox'] });
+  const keys = (list: { key: string }[]) => list.map((e) => e.key);
+  // Seen in this order: timber, then the wick (the wick is the more recent).
+  const order = keys(newestFirst(entries, ['material:timber', 'item:lamp-wick']));
+  const unseenKeys = ['material:amber', 'item:whittled-fox'];
+  assert.deepEqual(new Set(order.slice(0, 2)), new Set(unseenKeys), 'unseen things lead');
+  assert.deepEqual(order.slice(2, 4), ['item:lamp-wick', 'material:timber'], 'then the most recently seen');
+  assert.equal(order.at(-1), 'quest:field-journal', 'quest things last');
 });

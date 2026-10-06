@@ -20,8 +20,31 @@ export const INVENTORY_TABS = [
   { id: 'papers', label: 'Papers', icon: 'scroll' },
 ] as const
 
+/** The Carrying grid's filters: everything, or one kind (the old tabs). */
+export const INVENTORY_FILTERS = [
+  { id: 'all', label: 'All', icon: 'bag' },
+  { id: 'tools', label: 'Tools', icon: 'sword' },
+  { id: 'supplies', label: 'Supplies', icon: 'ember' },
+  { id: 'keepsakes', label: 'Keepsakes', icon: 'sparkle' },
+  { id: 'home', label: 'Home', icon: 'lantern' },
+  { id: 'papers', label: 'Papers', icon: 'scroll' },
+] as const
+
 export const inventoryCopy = {
   title: 'Inventory',
+  equipped: 'Equipped',
+  carrying: 'Carrying',
+  hand: 'Hand',
+  handWeapon: (basic: string) => `Your weapon · ${basic}`,
+  handHint: 'What you hold decides what your action does.',
+  holdThis: 'Hold',
+  inHandTag: 'In hand',
+  holdingNow: 'In hand now',
+  emptyFilter: 'Nothing here yet.',
+  pick: 'Pick something to see it here.',
+  pocketLocked: 'A satchel, apron or coat adds a second pocket.',
+  pocketHint: 'Pick a keepsake below and pocket it: it helps while you carry it.',
+  offHandHint: 'Pick a lantern or a whistle below to carry it.',
   close: 'Close the inventory',
   intro: {
     tools: 'Tools wear with use. Some can be mended.',

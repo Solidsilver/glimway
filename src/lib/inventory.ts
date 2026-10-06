@@ -375,3 +375,17 @@ export function unseen(entries: readonly InventoryEntry[], seen: ReadonlySet<str
 export function newTabs(entries: readonly InventoryEntry[], seen: ReadonlySet<string>): Set<ItemTab> {
   return new Set(unseen(entries, seen).map((e) => e.tab));
 }
+
+/**
+ * Newest first: what this device hasn't seen yet leads (in the usual order),
+ * then everything else, the most recently seen first. Quest things stay at
+ * the end, in story order.
+ */
+export function newestFirst(entries: readonly InventoryEntry[], seen: readonly string[]): InventoryEntry[] {
+  const at = new Map(seen.map((k, i) => [k, i]));
+  const main = entries.filter((e) => e.section === 'main');
+  const road = entries.filter((e) => e.section === 'road').sort(compare);
+  const fresh = main.filter((e) => !at.has(e.key)).sort(compare);
+  const old = main.filter((e) => at.has(e.key)).sort((a, b) => at.get(b.key)! - at.get(a.key)! || compare(a, b));
+  return [...fresh, ...old, ...road];
+}

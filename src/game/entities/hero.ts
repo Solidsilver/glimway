@@ -28,6 +28,8 @@ import type { Effects } from './fx'
 
 const PLAYER_SPEED = 110
 const ATTACK_RANGE = 26
+/** A tool swung at a creature does this share of the weapon's damage. */
+const TOOL_DAMAGE = 0.5
 const CONTACT_IFRAMES = 1.1
 
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
@@ -249,16 +251,27 @@ export class Hero {
     this.deps.session.setVitals(hp, mana)
   }
 
-  /** Melee (or the mage's ranged basic) on the action button. */
-  tryAttack(): void {
+  /**
+   * Melee (or the mage's ranged basic) on the action button. With a tool in
+   * hand it's a tool's swing instead: melee whatever the class, at half the
+   * weapon's damage (src/game/held.ts). `toward` turns to face a point first
+   * (a mouse click).
+   */
+  tryAttack(opts: { tool?: boolean; toward?: { x: number; y: number } } = {}): void {
     if (this.seat) return // no fighting from a bench; move to stand up
     const kit = this.kit()
     if (this.attackCooldown > 0 || this.deps.transitioning()) return
+    if (opts.toward) {
+      const fx = opts.toward.x - this.sprite.x
+      const fy = opts.toward.y - (this.sprite.y - 8)
+      if (Math.hypot(fx, fy) > 1) this.facing.set(fx, fy).normalize()
+    }
     this.attackCooldown = kit.cooldown
     const dir = this.facing.clone().normalize()
+    const tool = !!opts.tool
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
-    if (kit.class === 'mage') {
+    if (kit.class === 'mage' && !tool) {
       this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.meleeDamage)
       return
     }
@@ -271,6 +284,8 @@ export class Hero {
     const slash = this.scene.add.image(sx, sy, 'slash')
       .setDepth(this.sprite.y + 2)
       .setRotation(Math.atan2(dir.y, dir.x))
+    // A tool's swing: a shorter, duller arc than the blade's.
+    if (tool) slash.setScale(0.75).setTint(0xd8c79c)
     this.scene.tweens.add({ targets: slash, alpha: 0, duration: 150, onComplete: () => slash.destroy() })
     this.scene.time.delayedCall(60, () => {
       for (const enemy of [...this.deps.enemies().enemies]) {
@@ -278,7 +293,8 @@ export class Hero {
         const dy = enemy.sprite.y - 6 - sy
         if (dx * dx + dy * dy < ATTACK_RANGE * ATTACK_RANGE) {
           const crit = Math.random() < kit.critChance
-          const dmg = crit ? kit.meleeDamage * 2 : kit.meleeDamage
+          const base = tool ? Math.max(1, Math.round(kit.meleeDamage * TOOL_DAMAGE)) : kit.meleeDamage
+          const dmg = crit ? base * 2 : base
           if (crit) this.deps.fx.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 8)
           this.deps.enemies().damageEnemy(enemy, dmg, this.sprite.x, crit)
         }

@@ -22,6 +22,8 @@ import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, g
 import { parseHomeArea } from '../../lib/homestead'
 import { itemDef } from '../../lib/items'
 import { itemErrorText, itemsFor } from '../items'
+import { heldNow } from '../held'
+import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
@@ -36,6 +38,14 @@ import type { Effects } from './fx'
 import type { Hero } from './hero'
 import type { PromptAction } from './interactables'
 import type { HomePlantView, ItemsActionResponse } from '../../lib/api/types'
+
+/** A piece's work: chop, break or dig (content/gathering.json). */
+function actionOf(spot: GatherSpot): string {
+  return gatheringTarget(spot.target)?.action ?? 'chop'
+}
+
+/** The everyday tool for each kind of work (the ghost hint's picture when none is carried). */
+const BENCH_TOOL: Record<string, string> = { chop: 'bench-axe', break: 'bench-pick', dig: 'bench-spade' }
 
 export interface GatherAction extends PromptAction {
   spot: GatherSpot
@@ -97,6 +107,8 @@ export class Gathering {
     Gathering.live = this
     bus.on(EV.planted, this.onPlanted, this)
     scene.events.once('shutdown', () => {
+      this.ghost?.destroy()
+      this.ghost = null
       if (Gathering.live === this) Gathering.live = null
       bus.off(EV.planted, this.onPlanted, this)
       this.spots = []
@@ -124,8 +136,11 @@ export class Gathering {
   promptAction(hero: { x: number; y: number }, closerThan = Infinity): GatherAction | null {
     this.current = null
     if (this.busy || !this.live()) return null
+    // Only what the held tool works answers (the blade out: the woods keep quiet).
+    const kind = heldNow().kind
     let best: { d: number; spot: GatherSpot } | null = null
     for (const spot of this.spots) {
+      if (actionOf(spot) !== kind) continue
       const d = this.distance(hero, spot)
       if (d <= REACH && d < closerThan && (!best || d < best.d)) best = { d, spot }
     }
@@ -187,17 +202,24 @@ export class Gathering {
     this.busy = true
     const hero = this.deps.hero()
     try {
-      // The pack may have changed since it was read (a tool from the post,
-      // or still loading): read it again before saying there's no tool.
-      let tool = this.toolFor(target.action)
+      // The tool in hand does the work. The pack may have changed since it
+      // was read (a tool from the post, or still loading): read it again
+      // before saying there's no tool.
+      let tool = this.heldTool(target.action)
       if (!tool) {
         await itemsFor(session).load()
         if (!this.scene.sys.isActive()) return
-        tool = this.toolFor(target.action)
+        tool = this.heldTool(target.action)
       }
       if (!tool) {
         this.last = 'no-tool'
         bus.emit(EV.toast, { text: `You’d want your ${gatheringToolWord(target.action)} for this.`, icon: 'bag' })
+        return
+      }
+      if (tool.refuses) {
+        // A blunt or cracked tool in hand: say so, as its wear would.
+        this.last = 'no-tool'
+        bus.emit(EV.toast, { text: wearLine({ broke: false, state: tool.state, wornOut: [], returned: [], itemDef: tool.itemDef, usesLeft: 0 }) ?? `You’d want your ${gatheringToolWord(target.action)} for this.`, icon: 'bag' })
         return
       }
       this.last = 'working'
@@ -243,22 +265,95 @@ export class Gathering {
   }
 
   /**
-   * The carried tool for an action: one still working (blunt and cracked
-   * ones refuse), sharpest first, so a dull warden-set tool waits while a
-   * keen one is to hand.
+   * The tool in hand for an action (the belt's slot for that kind: its best,
+   * src/lib/belt.ts), with how it works: null when nothing of that kind is
+   * held or carried; `refuses` when it's blunt or cracked.
    */
-  private toolFor(action: string): { id: string; feel: ToolFeel } | null {
-    const view = itemsFor(this.deps.session).view
-    if (!view) return null
-    const usable = view.instances.filter((i) => {
-      const d = itemDef(i.itemDef)
-      return d?.kind === 'tool' && d.actions?.includes(action) && i.state !== 'blunt' && i.state !== 'cracked'
-    })
-    usable.sort((a, b) => Number(a.state === 'dull') - Number(b.state === 'dull'))
-    const i = usable[0]
+  private heldTool(action: string): { id: string; itemDef: string; state: string; refuses: boolean; feel: ToolFeel } | null {
+    const slot = heldNow()
+    if (slot.kind !== action || !slot.instance) return null
+    const i = itemsFor(this.deps.session).view?.instances.find((x) => x.id === slot.instance)
     if (!i) return null
     const has = (kind: string) => i.fittings.some((f) => f.fitting === kind)
-    return { id: i.id, feel: { bite: has('bite'), heft: has('heft'), dull: i.state === 'dull' } }
+    return { id: i.id, itemDef: i.itemDef, state: i.state, refuses: !slot.usable, feel: { bite: has('bite'), heft: has('heft'), dull: i.state === 'dull' } }
+  }
+
+  // ------------------------------------------------------------ the ghost hint
+
+  /**
+   * Standing still by a piece the held item can't work, a faint icon of the
+   * right tool appears over it after a moment (never an E, and never with a
+   * creature near). It teaches the belt without an E-press that does nothing.
+   */
+  private ghost: Phaser.GameObjects.Image | null = null
+  private ghostFor: GatherSpot | null = null
+  private still = 0
+  private lastHero = { x: 0, y: 0 }
+
+  updateHint(dt: number, hero: { x: number; y: number }, creatureNear: boolean, live: boolean): void {
+    const moved = Math.hypot(hero.x - this.lastHero.x, hero.y - this.lastHero.y) > 0.5
+    this.lastHero = { x: hero.x, y: hero.y }
+    this.still = moved ? 0 : this.still + dt
+    const spot = live && !creatureNear && !this.busy && this.current === null && this.still >= 0.8 && this.live() ? this.wrongToolSpot(hero) : null
+    if (!spot) {
+      if (this.ghost) this.ghost.setVisible(false)
+      this.ghostFor = null
+      return
+    }
+    if (spot !== this.ghostFor) {
+      this.ghostFor = spot
+      const action = actionOf(spot)
+      // The belt's own tool of that kind if carried, else the bench one (it shows what's wanted).
+      const def = this.carriedDef(action) ?? BENCH_TOOL[action] ?? 'bench-axe'
+      let key = itemIcon(def)
+      if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
+      if (!this.scene.textures.exists(key)) return
+      this.ghost?.destroy()
+      this.ghost = this.scene.add.image(0, 0, key).setOrigin(0.5, 1).setAlpha(0).setDepth(5000)
+      if (this.ghost.height > 12) this.ghost.setScale(12 / this.ghost.height)
+      this.scene.tweens.add({ targets: this.ghost, alpha: 0.5, duration: this.deps.reducedMotion ? 0 : 300 })
+    }
+    this.ghost!.setPosition(spot.tx * TILE + 8, spot.ty * TILE - 2).setVisible(true)
+  }
+
+  /** Read-only: the piece the ghost hint shows over (playtests). */
+  hinted(): { tx: number; ty: number } | null {
+    return this.ghostFor && this.ghost?.visible ? { tx: this.ghostFor.tx, ty: this.ghostFor.ty } : null
+  }
+
+  /** The nearest piece in reach that the held item can't work. */
+  private wrongToolSpot(hero: { x: number; y: number }): GatherSpot | null {
+    const kind = heldNow().kind
+    let best: { d: number; spot: GatherSpot } | null = null
+    for (const spot of this.spots) {
+      if (actionOf(spot) === kind) continue
+      const d = this.distance(hero, spot)
+      if (d <= REACH && (!best || d < best.d)) best = { d, spot }
+    }
+    return best?.spot ?? null
+  }
+
+  private carriedDef(action: string): string | null {
+    const i = (itemsFor(this.deps.session).view?.instances ?? []).find((x) => itemDef(x.itemDef)?.actions?.includes(action))
+    return i?.itemDef ?? null
+  }
+
+  /**
+   * Work the piece under a point (a mouse click), when the held tool works
+   * it and it's in reach. True when work started.
+   */
+  workAt(point: { x: number; y: number }, hero: { x: number; y: number }): boolean {
+    if (this.busy || !this.live()) return false
+    const kind = heldNow().kind
+    const spot = this.spots.find((s) => {
+      if (actionOf(s) !== kind) return false
+      const dx = point.x - (s.tx * TILE + 8)
+      const dy = point.y - (s.ty + 1) * TILE
+      return Math.abs(dx) <= 12 && dy >= -28 && dy <= 6 && this.distance(hero, s) <= REACH
+    })
+    if (!spot) return false
+    void this.work(spot)
+    return true
   }
 
   /** One swing: the arc, the sound, the piece shivering. */

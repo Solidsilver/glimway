@@ -6,21 +6,28 @@
   import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import PapersTab from './PapersTab.svelte'
+  import GuidesTab from './GuidesTab.svelte'
+  import type { Session } from '../game/session'
   import { papers } from './papers.svelte'
   import { home } from './home.svelte'
 
   // Mounted only while open (App owns journalOpen + the J/Escape keys). Quest
   // state comes from the shared store, which App keeps current from the
   // first snapshot on — never a local copy that starts at 'new'.
-  let { onClose }: { onClose: () => void } = $props()
+  let { onClose, session, initialTab = 'road' }: { onClose: () => void; session: Session; initialTab?: 'road' | 'papers' | 'guides' } = $props()
 
-  // Two pages: the quest, and the found texts ("Papers").
-  type Tab = 'road' | 'papers'
+  // Three pages: the quest, the found texts ("Papers"), and "How do I…?".
+  type Tab = 'road' | 'papers' | 'guides'
   const TABS: { id: Tab; label: string }[] = [
     { id: 'road', label: 'Lantern Road' },
-    { id: 'papers', label: 'Papers' }
+    { id: 'papers', label: 'Papers' },
+    { id: 'guides', label: 'How do I…?' }
   ]
+  // Opens on the page asked for; the tabs take over from there.
   let tab = $state<Tab>('road')
+  $effect.pre(() => {
+    tab = initialTab
+  })
 
   function onTabKey(e: KeyboardEvent): void {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
@@ -72,6 +79,10 @@
     {#if tab === 'papers'}
       <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
         <PapersTab />
+      </div>
+    {:else if tab === 'guides'}
+      <div role="tabpanel" id="journal-page-guides" aria-labelledby="journal-tab-guides">
+        <GuidesTab {session} />
       </div>
     {:else}
     <div role="tabpanel" id="journal-page-road" aria-labelledby="journal-tab-road">

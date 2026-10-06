@@ -84,6 +84,7 @@
   import { EMOTES } from './content/presence'
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
   import { setPlayInsets } from './game/viewport'
+  import { pinnedProgress, setPinned } from './game/guide-pin'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
   type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
@@ -1032,6 +1033,40 @@
       !home.leaveAsk &&
       !ui.bannerUp
   )
+  /** The journal page to open on (the HUD's pinned goal opens "How do I…?"). */
+  let journalTab = $state<'road' | 'papers' | 'guides'>('road')
+  $effect(() => {
+    if (panel !== 'journal') journalTab = 'road'
+  })
+
+  /**
+   * The pinned guide's step on the goal line, kept current (the item and
+   * home models change under it). A finished guide says so and unpins.
+   */
+  $effect(() => {
+    if (phase !== 'playing' || !session) return
+    const s = session
+    const read = () => {
+      const p = pinnedProgress(s)
+      if (p && p.done) {
+        ui.toast({ text: `Done: ${p.guide.title}.`, icon: 'check' })
+        setPinned(null)
+        return
+      }
+      const next = p && !p.locked && p.current !== null
+        ? { id: p.guide.id, title: p.guide.title, step: p.steps[p.current].text, index: p.current, count: p.steps.length }
+        : null
+      if (JSON.stringify(next) !== JSON.stringify(ui.goalLine.guide)) ui.goalLine = { guide: next }
+    }
+    read()
+    const t = setInterval(read, 1000)
+    bus.on(EV.guidePin, read)
+    return () => {
+      clearInterval(t)
+      bus.off(EV.guidePin, read)
+    }
+  })
+
   /** Character opened from the bag's hero row: closing it goes back to the bag. */
   let characterFromBag = false
   function closeCharacter(): void {
@@ -1063,6 +1098,10 @@
       {inventoryNew}
       onMenu={() => toggle('menu')}
       onEmote={() => (ui.emoteOpen = !ui.emoteOpen)}
+      onGuides={() => {
+        journalTab = 'guides'
+        if (panel !== 'journal') toggle('journal')
+      }}
       prompt={showPrompt && !touch ? ui.prompt.label : null}
     />
     {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
@@ -1096,7 +1135,7 @@
       <WorldMove {session} target={moving.target} home={moving.home} view={moving.view} arriving={moving.arriving} {onMoved} {onHere} onCancel={() => (moving = null)} />
     {/if}
     {#if panel === 'journal'}
-      <JournalPanel onClose={() => toggle('journal')} />
+      <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} />
     {:else if panel === 'library'}
       <LibraryPanel {session} onClose={() => toggle('library')} />
     {:else if panel === 'shop'}

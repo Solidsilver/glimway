@@ -51,8 +51,9 @@ test.describe('guest', () => {
     await page.keyboard.press('i')
     await expect(dialog(page)).toBeVisible()
 
-    // Opens on the first tab with something new: Tools (the road's things).
-    await expect(tab(page, /Tools/)).toHaveAttribute('aria-selected', 'true')
+    // Opens on everything carried; Tools shows the road's things.
+    await expect(tab(page, /All/)).toHaveAttribute('aria-selected', 'true')
+    await tab(page, /Tools/).click()
     const tools = dialog(page).getByTestId('inv-page-tools')
     await expect(tools.getByText('No tools yet.')).toBeVisible()
     await expect(tools.getByRole('heading', { name: 'For the road' })).toBeVisible()
@@ -74,7 +75,7 @@ test.describe('guest', () => {
 
     await page.keyboard.press('ArrowRight')
     const keep = dialog(page).getByTestId('inv-page-keepsakes')
-    await expect(keep.locator('[data-item]').first()).toContainText('Ember Charm')
+    await expect(keep.locator('[data-cell]').first()).toContainText('Ember Charm')
     await expect(keep.getByText('Whittled Fox')).toBeVisible()
     await shot(page, 'inventory-keepsakes-desktop')
 
@@ -98,8 +99,27 @@ test.describe('guest', () => {
     await expect(bag).toHaveAccessibleName('Inventory (I)')
     await bag.click()
     await expect(dialog(page)).toBeVisible()
-    await expect(tab(page, /Supplies/)).toHaveAttribute('aria-selected', 'true')
+    await expect(tab(page, /All/)).toHaveAttribute('aria-selected', 'true')
     await expect(dialog(page).locator('.badge')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await expect(dialog(page)).toBeHidden()
+  })
+
+  test('the grid walks with the arrow keys; Enter opens a card, Escape closes it, then the bag', async ({ page }) => {
+    await beginNewJourney(page)
+    await seedPack(page, ['material:timber:4', 'material:amber:1', 'lamp-wick', 'whittled-fox'])
+    await page.keyboard.press('i')
+    await expect(dialog(page)).toBeVisible()
+    const cells = dialog(page).locator('.grid:not(.road) [data-cell]')
+    await cells.first().focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(cells.nth(1)).toBeFocused()
+    const key = await cells.nth(1).getAttribute('data-cell')
+    await page.keyboard.press('Enter')
+    await expect(dialog(page).locator(`[data-item="${key}"]`)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog(page).locator('[data-item]')).toHaveCount(0)
+    await expect(dialog(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog(page)).toBeHidden()
   })
@@ -173,11 +193,14 @@ test.describe('connected', () => {
     await tab(page, /Keepsakes/).click()
     await expect(dialog(page).getByTestId('qty-item:river-glass-bead')).toHaveText('2')
 
-    await tab(page, /Home goods/).click()
+    await tab(page, /Home/).click()
     const goods = dialog(page).getByTestId('inv-page-home')
+    // Pick an icon: its card says where the pieces are.
+    await goods.locator('[data-cell="decoration:wooden-stool"]').click()
     const stool = goods.locator('[data-item="decoration:wooden-stool"]')
     await expect(stool).toContainText('Wooden Stool')
     await expect(stool).toContainText('1 set out · 1 put away')
+    await goods.locator('[data-cell="decoration:potted-fern"]').click()
     await expect(goods.locator('[data-item="decoration:potted-fern"]')).toContainText('1 put away')
     await shot(page, 'inventory-home-desktop')
 
