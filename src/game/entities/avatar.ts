@@ -34,10 +34,14 @@ import type { WorldData } from '../worlds'
 import type { Hero } from './hero'
 import { SEAT_CUT } from '../seats'
 import { ART_PX, BREATH_SPLIT, avatarMotion } from '../hero-motion'
+import { heldNow } from '../held'
+import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 
 /** Habitica sprite grid (source px) and its on-screen height in the 16px world. */
 const AVATAR_CANVAS = 90
 const AVATAR_DISPLAY = 22
+/** Where a held tool sits on the Habitica figure (container px, unmirrored: the weapon hand, art-left), and its size. */
+const HAND = { x: -6, y: -9, size: 11 }
 
 /** State carried across area changes and defeat recovery (per tab). */
 const carried = { riding: false, fallbackNotified: false, partialNotified: false }
@@ -59,6 +63,16 @@ export class AvatarVisual {
   private uppers: Phaser.GameObjects.Image[] = []
   private lowers: Phaser.GameObjects.Image[] = []
   private mountLayers: Phaser.GameObjects.Image[] = []
+  /**
+   * The weapon's layers (both crops): put away while a tool is in hand, and
+   * the tool drawn at the weapon hand instead (src/game/held.ts). The demo
+   * stand-in has its blade drawn into the frames; it waits for the art pass
+   * (docs/art-request-playtest1.md, hand items).
+   */
+  private weaponLayers: Phaser.GameObjects.Image[] = []
+  private handTool: Phaser.GameObjects.Image | null = null
+  /** The held item drawn now ('' = none built yet). */
+  private handShown = ''
   /** What the playtests read: the pose as last drawn. */
   pose = { breath: 0, step: 0, seated: false, mirrored: false }
   /** Stale-async guard: a token invalidates older rebuild completions. */
@@ -122,6 +136,10 @@ export class AvatarVisual {
     this.uppers = []
     this.lowers = []
     this.mountLayers = []
+    this.weaponLayers = []
+    this.handTool = null
+    this.handShown = ''
+    const isWeaponLayer = (key: string) => (key.startsWith('fs-asset-') ? key.slice('fs-asset-'.length) : key).startsWith('weapon_')
     const images: Phaser.GameObjects.Image[] = []
     for (const k of loaded.layerKeys) {
       if (isMountLayer(k)) {
@@ -136,6 +154,7 @@ export class AvatarVisual {
       const upper = this.scene.add.image(0, centerY, k).setOrigin(0.5, 0.5).setScale(scale)
       this.lowers.push(lower)
       this.uppers.push(upper)
+      if (isWeaponLayer(k)) this.weaponLayers.push(lower, upper)
       images.push(lower, upper)
     }
     this.cropLayers(null)
@@ -212,6 +231,7 @@ export class AvatarVisual {
         this.container.depth = hero.sprite.y + 1
       }
       this.pose = { ...motion, seated: !!seat, mirrored: right }
+      this.drawHand(!!seat, motion.breath * scale)
     }
     if (this.pet) {
       // The pet trails behind, on the side away from where you face.
@@ -228,6 +248,40 @@ export class AvatarVisual {
       void this.build()
       bus.emit(EV.toast, { text: 'You lead your mount through the gate on foot.', kind: 'thought' })
     }
+  }
+
+  /**
+   * What's in hand, on the hero: the Habitica weapon while the weapon is
+   * held; a tool's icon at the weapon hand otherwise (tucked away seated).
+   */
+  private drawHand(seated: boolean, breath: number): void {
+    const slot = heldNow()
+    const want = slot.kind === 'weapon' || !slot.itemDef ? '' : slot.itemDef
+    if (want !== this.handShown) {
+      this.handShown = want
+      for (const w of this.weaponLayers) w.setVisible(!want)
+      this.handTool?.destroy()
+      this.handTool = null
+      if (want && this.container) {
+        let key = itemIcon(want)
+        if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
+        if (this.scene.textures.exists(key)) {
+          const img = this.scene.add.image(HAND.x, HAND.y, key).setOrigin(0.5, 0.85)
+          img.setScale(HAND.size / Math.max(img.width, img.height))
+          this.container.add(img)
+          this.handTool = img
+        }
+      }
+    }
+    if (this.handTool) {
+      this.handTool.setVisible(!seated)
+      this.handTool.y = HAND.y + breath
+    }
+  }
+
+  /** Read-only, for playtests: what the hero is drawn holding ('' = the weapon). */
+  get holding(): string {
+    return this.handTool?.visible ? this.handShown : ''
   }
 
   /**
