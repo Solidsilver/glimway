@@ -149,6 +149,7 @@ export const SERVER_ERROR_CODES = [
   'not-a-tool',
   'wrong-tool',
   'tool-blunt',
+  'two-wardens-grind',
   'not-needed',
   'not-usable-yet',
   'cannot-mend',

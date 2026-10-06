@@ -117,18 +117,19 @@ type WildsTimers struct {
 }
 
 type Wilds struct {
-	GeneratorVersion      int                         `json:"generatorVersion"`
-	ChunkSize             int                         `json:"chunkSize"`
-	Regions               []WildsRegion               `json:"regions"`
-	EnemyKinds            []string                    `json:"enemyKinds"`
-	CampMixes             [][]string                  `json:"campMixes"`
-	Materials             []string                    `json:"materials"`
-	POIIds                []string                    `json:"poiIds"`
-	Trinkets              []string                    `json:"trinkets"`
-	EntityKinds           []WildsEntityKindRule       `json:"entityKinds"`
-	LootTables            map[string][]WildsLootEntry `json:"lootTables"`
-	TrinketChancePermille int                         `json:"trinketChancePermille"`
-	Timers                WildsTimers                 `json:"timers"`
+	GeneratorVersion            int                         `json:"generatorVersion"`
+	ChunkSize                   int                         `json:"chunkSize"`
+	DeepTangleManhattanDistance int                         `json:"deepTangleManhattanDistance"`
+	Regions                     []WildsRegion               `json:"regions"`
+	EnemyKinds                  []string                    `json:"enemyKinds"`
+	CampMixes                   [][]string                  `json:"campMixes"`
+	Materials                   []string                    `json:"materials"`
+	POIIds                      []string                    `json:"poiIds"`
+	Trinkets                    []string                    `json:"trinkets"`
+	EntityKinds                 []WildsEntityKindRule       `json:"entityKinds"`
+	LootTables                  map[string][]WildsLootEntry `json:"lootTables"`
+	TrinketChancePermille       int                         `json:"trinketChancePermille"`
+	Timers                      WildsTimers                 `json:"timers"`
 }
 
 func LoadWilds() (Wilds, error) {
@@ -140,7 +141,7 @@ func LoadWilds() (Wilds, error) {
 	if err = json.Unmarshal(b, &w); err != nil {
 		return w, err
 	}
-	if w.GeneratorVersion != 1 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || len(w.Regions) == 0 {
+	if w.GeneratorVersion != 1 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || w.DeepTangleManhattanDistance < 1 || len(w.Regions) == 0 {
 		return w, fmt.Errorf("invalid wilds: version/chunk/regions")
 	}
 	for _, r := range w.Regions {

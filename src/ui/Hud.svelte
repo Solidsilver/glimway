@@ -104,6 +104,12 @@
     {#if home.goal}
       <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> {home.goal}</p>
     {/if}
+    {#if ui.unmoored}
+      <div class="unmoored-hint" data-testid="unmoored-hint" title="Unmoored: the drift’s sway holds you. Rest in lamplight or take a remedy.">
+        <Icon name="sparkle" size={11} />
+        <span>Unmoored</span>
+      </div>
+    {/if}
     {#if showBars}
       <div class="bars">
         <div class="vital" class:low={lowHp} title="Health">
@@ -343,6 +349,19 @@
     gap: 4px;
     align-items: center;
     max-width: 260px;
+  }
+  .unmoored-hint {
+    margin: 4px 0 0;
+    padding: 3px 8px;
+    font-size: 11px;
+    line-height: 1.3;
+    border-radius: 6px;
+    background: rgba(180, 195, 208, 0.45);
+    border: 1px solid rgba(130, 145, 160, 0.5);
+    color: var(--wood-dark);
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
   }
   .objective {
     all: unset;

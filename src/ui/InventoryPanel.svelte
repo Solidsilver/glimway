@@ -137,7 +137,7 @@
   const maker = (e: InventoryEntry) => (e.maker ? e.maker.id : undefined)
 
   function useIt(e: InventoryEntry): void {
-    void act(`use:${e.key}`, () => items.useItem(e.id, e.maker ? e.maker.id : ''), `You used ${giftPhrase(e.id, 1)}.`)
+    void act(`use:${e.key}`, () => items.useItem(e.id, e.maker ? e.maker.id : '', ui.unmoored), `You used ${giftPhrase(e.id, 1)}.`)
   }
 
   function pocketIt(e: InventoryEntry): void {
@@ -198,8 +198,14 @@
   }
 
   const percent = (i: InstanceView) => Math.round(conditionFraction(i) * 100)
-  const wearWords = (i: InstanceView) =>
-    i.maxCondition === 0 ? inventoryCopy.neverWears : (inventoryCopy.state[i.state] ?? inventoryCopy.usesLeft(i.usesLeft))
+  const wearWords = (i: InstanceView) => {
+    if (i.wardenSet) {
+      if (i.condition === i.maxCondition) return 'Sharp'
+      if (i.condition === 0) return inventoryCopy.state['dull'] ?? 'Dull. Sharp again by morning.'
+      return inventoryCopy.usesLeft(i.usesLeft)
+    }
+    return i.maxCondition === 0 ? inventoryCopy.neverWears : (inventoryCopy.state[i.state] ?? inventoryCopy.usesLeft(i.usesLeft))
+  }
   const toggleOpen = (id: string) => {
     open = open === id ? null : id
     message = null
@@ -226,6 +232,9 @@
         <img class="thumb" src={home.thumbs[e.id]} alt="" />
       {:else}
         <ArtIcon art={artOf(e)} name={e.icon} size={32} />
+      {/if}
+      {#if e.instance?.wardenSet}
+        <span class="grey-chip" title="Warden-set" data-testid="grey-chip"></span>
       {/if}
     </span>
     <span class="txt">
@@ -600,6 +609,7 @@
     background: rgba(255, 210, 74, 0.14);
   }
   .ii {
+    position: relative;
     display: grid;
     place-items: center;
     align-self: start;
@@ -609,6 +619,17 @@
     background: var(--paper-hi);
     border: 2px solid var(--wood);
     color: var(--wood);
+  }
+  .grey-chip {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: #9aa0a6;
+    border: 1px solid #5f6368;
+    border-radius: 2px;
+    box-sizing: border-box;
   }
   .ii.dim {
     filter: grayscale(0.6);

@@ -621,6 +621,23 @@ func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error 
 			}
 		}
 	}
+	if slices.Index(rules.Stages, s.State.Quest) >= slices.Index(rules.Stages, "guardian-defeated") {
+		sliverAdded, err := store.Outcome(ctx, tx, s.HabiticaID, "quest-gift:warden-sliver", "quest", now)
+		if err != nil {
+			return err
+		}
+		if sliverAdded {
+			sliverDef, ok := content.ItemFor("warden-sliver")
+			if ok {
+				if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.HabiticaID}, "", sliverDef.MaxPoints(), now); err != nil {
+					return err
+				}
+				if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency("warden-sliver"), 1, "story-grant", "defeat-guardian", now); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 func (a *Server) progress(w http.ResponseWriter, r *http.Request) error {

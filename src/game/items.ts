@@ -28,6 +28,8 @@ export function itemErrorText(code: ApiErrorCode | string): string {
   switch (code) {
     case 'tool-blunt':
       return 'It’s too blunt to work with. Mend it first.'
+    case 'two-wardens-grind':
+      return 'Two slivers in one pack pull toward each other’s pose and grind.'
     case 'wrong-tool':
       return 'That isn’t the tool for this.'
     case 'not-a-tool':
@@ -175,8 +177,17 @@ export class Items {
     return this.run('use', { instance, ...(action ? { action } : {}) })
   }
   /** Eat or drink one (any maker's, unmarked first, unless one is named). */
-  useItem(itemDef: string, maker?: string) {
-    return this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}) })
+  useItem(itemDef: string, maker?: string, unmoored?: boolean) {
+    return this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) }).then((r) => {
+      if (r.ok) {
+        if (itemDef === 'comfrey-salve') {
+          bus.emit('game:clear-unmoored', { instant: true })
+        } else if (itemDef === 'willow-bark-tea') {
+          bus.emit('game:clear-unmoored', { instant: false })
+        }
+      }
+      return r
+    })
   }
   /** Mend an heirloom at your bench ('bench') or by a mender ('silas', 'orrin'). */
   repair(instance: string, at: string) {

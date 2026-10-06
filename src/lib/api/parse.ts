@@ -277,6 +277,7 @@ export function parseWildsRegion(raw: unknown): WildsRegionResponse {
 export function parseWildsClaim(raw: unknown): WildsClaimResponse {
   const o = obj(raw);
   const r = obj(o.result);
+  if (r.wardenSliverFound !== undefined && typeof r.wardenSliverFound !== 'boolean') throw new ApiError('bad-response');
   return {
     ...parseSnapshot(raw),
     result: {
@@ -284,6 +285,7 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
       entity: parseEntity(r.entity),
       loot: parseLoot(r.loot),
       materials: parseMaterials(r.materials),
+      ...(typeof r.wardenSliverFound === 'boolean' ? { wardenSliverFound: r.wardenSliverFound } : {}),
     },
   };
 }
@@ -811,4 +813,3 @@ export function parseMend(raw: unknown): MendResponse {
     },
   };
 }
-

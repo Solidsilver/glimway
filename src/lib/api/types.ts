@@ -217,6 +217,7 @@ export interface WildsClaimResult {
   entity: WildsEntityView;
   loot: WildsLoot;
   materials: WildsMaterials;
+  wardenSliverFound?: boolean;
 }
 
 export interface WildsClaimResponse extends Snapshot {
@@ -428,6 +429,8 @@ export interface InstanceView {
   wardenSet: boolean;
   fittings: FittingView[];
   maker: MakerView | null;
+  dullness?: number;
+  speed?: number;
 }
 export interface StackView {
   itemDef: string;
@@ -662,4 +665,3 @@ export interface MendResult {
 export interface MendResponse extends Snapshot {
   result: MendResult;
 }
-

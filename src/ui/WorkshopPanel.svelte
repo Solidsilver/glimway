@@ -163,7 +163,7 @@
           {/each}
           {#each view.tools as t (t.instance.id)}
             <tr data-goods={`instance:${t.instance.id}`}>
-              <th scope="row"><ArtIcon art={t.instance.itemDef} size={16} /> {itemName(t.instance.itemDef)}{t.instance.maxCondition > 0 ? ` · ${Math.round((100 * t.instance.condition) / t.instance.maxCondition)}%` : ''}</th>
+              <th scope="row"><ArtIcon art={t.instance.itemDef} size={16} /> {itemName(t.instance.itemDef)}{t.instance.wardenSet ? (t.instance.condition === t.instance.maxCondition ? ' · Warden-set (sharp)' : t.instance.condition === 0 ? ' · Warden-set (dull)' : ` · Warden-set (${Math.round((100 * t.instance.condition) / t.instance.maxCondition)}%)`) : t.instance.maxCondition > 0 ? ` · ${Math.round((100 * t.instance.condition) / t.instance.maxCondition)}%` : ''}</th>
               <td class="n">{t.where === 'carried' ? 1 : 0}</td>
               <td class="moves">
                 <span class="dir">

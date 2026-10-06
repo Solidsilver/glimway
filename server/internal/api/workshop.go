@@ -22,6 +22,9 @@ type workshopView struct {
 }
 
 func readWorkshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (workshopView, error) {
+	if err := healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+		return workshopView{}, err
+	}
 	v := workshopView{Shared: "open"}
 	var err error
 	home, err := workshop(ctx, tx, s)

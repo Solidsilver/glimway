@@ -46,6 +46,7 @@ import { grantPaper } from '../papers'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
+import { emitResidents } from '../residents'
 import { commonsAnim, commonsArt } from '../commons-pass'
 import { TILE } from '../textures'
 import type { Session } from '../session'
@@ -393,6 +394,14 @@ export class WildsEntities {
     }
     const drop = applyClaim(res.result)
     this.lootFeedback(target, drop)
+    if (res.result.wardenSliverFound) {
+      const session = this.deps.session
+      bus.emit(EV.toast, { text: 'A chip of grey stone with an amber fleck. It sits very still in your hand.', icon: 'sparkle' })
+      if (!session.state.flags.includes('warden-sliver:found')) {
+        session.addFlag('warden-sliver:found')
+        emitResidents(session)
+      }
+    }
     // Personal claims and discoveries lists, complete.
     void refreshWilds(session, 0)
   }

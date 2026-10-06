@@ -54,6 +54,8 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'That was given to you. It stays with you.'
     case 'item-not-available':
       return 'That piece isn’t free to move just now.'
+    case 'two-wardens-grind':
+      return 'Two slivers in one pack pull toward each other’s pose and grind.'
     case 'invalid-quantity':
       return 'That’s not an amount Silas would write down.'
     case 'self-mail':

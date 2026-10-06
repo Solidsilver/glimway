@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fingersnap/content"
 	"fmt"
+	"strings"
 )
 
 // ReturnMail settles transit exactly once inside the caller's immediate tx.
@@ -60,12 +61,51 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		}
 		q := "UPDATE homestead_items SET location='inventory' WHERE id=? AND habitica_id=? AND item_def=? AND location='mail' AND scene IS NULL"
 		if kind == "instance" {
-			// A parcelled instance goes back into its sender's pack.
-			q = "UPDATE item_instances SET location='pack' WHERE id=? AND owner=? AND item_def=? AND location='mail'"
 			pack = content.StackCurrency(def)
 		}
 		for _, instance := range ids {
-			result, err = tx.ExecContext(ctx, q, instance, sender, def)
+			destLocation := "pack"
+			destOwner := sender
+			rackedAt := int64(0)
+			isRedirected := false
+			if kind == "instance" {
+				var isWarden bool
+				wSQL := wardenDefsSQL()
+				err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM item_instances WHERE location='fitted' AND owner=? AND item_def IN ("+wSQL+"))", instance).Scan(&isWarden)
+				if err != nil {
+					return false, err
+				}
+				if isWarden {
+					var senderHasWardenInPack bool
+					err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM item_instances t WHERE t.location='pack' AND t.owner=? AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def IN ("+wSQL+")))", sender).Scan(&senderHasWardenInPack)
+					if err != nil {
+						return false, err
+					}
+					if senderHasWardenInPack {
+						var homeID string
+						err = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", sender).Scan(&homeID)
+						if err != nil && err != sql.ErrNoRows {
+							return false, err
+						}
+						if err == nil && homeID != "" {
+							destLocation = "storage"
+							destOwner = homeID
+							rackedAt = now
+							pack = "storage:instance:" + def
+							isRedirected = true
+						} else {
+							destLocation = "personal"
+							destOwner = sender
+							rackedAt = 0
+							pack = "personal:instance:" + def
+							isRedirected = true
+						}
+					}
+				}
+				result, err = tx.ExecContext(ctx, "UPDATE item_instances SET location=?,owner=?,racked_at=? WHERE id=? AND owner=? AND item_def=? AND location='mail'", destLocation, destOwner, rackedAt, instance, sender, def)
+			} else {
+				result, err = tx.ExecContext(ctx, q, instance, sender, def)
+			}
 			if err != nil {
 				return false, err
 			}
@@ -76,7 +116,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 			if n != 1 {
 				return false, fmt.Errorf("mail instance unavailable")
 			}
-			if kind == "instance" {
+			if kind == "instance" && !isRedirected {
 				// The tool's fittings come back with it: so does their audit.
 				if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) SELECT ?,'fitted:'||item_def,1,0,?,?,? FROM item_instances WHERE location='fitted' AND owner=? ORDER BY item_def,id", sender, map[bool]string{true: "mail-recall", false: "mail-return"}[reason == "recalled"], id, now, instance); err != nil {
 					return false, err
@@ -161,4 +201,17 @@ func (s *Store) ReturnDueMail(ctx context.Context, now int64) (int, error) {
 		return 0, err
 	}
 	return n, tx.Commit()
+}
+
+func wardenDefsSQL() string {
+	ids := []string{}
+	for _, d := range content.ItemsRules.Items {
+		if d.Fitting == "remember" {
+			ids = append(ids, "'"+d.ID+"'")
+		}
+	}
+	if len(ids) == 0 {
+		return "''"
+	}
+	return strings.Join(ids, ",")
 }

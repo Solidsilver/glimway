@@ -63,7 +63,7 @@
         "src/game/entities/item-pickups.ts",
         "src/game/entities/off-hand.ts"
       ],
-      "specs": ["items.spec.ts", "inventory.spec.ts"]
+      "specs": ["items.spec.ts", "inventory.spec.ts", "warden.spec.ts"]
     },
     {
       "paths": ["src/content/heirlooms.ts"],
