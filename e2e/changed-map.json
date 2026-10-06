@@ -44,6 +44,16 @@
     },
     {
       "paths": [
+        "server/internal/api/crafting.go",
+        "src/ui/HearthPanel.svelte",
+        "src/ui/DeskPanel.svelte",
+        "src/ui/WoodpilePanel.svelte",
+        "src/game/items-pass.ts"
+      ],
+      "specs": ["crafting.spec.ts", "homestead.spec.ts"]
+    },
+    {
+      "paths": [
         "src/game/items*.ts",
         "src/lib/items.ts",
         "src/lib/inventory.ts",

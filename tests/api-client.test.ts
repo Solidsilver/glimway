@@ -319,3 +319,39 @@ test('client id: without BroadcastChannel or storage it still works', async () =
   const c = await claimClientId({ storage: blocked, makeChannel: () => null, waitMs: 1 });
   assert.ok(c.id.length > 0 && c.id.length <= 128);
 });
+
+// ---------------------------------------------------------------- hearth, desk, woodpile
+
+const workshopView = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {} }, storage: null, personal: { materials: {}, items: {}, decorations: {} }, shared: 'not-a-member' };
+
+test('hearth, desk and woodpile: endpoints, method, body and parsed shape', async () => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const api = createApiClient({
+    fetchImpl: (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      const base = snapshot();
+      if (calls.length === 3) return json(200, { ...base, woodpile: { homesteadId: 'h1', placed: true, stacks: [{ id: 's1', homesteadId: 'h1', habiticaId: 'a', qty: 10, stackedAt: 100, ready: true, remaining: 0 }], readyCount: 10, totalTimber: 10 } });
+      return json(200, { ...base, result: { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2 }, pageId: 'recipe-page-tea', qty: 2, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: undefined } });
+    }) as typeof fetch,
+  });
+  const hearth = await api.hearthCraft({ lease: 'L', baseRev: 3, key: 'k1', recipeId: 'hearth-wax-seal', qty: 2 });
+  assert.equal(calls[0].url, '/api/hearth/craft');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(String(calls[0].init.body)).recipeId, 'hearth-wax-seal');
+  assert.equal(hearth.result.recipeId, 'hearth-wax-seal');
+  assert.deepEqual(hearth.result.output, { kind: 'item', id: 'wax-seal', qty: 2 });
+  const desk = await api.deskCopy({ lease: 'L', baseRev: 3, key: 'k2', pageId: 'recipe-page-tea', qty: 2 });
+  assert.equal(calls[1].url, '/api/desk/copy');
+  assert.equal(desk.result.pageId, 'recipe-page-tea');
+  assert.equal(desk.result.qty, 2);
+  const wp = await api.woodpile();
+  assert.equal(calls[2].url, '/api/homestead/woodpile');
+  assert.equal(calls[2].init.method, 'GET');
+  assert.equal(wp.woodpile.readyCount, 10);
+  assert.ok(wp.woodpile.stacks[0].ready);
+  const act = await api.woodpileAction({ lease: 'L', baseRev: 3, key: 'k3', action: 'stack', qty: 10 });
+  assert.equal(calls[3].url, '/api/homestead/woodpile');
+  assert.equal(calls[3].init.method, 'POST');
+  assert.equal(act.result.action, 'stack');
+  assert.deepEqual(act.result.woodpile.stacks, []);
+});

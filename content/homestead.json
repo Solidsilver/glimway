@@ -412,6 +412,251 @@
         "stone": 4,
         "amber": 1
       }
+    },
+    {
+      "id": "gate-shelf",
+      "name": "Gate shelf",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "writing-desk",
+      "name": "Writing desk",
+      "category": "furniture",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "keepsake-cabinet",
+      "name": "Keepsake cabinet",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "drying-rack",
+      "name": "Herb drying rack",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "apothecary-shelf",
+      "name": "Apothecary shelf",
+      "category": "furniture",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "woodpile",
+      "name": "Woodpile",
+      "category": "utility",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "raised-bed",
+      "name": "Raised bed",
+      "category": "utility",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "window-lamp",
+      "name": "Window lamp",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "naming-frame",
+      "name": "Naming-slip frame",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {}
+    },
+    {
+      "id": "pencil-map",
+      "name": "Pip's pencil map",
+      "category": "decor",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "pressed-flowers",
+      "name": "Pressed-flower frame",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {}
+    },
+    {
+      "id": "candle-hulls",
+      "name": "Candle hulls",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "carting-bunting",
+      "name": "Carting bunting",
+      "category": "decor",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "empty-chair",
+      "name": "The Empty Chair",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {}
+    },
+    {
+      "id": "closure-lamp",
+      "name": "Closure Night lamp",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {}
+    },
+    {
+      "id": "door-fox",
+      "name": "Door-fox",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {}
     }
   ]
 }

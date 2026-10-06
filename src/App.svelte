@@ -40,6 +40,9 @@
   import SilasShop from './ui/SilasShop.svelte'
   import NoticeBoard from './ui/NoticeBoard.svelte'
   import WorkshopPanel from './ui/WorkshopPanel.svelte'
+  import HearthPanel from './ui/HearthPanel.svelte'
+  import DeskPanel from './ui/DeskPanel.svelte'
+  import WoodpilePanel from './ui/WoodpilePanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
   import { VILLAGE_EV, villageFor, type VillagePanel } from './game/village'
   import { villageUi } from './ui/village.svelte'
@@ -815,6 +818,12 @@
       <NoticeBoard {session} onClose={() => toggle('board')} />
     {:else if panel === 'chest' || panel === 'bench'}
       <WorkshopPanel {session} mode={panel} initialChest={chestPick} onClose={() => ((panel = null), (chestPick = 'shared'))} />
+    {:else if panel === 'hearth'}
+      <HearthPanel {session} onClose={() => (panel = null)} />
+    {:else if panel === 'desk'}
+      <DeskPanel {session} onClose={() => (panel = null)} />
+    {:else if panel === 'woodpile'}
+      <WoodpilePanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}

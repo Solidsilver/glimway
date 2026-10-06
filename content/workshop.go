@@ -29,8 +29,9 @@ type Recipe struct {
 	Output    Asset          `json:"output"`
 }
 type Crafting struct {
-	UtilityItems []UtilityItem `json:"utilityItems"`
-	Recipes      []Recipe      `json:"recipes"`
+	UtilityItems  []UtilityItem `json:"utilityItems"`
+	Recipes       []Recipe      `json:"recipes"`
+	HearthRecipes []Recipe      `json:"hearthRecipes,omitempty"`
 }
 type Project struct {
 	ID        string         `json:"id"`
@@ -99,6 +100,19 @@ func ValidateCrafting(c Crafting) error {
 		}
 		recipes[r.ID] = true
 	}
+	for _, r := range c.HearthRecipes {
+		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 1 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 {
+			return bad
+		}
+		if r.Output.Kind != "item" && r.Output.Kind != "material" {
+			return bad
+		}
+		d, ok := ItemFor(r.Output.ID)
+		if !ok || d.AssetKind() != r.Output.Kind {
+			return bad
+		}
+		recipes[r.ID] = true
+	}
 	return nil
 }
 func LoadCrafting() (Crafting, error) {
@@ -129,6 +143,14 @@ func KnownAdventureItem(id string) bool {
 }
 func RecipeFor(id string) (Recipe, bool) {
 	for _, r := range CraftingRules.Recipes {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return Recipe{}, false
+}
+func HearthRecipeFor(id string) (Recipe, bool) {
+	for _, r := range CraftingRules.HearthRecipes {
 		if r.ID == id {
 			return r, true
 		}

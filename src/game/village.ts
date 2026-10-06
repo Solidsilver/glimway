@@ -11,7 +11,7 @@
 import { calendarAt, type CalendarDay } from '../lib/calendar'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village'
 import { MAIL } from '../lib/mail'
-import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, StorageMoveResponse } from '../lib/api/types'
+import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
@@ -25,11 +25,11 @@ import type { Session } from './session'
 export const VILLAGE_EV = {
   /** Something here changed: { what: 'calendar' | 'projects' | 'goods' | 'mail' }. */
   changed: 'village:changed',
-  /** Open a panel: { panel: 'board' | 'chest' | 'bench' | 'mail', to?: string }. */
+  /** Open a panel: { panel: 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile', to?: string }. */
   open: 'ui:village-open'
 } as const
 
-export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail'
+export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile'
 
 export type Status = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
 
@@ -90,6 +90,20 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'It’s mended already. Someone got there first.'
     case 'recall-unsupported':
       return 'Your world’s post office can’t recall parcels yet.'
+    case 'invalid-recipe':
+      return 'That isn’t a recipe anyone keeps here.'
+    case 'desk-required':
+      return 'That needs a writing desk set out at home.'
+    case 'woodpile-required':
+      return 'That needs a woodpile set out at home.'
+    case 'invalid-page':
+      return 'That isn’t a page the desk can copy.'
+    case 'page-not-held':
+      return 'You don’t hold that page. The desk copies pages you carry.'
+    case 'nothing-ready':
+      return 'Nothing on the pile has seasoned yet. Green wood takes a real day.'
+    case 'invalid-action':
+      return 'That’s not something a woodpile does.'
     case 'offline':
       return 'Needs a connection. Nothing changed — try again when you’re back online.'
     case 'superseded':
@@ -162,12 +176,12 @@ export class Village {
     } else if (k === 'mend') {
       this.repairsStatus = 'idle'
       await this.loadRepairs()
-    } else if (k === 'storage' || k === 'craft') await this.loadStorage()
+    } else if (k === 'storage' || k === 'craft' || k === 'hearth' || k === 'desk' || k === 'woodpile') await this.loadStorage()
     else {
       await this.loadMail()
       await this.loadHomeAfterMail() // a piece sent, claimed or recalled
     }
-    const what = k === 'contribute' ? 'gift to the project' : k === 'mend' ? 'repair' : k === 'craft' ? 'work at the bench' : k === 'storage' ? 'trip to the chest' : 'parcel'
+    const what = k === 'contribute' ? 'gift to the project' : k === 'mend' ? 'repair' : k === 'craft' ? 'work at the bench' : k === 'hearth' ? 'batch at the hearth' : k === 'desk' ? 'copy at the desk' : k === 'woodpile' ? 'trip to the woodpile' : k === 'storage' ? 'trip to the chest' : 'parcel'
     bus.emit(EV.toast, { text: p.outcome === 'landed' ? `Your last ${what} went through after all.` : `Your last ${what} didn’t go through. Nothing changed.`, icon: 'scroll' })
   }
 
@@ -394,6 +408,54 @@ export class Village {
     this.adoptHome(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: r.res.result.output }
+  }
+
+  /** Cook food, remedies and oils at the cottage hearth. Everything made carries your maker's mark. */
+  async hearthCraft(recipeId: string, qty: number): Promise<VillageResult<Asset>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.mutate<HearthCraftResponse>({ kind: 'hearth', fields: { recipeId, qty } })
+    if (!r.ok) return fail(r.code)
+    this.adoptWorkshop(r.res.result)
+    return { ok: true, value: r.res.result.output }
+  }
+
+  /** Copy a recipe page you hold at the writing desk, to give away. */
+  async deskCopy(pageId: string, qty: number): Promise<VillageResult<{ pageId: string; qty: number }>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.mutate<DeskCopyResponse>({ kind: 'desk', fields: { pageId, qty } })
+    if (!r.ok) return fail(r.code)
+    this.adoptWorkshop(r.res.result)
+    return { ok: true, value: { pageId: r.res.result.pageId, qty: r.res.result.qty } }
+  }
+
+  /** The woodpile's stacks and how far each has seasoned. */
+  async loadWoodpile(): Promise<VillageResult<WoodpileView>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.readWith((raw) => raw.woodpile())
+    if (!r.ok) return fail(r.code)
+    return { ok: true, value: r.value.woodpile }
+  }
+
+  /** Stack green timber on the woodpile, or collect the seasoned timber. */
+  async woodpile(action: 'stack' | 'collect', qty = 1, stackId?: string): Promise<VillageResult<{ woodpile: WoodpileView; collectedQty?: number }>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.mutate<WoodpileActionResponse>({ kind: 'woodpile', fields: { action, qty, stackId } })
+    if (!r.ok) return fail(r.code)
+    this.adoptWorkshop(r.res.result)
+    return { ok: true, value: { woodpile: r.res.result.woodpile, collectedQty: r.res.result.collectedQty } }
+  }
+
+  private adoptWorkshop(w: WorkshopView): void {
+    this.inventory = w.inventory
+    this.storage = w.storage
+    this.personal = w.personal
+    this.shared = w.shared
+    this.adoptHome(w.home)
+    this.emit('goods')
   }
 
   private adoptHome(home: import('../lib/api/types').HomeView | null): void {

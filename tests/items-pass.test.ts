@@ -12,6 +12,7 @@ import {
   initItemsManifest,
   installItemsPass,
   itemIcon,
+  itemWorldArt,
   itemsArtKey,
   itemsFrame,
   preloadItemsPass,
@@ -197,4 +198,15 @@ test('itemsFrame queries frame metadata for delivered keys and aliases', () => {
 
   // Commons aliases return null from itemsFrame (they live in commons-pass)
   assert.equal(itemsFrame('timber'), null)
+})
+
+test('itemWorldArt resolves placed pieces to their world sprites', () => {
+  assert.equal(itemWorldArt('writing-desk'), 'items-art:world-writing-desk')
+  assert.equal(itemWorldArt('gate-shelf'), 'items-art:world-gate-shelf-empty')
+  assert.equal(itemWorldArt('empty-chair'), 'items-art:world-empty-chair')
+  assert.equal(itemWorldArt('window-lamp', 'unlit-pane'), 'items-art:world-window-lamp-unlit-pane')
+  // Without a state: the first delivered world sprite of the item wins.
+  assert.equal(itemWorldArt('window-lamp'), 'items-art:world-window-lamp-unlit-pane')
+  // No world sprite for an unknown item, and no invented art.
+  assert.equal(itemWorldArt('unknown-item'), null)
 })

@@ -95,6 +95,9 @@ let aliases: Record<string, string> = {}
 let frames = new Map<string, ItemsPassFrame>()
 let framesByItemState = new Map<string, ItemsPassFrame>()
 let framesByItemId = new Map<string, ItemsPassFrame>()
+/** World sprites (in-situ art for placed pieces), first per item id and per item id:state. */
+let worldByItemId = new Map<string, ItemsPassFrame>()
+let worldByItemState = new Map<string, ItemsPassFrame>()
 
 /**
  * Initialize internal frame and alias mappings from a manifest.
@@ -105,6 +108,8 @@ export function initItemsManifest(manifest: ItemsPassManifest): void {
   frames = new Map()
   framesByItemState = new Map()
   framesByItemId = new Map()
+  worldByItemId = new Map()
+  worldByItemState = new Map()
   for (const f of manifest.frames) {
     frames.set(f.key, f)
     if (f.itemId) {
@@ -113,6 +118,10 @@ export function initItemsManifest(manifest: ItemsPassManifest): void {
       }
       if (f.state) {
         framesByItemState.set(`${f.itemId}:${f.state}`, f)
+      }
+      if (f.role === 'world-sprite') {
+        if (!worldByItemId.has(f.itemId)) worldByItemId.set(f.itemId, f)
+        if (f.state && !worldByItemState.has(`${f.itemId}:${f.state}`)) worldByItemState.set(`${f.itemId}:${f.state}`, f)
       }
     }
   }
@@ -243,6 +252,21 @@ export function installItemsPass(scene: Phaser.Scene): void {
       output.refresh()
     }
   }
+}
+
+/**
+ * The delivered world-sprite frame for a placed home good (its footprint
+ * art, e.g. `world-writing-desk`), honouring a state (`lit`, `unlit-pane`),
+ * else null. Scenes draw placed pieces from this when no runtime `deco-`
+ * texture exists.
+ */
+export function itemWorldArt(itemId: string, state?: string): string | null {
+  if (state !== undefined) {
+    const byState = worldByItemState.get(`${itemId}:${state}`)
+    if (byState) return itemsArtKey(byState.key)
+  }
+  const byItem = worldByItemId.get(itemId)
+  return byItem ? itemsArtKey(byItem.key) : null
 }
 
 /**

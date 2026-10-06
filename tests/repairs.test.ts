@@ -123,12 +123,13 @@ test('every repair part has a source a player can get', () => {
   for (const r of REPAIR_RULES.repairs) {
     assert.ok(sources.has(r.part), `repair ${r.id} needs ${r.part}, which has no recipe or pickup`);
   }
-  // The design's bills for the three parts the first review found missing.
+  // The design's bills for the three parts the first review found missing
+  // (fine work wants seasoned timber: the oak slat, per the crafting doc).
   const bill = (id: string) => CRAFTING.recipes.find((r) => r.output.id === id);
   assert.deepEqual(bill('split-rail')?.materials, { timber: 2, 'wooden-peg': 2 });
   assert.deepEqual(bill('slates')?.materials, { stone: 3 });
   assert.equal(bill('slates')?.output.qty, 3);
-  assert.deepEqual(bill('oak-slat')?.materials, { timber: 1, 'wooden-peg': 1 });
+  assert.deepEqual(bill('oak-slat')?.materials, { 'seasoned-timber': 1, 'wooden-peg': 1 });
 });
 
 test('the world is built from the shared spots the server checks', () => {
