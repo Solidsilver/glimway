@@ -52,8 +52,11 @@ they differ):
 - **A party's world belongs to the party, and is for that party only.** The
   first operator-admitted member of a Habitica party to sign in makes it (no
   personal owner; one per party); an account let in through a party never
-  opens another. Members sign in with no code and no allowlist entry and land
-  there; everyone else still needs a code or the allowlist. No invite code
+  opens another. Members sign in with no code and no allowlist entry;
+  everyone else still needs a code or the allowlist. At a newcomer's first
+  sign-in, unless a code names a world, a party member is asked: join the
+  party's world (shown with how many live there), or start one of their own
+  (reversible later by a move). No invite code
   leads into a party's world: friends outside the party are invited to a
   personal world. Solo worlds stay their owners'. A settled member whose party
   has a world is asked once ("Your party has a world of its own here. Join
@@ -63,6 +66,11 @@ they differ):
   after three days, unless they rejoin. The operator can list parties, close
   or reopen one, adopt an older linked world as its party's world, and turn
   party admission off.
+- **Witnessing.** Standing near another player in the same place when they
+  speak the naming to the Warden, settle an Echo or light the last lantern,
+  you see it and your journal keeps "you were there" (once per beat and
+  player; a story line, never a reward). Your own story doesn't move: your
+  Warden rests a moment, then remembers its pose and waits for your naming.
 - **Moving takes only what's yours.** This replaces the move rules under
   "Worlds" below: the homestead does **not** move. You keep your character,
   story, embers, pack and personal chest; your deed membership ends as

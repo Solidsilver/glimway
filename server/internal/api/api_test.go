@@ -40,6 +40,8 @@ type response struct {
 	store.Snapshot
 	Lease  string `json:"lease"`
 	Status string `json:"status"`
+	// WorldChoice: a newcomer's sign-in held until they choose a world.
+	WorldChoice *worldChoiceView `json:"worldChoice"`
 }
 
 func profile(id string, level, exp, hp float64) rules.Profile {
@@ -116,11 +118,21 @@ func (x *rig) login(id, invite string) *http.Cookie {
 			x.t.Fatal(err)
 		}
 	}
-	code, _, err, c := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "invite": invite}, nil)
+	code, v, err, c := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "invite": invite}, nil)
 	if code != 200 {
 		x.t.Fatalf("login: %d %s", code, err)
 	}
+	x.chooseIfAsked(v, c)
 	return c
+}
+
+// chooseIfAsked answers a first sign-in's world question the way most tests
+// want it: the party's world (world_choice_test.go asks it both ways).
+func (x *rig) chooseIfAsked(v response, c *http.Cookie) {
+	x.t.Helper()
+	if v.WorldChoice != nil {
+		x.expect("POST", "/api/world/choose", map[string]any{"choice": "party"}, c, 200)
+	}
 }
 func (x *rig) ready(id string) (*http.Cookie, response) {
 	c := x.login(id, "")

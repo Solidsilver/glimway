@@ -1,10 +1,22 @@
 import { expect, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, TOKEN, waitForWorld } from './connected'
+import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, TOKEN, waitForWorld } from './connected'
 
 /** Players for the party-world playtests (party-worlds*.spec.ts). */
 
-/** Olive signs in from the title, the first of a fresh party: she lands in the party's new world. */
+/**
+ * A first sign-in may be asked where to live (a party with a world here, or
+ * one this account may open): answer it, then wait for the world. Settled
+ * players and newcomers with no party go straight in.
+ */
+export async function answerWorldChoice(page: Page, choice: 'party' | 'own' = 'party'): Promise<void> {
+  const gate = page.getByTestId('world-choice')
+  await expect.poll(async () => (await gate.isVisible()) || (await linkStatus(page)) === 'online', { timeout: 20_000 }).toBe(true)
+  if (await gate.isVisible()) await gate.getByTestId(choice === 'party' ? 'world-choice-party' : 'world-choice-own').click()
+  await waitForWorld(page)
+}
+
+/** Olive signs in from the title, the first of a fresh party: she opens the party's world and lands in it. */
 export async function partyOwner(page: Page): Promise<{ olive: string; party: string; world: string }> {
   const olive = newUser()
   const party = newUser()
@@ -13,7 +25,7 @@ export async function partyOwner(page: Page): Promise<{ olive: string; party: st
   await routeHabitica(page.context())
   await openTitleGuide(page)
   await pasteAndConnect(page, olive)
-  await waitForWorld(page)
+  await answerWorldChoice(page, 'party')
   return { olive, party, world: (await serverState(page)).body.worldId }
 }
 
@@ -44,20 +56,21 @@ INSERT INTO homestead_members VALUES('${id}','${home}',${now});
 INSERT INTO player_deeds VALUES('${id}',1);`)
 }
 
-/** Sign in from the title as an existing player and play (`touch`: a phone with a touchscreen). */
+/** Sign in from the title and play (`touch`: a phone with a touchscreen; `choice`: a newcomer's answer, if asked). */
 export async function signInPage(
   browser: Browser,
   baseURL: string,
   id: string,
   viewport = { width: 1200, height: 760 },
-  touch = false
+  touch = false,
+  choice: 'party' | 'own' = 'party'
 ): Promise<{ ctx: BrowserContext; other: Page }> {
   const ctx = await browser.newContext({ baseURL, viewport, ...(touch ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}) })
   await routeHabitica(ctx)
   const other = await ctx.newPage()
   await openTitleGuide(other)
   await pasteAndConnect(other, id)
-  await waitForWorld(other)
+  await answerWorldChoice(other, choice)
   return { ctx, other }
 }
 

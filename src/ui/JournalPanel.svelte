@@ -112,7 +112,7 @@
     </ol>
 
     <h3 class="section-title">Notes</h3>
-    {#each entries as entry, i (entry.title)}
+    {#each entries as entry, i (entry.title + '\n' + entry.body)}
       <article class:latest={i === 0}>
         <h4>{entry.title}</h4>
         <p>{entry.body}</p>

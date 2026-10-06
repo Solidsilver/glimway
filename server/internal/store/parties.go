@@ -23,18 +23,23 @@ type PartyRecord struct {
 	CreatedAt    *int64  `json:"createdAt"`
 	// Admitted: accounts let in through a party (allowlist added_by 'party')
 	// whose last sign-in reported this one.
-	Admitted int    `json:"admitted"`
+	Admitted int `json:"admitted"`
+	// Held: accounts let in through this party who signed in but haven't
+	// chosen a world yet (a live held sign-in, no player row). Closing the
+	// party keeps them out of its world.
+	Held     int    `json:"held"`
 	ClosedAt *int64 `json:"closedAt"`
 }
 
 func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT p.party_id,w.id,(SELECT count(*) FROM players m WHERE m.world_id=w.id),w.opened_by,o.display_name,w.created_at,
- (SELECT count(*) FROM allowlist a JOIN players x USING(habitica_id) WHERE a.added_by='party' AND x.habitica_party_id=p.party_id),c.closed_at
+ (SELECT count(*) FROM allowlist a JOIN players x USING(habitica_id) WHERE a.added_by='party' AND x.habitica_party_id=p.party_id),
+ (SELECT count(DISTINCT h.habitica_id) FROM pending_sessions h JOIN allowlist a USING(habitica_id) WHERE a.added_by='party' AND h.habitica_party_id=p.party_id AND h.expires_at>? AND NOT EXISTS(SELECT 1 FROM players x WHERE x.habitica_id=h.habitica_id)),c.closed_at
  FROM (SELECT habitica_party_id AS party_id FROM worlds WHERE owner_id='' AND habitica_party_id IS NOT NULL UNION SELECT party_id FROM party_closures) p
  LEFT JOIN worlds w ON w.owner_id='' AND w.habitica_party_id=p.party_id
  LEFT JOIN players o ON o.habitica_id=w.opened_by
  LEFT JOIN party_closures c ON c.party_id=p.party_id
- ORDER BY w.created_at IS NULL,w.created_at,p.party_id`)
+ ORDER BY w.created_at IS NULL,w.created_at,p.party_id`, time.Now().Unix())
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +47,7 @@ func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
 	out := []PartyRecord{}
 	for rows.Next() {
 		var v PartyRecord
-		if err = rows.Scan(&v.PartyID, &v.WorldID, &v.Members, &v.OpenedBy, &v.OpenedByName, &v.CreatedAt, &v.Admitted, &v.ClosedAt); err != nil {
+		if err = rows.Scan(&v.PartyID, &v.WorldID, &v.Members, &v.OpenedBy, &v.OpenedByName, &v.CreatedAt, &v.Admitted, &v.Held, &v.ClosedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, v)

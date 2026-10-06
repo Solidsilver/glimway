@@ -73,6 +73,7 @@ import type {
   WildsRegionResponse,
   WorldLeaver,
   WorldMoveResponse,
+  WorldChoice,
   WorldRef,
   WorldView,
 } from './types.ts';
@@ -176,6 +177,7 @@ export function parseInviteList(raw: unknown): InviteList {
   if (remaining !== undefined) out.remaining = remaining;
   if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
   if (o.partyWorld === true) out.partyWorld = true;
+  if (o.partyAdmitted === true) out.partyAdmitted = true;
   return out;
 }
 
@@ -216,6 +218,21 @@ export function parseWorld(raw: unknown): WorldView {
     moveOpensIn: count(o.moveOpensIn) ?? 0,
     leaver: o.leaver == null ? null : parseLeaver(o.leaver),
     movedOutAt: count(o.movedOutAt) ?? 0,
+  };
+}
+
+/** A held first sign-in's question (`{ worldChoice }`), or null when the answer is something else. */
+export function parseWorldChoice(raw: unknown): WorldChoice | null {
+  const c = obj(raw).worldChoice;
+  if (c == null || typeof c !== 'object') return null;
+  const o = obj(c);
+  const habiticaId = str(o.habiticaId);
+  return {
+    habiticaId,
+    displayName: str(o.displayName).slice(0, 128),
+    partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
+    partyCanOpen: o.partyCanOpen === true,
+    partyAdmitted: o.partyAdmitted === true,
   };
 }
 

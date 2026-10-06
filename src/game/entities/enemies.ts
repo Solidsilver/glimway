@@ -17,6 +17,7 @@ import type { GameState } from '../../lib/state'
 import { bus, EV } from '../events'
 import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
+import { witnessCopy } from '../../content/witness'
 import type { Session } from '../session'
 import { TILE } from '../textures'
 import type { EnemyType, WorldData } from '../worlds'
@@ -121,6 +122,8 @@ export interface WardenView {
   opening: boolean
   speakings: number
   needed: number
+  /** Resting for a moment for a naming someone else spoke nearby (witness). */
+  witnessRest: boolean
 }
 
 /** Knockback impulses (px/s) applied over KNOCK.time through physics. */
@@ -154,6 +157,8 @@ export class EnemySystem {
   private heart: Phaser.GameObjects.Image | null = null
   /** The first clink of a blow off the warden explains itself once. */
   private clinkHinted = false
+  /** Scene time (ms) until which the warden rests for someone else's naming. */
+  private witnessUntil = 0
 
   constructor(private scene: Phaser.Scene, private deps: EnemyDeps, state: GameState) {
     const { world } = deps
@@ -291,6 +296,64 @@ export class EnemySystem {
     })
   }
 
+  /** The warden resting for someone else's naming right now. */
+  private witnessResting(): boolean {
+    return this.witnessUntil > this.scene.time.now
+  }
+
+  /**
+   * Someone standing near spoke the naming in their own story (witness,
+   * src/content/witness.ts): the warden here rests in its pose for a moment,
+   * then the stone remembers its pose and waits again for yours. Nothing is
+   * saved and your quest doesn't move. False when there is nothing to show:
+   * no warden here, or yours already rests.
+   */
+  witnessRest(ms: number, onRise?: () => void): boolean {
+    if (this.restingState === 'settled') return false
+    const active = this.activeWarden()
+    const sprite = active?.sprite ?? (this.restingState === 'dormant' ? this.restingWarden : null)
+    if (!sprite?.active) return false
+    const already = this.witnessResting()
+    this.witnessUntil = this.scene.time.now + ms
+    if (active) {
+      ;(active.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0)
+      active.opening = false
+    }
+    if (!already) {
+      sprite.setTexture(this.settledTexture())
+      this.placeHeart(sprite, true)
+      this.gutterHeart(false)
+    }
+    this.scene.time.delayedCall(ms, () => {
+      if (this.witnessResting()) return // a later naming nearby kept it resting
+      this.witnessRise()
+      onRise?.()
+    })
+    return true
+  }
+
+  /** The rest ends: arms up again, the heart-lamp burning, the pose remembered. */
+  private witnessRise(): void {
+    this.witnessUntil = 0
+    if (this.restingState === 'settled') return
+    const active = this.activeWarden()
+    const sprite = active?.sprite ?? (this.restingState === 'dormant' ? this.restingWarden : null)
+    if (!sprite?.active) return
+    if (active) {
+      active.state = 'chase'
+      active.stateTimer = 0
+      this.applyGuardianPose(active)
+    } else {
+      sprite.setTexture(this.guardianPoseTexture('idle', 'guardian0'))
+    }
+    if (this.heart) {
+      this.scene.tweens.killTweensOf(this.heart)
+      this.heart.setAlpha(0.6).setScale(0.16)
+    }
+    this.placeHeart(sprite, false)
+    this.deps.fx.floatText(sprite.x, sprite.y - 28, witnessCopy.wardenFloat, '#ffd27a', false)
+  }
+
   /** The live warden, if it is up and unsettled in this area. */
   private activeWarden(): Enemy | undefined {
     return this.enemies.find((e) => e.type === 'guardian' && !e.dead)
@@ -302,7 +365,7 @@ export class EnemySystem {
    */
   speakTarget(): { x: number; y: number } | null {
     const w = this.activeWarden()
-    if (!w || w.state !== 'recover' || !w.opening || w.knockTimer > 0) return null
+    if (!w || w.state !== 'recover' || !w.opening || w.knockTimer > 0 || this.witnessResting()) return null
     const hero = this.deps.hero().sprite
     const dist = Math.hypot(hero.x - w.sprite.x, hero.y - 8 - (w.sprite.y - 6))
     return dist < WARDEN.speakReach ? { x: w.sprite.x, y: w.sprite.y - 36 } : null
@@ -390,7 +453,8 @@ export class EnemySystem {
       phase: w ? w.state : null,
       opening: !!w && w.state === 'recover' && w.opening,
       speakings: w?.speakings ?? (this.restingState === 'settled' ? WARDEN.speakings : 0),
-      needed: WARDEN.speakings
+      needed: WARDEN.speakings,
+      witnessRest: this.witnessResting()
     }
   }
 
@@ -441,6 +505,12 @@ export class EnemySystem {
       const ey = enemy.sprite.y - 6
       const dist = Math.hypot(px - ex, py - ey)
       const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+      if (enemy.type === 'guardian' && this.witnessResting()) {
+        // Resting for someone else's naming: no AI, no contact, until it remembers its pose.
+        body.setVelocity(0, 0)
+        enemy.sprite.setDepth(enemy.sprite.y)
+        continue
+      }
       if (enemy.knockTimer > 0) {
         // Shoved: physics owns the body for a beat, the AI waits.
         enemy.knockTimer -= dt

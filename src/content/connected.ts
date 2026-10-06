@@ -101,6 +101,8 @@ export const inviteCopy = {
   intro: 'Invite codes let a friend join your world. Each works once and lasts 30 days.',
   /** In a party's world, which takes no codes. */
   partyWorld: 'This world is for your party alone, so it takes no invite codes. Invite friends from a world of your own.',
+  /** Let in through a party: no codes anywhere (the server refuses them too). */
+  partyAdmitted: 'You came in with your party, so codes aren’t yours to give. Friends get one from whoever keeps this server, or from a friend they invited.',
   budgetLine: (left: number, total: number) => `${left} of ${total} invite codes left`,
   waitingLine: (limit: number) => `Up to ${limit} can wait at once.`,
   pasteHint: 'Your friend pastes it in “Have an invite code?” when they connect.',

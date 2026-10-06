@@ -45,6 +45,7 @@ import {
   parseWildsLantern,
   parseWildsRegion,
   parseWorld,
+  parseWorldChoice,
   parseWorldMove,
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
@@ -96,6 +97,7 @@ import type {
   WildsLanternRequest,
   WildsLanternResponse,
   WildsRegionResponse,
+  WorldChoice,
   WorldMoveResponse,
   WorldView,
 } from './types.ts';
@@ -110,7 +112,12 @@ export interface ApiClientOptions {
 
 /** Unqueued calls. Use them only inside `run`. */
 export interface RawApi {
-  login(req: LoginRequest): Promise<Snapshot>;
+  /**
+   * Sign in. A newcomer whose party has a world here (or may open one) comes
+   * back signed in but held for the world choice (`WorldChoice`); everyone
+   * else gets their snapshot.
+   */
+  login(req: LoginRequest): Promise<Snapshot | WorldChoice>;
   logout(): Promise<void>;
   state(lease?: string | null): Promise<StateResponse>;
   origin(req: OriginRequest): Promise<Snapshot>;
@@ -133,6 +140,10 @@ export interface RawApi {
   worldLeave(req: Envelope): Promise<WorldMoveResponse>;
   /** The "you were moved out" notice was shown. */
   worldNotice(): Promise<WorldView>;
+  /** A held first sign-in's question, asked again (a reload, a tab closed mid-choice). */
+  worldChoice(): Promise<WorldChoice>;
+  /** Answer it, once: the party's world, or one of your own. The same sign-in carries on. */
+  worldChoose(choice: 'party' | 'own'): Promise<Snapshot>;
   wildsRegion(regionId: string): Promise<WildsRegionResponse>;
   wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
   wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
@@ -248,7 +259,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const invite = req.invite ? normalizeInviteCode(req.invite) : '';
       if (invite) body.invite = invite;
       if (req.party && req.party.length <= 128) body.party = req.party;
-      return parseSnapshot(await request('POST', '/api/session', body));
+      const res = await request('POST', '/api/session', body);
+      return parseWorldChoice(res) ?? parseSnapshot(res);
     },
     async logout() {
       await request('DELETE', '/api/session');
@@ -297,6 +309,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
     async worldNotice() {
       return parseWorld(await request('POST', '/api/world/notice', {}));
+    },
+    async worldChoice() {
+      const c = parseWorldChoice(await request('GET', '/api/world/choice'));
+      if (!c) throw new ApiError('bad-response', { status: 200 });
+      return c;
+    },
+    async worldChoose(choice) {
+      return parseSnapshot(await request('POST', '/api/world/choose', { choice }));
     },
     async wildsRegion(regionId) {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
@@ -408,6 +428,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     worldMove: (req) => run((r) => r.worldMove(req)),
     worldLeave: (req) => run((r) => r.worldLeave(req)),
     worldNotice: () => run((r) => r.worldNotice()),
+    worldChoice: () => run((r) => r.worldChoice()),
+    worldChoose: (choice) => run((r) => r.worldChoose(choice)),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
     wildsClaim: (req) => run((r) => r.wildsClaim(req)),
     wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),

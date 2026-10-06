@@ -206,6 +206,7 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 		for _, q := range []string{
 			"DELETE FROM allowlist WHERE habitica_id=?",
 			"DELETE FROM sessions WHERE habitica_id=?",
+			"DELETE FROM pending_sessions WHERE habitica_id=?",
 		} {
 			if _, err = tx.ExecContext(ctx, q, id); err != nil {
 				return err

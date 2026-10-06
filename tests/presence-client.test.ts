@@ -104,6 +104,7 @@ function rig() {
       leave: (id) => events.push({ leave: id }),
       pos: (id, p) => events.push({ pos: id, x: p.x }),
       emote: (id, e) => events.push({ emote: id, id: e }),
+      witness: (w) => events.push({ witness: w.beat, id: w.habiticaId, name: w.name }),
     },
   });
   const sock = () => sockets[sockets.length - 1];
@@ -306,6 +307,17 @@ test('relayed messages reach the handlers; malformed ones are ignored', () => {
   r.sock().push({ type: 'leave', habiticaId: 'bob' });
   r.sock().onmessage?.({ data: '{nope' });
   assert.deepEqual(r.events, [{ join: 'village', id: 'bob' }, { pos: 'bob', x: 5 }, { emote: 'bob', id: 'wave' }, { leave: 'bob' }]);
+});
+
+test('a witnessed beat reaches its handler; malformed ones are ignored', () => {
+  const r = rig();
+  r.live();
+  r.client.setArea('ruin');
+  r.sock().push({ type: 'witness', beat: 'warden', habiticaId: 'olive', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 'warden', habiticaId: '', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 7, habiticaId: 'olive', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 'lantern', habiticaId: 'olive' });
+  assert.deepEqual(r.events, [{ witness: 'warden', id: 'olive', name: 'Olive' }]);
 });
 
 test('lost transport reconnects with backoff, re-auths and re-joins', () => {

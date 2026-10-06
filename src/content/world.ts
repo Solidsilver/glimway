@@ -2,6 +2,7 @@ import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER, echoKeepsakeJournalEntries } from './echoes.ts';
+import { witnessJournalEntries } from './witness.ts';
 import { residentJournal } from './residents.ts';
 import { heirloomJournalEntries } from './heirlooms.ts';
 
@@ -526,6 +527,8 @@ export function journalEntries(stage: QuestStage, flags: readonly string[] = [])
   entries.push(...heirloomJournalEntries(flags));
   // The keepsakes with no living owner, left at their Echo camps.
   entries.push(...echoKeepsakeJournalEntries(flags));
+  // Beats you stood beside in someone else's story.
+  entries.push(...witnessJournalEntries(flags));
   if (flags.includes('unmoored:felt')) {
     entries.push({
       title: 'The Drift’s Sway',

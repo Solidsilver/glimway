@@ -132,6 +132,8 @@ export interface InviteList {
   outstandingLimit?: number;
   /** You live in a party's world, which takes no codes. */
   partyWorld?: boolean;
+  /** You came in through a party: you make no codes anywhere. */
+  partyAdmitted?: boolean;
 }
 
 // ------------------------------------------------------------- worlds
@@ -147,6 +149,22 @@ export interface WorldRef {
   ownerHere: boolean;
   /** A party's world, owned by no one. */
   party: boolean;
+}
+
+/**
+ * A first sign-in held for the world choice (POST /api/session, GET
+ * /api/world/choice): the account is signed in, but has no world until
+ * POST /api/world/choose. Everything else answers `world-choice-required`.
+ */
+export interface WorldChoice {
+  habiticaId: string;
+  displayName: string;
+  /** The party's world here, and how many live there. */
+  partyWorld: WorldRef | null;
+  /** The party has no world here yet: choosing it opens one. */
+  partyCanOpen: boolean;
+  /** Let in through the party: they make no invite codes, even from a world of their own. */
+  partyAdmitted: boolean;
 }
 
 /** What a move would leave behind (GET /api/world). */

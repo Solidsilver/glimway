@@ -65,21 +65,22 @@
   import { XP_PER_EMBER } from './lib/embers'
   import { emberLine, titleChoice } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
-  import { accountName, api, connectedSession, probeServer } from './ui/account'
+  import { accountName, api, connectedSession, isWorldChoice, probeServer } from './ui/account'
   import { prepareWilds, resetWilds } from './game/wilds/store'
   import { clearCache, loadCache, loadLatestCache, saveCache, type ConnectedCache } from './lib/api/cache'
   import { newKey } from './lib/api/client'
   import { errorCode, isUnreachable } from './lib/api/errors'
   import { hasProgress } from './lib/api/progress'
-  import type { Snapshot, WorldMoveResponse, WorldRef, WorldView } from './lib/api/types'
+  import type { Snapshot, WorldChoice, WorldMoveResponse, WorldRef, WorldView } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
   import OriginChoice from './ui/OriginChoice.svelte'
+  import WorldChoiceGate from './ui/WorldChoiceGate.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
   import PartyPrompt from './ui/PartyPrompt.svelte'
   import LeaverNotice from './ui/LeaverNotice.svelte'
   import WorldMove from './ui/WorldMove.svelte'
-  import { worldCopy } from './content/world-moves'
+  import { firstWorldCopy, worldCopy } from './content/world-moves'
   import EmotePicker from './ui/EmotePicker.svelte'
   import { presence, startPresence, stopPresence } from './game/presence'
   import { EMOTES } from './content/presence'
@@ -108,6 +109,8 @@
   // ---- connected play (Fingersnap server) ----
   /** Latest server snapshot for the signed-in account (null when offline or signed out). */
   let accountSnapshot = $state<Snapshot | null>(null)
+  /** Signed in for the first time, the world not chosen yet (the server holds the sign-in). */
+  let accountChoice = $state<WorldChoice | null>(null)
   /** The device's connected cache (offline copy, revision, lease). */
   let accountCache = $state<ConnectedCache | null>(null)
   /** Signed in earlier, but no server answered at load: play from the cache. */
@@ -115,9 +118,10 @@
   let accountBusy = $state(false)
   let accountError = $state('')
   type Gate =
+    | { kind: 'world'; choice: WorldChoice; busy: boolean; error: string; picked: 'party' | 'own' | null }
     | { kind: 'origin'; name: string; local: GameState; key: string; busy: boolean; error: string }
     | { kind: 'elsewhere'; busy: boolean; error: string }
-  /** A step between signing in and playing: the origin choice or the lease. */
+  /** A step between signing in and playing: the world choice, the origin choice or the lease. */
   let gate = $state<Gate | null>(null)
   /** A connected session waiting for the player to take over the lease. */
   let pending: Session | null = null
@@ -160,6 +164,7 @@
   /** The signed-in account's Continue card on the title screen. */
   const accountSummary = $derived.by(() => {
     if (!ui.account) return null
+    if (accountChoice) return { place: 'Your world', time: '', goal: firstWorldCopy.titleGoal }
     if (accountSnapshot && accountSnapshot.saveOrigin === null) {
       return { place: 'Your world', time: '', goal: 'Choose how to begin.' }
     }
@@ -496,6 +501,11 @@
       ui.server = 'available'
       accountSnapshot = probe.snapshot
       ui.account = { habiticaId: probe.snapshot.habiticaId, name: accountName(probe.snapshot, cache) }
+    } else if (probe.kind === 'choose-world') {
+      // A first sign-in whose world is still to choose (a reload, a closed tab): Continue asks again.
+      ui.server = 'available'
+      accountChoice = probe.choice
+      ui.account = { habiticaId: probe.choice.habiticaId, name: probe.choice.displayName || 'Your hero' }
     } else if (probe.kind === 'signed-out') {
       ui.server = 'available'
     } else {
@@ -516,6 +526,10 @@
     accountBusy = true
     accountError = ''
     try {
+      if (accountChoice) {
+        await openWorldChoice(accountChoice)
+        return
+      }
       if (accountSnapshot && accountSnapshot.saveOrigin === null) {
         openOrigin(ui.account.name)
         return
@@ -528,12 +542,23 @@
     }
   }
 
-  /** The guide signed in to the server. */
-  async function onSignedIn(snapshot: Snapshot, profile: HabiticaProfile): Promise<void> {
+  /** The guide signed in to the server (or the world choice was just answered). */
+  async function onSignedIn(answer: Snapshot | WorldChoice, profile: HabiticaProfile | null): Promise<void> {
     ui.server = 'available'
     accountOffline = false
+    if (isWorldChoice(answer)) {
+      // Signed in, but where to live comes first.
+      accountChoice = answer
+      accountSnapshot = null
+      ui.account = { habiticaId: answer.habiticaId, name: answer.displayName || profile?.name || 'Your hero' }
+      panel = null
+      gate = { kind: 'world', choice: answer, busy: false, error: '', picked: null }
+      return
+    }
+    const snapshot = answer
+    accountChoice = null
     accountSnapshot = snapshot
-    const name = snapshot.displayName || snapshot.importedProfile?.name || profile.name
+    const name = snapshot.displayName || snapshot.importedProfile?.name || profile?.name || ui.account?.name || 'Your hero'
     ui.account = { habiticaId: snapshot.habiticaId, name }
     // Signed in from the Menu: the next step (origin, lease) takes the screen.
     panel = null
@@ -547,6 +572,89 @@
     // The account already has a journey: this device's guest save stays put.
     if (session && !session.link && hasProgress(session.state)) ui.toast({ text: originCopy.alreadySet })
     await startAccount(snapshot, name)
+  }
+
+  /** Ask (again) where to live: the server's question, fresh, so the party's head count is current. */
+  async function openWorldChoice(known: WorldChoice): Promise<void> {
+    let choice = known
+    try {
+      choice = await api.worldChoice()
+      accountChoice = choice
+    } catch (err) {
+      const code = errorCode(err)
+      if (code === 'world-chosen') {
+        // Chosen on another device meanwhile: carry on into that world.
+        accountChoice = null
+        const snap = await api.state()
+        await onSignedIn(snap, null)
+        return
+      }
+      if (code === 'unauthorized') {
+        accountChoice = null
+        ui.account = null
+        accountError = 'Your sign-in ended. Sign in again to play in your world.'
+        return
+      }
+      // Offline: ask with what we know; choosing will say if it can't reach the server.
+    }
+    gate = { kind: 'world', choice, busy: false, error: '', picked: null }
+  }
+
+  /** First sign-in: the party's world, or one of your own. The same sign-in carries on. */
+  async function chooseWorld(pick: 'party' | 'own'): Promise<void> {
+    const g = gate?.kind === 'world' ? gate : null
+    if (!g || g.busy) return
+    g.busy = true
+    g.error = ''
+    g.picked = pick
+    try {
+      const snap = await api.worldChoose(pick)
+      gate = null
+      await onSignedIn(snap, null)
+    } catch (err) {
+      const code = errorCode(err)
+      if (code === 'world-chosen') {
+        gate = null
+        accountChoice = null
+        try {
+          await onSignedIn(await api.state(), null)
+        } catch {
+          accountError = firstWorldCopy.offline
+        }
+        return
+      }
+      if (code === 'unauthorized') {
+        gate = null
+        accountChoice = null
+        ui.account = null
+        accountError = 'Your sign-in ended. Sign in again to play in your world.'
+        return
+      }
+      g.busy = false
+      g.picked = null
+      if (code === 'party-closed' || code === 'party-open-denied' || code === 'no-party') {
+        // The party's world can't be had now: ask again with what's left,
+        // or (nothing left to ask) step into the world of their own made for them.
+        try {
+          g.choice = accountChoice = await api.worldChoice()
+        } catch (again) {
+          if (errorCode(again) === 'world-chosen') {
+            gate = null
+            accountChoice = null
+            try {
+              await onSignedIn(await api.state(), null)
+            } catch {
+              accountError = firstWorldCopy.offline
+            }
+            return
+          }
+          /* keep the old question */
+        }
+        g.error = firstWorldCopy.partyGone
+        return
+      }
+      g.error = isUnreachable(err) ? firstWorldCopy.offline : firstWorldCopy.failed
+    }
   }
 
   function openOrigin(name: string): void {
@@ -1329,7 +1437,16 @@
     </div>
   {/if}
 
-  {#if gate?.kind === 'origin'}
+  {#if gate?.kind === 'world'}
+    <WorldChoiceGate
+      choice={gate.choice}
+      busy={gate.busy}
+      error={gate.error}
+      picked={gate.picked}
+      onChoose={(c) => void chooseWorld(c)}
+      onCancel={() => (gate = null)}
+    />
+  {:else if gate?.kind === 'origin'}
     <OriginChoice
       name={gate.name}
       local={gate.local}

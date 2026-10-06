@@ -35,5 +35,7 @@ export type PresenceServerMessage =
   | { type: 'leave'; habiticaId: string }
   | ({ type: 'pos'; habiticaId: string } & PresencePosition)
   | { type: 'emote'; habiticaId: string; id: string }
-  | { type: 'gift'; fromName: string; kind: string; itemDef: string; qty: number };
+  | { type: 'gift'; fromName: string; kind: string; itemDef: string; qty: number }
+  /** Someone near you reached a shared story beat (relayed from the server's record of it). */
+  | { type: 'witness'; beat: string; habiticaId: string; name: string };
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004 } as const;

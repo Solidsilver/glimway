@@ -50,6 +50,8 @@ export const EV = {
   emote: 'game:emote',
   /** Presence: someone standing by you handed you something: { fromName, kind, itemDef, qty }. */
   gift: 'game:gift',
+  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, habiticaId, name }. */
+  witness: 'game:witness',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */

@@ -220,6 +220,10 @@ export const SERVER_ERROR_CODES = [
   'party-closed',
   'party-open-denied',
   'party-world-invites',
+  'party-admitted-invites',
+  // the first sign-in's world choice (server/internal/api/world_choice.go)
+  'world-choice-required',
+  'world-chosen',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

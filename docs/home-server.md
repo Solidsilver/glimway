@@ -317,11 +317,16 @@ stored, and the party is never read in between.
   world moves no one.
 - **Members come in without a code.** A player whose verified party has an
   open world here may sign in with no invite and no allowlist entry, when the
-  client named that same party; they land in the party's world, are added to
-  the allowlist (`added_by` = `party`) and stay on it. Everyone else still
+  client named that same party; they are asked where to live (below), are
+  added to the allowlist (`added_by` = `party`) and stay on it. Everyone else still
   needs an invite code or the allowlist. An account removed with
   `allowlist remove` is not let back in by its party (only `allowlist add` or
-  a CLI code does that).
+  a CLI code does that). An account let in through a party makes **no invite
+  codes anywhere**, not even from a world of its own (`POST /api/invites` →
+  403 `party-admitted-invites`; `GET /api/invites` says `partyAdmitted: true`,
+  and the Menu says codes come from the operator or an invited friend).
+  Otherwise its invitee would count as operator-admitted and open their own
+  party's world, and admission would chain. `allowlist add` lifts it.
 - **No codes into a party's world.** A resident can't make invites
   (`POST /api/invites` → `party-world-invites`; `GET /api/invites` says
   `partyWorld: true`, and the Menu says why), `invite WORLD-ID` refuses one,
@@ -330,9 +335,42 @@ stored, and the party is never read in between.
   world of your own. A move into a party's world leaves your waiting codes
   naming the world you left.
 - **First sign-in:** a code that names a world decides (also for an already
-  allowlisted newcomer, whose code is then used up). Otherwise a party member
-  lands in the party's world, and a newcomer with no party gets a solo world
-  of their own (theirs alone; it never becomes a party's).
+  allowlisted newcomer, whose code is then used up), with no question.
+  Otherwise a newcomer (no player row yet) whose verified party has a world
+  here, or who may open one (the operator-admitted rule above), is **asked**:
+  join the party's world (the question carries its `members`), or start a
+  world of their own. Everyone else gets a solo world of their own (theirs
+  alone; it never becomes a party's).
+  - The token is still sent once and never stored, so the question doesn't
+    cost a second sign-in. `POST /api/session` sets the session cookie and
+    answers `{"worldChoice": {habiticaId, displayName, partyWorld,
+    partyCanOpen}}` instead of a snapshot. The sign-in is held in
+    `pending_sessions` (migration 025: the verified profile and party, the
+    same lifetimes as a session, no player row); only the world waits.
+  - Until it is answered every other call (state, origin, play, world reads,
+    invites, …) refuses with 409 `world-choice-required`, and presence admits
+    no socket. `GET /api/world/choice` asks again (a reload, or a tab closed
+    mid-choice: the cookie still holds it; it slides like a session). Its
+  `partyAdmitted` says the newcomer came in through the party (the gate then
+  says invite codes come from elsewhere). When nothing is left to ask (the
+  party's world can't be had any more), it makes them a world of their own,
+  as sign-in would have, and answers 409 `world-chosen` (read the state).
+  - `POST /api/world/choose {"choice":"party"|"own"}` answers it once: the
+    player is made in the party's world (opening it now, with `opened_by`, if
+    it has none and they may: `party-closed` / `party-open-denied` /
+    `no-party` otherwise, the question still standing; an account let in
+    through the party gets `party-closed` once the party is closed or party
+    admission is off, even though its world exists) or in a new world of
+    their own, and the held sign-in becomes a session with the same cookie,
+    answered with the snapshot. Any other device's held sign-in for the same
+    account becomes a session in that world too. Asked again afterwards:
+    409 `world-chosen`. Logout and `allowlist remove` end a held sign-in.
+  - Choosing their own world records the party's offer as shown (no prompt
+    straight after), and the Menu keeps it. It is reversible through the move
+    below. The choice itself isn't a move: the first move after it is open
+    at once, and the day's cooldown counts from that move.
+  - A newcomer still choosing doesn't open the party's world by signing in;
+    only choosing it does.
 - **Settled players** see `GET /api/world` report their party's world
   (`partyWorld`, `party: true`, no owner) when they live elsewhere, with
   `prompt: true` until `POST /api/world/prompt {"worldId"}` records that the
@@ -394,6 +432,36 @@ stored, and the party is never read in between.
   - A replay with the same key returns the first answer and moves nothing,
     during the cooldown too.
 
+### Witnessing
+
+When a player's progress lands with one of the story's shared beats in it,
+the players standing near them see it and keep a journal line, "you were
+there":
+
+- the Warden's naming (the quest reaching `guardian-defeated`), the last
+  lantern (`lantern-lit`), and settling an Echo (a new `echo:<member>` flag);
+- relayed only from the server's own record of the beat: the doer's upload
+  (`PUT /api/progress`, a sync, a spend, or a keyed mutation's progress)
+  whose merge adds it, after the commit. Merges only ever add a beat once, so
+  each witness hears it once per beat and doer. A stale upload (another
+  device catching up) relays nothing;
+- through the presence hub, to every peer connected in the doer's world and
+  room who last stood within `WitnessTiles` (10 tiles, 160 px) of where the
+  doer last stood, as `{"type":"witness","beat","habiticaId","name"}`. The doer
+  must be standing in that room right now, in the beat's place (Ashwatch
+  Ruin for the Warden and the lantern, a Wilds chunk for an Echo, as both
+  their saved area and their presence room say): an offline journey caught
+  up later is no one's moment. No client can send one (the hub closes a
+  socket that tries, 1008 `invalid-message`).
+
+The witness's story doesn't move. Their client shows the moment, a lantern
+over the doer, and keeps a story flag `witness:<beat>:<doer id>:<name>`
+(`echo:nan` is written `echo-nan`), once per beat and doer: a journal line,
+never an economy flag or a reward (src/content/witness.ts). A witness whose
+own Warden still waits sees it rest a moment; then the stone remembers its
+pose and keeps waiting for their own naming. Echo lines never name whose
+Echo it was. No migration, no new route.
+
 **Operator controls** (run as the service user, like `allowlist`):
 
 - `-party-admission=false` (env `FINGERSNAP_PARTY_ADMISSION`, Nix
@@ -402,7 +470,9 @@ stored, and the party is never read in between.
   already made keep working for the people in them.
 - `parties` prints one JSON record per party world (and per closed party):
   party id, world, members, who opened it (`openedBy`, `openedByName`), how
-  many accounts came in through the party (`admitted`), and `closedAt`.
+  many accounts came in through the party (`admitted`), how many of those
+  signed in but are still choosing a world (`held`: closing the party keeps
+  them out of its world), and `closedAt`.
 - `party close PARTY-ID` stops admitting that party (no codeless sign-ins
   through it, and no world is made for it); `party open PARTY-ID` resumes.
   Its world, and everyone already in, stay. Table `party_closures`.
@@ -455,6 +525,9 @@ accepted syncs and verified checkpoints record their reference explicitly.
 Existing pending lots retain their original creation date for 90-day expiry.
 The service upgrades existing databases in place; use the backup procedure above
 before an owner deployment.
+
+Migration 025 adds `pending_sessions`, first sign-ins held for the world
+choice (see "Party worlds and world moves"). It changes no existing rows.
 
 
 ### Homesteads and the compact Wilds (phases 3–4)
