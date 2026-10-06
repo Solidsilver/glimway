@@ -1,4 +1,4 @@
-import type { AreaPayload, GoalDirPayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
+import type { AreaPayload, GoalDirPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { isMuted } from '../game/sfx'
 import { bus, EV } from '../game/events'
@@ -54,6 +54,8 @@ export interface Banner {
 class UiStore {
   stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0 })
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
+  /** The pinned "How do I…?" guide's step, when one leads the goal line (null: the story). */
+  goalLine = $state<GoalLinePayload>({ guide: null })
   /** Which way the quest goal lies from the hero (src/game/entities/goal-guide.ts). */
   goalDir = $state<GoalDirPayload>({ angle: null, here: false })
   /** False until the first quest snapshot arrives (load is not a "change"). */

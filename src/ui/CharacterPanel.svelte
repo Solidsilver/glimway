@@ -49,22 +49,23 @@
   <div class="panel" use:focusTrap>
     <header class="panel-head">
       <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
-
-      <div class="hero">
-        <div class="avatar">
-          {#if !profile && ui.portraits['You']}
-            <img class="pixel" src={ui.portraits['You']} alt="" />
-          {:else}
-            <span class="initial">{name[0]}</span>
-          {/if}
-        </div>
-        <div class="who">
-          <h2 id="char-title">{name}</h2>
-          <p class="sub">Level {level} {className}</p>
-          <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
-        </div>
-      </div>
+      <h2 class="panel-title" id="char-title"><Icon name="person" size={20} /> Character</h2>
     </header>
+
+    <div class="hero">
+      <div class="avatar">
+        {#if !profile && ui.portraits['You']}
+          <img class="pixel" src={ui.portraits['You']} alt="" />
+        {:else}
+          <span class="initial">{name[0]}</span>
+        {/if}
+      </div>
+      <div class="who">
+        <h3 class="name">{name}</h3>
+        <p class="sub">Level {level} {className}</p>
+        <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+      </div>
+    </div>
 
     <div class="vitals">
       <div class="vital">
@@ -174,7 +175,7 @@
     width: 52px;
     height: 52px;
   }
-  :global(:root.touch) .who h2 {
+  :global(:root.touch) .who .name {
     font-size: 22px;
   }
   .hero {
@@ -207,7 +208,7 @@
     font-size: 40px;
     color: var(--wood);
   }
-  .who h2 {
+  .who .name {
     margin: 0;
     font-size: 28px;
     line-height: 1.05;
@@ -472,7 +473,7 @@
       width: 58px;
       height: 58px;
     }
-    .who h2 {
+    .who .name {
       font-size: 23px;
     }
   }

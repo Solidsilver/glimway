@@ -43,3 +43,45 @@ test('the HUD names the goal in a few words, and the needle points the way', asy
   await page.locator('.hud .objective').click()
   await expect(page.locator('.hud .goal-text')).toContainText('Leave by the east gate')
 })
+
+test.describe('pinned guides', () => {
+  test.use({ server: true })
+
+  test('a pinned "How do I…?" guide leads the goal line and the needle, and unpins back to the story', async ({ page }) => {
+    const { freshPlayer, go } = await import('./home-helpers')
+    await freshPlayer(page)
+    await go(page, 'village', 16, 14)
+    await waitForLive(page)
+    // The journal's "How do I…?" page: open "Make your first tool" and pin it.
+    await page.keyboard.press('j')
+    await page.getByRole('tab', { name: 'How do I…?' }).click()
+    const guide = page.locator('[data-guide="first-tool"]')
+    await guide.getByRole('button', { name: /Make your first tool/ }).click()
+    await expect(guide).toContainText('Sign a deed with Silas')
+    await page.getByTestId('pin-first-tool').click()
+    await page.keyboard.press('Escape')
+
+    // The goal line follows the guide's first step, and the needle points on toward the Commons (east).
+    await expect(page.getByTestId('goal-pinned')).toContainText('Sign a deed with Silas')
+    await waitForLive(page)
+    await frames(page, 30)
+    let g = await goal(page)
+    expect(g.dir.here).toBe(false)
+    expect(Math.cos(g.dir.angle!), 'toward the Commons gate: east').toBeGreaterThan(0.3)
+
+    // On the Commons, Silas's table itself.
+    await go(page, 'commons', 23, 19)
+    await waitForLive(page)
+    await frames(page, 30)
+    g = await goal(page)
+    expect(g.dir.here, 'Silas is here').toBe(true)
+
+    // Tapping the pinned goal opens the guide in the journal; unpinning brings the story back.
+    await page.getByTestId('goal-pinned').click()
+    await expect(page.getByRole('tab', { name: 'How do I…?' })).toHaveAttribute('aria-selected', 'true')
+    await page.getByTestId('pin-first-tool').click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('goal-pinned')).toHaveCount(0)
+    await expect(page.locator('.hud .goal-text')).toHaveText('Find Mara in the village square')
+  })
+})

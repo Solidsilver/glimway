@@ -27,7 +27,7 @@ import {
   toolWorkSpeed,
   type Items,
 } from '../src/lib/items.ts';
-import { fitTargets, groupInventory, modelEntries } from '../src/lib/inventory.ts';
+import { fitTargets, modelEntries, newestFirst } from '../src/lib/inventory.ts';
 import { CRAFTING, validateCrafting } from '../src/lib/workshop.ts';
 import { parseItems, parseItemsAction, parseStorage } from '../src/lib/api/parse.ts';
 import type { InstanceView, ItemsView } from '../src/lib/api/types.ts';
@@ -256,8 +256,8 @@ function view(extra: Partial<ItemsView> = {}): ItemsView {
 
 test('the item model fills the inventory tabs: one row per maker, one per tool, with what each can do', () => {
   const entries = modelEntries(view(), { pack: ['field-journal', 'hearthwick-map'], decorations: [] });
-  const g = groupInventory(entries);
-  assert.deepEqual(g.supplies.main.map((e) => e.key).sort(), ['inst:n1', 'item:keepers-twists', 'item:lamp-wick', 'item:lamp-wick@wren', 'material:timber'].sort());
+  const supplies = newestFirst(entries.filter((e) => e.tab === 'supplies'), new Map()).filter((e) => e.section === 'main');
+  assert.deepEqual(supplies.map((e) => e.key).sort(), ['inst:n1', 'item:keepers-twists', 'item:lamp-wick', 'item:lamp-wick@wren', 'material:timber'].sort());
   const wick = entries.find((e) => e.key === 'item:lamp-wick@wren')!;
   assert.equal(wick.maker?.name, 'Wren');
   assert.equal(wick.qty, 2);
@@ -278,7 +278,8 @@ test('the item model fills the inventory tabs: one row per maker, one per tool, 
   assert.equal(lantern.carryable, true);
   assert.ok(lantern.helps!.length >= 2, 'the warrior affinity');
   assert.equal(entries.find((e) => e.key === 'item:keepers-twists')!.usable, true);
-  assert.deepEqual(g.tools.road.map((e) => e.id), ['field-journal', 'hearthwick-map'], 'quest things still ride along');
+  const road = newestFirst(entries.filter((e) => e.tab === 'tools'), new Map()).filter((e) => e.section === 'road');
+  assert.deepEqual(road.map((e) => e.id), ['field-journal', 'hearthwick-map'], 'quest things still ride along');
   // Without a class the off hand closes: nothing is carryable.
   const closed = modelEntries(view({ offHand: { open: false, class: null, itemDef: null, instance: null } }), { pack: [], decorations: [] });
   assert.equal(closed.find((e) => e.key === 'inst:l1')!.carryable, false);

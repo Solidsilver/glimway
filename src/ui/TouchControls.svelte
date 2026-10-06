@@ -5,6 +5,10 @@
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
+  import { heldUi } from './held.svelte'
+  import { setHeld } from '../game/held'
+  import { KIND_WORDS } from '../lib/belt'
   import { noteFloatingVisit, settings } from './settings.svelte'
 
   const show = isTouchFirst()
@@ -187,6 +191,28 @@
   const kit = $derived(getCombatKit(ui.importedProfile))
   const canAfford = $derived(ui.stats.mana >= kit.manaCost)
   const talkMode = $derived(!!ui.prompt.label && !ui.dialogueOpen)
+  /**
+   * The belt (src/game/held.ts): the big button shows what's in hand; the
+   * rest sit as small buttons arced above it, clear of the roll and the
+   * ability. Shown only when there's more than the weapon to hold.
+   */
+  const heldDef = $derived(heldUi.slot?.itemDef ?? null)
+  const handWord = $derived(heldUi.kind === 'weapon' ? kit.basicName : KIND_WORDS[heldUi.kind])
+  const others = $derived(heldUi.belt.filter((b) => b.kind !== heldUi.kind))
+  /** Spots for the small buttons, from the big button's centre (px): up, then curving left over the roll. */
+  const RING = [
+    [0, -160],
+    [-50, -152],
+    [-100, -138],
+    [-140, -108],
+    [-166, -66],
+    [-178, -20],
+    [-182, 26]
+  ]
+  function pickHeld(e: PointerEvent, kind: (typeof heldUi.belt)[number]['kind']): void {
+    e.preventDefault()
+    setHeld(kind)
+  }
   // The dialogue box covers this corner on phones; tapping it advances.
   const hidden = $derived(ui.cinematic || ui.dialogueOpen)
 
@@ -257,7 +283,7 @@
       </div>
     {/if}
 
-    <div class="actions">
+    <div class="actions" class:with-belt={heldUi.belt.length > 1}>
       <div class="col">
       <button
         type="button"
@@ -288,20 +314,42 @@
         <span class="cost"><Icon name="drop" size={9} />{kit.manaCost}</span>
       </button>
       </div>
-      <button
-        type="button"
-        class="round act"
-        class:talk={talkMode}
-        onpointerdown={actionDown}
-        onpointerup={actionUp}
-        onpointercancel={actionUp}
-        onpointerleave={actionUp}
-        oncontextmenu={(e) => e.preventDefault()}
-        aria-label={ui.dialogueOpen ? 'Continue' : talkMode ? ui.prompt.label : kit.basicName}
-      >
-        <Icon name={ui.dialogueOpen ? 'check' : talkMode ? 'sparkle' : 'sword'} size={28} />
-        <span class="cap">{ui.dialogueOpen ? 'Next' : talkMode ? (ui.prompt.verb ?? 'Talk') : kit.basicName}</span>
-      </button>
+      <div class="actwrap">
+        {#if heldUi.belt.length > 1}
+          <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
+            {#each others as b, i (b.kind)}
+              {@const at = RING[i] ?? RING[RING.length - 1]}
+              <button
+                type="button"
+                class="bslot"
+                class:worn={!b.usable}
+                aria-label={`Hold the ${b.kind === 'weapon' ? kit.basicName.toLowerCase() : KIND_WORDS[b.kind].toLowerCase()}`}
+                data-kind={b.kind}
+                style={`transform: translate(${at[0]}px, ${at[1]}px)`}
+                onpointerdown={(e) => pickHeld(e, b.kind)}
+                oncontextmenu={(e) => e.preventDefault()}
+              >
+                {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name="sword" size={18} />{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+        <button
+          type="button"
+          class="round act"
+          class:talk={talkMode}
+          data-held={heldUi.kind}
+          onpointerdown={actionDown}
+          onpointerup={actionUp}
+          onpointercancel={actionUp}
+          onpointerleave={actionUp}
+          oncontextmenu={(e) => e.preventDefault()}
+          aria-label={ui.dialogueOpen ? 'Continue' : talkMode ? ui.prompt.label : handWord}
+        >
+          {#if ui.dialogueOpen}<Icon name="check" size={28} />{:else if talkMode}<Icon name="sparkle" size={28} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name="sword" size={28} />{/if}
+          <span class="cap">{ui.dialogueOpen ? 'Next' : talkMode ? (ui.prompt.verb ?? 'Talk') : handWord}</span>
+        </button>
+      </div>
     </div>
   </div>
 {/if}
@@ -432,6 +480,46 @@
     display: grid;
     place-items: center;
     border-width: 3px;
+  }
+  /* Room above the buttons for the belt's arc (the camera keeps the hero clear of this box). */
+  /* The ring is an overlay over the world: App.svelte measures its buttons, not a padded box. */
+  .actwrap {
+    position: relative;
+  }
+  .belt {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .bslot {
+    position: absolute;
+    left: -20px;
+    top: -20px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border-width: 2.5px;
+    background: linear-gradient(180deg, #fff6dd, #e8d4a4);
+    color: var(--wood-dark);
+    pointer-events: auto;
+    touch-action: none;
+    box-shadow: 0 3px 0 rgba(20, 12, 16, 0.45);
+  }
+  /* A thumb-sized hit area. */
+  .bslot::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+  }
+  .bslot.worn {
+    filter: grayscale(0.8);
   }
   .act {
     width: 80px;

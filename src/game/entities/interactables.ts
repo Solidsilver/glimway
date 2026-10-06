@@ -18,7 +18,9 @@ import { TILE } from '../textures'
 import type { EmberSpotId, InteractId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
-import { isResident, residentFullName, residentTalk } from '../../content/residents'
+import { isResident, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
+import { shortTalk } from '../../content/talk'
+import { greetingFor, heardDay, heardStory, markDay, markStory } from '../heard'
 import { meetResident, residentContext } from '../residents'
 import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
@@ -71,11 +73,18 @@ export interface InteractableDeps {
 }
 
 /**
- * Who the player has already heard from at each quest stage (this tab). A
- * resident's key also carries what their line about the day was, so a new
- * festival, notice or project brings their "…" back.
+ * Has this person something you haven't heard? Their story at this stage
+ * (src/game/heard.ts) or a new line about the day brings their "…" back.
+ * Just after a first meeting the stage's own lines wait quietly for the
+ * next talk (no "…" straight away).
  */
-const heardAt = new Set<string>()
+function residentHasNews(session: Session, id: string): boolean {
+  const talk = residentTalk(id, residentContext(session))
+  const flags = session.state.flags
+  if (talk.first) return true
+  const story = !heardStory(flags, id, talk.story.key) && metAt(flags, id as ResidentId) !== talk.story.key
+  return story || (!!talk.day && !heardDay(id, talk.day.topic))
+}
 
 
 export class Interactables {
@@ -207,10 +216,9 @@ export class Interactables {
       } else if (this.isEmberSpot(it.id)) {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else if (isResident(it.id)) {
-        const talk = residentTalk(it.id, residentContext(this.deps.session))
         const flags = this.deps.session.state.flags
         const adaSpade = it.id === 'ada' && Boolean(this.deps.session.link) && countAdaOilGifts(flags) >= 3 && !flags.includes('heirloom:ada-garden-spade') && !itemsFor(this.deps.session).isGrantInFlight('ada-garden-spade')
-        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, flags) || adaSpade) kind = 'talk'
+        if (residentHasNews(this.deps.session, it.id) || handoverFor(it.id, stage, flags) || adaSpade) kind = 'talk'
       } else {
         const flags = this.deps.session.state.flags
         const orrinPick = it.id === 'orrin' && Boolean(this.deps.session.link) && this.village.hasWorldFlag('project:north-bridge:complete') && !flags.includes('heirloom:orrins-mason-pick') && !itemsFor(this.deps.session).isGrantInFlight('orrins-mason-pick')
@@ -218,7 +226,7 @@ export class Interactables {
           const d = dialogueFor(it.id, stage)
           if (d.event) kind = 'quest'
           else if (orrinPick) kind = 'talk'
-          else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
+          else if (it.id in NPC_NAMES && !heardStory(flags, it.id, stage)) kind = 'talk'
           else if (it.id in NPC_NAMES && handoverFor(it.id, stage, flags)) kind = 'talk'
         } catch {
           kind = null
@@ -281,18 +289,22 @@ export class Interactables {
       return
     }
     let payload: Dialogue
-    let heardKey = `${target.id}@${session.questStage}`
     try {
       if (isResident(target.id)) {
         // Residents talk around the quest: their words come from the save,
-        // the calendar, the world's projects and your plot.
+        // the calendar, the world's projects and your plot. Heard before:
+        // a greeting, anything new about the day, and "Hear it again".
         const talk = residentTalk(target.id, residentContext(session))
         payload = talk.dialogue
-        heardKey = `${target.id}@${talk.topic}`
+        const flags = session.state.flags
+        if (!talk.first && heardStory(flags, target.id, talk.story.key)) {
+          const fresh = talk.day && !heardDay(target.id, talk.day.topic) ? [talk.day.line] : []
+          payload = { ...payload, ...shortTalk({ greeting: greetingFor(target.id), fresh, full: talk.dialogue.lines, choices: payload.choices }) }
+        }
+        markStory(session, target.id, talk.story.key)
+        if (talk.day) markDay(target.id, talk.day.topic)
         if (talk.first) {
           meetResident(session, target.id)
-          // What they'd say next time is old news by then, too.
-          heardAt.add(`${target.id}@${residentTalk(target.id, residentContext(session)).topic}`)
           bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book', kind: 'gain', gain: { to: 'journal', label: residentFullName(target.id) } })
         }
       } else payload = this.isEmberSpot(target.id)
@@ -300,7 +312,7 @@ export class Interactables {
           connected: session.vitalsSource === 'imported',
           remote: session.link ? (session.link.online ? 'online' : 'offline') : null
         })
-        : dialogueFor(target.id, session.questStage)
+        : this.storyTalk(target.id, dialogueFor(target.id, session.questStage))
     } catch (err) {
       console.warn('[fingersnap] no dialogue available for', target.id, err)
       return
@@ -316,8 +328,10 @@ export class Interactables {
     // One more choice, and a single "Not yet" at the end (an earlier one,
     // e.g. a keepsake's with its own reply, is kept in its place).
     const withChoiceAndNotYet = (existing: DialogueChoice[] | undefined, newChoice: DialogueChoice): DialogueChoice[] => {
-      const notYet = (existing ?? []).find((c) => c.text === 'Not yet') ?? { text: 'Not yet' }
-      const nonNotYet = (existing ?? []).filter((c) => c !== notYet)
+      // A short talk's plain goodbye becomes "Not yet" once there's something on offer.
+      const found = (existing ?? []).find((c) => c.text === 'Not yet' || c.dismiss)
+      const notYet = found && found.text !== 'Not yet' ? { text: 'Not yet', dismiss: true } : (found ?? { text: 'Not yet' })
+      const nonNotYet = (existing ?? []).filter((c) => c !== found)
       return [...nonNotYet, newChoice, notYet]
     }
     // What a resident sells at their own door (Hazel's kitchen, Finn's
@@ -385,7 +399,6 @@ export class Interactables {
       }
     }
     uiState.dialogueOpen = true
-    heardAt.add(heardKey)
     this.refreshMarkers()
     sfx('open')
     bus.emit(EV.dialogue, {
@@ -395,6 +408,21 @@ export class Interactables {
       event: payload.event,
       choices: payload.choices
     })
+  }
+
+  /**
+   * Mara, Pip, Orrin (and the stone and the lantern, which don't greet): a
+   * stage's lines play in full once; a quest step (an event) always plays
+   * in full. After that, a greeting and "Hear it again".
+   */
+  private storyTalk(id: string, d: Dialogue): Dialogue {
+    if (!(id in NPC_NAMES) || d.event) return d
+    const { session } = this.deps
+    const stage = session.questStage
+    const heard = heardStory(session.state.flags, id, stage)
+    markStory(session, id, stage)
+    if (!heard) return d
+    return { ...d, ...shortTalk({ greeting: greetingFor(id), fresh: [], full: d.lines, choices: d.choices }) }
   }
 
   /** Drop a used-up interaction point (a picked-up paper) and its marker. */

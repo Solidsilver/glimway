@@ -18,6 +18,7 @@ import {
   type QuestStage,
 } from '../src/lib/state.ts';
 import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
+import { allTalkLines } from '../src/content/talk.ts';
 import { allHeirloomJournal, allHeirloomLines } from '../src/content/heirlooms.ts';
 import { allEchoKeepsakeJournal, allEchoKeepsakeLines } from '../src/content/echoes.ts';
 
@@ -199,6 +200,8 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
   lines.push(...builder.idleLines, ...Object.values(expansion.NEW_NPC_LINES).flat());
   // The residents (Elara, Finn, Hazel, Ada): every line they can say.
   lines.push(...allResidentLines());
+  // Greetings and the short talk's choices (src/content/talk.ts).
+  lines.push(...allTalkLines());
   // The heirlooms (Silas, Orrin, Ada, Nan's camp): every line they say.
   lines.push(...allHeirloomLines());
   // The Echo camps' keepsake offers (leaving Bett's candle, Nan's road-nails):

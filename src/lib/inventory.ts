@@ -15,12 +15,12 @@
  */
 import { ITEM_INFO } from '../content/world.ts';
 import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, MATERIALS, MORE_TRINKETS, TRINKETS } from '../content/expansion-writing.ts';
-import { CRAFTED_BLURBS } from '../content/inventory.ts';
+import { CRAFTED_BLURBS, inventoryCopy as INVENTORY_WEAR } from '../content/inventory.ts';
 import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './embers.ts';
-import type { InstanceView, ItemsView, MakerView } from './api/types.ts';
-import { effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
+import type { Asset, InstanceView, ItemsView, MakerView } from './api/types.ts';
+import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
 export type InventoryTab = 'tools' | 'supplies' | 'keepsakes' | 'home' | 'papers';
 export type ItemTab = Exclude<InventoryTab, 'papers'>;
@@ -141,7 +141,7 @@ function describe(id: string, qty: number): InventoryEntry {
   return { key: `item:${id}`, tab: 'keepsakes', section: 'main', kind: 'other', id, name: info?.name ?? titleCase(id), blurb: info?.blurb ?? '', qty, art, icon: info?.icon ?? 'sparkle' };
 }
 
-/** Everything carried, described (unsorted; see `groupInventory`). */
+/** Everything carried, described (unsorted; see `newestFirst`). */
 export function inventoryEntries(src: InventorySource): InventoryEntry[] {
   const out: InventoryEntry[] = [];
   // Materials: known balances win over the pack's guest entries.
@@ -343,29 +343,6 @@ function compare(a: InventoryEntry, b: InventoryEntry): number {
   return a.name.localeCompare(b.name);
 }
 
-export type InventoryGroups = Record<ItemTab, { main: InventoryEntry[]; road: InventoryEntry[] }>;
-
-/**
- * Entries by tab, sorted: supplies are materials (timber, stone, fiber,
- * amber) then crafted pieces by name; keepsakes the charm, then trinkets by
- * name, then anything else; home goods by name; the road's quest items in
- * story order.
- */
-export function groupInventory(entries: readonly InventoryEntry[]): InventoryGroups {
-  const out: InventoryGroups = {
-    tools: { main: [], road: [] },
-    supplies: { main: [], road: [] },
-    keepsakes: { main: [], road: [] },
-    home: { main: [], road: [] },
-  };
-  for (const e of entries) out[e.tab][e.section].push(e);
-  for (const tab of Object.values(out)) {
-    tab.main.sort(compare);
-    tab.road.sort(compare);
-  }
-  return out;
-}
-
 /** Entries not yet seen on this device. */
 export function unseen(entries: readonly InventoryEntry[], seen: ReadonlySet<string>): InventoryEntry[] {
   return entries.filter((e) => !seen.has(e.key));
@@ -374,4 +351,43 @@ export function unseen(entries: readonly InventoryEntry[], seen: ReadonlySet<str
 /** Which tabs have something new (for the tab dots). */
 export function newTabs(entries: readonly InventoryEntry[], seen: ReadonlySet<string>): Set<ItemTab> {
   return new Set(unseen(entries, seen).map((e) => e.tab));
+}
+
+/**
+ * Newest first: what this device hasn't seen yet leads (in the usual order),
+ * then everything else, the most recently seen batch first. Things seen
+ * together (one look at the bag) share a stamp and keep the usual order
+ * among themselves. Quest things stay at the end, in story order.
+ */
+export function newestFirst(entries: readonly InventoryEntry[], seenAt: ReadonlyMap<string, number>): InventoryEntry[] {
+  const main = entries.filter((e) => e.section === 'main');
+  const road = entries.filter((e) => e.section === 'road').sort(compare);
+  const fresh = main.filter((e) => !seenAt.has(e.key)).sort(compare);
+  const old = main.filter((e) => seenAt.has(e.key)).sort((a, b) => seenAt.get(b.key)! - seenAt.get(a.key)! || compare(a, b));
+  return [...fresh, ...old, ...road];
+}
+
+/** What a recipe or a mend costs, in words: "2 timber, 1 fiber". */
+export function costLine(cost: Record<string, number> | undefined): string {
+  return Object.entries(cost ?? {})
+    .map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`)
+    .join(', ');
+}
+
+/** The asset one of an entry is, for a hand-over (an instance by id; a stack with its maker). */
+export function assetOf(e: Pick<InventoryEntry, 'id' | 'instance' | 'maker'>): Asset {
+  const d = itemDef(e.id);
+  const kind = d ? assetKind(d) : 'item';
+  if (e.instance) return { kind: 'instance', id: e.id, qty: 1, instance: e.instance.id } as Asset;
+  return { kind: kind === 'instance' ? 'item' : kind, id: e.id, qty: 1, maker: e.maker ? e.maker.id : '' } as Asset;
+}
+
+/** A tool's wear in words: "Sharp", "30 uses left", "Blunt…" (warden-set tools dull and come back). */
+export function wearWords(i: InstanceView): string {
+  if (i.wardenSet) {
+    if (i.condition === i.maxCondition) return 'Sharp';
+    if (i.condition === 0) return INVENTORY_WEAR.state['dull'] ?? 'Dull. Sharp again by morning.';
+    return INVENTORY_WEAR.usesLeft(i.usesLeft);
+  }
+  return i.maxCondition === 0 ? INVENTORY_WEAR.neverWears : (INVENTORY_WEAR.state[i.state] ?? INVENTORY_WEAR.usesLeft(i.usesLeft));
 }

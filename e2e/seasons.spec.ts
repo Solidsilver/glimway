@@ -81,6 +81,10 @@ test('in the Quiet the frozen pond breaks for frost-glass, by the server’s own
 
   // Beside the ice at 38,21, on the pond's east bank.
   await warp(page, 'village', 39, 21)
+  // The pick in hand: the belt's second slot (the weapon, then the pick).
+  await waitForLive(page)
+  await page.keyboard.press('2')
+  await expect.poll(async () => page.evaluate(() => (window as unknown as { __fsHeld: () => { kind: string } }).__fsHeld().kind)).toBe('break')
   await expect.poll(async () => (await gather(page))?.spots.filter((s) => s.target === 'pond-ice').length).toBe(3)
   await expect.poll(async () => (await gather(page))?.prompt?.label ?? '').toBe('Break the pond ice')
   await expect(page.locator('.prompt')).toContainText('Break the pond ice')

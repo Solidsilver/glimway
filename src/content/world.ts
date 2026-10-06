@@ -15,6 +15,10 @@ export interface DialogueChoice {
   disabled?: boolean;
   /** Small side text: a cost, or why the choice is unavailable. */
   note?: string;
+  /** "Hear it again": plays `reply`, then offers the other choices again (src/content/talk.ts). */
+  replay?: boolean;
+  /** A plain goodbye: dropped when it would be the only choice left. */
+  dismiss?: boolean;
 }
 
 export interface Dialogue {

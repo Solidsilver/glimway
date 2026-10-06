@@ -22,6 +22,8 @@ import { checkSpend } from '../../lib/embers'
 import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
+import { shortTalk } from '../../content/talk'
+import { heardStory, markStory } from '../heard'
 import { paperFlag } from '../../content/papers'
 import { HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
@@ -882,6 +884,48 @@ export class HomesteadLayer implements InteractionProvider {
     return out
   }
 
+  /**
+   * Whose place this scene is: your own land or cottage, someone else's, or
+   * not a homestead (the goal needle's way-finding, src/game/entities/goal-guide.ts).
+   */
+  get placeKind(): 'home' | 'cottage' | 'other-home' | 'other-cottage' | null {
+    if (this.gate === null) return null
+    const own = this.gate === this.homes.myGate
+    if (this.deps.room) return own ? 'cottage' : 'other-cottage'
+    return this.land ? (own ? 'home' : 'other-home') : null
+  }
+
+  /**
+   * Where a "How do I…?" step happens, in this scene's world px (null: not
+   * in this scene, or not known yet): Silas's table and your gate on the
+   * lane; your door and mailbox on your land; the bench and hearth inside.
+   */
+  guidePoint(where: string): { x: number; y: number } | null {
+    const mine = this.homes.myGate
+    if (this.commons) {
+      if (where === 'silas') {
+        const t = HOMESTEAD_DATA.commons.silasTable
+        return { x: t.x, y: t.y }
+      }
+      if (where === 'gate' && mine !== null) {
+        const slot = this.commons.gates.find((g) => g.gate === mine)
+        return slot ? { x: slot.tx * TILE + 8, y: slot.ty * TILE + 8 } : null
+      }
+      return null
+    }
+    if (this.gate === null || this.gate !== mine) return null
+    if (this.land) {
+      if (where === 'door') return { x: this.land.door.tx * TILE + 8, y: (this.land.door.ty + 1) * TILE }
+      if (where === 'mailbox') return { x: this.land.mailbox.tx * TILE + 8, y: (this.land.mailbox.ty + 1) * TILE }
+      return null
+    }
+    if (this.deps.room) {
+      if (where === 'bench') return { x: ROOM_BENCH.x, y: 60 }
+      if (where === 'hearth') return { x: ROOM_HEARTH.x - 14, y: ROOM_HEARTH.y + 14 }
+    }
+    return null
+  }
+
   owns(id: InteractId): boolean {
     return id.startsWith('home:')
   }
@@ -1145,13 +1189,16 @@ export class HomesteadLayer implements InteractionProvider {
 
     if (!this.homes.connected) {
       const guestAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe')
+      const deeds = ['Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.']
+      const told = this.toldBefore('guest', first, deeds)
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : [lines.idleLines[this.nextIdle()]]),
           ...(guestAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
-          'Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.'
-        ]
+          ...told.lines
+        ],
+        choices: told.choices
       })
       return
     }
@@ -1184,18 +1231,21 @@ export class HomesteadLayer implements InteractionProvider {
         choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${price} embers`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : `${price} embers`, action: `home:claim:${g.gate}` })
       }
       choices.push({ text: 'Not yet' })
+      // An invite or an old page is news every time; the lantern-light speech plays once.
+      const pitch = invite
+        ? [`${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`]
+        : this.homes.reclaimable().length
+          ? [`Your old page’s still in the book: ${lotName(this.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`]
+          : null
+      const told = pitch ? { lines: pitch, choices } : this.toldBefore('unclaimed', first, ['I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'], choices)
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : ['There you are, neighbour.']),
           ...axeLines,
-          invite
-            ? `${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`
-            : this.homes.reclaimable().length
-              ? `Your old page’s still in the book: ${lotName(this.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`
-            : 'I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'
+          ...told.lines
         ],
-        choices
+        choices: told.choices
       })
       return
     }
@@ -1233,15 +1283,28 @@ export class HomesteadLayer implements InteractionProvider {
       : mine.tier === 1
         ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
         : [lines.sellDecorations.lines[0]]
+    // What he says about your place plays once per state; then a nod and "Hear it again".
+    const state = mine.tier === 0 ? `tier:0:${s.state.embers < this.homes.cottagePrice() ? 'saving' : 'ready'}` : `tier:${mine.tier}`
+    const told = this.toldBefore(state, first, intro, choices)
+    const greet = first ? lines.firstMeeting.lines : mine.tier === 0 && !told.short ? [] : [lines.idleLines[this.nextIdle()]]
     this.say({
       speaker: SILAS.name,
-      lines: [
-        ...(first ? lines.firstMeeting.lines : (mine.tier === 0 ? [] : [lines.idleLines[this.nextIdle()]])),
-        ...axeLines,
-        ...intro
-      ],
-      choices
+      lines: [...greet, ...axeLines, ...told.lines],
+      choices: told.choices
     })
+  }
+
+  /**
+   * Silas's say about something plays in full once (src/game/heard.ts);
+   * after that he leaves it out and offers "Hear it again" among the choices.
+   */
+  private toldBefore(what: string, first: boolean, lines: string[], choices?: DialogueChoice[]): { lines: string[]; choices: DialogueChoice[] | undefined; short: boolean } {
+    const s = this.deps.session
+    const heard = !first && heardStory(s.state.flags, 'silas', what)
+    markStory(s, 'silas', what)
+    if (!heard) return { lines, choices, short: false }
+    const t = shortTalk({ greeting: '', fresh: [], full: lines, choices })
+    return { lines: [], choices: t.choices, short: true }
   }
 
   private nextIdle(): number {

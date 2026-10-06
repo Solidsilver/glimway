@@ -219,11 +219,14 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await pageFinn.keyboard.press('i')
   await expect(inv).toBeVisible()
   await inv.getByRole('tab', { name: /Supplies/ }).click()
+  await inv.locator(`[data-cell="item:keepers-twists@${idWren}"]`).click()
   const salveRow = inv.locator(`[data-item="item:keepers-twists@${idWren}"]`)
   await expect(salveRow).toContainText('Made by Wren')
   await salveRow.getByRole('button', { name: 'Use' }).click()
   await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
+  // Escape closes the card, then the bag.
   await pageFinn.keyboard.press('Escape')
+  if (await inv.isVisible()) await pageFinn.keyboard.press('Escape')
   await ctxFinn.close()
 
   // Verify thank-you mail exists for Wren in database

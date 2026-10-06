@@ -115,9 +115,19 @@
       sfx('fizzle')
       return
     }
+    sfx('click')
+    if (choice.replay && choice.reply?.length) {
+      // "Hear it again": the whole talk, then the other choices again (a
+      // goodbye alone isn't worth asking: the talk just ends).
+      const rest = (choices ?? []).filter((c) => c !== choice)
+      choices = rest.some((c) => !c.dismiss) ? rest : null
+      lines = [...lines, ...choice.reply]
+      idx += 1
+      typeLine(lines[idx])
+      return
+    }
     answered = true
     chosenAction = choice.action
-    sfx('click')
     const reply = choice.reply ?? []
     if (reply.length === 0) {
       close()

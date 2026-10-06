@@ -38,9 +38,19 @@ async function openInventory(page: Page, t: RegExp): Promise<void> {
   await tab(page, t).click()
 }
 async function closeInventory(page: Page): Promise<void> {
-  await page.keyboard.press('Escape')
+  // Escape closes an open card first, then the panel.
+  for (let i = 0; i < 3 && (await dialog(page).isVisible()); i++) await page.keyboard.press('Escape')
   await expect(dialog(page)).toBeHidden()
 }
+
+/** Pick an item in the bag's grid: its card (what each row used to show) opens. */
+async function pick(page: Page, key: string) {
+  await dialog(page).locator(`[data-cell="${key}"]`).click()
+  const card = dialog(page).locator(`[data-item="${key}"]`)
+  await expect(card).toBeVisible()
+  return card
+}
+
 
 test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas mends it', async ({ page }) => {
   const id = await freshPlayer(page, 'Wren')
@@ -50,13 +60,13 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
 
   await openInventory(page, /Tools/)
   const tools = dialog(page).getByTestId('inv-page-tools')
-  const axeRow = tools.locator(`[data-item="inst:${axe}"]`)
+  const axeRow = await pick(page, `inst:${axe}`)
   await expect(axeRow).toContainText('Bench axe')
   await expect(axeRow).toContainText('Made by Wren')
   await expect(axeRow.getByTestId('wear-words')).toHaveText('3 uses left')
   await expect(axeRow).toHaveAttribute('data-state', 'worn')
   await expect(axeRow.getByTestId('condition')).toHaveAttribute('aria-valuenow', '10')
-  await expect(tools.locator(`[data-item="inst:${brack}"]`)).toContainText('About 80 uses before it')
+  await expect(await pick(page, `inst:${brack}`)).toContainText('About 80 uses before it')
   await shot(page, 'items-tools-worn-desktop')
   await closeInventory(page)
 
@@ -69,8 +79,8 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
   expect(await useTool(page, brack)).toMatchObject({ broke: false, state: 'blunt', condition: 0 })
   expect(await useTool(page, brack)).toEqual({ error: 'tool-blunt' })
   await openInventory(page, /Tools/)
-  await expect(tools.locator(`[data-item="inst:${axe}"]`)).toHaveCount(0)
-  const brackRow = tools.locator(`[data-item="inst:${brack}"]`)
+  await expect(tools.locator(`[data-cell="inst:${axe}"]`)).toHaveCount(0)
+  const brackRow = await pick(page, `inst:${brack}`)
   await expect(brackRow).toHaveAttribute('data-state', 'blunt')
   await expect(brackRow.getByTestId('wear-words')).toHaveText('Blunt. Mend it to use it again.')
   // Away from any mender, only the bench is offered (and there's no workshop).
@@ -84,6 +94,7 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
   // At Silas's table he mends it while you talk.
   await go(page, 'commons', 51, 23)
   await openInventory(page, /Tools/)
+  await pick(page, `inst:${brack}`)
   await brackRow.getByRole('button', { name: 'Mend…' }).click()
   const silas = brackRow.locator('[data-mend="silas"]')
   await expect(silas).toContainText('Silas (2 timber, 1 wooden peg)')
@@ -104,7 +115,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   await hurt(page, 15)
   const before = (await vitals(page)).hp
   await openInventory(page, /Supplies/)
-  const twists = dialog(page).locator('[data-item="item:keepers-twists"]')
+  const twists = await pick(page, 'item:keepers-twists')
   await expect(twists).toContainText('Mends you a little')
   await twists.getByRole('button', { name: 'Use' }).click()
   await expect(dialog(page).getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
@@ -113,7 +124,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
 
   // One pocket to start; the fox's help reads in words.
   await tab(page, /Keepsakes/).click()
-  const fox = dialog(page).locator('[data-item="item:whittled-fox"]')
+  const fox = await pick(page, 'item:whittled-fox')
   await expect(fox).toContainText('Papers glint brighter')
   await fox.getByRole('button', { name: 'Pocket' }).click()
   await expect(fox.getByTestId('in-pocket')).toHaveText('In pocket 1')
@@ -125,7 +136,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
 
   // The off hand is open (the hero has a class): carry the lantern.
   await tab(page, /Tools/).click()
-  const lanternRow = dialog(page).locator(`[data-item="inst:${lantern}"]`)
+  const lanternRow = await pick(page, `inst:${lantern}`)
   await expect(lanternRow).toContainText('Lights the way')
   await expect(lanternRow).toContainText('A little better in a warrior’s hands')
   await lanternRow.getByRole('button', { name: 'Carry' }).click()
@@ -215,7 +226,7 @@ test('standing together, one player hands another something they made', async ({
   await expect.poll(() => remotes(other), { timeout: 15_000 }).toEqual(['Ash'])
 
   await openInventory(page, /Supplies/)
-  const wick = dialog(page).locator(`[data-item="item:lamp-wick@${ash}"]`)
+  const wick = await pick(page, `item:lamp-wick@${ash}`)
   await expect(wick).toContainText('Made by Ash')
   await wick.getByRole('button', { name: 'Give…' }).click()
   await expect(wick.getByTestId('give-to')).toContainText('Rowan')
@@ -229,7 +240,7 @@ test('standing together, one player hands another something they made', async ({
   await expect.poll(async () => (await items(other))?.stacks.find((s) => s.itemDef === 'lamp-wick')?.maker?.name).toBe('Ash')
   await other.bringToFront()
   await openInventory(other, /Supplies/)
-  await expect(dialog(other).locator(`[data-item="item:lamp-wick@${ash}"]`)).toContainText('Made by Ash')
+  await expect(await pick(other, `item:lamp-wick@${ash}`)).toContainText('Made by Ash')
   await shot(other, 'items-gift-received-desktop')
   await closeInventory(other)
 
@@ -242,7 +253,7 @@ test('standing together, one player hands another something they made', async ({
   await closeInventory(page)
   await expect.poll(() => remotes(page), { timeout: 15_000 }).toEqual([])
   await openInventory(page, /Keepsakes/)
-  const gloveRow = dialog(page).locator(`[data-item="item:${glove}"]`)
+  const gloveRow = await pick(page, `item:${glove}`)
   await gloveRow.getByRole('button', { name: 'Give…' }).click()
   await expect(gloveRow.getByTestId('give-to')).toHaveText('Stand next to someone to hand it over.')
   await ctx.close()

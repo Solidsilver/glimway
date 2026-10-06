@@ -15,13 +15,34 @@ import { TILE } from '../textures'
 import { playInsets } from '../viewport'
 import type { QuestStage } from '../../lib/state'
 import type { WorldData } from '../worlds'
+import type { GuideWhere } from '../../content/guides'
 
-/** The road's areas and their neighbours (the areas a quest goal can be in, and the ways between them). */
+/**
+ * The places and the ways between them. Homesteads are by whose they are:
+ * `home` and `cottage` are your own; someone else's lead back the way you
+ * came. The Wilds are one place, through the Commons arch.
+ */
 const ROAD: Record<string, string[]> = {
   village: ['woodland', 'commons'],
   woodland: ['village', 'ruin'],
   ruin: ['woodland'],
-  commons: ['village']
+  commons: ['village', 'home', 'wilds'],
+  home: ['commons', 'cottage'],
+  cottage: ['home'],
+  'other-home': ['commons', 'other-cottage'],
+  'other-cottage': ['other-home'],
+  wilds: ['commons']
+}
+
+/** Where each "How do I…?" step's place is (src/content/guides.ts GuideWhere). */
+const WHERE_PLACE: Record<GuideWhere, string> = {
+  silas: 'commons',
+  gate: 'commons',
+  door: 'home',
+  mailbox: 'home',
+  bench: 'cottage',
+  hearth: 'cottage',
+  wilds: 'wilds'
 }
 
 /** Each stage's goal: the area, and what to point at there (an NPC, an interactable, or the warden). */
@@ -62,6 +83,11 @@ export interface GoalGuideDeps {
   npcAt: (id: string) => { x: number; y: number } | null
   spotAt: (id: string) => { x: number; y: number } | null
   wardenAt: () => { x: number; y: number } | null
+  /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
+  placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
+  guidePoint: (where: GuideWhere) => { x: number; y: number } | null
+  /** The pinned guide's current step (null: none pinned, or it's done): the needle follows it instead of the story. */
+  pinnedStep: () => { where: GuideWhere | null } | null
   reducedMotion: boolean
 }
 
@@ -89,8 +115,17 @@ export class GoalGuide {
     })
   }
 
+  /** This scene as a place on the road (ROAD's keys). */
+  private place(): string {
+    const id = String(this.deps.world.areaId)
+    if (id === 'wilds' || id.startsWith('chunk:')) return 'wilds'
+    return this.deps.placeKind() ?? id
+  }
+
   /** The point to head for now, in world px, and whether it's the goal itself. */
   target(): { x: number; y: number; here: boolean } | null {
+    const step = this.deps.pinnedStep()
+    if (step) return step.where ? this.towardGuide(step.where) : null
     const goal = GOALS[this.deps.stage()]
     if (!goal) return null
     const area = this.deps.world.areaId
@@ -98,11 +133,39 @@ export class GoalGuide {
       const p = (goal.warden ? this.deps.wardenAt() : null) ?? (goal.npc ? this.deps.npcAt(goal.npc) : null) ?? (goal.spot ? this.deps.spotAt(goal.spot) : null)
       return p ? { ...p, here: true } : null
     }
-    // The way out that gets closest to the goal's area.
+    return this.wayToward(goal.area)
+  }
+
+  /** A pinned guide's step: its point when it's here, else the way toward its place. */
+  private towardGuide(where: GuideWhere): { x: number; y: number; here: boolean } | null {
+    const goal = WHERE_PLACE[where]
+    if (this.place() === goal) {
+      const p = this.deps.guidePoint(where)
+      // In the Wilds (or a point not known yet) there's nothing more exact to point at.
+      return p ? { ...p, here: true } : null
+    }
+    return this.wayToward(goal)
+  }
+
+  /** The way out of this place that gets closest to `goal`. */
+  private wayToward(goal: string): { x: number; y: number; here: false } | null {
+    const from = this.place()
+    // Out of the Commons to your own land: your gate on the lane, not an exit.
+    if (from === 'commons' && steps('home', goal) < steps('commons', goal)) {
+      const g = this.deps.guidePoint('gate')
+      if (g) return { ...g, here: false }
+    }
+    // From your land into the cottage: the door.
+    if (from === 'home' && goal === 'cottage') {
+      const d = this.deps.guidePoint('door')
+      if (d) return { ...d, here: false }
+    }
     let best: { x: number; y: number } | null = null
     let bestSteps = Infinity
     for (const e of this.deps.world.exits) {
-      const n = steps(String(e.to), goal.area)
+      const to = String(e.to)
+      const node = /^home:\d+$/.test(to) ? (from === 'cottage' ? 'home' : 'other-home') : to.startsWith('chunk:') ? 'wilds' : to
+      const n = steps(node, goal)
       if (n < bestSteps) {
         bestSteps = n
         best = { x: (e.tx + e.tw / 2) * TILE, y: (e.ty + e.th / 2) * TILE }
