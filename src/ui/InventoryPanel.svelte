@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import type { Session } from '../game/session'
   import { VILLAGE_EV, villageFor } from '../game/village'
   import { HOME_EV, homesteadsFor } from '../game/homestead'
   import { ITEMS_EV, giftPhrase, itemErrorText, itemsFor } from '../game/items'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
-  import { fitTargets, inventoryEntries, modelEntries, newestFirst, newTabs, type InventoryEntry, type InventoryTab } from '../lib/inventory'
-  import { assetKind, conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
-  import type { Asset, InstanceView } from '../lib/api/types'
+  import { assetOf, costLine, fitTargets, inventoryEntries, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
+  import { conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
+  import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { getCombatKit } from '../lib/combat'
@@ -137,7 +137,7 @@
   /** What the current filter shows, newest first (quest things last). */
   const shown = $derived.by(() => {
     if (tab === 'papers') return [] as InventoryEntry[]
-    return newestFirst(tab === 'all' ? entries : entries.filter((e) => e.tab === tab), inventory.seen)
+    return newestFirst(tab === 'all' ? entries : entries.filter((e) => e.tab === tab), inventory.seenAt)
   })
   const mainShown = $derived(shown.filter((e) => e.section === 'main'))
   const roadShown = $derived(shown.filter((e) => e.section === 'road'))
@@ -166,18 +166,45 @@
   /** An empty slot's (or the weapon's) card. */
   const slotCard = $derived(cardKey?.startsWith('slot:') ? cardKey.slice(5) : null)
 
-  function pick(key: string | null): void {
+  /** What opened the card (a cell or a slot): focus goes back to it when the card closes. */
+  let opener: HTMLElement | null = null
+
+  function pick(key: string, from?: EventTarget | null): void {
     selected = key
     open = null
     message = null
+    if (from instanceof HTMLElement) opener = from
   }
-  /** Pick a slot: its item's card, or the slot's own (empty, the weapon). */
-  function pickSlot(name: string, e: InventoryEntry | null): void {
-    pick(e ? e.key : `slot:${name}`)
+  /** Pick a slot: its item's card, or the slot's own (empty, locked, the weapon). */
+  function pickSlot(name: string, e: InventoryEntry | null, from?: EventTarget | null): void {
+    pick(e ? e.key : `slot:${name}`, from)
   }
-  // A picked thing that's gone (used up, given away) closes its card.
+
+  /** Close the card, and put focus back where the player was (never on the page behind). */
+  async function closeCard(): Promise<void> {
+    selected = null
+    open = null
+    // Not straight back to a hover preview of what was just closed.
+    hovered = null
+    await tick()
+    refocus()
+  }
+  function refocus(): void {
+    const target =
+      (opener?.isConnected && opener.offsetParent !== null ? opener : null) ??
+      panelEl?.querySelector<HTMLElement>('[data-cell][tabindex="0"]') ??
+      panelEl ??
+      null
+    target?.focus()
+  }
+
+  // A picked thing that's gone (used up, given away) closes its card; focus stays in the bag.
   $effect(() => {
-    if (selected && !selected.startsWith('slot:') && !entries.some((e) => e.key === selected)) selected = null
+    if (selected && !selected.startsWith('slot:') && !entries.some((e) => e.key === selected)) void closeCard()
+  })
+  // The grid shrank under the keyboard's place (the last of something used up): keep a cell in the Tab order.
+  $effect(() => {
+    if (cursor > 0 && cursor > cells.length - 1) cursor = Math.max(0, cells.length - 1)
   })
 
   function markTab(t: Filter): void {
@@ -227,16 +254,12 @@
     els[i]?.focus()
   }
 
-  /** Escape closes the card first (then App's Escape closes the panel). */
+  /** Escape closes the card first, focus back where it came from (then App's Escape closes the panel). */
   function onPanelKey(ev: KeyboardEvent): void {
     if (ev.key !== 'Escape' || (!selected && !open)) return
     ev.preventDefault()
     ev.stopPropagation()
-    const key = selected
-    selected = null
-    open = null
-    // Back to its icon in the grid.
-    if (key) panelEl?.querySelector<HTMLElement>(`[data-cell="${CSS.escape(key)}"]`)?.focus()
+    void closeCard()
   }
 
   /** "1 set out · 2 put away" for a home good. */
@@ -249,6 +272,23 @@
   const shortLine = (s: string) => {
     const m = /^(.+?[.!?])(\s|$)/.exec(s)
     return (m ? m[1] : s).trim()
+  }
+
+  /** A cell's name for screen readers: "Bench axe, 30 uses left, in hand, new". */
+  function cellLabel(e: InventoryEntry): string {
+    const k = beltKindOf(e)
+    return [
+      e.name,
+      e.section === 'main' && !e.instance && e.qty > 1 ? `${e.qty}` : '',
+      e.instance && e.instance.maxCondition > 0 ? wearWords(e.instance) : '',
+      e.instance?.wardenSet ? 'warden-set' : '',
+      k && k === hand.kind ? inventoryCopy.inHandTag.toLowerCase() : '',
+      e.inHand ? 'in your off hand' : '',
+      e.pocket ? `in pocket ${e.pocket}` : '',
+      !seen.has(e.key) ? inventoryCopy.newBadge.toLowerCase() : ''
+    ]
+      .filter(Boolean)
+      .join(', ')
   }
 
   /** The delivered art for an icon: the wear-state frame when it's loaded, else the item's own. */
@@ -268,8 +308,6 @@
     open = null
     message = r.ok ? { text: ok, kind: 'ok' } : { text: r.text, kind: 'error' }
   }
-
-  const maker = (e: InventoryEntry) => (e.maker ? e.maker.id : undefined)
 
   function useIt(e: InventoryEntry): void {
     void act(`use:${e.key}`, () => items.useItem(e.id, e.maker ? e.maker.id : '', ui.unmoored), `You used ${giftPhrase(e.id, 1)}.`)
@@ -337,22 +375,8 @@
     return feed.nearby(p.x, p.y, ITEM_RULES.give.radiusTiles * 16)
   }
 
-  function assetOf(e: InventoryEntry): Asset {
-    const d = itemDef(e.id)
-    const kind = d ? assetKind(d) : 'item'
-    if (e.instance) return { kind: 'instance', id: e.id, qty: 1, instance: e.instance.id }
-    const m = maker(e)
-    return { kind: kind === 'instance' ? 'item' : kind, id: e.id, qty: 1, ...(m !== undefined ? { maker: m } : { maker: '' }) } as Asset
-  }
-
   function giveIt(e: InventoryEntry, to: { habiticaId: string; displayName: string }): void {
     void act(`give:${e.key}`, () => items.give(to.habiticaId, assetOf(e)), `You gave ${to.displayName} ${giftPhrase(e.id, 1)}.`)
-  }
-
-  function costLine(cost: Record<string, number> | undefined): string {
-    return Object.entries(cost ?? {})
-      .map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`)
-      .join(', ')
   }
 
   function mendIt(e: InventoryEntry, at: string, who: string): void {
@@ -368,14 +392,6 @@
   }
 
   const percent = (i: InstanceView) => Math.round(conditionFraction(i) * 100)
-  const wearWords = (i: InstanceView) => {
-    if (i.wardenSet) {
-      if (i.condition === i.maxCondition) return 'Sharp'
-      if (i.condition === 0) return inventoryCopy.state['dull'] ?? 'Dull. Sharp again by morning.'
-      return inventoryCopy.usesLeft(i.usesLeft)
-    }
-    return i.maxCondition === 0 ? inventoryCopy.neverWears : (inventoryCopy.state[i.state] ?? inventoryCopy.usesLeft(i.usesLeft))
-  }
   const toggleOpen = (id: string) => {
     open = open === id ? null : id
     message = null
@@ -390,13 +406,14 @@
   {/if}
 {/snippet}
 
-{#snippet wearBar(e: InventoryEntry, testid: boolean)}
+{#snippet wearBar(e: InventoryEntry, testid: boolean, decorative = false)}
   {#if e.instance && e.instance.maxCondition > 0}
     <span
       class="bar"
       class:low={percent(e.instance) < ITEM_RULES.wear.wornBelowPercent}
-      role="meter"
-      aria-label={`${e.name} condition`}
+      role={decorative ? undefined : 'meter'}
+      aria-hidden={decorative ? 'true' : undefined}
+      aria-label={decorative ? undefined : `${e.name} condition`}
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={percent(e.instance)}
@@ -416,14 +433,15 @@
       aria-pressed={selected === e.key}
       tabindex={i === cursor ? 0 : -1}
       title={touch ? undefined : e.name}
-      onclick={() => {
+      aria-label={cellLabel(e)}
+      onclick={(ev) => {
         cursor = i
-        pick(e.key)
+        pick(e.key, ev.currentTarget)
       }}
       onmouseenter={() => !touch && (hovered = e.key)}
       onfocus={() => (cursor = i)}
     >
-      <span class="ci">
+      <span class="ci" aria-hidden="true">
         {@render icon(e, 32)}
         {#if e.instance?.wardenSet}<span class="grey-chip" title="Warden-set"></span>{/if}
         {#if !seen.has(e.key)}<span class="badge" aria-hidden="true"></span>{/if}
@@ -432,14 +450,22 @@
         {/if}
         {#if e.pocket || e.inHand || (beltKindOf(e) && beltKindOf(e) === hand.kind)}<span class="worn" aria-hidden="true"><Icon name="check" size={9} /></span>{/if}
       </span>
-      {@render wearBar(e, false)}
-      <span class="cn">{e.name}</span>
-      {#if !seen.has(e.key)}<span class="sr">, {inventoryCopy.newBadge}</span>{/if}
+      {@render wearBar(e, false, true)}
+      <span class="cn" aria-hidden="true">{e.name}</span>
     </button>
   </li>
 {/snippet}
 
-{#snippet itemCard(e: InventoryEntry)}
+{#snippet beltRow()}
+  <span class="acts belt" role="group" aria-label={inventoryCopy.holdGroup}>
+    {#each belt as s (s.kind)}
+      <button type="button" class="act" class:primary={s.kind === hand.kind} aria-pressed={s.kind === hand.kind} data-hold={s.kind} onclick={() => hold(s.kind)}>{s.kind === 'weapon' ? kit.basicName : KIND_WORDS[s.kind]}</button>
+    {/each}
+  </span>
+{/snippet}
+
+<!-- `full`: the picked card, with its actions; a hovered card (desktop) only shows what the thing is. -->
+{#snippet itemCard(e: InventoryEntry, full: boolean)}
   {@const k = beltKindOf(e)}
   <div class="card-head">
     <span class="card-icon" class:dim={e.instance && (e.instance.state === 'blunt' || e.instance.state === 'cracked')}>
@@ -471,7 +497,7 @@
         <span class="fit" data-fitting={f.itemDef}>
           <ArtIcon art={f.itemDef} name="sparkle" size={16} />
           {fittingLine(f.fitting)}{#if f.maxCondition > 0}<i> · {inventoryCopy.usesLeft(f.usesLeft)}</i>{/if}
-          <button type="button" class="x" aria-label={`${inventoryCopy.actions.takeOff} ${itemName(f.itemDef)}`} disabled={busy !== null} onclick={() => takeOff(f.id, f.itemDef)}><Icon name="close" size={10} /></button>
+          {#if full}<button type="button" class="x" aria-label={`${inventoryCopy.actions.takeOff} ${itemName(f.itemDef)}`} disabled={busy !== null} onclick={() => takeOff(f.id, f.itemDef)}><Icon name="close" size={10} /></button>{/if}
         </span>
       {/each}
     </span>
@@ -480,12 +506,15 @@
   {#if e.rule && e.kind === 'tool'}<small class="rule">{e.rule}</small>{/if}
   {#if e.kind === 'decoration'}<small class="where">{where(e)}</small>{/if}
   {#if e.section === 'road'}<small class="rule">{inventoryCopy.roadNote}</small>{/if}
-  {#if model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
+  {#if !full && model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
+    <small class="rule pick-hint">{inventoryCopy.pickToAct}</small>
+  {:else if model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
+    {#if k && k === hand.kind}
+      <!-- In hand now: the belt, to take something else in hand (or put it away for the weapon). -->
+      {@render beltRow()}
+    {/if}
     <span class="acts">
-      {#if k}
-        {#if k === hand.kind}<span class="tag held">{inventoryCopy.holdingNow}</span>
-        {:else}<button type="button" class="act primary" data-act="hold" onclick={() => hold(k)}>{inventoryCopy.holdThis}</button>{/if}
-      {/if}
+      {#if k && k !== hand.kind}<button type="button" class="act primary" data-act="hold" onclick={() => hold(k)}>{inventoryCopy.holdThis}</button>{/if}
       {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
       {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
       {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
@@ -534,35 +563,51 @@
       <span class="card-name"><b>{inventoryCopy.hand}</b><span class="tag held">{inventoryCopy.handWeapon(kit.basicName)}</span></span>
     </div>
     <p class="line">{inventoryCopy.handHint}</p>
-  {:else if name.startsWith('pocket')}
+  {:else if name.startsWith('pocket') && name !== 'pocket-locked'}
     <div class="card-head">
       <span class="card-icon"><Icon name="bag" size={22} /></span>
       <span class="card-name"><b>{inventoryCopy.pocket(Number(name.slice(7)))}</b><span class="tag">{inventoryCopy.pocketEmpty}</span></span>
     </div>
     <p class="line">{inventoryCopy.pocketHint}</p>
+  {:else if name === 'pocket-locked'}
+    <div class="card-head">
+      <span class="card-icon"><Icon name="key" size={20} /></span>
+      <span class="card-name"><b>{inventoryCopy.pocket((model?.pockets.length ?? 1) + 1)}</b><span class="tag">{inventoryCopy.lockedTag}</span></span>
+    </div>
+    <p class="line">{inventoryCopy.pocketLocked}</p>
+  {:else if name === 'off-locked'}
+    <div class="card-head">
+      <span class="card-icon"><Icon name="key" size={20} /></span>
+      <span class="card-name"><b>{inventoryCopy.offHand}</b><span class="tag">{inventoryCopy.lockedTag}</span></span>
+    </div>
+    <p class="line">{inventoryCopy.offHandClosed}</p>
   {:else}
     <div class="card-head">
       <span class="card-icon"><Icon name="lantern" size={22} /></span>
-      <span class="card-name"><b>{inventoryCopy.offHand}</b><span class="tag">{model?.offHand.open ? inventoryCopy.offHandEmpty : inventoryCopy.offHandClosed}</span></span>
+      <span class="card-name"><b>{inventoryCopy.offHand}</b><span class="tag">{inventoryCopy.offHandEmpty}</span></span>
     </div>
-    {#if model?.offHand.open}<p class="line">{inventoryCopy.offHandHint}</p>{/if}
+    <p class="line">{inventoryCopy.offHandHint}</p>
   {/if}
-  {#if belt.length > 1 && name === 'hand'}
-    <span class="acts belt" aria-label="Hold">
-      {#each belt as s (s.kind)}
-        <button type="button" class="act" class:primary={s.kind === hand.kind} aria-pressed={s.kind === hand.kind} data-hold={s.kind} onclick={() => hold(s.kind)}>{s.kind === 'weapon' ? kit.basicName : KIND_WORDS[s.kind]}</button>
-      {/each}
-    </span>
-  {/if}
+  {#if belt.length > 1 && name === 'hand'}{@render beltRow()}{/if}
 {/snippet}
 
-{#snippet slotButton(name: string, label: string, e: InventoryEntry | null, testid: string, fallbackIcon: string, extra?: string)}
-  <button type="button" class="eq" class:filled={!!e} class:on={cardKey === (e ? e.key : `slot:${name}`)} data-testid={testid} onclick={() => pickSlot(name, e)} title={e ? `${label}: ${e.name}` : label}>
-    <span class="eq-box">
-      {#if e}{@render icon(e, 32)}{:else}<span class="eq-empty"><Icon name={fallbackIcon} size={18} /></span>{/if}
+<!-- A slot around the hero: its item, or its own card (empty, the weapon). `held`: the hand. -->
+{#snippet slotButton(name: string, label: string, e: InventoryEntry | null, testid: string, fallbackIcon: string, held = false, emptyName = inventoryCopy.pocketEmpty)}
+  <button type="button" class="eq" class:filled={!!e} class:on={cardKey === (e ? e.key : `slot:${name}`)} data-testid={testid} onclick={(ev) => pickSlot(name, e, ev.currentTarget)} title={`${label}: ${e ? e.name : emptyName}`}>
+    <span class="eq-box" class:held>
+      {#if e}{@render icon(e, 32)}{:else}<span class="eq-empty" class:weapon={held}><Icon name={fallbackIcon} size={held ? 20 : 18} /></span>{/if}
     </span>
     <span class="eq-label">{label}</span>
-    <span class="sr">{e ? e.name : (extra ?? inventoryCopy.pocketEmpty)}</span>
+    <span class="sr">{e ? e.name : emptyName}</span>
+  </button>
+{/snippet}
+
+<!-- A slot that isn't open yet: a button too, so a tap says why (a title only shows on hover). -->
+{#snippet lockedSlot(name: string, label: string, testid: string, reason: string)}
+  <button type="button" class="eq locked" class:on={cardKey === `slot:${name}`} data-testid={testid} onclick={(ev) => pickSlot(name, null, ev.currentTarget)} title={reason}>
+    <span class="eq-box"><span class="eq-empty"><Icon name="key" size={16} /></span></span>
+    <span class="eq-label">{label}</span>
+    <span class="sr">{reason}</span>
   </button>
 {/snippet}
 
@@ -578,22 +623,12 @@
     <!-- Equipped: the hero, with the hand, the off hand and the pockets around them. -->
     <section class="equipped" data-testid="carry-strip" aria-label={inventoryCopy.equipped}>
       <div class="eq-side">
-        <button type="button" class="eq" class:filled={!!handEntry} class:on={cardKey === (handEntry ? handEntry.key : 'slot:hand')} data-testid="hand-slot" onclick={() => pickSlot('hand', handEntry)} title={`${inventoryCopy.hand}: ${handEntry ? handEntry.name : kit.basicName}`}>
-          <span class="eq-box held">
-            {#if handEntry}{@render icon(handEntry, 32)}{:else}<span class="eq-empty weapon"><Icon name="sword" size={20} /></span>{/if}
-          </span>
-          <span class="eq-label">{inventoryCopy.hand}</span>
-          <span class="sr">{handEntry ? handEntry.name : kit.basicName}</span>
-        </button>
+        {@render slotButton('hand', inventoryCopy.hand, handEntry, 'hand-slot', 'sword', true, kit.basicName)}
         {#if model}
           {#if model.offHand.open}
             {@render slotButton('off', inventoryCopy.offHand, offEntry, 'off-hand', 'lantern')}
           {:else}
-            <span class="eq locked" data-testid="off-hand" title={inventoryCopy.offHandClosed}>
-              <span class="eq-box"><span class="eq-empty"><Icon name="key" size={16} /></span></span>
-              <span class="eq-label">{inventoryCopy.offHand}</span>
-              <span class="sr">{inventoryCopy.offHandClosed}</span>
-            </span>
+            {@render lockedSlot('off-locked', inventoryCopy.offHand, 'off-hand', inventoryCopy.offHandClosed)}
           {/if}
         {/if}
       </div>
@@ -610,11 +645,7 @@
             {@render slotButton(`pocket-${i + 1}`, inventoryCopy.pocket(i + 1), pocketEntry(i + 1), `pocket-${i + 1}`, 'bag')}
           {/each}
           {#if model.pockets.length < ITEM_RULES.pockets.withCarryGear}
-            <span class="eq locked" data-testid={`pocket-${model.pockets.length + 1}-locked`} title={inventoryCopy.pocketLocked}>
-              <span class="eq-box"><span class="eq-empty"><Icon name="key" size={16} /></span></span>
-              <span class="eq-label">{inventoryCopy.pocket(model.pockets.length + 1)}</span>
-              <span class="sr">{inventoryCopy.pocketLocked}</span>
-            </span>
+            {@render lockedSlot('pocket-locked', inventoryCopy.pocket(model.pockets.length + 1), `pocket-${model.pockets.length + 1}-locked`, inventoryCopy.pocketLocked)}
           {/if}
         {/if}
       </div>
@@ -661,7 +692,7 @@
         <p class="fine">{touch ? inventoryCopy.papersNoteTouch : inventoryCopy.papersNote}</p>
         <PapersTab />
       {:else}
-        <div class="body" class:picked={!!(card || slotCard)} style={`--card-top:${cardTop}px`}>
+        <div class="body" style={`--card-top:${cardTop}px`}>
           <div class="grids">
             {#if mainShown.length === 0}
               <p class="empty">
@@ -683,12 +714,12 @@
           </div>
           {#if card}
             <aside class="card" data-item={card.key} data-state={card.instance?.state} aria-label={card.name} aria-live="polite">
-              {#if selected}<button type="button" class="x card-x" aria-label="Close" onclick={() => pick(null)}><Icon name="close" size={10} /></button>{/if}
-              {@render itemCard(card)}
+              {#if selected}<button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>{/if}
+              {@render itemCard(card, selected === card.key)}
             </aside>
           {:else if slotCard}
             <aside class="card" data-slot={slotCard} aria-live="polite">
-              <button type="button" class="x card-x" aria-label="Close" onclick={() => pick(null)}><Icon name="close" size={10} /></button>
+              <button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>
               {@render slotView(slotCard)}
             </aside>
           {:else if !touch && mainShown.length > 0}
@@ -733,10 +764,12 @@
   .msg.ok {
     border-color: #7aa25a;
     background: rgba(160, 210, 120, 0.2);
+    --msg-tint: rgba(160, 210, 120, 0.2);
   }
   .msg.error {
     border-color: #c0603e;
     background: rgba(224, 122, 82, 0.15);
+    --msg-tint: rgba(224, 122, 82, 0.15);
   }
 
   /* ---- Equipped: hand and off hand | the hero | pockets ---- */
@@ -770,9 +803,9 @@
     cursor: pointer;
     border-radius: 10px;
   }
+  /* Not open yet: faded, but a tap still says why. */
   .eq.locked {
-    cursor: default;
-    opacity: 0.55;
+    opacity: 0.6;
   }
   .eq:focus-visible {
     outline: 3px solid var(--gold);
@@ -1124,8 +1157,10 @@
   }
   .card-x {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
   }
   .card-head {
     display: flex;
@@ -1249,6 +1284,21 @@
     transform: none;
     box-shadow: none;
   }
+  /* A thumb-sized hit area around the small round buttons (the card's close, a fitting's take-off). */
+  .x {
+    position: relative;
+  }
+  .card-x {
+    position: absolute;
+  }
+  :global(:root.touch) .x::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+  :global(:root.touch) .card-x::after {
+    inset: -8px;
+  }
   .acts,
   .chooser {
     display: flex;
@@ -1262,6 +1312,10 @@
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.35);
     border: 1.5px dashed var(--paper-line);
+  }
+  .pick-hint {
+    font-style: italic;
+    color: var(--text-soft);
   }
   .act {
     padding: 3px 10px;
@@ -1319,8 +1373,8 @@
     display: none;
   }
   :global(:root.touch) .act {
-    min-height: 36px;
-    padding: 4px 12px;
+    min-height: 44px;
+    padding: 6px 14px;
   }
   /* Phone landscape: a wider side sheet, so the grid and its card sit side
      by side, and a slimmer Equipped row (the screen is short). */

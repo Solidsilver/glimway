@@ -4,6 +4,7 @@
   import { allGuides } from '../lib/guides'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import { bus, EV } from '../game/events'
 
   /**
    * "How do I…?": the guides, each with its steps ticking themselves off.
@@ -23,13 +24,19 @@
     void ui.goalLine
     return allGuides(guideContext(session))
   })
+  // The pin follows the game (a finished guide unpins itself while this page is open).
   let pinnedId = $state(pinned.id)
+  $effect(() => {
+    const onPin = (p: { id: string | null }) => (pinnedId = p.id)
+    bus.on(EV.guidePin, onPin)
+    return () => {
+      bus.off(EV.guidePin, onPin)
+    }
+  })
   let open = $state<string | null>(pinned.id)
 
   function togglePin(id: string): void {
-    const next = pinnedId === id ? null : id
-    setPinned(next)
-    pinnedId = next
+    setPinned(pinnedId === id ? null : id)
   }
 </script>
 
@@ -39,22 +46,22 @@
     {@const isOpen = open === g.guide.id}
     {@const isPinned = pinnedId === g.guide.id}
     <article class="guide" class:done={g.done} class:pinned={isPinned} data-guide={g.guide.id}>
-      <button type="button" class="head" aria-expanded={isOpen} onclick={() => (open = isOpen ? null : g.guide.id)}>
+      <button type="button" class="head" aria-expanded={isOpen} aria-controls={`guide-${g.guide.id}`} onclick={() => (open = isOpen ? null : g.guide.id)}>
         <span class="state" aria-hidden="true">
-          {#if g.done}<Icon name="check" size={12} />{:else if isPinned}<Icon name="star" size={12} />{:else}<Icon name="scroll" size={12} />{/if}
+          {#if g.done}<Icon name="check" size={12} />{:else if isPinned}<Icon name="pin" size={12} />{:else}<Icon name="scroll" size={12} />{/if}
         </span>
         <span class="title">{g.guide.title}</span>
         {#if !g.done && !g.locked}<span class="count">{g.steps.filter((s) => s.done).length}/{g.steps.length}</span>{/if}
       </button>
       {#if isOpen}
-        <div class="body">
+        <div class="body" id={`guide-${g.guide.id}`}>
           <p class="blurb">{g.guide.blurb}</p>
           {#if g.locked}
             <p class="locked"><Icon name="lantern" size={12} /> This needs a world to keep it. Sign in from the Menu.</p>
           {:else}
             <ol class="steps">
               {#each g.steps as st, i}
-                <li class:done={st.done} class:now={i === g.current}>
+                <li class:done={st.done} class:now={i === g.current} aria-current={i === g.current ? 'step' : undefined}>
                   <span class="dot" aria-hidden="true">{#if st.done}<Icon name="check" size={10} />{:else}{i + 1}{/if}</span>
                   <span>{st.text}</span>
                   {#if st.done}<span class="sr"> (done)</span>{/if}
@@ -62,8 +69,9 @@
               {/each}
             </ol>
             {#if !g.done}
-              <button type="button" class="pin" class:primary={!isPinned} aria-pressed={isPinned} onclick={() => togglePin(g.guide.id)} data-testid={`pin-${g.guide.id}`}>
-                <Icon name="star" size={12} /> {isPinned ? 'Unpin' : 'Pin as my goal'}
+              <!-- The label says what a press does (no pressed state on top of it). -->
+              <button type="button" class="pin" class:primary={!isPinned} onclick={() => togglePin(g.guide.id)} data-testid={`pin-${g.guide.id}`}>
+                <Icon name="pin" size={12} /> {isPinned ? 'Unpin' : 'Pin as my goal'}
               </button>
             {:else}
               <p class="donenote">Done.</p>

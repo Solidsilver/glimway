@@ -143,26 +143,32 @@
     letter-spacing: 0.06em;
     opacity: 0.75;
   }
+  /* A segmented chip under the title (src/app.css .panel-head). */
   .tabs {
     display: flex;
-    gap: 6px;
-    margin: -2px 0 14px;
-    border-bottom: 2px solid var(--paper-line);
+    gap: 4px;
   }
   .tabs button {
     position: relative;
-    padding: 6px 14px 7px;
-    border-radius: 9px 9px 0 0;
-    border-bottom: none;
+    flex: 1;
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 2px solid transparent;
     box-shadow: none;
-    background: rgba(255, 255, 255, 0.25);
+    background: transparent;
     color: var(--text-soft);
-    margin-bottom: -2px;
   }
   .tabs button.active {
-    background: var(--paper-hi);
+    background: #fff1c2;
+    border-color: var(--gold-deep);
     color: var(--wood-dark);
-    border-bottom: 2px solid var(--paper-hi);
+  }
+  :global(:root.touch) .tabs button {
+    min-height: 36px;
+    padding: 4px 6px;
+    font-size: 13px;
+    white-space: nowrap;
   }
   .tabs button:hover:not(:disabled) {
     transform: none;

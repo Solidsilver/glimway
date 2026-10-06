@@ -178,7 +178,7 @@
     {@const g = ui.goalLine.guide}
     <!-- A pinned "How do I…?" guide leads: its step, with a pin; tap for the guide in the journal. -->
     <button type="button" class="objective pinned" onclick={() => onGuides?.()} title={`${g.title}: ${g.step}`} aria-label={`Pinned guide, ${g.title}, step ${g.index + 1} of ${g.count}: ${g.step}${needleWords ? ` (${needleWords})` : ''}`} data-testid="goal-pinned">
-      <span class="goal-icon pin"><Icon name="star" size={12} /></span>
+      <span class="goal-icon pin"><Icon name="pin" size={14} /></span>
       <span class="goal-text">{g.step}</span>
       {#if ui.goalDir.angle !== null}
         <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
@@ -312,16 +312,15 @@
     {/if}
     {#if heldUi.belt.length > 1}
       <!-- The belt: what you carry to hand, by number key; click or press to take one. -->
-      <div class="belt" role="radiogroup" aria-label="In hand" data-testid="belt">
+      <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
         {#each heldUi.belt as b, i (b.kind)}
           <button
             type="button"
             class="bslot"
             class:on={b.kind === heldUi.kind}
             class:worn={!b.usable}
-            role="radio"
-            aria-checked={b.kind === heldUi.kind}
-            aria-label={`${b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]} (${i + 1})`}
+            aria-pressed={b.kind === heldUi.kind}
+            aria-label={`Hold the ${(b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]).toLowerCase()} (${i + 1})`}
             title={b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]}
             data-kind={b.kind}
             tabindex="-1"

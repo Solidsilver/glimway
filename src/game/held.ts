@@ -10,11 +10,18 @@ import { BELT_ORDER, beltFor, heldSlot, type BeltKind, type BeltSlot } from '../
 import { ITEMS_EV, itemsFor } from './items'
 import type { Session } from './session'
 
-const KEY = 'fingersnap:held'
+/** One choice per player and world on this device (a guest has its own). */
+let key = 'fingersnap:held'
+
+/** The localStorage key for a session: `fingersnap:held:<player>@<world>`. */
+export function deviceKey(base: string, session: Session | null): string {
+  const link = session?.link
+  return link ? `${base}:${link.habiticaId}@${link.worldId || 'home'}` : `${base}:guest`
+}
 
 function load(): BeltKind {
   try {
-    const v = localStorage.getItem(KEY)
+    const v = localStorage.getItem(key)
     return v && (BELT_ORDER as readonly string[]).includes(v) ? (v as BeltKind) : 'weapon'
   } catch {
     return 'weapon'
@@ -44,7 +51,7 @@ export function setHeld(kind: BeltKind): void {
   if (held.kind === kind && heldNow().kind === kind) return
   held.kind = kind
   try {
-    localStorage.setItem(KEY, kind)
+    localStorage.setItem(key, kind)
   } catch {
     /* kept for this visit */
   }
@@ -62,6 +69,12 @@ export function refreshBelt(session: Session): void {
  * go. Returns the stop function (the scene calls it on shutdown).
  */
 export function trackBelt(session: Session): () => void {
+  // This player's choice in this world.
+  const k = deviceKey('fingersnap:held', session)
+  if (k !== key) {
+    key = k
+    held.kind = load()
+  }
   const onChanged = () => refreshBelt(session)
   bus.on(ITEMS_EV.changed, onChanged)
   refreshBelt(session)

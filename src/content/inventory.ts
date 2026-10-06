@@ -11,15 +11,6 @@ export const CRAFTED_BLURBS: Record<string, string> = {
   'wooden-peg': 'A peg for a hook or a hinge. The kind of thing you only miss once.',
 }
 
-export const INVENTORY_TABS = [
-  { id: 'tools', label: 'Tools', icon: 'sword' },
-  { id: 'supplies', label: 'Supplies', icon: 'ember' },
-  { id: 'keepsakes', label: 'Keepsakes', icon: 'sparkle' },
-  // `short`: the phone tab shows only this much (the rest stays for screen readers).
-  { id: 'home', label: 'Home goods', short: 'Home', icon: 'lantern' },
-  { id: 'papers', label: 'Papers', icon: 'scroll' },
-] as const
-
 /** The Carrying grid's filters: everything, or one kind (the old tabs). */
 export const INVENTORY_FILTERS = [
   { id: 'all', label: 'All', icon: 'bag' },
@@ -39,19 +30,18 @@ export const inventoryCopy = {
   handHint: 'What you hold decides what your action does.',
   holdThis: 'Hold',
   inHandTag: 'In hand',
-  holdingNow: 'In hand now',
   emptyFilter: 'Nothing here yet.',
   pick: 'Pick something to see it here.',
   pocketLocked: 'A satchel, apron or coat adds a second pocket.',
   pocketHint: 'Pick a keepsake below and pocket it: it helps while you carry it.',
   offHandHint: 'Pick a lantern or a whistle below to carry it.',
+  /** A locked slot's card: why it's shut, and what opens it. */
+  lockedTag: 'Not open yet',
+  /** A hovered card (desktop) shows what the thing is; its actions come with a pick. */
+  pickToAct: 'Click it for what you can do with it.',
+  holdGroup: 'Take in hand',
+  closeCard: 'Close the card',
   close: 'Close the inventory',
-  intro: {
-    tools: 'Tools wear with use. Some can be mended.',
-    supplies: 'Materials from the Wilds and things you make at the bench.',
-    keepsakes: 'Things the road gave back, and the charm from the Ashwatch chest.',
-    home: 'Pieces for your place on the Commons.',
-  },
   empty: {
     tools: 'No tools yet.',
     supplies: 'Nothing yet. The Tangle, north of the Commons, gives timber, stone, fiber and amber.',
@@ -78,11 +68,9 @@ export const inventoryCopy = {
   pockets: 'Pockets',
   pocket: (n: number) => `Pocket ${n}`,
   pocketEmpty: 'Empty',
-  pocketMore: 'A satchel, apron or coat adds a second pocket.',
   offHand: 'Off hand',
   offHandClosed: 'Opens when you take a class.',
   offHandEmpty: 'Empty',
-  offHandNote: 'Put away while you chop, dig, sit, draw water or fight.',
   madeBy: (name: string) => `Made by ${name}`,
   usesLeft: (n: number) => (n === 1 ? '1 use left' : `${n} uses left`),
   neverWears: 'Never wears',

@@ -206,8 +206,8 @@
     [-100, -138],
     [-140, -108],
     [-166, -66],
-    [34, -150],
-    [-172, -20]
+    [-178, -20],
+    [-182, 26]
   ]
   function pickHeld(e: PointerEvent, kind: (typeof heldUi.belt)[number]['kind']): void {
     e.preventDefault()
@@ -316,15 +316,13 @@
       </div>
       <div class="actwrap">
         {#if heldUi.belt.length > 1}
-          <div class="belt" role="radiogroup" aria-label="In hand" data-testid="belt">
+          <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
             {#each others as b, i (b.kind)}
               {@const at = RING[i] ?? RING[RING.length - 1]}
               <button
                 type="button"
                 class="bslot"
                 class:worn={!b.usable}
-                role="radio"
-                aria-checked="false"
                 aria-label={`Hold the ${b.kind === 'weapon' ? kit.basicName.toLowerCase() : KIND_WORDS[b.kind].toLowerCase()}`}
                 data-kind={b.kind}
                 style={`transform: translate(${at[0]}px, ${at[1]}px)`}
@@ -484,9 +482,7 @@
     border-width: 3px;
   }
   /* Room above the buttons for the belt's arc (the camera keeps the hero clear of this box). */
-  .actions.with-belt {
-    padding-top: 148px;
-  }
+  /* The ring is an overlay over the world: App.svelte measures its buttons, not a padded box. */
   .actwrap {
     position: relative;
   }

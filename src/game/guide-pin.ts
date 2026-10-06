@@ -6,18 +6,20 @@
  */
 import { bus, EV } from './events'
 import type { Session } from './session'
-import { guideById, guideProgress, type GuideContext, type GuideProgress } from '../lib/guides'
+import { guideById, guideProgress, newlyMet, type GuideContext, type GuideProgress } from '../lib/guides'
+import { deviceKey } from './held'
 import { homesteadsFor } from './homestead'
 import { itemsFor } from './items'
 import { villageFor } from './village'
 import { itemDef } from '../lib/items'
 import { HEARTH_RECIPES } from '../lib/workshop'
 
-const KEY = 'fingersnap:pinned-guide'
+/** One pin per player and world on this device (src/game/held.ts deviceKey). */
+let key = 'fingersnap:pinned-guide:guest'
 
 function load(): string | null {
   try {
-    const v = localStorage.getItem(KEY)
+    const v = localStorage.getItem(key)
     return v && guideById(v) ? v : null
   } catch {
     return null
@@ -31,12 +33,29 @@ export function setPinned(id: string | null): void {
   if (pinned.id === id) return
   pinned.id = id
   try {
-    if (id) localStorage.setItem(KEY, id)
-    else localStorage.removeItem(KEY)
+    if (id) localStorage.setItem(key, id)
+    else localStorage.removeItem(key)
   } catch {
     /* kept for this visit */
   }
   bus.emit(EV.guidePin, { id })
+}
+
+/** Read this player's pin in this world (when a session starts). */
+export function usePinFor(session: Session): void {
+  const k = deviceKey('fingersnap:pinned-guide', session)
+  if (k === key) return
+  key = k
+  pinned.id = load()
+  bus.emit(EV.guidePin, { id: pinned.id })
+}
+
+/**
+ * Remember every guide step met now as a save flag, so a finished step
+ * never un-ticks (the timber spent, the tea drunk). Connected players only.
+ */
+export function recordGuideSteps(session: Session): void {
+  for (const f of newlyMet(guideContext(session))) session.addFlag(f)
 }
 
 const HEARTH_MADE = new Set(HEARTH_RECIPES.map((r) => r.output.id))
@@ -62,6 +81,7 @@ export function guideContext(session: Session): GuideContext {
     claimed: !!homes?.claimed,
     tier: mine ? mine.tier : homes?.claimed ? 0 : -1,
     tools: [...tools],
+    madeTool: !!me && instances.some((i) => itemDef(i.itemDef)?.kind === 'tool' && i.maker?.id === me),
     fitted: instances.some((i) => itemDef(i.itemDef)?.kind === 'tool' && i.fittings.length > 0),
     fittings: instances.filter((i) => itemDef(i.itemDef)?.kind === 'fitting').length,
     materials: homes ? { ...homes.materials } : {},

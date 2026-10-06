@@ -301,19 +301,22 @@ export class Gathering {
       return
     }
     if (spot !== this.ghostFor) {
-      this.ghostFor = spot
       const action = actionOf(spot)
       // The belt's own tool of that kind if carried, else the bench one (it shows what's wanted).
       const def = this.carriedDef(action) ?? BENCH_TOOL[action] ?? 'bench-axe'
       let key = itemIcon(def)
       if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
-      if (!this.scene.textures.exists(key)) return
+      // No art for it at all: no hint (and the old piece's icon mustn't linger over this one).
       this.ghost?.destroy()
+      this.ghost = null
+      this.ghostFor = null
+      if (!this.scene.textures.exists(key)) return
+      this.ghostFor = spot
       this.ghost = this.scene.add.image(0, 0, key).setOrigin(0.5, 1).setAlpha(0).setDepth(5000)
       if (this.ghost.height > 12) this.ghost.setScale(12 / this.ghost.height)
       this.scene.tweens.add({ targets: this.ghost, alpha: 0.5, duration: this.deps.reducedMotion ? 0 : 300 })
     }
-    this.ghost!.setPosition(spot.tx * TILE + 8, spot.ty * TILE - 2).setVisible(true)
+    this.ghost?.setPosition(spot.tx * TILE + 8, spot.ty * TILE - 2).setVisible(true)
   }
 
   /** Read-only: the piece the ghost hint shows over (playtests). */

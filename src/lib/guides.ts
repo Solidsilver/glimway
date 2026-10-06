@@ -18,6 +18,8 @@ export interface GuideContext {
   tier: number;
   /** Tool actions the player carries a tool for (chop, break, dig, draw…). */
   tools: string[];
+  /** A tool with the player's own maker's mark is carried (made at their bench). */
+  madeTool: boolean;
   /** Any carried tool has a fitting in it. */
   fitted: boolean;
   /** Fitting items carried, loose. */
@@ -30,8 +32,13 @@ export interface GuideContext {
   sentMail: boolean;
   /** Home goods the player owns: carried, stored or set out. */
   homeGoods: { itemDef: string; placed: boolean }[];
-  /** Story flags (seen places, quest beats…). */
+  /** Story flags (seen places, quest beats, and `guide:<id>:<step>` for steps already done). */
   flags: string[];
+}
+
+/** The save flag that remembers a guide's step as done (it never un-ticks). */
+export function guideFlag(id: string, step: number): string {
+  return `guide:${id}:${step}`;
 }
 
 export interface GuideProgress {
@@ -50,16 +57,14 @@ export function guideById(id: string): GuideDef | null {
 }
 
 /**
- * Where a guide stands. Steps are checked in order, and a later step can
- * count an earlier one done (a workshop means a cottage).
+ * Where a guide stands. A step is done once it has been met (remembered in
+ * the save, so spending the timber or drinking the tea never un-ticks it),
+ * or when it's met now. Each step carries its own prerequisites: nothing
+ * later in a guide ticks an earlier step for the player.
  */
 export function guideProgress(guide: GuideDef, ctx: GuideContext): GuideProgress {
-  const doneFlags = guide.steps.map((s) => s.done(ctx));
-  // A done step later in the guide means everything before it is done too.
-  for (let i = doneFlags.length - 1, later = false; i >= 0; i--) {
-    later ||= doneFlags[i];
-    doneFlags[i] = doneFlags[i] || later;
-  }
+  const flags = new Set(ctx.flags);
+  const doneFlags = guide.steps.map((s, i) => flags.has(guideFlag(guide.id, i)) || s.done(ctx));
   const current = doneFlags.findIndex((d) => !d);
   return {
     guide,
@@ -68,6 +73,20 @@ export function guideProgress(guide: GuideDef, ctx: GuideContext): GuideProgress
     done: current < 0,
     locked: !!guide.needsWorld && !ctx.connected,
   };
+}
+
+/** Steps met now and not yet remembered: the flags to add to the save. */
+export function newlyMet(ctx: GuideContext): string[] {
+  if (!ctx.connected) return [];
+  const flags = new Set(ctx.flags);
+  const out: string[] = [];
+  for (const g of GUIDES) {
+    g.steps.forEach((s, i) => {
+      const f = guideFlag(g.id, i);
+      if (!flags.has(f) && s.done(ctx)) out.push(f);
+    });
+  }
+  return out;
 }
 
 /** Every guide's progress, in the journal's order. */

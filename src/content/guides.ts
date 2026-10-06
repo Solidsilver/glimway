@@ -37,7 +37,9 @@ export interface GuideDef {
 const claimed = (c: GuideContext) => c.claimed;
 const cottage = (c: GuideContext) => c.tier >= 1;
 const workshop = (c: GuideContext) => c.tier >= 2;
-const hasTool = (c: GuideContext) => ['chop', 'break', 'dig'].some((a) => c.tools.includes(a));
+/** Made at your own bench: a tool with your maker's mark (one given or bought doesn't count). */
+const madeTool = (c: GuideContext) => workshop(c) && c.madeTool;
+const ownsShelf = (c: GuideContext) => c.homeGoods.some((g) => g.itemDef === 'gate-shelf');
 const has = (c: GuideContext, m: Record<string, number>) => Object.entries(m).every(([k, n]) => (c.materials[k] ?? 0) >= n);
 const materialsTotal = (c: GuideContext) => Object.values(c.materials).reduce((a, b) => a + b, 0);
 const inTangle = (c: GuideContext) => c.flags.some((f) => f.startsWith('seen:wilds:'));
@@ -62,7 +64,7 @@ export const GUIDES: GuideDef[] = [
       { text: 'Walk up the Commons lane and through the arch into the Tangle.', done: inTangle, where: 'wilds' },
       {
         text: 'Take your axe, pick or spade in hand, then work a tree, a stone or a stump. Camps and chests give too.',
-        done: (c) => materialsTotal(c) >= 10,
+        done: (c) => inTangle(c) && materialsTotal(c) >= 10,
         where: 'wilds',
       },
     ],
@@ -77,11 +79,11 @@ export const GUIDES: GuideDef[] = [
       { text: 'Ask Silas to raise a cottage on your land.', done: cottage, where: 'silas' },
       {
         text: 'Bring 20 timber, 10 stone and 8 fibre back from the Wilds.',
-        done: (c) => workshop(c) || has(c, WORKSHOP_MATERIALS),
+        done: (c) => cottage(c) && (workshop(c) || has(c, WORKSHOP_MATERIALS)),
         where: 'wilds',
       },
       { text: 'Ask Silas to build on a workshop.', done: workshop, where: 'silas' },
-      { text: 'At the bench in your cottage, make a bench axe, pick or spade.', done: hasTool, where: 'bench' },
+      { text: 'At the bench in your cottage, make a bench axe, pick or spade.', done: madeTool, where: 'bench' },
     ],
   },
   {
@@ -102,7 +104,7 @@ export const GUIDES: GuideDef[] = [
     steps: [
       { text: 'Sign a deed with Silas on the Commons lane.', done: claimed, where: 'silas' },
       { text: 'Ask Silas to raise a cottage on your land.', done: cottage, where: 'silas' },
-      { text: 'At the hearth in your cottage, cook something you have the makings for.', done: (c) => c.cooked > 0, where: 'hearth' },
+      { text: 'At the hearth in your cottage, cook something you have the makings for.', done: (c) => cottage(c) && c.cooked > 0, where: 'hearth' },
     ],
   },
   {
@@ -112,7 +114,7 @@ export const GUIDES: GuideDef[] = [
     needsWorld: true,
     steps: [
       { text: 'Sign a deed with Silas on the Commons lane.', done: claimed, where: 'silas' },
-      { text: 'At the mailbox by your cottage, choose a neighbour and send.', done: (c) => c.sentMail, where: 'mailbox' },
+      { text: 'At the mailbox by your cottage, choose a neighbour and send.', done: (c) => c.claimed && c.sentMail, where: 'mailbox' },
     ],
   },
   {
@@ -124,12 +126,12 @@ export const GUIDES: GuideDef[] = [
       { text: 'Ask Silas to build on a workshop.', done: workshop, where: 'silas' },
       {
         text: 'Make a gate shelf at your bench.',
-        done: (c) => c.homeGoods.some((g) => g.itemDef === 'gate-shelf'),
+        done: (c) => workshop(c) && ownsShelf(c),
         where: 'bench',
       },
       {
         text: 'Set it out by your gate on the lane.',
-        done: (c) => c.homeGoods.some((g) => g.itemDef === 'gate-shelf' && g.placed),
+        done: (c) => workshop(c) && c.homeGoods.some((g) => g.itemDef === 'gate-shelf' && g.placed),
         where: 'gate',
       },
     ],

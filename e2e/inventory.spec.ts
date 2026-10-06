@@ -119,9 +119,36 @@ test.describe('guest', () => {
     await expect(dialog(page).locator(`[data-item="${key}"]`)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog(page).locator('[data-item]')).toHaveCount(0)
+    // Focus goes back to the icon that opened the card.
+    await expect(cells.nth(1)).toBeFocused()
     await expect(dialog(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog(page)).toBeHidden()
+  })
+
+  test('Tab stays in the bag, and closing a card with its ✕ puts focus back on the icon', async ({ page }) => {
+    await beginNewJourney(page)
+    await seedPack(page, ['material:timber:4', 'material:amber:1', 'lamp-wick', 'whittled-fox'])
+    await page.keyboard.press('i')
+    await expect(dialog(page)).toBeVisible()
+    const inside = () => page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
+    // Round the whole bag twice, both ways: never out to the HUD or the page.
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press('Tab')
+      expect(await inside(), `Tab ${i + 1} stays in the bag`).toBe(true)
+    }
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press('Shift+Tab')
+      expect(await inside(), `Shift+Tab ${i + 1} stays in the bag`).toBe(true)
+    }
+    const fox = dialog(page).locator('[data-cell="item:whittled-fox"]')
+    await fox.click()
+    await expect(dialog(page).locator('[data-item="item:whittled-fox"]')).toBeVisible()
+    await dialog(page).getByRole('button', { name: 'Close the card' }).click()
+    await expect(dialog(page).locator('[data-item]')).toHaveCount(0)
+    await expect(fox).toBeFocused()
+    // A cell's name says what it is and how it stands.
+    await expect(dialog(page).locator('[data-cell="material:timber"]')).toHaveAccessibleName(/^Timber, 4/)
   })
 
   test('the Character panel points to the inventory', async ({ page }) => {
@@ -192,6 +219,15 @@ test.describe('connected', () => {
 
     await tab(page, /Keepsakes/).click()
     await expect(dialog(page).getByTestId('qty-item:river-glass-bead')).toHaveText('2')
+    // Hovering shows what a thing is; what you can do with it comes with a click.
+    const bead = dialog(page).locator('[data-cell="item:river-glass-bead"]')
+    await bead.hover()
+    const beadCard = dialog(page).locator('[data-item="item:river-glass-bead"]')
+    await expect(beadCard).toBeVisible()
+    await expect(beadCard.locator('[data-act]')).toHaveCount(0)
+    await bead.click()
+    await expect(beadCard.locator('[data-act="pocket"]')).toBeVisible()
+    await page.keyboard.press('Escape')
 
     await tab(page, /Home/).click()
     const goods = dialog(page).getByTestId('inv-page-home')

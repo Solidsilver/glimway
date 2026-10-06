@@ -1150,7 +1150,8 @@ export class WorldScene extends Phaser.Scene {
   /** Keys 1…9 take the belt's slot in hand (not while the emote picker, a panel or a talk has the keys). */
   private onBeltKey(e: KeyboardEvent): void {
     const m = /^Digit([1-9])$/.exec(e.code)
-    if (!m || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+    // A digit the UI already used (an emote picked from the picker) isn't for the belt.
+    if (!m || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
     if (ui.emoteOpen || !this.worldLive()) return

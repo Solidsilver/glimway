@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allGuides, guideById, guideProgress, GUIDES, type GuideContext } from '../src/lib/guides.ts';
+import { allGuides, guideById, guideFlag, guideProgress, GUIDES, newlyMet, type GuideContext } from '../src/lib/guides.ts';
 
 const base = (over: Partial<GuideContext> = {}): GuideContext => ({
   connected: true,
   claimed: false,
   tier: -1,
   tools: [],
+  madeTool: false,
   fitted: false,
   fittings: 0,
   materials: {},
@@ -30,13 +31,41 @@ test('guides: the text is short, in-world, and every step says where or what', (
   assert.equal(new Set(GUIDES.map((g) => g.id)).size, GUIDES.length, 'ids are unique');
 });
 
-test('guides: a step done later counts the earlier ones done (a workshop means a cottage and a deed)', () => {
+test('guides: each step stands on its own; a workshop means the deed and cottage steps are met', () => {
   const g = guideById('first-tool')!;
   const p = guideProgress(g, base({ claimed: true, tier: 2 }));
   assert.deepEqual(p.steps.map((s) => s.done), [true, true, true, true, false]);
   assert.equal(p.current, 4);
   assert.equal(p.steps[4].where, 'bench');
-  assert.equal(guideProgress(g, base({ claimed: true, tier: 2, tools: ['chop'] })).done, true);
+  assert.equal(guideProgress(g, base({ claimed: true, tier: 2, madeTool: true })).done, true);
+});
+
+test('guides: a tool given or found (an heirloom, no deed) is not "your first tool"', () => {
+  const p = guideProgress(guideById('first-tool')!, base({ tools: ['chop', 'break', 'dig'] }));
+  assert.equal(p.done, false);
+  assert.deepEqual(p.steps.map((s) => s.done), [false, false, false, false, false]);
+  assert.equal(p.current, 0);
+  // Even with a workshop, a tool someone else made doesn't finish it.
+  assert.equal(guideProgress(guideById('first-tool')!, base({ claimed: true, tier: 2, tools: ['chop'] })).done, false);
+});
+
+test('guides: materials carried with no deed tick nothing before them', () => {
+  const p = guideProgress(guideById('first-tool')!, base({ materials: { timber: 20, stone: 10, fiber: 8 } }));
+  assert.deepEqual(p.steps.map((s) => s.done), [false, false, false, false, false]);
+  assert.equal(p.steps[0].where, 'silas');
+});
+
+test('guides: a met step is remembered in the save and never un-ticks', () => {
+  const g = guideById('hearth')!;
+  const cooking = base({ claimed: true, tier: 1, cooked: 2 });
+  const flags = newlyMet(cooking);
+  assert.ok(flags.includes(guideFlag('hearth', 2)), 'cooking is recorded');
+  // The tea drunk: nothing carried, yet the step stays done.
+  const later = guideProgress(g, base({ claimed: true, tier: 1, cooked: 0, flags }));
+  assert.equal(later.done, true);
+  // Recorded steps aren't offered again; guests record nothing.
+  assert.equal(newlyMet(base({ claimed: true, tier: 1, cooked: 2, flags })).filter((f) => f.startsWith('guide:hearth')).length, 0);
+  assert.deepEqual(newlyMet(base({ connected: false, claimed: true, tier: 1, cooked: 2 })), []);
 });
 
 test('guides: a fresh player starts at the first step; the Silas steps point at Silas', () => {
@@ -46,6 +75,9 @@ test('guides: a fresh player starts at the first step; the Silas steps point at 
   // Enough materials but no workshop yet: that step is done, Silas is next.
   const q = guideProgress(guideById('first-tool')!, base({ claimed: true, tier: 1, materials: { timber: 20, stone: 10, fiber: 8 } }));
   assert.equal(q.current, 3);
+  // A gate shelf from a neighbour doesn't stand for a workshop.
+  const shelf = guideProgress(guideById('gate-shelf')!, base({ claimed: true, tier: 0, homeGoods: [{ itemDef: 'gate-shelf', placed: true }] }));
+  assert.deepEqual(shelf.steps.map((s) => s.done), [false, false, false]);
 });
 
 test('guides: guests see the world guides locked', () => {
