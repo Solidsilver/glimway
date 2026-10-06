@@ -27,9 +27,11 @@ small JSON manifests (`commons-pass/manifest.json`,
   16-px world tile each) are baked in headless Chromium at `ART_DENSITY`
   (4) texels per world px: each frame's measured source rect is
   box-filtered (area-averaged, alpha-weighted) into its destination rect on
-  a native canvas 4× its world size, packed (`commons.png`, `runtime.png`,
-  `items.png`, `terrain.png`), and copied back out 1:1 at boot. The build
-  reads every frame back from the encoded PNG and fails on any difference;
+  a native canvas 4× its world size, packed (`commons.webp`, `runtime.webp`,
+  `items.webp`, `terrain.webp`), and copied back out 1:1 at boot. The build
+  reads every frame back from the encoded PNG and fails on any difference,
+  then re-encodes each pack as lossless WebP (`cwebp -lossless -z 9 -exact`)
+  and fails unless that too decodes to the same texels;
   `e2e/atlases.spec.ts` checks the game holds exactly the packed texels and
   draws each texture at its native world size. Off-size samples (the
   refitted 2×1 decorations, the Wilds decor boxes, the mirrored fence
@@ -260,7 +262,7 @@ atlases, `manifest.json`, `jobs.json`, `request-index.json`, `drafts/`,
 `preview.html`, `validation.json`, `frame-inspection.json`, `build_manifest.py`,
 `integration.js`, README and COVERAGE). `public/assets/fingersnap/items-pass/`
 ships only `manifest.json`; the frames ship baked into the packed atlas
-(`items.png`). Typed helpers: `src/game/items-pass.ts` (loader, `items-art:`
+(`items.webp`). Typed helpers: `src/game/items-pass.ts` (loader, `items-art:`
 native textures, `itemIcon` helper with discrete states and fallbacks,
 `itemIconUrls`). Contract: `tests/items-pass.test.ts`.
 

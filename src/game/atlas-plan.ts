@@ -28,7 +28,7 @@ import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 2
+export const ATLAS_GENERATOR_VERSION = 3
 export const PACKED_MANIFEST_KEY = 'fingersnap-packed'
 
 /**

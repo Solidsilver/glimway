@@ -234,7 +234,7 @@ record: 12 sheets, per-sheet atlases, `manifest.json`, `jobs.json`,
 `request-index.json`, `drafts/`, `preview.html`, `validation.json`,
 `frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
 COVERAGE). `public/assets/fingersnap/items-pass/` ships only `manifest.json`;
-the frames ship baked into the packed atlas (`items.png`, 144 KB).
+the frames ship baked into the packed atlas (`items.webp`, 1.1 MB).
 
 Provenance: original artwork generated 2026-10-05 with the built-in
 image-generation tool; prompts in `jobs.json` / `request-index.json`; no
@@ -387,6 +387,11 @@ record here):
   atlases are re-sampled at their largest on-screen size; the two
   illustrations ship as WebP. See `docs/runtime-asset-spec.md` ("Packed
   atlases").
+- 2026-10-06 — The dense packs (`commons`, `runtime`, `items`, `terrain`)
+  ship as lossless WebP instead of PNG (`cwebp -lossless -z 9 -exact`):
+  identical texels, 5.7 MB → 3.6 MB (`commons.webp` 2.1 MB, `items.webp`
+  1.1 MB). The build fails unless the WebP decodes to the PNG's exact
+  texels. See `docs/runtime-asset-spec.md` ("Packed atlases").
 - 2026-10-06 — Dense packs: the Commons, runtime and items passes and the
   terrain tileset are baked at 4 texels per world px (64 per 16-px tile),
   box-filtered from the sources, and drawn at the same world size
