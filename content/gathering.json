@@ -14,9 +14,11 @@
   "softCapLine": "The wood’s given enough here today.",
   "plantsPerHome": 40,
   "areas": {
-    "wilds": ["tree", "iron-oak", "willow", "boulder", "lamp-stone", "stump", "herbs", "sapling", "hollow-tree"],
+    "wilds": ["tangle-tree", "tree", "iron-oak", "willow", "boulder", "lamp-stone", "stump", "herbs", "bloom-patch", "sapling", "hollow-tree"],
     "woodland": ["tree", "ash", "boulder"],
-    "home": ["tree", "iron-oak", "boulder", "lamp-stone", "stump"]
+    "home": ["tree", "iron-oak", "boulder", "lamp-stone", "stump"],
+    "village": ["freshet-shore", "pond-ice"],
+    "commons": ["bloom-patch"]
   },
   "swings": {
     "chop": 3,
@@ -30,6 +32,44 @@
       "name": "Tree",
       "yields": [
         { "item": "timber", "min": 2, "max": 4 }
+      ]
+    },
+    "tangle-tree": {
+      "action": "chop",
+      "toolAction": "chop",
+      "name": "Tree",
+      "yields": [
+        { "item": "timber", "min": 2, "max": 4 },
+        { "item": "amberfall-sap", "min": 1, "max": 2, "chancePermille": 400, "mark": "Amberfall" }
+      ]
+    },
+    "freshet-shore": {
+      "action": "dig",
+      "toolAction": "dig",
+      "name": "Freshet shore",
+      "verb": "Sweep",
+      "mark": "Mudrise",
+      "yields": [
+        { "item": "walnut-shells", "min": 1, "max": 2 }
+      ]
+    },
+    "bloom-patch": {
+      "action": "dig",
+      "toolAction": "dig",
+      "name": "Bloom patch",
+      "verb": "Pick",
+      "wick": "Bloom",
+      "yields": [
+        { "item": "bloom-flowers", "min": 1, "max": 2 }
+      ]
+    },
+    "pond-ice": {
+      "action": "break",
+      "toolAction": "break",
+      "name": "Frozen pond",
+      "mark": "Quiet",
+      "yields": [
+        { "item": "frost-glass", "min": 1, "max": 2 }
       ]
     },
     "ash": {

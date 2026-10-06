@@ -3,12 +3,14 @@
  * from code (seeded) — part of the original, code-native asset set.
  */
 import type { AreaId } from '../lib/state.ts'
-import { ITEM_RULES } from '../lib/items.ts'
+import { ITEM_RULES, sellerFor } from '../lib/items.ts'
 import { repairFor } from '../lib/repairs.ts'
+import { calendarAt } from '../lib/calendar.ts'
 import { TERRAIN, TILE } from './textures.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
 import { homeLandKind } from './homeland.ts'
 import { buildRoom } from './cottage.ts'
+import { gameNow } from './clock.ts'
 
 /** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
 export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada'
@@ -102,7 +104,7 @@ export interface GatherSpot {
   tx: number
   ty: number
   /** The piece's own art, so a felled tree can leave its stump. */
-  art?: { key: string; frame: string }
+  art?: { key: string; frame?: string }
 }
 
 export interface WorldData {
@@ -355,13 +357,14 @@ function buildVillage(): WorldData {
   // Hazel in the square below the well with her basket, Finn at his mill
   // door, Ada under her window on the east house (village-life.ts
   // ADA_HOUSE_WINDOW). All off the quest route. Ada and Hazel stand where
-  // the shared residents data says (the server checks proximity against
-  // the same rows).
+  // the shared residents data says, Finn where his mill-door seller row
+  // does (the server checks proximity against the same rows).
   for (const res of ITEM_RULES.residents) {
     if (res.area !== 'village') continue
     npcs.push({ id: res.id as NpcId, tx: res.tx, ty: res.ty })
   }
-  npcs.push({ id: 'finn', tx: 30, ty: 23 })
+  const finnsDoor = sellerFor('finns-mill-door')!
+  npcs.push({ id: 'finn', tx: finnsDoor.tx, ty: finnsDoor.ty })
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
@@ -374,6 +377,29 @@ function buildVillage(): WorldData {
     // The square's signpost: Orrin resets it every spring to the same lean.
     { frame: 'trail-sign', tx: 15, ty: 11, h: 24, body: [10, 6] }
   ]
+
+  // The seasons at the village water — the pond the Wend feeds
+  // (docs/items/crafting-and-repair.md, "Seasonal materials"). In Mudrise
+  // the freshet leaves walnut shells on the shore; in the Quiet the pond
+  // freezes over and carries frost-glass. The spots stay all season (the
+  // day's caps hold you); the server re-checks the season from its own
+  // clock and calendar, so a stale map can only be refused.
+  const mark = calendarAt(gameNow()).mark
+  const seasonalScenery: ScenerySpot[] = []
+  const gathering: GatherSpot[] = []
+  if (mark === 'Mudrise') {
+    for (const [tx, ty, v] of [[34, 18, 0], [36, 18, 1], [38, 18, 2]] as const) {
+      const frame = `pebbles-${v}`
+      seasonalScenery.push({ key: 'tangle-decor', frame, x: tx * TILE + 8, y: (ty + 1) * TILE, tx, ty })
+      gathering.push({ target: 'freshet-shore', label: 'Sweep the freshet shore', tx, ty, art: { key: 'tangle-decor', frame } })
+    }
+  }
+  if (mark === 'Quiet') {
+    for (const [tx, ty] of [[34, 19], [37, 19], [38, 21]] as const) {
+      seasonalScenery.push({ key: 'pond-ice', x: tx * TILE + 8, y: (ty + 1) * TILE, tx, ty })
+      gathering.push({ target: 'pond-ice', label: 'Break the pond ice', tx, ty, art: { key: 'pond-ice' } })
+    }
+  }
 
   return {
     areaId: 'village',
@@ -401,6 +427,7 @@ function buildVillage(): WorldData {
     board,
     mill,
     scenery: [
+      ...seasonalScenery,
       { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
       { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
       { key: 'mill-hopper', x: millHopper.tx * TILE + 8, y: (millHopper.ty + 1) * TILE },
@@ -410,7 +437,8 @@ function buildVillage(): WorldData {
         y: (libraryAt.ty + 4) * TILE,
         groundUnder: { tx: libraryAt.tx, ty: libraryAt.ty, tw: libraryAt.w, th: 4, tile: TERRAIN.grass_a }
       }
-    ]
+    ],
+    gathering
   }
 }
 

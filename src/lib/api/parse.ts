@@ -71,6 +71,9 @@ import type {
   WildsLoot,
   WildsMaterials,
   WildsRegionResponse,
+  WorldMoveResponse,
+  WorldRef,
+  WorldView,
 } from './types.ts';
 
 type Obj = Record<string, unknown>;
@@ -172,6 +175,45 @@ export function parseInviteList(raw: unknown): InviteList {
   if (remaining !== undefined) out.remaining = remaining;
   if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
   return out;
+}
+
+// ------------------------------------------------------------- worlds
+
+function parseWorldRef(raw: unknown): WorldRef {
+  const o = obj(raw);
+  return { id: str(o.id), ownerId: str(o.ownerId), ownerName: str(o.ownerName).slice(0, 128), members: count(o.members) ?? 0, ownerHere: o.ownerHere === true, linked: o.linked === true };
+}
+
+export function parseWorld(raw: unknown): WorldView {
+  const o = obj(raw);
+  const l = obj(o.leaving);
+  const gate = typeof l.gate === 'number' && Number.isInteger(l.gate) && l.gate >= 0 ? l.gate : -1;
+  return {
+    world: parseWorldRef(o.world),
+    isOwner: o.isOwner === true,
+    inParty: o.inParty === true,
+    linked: o.linked === true,
+    linkedToMine: o.linkedToMine === true,
+    partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
+    ownWorld: o.ownWorld == null ? null : parseWorldRef(o.ownWorld),
+    prompt: o.prompt === true,
+    leaving: {
+      gate,
+      last: gate >= 0 && l.last === true,
+      outgoing: count(l.outgoing) ?? 0,
+      incoming: count(l.incoming) ?? 0,
+      wardenTools: count(l.wardenTools) ?? 0,
+      deedCost: count(l.deedCost) ?? 0,
+    },
+  };
+}
+
+export function parseWorldMove(raw: unknown): WorldMoveResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: { world: parseWorld(r.world), from: str(r.from), leftHome: r.leftHome === true, returned: count(r.returned) ?? 0 },
+  };
 }
 
 // ------------------------------------------------------------- the Wilds
@@ -282,6 +324,7 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
   const o = obj(raw);
   const r = obj(o.result);
   if (r.wardenSliverFound !== undefined && typeof r.wardenSliverFound !== 'boolean') throw new ApiError('bad-response');
+  if (r.stormDropFound !== undefined && typeof r.stormDropFound !== 'boolean') throw new ApiError('bad-response');
   return {
     ...parseSnapshot(raw),
     result: {
@@ -290,6 +333,7 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
       loot: parseLoot(r.loot),
       materials: parseMaterials(r.materials),
       ...(typeof r.wardenSliverFound === 'boolean' ? { wardenSliverFound: r.wardenSliverFound } : {}),
+      ...(typeof r.stormDropFound === 'boolean' ? { stormDropFound: r.stormDropFound } : {}),
     },
   };
 }
@@ -582,6 +626,10 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
   if (typeof r.heirloom === 'string' && r.heirloom) result.heirloom = r.heirloom;
   if (typeof r.adaOilCount === 'number') result.adaOilCount = r.adaOilCount;
+  if (r.bought) {
+    const b = obj(r.bought);
+    result.bought = { seller: str(b.seller), itemDef: str(b.itemDef), qty: int(b.qty), embers: int(b.embers) };
+  }
   if (Array.isArray(r.gathered)) {
     result.gathered = r.gathered.map((g) => {
       const go = obj(g);

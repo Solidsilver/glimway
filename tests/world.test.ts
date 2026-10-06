@@ -19,6 +19,7 @@ import {
 } from '../src/lib/state.ts';
 import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
 import { allHeirloomJournal, allHeirloomLines } from '../src/content/heirlooms.ts';
+import { allEchoKeepsakeJournal, allEchoKeepsakeLines } from '../src/content/echoes.ts';
 
 const NPC_IDS = ['mara', 'pip', 'orrin', 'clue', 'lantern'];
 
@@ -200,6 +201,9 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
   lines.push(...allResidentLines());
   // The heirlooms (Silas, Orrin, Ada, Nan's camp): every line they say.
   lines.push(...allHeirloomLines());
+  // The Echo camps' keepsake offers (leaving Bett's candle, Nan's road-nails):
+  // the leave choice, the offers, the guest line, the leaving and the softer settle.
+  lines.push(...allEchoKeepsakeLines());
   for (const line of lines) {
     assert.ok(line.length <= 160, `${line.length} chars: ${line}`);
     assert.doesNotMatch(line, OUT_OF_WORLD, line);
@@ -208,6 +212,7 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     ...journalEntries('complete').flatMap((e) => [e.title, e.body]),
     ...allResidentJournal().flatMap((e) => [e.title, e.body]),
     ...allHeirloomJournal().flatMap((e) => [e.title, e.body]),
+    ...allEchoKeepsakeJournal().flatMap((e) => [e.title, e.body]),
     ...Object.values(locations).flatMap((l) => [l.name, l.eyebrow, l.tagline, l.description]),
     ...[...expansion.POIS, ...expansion.TRINKETS, ...expansion.MORE_TRINKETS].map((t) => ('discoveryText' in t ? t.discoveryText : t.blurb)),
   ];
@@ -261,9 +266,23 @@ test('the warden is settled, not slain, in every story beat', () => {
     ...allResidentLines(),
     ...allHeirloomLines(),
     ...allHeirloomJournal().map((e) => e.body),
+    ...allEchoKeepsakeLines(),
+    ...allEchoKeepsakeJournal().map((e) => e.body),
   ].join('\n');
   assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
   assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
+});
+
+test('the Echo camps take their person’s keepsake: journal once, and a softer settle', async () => {
+  const { ECHOES, echoKeepsakeJournalEntries } = await import('../src/content/echoes.ts');
+  // Dorrit has no keepsake item yet; Bett's and Nan's do.
+  assert.deepEqual(ECHOES.filter((e) => e.keepsake).map((e) => e.member).sort(), ['bett', 'nan']);
+  // The journal writes each keep the first time it is left, and only then.
+  assert.deepEqual(echoKeepsakeJournalEntries([]), []);
+  const entries = echoKeepsakeJournalEntries(['returned:beeswax-candle', 'returned:road-nails']);
+  assert.equal(entries.length, 2);
+  const nan = ECHOES.find((e) => e.member === 'nan')!.keepsake!;
+  assert.deepEqual(echoKeepsakeJournalEntries(['returned:road-nails']), [{ ...nan.journal }]);
 });
 
 test('the journal checklist follows the objectives: copy the naming, then settle the warden', () => {
@@ -299,4 +318,60 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
   for (const t of text) assert.doesNotMatch(t, /\brub(bing|bed)?\b/i, t);
   assert.match(dialogueFor('clue', 'accepted').lines.join(' '), /The road is closed here/);
   assert.equal(itemInfo('lantern-route-rubbing').name, 'Wenna’s Naming, Copied Out');
+});
+
+test('the seasons’ materials keep their own company: each in its mark or wick, and none expire', async () => {
+  const { GATHERING_DATA, inSeason, gatheringTarget } = await import('../src/lib/gathering.ts');
+  const { CALENDAR, calendarAt } = await import('../src/lib/calendar.ts');
+  const dayAt = (t: number) => calendarAt(t, CALENDAR);
+  const epoch = Date.parse(CALENDAR.epoch) / 1000;
+
+  // Every seasonal piece names the season the doc gives it.
+  const seasons: Record<string, { kind: 'mark' | 'wick'; season: string; item: string }> = {
+    'freshet-shore': { kind: 'mark', season: 'Mudrise', item: 'walnut-shells' },
+    'bloom-patch': { kind: 'wick', season: 'Bloom', item: 'bloom-flowers' },
+    'pond-ice': { kind: 'mark', season: 'Quiet', item: 'frost-glass' },
+  };
+  for (const [id, want] of Object.entries(seasons)) {
+    const t = gatheringTarget(id);
+    assert.ok(t, `${id} is a gather target`);
+    assert.equal(want.kind === 'mark' ? t!.mark : t!.wick, want.season, `${id} in ${want.season}`);
+    assert.deepEqual(t!.yields.map((y) => y.item), [want.item]);
+    // Its own wick or mark, and never its neighbour's: the year has all of
+    // them, once each.
+    const own = firstOf((inner) => (want.kind === 'mark' ? inner.mark : inner.wick) === want.season);
+    assert.ok(inSeason(t!, dayAt(own)), `${id} stands in its season`);
+  }
+  function firstOf(when: (day: { mark: string; wick: string }) => boolean): number {
+    for (let d = 0; d < CALENDAR.wickDays * 12; d++) {
+      const t = epoch + d * 86400 + 3600;
+      if (when(dayAt(t))) return t;
+    }
+    throw new Error('no such day');
+  }
+  // The sap rides the Tangle's trees, in Amberfall alone.
+  const sap = gatheringTarget('tangle-tree')?.yields.find((y) => y.item === 'amberfall-sap');
+  assert.ok(sap, 'the Tangle trees give their sap');
+  assert.equal(sap?.mark, 'Amberfall');
+  // The amberfall sap yield is silent the rest of the year.
+  const amberfall = firstOf((day) => day.mark === 'Amberfall');
+  assert.ok(inSeason(sap!, dayAt(amberfall)));
+});
+
+test('the sellers and their goods speak the village’s voice', async () => {
+  const { ITEMS } = await import('../src/lib/items.ts');
+  const sellers = ITEMS.sellers ?? [];
+  assert.ok(sellers.length >= 3, 'Hazel’s kitchen, Finn’s mill door, the Carting Day stall');
+  const names = sellers.map((s) => s.npc).join(',');
+  assert.match(names, /Hazel/);
+  assert.match(names, /Finn/);
+  const stall = sellers.find((s) => s.festival);
+  assert.equal(stall?.festival, 'Carting Day');
+  for (const s of sellers) {
+    for (const g of s.goods) {
+      assert.ok(g.line.length <= 160, `${g.line.length} chars: ${g.line}`);
+      assert.doesNotMatch(g.line, OUT_OF_WORLD, g.line);
+      assert.ok(g.label.length > 0 && g.label.length <= 80);
+    }
+  }
 });

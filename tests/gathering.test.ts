@@ -146,8 +146,8 @@ test('a tool’s feel: Bite takes a swing off, Heft quickens, a dull warden-set 
 });
 
 test('the drift: only your land inside lamplight keeps what you work; everywhere else regrows', () => {
-  for (const area of ['wilds', 'woodland', 'home:0']) assert.ok(gatherArea(area), `${area} offers work`);
-  for (const area of ['village', 'ruin', 'commons', 'cottage']) assert.ok(!gatherArea(area), `${area} offers none`);
+  for (const area of ['wilds', 'woodland', 'home:0', 'village', 'commons']) assert.ok(gatherArea(area), `${area} offers work`);
+  for (const area of ['ruin', 'cottage']) assert.ok(!gatherArea(area), `${area} offers none`);
   assert.equal(keepsWork('home:3', true), true, 'inside lamplight: a stump stays a stump');
   assert.equal(keepsWork('home:3', false), false, 'the unlit edge regrows like the Tangle');
   assert.equal(keepsWork('wilds', true), false, 'the Tangle always comes back');

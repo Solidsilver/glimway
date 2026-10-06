@@ -172,10 +172,14 @@ export function papersDue(grantable: readonly string[], held: (id: string) => bo
 
 // ------------------------------------------------------------ crafting
 
-/** How many batches of a recipe the carried materials pay for (0 = can't). */
+/** How many batches of a recipe the carried materials pay for (0 = can't). A bill line may be paid in its swaps (dried flowers for fresh). */
 export function batchesAffordable(r: Recipe, carried: Record<string, number>): number {
   let n = Infinity;
-  for (const [m, cost] of Object.entries(r.materials)) n = Math.min(n, Math.floor((carried[m] ?? 0) / cost));
+  for (const [m, cost] of Object.entries(r.materials)) {
+    let have = carried[m] ?? 0;
+    for (const s of r.swaps?.[m] ?? []) have += carried[s] ?? 0;
+    n = Math.min(n, Math.floor(have / cost));
+  }
   return Number.isFinite(n) ? Math.min(100, n) : 0;
 }
 

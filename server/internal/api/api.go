@@ -103,7 +103,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -156,6 +156,14 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.createInvite(w, r)
 	case "GET /api/invites":
 		err = a.listInvites(w, r)
+	case "GET /api/world":
+		err = a.worldRead(w, r)
+	case "POST /api/world/party":
+		err = a.worldParty(w, r)
+	case "POST /api/world/prompt":
+		err = a.worldPrompt(w, r)
+	case "POST /api/world/move":
+		err = a.worldMove(w, r)
 	case "POST /api/session":
 		err = a.login(w, r)
 	case "DELETE /api/session":
@@ -213,7 +221,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.itemsRead(w, r)
 	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
 		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return",
-		"POST /api/items/heirloom", "POST /api/items/ada-oil", "POST /api/items/gather", "POST /api/items/plant":
+		"POST /api/items/heirloom", "POST /api/items/ada-oil", "POST /api/items/gather", "POST /api/items/plant",
+		"POST /api/items/buy":
 		err = a.itemsMutation(w, r)
 	case "GET /api/repairs":
 		err = a.repairsRead(w, r)
@@ -376,43 +385,60 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM allowlist WHERE habitica_id=?", p.ID).Scan(&allowed); err != nil {
 		return err
 	}
-	world := ""
-	if allowed == 0 {
-		var named sql.NullString
-		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, store.Hash(req.Invite), now).Scan(&named)
-		if err == sql.ErrNoRows {
-			return fail(403, "access-denied")
-		}
-		if err != nil {
-			return err
-		}
-		if named.Valid {
-			world = named.String
-		}
-		res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, now, store.Hash(req.Invite), now)
-		if err != nil {
-			return err
-		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if n != 1 {
-			return fail(403, "access-denied")
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, "invite", now); err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", p.ID); err != nil {
-			return err
-		}
-	}
 	var existing int
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM players WHERE habitica_id=?", p.ID).Scan(&existing); err != nil {
 		return err
 	}
+	// An invite code decides a new player's world (the one it names, else a
+	// solo world). An allowlisted newcomer's valid code still counts.
+	world := ""
+	invited := false
+	if allowed == 0 || existing == 0 && req.Invite != "" {
+		var named sql.NullString
+		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, store.Hash(req.Invite), now).Scan(&named)
+		if err == sql.ErrNoRows && allowed == 0 {
+			return fail(403, "access-denied")
+		}
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if err == nil {
+			invited = true
+			if named.Valid {
+				world = named.String
+			}
+			res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, now, store.Hash(req.Invite), now)
+			if err != nil {
+				return err
+			}
+			n, err := res.RowsAffected()
+			if err != nil {
+				return err
+			}
+			if n != 1 {
+				return fail(403, "access-denied")
+			}
+		}
+		if allowed == 0 {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, "invite", now); err != nil {
+				return err
+			}
+			if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", p.ID); err != nil {
+				return err
+			}
+		}
+	}
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
 	if existing == 0 {
+		// Being in the same Habitica party counts as an invite: without a
+		// code, a newcomer joins their party's world when it has one.
+		party, err := partyWorld(ctx, tx, p.PartyID)
+		if err != nil {
+			return err
+		}
+		if !invited {
+			world = party
+		}
 		if world == "" {
 			world, err = store.Random()
 			if err != nil {
@@ -422,8 +448,15 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at,habitica_party_id) VALUES(?,?,?,?,?)", world, p.ID, seed, now, p.PartyID); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
 				return err
+			}
+			// A new world becomes its creator's party's world, unless the
+			// party already has one (a code sent them to a world of their own).
+			if party == "" {
+				if err = linkParty(ctx, tx, world, p.PartyID); err != nil {
+					return err
+				}
 			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {

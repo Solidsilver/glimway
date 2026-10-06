@@ -7,6 +7,7 @@
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
+import { CALENDAR } from './calendar.ts';
 import economy from '../../content/economy.json' with { type: 'json' };
 
 export const ITEM_TABS = ['tools', 'supplies', 'keepsakes', 'home', 'papers'] as const;
@@ -42,6 +43,8 @@ export interface ItemDef {
   kind: ItemKind;
   blurb: string;
   icon?: string;
+  /** The icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon. */
+  iconState?: string;
   grade?: 'cheap' | 'heirloom' | 'special';
   uses?: number;
   atZero?: 'breaks' | 'blunt' | 'cracked';
@@ -68,6 +71,28 @@ export interface ItemPickup {
   usesLeft?: number;
   label: string;
   found: string;
+}
+/** One thing a seller sells (for embers), and what they say. */
+export interface ItemGood {
+  item: string;
+  qty: number;
+  embers: number;
+  /** The most one player can buy of it a day (0: no cap). */
+  cap?: number;
+  label: string;
+  line: string;
+}
+/** A person or stall that sells goods: a named resident, or a festival-day stall. */
+export interface ItemSeller {
+  id: string;
+  npc: string;
+  area: (typeof PICKUP_AREAS)[number];
+  tx: number;
+  ty: number;
+  radiusTiles: number;
+  /** The seller stands on its festival day only. */
+  festival?: string;
+  goods: ItemGood[];
 }
 export interface ItemMender {
   npc: string;
@@ -98,6 +123,7 @@ export interface Items {
   rules: ItemRules;
   items: ItemDef[];
   pickups: ItemPickup[];
+  sellers?: ItemSeller[];
 }
 
 const KIND_TAB: Record<ItemKind, ItemTab> = {
@@ -173,7 +199,7 @@ export function validateItems(value: unknown): Items {
   }
   const defs = new Map<string, ItemDef>();
   for (const d of v.items) {
-    if (!isObj(d) || !validId(d.id) || defs.has(d.id) || typeof d.name !== 'string' || !d.name || typeof d.blurb !== 'string' || !d.blurb || !ITEM_KINDS.includes(d.kind) || KIND_TAB[d.kind] !== d.tab || (d.icon !== undefined && !validId(d.icon))) return bad(`item ${String(d?.id)}`);
+    if (!isObj(d) || !validId(d.id) || defs.has(d.id) || typeof d.name !== 'string' || !d.name || typeof d.blurb !== 'string' || !d.blurb || !ITEM_KINDS.includes(d.kind) || KIND_TAB[d.kind] !== d.tab || (d.icon !== undefined && !validId(d.icon)) || (d.iconState !== undefined && (d.icon === undefined || !validId(d.iconState)))) return bad(`item ${String(d?.id)}`);
     defs.set(d.id, d);
   }
   for (const d of v.items) {
@@ -213,6 +239,24 @@ export function validateItems(value: unknown): Items {
       (p.usesLeft !== undefined && (!isInt(p.usesLeft, 1) || d.kind !== 'tool' || p.usesLeft > (d.uses ?? 0)))
     ) return bad(`pickup ${p.id}`);
     pickups.add(p.id);
+  }
+  // Sellers: people and stalls that sell goods for embers (a festival
+  // seller stands on its day only).
+  const festivals = CALENDAR.festivals.map((f) => f.name);
+  const sellers = new Set<string>();
+  for (const s of v.sellers ?? []) {
+    if (!isObj(s) || !validId(s.id) || sellers.has(s.id) || typeof s.npc !== 'string' || !s.npc || s.npc.length > 40 ||
+      !(PICKUP_AREAS as readonly string[]).includes(s.area) || !isInt(s.tx) || !isInt(s.ty) || !isInt(s.radiusTiles, 1, 16) ||
+      !Array.isArray(s.goods) || !s.goods.length || (s.festival !== undefined && !festivals.includes(s.festival))) return bad(`seller ${String(s?.id)}`);
+    sellers.add(s.id);
+    const goods = new Set<string>();
+    for (const g of s.goods) {
+      const d = isObj(g) ? defs.get(g.item as string) : null;
+      if (!isObj(g) || !validId(g.item) || goods.has(g.item) || !d || !isStackable(d) || !isInt(g.qty, 1, 100) || !isInt(g.embers, 1, 1000) ||
+        (g.cap !== undefined && !isInt(g.cap, 0, 1000)) || typeof g.label !== 'string' || !g.label || g.label.length > 80 ||
+        typeof g.line !== 'string' || !g.line || g.line.length > 160) return bad(`seller ${s.id} good ${String(g?.item)}`);
+      goods.add(g.item);
+    }
   }
   return v;
 }
@@ -394,6 +438,11 @@ export function menderNear(area: string, x: number, y: number, tile = 16): ItemM
     if (dx * dx + dy * dy <= r * r) return m;
   }
   return null;
+}
+
+/** A seller by id (shared content; the server checks the same rows). */
+export function sellerFor(id: string): ItemSeller | null {
+  return ITEMS.sellers?.find((s) => s.id === id) ?? null;
 }
 
 /** Any pocketed keepsake gives this help (e.g. papers-glint). */

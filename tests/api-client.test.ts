@@ -4,7 +4,7 @@ import { createQueue } from '../src/lib/api/queue.ts';
 import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERROR_CODES } from '../src/lib/api/errors.ts';
 import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
-import { parseWildsClaim } from '../src/lib/api/parse.ts';
+import { parseItemsAction, parseWildsClaim } from '../src/lib/api/parse.ts';
 import type { Progress } from '../src/lib/api/types.ts';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -62,6 +62,17 @@ test('Wilds claim parser preserves and validates rare warden sliver finds', () =
   };
   assert.equal(parseWildsClaim(raw).result.wardenSliverFound, true);
   assert.throws(() => parseWildsClaim({ ...raw, result: { ...raw.result, wardenSliverFound: 'yes' } }));
+  // The storm-grade drop rides the same claim answer (the toast reads it).
+  assert.equal(parseWildsClaim({ ...raw, result: { ...raw.result, stormDropFound: true } }).result.stormDropFound, true);
+  assert.equal(parseWildsClaim(raw).result.stormDropFound, undefined);
+  assert.throws(() => parseWildsClaim({ ...raw, result: { ...raw.result, stormDropFound: 'yes' } }));
+});
+
+test('items parser keeps what a seller handed over (/api/items/buy)', () => {
+  const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
+  const raw = { ...snapshot(), result: { items, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1 } } };
+  assert.deepEqual(parseItemsAction(raw).result.bought, { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1 });
+  assert.equal(parseItemsAction({ ...raw, result: { items } }).result.bought, undefined);
 });
 
 test('queue: a failure goes to its own caller and the queue keeps going', async () => {

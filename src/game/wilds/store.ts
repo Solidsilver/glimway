@@ -156,6 +156,15 @@ export function resetWildsRegion(id: string): void {
   regions.delete(id);
 }
 
+/**
+ * Forget every region (a world move): the next read fetches the new world's
+ * epochs, and no view of the old world's Wilds is reused.
+ */
+export function resetWilds(): void {
+  regions.clear();
+  bus.emit(EV.wilds, { materials: null });
+}
+
 function materialsRecord(list: { id: string; qty: number }[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const m of MATERIALS) out[m.id] = 0;

@@ -38,7 +38,9 @@ func TestItemsLoadAndDerivedRules(t *testing.T) {
 	timber, _ := ItemFor("timber")
 	twists, _ := ItemFor("keepers-twists")
 	salve, _ := ItemFor("comfrey-salve")
-	if timber.AssetKind() != "material" || !twists.UsableNow() || salve.UsableNow() || twists.AssetKind() != "item" {
+	// The salve's unmoored-clearing is implemented (the warden work), so it
+	// is usable now, as the twists are.
+	if timber.AssetKind() != "material" || !twists.UsableNow() || !salve.UsableNow() || twists.AssetKind() != "item" {
 		t.Fatal("stacks")
 	}
 	fox, _ := ItemFor("whittled-fox")

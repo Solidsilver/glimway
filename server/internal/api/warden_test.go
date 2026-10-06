@@ -102,7 +102,7 @@ func TestWardenSliverMovesBetweenToolsAtBench(t *testing.T) {
 }
 
 func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
-	for _, mode := range []string{"recall-to-shared", "expiry-to-personal"} {
+	for _, mode := range []string{"recall-to-personal", "expiry-to-personal"} {
 		t.Run(mode, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
@@ -116,12 +116,12 @@ func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
 			sent := x.p5("POST", "/api/mail", body(s, "send-warden", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), c, 200)
 			s.Snapshot = sent.Snapshot
 			x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": pickSliver}, 200)
-			expectedLocation, expectedOwner := "storage", ""
+			// Either way it lands in the personal chest, which comes along on a move.
+			expectedLocation, expectedOwner := "personal", "alice"
 			if mode == "expiry-to-personal" {
 				if _, err := x.db.DB.Exec("DELETE FROM homestead_members WHERE habitica_id='alice'"); err != nil {
 					t.Fatal(err)
 				}
-				expectedLocation, expectedOwner = "personal", "alice"
 				if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=? WHERE id=?", x.now.Load()-30*86400, sent.Result.MailID); err != nil {
 					t.Fatal(err)
 				}
@@ -129,11 +129,6 @@ func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
 					t.Fatalf("automatic return: %d, %v", n, err)
 				}
 			} else {
-				var homeID string
-				if err := x.db.DB.QueryRow("SELECT homestead_id FROM homestead_members WHERE habitica_id='alice'").Scan(&homeID); err != nil {
-					t.Fatal(err)
-				}
-				expectedOwner = homeID
 				x.p5("POST", "/api/mail/"+sent.Result.MailID+"/recall", body(s, "recall-warden", nil), c, 200)
 			}
 			var location, owner string

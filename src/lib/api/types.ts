@@ -130,6 +130,59 @@ export interface InviteList {
   outstandingLimit?: number;
 }
 
+// ------------------------------------------------------------- worlds
+
+/** A world as the server names it: its owner and how many live there. */
+export interface WorldRef {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  members: number;
+  /** The owner lives there. */
+  ownerHere: boolean;
+  /** Linked to a party. */
+  linked: boolean;
+}
+
+/** What a move would leave behind (GET /api/world). */
+export interface WorldLeaving {
+  /** Your homestead's gate (-1: none). */
+  gate: number;
+  /** You are its only member: it goes quiet after you leave. */
+  last: boolean;
+  /** Parcels you sent that are still on the road (recall them first). */
+  outgoing: number;
+  /** Parcels waiting for you (they go back to their senders). */
+  incoming: number;
+  /** Warden-set tools in your homestead's shared chest (they stay behind). */
+  wardenTools: number;
+  /** Embers a deed costs in the next world (0: your first, free). */
+  deedCost: number;
+}
+
+/** GET /api/world: your world, its party link, and the party's world. */
+export interface WorldView {
+  world: WorldRef;
+  isOwner: boolean;
+  /** Your last sign-in reported a party. */
+  inParty: boolean;
+  /** This world is linked to a party; `linkedToMine`: to yours. */
+  linked: boolean;
+  linkedToMine: boolean;
+  /** Your party's world, when it is somewhere else. */
+  partyWorld: WorldRef | null;
+  /** A world you own, when you live somewhere else. */
+  ownWorld: WorldRef | null;
+  /** The party world's join prompt hasn't been shown yet. */
+  prompt: boolean;
+  leaving: WorldLeaving;
+}
+
+/** POST /api/world/move (keyed). */
+export interface WorldMoveResponse extends Snapshot {
+  result: { world: WorldView; from: string; leftHome: boolean; returned: number };
+}
+
 // ------------------------------------------------------------- the Wilds
 
 /** The frozen epoch a region is generated from (server: `region_epochs`). */
@@ -218,6 +271,7 @@ export interface WildsClaimResult {
   loot: WildsLoot;
   materials: WildsMaterials;
   wardenSliverFound?: boolean;
+  stormDropFound?: boolean;
 }
 
 export interface WildsClaimResponse extends Snapshot {
@@ -493,7 +547,7 @@ export interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy';
 export interface ItemsActionResponse extends Snapshot {
   result: {
     items: ItemsView;
@@ -511,6 +565,8 @@ export interface ItemsActionResponse extends Snapshot {
     land?: { tile: [number, number]; stump: boolean; cleared: boolean };
     heirloom?: string;
     adaOilCount?: number;
+    /** What a seller just handed over (/api/items/buy). */
+    bought?: { seller: string; itemDef: string; qty: number; embers: number };
   };
 }
 

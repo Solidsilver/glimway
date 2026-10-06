@@ -8,6 +8,7 @@
 import type Phaser from 'phaser'
 import { dialogueFor, emberDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
 import { EMBER_COSTS, isLit, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { ITEMS } from '../../lib/items'
 import { bus, EV, type PromptPayload } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
@@ -318,9 +319,21 @@ export class Interactables {
       ? keepsakeAsk(target.id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
       : null
     if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
+    // One more choice, and a single "Not yet" at the end (an earlier one,
+    // e.g. a keepsake's with its own reply, is kept in its place).
     const withChoiceAndNotYet = (existing: DialogueChoice[] | undefined, newChoice: DialogueChoice): DialogueChoice[] => {
-      const nonNotYet = (existing ?? []).filter((c) => c.text !== 'Not yet')
-      return [...nonNotYet, newChoice, { text: 'Not yet' }]
+      const notYet = (existing ?? []).find((c) => c.text === 'Not yet') ?? { text: 'Not yet' }
+      const nonNotYet = (existing ?? []).filter((c) => c !== notYet)
+      return [...nonNotYet, newChoice, notYet]
+    }
+    // What a resident sells at their own door (Hazel's kitchen, Finn's
+    // mill door): a choice at the end of the talk, when there's a world to
+    // keep the books. Their words for it are the reply.
+    const seller = (ITEMS.sellers ?? []).find((sl) => sl.npc.toLowerCase() === target.id && !sl.festival)
+    if (seller && session.link) {
+      for (const g of seller.goods) {
+        payload = { ...payload, choices: withChoiceAndNotYet(payload.choices, { text: g.label, reply: [g.line], action: `buy:${seller.id}:${g.item}` }) }
+      }
     }
 
     // Heirloom beats: Orrin's mason pick and Ada's garden spade

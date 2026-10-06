@@ -27,6 +27,9 @@ type Recipe struct {
 	MinTier   int            `json:"minTier"`
 	Materials map[string]int `json:"materials"`
 	Output    Asset          `json:"output"`
+	// Swaps: a material's stand-ins, one for one ("bloom-flowers" accept
+	// "dried-flowers"). The bill still names the primary.
+	Swaps map[string][]string `json:"swaps,omitempty"`
 	// Hearth recipes only: the recipe page a found recipe asks for (empty
 	// for a starting recipe), and where the world says it is found.
 	Page  string `json:"page,omitempty"`
@@ -70,6 +73,30 @@ func ValidMaterialCosts(costs map[string]int) bool {
 	}
 	return true
 }
+
+// validateSwaps: a swap names a material on the bill and stand-ins that
+// are carried stacks of their own, never a bill item or a repeat.
+func validateSwaps(r Recipe, defs map[string]ItemDef) bool {
+	for key, swaps := range r.Swaps {
+		if _, ok := r.Materials[key]; !ok || len(swaps) == 0 {
+			return false
+		}
+		for _, s := range swaps {
+			if s == key {
+				return false
+			}
+			if _, onBill := r.Materials[s]; onBill {
+				return false
+			}
+			d, ok := defs[s]
+			if !ok || !d.Stackable() {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func ValidateCrafting(c Crafting) error {
 	bad := fmt.Errorf("invalid crafting")
 	if len(c.Recipes) == 0 || len(c.Recipes) > 60 || len(c.UtilityItems) == 0 {
@@ -85,7 +112,7 @@ func ValidateCrafting(c Crafting) error {
 		items[i.ID] = true
 	}
 	for _, r := range c.Recipes {
-		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 2 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 {
+		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 2 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 || !validateSwaps(r, itemsByID) {
 			return bad
 		}
 		switch r.Output.Kind {
@@ -105,7 +132,7 @@ func ValidateCrafting(c Crafting) error {
 		recipes[r.ID] = true
 	}
 	for _, r := range c.HearthRecipes {
-		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 1 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 {
+		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 1 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 || !validateSwaps(r, itemsByID) {
 			return bad
 		}
 		// A found recipe names the page that teaches it (a recipe paper you

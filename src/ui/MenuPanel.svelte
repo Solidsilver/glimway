@@ -10,8 +10,9 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import ConnectGuide from './ConnectGuide.svelte'
   import InvitePanel from './InvitePanel.svelte'
+  import WorldCard from './WorldCard.svelte'
   import type { HabiticaProfile } from '../lib/habitica/types'
-  import type { Snapshot } from '../lib/api/types'
+  import type { Snapshot, WorldRef, WorldView } from '../lib/api/types'
   import { accountCopy, offlineCopy } from '../content/connected'
   import { CONTROLS, TOUCH_CONTROLS } from '../content/controls'
   import { isTouchFirst } from './device'
@@ -29,7 +30,8 @@
     onClose,
     onSignedIn,
     onLogout,
-    onEnterWorld
+    onEnterWorld,
+    onMove
   }: {
     session: Session
     onClose: () => void
@@ -38,6 +40,8 @@
     onLogout?: () => void
     /** Signed in but playing the guest save: switch to the world. */
     onEnterWorld?: () => void
+    /** Move to another world: the confirmation takes over from here. */
+    onMove?: (target: WorldRef, home: boolean, view: WorldView) => void
   } = $props()
 
   const touch = isTouchFirst()
@@ -186,6 +190,7 @@
           <button type="button" onclick={requestLogout} disabled={offline || logoutBusy} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
           {#if offline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
         </div>
+        {#if connected && !offline && onMove}<WorldCard {onMove} />{/if}
       </section>
     {/if}
 

@@ -460,6 +460,9 @@
         "seasoned-timber": 1,
         "bloom-flowers": 3
       },
+      "swaps": {
+        "bloom-flowers": ["dried-flowers"]
+      },
       "output": {
         "kind": "decoration",
         "id": "pressed-flowers",

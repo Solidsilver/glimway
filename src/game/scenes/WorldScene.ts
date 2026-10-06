@@ -24,6 +24,8 @@ import { TILE } from '../textures'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
 import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { yieldLine } from '../../lib/gathering'
+import { sellerFor } from '../../lib/items'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
 import { Hero } from '../entities/hero'
@@ -37,6 +39,8 @@ import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { itemsFor } from '../items'
 import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
+import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
+import { echoSettled } from '../../lib/wilds/stories'
 import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
 import { HEIRLOOMS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
@@ -1246,6 +1250,11 @@ export class WorldScene extends Phaser.Scene {
       if (parsed) this.returnKeepsake(parsed.def, parsed.target)
       return
     }
+    if (action.startsWith('echo:settle:')) {
+      // A settle picked in an Echo camp conversation (the keep's offer keeps the lamp open).
+      this.wilds?.settleEcho(action.slice('echo:settle:'.length))
+      return
+    }
     if (action.startsWith('heirloom:grant:')) {
       const id = action.slice('heirloom:grant:'.length)
       this.grantHeirloom(id)
@@ -1253,6 +1262,11 @@ export class WorldScene extends Phaser.Scene {
     }
     if (action === 'ada:oil') {
       this.giveAdaOil()
+      return
+    }
+    if (action.startsWith('buy:')) {
+      const [, seller, good] = action.split(':')
+      if (seller && good) this.marketBuy(seller, good)
       return
     }
     const spend: EmberSpend | null =
@@ -1296,8 +1310,23 @@ export class WorldScene extends Phaser.Scene {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
         return
       }
-      const thanks = keepsakeThanks(r.value.returned ?? def)
-      if (thanks.length) bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
+      const returned = r.value.returned ?? def
+      const thanks = keepsakeThanks(returned)
+      if (thanks.length) {
+        bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
+      } else {
+        // A keep with no living owner, left at its Echo camp: the echo
+        // answers in its own register (the camp's voice once settled).
+        const left = echoForKeepsake(returned)
+        if (left) {
+          bus.emit(EV.dialogue, {
+            id: 'echo-keepsake-left',
+            speaker: echoCampSpeaker(left.echo.member, echoSettled(this.session.state.flags, left.echo.member)),
+            lines: [...left.keep.leave]
+          })
+          emitResidents(this.session)
+        }
+      }
       if (r.value.paper) {
         const paper = paperById(r.value.paper)
         if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal' } })
@@ -1317,6 +1346,25 @@ export class WorldScene extends Phaser.Scene {
       const h = HEIRLOOMS[id as HeirloomId]
       if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: h.id, qty: 1 } })
       emitResidents(this.session)
+    })
+  }
+
+  /** Buying from a seller (a resident's kitchen door, or the day's market stall). */
+  private marketBuy(seller: string, good: string): void {
+    const items = itemsFor(this.session)
+    if (!this.session.link) return
+    // The server checks you stand by the seller: where you stand now rides along.
+    this.notePosition()
+    void items.buy(seller, good).then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      // The seller's own words for what changed hands.
+      const bought = r.value.bought
+      const line = bought ? sellerFor(bought.seller)?.goods.find((g) => g.item === bought.itemDef)?.line : undefined
+      if (bought) bus.emit(EV.toast, { text: line ?? `Bought: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'bag', art: `icon-${bought.itemDef}` })
     })
   }
 

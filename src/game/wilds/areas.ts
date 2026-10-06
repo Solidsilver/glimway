@@ -14,7 +14,9 @@
 import { chunkTerrain, toWorldData } from '../../lib/wilds/index.ts';
 import type { Epoch } from '../../lib/wilds/types.ts';
 import type { AreaId } from '../../lib/state.ts';
+import { calendarAt } from '../../lib/calendar.ts';
 import { registerAreaKind, type AreaKind, type ForegroundSpot } from '../worlds.ts';
+import { gameNow } from '../clock.ts';
 import { WILDS_AREA, WILDS_REGION_ID, chunkAreaId, wildsRegion } from './regions.ts';
 
 /**
@@ -32,8 +34,10 @@ function wildsKind(epoch: Epoch, cx: number, cy: number): AreaKind {
     build: () => {
       const chunk = chunkTerrain(epoch, cx, cy);
       // WorldData's exits keep the generator's raw targets (`chunk:…`,
-      // `commons`); the scene resolves them into transitions.
-      return toWorldData(chunk, areaId);
+      // `commons`); the scene resolves them into transitions. The
+      // calendar day decides the seasons' pieces (bloom patches in
+      // Bloom-wick); the server re-checks the season from its own clock.
+      return toWorldData(chunk, areaId, calendarAt(gameNow()));
     },
     foreground: wildsForeground,
   };

@@ -90,7 +90,7 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 			if err == nil {
 				var n int
 				err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n)
-				if err == nil && n != 19 {
+				if err == nil && n != 21 {
 					err = sql.ErrNoRows
 				}
 				s.Close()

@@ -38,6 +38,7 @@ type itemsResponse struct {
 		Paper       *string         `json:"paper"`
 		Heirloom    string          `json:"heirloom"`
 		AdaOilCount int             `json:"adaOilCount"`
+		Bought      *boughtView     `json:"bought"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`
