@@ -269,7 +269,7 @@ export class Items {
     return this.run('pickup', { pickup: id }).then((r) => {
       if (r.ok) {
         const p = pickupById(id)
-        if (p) bus.emit(EV.toast, { text: p.found, icon: 'bag' })
+        if (p) bus.emit(EV.toast, { text: p.found, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: p.item, qty: p.qty } })
       }
       return r
     })

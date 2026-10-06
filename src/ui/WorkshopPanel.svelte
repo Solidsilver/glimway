@@ -8,6 +8,7 @@
   import { HOMESTEAD_DATA } from '../lib/homestead'
   import { itemName } from '../lib/items'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -109,21 +110,23 @@
   const steps = (n: number) => [...new Set([1, 5, n].filter((v) => v > 0 && v <= n))]
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="workshop-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="workshop-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the workshop"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="workshop-title"><Icon name="home" size={20} /> The Workshop</h2>
-    <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'chest'} class:on={tab === 'chest'} onclick={() => ((tab = 'chest'), (message = null))}>Chests</button>
-      <button type="button" role="tab" aria-selected={tab === 'bench'} class:on={tab === 'bench'} onclick={() => ((tab = 'bench'), (message = null))}>Crafting bench</button>
-    </div>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the workshop"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="workshop-title"><Icon name="home" size={20} /> The Workshop</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'chest'} class:on={tab === 'chest'} onclick={() => ((tab = 'chest'), (message = null))}>Chests</button>
+        <button type="button" role="tab" aria-selected={tab === 'bench'} class:on={tab === 'bench'} onclick={() => ((tab = 'bench'), (message = null))}>Crafting bench</button>
+      </div>
 
-    {#if loaded !== 'ready' && loaded !== 'loading'}
-      <p class="msg error">{loaded}</p>
-    {:else if loaded === 'loading'}
-      <p class="msg">Lifting the lid…</p>
-    {/if}
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+      {#if loaded !== 'ready' && loaded !== 'loading'}
+        <p class="msg error">{loaded}</p>
+      {:else if loaded === 'loading'}
+        <p class="msg">Lifting the lid…</p>
+      {/if}
+      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    </header>
 
     {#if tab === 'chest' && loaded === 'ready'}
       <div class="chests" role="radiogroup" aria-label="Which chest">

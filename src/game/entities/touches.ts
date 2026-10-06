@@ -102,13 +102,13 @@ export class Touches implements InteractionProvider {
     // A small offset onto the bench's front edge + a still frame (hero.sit).
     hero.sit({ x: spec.x, y: spec.y + 4 })
     sfx('settle')
-    bus.emit(EV.toast, { text: this.take(id, SIT_LINES), icon: 'sparkle' })
+    bus.emit(EV.toast, { text: this.take(id, SIT_LINES), icon: 'sparkle', kind: 'thought' })
   }
 
   private useFlowers(id: InteractId, spec: TouchSpec): void {
     sfx('pop')
     this.deps.fx.sparkBurst(spec.x, spec.y - 8, 4)
-    bus.emit(EV.toast, { text: this.take(id, FLOWER_LINES), icon: 'sparkle' })
+    bus.emit(EV.toast, { text: this.take(id, FLOWER_LINES), icon: 'sparkle', kind: 'thought' })
   }
 
   private useSign(id: InteractId, spec: TouchSpec): void {

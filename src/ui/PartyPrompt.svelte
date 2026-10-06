@@ -51,7 +51,8 @@
   }
   /* Touch: above the joystick, the action buttons and the "Talk" prompt. */
   .notice.touch {
-    bottom: calc(env(safe-area-inset-bottom) + 228px);
+    /* App.svelte measures the buttons and the prompt tag on them (--dock-bottom). */
+    bottom: max(calc(env(safe-area-inset-bottom) + 228px), calc(var(--dock-bottom, 0px) + 8px));
   }
   .badge {
     display: grid;

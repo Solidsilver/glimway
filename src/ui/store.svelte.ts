@@ -1,15 +1,48 @@
-import type { AreaPayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
+import type { AreaPayload, GoalDirPayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { isMuted } from '../game/sfx'
+import { bus, EV } from '../game/events'
+import { itemName } from '../lib/items'
+import { isTouchFirst } from './device'
 
 /** Stored toast = payload plus a render key and optional icon. */
 type StoredToast = ToastPayload & { id: string }
+
+/**
+ * Things that just went into the bag or the journal: the HUD button shows
+ * them as a short "+7 Fiber" tag. Gains of one item within GAIN_MERGE_MS
+ * add up into one tag.
+ */
+export interface Gain {
+  id: string
+  to: 'bag' | 'journal'
+  itemDef: string | null
+  qty: number
+  /** What the tag says ("7 Fiber", "Eleven Days"). */
+  label: string
+  /** The full sentence, for screen readers. */
+  text: string
+  art?: string
+  icon?: string
+  at: number
+}
+
+const GAIN_MERGE_MS = 1500
+const GAIN_SHOW_MS = 2400
+
+/** Every toast handed to the UI so far, whatever its kind (dev hook `__fsToasts`). */
+export interface ToastLogEntry {
+  n: number
+  text: string
+  kind: string
+}
 
 /** A quest beat or area title waiting to be shown. */
 export interface Banner {
   id: string
   kind: 'quest' | 'area'
   eyebrow: string
+  /** First visit: the full storybook card. Later visits pass `chip` instead (src/ui/Banners.svelte). */
   title: string
   body?: string
 }
@@ -21,11 +54,22 @@ export interface Banner {
 class UiStore {
   stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0 })
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
+  /** Which way the quest goal lies from the hero (src/game/entities/goal-guide.ts). */
+  goalDir = $state<GoalDirPayload>({ angle: null, here: false })
   /** False until the first quest snapshot arrives (load is not a "change"). */
   questKnown = $state(false)
   area = $state<AreaPayload>({ areaId: 'village', name: 'Village', description: '' })
   prompt = $state<PromptPayload>({ label: null })
   toasts = $state<StoredToast[]>([])
+  /** Gains on show beside the bag and journal buttons (newest last). */
+  gains = $state<Gain[]>([])
+  /** The hero's latest thought (screen readers hear it from the HUD). */
+  thought = $state<{ text: string; at: number } | null>(null)
+  /** A title card or quest ribbon is on screen (toasts and notices wait). */
+  bannerUp = $state(false)
+  /** Read-only log for playtests: every toast of every kind (dev builds only). */
+  toastLog: ToastLogEntry[] = []
+  toastCount = 0
   defeatCount = $state(0)
   /** Save provenance (format 2), shown in the character panel. */
   vitalsSource = $state<VitalsSource>('demo')
@@ -73,12 +117,74 @@ class UiStore {
   muted = $state(isMuted())
 
   toast(payload: ToastPayload): void {
+    const kind = payload.kind ?? 'info'
+    if (import.meta.env.DEV) {
+      this.toastCount += 1
+      this.toastLog.push({ n: this.toastCount, text: payload.text, kind })
+      if (this.toastLog.length > 100) this.toastLog.shift()
+    }
+    // The hero noticing something: a line above the hero, not news. The HUD
+    // reads it out for screen readers (the bubble is canvas text).
+    if (kind === 'thought') {
+      // A title card or ribbon over the hero would hide it: it waits for the card.
+      if (this.bannerUp) this.pendingThought = payload.text
+      else this.think(payload.text)
+      return
+    }
+    if (kind === 'gain' && payload.gain) {
+      this.gain(payload)
+      return
+    }
     const id = Math.random().toString(36).slice(2)
-    const entry: StoredToast = { ...payload, id, kind: payload.kind ?? 'info' }
-    this.toasts = [...this.toasts.slice(-2), entry]
+    const entry: StoredToast = { ...payload, id, kind }
+    // Waiting and showing toasts. A phone shows one at a time and a desktop
+    // two (src/ui/Toasts.svelte); only the newest plain lines wait, and an
+    // error is never pushed out by a later line. Each toast's clock starts
+    // when it is really on screen (not behind a title card).
+    const errors = this.toasts.filter((t) => t.kind === 'error')
+    const infos = this.toasts.filter((t) => t.kind !== 'error')
+    if (kind === 'error') errors.push(entry)
+    else infos.push(entry)
+    const keep = isTouchFirst() ? 1 : 2
+    const kept = new Set([...errors.slice(-2), ...infos.slice(-keep)])
+    this.toasts = [...this.toasts, entry].filter((t) => kept.has(t))
+  }
+
+  private pendingThought: string | null = null
+
+  private think(text: string): void {
+    this.thought = { text, at: performance.now() }
+    bus.emit(EV.thought, { text })
+  }
+
+  /** A title card or quest ribbon came up or went (src/ui/Banners.svelte). */
+  setBannerUp(up: boolean): void {
+    this.bannerUp = up
+    if (!up && this.pendingThought) {
+      const text = this.pendingThought
+      this.pendingThought = null
+      this.think(text)
+    }
+  }
+
+  dismissToast(id: string): void {
+    this.toasts = this.toasts.filter((t) => t.id !== id)
+  }
+
+  private gain(payload: ToastPayload): void {
+    const g = payload.gain!
+    const now = performance.now()
+    // A counted single item adds up with the last one; mixed loot says what it was.
+    const counted = !!g.itemDef && g.qty !== undefined
+    const recent = counted ? this.gains.find((x) => x.to === g.to && x.itemDef === g.itemDef && x.qty > 0 && now - x.at < GAIN_MERGE_MS) : undefined
+    const total = counted ? (recent?.qty ?? 0) + g.qty! : 0
+    const label = counted ? `${total} ${itemName(g.itemDef!)}` : (g.label ?? gainLabel(payload.text))
+    const id = Math.random().toString(36).slice(2)
+    const next: Gain = { id, to: g.to, itemDef: g.itemDef ?? null, qty: total, label, text: payload.text, art: payload.art, icon: payload.icon, at: now }
+    this.gains = [...this.gains.filter((x) => x !== recent && x.to !== g.to), next]
     setTimeout(() => {
-      this.toasts = this.toasts.filter((t) => t.id !== id)
-    }, payload.kind === 'error' ? 6000 : 4200)
+      this.gains = this.gains.filter((x) => x.id !== id)
+    }, GAIN_SHOW_MS)
   }
 
   /** Id of the banner currently on screen (set by Banners.svelte). */
@@ -96,6 +202,16 @@ class UiStore {
   dismissBanner(id: string): void {
     this.banners = this.banners.filter((b) => b.id !== id)
   }
+}
+
+/** A short tag for a gain without an item: the name in "Found: “Eleven Days” — it's in your journal." */
+function gainLabel(text: string): string {
+  const quoted = /[“"]([^”"]+)[”"]/.exec(text)?.[1]
+  // "Mara Wells: noted in your journal." → "Mara Wells"
+  const noted = /^(.+?): noted in your journal/.exec(text)?.[1]
+  // "For the light: 3 timber, 2 stone." → "3 timber, 2 stone"
+  const after = /^[^:]{1,40}:\s*([^—]+?)\.?(?:\s+—.*)?$/.exec(text)?.[1]
+  return (quoted ?? noted ?? after ?? text).trim().replace(/^\+/, '')
 }
 
 export const ui = new UiStore()

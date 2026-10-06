@@ -122,7 +122,7 @@ export class AvatarVisual {
     if (this.riding) {
       this.riding = false
       void this.build()
-      bus.emit(EV.toast, { text: 'You hop down.' })
+      bus.emit(EV.toast, { text: 'You hop down.', kind: 'thought' })
       return
     }
     if (world.areaId === 'village') {
@@ -136,7 +136,7 @@ export class AvatarVisual {
     }
     this.riding = true
     void this.build()
-    bus.emit(EV.toast, { text: 'You saddle up. Faster on the open road!' })
+    bus.emit(EV.toast, { text: 'You saddle up. Faster on the open road!', kind: 'thought' })
   }
 
   /** A sync committed a new profile: riding rules re-checked, layers rebuilt. */
@@ -164,7 +164,7 @@ export class AvatarVisual {
     if (this.riding && world.areaId === 'village') {
       this.riding = false
       void this.build()
-      bus.emit(EV.toast, { text: 'You lead your mount through the gate on foot.' })
+      bus.emit(EV.toast, { text: 'You lead your mount through the gate on foot.', kind: 'thought' })
     }
   }
 

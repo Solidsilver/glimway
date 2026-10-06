@@ -19,7 +19,7 @@ import { buildExitSigns } from '../area/exits'
 import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
 import { bus, EV, type DialogueClosedPayload, type RelocatePayload } from '../events'
 import { prefersReducedMotion, sfx } from '../sfx'
-import { touchVec, uiBlocked, uiState } from '../input'
+import { heroScreen, touchVec, uiBlocked, uiState } from '../input'
 import { TILE } from '../textures'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
@@ -46,6 +46,7 @@ import { Effects } from '../entities/fx'
 import { HEIRLOOMS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
+import { Thoughts } from '../entities/thoughts'
 import { presence } from '../presence'
 import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
@@ -83,6 +84,9 @@ import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
 import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
 import { seasonMark } from '../../lib/wilds/outer'
 import { loadWilds } from '../../lib/wilds/data'
+import { playInsets, setPlayInsets } from '../viewport'
+import { GoalGuide } from '../entities/goal-guide'
+import { MAX_SCREEN_SCALE } from '../atlas-plan'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
 
@@ -134,6 +138,8 @@ export class WorldScene extends Phaser.Scene {
   /** Foreground canopies/arches that fade when something walks beneath. */
   private occluders: Occluder[] = []
   private interactables!: Interactables
+  /** Where the quest goal is: the HUD's needle and the off-screen glint (src/game/entities/goal-guide.ts). */
+  private goalGuide!: GoalGuide
   private hero!: Hero
   private npcs!: Npcs
   private enemies!: EnemySystem
@@ -338,6 +344,8 @@ export class WorldScene extends Phaser.Scene {
     // small maps — without this the hero can walk off the map edge.
     this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
+    // A restarted scene keeps its fields: last area's fade images are gone.
+    this.edgeFade = []
     this.applyZoom(this.scale.width, this.scale.height)
     const onResize = (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height)
     this.scale.on('resize', onResize)
@@ -413,6 +421,25 @@ export class WorldScene extends Phaser.Scene {
       this.remotePlayers.clear()
       bus.off(EV.emote, this.onOwnEmote, this)
     })
+    this.goalGuide = new GoalGuide(this, {
+      world: this.world,
+      stage: () => this.session.questStage,
+      npcAt: (id) => {
+        const n = this.npcs.npcs.find((x) => x.id === id)
+        return n ? { x: n.sprite.x, y: n.sprite.y - 8 } : null
+      },
+      spotAt: (id) => {
+        const it = this.interactables.list.find((x) => x.id === id)
+        return it ? { x: it.x, y: it.y - 8 } : null
+      },
+      wardenAt: () => {
+        const w = this.enemies.wardenView()
+        return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
+      },
+      reducedMotion: this.reducedMotion
+    })
+    // Passing thoughts above the hero (flavour lines; cleans up on shutdown).
+    new Thoughts(this, this.hero.sprite, { reducedMotion: this.reducedMotion, hidden: () => this.cinematic, offsetY: -32 })
     void this.avatar.build() // imported layered avatar (if any)
 
     // Read-only handle for automated playtesting (docs/playtest.md).
@@ -473,6 +500,17 @@ export class WorldScene extends Phaser.Scene {
         this.hero.damagePlayer(n, this.hero.sprite.x - 1)
       }
       w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
+      // The screen insets the camera keeps the hero clear of; a playtest can set them.
+      w.__fsDevInsets = (v?: { top: number; right: number; bottom: number; left: number }) => {
+        if (v) setPlayInsets(v)
+        return { ...playInsets }
+      }
+      // Read-only: the hero sprite's box on screen (CSS px from the canvas's top left).
+      w.__fsDevHeroScreen = () => {
+        const cam = this.cameras.main
+        const b = this.hero.sprite.getBounds()
+        return { x: (b.x - cam.worldView.x) * cam.zoom, y: (b.y - cam.worldView.y) * cam.zoom, w: b.width * cam.zoom, h: b.height * cam.zoom, zoom: cam.zoom }
+      }
       w.__fsDevAddFlag = (flag: string) => this.session.addFlag(flag)
       // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
       // checks the packed atlases give the loaders the pixels they had).
@@ -759,7 +797,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.session.state.flags.includes('unmoored:felt')) {
       this.session.addFlag('unmoored:felt')
       emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll' })
+      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'The Drift’s Sway' } })
     }
   }
 
@@ -784,7 +822,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.session.state.flags.includes('unmoored:cleared')) {
       this.session.addFlag('unmoored:cleared')
       emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll' })
+      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'Finding the Anchor' } })
     }
   }
 
@@ -849,6 +887,12 @@ export class WorldScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     const dt = Math.min(delta / 1000, 0.05)
+    this.keepFramed()
+    // The hero's spot on the canvas, every frame (panels and transitions too):
+    // "hold to walk" steers by it, and title cards keep clear of it.
+    const view = this.cameras.main.worldView
+    heroScreen.x = (this.hero.sprite.x - view.x) * this.cameras.main.zoom
+    heroScreen.y = (this.hero.sprite.y - 8 - view.y) * this.cameras.main.zoom
     // While a panel/dialogue owns the screen, stop preventDefault-ing Space
     // etc. so focused buttons (replies, confirms) activate natively.
     // A focused placement-tray control gets its keys natively (Space presses it).
@@ -909,6 +953,7 @@ export class WorldScene extends Phaser.Scene {
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       this.interactables.hideKeyHint()
+      this.goalGuide.update(dt, this.hero.sprite, false)
       this.enemies.updateEnemyBars()
       this.updateOccluders(dt)
       return
@@ -916,6 +961,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.hero.move(dt, this.inputVector())
     this.enemies.update(dt)
+    this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
     this.wilds?.update()
     this.checkTurning(dt)
@@ -1306,7 +1352,7 @@ export class WorldScene extends Phaser.Scene {
       }
       if (r.value.paper) {
         const paper = paperById(r.value.paper)
-        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll' })
+        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
       }
     })
   }
@@ -1321,7 +1367,7 @@ export class WorldScene extends Phaser.Scene {
         return
       }
       const h = HEIRLOOMS[id as HeirloomId]
-      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
+      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: h.id, qty: 1 } })
       emitResidents(this.session)
     })
   }
@@ -1482,7 +1528,7 @@ export class WorldScene extends Phaser.Scene {
     this.time.delayedCall(panMs + 2300, () => {
       cam.pan(this.hero.sprite.x, this.hero.sprite.y, panMs, 'Sine.easeInOut')
       // Return to the zoom for the CURRENT viewport (it may have resized).
-      if (!this.reducedMotion) cam.zoomTo(this.zoomFor(this.scale.height), panMs, 'Sine.easeInOut')
+      if (!this.reducedMotion) cam.zoomTo(this.zoomFor(this.scale.width, this.scale.height), panMs, 'Sine.easeInOut')
       this.time.delayedCall(panMs + 50, () => {
         cam.startFollow(this.hero.sprite, true, 0.12, 0.12)
         this.cinematic = false
@@ -1531,7 +1577,7 @@ export class WorldScene extends Phaser.Scene {
     if (performance.now() - this.overgrownAt < 2500) return
     this.overgrownAt = performance.now()
     this.fx.floatText(h.x, h.y - 24, 'Overgrown', '#fff3c4', false)
-    bus.emit(EV.toast, { text: 'The way is overgrown. Brambles and fallen iron-oak — nobody has cleared it yet.', icon: 'map' })
+    bus.emit(EV.toast, { text: 'The way is overgrown. Brambles and fallen iron-oak — nobody has cleared it yet.', icon: 'map', kind: 'thought' })
   }
 
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
@@ -1675,19 +1721,102 @@ export class WorldScene extends Phaser.Scene {
 
   // ------------------------------------------------------------- zoom
 
-  private zoomFor(h: number): number {
-    return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, 5)
+  /**
+   * World pixels to screen pixels. Phones show about 12 tiles across the
+   * short side (390×844 and 844×390 both get 2×: one phone, one game,
+   * whichever way it's held); from a 600 px short side up, the old rule
+   * (the height over 280, in half steps) holds, and the tile count ramps
+   * between the two so no size jumps.
+   */
+  private zoomFor(w: number, h: number): number {
+    const short = Math.min(w, h)
+    if (short >= 600) return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
+    const tiles = 12 + (Phaser.Math.Clamp(short, 440, 600) - 440) * (5.5 / 160)
+    return Phaser.Math.Clamp(Math.round((short / (tiles * TILE)) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
   }
 
   private applyZoom(w: number, h: number): void {
-    const zoom = this.zoomFor(h)
-    this.cameras.main.setZoom(zoom)
-    // A map smaller than the view (a cottage room) sits centred in it.
-    const vw = w / zoom
-    const vh = h / zoom
-    const bx = Math.min(0, (this.world.widthPx - vw) / 2)
-    const by = Math.min(0, (this.world.heightPx - vh) / 2)
-    this.cameras.main.setBounds(bx, by, Math.max(this.world.widthPx, vw), Math.max(this.world.heightPx, vh))
+    this.cameras.main.setZoom(this.zoomFor(w, h))
+    this.frameCamera()
+  }
+
+  /** What the camera was last framed for (playInsets.rev, zoom, size). */
+  private framedFor = ''
+  private followOffset = { x: 0, y: 0 }
+  private edgeFade: Phaser.GameObjects.Image[] = []
+
+  /**
+   * Fit the camera to the map and to the screen the interface leaves open
+   * (src/game/viewport.ts): the bounds reach past each map edge by the
+   * inset there, and the follow offset centres the hero in the open
+   * rectangle. Near an edge the map scrolls a little into the backdrop and
+   * the hero stays clear of the HUD and the thumbs. A map smaller than the
+   * open rectangle (a cottage room) sits centred in it.
+   */
+  private frameCamera(): void {
+    const cam = this.cameras.main
+    const z = cam.zoom
+    const W = cam.width
+    const H = cam.height
+    this.framedFor = `${playInsets.rev}:${z}:${W}x${H}`
+    // Leave at least 40% of the view open on each axis: past that, both
+    // insets on the axis shrink in proportion.
+    const fit = (a: number, b: number, view: number): [number, number] => {
+      const k = Math.min(1, (view * 0.6) / Math.max(1, a + b))
+      return [a * k, b * k]
+    }
+    const [left, right] = fit(playInsets.left, playInsets.right, W)
+    const [top, bottom] = fit(playInsets.top, playInsets.bottom, H)
+    const axis = (size: number, view: number, a: number, b: number): [number, number] => {
+      const open = (view - a - b) / z
+      if (size >= open) return [-a / z, size + (a + b) / z]
+      return [-a / z - (open - size) / 2, view / z]
+    }
+    const [bx, bw] = axis(this.world.widthPx, W, left, right)
+    const [by, bh] = axis(this.world.heightPx, H, top, bottom)
+    cam.setBounds(bx, by, bw, bh)
+    this.followOffset = { x: (left - right) / (2 * z), y: (top - bottom) / (2 * z) }
+    cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
+    this.layEdgeFade(left || right || top || bottom ? 1 : 0)
+  }
+
+  /** Re-frame when the insets, the zoom or the size changed (cheap: one string compare a frame). */
+  private keepFramed(): void {
+    const cam = this.cameras.main
+    if (this.framedFor !== `${playInsets.rev}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
+    // startFollow elsewhere (placement, the lantern beat) resets the offset.
+    else if (cam.followOffset.x !== this.followOffset.x || cam.followOffset.y !== this.followOffset.y) cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
+  }
+
+  /**
+   * A soft shadow just inside the map's edges, so where the camera shows the
+   * backdrop past an edge the map ends in a fade, not a hard line.
+   */
+  private layEdgeFade(alpha: number): void {
+    if (!this.textures.exists('edge-fade')) {
+      const t = this.textures.createCanvas('edge-fade', 1, 16)!
+      const ctx = t.getContext()
+      const g = ctx.createLinearGradient(0, 0, 0, 16)
+      g.addColorStop(0, 'rgba(36,31,49,0.6)')
+      g.addColorStop(1, 'rgba(36,31,49,0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, 1, 16)
+      t.refresh()
+    }
+    if (this.edgeFade.length === 0) {
+      const mw = this.world.widthPx
+      const mh = this.world.heightPx
+      const D = 10
+      const mk = (x: number, y: number, w: number, angle: number) =>
+        this.add.image(x, y, 'edge-fade').setOrigin(0.5, 0).setDisplaySize(w, D).setAngle(angle).setDepth(6000)
+      this.edgeFade = [
+        mk(mw / 2, 0, mw, 0), // top: dark at the edge, fading down
+        mk(mw / 2, mh, mw, 180),
+        mk(0, mh / 2, mh, -90),
+        mk(mw, mh / 2, mh, 90)
+      ]
+    }
+    for (const img of this.edgeFade) img.setAlpha(alpha)
   }
 
   // ------------------------------------------------------------- world upkeep

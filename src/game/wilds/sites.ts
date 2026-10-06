@@ -361,7 +361,7 @@ export class WildsSites {
       const at = this.sitePx(s)
       if (Math.hypot(this.heroPx.x - at.x, this.heroPx.y - at.y) > 64) continue
       this.greeted.add(s.id)
-      bus.emit(EV.toast, { text: def.scene, icon: 'sparkle' })
+      bus.emit(EV.toast, { text: def.scene, icon: 'sparkle', kind: 'thought' })
     }
   }
 
@@ -505,7 +505,7 @@ export class WildsSites {
 
   private find(s: StorySite, paper: string): void {
     const text = SITE_TEXT[s.kind as keyof typeof SITE_TEXT]
-    if (text) bus.emit(EV.toast, { text: text.look, icon: 'map' })
+    if (text) bus.emit(EV.toast, { text: text.look, icon: 'map', kind: 'thought' })
     grantPaper(this.deps.session, paper)
     this.render()
   }

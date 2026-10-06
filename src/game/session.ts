@@ -12,7 +12,7 @@
  */
 import Phaser from 'phaser'
 import type { GameState, QuestEvent, QuestStage } from '../lib/state'
-import { advanceQuest, questObjective } from '../lib/state'
+import { advanceQuest, questObjective, questShortGoal } from '../lib/state'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
 import { resolveDefeatRecovery } from '../lib/habitica/sync'
 import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
@@ -233,7 +233,8 @@ export class Session {
   emitQuest(): void {
     bus.emit(EV.quest, {
       stage: this.state.quest,
-      objective: questObjective(this.state.quest)
+      objective: questObjective(this.state.quest),
+      short: questShortGoal(this.state.quest)
     })
   }
 

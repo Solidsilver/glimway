@@ -7,10 +7,14 @@ export const EV = {
   sync: 'ui:sync',
   stats: 'ui:stats',
   quest: 'ui:quest',
+  /** Which way the quest goal lies: { angle, here } (GoalDirPayload). */
+  goalDir: 'ui:goal-dir',
   area: 'ui:area',
   prompt: 'ui:prompt',
   dialogue: 'ui:dialogue',
   toast: 'ui:toast',
+  /** A passing thought shown above the hero (flavour, not news): { text }. Sent by the UI for `kind: 'thought'` toasts. */
+  thought: 'game:thought',
   defeat: 'ui:defeat',
   /** Session committed a new imported profile — the world avatar/pet refresh. */
   profileChanged: 'ui:profile-changed',
@@ -73,6 +77,18 @@ export interface StatsPayload {
 export interface QuestPayload {
   stage: string
   objective: string
+  /** The goal in a few words (HUD line, quest ribbon). */
+  short?: string
+}
+
+/**
+ * Which way the current goal lies from the hero, in screen terms (radians,
+ * 0 = right, clockwise; null when there is no place to point at). `here`:
+ * the goal is in this area (else the angle points at the way out toward it).
+ */
+export interface GoalDirPayload {
+  angle: number | null
+  here: boolean
 }
 
 export interface DialoguePayload {
@@ -99,7 +115,14 @@ export interface PromptPayload {
 
 export interface ToastPayload {
   text: string
-  kind?: 'info' | 'error'
+  /**
+   * info: a toast. error: a red toast that stays longer. thought: the hero
+   * noticing something (a line above the hero, no toast). gain: something
+   * went into the bag or the journal (the button shows it, no toast).
+   */
+  kind?: 'info' | 'error' | 'thought' | 'gain'
+  /** For `kind: 'gain'`: where it went, and what (merged per item for a moment). */
+  gain?: { to: 'bag' | 'journal'; itemDef?: string; qty?: number; /** The tag's words when it isn't one counted item ("3 fiber, 1 amber", a paper's title). */ label?: string }
   /** Icon name (src/ui/Icon.svelte); defaults to a sparkle. */
   icon?: string
   /** A delivered icon frame (`icon-timber`, …) shown instead, when loaded. */

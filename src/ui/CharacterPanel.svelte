@@ -6,8 +6,10 @@
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import { isTouchFirst } from './device'
+  import { heroLine } from './hero'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
@@ -20,9 +22,10 @@
   const kit = $derived(withCharm(getCombatKit(profile), snapshot.inventory))
   const litCount = $derived(ROAD_LANTERNS.filter((id) => isLit(snapshot, id)).length)
   const chestDone = $derived(chestOpened(snapshot))
-  const name = $derived(profile?.name ?? DEMO_CHARACTER.name)
-  const className = $derived(profile?.class ? profile.class[0].toUpperCase() + profile.class.slice(1) : profile ? 'Adventurer' : 'Wayfarer')
-  const level = $derived(profile?.level ?? DEMO_CHARACTER.level)
+  const who = $derived(heroLine(profile))
+  const name = $derived(who.name)
+  const className = $derived(who.className)
+  const level = $derived(who.level)
   const stats = $derived(profile?.stats ?? DEMO_CHARACTER.stats)
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))
@@ -42,22 +45,24 @@
   const touch = isTouchFirst()
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="char-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="char-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
 
-    <header class="hero">
-      <div class="avatar">
-        {#if !profile && ui.portraits['You']}
-          <img class="pixel" src={ui.portraits['You']} alt="" />
-        {:else}
-          <span class="initial">{name[0]}</span>
-        {/if}
-      </div>
-      <div class="who">
-        <h2 id="char-title">{name}</h2>
-        <p class="sub">Level {level} {className}</p>
-        <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+      <div class="hero">
+        <div class="avatar">
+          {#if !profile && ui.portraits['You']}
+            <img class="pixel" src={ui.portraits['You']} alt="" />
+          {:else}
+            <span class="initial">{name[0]}</span>
+          {/if}
+        </div>
+        <div class="who">
+          <h2 id="char-title">{name}</h2>
+          <p class="sub">Level {level} {className}</p>
+          <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+        </div>
       </div>
     </header>
 
@@ -160,6 +165,18 @@
 </div>
 
 <style>
+  /* Phones: a smaller portrait, so the pinned header leaves room for the sheet. */
+  :global(:root.touch) .avatar {
+    width: 60px;
+    height: 60px;
+  }
+  :global(:root.touch) .avatar img {
+    width: 52px;
+    height: 52px;
+  }
+  :global(:root.touch) .who h2 {
+    font-size: 22px;
+  }
   .hero {
     display: flex;
     align-items: center;

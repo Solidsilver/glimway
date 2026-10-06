@@ -224,3 +224,13 @@ test('recoverFromDefeat: demo rule returns to village with full resources and ke
   assert.equal(recovered.playSeconds, 120);
   assert.deepEqual(hurt, { ...state, area: 'ruin', position: { x: 12, y: 34 }, hp: 1, mana: 0, playSeconds: 120 });
 });
+
+test('every quest stage has a short goal for the HUD, 40 characters at most', async () => {
+  const { QUEST_STAGES: stages, questShortGoal, questObjective } = await import('../src/lib/state.ts');
+  for (const stage of stages) {
+    const short = questShortGoal(stage);
+    assert.ok(short.length > 0, `${stage} has a short goal`);
+    assert.ok(short.length <= 40, `${stage}: "${short}" is ${short.length} characters`);
+    assert.notEqual(short, questObjective(stage), `${stage}: the short goal is shorter than the objective`);
+  }
+});

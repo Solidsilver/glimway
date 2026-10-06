@@ -571,7 +571,25 @@ const MARK_CHEVRON: string[] = [
 ]
 
 const GLYPH_E = ['kkkk', 'k...', 'kkk.', 'k...', 'kkkk']
-const GLYPH_A = ['.kk.', 'k..k', 'kkkk', 'k..k', 'k..k']
+
+/**
+ * The touch hint: a small gold coin with a four-point sparkle, the same face
+ * as the phone's action button (a keycap letter would name a key a phone
+ * doesn't have).
+ */
+const KEY_TAP = [
+  '...ooooo...',
+  '..oyyyyyo..',
+  '.oyyyhyyyo.',
+  'oyyyyhyyyyo',
+  'oyyykhkyyyo',
+  'oyhhhkhhhyo',
+  'oyyykhkyyyo',
+  'oyyyyhyyyyo',
+  '.oYyyhyyYo.',
+  '..oYYYYYo..',
+  '...ooooo...'
+]
 
 /** A small parchment keycap with a 4x5 glyph and a pressed-edge shadow. */
 function keycap(glyph: string[]): string[] {
@@ -707,7 +725,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   addArtTexture(scene, 'mark-talk', { rows: MARK_TALK, pal: markPal })
   addArtTexture(scene, 'mark-chevron', { rows: MARK_CHEVRON, pal: markPal })
   addArtTexture(scene, 'key-e', { rows: keycap(GLYPH_E), pal: markPal })
-  addArtTexture(scene, 'key-a', { rows: keycap(GLYPH_A), pal: markPal })
+  addArtTexture(scene, 'key-tap', { rows: KEY_TAP, pal: markPal })
 
   addCanvasTexture(scene, 'px', 2, 2, (ctx) => {
     ctx.fillStyle = '#ffffff'

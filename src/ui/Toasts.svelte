@@ -1,29 +1,37 @@
 <script lang="ts">
   import { ui } from './store.svelte'
+  import { isTouchFirst } from './device'
   import ArtIcon from './ArtIcon.svelte'
 
-  // Read-only, for playtests (dev builds): every toast shown so far, in
-  // order, so a test can check one that came and went while it looked away.
+  // Read-only, for playtests (dev builds): every toast handed to the UI so
+  // far, in order, whatever its kind (a thought or a gain shows elsewhere),
+  // so a test can check one that came and went while it looked away.
   if (import.meta.env.DEV) {
-    const seen: { n: number; text: string; kind: string }[] = []
-    const ids = new Set<string>()
-    let count = 0
-    $effect(() => {
-      for (const t of ui.toasts) {
-        if (ids.has(t.id)) continue
-        ids.add(t.id)
-        count += 1
-        seen.push({ n: count, text: t.text, kind: t.kind ?? 'info' })
-        if (seen.length > 100) seen.shift()
-      }
-    })
-    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count, seen: [...seen] })
+    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count: ui.toastCount, seen: [...ui.toastLog] })
+  }
+
+  const touch = isTouchFirst()
+  /**
+   * On screen now: a phone shows one (an error first, until it times out),
+   * a desktop the newest two. None while a title card or quest ribbon
+   * holds the band under the HUD: they wait, and their clocks wait too.
+   */
+  const shown = $derived.by(() => {
+    if (ui.bannerUp) return []
+    const errors = ui.toasts.filter((t) => t.kind === 'error')
+    return touch ? [errors[0] ?? ui.toasts.at(-1)].filter((t) => !!t) : ui.toasts.slice(-2)
+  })
+
+  /** A toast's clock starts when it is really on screen. */
+  function expire(_node: HTMLElement, t: { id: string; kind?: string }) {
+    const timer = window.setTimeout(() => ui.dismissToast(t.id), t.kind === 'error' ? 6000 : 4200)
+    return { destroy: () => window.clearTimeout(timer) }
   }
 </script>
 
 <div class="toasts" aria-live="polite">
-  {#each ui.toasts as toast (toast.id)}
-    <div class="toast {toast.kind}">
+  {#each shown as toast (toast.id)}
+    <div class="toast {toast.kind}" use:expire={toast}>
       <span class="ico"><ArtIcon art={toast.kind === 'error' ? null : toast.art} name={toast.kind === 'error' ? 'close' : (toast.icon ?? 'sparkle')} size={14} /></span>
       <span>{toast.text}</span>
     </div>
@@ -72,11 +80,8 @@
     from { transform: translateY(-8px) scale(0.96); opacity: 0; }
     to { transform: translateY(0) scale(1); opacity: 1; }
   }
-  /* Narrower screens: drop below the HUD card instead of between widgets. */
+  /* Narrower screens: under the HUD (App.svelte measures it) instead of between widgets. */
   @media (max-width: 940px) {
-    .toasts { top: calc(max(10px, env(safe-area-inset-top)) + 140px); }
-  }
-  @media (max-width: 560px) {
-    .toasts { top: calc(max(10px, env(safe-area-inset-top)) + 112px); }
+    .toasts { top: calc(max(10px, var(--hud-bottom, 140px)) + 8px); }
   }
 </style>

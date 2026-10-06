@@ -9,7 +9,14 @@
   // cottage, and the tray for placement mode (pick a piece, nudge it, turn
   // it, set it down or put it away; outdoors, tap a tree, stump or boulder in
   // your light and Silas clears it). Keyboard: arrows/WASD, R, E, X, Esc.
-  let { hidden = false }: { hidden?: boolean } = $props()
+  let {
+    hidden = false,
+    dockBottom
+  }: {
+    hidden?: boolean
+    /** Touch: px from the bottom where the Arrange button sits (App.svelte measures the action buttons, gap included). */
+    dockBottom?: number
+  } = $props()
 
   const touch = isTouchFirst()
   const send = (c: PlacementCommand) => bus.emit(HOME_EV.command, c)
@@ -19,6 +26,28 @@
   const elsewhere = $derived(p ? p.items.filter((i) => !i.fits) : [])
   const stateOf = (i: { placed: boolean; elsewhere: boolean }) => (i.placed ? 'Set out' : i.elsewhere ? (p?.scene === 'indoor' ? 'Outdoors' : 'Indoors') : 'In your pack')
   const needsCottage = $derived(!!p && p.scene === 'indoor' && p.tier < 1)
+
+  // Touch: the Arrange button sits just above the action buttons (bottom
+  // right, in the thumb's reach), never over the HUD. App.svelte passes the
+  // spot; without it, measure here (the fallback clears the usual cluster).
+  let measured = $state(190)
+  const dock = $derived(dockBottom ?? measured)
+  const showArrange = $derived(!p && home.arrange.available && !hidden)
+  function measureDock(): void {
+    const actions = document.querySelector('.controls .actions')
+    if (!actions) return
+    const top = Math.min(...[...actions.querySelectorAll('button')].map((b) => b.getBoundingClientRect().top).filter((t) => t > 0))
+    if (Number.isFinite(top)) measured = Math.round(window.innerHeight - top + 10)
+  }
+  $effect(() => {
+    if (!touch || !showArrange || dockBottom !== undefined) return
+    const raf = requestAnimationFrame(measureDock)
+    window.addEventListener('resize', measureDock)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measureDock)
+    }
+  })
 </script>
 
 {#if p && !hidden}
@@ -105,8 +134,8 @@
       </div>
     {/if}
   </div>
-{:else if home.arrange.available && !hidden}
-  <button type="button" class="arrange" class:touch onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
+{:else if showArrange}
+  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
     <Icon name="home" size={16} /> Arrange{#if !touch}<span class="kbd">B</span>{/if}
   </button>
 {/if}
@@ -133,9 +162,8 @@
   }
   .arrange.touch {
     left: auto;
-    right: 14px;
-    bottom: auto;
-    top: 96px;
+    right: max(14px, env(safe-area-inset-right));
+    min-height: 44px;
   }
   .kbd {
     margin-left: 6px;
@@ -147,6 +175,8 @@
   }
   .tray {
     position: absolute;
+    display: flex;
+    flex-direction: column;
     left: 50%;
     bottom: 12px;
     transform: translateX(-50%);
@@ -179,6 +209,7 @@
     color: var(--ember-deep);
   }
   .pieces {
+    flex: none;
     list-style: none;
     margin: 8px 0 0;
     padding: 2px 2px 4px;
@@ -254,5 +285,48 @@
     padding: 4px 0;
     min-height: 34px;
     font-size: 13px;
+  }
+  .tray > * {
+    flex: none;
+  }
+
+  /* Touch: buttons a thumb can hit. */
+  :global(:root.touch) .tray .pad {
+    grid-template-columns: repeat(4, 44px);
+  }
+  :global(:root.touch) .tray .pad button,
+  :global(:root.touch) .tray .controls > button {
+    min-height: 44px;
+  }
+
+  /*
+   * Phone landscape: the tray is a strip down the right side, so the land
+   * stays in view and every button stays on screen (the pieces scroll).
+   */
+  @media (orientation: landscape) {
+    :global(:root.touch) .tray {
+      left: auto;
+      right: max(8px, env(safe-area-inset-right));
+      top: max(8px, env(safe-area-inset-top));
+      bottom: max(8px, env(safe-area-inset-bottom));
+      transform: none;
+      width: min(330px, 42vw);
+      max-height: none;
+      overflow: hidden;
+    }
+    :global(:root.touch) .tray .pieces {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      flex-wrap: wrap;
+      align-content: flex-start;
+    }
+    :global(:root.touch) .tray .piece {
+      width: 76px;
+      min-height: 74px;
+    }
+    :global(:root.touch) .tray .status {
+      font-size: 13px;
+    }
   }
 </style>

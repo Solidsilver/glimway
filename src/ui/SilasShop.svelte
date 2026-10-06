@@ -6,6 +6,7 @@
   import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
   import { MATERIALS } from '../content/expansion-writing'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -92,10 +93,12 @@
     it.embers > 0 ? `${it.embers} embers` : Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="shop-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close Silas’s yard"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="shop-title"><Icon name="home" size={20} /> Silas’s Yard</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close Silas’s yard"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="shop-title"><Icon name="home" size={20} /> Silas’s Yard</h2>
+    </header>
 
     <div class="silas">
       {#if ui.portraits[SILAS.name]}<img src={ui.portraits[SILAS.name]} alt="" class="portrait" />{/if}

@@ -378,6 +378,23 @@ const OBJECTIVES: Record<QuestStage, string> = {
     'The lantern road glows again. Explore Hearthwick, Brackenwood, and the ruin at your own pace.',
 };
 
+/**
+ * The goal in a few words, for the HUD's one line and the quest ribbon
+ * (40 characters at most). The journal keeps the full objective.
+ */
+const SHORT_GOALS: Record<QuestStage, string> = {
+  new: 'Find Mara in the village square',
+  accepted: 'Copy the route stone in Ashwatch Ruin',
+  'clue-found': 'Settle the stone warden',
+  'guardian-defeated': 'Light the lantern at the shrine',
+  'lantern-lit': 'Tell Mara the light is back',
+  complete: 'The road is lit. Wander as you like',
+};
+
+export function questShortGoal(stage: QuestStage): string {
+  return SHORT_GOALS[stage] ?? OBJECTIVES[stage] ?? '';
+}
+
 export function questObjective(stage: QuestStage): string {
   if (typeof stage !== 'string' || !(QUEST_STAGES as readonly string[]).includes(stage)) {
     throw new InvalidSaveError(

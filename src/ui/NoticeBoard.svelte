@@ -10,6 +10,7 @@
   import { itemDef } from '../lib/items'
   import type { ProjectView } from '../lib/api/types'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
 
   // A notice board (Hearthwick or the Commons): Elara's Turning notice, the
@@ -83,10 +84,12 @@
   const heldPapers = (p: ProjectView) => p.grantablePapers.filter((id) => session.state.flags.includes(paperFlag(id)))
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="board-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="board-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the notice board"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="board-title"><Icon name="scroll" size={20} /> Notice Board</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the notice board"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="board-title"><Icon name="scroll" size={20} /> Notice Board</h2>
+    </header>
     <p class="today" data-testid="board-date">{calendarLine(view.day)}</p>
 
     <section aria-label="Notices">

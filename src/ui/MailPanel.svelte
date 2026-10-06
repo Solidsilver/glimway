@@ -9,6 +9,7 @@
   import { MAIL } from '../lib/mail'
   import type { Asset, Mail } from '../lib/api/types'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -105,18 +106,20 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="mail-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="mail-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the mailbox"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="mail-title"><Icon name="scroll" size={20} /> Mailbox</h2>
-    <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'box'} class:on={tab === 'box'} onclick={() => ((tab = 'box'), (message = null))}>
-        Your mail{#if view.buckets.waiting.length}<span class="count">{view.buckets.waiting.length}</span>{/if}
-      </button>
-      <button type="button" role="tab" aria-selected={tab === 'send'} class:on={tab === 'send'} onclick={() => ((tab = 'send'), (message = null))}>Send something</button>
-    </div>
-    {#if view.status === 'offline'}<p class="msg error">Needs a connection. The post goes when the road to your world is clear.</p>{/if}
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the mailbox"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="mail-title"><Icon name="scroll" size={20} /> Mailbox</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'box'} class:on={tab === 'box'} onclick={() => ((tab = 'box'), (message = null))}>
+          Your mail{#if view.buckets.waiting.length}<span class="count">{view.buckets.waiting.length}</span>{/if}
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'send'} class:on={tab === 'send'} onclick={() => ((tab = 'send'), (message = null))}>Send something</button>
+      </div>
+      {#if view.status === 'offline'}<p class="msg error">Needs a connection. The post goes when the road to your world is clear.</p>{/if}
+      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    </header>
 
     {#if tab === 'box'}
       <h3 class="section-title">Waiting for you</h3>
@@ -194,7 +197,7 @@
         </label>
         <p class="hint">Materials, things the Wilds gave back, crafted goods and pieces that aren’t set out can be posted. Embers and keepsakes stay with you. Uncollected parcels come back after {MAIL.returnAfterDays} days.</p>
         {#if view.goods.length === 0}<p class="none">Nothing in your pack to send.</p>{/if}
-        <ul class="goods" aria-label="What to send">
+        <ul class="goods" aria-label="What to send" data-dirty={pick ? 'true' : undefined}>
           {#each view.goods as g (assetKey(g))}
             <li>
               <button type="button" class="good" class:on={pick === assetKey(g)} aria-pressed={pick === assetKey(g)} data-pick={assetKey(g)} onclick={() => ((pick = assetKey(g)), (qty = 1))}>

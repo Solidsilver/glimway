@@ -121,7 +121,7 @@
     font-size: 11.5px;
     color: var(--text-faint);
   }
-  @media (max-width: 560px), (pointer: coarse) {
+  @media (max-width: 560px), (pointer: coarse) and (hover: none) {
     .emotes {
       bottom: max(196px, calc(env(safe-area-inset-bottom) + 196px));
       width: calc(100% - 24px);

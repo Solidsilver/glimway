@@ -91,7 +91,8 @@
     all: unset;
     position: absolute;
     left: 50%;
-    top: 30%;
+    /* Upper third, under the HUD: the hero who just woke stands mid-screen. */
+    top: max(12%, calc(var(--hud-bottom, 0px) + 14px));
     transform: translateX(-50%);
     z-index: 36;
     width: min(420px, 90vw);

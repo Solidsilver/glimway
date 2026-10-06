@@ -8,6 +8,13 @@
  */
 export const touchVec = { x: 0, y: 0 }
 
+/**
+ * Where the hero stands on the game canvas, in CSS pixels (written by the
+ * scene every live frame). The "hold to walk" touch mode steers toward the
+ * finger from here.
+ */
+export const heroScreen = { x: 0, y: 0 }
+
 export const uiState = {
   dialogueOpen: false,
   panelOpen: false,
