@@ -14,10 +14,11 @@
  * The outer Wilds also drift with pale motes of the white quiet.
  */
 import type Phaser from 'phaser'
-import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
+import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoCampSpeaker, echoFlag, echoSoftenedFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
 import { paperFlag } from '../../content/papers.ts'
 import { HEIRLOOMS, HEIRLOOM_GUEST_LINES } from '../../content/heirlooms.ts'
 import { itemsFor } from '../items'
+import { echoKeepsakeOffer, type EchoKeepsakeOffer } from '../keepsakes'
 import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
 import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
 import type { Epoch } from '../../lib/wilds/types.ts'
@@ -28,6 +29,7 @@ import { sfx } from '../sfx'
 import { TILE } from '../textures'
 import { commonsArt } from '../commons-pass'
 import type { Session } from '../session'
+import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { PromptAction } from '../entities/interactables'
 
@@ -386,6 +388,13 @@ export class WildsSites {
     if (s.kind === 'echo') {
       const def = this.echoes.get(s.id)
       if (!def) return null
+      // Carrying the person's keepsake: the camp offers to take it (docs/
+      // items/overview.md), settled or not. The owed lamp stays offered in
+      // the conversation, so leaving never takes the settling away.
+      const offer = echoKeepsakeOffer(def.member, c.flags, this.carried())
+      if (offer) {
+        return { entityId: `site:${s.id}`, label: offer.label, verb: 'Leave', x: spot.x, y: spot.y, claim: () => this.offerKeepsake(s, def, offer) }
+      }
       if (echoSettled(c.flags, def.member)) {
         if (def.member === 'nan' && !c.flags.includes('heirloom:nans-lamplighter-pole')) {
           return { entityId: `site:${s.id}`, label: 'Take Nan’s lamplighter pole', verb: 'Take', x: spot.x, y: spot.y, claim: () => this.takeNanPole() }
@@ -398,6 +407,15 @@ export class WildsSites {
     if (!paper) return null
     const text = SITE_TEXT[s.kind as keyof typeof SITE_TEXT]
     return { entityId: `site:${s.id}`, label: text.verb, verb: 'Look', x: spot.x, y: spot.y, claim: () => this.find(s, paper) }
+  }
+
+  /**
+   * Everything carried, both ways: the save's pack (guests, quest things)
+   * and the world's item stacks (connected play).
+   */
+  private carried(): string[] {
+    const s = this.deps.session
+    return [...s.state.inventory, ...(itemsFor(s).view?.stacks.map((st) => st.itemDef) ?? [])]
   }
 
   /** The action key while a site prompt is up. */
@@ -417,9 +435,46 @@ export class WildsSites {
     sfx('lantern')
     this.deps.fx.sparkBurst(at.x + 16, at.y - 18, 12)
     uiState.dialogueOpen = true
-    bus.emit(EV.dialogue, { id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle] })
+    // A keep left here before the settling: the moment finishes a little softer.
+    const softened = def.keepsake && session.state.flags.includes(echoSoftenedFlag(def.member)) ? [def.keepsake.softened] : []
+    bus.emit(EV.dialogue, { id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle, ...softened] })
     if (def.paper && !session.state.flags.includes(paperFlag(def.paper))) grantPaper(session, def.paper)
     this.render()
+  }
+
+  /** A settle picked in a camp conversation (the keepsake's offer keeps the lamp open). */
+  settleEcho(siteId: string): boolean {
+    const s = this.sites.find((x) => x.id === siteId && x.kind === 'echo')
+    const def = s ? this.echoes.get(s.id) : undefined
+    if (!s || !def) return false
+    this.settle(s, def)
+    return true
+  }
+
+  /**
+   * The camp's offer while you carry its person's keepsake (docs/items/
+   * overview.md, "Returning keepsakes"): the leave choice goes through the
+   * server's `return` op — the same action the residents' talk uses — and
+   * "not yet" never closes the door. While the echo still waits, its lamp
+   * stays offered too. Guests get one short line: the leave itself waits
+   * until they're signed in, like the heirloom beats.
+   */
+  private offerKeepsake(s: StorySite, def: EchoDef, offer: EchoKeepsakeOffer): void {
+    const session = this.deps.session
+    const settled = echoSettled(session.state.flags, def.member)
+    const lamp: DialogueChoice = { text: def.verb, action: `echo:settle:${s.id}` }
+    const notYet: DialogueChoice = { text: 'Not yet' }
+    uiState.dialogueOpen = true
+    bus.emit(EV.dialogue, {
+      id: `wilds-keepsake:${def.member}`,
+      speaker: echoCampSpeaker(def.member, settled),
+      lines: session.link ? [...offer.lines] : [offer.guest],
+      choices: session.link
+        ? [{ text: offer.label, action: offer.action }, ...(settled ? [] : [lamp]), notYet]
+        : settled
+          ? undefined
+          : [lamp, notYet]
+    })
   }
 
   private takeNanPole(): void {

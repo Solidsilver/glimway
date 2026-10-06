@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REPAIR_RULES, repairFor, repairsForArea } from '../src/lib/repairs.ts';
-import { allKeepsakeLines, keepsakeAsk, keepsakeReturnAction, keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../src/game/keepsakes.ts';
+import { allKeepsakeLines, echoKeepsakeOffer, keepsakeAsk, keepsakeReturnAction, keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../src/game/keepsakes.ts';
 import { itemDef, ITEMS, ITEM_RULES } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { buildArea } from '../src/game/worlds.ts';
@@ -114,6 +114,30 @@ test('keepsake lines keep the canon rules', () => {
   const parsed = parseKeepsakeAction(keepsakeReturnAction('tin-whistle', 'hazel'));
   assert.deepEqual(parsed, { def: 'tin-whistle', target: 'hazel' });
   assert.equal(parseKeepsakeAction('home:claim:3'), null);
+});
+
+test('carrying an ownerless keepsake at its Echo camp offers to leave it there', () => {
+  // Nan's road-nails at her camp: the leave goes through the server's
+  // `return` op (the same action the residents' talk uses).
+  const offer = echoKeepsakeOffer('nan', [], ['road-nails']);
+  assert.ok(offer);
+  assert.equal(offer.def, 'road-nails');
+  assert.equal(offer.label, 'Leave the eleven road-nails here');
+  assert.equal(offer.action, 'keep:return:road-nails:nan');
+  assert.ok(offer.lines.length > 0);
+  assert.ok(offer.guest.length > 0);
+  // Bett's candle at hers.
+  const bett = echoKeepsakeOffer('bett', [], ['beeswax-candle', 'road-nails']);
+  assert.ok(bett);
+  assert.equal(bett.def, 'beeswax-candle');
+  assert.equal(bett.action, 'keep:return:beeswax-candle:bett');
+  // Not carried, already left, or no keepsake at that camp: no offer.
+  assert.equal(echoKeepsakeOffer('nan', [], []), null);
+  assert.equal(echoKeepsakeOffer('nan', ['returned:road-nails'], ['road-nails']), null);
+  assert.equal(echoKeepsakeOffer('dorrit', [], ['work-glove']), null);
+  assert.equal(echoKeepsakeOffer('hollis', [], ['whittled-fox']), null);
+  // The camp's offers belong to their person: nails are not Bett's.
+  assert.equal(echoKeepsakeOffer('bett', [], ['road-nails']), null);
 });
 
 test('every repair part has a source a player can get', () => {
