@@ -116,3 +116,39 @@ export const worldCopy = {
   denied: 'That world isn’t open to you any more.',
   offline: 'Your world needs a connection for this.'
 }
+
+/**
+ * The first sign-in's world choice (docs/home-server.md "Party worlds and
+ * world moves"): a newcomer whose party has a world here, or may open one.
+ * Same voice and limit as the move screen.
+ */
+export const firstWorldCopy = {
+  eyebrow: 'Where will you live?',
+  title: (name: string) => `Welcome, ${String(name ?? '').trim().slice(0, 40) || 'traveler'}. Where will you set down your pack?`,
+  lead: (open: boolean) =>
+    open
+      ? 'Your party has no world here yet. Open one for them, or begin in a world that is yours alone.'
+      : 'Your party already keeps a world here. Live in it with them, or begin in a world that is yours alone.',
+  party: {
+    label: (open: boolean) => (open ? 'Open your party’s world' : 'Join your party’s world'),
+    /** Who lives there now (the same words as the Menu). */
+    who: (n: number) => (n <= 0 ? 'No one lives there just now.' : n === 1 ? 'One traveler calls it home.' : `${n} travelers call it home.`),
+    first: 'No lamps lit there yet. You’d be the first to walk its road.',
+    belongs: 'It belongs to the party, not to any one of you.',
+    straightIn: 'Party members come straight in, no code needed.',
+  },
+  own: {
+    label: 'Start a world of your own',
+    yours: 'Yours alone: its own road, its own lamps, its own Wilds.',
+    friends: 'Invite friends with a code from the Menu.',
+    later: 'Your party’s world stays on offer in the Menu, if you change your mind.',
+  },
+  note: 'Either way you can move later from the Menu. Travelers rest a day between worlds.',
+  later: 'Not now',
+  working: 'Setting down your pack…',
+  failed: 'That didn’t go through. Choose again in a moment.',
+  partyGone: 'Your party’s world can’t be opened just now. A world of your own is still yours to start.',
+  offline: 'Choosing your world needs a connection.',
+  /** The title screen's Continue card while the choice waits. */
+  titleGoal: 'Choose where to live.',
+}

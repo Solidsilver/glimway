@@ -12,7 +12,7 @@
   import InvitePanel from './InvitePanel.svelte'
   import WorldCard from './WorldCard.svelte'
   import type { HabiticaProfile } from '../lib/habitica/types'
-  import type { Snapshot, WorldRef, WorldView } from '../lib/api/types'
+  import type { Snapshot, WorldChoice, WorldRef, WorldView } from '../lib/api/types'
   import { accountCopy, offlineCopy } from '../content/connected'
   import { CONTROLS, TOUCH_CONTROLS } from '../content/controls'
   import { isTouchFirst } from './device'
@@ -37,7 +37,7 @@
     session: Session
     onClose: () => void
     /** The guide signed in to the Fingersnap server (connected mode starts). */
-    onSignedIn?: (snapshot: Snapshot, profile: HabiticaProfile) => void
+    onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
     onLogout?: () => void
     /** Signed in but playing the guest save: switch to the world. */
     onEnterWorld?: () => void

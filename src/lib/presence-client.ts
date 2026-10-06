@@ -56,6 +56,8 @@ export interface PresenceHandlers {
   emote?(habiticaId: string, id: string): void;
   /** Someone standing by you handed you something (the server says who and what). */
   gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
+  /** Someone standing near you reached a story beat (the server says who and which). */
+  witness?(w: { beat: string; habiticaId: string; name: string }): void;
 }
 
 export interface Timers {
@@ -374,6 +376,11 @@ export class PresenceClient {
       case 'gift':
         if (typeof m.fromName === 'string' && typeof m.itemDef === 'string' && typeof m.kind === 'string' && Number.isInteger(m.qty) && m.qty > 0) {
           this.handlers.gift?.({ fromName: m.fromName.slice(0, 80), kind: m.kind, itemDef: m.itemDef, qty: m.qty });
+        }
+        break;
+      case 'witness':
+        if (typeof m.beat === 'string' && typeof m.habiticaId === 'string' && m.habiticaId && typeof m.name === 'string') {
+          this.handlers.witness?.({ beat: m.beat, habiticaId: m.habiticaId, name: m.name.slice(0, 80) });
         }
         break;
     }

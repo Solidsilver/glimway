@@ -14,7 +14,7 @@
   import { connectedClient, connectSession, creatorId, disconnectSession, fixtureProfiles, friendlyErrorCopy, isConnected } from './habitica-local'
   import { api } from './account'
   import { errorCode, isUnreachable } from '../lib/api/errors'
-  import type { Snapshot } from '../lib/api/types'
+  import type { Snapshot, WorldChoice } from '../lib/api/types'
   import { offlineCopy, signInCopy } from '../content/connected'
 
   /**
@@ -35,7 +35,7 @@
     onBack?: () => void
     onReady?: () => void
     /** A Fingersnap server answered the sign-in: connected mode takes over from here. */
-    onSignedIn?: (snapshot: Snapshot, profile: HabiticaProfile) => void
+    onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
   } = $props()
 
   type ConnectionState = 'disconnected' | 'connected' | 'syncing' | 'error'

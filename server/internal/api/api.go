@@ -116,7 +116,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -184,6 +184,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.worldLeave(w, r)
 	case "POST /api/world/notice":
 		err = a.worldNotice(w, r)
+	case "GET /api/world/choice":
+		err = a.worldChoiceRead(w, r)
+	case "POST /api/world/choose":
+		err = a.worldChoose(w, r)
 	case "POST /api/session":
 		err = a.login(w, r)
 	case "DELETE /api/session":
@@ -292,6 +296,14 @@ func (a *Server) auth(ctx context.Context, tx *sql.Tx, r *http.Request) (string,
 	now := a.Config.Now().Unix()
 	err = tx.QueryRowContext(ctx, "SELECT s.habitica_id FROM sessions s JOIN allowlist l USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?", hash, now, now-int64(SessionTTL.Seconds())).Scan(&id)
 	if err == sql.ErrNoRows {
+		// Signed in, but the world isn't chosen yet: everything waits for
+		// POST /api/world/choose (world_choice.go).
+		if _, err = pendingSession(ctx, tx, hash, now); err == nil {
+			return "", "", fail(409, "world-choice-required")
+		}
+		if err != sql.ErrNoRows {
+			return "", "", err
+		}
 		return "", "", fail(401, "unauthorized")
 	}
 	if err != nil {
@@ -473,53 +485,47 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	// A newcomer whose party has a world here, or who may open one, is asked
+	// where to live (POST /api/world/choose), unless a code named a world.
+	// The sign-in is held until then: the session, but no player yet.
+	var offer *worldChoiceView
+	if existing == 0 && world == "" {
+		v, err := a.loadWorldChoice(ctx, tx, p.ID, p.Name, p.PartyID)
+		if err != nil {
+			return err
+		}
+		if v.PartyWorld != nil || v.PartyCanOpen {
+			offer = &v
+		}
+	}
 	// The first operator-admitted member of a party to sign in makes the
-	// party's world; one let in through a party never makes another.
-	why, err := a.mayOpenParty(ctx, tx, p.ID, p.PartyID)
-	if err != nil {
-		return err
-	}
-	var pw string
-	if why == "" {
-		pw, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now)
-	} else {
-		pw, err = partyWorld(ctx, tx, p.PartyID)
-	}
-	if err != nil {
-		return err
+	// party's world; one let in through a party never makes another. A
+	// newcomer still choosing makes it only by choosing it.
+	if offer == nil {
+		why, err := a.mayOpenParty(ctx, tx, p.ID, p.PartyID)
+		if err != nil {
+			return err
+		}
+		if why == "" {
+			if _, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now); err != nil {
+				return err
+			}
+		}
 	}
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
 	movedOut := false
-	if existing == 0 {
+	if existing == 0 && offer == nil {
 		if world == "" {
-			world = pw
-		}
-		if world == "" {
-			world, err = store.Random()
+			own, err := ownWorld(ctx, tx, p.ID, now)
 			if err != nil {
 				return err
 			}
-			seed, err := store.Random()
-			if err != nil {
-				return err
-			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
-				return err
-			}
+			world = own.ID
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {
+		if err = createPlayer(ctx, tx, p, world, now, now); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO progress VALUES(?,1,0,?,?)", p.ID, store.JSON(rules.NewState()), now); err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", p.ID); err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO sync_baselines(habitica_id,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level) VALUES(?,?,?,?,?,?,?,?,?,?)", p.ID, verified, verified, store.JSON(p), now, now, p.Level, verified, now, p.Level); err != nil {
-			return err
-		}
-	} else {
+	} else if existing != 0 {
 		s, err := store.Load(ctx, tx, p.ID)
 		if err != nil {
 			return err
@@ -544,8 +550,21 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	expires := time.Unix(now, 0).Add(SessionIdleTTL)
-	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE expires_at<=? OR created_at<=?", now, now-int64(SessionTTL.Seconds())); err != nil {
-		return err
+	for _, table := range []string{"sessions", "pending_sessions"} {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM "+table+" WHERE expires_at<=? OR created_at<=?", now, now-int64(SessionTTL.Seconds())); err != nil {
+			return err
+		}
+	}
+	if offer != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO pending_sessions VALUES(?,?,?,?,?,?,?,?)", store.Hash(session), p.ID, p.Name, p.PartyID, now, expires.Unix(), store.JSON(p), verified); err != nil {
+			return err
+		}
+		if err = tx.Commit(); err != nil {
+			return err
+		}
+		a.cookie(w, session, expires)
+		write(w, 200, worldChoiceAnswer{*offer})
+		return nil
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), p.ID, now, expires.Unix(), store.JSON(p), verified); err != nil {
 		return err
@@ -583,8 +602,10 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
-		if _, err = tx.ExecContext(r.Context(), "DELETE FROM sessions WHERE id_hash=?", hash); err != nil {
-			return err
+		for _, table := range []string{"sessions", "pending_sessions"} {
+			if _, err = tx.ExecContext(r.Context(), "DELETE FROM "+table+" WHERE id_hash=?", hash); err != nil {
+				return err
+			}
 		}
 		prefix := hash + ":"
 		if _, err = tx.ExecContext(r.Context(), "UPDATE players SET lease_id=NULL,lease_client=NULL,lease_seen_at=NULL WHERE lease_client IS NOT NULL AND substr(lease_client,1,?)=?", len(prefix), prefix); err != nil {
@@ -680,7 +701,11 @@ func revision(s store.Snapshot, m Mutation, current bool) error {
 	}
 	return nil
 }
-func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMessage, stale bool, now int64) error {
+
+// upload merges a progress document. It reports the story beats the merge
+// added (witness.go), none for a stale one: that is another device's
+// catching up, not a moment anyone stands beside.
+func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMessage, stale bool, now int64) ([]string, error) {
 	maxHP, maxMana := s.State.MaxHP, s.State.MaxMana
 	if stale {
 		maxHP = 1e6
@@ -688,16 +713,21 @@ func upload(ctx context.Context, tx *sql.Tx, s *store.Snapshot, raw json.RawMess
 	}
 	p, err := rules.DecodeProgress(raw, maxHP, maxMana)
 	if err != nil {
-		return fail(400, "invalid-progress")
+		return nil, fail(400, "invalid-progress")
 	}
 	if !stale && s.VitalsSource == "imported" && s.ImportedProfile != nil && s.State.HP <= 0 && s.ImportedProfile.HP <= 0 && p.HP != 0 {
-		return fail(400, "invalid-progress")
+		return nil, fail(400, "invalid-progress")
 	}
+	before := s.State
 	s.State = rules.Merge(s.State, p, stale)
 	if !rules.ValidMerged(s.State) {
-		return fail(400, "invalid-progress")
+		return nil, fail(400, "invalid-progress")
 	}
-	return gifts(ctx, tx, s, now)
+	var beats []string
+	if !stale {
+		beats = storyBeats(before, s.State)
+	}
+	return beats, gifts(ctx, tx, s, now)
 }
 func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
 	for _, g := range []struct{ event, stage string }{{"defeat-guardian", "guardian-defeated"}, {"return-village", "complete"}} {
@@ -743,7 +773,8 @@ func (a *Server) progress(w http.ResponseWriter, r *http.Request) error {
 	if stale {
 		status = "stale"
 	}
-	if err = upload(ctx, tx, &s, req.Doc, stale, a.Config.Now().Unix()); err != nil {
+	beats, err := upload(ctx, tx, &s, req.Doc, stale, a.Config.Now().Unix())
+	if err != nil {
 		return err
 	}
 	if err = store.Persist(ctx, tx, &s, a.Config.Now().Unix()); err != nil {
@@ -752,7 +783,7 @@ func (a *Server) progress(w http.ResponseWriter, r *http.Request) error {
 	return a.finish(w, r, tx, struct {
 		store.Snapshot
 		Status string `json:"status"`
-	}{s, status})
+	}{s, status}, a.witnessed(s, beats))
 }
 func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
@@ -786,7 +817,8 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if !rules.Plausible(p) {
 		return fail(422, "implausible-profile")
 	}
-	if err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
+	beats, err := upload(ctx, tx, &s, req.Progress, false, now)
+	if err != nil {
 		return err
 	}
 	if !rules.IsSafeArea(s.State.Area) {
@@ -854,7 +886,7 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 		store.Snapshot
 		Status       string             `json:"status"`
 		VitalsCredit map[string]float64 `json:"vitalsCredit"`
-	}{s, r0.Status, map[string]float64{"hp": s.State.HP - before.HP, "mana": s.State.Mana - before.Mana}})
+	}{s, r0.Status, map[string]float64{"hp": s.State.HP - before.HP, "mana": s.State.Mana - before.Mana}}, a.witnessed(s, beats))
 }
 func idem(ctx context.Context, tx *sql.Tx, id, op, key string, req any, now int64) (string, string, error) {
 	if key == "" || len(key) > 128 {
@@ -920,8 +952,9 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 	if err = revision(s, req.Mutation, true); err != nil {
 		return err
 	}
+	var beats []string
 	if len(req.Progress) > 0 && string(req.Progress) != "null" {
-		if err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
+		if beats, err = upload(ctx, tx, &s, req.Progress, false, now); err != nil {
 			return err
 		}
 	}
@@ -973,7 +1006,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 	if err = saveIdem(ctx, tx, s.HabiticaID, "spend", req.Key, hash, v, now); err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v)
+	return a.finish(w, r, tx, v, a.witnessed(s, beats))
 }
 func (a *Server) origin(w http.ResponseWriter, r *http.Request) error {
 	var req struct {

@@ -51,6 +51,7 @@ import { Thoughts } from '../entities/thoughts'
 import { presence } from '../presence'
 import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
+import { hasWitnessed, isWitnessBeat, witnessCopy, witnessFlag, witnessMoment } from '../../content/witness'
 import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
 import { ITEM_ART_FALLBACK, itemIcon, itemIconUrls } from '../items-pass'
@@ -94,6 +95,9 @@ import type { GuideWhere } from '../../content/guides'
 import { MAX_SCREEN_SCALE } from '../atlas-plan'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
+
+/** How long a waiting warden rests for someone else's naming before it remembers its pose. */
+const WITNESS_REST_MS = 4200
 
 interface SceneData {
   entry?: { tx: number; ty: number }
@@ -438,9 +442,11 @@ export class WorldScene extends Phaser.Scene {
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, !!this.room)
     bus.on(EV.emote, this.onOwnEmote, this)
+    bus.on(EV.witness, this.onWitness, this)
     this.events.once('shutdown', () => {
       this.remotePlayers.clear()
       bus.off(EV.emote, this.onOwnEmote, this)
+      bus.off(EV.witness, this.onWitness, this)
     })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
@@ -1078,6 +1084,25 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Our own emote: a bubble over the hero (the server doesn't echo it back). */
+  /**
+   * Someone standing near reached a story beat (the server relayed it from
+   * its record of their progress): the moment on screen, a lantern over
+   * them, and a journal line, once per beat and traveler. Your story doesn't
+   * move. Your own waiting warden rests a moment, then remembers its pose.
+   */
+  private onWitness(p: { beat: string; habiticaId: string; name: string }): void {
+    const s = this.session
+    if (!s.link || !p || !isWitnessBeat(p.beat) || !p.habiticaId) return
+    if (hasWitnessed(s.state.flags, p.beat, p.habiticaId)) return
+    s.addFlag(witnessFlag(p.beat, p.habiticaId, p.name))
+    emitResidents(s)
+    bus.emit(EV.toast, { text: witnessMoment(p.beat, p.name), icon: 'lantern' })
+    bus.emit(EV.emote, { habiticaId: p.habiticaId, id: 'lantern' } satisfies EmotePayload)
+    if (p.beat === 'warden' && this.world.areaId === 'ruin') {
+      this.enemies.witnessRest(WITNESS_REST_MS, () => bus.emit(EV.toast, { text: witnessCopy.wardenRises, icon: 'lantern' }))
+    }
+  }
+
   private onOwnEmote(p: EmotePayload): void {
     if (p.habiticaId !== null) return
     this.ownBubble?.destroy()

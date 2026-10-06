@@ -132,6 +132,8 @@
         "src/content/world-moves.ts",
         "src/lib/world-moves.ts",
         "src/ui/PartyPrompt.svelte",
+        "src/ui/WorldChoiceGate.svelte",
+        "src/ui/account.ts",
         "src/ui/LeaverNotice.svelte",
         "src/ui/InvitePanel.svelte",
         "src/ui/WorldMove.svelte",
@@ -141,6 +143,7 @@
         "src/game/link.ts",
         "src/lib/api/**",
         "server/internal/api/worlds.go",
+        "server/internal/api/world_choice.go",
         "server/internal/api/invites.go",
         "server/internal/api/login_limits.go",
         "server/internal/store/parties.go",
@@ -149,7 +152,11 @@
         "server/internal/store/migrations/**",
         "e2e/party-helpers.ts"
       ],
-      "specs": ["party-worlds.spec.ts", "party-worlds-screens.spec.ts", "presence.spec.ts"]
+      "specs": ["party-worlds.spec.ts", "party-worlds-screens.spec.ts", "presence.spec.ts", "coop.spec.ts"]
+    },
+    {
+      "paths": ["src/content/witness.ts", "server/internal/api/witness.go", "src/game/presence*.ts", "src/lib/presence*.ts", "src/game/entities/enemies.ts"],
+      "specs": ["coop.spec.ts"]
     },
     {
       "paths": ["server/internal/rules/**", "src/lib/embers.ts", "src/lib/economy.ts"],

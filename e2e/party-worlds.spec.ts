@@ -15,7 +15,7 @@ const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __f
 
 const worldView = async (page: Page) => (await page.request.get('/api/world')).json()
 
-test('a party member signs in with no code and lands in the party’s world', async ({ page, browser, baseURL }) => {
+test('a party member signs in with no code and, choosing it, lands in the party’s world', async ({ page, browser, baseURL }) => {
   const { party, world } = await partyOwner(page)
   // Not allowlisted, no invite code: the party is enough.
   const rue = newUser()

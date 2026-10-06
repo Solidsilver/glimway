@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MOVE_AREAS, moveBlocks, moveRefusal } from '../src/lib/world-moves.ts';
-import { worldCopy } from '../src/content/world-moves.ts';
-import { parseWorld, parseWorldMove } from '../src/lib/api/parse.ts';
+import { firstWorldCopy, worldCopy } from '../src/content/world-moves.ts';
+import { parseWorld, parseWorldChoice, parseWorldMove } from '../src/lib/api/parse.ts';
 import { errorFromResponse } from '../src/lib/api/errors.ts';
 import { inviteCopy, signInCopy } from '../src/content/connected.ts';
 import { parseInviteList } from '../src/lib/api/parse.ts';
@@ -156,4 +156,28 @@ test('a move answer carries the snapshot and the new world', () => {
   assert.equal(res.rev, 7);
   assert.deepEqual(res.result, { world: view, from: 'w1', leftHome: true, returned: 2 });
   assert.throws(() => parseWorldMove(snapshot));
+});
+
+test('the first sign-in’s world question: parsed apart from a snapshot, its copy short and in voice', () => {
+  const q = parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false } });
+  assert.deepEqual(q, { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false });
+  assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'olive', displayName: 'Olive', partyWorld: null, partyCanOpen: true } })?.partyCanOpen, true);
+  // A snapshot is not a question.
+  assert.equal(parseWorldChoice({ habiticaId: 'rue', state: {} }), null);
+  assert.equal(errorFromResponse(409, { error: { code: 'world-choice-required' } }).code, 'world-choice-required');
+  assert.equal(errorFromResponse(409, { error: { code: 'world-chosen' } }).code, 'world-chosen');
+  const samples: string[] = [];
+  const walk = (v: unknown): void => {
+    if (typeof v === 'string') samples.push(v);
+    else if (typeof v === 'function') for (const arg of ['Bartholomew-the-Extraordinarily-Long-Named-Keeper', '', 0, 1, 7, true, false] as never[]) samples.push((v as (a: never) => string)(arg));
+    else if (v && typeof v === 'object') for (const x of Object.values(v)) walk(x);
+  };
+  walk(firstWorldCopy);
+  for (const s of samples) {
+    assert.ok(s.length > 0 && s.length <= 160, `${s.length}: ${s}`);
+    assert.doesNotMatch(s, /undefined|NaN|habitica|app\b|task|todo|daily|dailies|habit\b/i, s);
+  }
+  assert.equal(firstWorldCopy.party.who(3), '3 travelers call it home.');
+  assert.equal(firstWorldCopy.party.label(false), 'Join your party’s world');
+  assert.equal(firstWorldCopy.party.label(true), 'Open your party’s world');
 });

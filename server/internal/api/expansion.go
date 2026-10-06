@@ -32,8 +32,9 @@ func (a *Server) keyedMutation(w http.ResponseWriter, r *http.Request, m Mutatio
 	if err = revision(s, m, true); err != nil {
 		return err
 	}
+	var beats []string
 	if len(progress) > 0 && string(progress) != "null" {
-		if err = upload(ctx, tx, &s, progress, false, now); err != nil {
+		if beats, err = upload(ctx, tx, &s, progress, false, now); err != nil {
 			return err
 		}
 	}
@@ -56,7 +57,7 @@ func (a *Server) keyedMutation(w http.ResponseWriter, r *http.Request, m Mutatio
 	if err = saveIdem(ctx, tx, s.HabiticaID, op, key, hash, v, now); err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v, afterCommit...)
+	return a.finish(w, r, tx, v, append(afterCommit, a.witnessed(s, beats))...)
 }
 func currency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, reason, ref string, now int64) error {
 	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", id, currency, delta, reason, ref, now)

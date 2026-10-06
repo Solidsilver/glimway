@@ -96,7 +96,8 @@ export class PresenceFeed {
           const p = this.peers.get(id)
           if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { habiticaId: id, id: emote } satisfies EmotePayload)
         },
-        gift: (g) => this.bus.emit(EV.gift, g)
+        gift: (g) => this.bus.emit(EV.gift, g),
+        witness: (w) => this.bus.emit(EV.witness, w)
       }
     })
     this.bus.on(EV.link, this.onLink)

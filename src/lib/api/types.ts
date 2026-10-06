@@ -149,6 +149,20 @@ export interface WorldRef {
   party: boolean;
 }
 
+/**
+ * A first sign-in held for the world choice (POST /api/session, GET
+ * /api/world/choice): the account is signed in, but has no world until
+ * POST /api/world/choose. Everything else answers `world-choice-required`.
+ */
+export interface WorldChoice {
+  habiticaId: string;
+  displayName: string;
+  /** The party's world here, and how many live there. */
+  partyWorld: WorldRef | null;
+  /** The party has no world here yet: choosing it opens one. */
+  partyCanOpen: boolean;
+}
+
 /** What a move would leave behind (GET /api/world). */
 export interface WorldLeaving {
   /** Your homestead's gate (-1: none). */

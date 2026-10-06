@@ -102,7 +102,10 @@ func (x *rig) partyWorldOf(party string) string {
 // signIn: a sign-in with no code and no allowlist entry added for it,
 // saying which party the client expects ("" for none).
 func (x *rig) signIn(id, party string) (int, string, *http.Cookie) {
-	st, _, e, c := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "party": party}, nil)
+	st, v, e, c := x.request("POST", "/api/session", map[string]any{"userId": id, "token": secret, "party": party}, nil)
+	if st == 200 {
+		x.chooseIfAsked(v, c)
+	}
 	return st, e, c
 }
 
