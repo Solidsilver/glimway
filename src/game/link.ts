@@ -825,12 +825,17 @@ export class Link {
         // Keyed on changes made offline, not on the current status: the first
         // try after reconnecting may have met another device's lease.
         const notice = reconnectNotice(plan, this.offlineProgress)
-        const res = await this.api.run((raw) =>
-          raw.progress({ lease: this.lease!, baseRev: plan.baseRev, doc: toProgress(s.state) }, { keepalive: true })
-        )
-        const pre = s.state
-        this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
-        this.acked = docKey(s.state)
+        // Send and adopt in one queue task, like `exchange`: anything changed
+        // while the upload was out stays unacked and goes up next.
+        const { res, pre } = await this.api.run(async (raw) => {
+          const sentKey = docKey(s.state)
+          const r = await raw.progress({ lease: this.lease!, baseRev: plan.baseRev, doc: toProgress(s.state) }, { keepalive: true })
+          const changedMeanwhile = docKey(s.state) !== sentKey
+          const pre = s.state
+          this.apply(r, r.status === 'current' ? 'keep-local' : 'server')
+          this.acked = changedMeanwhile ? sentKey : docKey(s.state)
+          return { res: r, pre }
+        })
         if (res.status === 'current') this.giftToast(pre)
         if (notice) {
           this.recovery = { state: offlineCopy, savedAt: Date.now() }

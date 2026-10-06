@@ -243,6 +243,24 @@ test('unsent changes that were not made offline merge without the notice (findin
   link.stop();
 });
 
+test('a change made while the reconnect upload is out stays unsent and goes up next (review: reconnect ack)', async () => {
+  const server = fakeServer();
+  const { link, session } = makeLink(server, { status: 'offline', rev: 3, dirty: true, offlineProgress: false, state: base({ hp: 25 }) });
+  server.on('POST /api/play', { body: { ...snap(base({ hp: 25 }), 3), lease: 'L1' } });
+  server.on('PUT /api/progress', (c) => ({ body: { ...snap({ ...base(), ...c.body.doc, maxHp: 50, maxMana: 36 }, c.body.baseRev + 1), status: 'current' } }));
+  const release = server.hold('PUT /api/progress');
+  const done = link.reconnect(false);
+  while (server.sent('PUT /api/progress').length === 0) await new Promise((r) => setTimeout(r, 1));
+  session.state = { ...session.state, quest: 'accepted' };
+  release();
+  await done;
+  for (let i = 0; i < 200 && server.sent('PUT /api/progress').length < 2; i++) await settle();
+  const up = server.sent('PUT /api/progress');
+  assert.equal(up.length, 2, 'the change made meanwhile goes up next');
+  assert.equal(up[1].body.doc.quest, 'accepted');
+  link.stop();
+});
+
 test('offline progress meeting newer progress shows the notice and keeps a recovery copy', async () => {
   const server = fakeServer();
   const { link, events } = makeLink(server, { status: 'offline', rev: 3, dirty: true, offlineProgress: true, state: base({ hp: 25, quest: 'accepted' }) });
