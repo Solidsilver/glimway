@@ -1,9 +1,19 @@
 {
   "rules": {
     "grades": {
-      "cheap": { "slots": 1, "atZero": "breaks" },
-      "heirloom": { "slots": 3, "atZero": "blunt", "bound": true },
-      "special": { "slots": 0, "atZero": "never" }
+      "cheap": {
+        "slots": 1,
+        "atZero": "breaks"
+      },
+      "heirloom": {
+        "slots": 3,
+        "atZero": "blunt",
+        "bound": true
+      },
+      "special": {
+        "slots": 0,
+        "atZero": "never"
+      }
     },
     "wear": {
       "pointsPerUse": 3,
@@ -12,13 +22,42 @@
       "wornBelowPercent": 50,
       "wardenDullUses": 40
     },
-    "pockets": { "base": 1, "withCarryGear": 2 },
-    "offHand": { "tuckDuring": ["chop", "dig", "sit", "draw", "fight"] },
-    "give": { "radiusTiles": 3 },
-    "thanks": { "nearbyTiles": 6 },
+    "pockets": {
+      "base": 1,
+      "withCarryGear": 2
+    },
+    "offHand": {
+      "tuckDuring": [
+        "chop",
+        "dig",
+        "sit",
+        "draw",
+        "fight"
+      ]
+    },
+    "give": {
+      "radiusTiles": 3
+    },
+    "thanks": {
+      "nearbyTiles": 6
+    },
     "menders": [
-      { "npc": "silas", "name": "Silas", "area": "commons", "tx": 51, "ty": 21, "radiusTiles": 4 },
-      { "npc": "orrin", "name": "Orrin", "area": "village", "tx": 21, "ty": 9, "radiusTiles": 4 }
+      {
+        "npc": "silas",
+        "name": "Silas",
+        "area": "commons",
+        "tx": 51,
+        "ty": 21,
+        "radiusTiles": 4
+      },
+      {
+        "npc": "orrin",
+        "name": "Orrin",
+        "area": "village",
+        "tx": 21,
+        "ty": 9,
+        "radiusTiles": 4
+      }
     ]
   },
   "items": [
@@ -29,7 +68,9 @@
       "kind": "tool",
       "grade": "cheap",
       "uses": 30,
-      "actions": ["chop"],
+      "actions": [
+        "chop"
+      ],
       "marked": true,
       "blurb": "Pine haft, soft scrap-iron head. Chops trees in the Tangle and on your land."
     },
@@ -40,7 +81,9 @@
       "kind": "tool",
       "grade": "cheap",
       "uses": 30,
-      "actions": ["break"],
+      "actions": [
+        "break"
+      ],
       "marked": true,
       "blurb": "Breaks boulders into quarry stone and drift-stone."
     },
@@ -51,7 +94,9 @@
       "kind": "tool",
       "grade": "cheap",
       "uses": 30,
-      "actions": ["dig"],
+      "actions": [
+        "dig"
+      ],
       "marked": true,
       "blurb": "Digs saplings, roots, herbs, turncap spawn and wild honey."
     },
@@ -62,7 +107,9 @@
       "kind": "tool",
       "grade": "cheap",
       "uses": 30,
-      "actions": ["draw"],
+      "actions": [
+        "draw"
+      ],
       "marked": true,
       "blurb": "Oak staves, iron hoops. Draws water at the well. The hoops loosen with use."
     },
@@ -73,7 +120,9 @@
       "kind": "tool",
       "grade": "cheap",
       "uses": 30,
-      "actions": ["water"],
+      "actions": [
+        "water"
+      ],
       "blurb": "Tarrow tin, bought from Silas. Waters a bed in one go. Watering is never required."
     },
     {
@@ -83,8 +132,19 @@
       "kind": "tool",
       "grade": "heirloom",
       "uses": 80,
-      "actions": ["chop"],
-      "repair": { "bench": { "timber": 2, "wooden-peg": 1 }, "mender": { "timber": 2, "wooden-peg": 1 } },
+      "actions": [
+        "chop"
+      ],
+      "repair": {
+        "bench": {
+          "timber": 2,
+          "wooden-peg": 1
+        },
+        "mender": {
+          "timber": 2,
+          "wooden-peg": 1
+        }
+      },
       "blurb": "Ash haft, iron head forged by Maren Brack, Hollis's sister. Rehafted by Orrin with a trunnel through the eye."
     },
     {
@@ -95,10 +155,24 @@
       "grade": "heirloom",
       "uses": 80,
       "atZero": "cracked",
-      "actions": ["trim"],
+      "actions": [
+        "trim"
+      ],
       "offHand": true,
-      "held": [{ "type": "light", "amount": 6 }],
-      "repair": { "bench": { "fiber": 2 }, "mender": { "fiber": 2 } },
+      "held": [
+        {
+          "type": "light",
+          "amount": 6
+        }
+      ],
+      "repair": {
+        "bench": {
+          "fiber": 2
+        },
+        "mender": {
+          "fiber": 2
+        }
+      },
       "blurb": "A long pole with a hook and a wick-trimmer. Sets lamp heads and trims wicks. Carried, it lights the way a little further than a lantern."
     },
     {
@@ -107,7 +181,9 @@
       "tab": "tools",
       "kind": "tool",
       "grade": "special",
-      "actions": ["mark"],
+      "actions": [
+        "mark"
+      ],
       "blurb": "The Hall's wheel-and-wave stamp. Strikes a wax seal into a standing iron-oak. Never wears."
     },
     {
@@ -115,8 +191,28 @@
       "name": "Carter's lantern",
       "tab": "tools",
       "kind": "off-hand",
-      "held": [{ "type": "light", "amount": 4 }, { "type": "wisps-keep-off" }],
-      "affinity": { "class": "warrior", "held": [{ "type": "light", "amount": 5 }, { "type": "wisps-keep-off", "amount": 2 }] },
+      "held": [
+        {
+          "type": "light",
+          "amount": 4
+        },
+        {
+          "type": "wisps-keep-off"
+        }
+      ],
+      "affinity": {
+        "class": "warrior",
+        "held": [
+          {
+            "type": "light",
+            "amount": 5
+          },
+          {
+            "type": "wisps-keep-off",
+            "amount": 2
+          }
+        ]
+      },
       "blurb": "Lights the way in the dark Tangle; wisps keep a little further off. A fill of candle oil lasts a long while."
     },
     {
@@ -124,8 +220,23 @@
       "name": "Your own whistle",
       "tab": "tools",
       "kind": "off-hand",
-      "held": [{ "type": "whistle" }],
-      "affinity": { "class": "rogue", "held": [{ "type": "whistle", "amount": 2 }, { "type": "papers-chime" }] },
+      "held": [
+        {
+          "type": "whistle"
+        }
+      ],
+      "affinity": {
+        "class": "rogue",
+        "held": [
+          {
+            "type": "whistle",
+            "amount": 2
+          },
+          {
+            "type": "papers-chime"
+          }
+        ]
+      },
       "blurb": "A plain tin whistle from Pip that you dent to your own note. Echoes nearby answer it."
     },
     {
@@ -281,7 +392,12 @@
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
-      "use": [{ "type": "restore-hp", "amount": 10 }],
+      "use": [
+        {
+          "type": "restore-hp",
+          "amount": 10
+        }
+      ],
       "blurb": "Hazel's butter batch. A small mend. \"Not quite right,\" she says."
     },
     {
@@ -289,7 +405,12 @@
       "name": "Finn's oatcakes",
       "tab": "supplies",
       "kind": "consumable",
-      "use": [{ "type": "restore-hp", "amount": 5 }],
+      "use": [
+        {
+          "type": "restore-hp",
+          "amount": 5
+        }
+      ],
       "blurb": "A little mend. Sold in fives, of course."
     },
     {
@@ -298,7 +419,13 @@
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
-      "use": [{ "type": "restore-mana", "amount": 8, "seconds": 60 }],
+      "use": [
+        {
+          "type": "restore-mana",
+          "amount": 8,
+          "seconds": 60
+        }
+      ],
       "blurb": "Grey-green and salty. Mana comes back slowly over a minute."
     },
     {
@@ -307,7 +434,11 @@
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
-      "use": [{ "type": "clear-unmoored" }],
+      "use": [
+        {
+          "type": "clear-unmoored"
+        }
+      ],
       "blurb": "Clears the drift's sway at once. \"The hands keep more memory than the head.\""
     },
     {
@@ -317,7 +448,11 @@
       "kind": "keepsake",
       "bound": true,
       "belongsTo": "silas",
-      "pocket": [{ "type": "papers-glint" }],
+      "pocket": [
+        {
+          "type": "papers-glint"
+        }
+      ],
       "blurb": "A carter's door-fox in soft pine, one ear carved longer than the other. Meant for a lintel somewhere."
     },
     {
@@ -327,7 +462,12 @@
       "kind": "keepsake",
       "bound": true,
       "belongsTo": "ada",
-      "pocket": [{ "type": "notice-later", "target": "beetles" }],
+      "pocket": [
+        {
+          "type": "notice-later",
+          "target": "beetles"
+        }
+      ],
       "blurb": "Rope worked in a patient, talkative knot, the kind a driver ties while chatting to the oxen."
     },
     {
@@ -335,7 +475,12 @@
       "name": "Work Glove",
       "tab": "keepsakes",
       "kind": "keepsake",
-      "pocket": [{ "type": "gather-more", "target": "fiber" }],
+      "pocket": [
+        {
+          "type": "gather-more",
+          "target": "fiber"
+        }
+      ],
       "blurb": "Taken off for a fiddly job and never fetched. It still holds the shape of the hand that left it."
     },
     {
@@ -343,7 +488,11 @@
       "name": "River Glass Bead",
       "tab": "keepsakes",
       "kind": "keepsake",
-      "pocket": [{ "type": "pond-skip" }],
+      "pocket": [
+        {
+          "type": "pond-skip"
+        }
+      ],
       "blurb": "Frosted green glass off a carter's harness, tumbled smooth. The Wend brings down what the first frost throws."
     },
     {
@@ -354,7 +503,11 @@
       "bound": true,
       "belongsTo": "hazel",
       "offHand": true,
-      "held": [{ "type": "whistle" }],
+      "held": [
+        {
+          "type": "whistle"
+        }
+      ],
       "blurb": "Dented to one clear note. Runners dent their whistles until the note is theirs. Whose note this was, nobody says."
     },
     {
@@ -399,6 +552,363 @@
       "tab": "home",
       "kind": "home-good",
       "blurb": "Where hearth recipes are made."
+    },
+    {
+      "id": "orrins-mason-pick",
+      "name": "Orrin's mason pick",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "heirloom",
+      "uses": 80,
+      "actions": [
+        "break"
+      ],
+      "repair": {
+        "bench": {
+          "timber": 2,
+          "wooden-peg": 1
+        },
+        "mender": {
+          "timber": 2,
+          "wooden-peg": 1
+        }
+      },
+      "blurb": "The pick Orrin dressed the north bridge's footings with. \"Drift-stone for foundations, NOT for walls\" is cut into the haft."
+    },
+    {
+      "id": "ada-garden-spade",
+      "name": "Ada's garden spade",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "heirloom",
+      "uses": 80,
+      "actions": [
+        "dig"
+      ],
+      "repair": {
+        "bench": {
+          "timber": 2,
+          "wooden-peg": 1
+        },
+        "mender": {
+          "timber": 2,
+          "wooden-peg": 1
+        }
+      },
+      "blurb": "Small, polished by eighty years of hands. Ada dug the twins' first garden with it."
+    },
+    {
+      "id": "turncap-jar",
+      "name": "Jar of turncaps",
+      "tab": "tools",
+      "kind": "off-hand",
+      "held": [
+        {
+          "type": "compass"
+        }
+      ],
+      "affinity": {
+        "class": "mage",
+        "held": [
+          {
+            "type": "compass",
+            "target": "echoes"
+          }
+        ]
+      },
+      "blurb": "Elara's living compass. The caps tilt toward the nearest named light. Dries out over a few wicks; refresh with fresh turncap spawn."
+    },
+    {
+      "id": "salve-satchel",
+      "name": "Salve satchel",
+      "tab": "tools",
+      "kind": "off-hand",
+      "held": [
+        {
+          "type": "remedy-at-hand"
+        }
+      ],
+      "blurb": "Keeps one remedy always at hand without opening the inventory."
+    },
+    {
+      "id": "seasoned-timber",
+      "name": "Seasoned timber",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Wanted by fine furniture, beds and tables. \"Green wood sinks, dry wood sings.\""
+    },
+    {
+      "id": "drift-stone",
+      "name": "Drift-stone",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Footings, well linings and post-holes only. Recipes refuse it for walls."
+    },
+    {
+      "id": "iron-oak",
+      "name": "Iron-oak",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "From windfall, or a marked, warden-felled standing oak. Heavy, rare, heirloom-grade builds."
+    },
+    {
+      "id": "willow-bark",
+      "name": "Willow bark",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Stripped with the axe from willows by water. Good for tea."
+    },
+    {
+      "id": "storm-grade-drop",
+      "name": "Storm-grade drop",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Very rare amber found deep in the Tangle or the Whitequiet. Kept for storm oil."
+    },
+    {
+      "id": "flour",
+      "name": "Flour",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Bought from Finn: the fine sift, not the grist."
+    },
+    {
+      "id": "wild-honey",
+      "name": "Wild honey",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "From hives in hollow trees, gathered with the spade."
+    },
+    {
+      "id": "walnut-shells",
+      "name": "Walnut shells",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Swept up along the Wend after the freshet in Mudrise. Hulls for candle boats."
+    },
+    {
+      "id": "madder-scraps",
+      "name": "Madder scraps",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "From the Carting Day market. Red cloth scraps for festive bunting."
+    },
+    {
+      "id": "amberfall-sap",
+      "name": "Amberfall sap",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "The woods let it go in Amberfall. Window lamps and the Empty Chair's cushion."
+    },
+    {
+      "id": "frost-glass",
+      "name": "Frost-glass",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Off the frozen pond in Quiet. For the Closure Night lamp."
+    },
+    {
+      "id": "bloom-flowers",
+      "name": "Bloom flowers",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Picked in Bloom. Fresh posies for garlands and pressed-flower frames; they dry over time."
+    },
+    {
+      "id": "iron-oak-wedge",
+      "name": "Iron-oak wedge",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "hold",
+      "blurb": "Offcuts at tight-ringed stumps. Fitted to a tool, it wears slower."
+    },
+    {
+      "id": "tyre-iron-hoop",
+      "name": "Hoop of tyre-iron",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "hold",
+      "blurb": "From Maren's wheels at the abandoned cart. Fitted to a tool, nothing splits: wears slower."
+    },
+    {
+      "id": "green-ash-haft",
+      "name": "Green-ash haft",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "heft",
+      "blurb": "Ash trees, now and then, when chopping. Fitted to a tool: lighter, faster, less tiring."
+    },
+    {
+      "id": "split-rail",
+      "name": "Split rail",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Rough-split timber for closing gaps in fallen fences."
+    },
+    {
+      "id": "slates",
+      "name": "Slates",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Dressed quarry slates for leaking roofs."
+    },
+    {
+      "id": "oak-slat",
+      "name": "Oak slat",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Smooth oak slat for cracked village benches."
+    },
+    {
+      "id": "lamp-head",
+      "name": "Lamp head",
+      "tab": "supplies",
+      "kind": "part",
+      "blurb": "Iron frame, glass and a wick holder for a lantern post. Bought from Orrin or salvaged from old lamp-stones."
+    },
+    {
+      "id": "wax-seal",
+      "name": "Wax seal",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Red-brown wax disc stamped with the wheel and wave. One strike of the oak-mark punch."
+    },
+    {
+      "id": "hazel-whip",
+      "name": "Hazel whip",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Thin sapling with round leaves. Planted in lamplight, it grows into a hazel tree."
+    },
+    {
+      "id": "birch-sapling",
+      "name": "Birch sapling",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "White-barked sapling. Planted in lamplight, it grows into a birch tree."
+    },
+    {
+      "id": "rowan-sapling",
+      "name": "Rowan sapling",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Sapling with red clusters in Amberfall. Planted in lamplight, it grows into a rowan tree."
+    },
+    {
+      "id": "wild-thyme",
+      "name": "Wild thyme",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Tiny-leaved sprig. Planted in lamplight, it grows into a thyme bed for tea."
+    },
+    {
+      "id": "turncap-spawn",
+      "name": "Turncap spawn",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Pale cap on a sliver of wood. Sprouts on a stump at home and leans toward your lantern post."
+    },
+    {
+      "id": "iron-oak-acorn",
+      "name": "Iron-oak acorn",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Very rare. Grows only in lamplight, over weeks of real time, into a tight-ringed iron-oak."
+    },
+    {
+      "id": "oil-twists",
+      "name": "Keeper's Twists (oil)",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "restore-hp",
+          "amount": 10
+        },
+        {
+          "type": "restore-mana",
+          "amount": 5
+        }
+      ],
+      "blurb": "Hazel's oil batch. Darker, with a burnt end. HP and a little mana."
+    },
+    {
+      "id": "willow-bark-tea",
+      "name": "Willow-bark tea",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "ease-unmoored"
+        }
+      ],
+      "blurb": "Eases the drift's sway slowly. Willow bark and fresh well water."
+    },
+    {
+      "id": "blue-moss",
+      "name": "A pinch of Blue Moss",
+      "tab": "supplies",
+      "kind": "consumable",
+      "use": [
+        {
+          "type": "wisps-forget"
+        }
+      ],
+      "blurb": "Nearby wisps forget you for a short while, so you can slip past a camp."
+    },
+    {
+      "id": "candle-oil",
+      "name": "Candle oil",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "refill-lantern"
+        }
+      ],
+      "blurb": "Refills a carried lantern. Small corked vial of pale amber oil."
+    },
+    {
+      "id": "hearth-oil",
+      "name": "Hearth oil",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "light-post"
+        }
+      ],
+      "blurb": "Lights lantern posts and window lamps once each; a gift for Ada's window."
+    },
+    {
+      "id": "storm-oil",
+      "name": "Storm oil",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Rare. Kept for the old ways. Stoppered flask with a bright core."
+    },
+    {
+      "id": "mirror-fox",
+      "name": "A mirror-wise fox",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "belongsTo": "silas",
+      "blurb": "Silas carves them with the long ear on the left; collect them and compare the ears."
+    },
+    {
+      "id": "lantern-post",
+      "name": "Lantern Post",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Expands your land. Holds back the dark where its light falls."
     }
   ],
   "pickups": [
