@@ -130,6 +130,8 @@ export class WorldScene extends Phaser.Scene {
   private captureReleased = false
   private cinematic = false
   private positionTimer = 0
+  /** Dev: take the position sample every frame (a playtest of the exit race). */
+  private devSampleEveryFrame = false
   /** This area's presence room (null where presence doesn't reach). */
   private presenceArea: string | null = null
   /** The Commons/cottage homestead layer (null elsewhere). */
@@ -457,6 +459,11 @@ export class WorldScene extends Phaser.Scene {
         this.hero.sprite.setPosition(x, y)
         this.hero.sprite.setVelocity(0, 0)
       }
+      // Take the saved-position sample every frame, so a playtest can make
+      // the exit check and the sample meet in one frame (bugs #2).
+      w.__fsDevSampleEveryFrame = (on: boolean) => {
+        this.devSampleEveryFrame = on
+      }
       // Add an exit to this area until the scene restarts, so a playtest can
       // walk into a destination no area kind is registered for (the guard).
       w.__fsDevAddExit = (exit: { tx: number; ty: number; tw: number; th: number; to: string }) => {
@@ -695,8 +702,10 @@ export class WorldScene extends Phaser.Scene {
     this.offHand?.update(time)
 
     this.positionTimer += dt
-    // In a cottage the save keeps the doorstep (set on the way in).
-    if (this.positionTimer > 1 && !this.room) {
+    // In a cottage the save keeps the doorstep (set on the way in). Nor while
+    // a move began this frame (an exit, above): the save already names the
+    // destination, and this spot belongs to the area being left.
+    if ((this.positionTimer > 1 || this.devSampleEveryFrame) && !this.room && !this.transitioning) {
       this.positionTimer = 0
       // Wilds: saved progress is region-wide pixels (one convention for
       // saves, reloads, claims and defeat reports).

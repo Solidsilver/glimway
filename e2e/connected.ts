@@ -88,33 +88,9 @@ export async function linkStatus(page: Page): Promise<string | null> {
   return page.evaluate(() => (window as unknown as { __fsLink?: () => string | null }).__fsLink?.() ?? null)
 }
 
-/**
- * This tab's link has caught up with the server: it is based on the server's
- * current revision. A spend sent before that is refused as stale. After a
- * replayed request the link can stay a revision behind until its next upload
- * (a known product race, see .agent/REPORT.md); if it hasn't caught up within
- * a few seconds, the hero steps to the next tile (a dev warp), which
- * uploads progress, and the answer carries the server's revision.
- */
-export async function linkCaughtUp(page: Page): Promise<void> {
-  const caughtUp = async () => {
-    const mine = await page.evaluate(() => (window as unknown as { __fsLinkRev?: () => number | null }).__fsLinkRev?.() ?? null)
-    return mine !== null && mine === (await serverState(page)).body?.rev
-  }
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await expect.poll(caughtUp, { message: 'the link is on the server’s revision', timeout: 8_000 }).toBe(true)
-      return
-    } catch (e) {
-      if (attempt >= 2) throw e
-    }
-    const here = await page.evaluate(() => {
-      const w = window as unknown as { __fsSafety: () => { areaId: string }; __fsPlayer: () => { x: number; y: number } }
-      return { area: w.__fsSafety().areaId, x: w.__fsPlayer().x, y: w.__fsPlayer().y }
-    })
-    // A step to the next tile (the same tile wouldn't change the progress).
-    await warp(page, here.area, Math.floor(here.x / 16) + (attempt % 2 ? -1 : 1), Math.floor(here.y / 16))
-  }
+/** The revision this tab's link is based on (null for guests). */
+export async function linkRev(page: Page): Promise<number | null> {
+  return page.evaluate(() => (window as unknown as { __fsLinkRev?: () => number | null }).__fsLinkRev?.() ?? null)
 }
 
 /** Server state for this browser's session cookie. */

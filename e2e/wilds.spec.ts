@@ -88,17 +88,16 @@ async function handoffWorld(page: Page, context: BrowserContext): Promise<void> 
   expect((await region.json()).epoch.worldSeed).toBe('handoff-tiles')
 }
 
-// Known product bug, quarantined (see .agent/REPORT.md): in WorldScene.update
-// the exit check can start the move into the Wilds, and the once-a-second
-// position sample then runs in the same frame. The save already says
-// `wilds` while the hero still stands in the Commons, so the Commons spot is
-// stored as a Tangle position in chunk (0,0), and the hero arrives there
-// (about one crossing in 60 at 60 fps). Remove fixme with the fix.
-test.fixme('connected: the Commons arch leads into the Tangle (handoff tiles)', async ({ page, context }) => {
+// The exit check and the once-a-second position sample can run in the same
+// frame; the sample used to store the Commons spot as a Tangle position
+// (about one crossing in 60). Sampling every frame makes the crossing frame
+// always sample, so this fails every time without the fix (bugs #2).
+test('connected: the Commons arch leads into the Tangle (handoff tiles)', async ({ page, context }) => {
   await handoffWorld(page, context)
   // North through the Commons arch: the Wilds entry chunk, at the agreed
   // arrival tile ({2,22} — the region-wide position the server expects).
   await warp(page, 'commons', 23, 2)
+  await page.evaluate(() => (window as unknown as { __fsDevSampleEveryFrame: (on: boolean) => void }).__fsDevSampleEveryFrame(true))
   const inWilds = () =>
     page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId.startsWith('chunk:inner-1') === true)
   await holdUntil(page, 'ArrowUp', inWilds)

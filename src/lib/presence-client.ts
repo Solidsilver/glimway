@@ -128,7 +128,18 @@ export function normalFacing(f: { x: number; y: number }): { x: number; y: numbe
   return { x: f.x / len, y: f.y / len };
 }
 
-const POS_GAP = Math.ceil(1000 / PRESENCE.positionHz); // 125 ms at 8 Hz
+/**
+ * The server drops a position that arrives within 1/positionHz (125 ms) of
+ * the last one it took. Sending at exactly that pace, network jitter can bunch
+ * two messages up and the later one is dropped, so pace with some slack.
+ */
+const POS_GAP = Math.ceil(1000 / PRESENCE.positionHz) + 25; // 150 ms at 8 Hz
+/**
+ * A final stop is sent once more after this long (if nothing moved since):
+ * even if jitter had the first one dropped, the repeat comes well outside the
+ * server's window, so the others never see you frozen short of where you stopped.
+ */
+export const STOP_REPEAT_MS = 3 * Math.ceil(1000 / PRESENCE.positionHz);
 const HEARTBEAT_MS = 20_000;
 /** Connected this long without a close: earlier failures are forgiven. */
 export const STABLE_MS = 30_000;
@@ -155,6 +166,7 @@ export class PresenceClient {
   private lastPos: PresencePosition | null = null;
   private pendingPos: PresencePosition | null = null;
   private posTimer: unknown = null;
+  private stopTimer: unknown = null;
   private lastEmoteAt = -Infinity;
   private lastSentAt = 0;
   private heartbeatTimer: unknown = null;
@@ -405,6 +417,20 @@ export class PresenceClient {
     }
     const p = this.pendingPos;
     this.pendingPos = null;
+    this.sendPos(p);
+    if (this.stopTimer !== null) this.timers.clear(this.stopTimer);
+    this.stopTimer = null;
+    if (!p.moving) {
+      this.stopTimer = this.timers.set(() => {
+        this.stopTimer = null;
+        // Still standing on that spot, nothing newer waiting: say it again.
+        if (this.lastPos !== p || this.pendingPos || !this.ready || this.sentArea !== this.area) return;
+        this.sendPos(p);
+      }, STOP_REPEAT_MS);
+    }
+  }
+
+  private sendPos(p: PresencePosition): void {
     this.lastPosAt = this.timers.now();
     this.lastPos = p;
     this.send({ type: 'pos', x: p.x, y: p.y, facing: p.facing, moving: p.moving });
@@ -447,8 +473,8 @@ export class PresenceClient {
   }
 
   private clearTimers(): void {
-    for (const t of [this.retryTimer, this.joinTimer, this.posTimer, this.heartbeatTimer, this.stableTimer]) if (t !== null) this.timers.clear(t);
-    this.retryTimer = this.joinTimer = this.posTimer = this.heartbeatTimer = this.stableTimer = null;
+    for (const t of [this.retryTimer, this.joinTimer, this.posTimer, this.stopTimer, this.heartbeatTimer, this.stableTimer]) if (t !== null) this.timers.clear(t);
+    this.retryTimer = this.joinTimer = this.posTimer = this.stopTimer = this.heartbeatTimer = this.stableTimer = null;
   }
 
   private setStatus(status: PresenceStatus, code?: number): void {
