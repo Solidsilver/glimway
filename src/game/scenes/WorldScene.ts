@@ -85,6 +85,7 @@ import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
 import { seasonMark } from '../../lib/wilds/outer'
 import { loadWilds } from '../../lib/wilds/data'
 import { playInsets, setPlayInsets } from '../viewport'
+import { GoalGuide } from '../entities/goal-guide'
 import { MAX_SCREEN_SCALE } from '../atlas-plan'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
@@ -137,6 +138,8 @@ export class WorldScene extends Phaser.Scene {
   /** Foreground canopies/arches that fade when something walks beneath. */
   private occluders: Occluder[] = []
   private interactables!: Interactables
+  /** Where the quest goal is: the HUD's needle and the off-screen glint (src/game/entities/goal-guide.ts). */
+  private goalGuide!: GoalGuide
   private hero!: Hero
   private npcs!: Npcs
   private enemies!: EnemySystem
@@ -417,6 +420,23 @@ export class WorldScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       this.remotePlayers.clear()
       bus.off(EV.emote, this.onOwnEmote, this)
+    })
+    this.goalGuide = new GoalGuide(this, {
+      world: this.world,
+      stage: () => this.session.questStage,
+      npcAt: (id) => {
+        const n = this.npcs.npcs.find((x) => x.id === id)
+        return n ? { x: n.sprite.x, y: n.sprite.y - 8 } : null
+      },
+      spotAt: (id) => {
+        const it = this.interactables.list.find((x) => x.id === id)
+        return it ? { x: it.x, y: it.y - 8 } : null
+      },
+      wardenAt: () => {
+        const w = this.enemies.wardenView()
+        return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
+      },
+      reducedMotion: this.reducedMotion
     })
     // Passing thoughts above the hero (flavour lines; cleans up on shutdown).
     new Thoughts(this, this.hero.sprite, { reducedMotion: this.reducedMotion, hidden: () => this.cinematic, offsetY: -32 })
@@ -777,7 +797,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.session.state.flags.includes('unmoored:felt')) {
       this.session.addFlag('unmoored:felt')
       emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll', kind: 'gain', gain: { to: 'journal' } })
+      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'The Drift’s Sway' } })
     }
   }
 
@@ -802,7 +822,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.session.state.flags.includes('unmoored:cleared')) {
       this.session.addFlag('unmoored:cleared')
       emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll', kind: 'gain', gain: { to: 'journal' } })
+      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'Finding the Anchor' } })
     }
   }
 
@@ -868,6 +888,11 @@ export class WorldScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     const dt = Math.min(delta / 1000, 0.05)
     this.keepFramed()
+    // The hero's spot on the canvas, every frame (panels and transitions too):
+    // "hold to walk" steers by it, and title cards keep clear of it.
+    const view = this.cameras.main.worldView
+    heroScreen.x = (this.hero.sprite.x - view.x) * this.cameras.main.zoom
+    heroScreen.y = (this.hero.sprite.y - 8 - view.y) * this.cameras.main.zoom
     // While a panel/dialogue owns the screen, stop preventDefault-ing Space
     // etc. so focused buttons (replies, confirms) activate natively.
     // A focused placement-tray control gets its keys natively (Space presses it).
@@ -928,17 +953,15 @@ export class WorldScene extends Phaser.Scene {
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       this.interactables.hideKeyHint()
+      this.goalGuide.update(dt, this.hero.sprite, false)
       this.enemies.updateEnemyBars()
       this.updateOccluders(dt)
       return
     }
 
-    // The hero's spot on the canvas, for "hold to walk" (src/ui/TouchControls.svelte).
-    const view = this.cameras.main.worldView
-    heroScreen.x = (this.hero.sprite.x - view.x) * this.cameras.main.zoom
-    heroScreen.y = (this.hero.sprite.y - 8 - view.y) * this.cameras.main.zoom
     this.hero.move(dt, this.inputVector())
     this.enemies.update(dt)
+    this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
     this.wilds?.update()
     this.checkTurning(dt)
@@ -1329,7 +1352,7 @@ export class WorldScene extends Phaser.Scene {
       }
       if (r.value.paper) {
         const paper = paperById(r.value.paper)
-        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal' } })
+        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
       }
     })
   }

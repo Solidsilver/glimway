@@ -16,7 +16,7 @@
   "rules": [
     {
       "paths": ["src/main.ts", "src/game/main.ts", "src/game/scenes/**", "index.html"],
-      "specs": ["quest.spec.ts", "combat.spec.ts", "camera.spec.ts"],
+      "specs": ["quest.spec.ts", "combat.spec.ts", "camera.spec.ts", "goal.spec.ts"],
       "smoke": true
     },
     {
@@ -238,6 +238,10 @@
     {
       "paths": ["src/game/entities/thoughts.ts"],
       "specs": ["touches.spec.ts", "gathering.spec.ts"]
+    },
+    {
+      "paths": ["src/game/entities/goal-guide.ts", "src/lib/state.ts", "src/ui/Hud.svelte"],
+      "specs": ["goal.spec.ts"]
     }
   ]
 }

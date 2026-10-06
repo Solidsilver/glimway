@@ -197,7 +197,7 @@
         </label>
         <p class="hint">Materials, things the Wilds gave back, crafted goods and pieces that aren’t set out can be posted. Embers and keepsakes stay with you. Uncollected parcels come back after {MAIL.returnAfterDays} days.</p>
         {#if view.goods.length === 0}<p class="none">Nothing in your pack to send.</p>{/if}
-        <ul class="goods" aria-label="What to send">
+        <ul class="goods" aria-label="What to send" data-dirty={pick ? 'true' : undefined}>
           {#each view.goods as g (assetKey(g))}
             <li>
               <button type="button" class="good" class:on={pick === assetKey(g)} aria-pressed={pick === assetKey(g)} data-pick={assetKey(g)} onclick={() => ((pick = assetKey(g)), (qty = 1))}>

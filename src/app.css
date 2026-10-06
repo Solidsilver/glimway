@@ -445,9 +445,9 @@ img.pixel {
   background: rgba(107, 76, 46, 0.32);
 }
 :root.touch .overlay.sheet .modal-close {
-  top: 14px;
-  width: 40px;
-  height: 40px;
+  top: 12px;
+  width: 44px;
+  height: 44px;
 }
 @media (orientation: landscape) {
   :root.touch .overlay.sheet {

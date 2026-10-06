@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { frames, settled, warp } from './helpers'
+import { frames, openTalk, readDialogue, settled, warp } from './helpers'
 
 /**
  * On a phone the camera keeps the hero clear of the HUD and the touch
@@ -107,6 +107,37 @@ for (const [name, viewport] of phones) {
       }
     }
     expect(errors, 'uncaught page errors').toEqual([])
+    await context.close()
+  })
+}
+
+for (const [name, viewport] of phones) {
+  test(`phone ${name}: a conversation doesn't move the camera`, async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ baseURL, viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })
+    const origin = new URL(baseURL!).host
+    await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
+    const page = await context.newPage()
+    await page.goto('/')
+    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await settled(page, { area: 'village' })
+    // Mara, by the well: the conversation hides the touch controls (and, under
+    // the old measuring, dropped their insets and slid the world aside).
+    await warp(page, 'village', 16, 14)
+    await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
+    await frames(page, 60)
+    const insets = () => page.evaluate(() => (window as unknown as { __fsDevInsets: () => { top: number; bottom: number; left: number; right: number; rev: number } }).__fsDevInsets())
+    const before = await insets()
+    const heroBefore = await heroBox(page)
+    expect(before.top, 'the App measures the HUD').toBeGreaterThan(0)
+    await openTalk(page, /Talk to Mara/)
+    await frames(page, 60)
+    expect(await insets(), 'insets while talking').toEqual(before)
+    const heroDuring = await heroBox(page)
+    expect(Math.abs(heroDuring.x - heroBefore.x), 'the hero stays put sideways').toBeLessThanOrEqual(1)
+    expect(Math.abs(heroDuring.y - heroBefore.y), 'the hero stays put up and down').toBeLessThanOrEqual(1)
+    await readDialogue(page)
+    await frames(page, 30)
+    expect(await insets(), 'insets after talking').toEqual(before)
     await context.close()
   })
 }

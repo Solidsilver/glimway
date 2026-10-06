@@ -289,7 +289,7 @@ export class Gathering {
   private paid(result: ItemsActionResponse['result']): void {
     const gathered = result.gathered ?? []
     if (gathered.length > 0) {
-      const gain = { to: 'bag' as const, itemDef: gathered[0].itemDef, ...(gathered.length === 1 ? { qty: gathered[0].qty } : {}) }
+      const gain = { to: 'bag' as const, itemDef: gathered[0].itemDef, ...(gathered.length === 1 ? { qty: gathered[0].qty } : { label: yieldLine(gathered) }) }
       bus.emit(EV.toast, { text: `Found: ${yieldLine(gathered)}.`, icon: 'sparkle', art: `icon-${gathered[0].itemDef}`, kind: 'gain', gain })
     } else bus.emit(EV.toast, { text: EMPTY_YIELD_LINE, icon: 'sparkle', kind: 'thought' })
     // What the work did to the tool, when it's worth a word.

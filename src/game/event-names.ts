@@ -7,6 +7,8 @@ export const EV = {
   sync: 'ui:sync',
   stats: 'ui:stats',
   quest: 'ui:quest',
+  /** Which way the quest goal lies: { angle, here } (GoalDirPayload). */
+  goalDir: 'ui:goal-dir',
   area: 'ui:area',
   prompt: 'ui:prompt',
   dialogue: 'ui:dialogue',
@@ -75,6 +77,18 @@ export interface StatsPayload {
 export interface QuestPayload {
   stage: string
   objective: string
+  /** The goal in a few words (HUD line, quest ribbon). */
+  short?: string
+}
+
+/**
+ * Which way the current goal lies from the hero, in screen terms (radians,
+ * 0 = right, clockwise; null when there is no place to point at). `here`:
+ * the goal is in this area (else the angle points at the way out toward it).
+ */
+export interface GoalDirPayload {
+  angle: number | null
+  here: boolean
 }
 
 export interface DialoguePayload {
@@ -108,7 +122,7 @@ export interface ToastPayload {
    */
   kind?: 'info' | 'error' | 'thought' | 'gain'
   /** For `kind: 'gain'`: where it went, and what (merged per item for a moment). */
-  gain?: { to: 'bag' | 'journal'; itemDef?: string; qty?: number }
+  gain?: { to: 'bag' | 'journal'; itemDef?: string; qty?: number; /** The tag's words when it isn't one counted item ("3 fiber, 1 amber", a paper's title). */ label?: string }
   /** Icon name (src/ui/Icon.svelte); defaults to a sparkle. */
   icon?: string
   /** A delivered icon frame (`icon-timber`, …) shown instead, when loaded. */

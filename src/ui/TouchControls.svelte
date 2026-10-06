@@ -5,7 +5,7 @@
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
-  import { settings } from './settings.svelte'
+  import { noteFloatingVisit, settings } from './settings.svelte'
 
   const show = isTouchFirst()
   /** fixed: the corner joystick. floating: it appears under the thumb. hold: walk toward the finger. */
@@ -13,7 +13,7 @@
 
   // The floating stick's resting hint shows for the first few visits only.
   const FLOAT_HINT_SESSIONS = 3
-  if (show && settings.stick === 'floating') settings.set('floatingSessions', settings.value.floatingSessions + 1)
+  if (show) noteFloatingVisit()
   const floatHint = $derived(mode === 'floating' && settings.value.floatingSessions <= FLOAT_HINT_SESSIONS)
 
   // ---- joystick: one pad, analog direction, slide freely between directions

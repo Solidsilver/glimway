@@ -32,6 +32,14 @@
     prompt?: string | null
   } = $props()
   const presenceLive = $derived(ui.presence.status === 'live')
+  /** The needle in words, for screen readers: "this way: north-east", and whether it's here or onward. */
+  const needleWords = $derived.by(() => {
+    const a = ui.goalDir.angle
+    if (a === null) return ''
+    const names = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east']
+    const i = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8
+    return `${ui.goalDir.here ? 'here, to the' : 'onward, to the'} ${names[i]}`
+  })
 
   /**
    * Phones get a slim strip (bars, place, one line of goal) and three
@@ -108,8 +116,12 @@
   })
 
   const gainOf = (to: Gain['to']): Gain | null => [...ui.gains].reverse().find((g) => g.to === to) ?? null
-  const bagGain = $derived(gainOf('bag'))
-  const journalGain = $derived(gainOf('journal'))
+  // A phone shows only the newest tag (the two would overlap in its narrow row).
+  const newest = $derived(ui.gains.at(-1) ?? null)
+  const bagGain = $derived(touch ? (newest?.to === 'bag' ? newest : null) : gainOf('bag'))
+  const journalGain = $derived(touch ? (newest?.to === 'journal' ? newest : null) : gainOf('journal'))
+  /** What's new in the status chips, read out once (the chips themselves are buttons). */
+  const statusLine = $derived(chips.filter((c) => c.id !== 'here').map((c) => c.text).join('. '))
 </script>
 
 {#snippet placeName()}
@@ -153,9 +165,15 @@
 {/snippet}
 
 {#snippet goal()}
-  <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title="Current goal">
+  <!-- The goal in a few words, and a needle toward it; open, the whole objective. -->
+  <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title={ui.quest.objective} aria-label={`Current goal: ${ui.quest.objective}${needleWords ? ` (${needleWords})` : ''}`}>
     <span class="goal-icon"><Icon name="star" size={12} /></span>
-    <span class="goal-text">{ui.quest.objective}</span>
+    <span class="goal-text">{objectiveOpen ? ui.quest.objective : (ui.quest.short ?? ui.quest.objective)}</span>
+    {#if ui.goalDir.angle !== null}
+      <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
+        <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
+      </span>
+    {/if}
   </button>
   {#if home.goal}
     <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> <span>{home.goal}</span></p>
@@ -164,7 +182,7 @@
 
 {#snippet bars()}
   {#if showBars}
-    <svelte:element this={touch ? 'button' : 'div'} type={touch ? 'button' : undefined} class="bars" class:nums={showNumbers} onclick={touch ? () => (numbersOpen = !numbersOpen) : undefined} aria-label={touch ? 'Health and mana: show the numbers' : undefined} role={touch ? undefined : 'group'}>
+    <svelte:element this={touch ? 'button' : 'div'} type={touch ? 'button' : undefined} class="bars" class:nums={showNumbers} onclick={touch ? () => (numbersOpen = !numbersOpen) : undefined} aria-label={touch ? `Health ${ui.stats.hp} of ${ui.stats.maxHp}, mana ${ui.stats.mana} of ${ui.stats.maxMana}. Show the numbers` : undefined} role={touch ? undefined : 'group'}>
       <span class="vital" class:low={lowHp} title="Health">
         <span class="vi hp"><Icon name="heart" size={touch ? 12 : 14} /></span>
         <span class="bar hp" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax={ui.stats.maxHp} aria-valuenow={ui.stats.hp}>
@@ -257,8 +275,10 @@
   {#if openWhy}
     <p class="why" role="status">{openWhy}</p>
   {/if}
-  <!-- Gains, read out in full (the tags only show "+7 Fiber"). -->
+  <!-- Read out in full: gains (the tags only show "+7 Fiber"), the hero's thoughts (canvas text), and status changes. -->
   <p class="sr" aria-live="polite">{bagGain?.text ?? ''} {journalGain?.text ?? ''}</p>
+  <p class="sr" aria-live="polite">{ui.thought?.text ?? ''}</p>
+  <p class="sr" role="status">{statusLine}</p>
 </div>
 
 {#if !touch && showBars}
@@ -447,6 +467,15 @@
   .chip:focus-visible {
     outline: 3px solid var(--gold);
   }
+  /* A thumb-sized hit area around a small chip. */
+  .slim .chip {
+    position: relative;
+  }
+  .slim .chip::after {
+    content: '';
+    position: absolute;
+    inset: -11px -2px;
+  }
   .chip.date {
     font-style: normal;
     color: var(--text-soft);
@@ -536,6 +565,29 @@
     flex: none;
     color: var(--gold-deep);
     margin-top: 2px;
+  }
+  /* The needle: a small gold arrow toward the goal (the next way out, or the goal itself, which glows). */
+  .needle {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: rgba(255, 249, 230, 0.9);
+    border: 1.5px solid var(--gold-deep);
+  }
+  .needle svg {
+    transform: rotate(var(--a));
+    transition: transform 0.35s ease;
+  }
+  .needle path {
+    fill: var(--wood-dark);
+  }
+  .needle.here {
+    background: radial-gradient(circle, #fff3c4 0%, #ffd24a 100%);
+    box-shadow: 0 0 6px rgba(255, 210, 74, 0.8);
   }
   .goal-text {
     display: -webkit-box;
@@ -688,7 +740,12 @@
     border-radius: 999px;
     box-shadow: 0 3px 0 rgba(20, 12, 16, 0.45);
     pointer-events: none;
+    max-width: min(240px, 60vw);
     animation: gain-life 2.4s ease forwards;
+  }
+  .gain > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   @keyframes gain-life {
     0% { opacity: 0; transform: translateY(10px) scale(0.8); }
@@ -727,7 +784,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 3px 8px;
-    min-height: 40px;
+    min-height: 44px;
     box-sizing: border-box;
     padding: 4px 10px;
   }
@@ -773,8 +830,14 @@
   }
   .slim .objective {
     flex: 1 1 0;
-    margin: 0;
+    align-self: stretch;
+    align-items: center;
+    min-height: 40px;
+    margin: -2px 0;
     font-size: 12.5px;
+  }
+  .slim .objective .goal-icon {
+    margin-top: 0;
   }
   .slim .home-goal {
     order: 3;
@@ -801,7 +864,7 @@
   }
   .slim .hb {
     width: 44px;
-    height: 40px;
+    height: 44px;
     border-radius: 10px;
   }
   .slim .gain {

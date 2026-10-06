@@ -124,6 +124,24 @@
       .then(() => window.location.reload())
       .catch(() => ui.toast({ text: 'Couldn’t start over — this browser wouldn’t save.', kind: 'error' }))
   }
+
+  /** Choose how to walk (the radiogroup: one tab stop, arrows move and choose, as in the tab rows). */
+  function pickStick(id: StickMode): void {
+    settings.set('stick', id)
+    sfx('click')
+  }
+  function onStickKey(e: KeyboardEvent): void {
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
+    if (!keys.includes(e.key)) return
+    e.preventDefault()
+    const n = STICKS.length
+    const i = STICKS.findIndex((m) => m.id === settings.stick)
+    const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : (i + (back ? -1 : 1) + n) % n
+    pickStick(STICKS[next].id)
+    const group = (e.currentTarget as HTMLElement).parentElement
+    queueMicrotask(() => group?.querySelector<HTMLElement>(`[data-stick="${STICKS[next].id}"]`)?.focus())
+  }
 </script>
 
 <div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -149,11 +167,10 @@
             class="stick"
             class:on={settings.stick === m.id}
             aria-checked={settings.stick === m.id}
+            tabindex={settings.stick === m.id ? 0 : -1}
             data-stick={m.id}
-            onclick={() => {
-              settings.set('stick', m.id)
-              sfx('click')
-            }}
+            onclick={() => pickStick(m.id)}
+            onkeydown={onStickKey}
           >
             <svg class="pic" viewBox="0 0 36 22" aria-hidden="true">
               <rect x="1" y="1" width="34" height="20" rx="4" class="phone" />

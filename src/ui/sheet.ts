@@ -6,6 +6,11 @@ import { isTouchFirst } from './device'
  * closes it, and so does dragging its header down (portrait, a bottom sheet)
  * or right (landscape, a side sheet). Short drags spring back. Desktop keeps
  * the plain modal: no backdrop click, no drag.
+ *
+ * A tap on the world never throws away something half done: while a field
+ * in the panel has focus, has been typed in or changed, or the panel marks
+ * a choice in progress (`data-dirty="true"` on any element), only the ✕ or
+ * a drag closes it.
  */
 export function sheet(node: HTMLElement, onClose: () => void) {
   let close = onClose
@@ -16,6 +21,11 @@ export function sheet(node: HTMLElement, onClose: () => void) {
   let drag: { id: number; x: number; y: number; t: number; moved: boolean } | null = null
   /** Until when a click is the end of a drag, not a press. */
   let swallowUntil = 0
+  /** The player typed or changed a field in this panel. */
+  let edited = false
+  /** A field had focus when the backdrop press began (the press itself blurs it). */
+  let fieldFocusedAtPress = false
+  const FIELD = 'input, textarea, select, [contenteditable="true"]'
 
   function offset(e: PointerEvent): number {
     if (!drag) return 0
@@ -23,6 +33,10 @@ export function sheet(node: HTMLElement, onClose: () => void) {
   }
 
   function onDown(e: PointerEvent): void {
+    if (e.target === node) {
+      const active = document.activeElement as HTMLElement | null
+      fieldFocusedAtPress = !!active && node.contains(active) && active.matches(FIELD)
+    }
     const head = (e.target as HTMLElement | null)?.closest('.panel-head')
     if (!head || !node.contains(head) || drag) return
     if ((e.target as HTMLElement).closest('input, textarea, select')) return
@@ -74,8 +88,19 @@ export function sheet(node: HTMLElement, onClose: () => void) {
     e.preventDefault()
   }
 
+  function busy(): boolean {
+    return edited || fieldFocusedAtPress || !!node.querySelector('[data-dirty="true"]')
+  }
+
   function onBackdrop(e: MouseEvent): void {
-    if (e.target === node) close()
+    if (e.target !== node) return
+    const keep = busy()
+    fieldFocusedAtPress = false
+    if (!keep) close()
+  }
+
+  function onEdit(e: Event): void {
+    if ((e.target as HTMLElement | null)?.matches?.(FIELD)) edited = true
   }
 
   node.addEventListener('pointerdown', onDown)
@@ -84,6 +109,8 @@ export function sheet(node: HTMLElement, onClose: () => void) {
   node.addEventListener('pointercancel', onUp)
   node.addEventListener('click', onClickCapture, true)
   node.addEventListener('click', onBackdrop)
+  node.addEventListener('input', onEdit, true)
+  node.addEventListener('change', onEdit, true)
   return {
     update: (f: () => void) => void (close = f),
     destroy() {
@@ -93,6 +120,8 @@ export function sheet(node: HTMLElement, onClose: () => void) {
       node.removeEventListener('pointercancel', onUp)
       node.removeEventListener('click', onClickCapture, true)
       node.removeEventListener('click', onBackdrop)
+      node.removeEventListener('input', onEdit, true)
+      node.removeEventListener('change', onEdit, true)
     }
   }
 }

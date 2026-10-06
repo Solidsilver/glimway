@@ -46,7 +46,7 @@ export function grantPaper(session: Session, id: string, opts: { quiet?: boolean
   if (!session.state.flags.includes(paperFlag(id))) return false // session torn down
   if (!opts.quiet) {
     sfx('discover')
-    bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal' } })
+    bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
   }
   const payload: PaperFoundPayload = { id }
   bus.emit(PAPER_EV.found, payload)

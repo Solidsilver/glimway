@@ -54,3 +54,16 @@ class SettingsStore {
 }
 
 export const settings = new SettingsStore()
+
+let floatingCounted = false
+
+/**
+ * Count this page load as one played with the floating stick (its resting
+ * hint shows for the first few). Once per load: the controls unmount and
+ * mount again around placement, which isn't a new visit.
+ */
+export function noteFloatingVisit(): void {
+  if (floatingCounted || settings.stick !== 'floating') return
+  floatingCounted = true
+  settings.set('floatingSessions', settings.value.floatingSessions + 1)
+}

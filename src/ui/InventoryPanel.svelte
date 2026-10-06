@@ -19,7 +19,7 @@
   import { focusTrap } from './focus'
   import { sheet } from './sheet'
   import { isTouchFirst } from './device'
-  import { DEMO_CHARACTER } from '../content/world'
+  import { heroLine } from './hero'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
@@ -49,8 +49,8 @@
   let panelEl: HTMLDivElement | undefined = $state()
   const hero = $derived.by(() => {
     const p = ui.importedProfile
-    const cls = p?.class ? p.class[0].toUpperCase() + p.class.slice(1) : p ? 'Adventurer' : 'Wayfarer'
-    return { name: p?.name ?? DEMO_CHARACTER.name, line: `Level ${p?.level ?? DEMO_CHARACTER.level} ${cls}`, portrait: !p ? ui.portraits['You'] ?? null : null }
+    const who = heroLine(p)
+    return { name: who.name, line: `Level ${who.level} ${who.className}`, portrait: !p ? ui.portraits['You'] ?? null : null }
   })
   /** Phone copy never names keys. */
   const blurbOf = (e: InventoryEntry) => (touch ? inventoryCopy.touchBlurbs[e.id] ?? e.blurb : e.blurb)
@@ -894,7 +894,34 @@
     font-size: 13px;
     color: var(--wood);
   }
-  /* Phones: five equal tabs, icon over label, so none scrolls out of sight. */
+  /* Phones (any orientation, :root.touch from src/main.ts) and narrow
+     windows: five equal tabs, icon over label, so none runs off the sheet. */
+  :global(:root.touch) .tl {
+    white-space: nowrap;
+    text-align: center;
+  }
+  :global(:root.touch) .tl-more {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  :global(:root.touch) .tabs {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+  }
+  :global(:root.touch) .tabs button {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 44px;
+    padding: 6px 2px 5px;
+    font-size: 11.5px;
+    line-height: 1.1;
+  }
+  :global(:root.touch) .tc {
+    display: none;
+  }
   @media (max-width: 560px) {
     .tl {
       white-space: nowrap;

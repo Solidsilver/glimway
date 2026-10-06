@@ -12,6 +12,7 @@ import { ITEMS } from '../../lib/items'
 import { bus, EV, type PromptPayload } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
+import { isTouchFirst } from '../../ui/device'
 import type { Session } from '../session'
 import { TILE } from '../textures'
 import type { EmberSpotId, InteractId, WorldData } from '../worlds'
@@ -75,14 +76,6 @@ export interface InteractableDeps {
  */
 const heardAt = new Set<string>()
 
-/** Was this a touch-first device? Picks the in-world button hint. */
-function isTouchFirst(): boolean {
-  try {
-    return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
-  } catch {
-    return false
-  }
-}
 
 export class Interactables {
   readonly list: Interactable[] = []
@@ -299,7 +292,7 @@ export class Interactables {
           meetResident(session, target.id)
           // What they'd say next time is old news by then, too.
           heardAt.add(`${target.id}@${residentTalk(target.id, residentContext(session)).topic}`)
-          bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book', kind: 'gain', gain: { to: 'journal' } })
+          bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book', kind: 'gain', gain: { to: 'journal', label: residentFullName(target.id) } })
         }
       } else payload = this.isEmberSpot(target.id)
         ? emberDialogue(target.id, session.state, {

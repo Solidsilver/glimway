@@ -33,6 +33,7 @@ import {
   entityAvailable,
   guestClaim,
   isClaimed,
+  lootName,
   lootText,
   refreshWilds,
   tickWildsGuest,
@@ -219,12 +220,17 @@ const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
 const lootArt = (drop: { materials: { id: string }[]; trinket: string | null }): string | undefined =>
   drop.trinket ? `icon-${drop.trinket}` : drop.materials[0] ? `icon-${drop.materials[0].id}` : undefined
 
-/** What a drop put in the bag, for the bag button (the first item; its count when it's the only one). */
+/**
+ * What a drop put in the bag, for the bag button: the first item, and its
+ * count when it's the only one; mixed loot says what it was ("3 Fiber, 1 Amber").
+ */
 const lootGain = (drop: { materials: { id: string; qty: number }[]; trinket: string | null }): ToastPayload['gain'] => {
   const first = drop.trinket ?? drop.materials[0]?.id
   if (!first) return undefined
   const single = drop.materials.length + (drop.trinket ? 1 : 0) === 1
-  return { to: 'bag', itemDef: first, ...(single ? { qty: drop.trinket ? 1 : drop.materials[0].qty } : {}) }
+  if (single) return { to: 'bag', itemDef: first, qty: drop.trinket ? 1 : drop.materials[0].qty }
+  const label = [...drop.materials.map((m) => `${m.qty} ${lootName(m.id)}`), ...(drop.trinket ? [lootName(drop.trinket)] : [])].join(', ')
+  return { to: 'bag', itemDef: first, label }
 }
 
 const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? id
@@ -409,7 +415,8 @@ export class WildsEntities {
     this.lootFeedback(target, drop)
     if (res.result.wardenSliverFound) {
       const session = this.deps.session
-      bus.emit(EV.toast, { text: 'A chip of grey stone with an amber fleck. It sits very still in your hand.', icon: 'sparkle', kind: 'thought' })
+      // A story find, kept in the journal ("A Still Stone"): a gain, not a passing thought.
+      bus.emit(EV.toast, { text: 'A chip of grey stone with an amber fleck. It sits very still in your hand.', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'A Still Stone' } })
       if (!session.state.flags.includes('warden-sliver:found')) {
         session.addFlag('warden-sliver:found')
         emitResidents(session)

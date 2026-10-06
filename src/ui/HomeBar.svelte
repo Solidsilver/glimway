@@ -9,7 +9,14 @@
   // cottage, and the tray for placement mode (pick a piece, nudge it, turn
   // it, set it down or put it away; outdoors, tap a tree, stump or boulder in
   // your light and Silas clears it). Keyboard: arrows/WASD, R, E, X, Esc.
-  let { hidden = false }: { hidden?: boolean } = $props()
+  let {
+    hidden = false,
+    dockBottom
+  }: {
+    hidden?: boolean
+    /** Touch: px from the bottom where the Arrange button sits (App.svelte measures the action buttons, gap included). */
+    dockBottom?: number
+  } = $props()
 
   const touch = isTouchFirst()
   const send = (c: PlacementCommand) => bus.emit(HOME_EV.command, c)
@@ -21,18 +28,19 @@
   const needsCottage = $derived(!!p && p.scene === 'indoor' && p.tier < 1)
 
   // Touch: the Arrange button sits just above the action buttons (bottom
-  // right, in the thumb's reach), never over the HUD. Measured, since the
-  // touch controls size themselves; the fallback clears the usual cluster.
-  let dockBottom = $state(190)
+  // right, in the thumb's reach), never over the HUD. App.svelte passes the
+  // spot; without it, measure here (the fallback clears the usual cluster).
+  let measured = $state(190)
+  const dock = $derived(dockBottom ?? measured)
   const showArrange = $derived(!p && home.arrange.available && !hidden)
   function measureDock(): void {
     const actions = document.querySelector('.controls .actions')
     if (!actions) return
     const top = Math.min(...[...actions.querySelectorAll('button')].map((b) => b.getBoundingClientRect().top).filter((t) => t > 0))
-    if (Number.isFinite(top)) dockBottom = Math.round(window.innerHeight - top + 10)
+    if (Number.isFinite(top)) measured = Math.round(window.innerHeight - top + 10)
   }
   $effect(() => {
-    if (!touch || !showArrange) return
+    if (!touch || !showArrange || dockBottom !== undefined) return
     const raf = requestAnimationFrame(measureDock)
     window.addEventListener('resize', measureDock)
     return () => {
@@ -127,7 +135,7 @@
     {/if}
   </div>
 {:else if showArrange}
-  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dockBottom}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
+  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
     <Icon name="home" size={16} /> Arrange{#if !touch}<span class="kbd">B</span>{/if}
   </button>
 {/if}

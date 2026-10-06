@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ui } from './store.svelte'
+  import { isTouchFirst } from './device'
   import ArtIcon from './ArtIcon.svelte'
 
   // Read-only, for playtests (dev builds): every toast handed to the UI so
@@ -8,11 +9,29 @@
   if (import.meta.env.DEV) {
     ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count: ui.toastCount, seen: [...ui.toastLog] })
   }
+
+  const touch = isTouchFirst()
+  /**
+   * On screen now: a phone shows one (an error first, until it times out),
+   * a desktop the newest two. None while a title card or quest ribbon
+   * holds the band under the HUD: they wait, and their clocks wait too.
+   */
+  const shown = $derived.by(() => {
+    if (ui.bannerUp) return []
+    const errors = ui.toasts.filter((t) => t.kind === 'error')
+    return touch ? [errors[0] ?? ui.toasts.at(-1)].filter((t) => !!t) : ui.toasts.slice(-2)
+  })
+
+  /** A toast's clock starts when it is really on screen. */
+  function expire(_node: HTMLElement, t: { id: string; kind?: string }) {
+    const timer = window.setTimeout(() => ui.dismissToast(t.id), t.kind === 'error' ? 6000 : 4200)
+    return { destroy: () => window.clearTimeout(timer) }
+  }
 </script>
 
 <div class="toasts" aria-live="polite">
-  {#each ui.toasts as toast (toast.id)}
-    <div class="toast {toast.kind}">
+  {#each shown as toast (toast.id)}
+    <div class="toast {toast.kind}" use:expire={toast}>
       <span class="ico"><ArtIcon art={toast.kind === 'error' ? null : toast.art} name={toast.kind === 'error' ? 'close' : (toast.icon ?? 'sparkle')} size={14} /></span>
       <span>{toast.text}</span>
     </div>

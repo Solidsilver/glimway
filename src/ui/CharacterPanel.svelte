@@ -9,6 +9,7 @@
   import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import { isTouchFirst } from './device'
+  import { heroLine } from './hero'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
@@ -21,9 +22,10 @@
   const kit = $derived(withCharm(getCombatKit(profile), snapshot.inventory))
   const litCount = $derived(ROAD_LANTERNS.filter((id) => isLit(snapshot, id)).length)
   const chestDone = $derived(chestOpened(snapshot))
-  const name = $derived(profile?.name ?? DEMO_CHARACTER.name)
-  const className = $derived(profile?.class ? profile.class[0].toUpperCase() + profile.class.slice(1) : profile ? 'Adventurer' : 'Wayfarer')
-  const level = $derived(profile?.level ?? DEMO_CHARACTER.level)
+  const who = $derived(heroLine(profile))
+  const name = $derived(who.name)
+  const className = $derived(who.className)
+  const level = $derived(who.level)
   const stats = $derived(profile?.stats ?? DEMO_CHARACTER.stats)
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))

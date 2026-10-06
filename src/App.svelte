@@ -9,6 +9,7 @@
     type CinematicPayload,
     type DefeatPayload,
     type DiscoveryPayload,
+    type GoalDirPayload,
     type LinkPayload,
     type PresencePayload,
     type PortraitsPayload,
@@ -197,13 +198,15 @@
         return
       }
       const beat = QUEST_BEATS[p.stage as QuestStage]
-      if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.objective })
+      if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.short ?? p.objective })
     }
     const onArea = (p: AreaPayload) => {
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       // A homestead's land and its cottage announce themselves (whose place, in words).
       const homestead = /^home:\d+$/.test(p.areaId) || p.areaId === 'cottage'
+      // A new place waits for its own announcement; until then it's "Lot 4", never the last place's name.
+      if (ui.area.areaId !== p.areaId) roomName = null
       ui.area = { areaId: p.areaId, name: homestead && roomName ? roomName : info.name, description: info.description }
       if (phase === 'playing' && moved && !homestead) {
         areaShown = true
@@ -214,6 +217,9 @@
     }
     const onWilds = (p: WildsPayload) => {
       ui.materials = p.materials
+    }
+    const onGoalDir = (p: GoalDirPayload) => {
+      ui.goalDir = p
     }
     const onPrompt = (p: PromptPayload) => {
       // Every prompt gets a verb for its button: "Copy the naming…" → Copy.
@@ -327,6 +333,7 @@
       [EV.quest, onQuest],
       [EV.area, onArea],
       [EV.prompt, onPrompt],
+      [EV.goalDir, onGoalDir],
       [EV.toast, onToast],
       [EV.defeat, onDefeat],
       [EV.ability, onAbility],
@@ -372,13 +379,13 @@
 
   /**
    * The place a title card is about: the area, or for the Wilds the region
-   * (and the outer Wilds' season, which redraws them).
+   * (a Turning has its own moment).
    */
   function placeKey(areaId: string): string {
-    if (areaId !== 'wilds') return areaId
-    const st = session?.state
-    const region = st?.wildsRegion ?? 'inner-1'
-    return region.startsWith('outer') && st?.outerSeason ? `wilds:${region}:${st.outerSeason}` : `wilds:${region}`
+    if (areaId === 'wilds') return `wilds:${session?.state.wildsRegion ?? 'inner-1'}`
+    // Wilds chunks ("chunk:outer-1:3:-2"): one card per region, not per chunk.
+    const chunk = /^chunk:([^:]+):/.exec(areaId)
+    return chunk ? `wilds:${chunk[1]}` : areaId
   }
 
   /**
@@ -905,6 +912,8 @@
     else if (e.code === 'Escape') {
       if (ui.emoteOpen && !panel) {
         ui.emoteOpen = false
+      } else if (panel === 'character' && characterFromBag) {
+        closeCharacter()
       } else if (panel) {
         sfx('close')
         panel = null
@@ -928,6 +937,8 @@
    * (--hud-bottom). On a phone the prompt docks beside the action button.
    */
   let promptDock = $state<{ right: number; bottom: number } | null>(null)
+  /** Touch: px from the screen's bottom to just above the action buttons (the Arrange button docks there). */
+  let controlsDock = $state<number | undefined>(undefined)
   $effect(() => {
     if (phase !== 'playing') return
     let raf = 0
@@ -935,18 +946,27 @@
       raf = 0
       const vh = window.innerHeight
       const vw = window.innerWidth
-      const hud = document.querySelector<HTMLElement>('.hud:not(.hidden)')
-      const hudBottom = hud ? Math.max(0, ...[...hud.children].filter((c) => !c.classList.contains('why') && !c.classList.contains('sr')).map((c) => c.getBoundingClientRect().bottom)) : 0
-      document.documentElement.style.setProperty('--hud-bottom', `${Math.round(hudBottom)}px`)
+      // Layout boxes, not painted ones: a hidden HUD (a cinematic) or hidden
+      // controls (a conversation) keep their place, so the camera never
+      // slides when a dialogue opens and closes.
+      const hud = document.querySelector<HTMLElement>('.hud')
+      const hudBottom = hud
+        ? Math.max(0, ...[...hud.children].filter((c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains('why') && !c.classList.contains('sr')).map((c) => hud.offsetTop + c.offsetTop + c.offsetHeight))
+        : 0
+      const root = document.documentElement.style
+      root.setProperty('--hud-bottom', `${Math.round(hudBottom)}px`)
       if (!touch) {
         // Desktop: the HUD is a corner card on a wide screen; the camera centres as before.
         setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
+        // The action bar and the prompt tag on it.
+        root.setProperty('--dock-bottom', '128px')
         return
       }
       // The buttons at the bottom right always; the joystick at the bottom left when it's fixed there.
       const box = (sel: string) => {
-        const r = document.querySelector<HTMLElement>(`.controls:not(.hidden) ${sel}`)?.getBoundingClientRect()
-        return r && r.height > 0 ? r : null
+        const el = document.querySelector<HTMLElement>(`.controls ${sel}`)
+        // Hidden controls only fade (opacity): their boxes stay where they are laid out.
+        return el && el.offsetHeight > 0 ? el.getBoundingClientRect() : null
       }
       const actions = box('.actions')
       const pad = box('.pad')
@@ -957,30 +977,38 @@
         const tops = [actions?.top, pad?.top].filter((t): t is number => t !== undefined)
         setPlayInsets({ top: hudBottom, right: 0, bottom: tops.length ? vh - Math.min(...tops) : 0, left: 0 })
       }
+      controlsDock = actions ? Math.round(vh - actions.top + 10) : undefined
       // The prompt sits just above the button cluster (and the Arrange button, when it's out), right-aligned with the action button.
       const act = box('.act')
       const arrange = document.querySelector<HTMLElement>('[data-testid="arrange"]')?.getBoundingClientRect()
       const above = Math.min(actions?.top ?? vh, arrange && arrange.height > 0 ? arrange.top : vh)
       promptDock = act && actions ? { right: Math.round(vw - act.right), bottom: Math.round(vh - above + 8) } : null
+      // Cards and notices that sit low keep above the buttons and the prompt tag on them.
+      root.setProperty('--dock-bottom', `${Math.round(vh - above + 8 + (promptDock ? 48 : 0))}px`)
     }
     const soon = () => {
       if (!raf) raf = requestAnimationFrame(measure)
     }
     const ro = new ResizeObserver(soon)
+    // Only the HUD, the controls and the Arrange button matter: watch them,
+    // and re-attach when one of them mounts or unmounts.
+    const mo = new MutationObserver(soon)
+    const top = new MutationObserver(() => watch())
     const watch = () => {
       ro.disconnect()
+      mo.disconnect()
       for (const el of document.querySelectorAll('.hud, .hud > *, .controls, .controls .actions, .controls .pad, [data-testid="arrange"]')) ro.observe(el)
+      for (const el of document.querySelectorAll('.hud, .controls')) mo.observe(el, { childList: true, subtree: true })
       soon()
     }
-    // The HUD and controls re-render (chips come and go, the stick mode changes): re-watch now and then.
-    const mo = new MutationObserver(watch)
     const main = document.querySelector('main')
-    if (main) mo.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    if (main) top.observe(main, { childList: true })
     window.addEventListener('resize', soon)
     watch()
     return () => {
       ro.disconnect()
       mo.disconnect()
+      top.disconnect()
       window.removeEventListener('resize', soon)
       if (raf) cancelAnimationFrame(raf)
       setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
@@ -1001,8 +1029,24 @@
       !confirmLogout &&
       !home.placement &&
       !home.namePrompt &&
-      !home.leaveAsk
+      !home.leaveAsk &&
+      !ui.bannerUp
   )
+  /** Character opened from the bag's hero row: closing it goes back to the bag. */
+  let characterFromBag = false
+  function closeCharacter(): void {
+    if (characterFromBag && panel === 'character') {
+      characterFromBag = false
+      sfx('close')
+      panel = 'inventory'
+      return
+    }
+    toggle('character')
+  }
+  $effect(() => {
+    if (panel !== 'character') characterFromBag = false
+  })
+
   const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen && !home.placement)
 </script>
 
@@ -1032,7 +1076,7 @@
     {/if}
     <DialoguePanel />
     {#if !home.placement}<TouchControls />{/if}
-    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic || gate !== null || leaseBlock !== null} />
+    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic || gate !== null || leaseBlock !== null} dockBottom={controlsDock} />
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -1072,12 +1116,15 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={() => toggle('character')} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
+      <CharacterPanel {session} onClose={closeCharacter} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
       <InventoryPanel
         {session}
         onClose={() => toggle('inventory')}
-        onCharacter={() => (panel = 'character')}
+        onCharacter={() => {
+          characterFromBag = true
+          panel = 'character'
+        }}
         onOwnChest={session?.link
           ? () => {
               chestPick = 'personal'
@@ -1359,6 +1406,8 @@
   /* Docked: a tag just above the action buttons, right-aligned with the big one. */
   .prompt.touch.docked {
     left: auto;
+    /* Over a title card or quest ribbon (36): what the button does stays readable. */
+    z-index: 37;
     max-width: min(70vw, 360px);
     transform: none;
     border-radius: 12px;

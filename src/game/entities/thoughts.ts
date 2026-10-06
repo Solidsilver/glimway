@@ -8,10 +8,14 @@ import Phaser from 'phaser'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
 
-/** Base time on screen, plus a little per character, capped. */
+/**
+ * Time on screen: a base plus enough per character to read it, capped. A
+ * long echo scene (~160 characters) gets about nine seconds. The clock only
+ * runs while the bubble can be seen (a conversation or a cinematic pauses it).
+ */
 const BASE_MS = 1800
-const PER_CHAR_MS = 28
-const MAX_MS = 5200
+const PER_CHAR_MS = 45
+const MAX_MS = 9000
 /** Wrap width in world pixels (the bubble's text box). */
 const WRAP = 120
 
@@ -24,7 +28,8 @@ export function thoughtMs(text: string): number {
 
 export class Thoughts {
   private bubble: Phaser.GameObjects.Container | null = null
-  private timer: Phaser.Time.TimerEvent | null = null
+  /** Visible time left before it fades (ms of game time while shown). */
+  private left = 0
 
   constructor(
     private scene: Phaser.Scene,
@@ -82,7 +87,7 @@ export class Thoughts {
     this.bubble = bubble
     this.place()
     s.tweens.add({ targets: bubble, alpha: 1, duration: this.opts.reducedMotion ? 80 : 180, ease: 'Quad.easeOut' })
-    this.timer = s.time.delayedCall(thoughtMs(text), () => this.fade())
+    this.left = thoughtMs(text)
   }
 
   /** What's showing now (playtests), or null. */
@@ -99,11 +104,15 @@ export class Thoughts {
     b.setPosition(Math.round(this.follow.x), Math.round(this.follow.y + (this.opts.offsetY ?? -30) - h / 2 + 4 - lift))
   }
 
-  private tick(): void {
+  private tick(_time: number, delta: number): void {
     const b = this.bubble
     if (!b?.active) return
     this.place()
-    b.setVisible(!this.opts.hidden() && !uiState.dialogueOpen)
+    const visible = !this.opts.hidden() && !uiState.dialogueOpen
+    b.setVisible(visible)
+    if (!visible || this.left <= 0) return
+    this.left -= delta
+    if (this.left <= 0) this.fade()
   }
 
   private fade(): void {
@@ -113,8 +122,7 @@ export class Thoughts {
   }
 
   private clear(): void {
-    this.timer?.remove(false)
-    this.timer = null
+    this.left = 0
     this.bubble?.destroy()
     this.bubble = null
   }
