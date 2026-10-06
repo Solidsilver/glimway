@@ -31,7 +31,8 @@
     onSignedIn,
     onLogout,
     onEnterWorld,
-    onMove
+    onMove,
+    onLeave
   }: {
     session: Session
     onClose: () => void
@@ -42,6 +43,8 @@
     onEnterWorld?: () => void
     /** Move to another world: the confirmation takes over from here. */
     onMove?: (target: WorldRef, home: boolean, view: WorldView) => void
+    /** Left the party whose world you live in: go now. */
+    onLeave?: (view: WorldView) => void
   } = $props()
 
   const touch = isTouchFirst()
@@ -207,7 +210,7 @@
           <button type="button" onclick={requestLogout} disabled={offline || logoutBusy} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
           {#if offline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
         </div>
-        {#if connected && !offline && onMove}<WorldCard {onMove} />{/if}
+        {#if connected && !offline && onMove}<WorldCard {onMove} {onLeave} />{/if}
       </section>
     {/if}
 

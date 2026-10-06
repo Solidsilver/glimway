@@ -121,14 +121,18 @@ export interface RawApi {
   createInvite(): Promise<CreatedInvite>;
   listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
-  /** Your world, its party link, and your party's world (needs the session only). */
+  /** Your world, your party's world, and when you may next move (needs the session only). */
   world(): Promise<WorldView>;
-  /** Owner only: link this world (or `worldId`, one you own and left) to your party, or unlink it. No lease. */
-  worldParty(link: boolean, worldId?: string): Promise<WorldView>;
+  /** Make your party's world, if it has none yet (it moves no one). No lease. */
+  worldParty(): Promise<WorldView>;
   /** The party world's join prompt was shown (once per party world). */
   worldPrompt(worldId: string): Promise<WorldView>;
   /** Move to another world (keyed; from the village or the Commons). */
   worldMove(req: Envelope & { worldId: string }): Promise<WorldMoveResponse>;
+  /** Left the party whose world you live in: go to your own world now (keyed; no cooldown). */
+  worldLeave(req: Envelope): Promise<WorldMoveResponse>;
+  /** The "you were moved out" notice was shown. */
+  worldNotice(): Promise<WorldView>;
   wildsRegion(regionId: string): Promise<WildsRegionResponse>;
   wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
   wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
@@ -243,6 +247,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const body: LoginRequest = { userId: req.userId, token: req.token };
       const invite = req.invite ? normalizeInviteCode(req.invite) : '';
       if (invite) body.invite = invite;
+      if (req.party && req.party.length <= 128) body.party = req.party;
       return parseSnapshot(await request('POST', '/api/session', body));
     },
     async logout() {
@@ -278,14 +283,20 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async world() {
       return parseWorld(await request('GET', '/api/world'));
     },
-    async worldParty(link, worldId) {
-      return parseWorld(await request('POST', '/api/world/party', worldId ? { link, worldId } : { link }));
+    async worldParty() {
+      return parseWorld(await request('POST', '/api/world/party', {}));
     },
     async worldPrompt(worldId) {
       return parseWorld(await request('POST', '/api/world/prompt', { worldId }));
     },
     async worldMove(req) {
       return parseWorldMove(await request('POST', '/api/world/move', req));
+    },
+    async worldLeave(req) {
+      return parseWorldMove(await request('POST', '/api/world/leave', req));
+    },
+    async worldNotice() {
+      return parseWorld(await request('POST', '/api/world/notice', {}));
     },
     async wildsRegion(regionId) {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
@@ -392,9 +403,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
     world: () => run((r) => r.world()),
-    worldParty: (link, worldId) => run((r) => r.worldParty(link, worldId)),
+    worldParty: () => run((r) => r.worldParty()),
     worldPrompt: (worldId) => run((r) => r.worldPrompt(worldId)),
     worldMove: (req) => run((r) => r.worldMove(req)),
+    worldLeave: (req) => run((r) => r.worldLeave(req)),
+    worldNotice: () => run((r) => r.worldNotice()),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
     wildsClaim: (req) => run((r) => r.wildsClaim(req)),
     wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),

@@ -10,22 +10,35 @@ import (
 	"net/http"
 )
 
-// Worlds and party links (docs/expansion-design.md "Worlds"). Being in the
-// same Habitica party counts as an invite: a member may move into their
-// party's world (partyWorld), or back to a world they own. The party is read
-// only at sign-in (players.habitica_party_id); leaving a party never moves
-// anyone. A party links one world at a time: linking unlinks the others.
+// Worlds and party worlds (docs/home-server.md "Party worlds and world
+// moves"). A party's world belongs to the party, not a person: owner_id is
+// empty and habitica_party_id names the party, one world per party. It is for
+// that party only: no invite code leads into it. Only an account the operator
+// let in (the CLI allowlist or an invite code) opens one; an account let in
+// through a party only ever joins its own party's world. The party is read
+// only at sign-in (players.habitica_party_id). A resident whose sign-in finds
+// them outside the party is moved out after PartyGrace, or sooner if they
+// choose. Otherwise a member may move into their party's world or back to a
+// world they own, at most once a day (MoveCooldown).
+
+// MoveCooldown: seconds between one world move and the next.
+const MoveCooldown = 24 * 3600
+
+// PartyGrace: seconds a resident of a party's world who has left the party
+// keeps living there, counted from the sign-in that first saw it.
+const PartyGrace = 3 * 24 * 3600
 
 type worldRef struct {
-	ID        string `json:"id"`
+	ID string `json:"id"`
+	// OwnerID, OwnerName: empty for a party's world.
 	OwnerID   string `json:"ownerId"`
 	OwnerName string `json:"ownerName"`
 	Members   int    `json:"members"`
 	// OwnerHere: the owner lives in this world.
 	OwnerHere bool `json:"ownerHere"`
-	// Linked: linked to a party (any).
-	Linked bool `json:"linked"`
-	party  sql.NullString
+	// Party: a party's world, owned by no one.
+	Party bool `json:"party"`
+	party sql.NullString
 }
 
 // leavingView is what a move would leave behind, for the confirmation screen.
@@ -44,50 +57,169 @@ type leavingView struct {
 	DeedCost int `json:"deedCost"`
 }
 
+// leaverView: the caller lives in a party's world but has left that party.
+type leaverView struct {
+	// LeftAt: the sign-in that first saw it; MoveOutAt: when the next sign-in
+	// moves them out; MoveOutIn: seconds until then, by the server's clock.
+	LeftAt    int64 `json:"leftAt"`
+	MoveOutAt int64 `json:"moveOutAt"`
+	MoveOutIn int64 `json:"moveOutIn"`
+	// HasOwn: they own a world to go to (otherwise one is made for them).
+	HasOwn bool `json:"hasOwn"`
+}
+
 type worldView struct {
 	World worldRef `json:"world"`
-	// IsOwner: the caller owns this world (and may link or unlink it).
+	// IsOwner: the caller owns this world.
 	IsOwner bool `json:"isOwner"`
 	// InParty: the caller's last sign-in reported a party.
 	InParty bool `json:"inParty"`
-	// Linked: this world is linked to a party; LinkedToMine: the caller's.
-	Linked       bool `json:"linked"`
-	LinkedToMine bool `json:"linkedToMine"`
-	// PartyWorld: the caller's party's world, when that is somewhere else.
+	// PartyHome: this world is the caller's party's world.
+	PartyHome bool `json:"partyHome"`
+	// PartyWorld: the caller's party's world, when they live somewhere else.
 	PartyWorld *worldRef `json:"partyWorld"`
+	// PartyCanOpen: the caller's party has no world here and they may open it.
+	PartyCanOpen bool `json:"partyCanOpen"`
 	// OwnWorld: a world the caller owns, when they live somewhere else.
 	OwnWorld *worldRef `json:"ownWorld"`
 	// Prompt: PartyWorld is set and its join prompt hasn't been shown.
 	Prompt  bool        `json:"prompt"`
 	Leaving leavingView `json:"leaving"`
+	// MoveOpensAt: when the next move is allowed (unix seconds); 0: now.
+	// MoveOpensIn: seconds until then, by the server's clock (the device
+	// counts down from it on its own clock).
+	MoveOpensAt int64 `json:"moveOpensAt"`
+	MoveOpensIn int64 `json:"moveOpensIn"`
+	// Leaver: they live in a party's world and have left that party.
+	Leaver *leaverView `json:"leaver"`
+	// MovedOutAt: when the server moved them out of a party's world they had
+	// left (0: it didn't), until POST /api/world/notice.
+	MovedOutAt int64 `json:"movedOutAt"`
 }
 
 func loadWorldRef(ctx context.Context, tx *sql.Tx, id string) (worldRef, error) {
 	var w worldRef
 	err := tx.QueryRowContext(ctx, `SELECT w.id,w.owner_id,COALESCE(p.display_name,''),(SELECT count(*) FROM players m WHERE m.world_id=w.id),COALESCE(p.world_id=w.id,0),w.habitica_party_id
  FROM worlds w LEFT JOIN players p ON p.habitica_id=w.owner_id WHERE w.id=?`, id).Scan(&w.ID, &w.OwnerID, &w.OwnerName, &w.Members, &w.OwnerHere, &w.party)
-	w.Linked = w.party.Valid
+	w.Party = w.OwnerID == "" && w.party.Valid
 	return w, err
 }
 
-// partyWorld is the party's world ("" when none): of the worlds linked to
-// it that someone lives in, one whose owner lives there first, then the
-// oldest. An empty world, or one its owner left, never draws newcomers
-// ahead of a lived-in one.
+// partyWorld is the party's world ("" when it has none, or no party).
 func partyWorld(ctx context.Context, tx *sql.Tx, party *string) (string, error) {
 	if party == nil || *party == "" {
 		return "", nil
 	}
 	var id string
-	err := tx.QueryRowContext(ctx, `SELECT w.id FROM worlds w WHERE w.habitica_party_id=? AND EXISTS(SELECT 1 FROM players m WHERE m.world_id=w.id)
- ORDER BY EXISTS(SELECT 1 FROM players o WHERE o.habitica_id=w.owner_id AND o.world_id=w.id) DESC,w.created_at,w.id LIMIT 1`, *party).Scan(&id)
+	err := tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE habitica_party_id=? AND owner_id=''", *party).Scan(&id)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
 	return id, err
 }
 
-func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView, error) {
+func partyClosed(ctx context.Context, tx *sql.Tx, party string) (bool, error) {
+	var n int
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM party_closures WHERE party_id=?", party).Scan(&n)
+	return n > 0, err
+}
+
+// partyAdmits is the party's world when its members may sign in through it
+// ("" otherwise): party admission is on, the party isn't closed, and it has
+// a world.
+func (a *Server) partyAdmits(ctx context.Context, tx *sql.Tx, party *string) (string, error) {
+	if a.Config.PartyAdmissionOff || party == nil || *party == "" {
+		return "", nil
+	}
+	if closed, err := partyClosed(ctx, tx, *party); err != nil || closed {
+		return "", err
+	}
+	return partyWorld(ctx, tx, party)
+}
+
+// mayOpenParty: the account may open its party's world. Only accounts the
+// operator let in (allowlist added_by other than 'party') open one, so
+// admission through a party never opens another; and not while party
+// admission is off or the party is closed. "" when it may.
+func (a *Server) mayOpenParty(ctx context.Context, tx *sql.Tx, id string, party *string) (string, error) {
+	if party == nil || *party == "" {
+		return "no-party", nil
+	}
+	if a.Config.PartyAdmissionOff {
+		return "party-closed", nil
+	}
+	if closed, err := partyClosed(ctx, tx, *party); err != nil || closed {
+		return "party-closed", err
+	}
+	var by string
+	err := tx.QueryRowContext(ctx, "SELECT added_by FROM allowlist WHERE habitica_id=?", id).Scan(&by)
+	if err == sql.ErrNoRows || by == "party" {
+		return "party-open-denied", nil
+	}
+	return "", err
+}
+
+// ensurePartyWorld returns the party's world, making it first (opened by
+// the given account) when the party has none. Two members signing in at
+// once still make one: the unique index keeps the first.
+func ensurePartyWorld(ctx context.Context, tx *sql.Tx, party *string, opener string, now int64) (string, error) {
+	id, err := partyWorld(ctx, tx, party)
+	if id != "" || err != nil || party == nil || *party == "" {
+		return id, err
+	}
+	if id, err = store.Random(); err != nil {
+		return "", err
+	}
+	seed, err := store.Random()
+	if err != nil {
+		return "", err
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at,opened_by) VALUES(?,'',?,?,?,?) ON CONFLICT(habitica_party_id) WHERE owner_id='' AND habitica_party_id IS NOT NULL DO NOTHING", id, seed, *party, now, opener); err != nil {
+		return "", err
+	}
+	return partyWorld(ctx, tx, party)
+}
+
+// ownWorld is the oldest world the player owns, made when they have none.
+func ownWorld(ctx context.Context, tx *sql.Tx, id string, now int64) (worldRef, error) {
+	var own string
+	err := tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE owner_id=? ORDER BY created_at,id LIMIT 1", id).Scan(&own)
+	if err == sql.ErrNoRows {
+		if own, err = store.Random(); err != nil {
+			return worldRef{}, err
+		}
+		seed, err := store.Random()
+		if err != nil {
+			return worldRef{}, err
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", own, id, seed, now); err != nil {
+			return worldRef{}, err
+		}
+	} else if err != nil {
+		return worldRef{}, err
+	}
+	return loadWorldRef(ctx, tx, own)
+}
+
+// leaverOf: the player lives in a party's world but their last sign-in
+// reported another party, or none.
+func leaverOf(w worldRef, party *string) bool {
+	return w.Party && (party == nil || *party != w.party.String)
+}
+
+// moveOpensAt is when the player may next move (0: now).
+func moveOpensAt(ctx context.Context, tx *sql.Tx, id string, now int64) (int64, error) {
+	var last int64
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(created_at),0) FROM ledger WHERE habitica_id=? AND reason='world-move'", id).Scan(&last); err != nil {
+		return 0, err
+	}
+	if last == 0 || now >= last+MoveCooldown {
+		return 0, nil
+	}
+	return last + MoveCooldown, nil
+}
+
+func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (worldView, error) {
 	var v worldView
 	var err error
 	if v.World, err = loadWorldRef(ctx, tx, s.WorldID); err != nil {
@@ -96,12 +228,11 @@ func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView
 	party := s.HabiticaPartyID
 	v.IsOwner = v.World.OwnerID == s.HabiticaID
 	v.InParty = party != nil && *party != ""
-	v.Linked = v.World.party.Valid
-	v.LinkedToMine = v.InParty && v.World.party.String == *party
 	pw, err := partyWorld(ctx, tx, party)
 	if err != nil {
 		return v, err
 	}
+	v.PartyHome = pw != "" && pw == s.WorldID
 	if pw != "" && pw != s.WorldID {
 		ref, err := loadWorldRef(ctx, tx, pw)
 		if err != nil {
@@ -112,20 +243,50 @@ func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView
 		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM party_prompts WHERE habitica_id=? AND world_id=?", s.HabiticaID, pw).Scan(&seen); err != nil {
 			return v, err
 		}
-		v.Prompt = seen == 0
+		// Not while they live in a world an older link tied to their party:
+		// that group moves over together, when the operator adopts it.
+		oldLink := !v.World.Party && v.World.party.Valid && v.InParty && v.World.party.String == *party
+		v.Prompt = seen == 0 && !oldLink
+	}
+	if pw == "" && v.InParty {
+		why, err := a.mayOpenParty(ctx, tx, s.HabiticaID, party)
+		if err != nil {
+			return v, err
+		}
+		v.PartyCanOpen = why == ""
 	}
 	var own string
 	err = tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE owner_id=? AND id!=? ORDER BY created_at,id LIMIT 1", s.HabiticaID, s.WorldID).Scan(&own)
 	if err != nil && err != sql.ErrNoRows {
 		return v, err
 	}
-	if own != "" && own != pw {
+	if own != "" {
 		ref, err := loadWorldRef(ctx, tx, own)
 		if err != nil {
 			return v, err
 		}
 		v.OwnWorld = &ref
 	}
+	if v.MoveOpensAt, err = moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+		return v, err
+	}
+	if v.MoveOpensAt > 0 {
+		v.MoveOpensIn = v.MoveOpensAt - now
+	}
+	var left, movedOut sql.NullInt64
+	if err = tx.QueryRowContext(ctx, "SELECT party_left_at,party_moved_out_at FROM players WHERE habitica_id=?", s.HabiticaID).Scan(&left, &movedOut); err != nil {
+		return v, err
+	}
+	if leaverOf(v.World, party) {
+		l := &leaverView{LeftAt: now, HasOwn: v.OwnWorld != nil}
+		if left.Valid {
+			l.LeftAt = left.Int64
+		}
+		l.MoveOutAt = l.LeftAt + PartyGrace
+		l.MoveOutIn = max(0, l.MoveOutAt-now)
+		v.Leaver = l
+	}
+	v.MovedOutAt = movedOut.Int64
 	v.Leaving, err = leaving(ctx, tx, s)
 	return v, err
 }
@@ -161,47 +322,27 @@ func leaving(ctx context.Context, tx *sql.Tx, s store.Snapshot) (leavingView, er
 	return l, nil
 }
 
-// linkParty links a world to a party, and unlinks that party from every
-// other world: a party has one world. A nil party unlinks.
-func linkParty(ctx context.Context, tx *sql.Tx, world string, party *string) error {
-	if party != nil && *party != "" {
-		if _, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=NULL WHERE habitica_party_id=? AND id!=?", *party, world); err != nil {
-			return err
-		}
-		_, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=? WHERE id=?", *party, world)
-		return err
-	}
-	_, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=NULL WHERE id=?", world)
-	return err
-}
-
 func (a *Server) worldRead(w http.ResponseWriter, r *http.Request) error {
 	tx, s, _, err := a.begin(r)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	v, err := loadWorldView(r.Context(), tx, s)
+	v, err := a.loadWorldView(r.Context(), tx, s, a.Config.Now().Unix())
 	if err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v)
 }
 
-// worldParty links a world the caller owns (theirs where they live, or
-// worldId: one they left) to the party their last sign-in reported, or
-// unlinks it. Linking is exclusive (linkParty). A world setting, like
-// invites: no play lease.
+// worldParty makes the party's world for the party the caller's last
+// sign-in reported, when it has none yet (sign-in makes it too; this is for
+// a session older than that, or a party reopened since). Only an account the
+// operator let in may (mayOpenParty). It moves no one. Session only, no lease.
 func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Link    *bool  `json:"link"`
-		WorldID string `json:"worldId,omitempty"`
-	}
+	var req struct{}
 	if err := decode(w, r, &req); err != nil {
 		return err
-	}
-	if req.Link == nil || len(req.WorldID) > 128 {
-		return fail(400, "invalid-request")
 	}
 	tx, s, _, err := a.begin(r)
 	if err != nil {
@@ -209,31 +350,19 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	world := s.WorldID
-	if req.WorldID != "" {
-		world = req.WorldID
+	now := a.Config.Now().Unix()
+	switch why, err := a.mayOpenParty(ctx, tx, s.HabiticaID, s.HabiticaPartyID); {
+	case err != nil:
+		return err
+	case why == "party-open-denied":
+		return fail(403, why)
+	case why != "":
+		return fail(409, why)
 	}
-	ref, err := loadWorldRef(ctx, tx, world)
-	if err == sql.ErrNoRows {
-		return fail(404, "world-not-found")
-	}
-	if err != nil {
+	if _, err = ensurePartyWorld(ctx, tx, s.HabiticaPartyID, s.HabiticaID, now); err != nil {
 		return err
 	}
-	if ref.OwnerID != s.HabiticaID {
-		return fail(403, "not-world-owner")
-	}
-	var party *string
-	if *req.Link {
-		if s.HabiticaPartyID == nil || *s.HabiticaPartyID == "" {
-			return fail(409, "no-party")
-		}
-		party = s.HabiticaPartyID
-	}
-	if err = linkParty(ctx, tx, world, party); err != nil {
-		return err
-	}
-	v, err := loadWorldView(ctx, tx, s)
+	v, err := a.loadWorldView(ctx, tx, s, now)
 	if err != nil {
 		return err
 	}
@@ -264,24 +393,99 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 	if exists == 0 {
 		return fail(404, "world-not-found")
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.HabiticaID, req.WorldID, a.Config.Now().Unix()); err != nil {
+	now := a.Config.Now().Unix()
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.HabiticaID, req.WorldID, now); err != nil {
 		return err
 	}
-	v, err := loadWorldView(ctx, tx, s)
+	v, err := a.loadWorldView(ctx, tx, s, now)
 	if err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v)
 }
 
-// worldMove moves the caller to another world in one keyed transaction.
-// With them go their character, story, embers, pack and personal chest (all
-// keyed by player, not world). Their homestead membership ends exactly as a
+// relocate moves the player to target, the move's one shared step. With
+// them go their character, story, embers, pack and personal chest (all keyed
+// by player, not world). Their homestead membership ends exactly as a
 // "leave" does; furniture, the shared chest, shelf stock, Wilds claims and
 // project contributions stay with the old world. Parcels waiting for them
-// go back to their senders; parcels they sent must be recalled first (a move
-// never takes back a gift on its own). Their unused invite codes now admit
-// friends to the new world.
+// go back to their senders. Their unused invite codes now admit friends to
+// the new world, unless it is a party's (those take no codes). A warning
+// about having left a party ends with the move.
+func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRef, now int64) (bool, int, error) {
+	from := s.WorldID
+	if err := settleHomes(ctx, tx, from, now); err != nil {
+		return false, 0, err
+	}
+	homeID, member, err := memberOf(ctx, tx, s.HabiticaID)
+	if err != nil {
+		return false, 0, err
+	}
+	if member {
+		h, err := loadHome(ctx, tx, homeID, s.HabiticaID, now)
+		if err != nil {
+			return false, 0, err
+		}
+		if err = leave(ctx, tx, s, h, now); err != nil {
+			return false, 0, err
+		}
+	}
+	// Deed invitations to them belong to the old world's lane.
+	if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE to_id=?", s.HabiticaID); err != nil {
+		return false, 0, err
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM mail WHERE to_id=? AND world_id=? AND claimed_at IS NULL AND returned_at IS NULL AND kind!='thanks' ORDER BY sent_at,id", s.HabiticaID, from)
+	if err != nil {
+		return false, 0, err
+	}
+	incoming := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return false, 0, err
+		}
+		incoming = append(incoming, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return false, 0, err
+	}
+	for _, id := range incoming {
+		if _, err = store.ReturnMail(ctx, tx, id, "recipient-removed", now, true); err != nil {
+			return false, 0, err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET world_id=?,party_left_at=NULL WHERE habitica_id=?", target.ID, s.HabiticaID); err != nil {
+		return false, 0, err
+	}
+	// Codes they handed out follow them: a friend joins them, not the world
+	// they left. A party's world takes no codes: theirs keep naming the old one.
+	if !target.Party {
+		if _, err = tx.ExecContext(ctx, "UPDATE invites SET world_id=? WHERE created_by=? AND world_id=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", target.ID, s.HabiticaID, from, now); err != nil {
+			return false, 0, err
+		}
+	}
+	s.WorldID = target.ID
+	if err = store.Credit(ctx, tx, s, 0, 0, "world-move", from+">"+target.ID, nil, now); err != nil {
+		return false, 0, err
+	}
+	return member, len(incoming), nil
+}
+
+// moveResult is a move's answer under "result".
+type moveResult struct {
+	World    worldView `json:"world"`
+	From     string    `json:"from"`
+	LeftHome bool      `json:"leftHome"`
+	Returned int       `json:"returned"`
+}
+
+// worldMove moves the caller to their party's world or to one they own, in
+// one keyed transaction (relocate), from the village or the Commons, at most
+// once a day, and only once parcels they sent are home (a move never takes
+// back a gift on its own).
 func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
@@ -311,14 +515,18 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		// Only the party's world counts as an invite, not any world the
-		// party ever linked; a world you own is always yours to go back to.
+		// Your party's world, or a world you own (always yours to go back to).
 		pw, err := partyWorld(ctx, tx, s.HabiticaPartyID)
 		if err != nil {
 			return nil, err
 		}
 		if target.ID != pw && target.OwnerID != s.HabiticaID {
 			return nil, fail(403, "world-access-denied")
+		}
+		if opens, err := moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+			return nil, err
+		} else if opens > 0 {
+			return nil, fail(409, "move-cooldown")
 		}
 		before, err := leaving(ctx, tx, *s)
 		if err != nil {
@@ -327,75 +535,142 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if before.Outgoing > 0 {
 			return nil, fail(409, "mail-in-flight")
 		}
-		if err = settleHomes(ctx, tx, from, now); err != nil {
-			return nil, err
-		}
-		homeID, member, err := memberOf(ctx, tx, s.HabiticaID)
+		left, returned, err := relocate(ctx, tx, s, target, now)
 		if err != nil {
-			return nil, err
-		}
-		if member {
-			h, err := loadHome(ctx, tx, homeID, s.HabiticaID, now)
-			if err != nil {
-				return nil, err
-			}
-			if err = leave(ctx, tx, s, h, now); err != nil {
-				return nil, err
-			}
-		}
-		// Deed invitations to them belong to the old world's lane.
-		if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE to_id=?", s.HabiticaID); err != nil {
-			return nil, err
-		}
-		rows, err := tx.QueryContext(ctx, "SELECT id FROM mail WHERE to_id=? AND world_id=? AND claimed_at IS NULL AND returned_at IS NULL AND kind!='thanks' ORDER BY sent_at,id", s.HabiticaID, from)
-		if err != nil {
-			return nil, err
-		}
-		incoming := []string{}
-		for rows.Next() {
-			var id string
-			if err = rows.Scan(&id); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			incoming = append(incoming, id)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
-		for _, id := range incoming {
-			if _, err = store.ReturnMail(ctx, tx, id, "recipient-removed", now, true); err != nil {
-				return nil, err
-			}
-		}
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET world_id=? WHERE habitica_id=?", target.ID, s.HabiticaID); err != nil {
-			return nil, err
-		}
-		// Codes they handed out follow them: a friend joins them, not the world they left.
-		if _, err = tx.ExecContext(ctx, "UPDATE invites SET world_id=? WHERE created_by=? AND world_id=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", target.ID, s.HabiticaID, from, now); err != nil {
-			return nil, err
-		}
-		s.WorldID = target.ID
-		if err = store.Credit(ctx, tx, s, 0, 0, "world-move", from+">"+target.ID, nil, now); err != nil {
 			return nil, err
 		}
 		mover = s.HabiticaID
-		v, err := loadWorldView(ctx, tx, *s)
+		v, err := a.loadWorldView(ctx, tx, *s, now)
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			World    worldView `json:"world"`
-			From     string    `json:"from"`
-			LeftHome bool      `json:"leftHome"`
-			Returned int       `json:"returned"`
-		}{v, from, member, len(incoming)}, nil
+		return moveResult{v, from, left, returned}, nil
 	}, func() {
 		// Presence follows: the live socket moves to the new world's rooms.
 		if mover != "" {
 			a.presenceChanged(mover)
 		}
 	})
+}
+
+// worldLeave ("Leave now") moves someone who has left the party whose world
+// they live in to a world of their own (made when they have none) straight
+// away, without waiting out the grace period or the move cooldown. The
+// other move rules hold: from the village or the Commons, parcels home first.
+func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Mutation
+		Key      string          `json:"key"`
+		Progress json.RawMessage `json:"progress,omitempty"`
+	}
+	if err := decode(w, r, &req); err != nil {
+		return err
+	}
+	mover := ""
+	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		here, err := loadWorldRef(ctx, tx, s.WorldID)
+		if err != nil {
+			return nil, err
+		}
+		if !leaverOf(here, s.HabiticaPartyID) {
+			return nil, fail(409, "still-in-party")
+		}
+		if !rules.SafeAreas[s.State.Area] {
+			return nil, fail(409, "not-at-safe-boundary")
+		}
+		before, err := leaving(ctx, tx, *s)
+		if err != nil {
+			return nil, err
+		}
+		if before.Outgoing > 0 {
+			return nil, fail(409, "mail-in-flight")
+		}
+		target, err := ownWorld(ctx, tx, s.HabiticaID, now)
+		if err != nil {
+			return nil, err
+		}
+		from := s.WorldID
+		left, returned, err := relocate(ctx, tx, s, target, now)
+		if err != nil {
+			return nil, err
+		}
+		mover = s.HabiticaID
+		v, err := a.loadWorldView(ctx, tx, *s, now)
+		if err != nil {
+			return nil, err
+		}
+		return moveResult{v, from, left, returned}, nil
+	}, func() {
+		if mover != "" {
+			a.presenceChanged(mover)
+		}
+	})
+}
+
+// partyResidence runs at sign-in, with the party just verified: a resident
+// of a party's world who is back in that party is no longer warned; one who
+// isn't is warned from now (party_left_at), and once PartyGrace has passed
+// is moved out to a world of their own (relocate), wherever they stood: off
+// the safe paths they arrive in the village, and parcels they sent stay on
+// the road (their recipients can still take them). Reports a move.
+func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *string, now int64) (bool, error) {
+	here, err := loadWorldRef(ctx, tx, s.WorldID)
+	if err != nil || !here.Party {
+		return false, err
+	}
+	if !leaverOf(here, party) {
+		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=NULL WHERE habitica_id=?", s.HabiticaID)
+		return false, err
+	}
+	var left sql.NullInt64
+	if err = tx.QueryRowContext(ctx, "SELECT party_left_at FROM players WHERE habitica_id=?", s.HabiticaID).Scan(&left); err != nil {
+		return false, err
+	}
+	if !left.Valid {
+		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=? WHERE habitica_id=?", now, s.HabiticaID)
+		return false, err
+	}
+	if now < left.Int64+PartyGrace {
+		return false, nil
+	}
+	target, err := ownWorld(ctx, tx, s.HabiticaID, now)
+	if err != nil {
+		return false, err
+	}
+	if !rules.SafeAreas[s.State.Area] {
+		start := rules.NewState()
+		s.State.Area, s.State.Position = start.Area, start.Position
+	}
+	if _, _, err = relocate(ctx, tx, s, target, now); err != nil {
+		return false, err
+	}
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=? WHERE habitica_id=?", now, s.HabiticaID); err != nil {
+		return false, err
+	}
+	if err = settleSlots(ctx, tx, s); err != nil {
+		return false, err
+	}
+	return true, store.Persist(ctx, tx, s, now)
+}
+
+// worldNotice records that the "you were moved out" notice was shown.
+func (a *Server) worldNotice(w http.ResponseWriter, r *http.Request) error {
+	var req struct{}
+	if err := decode(w, r, &req); err != nil {
+		return err
+	}
+	tx, s, _, err := a.begin(r)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	ctx := r.Context()
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=NULL WHERE habitica_id=?", s.HabiticaID); err != nil {
+		return err
+	}
+	v, err := a.loadWorldView(ctx, tx, s, a.Config.Now().Unix())
+	if err != nil {
+		return err
+	}
+	return a.finish(w, r, tx, v)
 }

@@ -170,7 +170,7 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
   }
 }
 
-const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute', 'items', 'mend', 'world-move'];
+const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute', 'items', 'mend', 'world-move', 'world-leave'];
 const ITEM_OPS = ['use', 'repair', 'fit', 'unfit', 'give', 'pocket', 'offhand', 'pickup', 'return', 'heirloom', 'ada-oil'];
 const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade', 'claim', 'clear', 'invite', 'joint', 'leave'];
 

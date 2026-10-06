@@ -76,6 +76,7 @@ export type MutationOp =
   | { kind: 'items'; op: ItemsOp; fields: Record<string, unknown> }
   | { kind: 'mend'; id: string; fields?: Record<string, unknown> }
   | { kind: 'world-move'; fields: { worldId: string } }
+  | { kind: 'world-leave'; fields: Record<string, never> }
 
 /** A mutation sent whose answer never came: the exact body, key and all. */
 export interface Unresolved {
@@ -142,6 +143,8 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.repairMend(op.id, req)
     case 'world-move':
       return raw.worldMove(req)
+    case 'world-leave':
+      return raw.worldLeave(req)
   }
 }
 

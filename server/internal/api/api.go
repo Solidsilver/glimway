@@ -39,6 +39,12 @@ type Config struct {
 	WildsGeneratorVersion int
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
+	// PartyAdmissionOff: no one signs in through a party, and no party's
+	// world is made (-party-admission=false). Party worlds already made stay.
+	PartyAdmissionOff bool
+	// LoginPartyRate: upstream calls a minute for sign-ins that only a party
+	// could admit, a bucket apart from LoginGlobalRate (zero: a quarter of it).
+	LoginPartyRate int
 	// Habitica outfit art (sprites.go): where fetched sprites are kept on
 	// disk (empty: a folder in the system temp dir) and the sprite host
 	// (empty: DefaultSpriteBaseURL; the playtests point it at a fake).
@@ -52,6 +58,7 @@ type Server struct {
 	loginSlots  chan struct{}
 	loginLimit  *loginLimiter
 	loginGlobal *loginLimiter
+	loginParty  *loginLimiter
 	loginProofs *proofLimiter
 	presence    *presenceHub
 	sprites     *spriteProxy
@@ -109,7 +116,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -173,6 +180,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.worldPrompt(w, r)
 	case "POST /api/world/move":
 		err = a.worldMove(w, r)
+	case "POST /api/world/leave":
+		err = a.worldLeave(w, r)
+	case "POST /api/world/notice":
+		err = a.worldNotice(w, r)
 	case "POST /api/session":
 		err = a.login(w, r)
 	case "DELETE /api/session":
@@ -336,23 +347,33 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		UserID string `json:"userId"`
 		Token  string `json:"token"`
 		Invite string `json:"invite"`
+		// Party: the party the client expects Habitica to report (from the
+		// profile it read itself). Only lets a party-only sign-in past the
+		// precheck; the verified party must match it.
+		Party string `json:"party"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 512 {
+	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 512 || len(req.Party) > 128 {
 		return fail(400, "invalid-credentials")
 	}
 	req.Invite = store.NormalizeInvite(req.Invite)
 	if len(req.Invite) > 128 {
 		return fail(400, "invalid-credentials")
 	}
-	eligible, err := a.precheck(r.Context(), req.UserID, req.Invite)
+	route, err := a.precheck(r.Context(), req.UserID, req.Invite, req.Party)
 	if err != nil {
 		return err
 	}
-	if !eligible {
+	if route == "" {
 		return fail(403, "access-denied")
+	}
+	// Sign-ins only a party could admit spend their own, smaller share of
+	// the Habitica budget, never the one allowlisted and invited players use.
+	budget := a.loginGlobal
+	if route == "party" {
+		budget = a.loginParty
 	}
 	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
@@ -372,7 +393,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", "1")
 		return fail(429, "login-busy")
 	}
-	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserID, req.Token, func() bool { return a.loginGlobal.allow("global", a.Config.Now()) })
+	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserID, req.Token, func() bool { return budget.allow("global", a.Config.Now()) })
 	req.Token = ""
 	if err != nil {
 		var h *habitica.Error
@@ -400,25 +421,38 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM players WHERE habitica_id=?", p.ID).Scan(&existing); err != nil {
 		return err
 	}
-	// An invite code decides a new player's world (the one it names, else a
-	// solo world). An allowlisted newcomer's valid code still counts.
+	// A party with an open world here counts as an invite: a verified member
+	// may sign in with no code and no allowlist entry (and is allowlisted from
+	// then on, added_by 'party'), unless the CLI removed them. The party comes
+	// only from the identity check above, and must be the one the client said.
+	admits, err := a.partyAdmits(ctx, tx, p.PartyID)
+	if err != nil {
+		return err
+	}
+	// An invite code decides a new player's world (the one it names, else
+	// their party's world, else a solo world). An allowlisted newcomer's
+	// valid code still counts. A code naming a party's world admits no one.
 	world := ""
-	invited := false
+	via := "invite"
 	if allowed == 0 || existing == 0 && req.Invite != "" {
 		var named sql.NullString
-		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, store.Hash(req.Invite), now).Scan(&named)
+		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND "+inviteUsable, p.ID, store.Hash(req.Invite), now).Scan(&named)
 		if err == sql.ErrNoRows && allowed == 0 {
-			return fail(403, "access-denied")
-		}
-		if err != nil && err != sql.ErrNoRows {
+			var removed int
+			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM access_removals WHERE habitica_id=?", p.ID).Scan(&removed); err != nil {
+				return err
+			}
+			if admits == "" || removed > 0 || req.Party != *p.PartyID {
+				return fail(403, "access-denied")
+			}
+			via = "party"
+		} else if err != nil && err != sql.ErrNoRows {
 			return err
-		}
-		if err == nil {
-			invited = true
+		} else if err == nil {
 			if named.Valid {
 				world = named.String
 			}
-			res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, now, store.Hash(req.Invite), now)
+			res, err := tx.ExecContext(ctx, "UPDATE invites SET used_by=?,used_at=? WHERE code_hash=? AND "+inviteUsable, p.ID, now, store.Hash(req.Invite), now)
 			if err != nil {
 				return err
 			}
@@ -431,7 +465,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if allowed == 0 {
-			if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, "invite", now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, via, now); err != nil {
 				return err
 			}
 			if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", p.ID); err != nil {
@@ -439,16 +473,26 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	// The first operator-admitted member of a party to sign in makes the
+	// party's world; one let in through a party never makes another.
+	why, err := a.mayOpenParty(ctx, tx, p.ID, p.PartyID)
+	if err != nil {
+		return err
+	}
+	var pw string
+	if why == "" {
+		pw, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now)
+	} else {
+		pw, err = partyWorld(ctx, tx, p.PartyID)
+	}
+	if err != nil {
+		return err
+	}
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
+	movedOut := false
 	if existing == 0 {
-		// Being in the same Habitica party counts as an invite: without a
-		// code, a newcomer joins their party's world when it has one.
-		party, err := partyWorld(ctx, tx, p.PartyID)
-		if err != nil {
-			return err
-		}
-		if !invited {
-			world = party
+		if world == "" {
+			world = pw
 		}
 		if world == "" {
 			world, err = store.Random()
@@ -461,13 +505,6 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
 				return err
-			}
-			// A new world becomes its creator's party's world, unless the
-			// party already has one (a code sent them to a world of their own).
-			if party == "" {
-				if err = linkParty(ctx, tx, world, p.PartyID); err != nil {
-					return err
-				}
 			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {
@@ -496,6 +533,11 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE habitica_id=?),0) WHERE habitica_id=?", verified, store.JSON(p), now, p.Level, p.ID, p.ID); err != nil {
 			return err
 		}
+		// Left the party whose world they live in: warned now, moved out
+		// once the grace period has passed.
+		if movedOut, err = partyResidence(ctx, tx, &s, p.PartyID, now); err != nil {
+			return err
+		}
 	}
 	session, err := store.Random()
 	if err != nil {
@@ -514,6 +556,9 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err = tx.Commit(); err != nil {
 		return err
+	}
+	if movedOut {
+		a.presenceChanged(p.ID)
 	}
 	a.cookie(w, session, expires)
 	write(w, 200, s)

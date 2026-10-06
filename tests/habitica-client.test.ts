@@ -215,6 +215,8 @@ test('USER_FIELDS projects companions and costume for real imports', () => {
   assert.ok(USER_FIELDS.includes('items.gear.costume'));
   assert.ok(USER_FIELDS.includes('items.gear.equipped'));
   assert.ok(USER_FIELDS.includes('flags.classSelected'));
+  // The party id, which a world sign-in tells the server to expect.
+  assert.ok(USER_FIELDS.split(',').includes('party._id'));
 });
 
 test('default client uses the real gear catalog (actual gear stats)', async () => {

@@ -71,3 +71,35 @@ func TestNixUsesEnvCGO(t *testing.T) {
 		t.Fatal("CGO attribute must be in env for buildGoModule")
 	}
 }
+
+// The operator's party controls: list, close and reopen, adopt; and the
+// -party-admission flag parses.
+func TestPartyCommands(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "game.sqlite")
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES('old','bob','s','p1',1)"); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	for _, cmd := range [][]string{{"party", "close", "p2"}, {"parties"}, {"party", "open", "p2"}, {"party", "adopt", "old"}, {"parties"}, {"-party-admission=false", "parties"}} {
+		if err := run(append([]string{"-db", path}, cmd...)); err != nil {
+			t.Fatalf("%v: %v", cmd, err)
+		}
+	}
+	if s, err = store.Open(path); err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var owner string
+	if err = s.DB.QueryRow("SELECT owner_id FROM worlds WHERE id='old'").Scan(&owner); err != nil || owner != "" {
+		t.Fatal("adopt", owner, err)
+	}
+	for _, cmd := range [][]string{{"parties", "x"}, {"party"}, {"party", "close"}, {"party", "shut", "p1"}, {"party", "adopt", "old"}, {"party", "adopt", "nowhere"}, {"invite", "old"}} {
+		if err = run(append([]string{"-db", path}, cmd...)); err == nil {
+			t.Fatalf("accepted invalid CLI %v", cmd)
+		}
+	}
+}

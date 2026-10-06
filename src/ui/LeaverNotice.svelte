@@ -1,35 +1,43 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import type { WorldRef } from '../lib/api/types'
+  import type { WorldView } from '../lib/api/types'
   import { worldCopy } from '../content/world-moves'
-  import { api } from './account'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
 
   /**
-   * Shown once when your party has a world and you live elsewhere. The server
-   * remembers it was shown only once it has really been on screen (this
-   * mounting). Never a modal: the world goes on around it.
+   * After a sign-in, when you've left the party whose world you live in: how
+   * long until you're moved out, and "Leave now" (the move screen, no
+   * cooldown). Or, once the server has moved you out, what happened (shown
+   * until you dismiss it). Never a modal: the world goes on around it.
    */
-  let { world, onJoin, onLater }: { world: WorldRef; onJoin: () => void; onLater: () => void } = $props()
+  let { view, onLeave, onClose }: { view: WorldView; onLeave: () => void; onClose: () => void } = $props()
   const touch = isTouchFirst()
-
-  onMount(() => {
-    void api.worldPrompt(world.id).catch(() => undefined)
-  })
+  /** Seconds left, counted on this device's clock from the server's figure. */
+  // svelte-ignore state_referenced_locally
+  const deadline = Date.now() / 1000 + (view.leaver?.moveOutIn ?? 0)
 </script>
 
-<div class="notice panel" class:touch role="status" aria-live="polite" data-testid="party-prompt">
-  <span class="badge" aria-hidden="true"><Icon name="world" size={20} /></span>
-  <div class="body">
-    <strong>{worldCopy.prompt(world.members)}</strong>
-    <p><span class="who"><Icon name="person" size={11} /> {worldCopy.travelers(world.members, world.ownerName, world.ownerHere)}</span> <span class="note">{worldCopy.promptNote}</span></p>
+{#if view.movedOutAt > 0}
+  <div class="notice panel" class:touch role="status" aria-live="polite" data-testid="party-moved-out">
+    <span class="badge" aria-hidden="true"><Icon name="lantern" size={20} /></span>
+    <div class="body"><strong>{worldCopy.movedOut}</strong></div>
+    <div class="actions">
+      <button type="button" class="primary" onclick={onClose}>{worldCopy.movedOutOk}</button>
+    </div>
   </div>
-  <div class="actions">
-    <button type="button" class="primary" onclick={onJoin}>{worldCopy.join(world.members)}</button>
-    <button type="button" class="ghost" onclick={onLater}>{worldCopy.later}</button>
+{:else if view.leaver}
+  <div class="notice panel" class:touch role="status" aria-live="polite" data-testid="party-leaver">
+    <span class="badge" aria-hidden="true"><Icon name="world" size={20} /></span>
+    <div class="body">
+      <strong>{worldCopy.leaver(worldCopy.within(deadline - Date.now() / 1000))}</strong>
+      <p>{worldCopy.leaverNote(view.leaver.hasOwn)}</p>
+    </div>
+    <div class="actions">
+      <button type="button" class="primary" onclick={onLeave}>{worldCopy.leaveNow}</button>
+      <button type="button" class="ghost" onclick={onClose}>{worldCopy.later}</button>
+    </div>
   </div>
-</div>
+{/if}
 
 <style>
   .notice {
@@ -78,17 +86,6 @@
     font-size: 13px;
     line-height: 1.45;
     color: var(--text-soft);
-  }
-  .note {
-    color: var(--text-faint);
-  }
-  .who {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-right: 4px;
-    font-weight: 700;
-    color: var(--wood);
   }
   .actions {
     display: flex;

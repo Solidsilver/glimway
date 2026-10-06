@@ -46,6 +46,11 @@ func run(args []string) error {
 		return fmt.Errorf("invalid FINGERSNAP_COOKIE_SECURE")
 	}
 	secure := f.Bool("cookie-secure", secureDefault, "Secure session cookies (disable only for local HTTP)")
+	partyDefault, err := strconv.ParseBool(env("FINGERSNAP_PARTY_ADMISSION", "true"))
+	if err != nil {
+		return fmt.Errorf("invalid FINGERSNAP_PARTY_ADMISSION")
+	}
+	partyAdmission := f.Bool("party-admission", partyDefault, "Let members of a party with a world here sign in without a code, and make party worlds")
 	if err = f.Parse(args); err != nil {
 		return err
 	}
@@ -111,6 +116,34 @@ func run(args []string) error {
 				fmt.Println(store.JSON(v))
 			}
 			return nil
+		case "parties":
+			if len(cmd) != 1 {
+				return fmt.Errorf("usage: parties")
+			}
+			records, err := s.Parties(ctx)
+			if err != nil {
+				return err
+			}
+			for _, v := range records {
+				fmt.Println(store.JSON(v))
+			}
+			return nil
+		case "party":
+			if len(cmd) != 3 {
+				return fmt.Errorf("usage: party close|open PARTY-ID | party adopt WORLD-ID")
+			}
+			switch cmd[1] {
+			case "close", "open":
+				return s.SetPartyOpen(ctx, cmd[2], cmd[1] == "open")
+			case "adopt":
+				party, err := s.AdoptWorld(ctx, cmd[2])
+				if err != nil {
+					return err
+				}
+				fmt.Printf("world %s is now party %s's world\n", cmd[2], party)
+				return nil
+			}
+			return fmt.Errorf("unknown party command")
 		case "flag":
 			if len(cmd) != 3 || cmd[1] != "clear" {
 				return fmt.Errorf("usage: flag clear ID")
@@ -193,7 +226,7 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "fingersnap ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission})
 	defer handler.ClosePresence()
 	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)

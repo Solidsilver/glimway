@@ -31,6 +31,7 @@ in
     habiticaUrl = lib.mkOption { type = lib.types.str; default = "https://habitica.com"; description = "Habitica read-only API base URL."; };
     xClient = lib.mkOption { type = lib.types.str; default = "5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap"; description = "Habitica creator-id-appname header."; };
     trustedProxies = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "127.0.0.1" "::1" ]; description = "Proxy IPs permitted to supply the last X-Forwarded-For hop; empty trusts none."; };
+    partyAdmission = lib.mkOption { type = lib.types.bool; default = true; description = "Let members of a Habitica party with a world here sign in without a code, and make party worlds (-party-admission)."; };
     backupRetentionDays = lib.mkOption { type = lib.types.ints.positive; default = 30; description = "Nightly backup retention in days."; };
   };
   config = lib.mkIf cfg.enable {
@@ -49,6 +50,7 @@ in
         FINGERSNAP_X_CLIENT = cfg.xClient;
         FINGERSNAP_COOKIE_SECURE = "true";
         FINGERSNAP_TRUSTED_PROXIES = lib.concatStringsSep "," cfg.trustedProxies;
+        FINGERSNAP_PARTY_ADMISSION = lib.boolToString cfg.partyAdmission;
       };
       serviceConfig = {
         ExecStart = "${cfg.package}/bin/fingersnap-server";

@@ -77,6 +77,8 @@ export interface LoginRequest {
   userId: string;
   token: string;
   invite?: string;
+  /** The Habitica party the client read (lets a party member in without a code; the server checks it). */
+  party?: string;
 }
 
 export interface OriginRequest {
@@ -128,20 +130,23 @@ export interface InviteList {
   remaining?: number;
   /** How many unused codes may wait at once. */
   outstandingLimit?: number;
+  /** You live in a party's world, which takes no codes. */
+  partyWorld?: boolean;
 }
 
 // ------------------------------------------------------------- worlds
 
-/** A world as the server names it: its owner and how many live there. */
+/** A world as the server names it: its owner (none for a party's) and how many live there. */
 export interface WorldRef {
   id: string;
+  /** Empty for a party's world. */
   ownerId: string;
   ownerName: string;
   members: number;
   /** The owner lives there. */
   ownerHere: boolean;
-  /** Linked to a party. */
-  linked: boolean;
+  /** A party's world, owned by no one. */
+  party: boolean;
 }
 
 /** What a move would leave behind (GET /api/world). */
@@ -160,22 +165,41 @@ export interface WorldLeaving {
   deedCost: number;
 }
 
-/** GET /api/world: your world, its party link, and the party's world. */
+/** GET /api/world: your world, your party's world, and when you may next move. */
 export interface WorldView {
   world: WorldRef;
   isOwner: boolean;
   /** Your last sign-in reported a party. */
   inParty: boolean;
-  /** This world is linked to a party; `linkedToMine`: to yours. */
-  linked: boolean;
-  linkedToMine: boolean;
-  /** Your party's world, when it is somewhere else. */
+  /** You live in your party's world. */
+  partyHome: boolean;
+  /** Your party's world, when you live somewhere else. */
   partyWorld: WorldRef | null;
+  /** Your party has no world here yet and you may open it. */
+  partyCanOpen: boolean;
   /** A world you own, when you live somewhere else. */
   ownWorld: WorldRef | null;
   /** The party world's join prompt hasn't been shown yet. */
   prompt: boolean;
   leaving: WorldLeaving;
+  /** When the next move is allowed (unix seconds, the server's clock; 0: now). One move a day. */
+  moveOpensAt: number;
+  /** Seconds until then, by the server's clock: count down from this on the device's own. */
+  moveOpensIn: number;
+  /** You live in a party's world and have left that party. */
+  leaver: WorldLeaver | null;
+  /** When the server moved you out of a party's world you'd left (0: it didn't), until noticed. */
+  movedOutAt: number;
+}
+
+/** Living in a party's world after leaving the party (GET /api/world). */
+export interface WorldLeaver {
+  leftAt: number;
+  /** When the next sign-in moves you out (server clock); moveOutIn: seconds until then. */
+  moveOutAt: number;
+  moveOutIn: number;
+  /** You own a world to go to (otherwise one is made for you). */
+  hasOwn: boolean;
 }
 
 /** POST /api/world/move (keyed). */

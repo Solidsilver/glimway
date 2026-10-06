@@ -194,7 +194,9 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 	defer tx.Rollback()
 	now := time.Now().Unix()
 	if add {
-		if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO allowlist VALUES(?,?,?)", id, "cli", now); err != nil {
+		// An account let in through a party becomes the operator's own: it
+		// may then open a party's world (docs/home-server.md).
+		if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?) ON CONFLICT(habitica_id) DO UPDATE SET added_by='cli',added_at=excluded.added_at WHERE added_by='party'", id, "cli", now); err != nil {
 			return err
 		}
 		if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", id); err != nil {
@@ -237,6 +239,14 @@ func (s *Store) Invite(ctx context.Context, world string) (string, error) {
 	var w any
 	if strings.TrimSpace(world) != "" {
 		w = world
+		// A party's world is for that party only: no code names it.
+		var party int
+		if err = s.DB.QueryRowContext(ctx, "SELECT count(*) FROM worlds WHERE id=? AND owner_id=''", world).Scan(&party); err != nil {
+			return "", err
+		}
+		if party > 0 {
+			return "", fmt.Errorf("a party's world takes no invite codes")
+		}
 	}
 	_, err = s.DB.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", Hash(code), "cli", w, time.Now().Unix(), time.Now().Add(30*24*time.Hour).Unix())
 	return code, err
