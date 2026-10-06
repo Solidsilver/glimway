@@ -72,7 +72,7 @@
       "name": "Oak Table",
       "minTier": 2,
       "materials": {
-        "timber": 8,
+        "seasoned-timber": 8,
         "fiber": 2
       },
       "output": {
@@ -86,7 +86,7 @@
       "name": "Reading Chair",
       "minTier": 2,
       "materials": {
-        "timber": 6,
+        "seasoned-timber": 6,
         "fiber": 2
       },
       "output": {
@@ -288,6 +288,394 @@
         "id": "carting-coat",
         "qty": 1
       }
+    },
+    {
+      "id": "craft-split-rail",
+      "name": "Split rail",
+      "minTier": 2,
+      "materials": {
+        "timber": 2,
+        "wooden-peg": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "split-rail",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-slates",
+      "name": "Slates",
+      "minTier": 2,
+      "materials": {
+        "stone": 3
+      },
+      "output": {
+        "kind": "item",
+        "id": "slates",
+        "qty": 3
+      }
+    },
+    {
+      "id": "craft-oak-slat",
+      "name": "Oak slat",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 1,
+        "wooden-peg": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "oak-slat",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-gate-shelf",
+      "name": "Gate shelf",
+      "minTier": 2,
+      "materials": {
+        "timber": 4,
+        "stone": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "gate-shelf",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-writing-desk",
+      "name": "Writing desk",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 6
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "writing-desk",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-keepsake-cabinet",
+      "name": "Keepsake cabinet",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 5
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "keepsake-cabinet",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-drying-rack",
+      "name": "Herb drying rack",
+      "minTier": 2,
+      "materials": {
+        "timber": 3,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "drying-rack",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-apothecary-shelf",
+      "name": "Apothecary shelf",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 4
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "apothecary-shelf",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-woodpile",
+      "name": "Woodpile",
+      "minTier": 2,
+      "materials": {
+        "timber": 4,
+        "stone": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "woodpile",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-raised-bed",
+      "name": "Raised bed",
+      "minTier": 2,
+      "materials": {
+        "timber": 4,
+        "stone": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "raised-bed",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-window-lamp",
+      "name": "Window lamp",
+      "minTier": 2,
+      "materials": {
+        "lamp-head": 1,
+        "hearth-oil": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "window-lamp",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-naming-frame",
+      "name": "Naming-slip frame",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "naming-frame",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-pressed-flowers",
+      "name": "Pressed-flower frame",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 1,
+        "bloom-flowers": 3
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "pressed-flowers",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-candle-hulls",
+      "name": "Candle hulls",
+      "minTier": 2,
+      "materials": {
+        "walnut-shells": 4,
+        "candle-oil": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "candle-hulls",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-carting-bunting",
+      "name": "Carting bunting",
+      "minTier": 2,
+      "materials": {
+        "madder-scraps": 4,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "carting-bunting",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-empty-chair",
+      "name": "The Empty Chair",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 4,
+        "amberfall-sap": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "empty-chair",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-closure-lamp",
+      "name": "Closure Night lamp",
+      "minTier": 2,
+      "materials": {
+        "frost-glass": 2,
+        "lamp-wick": 1,
+        "hearth-oil": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "closure-lamp",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-bookshelf",
+      "name": "Bookshelf",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 5,
+        "wooden-peg": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "bookshelf",
+        "qty": 1
+      }
+    }
+  ],
+  "hearthRecipes": [
+    {
+      "id": "hearth-saltings-tea",
+      "name": "Saltings tea",
+      "minTier": 1,
+      "materials": {
+        "wild-thyme": 2,
+        "water": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "saltings-tea",
+        "qty": 2
+      }
+    },
+    {
+      "id": "hearth-comfrey-salve",
+      "name": "Comfrey salve",
+      "minTier": 1,
+      "materials": {
+        "comfrey-root": 2,
+        "tallow": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "comfrey-salve",
+        "qty": 2
+      }
+    },
+    {
+      "id": "hearth-candle-oil",
+      "name": "Candle oil",
+      "minTier": 1,
+      "materials": {
+        "amber": 1,
+        "tallow": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "candle-oil",
+        "qty": 2
+      }
+    },
+    {
+      "id": "hearth-willow-bark-tea",
+      "name": "Willow-bark tea",
+      "minTier": 1,
+      "materials": {
+        "willow-bark": 2,
+        "water": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "willow-bark-tea",
+        "qty": 2
+      },
+      "page": "recipe-page-willow-tea",
+      "found": "Found on another Cotta leaf out in the Wilds"
+    },
+    {
+      "id": "hearth-hearth-oil",
+      "name": "Hearth oil",
+      "minTier": 1,
+      "materials": {
+        "amber": 3,
+        "tallow": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "hearth-oil",
+        "qty": 1
+      },
+      "page": "recipe-page-hearth-oil",
+      "found": "Found on a leaf of Ada’s oil receipts"
+    },
+    {
+      "id": "hearth-keepers-twists",
+      "name": "Keeper's Twists",
+      "minTier": 1,
+      "materials": {
+        "flour": 2,
+        "wild-honey": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "keepers-twists",
+        "qty": 4
+      },
+      "page": "recipe-card-twists",
+      "found": "Found on Hazel’s recipe card in the village"
+    },
+    {
+      "id": "hearth-oil-twists",
+      "name": "Keeper's Twists (oil)",
+      "minTier": 1,
+      "materials": {
+        "flour": 2,
+        "wild-honey": 1,
+        "candle-oil": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "oil-twists",
+        "qty": 4
+      },
+      "page": "recipe-card-oil-twists",
+      "found": "Hazel’s card, once the oil comes back"
+    },
+    {
+      "id": "hearth-wax-seal",
+      "name": "Wax seal",
+      "minTier": 1,
+      "materials": {
+        "beeswax": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "wax-seal",
+        "qty": 2
+      },
+      "page": "recipe-page-wax-seal",
+      "found": "Found on a Brackenwood handbook page"
+    },
+    {
+      "id": "hearth-storm-oil",
+      "name": "Storm oil",
+      "minTier": 1,
+      "materials": {
+        "storm-grade-drop": 1,
+        "tallow": 1
+      },
+      "output": {
+        "kind": "material",
+        "id": "storm-oil",
+        "qty": 1
+      },
+      "page": "recipe-page-storm-oil",
+      "found": "Found in a margin of Wenna’s ledger"
     }
   ]
 }

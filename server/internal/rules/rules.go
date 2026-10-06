@@ -129,12 +129,39 @@ func SanitizeProfile(p Profile) Profile {
 	return p
 }
 func finite(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }
+
+// Habitica's API spells the mage class "wizard" — in user stats.class and in
+// gear klass/specialClass (content/habitica-gear.json). Class admissions
+// accept both spellings; everything stored or replayed internally uses
+// "mage". NormalizeClass maps Habitica's alias onto the internal class and
+// reports whether the class is known at all.
+func NormalizeClass(class string) (string, bool) {
+	switch class {
+	case "warrior", "mage", "rogue", "healer":
+		return class, true
+	case "wizard":
+		return "mage", true
+	default:
+		return "", false
+	}
+}
+
+// GearMatchesClass reports whether a gear item's klass/specialClass earns
+// the class-stat bonus for an (internal) character class: Habitica's
+// gear klass "wizard" matches an internal "mage".
+func GearMatchesClass(klass, class string) bool {
+	k, ok := NormalizeClass(klass)
+	return ok && k == class
+}
+
 func ValidProfile(p Profile) bool {
 	if p.ID == "" || len(p.ID) > 128 || p.Name == "" || len(p.Name) > 256 || p.Level < 1 || p.Level > MaxProfileLevel || p.MaxHP < 1 || p.MaxMP < 0 {
 		return false
 	}
-	if p.Class != nil && !slices.Contains([]string{"warrior", "mage", "healer", "rogue"}, *p.Class) {
-		return false
+	if p.Class != nil {
+		if _, ok := NormalizeClass(*p.Class); !ok {
+			return false
+		}
 	}
 	for _, n := range []float64{p.Level, p.HP, p.MaxHP, p.MP, p.MaxMP, p.Stats.Str, p.Stats.Int, p.Stats.Con, p.Stats.Per} {
 		if !finite(n) || n < 0 {
@@ -536,6 +563,15 @@ func DecodeProfile(raw json.RawMessage) (Profile, error) {
 		if !finite(v) {
 			return p, bad
 		}
+	}
+	// Accept Habitica's "wizard" spelling at this intake too; save the
+	// normalized internal class so nothing but "mage" is ever stored.
+	if p.Class != nil {
+		c, ok := NormalizeClass(*p.Class)
+		if !ok {
+			return p, bad
+		}
+		p.Class = &c
 	}
 	if !ValidProfile(p) {
 		return p, bad

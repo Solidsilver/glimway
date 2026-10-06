@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -23,16 +24,18 @@ type itemsResponse struct {
 	store.Snapshot
 	Items  itemsView `json:"items"`
 	Result struct {
-		Items   itemsView      `json:"items"`
-		Wear    *wearResult    `json:"wear"`
-		Used    string         `json:"used"`
-		Pickup  string         `json:"pickup"`
-		Given   *content.Asset `json:"given"`
-		Mended  string         `json:"mended"`
-		Created  []string         `json:"created"`
-		Gathered []stackView      `json:"gathered"`
-		Plant    *homePlantView   `json:"plant"`
-		Land     *homeLandChange  `json:"land"`
+		Items    itemsView       `json:"items"`
+		Wear     *wearResult     `json:"wear"`
+		Used     string          `json:"used"`
+		Pickup   string          `json:"pickup"`
+		Given    *content.Asset  `json:"given"`
+		Mended   string          `json:"mended"`
+		Created  []string        `json:"created"`
+		Gathered []stackView     `json:"gathered"`
+		Plant    *homePlantView  `json:"plant"`
+		Land     *homeLandChange `json:"land"`
+		Returned string          `json:"returned"`
+		Paper    *string         `json:"paper"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`
@@ -148,7 +151,7 @@ func stackQty(v itemsView, def string) int {
 // up to what the tables hold (stacks plus loose instances) for this player.
 func (x *rig) conserved(id string) {
 	x.t.Helper()
-	rows, err := x.db.DB.Query("SELECT currency,SUM(delta) FROM ledger WHERE habitica_id=? AND (currency LIKE 'material:%' OR currency LIKE 'item:%') GROUP BY currency", id)
+	rows, err := x.db.DB.Query("SELECT currency,SUM(delta) FROM ledger WHERE habitica_id=? AND (currency LIKE 'material:%' OR currency LIKE 'item:%' OR currency LIKE 'fitted:%') GROUP BY currency", id)
 	if err != nil {
 		x.t.Fatal(err)
 	}
@@ -163,7 +166,10 @@ func (x *rig) conserved(id string) {
 	}
 	rows.Close()
 	held := map[string]int{}
-	rows, err = x.db.DB.Query("SELECT item_def,SUM(qty) FROM item_stacks WHERE location='pack' AND owner=? GROUP BY item_def UNION ALL SELECT item_def,count(*) FROM item_instances WHERE location='pack' AND owner=? GROUP BY item_def", id, id)
+	// Fittings count under whoever holds their tool (fitted:<def>).
+	rows, err = x.db.DB.Query(`SELECT item_def,SUM(qty) FROM item_stacks WHERE location='pack' AND owner=? GROUP BY item_def
+ UNION ALL SELECT item_def,count(*) FROM item_instances WHERE location='pack' AND owner=? GROUP BY item_def
+ UNION ALL SELECT 'fitted:'||f.item_def,count(*) FROM item_instances f JOIN item_instances t ON t.id=f.owner WHERE f.location='fitted' AND t.location='pack' AND t.owner=? GROUP BY f.item_def`, id, id, id)
 	if err != nil {
 		x.t.Fatal(err)
 	}
@@ -173,7 +179,11 @@ func (x *rig) conserved(id string) {
 		if err = rows.Scan(&d, &n); err != nil {
 			x.t.Fatal(err)
 		}
-		held[content.StackCurrency(d)] += n
+		if strings.HasPrefix(d, "fitted:") {
+			held[d] += n
+		} else {
+			held[content.StackCurrency(d)] += n
+		}
 	}
 	rows.Close()
 	for c, n := range ledger {
@@ -421,6 +431,10 @@ func TestItemsWardenSetDullsAndHealsOvernight(t *testing.T) {
 		t.Fatal("sliver never wears")
 	}
 	x.now.Add(86400)
+	// Any item change shows it healed too, not only a read or a use.
+	if a := findInstance(x.op(c, &s, "pocket", map[string]any{"slot": 1}, 200).Result.Items, axe); a.Condition != 90 || a.State != "whole" {
+		t.Fatal("healed overnight in a mutation's view", a)
+	}
 	if a := findInstance(x.items("GET", "/api/items", nil, c, 200).Items, axe); a.Condition != 90 || a.State != "whole" {
 		t.Fatal("healed overnight", a)
 	}
@@ -751,6 +765,16 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	if got == nil || got.Condition != 40 || len(got.Fittings) != 1 || got.Maker.ID != "alice" {
 		t.Fatal("parcel delivered the axe with its nail", got)
 	}
+	// Bob posts it back and recalls it: the nail's audit follows the axe home.
+	x.refresh(bc, &b)
+	returned := x.p5("POST", "/api/mail", body(b, "post-back", map[string]any{"toId": "alice", "asset": asset}), bc, 200)
+	b.Snapshot = returned.Snapshot
+	x.p5("POST", "/api/mail/"+returned.Result.MailID+"/recall", body(b, "recall-axe", nil), bc, 200)
+	if count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='bob' AND currency='fitted:loose-road-nail'") != 1 ||
+		count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='alice' AND currency='fitted:loose-road-nail'") != 0 {
+		t.Fatal("the fitting's audit stayed with a former holder")
+	}
+	x.conserved("bob")
 	// Marked stacks keep their maker through the post and back.
 	maker := "alice"
 	wicks := content.Asset{Kind: "item", ID: "lamp-wick", Qty: 2, Maker: &maker}
@@ -779,4 +803,31 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	for _, id := range []string{"alice", "bob"} {
 		x.conserved(id)
 	}
+}
+
+// Review finding 1: a hero at 0 HP is too far gone to eat. Only a sync, a
+// rest or a revive lifts the zero-HP lock; food mustn't open it.
+func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.stack("alice", "oatcakes", "", 5)
+	// Habitica says 0 HP: the stored HP and the baseline are both 0.
+	down := profile("alice", 1, 0, 0)
+	x.set(down)
+	x.refresh(c, &s)
+	s.Snapshot = x.expect("POST", "/api/sync", syncBody(s, down, s.State), c, 200).Snapshot
+	if s.State.HP != 0 {
+		t.Fatal("the hero should be down", s.State.HP)
+	}
+	if x.op(c, &s, "use", map[string]any{"itemDef": "oatcakes"}, 409).Error.Code != "too-weak" {
+		t.Fatal("ate at 0 HP")
+	}
+	x.refresh(c, &s)
+	if s.State.HP != 0 || count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='oatcakes'") != 5 {
+		t.Fatal("the refused use changed something")
+	}
+	// The lock still holds: a healed upload is refused.
+	healed := s.State
+	healed.HP = 50
+	x.expect("PUT", "/api/progress", mutation(s, healed), c, 400)
 }

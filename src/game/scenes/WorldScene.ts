@@ -33,8 +33,11 @@ import { Interactables } from '../entities/interactables'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
 import { Gathering } from '../entities/gathering'
+import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { itemsFor } from '../items'
+import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
+import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
@@ -136,6 +139,8 @@ export class WorldScene extends Phaser.Scene {
   private captureReleased = false
   private cinematic = false
   private positionTimer = 0
+  /** Dev: take the position sample every frame (a playtest of the exit race). */
+  private devSampleEveryFrame = false
   /** This area's presence room (null where presence doesn't reach). */
   private presenceArea: string | null = null
   /** The Commons/cottage homestead layer (null elsewhere). */
@@ -276,6 +281,10 @@ export class WorldScene extends Phaser.Scene {
         this.scenerySprites.delete(`${tx},${ty}`)
       }
     })
+    // The village's broken things, mended with the right part (shared per world).
+    const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    this.interactables.setExtra(repairs)
+    ;(window as unknown as { __fsRepairs?: () => string[] }).__fsRepairs = () => repairs.ids()
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -428,6 +437,22 @@ export class WorldScene extends Phaser.Scene {
     // low-health and defeat beats can be checked without a long fight.
     if (import.meta.env.DEV) {
       const w = window as unknown as Record<string, unknown>
+      // Read-only: how settled this area is, so playtests wait on the game
+      // instead of the clock: frames drawn since it was built, the camera
+      // fade, and whether world input is live right now.
+      const builtAt = this.game.loop.frame
+      w.__fsFrame = () => ({
+        areaId: this.world.areaId,
+        frames: this.game.loop.frame - builtAt,
+        loop: this.game.loop.frame,
+        fading: this.cameras.main.fadeEffect.isRunning,
+        transitioning: this.transitioning,
+        cinematic: this.cinematic,
+        live: this.worldLive()
+      })
+      // Read-only: the server revision this tab's link is based on (null for
+      // guests), so a playtest can wait for the link to catch up.
+      w.__fsLinkRev = () => this.session.link?.rev ?? null
       w.__fsDevHurt = (n: number) => {
         this.hero.iframes = 0
         this.hero.damagePlayer(n, this.hero.sprite.x - 1)
@@ -471,19 +496,29 @@ export class WorldScene extends Phaser.Scene {
           : { x: Math.round(x), y: Math.round(y) }
         this.session.saveSoon()
       }
+      // Take the saved-position sample every frame, so a playtest can make
+      // the exit check and the sample meet in one frame (bugs #2).
+      w.__fsDevSampleEveryFrame = (on: boolean) => {
+        this.devSampleEveryFrame = on
+      }
       // Add an exit to this area until the scene restarts, so a playtest can
       // walk into a destination no area kind is registered for (the guard).
       w.__fsDevAddExit = (exit: { tx: number; ty: number; tw: number; th: number; to: string }) => {
         this.world.exits.push({ ...exit, entry: { tx: 1, ty: 1 } })
       }
-      // Read-only: where the save says the hero is (area and position).
-      w.__fsDevSaved = () => ({ area: this.session.state.area, position: { ...this.session.state.position } })
+      // Read-only: where the save says the hero is (area and position), and
+      // whether a debounced save is still waiting to be written.
+      w.__fsDevSaved = () => {
+        const s = this.session as unknown as { saveTimer: number | null; pendingSave: boolean }
+        return { area: this.session.state.area, position: { ...this.session.state.position }, pending: s.saveTimer !== null || s.pendingSave }
+      }
       // One use of a carried tool through the real server path (gathering,
-      // which will use tools, isn't in the game yet). Resolves to the wear result.
-      w.__fsDevUseTool = async (instance: string, n = 1) => {
+      // which will use tools, isn't in the game yet). Resolves to the wear
+      // result; an `action` (draw water at the well) goes through as such.
+      w.__fsDevUseTool = async (instance: string, n = 1, action?: string) => {
         let last: unknown = null
         for (let i = 0; i < n; i++) {
-          const r = await itemsFor(this.session).useTool(instance)
+          const r = await itemsFor(this.session).useTool(instance, action)
           if (!r.ok) return { error: r.code }
           last = r.value.wear
         }
@@ -720,8 +755,10 @@ export class WorldScene extends Phaser.Scene {
     this.offHand?.update(time)
 
     this.positionTimer += dt
-    // In a cottage the save keeps the doorstep (set on the way in).
-    if (this.positionTimer > 1 && !this.room) {
+    // In a cottage the save keeps the doorstep (set on the way in). Nor while
+    // a move began this frame (an exit, above): the save already names the
+    // destination, and this spot belongs to the area being left.
+    if ((this.positionTimer > 1 || this.devSampleEveryFrame) && !this.room && !this.transitioning) {
       this.positionTimer = 0
       // Wilds: saved progress is region-wide pixels (one convention for
       // saves, reloads, claims and defeat reports).
@@ -999,6 +1036,11 @@ export class WorldScene extends Phaser.Scene {
       void this.homesteads?.onAction(action)
       return
     }
+    if (action.startsWith('keep:return:')) {
+      const parsed = parseKeepsakeAction(action)
+      if (parsed) this.returnKeepsake(parsed.def, parsed.target)
+      return
+    }
     const spend: EmberSpend | null =
       action === 'rest' ? { kind: 'rest' }
         : action === 'home-rest' ? { kind: 'home-rest' }
@@ -1023,6 +1065,30 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     this.spendPayoff(spend)
+  }
+
+  /**
+   * A keepsake given back at the end of a conversation (docs/items/
+   * overview.md, "Returning keepsakes"): the thanks wait for the server's
+   * yes — the return is a keyed mutation, and a refusal leaves the keepsake
+   * with you and says so. On a yes the resident speaks their thanks and the
+   * paper's own toast marks the find.
+   */
+  private returnKeepsake(def: string, target: string): void {
+    const items = itemsFor(this.session)
+    void items.returnKeepsake(def, target).then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      const thanks = keepsakeThanks(r.value.returned ?? def)
+      if (thanks.length) bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
+      if (r.value.paper) {
+        const paper = paperById(r.value.paper)
+        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll' })
+      }
+    })
   }
 
   /**

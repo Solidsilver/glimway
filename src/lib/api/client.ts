@@ -14,9 +14,15 @@ import {
   parseCalendar,
   parseContribute,
   parseCraft,
+  parseDeskCopy,
+  parseHearthCraft,
+  parseWoodpileRead,
+  parseWoodpileAction,
   parseMail,
   parseMailAction,
   parseProjects,
+  parseRepairs,
+  parseMend,
   parseStorage,
   parseStorageMove,
   parseCommons,
@@ -43,9 +49,15 @@ import type {
   CalendarResponse,
   ContributeResponse,
   CraftResponse,
+  DeskCopyResponse,
+  HearthCraftResponse,
+  WoodpileResponse,
+  WoodpileActionResponse,
   MailActionResponse,
   MailResponse,
   ProjectsResponse,
+  RepairsResponse,
+  MendResponse,
   StorageMoveResponse,
   StorageResponse,
   ChestId,
@@ -117,6 +129,13 @@ export interface RawApi {
   storage(): Promise<StorageResponse>;
   storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId }): Promise<StorageMoveResponse>;
   craft(req: Envelope & { recipeId: string; qty: number }): Promise<CraftResponse>;
+  /** Make food, remedies and oils at the cottage hearth (tier 1+ or a placed stone hearth). */
+  hearthCraft(req: Envelope & { recipeId: string; qty: number }): Promise<HearthCraftResponse>;
+  /** Copy a recipe page you hold at a placed writing desk (1 fiber a copy). */
+  deskCopy(req: Envelope & { pageId: string; qty: number }): Promise<DeskCopyResponse>;
+  /** The woodpile's green-timber stacks and how far each has seasoned. */
+  woodpile(): Promise<WoodpileResponse>;
+  woodpileAction(req: Envelope & { action: 'stack' | 'collect'; qty?: number; stackId?: string }): Promise<WoodpileActionResponse>;
   mail(page?: { cursor?: string; pendingCursor?: string }): Promise<MailResponse>;
   mailSend(req: Envelope & { toId: string; asset: Asset }): Promise<MailActionResponse>;
   mailClaim(id: string, req: Envelope): Promise<MailActionResponse>;
@@ -126,8 +145,12 @@ export interface RawApi {
   contribute(id: string, req: Envelope & { materials: Record<string, number> }): Promise<ContributeResponse>;
   /** What you carry in the item model: stacks, instances, pockets, the off hand. */
   items(): Promise<ItemsResponse>;
-  /** A keyed item mutation (use, repair, fit, unfit, give, pocket, offhand, pickup). */
+  /** A keyed item mutation (use, repair, fit, unfit, give, pocket, offhand, pickup, return). */
   itemAction(op: ItemsOp, req: Envelope & Record<string, unknown>): Promise<ItemsActionResponse>;
+  /** Village repairs and chores list. */
+  repairs(): Promise<RepairsResponse>;
+  /** Mend a village repair. */
+  repairMend(id: string, req: Envelope): Promise<MendResponse>;
 }
 
 /** The common keyed-mutation fields (Link.mutate fills them). */
@@ -264,6 +287,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async craft(req) {
       return parseCraft(await request('POST', '/api/craft', req));
     },
+    async hearthCraft(req) {
+      return parseHearthCraft(await request('POST', '/api/hearth/craft', req));
+    },
+    async deskCopy(req) {
+      return parseDeskCopy(await request('POST', '/api/desk/copy', req));
+    },
+    async woodpile() {
+      return parseWoodpileRead(await request('GET', '/api/homestead/woodpile'));
+    },
+    async woodpileAction(req) {
+      return parseWoodpileAction(await request('POST', '/api/homestead/woodpile', req));
+    },
     async mail(page) {
       const q = new URLSearchParams();
       if (page?.cursor) q.set('cursor', page.cursor);
@@ -291,6 +326,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
     async itemAction(op, req) {
       return parseItemsAction(await request('POST', `/api/items/${op}`, req));
+    },
+    async repairs() {
+      return parseRepairs(await request('GET', '/api/repairs'));
+    },
+    async repairMend(id, req) {
+      return parseMend(await request('POST', `/api/repairs/${encodeURIComponent(id)}/mend`, req));
     },
   };
 
@@ -322,6 +363,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     storage: () => run((r) => r.storage()),
     storageMove: (req) => run((r) => r.storageMove(req)),
     craft: (req) => run((r) => r.craft(req)),
+    hearthCraft: (req) => run((r) => r.hearthCraft(req)),
+    deskCopy: (req) => run((r) => r.deskCopy(req)),
+    woodpile: () => run((r) => r.woodpile()),
+    woodpileAction: (req) => run((r) => r.woodpileAction(req)),
     mail: (page) => run((r) => r.mail(page)),
     mailSend: (req) => run((r) => r.mailSend(req)),
     mailClaim: (id, req) => run((r) => r.mailClaim(id, req)),
@@ -330,6 +375,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     contribute: (id, req) => run((r) => r.contribute(id, req)),
     items: () => run((r) => r.items()),
     itemAction: (op, req) => run((r) => r.itemAction(op, req)),
+    repairs: () => run((r) => r.repairs()),
+    repairMend: (id, req) => run((r) => r.repairMend(id, req)),
   };
 }
 

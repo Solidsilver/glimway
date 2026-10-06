@@ -1,0 +1,124 @@
+{
+  "rules": {
+    "maxOpen": 3,
+    "perWick": 1,
+    "scripted": [
+      "well-rope",
+      "fence-rail"
+    ]
+  },
+  "repairs": [
+    {
+      "id": "well-rope",
+      "name": "The well's rotten rope",
+      "part": "fibre-rope",
+      "area": "village",
+      "target": "well",
+      "pos": {
+        "tx": 13,
+        "ty": 12
+      },
+      "resident": "hazel",
+      "reaction": "Bread tastes of the well again.",
+      "gift": {
+        "kind": "item",
+        "id": "keepers-twists",
+        "qty": 1
+      },
+      "hint": "The village well in the square",
+      "description": "The well rope is rotten through; water cannot be drawn.",
+      "mendedDescription": "A sound fibre rope hangs on the well. Water can be drawn again.",
+      "worldFlag": "repair:well-rope:mended",
+      "weather": false
+    },
+    {
+      "id": "fence-rail",
+      "name": "A fallen fence rail",
+      "part": "split-rail",
+      "area": "village",
+      "target": "fence",
+      "pos": {
+        "tx": 27,
+        "ty": 18
+      },
+      "resident": "silas",
+      "reaction": "The gap’s shut. Path was chewing into the grass.",
+      "hint": "The garden fence below the square",
+      "description": "A rail has fallen from the garden fence; the path cuts the corner.",
+      "mendedDescription": "The split rail is pegged tight; the fence gap is closed.",
+      "worldFlag": "repair:fence-rail:mended"
+    },
+    {
+      "id": "library-roof",
+      "name": "The leaking library roof",
+      "part": "slates",
+      "area": "village",
+      "target": "library",
+      "pos": {
+        "tx": 4,
+        "ty": 17
+      },
+      "resident": "mara",
+      "reaction": "The drip’s stopped. I’ve put the bucket away.",
+      "hint": "The Hearthwick Library roof",
+      "description": "Slates slipped on the library roof; rain drips into the reading room.",
+      "mendedDescription": "Fresh slates dressed and pinned; the drip bucket is gone.",
+      "worldFlag": "repair:library-roof:mended"
+    },
+    {
+      "id": "bench-slat",
+      "name": "A bench with a cracked slat",
+      "part": "oak-slat",
+      "area": "village",
+      "target": "bench",
+      "pos": {
+        "tx": 9,
+        "ty": 13
+      },
+      "resident": "orrin",
+      "reaction": "That’s a true slat. Good oak.",
+      "hint": "The bench by the square's lamp",
+      "description": "A cracked slat on the village bench; you can't sit there.",
+      "mendedDescription": "A smooth oak slat pegged into the bench; you can sit there again.",
+      "worldFlag": "repair:bench-slat:mended"
+    },
+    {
+      "id": "village-lamp",
+      "name": "A guttering village lamp",
+      "part": "lamp-wick",
+      "area": "village",
+      "target": "lamp",
+      "pos": {
+        "tx": 11,
+        "ty": 12
+      },
+      "resident": "ada",
+      "reaction": "Burns steady now. Good wick.",
+      "hint": "The village lamp beside the well",
+      "description": "The village lamp gutters in the draft; the wick is burned down.",
+      "mendedDescription": "A fresh wick trimmed and lit; the lamp burns steady and warm.",
+      "worldFlag": "repair:village-lamp:mended"
+    },
+    {
+      "id": "gate-hame",
+      "name": "The hame before Carting Day",
+      "part": "oilcloth-wrap",
+      "area": "commons",
+      "target": "hame",
+      "pos": {
+        "tx": 3,
+        "ty": 18
+      },
+      "resident": "silas",
+      "reaction": "Shines the way Hollis kept it.",
+      "hint": "The horse collar on the Commons gate",
+      "description": "The empty carter's collar on the gate has weathered dull.",
+      "mendedDescription": "Polished with oilcloth; the brass hame shines on the gate.",
+      "worldFlag": "repair:gate-hame:mended",
+      "openFrom": {
+        "wick": "Cart",
+        "day": 5
+      }
+    }
+  ]
+}

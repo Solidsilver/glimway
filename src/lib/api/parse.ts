@@ -22,12 +22,23 @@ import type {
   CalendarResponse,
   ContributeResponse,
   CraftResponse,
+  DeskCopyResponse,
+  HearthCraftResponse,
+  WoodpileActionResponse,
+  WoodpileResponse,
+  WoodpileView,
   Mail,
   MailActionResponse,
   MailResponse,
   ProjectView,
   ProjectsResponse,
   ProjectsView,
+  ChoreView,
+  MendedView,
+  ChoreHistoryView,
+  RepairsView,
+  RepairsResponse,
+  MendResponse,
   StorageMoveResponse,
   StorageResponse,
   CommonsResponse,
@@ -556,6 +567,8 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   if (typeof r.used === 'string' && r.used) result.used = r.used;
   if (typeof r.pickup === 'string' && r.pickup) result.pickup = r.pickup;
   if (typeof r.mended === 'string' && r.mended) result.mended = r.mended;
+  if (typeof r.returned === 'string' && r.returned) result.returned = r.returned;
+  if (typeof r.paper === 'string' && r.paper) result.paper = r.paper;
   if (r.given) result.given = parseAsset(r.given);
   if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
   if (Array.isArray(r.gathered)) {
@@ -628,6 +641,71 @@ export function parseCraft(raw: unknown): CraftResponse {
       recipeId: str(r.recipeId),
       output: parseAsset(r.output),
       instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],
+    },
+  };
+}
+
+export function parseHearthCraft(raw: unknown): HearthCraftResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      recipeId: str(r.recipeId),
+      output: parseAsset(r.output),
+    },
+  };
+}
+
+export function parseDeskCopy(raw: unknown): DeskCopyResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      pageId: str(r.pageId),
+      qty: int(r.qty, 1),
+    },
+  };
+}
+
+export function parseWoodpile(v: unknown): WoodpileView {
+  const o = obj(v);
+  const stacks = Array.isArray(o.stacks) ? o.stacks : [];
+  return {
+    homesteadId: str(o.homesteadId),
+    placed: o.placed === true,
+    stacks: stacks.map((s) => {
+      const w = obj(s);
+      const remaining = num(w.remaining);
+      return {
+        id: str(w.id),
+        homesteadId: str(w.homesteadId),
+        habiticaId: str(w.habiticaId),
+        qty: int(w.qty, 1),
+        stackedAt: num(w.stackedAt),
+        ready: w.ready === true || remaining <= 0,
+        remaining: Math.max(0, remaining),
+      };
+    }),
+    readyCount: int(o.readyCount, 0),
+    totalTimber: int(o.totalTimber, 0),
+  };
+}
+
+export function parseWoodpileRead(raw: unknown): WoodpileResponse {
+  return { ...parseSnapshot(raw), woodpile: parseWoodpile(obj(raw).woodpile) };
+}
+
+export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      woodpile: parseWoodpile(r.woodpile),
+      action: str(r.action),
+      collectedQty: typeof r.collectedQty === 'number' ? r.collectedQty : undefined,
     },
   };
 }
@@ -712,3 +790,72 @@ export function parseContribute(raw: unknown): ContributeResponse {
   const r = obj(obj(raw).result);
   return { ...parseSnapshot(raw), result: { ...parseProjectsView(r), projectId: str(r.projectId), materials: countMap(r.materials) } };
 }
+
+function parseChore(raw: unknown): ChoreView {
+  const o = obj(raw);
+  const pos = obj(o.pos);
+  return {
+    id: str(o.id),
+    name: str(o.name),
+    part: str(o.part),
+    area: str(o.area),
+    target: str(o.target),
+    pos: { tx: int(pos.tx ?? 0), ty: int(pos.ty ?? 0) },
+    resident: str(o.resident),
+    hint: str(o.hint),
+    description: str(o.description),
+  };
+}
+
+function parseMended(raw: unknown): MendedView {
+  const o = obj(raw);
+  return {
+    repairId: str(o.repairId),
+    mendedBy: str(o.mendedBy),
+    displayName: str(o.displayName),
+    mendedAt: num(o.mendedAt),
+  };
+}
+
+function parseChoreHistory(raw: unknown): ChoreHistoryView {
+  const o = obj(raw);
+  return {
+    id: str(o.id),
+    repairId: str(o.repairId),
+    repairName: str(o.repairName),
+    mendedBy: str(o.mendedBy),
+    displayName: str(o.displayName),
+    mendedAt: num(o.mendedAt),
+  };
+}
+
+export function parseRepairsView(o: Record<string, unknown>): RepairsView {
+  if (!Array.isArray(o.open) || !Array.isArray(o.mended)) throw new ApiError('bad-response');
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  return {
+    open: o.open.map(parseChore),
+    mended: o.mended.map(parseMended),
+    worldFlags: strings(o.worldFlags),
+    history: Array.isArray(o.history) ? o.history.map(parseChoreHistory) : [],
+  };
+}
+
+export function parseRepairs(raw: unknown): RepairsResponse {
+  return { ...parseSnapshot(raw), ...parseRepairsView(obj(raw)) };
+}
+
+export function parseMend(raw: unknown): MendResponse {
+  const r = obj(obj(raw).result);
+  const gift = r.gift ? obj(r.gift) : undefined;
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      repairs: parseRepairsView(obj(r.repairs)),
+      mended: str(r.mended),
+      reaction: str(r.reaction),
+      gift: gift ? { kind: str(gift.kind), id: str(gift.id), qty: int(gift.qty ?? 1) } : undefined,
+      items: parseItemsView(r.items),
+    },
+  };
+}
+

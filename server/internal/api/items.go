@@ -135,6 +135,22 @@ func moveInstance(ctx context.Context, tx *sql.Tx, id, def string, from, to inst
 	return err
 }
 
+// fittedLedger moves the audit of a tool's fittings with the tool: whoever
+// holds a tool in their pack carries `fitted:<def>` for each fitting on it.
+// delta is -1 as it leaves a holder's pack, +1 as it arrives in one.
+func fittedLedger(ctx context.Context, tx *sql.Tx, player, tool string, delta int, reason, ref string, now int64) error {
+	fittings, err := fittingRows(ctx, tx, tool)
+	if err != nil {
+		return err
+	}
+	for _, f := range fittings {
+		if err = currency(ctx, tx, player, "fitted:"+f.Def, delta, reason, ref, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func makerOf(ctx context.Context, tx *sql.Tx, id string, cache map[string]*makerView) (*makerView, error) {
 	if id == "" {
 		return nil, nil
@@ -323,6 +339,21 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 	if action != "" && !slices.Contains(def.Actions, action) {
 		return out, fail(409, "wrong-tool")
 	}
+	if action == "draw" {
+		// The well stands where the repairs data puts it (shared content).
+		well, ok := content.RepairFor("well-rope")
+		if !ok || !nearTile(s, well.Area, well.Pos.TX, well.Pos.TY, 4) {
+			return out, fail(409, "too-far-away")
+		}
+		var mendedAt sql.NullInt64
+		err = tx.QueryRowContext(ctx, "SELECT mended_at FROM village_repairs WHERE world_id=? AND repair_id='well-rope'", s.WorldID).Scan(&mendedAt)
+		if err == sql.ErrNoRows || !mendedAt.Valid {
+			return out, fail(409, "well-rope-broken")
+		}
+		if err != nil {
+			return out, err
+		}
+	}
 	out.ItemDef = v.Def
 	fittings, err := fittingRows(ctx, tx, v.ID)
 	if err != nil {
@@ -335,6 +366,10 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		}
 		v.Condition = max(0, v.Condition-wearCost(v.Max, fittings))
 		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=? WHERE id=?", v.Condition, utcDay(now), v.ID); err != nil {
+			return out, err
+		}
+		// One draw is one bucket: a full stave bucket of well water.
+		if err = itemChange(ctx, tx, s, "water", 1, "draw", v.ID, now); err != nil {
 			return out, err
 		}
 	}
@@ -709,6 +744,8 @@ type itemResult struct {
 	Gathered []stackView     `json:"gathered,omitempty"`
 	Plant    *homePlantView  `json:"plant,omitempty"`
 	Land     *homeLandChange `json:"land,omitempty"`
+	Returned string          `json:"returned,omitempty"`
+	Paper    *string         `json:"paper,omitempty"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -746,6 +783,8 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.gather(ctx, tx, s, req, now, &out)
 		case "plant":
 			err = a.plant(ctx, tx, s, req, now, &out)
+		case "return":
+			err = a.returnKeepsake(ctx, tx, s, req, now, &out)
 		default:
 			err = fail(404, "not-found")
 		}
@@ -756,6 +795,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		if err = refreshItems(ctx, tx, s); err != nil {
+			return nil, err
+		}
+		// Every view of the pack shows warden-set tools healed overnight.
+		if err = healWardens(ctx, tx, s.HabiticaID, now); err != nil {
 			return nil, err
 		}
 		out.Items, err = readItems(ctx, tx, s)
@@ -781,6 +824,11 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	}
 	if !def.UsableNow() {
 		return fail(409, "not-usable-yet")
+	}
+	// A hero at 0 HP is too far gone to eat or drink. Only a sync, a rest or
+	// a revive (as the rules define them) lifts the zero-HP lock.
+	if s.State.HP <= 0 {
+		return fail(409, "too-weak")
 	}
 	helps := false
 	for _, e := range def.Use {
@@ -1006,7 +1054,9 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	case "material", "item":
 		err = packPut(ctx, tx, req.ToID, v.ID, got.Makers, "gift", s.HabiticaID, now)
 	case "instance":
-		err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.HabiticaID, now)
+		if err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.HabiticaID, now); err == nil {
+			err = fittedLedger(ctx, tx, req.ToID, v.Instance, 1, "gift", s.HabiticaID, now)
+		}
 	default:
 		err = currency(ctx, tx, req.ToID, "decoration:"+v.ID, v.Qty, "gift", s.HabiticaID, now)
 	}
@@ -1430,4 +1480,81 @@ func (a *Server) presenceGift(world, to, fromName string, v content.Asset) {
 		ItemDef  string `json:"itemDef"`
 		Qty      int    `json:"qty"`
 	}{"gift", capDonor(fromName), v.Kind, v.ID, v.Qty})
+}
+
+func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	itemID := req.ItemDef
+	if itemID == "" {
+		return fail(400, "invalid-item")
+	}
+	def, ok := content.ItemFor(itemID)
+	if !ok || def.Kind != "keepsake" {
+		return fail(400, "not-a-keepsake")
+	}
+	if !def.Bound {
+		// Only story keepsakes come back to a person (the mirror foxes stay carved).
+		return fail(400, "not-giveable")
+	}
+	target := req.Target
+	if target == "" {
+		return fail(400, "invalid-target")
+	}
+	if def.BelongsTo != target {
+		return fail(400, "wrong-recipient")
+	}
+
+	if slices.Contains(s.State.Flags, "returned:"+itemID) {
+		return fail(409, "already-returned")
+	}
+
+	// Proximity check: where each resident stands is shared content — Ada
+	// and Hazel from the residents' spots, Silas from the menders, the Echo
+	// camps anywhere in the deep Wilds until camps are placed per person.
+	switch target {
+	case "ada", "hazel":
+		spot, ok := content.ResidentFor(target)
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+			return fail(409, "too-far-away")
+		}
+	case "silas":
+		m, ok := content.MenderFor("silas")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+			return fail(409, "too-far-away")
+		}
+	case "bett", "nan":
+		if s.State.Area != "wilds" {
+			return fail(409, "too-far-away")
+		}
+	default:
+		return fail(400, "unknown-target")
+	}
+
+	ref := target + ":" + itemID
+	if _, err := packTake(ctx, tx, s.HabiticaID, itemID, nil, 1, "return-keepsake", ref, now); err != nil {
+		return err
+	}
+
+	s.State.Flags = rules.AddUnique(s.State.Flags, "returned:"+itemID)
+
+	var paperGranted *string
+	switch target {
+	case "ada":
+		p := "adas-oil-receipts"
+		paperGranted = &p
+		s.State.Flags = rules.AddUnique(s.State.Flags, "paper:"+p)
+	case "hazel":
+		p := "keepers-twists-recipe-card"
+		paperGranted = &p
+		s.State.Flags = rules.AddUnique(s.State.Flags, "paper:"+p)
+	case "silas":
+		// Story conversation only, no paper
+	case "bett":
+		s.State.Flags = rules.AddUnique(s.State.Flags, "echo:bett:softened")
+	case "nan":
+		s.State.Flags = rules.AddUnique(s.State.Flags, "echo:nan:softened")
+	}
+
+	out.Returned = itemID
+	out.Paper = paperGranted
+	return nil
 }

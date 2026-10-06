@@ -74,7 +74,7 @@ func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 	if err = s.DB.QueryRow("SELECT count(*) FROM homesteads").Scan(&n); err != nil || n != 0 {
 		t.Fatal("homestead reset", err)
 	}
-	// 020 moves carried goods into the stack table, unmarked.
+	// 012 moves carried goods into the stack table, unmarked.
 	if err = s.DB.QueryRow("SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='beeswax-candle' AND maker_id=''").Scan(&n); err != nil || n != 3 {
 		t.Fatal("lost trinkets", err)
 	}

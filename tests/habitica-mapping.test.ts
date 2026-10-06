@@ -86,6 +86,66 @@ test('specialClass matches like klass in the class bonus', () => {
   assert.equal(stats.con, 16);
 });
 
+test("Habitica's wizard class imports as the internal mage with the wizard-gear bonus", () => {
+  // Real Habitica payloads spell the mage class `wizard` and label wizard
+  // gear `klass: 'wizard'` (content/habitica-gear.json). The highLevel
+  // fixture carries those real values and must import as a mage WITH the
+  // class bonus from its wizard gear.
+  const fixture = FIXTURES_BY_KEY.highLevel;
+  assert.equal((fixture.user.stats as { class?: string }).class, 'wizard');
+  const profile = toHabiticaProfile(fixture.user, gearLookupFor(fixture.gearStats));
+  assert.equal(profile.class, 'mage');
+  assert.deepEqual(profile.stats, fixture.expected.stats);
+});
+
+test('the raw mage spelling keeps importing as mage', () => {
+  const fixture = structuredClone(FIXTURES_BY_KEY.highLevel) as typeof FIXTURES_BY_KEY.highLevel;
+  (fixture.user.stats as { class?: string }).class = 'mage';
+  for (const table of Object.values(fixture.gearStats)) {
+    if (table.klass === 'wizard') table.klass = 'mage';
+  }
+  const profile = toHabiticaProfile(fixture.user, gearLookupFor(fixture.gearStats));
+  assert.equal(profile.class, 'mage');
+  assert.deepEqual(profile.stats, fixture.expected.stats);
+});
+
+test('gear klass wizard matches the internal mage class in the bonus', () => {
+  const stats = effectiveStatsFor(
+    { str: 0, int: 0, con: 0, per: 0 },
+    { str: 0, int: 0, con: 0, per: 0 },
+    0,
+    { weapon: 'weapon_wizard_1' },
+    'mage',
+    (key) => (key === 'weapon_wizard_1' ? { int: 6, klass: 'wizard' } : undefined),
+  );
+  // gear 6 + class bonus 6
+  assert.equal(stats.int, 12);
+});
+
+test('specialClass wizard matches the internal mage class too', () => {
+  const stats = effectiveStatsFor(
+    { str: 0, int: 0, con: 0, per: 0 },
+    { str: 0, int: 0, con: 0, per: 0 },
+    0,
+    { shield: 'shield_special_summer2019Mage' },
+    'mage',
+    () => ({ per: 7, klass: 'special', specialClass: 'wizard' }),
+  );
+  assert.equal(stats.per, 14);
+});
+
+test('wizard gear never matches a non-mage class', () => {
+  const stats = effectiveStatsFor(
+    { str: 0, int: 0, con: 0, per: 0 },
+    { str: 0, int: 0, con: 0, per: 0 },
+    0,
+    { weapon: 'weapon_wizard_1' },
+    'warrior',
+    (key) => (key === 'weapon_wizard_1' ? { int: 6, klass: 'wizard' } : undefined),
+  );
+  assert.equal(stats.int, 6);
+});
+
 test('toHabiticaProfile rejects malformed payloads with field paths', () => {
   assert.throws(() => toHabiticaProfile(null), InvalidHabiticaUserError);
   assert.throws(() => toHabiticaProfile({}), (err: unknown) => {

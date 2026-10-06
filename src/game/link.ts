@@ -65,11 +65,15 @@ export type MutationOp =
   | { kind: 'home'; op: HomeOp; fields: Record<string, unknown> }
   | { kind: 'storage'; fields: Record<string, unknown> }
   | { kind: 'craft'; fields: Record<string, unknown> }
+  | { kind: 'hearth'; fields: Record<string, unknown> }
+  | { kind: 'desk'; fields: Record<string, unknown> }
+  | { kind: 'woodpile'; fields: Record<string, unknown> }
   | { kind: 'mail-send'; fields: Record<string, unknown> }
   | { kind: 'mail-claim'; id: string; fields?: Record<string, unknown> }
   | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
   | { kind: 'contribute'; id: string; fields: Record<string, unknown> }
   | { kind: 'items'; op: ItemsOp; fields: Record<string, unknown> }
+  | { kind: 'mend'; id: string; fields?: Record<string, unknown> }
 
 /** A mutation sent whose answer never came: the exact body, key and all. */
 export interface Unresolved {
@@ -114,6 +118,12 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.storageMove(req)
     case 'craft':
       return raw.craft(req)
+    case 'hearth':
+      return raw.hearthCraft(req)
+    case 'desk':
+      return raw.deskCopy(req)
+    case 'woodpile':
+      return raw.woodpileAction(req)
     case 'mail-send':
       return raw.mailSend(req)
     case 'mail-claim':
@@ -124,6 +134,8 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.contribute(op.id, req)
     case 'items':
       return raw.itemAction(op.op, req)
+    case 'mend':
+      return raw.repairMend(op.id, req)
   }
 }
 
@@ -406,10 +418,7 @@ export class Link {
     })
     this.setBusy(true)
     try {
-      const res = await this.withReload(() => this.api.run((raw) => raw.spend(build())))
-      this.contact()
-      this.apply(res, 'server')
-      this.acked = docKey(s.state)
+      await this.exchange((raw) => raw.spend(build()))
       void this.saveLocal()
       return null
     } catch (err) {
@@ -437,12 +446,7 @@ export class Link {
       const before = s.state
       // The hero's own progress, untouched: Habitica healing comes only from
       // the server's answer (a hero locked at 0 HP must send hp 0).
-      const res = await this.withReload(() =>
-        this.api.run((raw) => raw.sync({ lease: this.lease!, baseRev: this.rev, progress: toProgress(s.state), profile }))
-      )
-      this.contact()
-      this.apply(res, 'server')
-      this.acked = docKey(s.state)
+      const res = await this.exchange((raw) => raw.sync({ lease: this.lease!, baseRev: this.rev, progress: toProgress(s.state), profile }))
       void this.saveLocal()
       const gained = embersGained(before, s.state)
       const welcome = !before.flags.includes(FLAGS.welcome) && s.state.flags.includes(FLAGS.welcome) ? Math.min(gained, WELCOME_EMBERS) : 0
@@ -538,10 +542,7 @@ export class Link {
     const body = (): Record<string, unknown> => (sent = { lease: this.lease!, baseRev: this.rev, key, progress: toProgress(s.state), ...op.fields })
     this.setBusy(true)
     try {
-      const res = await this.withReload(() => this.api.run((raw) => dispatchMutation(raw, op, body()))) as R
-      this.contact()
-      this.apply(res, 'server')
-      this.acked = docKey(s.state)
+      const res = (await this.exchange((raw) => dispatchMutation(raw, op, body()))) as R
       void this.saveLocal()
       return { ok: true, res }
     } catch (err) {
@@ -599,11 +600,20 @@ export class Link {
     if (!u || !s) return { outcome: 'none' }
     if (this.status !== 'online' || !this.lease) return { outcome: 'unknown' }
     try {
-      const res = await this.api.run((raw) => dispatchMutation(raw, u.op, { ...u.body, lease: this.lease! }))
-      this.contact()
-      this.unresolved = null
-      this.apply(res, 'server')
-      this.acked = docKey(s.state)
+      const res = await this.api.run(async (raw) => {
+        const r = await dispatchMutation(raw, u.op, { ...u.body, lease: this.lease! })
+        this.contact()
+        this.unresolved = null
+        // A committed request answers with its original response. If the
+        // link has moved past it since (the reconnect's own write), that
+        // answer is history: adopting it would take the revision, and the
+        // state, back one step, and the next action would be refused as stale.
+        if (r.rev >= this.rev) {
+          this.apply(r, 'server')
+          this.acked = docKey(s.state)
+        }
+        return r
+      })
       void this.saveLocal()
       if (announce) this.emitter(EV.mutationResolved, { op: u.op, outcome: 'landed', res })
       return { outcome: 'landed', res }
@@ -639,15 +649,48 @@ export class Link {
   }
 
   /** stale-revision: re-read state (keeping local progress) and retry once. */
-  private async withReload<T>(attempt: () => Promise<T>): Promise<T> {
-    try {
-      return await attempt()
-    } catch (err) {
-      if (errorCode(err) !== 'stale-revision') throw err
-      const snap = await this.api.run((raw) => raw.state(this.lease))
-      this.apply(snap, 'keep-local')
-      return attempt()
-    }
+  /**
+   * One keyed request, answered and adopted inside a single queue task. The
+   * queue starts its next task as soon as this one settles, before the
+   * caller's code after `await` runs; adopting here means the next request
+   * (an upload queued meanwhile, say) is built on this answer's revision,
+   * never the one before it. A stale-revision refusal re-reads the state
+   * (keeping local progress) and tries once more, in the same task.
+   *
+   * The answer's state is merged (`stateToo`, the default) or only its
+   * revision taken (a defeat report: the local recovery owns the save now).
+   * The progress sent counts as uploaded; anything that changed locally
+   * while the request was out stays unsent, and goes up next on this
+   * revision. `sentKey`: the progress was captured before queueing.
+   */
+  private exchange<T extends Snapshot>(send: (raw: RawApi) => Promise<T>, opts: { stateToo?: boolean; sentKey?: string } = {}): Promise<T> {
+    return this.api.run(async (raw) => {
+      const s = this.session
+      const keyNow = () => opts.sentKey ?? (s ? docKey(s.state) : '')
+      let sentKey = keyNow()
+      let res: T
+      try {
+        res = await send(raw)
+      } catch (err) {
+        if (errorCode(err) !== 'stale-revision') throw err
+        const snap = await raw.state(this.lease)
+        this.contact()
+        this.apply(snap, 'keep-local')
+        sentKey = keyNow()
+        res = await send(raw)
+      }
+      this.contact()
+      if (!s) return res
+      const changedMeanwhile = docKey(s.state) !== sentKey
+      if (opts.stateToo === false) {
+        this.rev = res.rev
+        this.acked = sentKey
+      } else {
+        this.apply(res, 'server')
+        if (!changedMeanwhile) this.acked = docKey(s.state)
+      }
+      return res
+    })
   }
 
   // ------------------------------------------------------------ the Wilds
@@ -658,10 +701,13 @@ export class Link {
    * claims, discoveries, lanterns, material balances.
    */
   async wildsRegion(regionId: string): Promise<WildsRegionResponse> {
-    const res = await this.api.run((raw) => raw.wildsRegion(regionId))
-    this.contact()
-    // keep-local: a read must never move the hero or touch local vitals.
-    this.apply(res, 'keep-local')
+    const res = await this.api.run(async (raw) => {
+      const r = await raw.wildsRegion(regionId)
+      this.contact()
+      // keep-local: a read must never move the hero or touch local vitals.
+      this.apply(r, 'keep-local')
+      return r
+    })
     void this.saveLocal()
     return res
   }
@@ -676,18 +722,16 @@ export class Link {
   async wildsClaim(req: { epoch: string; entityId: string; cycle: number }): Promise<WildsOutcome<WildsClaimResult>> {
     return this.wildsMutation(
       req.epoch,
-      (key, progress) =>
-        this.api.run((raw) =>
-          raw.wildsClaim({
-            lease: this.lease!,
-            baseRev: this.rev,
-            epoch: req.epoch,
-            entityId: req.entityId,
-            cycle: req.cycle,
-            key,
-            progress
-          })
-        )
+      (raw, key, progress) =>
+        raw.wildsClaim({
+          lease: this.lease!,
+          baseRev: this.rev,
+          epoch: req.epoch,
+          entityId: req.entityId,
+          cycle: req.cycle,
+          key,
+          progress
+        })
     )
   }
 
@@ -699,35 +743,30 @@ export class Link {
   async wildsDefeat(req: { epoch: string; x: number; y: number }): Promise<WildsOutcome<WildsDefeatResult>> {
     return this.wildsMutation(
       req.epoch,
-      (key, progress) =>
-        this.api.run((raw) =>
-          raw.wildsDefeat({ lease: this.lease!, baseRev: this.rev, epoch: req.epoch, x: req.x, y: req.y, key, progress })
-        ),
+      (raw, key, progress) => raw.wildsDefeat({ lease: this.lease!, baseRev: this.rev, epoch: req.epoch, x: req.x, y: req.y, key, progress }),
       { adoptState: false }
     )
   }
 
   /** Relight a fallen hero's lantern (the exact instance, by id). */
   async wildsRelight(req: { epoch: string; ownerId: string; lanternId: string }): Promise<WildsOutcome<WildsLanternResult>> {
-    return this.wildsMutation(req.epoch, (key, progress) =>
-      this.api.run((raw) =>
-        raw.wildsLantern({
-          lease: this.lease!,
-          baseRev: this.rev,
-          epoch: req.epoch,
-          ownerId: req.ownerId,
-          lanternId: req.lanternId,
-          key,
-          progress
-        })
-      )
+    return this.wildsMutation(req.epoch, (raw, key, progress) =>
+      raw.wildsLantern({
+        lease: this.lease!,
+        baseRev: this.rev,
+        epoch: req.epoch,
+        ownerId: req.ownerId,
+        lanternId: req.lanternId,
+        key,
+        progress
+      })
     )
   }
 
   /** Shared body of the three Wilds mutations: busy/lease guards, stale retry, adopt. */
   private async wildsMutation<T>(
     epoch: string,
-    call: (key: string, progress: Progress) => Promise<Snapshot & { result: T }>,
+    call: (raw: RawApi, key: string, progress: Progress) => Promise<Snapshot & { result: T }>,
     opts: { adoptState?: boolean } = {}
   ): Promise<WildsOutcome<T>> {
     const s = this.session
@@ -737,13 +776,10 @@ export class Link {
     if (!epoch) return { ok: false, code: 'epoch-not-found' }
     // Captured now: the request must describe the moment it was made.
     const progress = toProgress(s.state)
+    const sentKey = docKey(s.state)
     this.setBusy(true)
     try {
-      const res = await this.withReload(() => call(newKey(), progress))
-      this.contact()
-      if (opts.adoptState !== false) this.apply(res, 'server')
-      else this.rev = res.rev
-      this.acked = docKey(s.state)
+      const res = await this.exchange((raw) => call(raw, newKey(), progress), { stateToo: opts.adoptState !== false, sentKey })
       void this.saveLocal()
       return { ok: true, result: res.result }
     } catch (err) {
@@ -798,12 +834,17 @@ export class Link {
         // Keyed on changes made offline, not on the current status: the first
         // try after reconnecting may have met another device's lease.
         const notice = reconnectNotice(plan, this.offlineProgress)
-        const res = await this.api.run((raw) =>
-          raw.progress({ lease: this.lease!, baseRev: plan.baseRev, doc: toProgress(s.state) }, { keepalive: true })
-        )
-        const pre = s.state
-        this.apply(res, res.status === 'current' ? 'keep-local' : 'server')
-        this.acked = docKey(s.state)
+        // Send and adopt in one queue task, like `exchange`: anything changed
+        // while the upload was out stays unacked and goes up next.
+        const { res, pre } = await this.api.run(async (raw) => {
+          const sentKey = docKey(s.state)
+          const r = await raw.progress({ lease: this.lease!, baseRev: plan.baseRev, doc: toProgress(s.state) }, { keepalive: true })
+          const changedMeanwhile = docKey(s.state) !== sentKey
+          const pre = s.state
+          this.apply(r, r.status === 'current' ? 'keep-local' : 'server')
+          this.acked = changedMeanwhile ? sentKey : docKey(s.state)
+          return { res: r, pre }
+        })
         if (res.status === 'current') this.giftToast(pre)
         if (notice) {
           this.recovery = { state: offlineCopy, savedAt: Date.now() }
@@ -859,12 +900,12 @@ export class Link {
     for (const o of orphans) {
       if (o.clientId !== this.clientId && this.rev > 0 && this.status === 'online') {
         try {
-          const res = await this.api.run((raw) =>
-            raw.progress({ lease: this.lease!, baseRev: Math.min(o.rev, this.rev - 1), doc: toProgress(o.state) })
-          )
-          const wasDirty = this.dirty
-          this.apply(res, 'keep-local')
-          if (!wasDirty) this.acked = docKey(this.session!.state)
+          await this.api.run(async (raw) => {
+            const res = await raw.progress({ lease: this.lease!, baseRev: Math.min(o.rev, this.rev - 1), doc: toProgress(o.state) })
+            const wasDirty = this.dirty
+            this.apply(res, 'keep-local')
+            if (!wasDirty) this.acked = docKey(this.session!.state)
+          })
         } catch (err) {
           this.onFailure(err, 'orphan')
           return
@@ -917,18 +958,24 @@ export class Link {
     if (this.status !== 'online' || this.busy || this.api.queue.size > 0) return
     if (!force && Date.now() - this.lastContact < HEARTBEAT_MS - 5_000) return
     try {
-      const snap = await this.api.run((raw) => raw.state(this.lease))
-      this.contact()
-      if (snap.leaseActive === false) {
+      // Adopted inside the queue task, so a request queued meanwhile is built on it.
+      const moved = await this.api.run(async (raw) => {
+        const snap = await raw.state(this.lease)
+        this.contact()
+        if (snap.leaseActive === false) return 'superseded' as const
+        if (snap.rev === this.rev) return false
+        // Still our lease, so nobody else played: the rev moved for bookkeeping
+        // (a login settling credit, an owner action). Keep local vitals and
+        // position, adopt the rev, and send what we have as a current write.
+        this.apply(snap, 'keep-local')
+        return true
+      })
+      if (moved === 'superseded') {
         // Another tab or device took over. Taking it back is the player's call.
         this.setStatus('superseded')
         return
       }
-      if (snap.rev === this.rev) return
-      // Still our lease, so nobody else played: the rev moved for bookkeeping
-      // (a login settling credit, an owner action). Keep local vitals and
-      // position, adopt the rev, and send what we have as a current write.
-      this.apply(snap, 'keep-local')
+      if (!moved) return
       this.scheduleUpload()
       void this.saveLocal()
     } catch (err) {

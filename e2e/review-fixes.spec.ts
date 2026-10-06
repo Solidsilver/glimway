@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { linkStatus, serverState } from './connected'
-import { beginNewJourney } from './helpers'
+import { linkRev, linkStatus, serverState } from './connected'
+import { beginNewJourney, dialogueState, frames, readDialogue, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, silasSays } from './home-helpers'
 
 /**
@@ -40,23 +40,31 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.error')).toContainText('may have gone through')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  // A step while offline: the reconnect has a write of its own to send before
+  // it replays the purchase (whose stored answer then carries an older rev).
+  await expect.poll(() => linkStatus(page)).toBe('offline')
+  const silas = (await homes(page)).features!.silas
+  await go(page, 'commons', silas.tx, silas.ty + 3)
   // The link reconnects by itself and replays the same request: it landed.
-  await expect(page.locator('.toast', { hasText: 'went through after all' })).toBeVisible({ timeout: 30_000 })
+  await expectToast(page, 'went through after all', { timeout: 30_000 })
   await expect.poll(() => linkStatus(page)).toBe('online')
   expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(1)
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
   expect((await serverState(page)).body.state.embers).toBe(before - 2)
 
   // A lost upgrade: tier 1 lands, and Orrin's foundation paper still arrives.
-  // (Let the purchase's toast go first, so the next one is the upgrade's own.)
-  const recovered = page.locator('.toast', { hasText: 'went through after all' })
-  await expect(recovered).toHaveCount(0, { timeout: 10_000 })
+  // (expectToast below needs a newer 'went through' toast than the purchase's.)
+  // The replay leaves the link on the server's revision, so the next spend
+  // isn't refused as stale (bugs #4: it used to fall a revision behind).
+  await expect
+    .poll(async () => (await linkRev(page)) === (await serverState(page)).body.rev, { message: 'the link is on the server’s revision', timeout: 5_000 })
+    .toBe(true)
   await loseNextAnswer(page, '/api/homestead/upgrade')
   await silasSays(page, /Raise a cottage/)
-  await expect(page.locator('.toast', { hasText: 'may have gone through' })).toBeVisible()
+  await expectToast(page, 'may have gone through')
   // The server has it at once; the client learns on the reconnect (8 s retry) and says so.
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await expect(recovered).toBeVisible({ timeout: 30_000 })
+  await expectToast(page, 'went through after all', { timeout: 30_000 })
   await expect.poll(async () => (await homes(page)).mine?.tier, { timeout: 15_000 }).toBe(1)
   // The paper is granted on recovery and reaches the server with the next upload.
   await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 15_000 }).toContain('paper:orrins-drift-slap-foundation-standard')
@@ -73,9 +81,9 @@ test('finding 2: an exit to an unregistered area is overgrown (no crash, the sav
   expect(before.area).toBe('commons')
   await page.evaluate(() => (window as unknown as { __fsDevAddExit: (e: unknown) => void }).__fsDevAddExit({ tx: 22, ty: 19, tw: 1, th: 1, to: 'nowhere-yet' }))
   await page.keyboard.down('ArrowRight')
-  await expect(page.locator('.toast', { hasText: 'The way is overgrown' }).first()).toBeVisible({ timeout: 10_000 })
+  await expectToast(page, 'The way is overgrown', { timeout: 10_000 })
   await page.keyboard.up('ArrowRight')
-  await page.waitForTimeout(400)
+  await frames(page, 24)
   const s = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string; transitioning: boolean } }).__fsSafety())
   expect(s).toEqual(expect.objectContaining({ areaId: 'commons', transitioning: false }))
   // The save never named the unregistered area.
@@ -103,10 +111,10 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   for (const item of ['wooden-stool', 'wooden-stool', 'potted-fern', 'woven-basket']) {
     await shop.locator(`[data-buy="${item}"]`).click()
     await expect(shop.locator('.msg.ok')).toBeVisible()
-    await page.waitForTimeout(150)
+    await expect(shop.locator('button[data-buy]', { hasText: 'Buying…' })).toHaveCount(0)
   }
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
-  await page.waitForTimeout(300)
+  await frames(page, 18)
   const after = await stats(page)
   expect(after.deadTweens).toBe(0)
   expect(after.gateDraws - loaded.gateDraws).toBeLessThanOrEqual(4)
@@ -119,10 +127,9 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await claim(page)
   await silasSays(page, /Raise a cottage/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await page.waitForTimeout(600)
-  if (await page.getByRole('dialog', { name: /Conversation with/ }).isVisible()) {
-    for (let i = 0; i < 6; i++) await page.keyboard.press('e')
-  }
+  // Silas may say a word more on his own: read it if he does.
+  await frames(page, 36)
+  if ((await dialogueState(page)).open) await readDialogue(page)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.locator('[data-buy="wooden-stool"]').click()
@@ -137,7 +144,9 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await page.getByRole('button', { name: /^Menu/ }).click()
   await expect(tray).toBeHidden()
   await page.keyboard.press('e')
-  await page.waitForTimeout(800)
+  // Nothing may happen: give a placement time to reach the server first.
+  await frames(page, 30)
+  await page.waitForTimeout(500)
   expect((await myHome(page, id)).items.find((i) => i.itemDef === 'wooden-stool')!.scene).toBeNull()
   // Escape closes the Menu only: the piece is still in hand.
   await page.keyboard.press('Escape')
@@ -145,6 +154,8 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await expect(tray.locator('[data-piece="wooden-stool"]')).toHaveAttribute('aria-pressed', 'true')
   // Space on the focused Done button presses it.
   await tray.getByRole('button', { name: /Done/ }).focus()
+  // The world lets go of Space for a focused tray control on its next frame.
+  await frames(page, 3)
   await page.keyboard.press('Space')
   await expect(tray).toBeHidden()
 })

@@ -291,7 +291,7 @@
       {/if}
       {#if model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
         <span class="acts">
-          {#if e.usable}<button type="button" class="act primary" data-act="use" disabled={busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
+          {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
           {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
           {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
           {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}

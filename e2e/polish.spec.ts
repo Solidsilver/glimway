@@ -1,18 +1,15 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, syncFromMenu, waitForWorld } from './connected'
-import { beginNewJourney, talkThrough, waitForArea } from './helpers'
+import { beginNewJourney, talkThrough, waitForArea, warp, expectToast } from './helpers'
 
 /**
  * Polish from the docs pass: syncing in the Commons (a safe area), the
  * Journal's quest checklist, and the Menu's controls list (keys and touch).
  */
 
-async function go(page: Page, to: string, tx: number, ty: number): Promise<void> {
-  await page.evaluate(([a, x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp(a as string, x as number, y as number), [to, tx, ty] as const)
-  await page.waitForFunction(() => (window as unknown as { __fsSafety: () => { transitioning: boolean } }).__fsSafety().transitioning === true).catch(() => {})
-  await waitForArea(page, to as 'village')
-}
+/** Dev warp to any area id; waits until it has settled. */
+const go = (page: Page, to: string, tx: number, ty: number): Promise<void> => warp(page, to, tx, ty)
 
 test.describe('guest', () => {
   test('a sample-hero sync works in the Commons, and is refused out on the road', async ({ page }) => {
@@ -26,7 +23,7 @@ test.describe('guest', () => {
     await go(page, 'commons', 2, 21)
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Try a sample hero' }).click()
-    await expect(page.locator('.toast', { hasText: 'embers into your hand' })).toBeVisible()
+    await expectToast(page, 'embers into your hand')
     await page.getByRole('button', { name: 'Back to the road' }).click()
     await expect(page.locator('.hud .embers')).toHaveText('3')
   })
@@ -89,7 +86,7 @@ test.describe('connected', () => {
     await waitForWorld(page)
     await go(page, 'commons', 2, 21)
     await syncFromMenu(page)
-    await expect(page.locator('.toast', { hasText: 'embers into your hand' })).toBeVisible()
+    await expectToast(page, 'embers into your hand')
     await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(3)
     expect((await serverState(page)).body.state.area).toBe('commons')
   })

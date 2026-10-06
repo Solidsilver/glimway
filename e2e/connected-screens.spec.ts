@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, TOKEN, waitForWorld } from './connected'
-import { beginNewJourney, talkThrough, warp, waitForArea } from './helpers'
+import { beginNewJourney, openTalk, talkThrough, untilChoices, warp, waitForArea, expectToast } from './helpers'
 
 /**
  * Layout checks and screenshots for the connected-play screens, at desktop
@@ -124,7 +124,7 @@ for (const [name, vp] of sizes) {
     // Pending: the world waits for the server's answer to a spend.
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Sync character' }).click()
-    await expect(page.locator('.toast', { hasText: 'embers into your hand' })).toBeVisible()
+    await expectToast(page, 'embers into your hand')
     await page.getByRole('button', { name: 'Back to the road' }).click()
     await hurt(page, 6)
     await page.route('**/api/spend', async (route) => {
@@ -132,12 +132,9 @@ for (const [name, vp] of sizes) {
       await route.continue()
     })
     await warp(page, 'village', 11, 13)
-    await page.keyboard.press('e')
-    const rest = page.locator('.choice', { hasText: 'Rest by the flame' })
-    for (let i = 0; i < 10 && !(await rest.isVisible()); i++) {
-      await page.keyboard.press('e')
-      await page.waitForTimeout(200)
-    }
+    await openTalk(page, 'Rest by the lantern')
+    await untilChoices(page)
+    await expect(page.locator('.choice', { hasText: 'Rest by the flame' })).toBeVisible()
     await page.keyboard.press('1')
     await expect(page.getByTestId('net-pending')).toBeVisible()
     await shot(page, '09-hud-pending')

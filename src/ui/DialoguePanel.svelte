@@ -174,7 +174,38 @@
     bus.on(EV.dialogue, onDialogue)
     bus.on(EV.action, onAction)
     window.addEventListener('keydown', onKey)
+    // Read-only, for playtests: where the conversation is, so a test can
+    // press on when the line changes instead of after a fixed pause, and
+    // which conversations have opened so far (one the world opens on its own
+    // may come and go between two checks).
+    let offSeen = () => {}
+    if (import.meta.env.DEV) {
+      const seen: { speaker: string; text: string }[] = []
+      let opened = 0
+      const onSeen = (p: DialoguePayload) => {
+        opened += 1
+        seen.push({ speaker: p.speaker, text: p.lines.join('\n') })
+        if (seen.length > 50) seen.shift()
+      }
+      bus.on(EV.dialogue, onSeen)
+      offSeen = () => bus.off(EV.dialogue, onSeen)
+      ;(window as unknown as { __fsDialogue?: () => unknown }).__fsDialogue = () => ({
+        open,
+        speaker,
+        line: idx,
+        lines: lines.length,
+        /** Every line of this (or the last) conversation, replies included. */
+        said: [...lines],
+        typing,
+        /** Replies are still to come on the last line (shown once its typing ends). */
+        pending: !!choices && !answered,
+        choices: showChoices ? (choices ?? []).map((c) => ({ text: c.text, disabled: !!c.disabled })) : null,
+        opened,
+        seen: [...seen]
+      })
+    }
     return () => {
+      offSeen()
       bus.off(EV.dialogue, onDialogue)
       bus.off(EV.action, onAction)
       window.removeEventListener('keydown', onKey)

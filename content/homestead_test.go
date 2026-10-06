@@ -16,7 +16,7 @@ func TestHomesteadContent(t *testing.T) {
 			t.Fatal("tier identity")
 		}
 	}
-	if h.Tiers[1].Embers != 15 || len(h.Items) != 15 {
+	if h.Tiers[1].Embers != 15 || len(h.Items) != 31 {
 		t.Fatal("starting content")
 	}
 	for _, v := range h.Items {

@@ -77,6 +77,9 @@ func (x *rig) seedAssets(id string) {
 			x.t.Fatal(err)
 		}
 	}
+	if err = materialChange(ctx, tx, id, "seasoned-timber", 1000, "test-funding", "", x.now.Load()); err != nil {
+		x.t.Fatal(err)
+	}
 	if err = itemChange(ctx, tx, &s, giftTrinket, 5, "test-funding", "", x.now.Load()); err != nil {
 		x.t.Fatal(err)
 	}
@@ -200,14 +203,23 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	}
 	x.exp("POST", "/api/homestead/upgrade", req, c, 200)
 	x.exp("POST", "/api/homestead/upgrade", body(s, "garden", map[string]any{"tier": 3}), c, 409)
-	x.give("alice", "beeswax", 20)
-	x.give("alice", "wooden-peg", 20)
+	x.give("alice", "beeswax", 50)
+	x.give("alice", "wooden-peg", 50)
+	x.give("alice", "lamp-head", 50)
+	x.give("alice", "hearth-oil", 50)
+	x.give("alice", "bloom-flowers", 50)
+	x.give("alice", "walnut-shells", 50)
+	x.give("alice", "candle-oil", 50)
+	x.give("alice", "madder-scraps", 50)
+	x.give("alice", "amberfall-sap", 50)
+	x.give("alice", "frost-glass", 50)
+	x.give("alice", "lamp-wick", 50)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	for i, recipe := range content.CraftingRules.Recipes {
 		req = body(s, recipe.ID, map[string]any{"recipeId": recipe.ID, "qty": 2})
 		v := x.p5("POST", "/api/craft", req, c, 200)
 		s.Snapshot = v.Snapshot
-		if v.Result.Output.Qty != 2 || v.Result.Output.ID != recipe.Output.ID {
+		if v.Result.Output.Qty != recipe.Output.Qty*2 || v.Result.Output.ID != recipe.Output.ID {
 			t.Fatal("craft output")
 		}
 		if recipe.Output.Kind == "instance" && len(v.Result.InstanceIDs) != 2 {

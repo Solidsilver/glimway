@@ -42,6 +42,8 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t a tool.'
     case 'not-needed':
       return 'No need just now.'
+    case 'too-weak':
+      return 'You’re too far gone to eat. Rest by a hearth first.'
     case 'not-usable-yet':
       return 'Keep it for when you need it.'
     case 'cannot-mend':
@@ -63,6 +65,12 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'Stand next to them to hand it over.'
     case 'not-giveable':
       return 'That was given to you. It stays with you.'
+    case 'well-rope-broken':
+      return 'The well rope is rotten through. Mend it first.'
+    case 'already-returned':
+      return 'You have already returned that.'
+    case 'wrong-recipient':
+      return 'That doesn’t belong to them.'
     case 'self-gift':
       return 'You can’t give something to yourself.'
     case 'recipient-not-found':
@@ -150,6 +158,11 @@ export class Items {
     this.emit(what)
   }
 
+  /** Adopt an items view carried in another answer (a village mend's). */
+  adoptView(v: ItemsView): void {
+    if (this.status !== 'guest') this.adopt(v)
+  }
+
   private async run(op: ItemsOp, fields: Record<string, unknown>): Promise<ItemsResult<ItemsActionResponse['result']>> {
     const link = this.session.link
     if (!link) return fail('guest')
@@ -204,6 +217,9 @@ export class Items {
       }
       return r
     })
+  }
+  returnKeepsake(itemDef: string, target: string) {
+    return this.run('return', { itemDef, target })
   }
 
   // ------------------------------------------------------------ reads

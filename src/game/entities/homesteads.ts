@@ -16,7 +16,7 @@
  * when that data changes.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, homeItem, parseHomeArea, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
+import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, homeItem, parseHomeArea, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Light } from '../../lib/homestead-land'
 import { checkSpend } from '../../lib/embers'
 import type { HomeView } from '../../lib/api/types'
@@ -32,10 +32,13 @@ import type { InteractId, WorldData } from '../worlds'
 import type { CommonsWorld, GateSlot } from '../commons'
 import type { LandWorld } from '../homeland'
 import { COTTAGE_H, decoFlat, decoKey } from '../commons-art'
+import { itemsFrame, itemWorldArt } from '../items-pass'
 import { commonsAnim, commonsDataUrl } from '../commons-pass'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { presence } from '../presence'
+import { itemsFor } from '../items'
+import { keepsakeAsk } from '../keepsakes'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
 import { openBoard } from './village-life'
 import { costPhrase, WORKSHOP_TIER } from '../../lib/village'
@@ -615,8 +618,20 @@ export class HomesteadLayer implements InteractionProvider {
       const by = oy + (it.y + fh) * TILE
       const flat = decoFlat(it.itemDef)
       const key = decoKey(it.itemDef, rot)
-      if (!this.scene.textures.exists(key)) continue
-      const img = this.add(d, this.scene.add.image(bx, by, key).setOrigin(0, 1).setDepth(flat ? -3 : by))
+      // Pieces without runtime art draw the items-pass world sprite (the
+      // items pass's own art for the piece, footprint-sized).
+      const art = this.scene.textures.exists(key) ? null : itemWorldArt(it.itemDef)
+      if (!art && !this.scene.textures.exists(key)) continue
+      let img: Phaser.GameObjects.Image
+      if (art) {
+        const f = itemsFrame(art.slice('items-art:'.length))
+        const w = f ? f.width : fw * TILE
+        const h = f ? f.height : fh * TILE
+        const scale = Math.min((fw * TILE) / w, (fh * TILE) / h) || 1
+        img = this.add(d, this.scene.add.image(bx + (fw * TILE) / 2, by, art).setOrigin(0.5, 1).setScale(scale).setDepth(flat ? -3 : by))
+      } else {
+        img = this.add(d, this.scene.add.image(bx, by, key).setOrigin(0, 1).setDepth(flat ? -3 : by))
+      }
       if (rot === 180 || rot === 270) img.setFlipX(true)
       if (desolate) img.setTint(0xa0a0aa)
       img.setData('instance', it.id)
@@ -702,11 +717,29 @@ export class HomesteadLayer implements InteractionProvider {
 
   // ------------------------------------------------------------ interactions
 
+  /** Where a placed piece stands (px, its footprint's bottom-centre). */
+  private decoSpot(it: HomeInstance, scene: HomeScene): { x: number; y: number } {
+    const def = homeItem(it.itemDef)
+    const [fw, fh] = rotatedFootprint(def ?? { footprint: [1, 1] } as HomeItem, it.rotation ?? 0)
+    const ox = (scene === 'indoor' ? ROOM_GRID.tx * TILE : 0)
+    const oy = (scene === 'indoor' ? ROOM_GRID.ty * TILE : 0)
+    return { x: ox + (it.x ?? 0) * TILE + (fw * TILE) / 2, y: oy + ((it.y ?? 0) + fh) * TILE - 4 }
+  }
+
   private interactionList(): Interactable[] {
     const out: Interactable[] = []
     if (this.deps.room) {
       out.push({ id: 'home:hearth', x: ROOM_HEARTH.x + 8, y: ROOM_HEARTH.y + 10, label: 'Sit by the hearth' })
       const home = this.here()
+      // Cooking at the hearth (your own place, connected): the hearth recipes.
+      if (home?.member && this.homes.connected) out.push({ id: 'home:cook', x: ROOM_HEARTH.x - 14, y: ROOM_HEARTH.y + 14, label: 'Cook at the hearth' })
+      if (home) {
+        for (const it of home.items) {
+          if (!home.member || !this.homes.connected) break
+          if (it.itemDef !== 'writing-desk' || it.scene !== 'indoor' || it.x === null || it.y === null) continue
+          out.push({ id: `home:desk:${it.id}`, ...this.decoSpot(it, 'indoor'), label: 'Sit at the desk' })
+        }
+      }
       if (home && home.tier >= 2) {
         out.push({ id: 'home:chest', x: ROOM_CHEST.x, y: 60, label: home.member ? 'Open the chests' : 'Look at the chest' })
         out.push({ id: 'home:bench', x: ROOM_BENCH.x, y: 60, label: home.member ? 'Work at the bench' : 'Look at the bench' })
@@ -729,6 +762,12 @@ export class HomesteadLayer implements InteractionProvider {
       for (const it of home.items) {
         if (it.itemDef !== POST || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
         out.push({ id: `home:post:${it.id}`, x: it.x * TILE + 8, y: (it.y + 1) * TILE + 2, label: `Read the lamp${it.name ? `: ${short(it.name, 20)}` : ''}` })
+      }
+      // A woodpile of yours on the land: stack green timber, collect seasoned.
+      for (const it of home.items) {
+        if (!home.member || !this.homes.connected) break
+        if (it.itemDef !== 'woodpile' || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
+        out.push({ id: `home:woodpile:${it.id}`, ...this.decoSpot(it, 'outdoor'), label: 'Tend the woodpile' })
       }
       return out
     }
@@ -775,6 +814,9 @@ export class HomesteadLayer implements InteractionProvider {
   verb(id: InteractId): string | null {
     if (id === 'home:door') return 'Enter'
     if (id === 'home:bed' || id === 'home:hearth') return 'Rest'
+    if (id === 'home:cook') return 'Cook'
+    if (id.startsWith('home:desk:')) return 'Sit'
+    if (id.startsWith('home:woodpile:')) return 'Stack'
     if (id === SILAS_ID) return 'Talk'
     if (id.startsWith('home:sign:') || id === 'home:stake' || id.startsWith('home:post:')) return 'Read'
     return 'Look'
@@ -812,11 +854,32 @@ export class HomesteadLayer implements InteractionProvider {
       bus.emit(VILLAGE_EV.open, home?.member || !other ? { panel: 'mail' } : { panel: 'mail', to: other.id })
       return
     }
+    if (id.startsWith('home:desk:')) {
+      if (!this.ownRoom() || !this.homes.connected) {
+        return this.say({ speaker: 'A writing desk', lines: ['A slant-top desk, a jar of quills, rag paper. Its owner copies out pages here.'] })
+      }
+      sfx('open')
+      bus.emit(VILLAGE_EV.open, { panel: 'desk' })
+      return
+    }
+    if (id.startsWith('home:woodpile:')) {
+      if (!this.homes.connected || !this.here()?.member) {
+        return this.say({ speaker: 'A woodpile', lines: ['Green timber, stacked to season. “Green wood sinks, dry wood sings.”'] })
+      }
+      sfx('open')
+      bus.emit(VILLAGE_EV.open, { panel: 'woodpile' })
+      return
+    }
     const say = (speaker: string, lines: string[]) => this.say({ speaker, lines })
     switch (id) {
       case 'home:hearth': {
         const name = this.placeName(this.here(), this.gate ?? 0)
         return say(name, ['Quarried stone, never drift-stone. It is warm, and it isn’t yours to sit by. Leave one for Ada, and let yourself out.'])
+      }
+      case 'home:cook': {
+        sfx('open')
+        bus.emit(VILLAGE_EV.open, { panel: 'hearth' })
+        return
       }
       case 'home:hame':
         return say('The Commons Gate', [
@@ -890,8 +953,18 @@ export class HomesteadLayer implements InteractionProvider {
 
   private say(d: Dialogue): void {
     uiState.dialogueOpen = true
+    // Carrying Hollis's fox adds the quiet line (give it back / not yet).
+    let lines = d.lines
+    let choices = d.choices
+    if (d.speaker === SILAS.name) {
+      const ask = keepsakeAsk('silas', this.deps.session.state.flags, itemsFor(this.deps.session).view?.stacks.map((s) => s.itemDef) ?? [])
+      if (ask) {
+        lines = [...lines, ask.line]
+        choices = [...(choices ?? []), ...ask.choices]
+      }
+    }
     sfx('open')
-    bus.emit(EV.dialogue, { id: 'home', speaker: d.speaker, lines: d.lines, choices: d.choices })
+    bus.emit(EV.dialogue, { id: 'home', speaker: d.speaker, lines, choices })
   }
 
   /** Who stands at Silas's table right now (presence, this world), but you. */
@@ -1656,7 +1729,18 @@ export class HomesteadLayer implements InteractionProvider {
         g.lineStyle(1, 0xffd98a, 0.8)
         g.strokeCircle(bx + TILE / 2, by - TILE / 2, (HOMESTEAD_DATA.lanternPosts.radius + 0.5) * TILE)
       }
-      if (this.scene.textures.exists(key)) {
+      // Runtime art when it exists, else the items pass's world sprite (or
+      // its commons alias) — the same fallback the placed piece draws.
+      const art = this.scene.textures.exists(key) ? null : itemWorldArt(it.itemDef)
+      const hasArt = !!art && this.scene.textures.exists(art)
+      if (hasArt) {
+        const f = itemsFrame(art!.slice('items-art:'.length))
+        const fw = f ? f.width : w * TILE
+        const fh = f ? f.height : h * TILE
+        const scale = Math.min((w * TILE) / fw, (h * TILE) / fh) || 1
+        p.ghost = this.scene.add.image(bx + (w * TILE) / 2, by, art!).setOrigin(0.5, 1).setScale(scale).setDepth(5300).setAlpha(0.85)
+        if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
+      } else if (!art) {
         p.ghost = this.scene.add.image(bx, by, key).setOrigin(0, 1).setDepth(5300).setAlpha(0.85)
         if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
       }

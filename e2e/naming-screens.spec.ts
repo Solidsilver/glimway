@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { stepToWarden, talkThrough, warden, warp, waitForArea } from './helpers'
+import { stepToWarden, talkThrough, warden, warp, waitForArea, waitForLive } from './helpers'
 
 /**
  * Screenshots of the naming beats for review (.agent/screens/).
@@ -14,7 +14,7 @@ async function toTheStone(page: Page, prefix: string): Promise<void> {
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await expect(page.locator('.prompt')).toContainText('Copy the naming from the stone')
-  await page.waitForTimeout(350)
+  await waitForLive(page)
   await page.screenshot({ path: `${OUT}/${prefix}-naming-clue-prompt.png` })
 }
 
@@ -47,7 +47,7 @@ test('desktop: copy the naming, then speak it to the warden', async ({ page }) =
   await stepToWarden(page, 84, false)
   await stepToWarden(page, 20, true)
   await expect(page.locator('.prompt')).toContainText('Speak the naming')
-  await page.waitForTimeout(350)
+  await waitForLive(page)
   await page.screenshot({ path: `${OUT}/desktop-naming-speak-prompt.png` })
   await page.keyboard.press('e')
   await page.waitForTimeout(120)

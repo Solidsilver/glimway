@@ -7,6 +7,7 @@
   import { ELARA_SIGNATURE, PROJECTS_NEED_WORLD, PROJECTS_OFFLINE, projectNotice } from '../content/village-notices'
   import { MATERIALS } from '../content/expansion-writing'
   import { paperById, paperFlag } from '../content/papers'
+  import { itemDef } from '../lib/items'
   import type { ProjectView } from '../lib/api/types'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
@@ -27,6 +28,7 @@
     village.refreshIfStale() // the board may open just past midnight
     if (session.link) {
       void village.loadProjects()
+      void village.loadRepairs()
       void village.loadMail() // carried counts
     }
     return () => bus.off(VILLAGE_EV.changed, bump)
@@ -42,12 +44,15 @@
       next: nextFestival(now),
       projects: village.projects,
       status: village.projectsStatus,
+      repairs: village.repairs,
+      repairsStatus: village.repairsStatus,
       carried: village.inventory?.materials ?? {},
       connected: !!session.link,
     }
   })
 
   const matName = (id: string) => MATERIALS.find((m) => m.id === id)?.name ?? id
+  const partName = (id: string) => itemDef(id)?.name ?? id
   const when = (unix: number) => new Date(unix * 1000).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
 
   function amount(p: ProjectView, m: string): number {
@@ -102,6 +107,45 @@
         </div>
       {/if}
     </section>
+
+    <h3 class="section-title">Village chores</h3>
+    {#if !view.connected}
+      <p class="msg">Chores on the board are for folk with a world.</p>
+    {:else if view.repairsStatus === 'offline'}
+      <p class="msg">Can’t read the chores list just now.</p>
+    {:else if view.repairs.open.length === 0}
+      <p class="msg">All quiet. Nothing broken in the village today.</p>
+    {:else}
+      <ul class="chores" data-testid="chores-list">
+        {#each view.repairs.open as chore (chore.id)}
+          <li class="chore" data-chore={chore.id}>
+            <div class="ph">
+              <span class="name">{chore.name}</span>
+              <span class="stage open">Open</span>
+            </div>
+            <p class="say">{chore.description}</p>
+            <div class="chore-meta">
+              <span class="hint"><Icon name="map" size={12} /> {chore.hint}</span>
+              <span class="part"><Icon name="tools" size={12} /> Needs: <b>{partName(chore.part)}</b></span>
+            </div>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if view.connected && view.repairs.history.length > 0}
+      <div class="history-block" data-testid="repairs-history">
+        <h4 class="sub-title">Mended recently</h4>
+        <ul class="history-list">
+          {#each view.repairs.history as h (h.id)}
+            <li class="history-item">
+              <span class="mended-name">{h.repairName}</span>
+              <span class="mended-by">— mended by {h.displayName || 'a neighbour'}</span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
 
     <h3 class="section-title">Village projects</h3>
     {#if !view.connected}
@@ -162,6 +206,7 @@
         </li>
       {/each}
     </ul>
+
   </div>
 </div>
 

@@ -2,6 +2,7 @@ import type { Browser, BrowserContext } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld } from './connected'
 import { freshPlayer, fund, giveInstance, go, hurt, shot } from './home-helpers'
+import { waitForLive, waitFrames, expectToast } from './helpers'
 
 /**
  * The item system core against the real Go server (docs/items/): tools wear
@@ -135,19 +136,22 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   // Drawn at the hero's side, and put away while fighting.
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand())).toBe('carters-lantern')
   await page.evaluate(() => (window as unknown as { __fsDevAttack: () => void }).__fsDevAttack())
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand()), { timeout: 2_000 }).toBeNull()
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand()), { timeout: 5_000 }).toBe('carters-lantern')
+  // Within the swing (game time; checked every frame, so the short gap can't slip by).
+  const offHand = (want: string | null) => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand() === want
+  await waitFrames(page, offHand, null, { seconds: 2, message: 'the lantern put away' })
+  await waitFrames(page, offHand, 'carters-lantern', { seconds: 5, message: 'the lantern back out' })
 })
 
-test('things lying in the world can be picked up, once', async ({ page }) => {
+test('things lying in the world can be picked up, once', { tag: '@smoke' }, async ({ page }) => {
   await freshPlayer(page, 'Moss')
   await go(page, 'village', 10, 10)
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsPickups: () => string[] }).__fsPickups())).toContain('well-rope-coil')
   await expect(page.locator('.prompt')).toContainText('Pick up the coil of rope')
-  await page.waitForTimeout(2500) // the area title fades
+  if (process.env.SCREENS) await page.waitForTimeout(2500) // the area title fades
   await shot(page, 'items-pickup-rope-desktop')
+  await waitForLive(page)
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: 'A coil of rope, left by the well' })).toBeVisible()
+  await expectToast(page, 'A coil of rope, left by the well')
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsPickups: () => string[] }).__fsPickups())).not.toContain('well-rope-coil')
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'fibre-rope')?.qty).toBe(1)
   // The bucket in the bracken is a worn tool.
@@ -221,7 +225,7 @@ test('standing together, one player hands another something they made', async ({
   await expect(dialog(page).getByTestId(`qty-item:lamp-wick@${ash}`)).toHaveText('1')
 
   // Rowan hears it at once, and the wick carries Ash's mark.
-  await expect(other.locator('.toast', { hasText: 'Ash gave you a Lamp Wick.' })).toBeVisible()
+  await expectToast(other, 'Ash gave you a Lamp Wick.')
   await expect.poll(async () => (await items(other))?.stacks.find((s) => s.itemDef === 'lamp-wick')?.maker?.name).toBe('Ash')
   await other.bringToFront()
   await openInventory(other, /Supplies/)

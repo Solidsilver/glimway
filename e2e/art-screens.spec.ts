@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { beginNewJourney, settleWarden, talkThrough, waitForArea, waitForWilds, warden, warp } from './helpers'
+import { beginNewJourney, settleWarden, talkThrough, waitForArea, waitForWilds, warden, warp, waitForLive } from './helpers'
 import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, homes, intoCottage, myHome, onMyLand, place, readOn, shot as snap, silasSays, type Area } from './home-helpers'
 import type { Page } from './fixtures'
 
@@ -74,7 +74,7 @@ test.describe('connected', () => {
     await shot(page, 'art-interior-workshop-desktop')
     await place(page, 40, 66)
     await expect(page.locator('.prompt')).toContainText('Open the chests')
-    await page.waitForTimeout(200)
+    await waitForLive(page)
     await page.keyboard.press('e')
     const panel = page.getByRole('dialog', { name: 'The Workshop' })
     await expect(panel).toBeVisible()
@@ -86,7 +86,7 @@ test.describe('connected', () => {
     // The mailbox's goods, the Character panel's pack and materials.
     await atMyMailbox(page)
     await expect(page.locator('.prompt')).toContainText('Check your mailbox')
-    await page.waitForTimeout(200)
+    await waitForLive(page)
     await page.keyboard.press('e')
     const mail = page.getByRole('dialog', { name: 'Mailbox' })
     await mail.getByRole('tab', { name: 'Send something' }).click()

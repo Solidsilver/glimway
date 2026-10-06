@@ -38,10 +38,13 @@ type Answer = { status?: number; body: unknown } | 'network';
 function fakeServer() {
   const calls: Call[] = [];
   const answers = new Map<string, Array<Answer | ((c: Call) => Answer)>>();
+  const holds = new Map<string, Array<Promise<void>>>();
   const fetchImpl = (async (url: string, init: RequestInit) => {
     const method = init.method ?? 'GET';
     const call = { method, path: url, body: init.body ? JSON.parse(String(init.body)) : undefined };
     calls.push(call);
+    const gate = holds.get(`${method} ${url}`)?.shift();
+    if (gate) await gate;
     const list = answers.get(`${method} ${url}`) ?? [];
     const next = list.length > 1 ? list.shift()! : list[0];
     if (!next) throw new Error(`unexpected ${method} ${url}`);
@@ -58,6 +61,13 @@ function fakeServer() {
     sent(key: string) {
       const [method, path] = key.split(' ');
       return calls.filter((c) => c.method === method && c.path === path);
+    },
+    /** The next request matching `key` is answered only once the returned function is called. */
+    hold(key: string): () => void {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      holds.set(key, [...(holds.get(key) ?? []), gate]);
+      return release;
     },
   };
 }
@@ -230,6 +240,24 @@ test('unsent changes that were not made offline merge without the notice (findin
   await link.reconnect(false);
   assert.equal(server.sent('PUT /api/progress')[0].body.baseRev, 3);
   assert.equal(events.filter((e) => e.event === EV.linkNotice).length, 0);
+  link.stop();
+});
+
+test('a change made while the reconnect upload is out stays unsent and goes up next (review: reconnect ack)', async () => {
+  const server = fakeServer();
+  const { link, session } = makeLink(server, { status: 'offline', rev: 3, dirty: true, offlineProgress: false, state: base({ hp: 25 }) });
+  server.on('POST /api/play', { body: { ...snap(base({ hp: 25 }), 3), lease: 'L1' } });
+  server.on('PUT /api/progress', (c) => ({ body: { ...snap({ ...base(), ...c.body.doc, maxHp: 50, maxMana: 36 }, c.body.baseRev + 1), status: 'current' } }));
+  const release = server.hold('PUT /api/progress');
+  const done = link.reconnect(false);
+  while (server.sent('PUT /api/progress').length === 0) await new Promise((r) => setTimeout(r, 1));
+  session.state = { ...session.state, quest: 'accepted' };
+  release();
+  await done;
+  for (let i = 0; i < 200 && server.sent('PUT /api/progress').length < 2; i++) await settle();
+  const up = server.sent('PUT /api/progress');
+  assert.equal(up.length, 2, 'the change made meanwhile goes up next');
+  assert.equal(up[1].body.doc.quest, 'accepted');
   link.stop();
 });
 
@@ -598,4 +626,81 @@ test('a reconnect resolves a lost mutation by exact replay', async () => {
   assert.equal(replay.body.lease, 'L2');
   assert.equal(link.pendingOperation, null);
   assert.equal(events.filter((e) => e.event === EV.mutationResolved).at(-1)!.payload.outcome, 'landed');
+});
+
+// ---------------------------------------------------------------- bugs round
+
+const lanternResult = { epoch: 'e1', lanternId: 'l1', lanterns: [] };
+
+test('bugs #3: an upload queued behind a Wilds defeat report is built on its answer, so no stale merge puts the hero back in the Tangle', async () => {
+  const server = fakeServer();
+  let rev = 5;
+  const fallen = base({ area: 'wilds', hp: 0, position: { x: 900, y: 900 } });
+  const { link, session } = makeLink(server, { rev: 5, state: fallen });
+  server.on('POST /api/wilds/defeat', () => ({ body: { ...snap(fallen, ++rev), result: lanternResult } }));
+  // A write on an old revision is merged as stale: the server keeps its own area and vitals.
+  server.on('PUT /api/progress', (c) => {
+    const stale = c.body.baseRev < rev;
+    return { body: { ...snap(stale ? fallen : { ...fallen, ...c.body.doc }, ++rev), status: stale ? 'stale' : 'current' } };
+  });
+  const release = server.hold('POST /api/wilds/defeat');
+  const report = link.wildsDefeat({ epoch: 'e1', x: 3, y: 4 });
+  // The recovery runs while the report is out: home to the village, healed,
+  // and the save queues an upload behind the report.
+  session.state = base({ area: 'village', hp: 50, position: { x: 200, y: 200 } });
+  await link.persist();
+  assert.equal(server.sent('PUT /api/progress').length, 0, 'the upload waits its turn');
+  release();
+  assert.ok((await report).ok);
+  await link.flush();
+  const put = server.sent('PUT /api/progress')[0];
+  assert.equal(put.body.baseRev, 6, 'built on the report’s revision');
+  assert.equal(session.state.area, 'village', 'the hero stays home');
+  assert.equal(session.state.hp, 50);
+  assert.equal(link.rev, 7);
+});
+
+test('bugs #3: a spend’s answer is adopted before the next queued upload is built', async () => {
+  const server = fakeServer();
+  let rev = 5;
+  const { link, session } = makeLink(server, { rev: 5, state: base({ embers: 10, area: 'village' }) });
+  server.on('POST /api/spend', (c) => ({ body: { ...snap(base({ embers: 7, area: 'village' }), ++rev), _c: c } }));
+  server.on('PUT /api/progress', (c) => {
+    const stale = c.body.baseRev < rev;
+    return { body: { ...snap(base({ embers: 7, area: stale ? 'woodland' : c.body.doc.area }), ++rev), status: stale ? 'stale' : 'current' } };
+  });
+  const release = server.hold('POST /api/spend');
+  const spend = link.spend({ kind: 'rest' } as never);
+  while (server.sent('POST /api/spend').length === 0) await new Promise((r) => setTimeout(r, 0));
+  // Found while the spend is out: not in what it carried, so it goes up next.
+  session.state = { ...session.state, discoveries: [...session.state.discoveries, 'route-marker'] };
+  await link.persist();
+  release();
+  assert.equal(await spend, null);
+  await link.flush();
+  const put = server.sent('PUT /api/progress')[0];
+  assert.equal(put.body.baseRev, 6, 'built on the spend’s revision');
+  assert.ok(put.body.doc.discoveries.includes('route-marker'), 'the change made meanwhile is uploaded, not marked as sent');
+  assert.equal(session.state.area, 'village');
+});
+
+test('bugs #4: a replayed answer never takes the link back a revision (or its state back to that answer)', async () => {
+  const server = fakeServer();
+  const { link, session } = makeLink(server, { rev: 5, state: base({ embers: 10 }) });
+  server.on('POST /api/homestead/buy', 'network');
+  assert.deepEqual(await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' }), { ok: false, code: 'pending' });
+  // It committed at rev 6; the hero plays on offline, so the reconnect has a
+  // write of its own (rev 7) before the replay comes back with rev 6.
+  session.state = { ...session.state, discoveries: [...session.state.discoveries, 'route-marker'] };
+  server.on('POST /api/play', { body: { ...snap(base({ embers: 8 }), 6), lease: 'L2' } });
+  server.on('PUT /api/progress', { body: { ...snap(base({ embers: 8, discoveries: ['route-marker'] }), 7), status: 'stale' } });
+  server.on('POST /api/homestead/buy', { body: { ...snap(base({ embers: 8 }), 6), result: { home: homeView([stool]), materials: {}, itemId: 's1' } } });
+  await link.reconnect(false);
+  assert.equal(link.pendingOperation, null, 'the replay resolved it');
+  assert.equal(link.rev, 7, 'still on the newest revision');
+  assert.ok(session.state.discoveries.includes('route-marker'), 'the newer state is kept');
+  // The next action is built on rev 7.
+  server.on('POST /api/homestead/upgrade', (c) => ({ body: { ...snap(base({ embers: 0 }), 8), result: { home: homeView([stool], 1), materials: {} } }, _c: c } as Answer));
+  assert.equal((await link.homeAction({ op: 'upgrade', tier: 1 })).ok, true);
+  assert.equal(server.sent('POST /api/homestead/upgrade')[0].body.baseRev, 7);
 });

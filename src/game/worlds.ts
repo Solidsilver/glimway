@@ -3,6 +3,8 @@
  * from code (seeded) — part of the original, code-native asset set.
  */
 import type { AreaId } from '../lib/state.ts'
+import { ITEM_RULES } from '../lib/items.ts'
+import { repairFor } from '../lib/repairs.ts'
 import { TERRAIN, TILE } from './textures.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
 import { homeLandKind } from './homeland.ts'
@@ -13,7 +15,7 @@ export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}` | `touch:${string}` | `pickup:${string}`
+export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}` | `touch:${string}` | `pickup:${string}` | `repair:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -294,7 +296,10 @@ function buildVillage(): WorldData {
     if ((y < 9 || y > 11) && (y < 14 || y > 16)) scatterOne(g, W - 1, y)
   }
 
-  const well = { tx: 13, ty: 12 }
+  // The well stands where the repairs data puts it (shared with the
+  // server's draw-water and mend checks); the village lantern beside it.
+  const wellPos = repairFor('well-rope')?.pos ?? { tx: 13, ty: 12 }
+  const well = { tx: wellPos.tx, ty: wellPos.ty }
   const villageLantern = { tx: 11, ty: 12 }
 
   const npcs: NpcSpot[] = [
@@ -349,8 +354,14 @@ function buildVillage(): WorldData {
   // The residents, placed after the scatter too (the seeded layout stays):
   // Hazel in the square below the well with her basket, Finn at his mill
   // door, Ada under her window on the east house (village-life.ts
-  // ADA_HOUSE_WINDOW). All off the quest route.
-  npcs.push({ id: 'hazel', tx: 12, ty: 15 }, { id: 'finn', tx: 30, ty: 23 }, { id: 'ada', tx: 35, ty: 8 })
+  // ADA_HOUSE_WINDOW). All off the quest route. Ada and Hazel stand where
+  // the shared residents data says (the server checks proximity against
+  // the same rows).
+  for (const res of ITEM_RULES.residents) {
+    if (res.area !== 'village') continue
+    npcs.push({ id: res.id as NpcId, tx: res.tx, ty: res.ty })
+  }
+  npcs.push({ id: 'finn', tx: 30, ty: 23 })
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [

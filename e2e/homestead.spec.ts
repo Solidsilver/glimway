@@ -1,7 +1,6 @@
-import { execFileSync } from 'node:child_process'
 import { expect, test, type Page } from './fixtures'
-import { serverState } from './connected'
-import { beginNewJourney, waitForArea, player } from './helpers'
+import { serverState, sql } from './connected'
+import { beginNewJourney, dialogueState, talkText, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
 import { area, earnEmbers, freshPlayer, fund, go, homeAt, homes, hurt, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts'
@@ -45,25 +44,31 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   const tray = page.getByTestId('placement-tray')
   await tray.locator(`[data-piece="${piece}"]`).first().click()
   await expect.poll(async () => (await homes(page)).placement?.spot ?? null).not.toBeNull()
-  const at = (await homes(page)).placement!.spot!
-  for (let i = 0; i < Math.abs(x - at.x); i++) await page.keyboard.press(x > at.x ? 'ArrowRight' : 'ArrowLeft')
-  for (let i = 0; i < Math.abs(y - at.y); i++) await page.keyboard.press(y > at.y ? 'ArrowDown' : 'ArrowUp')
+  // One key press per step, each waited for: presses landing inside one
+  // frame would be read as one.
+  const spot = async () => (await homes(page)).placement!.spot!
+  for (let at = await spot(); at.x !== x || at.y !== y; ) {
+    const key = at.x !== x ? (x > at.x ? 'ArrowRight' : 'ArrowLeft') : y > at.y ? 'ArrowDown' : 'ArrowUp'
+    await page.keyboard.press(key)
+    const before = at
+    await expect.poll(async () => JSON.stringify(await spot())).not.toBe(JSON.stringify(before))
+    at = await spot()
+  }
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
 }
 
 /** Talk at the prompt and pick a choice in each conversation that follows, in order. */
 async function converse(page: Page, prompt: RegExp, picks: RegExp[]): Promise<void> {
   await expect(page.locator('.prompt')).toContainText(prompt)
-  await page.waitForTimeout(250)
+  await waitForLive(page)
   await page.keyboard.press('e')
   for (const pick of picks) {
-    const choice = page.locator('.choice', { hasText: pick })
-    for (let i = 0; i < 20 && !(await choice.isVisible().catch(() => false)); i++) {
-      if (!(await page.locator('.choice').first().isVisible().catch(() => false))) await page.keyboard.press('e')
-      await page.waitForTimeout(220)
-    }
-    await choice.click()
-    await page.waitForTimeout(250)
+    // The next conversation may still be opening.
+    await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
+    const choices = await untilChoices(page)
+    expect(choices.map((c) => c.text).some((t) => pick.test(t)), `a reply matching ${pick}`).toBe(true)
+    await page.locator('.choice', { hasText: pick }).click()
+    await expect.poll(async () => (await dialogueState(page)).choices).toBeNull()
   }
 }
 
@@ -74,6 +79,8 @@ async function claimFirstFree(page: Page): Promise<number> {
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
   await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  // Silas answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, /in my square hand/)
   return free.gate
 }
 
@@ -85,7 +92,7 @@ test('the Commons gate: walk in from Hearthwick and back; guests walk the lane a
   await waitForArea(page, 'commons')
   await page.keyboard.up('ArrowRight')
   expect((await player(page)).x).toBeLessThan(6 * 16)
-  await expect(page.locator('.area .title')).toHaveText('Hearthwick Commons')
+  await expectAreaCard(page, 'Hearthwick Commons')
 
   // Guests see spare gates of wild land, and Silas tells them about worlds.
   const v = await homes(page)
@@ -97,7 +104,7 @@ test('the Commons gate: walk in from Hearthwick and back; guests walk the lane a
 
   // Through a gate: wild land, nobody's, and back out onto the lane.
   await throughGate(page, 0)
-  await expect(page.locator('.area .title')).toHaveText('Unclaimed land')
+  await expectAreaCard(page, 'Unclaimed land')
   await expect(page.getByTestId('arrange')).toHaveCount(0)
   await shot(page, 'land-wild-guest-desktop')
   await page.keyboard.down('ArrowDown')
@@ -117,16 +124,8 @@ test('the Commons gate: walk in from Hearthwick and back; guests walk the lane a
 test('a guest hears that deeds are for people with a world', async ({ page }) => {
   await beginNewJourney(page)
   await go(page, 'commons', 51, 22)
-  await expect(page.locator('.prompt')).toContainText('Talk to Silas')
-  await page.keyboard.press('e')
-  const dialogue = page.getByRole('dialog', { name: /Conversation with Silas/ })
-  await expect(dialogue).toBeVisible()
-  let text = ''
-  for (let i = 0; i < 8 && (await dialogue.isVisible()); i++) {
-    text += await dialogue.innerText()
-    await page.keyboard.press('e')
-    await page.waitForTimeout(300)
-  }
+  const text = await talkText(page, 'Talk to Silas')
+  expect((await dialogueState(page)).seen.at(-1)?.speaker).toBe('Silas')
   expect(text).toContain('Sign in to your world')
 })
 
@@ -149,6 +148,8 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const embers = (await serverState(page)).body.state.embers
   await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  // Silas answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, /in my square hand/)
   expect((await serverState(page)).body.state.embers).toBe(embers)
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:deed-of-sale-commons-plot')
 
@@ -167,7 +168,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Through the gate: your land. The guidance is done.
   await throughGate(page, free.gate)
-  await expect(page.locator('.area .title')).toHaveText('Your land')
+  await expectAreaCard(page, 'Your land')
   await expect(page.getByTestId('home-goal')).toHaveCount(0)
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('home:arrived')
   await shot(page, 'land-camp-desktop')
@@ -268,7 +269,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await hurt(page, 6)
   await go(page, `home:${free.gate}`, Math.floor((land.site.x * 16 - 64 + 96) / 16), Math.floor((land.site.y * 16 + 52) / 16))
   await talk(page, /Rest at your bedroll/, /Rest a while/)
-  await expect(page.locator('.toast', { hasText: 'Home, and rested' })).toBeVisible()
+  await expectToast(page, 'Home, and rested')
 
   // Raise the cottage, go inside; the save stays on your land, by the door.
   const embers2 = (await serverState(page)).body.state.embers
@@ -287,7 +288,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await hurt(page, 4)
   await place(page, 181, 66)
   await talk(page, /Rest by your hearth/, /Rest a while/)
-  await expect(page.locator('.toast', { hasText: 'Home, and rested' }).last()).toBeVisible()
+  await expectToast(page, 'Home, and rested')
   await place(page, 112, 13 * 16 - 4)
   await page.keyboard.down('ArrowDown')
   await waitForArea(page, `home:${free.gate}`)
@@ -340,7 +341,7 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
   expect((await myHome(page)).postsBought).toBe(1)
   await throughGate(other, gate)
-  await expect(other.locator('.area .title')).toHaveText('Your land')
+  await expectAreaCard(other, 'Your land')
   await expect(other.getByTestId('arrange')).toBeVisible()
   await shot(other, 'joint-deed-land-desktop')
 
@@ -392,7 +393,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
 
   // Through Tansy's gate: her land, read-only (no arranging, no resting).
   await throughGate(other, gate)
-  await expect(other.locator('.area .title')).toHaveText('Tansy’s Place')
+  await expectAreaCard(other, 'Tansy’s Place')
   await expect(other.getByTestId('arrange')).toHaveCount(0)
   expect((await homeAt(other, gate))!.member).toBe(false)
   // Each land is its own presence room: Tansy walks home and they see each other there.
@@ -406,7 +407,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   await expect(other.locator('.prompt')).toContainText('Visit the cottage')
   await other.keyboard.press('e')
   await waitForArea(other, 'cottage')
-  await expect(other.locator('.area .title')).toHaveText('Tansy’s Place')
+  await expectAreaCard(other, 'Tansy’s Place')
   await expect(other.getByTestId('arrange')).toHaveCount(0)
   await shot(other, 'visiting-interior-desktop')
   await place(other, 181, 66)
@@ -449,7 +450,7 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
 
   // Days pass (the e2e database's clock is moved back instead).
   const ago = (days: number) =>
-    execFileSync('sqlite3', ['-cmd', '.timeout 5000', '.e2e-server/fingersnap.sqlite', `UPDATE homesteads SET vacant_since=strftime('%s','now')-${days}*86400 WHERE gate=${gate} AND world_id=(SELECT world_id FROM players WHERE habitica_id='${a}');`])
+    sql(`UPDATE homesteads SET vacant_since=strftime('%s','now')-${days}*86400 WHERE gate=${gate} AND world_id=(SELECT world_id FROM players WHERE habitica_id='${a}');`)
   ago(HOMESTEAD_DATA.desolation.desolateAfterDays)
   const home = (await homeAt(page, gate))!
   expect(home.desolate).toBe(true)

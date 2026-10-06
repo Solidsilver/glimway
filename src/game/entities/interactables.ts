@@ -18,6 +18,8 @@ import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
 import { isResident, residentFullName, residentTalk } from '../../content/residents'
 import { meetResident, residentContext } from '../residents'
+import { itemsFor } from '../items'
+import { keepsakeAsk } from '../keepsakes'
 import { VILLAGE_EV } from '../village'
 import { HOME_EV } from '../homestead'
 import type { PaperPickups } from './papers'
@@ -302,6 +304,11 @@ export class Interactables {
     // A paper to hand over rides at the end of the NPC's usual lines.
     const handover = !this.isEmberSpot(target.id) && target.id in NPC_NAMES ? papers?.handover(target.id) : null
     if (handover) payload = { ...payload, lines: [...payload.lines, ...handover] }
+    // Carrying a resident's keepsake adds the quiet line (give it back / not yet).
+    const ask = isResident(target.id)
+      ? keepsakeAsk(target.id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
+      : null
+    if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
     uiState.dialogueOpen = true
     heardAt.add(heardKey)
     this.refreshMarkers()

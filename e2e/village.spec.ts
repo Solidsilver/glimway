@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState } from './connected'
-import { beginNewJourney } from './helpers'
+import { beginNewJourney, waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, readOn, shot, silasSays } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
 import { dateLine } from '../src/lib/village'
@@ -19,7 +19,7 @@ const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000
 async function openBoard(page: Page): Promise<ReturnType<Page['getByRole']>> {
   await go(page, 'village', 15, 10)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const board = page.getByRole('dialog', { name: 'Notice Board' })
   await expect(board).toBeVisible()
@@ -47,7 +47,7 @@ test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commo
   await go(page, 'commons', 9, 21)
   await expect(page.getByTestId('calendar-line')).toContainText('Cart-wick, 6th day — Carting')
   await expect(page.getByTestId('calendar-line')).toContainText('Carting Day')
-  await expect(page.locator('.toast', { hasText: 'Carting Day. Stalls on the Commons' })).toBeVisible({ timeout: 8000 })
+  await expectToast(page, 'Carting Day. Stalls on the Commons', { timeout: 8000 })
   await shot(page, 'festival-carting-day-desktop')
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (11 * 7 + 6) * 86400 + 3600)
   await go(page, 'village', 14, 12)
@@ -120,7 +120,6 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await page.waitForTimeout(400)
   await silasSays(page, /Build on a workshop/)
   await readOn(page, /Steady|eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
@@ -131,7 +130,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   // The chests: the home chest everyone on the deed shares, and your own.
   await place(page, 40, 66)
   await expect(page.locator('.prompt')).toContainText('Open the chests')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const panel = page.getByRole('dialog', { name: 'The Workshop' })
   await expect(panel).toBeVisible()
@@ -190,7 +189,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await expect.poll(async () => (await homes(page)).gates.filter((g) => g.names.length > 0).length).toBeGreaterThanOrEqual(2)
   await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const mail = page.getByRole('dialog', { name: 'Mailbox' })
   await mail.getByRole('tab', { name: 'Send something' }).click()
@@ -223,7 +222,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await atMyMailbox(other)
   await shot(other, 'mailbox-flag-desktop')
   await expect(other.locator('.prompt')).toContainText('Check your mailbox')
-  await other.waitForTimeout(200)
+  await waitForLive(other)
   await other.keyboard.press('e')
   const box = other.getByRole('dialog', { name: 'Mailbox' })
   const parcel = box.locator('[data-mail]', { hasText: '3 timber' })

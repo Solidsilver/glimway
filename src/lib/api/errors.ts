@@ -167,6 +167,15 @@ export const SERVER_ERROR_CODES = [
   'not-for-the-off-hand',
   'pickup-not-found',
   'already-picked-up',
+  'too-weak',
+  // village repairs and returning keepsakes (docs/items/crafting-and-repair.md)
+  'repair-not-found',
+  'repair-not-open',
+  'already-mended',
+  'well-rope-broken',
+  'wrong-recipient',
+  'invalid-target',
+  'unknown-target',
   // gathering & planting
   'gathered-enough',
   'cannot-gather-here',

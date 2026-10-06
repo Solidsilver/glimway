@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, settleWarden, talkThrough, warp } from './helpers'
+import { beginNewJourney, expectStage, openTalk, readDialogue, settleWarden, talkThrough, untilChoices, warp, expectToast } from './helpers'
 
 /** Read the save's ember balance and flags straight from IndexedDB. */
 async function savedEmbers(page: Page): Promise<{ embers: number; flags: string[]; hp: number; maxHp: number } | undefined> {
@@ -29,28 +29,21 @@ test('a sample hero brings welcome embers, and a warm rest spends them', async (
 
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Try a sample hero' }).click()
-  await expect(page.locator('.toast', { hasText: 'embers into your hand' })).toBeVisible()
+  await expectToast(page, 'embers into your hand')
   await page.getByRole('button', { name: 'Back to the road' }).click()
   await expect(hud(page)).toHaveText('3')
 
   // Get hurt, then rest by the village lantern.
   await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
   await warp(page, 'village', 11, 13)
-  await expect(page.locator('.prompt')).toContainText('Rest by the lantern')
-  await page.keyboard.press('e')
+  await openTalk(page, 'Rest by the lantern')
+  await untilChoices(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
-  for (let i = 0; i < 10 && !(await choice.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
   await expect(choice).toBeEnabled()
   await expect(choice).toContainText('2 embers')
   await page.screenshot({ path: 'test-results/embers-hearth.png' })
   await page.keyboard.press('1')
-  for (let i = 0; i < 10 && (await page.getByRole('dialog', { name: /Conversation/ }).isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
+  await readDialogue(page)
   await expect(hud(page)).toHaveText('1')
   await expect.poll(async () => {
     const s = await savedEmbers(page)
@@ -73,13 +66,9 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
 
   // The chest needs 5: the choice is shown but greyed out.
   await warp(page, 'ruin', 28, 3)
-  await expect(page.locator('.prompt')).toContainText('Open the chest')
-  await page.keyboard.press('e')
+  await openTalk(page, 'Open the chest')
+  await untilChoices(page)
   const kindle = page.locator('.choice', { hasText: 'Kindle the lock' })
-  for (let i = 0; i < 10 && !(await kindle.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(200)
-  }
   await expect(kindle).toBeDisabled()
   await expect(kindle).toContainText('Needs 5 embers')
   await page.screenshot({ path: 'test-results/embers-chest.png' })
@@ -100,6 +89,5 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
   await talkThrough(page, /Light the lantern/)
   await expect(hud(page)).toHaveText('2')
   await expect.poll(async () => (await savedEmbers(page))?.flags ?? []).toContain('lit:road-1')
-  await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/embers-road-lit.png' })
 })

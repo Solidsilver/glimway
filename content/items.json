@@ -58,6 +58,20 @@
         "ty": 9,
         "radiusTiles": 4
       }
+    ],
+    "residents": [
+      {
+        "id": "ada",
+        "area": "village",
+        "tx": 35,
+        "ty": 8
+      },
+      {
+        "id": "hazel",
+        "area": "village",
+        "tx": 12,
+        "ty": 15
+      }
     ]
   },
   "items": [
@@ -515,6 +529,8 @@
       "name": "Beeswax Candle",
       "tab": "keepsakes",
       "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "bett",
       "blurb": "Never lit, saved for a birthday. The Wilds kept it a long while. Now they've handed it back."
     },
     {
@@ -529,6 +545,8 @@
       "name": "Stamped Road-Nails",
       "tab": "keepsakes",
       "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "nan",
       "blurb": "Eleven iron nails, each stamped with the wheel and wave. Lantern-post nails. Eleven exactly."
     },
     {
@@ -893,6 +911,7 @@
       "name": "Storm oil",
       "tab": "supplies",
       "kind": "material",
+      "marked": true,
       "blurb": "Rare. Kept for the old ways. Stoppered flask with a bright core."
     },
     {
@@ -909,6 +928,198 @@
       "tab": "home",
       "kind": "home-good",
       "blurb": "Expands your land. Holds back the dark where its light falls."
+    },
+    {
+      "id": "gate-shelf",
+      "name": "Gate shelf",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Pure-gift shelf for passers-by on the Commons lane."
+    },
+    {
+      "id": "writing-desk",
+      "name": "Writing desk",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "A slant-top desk for copying recipe pages to give away."
+    },
+    {
+      "id": "keepsake-cabinet",
+      "name": "Keepsake cabinet",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Glass-front case to display keepsakes for visitors."
+    },
+    {
+      "id": "drying-rack",
+      "name": "Herb drying rack",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Holds herbs from your beds and shows them hanging."
+    },
+    {
+      "id": "apothecary-shelf",
+      "name": "Apothecary shelf",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Jars fill to show your stock of remedies."
+    },
+    {
+      "id": "woodpile",
+      "name": "Woodpile",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Green timber stacked here seasons after a real day. \"Green wood sinks, dry wood sings.\""
+    },
+    {
+      "id": "raised-bed",
+      "name": "Raised bed",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Timber-edged bed of dark soil to plant herbs and saplings."
+    },
+    {
+      "id": "window-lamp",
+      "name": "Window lamp",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Hearth-grade. Your window shows lit from the Commons lane; at Amberwake every lit window adds to the village's glow."
+    },
+    {
+      "id": "naming-frame",
+      "name": "Naming-slip frame",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Frames your first lantern post naming slip."
+    },
+    {
+      "id": "pencil-map",
+      "name": "Pip's pencil map",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "A copy from Pip, in pencil because the lines drift. Smudges a little each season."
+    },
+    {
+      "id": "pressed-flowers",
+      "name": "Pressed-flower frame",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Framed posy from Bloom flowers, fresh or dried."
+    },
+    {
+      "id": "candle-hulls",
+      "name": "Candle hulls",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "A shelf of walnut-shell boats; float one on the pond for the Breaking."
+    },
+    {
+      "id": "carting-bunting",
+      "name": "Carting bunting",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Red and cream bunting strung across your gate for Carting Day."
+    },
+    {
+      "id": "empty-chair",
+      "name": "The Empty Chair",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Set at your table for those lost in the Tangle."
+    },
+    {
+      "id": "closure-lamp",
+      "name": "Closure Night lamp",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Frost-glass lamp facing the dark for Closure Night."
+    },
+    {
+      "id": "door-fox",
+      "name": "Door-fox",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Silas carves it when you get your deed, mirror-wise. Can't be sold or given."
+    },
+    {
+      "id": "recipe-page-tea",
+      "name": "Recipe page: Saltings tea",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A rag paper slip with a cup sketch, from Elara. Wild thyme and well water."
+    },
+    {
+      "id": "recipe-page-salve",
+      "name": "Recipe page: Comfrey salve",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "An aged leaf of Mother Cotta's book with a botanical comfrey sketch, via Mara. Comfrey root and tallow."
+    },
+    {
+      "id": "recipe-page-candle-oil",
+      "name": "Recipe page: Candle oil",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A neat library slip with oil flask notation, from Mara. Amber and tallow."
+    },
+    {
+      "id": "recipe-page-willow-tea",
+      "name": "Recipe page: Willow-bark tea",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A book leaf of Mother Cotta's herbal with a curl-of-bark sketch. Willow bark and well water."
+    },
+    {
+      "id": "recipe-card-twists",
+      "name": "Recipe card: Keeper's Twists",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A flour-dusted bakery card from Hazel's wall. Flour and wild honey."
+    },
+    {
+      "id": "recipe-card-oil-twists",
+      "name": "Recipe card: Oil twists",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A darker stained bakery card from Hazel with a note on the back. Flour, wild honey, and candle oil."
+    },
+    {
+      "id": "recipe-page-hearth-oil",
+      "name": "Recipe page: Hearth oil",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A ruled ledger receipt leaf from Ada Cooley's window fund. Amber and tallow."
+    },
+    {
+      "id": "recipe-page-wax-seal",
+      "name": "Recipe page: Wax seal",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A printed page from a Brackenwood handbook with the wheel-and-wave stamp. Beeswax."
+    },
+    {
+      "id": "recipe-page-storm-oil",
+      "name": "Recipe page: Storm oil",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A torn margin from Wenna's ledger in dense dark script. Storm-grade drop and tallow."
+    },
+    {
+      "id": "water",
+      "name": "Well water",
+      "tab": "supplies",
+      "kind": "material",
+      "icon": "stave-bucket",
+      "blurb": "Fresh water drawn from the well with a stave bucket."
     }
   ],
   "pickups": [
