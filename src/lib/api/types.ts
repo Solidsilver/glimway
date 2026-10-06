@@ -218,6 +218,7 @@ export interface WildsClaimResult {
   loot: WildsLoot;
   materials: WildsMaterials;
   wardenSliverFound?: boolean;
+  stormDropFound?: boolean;
 }
 
 export interface WildsClaimResponse extends Snapshot {
@@ -493,7 +494,7 @@ export interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy';
 export interface ItemsActionResponse extends Snapshot {
   result: {
     items: ItemsView;
@@ -511,6 +512,8 @@ export interface ItemsActionResponse extends Snapshot {
     land?: { tile: [number, number]; stump: boolean; cleared: boolean };
     heirloom?: string;
     adaOilCount?: number;
+    /** What a seller just handed over (/api/items/buy). */
+    bought?: { seller: string; itemDef: string; qty: number; embers: number };
   };
 }
 

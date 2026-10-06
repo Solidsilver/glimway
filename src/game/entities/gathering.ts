@@ -18,13 +18,14 @@
  * stump is still there. Planting draws the new sapling where it went in.
  */
 import type Phaser from 'phaser'
-import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
+import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, keepsStanding, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
 import { parseHomeArea } from '../../lib/homestead'
 import { itemDef } from '../../lib/items'
 import { itemErrorText, itemsFor } from '../items'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
+import { parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { sfx } from '../sfx'
@@ -133,7 +134,7 @@ export class Gathering {
     this.current = {
       spot,
       label: spot.label,
-      verb: gatheringVerb(gatheringTarget(spot.target)?.action ?? 'chop'),
+      verb: gatheringVerb(gatheringTarget(spot.target)?.action ?? 'chop', gatheringTarget(spot.target)?.verb),
       x: spot.tx * TILE + 8,
       y: (spot.ty + 1) * TILE - 6,
       work: () => void this.work(spot)
@@ -214,7 +215,8 @@ export class Gathering {
       }
       const home = parseHomeArea(session.state.area) !== null
       this.deps.notePosition()
-      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, home ? [spot.tx, spot.ty] : undefined)
+      const region = session.state.area === WILDS_AREA ? (parseChunkArea(this.deps.world.areaId)?.region ?? regionOfState(session.state)) : undefined
+      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile: home ? [spot.tx, spot.ty] : undefined, region })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
       const live = Gathering.live?.deps.world.areaId === this.deps.world.areaId ? Gathering.live : null
@@ -303,10 +305,13 @@ export class Gathering {
 
   /**
    * A worked piece as it is now: a felled tree is a stump (still in the
-   * way, and diggable); a broken boulder or a dug stump is open ground.
+   * way, and diggable); a broken boulder or a dug stump is open ground. A
+   * seasonal piece stays standing however often it's worked — the caps
+   * hold you, not the map.
    */
   private change(spot: GatherSpot, now: 'stump' | 'open'): void {
     if (spot.target === 'stump' && now === 'stump') return // the map already has it
+    if (keepsStanding(spot.target)) return // the freshet shore, the bloom patches, the pond ice
     const x = spot.tx * TILE + 8
     const y = (spot.ty + 1) * TILE
     for (const img of this.drawn.get(`${spot.tx},${spot.ty}`) ?? []) img.destroy()

@@ -319,3 +319,59 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
   assert.match(dialogueFor('clue', 'accepted').lines.join(' '), /The road is closed here/);
   assert.equal(itemInfo('lantern-route-rubbing').name, 'Wenna’s Naming, Copied Out');
 });
+
+test('the seasons’ materials keep their own company: each in its mark or wick, and none expire', async () => {
+  const { GATHERING_DATA, inSeason, gatheringTarget } = await import('../src/lib/gathering.ts');
+  const { CALENDAR, calendarAt } = await import('../src/lib/calendar.ts');
+  const dayAt = (t: number) => calendarAt(t, CALENDAR);
+  const epoch = Date.parse(CALENDAR.epoch) / 1000;
+
+  // Every seasonal piece names the season the doc gives it.
+  const seasons: Record<string, { kind: 'mark' | 'wick'; season: string; item: string }> = {
+    'freshet-shore': { kind: 'mark', season: 'Mudrise', item: 'walnut-shells' },
+    'bloom-patch': { kind: 'wick', season: 'Bloom', item: 'bloom-flowers' },
+    'pond-ice': { kind: 'mark', season: 'Quiet', item: 'frost-glass' },
+  };
+  for (const [id, want] of Object.entries(seasons)) {
+    const t = gatheringTarget(id);
+    assert.ok(t, `${id} is a gather target`);
+    assert.equal(want.kind === 'mark' ? t!.mark : t!.wick, want.season, `${id} in ${want.season}`);
+    assert.deepEqual(t!.yields.map((y) => y.item), [want.item]);
+    // Its own wick or mark, and never its neighbour's: the year has all of
+    // them, once each.
+    const own = firstOf((inner) => (want.kind === 'mark' ? inner.mark : inner.wick) === want.season);
+    assert.ok(inSeason(t!, dayAt(own)), `${id} stands in its season`);
+  }
+  function firstOf(when: (day: { mark: string; wick: string }) => boolean): number {
+    for (let d = 0; d < CALENDAR.wickDays * 12; d++) {
+      const t = epoch + d * 86400 + 3600;
+      if (when(dayAt(t))) return t;
+    }
+    throw new Error('no such day');
+  }
+  // The sap rides the Tangle's trees, in Amberfall alone.
+  const sap = gatheringTarget('tangle-tree')?.yields.find((y) => y.item === 'amberfall-sap');
+  assert.ok(sap, 'the Tangle trees give their sap');
+  assert.equal(sap?.mark, 'Amberfall');
+  // The amberfall sap yield is silent the rest of the year.
+  const amberfall = firstOf((day) => day.mark === 'Amberfall');
+  assert.ok(inSeason(sap!, dayAt(amberfall)));
+});
+
+test('the sellers and their goods speak the village’s voice', async () => {
+  const { ITEMS } = await import('../src/lib/items.ts');
+  const sellers = ITEMS.sellers ?? [];
+  assert.ok(sellers.length >= 3, 'Hazel’s kitchen, Finn’s mill door, the Carting Day stall');
+  const names = sellers.map((s) => s.npc).join(',');
+  assert.match(names, /Hazel/);
+  assert.match(names, /Finn/);
+  const stall = sellers.find((s) => s.festival);
+  assert.equal(stall?.festival, 'Carting Day');
+  for (const s of sellers) {
+    for (const g of s.goods) {
+      assert.ok(g.line.length <= 160, `${g.line.length} chars: ${g.line}`);
+      assert.doesNotMatch(g.line, OUT_OF_WORLD, g.line);
+      assert.ok(g.label.length > 0 && g.label.length <= 80);
+    }
+  }
+});

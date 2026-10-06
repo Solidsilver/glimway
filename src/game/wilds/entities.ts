@@ -407,6 +407,9 @@ export class WildsEntities {
         emitResidents(session)
       }
     }
+    if (res.result.stormDropFound) {
+      bus.emit(EV.toast, { text: 'A drop of amber with a bright core — storm-grade, kept for the old ways. The deep woods let it go.', icon: 'sparkle', art: 'icon-storm-grade-drop' })
+    }
     // Personal claims and discoveries lists, complete.
     void refreshWilds(session, 0)
   }

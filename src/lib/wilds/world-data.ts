@@ -21,12 +21,16 @@ const DEPTH_TINT = [undefined, undefined, 0xc4c4cc, 0xa4a4b4] as const;
 /**
  * What each kind of woods piece is to work on (docs/items/crafting-and-repair.md,
  * "Gathering"): the content/gathering.json target its yields come from, said
- * in words. Pieces that aren't worked are left out.
+ * in words. Pieces that aren't worked are left out. The Tangle's trees are
+ * their own target (their Amberfall sap; content/gathering.json); the outer
+ * drift's trees are plain trees (OUTER_TREE). A flower patch is a bloom
+ * patch in Bloom-wick and an herb patch the rest of the year (the seasons:
+ * the calendar day rides in from the area kind).
  */
 export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: string }>> = {
-  oak: { target: 'tree', label: 'Chop the tree' },
-  pine: { target: 'tree', label: 'Chop the tree' },
-  birch: { target: 'tree', label: 'Chop the tree' },
+  oak: { target: 'tangle-tree', label: 'Chop the tree' },
+  pine: { target: 'tangle-tree', label: 'Chop the tree' },
+  birch: { target: 'tangle-tree', label: 'Chop the tree' },
   'iron-oak': { target: 'iron-oak', label: 'Chop the iron-oak' },
   snag: { target: 'willow', label: 'Chop the willow snag' },
   boulder: { target: 'boulder', label: 'Break the boulder' },
@@ -39,20 +43,35 @@ export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: strin
   log: { target: 'hollow-tree', label: 'Dig the hollow log' },
 };
 
+/** The flowers' piece in Bloom-wick: the same patch, picked, not dug. */
+export const BLOOM_PATCH = { target: 'bloom-patch', label: 'Pick the bloom flowers' };
+/** The outer drift's trees: timber, but no Amberfall sap ("on trees in the Tangle"). */
+export const OUTER_TREE = { target: 'tree', label: 'Chop the tree' };
+const TREES: readonly DecorKind[] = ['oak', 'pine', 'birch'];
+
 /**
  * The workable pieces of a chunk (trees, boulders, stumps, patches): one
  * per tile, the standing piece over the patch at its foot (working a tile
- * fells what's drawn there).
+ * fells what's drawn there). `day` is the calendar day, for the seasons'
+ * pieces (bloom patches in Bloom-wick, a wick, not a mark); without it, the
+ * plain year-round pieces.
  */
-function gatherSpots(chunk: ChunkTerrain, atlas: string): GatherSpot[] {
+function gatherSpots(chunk: ChunkTerrain, atlas: string, day?: { wick: string } | null): GatherSpot[] {
+  const bloom = day?.wick === 'Bloom';
+  const outer = chunk.look === 'outer';
+  const of = (d: { kind: DecorKind }) =>
+    bloom && d.kind === 'flowers' ? BLOOM_PATCH : outer && TREES.includes(d.kind) ? OUTER_TREE : GATHER_OF[d.kind];
   const byTile = new Map<string, (typeof chunk.decor)[number]>();
   for (const d of chunk.decor) {
-    if (!GATHER_OF[d.kind]) continue;
+    if (!of(d)) continue;
     const key = `${d.tx},${d.ty}`;
     const had = byTile.get(key);
     if (!had || (DECOR_ART[d.kind].blocking && !DECOR_ART[had.kind].blocking)) byTile.set(key, d);
   }
-  return [...byTile.values()].map((d) => ({ target: GATHER_OF[d.kind]!.target, label: GATHER_OF[d.kind]!.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } }));
+  return [...byTile.values()].map((d) => {
+    const g = of(d)!;
+    return { target: g.target, label: g.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } };
+  });
 }
 
 /** Chebyshev distance (capped at 3) from a tile to the nearest walkable one. */
@@ -68,7 +87,7 @@ function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
   return 3;
 }
 
-export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
+export function toWorldData(chunk: ChunkTerrain, areaId: AreaId, day?: { wick: string } | null): WorldData {
   const atlas = lookAtlasKey(chunk.look, chunk.mark);
   return {
     areaId,
@@ -107,7 +126,7 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
       tx: d.tx,
       ty: d.ty,
     })),
-    gathering: gatherSpots(chunk, atlas),
+    gathering: gatherSpots(chunk, atlas, day),
     storySites: chunk.sites.map((s) => ({ id: s.id, kind: s.kind, tx: s.tx, ty: s.ty })),
     groundStyle: chunk.look,
     groundMark: chunk.mark,

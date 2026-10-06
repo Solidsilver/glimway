@@ -282,6 +282,7 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
   const o = obj(raw);
   const r = obj(o.result);
   if (r.wardenSliverFound !== undefined && typeof r.wardenSliverFound !== 'boolean') throw new ApiError('bad-response');
+  if (r.stormDropFound !== undefined && typeof r.stormDropFound !== 'boolean') throw new ApiError('bad-response');
   return {
     ...parseSnapshot(raw),
     result: {
@@ -290,6 +291,7 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
       loot: parseLoot(r.loot),
       materials: parseMaterials(r.materials),
       ...(typeof r.wardenSliverFound === 'boolean' ? { wardenSliverFound: r.wardenSliverFound } : {}),
+      ...(typeof r.stormDropFound === 'boolean' ? { stormDropFound: r.stormDropFound } : {}),
     },
   };
 }
@@ -582,6 +584,10 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
   if (typeof r.heirloom === 'string' && r.heirloom) result.heirloom = r.heirloom;
   if (typeof r.adaOilCount === 'number') result.adaOilCount = r.adaOilCount;
+  if (r.bought) {
+    const b = obj(r.bought);
+    result.bought = { seller: str(b.seller), itemDef: str(b.itemDef), qty: int(b.qty), embers: int(b.embers) };
+  }
   if (Array.isArray(r.gathered)) {
     result.gathered = r.gathered.map((g) => {
       const go = obj(g);

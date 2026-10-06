@@ -756,9 +756,13 @@ type itemsView struct {
 	Thanks    []thanksView   `json:"thanks"`
 }
 
-func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (itemsView, error) {
+func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (itemsView, error) {
 	v := itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
 	makers := map[string]*makerView{}
+	// Fresh bloom flowers dry once the wick has turned (the pack only).
+	if err := dryFlowers(ctx, tx, s, now); err != nil {
+		return v, err
+	}
 	rows, err := tx.QueryContext(ctx, "SELECT item_def,maker_id,qty FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def,maker_id", s.HabiticaID)
 	if err != nil {
 		return v, err
@@ -872,7 +876,7 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 	if err = healWardens(r.Context(), tx, s.HabiticaID, now); err != nil {
 		return err
 	}
-	v, err := readItems(r.Context(), tx, &s)
+	v, err := readItems(r.Context(), tx, &s, now)
 	if err != nil {
 		return err
 	}
@@ -901,6 +905,12 @@ type itemRequest struct {
 	Unmoored bool    `json:"unmoored,omitempty"`
 	VisitID  string  `json:"visitId,omitempty"`
 	Tile     *[2]int `json:"tile,omitempty"`
+	// Region: which Wilds region a wilds gather is in (the progress area
+	// is "wilds" for both; the client's save marker names the region).
+	Region string `json:"region,omitempty"`
+	// Buying from a seller (Hazel's kitchen, Finn's mill door, a market stall).
+	Seller string `json:"seller,omitempty"`
+	Good   string `json:"good,omitempty"`
 }
 
 // itemResult: the caller's items after the change, and what happened.
@@ -919,6 +929,15 @@ type itemResult struct {
 	Paper       *string         `json:"paper,omitempty"`
 	Heirloom    string          `json:"heirloom,omitempty"`
 	AdaOilCount int             `json:"adaOilCount,omitempty"`
+	Bought      *boughtView     `json:"bought,omitempty"`
+}
+
+// boughtView: what a seller just handed over.
+type boughtView struct {
+	Seller  string `json:"seller"`
+	ItemDef string `json:"itemDef"`
+	Qty     int    `json:"qty"`
+	Embers  int    `json:"embers"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -962,6 +981,8 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.grantHeirloom(ctx, tx, s, req, now, &out)
 		case "ada-oil":
 			err = a.giveAdaOil(ctx, tx, s, req, now, &out)
+		case "buy":
+			err = a.marketBuy(ctx, tx, s, req, now, &out)
 		default:
 			err = fail(404, "not-found")
 		}
@@ -978,7 +999,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		if err = healWardens(ctx, tx, s.HabiticaID, now); err != nil {
 			return nil, err
 		}
-		out.Items, err = readItems(ctx, tx, s)
+		out.Items, err = readItems(ctx, tx, s, now)
 		return out, err
 	}, func() {
 		for _, n := range notify {
@@ -1510,6 +1531,14 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	if target.Action != req.Action {
 		return fail(409, "wrong-tool")
 	}
+	// The seasons are the server's own reading of its clock and the
+	// calendar (docs/items/crafting-and-repair.md, "Seasonal materials"):
+	// a seasonal piece only stands in its mark or wick, whatever the
+	// client's map says.
+	calDay := content.CalendarAt(content.CalendarRules, now)
+	if !target.InSeason(calDay) {
+		return fail(409, "not-in-season")
+	}
 	if len(req.VisitID) > 64 {
 		return fail(400, "invalid-visit")
 	}
@@ -1518,6 +1547,18 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	area := s.State.Area
 	if !content.GatheringOffered(area, req.Target) {
 		return fail(409, "cannot-gather-here")
+	}
+	// The Wilds: the request names its region (the progress area is
+	// "wilds" for both). The Tangle's own trees, and their Amberfall sap,
+	// stand in the Tangle only ("on trees in the Tangle"); the outer
+	// drift's trees are plain trees.
+	if area == "wilds" {
+		if _, ok := regionDefinition(req.Region); !ok {
+			return fail(400, "invalid-region")
+		}
+		if req.Target == "tangle-tree" && req.Region != tangleRegion {
+			return fail(409, "cannot-gather-here")
+		}
 	}
 	var home *homeView
 	var tile [2]int
@@ -1602,6 +1643,9 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 	rng := wilds.NewRng(wilds.Hash(s.HabiticaID, req.Target, int(now), int(day), dayCount))
 	out.Gathered = []stackView{}
 	for _, y := range target.Yields {
+		if !y.InSeason(calDay) {
+			continue
+		}
 		if y.ChancePermille > 0 && rng.NextInt(1000) >= y.ChancePermille {
 			continue
 		}
@@ -1646,6 +1690,58 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 	}
 	out.Land = &change
 	return err
+}
+
+// ------------------------------------------------------------- the sellers
+
+// marketBuy buys a good from a seller: a named resident (Hazel's kitchen,
+// Finn's mill door) or a stall that stands on its festival day only (the
+// Carting Day market). You stand by them; the embers leave the pack; the
+// server's own calendar decides whether the seller is there at all
+// (docs/items/crafting-and-repair.md, "Seasonal materials"). Capped goods
+// keep their day's count in the ledger (one row a buy, reason market-buy).
+func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	seller, ok := content.SellerFor(req.Seller)
+	if !ok {
+		return fail(400, "invalid-seller")
+	}
+	var good *content.ItemGood
+	for i := range seller.Goods {
+		if seller.Goods[i].Item == req.Good {
+			good = &seller.Goods[i]
+			break
+		}
+	}
+	if good == nil {
+		return fail(400, "invalid-good")
+	}
+	if !nearTile(s, seller.Area, seller.TX, seller.TY, seller.RadiusTiles) {
+		return fail(409, "too-far-away")
+	}
+	day := content.CalendarAt(content.CalendarRules, now)
+	if seller.Festival != "" && (day.Festival == nil || *day.Festival != seller.Festival) {
+		return fail(409, "not-in-season")
+	}
+	ref := seller.ID + ":" + good.Item
+	if good.Cap > 0 {
+		dayStart := (now / 86400) * 86400
+		var n int
+		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE habitica_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.HabiticaID, content.StackCurrency(good.Item), ref, dayStart).Scan(&n)
+		if err != nil {
+			return err
+		}
+		if n >= good.Cap {
+			return fail(409, "sold-out")
+		}
+	}
+	if err := debitEmbers(ctx, tx, s, good.Embers, "market-buy", ref, now); err != nil {
+		return err
+	}
+	if err := packPut(ctx, tx, s.HabiticaID, good.Item, []makerQty{{"", good.Qty}}, "market-buy", ref, now); err != nil {
+		return err
+	}
+	out.Bought = &boughtView{Seller: seller.ID, ItemDef: good.Item, Qty: good.Qty, Embers: good.Embers}
+	return refreshItems(ctx, tx, s)
 }
 
 // plantGround: the tiles a plant can stand on (or wander onto): open

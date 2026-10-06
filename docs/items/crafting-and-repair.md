@@ -260,6 +260,14 @@ To mend something, use the right part on the broken thing.
 Seasonal home goods can be crafted any time; only the materials are seasonal.
 Nothing expires.
 
+Bloom flowers stay fresh through the Mark Bloom-wick falls in (Carting:
+Bloom-, Light- and Cart-wick) and dry in the pack once Amberfall begins.
+
+**Playtest notes.** The madder stall sells a player at most four scraps on
+Carting Day, and Carting Day comes once in twelve wicks: four scraps a year,
+exactly one Carting bunting (madder scraps 4). A player who misses the day goes
+without until the next one. Watch whether that is too tight.
+
 ## Lantern posts
 
 Land only stays put where a named lamp holds it. A post is built from the three

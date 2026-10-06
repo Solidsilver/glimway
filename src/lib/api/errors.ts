@@ -97,6 +97,12 @@ export const SERVER_ERROR_CODES = [
   'not-in-wilds',
   'too-far-away',
   'generator-unavailable',
+  // seasons: seasonal materials and the sellers (docs/items/)
+  'not-in-season',
+  'invalid-region',
+  'sold-out',
+  'invalid-seller',
+  'invalid-good',
   // 500
   'internal',
   // 502

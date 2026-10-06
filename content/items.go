@@ -40,6 +40,7 @@ type ItemDef struct {
 	Kind      string        `json:"kind"`
 	Blurb     string        `json:"blurb"`
 	Icon      string        `json:"icon,omitempty"`
+	IconState string        `json:"iconState,omitempty"` // the icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon
 	Grade     string        `json:"grade,omitempty"`
 	Uses      int           `json:"uses,omitempty"`
 	AtZero    string        `json:"atZero,omitempty"`
@@ -80,6 +81,32 @@ type ItemPickup struct {
 	Label    string `json:"label"`
 	Found    string `json:"found"`
 }
+
+// ItemGood is one thing a seller sells (for embers), and what it says.
+type ItemGood struct {
+	Item   string `json:"item"`
+	Qty    int    `json:"qty"`
+	Embers int    `json:"embers"`
+	// Cap: the most one player can buy of it a day (0: no cap).
+	Cap   int    `json:"cap,omitempty"`
+	Label string `json:"label"`
+	Line  string `json:"line"`
+}
+
+// ItemSeller is a person or stall in the world who sells goods: a named
+// resident at their spot (Hazel, Finn), or a stall that stands on a
+// festival day only (the Carting Day market). The spot is shared content,
+// the same rows the client prompts at.
+type ItemSeller struct {
+	ID          string     `json:"id"`
+	NPC         string     `json:"npc"`
+	Area        string     `json:"area"`
+	TX          int        `json:"tx"`
+	TY          int        `json:"ty"`
+	RadiusTiles int        `json:"radiusTiles"`
+	Festival    string     `json:"festival,omitempty"`
+	Goods       []ItemGood `json:"goods"`
+}
 type ItemRules struct {
 	Grades map[string]ItemGrade `json:"grades"`
 	Wear   struct {
@@ -118,6 +145,7 @@ type Items struct {
 	Rules   ItemRules    `json:"rules"`
 	Items   []ItemDef    `json:"items"`
 	Pickups []ItemPickup `json:"pickups"`
+	Sellers []ItemSeller `json:"sellers"`
 }
 
 // The closed sets. A new kind, tab, fitting or effect type is a code change
@@ -286,7 +314,7 @@ func ValidateItems(v Items) error {
 	}
 	defs := map[string]ItemDef{}
 	for _, d := range v.Items {
-		if !ValidContentID(d.ID) || defs[d.ID].ID != "" || d.Name == "" || d.Blurb == "" || !slices.Contains(ItemKinds, d.Kind) || kindTab[d.Kind] != d.Tab || (d.Icon != "" && !ValidContentID(d.Icon)) {
+		if !ValidContentID(d.ID) || defs[d.ID].ID != "" || d.Name == "" || d.Blurb == "" || !slices.Contains(ItemKinds, d.Kind) || kindTab[d.Kind] != d.Tab || (d.Icon != "" && !ValidContentID(d.Icon)) || (d.IconState != "" && (d.Icon == "" || !ValidContentID(d.IconState))) {
 			return bad("item %q", d.ID)
 		}
 		defs[d.ID] = d
@@ -383,6 +411,31 @@ func ValidateItems(v Items) error {
 		}
 		pickups[p.ID] = true
 	}
+	// Sellers: people and stalls that sell goods for embers. A festival
+	// seller stands on its day only; the calendar is loaded, not a global,
+	// so validation never depends on init order.
+	cal, err := LoadCalendar()
+	if err != nil {
+		return bad("calendar")
+	}
+	sellers := map[string]bool{}
+	for _, s := range v.Sellers {
+		if !ValidContentID(s.ID) || sellers[s.ID] || s.NPC == "" || len(s.NPC) > 40 || !slices.Contains(PickupAreas, s.Area) ||
+			s.TX < 0 || s.TY < 0 || s.RadiusTiles < 1 || s.RadiusTiles > 16 || len(s.Goods) == 0 ||
+			s.Festival != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.Festival }) {
+			return bad("seller %q", s.ID)
+		}
+		goods := map[string]bool{}
+		for _, g := range s.Goods {
+			d, ok := defs[g.Item]
+			if goods[g.Item] || !ok || !d.Stackable() || g.Qty < 1 || g.Qty > 100 || g.Embers < 1 || g.Embers > 1000 ||
+				g.Cap < 0 || g.Cap > 1000 || g.Label == "" || len(g.Label) > 80 || g.Line == "" || len(g.Line) > 160 {
+				return bad("seller %q good %q", s.ID, g.Item)
+			}
+			goods[g.Item] = true
+		}
+		sellers[s.ID] = true
+	}
 	return nil
 }
 func LoadItems() (Items, error) {
@@ -443,6 +496,17 @@ func ResidentFor(id string) (ItemResident, bool) {
 		}
 	}
 	return ItemResident{}, false
+}
+
+// SellerFor is a seller by id (shared content; the client prompts at the
+// same spots).
+func SellerFor(id string) (ItemSeller, bool) {
+	for _, s := range ItemsRules.Sellers {
+		if s.ID == id {
+			return s, true
+		}
+	}
+	return ItemSeller{}, false
 }
 
 // SortedCosts walks a bill in a fixed order (stable ledgers and errors).
