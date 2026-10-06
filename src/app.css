@@ -195,13 +195,6 @@ img.pixel {
   gap: 10px;
 }
 
-.panel-title::after {
-  content: '';
-  flex: 1;
-  height: 2px;
-  background: repeating-linear-gradient(90deg, var(--paper-line) 0 6px, transparent 6px 10px);
-  margin-right: 40px;
-}
 
 .section-title {
   margin: 18px 0 8px;
@@ -248,30 +241,90 @@ img.pixel {
 }
 
 /*
- * A panel's header (close, title, tabs, status line) stays pinned while the
- * body scrolls under it. It reaches out over the panel's padding so its
- * paper covers what slides beneath.
+ * A panel's header floats: its icon and title in a small chip at the top
+ * left, the ✕ in a chip at the top right, and any tab row or status line as
+ * chips under them. Only the chips cover the body, which scrolls under them
+ * and keeps the rest of the panel. Pinned while the body scrolls, on desktop
+ * and on phone sheets.
  */
 .panel-head {
+  --chip-gap: 10px;
   position: sticky;
-  /* Sticky offsets count from inside the panel's padding: reach back over it. */
-  top: calc(-1 * var(--pad-t, 22px));
+  /* Sticky offsets count from inside the panel's padding: reach back over most of it. */
+  top: calc(var(--chip-gap) - var(--pad-t, 22px));
   z-index: 3;
-  margin: calc(-1 * var(--pad-t, 22px)) calc(-1 * var(--pad-x, 24px)) 12px;
-  padding: var(--pad-t, 22px) var(--pad-x, 24px) 10px;
-  background: linear-gradient(180deg, #fdf7e8 0%, var(--paper-hi) 100%);
-  border-radius: calc(var(--panel-radius) - 3px) calc(var(--panel-radius) - 3px) 0 0;
-  box-shadow: 0 9px 10px -10px rgba(58, 38, 20, 0.45);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin: calc(var(--chip-gap) - var(--pad-t, 22px)) calc(var(--chip-gap) - var(--pad-x, 24px)) 12px;
+  padding: 0;
+  /* The space between the chips belongs to the body under them. */
+  pointer-events: none;
 }
-.panel-head .panel-title {
-  margin-bottom: 10px;
+.panel-head > * {
+  pointer-events: auto;
 }
-.panel-head > :last-child {
-  margin-bottom: 0;
+/* Chips: paper on wood, lifted off the page. */
+.panel-head > .panel-title,
+.panel-head > .modal-close,
+.overlay > .panel > .panel-head > [role='tablist'] {
+  background: linear-gradient(180deg, #fffaf0 0%, var(--paper-hi) 100%);
+  border: 2px solid var(--wood-dark);
+  box-shadow: 0 3px 0 rgba(58, 38, 20, 0.55), 0 6px 14px rgba(20, 12, 16, 0.22);
 }
-/* A tab row closing the header is its bottom edge. */
-.panel-head:has(> [role='tablist']:last-child) {
-  padding-bottom: 0;
+/* A status line keeps its panel's own border colour (ok, error), on solid paper. */
+.overlay > .panel > .panel-head > .msg {
+  background-color: var(--paper-hi);
+  background-image: linear-gradient(var(--msg-tint, transparent), var(--msg-tint, transparent));
+  box-shadow: 0 3px 0 rgba(58, 38, 20, 0.35), 0 6px 14px rgba(20, 12, 16, 0.18);
+}
+.panel-head > .panel-title {
+  order: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 14px 6px 10px;
+  border-radius: 12px;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel-head > .panel-title svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.panel-head > .modal-close {
+  position: static;
+  order: 1;
+  flex: none;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+/* A tab row or a status line under the title chips: the full width, as its own chip. */
+.overlay > .panel > .panel-head > [role='tablist'],
+.overlay > .panel > .panel-head > .msg {
+  order: 2;
+  flex: 1 1 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+.overlay > .panel > .panel-head > [role='tablist'] {
+  padding: 4px;
+  border-radius: 12px;
+  border-bottom-width: 2px;
+}
+.overlay > .panel > .panel-head > .msg {
+  padding: 6px 12px;
+  border-radius: 10px;
 }
 
 .modal-close {
@@ -407,6 +460,7 @@ img.pixel {
     max-height: 88dvh;
   }
   .panel-title { font-size: 19px; }
+  .panel-head > .panel-title { font-size: 14.5px; }
 }
 
 /*
@@ -430,8 +484,11 @@ img.pixel {
   animation: sheet-up 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 :root.touch .overlay.sheet .panel-head {
-  border-radius: 15px 15px 0 0;
   touch-action: none;
+  /* The strip between the chips is where a thumb drags the sheet. */
+  pointer-events: auto;
+  /* Room for the grab handle above the chips. */
+  padding-top: 8px;
 }
 :root.touch .overlay.sheet .panel-head::before {
   content: '';
@@ -444,11 +501,7 @@ img.pixel {
   border-radius: 3px;
   background: rgba(107, 76, 46, 0.32);
 }
-:root.touch .overlay.sheet .modal-close {
-  top: 12px;
-  width: 44px;
-  height: 44px;
-}
+
 @media (orientation: landscape) {
   :root.touch .overlay.sheet {
     align-items: stretch;
@@ -467,19 +520,11 @@ img.pixel {
     animation: sheet-left 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
   }
   :root.touch .overlay.sheet .panel-head {
-    margin-left: -22px;
-    padding-left: 22px;
-    border-radius: 15px 0 0 0;
+    margin-left: calc(var(--chip-gap) - 22px);
+    padding-top: 0;
   }
   :root.touch .overlay.sheet .panel-head::before {
-    top: 50%;
-    left: 8px;
-    width: 5px;
-    height: 36px;
-    margin: -18px 0 0;
-  }
-  :root.touch .overlay.sheet .modal-close {
-    top: 10px;
+    display: none;
   }
 }
 

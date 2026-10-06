@@ -45,6 +45,11 @@ type Config struct {
 	// LoginPartyRate: upstream calls a minute for sign-ins that only a party
 	// could admit, a bucket apart from LoginGlobalRate (zero: a quarter of it).
 	LoginPartyRate int
+	// Habitica outfit art (sprites.go): where fetched sprites are kept on
+	// disk (empty: a folder in the system temp dir) and the sprite host
+	// (empty: DefaultSpriteBaseURL; the playtests point it at a fake).
+	SpriteCacheDir string
+	SpriteBaseURL  string
 }
 type Server struct {
 	Store       *store.Store
@@ -56,6 +61,7 @@ type Server struct {
 	loginParty  *loginLimiter
 	loginProofs *proofLimiter
 	presence    *presenceHub
+	sprites     *spriteProxy
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
@@ -135,6 +141,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/repairs/") {
 		route = "/api/repairs/:id/mend"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/sprites/") {
+		route = "/api/sprites/:name"
 	}
 	defer func() {
 		class := "none"
@@ -254,6 +263,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err = a.homeRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/region/") {
 			err = a.regionRead(w, r)
+		} else if (r.Method == "GET" || r.Method == "HEAD") && strings.HasPrefix(r.URL.Path, "/api/sprites/") {
+			err = a.sprite(w, r)
 		} else {
 			err = fail(404, "not-found")
 		}
@@ -703,23 +714,8 @@ func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error 
 			}
 		}
 	}
-	if slices.Index(rules.Stages, s.State.Quest) >= slices.Index(rules.Stages, "guardian-defeated") {
-		sliverAdded, err := store.Outcome(ctx, tx, s.HabiticaID, "quest-gift:warden-sliver", "quest", now)
-		if err != nil {
-			return err
-		}
-		if sliverAdded {
-			sliverDef, ok := content.ItemFor("warden-sliver")
-			if ok {
-				if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.HabiticaID}, "", sliverDef.MaxPoints(), now); err != nil {
-					return err
-				}
-				if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency("warden-sliver"), 1, "story-grant", "defeat-guardian", now); err != nil {
-					return err
-				}
-			}
-		}
-	}
+	// Settling the Warden is a story beat only: no warden-stone sliver. Slivers
+	// come from the deep Tangle and the Whitequiet (maybeGrantWardenSliver).
 	return nil
 }
 func (a *Server) progress(w http.ResponseWriter, r *http.Request) error {

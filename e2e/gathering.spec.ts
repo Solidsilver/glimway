@@ -4,6 +4,7 @@ import { sql } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
 import { plantable } from '../src/lib/homestead.ts'
+import { gatheringTarget } from '../src/lib/gathering.ts'
 import { homeLights, isLit } from '../src/lib/homestead-land.ts'
 
 /**
@@ -103,6 +104,23 @@ async function candidates(page: Page, targets: string[], lit?: boolean, strict =
   }, [targets, lit, strict] as const)
 }
 
+/**
+ * Take the tool for a kind of work in hand (src/game/held.ts): its number
+ * key on the belt, as a player would. The pack is read again first when the
+ * belt doesn't show the tool yet.
+ */
+async function hold(page: Page, kind: string): Promise<void> {
+  const held = () => page.evaluate(() => (window as unknown as { __fsHeld: () => { kind: string; belt: string[] } }).__fsHeld())
+  if (!(await held()).belt.includes(kind)) {
+    await page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
+    await expect.poll(async () => (await held()).belt, { message: `a ${kind} tool on the belt` }).toContain(kind)
+  }
+  if ((await held()).kind === kind) return
+  await waitForLive(page)
+  await page.keyboard.press(String((await held()).belt.indexOf(kind) + 1))
+  await expect.poll(async () => (await held()).kind, { message: `the ${kind} tool in hand` }).toBe(kind)
+}
+
 /** Set the area's creatures aside (dev hook): frozen, off the map, back on the next build. */
 const parkCreatures = (page: Page) =>
   page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => number }).__fsDevParkCreatures?.() ?? 0)
@@ -160,6 +178,8 @@ async function promptOn(page: Page, spot: { tx: number; ty: number }, prompt: Re
  */
 async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { lit?: boolean; says?: RegExp; at?: { tx: number; ty: number } } = {}): Promise<Spot & { from: { x: number; y: number } }> {
   const tried: string[] = []
+  // The right tool in hand: only what it works answers.
+  await hold(page, gatheringTarget(targets[0])?.action ?? 'chop')
   // A quiet chunk: the creatures set aside (a wisp near every tree empties
   // the candidate list, and its knockback moves the hero off the prompt).
   await parkCreatures(page)
@@ -200,7 +220,8 @@ async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { li
 }
 
 /** Work the piece at a spot again from where you stood (the felled tree's stump). */
-async function workAgain(page: Page, spot: Spot & { from: { x: number; y: number } }, prompt: RegExp): Promise<void> {
+async function workAgain(page: Page, spot: Spot & { from: { x: number; y: number } }, prompt: RegExp, kind = 'dig'): Promise<void> {
+  await hold(page, kind)
   await parkCreatures(page)
   expect(await settle(page, spot.from), 'back where you stood').toBe(true)
   expect(await promptOn(page, spot, prompt), `the prompt on ${spot.tx},${spot.ty}`).toBe(true)
@@ -337,9 +358,12 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   const dialog = page.getByRole('dialog', { name: 'Inventory' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('tab', { name: /Supplies/ }).click()
+  await dialog.locator('[data-cell="item:birch-sapling"]').click()
   await dialog.locator('[data-item="item:birch-sapling"]').getByRole('button', { name: 'Plant' }).click()
   await expect(dialog.getByTestId('inv-message')).toHaveText('You planted a birch sapling.')
+  // Escape closes the card, then the bag.
   await page.keyboard.press('Escape')
+  if (await dialog.isVisible()) await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect.poll(async () => (await landAt(page, land.gate))?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile![0], y: tile![1], lit: true }))
   // Step off it to see it standing there.

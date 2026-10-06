@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -29,6 +30,8 @@ func run(args []string) error {
 	addr := f.String("listen", env("FINGERSNAP_LISTEN", "127.0.0.1:8090"), "HTTP listener")
 	path := f.String("db", env("FINGERSNAP_DB", ".data/fingersnap.sqlite"), "SQLite database path")
 	base := f.String("habitica-url", env("FINGERSNAP_HABITICA_URL", "https://habitica.com"), "Habitica base URL")
+	spriteBase := f.String("habitica-assets-url", env("FINGERSNAP_HABITICA_ASSETS_URL", api.DefaultSpriteBaseURL), "Habitica sprite host (outfit art the bundled cache lacks)")
+	spriteDir := f.String("sprite-cache", env("FINGERSNAP_SPRITE_CACHE", ""), "Folder for fetched Habitica sprites (default: habitica-sprites beside the database)")
 	tag := f.String("x-client", env("FINGERSNAP_X_CLIENT", "5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap"), "Habitica creator-id-appname")
 	trustedDefault := "127.0.0.1,::1"
 	if v, ok := os.LookupEnv("FINGERSNAP_TRUSTED_PROXIES"); ok {
@@ -64,6 +67,9 @@ func run(args []string) error {
 	}
 	if *concurrency < 1 || *rate < 1 || *globalRate < 1 {
 		return fmt.Errorf("invalid login limits")
+	}
+	if *spriteDir == "" {
+		*spriteDir = filepath.Join(filepath.Dir(*path), "habitica-sprites")
 	}
 	s, err := store.Open(*path)
 	if err != nil {
@@ -220,7 +226,7 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "fingersnap ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, PartyAdmissionOff: !*partyAdmission})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission})
 	defer handler.ClosePresence()
 	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)

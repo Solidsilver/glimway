@@ -245,8 +245,20 @@
       "specs": ["touches.spec.ts", "gathering.spec.ts"]
     },
     {
-      "paths": ["src/game/entities/goal-guide.ts", "src/lib/state.ts", "src/ui/Hud.svelte"],
+      "paths": ["src/game/entities/goal-guide.ts", "src/lib/state.ts", "src/ui/Hud.svelte", "src/lib/guides.ts", "src/content/guides.ts", "src/game/guide-pin.ts", "src/ui/GuidesTab.svelte", "src/ui/JournalPanel.svelte"],
       "specs": ["goal.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/belt.ts", "src/game/held.ts", "src/ui/held.svelte.ts", "src/game/entities/gathering.ts", "src/game/entities/hero.ts", "src/ui/TouchControls.svelte", "src/ui/Hud.svelte"],
+      "specs": ["held.spec.ts", "gathering.spec.ts", "seasons.spec.ts"]
+    },
+    {
+      "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/content/residents.ts", "src/game/entities/homesteads.ts"],
+      "specs": ["talk.spec.ts"]
+    },
+    {
+      "paths": ["src/game/heirloom-beats.ts", "src/game/seats.ts", "src/game/hero-motion.ts", "src/lib/habitica/sprite-cache.ts", "server/internal/api/sprites.go"],
+      "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
     }
   ]
 }

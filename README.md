@@ -302,6 +302,8 @@ subcommand):
 | `-db` | `FINGERSNAP_DB` | `.data/fingersnap.sqlite` |
 | `-habitica-url` | `FINGERSNAP_HABITICA_URL` | `https://habitica.com` |
 | `-x-client` | `FINGERSNAP_X_CLIENT` | the creator's public client id |
+| `-habitica-assets-url` | `FINGERSNAP_HABITICA_ASSETS_URL` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/` (Habitica's sprite host, for outfit pieces the bundle lacks) |
+| `-sprite-cache` | `FINGERSNAP_SPRITE_CACHE` | `habitica-sprites/` beside the database |
 | `-cookie-secure` | `FINGERSNAP_COOKIE_SECURE` | `true` (`npm run server` sets false for local HTTP) |
 | `-trusted-proxies` | `FINGERSNAP_TRUSTED_PROXIES` | `127.0.0.1,::1` |
 | `-login-concurrency` / `-login-rate` / `-login-global-rate` | — | `4` / `10` per IP per minute / `60` per minute |

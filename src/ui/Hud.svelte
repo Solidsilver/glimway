@@ -11,6 +11,9 @@
   import { offlineCopy } from '../content/connected'
   import { presenceCopy } from '../content/presence'
   import { papers } from './papers.svelte'
+  import { heldUi } from './held.svelte'
+  import { setHeld } from '../game/held'
+  import { KIND_WORDS } from '../lib/belt'
 
   let {
     onJournal,
@@ -19,6 +22,7 @@
     inventoryNew = 0,
     onMenu,
     onEmote,
+    onGuides,
     prompt = null
   }: {
     onJournal: () => void
@@ -28,6 +32,8 @@
     inventoryNew?: number
     onMenu: () => void
     onEmote?: () => void
+    /** Open the journal's "How do I…?" page (the pinned guide's goal line). */
+    onGuides?: () => void
     /** What E does here right now ("Talk to Mara"), when the world may act on it (desktop shows it on the E slot). */
     prompt?: string | null
   } = $props()
@@ -54,7 +60,9 @@
   const canAfford = $derived(ui.stats.mana >= kit.manaCost)
   const resting = $derived(ui.stats.hp <= 0 && ui.vitalsSource === 'imported')
   /** The E/Space slot says what it will do here: the prompt's verb, else the swing. */
-  const actLabel = $derived(ui.prompt.label ? (ui.prompt.verb ?? 'Use') : kit.basicName)
+  const actLabel = $derived(ui.prompt.label ? (ui.prompt.verb ?? 'Use') : heldUi.kind === 'weapon' ? kit.basicName : KIND_WORDS[heldUi.kind])
+  /** What's in hand (src/game/held.ts): its icon on the E slot, the belt beside it. */
+  const heldDef = $derived(heldUi.slot?.itemDef ?? null)
   let objectiveOpen = $state(false)
   const showEmbers = $derived(ui.stats.embers > 0 || ui.vitalsSource === 'imported')
   /** Phones show the numbers on the bars only when asked or when health runs low. */
@@ -142,7 +150,8 @@
 {/snippet}
 
 {#snippet statusChips()}
-  {#if villageUi.calendar}
+  <!-- On a phone the date waits for a festival: the goal needs the room. -->
+  {#if villageUi.calendar && (!touch || villageUi.calendar.festival)}
     {@const c = villageUi.calendar}
     <button type="button" class="chip date" data-testid="calendar-line" title={`${calendarLine(c)}. ${MARK_NOTES[c.mark] ?? ''}`} aria-expanded={openChip === 'date'} onclick={() => toggleChip('date')}>
       <span aria-hidden="true">{c.wick} {c.day}</span>
@@ -165,6 +174,19 @@
 {/snippet}
 
 {#snippet goal()}
+  {#if ui.goalLine.guide}
+    {@const g = ui.goalLine.guide}
+    <!-- A pinned "How do I…?" guide leads: its step, with a pin; tap for the guide in the journal. -->
+    <button type="button" class="objective pinned" onclick={() => onGuides?.()} title={`${g.title}: ${g.step}`} aria-label={`Pinned guide, ${g.title}, step ${g.index + 1} of ${g.count}: ${g.step}${needleWords ? ` (${needleWords})` : ''}`} data-testid="goal-pinned">
+      <span class="goal-icon pin"><Icon name="pin" size={14} /></span>
+      <span class="goal-text">{g.step}</span>
+      {#if ui.goalDir.angle !== null}
+        <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
+          <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
+        </span>
+      {/if}
+    </button>
+  {:else}
   <!-- The goal in a few words, and a needle toward it; open, the whole objective. -->
   <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title={ui.quest.objective} aria-label={`Current goal: ${ui.quest.objective}${needleWords ? ` (${needleWords})` : ''}`}>
     <span class="goal-icon"><Icon name="star" size={12} /></span>
@@ -175,6 +197,7 @@
       </span>
     {/if}
   </button>
+  {/if}
   {#if home.goal}
     <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> <span>{home.goal}</span></p>
   {/if}
@@ -287,8 +310,32 @@
       <!-- The E slot says what it will do here; tests and players read it as the prompt. -->
       <div class="prompt" role="status"><span class="kbd">E</span><span>{prompt}</span></div>
     {/if}
-    <div class="slot" class:context={!!ui.prompt.label}>
-      <div class="face"><Icon name={ui.prompt.label ? 'sparkle' : 'sword'} size={22} /></div>
+    {#if heldUi.belt.length > 1}
+      <!-- The belt: what you carry to hand, by number key; click or press to take one. -->
+      <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
+        {#each heldUi.belt as b, i (b.kind)}
+          <button
+            type="button"
+            class="bslot"
+            class:on={b.kind === heldUi.kind}
+            class:worn={!b.usable}
+            aria-pressed={b.kind === heldUi.kind}
+            aria-label={`Hold the ${(b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]).toLowerCase()} (${i + 1})`}
+            title={b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]}
+            data-kind={b.kind}
+            tabindex="-1"
+            onclick={() => setHeld(b.kind)}
+          >
+            {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name="sword" size={16} />{/if}
+            <span class="kbd">{i + 1}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+    <div class="slot" class:context={!!ui.prompt.label} data-held={heldUi.kind}>
+      <div class="face">
+        {#if ui.prompt.label}<Icon name="sparkle" size={22} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name="sword" size={22} />{/if}
+      </div>
       <span class="kbd">E</span>
       <span class="label">{actLabel}</span>
     </div>
@@ -588,6 +635,11 @@
   .needle.here {
     background: radial-gradient(circle, #fff3c4 0%, #ffd24a 100%);
     box-shadow: 0 0 6px rgba(255, 210, 74, 0.8);
+  }
+  /* A pinned guide leads: the goal icon becomes a gold pin. */
+  .goal-icon.pin {
+    color: var(--ember-deep);
+    filter: drop-shadow(0 0 2px rgba(255, 210, 74, 0.9));
   }
   .goal-text {
     display: -webkit-box;
@@ -905,6 +957,44 @@
     z-index: 20;
     pointer-events: none;
     transition: opacity 250ms ease, transform 250ms ease;
+  }
+  /* The belt beside the E slot: small slots, the one in hand lit. */
+  .belt {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin-right: 4px;
+    padding-bottom: 22px;
+    pointer-events: auto;
+  }
+  .bslot {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--wood-dark);
+    border-radius: 9px;
+    background: linear-gradient(180deg, var(--paper-hi), var(--paper-dark));
+    color: var(--wood-dark);
+    opacity: 0.85;
+  }
+  .bslot.on {
+    opacity: 1;
+    background: linear-gradient(180deg, #fff3b8, #f5cf5c);
+    box-shadow: 0 0 0 2px rgba(255, 210, 74, 0.6);
+  }
+  .bslot.worn {
+    filter: grayscale(0.8);
+  }
+  .bslot .kbd {
+    position: absolute;
+    bottom: -9px;
+    right: -6px;
+    font-size: 10px;
+    height: 16px;
+    min-width: 16px;
   }
   /* What E does here, sitting on the E slot (no separate pill mid-screen). */
   .prompt {

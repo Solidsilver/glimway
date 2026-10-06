@@ -25,9 +25,12 @@ import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
+import { SEAT_CUT, type SeatPose } from '../seats'
 
 const PLAYER_SPEED = 110
 const ATTACK_RANGE = 26
+/** A tool swung at a creature does this share of the weapon's damage. */
+const TOOL_DAMAGE = 0.5
 const CONTACT_IFRAMES = 1.1
 
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
@@ -67,10 +70,10 @@ export class Hero {
   dashTime = 0
   iframes = 0
   dodgeCooldown = 0
-  /** The bench seat while seated: where the hero sits, and where they stood. */
-  seat: { x: number; y: number; fromX: number; fromY: number; scaleY: number } | null = null
+  /** The seat while seated (src/game/seats.ts), and where they stood before. */
+  seat: (SeatPose & { fromX: number; fromY: number }) | null = null
 
-  /** Seated at a bench (the visible body is the still pose; see sit). */
+  /** Seated (the visible body is the seated pose; see sit). */
   get isSeated(): boolean {
     return this.seat !== null
   }
@@ -118,32 +121,43 @@ export class Hero {
   }
 
   /**
-   * Sit down at a seat spot (a bench's front edge): a small offset, a still
-   * down-facing frame and a slight slump. Mana returns a little faster while
-   * seated (see move). Any movement input stands the hero back up.
+   * Sit down on a seat (a bench, a placed stool or chair): on the seat, not
+   * in front of it, facing the way the seat does, drawn just in front of the
+   * seat (its backrest behind you). The body is cut at the lap and the cut
+   * laid on the seat's front edge; never squashed. The physics body rests
+   * while seated (you sit inside the seat's footprint). Mana returns a little
+   * faster while seated (see move). Any movement input stands the hero back up.
    */
-  sit(at: { x: number; y: number }): void {
+  sit(pose: SeatPose): void {
     if (this.seat) return
-    const visual = this.deps.avatar().container ?? this.sprite
-    this.seat = { x: at.x, y: at.y, fromX: this.sprite.x, fromY: this.sprite.y, scaleY: visual.scaleY }
+    this.seat = { ...pose, fromX: this.sprite.x, fromY: this.sprite.y }
     this.sprite.setVelocity(0, 0)
-    this.sprite.setPosition(at.x, at.y)
+    ;(this.sprite.body as Phaser.Physics.Arcade.Body).enable = false
     this.sprite.anims.stop()
-    if (this.scene.textures.get('fingersnap-demo-walk').has('walk-down-0')) {
-      this.sprite.setTexture('fingersnap-demo-walk', 'walk-down-0')
+    this.facing.set(pose.facing === 'left' ? -1 : pose.facing === 'right' ? 1 : 0, pose.facing === 'down' ? 1 : 0)
+    const frame = `walk-${pose.facing}-0`
+    if (this.scene.textures.get('fingersnap-demo-walk').has(frame)) {
+      this.sprite.setTexture('fingersnap-demo-walk', frame)
+      // Crop rows are the untrimmed frame's; the sprite's origin is its foot row.
+      const f = this.sprite.frame
+      const cut = SEAT_CUT.demo[pose.facing]
+      this.sprite.setCrop(0, 0, f.realWidth, cut)
+      this.sprite.setPosition(pose.x, pose.y + (f.realHeight - cut) * this.sprite.scaleY)
+    } else {
+      this.sprite.setPosition(pose.x, pose.y)
     }
-    visual.setScale(visual.scaleX, visual.scaleY * 0.78)
     this.updateDepth()
   }
 
-  /** Stand up from a bench: back to the spot you sat down from. */
+  /** Stand up from a seat: back to the spot you sat down from. */
   standUp(): void {
     const seat = this.seat
     if (!seat) return
     this.seat = null
-    const visual = this.deps.avatar().container ?? this.sprite
-    visual.setScale(visual.scaleX, seat.scaleY)
+    this.sprite.setCrop()
     this.sprite.setPosition(seat.fromX, seat.fromY)
+    ;(this.sprite.body as Phaser.Physics.Arcade.Body).enable = true
+    ;(this.sprite.body as Phaser.Physics.Arcade.Body).reset(seat.fromX, seat.fromY)
     this.updateDepth()
   }
 
@@ -249,16 +263,27 @@ export class Hero {
     this.deps.session.setVitals(hp, mana)
   }
 
-  /** Melee (or the mage's ranged basic) on the action button. */
-  tryAttack(): void {
+  /**
+   * Melee (or the mage's ranged basic) on the action button. With a tool in
+   * hand it's a tool's swing instead: melee whatever the class, at half the
+   * weapon's damage (src/game/held.ts). `toward` turns to face a point first
+   * (a mouse click).
+   */
+  tryAttack(opts: { tool?: boolean; toward?: { x: number; y: number } } = {}): void {
     if (this.seat) return // no fighting from a bench; move to stand up
     const kit = this.kit()
     if (this.attackCooldown > 0 || this.deps.transitioning()) return
+    if (opts.toward) {
+      const fx = opts.toward.x - this.sprite.x
+      const fy = opts.toward.y - (this.sprite.y - 8)
+      if (Math.hypot(fx, fy) > 1) this.facing.set(fx, fy).normalize()
+    }
     this.attackCooldown = kit.cooldown
     const dir = this.facing.clone().normalize()
+    const tool = !!opts.tool
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
-    if (kit.class === 'mage') {
+    if (kit.class === 'mage' && !tool) {
       this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.meleeDamage)
       return
     }
@@ -271,6 +296,8 @@ export class Hero {
     const slash = this.scene.add.image(sx, sy, 'slash')
       .setDepth(this.sprite.y + 2)
       .setRotation(Math.atan2(dir.y, dir.x))
+    // A tool's swing: a shorter, duller arc than the blade's.
+    if (tool) slash.setScale(0.75).setTint(0xd8c79c)
     this.scene.tweens.add({ targets: slash, alpha: 0, duration: 150, onComplete: () => slash.destroy() })
     this.scene.time.delayedCall(60, () => {
       for (const enemy of [...this.deps.enemies().enemies]) {
@@ -278,7 +305,8 @@ export class Hero {
         const dy = enemy.sprite.y - 6 - sy
         if (dx * dx + dy * dy < ATTACK_RANGE * ATTACK_RANGE) {
           const crit = Math.random() < kit.critChance
-          const dmg = crit ? kit.meleeDamage * 2 : kit.meleeDamage
+          const base = tool ? Math.max(1, Math.round(kit.meleeDamage * TOOL_DAMAGE)) : kit.meleeDamage
+          const dmg = crit ? base * 2 : base
           if (crit) this.deps.fx.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 8)
           this.deps.enemies().damageEnemy(enemy, dmg, this.sprite.x, crit)
         }
@@ -430,10 +458,15 @@ export class Hero {
     if (this.deps.session.state.hp <= 0) this.deps.onDefeat()
   }
 
-  /** Depth-by-y for the hero sprite + its shadow. */
+  /** Depth-by-y for the hero sprite + its shadow (seated: the seat's depth, no shadow). */
   updateDepth(): void {
+    if (this.seat) {
+      this.sprite.setDepth(this.seat.depth)
+      this.shadow.setVisible(false)
+      return
+    }
     this.sprite.setDepth(this.sprite.y)
-    this.shadow.setPosition(this.sprite.x, this.sprite.y - 1)
+    this.shadow.setVisible(true).setPosition(this.sprite.x, this.sprite.y - 1)
   }
 
   private kit(): CombatKit {

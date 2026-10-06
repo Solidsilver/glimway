@@ -403,6 +403,10 @@ export interface ResidentTalk {
   topic: string;
   /** True when this is the first meeting (the caller records `metFlag`). */
   first: boolean;
+  /** The story part (an introduction or the stage's lines) and what it is ('intro', a stage, 'complete:paper:<id>'). */
+  story: { key: string; lines: string[] };
+  /** The line about the day, if any, and what it's about ('festival:…', 'mark:Bud', …). */
+  day: { topic: string; line: string } | null;
 }
 
 function stageLines(def: ResidentDef, ctx: ResidentContext): string[] {
@@ -452,10 +456,18 @@ export function residentTalk(id: string, ctx: ResidentContext): ResidentTalk {
   if (!isResident(id)) throw new Error(`Unknown resident id ${JSON.stringify(id)}`);
   const def = RESIDENTS[id];
   const first = metAt(ctx.flags, id) === null;
-  const lines = first ? [...def.intro] : stageLines(def, ctx);
+  const story = first ? [...def.intro] : stageLines(def, ctx);
+  const paper = !first && ctx.stage === 'complete' ? (def.papers ?? []).find((p) => ctx.flags.includes(`paper:${p.paper}`)) : undefined;
   const topic = topicLine(def, ctx);
+  const lines = [...story];
   if (topic) lines.push(topic.line);
-  return { dialogue: { speaker: def.name, lines }, topic: `${first ? 'first' : ctx.stage}:${topic?.topic ?? 'none'}`, first };
+  return {
+    dialogue: { speaker: def.name, lines },
+    topic: `${first ? 'first' : ctx.stage}:${topic?.topic ?? 'none'}`,
+    first,
+    story: { key: first ? 'intro' : paper ? `complete:paper:${paper.paper}` : ctx.stage, lines: story },
+    day: topic,
+  };
 }
 
 /** Every line a resident can say, for the text rules in tests (wick filled in). */

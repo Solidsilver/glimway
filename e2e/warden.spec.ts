@@ -13,9 +13,19 @@ async function openInventory(page: Page, t: RegExp): Promise<void> {
   await tab(page, t).click()
 }
 async function closeInventory(page: Page): Promise<void> {
-  await page.keyboard.press('Escape')
+  // Escape closes an open card first, then the panel.
+  for (let i = 0; i < 3 && (await dialog(page).isVisible()); i++) await page.keyboard.press('Escape')
   await expect(dialog(page)).toBeHidden()
 }
+
+/** Pick an item in the bag's grid: its card (what each row used to show) opens. */
+async function pick(page: Page, key: string) {
+  await dialog(page).locator(`[data-cell="${key}"]`).click()
+  const card = dialog(page).locator(`[data-item="${key}"]`)
+  await expect(card).toBeVisible()
+  return card
+}
+
 
 test('warden-set tool displays grey chip on icon and dullness in description', async ({ page }) => {
   const id = await freshPlayer(page, 'Rowan')
@@ -25,12 +35,12 @@ test('warden-set tool displays grey chip on icon and dullness in description', a
 
   await openInventory(page, /Tools/)
   const tools = dialog(page).getByTestId('inv-page-tools')
-  const axeRow = tools.locator(`[data-item="inst:${axe}"]`)
+  const axeRow = await pick(page, `inst:${axe}`)
   await expect(axeRow).toBeVisible()
 
-  // Tool icon displays a grey chip (.grey-chip on .ii)
-  const chip = axeRow.locator('.ii .grey-chip')
-  await expect(chip).toBeVisible()
+  // Tool icon displays a grey chip, in the grid and on its card
+  await expect(tools.locator(`[data-cell="inst:${axe}"] .grey-chip`)).toBeVisible()
+  await expect(axeRow.getByTestId('grey-chip')).toBeVisible()
 
   // Tool description notes dullness
   await expect(axeRow.locator('.rule')).toContainText('Warden-set: sharp')
@@ -60,7 +70,7 @@ test('unmoored status shows HUD hint, and using comfrey salve clears it', async 
 
   // Open inventory and use comfrey-salve
   await openInventory(page, /Supplies/)
-  const salveRow = dialog(page).locator('[data-item="item:comfrey-salve"]')
+  const salveRow = await pick(page, 'item:comfrey-salve')
   await expect(salveRow).toBeVisible()
   await salveRow.getByRole('button', { name: 'Use' }).click()
 

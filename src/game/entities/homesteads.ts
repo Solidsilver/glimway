@@ -22,8 +22,13 @@ import { checkSpend } from '../../lib/embers'
 import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
+import { shortTalk } from '../../content/talk'
+import { heardStory, markStory } from '../heard'
 import { paperFlag } from '../../content/papers'
-import { HEIRLOOMS, HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
+import { HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
+import { heirloomBeat } from '../heirloom-beats'
+import { EMPTY_CHAIR_LINE, SEAT_LINES } from '../../content/touches'
+import { KEPT_EMPTY, decoSeat, isSeatItem, type ArtBox, type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
@@ -69,6 +74,8 @@ export interface HomesteadDeps {
   solidGroup: Phaser.Physics.Arcade.StaticGroup
   interactables: Interactables
   hero: () => Phaser.Physics.Arcade.Sprite
+  /** The hero, to sit on a placed seat (and stand back up). */
+  sitter: () => { readonly isSeated: boolean; sit(pose: SeatPose): void; standUp(): void }
   /** In a cottage: which gate's homestead it stands on. */
   room: { gate: number } | null
   /** Walk into a cottage (the scene fades and rebuilds). */
@@ -121,6 +128,10 @@ export class HomesteadLayer implements InteractionProvider {
   private arrange: ArrangeView = { available: false, scene: null, tier: 0 }
   private arrangeTimer = 0
   private idleLine = Math.floor(Math.random() * SILAS.dialogue.idleLines.length)
+  /** The next sit line for a placed seat (cycling). */
+  private seatLine = 0
+  /** Each seat art's opaque box, by texture and frame (seatPose). */
+  private opaque = new Map<string, { l: number; t: number; r: number; b: number }>()
   /** The way to your gate (Commons): a bobbing marker over it and an arrow at the screen's edge. */
   private guide: { marker: Phaser.GameObjects.Image; arrow: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text } | null = null
   private shade: Phaser.GameObjects.Graphics | null = null
@@ -742,6 +753,66 @@ export class HomesteadLayer implements InteractionProvider {
     return { x: ox + (it.x ?? 0) * TILE + (fw * TILE) / 2, y: oy + ((it.y ?? 0) + fh) * TILE - 4 }
   }
 
+  /**
+   * Placed seats (stools, chairs) anyone here can sit on, like the village
+   * benches; the Empty Chair is only looked at.
+   */
+  private seatPoints(home: HomeView, scene: HomeScene): Interactable[] {
+    const out: Interactable[] = []
+    for (const it of home.items) {
+      if (it.scene !== scene || it.x === null || it.y === null) continue
+      if (it.itemDef === KEPT_EMPTY) {
+        out.push({ id: `home:seat:${it.id}`, ...this.decoSpot(it, scene), label: 'Look at the Empty Chair' })
+      } else if (isSeatItem(it.itemDef)) {
+        out.push({ id: `home:seat:${it.id}`, ...this.decoSpot(it, scene), label: `Sit ${it.itemDef === 'wooden-stool' ? 'on the stool' : 'in the reading chair'}` })
+      }
+    }
+    return out
+  }
+
+  /** Where the hero sits on a placed seat (src/game/seats.ts): on the art drawn for it. */
+  private seatPose(it: HomeInstance): SeatPose | null {
+    const img = this.homeDrawn.objects.find((o): o is Phaser.GameObjects.Image => o instanceof Phaser.GameObjects.Image && o.getData('instance') === it.id)
+    return img ? decoSeat(it.itemDef, this.artBox(img), img.depth) : null
+  }
+
+  /** The opaque part of a drawn image, in world px (the texture's alpha, read once per frame name). */
+  private artBox(img: Phaser.GameObjects.Image): ArtBox {
+    const f = img.frame
+    const id = `${img.texture.key}:${f.name}`
+    let b = this.opaque.get(id)
+    if (!b) {
+      b = { l: f.width, t: f.height, r: 0, b: 0 }
+      for (let y = 0; y < f.height; y++)
+        for (let x = 0; x < f.width; x++) {
+          if ((this.scene.textures.getPixelAlpha(x, y, img.texture.key, f.name) ?? 0) === 0) continue
+          b = { l: Math.min(b.l, x), t: Math.min(b.t, y), r: Math.max(b.r, x + 1), b: Math.max(b.b, y + 1) }
+        }
+      if (b.r <= b.l) b = { l: 0, t: 0, r: f.width, b: f.height }
+      this.opaque.set(id, b)
+    }
+    const x0 = img.x - img.displayWidth * img.originX
+    const y0 = img.y - img.displayHeight * img.originY
+    const [l, r] = img.flipX ? [f.width - b.r, f.width - b.l] : [b.l, b.r]
+    return { left: x0 + l * img.scaleX, right: x0 + r * img.scaleX, top: y0 + b.t * img.scaleY, bottom: y0 + b.b * img.scaleY }
+  }
+
+  /** Sit on a placed seat, or stand back up from it. */
+  private useSeat(itemId: string): void {
+    const sitter = this.deps.sitter()
+    if (sitter.isSeated) return sitter.standUp()
+    const it = this.here()?.items.find((i) => i.id === itemId)
+    if (!it || it.scene === null) return
+    if (it.itemDef === KEPT_EMPTY) return this.say({ speaker: 'The Empty Chair', lines: [EMPTY_CHAIR_LINE] })
+    const pose = this.seatPose(it)
+    if (!pose) return
+    sitter.sit(pose)
+    sfx('settle')
+    const lines = SEAT_LINES[it.itemDef] ?? []
+    const n = this.seatLine++
+    if (lines.length) bus.emit(EV.toast, { text: lines[n % lines.length], icon: 'sparkle', kind: 'thought' })
+  }
+
   private interactionList(): Interactable[] {
     const out: Interactable[] = []
     if (this.deps.room) {
@@ -755,6 +826,7 @@ export class HomesteadLayer implements InteractionProvider {
           if (it.itemDef !== 'writing-desk' || it.scene !== 'indoor' || it.x === null || it.y === null) continue
           out.push({ id: `home:desk:${it.id}`, ...this.decoSpot(it, 'indoor'), label: 'Sit at the desk' })
         }
+        out.push(...this.seatPoints(home, 'indoor'))
       }
       if (home && home.tier >= 2) {
         out.push({ id: 'home:chest', x: ROOM_CHEST.x, y: 60, label: home.member ? 'Open the chests' : 'Look at the chest' })
@@ -785,6 +857,7 @@ export class HomesteadLayer implements InteractionProvider {
         if (it.itemDef !== 'woodpile' || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
         out.push({ id: `home:woodpile:${it.id}`, ...this.decoSpot(it, 'outdoor'), label: 'Tend the woodpile' })
       }
+      out.push(...this.seatPoints(home, 'outdoor'))
       return out
     }
     if (!this.commons) return out
@@ -811,6 +884,48 @@ export class HomesteadLayer implements InteractionProvider {
     return out
   }
 
+  /**
+   * Whose place this scene is: your own land or cottage, someone else's, or
+   * not a homestead (the goal needle's way-finding, src/game/entities/goal-guide.ts).
+   */
+  get placeKind(): 'home' | 'cottage' | 'other-home' | 'other-cottage' | null {
+    if (this.gate === null) return null
+    const own = this.gate === this.homes.myGate
+    if (this.deps.room) return own ? 'cottage' : 'other-cottage'
+    return this.land ? (own ? 'home' : 'other-home') : null
+  }
+
+  /**
+   * Where a "How do I…?" step happens, in this scene's world px (null: not
+   * in this scene, or not known yet): Silas's table and your gate on the
+   * lane; your door and mailbox on your land; the bench and hearth inside.
+   */
+  guidePoint(where: string): { x: number; y: number } | null {
+    const mine = this.homes.myGate
+    if (this.commons) {
+      if (where === 'silas') {
+        const t = HOMESTEAD_DATA.commons.silasTable
+        return { x: t.x, y: t.y }
+      }
+      if (where === 'gate' && mine !== null) {
+        const slot = this.commons.gates.find((g) => g.gate === mine)
+        return slot ? { x: slot.tx * TILE + 8, y: slot.ty * TILE + 8 } : null
+      }
+      return null
+    }
+    if (this.gate === null || this.gate !== mine) return null
+    if (this.land) {
+      if (where === 'door') return { x: this.land.door.tx * TILE + 8, y: (this.land.door.ty + 1) * TILE }
+      if (where === 'mailbox') return { x: this.land.mailbox.tx * TILE + 8, y: (this.land.mailbox.ty + 1) * TILE }
+      return null
+    }
+    if (this.deps.room) {
+      if (where === 'bench') return { x: ROOM_BENCH.x, y: 60 }
+      if (where === 'hearth') return { x: ROOM_HEARTH.x - 14, y: ROOM_HEARTH.y + 14 }
+    }
+    return null
+  }
+
   owns(id: InteractId): boolean {
     return id.startsWith('home:')
   }
@@ -833,6 +948,7 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   label(id: InteractId): string | null {
+    if (id.startsWith('home:seat:') && this.deps.sitter().isSeated) return 'Stand up'
     if (id === 'home:bed') return `Rest at your bedroll · ${checkSpend(this.deps.session.state, { kind: 'home-rest' }).cost} ember`
     if (id === 'home:hearth' && this.ownRoom()) return `Rest by your hearth · ${checkSpend(this.deps.session.state, { kind: 'home-rest' }).cost} ember`
     return null
@@ -843,6 +959,10 @@ export class HomesteadLayer implements InteractionProvider {
     if (id === 'home:bed' || id === 'home:hearth') return 'Rest'
     if (id === 'home:cook') return 'Cook'
     if (id.startsWith('home:desk:')) return 'Sit'
+    if (id.startsWith('home:seat:')) {
+      if (this.deps.sitter().isSeated) return 'Stand'
+      return this.here()?.items.find((i) => `home:seat:${i.id}` === id)?.itemDef === KEPT_EMPTY ? 'Look' : 'Sit'
+    }
     if (id.startsWith('home:woodpile:')) return 'Stack'
     if (id === SILAS_ID) return 'Talk'
     if (id.startsWith('home:shelf:')) return 'Look'
@@ -894,6 +1014,7 @@ export class HomesteadLayer implements InteractionProvider {
       bus.emit(VILLAGE_EV.open, home?.member || !other ? { panel: 'mail' } : { panel: 'mail', to: other.id })
       return
     }
+    if (id.startsWith('home:seat:')) return this.useSeat(id.slice('home:seat:'.length))
     if (id.startsWith('home:desk:')) {
       if (!this.ownRoom() || !this.homes.connected) {
         return this.say({ speaker: 'A writing desk', lines: ['A slant-top desk, a jar of quills, rag paper. Its owner copies out pages here.'] })
@@ -1059,18 +1180,25 @@ export class HomesteadLayer implements InteractionProvider {
     const first = !s.state.flags.includes(HOME_FLAGS.met)
     s.addFlag(HOME_FLAGS.met)
 
-    const canAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe') && !itemsFor(s).isGrantInFlight('brack-felling-axe')
-    const axeChoice: DialogueChoice = { text: 'Take the Brack felling axe', action: 'heirloom:grant:brack-felling-axe' }
-    const axeLines = canAxe ? HEIRLOOMS['brack-felling-axe'].dialogueLines : []
+    // The axe is offered only when Silas can hand it over now (the server's
+    // checks, from where you stand); otherwise he says why instead.
+    const axe = this.homes.connected ? heirloomBeat(s, 'brack-felling-axe', 'Take the Brack felling axe') : null
+    const canAxe = !!axe?.choices.length
+    const axeChoice = axe?.choices[0] as DialogueChoice
+    const axeLines = axe?.lines ?? []
 
     if (!this.homes.connected) {
+      const guestAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe')
+      const deeds = ['Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.']
+      const told = this.toldBefore('guest', first, deeds)
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : [lines.idleLines[this.nextIdle()]]),
-          ...(canAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
-          'Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.'
-        ]
+          ...(guestAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
+          ...told.lines
+        ],
+        choices: told.choices
       })
       return
     }
@@ -1103,18 +1231,21 @@ export class HomesteadLayer implements InteractionProvider {
         choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${price} embers`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : `${price} embers`, action: `home:claim:${g.gate}` })
       }
       choices.push({ text: 'Not yet' })
+      // An invite or an old page is news every time; the lantern-light speech plays once.
+      const pitch = invite
+        ? [`${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`]
+        : this.homes.reclaimable().length
+          ? [`Your old page’s still in the book: ${lotName(this.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`]
+          : null
+      const told = pitch ? { lines: pitch, choices } : this.toldBefore('unclaimed', first, ['I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'], choices)
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : ['There you are, neighbour.']),
           ...axeLines,
-          invite
-            ? `${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`
-            : this.homes.reclaimable().length
-              ? `Your old page’s still in the book: ${lotName(this.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`
-            : 'I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'
+          ...told.lines
         ],
-        choices
+        choices: told.choices
       })
       return
     }
@@ -1152,15 +1283,28 @@ export class HomesteadLayer implements InteractionProvider {
       : mine.tier === 1
         ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
         : [lines.sellDecorations.lines[0]]
+    // What he says about your place plays once per state; then a nod and "Hear it again".
+    const state = mine.tier === 0 ? `tier:0:${s.state.embers < this.homes.cottagePrice() ? 'saving' : 'ready'}` : `tier:${mine.tier}`
+    const told = this.toldBefore(state, first, intro, choices)
+    const greet = first ? lines.firstMeeting.lines : mine.tier === 0 && !told.short ? [] : [lines.idleLines[this.nextIdle()]]
     this.say({
       speaker: SILAS.name,
-      lines: [
-        ...(first ? lines.firstMeeting.lines : (mine.tier === 0 ? [] : [lines.idleLines[this.nextIdle()]])),
-        ...axeLines,
-        ...intro
-      ],
-      choices
+      lines: [...greet, ...axeLines, ...told.lines],
+      choices: told.choices
     })
+  }
+
+  /**
+   * Silas's say about something plays in full once (src/game/heard.ts);
+   * after that he leaves it out and offers "Hear it again" among the choices.
+   */
+  private toldBefore(what: string, first: boolean, lines: string[], choices?: DialogueChoice[]): { lines: string[]; choices: DialogueChoice[] | undefined; short: boolean } {
+    const s = this.deps.session
+    const heard = !first && heardStory(s.state.flags, 'silas', what)
+    markStory(s, 'silas', what)
+    if (!heard) return { lines, choices, short: false }
+    const t = shortTalk({ greeting: '', fresh: [], full: lines, choices })
+    return { lines: [], choices: t.choices, short: true }
   }
 
   private nextIdle(): number {

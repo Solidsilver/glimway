@@ -37,6 +37,8 @@ in
   config = lib.mkIf cfg.enable {
     users.groups.fingersnap-server = { };
     users.users.fingersnap-server = { isSystemUser = true; group = "fingersnap-server"; };
+    # Puts the admin CLI (allowlist, invite, backup) on PATH.
+    environment.systemPackages = [ cfg.package ];
     systemd.services.fingersnap-server = {
       description = "Fingersnap Go backend";
       wantedBy = [ "multi-user.target" ];

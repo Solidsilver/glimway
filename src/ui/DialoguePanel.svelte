@@ -115,9 +115,19 @@
       sfx('fizzle')
       return
     }
+    sfx('click')
+    if (choice.replay && choice.reply?.length) {
+      // "Hear it again": the whole talk, then the other choices again (a
+      // goodbye alone isn't worth asking: the talk just ends).
+      const rest = (choices ?? []).filter((c) => c !== choice)
+      choices = rest.some((c) => !c.dismiss) ? rest : null
+      lines = [...lines, ...choice.reply]
+      idx += 1
+      typeLine(lines[idx])
+      return
+    }
     answered = true
     chosenAction = choice.action
-    sfx('click')
     const reply = choice.reply ?? []
     if (reply.length === 0) {
       close()
@@ -398,19 +408,39 @@
   }
   .choice .label {
     flex: 1;
+    min-width: 0;
   }
+  /* The tag on a choice ("4 embers", "Needs 15 embers"): a solid chip in the
+     body face, readable at a glance on a phone (≥ 7:1 on its own ground). */
   .choice .note {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 13px;
-    color: var(--ember-deep);
+    flex: none;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1.2;
+    padding: 2px 9px 3px;
+    border-radius: 999px;
+    color: #8a3210;
+    background: #fff4d8;
+    border: 1.5px solid rgba(74, 50, 32, 0.45);
     white-space: nowrap;
   }
+  /* Out of reach: muted, not faded. The global disabled opacity would wash
+     the tag out to unreadable; the reason is the point of the tag. */
+  .choice:disabled {
+    opacity: 1;
+    color: var(--text-soft);
+    background: linear-gradient(180deg, #efe3c4 0%, #e3d3ad 100%);
+    border-style: dashed;
+    box-shadow: 0 2px 0 rgba(74, 50, 32, 0.55);
+  }
   .choice:disabled .note {
-    color: var(--text-faint);
+    color: var(--wood-dark);
+    background: #fbf1da;
+    border-color: var(--wood);
   }
   .choice:focus-visible {
     background: linear-gradient(180deg, #fff3b8, #f5cf5c);
@@ -454,6 +484,10 @@
     }
     .line {
       font-size: 15.5px;
+    }
+    .choice {
+      gap: 8px;
+      padding: 9px 10px 9px 12px;
     }
   }
 </style>

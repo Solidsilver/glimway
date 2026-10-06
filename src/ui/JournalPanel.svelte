@@ -6,21 +6,28 @@
   import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import PapersTab from './PapersTab.svelte'
+  import GuidesTab from './GuidesTab.svelte'
+  import type { Session } from '../game/session'
   import { papers } from './papers.svelte'
   import { home } from './home.svelte'
 
   // Mounted only while open (App owns journalOpen + the J/Escape keys). Quest
   // state comes from the shared store, which App keeps current from the
   // first snapshot on — never a local copy that starts at 'new'.
-  let { onClose }: { onClose: () => void } = $props()
+  let { onClose, session, initialTab = 'road' }: { onClose: () => void; session: Session; initialTab?: 'road' | 'papers' | 'guides' } = $props()
 
-  // Two pages: the quest, and the found texts ("Papers").
-  type Tab = 'road' | 'papers'
+  // Three pages: the quest, the found texts ("Papers"), and "How do I…?".
+  type Tab = 'road' | 'papers' | 'guides'
   const TABS: { id: Tab; label: string }[] = [
     { id: 'road', label: 'Lantern Road' },
-    { id: 'papers', label: 'Papers' }
+    { id: 'papers', label: 'Papers' },
+    { id: 'guides', label: 'How do I…?' }
   ]
+  // Opens on the page asked for; the tabs take over from there.
   let tab = $state<Tab>('road')
+  $effect.pre(() => {
+    tab = initialTab
+  })
 
   function onTabKey(e: KeyboardEvent): void {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
@@ -72,6 +79,10 @@
     {#if tab === 'papers'}
       <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
         <PapersTab />
+      </div>
+    {:else if tab === 'guides'}
+      <div role="tabpanel" id="journal-page-guides" aria-labelledby="journal-tab-guides">
+        <GuidesTab {session} />
       </div>
     {:else}
     <div role="tabpanel" id="journal-page-road" aria-labelledby="journal-tab-road">
@@ -132,26 +143,32 @@
     letter-spacing: 0.06em;
     opacity: 0.75;
   }
+  /* A segmented chip under the title (src/app.css .panel-head). */
   .tabs {
     display: flex;
-    gap: 6px;
-    margin: -2px 0 14px;
-    border-bottom: 2px solid var(--paper-line);
+    gap: 4px;
   }
   .tabs button {
     position: relative;
-    padding: 6px 14px 7px;
-    border-radius: 9px 9px 0 0;
-    border-bottom: none;
+    flex: 1;
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 2px solid transparent;
     box-shadow: none;
-    background: rgba(255, 255, 255, 0.25);
+    background: transparent;
     color: var(--text-soft);
-    margin-bottom: -2px;
   }
   .tabs button.active {
-    background: var(--paper-hi);
+    background: #fff1c2;
+    border-color: var(--gold-deep);
     color: var(--wood-dark);
-    border-bottom: 2px solid var(--paper-hi);
+  }
+  :global(:root.touch) .tabs button {
+    min-height: 36px;
+    padding: 4px 6px;
+    font-size: 13px;
+    white-space: nowrap;
   }
   .tabs button:hover:not(:disabled) {
     transform: none;

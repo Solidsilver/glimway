@@ -3,7 +3,23 @@
  * cycling within the panel, and returns focus to whatever had it before
  * (usually the HUD button) when the panel closes.
  */
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select, summary, [tabindex]:not([tabindex="-1"])'
+/**
+ * What Tab stops at. A roving `tabindex="-1"` (grid cells, unselected tabs)
+ * is out of the Tab order even on a button, so it's never the trap's first
+ * or last stop.
+ */
+const NOT_SKIPPED = ':not([tabindex="-1"])'
+const FOCUSABLE = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'textarea:not([disabled])',
+  'select',
+  'summary',
+  '[tabindex]'
+]
+  .map((s) => s + NOT_SKIPPED)
+  .join(', ')
 
 export function focusTrap(node: HTMLElement, opts: { initial?: string } = {}) {
   const previous = document.activeElement as HTMLElement | null

@@ -7,7 +7,8 @@
  * `touch:*` ids: it scans the built WorldData (props, flower beds, exits)
  * for touchable spots and answers for them. The lines are content
  * (src/content/touches.ts); sitting itself lives on the hero
- * (./hero — a still pose at the seat, slow mana, stand on any movement).
+ * (./hero — the seated pose on the seat, slow mana, stand on any movement;
+ * the bench's geometry is ../seats).
  */
 import { FLOWER_LINES, SIT_LINES, nextLine, signCopy } from '../../content/touches'
 import { bus, EV } from '../events'
@@ -17,7 +18,10 @@ import { uiState } from '../input'
 import type { InteractId, PropSpot, WorldData } from '../worlds'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
 import type { Hero } from './hero'
-import type { Effects } from './fx'/** A touchable spot: what it is, where, and (for signs) what it says. */
+import type { Effects } from './fx'
+import { benchSeat } from '../seats'
+
+/** A touchable spot: what it is, where, and (for signs) what it says. */
 interface TouchSpec {
   kind: 'flowers' | 'bench' | 'sign'
   x: number
@@ -99,8 +103,8 @@ export class Touches implements InteractionProvider {
       hero.standUp()
       return
     }
-    // A small offset onto the bench's front edge + a still frame (hero.sit).
-    hero.sit({ x: spec.x, y: spec.y + 4 })
+    // On the seat, facing the square, the backrest behind you (hero.sit).
+    hero.sit(benchSeat(spec.x, spec.y))
     sfx('settle')
     bus.emit(EV.toast, { text: this.take(id, SIT_LINES), icon: 'sparkle', kind: 'thought' })
   }

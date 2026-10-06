@@ -43,7 +43,8 @@ import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { echoSettled } from '../../lib/wilds/stories'
 import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
-import { HEIRLOOMS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
+import { HEIRLOOMS, HEIRLOOM_IDS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
+import { heirloomBeat, sayHeirloomRefusal } from '../heirloom-beats'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
 import { Thoughts } from '../entities/thoughts'
@@ -52,7 +53,7 @@ import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
 import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
-import { itemIconUrls } from '../items-pass'
+import { ITEM_ART_FALLBACK, itemIcon, itemIconUrls } from '../items-pass'
 import { emitResidents } from '../residents'
 import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
@@ -86,6 +87,10 @@ import { seasonMark } from '../../lib/wilds/outer'
 import { loadWilds } from '../../lib/wilds/data'
 import { playInsets, setPlayInsets } from '../viewport'
 import { GoalGuide } from '../entities/goal-guide'
+import { held, heldNow, setHeld, trackBelt, type HeldPayload } from '../held'
+import { kindForKey, stepKind } from '../../lib/belt'
+import { pinnedProgress } from '../guide-pin'
+import type { GuideWhere } from '../../content/guides'
 import { MAX_SCREEN_SCALE } from '../atlas-plan'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
@@ -261,7 +266,7 @@ export class WorldScene extends Phaser.Scene {
       },
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
-    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero })
+    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero)
     ;(window as unknown as { __fsOffHand?: () => string | null }).__fsOffHand = () => this.offHand?.showing ?? null
     this.npcs = new Npcs(this, this.world)
@@ -316,6 +321,7 @@ export class WorldScene extends Phaser.Scene {
         solidGroup: this.solidGroup,
         interactables: this.interactables,
         hero: () => this.hero.sprite,
+        sitter: () => this.hero,
         room: this.room ? { gate: this.room.gate } : null,
         enterRoom: (gate, doorstep) => this.enterRoom(gate, doorstep),
         rebuild: () => this.rebuildArea()
@@ -366,6 +372,21 @@ export class WorldScene extends Phaser.Scene {
     this.actionKeys.F.on('down', this.onCastKey, this)
     this.actionKeys.M.on('down', this.onRideKey, this)
     this.actionKeys.SHIFT.on('down', this.onDodgeKey, this)
+    // What's in hand (src/game/held.ts): number keys and the wheel pick from
+    // the belt; the mouse uses it where you point.
+    const stopBelt = trackBelt(this.session)
+    kb.on('keydown', this.onBeltKey, this)
+    this.input.on('wheel', this.onBeltWheel, this)
+    this.input.on('pointerdown', this.onWorldPointer, this)
+    this.input.mouse?.disableContextMenu()
+    bus.on(EV.held, this.onHeldChanged, this)
+    this.events.once('shutdown', () => {
+      stopBelt()
+      kb.off('keydown', this.onBeltKey, this)
+      this.input.off('wheel', this.onBeltWheel, this)
+      this.input.off('pointerdown', this.onWorldPointer, this)
+      bus.off(EV.held, this.onHeldChanged, this)
+    })
     bus.on(EV.action, this.handleAction, this)
     bus.on(EV.cast, this.onCastKey, this)
     bus.on(EV.dodge, this.onDodgeKey, this)
@@ -436,6 +457,9 @@ export class WorldScene extends Phaser.Scene {
         const w = this.enemies.wardenView()
         return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
       },
+      placeKind: () => this.homesteads?.placeKind ?? (this.room ? 'cottage' : null),
+      guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
+      pinnedStep: () => this.guideStep(),
       reducedMotion: this.reducedMotion
     })
     // Passing thoughts above the hero (flavour lines; cleans up on shutdown).
@@ -511,6 +535,11 @@ export class WorldScene extends Phaser.Scene {
         const b = this.hero.sprite.getBounds()
         return { x: (b.x - cam.worldView.x) * cam.zoom, y: (b.y - cam.worldView.y) * cam.zoom, w: b.width * cam.zoom, h: b.height * cam.zoom, zoom: cam.zoom }
       }
+      // Read-only: a world point on screen (CSS px from the canvas's top left), for clicks in playtests.
+      w.__fsDevToScreen = (x: number, y: number) => {
+        const cam = this.cameras.main
+        return { x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom }
+      }
       w.__fsDevAddFlag = (flag: string) => this.session.addFlag(flag)
       // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
       // checks the packed atlases give the loaders the pixels they had).
@@ -551,6 +580,11 @@ export class WorldScene extends Phaser.Scene {
           ? this.wildsPosition(Math.round(x), Math.round(y))
           : { x: Math.round(x), y: Math.round(y) }
         this.session.saveSoon()
+      }
+      // Write a spot into the save without moving the hero: the stale sample
+      // an open conversation leaves behind (playtest 1, Silas's axe).
+      w.__fsDevStalePosition = (x: number, y: number) => {
+        this.session.state.position = { x: Math.round(x), y: Math.round(y) }
       }
       // Take the saved-position sample every frame, so a playtest can make
       // the exit check and the sample meet in one frame (bugs #2).
@@ -597,7 +631,7 @@ export class WorldScene extends Phaser.Scene {
     ;(window as unknown as { __fsWilds?: () => ReturnType<WildsEntities['debug']> }).__fsWilds = () => this.wilds?.debug() ?? null
     // Read-only: the workable pieces of this area, and (at home) the lamps
     // whose light holds the ground (playtests: the drift rule).
-    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; left: { tx: number; ty: number; frame: string }[]; last: string; lights: { x: number; y: number; radius: number }[] } | null }).__fsGather = () => {
+    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; left: { tx: number; ty: number; frame: string }[]; last: string; lights: { x: number; y: number; radius: number }[]; hint: { tx: number; ty: number } | null } | null }).__fsGather = () => {
       if (!this.gathering) return null
       const lights = this.myLights()
       return {
@@ -606,7 +640,8 @@ export class WorldScene extends Phaser.Scene {
         prompt: this.gathering.prompted(),
         left: this.gathering.leftView(),
         last: this.gathering.lastOutcome(),
-        lights
+        lights,
+        hint: this.gathering.hinted()
       }
     }
     // Read-only: whether any collision body covers a tile (playtests: a
@@ -628,13 +663,22 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     // Read-only seat snapshot for playtests (a bench in the village or Commons).
-    ;(window as unknown as { __fsSeat?: () => { seated: boolean; bonus: number; mana: number; maxMana: number; x: number; y: number } }).__fsSeat = () => ({
+    // Seated: the seat's pose and the depths drawn at (the hero's and the
+    // layered avatar's), so a playtest can check the hero sits on the seat.
+    ;(window as unknown as { __fsSeat?: () => unknown }).__fsSeat = () => ({
       seated: this.hero.isSeated,
       bonus: this.hero.seatedBonus,
       mana: Math.floor(this.session.state.mana),
       maxMana: this.session.state.maxMana,
       x: this.hero.sprite.x,
-      y: this.hero.sprite.y
+      y: this.hero.sprite.y,
+      seat: this.hero.seat ? { x: this.hero.seat.x, y: this.hero.seat.y, depth: this.hero.seat.depth, facing: this.hero.seat.facing } : null,
+      heroDepth: this.hero.sprite.depth,
+      heroScale: { x: this.hero.sprite.scaleX, y: this.hero.sprite.scaleY },
+      heroCrop: this.hero.sprite.isCropped,
+      avatar: this.avatar.container
+        ? { x: this.avatar.container.x, y: this.avatar.container.y, depth: this.avatar.container.depth, scaleX: this.avatar.container.scaleX, scaleY: this.avatar.container.scaleY, ...this.avatar.pose }
+        : null
     })
     // Read-only avatar/combat diagnostics for verification (no mutation).
     ;(window as unknown as { __fsDebug?: () => Record<string, unknown> }).__fsDebug = () => ({
@@ -952,8 +996,11 @@ export class WorldScene extends Phaser.Scene {
     this.samplePresence()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
+      // Still breathing while a conversation or panel holds the screen.
+      this.avatar.update(time)
       this.interactables.hideKeyHint()
       this.goalGuide.update(dt, this.hero.sprite, false)
+      this.gathering?.updateHint(dt, this.hero.sprite, false, false)
       this.enemies.updateEnemyBars()
       this.updateOccluders(dt)
       return
@@ -975,6 +1022,14 @@ export class WorldScene extends Phaser.Scene {
     const gatherAction = this.gathering?.promptAction(this.hero.sprite, this.interactables.nearest(this.hero.sprite)) ?? null
     const action = wildsAction ?? gatherAction ?? (speak ? { label: 'Speak the naming', verb: 'Speak', ...speak } : null)
     this.interactables.updatePrompt(this.hero.sprite, this.time.now, action)
+    // Where the prompt's thing stands (a click on it does what E would).
+    const it = this.interactables.currentTarget
+    this.promptAt = action ? { x: action.x, y: action.y } : it ? { x: it.x, y: it.y - 8 } : null
+    // The wrong tool in hand by something workable: a faint hint after a moment.
+    const hx = this.hero.sprite.x
+    const hy = this.hero.sprite.y
+    const creatureNear = this.enemies.enemies.some((e) => !e.dead && Math.hypot(e.sprite.x - hx, e.sprite.y - hy) < 200)
+    this.gathering?.updateHint(dt, this.hero.sprite, creatureNear, true)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
     this.updateDepth()
@@ -1040,6 +1095,18 @@ export class WorldScene extends Phaser.Scene {
     return toRegionPosition(chunk.cx, chunk.cy, x, y)
   }
 
+  /** The pinned guide's current step, re-read twice a second (it reads the item and home models). */
+  private guideStepAt = -1
+  private guideStepCache: { where: GuideWhere | null } | null = null
+  private guideStep(): { where: GuideWhere | null } | null {
+    const now = this.time.now
+    if (now - this.guideStepAt < 500 && this.guideStepAt >= 0) return this.guideStepCache
+    this.guideStepAt = now
+    const p = pinnedProgress(this.session)
+    this.guideStepCache = p && !p.done && !p.locked && p.current !== null ? { where: p.steps[p.current].where } : null
+    return this.guideStepCache
+  }
+
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {
     return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
@@ -1087,7 +1154,88 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival
-    this.hero.tryAttack()
+    // A tool in hand swings too, weakly (you're never helpless).
+    this.hero.tryAttack({ tool: heldNow().kind !== 'weapon' })
+  }
+
+  // ------------------------------------------------------------- the hand
+
+  /** Where the current prompt's thing stands (null: no prompt). */
+  private promptAt: { x: number; y: number } | null = null
+  private wheelAcc = 0
+  private wheelAt = 0
+
+  /** Keys 1…9 take the belt's slot in hand (not while the emote picker, a panel or a talk has the keys). */
+  private onBeltKey(e: KeyboardEvent): void {
+    const m = /^Digit([1-9])$/.exec(e.code)
+    // A digit the UI already used (an emote picked from the picker) isn't for the belt.
+    if (!m || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
+    const t = e.target as HTMLElement | null
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+    if (ui.emoteOpen || !this.worldLive()) return
+    const kind = kindForKey(held.belt, Number(m[1]))
+    if (kind) setHeld(kind)
+  }
+
+  /** The wheel steps along the belt (one step per notch; a trackpad's flick counts once). */
+  private onBeltWheel(_p: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number): void {
+    if (!this.worldLive() || held.belt.length < 2) return
+    const now = performance.now()
+    if (now - this.wheelAt > 300) this.wheelAcc = 0
+    this.wheelAcc += dy
+    if (Math.abs(this.wheelAcc) < 40 || now - this.wheelAt < 120) return
+    this.wheelAt = now
+    setHeld(stepKind(held.belt, heldNow().kind, this.wheelAcc > 0 ? 1 : -1))
+    this.wheelAcc = 0
+  }
+
+  /**
+   * The mouse on the world (desktop; touches go to the touch controls). Left:
+   * what the prompt's thing would do when you click it, or the held tool on
+   * the piece under the cursor, or talk to the person or sign there, or a
+   * swing toward the cursor. Right: talk to or use what's under the cursor.
+   */
+  private onWorldPointer(p: Phaser.Input.Pointer): void {
+    const ev = p.event as PointerEvent | MouseEvent | TouchEvent
+    if ('pointerType' in ev && ev.pointerType && ev.pointerType !== 'mouse') return
+    if (typeof TouchEvent !== 'undefined' && ev instanceof TouchEvent) return
+    if (!this.worldLive()) return
+    const at = { x: p.worldX, y: p.worldY }
+    const hero = this.hero.sprite
+    const onPrompt = !!this.promptAt && Math.hypot(at.x - this.promptAt.x, at.y - this.promptAt.y) <= 18
+    // A person, sign or pickup under the cursor and within reach.
+    const thing = this.interactables.list.find(
+      (it) => Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 && Math.hypot(hero.x - it.x, hero.y - 8 - (it.y - 8)) <= 40
+    )
+    if (p.button === 2) {
+      if (onPrompt) this.handleAction()
+      else if (thing) this.interactables.open(thing)
+      return
+    }
+    if (p.button !== 0) return
+    if (onPrompt) return this.handleAction()
+    if (this.gathering?.workAt(at, hero)) return
+    if (thing) return this.interactables.open(thing)
+    if (this.session.zeroHpLocked) return
+    this.hero.tryAttack({ tool: heldNow().kind !== 'weapon', toward: at })
+  }
+
+  /** Something else in hand: the prompt follows at once, and the tool shows over the hero for a moment. */
+  private lastHeld = heldNow().kind
+  private onHeldChanged(p: HeldPayload): void {
+    this.interactables.invalidatePrompt()
+    if (p.kind === this.lastHeld) return
+    this.lastHeld = p.kind
+    if (!this.sys.isActive()) return
+    sfx('click')
+    const slot = p.belt.find((s) => s.kind === p.kind)
+    if (!slot?.itemDef) return
+    let key = itemIcon(slot.itemDef)
+    if (!this.textures.exists(key)) key = ITEM_ART_FALLBACK
+    if (!this.textures.exists(key)) return
+    const img = this.add.image(this.hero.sprite.x, this.hero.sprite.y - 30, key).setOrigin(0.5, 1).setDepth(5000)
+    if (img.height > 12) img.setScale(12 / img.height)
+    this.tweens.add({ targets: img, y: img.y - (this.reducedMotion ? 0 : 6), alpha: 0, delay: 350, duration: 450, onComplete: () => img.destroy() })
   }
 
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
@@ -1359,11 +1507,15 @@ export class WorldScene extends Phaser.Scene {
 
   private grantHeirloom(id: string): void {
     const items = itemsFor(this.session)
-    if (!this.session.link) return
+    if (!this.session.link || !(HEIRLOOM_IDS as readonly string[]).includes(id)) return
+    // The server measures reach from where you stand: that rides along now,
+    // not the spot noted before the conversation opened.
+    this.notePosition()
     void items.grantHeirloom(id).then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        // The giver says why, in the conversation.
+        sayHeirloomRefusal(id as HeirloomId, r.code)
         return
       }
       const h = HEIRLOOMS[id as HeirloomId]
@@ -1394,6 +1546,8 @@ export class WorldScene extends Phaser.Scene {
   private giveAdaOil(): void {
     const items = itemsFor(this.session)
     if (!this.session.link) return
+    // Ada checks you stand by her window: where you stand now rides along.
+    this.notePosition()
     void items.giveAdaOil().then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
@@ -1402,16 +1556,16 @@ export class WorldScene extends Phaser.Scene {
       }
       const count = r.value.adaOilCount ?? countAdaOilGifts(this.session.state.flags)
       if (count >= 3) {
-        const h = HEIRLOOMS['ada-garden-spade']
-        bus.emit(EV.dialogue, {
-          id: 'ada-spade-grant',
-          speaker: h.speaker,
-          lines: [...h.dialogueLines],
-          choices: [
-            { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' },
-            { text: 'Not yet' }
-          ]
-        })
+        // The third flask: the spade, offered only if it can be handed over now.
+        const beat = heirloomBeat(this.session, 'ada-garden-spade', 'Take Ada’s garden spade')
+        if (beat) {
+          bus.emit(EV.dialogue, {
+            id: 'ada-spade-grant',
+            speaker: HEIRLOOMS['ada-garden-spade'].speaker,
+            lines: beat.lines,
+            choices: beat.choices.length ? [...beat.choices, { text: 'Not yet' }] : undefined
+          })
+        }
       } else {
         const reply = ADA_OIL_REPLIES[count] ?? ['Good oil for the window. Thank you.']
         bus.emit(EV.dialogue, {

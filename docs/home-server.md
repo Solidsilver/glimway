@@ -43,8 +43,16 @@ each step points to the detail further down.
    applies its embedded database migrations on start. Login rate flags
    (`-login-concurrency`, `-login-rate`, `-login-global-rate`) keep their
    built-in defaults unless you add them to `ExecStart`.
+
+   **Getting the source into the build.** The module builds from `../..`, so
+   it must be imported from inside a copy of the repository, not copied on
+   its own into `/etc/nixos` (there `../..` would be `/etc/nixos`). The host
+   config is a git flake, which can't read `/home` and only sees files git
+   tracks. Follow the `lifedash-source` pattern: keep the files the Go build
+   needs under `/etc/nixos/services/native/fingersnap-source/` and `git add`
+   them. See "Server source in /etc/nixos" below.
 4. **Route `/api/*` and `/ws` to the server in Caddy**, before the static
-   handler (see the `caddyfile` block under "Go backend (phase 2)"). Use
+   handler (see "Caddy on example-host" below). Use
    `handle`, not `handle_path`, and keep the browser's Host header (Caddy's
    default). WebSocket upgrades need no extra configuration.
 5. **Build and switch NixOS** (`nh os build …`, then `nh os switch …`, under
@@ -64,11 +72,18 @@ each step points to the detail further down.
 From the local repo, copy source without credentials or machine-specific files:
 
 ```sh
-rsync -az --exclude node_modules --exclude dist --exclude .env \
+rsync -az --delete --exclude node_modules --exclude dist --exclude .env \
   --include .env.example --exclude '.env.*' --exclude .playwright-mcp \
   --exclude playwright-report --exclude test-results --exclude .claude \
-  --exclude .DS_Store ./ home.example.invalid:code/fingersnap/
+  --exclude .DS_Store --exclude .git --exclude .agent --exclude .data \
+  --exclude .e2e-server ./ home.example.invalid:code/fingersnap/
 ```
+
+`--delete` removes files the repo has dropped. Without it, old art in `public/`
+ships in `dist/` and fails the runtime-art tests. Excluded paths are never
+deleted on the server, so its `node_modules` and `dist` stay. `.data` and
+`.e2e-server` hold local test databases and macOS binaries, so they stay off the
+server. Add `--dry-run --itemize-changes` first to preview the changes.
 
 On the server, use Node from the server's pinned nixpkgs to build:
 
@@ -82,6 +97,61 @@ nix shell "$nixpkgs_path#nodejs_24" --command bash -c \
 
 The file server reads `dist/` directly; rebuilding the app does not require an
 OS switch. Change the NixOS module only when service configuration changes.
+
+### Server source in /etc/nixos
+
+The Go server is built by Nix from a copy of the source kept in the host
+flake, so a server update is: copy, stage, build, switch. Copy only what the
+Go build embeds or imports (on the server, after the rsync above):
+
+```sh
+src=/etc/nixos/services/native/fingersnap-source
+mkdir -p "$src"
+rsync -a --delete --exclude '*_test.go' \
+  --include go.mod --include go.sum \
+  --include 'server/***' --include 'content/***' \
+  --include deploy/ --include 'deploy/nixos/***' --exclude '*' \
+  ~/code/fingersnap/ "$src/"
+git -C /etc/nixos add services/native/fingersnap-source
+```
+
+The host wrapper `/etc/nixos/services/native/fingersnap-server.nix`, listed in
+that directory's `default.nix` next to `./fingersnap.nix`:
+
+```nix
+{ ... }:
+{
+  imports = [ ./fingersnap-source/deploy/nixos/fingersnap-server.nix ];
+  services.fingersnap-server.enable = true;
+}
+```
+
+Run `git -C /etc/nixos add` on the wrapper too. Staged files are enough for the
+build, and committing is up to the owner.
+
+### Caddy on example-host
+
+`/etc/nixos/services/caddy.nix` generates simple site blocks from a
+subdomain-to-port map. Remove `fsnap = 4173;` from that map and add a manual
+override under `virtualHosts` (if you keep both, the override silently replaces the map entry):
+
+```nix
+"fsnap.example.invalid".extraConfig = ''
+  handle /api/* {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8090
+  }
+  handle /ws {
+    reverse_proxy 127.0.0.1:8090
+  }
+  handle {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:4173
+  }
+'';
+```
+
+Compression stays off `/ws` so it doesn't interfere with the WebSocket upgrade.
 
 ## Build and activate NixOS
 
@@ -140,9 +210,12 @@ npm run dev      # Vite proxies /api and WebSocket /ws to localhost:8090
 
 Configuration is available as flags or environment variables: `-listen` /
 `FINGERSNAP_LISTEN`, `-db` / `FINGERSNAP_DB`, `-habitica-url` /
-`FINGERSNAP_HABITICA_URL`, `-x-client` / `FINGERSNAP_X_CLIENT`, and
-`-cookie-secure` / `FINGERSNAP_COOKIE_SECURE` (default true; false only for
-local HTTP). Flags precede CLI subcommands. Examples on the server:
+`FINGERSNAP_HABITICA_URL`, `-x-client` / `FINGERSNAP_X_CLIENT`,
+`-habitica-assets-url` / `FINGERSNAP_HABITICA_ASSETS_URL` and `-sprite-cache` /
+`FINGERSNAP_SPRITE_CACHE` (Habitica outfit art fetched for players, kept in
+`habitica-sprites/` beside the database by default: the service's state
+directory, already writable), and `-cookie-secure` / `FINGERSNAP_COOKIE_SECURE`
+(default true; false only for local HTTP). Flags precede CLI subcommands. Examples on the server:
 
 ```sh
 sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist add HABITICA_USER_ID

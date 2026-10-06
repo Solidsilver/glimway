@@ -7,8 +7,11 @@
  * assetSourceFor(name) -> 'local' | 'remote' | null.
  *
  * Rules from the asset contract:
- * - Only same-origin cached layers (`assetSourceFor === 'local'`) become
- *   Phaser textures; upstream URLs without CORS headers are display-only.
+ * - Only same-origin art becomes Phaser textures (upstream URLs carry no CORS
+ *   headers). Bundled pieces (`assetSourceFor === 'local'`) load from
+ *   /assets/habitica/; every other known piece ('remote') comes through our
+ *   server's sprite proxy, kept on this device (src/lib/habitica/
+ *   sprite-cache.ts). Only a piece that can't be had at all is left off.
  * - The WALKING world avatar renders with companions removed from the layer
  *   stack (cloned profile: selectedPet null; mount only while riding) so the
  *   companion is not baked in twice; the pet follows as a separate sprite.
@@ -42,6 +45,7 @@ import {
   type AvatarProfileFull,
   type AssetRef
 } from '../lib/habitica/avatar.ts'
+import { spriteCache } from '../lib/habitica/sprite-cache.ts'
 import type { HabiticaProfile } from '../lib/habitica/types.ts'
 import type { PresenceAvatar } from '../lib/presence.ts'
 
@@ -59,9 +63,9 @@ function visualProfile(profile: HabiticaProfile, riding: boolean): AvatarProfile
 export interface LoadedAvatar {
   layerKeys: string[]
   fallback: boolean
-  /** Sprite names that exist only upstream (display-only, skipped). */
-  remoteOnly: string[]
-  /** Local-cache layers that were queued but failed to load (dropped). */
+  /** Pieces that couldn't be had (no server to fetch them, or none upstream): left off. */
+  unavailable: string[]
+  /** Layers that were queued but failed to load (dropped). */
   failedKeys: string[]
 }
 
@@ -126,14 +130,32 @@ function queueImages(scene: Phaser.Scene, assets: AssetRef[]): Promise<string[]>
   })
 }
 
-function localOnly(refs: AssetRef[]): { local: AssetRef[]; remoteOnly: string[] } {
-  const local: AssetRef[] = []
-  const remoteOnly: string[] = []
-  for (const ref of refs) {
-    if (assetSourceFor(ref.key) === 'local') local.push(ref)
-    else remoteOnly.push(ref.key)
+/** Where a piece loads from: the bundled cache, or the sprite proxy via the device cache. */
+export type SpriteSource = (name: string) => Promise<string | null>
+
+type Resolved = { refs: AssetRef[]; unavailable: string[] }
+
+/**
+ * Same-origin URLs for every layer: bundled pieces as they are, the rest
+ * through `source` (the sprite cache). Order and duplicates are kept; a piece
+ * that can't be had is reported, never invented. When every piece is bundled
+ * the answer is immediate (no promise), so the loader is queued in the same
+ * tick as before the sprite proxy existed.
+ */
+export function resolveLayers(refs: AssetRef[], source: SpriteSource = (n) => spriteCache.src(n)): Resolved | Promise<Resolved> {
+  const where = refs.map((ref) => assetSourceFor(ref.key))
+  const collect = (urls: (string | null)[]): Resolved => {
+    const out: AssetRef[] = []
+    const unavailable: string[] = []
+    refs.forEach((ref, i) => {
+      const url = urls[i]
+      if (url) out.push({ key: ref.key, url })
+      else if (!unavailable.includes(ref.key)) unavailable.push(ref.key)
+    })
+    return { refs: out, unavailable }
   }
-  return { local, remoteOnly }
+  if (!where.includes('remote')) return collect(refs.map((ref, i) => (where[i] === 'local' ? ref.url : null)))
+  return Promise.all(refs.map((ref, i) => (where[i] === 'local' ? ref.url : where[i] === 'remote' ? source(ref.key) : null))).then(collect)
 }
 
 /**
@@ -143,31 +165,32 @@ function localOnly(refs: AssetRef[]): { local: AssetRef[]; remoteOnly: string[] 
  */
 export async function loadWorldAvatar(scene: Phaser.Scene, profile: HabiticaProfile, riding: boolean): Promise<LoadedAvatar> {
   try {
-    const refs = avatarLayersFor(visualProfile(profile, riding))
-    const { local, remoteOnly } = localOnly(refs)
-    if (local.length === 0) return { layerKeys: [], fallback: true, remoteOnly, failedKeys: [] }
-    const layerKeys = await queueImages(scene, local)
+    const now = resolveLayers(avatarLayersFor(visualProfile(profile, riding)))
+    const { refs, unavailable } = now instanceof Promise ? await now : now
+    if (refs.length === 0) return { layerKeys: [], fallback: true, unavailable, failedKeys: [] }
+    const layerKeys = await queueImages(scene, refs)
     const resolved = new Set(layerKeys)
     const failedKeys = [
-      ...new Set(local.filter((r) => !resolved.has(`${ASSET_PREFIX}${r.key}`)).map((r) => r.key))
+      ...new Set(refs.filter((r) => !resolved.has(`${ASSET_PREFIX}${r.key}`)).map((r) => r.key))
     ]
-    return { layerKeys, fallback: layerKeys.length === 0, remoteOnly, failedKeys }
+    return { layerKeys, fallback: layerKeys.length === 0, unavailable, failedKeys }
   } catch {
-    return { layerKeys: [], fallback: true, remoteOnly: [], failedKeys: [] }
+    return { layerKeys: [], fallback: true, unavailable: [], failedKeys: [] }
   }
 }
 
 /**
  * Another player's walking avatar (presence, phase 6) from the compact
- * visual shape the server relays: same layer stack and local-cache rule as
- * the hero's, on foot, with no companions baked in.
+ * visual shape the server relays: same layer stack and sources as the
+ * hero's, on foot, with no companions baked in.
  */
 export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAvatar): Promise<string[]> {
   try {
     const profile = { ...avatar, selectedPet: undefined, selectedMount: undefined } as unknown as AvatarProfileFull
-    const { local } = localOnly(avatarLayersFor(profile))
-    if (local.length === 0) return []
-    return await queueImages(scene, local)
+    const now = resolveLayers(avatarLayersFor(profile))
+    const { refs } = now instanceof Promise ? await now : now
+    if (refs.length === 0) return []
+    return await queueImages(scene, refs)
   } catch {
     return []
   }
@@ -178,11 +201,12 @@ export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAv
 export async function loadCompanion(scene: Phaser.Scene, key: string | undefined | null, kind: 'pet' | 'mount'): Promise<string[] | null> {
   if (!key) return null
   try {
-    const refs = companionLayersFor(key, kind)
+    const all = companionLayersFor(key, kind)
+    if (all.length === 0) return null
+    const now = resolveLayers(all)
+    const { refs } = now instanceof Promise ? await now : now
     if (refs.length === 0) return null
-    const { local } = localOnly(refs)
-    if (local.length === 0) return null
-    const keys = await queueImages(scene, local)
+    const keys = await queueImages(scene, refs)
     return keys.length > 0 ? keys : null
   } catch {
     return null

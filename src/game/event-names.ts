@@ -7,6 +7,14 @@ export const EV = {
   sync: 'ui:sync',
   stats: 'ui:stats',
   quest: 'ui:quest',
+  /** What the hero holds changed: { kind } (src/game/held.ts, src/lib/belt.ts). */
+  held: 'ui:held',
+  /** Take something in hand (UI -> game): { kind }. */
+  hold: 'game:hold',
+  /** A "How do I…?" guide was pinned or unpinned: { id } (src/game/guide-pin.ts). */
+  guidePin: 'ui:guide-pin',
+  /** The goal line's text and source changed: GoalLinePayload. */
+  goalLine: 'ui:goal-line',
   /** Which way the quest goal lies: { angle, here } (GoalDirPayload). */
   goalDir: 'ui:goal-dir',
   area: 'ui:area',
@@ -86,6 +94,12 @@ export interface QuestPayload {
  * 0 = right, clockwise; null when there is no place to point at). `here`:
  * the goal is in this area (else the angle points at the way out toward it).
  */
+/** What the HUD's goal line says: the story's short goal, or a pinned guide's step. */
+export interface GoalLinePayload {
+  /** null: the story leads (the HUD shows the quest's own words). */
+  guide: { id: string; title: string; step: string; index: number; count: number } | null
+}
+
 export interface GoalDirPayload {
   angle: number | null
   here: boolean
@@ -160,6 +174,13 @@ export interface DialogueChoice {
   disabled?: boolean
   /** Cost, or why the choice is unavailable. */
   note?: string
+  /**
+   * Plays `reply`, then offers the other choices again ("Hear it again"):
+   * it doesn't end the talk. It goes from the list once picked.
+   */
+  replay?: boolean
+  /** A plain goodbye: dropped when it would be the only choice left. */
+  dismiss?: boolean
 }
 
 export interface DialogueClosedPayload {
