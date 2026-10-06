@@ -266,7 +266,10 @@ export class AvatarVisual {
         let key = itemIcon(want)
         if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
         if (this.scene.textures.exists(key)) {
-          const img = this.scene.add.image(HAND.x, HAND.y, key).setOrigin(0.5, 0.85)
+          // Item icons point their head up and right; the unmirrored figure faces
+          // left with the weapon hand on the left, so flip the icon to point out
+          // ahead of the hero (the container's own mirroring turns it round).
+          const img = this.scene.add.image(HAND.x, HAND.y, key).setOrigin(0.5, 0.85).setFlipX(true)
           img.setScale(HAND.size / Math.max(img.width, img.height))
           this.container.add(img)
           this.handTool = img
