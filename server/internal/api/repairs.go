@@ -96,23 +96,45 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	if maxOpen <= 0 {
 		maxOpen = 3
 	}
+	perWick := content.RepairRules.Rules.PerWick
+	if perWick <= 0 {
+		perWick = 1
+	}
 
 	if fenceMended.Valid {
-		// Rotate in weather-based breakages up to maxOpen
+		// Break weather (docs/items/crafting-and-repair.md, "The chores
+		// list"): roughly one new breakage per wick, never the same thing
+		// twice in a row, up to maxOpen open at a time. The world's last
+		// break wick is stored, so reads never re-roll the weather.
 		var currentOpen int
 		err = tx.QueryRowContext(ctx, "SELECT count(*) FROM village_repairs WHERE world_id=? AND mended_at IS NULL", s.WorldID).Scan(&currentOpen)
 		if err != nil {
 			return out, err
 		}
+		wick := content.CalendarAt(content.CalendarRules, now).WickNumber
+
+		var lastBreakWick int64
+		err = tx.QueryRowContext(ctx, "SELECT last_break_wick FROM village_repair_clock WHERE world_id=?", s.WorldID).Scan(&lastBreakWick)
+		if err == sql.ErrNoRows {
+			lastBreakWick = 0
+			_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repair_clock(world_id, last_break_wick) VALUES(?, 0)", s.WorldID)
+		}
+		if err != nil {
+			return out, err
+		}
 
 		if currentOpen < maxOpen {
-			// Find existing repair records in this world
+			// Never the same thing twice in a row: skip the log's newest mend
+			// (rowid breaks ties: two mends in the same second keep their order).
+			var lastMended string
+			_ = tx.QueryRowContext(ctx, "SELECT repair_id FROM village_repair_log WHERE world_id=? ORDER BY mended_at DESC, rowid DESC LIMIT 1", s.WorldID).Scan(&lastMended)
+
 			rows, err := tx.QueryContext(ctx, "SELECT repair_id, mended_at FROM village_repairs WHERE world_id=?", s.WorldID)
 			if err != nil {
 				return out, err
 			}
-			existing := map[string]bool{}
 			isOpen := map[string]bool{}
+			known := map[string]bool{}
 			for rows.Next() {
 				var rid string
 				var mAt sql.NullInt64
@@ -120,30 +142,68 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 					rows.Close()
 					return out, err
 				}
-				existing[rid] = true
+				known[rid] = true
 				if !mAt.Valid {
 					isOpen[rid] = true
 				}
 			}
 			rows.Close()
+			if err = rows.Err(); err != nil {
+				return out, err
+			}
 
-			// Last mended
-			var lastMended string
-			_ = tx.QueryRowContext(ctx, "SELECT repair_id FROM village_repair_log WHERE world_id=? ORDER BY mended_at DESC LIMIT 1", s.WorldID).Scan(&lastMended)
+			day := content.CalendarAt(content.CalendarRules, now)
+			// A break goes in with the weather: at most one new one per
+			// wick (the clock), never a festival chore, which breaks on
+			// its own day (the hame before Carting Day) without spending
+			// the weather's allowance.
+			openBreak := func(def content.RepairDef) error {
+				// First time it breaks, or it's mended and rots again: the
+				// row is reset, the log keeps the history.
+				if known[def.ID] {
+					if _, err := tx.ExecContext(ctx, "UPDATE village_repairs SET mended_by=NULL, mended_at=NULL, created_at=? WHERE world_id=? AND repair_id=? AND mended_at IS NOT NULL", now, s.WorldID, def.ID); err != nil {
+						return err
+					}
+				} else if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, ?, ?)", s.WorldID, def.ID, now); err != nil {
+					return err
+				}
+				isOpen[def.ID] = true
+				currentOpen++
+				return nil
+			}
 
+			if lastBreakWick+int64(perWick) <= wick {
+				for _, def := range content.RepairRules.Repairs {
+					if currentOpen >= maxOpen {
+						break
+					}
+					if isOpen[def.ID] || def.ID == lastMended || def.OpenFrom != nil {
+						continue
+					}
+					if err = openBreak(def); err != nil {
+						return out, err
+					}
+					// One breakage per read; the clock paces the rest by wick.
+					if _, err = tx.ExecContext(ctx, "UPDATE village_repair_clock SET last_break_wick=? WHERE world_id=?", wick, s.WorldID); err != nil {
+						return out, err
+					}
+					break
+				}
+			}
+
+			// Festival chores break on their day, whatever the weather did.
 			for _, def := range content.RepairRules.Repairs {
 				if currentOpen >= maxOpen {
 					break
 				}
-				if isOpen[def.ID] || def.ID == lastMended {
+				if def.OpenFrom == nil || isOpen[def.ID] || def.ID == lastMended {
 					continue
 				}
-				// If not yet opened or already mended in the past, re-open if below maxOpen
-				if !existing[def.ID] {
-					if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, ?, ?)", s.WorldID, def.ID, now); err == nil {
-						currentOpen++
-						isOpen[def.ID] = true
-					}
+				if day.Wick != def.OpenFrom.Wick || day.Day < def.OpenFrom.Day {
+					continue
+				}
+				if err = openBreak(def); err != nil {
+					return out, err
 				}
 			}
 		}
@@ -194,9 +254,11 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	defer mendedRows.Close()
 	for mendedRows.Next() {
 		var mv mendedView
-		if err = mendedRows.Scan(&mv.RepairID, &mv.MendedBy, &mv.DisplayName, &mv.MendedAt); err != nil {
+		var by sql.NullString
+		if err = mendedRows.Scan(&mv.RepairID, &by, &mv.DisplayName, &mv.MendedAt); err != nil {
 			return out, err
 		}
+		mv.MendedBy = by.String
 		mv.DisplayName = capDonor(mv.DisplayName)
 		out.Mended = append(out.Mended, mv)
 		def, ok := content.RepairFor(mv.RepairID)
@@ -297,7 +359,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 
 		// Proximity check (must be near broken thing)
 		if !nearTile(s, def.Area, def.Pos.TX, def.Pos.TY, 4) {
-			return nil, fail(400, "too-far-away")
+			return nil, fail(409, "too-far-away")
 		}
 
 		// Take the required part from player pack
@@ -327,9 +389,11 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 
-		// Optional reward gift
+		// Optional reward gift: its ledger row must land with the mend.
 		if def.Gift != nil {
-			_ = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{"", def.Gift.Qty}}, "village-reward", ref, now)
+			if err = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{"", def.Gift.Qty}}, "village-reward", ref, now); err != nil {
+				return nil, err
+			}
 		}
 
 		if err = refreshItems(ctx, tx, s); err != nil {

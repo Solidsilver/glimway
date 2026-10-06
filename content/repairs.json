@@ -1,6 +1,7 @@
 {
   "rules": {
     "maxOpen": 3,
+    "perWick": 1,
     "scripted": [
       "well-rope",
       "fence-rail"
@@ -112,7 +113,11 @@
       "hint": "The horse collar on the Commons gate",
       "description": "The empty carter's collar on the gate has weathered dull.",
       "mendedDescription": "Polished with oilcloth; the brass hame shines on the gate.",
-      "worldFlag": "repair:gate-hame:mended"
+      "worldFlag": "repair:gate-hame:mended",
+      "openFrom": {
+        "wick": "Cart",
+        "day": 5
+      }
     }
   ]
 }

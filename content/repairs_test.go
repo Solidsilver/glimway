@@ -4,6 +4,34 @@ import (
 	"testing"
 )
 
+// Every repair's part must have a source a player can get: a bench recipe's
+// output, or a pickup lying in the world. A part with no source stalls the
+// chore list for good (the review's finding 1).
+func TestRepairPartsHaveASource(t *testing.T) {
+	r, err := LoadRepairs()
+	if err != nil {
+		t.Fatalf("failed to load repairs: %v", err)
+	}
+	c, err := LoadCrafting()
+	if err != nil {
+		t.Fatalf("failed to load crafting: %v", err)
+	}
+	sources := map[string]bool{}
+	for _, rec := range c.Recipes {
+		if rec.Output.Kind == "item" {
+			sources[rec.Output.ID] = true
+		}
+	}
+	for _, p := range ItemsRules.Pickups {
+		sources[p.Item] = true
+	}
+	for _, v := range r.Repairs {
+		if !sources[v.Part] {
+			t.Errorf("repair %s needs %s, which has no recipe or pickup", v.ID, v.Part)
+		}
+	}
+}
+
 func TestRepairsContent(t *testing.T) {
 	r, err := LoadRepairs()
 	if err != nil {

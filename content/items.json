@@ -58,6 +58,20 @@
         "ty": 9,
         "radiusTiles": 4
       }
+    ],
+    "residents": [
+      {
+        "id": "ada",
+        "area": "village",
+        "tx": 35,
+        "ty": 8
+      },
+      {
+        "id": "hazel",
+        "area": "village",
+        "tx": 12,
+        "ty": 15
+      }
     ]
   },
   "items": [

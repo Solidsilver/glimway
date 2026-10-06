@@ -17,24 +17,31 @@ type RepairGift struct {
 	Qty  int    `json:"qty"`
 }
 
+type RepairOpenFrom struct {
+	Wick string `json:"wick"`
+	Day  int    `json:"day"`
+}
+
 type RepairDef struct {
-	ID                string      `json:"id"`
-	Name              string      `json:"name"`
-	Part              string      `json:"part"`
-	Area              string      `json:"area"`
-	Target            string      `json:"target"`
-	Pos               RepairPos   `json:"pos"`
-	Resident          string      `json:"resident"`
-	Reaction          string      `json:"reaction"`
-	Gift              *RepairGift `json:"gift,omitempty"`
-	Hint              string      `json:"hint"`
-	Description       string      `json:"description"`
-	MendedDescription string      `json:"mendedDescription"`
-	WorldFlag         string      `json:"worldFlag"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name"`
+	Part              string          `json:"part"`
+	Area              string          `json:"area"`
+	Target            string          `json:"target"`
+	Pos               RepairPos       `json:"pos"`
+	Resident          string          `json:"resident"`
+	Reaction          string          `json:"reaction"`
+	Gift              *RepairGift     `json:"gift,omitempty"`
+	Hint              string          `json:"hint"`
+	Description       string          `json:"description"`
+	MendedDescription string          `json:"mendedDescription"`
+	WorldFlag         string          `json:"worldFlag"`
+	OpenFrom          *RepairOpenFrom `json:"openFrom,omitempty"`
 }
 
 type RepairsRulesConfig struct {
 	MaxOpen  int      `json:"maxOpen"`
+	PerWick  int      `json:"perWick"`
 	Scripted []string `json:"scripted"`
 }
 
@@ -45,7 +52,7 @@ type Repairs struct {
 
 func ValidateRepairs(r Repairs) error {
 	bad := fmt.Errorf("invalid repairs")
-	if r.Rules.MaxOpen <= 0 || len(r.Rules.Scripted) == 0 || len(r.Repairs) == 0 {
+	if r.Rules.MaxOpen <= 0 || r.Rules.PerWick <= 0 || len(r.Rules.Scripted) == 0 || len(r.Repairs) == 0 {
 		return bad
 	}
 	ids := map[string]bool{}
@@ -82,6 +89,9 @@ func ValidateRepairs(r Repairs) error {
 			if _, ok := ItemFor(v.Gift.ID); !ok {
 				return bad
 			}
+		}
+		if v.OpenFrom != nil && (!slices.Contains(CalendarRules.Wicks, v.OpenFrom.Wick) || v.OpenFrom.Day < 1 || v.OpenFrom.Day > CalendarRules.WickDays) {
+			return bad
 		}
 		ids[v.ID] = true
 	}

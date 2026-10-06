@@ -11,6 +11,11 @@ export interface RepairGift {
   qty: number;
 }
 
+export interface RepairOpenFrom {
+  wick: string;
+  day: number;
+}
+
 export interface RepairDef {
   id: string;
   name: string;
@@ -25,10 +30,14 @@ export interface RepairDef {
   description: string;
   mendedDescription: string;
   worldFlag: string;
+  /** Festival chores only break from this day of this wick (the hame before Carting Day). */
+  openFrom?: RepairOpenFrom;
 }
 
 export interface RepairsRulesConfig {
   maxOpen: number;
+  /** One new weather breakage every `perWick` wicks. */
+  perWick: number;
   scripted: string[];
 }
 
@@ -38,7 +47,7 @@ export interface RepairsData {
 }
 
 export function validateRepairs(data: RepairsData): RepairsData {
-  if (!data.rules || data.rules.maxOpen <= 0 || !Array.isArray(data.rules.scripted) || data.rules.scripted.length === 0) {
+  if (!data.rules || data.rules.maxOpen <= 0 || data.rules.perWick <= 0 || !Array.isArray(data.rules.scripted) || data.rules.scripted.length === 0) {
     throw new Error('invalid repairs: rules');
   }
   if (!Array.isArray(data.repairs) || data.repairs.length === 0) {

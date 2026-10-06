@@ -16,3 +16,10 @@ CREATE TABLE village_repair_log (
   mended_at INTEGER NOT NULL
 );
 CREATE INDEX village_repair_log_world ON village_repair_log(world_id, mended_at DESC);
+
+-- Per-world repair weather: the last wick that opened (or re-opened) a
+-- breakage, so breakages pace one per wick no matter who reads.
+CREATE TABLE village_repair_clock (
+  world_id TEXT PRIMARY KEY REFERENCES worlds(id),
+  last_break_wick INTEGER NOT NULL DEFAULT 0
+);

@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { REPAIR_RULES, repairFor, repairsForArea } from '../src/lib/repairs.ts';
-import { allKeepsakeLines, keepsakeAsk, keepsakeReturnAction, parseKeepsakeAction } from '../src/game/keepsakes.ts';
-import { itemDef } from '../src/lib/items.ts';
+import { allKeepsakeLines, keepsakeAsk, keepsakeReturnAction, keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../src/game/keepsakes.ts';
+import { itemDef, ITEMS, ITEM_RULES } from '../src/lib/items.ts';
+import { CRAFTING } from '../src/lib/workshop.ts';
+import { buildArea } from '../src/game/worlds.ts';
 
 test('repairs rules match crafting and lore canon', () => {
   assert.equal(REPAIR_RULES.rules.maxOpen, 3);
+  assert.equal(REPAIR_RULES.rules.perWick, 1);
   assert.deepEqual(REPAIR_RULES.rules.scripted, ['well-rope', 'fence-rail']);
   assert.equal(REPAIR_RULES.repairs.length, 6);
 
@@ -54,6 +57,13 @@ test('repairs rules match crafting and lore canon', () => {
 
   assert.equal(repairsForArea('village').length, 5);
   assert.equal(repairsForArea('commons').length, 1);
+
+  // The hame waits for its Carting Day window (content, read finding 2).
+  assert.deepEqual(hame.openFrom, { wick: 'Cart', day: 5 });
+  for (const r of REPAIR_RULES.repairs) {
+    if (!r.openFrom) continue;
+    assert.ok(r.openFrom.day >= 1 && r.openFrom.day <= 7, `openFrom day of ${r.id}`);
+  }
 });
 
 test('each repair names a real part and a real resident', () => {
@@ -75,6 +85,13 @@ test('carrying a keepsake adds the line, with give it back and not yet', () => {
   assert.equal(ask.choices[0].text, 'Give it back');
   assert.equal(ask.choices[1].text, 'Not yet');
   assert.equal(ask.choices[0].action, 'keep:return:knotted-halter:ada');
+  // The thanks wait for the server's yes: the choice closes on a neutral
+  // line, and the words come from keepsakeThanks after the return lands.
+  assert.deepEqual(ask.choices[0].reply, ['You hold it out.']);
+  assert.doesNotMatch(ask.choices[0].reply?.join(' ') ?? '', /knot|receipts|leaf/);
+  assert.match(keepsakeThanks('knotted-halter').join(' '), /oil receipts/);
+  assert.equal(keepsakeSpeaker('ada'), 'Ada');
+  assert.equal(keepsakeSpeaker('silas'), 'Silas');
   // Not carried, or already returned: no line at all.
   assert.equal(keepsakeAsk('ada', [], ['tin-whistle']), null);
   assert.equal(keepsakeAsk('ada', ['returned:knotted-halter'], carried), null);
@@ -94,4 +111,38 @@ test('keepsake lines keep the canon rules', () => {
   const parsed = parseKeepsakeAction(keepsakeReturnAction('tin-whistle', 'hazel'));
   assert.deepEqual(parsed, { def: 'tin-whistle', target: 'hazel' });
   assert.equal(parseKeepsakeAction('home:claim:3'), null);
+});
+
+test('every repair part has a source a player can get', () => {
+  const sources = new Set<string>();
+  for (const r of CRAFTING.recipes) if (r.output.kind === 'item') sources.add(r.output.id);
+  for (const p of ITEMS.pickups) sources.add(p.item);
+  for (const r of REPAIR_RULES.repairs) {
+    assert.ok(sources.has(r.part), `repair ${r.id} needs ${r.part}, which has no recipe or pickup`);
+  }
+  // The design's bills for the three parts the first review found missing.
+  const bill = (id: string) => CRAFTING.recipes.find((r) => r.output.id === id);
+  assert.deepEqual(bill('split-rail')?.materials, { timber: 2, 'wooden-peg': 2 });
+  assert.deepEqual(bill('slates')?.materials, { stone: 3 });
+  assert.equal(bill('slates')?.output.qty, 3);
+  assert.deepEqual(bill('oak-slat')?.materials, { timber: 1, 'wooden-peg': 1 });
+});
+
+test('the world is built from the shared spots the server checks', () => {
+  // The well, Ada and Hazel stand where the shared content says (the
+  // server's draw-water and keepsake-return checks read the same rows).
+  const v = buildArea('village');
+  const well = repairFor('well-rope')!.pos;
+  assert.deepEqual(v.well, { tx: well.tx, ty: well.ty });
+  for (const res of ITEM_RULES.residents) {
+    const npc = v.npcs.find((n) => n.id === res.id);
+    assert.ok(npc, `${res.id} stands in the village`);
+    assert.deepEqual({ tx: npc!.tx, ty: npc!.ty }, { tx: res.tx, ty: res.ty });
+  }
+  // Silas from the menders rows, in the Commons.
+  const c = buildArea('commons');
+  const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
+  assert.ok(silas);
+  const silasInteractable = c.npcs.find((n) => n.id === 'silas');
+  if (silasInteractable) assert.deepEqual({ tx: silasInteractable.tx, ty: silasInteractable.ty }, { tx: silas.tx, ty: silas.ty });
 });

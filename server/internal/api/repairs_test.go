@@ -2,10 +2,12 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fingersnap/content"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fingersnap/server/internal/wilds"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -79,11 +81,11 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 		t.Fatalf("expected 0 mended, got %+v", read.Mended)
 	}
 
-	// 2. Far away: fails too-far-away
+	// 2. Far away: fails too-far-away (409, like every other proximity refusal)
 	farDoc := s.State
 	farDoc.Area = "village"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
-	bad := x.mend(c, &s, "well-rope", map[string]any{"progress": farDoc}, 400)
+	bad := x.mend(c, &s, "well-rope", map[string]any{"progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away, got %s", bad.Error.Code)
 	}
@@ -272,6 +274,180 @@ func TestReturningKeepsakes(t *testing.T) {
 	retNan := x.op(c, &s, "return", map[string]any{"itemDef": "road-nails", "target": "nan", "progress": wildsDoc}, 200)
 	if retNan.Result.Returned != "road-nails" || !slices.Contains(retNan.Snapshot.State.Flags, "echo:nan:softened") {
 		t.Fatalf("expected echo:nan:softened flag, got %+v", retNan.Snapshot.State.Flags)
+	}
+	x.conserved("alice")
+}
+
+// The break weather (review finding 2): after the scripted two, one new
+// breakage opens per wick, never the same thing twice in a row, up to
+// maxOpen. Repairs must come back (re-break) or the chores list empties
+// for good. Candidates run in content order, so the rotation cycles through
+// the list, skipping whatever was mended last.
+func TestRepairsWeatherPacing(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	// The idle session expires in exactly 7 days, so a wick jump re-logins.
+	nextWick := func() repairsTestResponse {
+		x.now.Add(7*86400 + 3600)
+		c = x.login("alice", "")
+		x.refresh(c, &s)
+		return x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	}
+
+	// The scripted two, mended (their parts seeded; both near the square).
+	wellDoc := s.State
+	wellDoc.Area = "village"
+	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	fenceDoc := s.State
+	fenceDoc.Area = "village"
+	fenceDoc.Position = rules.Position{X: float64(27*16 + 8), Y: float64(18*16 + 8)}
+	for _, chore := range []struct {
+		id   string
+		part string
+		doc  rules.State
+	}{{"well-rope", "fibre-rope", wellDoc}, {"fence-rail", "split-rail", fenceDoc}} {
+		x.stack("alice", chore.part, "", 1)
+		x.mend(c, &s, chore.id, map[string]any{"progress": chore.doc}, 200)
+	}
+
+	// One weather breakage opens now (the wick's first), not all of them:
+	// the oldest mend (the well rope) rots again first.
+	read := x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	if len(read.Open) != 1 || read.Open[0].ID != "well-rope" {
+		t.Fatalf("expected exactly the well rope open after the fence, got %+v", read.Open)
+	}
+	// A second read in the same wick opens nothing more.
+	read = x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	if len(read.Open) != 1 {
+		t.Fatalf("expected the same single chore on re-read, got %+v", read.Open)
+	}
+
+	// A wick later, the fence takes its turn (never the same thing twice in
+	// a row), and a re-broken repair is not mended any more.
+	x.stack("alice", "fibre-rope", "", 1)
+	x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
+	read = nextWick()
+	if len(read.Open) != 1 || read.Open[0].ID != "fence-rail" {
+		t.Fatalf("expected the fence rail next wick, got %+v", read.Open)
+	}
+	if slices.ContainsFunc(read.Mended, func(m mendedView) bool { return m.RepairID == "fence-rail" }) {
+		t.Fatal("a re-broken repair is not mended any more")
+	}
+	x.conserved("alice")
+}
+
+// The hame is a festival chore: it only breaks shortly before Carting Day,
+// in its content window (openFrom: Cart wick, day 5).
+func TestRepairsHameWaitsForCartingDay(t *testing.T) {
+	x := newRig(t)
+	c, _ := x.ready("alice")
+
+	// The world has mended everything else; only the hame is left, and the
+	// weather clock spent last wick's breakage.
+	epoch := int64(1767571200) // the calendar's epoch (2026-01-05)
+	cartDay5 := epoch + (5*7+4)*86400
+	x.now.Store(cartDay5 - 86400) // Cart wick, day 4: the window is shut
+	_, err := x.db.DB.Exec("INSERT INTO village_repairs(world_id, repair_id, mended_by, mended_at, created_at) SELECT id, 'well-rope', NULL, 1, 0 FROM worlds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"fence-rail", "library-roof", "bench-slat", "village-lamp"} {
+		if _, err = x.db.DB.Exec("INSERT INTO village_repairs(world_id, repair_id, mended_by, mended_at, created_at) SELECT id, ?, NULL, 1, 0 FROM worlds", id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = x.db.DB.Exec("INSERT INTO village_repair_log(id, world_id, repair_id, mended_by, mended_at) SELECT hex(randomblob(16)), id, 'village-lamp', (SELECT habitica_id FROM players LIMIT 1), 1 FROM worlds"); err != nil {
+		t.Fatal(err)
+	}
+	// This wick's weather breakage is already spent (wick 6; Cart is wick 6):
+	// the hame is a festival chore, so it does not wait for the weather.
+	if _, err = x.db.DB.Exec(`INSERT INTO village_repair_clock(world_id, last_break_wick) SELECT id, 6 FROM worlds WHERE true ON CONFLICT(world_id) DO UPDATE SET last_break_wick=6`); err != nil {
+		t.Fatal(err)
+	}
+
+	// Day 4 of Cart: the hame stays shut, nothing opens.
+	read := x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	if len(read.Open) != 0 {
+		t.Fatalf("expected the hame to wait for its window, got %+v, logs: %s", read.Open, x.logs.String())
+	}
+
+	// Day 5, the day before the festival: the hame breaks.
+	x.now.Store(cartDay5)
+	read = x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	if len(read.Open) != 1 || read.Open[0].ID != "gate-hame" {
+		t.Fatalf("expected the hame open the day before Carting Day, got %+v", read.Open)
+	}
+	x.conserved("alice")
+}
+
+// The mend's gift goes through the ledger with everything else (review
+// finding 3): a failed gift insert must roll the whole mend back, leaving
+// the ledger conserved, instead of committing a stack with no ledger row.
+func TestMendGiftFailureRollsBack(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+
+	// Sabotage the gift's ledger row: the stack insert succeeds, the ledger
+	// row does not.
+	if _, err := x.db.DB.Exec("CREATE TRIGGER sabotage_reward BEFORE INSERT ON ledger WHEN NEW.reason='village-reward' BEGIN SELECT RAISE(ABORT, 'sabotage'); END"); err != nil {
+		t.Fatal(err)
+	}
+	x.stack("alice", "fibre-rope", "", 1)
+	wellDoc := s.State
+	wellDoc.Area = "village"
+	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
+	x.conserved("alice")
+
+	// Nothing changed: the rope is still in the pack, the well still open.
+	var n int
+	if err := x.db.DB.QueryRow("SELECT count(*) FROM item_stacks WHERE item_def='keepers-twists'").Scan(&n); err != nil || n != 0 {
+		t.Fatal("the gift outlived its failed ledger row", n)
+	}
+	read := x.repairsReq("GET", "/api/repairs", nil, c, 200)
+	if len(read.Open) != 1 || read.Open[0].ID != "well-rope" {
+		t.Fatalf("expected the well rope still open, got %+v", read.Open)
+	}
+}
+
+// A story keepsake is a single, real thing (review INFO): the Wilds give a
+// bound keepsake to a player once, no matter how often the loot roll says
+// it again. Unbound trinkets (the mirror foxes) stay repeatable.
+func TestStoryKeepsakeFoundOnce(t *testing.T) {
+	x := newRig(t)
+	x.ready("alice")
+	ctx := context.Background()
+	fox := "whittled-fox"
+	mirror := "mirror-fox"
+	for i := 0; i < 2; i++ {
+		tx, err := x.db.DB.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var worldID string
+		if err = tx.QueryRow("SELECT id FROM worlds LIMIT 1").Scan(&worldID); err != nil {
+			t.Fatal(err)
+		}
+		s := store.Snapshot{HabiticaID: "alice", WorldID: worldID}
+		if err = grantLoot(ctx, tx, &s, wilds.LootDrop{Trinket: &fox}, "wilds-claim", "ref", int64(i)); err != nil {
+			t.Fatal(err)
+		}
+		if err = grantLoot(ctx, tx, &s, wilds.LootDrop{Trinket: &mirror}, "wilds-claim", "ref", int64(i)); err != nil {
+			t.Fatal(err)
+		}
+		if err = tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var foxes, mirrors int
+	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='alice' AND item_def='whittled-fox'").Scan(&foxes); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='alice' AND item_def='mirror-fox'").Scan(&mirrors); err != nil {
+		t.Fatal(err)
+	}
+	if foxes != 1 || mirrors != 2 {
+		t.Fatalf("story keepsake once, mirror foxes repeat: foxes=%d mirrors=%d", foxes, mirrors)
 	}
 	x.conserved("alice")
 }

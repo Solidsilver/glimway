@@ -322,7 +322,9 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		return out, fail(409, "wrong-tool")
 	}
 	if action == "draw" {
-		if !nearTile(s, "village", 13, 12, 4) {
+		// The well stands where the repairs data puts it (shared content).
+		well, ok := content.RepairFor("well-rope")
+		if !ok || !nearTile(s, well.Area, well.Pos.TX, well.Pos.TY, 4) {
 			return out, fail(409, "too-far-away")
 		}
 		var mendedAt sql.NullInt64
@@ -1187,18 +1189,18 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 		return fail(409, "already-returned")
 	}
 
-	// Proximity check
+	// Proximity check: where each resident stands is shared content — Ada
+	// and Hazel from the residents' spots, Silas from the menders, the Echo
+	// camps anywhere in the deep Wilds until camps are placed per person.
 	switch target {
-	case "ada":
-		if !nearTile(s, "village", 35, 8, 4) {
-			return fail(409, "too-far-away")
-		}
-	case "hazel":
-		if !nearTile(s, "village", 12, 15, 4) {
+	case "ada", "hazel":
+		spot, ok := content.ResidentFor(target)
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
 			return fail(409, "too-far-away")
 		}
 	case "silas":
-		if !nearTile(s, "commons", 51, 21, 4) {
+		m, ok := content.MenderFor("silas")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":

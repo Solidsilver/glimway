@@ -173,6 +173,8 @@ export const SERVER_ERROR_CODES = [
   'already-mended',
   'well-rope-broken',
   'wrong-recipient',
+  'invalid-target',
+  'unknown-target',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

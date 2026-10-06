@@ -111,6 +111,8 @@ test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', 
   fund(id, { items: { 'knotted-halter': 1 } })
 
   await go(page, 'village', 34, 9)
+  // Carrying is observable: the pack read lands before the ask can ride.
+  await expect.poll(() => items(page), { timeout: 15_000 }).not.toBeNull()
   await expect(page.locator('.prompt')).toContainText('Talk to Ada')
   await page.waitForTimeout(250)
   await page.keyboard.press('e')
@@ -119,14 +121,20 @@ test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', 
   expect(kept).toBe(true)
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')?.qty).toBe(1)
 
-  // Ask again, and give it back: her thanks, then the story piece.
+  // Ask again, and give it back: the return lands (the world's word), her
+  // thanks ride a fresh conversation, and the story piece is on the save.
   await expect(page.locator('.prompt')).toContainText('Talk to Ada')
   await page.waitForTimeout(250)
   await page.keyboard.press('e')
   await expect(dialogue(page)).toBeVisible()
   const gave = await readThrough(page, /Give it back/)
   expect(gave).toBe(true)
-  await expect(page.locator('.toast', { hasText: 'Found: Ada’s Oil Receipts' })).toBeVisible()
+  await expect
+    .poll(async () => {
+      const st = await page.request.get('/api/state').then((r) => r.json())
+      return [st.state.flags.includes('returned:knotted-halter'), st.state.flags.includes('paper:adas-oil-receipts')]
+    }, { timeout: 15_000 })
+    .toEqual([true, true])
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')).toBeUndefined()
 
   // The world's word: the flags, and the line never asks again.
@@ -141,4 +149,27 @@ test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', 
   await expect(dialogue(page)).toBeVisible()
   const askedAgain = await readThrough(page, /Give it back/)
   expect(askedAgain).toBe(false)
+})
+
+test('a refused return never plays the thanks: the world answers first', async ({ page }) => {
+  const id = await freshPlayer(page, 'Rowan')
+  fund(id, { items: { 'knotted-halter': 1 } })
+
+  // The world refuses this one: the return is answered 409 (the hero has
+  // wandered, say), the way a real refusal arrives.
+  await page.route('**/api/items/return', (route) =>
+    route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'too-far-away' } }) })
+  )
+
+  await go(page, 'village', 34, 9)
+  await expect(page.locator('.prompt')).toContainText('Talk to Ada')
+  await page.waitForTimeout(250)
+  await page.keyboard.press('e')
+  await expect(dialogue(page)).toBeVisible()
+  // Giving back closes on the neutral line only; the thanks are the
+  // server's to give, and it refused.
+  await readThrough(page, /Give it back/)
+  await expect(dialogue(page)).toBeHidden()
+  expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')?.qty).toBe(1)
+  await expect(page.locator('.toast', { hasText: 'You need to be right there.' })).toBeVisible()
 })

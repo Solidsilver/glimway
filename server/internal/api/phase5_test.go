@@ -207,7 +207,7 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 		req = body(s, recipe.ID, map[string]any{"recipeId": recipe.ID, "qty": 2})
 		v := x.p5("POST", "/api/craft", req, c, 200)
 		s.Snapshot = v.Snapshot
-		if v.Result.Output.Qty != 2 || v.Result.Output.ID != recipe.Output.ID {
+		if v.Result.Output.Qty != 2*recipe.Output.Qty || v.Result.Output.ID != recipe.Output.ID {
 			t.Fatal("craft output")
 		}
 		if recipe.Output.Kind == "instance" && len(v.Result.InstanceIDs) != 2 {

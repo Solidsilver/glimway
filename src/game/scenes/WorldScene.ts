@@ -35,7 +35,7 @@ import { ItemPickups } from '../entities/item-pickups'
 import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { itemsFor } from '../items'
-import { parseKeepsakeAction } from '../keepsakes'
+import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
 import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
@@ -970,8 +970,10 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * A keepsake given back at the end of a conversation (docs/items/
-   * overview.md, "Returning keepsakes"): the server takes it from the pack
-   * and sets the story flags; the paper's own toast marks the find.
+   * overview.md, "Returning keepsakes"): the thanks wait for the server's
+   * yes — the return is a keyed mutation, and a refusal leaves the keepsake
+   * with you and says so. On a yes the resident speaks their thanks and the
+   * paper's own toast marks the find.
    */
   private returnKeepsake(def: string, target: string): void {
     const items = itemsFor(this.session)
@@ -981,6 +983,8 @@ export class WorldScene extends Phaser.Scene {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
         return
       }
+      const thanks = keepsakeThanks(r.value.returned ?? def)
+      if (thanks.length) bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
       if (r.value.paper) {
         const paper = paperById(r.value.paper)
         if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll' })

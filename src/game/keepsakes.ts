@@ -69,6 +69,17 @@ export function parseKeepsakeAction(action: string): { def: string; target: stri
   return m ? { def: m[1], target: m[2] } : null
 }
 
+/** The speaker's name for a return's thanks (the target of the return). */
+export function keepsakeSpeaker(target: string): string {
+  return ({ ada: 'Ada', hazel: 'Hazel', silas: 'Silas' })[target] ?? target
+}
+
+/** What they say when the return has gone through (never before). */
+export function keepsakeThanks(def: string): string[] {
+  for (const ask of Object.values(ASKS)) if (ask.def === def) return ask.giveReply
+  return []
+}
+
 export interface KeepsakeAsk {
   /** The quiet line, said after everything else. */
   line: string
@@ -86,8 +97,10 @@ export function keepsakeAsk(resident: string, flags: readonly string[], carried:
   if (!ask) return null
   if (!carried.includes(ask.def)) return null
   if (flags.includes(`returned:${ask.def}`)) return null
+  // "Give it back" closes on a neutral line; their thanks wait for the
+  // server's yes (the return is a keyed mutation, shown after it lands).
   const choices: DialogueChoice[] = [
-    { text: 'Give it back', reply: ask.giveReply, action: keepsakeReturnAction(ask.def, resident) },
+    { text: 'Give it back', reply: ['You hold it out.'], action: keepsakeReturnAction(ask.def, resident) },
     { text: 'Not yet', reply: ask.notYetReply }
   ]
   return { line: ask.line, choices }
