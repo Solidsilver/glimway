@@ -209,12 +209,12 @@ export const SERVER_ERROR_CODES = [
   'invalid-tool',
   'invalid-visit',
   'plant-in-the-way',
-  // worlds: party links and moves (server/internal/api/worlds.go)
+  // worlds: party worlds and moves (server/internal/api/worlds.go)
   'invalid-request',
   'world-not-found',
   'already-in-world',
   'mail-in-flight',
-  'not-world-owner',
+  'move-cooldown',
   'no-party',
 ] as const;
 
@@ -244,7 +244,7 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   unavailable: 'No Fingersnap server here.',
   'bad-response': 'The Fingersnap server sent something unexpected.',
   unauthorized: 'Not signed in.',
-  'access-denied': 'This world is invite-only.',
+  'access-denied': 'This world is invite-only, unless your party already plays here.',
   'habitica-auth': 'Habitica did not recognise those details.',
   'playing-elsewhere': 'Playing on another device.',
   superseded: 'Another device took over.',

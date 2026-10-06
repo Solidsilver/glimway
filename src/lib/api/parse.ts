@@ -181,7 +181,7 @@ export function parseInviteList(raw: unknown): InviteList {
 
 function parseWorldRef(raw: unknown): WorldRef {
   const o = obj(raw);
-  return { id: str(o.id), ownerId: str(o.ownerId), ownerName: str(o.ownerName).slice(0, 128), members: count(o.members) ?? 0, ownerHere: o.ownerHere === true, linked: o.linked === true };
+  return { id: str(o.id), ownerId: str(o.ownerId), ownerName: str(o.ownerName).slice(0, 128), members: count(o.members) ?? 0, ownerHere: o.ownerHere === true, party: o.party === true };
 }
 
 export function parseWorld(raw: unknown): WorldView {
@@ -192,8 +192,7 @@ export function parseWorld(raw: unknown): WorldView {
     world: parseWorldRef(o.world),
     isOwner: o.isOwner === true,
     inParty: o.inParty === true,
-    linked: o.linked === true,
-    linkedToMine: o.linkedToMine === true,
+    partyHome: o.partyHome === true,
     partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
     ownWorld: o.ownWorld == null ? null : parseWorldRef(o.ownWorld),
     prompt: o.prompt === true,
@@ -205,6 +204,7 @@ export function parseWorld(raw: unknown): WorldView {
       wardenTools: count(l.wardenTools) ?? 0,
       deedCost: count(l.deedCost) ?? 0,
     },
+    moveOpensAt: count(o.moveOpensAt) ?? 0,
   };
 }
 

@@ -49,8 +49,12 @@
   let unsafe = $state(false)
 
   const working = $derived(busy || arriving)
-  const here = $derived(view ? (view.isOwner ? 'Your world' : worldCopy.worldOf(view.world.ownerName)) : '…')
-  const there = $derived(home ? 'Your world' : worldCopy.worldOf(target.ownerName))
+  const here = $derived(view ? (view.isOwner ? 'Your world' : worldCopy.name(view.world, view.partyHome)) : '…')
+  const there = $derived(home ? 'Your world' : worldCopy.name(target))
+  /** Lowercase, mid-sentence: "your party’s world", "Olive’s world". */
+  const thereIn = $derived(worldCopy.place(target))
+  /** Seconds now, ticking while the screen is up, so the cooldown lifts on its own. */
+  let now = $state(Date.now() / 1000)
   const leaving = $derived(view?.leaving ?? null)
   const homestead = $derived(!!leaving && leaving.gate >= 0)
   const blocks = $derived.by(() => {
@@ -58,7 +62,9 @@
       area: session.state.area,
       outgoing: leaving?.outgoing ?? 0,
       online: ui.link?.status === 'online',
-      pending
+      pending,
+      opensAt: view?.moveOpensAt ?? 0,
+      now
     })
     if (unsafe && !b.includes('area')) b.push('area')
     return b
@@ -69,6 +75,7 @@
     if (b === 'area') return worldCopy.blockArea
     if (b === 'mail') return worldCopy.blockMail(Math.max(1, leaving?.outgoing ?? 1))
     if (b === 'offline') return worldCopy.blockOffline
+    if (b === 'cooldown') return worldCopy.blockCooldown(worldCopy.opensIn((view?.moveOpensAt ?? 0) - now))
     return worldCopy.blockPending
   }
 
@@ -97,6 +104,7 @@
     const why = moveRefusal(r.code)
     if (why === 'here') return onHere()
     if (why === 'area') unsafe = true
+    else if (why === 'cooldown') void refresh()
     else if (why === 'denied') error = worldCopy.denied
     else if (why === 'offline') error = worldCopy.blockOffline
     else if (why === 'pending' || why === 'retry') error = worldCopy.blockPending
@@ -114,13 +122,15 @@
 
   onMount(() => {
     void refresh()
+    const tick = setInterval(() => (now = Date.now() / 1000), 30_000)
+    return () => clearInterval(tick)
   })
 </script>
 
 <div class="overlay gate" role="dialog" aria-modal="true" aria-labelledby="move-title" aria-busy={working} tabindex="-1" onkeydown={onKey} data-testid="world-move">
   <div class="panel gate-panel wide" use:focusTrap={{ initial: '.stay' }}>
     <p class="gate-eyebrow"><Icon name="world" size={14} /> {worldCopy.eyebrow}</p>
-    <h2 class="gate-title" id="move-title">{home ? worldCopy.titleHome : worldCopy.title(target.ownerName)}</h2>
+    <h2 class="gate-title" id="move-title">{home ? worldCopy.titleHome : worldCopy.title(thereIn)}</h2>
 
     <div class="route" aria-label={`From ${here} to ${there}`}>
       <span class="stop from"><Icon name="lantern" size={13} /> {here}</span>
@@ -173,7 +183,7 @@
 
     {#if view && blocks.length > 0}
       <ul class="blocks" role="alert" data-testid="move-blocks">
-        {#each blocks as b (b)}<li><Icon name="clock" size={13} /> {blockLine(b)}</li>{/each}
+        {#each blocks as b (b)}<li data-block={b}><Icon name="clock" size={13} /> {blockLine(b)}</li>{/each}
       </ul>
     {/if}
     {#if error}<p class="gate-error" role="alert">{error}</p>{/if}
@@ -184,7 +194,7 @@
     {:else}
       <div class="row">
         <button type="button" class="stay" onclick={onCancel}>{worldCopy.cancel}</button>
-        <button type="button" class="primary" onclick={go} disabled={blocked}>{home ? worldCopy.confirmHome : worldCopy.confirm(target.ownerName)}</button>
+        <button type="button" class="primary" onclick={go} disabled={blocked}>{home ? worldCopy.confirmHome : worldCopy.confirm(thereIn)}</button>
       </div>
     {/if}
   </div>

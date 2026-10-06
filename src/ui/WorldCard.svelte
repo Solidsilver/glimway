@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { errorCode, isUnreachable } from '../lib/api/errors'
+  import { isUnreachable } from '../lib/api/errors'
   import type { WorldRef, WorldView } from '../lib/api/types'
   import { worldCopy } from '../content/world-moves'
   import { api } from './account'
@@ -8,8 +8,9 @@
 
   /**
    * The Menu's world settings: where you live, your party's world (the join
-   * prompt, findable again here), going back to a world you own, and, for an
-   * owner, the party link. Reads need the session only, not the lease.
+   * prompt, findable again here, or opening it when your party has none
+   * yet), and going back to a world you own. Reads need the session only,
+   * not the lease.
    */
   let { onMove }: { onMove: (target: WorldRef, home: boolean, view: WorldView) => void } = $props()
 
@@ -26,35 +27,20 @@
     }
   }
 
-  /** Link or unlink where you live, or (`worldId`) your own world that you left. */
-  async function setLink(link: boolean, worldId?: string): Promise<void> {
+  /** Make your party's world (it moves no one; joining is the usual move). */
+  async function openPartyWorld(): Promise<void> {
     if (busy) return
     busy = true
     error = ''
     try {
-      view = await api.worldParty(link, worldId)
+      view = await api.worldParty()
     } catch (err) {
-      const code = errorCode(err)
-      error = isUnreachable(err) ? worldCopy.offline : code === 'no-party' ? worldCopy.noParty : code === 'not-world-owner' ? worldCopy.ownerOnly : worldCopy.linkFailed
+      error = isUnreachable(err) ? worldCopy.offline : worldCopy.partyOpenFailed
       void refresh()
     } finally {
       busy = false
     }
   }
-
-  const linkLine = $derived(
-    !view
-      ? ''
-      : view.linkedToMine
-        ? view.partyWorld
-          ? worldCopy.linkedElsewhere(view.partyWorld.ownerName)
-          : worldCopy.linkedMine
-        : view.linked
-          ? worldCopy.linkedOther
-          : view.partyWorld
-            ? worldCopy.unlinkedElsewhere(view.partyWorld.ownerName)
-            : worldCopy.unlinked
-  )
 
   onMount(() => {
     void refresh()
@@ -63,13 +49,23 @@
 
 <div class="world-settings" data-testid="world-settings">
   {#if view}
-    <p class="lives"><Icon name="world" size={14} /> <span>{worldCopy.livesIn(view.world.ownerName, view.isOwner)}</span> <small>{view.isOwner ? worldCopy.members(view.world.members) : worldCopy.travelers(view.world.members, view.world.ownerName, view.world.ownerHere)}</small></p>
+    <p class="lives"><Icon name="world" size={14} /> <span>{worldCopy.livesIn(worldCopy.place(view.world, view.partyHome), view.isOwner)}</span> <small>{view.isOwner ? worldCopy.members(view.world.members) : worldCopy.travelers(view.world.members, view.world.ownerName, view.world.ownerHere)}</small></p>
+    {#if view.partyHome}<p class="tiny" data-testid="world-party-home">{worldCopy.partyHome}</p>{/if}
 
     {#if view.partyWorld}
       <div class="offer party" data-testid="world-party-offer">
         <span class="badge" aria-hidden="true"><Icon name="person" size={14} /></span>
-        <span class="text">{worldCopy.partyThere(view.partyWorld.ownerName)}</span>
-        <button type="button" class="primary small" onclick={() => onMove(view!.partyWorld!, false, view!)}>{worldCopy.join}</button>
+        <span class="text">
+          {worldCopy.partyThere}
+          <small>{worldCopy.travelers(view.partyWorld.members, view.partyWorld.ownerName, view.partyWorld.ownerHere)}</small>
+        </span>
+        <button type="button" class="primary small" onclick={() => onMove(view!.partyWorld!, false, view!)}>{worldCopy.join(view.partyWorld.members)}</button>
+      </div>
+    {:else if view.inParty && !view.partyHome}
+      <div class="offer party" data-testid="world-party-missing">
+        <span class="badge" aria-hidden="true"><Icon name="person" size={14} /></span>
+        <span class="text">{worldCopy.partyMissing}</span>
+        <button type="button" class="small" onclick={openPartyWorld} disabled={busy}>{worldCopy.partyOpen}</button>
       </div>
     {/if}
     {#if view.ownWorld}
@@ -78,23 +74,8 @@
         <span class="text">
           {worldCopy.ownThere}
           <small>{worldCopy.travelers(view.ownWorld.members, view.ownWorld.ownerName, view.ownWorld.ownerHere)}</small>
-          {#if view.ownWorld.linked}<small class="linked">{worldCopy.ownLinked} <button type="button" class="ghost tiny-btn" onclick={() => setLink(false, view!.ownWorld!.id)} disabled={busy}>{worldCopy.unlink}</button></small>{/if}
         </span>
         <button type="button" class="small" onclick={() => onMove(view!.ownWorld!, true, view!)}>{worldCopy.goHome}</button>
-      </div>
-    {/if}
-
-    {#if view.isOwner}
-      <div class="link" data-testid="world-link">
-        <h4><Icon name="key" size={12} /> {worldCopy.linkTitle}</h4>
-        <p class="fine"><span class="dot" class:on={view.linkedToMine} aria-hidden="true"></span>{linkLine}</p>
-        {#if view.linkedToMine}
-          <button type="button" class="small" onclick={() => setLink(false)} disabled={busy}>{worldCopy.unlink}</button>
-        {:else if view.inParty}
-          <button type="button" class="small" onclick={() => setLink(true)} disabled={busy}>{view.partyWorld ? worldCopy.linkHere : worldCopy.link}</button>
-        {:else}
-          <p class="tiny">{worldCopy.noParty}</p>
-        {/if}
       </div>
     {/if}
   {:else if !error}
@@ -159,48 +140,6 @@
     margin-top: 2px;
     font-size: 12.5px;
     color: var(--text-faint);
-  }
-  .text small.linked {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    color: var(--text-soft);
-  }
-  .tiny-btn {
-    padding: 1px 8px;
-    font-size: 12px;
-  }
-  .link {
-    padding-top: 4px;
-    border-top: 1.5px dashed var(--paper-line);
-  }
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 6px 0 2px;
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--wood);
-  }
-  .fine {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    margin: 0 0 6px;
-    font-size: 13.5px;
-  }
-  .dot {
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    background: var(--paper-line);
-  }
-  .dot.on {
-    background: var(--accent);
   }
   .small {
     padding: 4px 10px;

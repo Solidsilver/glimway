@@ -47,7 +47,7 @@ func TestWALMigrationsBackupAndAdmin(t *testing.T) {
 	}
 	defer s.Close()
 	var n int
-	if err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n); err != nil || n != 21 {
+	if err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n); err != nil || n != 22 {
 		t.Fatal("migration rerun")
 	}
 	if err = s.Allow(context.Background(), "alice", false); err != nil {

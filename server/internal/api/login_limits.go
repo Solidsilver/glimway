@@ -124,8 +124,14 @@ func ipBucket(ip net.IP) string {
 	}
 	return ip.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
+// precheck turns away, before Habitica is asked, a sign-in that can't
+// succeed: no allowlist entry, no valid code, and no party world here its
+// verified party could be (the party is only known after the identity
+// check, so any party world lets an account not removed by the CLI through
+// to it; the login limits still bound how often).
 func (a *Server) precheck(ctx context.Context, id, invite string) (bool, error) {
 	var allowed bool
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?)`, id, id, store.Hash(store.NormalizeInvite(invite)), a.Config.Now().Unix()).Scan(&allowed)
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?)
+ OR EXISTS(SELECT 1 FROM worlds WHERE owner_id='' AND habitica_party_id IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)`, id, id, store.Hash(store.NormalizeInvite(invite)), a.Config.Now().Unix(), id).Scan(&allowed)
 	return allowed, err
 }

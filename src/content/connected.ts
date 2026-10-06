@@ -3,8 +3,8 @@
  * origin choice, the play lease, offline play, and invites. Plain and short.
  */
 import economyJson from '../../content/economy.json' with { type: 'json' }
-import type { Economy } from '../lib/economy'
-import { WELCOME_EMBERS } from '../lib/embers'
+import type { Economy } from '../lib/economy.ts'
+import { WELCOME_EMBERS } from '../lib/embers.ts'
 
 const economy = economyJson as unknown as Economy
 export const MIGRATION_CAP = economy.migrationGiftCap
@@ -16,8 +16,10 @@ export const signInCopy = {
   inviteLabel: 'Invite code',
   invitePlaceholder: 'e.g. amber-fox-river-lantern-moss-ivy-7392',
   inviteHint: 'Any case; spaces or hyphens are fine.',
+  /** Read before anything about codes: a party member needs none. */
+  partyWelcome: 'Already in a Habitica party that plays here? Connect and come straight in. No invite code needed.',
   inviteOnlyTitle: 'This world is invite-only',
-  inviteOnlyBody: 'Your Habitica hero is fine. To join the shared world you need an invite code from someone already in it.',
+  inviteOnlyBody: 'Your Habitica hero is fine, but your party has no world here yet. To come in, ask someone already here for an invite code.',
   inviteJoin: 'Join with this code',
   playLocal: 'Play on this device instead',
   playLocalNote: 'Your journey stays in this browser, like a guest save with your Habitica hero.',

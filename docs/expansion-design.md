@@ -21,8 +21,8 @@ Also shipped, outside the original phases: **papers** (52 found texts in eight
 collections, a Journal tab) and the **Hearthwick Library** (a local shelf for
 guests, one shared shelf per world); the canon text pass.
 
-Also shipped: **party-linked worlds and world moves** (owner decisions
-below; server details in [home-server.md](home-server.md#party-linked-worlds-and-world-moves)).
+Also shipped: **party worlds and world moves** (owner decisions
+below; server details in [home-server.md](home-server.md#party-worlds-and-world-moves)).
 
 Still to come: the outer Wilds in the client, Garden and Hall tiers,
 Habitica-driven decoration, the party boss mirror, co-op combat and
@@ -49,13 +49,14 @@ they differ):
 - **Persistent worlds with player invites.** A first login creates a solo
   world or joins the inviter's; every member may have three codes
   outstanding and create five in all. Worlds never move players on their own.
-- **The party counts as an invite.** An allowlisted newcomer with no invite
-  code joins their party's world (the lived-in world linked to the party,
-  its owner's first); a code still wins. A party links one world: a new world
-  takes the link only if the party has none, and an owner linking a world
-  unlinks the others. Owners can unlink a world they've left. A settled member whose party plays elsewhere is asked once
-  ("Your party plays in <owner>'s world. Join them?"), and the Menu keeps the
-  offer. Leaving a party never moves anyone.
+- **A party's world belongs to the party.** The first member of a Habitica
+  party to sign in makes it (no personal owner; one per party). Members sign
+  in with no code and no allowlist entry and land there; everyone else still
+  needs a code or the allowlist, and a code that names a world still wins.
+  Solo worlds stay their owners'. A settled member whose party has a world is
+  asked once ("Your party has a world of its own here. Join them?"), and the
+  Menu keeps the offer. Moves are at most one a day. Leaving a party never
+  moves or removes anyone (the CLI removes).
 - **Moving takes only what's yours.** This replaces the move rules under
   "Worlds" below: the homestead does **not** move. You keep your character,
   story, embers, pack and personal chest; your deed membership ends as

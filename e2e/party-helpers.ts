@@ -4,7 +4,7 @@ import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverS
 
 /** Players for the party-world playtests (party-worlds*.spec.ts). */
 
-/** Olive signs in from the title: her new world is linked to a fresh party. */
+/** Olive signs in from the title, the first of a fresh party: she lands in the party's new world. */
 export async function partyOwner(page: Page): Promise<{ olive: string; party: string; world: string }> {
   const olive = newUser()
   const party = newUser()

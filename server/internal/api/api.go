@@ -389,21 +389,34 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM players WHERE habitica_id=?", p.ID).Scan(&existing); err != nil {
 		return err
 	}
-	// An invite code decides a new player's world (the one it names, else a
-	// solo world). An allowlisted newcomer's valid code still counts.
+	// A party with a world here counts as an invite: a verified member may
+	// sign in with no code and no allowlist entry (and is allowlisted from
+	// then on), unless the CLI removed them. The party comes only from the
+	// identity check above.
+	pw, err := partyWorld(ctx, tx, p.PartyID)
+	if err != nil {
+		return err
+	}
+	// An invite code decides a new player's world (the one it names, else
+	// their party's world, else a solo world). An allowlisted newcomer's
+	// valid code still counts.
 	world := ""
-	invited := false
+	via := "invite"
 	if allowed == 0 || existing == 0 && req.Invite != "" {
 		var named sql.NullString
 		err = tx.QueryRowContext(ctx, "SELECT world_id FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", p.ID, store.Hash(req.Invite), now).Scan(&named)
 		if err == sql.ErrNoRows && allowed == 0 {
-			return fail(403, "access-denied")
-		}
-		if err != nil && err != sql.ErrNoRows {
+			var removed int
+			if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM access_removals WHERE habitica_id=?", p.ID).Scan(&removed); err != nil {
+				return err
+			}
+			if pw == "" || removed > 0 {
+				return fail(403, "access-denied")
+			}
+			via = "party"
+		} else if err != nil && err != sql.ErrNoRows {
 			return err
-		}
-		if err == nil {
-			invited = true
+		} else if err == nil {
 			if named.Valid {
 				world = named.String
 			}
@@ -420,7 +433,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if allowed == 0 {
-			if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, "invite", now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO allowlist VALUES(?,?,?)", p.ID, via, now); err != nil {
 				return err
 			}
 			if _, err = tx.ExecContext(ctx, "DELETE FROM access_removals WHERE habitica_id=?", p.ID); err != nil {
@@ -428,16 +441,14 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	// The first member of a party to sign in makes the party's world.
+	if pw, err = ensurePartyWorld(ctx, tx, p.PartyID, now); err != nil {
+		return err
+	}
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
 	if existing == 0 {
-		// Being in the same Habitica party counts as an invite: without a
-		// code, a newcomer joins their party's world when it has one.
-		party, err := partyWorld(ctx, tx, p.PartyID)
-		if err != nil {
-			return err
-		}
-		if !invited {
-			world = party
+		if world == "" {
+			world = pw
 		}
 		if world == "" {
 			world, err = store.Random()
@@ -450,13 +461,6 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			}
 			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
 				return err
-			}
-			// A new world becomes its creator's party's world, unless the
-			// party already has one (a code sent them to a world of their own).
-			if party == "" {
-				if err = linkParty(ctx, tx, world, p.PartyID); err != nil {
-					return err
-				}
 			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {

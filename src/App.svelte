@@ -675,7 +675,7 @@
   }
 
   /**
-   * Your party plays in another world: say so once (the server remembers it
+   * Your party has a world and you live elsewhere: say so once (the server remembers it
    * was shown; the Menu keeps the offer). Reads need only the session.
    */
   async function checkPartyPrompt(s: Session): Promise<void> {
@@ -704,7 +704,7 @@
    */
   async function afterMove(snapshot: Snapshot, line: string): Promise<void> {
     if (moving) moving.arriving = true
-    else moving = { target: { id: snapshot.worldId, ownerId: '', ownerName: '', members: 0, ownerHere: false, linked: false }, home: false, view: null, arriving: true }
+    else moving = { target: { id: snapshot.worldId, ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, home: false, view: null, arriving: true }
     partyPrompt = null
     const prev = session
     try {
@@ -734,7 +734,8 @@
 
   function onMoved(res: WorldMoveResponse): void {
     const m = moving
-    void afterMove(res, m?.home ? worldCopy.doneHome : worldCopy.done(m?.target.ownerName ?? res.result.world.world.ownerName))
+    const v = res.result.world
+    void afterMove(res, m?.home ? worldCopy.doneHome : worldCopy.done(worldCopy.place(m?.target ?? v.world, m ? true : v.partyHome)))
   }
 
   /** Already in that world (another device moved first): step in. */

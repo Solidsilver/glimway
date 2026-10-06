@@ -132,16 +132,17 @@ export interface InviteList {
 
 // ------------------------------------------------------------- worlds
 
-/** A world as the server names it: its owner and how many live there. */
+/** A world as the server names it: its owner (none for a party's) and how many live there. */
 export interface WorldRef {
   id: string;
+  /** Empty for a party's world. */
   ownerId: string;
   ownerName: string;
   members: number;
   /** The owner lives there. */
   ownerHere: boolean;
-  /** Linked to a party. */
-  linked: boolean;
+  /** A party's world, owned by no one. */
+  party: boolean;
 }
 
 /** What a move would leave behind (GET /api/world). */
@@ -160,22 +161,23 @@ export interface WorldLeaving {
   deedCost: number;
 }
 
-/** GET /api/world: your world, its party link, and the party's world. */
+/** GET /api/world: your world, your party's world, and when you may next move. */
 export interface WorldView {
   world: WorldRef;
   isOwner: boolean;
   /** Your last sign-in reported a party. */
   inParty: boolean;
-  /** This world is linked to a party; `linkedToMine`: to yours. */
-  linked: boolean;
-  linkedToMine: boolean;
-  /** Your party's world, when it is somewhere else. */
+  /** You live in your party's world. */
+  partyHome: boolean;
+  /** Your party's world, when you live somewhere else. */
   partyWorld: WorldRef | null;
   /** A world you own, when you live somewhere else. */
   ownWorld: WorldRef | null;
   /** The party world's join prompt hasn't been shown yet. */
   prompt: boolean;
   leaving: WorldLeaving;
+  /** When the next move is allowed (unix seconds; 0: now). One move a day. */
+  moveOpensAt: number;
 }
 
 /** POST /api/world/move (keyed). */

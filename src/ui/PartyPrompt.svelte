@@ -7,7 +7,7 @@
   import Icon from './Icon.svelte'
 
   /**
-   * Shown once when your party plays in a world that isn't yours. The server
+   * Shown once when your party has a world and you live elsewhere. The server
    * remembers it was shown only once it has really been on screen (this
    * mounting). Never a modal: the world goes on around it.
    */
@@ -22,11 +22,11 @@
 <div class="notice panel" class:touch role="status" aria-live="polite" data-testid="party-prompt">
   <span class="badge" aria-hidden="true"><Icon name="world" size={20} /></span>
   <div class="body">
-    <strong>{worldCopy.prompt(world.ownerName)}</strong>
+    <strong>{worldCopy.prompt(world.members)}</strong>
     <p><span class="who"><Icon name="person" size={11} /> {worldCopy.travelers(world.members, world.ownerName, world.ownerHere)}</span> <span class="note">{worldCopy.promptNote}</span></p>
   </div>
   <div class="actions">
-    <button type="button" class="primary" onclick={onJoin}>{worldCopy.join}</button>
+    <button type="button" class="primary" onclick={onJoin}>{worldCopy.join(world.members)}</button>
     <button type="button" class="ghost" onclick={onLater}>{worldCopy.later}</button>
   </div>
 </div>

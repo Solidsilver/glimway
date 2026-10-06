@@ -10,22 +10,27 @@ import (
 	"net/http"
 )
 
-// Worlds and party links (docs/expansion-design.md "Worlds"). Being in the
-// same Habitica party counts as an invite: a member may move into their
-// party's world (partyWorld), or back to a world they own. The party is read
-// only at sign-in (players.habitica_party_id); leaving a party never moves
-// anyone. A party links one world at a time: linking unlinks the others.
+// Worlds and party worlds (docs/home-server.md "Party worlds and world
+// moves"). A party's world belongs to the party, not a person: owner_id is
+// empty and habitica_party_id names the party, one world per party. The
+// party is read only at sign-in (players.habitica_party_id); leaving a party
+// never moves or removes anyone. A member may move into their party's world
+// or back to a world they own, at most once a day (MoveCooldown).
+
+// MoveCooldown: seconds between one world move and the next.
+const MoveCooldown = 24 * 3600
 
 type worldRef struct {
-	ID        string `json:"id"`
+	ID string `json:"id"`
+	// OwnerID, OwnerName: empty for a party's world.
 	OwnerID   string `json:"ownerId"`
 	OwnerName string `json:"ownerName"`
 	Members   int    `json:"members"`
 	// OwnerHere: the owner lives in this world.
 	OwnerHere bool `json:"ownerHere"`
-	// Linked: linked to a party (any).
-	Linked bool `json:"linked"`
-	party  sql.NullString
+	// Party: a party's world, owned by no one.
+	Party bool `json:"party"`
+	party sql.NullString
 }
 
 // leavingView is what a move would leave behind, for the confirmation screen.
@@ -46,48 +51,78 @@ type leavingView struct {
 
 type worldView struct {
 	World worldRef `json:"world"`
-	// IsOwner: the caller owns this world (and may link or unlink it).
+	// IsOwner: the caller owns this world.
 	IsOwner bool `json:"isOwner"`
 	// InParty: the caller's last sign-in reported a party.
 	InParty bool `json:"inParty"`
-	// Linked: this world is linked to a party; LinkedToMine: the caller's.
-	Linked       bool `json:"linked"`
-	LinkedToMine bool `json:"linkedToMine"`
-	// PartyWorld: the caller's party's world, when that is somewhere else.
+	// PartyHome: this world is the caller's party's world.
+	PartyHome bool `json:"partyHome"`
+	// PartyWorld: the caller's party's world, when they live somewhere else.
 	PartyWorld *worldRef `json:"partyWorld"`
 	// OwnWorld: a world the caller owns, when they live somewhere else.
 	OwnWorld *worldRef `json:"ownWorld"`
 	// Prompt: PartyWorld is set and its join prompt hasn't been shown.
 	Prompt  bool        `json:"prompt"`
 	Leaving leavingView `json:"leaving"`
+	// MoveOpensAt: when the next move is allowed (unix seconds); 0: now.
+	MoveOpensAt int64 `json:"moveOpensAt"`
 }
 
 func loadWorldRef(ctx context.Context, tx *sql.Tx, id string) (worldRef, error) {
 	var w worldRef
 	err := tx.QueryRowContext(ctx, `SELECT w.id,w.owner_id,COALESCE(p.display_name,''),(SELECT count(*) FROM players m WHERE m.world_id=w.id),COALESCE(p.world_id=w.id,0),w.habitica_party_id
  FROM worlds w LEFT JOIN players p ON p.habitica_id=w.owner_id WHERE w.id=?`, id).Scan(&w.ID, &w.OwnerID, &w.OwnerName, &w.Members, &w.OwnerHere, &w.party)
-	w.Linked = w.party.Valid
+	w.Party = w.OwnerID == "" && w.party.Valid
 	return w, err
 }
 
-// partyWorld is the party's world ("" when none): of the worlds linked to
-// it that someone lives in, one whose owner lives there first, then the
-// oldest. An empty world, or one its owner left, never draws newcomers
-// ahead of a lived-in one.
+// partyWorld is the party's world ("" when it has none, or no party).
 func partyWorld(ctx context.Context, tx *sql.Tx, party *string) (string, error) {
 	if party == nil || *party == "" {
 		return "", nil
 	}
 	var id string
-	err := tx.QueryRowContext(ctx, `SELECT w.id FROM worlds w WHERE w.habitica_party_id=? AND EXISTS(SELECT 1 FROM players m WHERE m.world_id=w.id)
- ORDER BY EXISTS(SELECT 1 FROM players o WHERE o.habitica_id=w.owner_id AND o.world_id=w.id) DESC,w.created_at,w.id LIMIT 1`, *party).Scan(&id)
+	err := tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE habitica_party_id=? AND owner_id=''", *party).Scan(&id)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
 	return id, err
 }
 
-func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView, error) {
+// ensurePartyWorld returns the party's world, making it first when the
+// party has none (two members signing in at once still make one: the
+// unique index on habitica_party_id keeps the first).
+func ensurePartyWorld(ctx context.Context, tx *sql.Tx, party *string, now int64) (string, error) {
+	id, err := partyWorld(ctx, tx, party)
+	if id != "" || err != nil || party == nil || *party == "" {
+		return id, err
+	}
+	if id, err = store.Random(); err != nil {
+		return "", err
+	}
+	seed, err := store.Random()
+	if err != nil {
+		return "", err
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES(?,'',?,?,?) ON CONFLICT(habitica_party_id) WHERE owner_id='' AND habitica_party_id IS NOT NULL DO NOTHING", id, seed, *party, now); err != nil {
+		return "", err
+	}
+	return partyWorld(ctx, tx, party)
+}
+
+// moveOpensAt is when the player may next move (0: now).
+func moveOpensAt(ctx context.Context, tx *sql.Tx, id string, now int64) (int64, error) {
+	var last int64
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(created_at),0) FROM ledger WHERE habitica_id=? AND reason='world-move'", id).Scan(&last); err != nil {
+		return 0, err
+	}
+	if last == 0 || now >= last+MoveCooldown {
+		return 0, nil
+	}
+	return last + MoveCooldown, nil
+}
+
+func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (worldView, error) {
 	var v worldView
 	var err error
 	if v.World, err = loadWorldRef(ctx, tx, s.WorldID); err != nil {
@@ -96,12 +131,11 @@ func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView
 	party := s.HabiticaPartyID
 	v.IsOwner = v.World.OwnerID == s.HabiticaID
 	v.InParty = party != nil && *party != ""
-	v.Linked = v.World.party.Valid
-	v.LinkedToMine = v.InParty && v.World.party.String == *party
 	pw, err := partyWorld(ctx, tx, party)
 	if err != nil {
 		return v, err
 	}
+	v.PartyHome = pw != "" && pw == s.WorldID
 	if pw != "" && pw != s.WorldID {
 		ref, err := loadWorldRef(ctx, tx, pw)
 		if err != nil {
@@ -119,12 +153,15 @@ func loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot) (worldView
 	if err != nil && err != sql.ErrNoRows {
 		return v, err
 	}
-	if own != "" && own != pw {
+	if own != "" {
 		ref, err := loadWorldRef(ctx, tx, own)
 		if err != nil {
 			return v, err
 		}
 		v.OwnWorld = &ref
+	}
+	if v.MoveOpensAt, err = moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+		return v, err
 	}
 	v.Leaving, err = leaving(ctx, tx, s)
 	return v, err
@@ -161,47 +198,26 @@ func leaving(ctx context.Context, tx *sql.Tx, s store.Snapshot) (leavingView, er
 	return l, nil
 }
 
-// linkParty links a world to a party, and unlinks that party from every
-// other world: a party has one world. A nil party unlinks.
-func linkParty(ctx context.Context, tx *sql.Tx, world string, party *string) error {
-	if party != nil && *party != "" {
-		if _, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=NULL WHERE habitica_party_id=? AND id!=?", *party, world); err != nil {
-			return err
-		}
-		_, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=? WHERE id=?", *party, world)
-		return err
-	}
-	_, err := tx.ExecContext(ctx, "UPDATE worlds SET habitica_party_id=NULL WHERE id=?", world)
-	return err
-}
-
 func (a *Server) worldRead(w http.ResponseWriter, r *http.Request) error {
 	tx, s, _, err := a.begin(r)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	v, err := loadWorldView(r.Context(), tx, s)
+	v, err := loadWorldView(r.Context(), tx, s, a.Config.Now().Unix())
 	if err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v)
 }
 
-// worldParty links a world the caller owns (theirs where they live, or
-// worldId: one they left) to the party their last sign-in reported, or
-// unlinks it. Linking is exclusive (linkParty). A world setting, like
-// invites: no play lease.
+// worldParty makes the party's world for the party the caller's last
+// sign-in reported, when it has none yet (sign-in makes it too; this is for
+// a session older than that). It moves no one. Session only, no play lease.
 func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Link    *bool  `json:"link"`
-		WorldID string `json:"worldId,omitempty"`
-	}
+	var req struct{}
 	if err := decode(w, r, &req); err != nil {
 		return err
-	}
-	if req.Link == nil || len(req.WorldID) > 128 {
-		return fail(400, "invalid-request")
 	}
 	tx, s, _, err := a.begin(r)
 	if err != nil {
@@ -209,31 +225,14 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	world := s.WorldID
-	if req.WorldID != "" {
-		world = req.WorldID
+	now := a.Config.Now().Unix()
+	if s.HabiticaPartyID == nil || *s.HabiticaPartyID == "" {
+		return fail(409, "no-party")
 	}
-	ref, err := loadWorldRef(ctx, tx, world)
-	if err == sql.ErrNoRows {
-		return fail(404, "world-not-found")
-	}
-	if err != nil {
+	if _, err = ensurePartyWorld(ctx, tx, s.HabiticaPartyID, now); err != nil {
 		return err
 	}
-	if ref.OwnerID != s.HabiticaID {
-		return fail(403, "not-world-owner")
-	}
-	var party *string
-	if *req.Link {
-		if s.HabiticaPartyID == nil || *s.HabiticaPartyID == "" {
-			return fail(409, "no-party")
-		}
-		party = s.HabiticaPartyID
-	}
-	if err = linkParty(ctx, tx, world, party); err != nil {
-		return err
-	}
-	v, err := loadWorldView(ctx, tx, s)
+	v, err := loadWorldView(ctx, tx, s, now)
 	if err != nil {
 		return err
 	}
@@ -264,10 +263,11 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 	if exists == 0 {
 		return fail(404, "world-not-found")
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.HabiticaID, req.WorldID, a.Config.Now().Unix()); err != nil {
+	now := a.Config.Now().Unix()
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.HabiticaID, req.WorldID, now); err != nil {
 		return err
 	}
-	v, err := loadWorldView(ctx, tx, s)
+	v, err := loadWorldView(ctx, tx, s, now)
 	if err != nil {
 		return err
 	}
@@ -311,14 +311,18 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		// Only the party's world counts as an invite, not any world the
-		// party ever linked; a world you own is always yours to go back to.
+		// Your party's world, or a world you own (always yours to go back to).
 		pw, err := partyWorld(ctx, tx, s.HabiticaPartyID)
 		if err != nil {
 			return nil, err
 		}
 		if target.ID != pw && target.OwnerID != s.HabiticaID {
 			return nil, fail(403, "world-access-denied")
+		}
+		if opens, err := moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+			return nil, err
+		} else if opens > 0 {
+			return nil, fail(409, "move-cooldown")
 		}
 		before, err := leaving(ctx, tx, *s)
 		if err != nil {
@@ -382,7 +386,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		mover = s.HabiticaID
-		v, err := loadWorldView(ctx, tx, *s)
+		v, err := loadWorldView(ctx, tx, *s, now)
 		if err != nil {
 			return nil, err
 		}

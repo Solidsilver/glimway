@@ -192,7 +192,10 @@ using `go mod vendor -o /tmp/fingersnap-vendor` and
 
 The backend pre-checks allowlist membership or an eligible unused/unexpired
 invite before creating a limiter bucket or calling Habitica, then rechecks
-access in the transaction. Default limits are four concurrent identity proofs,
+access in the transaction. Once any party world exists, an account the CLI
+hasn't removed also passes the pre-check with neither (its party is only known
+after Habitica answers; see "Party worlds and world moves"), so the login limits
+below are what bound those calls. Default limits are four concurrent identity proofs,
 ten eligible attempts per IPv4 address or IPv6 /64 per minute, and sixty actual
 upstream calls globally per minute (including the single permitted 429 retry).
 Flags are `-login-concurrency`, `-login-rate`, and `-login-global-rate`.
@@ -213,37 +216,50 @@ returned only at creation. Admin CLI invites also expire after 30 days, and are
 under the owner's control rather than the player budget. Invites admit new
 players to the inviter's world and preserve existing players' world membership.
 
-### Party-linked worlds and world moves
+### Party worlds and world moves
 
-Being in the same Habitica party counts as an invite to the party's world;
-the allowlist still decides who may sign in at all. The party id comes from
-the one identity read at sign-in (`players.habitica_party_id`) and is never
-read in between; leaving a party moves no one.
+A Habitica party's world belongs to the party, not to a person: its
+`worlds.owner_id` is empty and `habitica_party_id` names the party. A party has
+at most one (a unique index, migration 023). The party id comes only from the
+identity check at sign-in (`players.habitica_party_id`); the token is never
+stored, and the party is never read in between.
 
-- **The party's world** is one of the worlds linked to the party that someone
-  lives in: one whose owner lives there first, then the oldest. An empty
-  world, or one its owner left, never draws newcomers ahead of a lived-in one.
-- **Linking is exclusive:** a party links one world. Linking a world unlinks
-  the same party from every other world. A new world takes its creator's
-  party only when the party has no world yet (a newcomer an invite code sent
-  to a world of their own doesn't take the link from the party's world).
-- **Owners** link or unlink with `POST /api/world/party {"link": true|false,
-  "worldId"?}` (session only, no lease; linking uses the party from the
-  owner's last sign-in). Without `worldId` it acts on the world they live
-  in; with it, on a world they own and left (the Menu's "Go back…" card).
-- **First sign-in:** a valid invite code decides the world (the one it names,
-  else a new solo world), also for an already allowlisted newcomer, whose code
-  is then used up. Without one, an allowlisted newcomer joins the party's
-  world, or starts one.
-- **Settled players** see `GET /api/world` report their party's world when it
-  isn't theirs, with `prompt: true` until `POST /api/world/prompt {"worldId"}`
-  records that the join prompt was shown (once per player and party world;
-  table `party_prompts`, migration 022). The client sends that only once the
-  prompt is on screen. The offer stays in the Menu.
+- **Made at sign-in.** When a member of a party with no world here signs in
+  (and is let in), the server makes the party's world in the same
+  transaction. Two members signing in at once still make one. A member whose
+  session predates it can ask: `POST /api/world/party {}` (session only, no
+  lease; `no-party` when their last sign-in reported none). Making it moves
+  no one.
+- **Members come in without a code.** A player whose verified party has a
+  world here may sign in with no invite and no allowlist entry; they're added
+  to the allowlist (`added_by` = `party`) and stay on it. Everyone else still
+  needs an invite code or the allowlist. An account removed with
+  `allowlist remove` is not let back in by its party (only `allowlist add`
+  or a CLI code does that). Leaving the Habitica party removes no one.
+- **First sign-in:** a code that names a world decides (also for an already
+  allowlisted newcomer, whose code is then used up). Otherwise a party member
+  lands in the party's world, and a newcomer with no party gets a solo world
+  of their own (theirs alone; it never becomes a party's).
+- **Settled players** see `GET /api/world` report their party's world
+  (`partyWorld`, `party: true`, no owner) when they live elsewhere, with
+  `prompt: true` until `POST /api/world/prompt {"worldId"}` records that the
+  join prompt was shown (once per player and party world; table
+  `party_prompts`). `partyHome` says they live in it. The offer stays in the
+  Menu.
+- **Older person-owned links** (migration 022 let an owner link their world
+  to a party) are cleared by migration 023, with their prompt rows. Those
+  worlds keep working: the owner and everyone living there stay, the owner
+  can always move back to it, and invite codes still lead into it. What they
+  no longer do is count as the party's world: a resident who came by the old
+  link and leaves can't move back in (only its owner can).
 - **Moving:** `POST /api/world/move {worldId, lease, baseRev, key, progress}`
   is one keyed, idempotent transaction under the usual lease and current-
   revision rules.
-  - Allowed targets: the party's world, or a world you own (moving back).
+  - Allowed targets: your party's world, or a world you own (moving back).
+  - **At most one move per 24 hours** (`move-cooldown`), counted from the
+    last `world-move` ledger row. `GET /api/world` (and the move's answer)
+    carries `moveOpensAt`, the unix second the next move is allowed (0: now);
+    the move screen says when the road opens again.
   - Only from the village or the Commons, and only with no goods parcels you
     sent still in transit (`mail-in-flight`: recall them first; a move never
     takes back a gift on its own). A recalled or returned warden-set tool goes
@@ -262,7 +278,8 @@ read in between; leaving a party moves no one.
   - The ledger records a zero-delta `world-move` row (`ref` = `from>to`).
   - A live presence socket is moved to the new world's rooms (the old room
     sees `leave`; a full room sends the mover an empty roster).
-  - A replay with the same key returns the first answer and moves nothing.
+  - A replay with the same key returns the first answer and moves nothing,
+    during the cooldown too.
 
 `invites [player]` prints one JSON metadata record per code, optionally filtered
 by creator, including creator, recipient, world, expiry and revocation timestamps.

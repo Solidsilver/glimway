@@ -629,6 +629,7 @@
       <p class="tiny" class:warn={remember}>{remember ? guideCopy.rememberExposure : guideCopy.rememberOffNote}</p>
 
       {#if canSignIn && !inviteOnly}
+        <p class="party-welcome" data-testid="party-welcome"><Icon name="person" size={12} /> {signInCopy.partyWelcome}</p>
         <details class="invite" bind:open={showInvite}>
           <summary><Icon name="key" size={12} /> {signInCopy.inviteToggle}</summary>
           <label class="field">
@@ -748,6 +749,15 @@
   }
   .fine {
     margin: 0 0 10px;
+  }
+  .party-welcome {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--wood);
   }
   .tiny {
     margin: 4px 0;
