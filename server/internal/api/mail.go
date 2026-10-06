@@ -182,6 +182,12 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if !eligible {
 			return nil, fail(403, "recipient-unavailable")
 		}
+		if err = validAsset(req.Asset); err != nil {
+			return nil, err
+		}
+		if d, ok := content.ItemFor(req.Asset.ID); ok && req.Asset.Kind != "decoration" && !d.Giveable() {
+			return nil, fail(409, "not-giveable")
+		}
 		if err = mailSendLimits(ctx, tx, s.HabiticaID, req.ToID, now, w); err != nil {
 			return nil, err
 		}
@@ -189,11 +195,11 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		ids, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.HabiticaID, ""}, "mail-send", id, now)
+		got, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.HabiticaID, ""}, "mail-send", id, now)
 		if err != nil {
 			return nil, err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,sent_at) VALUES(?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.HabiticaID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(ids), now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.HabiticaID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
 		if err = currency(ctx, tx, s.HabiticaID, "mail:"+req.Asset.Kind+":"+req.Asset.ID, req.Asset.Qty, "mail-send", id, now); err != nil {
@@ -239,10 +245,10 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var v content.Asset
-		var from, world, to, raw string
+		var from, world, to, raw, makers string
 		var claimed, returned sql.NullInt64
 		var sentAt int64
-		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,to_id,kind,item_def,qty,instance_ids,claimed_at,returned_at,sent_at FROM mail WHERE id=?", id).Scan(&world, &from, &to, &v.Kind, &v.ID, &v.Qty, &raw, &claimed, &returned, &sentAt)
+		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,claimed_at,returned_at,sent_at FROM mail WHERE id=?", id).Scan(&world, &from, &to, &v.Kind, &v.ID, &v.Qty, &raw, &makers, &claimed, &returned, &sentAt)
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "mail-not-found")
 		}
@@ -269,11 +275,17 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if senderWorld != world {
 			return nil, fail(403, "world-access-denied")
 		}
-		ids := []string{}
-		if err = json.Unmarshal([]byte(raw), &ids); err != nil {
+		got := moved{}
+		if err = json.Unmarshal([]byte(raw), &got.IDs); err != nil {
 			return nil, err
 		}
-		if err = giveAsset(ctx, tx, s, v, ids, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
+		if err = json.Unmarshal([]byte(makers), &got.Makers); err != nil {
+			return nil, err
+		}
+		if v.Kind == "instance" && len(got.IDs) == 1 {
+			v.Instance = got.IDs[0]
+		}
+		if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
 			return nil, err
 		}
 		if err = currency(ctx, tx, from, "mail:"+v.Kind+":"+v.ID, -v.Qty, "mail-claim", id, now); err != nil {

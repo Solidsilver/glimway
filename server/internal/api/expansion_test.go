@@ -567,7 +567,7 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 			t.Fatal("relight replay")
 		}
 	}
-	if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='bob' AND material='amber'") != limit*content.Rules.WildsLimits.LanternReward.Qty {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def='amber'") != limit*content.Rules.WildsLimits.LanternReward.Qty {
 		t.Fatal("relight balance")
 	}
 	if count(t, x.db, "SELECT sum(qty) FROM lantern_rewards WHERE habitica_id='bob'") != limit {
@@ -659,7 +659,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	}
 	unchanged(t, s.Snapshot, rs)
 	tx.Rollback()
-	for _, table := range []string{"homesteads", "homestead_members", "player_deeds", "homestead_items", "materials", "region_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "lantern_creations", "claim_rate", "ledger", "idempotency"} {
+	for _, table := range []string{"homesteads", "homestead_members", "player_deeds", "homestead_items", "item_stacks", "region_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "lantern_creations", "claim_rate", "ledger", "idempotency"} {
 		if count(t, x.db, "SELECT count(*) FROM "+table) != count(t, restored, "SELECT count(*) FROM "+table) {
 			t.Fatal("backup", table)
 		}

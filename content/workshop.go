@@ -6,10 +6,16 @@ import (
 	"slices"
 )
 
+// Asset is goods on the move (mail, chests, gifts, crafting output). Kind
+// is "material", "item" (any other stack), "decoration" (a home good) or
+// "instance" (one tool, off-hand item, carry gear or fitting, by Instance).
+// Maker picks one maker's stack ("" = unmarked); nil takes any, unmarked first.
 type Asset struct {
-	Kind string `json:"kind"`
-	ID   string `json:"id"`
-	Qty  int    `json:"qty"`
+	Kind     string  `json:"kind"`
+	ID       string  `json:"id"`
+	Qty      int     `json:"qty"`
+	Instance string  `json:"instance,omitempty"`
+	Maker    *string `json:"maker,omitempty"`
 }
 type UtilityItem struct {
 	ID   string `json:"id"`
@@ -61,27 +67,34 @@ func ValidMaterialCosts(costs map[string]int) bool {
 }
 func ValidateCrafting(c Crafting) error {
 	bad := fmt.Errorf("invalid crafting")
-	if len(c.Recipes) == 0 || len(c.Recipes) > 20 || len(c.UtilityItems) == 0 {
+	if len(c.Recipes) == 0 || len(c.Recipes) > 60 || len(c.UtilityItems) == 0 {
 		return bad
 	}
 	items := map[string]bool{}
 	recipes := map[string]bool{}
 	for _, i := range c.UtilityItems {
-		if !ValidContentID(i.ID) || i.Name == "" || items[i.ID] || slices.Contains(WildsRules.Trinkets, i.ID) {
+		d, ok := ItemFor(i.ID)
+		if !ValidContentID(i.ID) || i.Name == "" || items[i.ID] || !ok || d.Kind != "part" || d.Name != i.Name {
 			return bad
 		}
 		items[i.ID] = true
 	}
 	for _, r := range c.Recipes {
-		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 2 || !ValidMaterialCosts(r.Materials) || r.Output.Qty < 1 || r.Output.Qty > 100 {
+		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 2 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 {
 			return bad
 		}
-		if r.Output.Kind == "decoration" {
+		switch r.Output.Kind {
+		case "decoration":
 			d, ok := HomeItemFor(r.Output.ID)
 			if !ok || d.MinTier > r.MinTier {
 				return bad
 			}
-		} else if r.Output.Kind != "item" || !items[r.Output.ID] {
+		case "item", "instance":
+			d, ok := ItemFor(r.Output.ID)
+			if !ok || d.AssetKind() != r.Output.Kind || (r.Output.Kind == "instance" && r.Output.Qty != 1) {
+				return bad
+			}
+		default:
 			return bad
 		}
 		recipes[r.ID] = true
@@ -108,16 +121,11 @@ var CraftingRules = func() Crafting {
 	return c
 }()
 
+// KnownAdventureItem: a carried stack that isn't a material (keepsakes,
+// parts, consumables, seeds).
 func KnownAdventureItem(id string) bool {
-	if slices.Contains(WildsRules.Trinkets, id) {
-		return true
-	}
-	for _, v := range CraftingRules.UtilityItems {
-		if v.ID == id {
-			return true
-		}
-	}
-	return false
+	d, ok := ItemFor(id)
+	return ok && d.AssetKind() == "item"
 }
 func RecipeFor(id string) (Recipe, bool) {
 	for _, r := range CraftingRules.Recipes {

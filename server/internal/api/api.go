@@ -103,7 +103,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -122,6 +122,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/wilds/") {
 		route = "/api/wilds/:action"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/items/") {
+		route = "/api/items/:action"
 	}
 	defer func() {
 		class := "none"
@@ -191,6 +194,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.homeMutation(w, r)
 	case "POST /api/spend":
 		err = a.spend(w, r)
+	case "GET /api/items":
+		err = a.itemsRead(w, r)
+	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
+		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup":
+		err = a.itemsMutation(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
 			if strings.HasSuffix(r.URL.Path, "/recall") {
@@ -835,7 +843,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 		outcome = "lit:" + req.Target
 	case "chest":
 		outcome = "opened:" + rules.E.ChestID
-		if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO inventory VALUES(?,?,1)", s.HabiticaID, rules.E.CharmItem); err != nil {
+		if err = grantOnce(ctx, tx, s.HabiticaID, rules.E.CharmItem, "chest-charm", now); err != nil {
 			return err
 		}
 	}
@@ -961,7 +969,7 @@ func (a *Server) origin(w http.ResponseWriter, r *http.Request) error {
 		}
 		charm := slices.Contains(owned.Inventory, rules.E.CharmItem) || slices.Contains(owned.Flags, "opened:"+rules.E.ChestID)
 		if charm {
-			if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO inventory VALUES(?,?,1)", s.HabiticaID, rules.E.CharmItem); err != nil {
+			if err = grantOnce(ctx, tx, s.HabiticaID, rules.E.CharmItem, "migration-charm", now); err != nil {
 				return err
 			}
 			if _, err = store.Outcome(ctx, tx, s.HabiticaID, "owned:"+rules.E.CharmItem, "migration", now); err != nil {

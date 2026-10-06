@@ -174,7 +174,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   test.setTimeout(process.env.SCREENS ? 300_000 : 180_000)
   const a = await freshPlayer(page, 'Tansy')
   await claim(page)
-  fund(a, { materials: { timber: 10 }, items: { 'tin-whistle': 1 } })
+  fund(a, { materials: { timber: 10 }, items: { 'river-glass-bead': 1 } })
   const created = await page.request.post('/api/invites', { data: {} })
   const code = (await created.json()).code as string
 
@@ -200,21 +200,21 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await shot(page, 'mailbox-send-desktop')
   await mail.getByTestId('mail-send').click()
   await expect(mail.locator('.msg.ok')).toContainText('Sent 3 timber to Bram')
-  // And the whistle, which she then takes back.
-  await mail.locator('[data-pick="item:tin-whistle"]').click()
+  // And a river-glass bead (story keepsakes like Joss's whistle stay with you), which she then takes back.
+  await mail.locator('[data-pick="item:river-glass-bead"]').click()
   await mail.getByTestId('mail-send').click()
-  await expect(mail.locator('.msg.ok')).toContainText('Sent a Tin Whistle')
+  await expect(mail.locator('.msg.ok')).toContainText('Sent a River Glass Bead')
   await mail.getByRole('tab', { name: 'Your mail' }).click()
   await expect(mail.locator('[data-sent]')).toHaveCount(2)
-  const whistle = mail.locator('[data-sent]', { hasText: 'Tin Whistle' })
-  await whistle.getByRole('button', { name: 'Recall' }).click()
-  await expect(mail.locator('.msg.ok')).toContainText('A Tin Whistle came back to you')
+  const bead = mail.locator('[data-sent]', { hasText: 'River Glass Bead' })
+  await bead.getByRole('button', { name: 'Recall' }).click()
+  await expect(mail.locator('.msg.ok')).toContainText('A River Glass Bead came back to you')
   const back = await (await page.request.get('/api/mail')).json()
-  expect(back.inventory.items['tin-whistle']).toBe(1)
-  expect(back.mail.find((m: { asset: { id: string } }) => m.asset.id === 'tin-whistle').returnReason).toBe('recalled')
+  expect(back.inventory.items['river-glass-bead']).toBe(1)
+  expect(back.mail.find((m: { asset: { id: string } }) => m.asset.id === 'river-glass-bead').returnReason).toBe('recalled')
   await expect(mail.locator('[data-sent]')).toHaveCount(1)
   await mail.locator('summary').click()
-  await expect(mail.locator('.history')).toContainText('Tin Whistle · recalled')
+  await expect(mail.locator('.history')).toContainText('River Glass Bead · recalled')
   await page.keyboard.press('Escape')
 
   // Bram's flag is up; he collects the timber.

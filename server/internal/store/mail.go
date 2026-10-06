@@ -12,10 +12,10 @@ import (
 // Explicit recalls use the keyed mutation's Persist; unattended returns bump
 // the sender's revision here without rewriting their progress or last-seen time.
 func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, bumpRevision bool) (bool, error) {
-	var sender, kind, def, raw string
+	var sender, kind, def, raw, makers string
 	var qty int
 	var claimed, returned sql.NullInt64
-	err := tx.QueryRowContext(ctx, "SELECT from_id,kind,item_def,qty,instance_ids,claimed_at,returned_at FROM mail WHERE id=?", id).Scan(&sender, &kind, &def, &qty, &raw, &claimed, &returned)
+	err := tx.QueryRowContext(ctx, "SELECT from_id,kind,item_def,qty,instance_ids,makers,claimed_at,returned_at FROM mail WHERE id=?", id).Scan(&sender, &kind, &def, &qty, &raw, &makers, &claimed, &returned)
 	if err != nil {
 		return false, err
 	}
@@ -30,12 +30,27 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if err != nil || n != 1 {
 		return false, err
 	}
+	pack := kind + ":" + def
 	switch kind {
-	case "material":
-		_, err = tx.ExecContext(ctx, "INSERT INTO materials VALUES(?,?,?) ON CONFLICT(habitica_id,material) DO UPDATE SET qty=qty+excluded.qty", sender, def, qty)
-	case "item":
-		_, err = tx.ExecContext(ctx, "INSERT INTO inventory VALUES(?,?,?) ON CONFLICT(habitica_id,item_def) DO UPDATE SET qty=qty+excluded.qty", sender, def, qty)
-	case "decoration":
+	case "material", "item":
+		var split []struct {
+			Maker string `json:"maker"`
+			Qty   int    `json:"qty"`
+		}
+		if err = json.Unmarshal([]byte(makers), &split); err != nil {
+			return false, err
+		}
+		total := 0
+		for _, m := range split {
+			total += m.Qty
+			if _, err = tx.ExecContext(ctx, "INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('pack',?,?,?,?) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=qty+excluded.qty", sender, def, m.Maker, m.Qty); err != nil {
+				return false, err
+			}
+		}
+		if total != qty {
+			return false, fmt.Errorf("invalid mail makers")
+		}
+	case "decoration", "instance":
 		var ids []string
 		if err = json.Unmarshal([]byte(raw), &ids); err != nil {
 			return false, err
@@ -43,8 +58,14 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		if len(ids) != qty {
 			return false, fmt.Errorf("invalid mail instances")
 		}
+		q := "UPDATE homestead_items SET location='inventory' WHERE id=? AND habitica_id=? AND item_def=? AND location='mail' AND scene IS NULL"
+		if kind == "instance" {
+			// A parcelled instance goes back into its sender's pack.
+			q = "UPDATE item_instances SET location='pack' WHERE id=? AND owner=? AND item_def=? AND location='mail'"
+			pack = content.StackCurrency(def)
+		}
 		for _, instance := range ids {
-			result, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='inventory' WHERE id=? AND habitica_id=? AND item_def=? AND location='mail' AND scene IS NULL", instance, sender, def)
+			result, err = tx.ExecContext(ctx, q, instance, sender, def)
 			if err != nil {
 				return false, err
 			}
@@ -59,9 +80,6 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	default:
 		return false, fmt.Errorf("invalid mail asset")
 	}
-	if err != nil {
-		return false, err
-	}
 	ledgerReason := "mail-return"
 	if reason == "recalled" {
 		ledgerReason = "mail-recall"
@@ -69,7 +87,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	for _, delta := range []struct {
 		currency string
 		amount   int
-	}{{kind + ":" + def, qty}, {"mail:" + kind + ":" + def, -qty}} {
+	}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
 		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
 			return false, err
 		}

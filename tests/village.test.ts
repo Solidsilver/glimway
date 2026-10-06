@@ -10,6 +10,7 @@ import {
   contributionLimits,
   mailBuckets,
   movableAssets,
+  assetKey,
   nextFestival,
   ordinal,
   settledLine,
@@ -75,15 +76,19 @@ test('recipes: batches the pack pays for, capped at the server’s 100', () => {
 });
 
 test('pack decorations can move (placed ones belong to the homestead); materials list first', () => {
-  const counts = { materials: { timber: 4, stone: 0 }, items: { 'tin-whistle': 1 }, decorations: { 'wooden-stool': 1, 'potted-fern': 0 } };
+  const counts = { materials: { timber: 4, stone: 0 }, items: { 'tin-whistle': 1, 'river-glass-bead': 2 }, decorations: { 'wooden-stool': 1, 'potted-fern': 0 } };
   assert.deepEqual(movableAssets(counts), [
     { kind: 'material', id: 'timber', qty: 4 },
-    { kind: 'item', id: 'tin-whistle', qty: 1 },
+    { kind: 'item', id: 'river-glass-bead', qty: 2 },
     { kind: 'decoration', id: 'wooden-stool', qty: 1 },
-  ]);
+  ], "Joss's whistle is a story keepsake: it stays with you");
   assert.equal(assetPhrase({ kind: 'item', id: 'tin-whistle', qty: 1 }), 'a Tin Whistle');
   assert.equal(assetPhrase({ kind: 'material', id: 'timber', qty: 12 }), '12 timber');
   assert.equal(assetPhrase({ kind: 'decoration', id: 'wooden-stool', qty: 2 }), '2 Wooden Stools');
+  // Tools go one by one, by their own id; heirlooms stay.
+  const inst = (id: string, itemDef: string) => ({ id, itemDef, condition: 9, maxCondition: 90, usesLeft: 3, state: 'worn' as const, wardenSet: false, fittings: [], maker: null });
+  const tools = movableAssets({ materials: {}, items: {}, decorations: {}, instances: [inst('a', 'bench-axe'), inst('b', 'bench-axe'), inst('c', 'brack-felling-axe')] });
+  assert.deepEqual(tools.map((t) => assetKey(t)), ['instance:bench-axe:a', 'instance:bench-axe:b']);
 });
 
 test('the mailbox sorts waiting, outgoing (recallable) and settled mail', () => {

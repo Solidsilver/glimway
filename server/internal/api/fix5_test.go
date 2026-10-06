@@ -61,7 +61,7 @@ func TestFix5MailRecallConservesAndReplays(t *testing.T) {
 	req := body(s, "recall", nil)
 	returned := x.p5("POST", path, req, c, 200)
 	s.Snapshot = returned.Snapshot
-	if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 {
 		t.Fatal("recall lost assets")
 	}
 	replay := x.p5("POST", path, req, c, 200)
@@ -95,11 +95,11 @@ func TestFix5MailAutoReturns(t *testing.T) {
 				}
 			}
 			read := x.p5("GET", "/api/mail", nil, c, 200)
-			if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 || read.Rev <= sent.Rev {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 || read.Rev <= sent.Rev {
 				t.Fatal("automatic return did not restore goods/revision")
 			}
 			x.p5("GET", "/api/mail", nil, c, 200)
-			if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='timber'") != 1000 {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 {
 				t.Fatal("automatic return paid twice")
 			}
 		})
@@ -148,7 +148,7 @@ func TestFix5MailOutstandingCaps(t *testing.T) {
 				seedFix5Mail(t, x, s.WorldID, "carol", "bob", 50, false)
 			}
 			v := x.p5("POST", "/api/mail", body(s, "full", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 409)
-			if v.Error.Code != "mail-"+cap+"-limit" || count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM mail") != 50 {
+			if v.Error.Code != "mail-"+cap+"-limit" || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM mail") != 50 {
 				t.Fatal("mail capacity not enforced")
 			}
 		})
@@ -255,7 +255,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 			crafted := x.p5("POST", "/api/craft", body(s, "chair", map[string]any{"recipeId": "craft-reading-chair", "qty": 1}), c, 200)
 			s.Snapshot = crafted.Snapshot
 			instance := crafted.Result.InstanceIDs[0]
-			trinket := content.WildsRules.Trinkets[0]
+			trinket := giftTrinket
 			for i, asset := range []content.Asset{{Kind: "item", ID: trinket, Qty: 5}, {Kind: "decoration", ID: "reading-chair", Qty: 1}} {
 				sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": "bob", "asset": asset}), c, 200)
 				s.Snapshot = sent.Snapshot
@@ -278,7 +278,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 				}
 			}
 			read := x.p5("GET", "/api/mail", nil, c, 200)
-			if !slices.Contains(read.State.Inventory, trinket) || count(t, x.db, "SELECT qty FROM inventory WHERE habitica_id='alice' AND item_def=?", trinket) != 5 || count(t, x.db, "SELECT COUNT(*) FROM homestead_items WHERE id=? AND habitica_id='alice' AND location='inventory'", instance) != 1 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 2 {
+			if !slices.Contains(read.State.Inventory, trinket) || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def=?", trinket) != 5 || count(t, x.db, "SELECT COUNT(*) FROM homestead_items WHERE id=? AND habitica_id='alice' AND location='inventory'", instance) != 1 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 2 {
 				t.Fatal("return changed instance or inventory identity")
 			}
 			for _, mail := range read.Mail {
@@ -324,7 +324,7 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 					t.Fatal("failed removal revoked recipient")
 				}
 			}
-			if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='timber'") != 950 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 0 || count(t, x.db, "SELECT COUNT(*) FROM ledger WHERE reason IN ('mail-recall','mail-return')") != 0 || count(t, x.db, "SELECT COUNT(*) FROM idempotency WHERE key='recall'") != 0 {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 950 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 0 || count(t, x.db, "SELECT COUNT(*) FROM ledger WHERE reason IN ('mail-recall','mail-return')") != 0 || count(t, x.db, "SELECT COUNT(*) FROM idempotency WHERE key='recall'") != 0 {
 				t.Fatal("return partly committed")
 			}
 			unchanged(t, s.Snapshot, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
@@ -359,7 +359,7 @@ func TestFix5MailRecallRacesClaim(t *testing.T) {
 	if !slices.Equal(statuses, []int{200, 409}) {
 		t.Fatal("claim/recall race", statuses)
 	}
-	if count(t, x.db, "SELECT SUM(qty) FROM materials WHERE material='stone'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:stone'") != 0 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE claimed_at IS NOT NULL OR returned_at IS NOT NULL") != 1 {
+	if count(t, x.db, "SELECT SUM(qty) FROM item_stacks WHERE location='pack' AND item_def='stone'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:stone'") != 0 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE claimed_at IS NOT NULL OR returned_at IS NOT NULL") != 1 {
 		t.Fatal("double settlement")
 	}
 }
@@ -443,7 +443,7 @@ func TestFix5MailExpiryBoundaryAndMaintenance(t *testing.T) {
 	for count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") == 0 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
-	if count(t, x.db, "SELECT qty FROM materials WHERE habitica_id='alice' AND material='fiber'") != 1000 || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'") != int(sent.Rev)+1 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='fiber'") != 1000 || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'") != int(sent.Rev)+1 {
 		t.Fatal("unattended maintenance failed")
 	}
 }

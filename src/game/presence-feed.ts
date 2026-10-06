@@ -94,7 +94,8 @@ export class PresenceFeed {
         emote: (id, emote) => {
           const p = this.peers.get(id)
           if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { habiticaId: id, id: emote } satisfies EmotePayload)
-        }
+        },
+        gift: (g) => this.bus.emit(EV.gift, g)
       }
     })
     this.bus.on(EV.link, this.onLink)
@@ -149,6 +150,19 @@ export class PresenceFeed {
         continue
       }
       if (p.area === area) out.push(p)
+    }
+    return out
+  }
+
+  /** Players here now, standing within radius px of (x, y): who you could hand something to. */
+  nearby(x: number, y: number, radius: number): { habiticaId: string; displayName: string }[] {
+    if (!this.area) return []
+    const t = this.now()
+    const out: { habiticaId: string; displayName: string }[] = []
+    for (const p of this.peers.values()) {
+      if (p.leftAt !== null || p.area !== this.area) continue
+      const at = p.track.at(t)
+      if (at && Math.hypot(at.x - x, at.y - y) <= radius) out.push({ habiticaId: p.habiticaId, displayName: p.displayName })
     }
     return out
   }

@@ -54,6 +54,8 @@ export interface PresenceHandlers {
   leave?(habiticaId: string): void;
   pos?(habiticaId: string, pos: PresencePosition): void;
   emote?(habiticaId: string, id: string): void;
+  /** Someone standing by you handed you something (the server says who and what). */
+  gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
 }
 
 export interface Timers {
@@ -356,6 +358,11 @@ export class PresenceClient {
         break;
       case 'emote':
         if (typeof m.habiticaId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.habiticaId, m.id);
+        break;
+      case 'gift':
+        if (typeof m.fromName === 'string' && typeof m.itemDef === 'string' && typeof m.kind === 'string' && Number.isInteger(m.qty) && m.qty > 0) {
+          this.handlers.gift?.({ fromName: m.fromName.slice(0, 80), kind: m.kind, itemDef: m.itemDef, qty: m.qty });
+        }
         break;
     }
   }

@@ -8,6 +8,7 @@
 import { CALENDAR, calendarAt, type CalendarDay } from './calendar.ts';
 import { HOMESTEAD_DATA, homeItem } from './homestead.ts';
 import { CRAFTING, PROJECTS, type Recipe } from './workshop.ts';
+import { giveable, itemDef, itemName } from './items.ts';
 import type { Asset, AssetCounts, Mail, ProjectView } from './api/types.ts';
 
 export type { CalendarDay };
@@ -77,6 +78,7 @@ export function emptyCounts(): AssetCounts {
 
 export function countOf(c: AssetCounts | null | undefined, kind: Asset['kind'], id: string): number {
   if (!c) return 0;
+  if (kind === 'instance') return (c.instances ?? []).filter((i) => i.itemDef === id).length;
   const map = kind === 'material' ? c.materials : kind === 'item' ? c.items : c.decorations;
   return map[id] ?? 0;
 }
@@ -91,13 +93,27 @@ export function movableDecorations(c: AssetCounts | null | undefined): Record<st
   return out;
 }
 
-/** Everything you could send or store, as a flat list (materials first). */
+/**
+ * Everything you could send, as a flat list (materials first): stacks, home
+ * goods, and tools one by one. Heirlooms and story keepsakes stay with you.
+ */
 export function movableAssets(c: AssetCounts | null | undefined): Asset[] {
   const out: Asset[] = [];
-  for (const id of MATERIAL_IDS) if (countOf(c, 'material', id) > 0) out.push({ kind: 'material', id, qty: countOf(c, 'material', id) });
-  for (const [id, n] of Object.entries(c?.items ?? {}).sort()) if (n > 0) out.push({ kind: 'item', id, qty: n });
+  const sendable = (id: string) => {
+    const d = itemDef(id);
+    return !d || giveable(d);
+  };
+  const more = Object.keys(c?.materials ?? {}).filter((m) => !(MATERIAL_IDS as readonly string[]).includes(m)).sort();
+  for (const id of [...MATERIAL_IDS, ...more]) if (countOf(c, 'material', id) > 0) out.push({ kind: 'material', id, qty: countOf(c, 'material', id) });
+  for (const [id, n] of Object.entries(c?.items ?? {}).sort()) if (n > 0 && sendable(id)) out.push({ kind: 'item', id, qty: n });
   for (const [id, n] of Object.entries(movableDecorations(c)).sort()) out.push({ kind: 'decoration', id, qty: n });
+  for (const i of c?.instances ?? []) if (sendable(i.itemDef)) out.push({ kind: 'instance', id: i.itemDef, qty: 1, instance: i.id });
   return out;
+}
+
+/** A stable key for one choice in a goods list (instances by their own id). */
+export function assetKey(a: Pick<Asset, 'kind' | 'id' | 'instance'>): string {
+  return a.instance ? `${a.kind}:${a.id}:${a.instance}` : `${a.kind}:${a.id}`;
 }
 
 // ------------------------------------------------------------ projects
@@ -179,20 +195,9 @@ export const RECIPES = CRAFTING.recipes;
 
 // ------------------------------------------------------------ names
 
-const MATERIAL_NAMES: Record<string, string> = { timber: 'Timber', stone: 'Stone', fiber: 'Fiber', amber: 'Amber' };
-const ITEM_NAMES: Record<string, string> = {
-  'whittled-fox': 'Whittled Fox',
-  'beeswax-candle': 'Beeswax Candle',
-  'river-glass-bead': 'River Glass Bead',
-  'spare-bootlace': 'Spare Bootlace',
-  'tin-whistle': 'Tin Whistle',
-  ...Object.fromEntries(CRAFTING.utilityItems.map((u) => [u.id, u.name])),
-};
-
 export function assetName(a: Pick<Asset, 'kind' | 'id'>): string {
-  if (a.kind === 'material') return MATERIAL_NAMES[a.id] ?? a.id;
-  if (a.kind === 'item') return ITEM_NAMES[a.id] ?? a.id.replace(/-/g, ' ');
-  return homeItem(a.id)?.name ?? a.id;
+  if (a.kind === 'decoration') return homeItem(a.id)?.name ?? a.id;
+  return itemName(a.id);
 }
 
 /** "12 timber", "a Whittled Fox", "2 Wooden Stools". */
@@ -204,7 +209,7 @@ export function assetPhrase(a: Asset): string {
 }
 
 export function costPhrase(cost: Record<string, number>): string {
-  return Object.entries(cost).map(([m, n]) => `${n} ${(MATERIAL_NAMES[m] ?? m).toLowerCase()}`).join(', ');
+  return Object.entries(cost).map(([m, n]) => `${n} ${itemName(m).toLowerCase()}`).join(', ');
 }
 
 // ------------------------------------------------------------ mail

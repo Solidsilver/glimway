@@ -186,18 +186,38 @@ export async function throughGate(page: Page, gate: number): Promise<void> {
 
 
 /**
- * Test-only lever: put Wilds goods straight into a player's pack in the e2e
- * database (the Wilds client isn't on this branch, so nothing gathers them).
- * The server reads balances from these tables on every request.
+ * Test-only lever: put goods straight into a player's pack in the e2e
+ * database (nothing in the client gathers them yet). The server reads
+ * balances from the item tables on every request. Materials and items are
+ * unmarked stacks unless a maker is given.
  */
-export function fund(id: string, goods: { materials?: Record<string, number>; items?: Record<string, number> }): void {
+export function fund(id: string, goods: { materials?: Record<string, number>; items?: Record<string, number>; maker?: string; personal?: Record<string, number> }): void {
   const esc = (v: string) => v.replace(/'/g, "''")
+  const maker = esc(goods.maker ?? '')
   const sql: string[] = []
-  for (const [m, n] of Object.entries(goods.materials ?? {}))
-    sql.push(`INSERT INTO materials(habitica_id,material,qty) VALUES('${esc(id)}','${esc(m)}',${n}) ON CONFLICT(habitica_id,material) DO UPDATE SET qty=excluded.qty;`)
-  for (const [i, n] of Object.entries(goods.items ?? {}))
-    sql.push(`INSERT INTO inventory VALUES('${esc(id)}','${esc(i)}',${n}) ON CONFLICT(habitica_id,item_def) DO UPDATE SET qty=excluded.qty;`)
+  const put = (location: string, def: string, n: number, by: string) =>
+    sql.push(`INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('${location}','${esc(id)}','${esc(def)}','${by}',${n}) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=excluded.qty;`)
+  for (const [m, n] of Object.entries(goods.materials ?? {})) put('pack', m, n, '')
+  for (const [i, n] of Object.entries(goods.items ?? {})) put('pack', i, n, maker)
+  for (const [i, n] of Object.entries(goods.personal ?? {})) put('personal', i, n, '')
   execFileSync('sqlite3', ['-cmd', '.timeout 5000', '.e2e-server/fingersnap.sqlite', sql.join('\n')])
+}
+
+/**
+ * Test-only lever: one tool (or other instance) straight into a pack, with
+ * `uses` uses left (full when omitted). Story heirlooms have no gameplay
+ * source yet. Returns the instance id.
+ */
+export function giveInstance(id: string, def: string, opts: { uses?: number; max: number; maker?: string }): string {
+  const instance = `${def}-${Math.random().toString(36).slice(2, 10)}`
+  const condition = opts.uses === undefined ? opts.max : opts.uses * 3
+  execFileSync('sqlite3', [
+    '-cmd',
+    '.timeout 5000',
+    '.e2e-server/fingersnap.sqlite',
+    `INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${id.replace(/'/g, "''")}',${condition},${opts.max},'${opts.maker ?? ''}',0);`
+  ])
+  return instance
 }
 
 /** Three syncs: the welcome, then two big Habitica days (enough embers for a workshop). */

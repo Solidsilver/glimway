@@ -34,5 +34,6 @@ export type PresenceServerMessage =
   | { type: 'join'; area: string; player: PresencePlayer }
   | { type: 'leave'; habiticaId: string }
   | ({ type: 'pos'; habiticaId: string } & PresencePosition)
-  | { type: 'emote'; habiticaId: string; id: string };
+  | { type: 'emote'; habiticaId: string; id: string }
+  | { type: 'gift'; fromName: string; kind: string; itemDef: string; qty: number };
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004 } as const;

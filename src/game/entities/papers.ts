@@ -16,6 +16,7 @@ import { commonsAnim } from '../commons-pass'
 import type { InteractId, WorldData } from '../worlds'
 import type { Effects } from './fx'
 import { emitPapers, grantPaper, PAPER_EV } from '../papers'
+import { itemsFor } from '../items'
 import type { QuestStage } from '../../lib/state'
 
 export interface PaperDeps {
@@ -161,6 +162,11 @@ const LOOK_TEXTURE: Record<PickupLook, string> = {
 
 // ------------------------------------------------------------ pickups
 
+/** Papers glint brighter while a pocketed keepsake says so (worlds only). */
+export function papersGlintBright(session: Session): boolean {
+  return !!session.link && itemsFor(session).helps('papers-glint')
+}
+
 export class PaperPickups {
   private pickups = new Map<string, Pickup>()
   /** Paper an NPC is handing over in the open conversation (granted on close). */
@@ -252,8 +258,10 @@ export class PaperPickups {
         // A gentle glint every few seconds, staggered so pickups never pulse in step.
         const glint = () => {
           if (!twinkle.active) return
+          // A keepsake in a pocket (Hollis's fox) makes papers glint brighter.
+          const bright = papersGlintBright(session)
           twinkle.setPosition(x + Math.round((Math.random() - 0.5) * 8), y - 6 - Math.round(Math.random() * 5))
-          this.scene.tweens.add({ targets: twinkle, alpha: { from: 0, to: 1 }, scale: { from: 0.4, to: 1.1 }, duration: 260, yoyo: true, ease: 'Sine.easeOut' })
+          this.scene.tweens.add({ targets: twinkle, alpha: { from: 0, to: 1 }, scale: { from: 0.4, to: bright ? 1.7 : 1.1 }, duration: bright ? 420 : 260, yoyo: true, ease: 'Sine.easeOut' })
         }
         timer = this.scene.time.addEvent({ delay: 2200 + Math.floor(Math.random() * 900), loop: true, startAt: Math.floor(Math.random() * 1800), callback: glint })
       }

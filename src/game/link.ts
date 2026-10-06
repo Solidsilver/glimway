@@ -37,7 +37,7 @@ import {
   type MergeMode
 } from '../lib/api/progress.ts'
 import { idbLinkStore, type ConnectedCache, type LinkStore } from '../lib/api/cache.ts'
-import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeView, CommonsResponse, Snapshot, SpendRequest, SyncResponse, Progress, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, SpendRequest, SyncResponse, Progress, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
@@ -69,6 +69,7 @@ export type MutationOp =
   | { kind: 'mail-claim'; id: string; fields?: Record<string, unknown> }
   | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
   | { kind: 'contribute'; id: string; fields: Record<string, unknown> }
+  | { kind: 'items'; op: ItemsOp; fields: Record<string, unknown> }
 
 /** A mutation sent whose answer never came: the exact body, key and all. */
 export interface Unresolved {
@@ -121,6 +122,8 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.mailRecall(op.id, req)
     case 'contribute':
       return raw.contribute(op.id, req)
+    case 'items':
+      return raw.itemAction(op.op, req)
   }
 }
 

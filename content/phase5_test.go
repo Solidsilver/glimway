@@ -73,7 +73,7 @@ func TestCalendarBoundariesAndFestivals(t *testing.T) {
 }
 func TestPhase5ContentValidation(t *testing.T) {
 	c, err := LoadCrafting()
-	if err != nil || len(c.Recipes) != 10 {
+	if err != nil || len(c.Recipes) != 20 {
 		t.Fatal("recipes", err)
 	}
 	p, err := LoadProjects()

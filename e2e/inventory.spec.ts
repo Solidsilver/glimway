@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { beginNewJourney, waitForArea } from './helpers'
-import { freshPlayer, fund, myHome, shot } from './home-helpers'
+import { claimDeed, earnEmbers, freshPlayer, fund, myHome, shot } from './home-helpers'
 
 /**
  * The inventory panel (I, or the HUD's bag): tools, supplies, keepsakes,
@@ -149,18 +149,20 @@ test.describe('connected', () => {
 
   test('in a world the inventory shows server counts and your home goods, placed and stored', async ({ page }) => {
     const id = await freshPlayer(page)
+    // Homesteads v2: a home is a deed you claim from Silas.
+    await earnEmbers(page, id)
+    await claimDeed(page)
     const plot = await myHome(page, id)
     expect(plot).toBeTruthy()
     fund(id, { materials: { timber: 12, stone: 3 }, items: { 'river-glass-bead': 2, 'wooden-peg': 5 } })
-    // Two stools (one set out, one put away) and a fern in storage.
+    // Two stools (one set out, one put away in your pack) and a fern put away.
+    const home = `(SELECT homestead_id FROM homestead_members WHERE habitica_id='${id}')`
     execFileSync('sqlite3', [
       '-cmd',
       '.timeout 5000',
       '.e2e-server/fingersnap.sqlite',
-      'INSERT INTO homestead_items(id,habitica_id,item_def,scene,x,y,rotation) VALUES' +
-        `('inv-a','${id}','wooden-stool','outdoor',1,1,0),` +
-        `('inv-b','${id}','wooden-stool',NULL,NULL,NULL,NULL),` +
-        `('inv-c','${id}','potted-fern',NULL,NULL,NULL,NULL);`
+      `INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('inv-a','wooden-stool','placed',${home},'outdoor',1,1,0);` +
+        `INSERT INTO homestead_items(id,item_def,location,habitica_id) VALUES('inv-b','wooden-stool','inventory','${id}'),('inv-c','potted-fern','inventory','${id}');`
     ])
 
     await page.keyboard.press('i')

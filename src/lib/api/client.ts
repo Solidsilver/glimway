@@ -22,6 +22,8 @@ import {
   parseCommons,
   parseHome,
   parseHomeAction,
+  parseItems,
+  parseItemsAction,
   parseCreatedInvite,
   parseInviteList,
   parsePlay,
@@ -52,6 +54,9 @@ import type {
   HomeActionResponse,
   HomeOp,
   HomeResponse,
+  ItemsActionResponse,
+  ItemsOp,
+  ItemsResponse,
   CreatedInvite,
   InviteList,
   LoginRequest,
@@ -119,6 +124,10 @@ export interface RawApi {
   mailRecall(id: string, req: Envelope): Promise<MailActionResponse>;
   projects(): Promise<ProjectsResponse>;
   contribute(id: string, req: Envelope & { materials: Record<string, number> }): Promise<ContributeResponse>;
+  /** What you carry in the item model: stacks, instances, pockets, the off hand. */
+  items(): Promise<ItemsResponse>;
+  /** A keyed item mutation (use, repair, fit, unfit, give, pocket, offhand, pickup). */
+  itemAction(op: ItemsOp, req: Envelope & Record<string, unknown>): Promise<ItemsActionResponse>;
 }
 
 /** The common keyed-mutation fields (Link.mutate fills them). */
@@ -277,6 +286,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async contribute(id, req) {
       return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, req));
     },
+    async items() {
+      return parseItems(await request('GET', '/api/items'));
+    },
+    async itemAction(op, req) {
+      return parseItemsAction(await request('POST', `/api/items/${op}`, req));
+    },
   };
 
   const run = <T>(task: (r: RawApi) => Promise<T>): Promise<T> => queue.run(() => task(raw));
@@ -313,6 +328,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     mailRecall: (id, req) => run((r) => r.mailRecall(id, req)),
     projects: () => run((r) => r.projects()),
     contribute: (id, req) => run((r) => r.contribute(id, req)),
+    items: () => run((r) => r.items()),
+    itemAction: (op, req) => run((r) => r.itemAction(op, req)),
   };
 }
 

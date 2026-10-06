@@ -113,6 +113,8 @@ export class Village {
   storage: AssetCounts | null = null
   /** Your own small chest at home (goes with you if you leave the deed). */
   personal: AssetCounts | null = null
+  /** The shared chest and bench: 'open', or why not ('not-a-member', 'tier-required'). */
+  shared: string = 'open'
   mail: Mail[] = []
   mailStatus: Status
   /** The server answered "no recall here" once: stop offering it. */
@@ -143,7 +145,7 @@ export class Village {
   /** One of ours whose answer was lost is now known: re-read and say so. */
   private async onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused' }): Promise<void> {
     const k = p.op.kind
-    if (k === 'home') return
+    if (k === 'home' || k === 'items') return
     // Re-read everything the operation could have changed before saying so.
     if (k === 'contribute') {
       await this.loadProjects()
@@ -315,6 +317,7 @@ export class Village {
     this.inventory = r.value.inventory
     this.storage = r.value.storage
     this.personal = r.value.personal
+    this.shared = r.value.shared
     this.adoptHome(r.value.home)
     this.emit('goods')
     return { ok: true, value: undefined }
@@ -329,6 +332,7 @@ export class Village {
     this.inventory = r.res.result.inventory
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
+    this.shared = r.res.result.shared
     this.adoptHome(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: undefined }
@@ -342,13 +346,14 @@ export class Village {
     this.inventory = r.res.result.inventory
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
+    this.shared = r.res.result.shared
     this.adoptHome(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: r.res.result.output }
   }
 
-  private adoptHome(home: import('../lib/api/types').HomeView): void {
-    homesteadsFor(this.session).adoptHome(home)
+  private adoptHome(home: import('../lib/api/types').HomeView | null): void {
+    if (home) homesteadsFor(this.session).adoptHome(home)
   }
 
   // ------------------------------------------------------------ mail

@@ -379,11 +379,17 @@ export interface HomeActionResponse extends Snapshot {
 
 // ------------------------------------------------------------ phase 5
 
-/** One kind of goods (a catalogue id, never a decoration instance). */
+/**
+ * Goods on the move. Stacks and home goods by catalogue id and count; an
+ * `instance` (a tool, off-hand item, carry gear or fitting) one at a time by
+ * its id. `maker` picks one maker's stack ('' = unmarked); absent takes any.
+ */
 export interface Asset {
-  kind: 'material' | 'item' | 'decoration';
+  kind: 'material' | 'item' | 'decoration' | 'instance';
   id: string;
   qty: number;
+  instance?: string;
+  maker?: string;
 }
 
 /** Counts by kind; a missing key means zero. Carried decorations are the pack's (placed ones belong to the homestead). */
@@ -391,6 +397,87 @@ export interface AssetCounts {
   materials: Record<string, number>;
   items: Record<string, number>;
   decorations: Record<string, number>;
+  /** Tools, off-hand items, carry gear and loose fittings, one by one (absent from older servers). */
+  instances?: InstanceView[];
+}
+
+// ------------------------------------------------------------ items (docs/items/)
+
+export interface MakerView {
+  id: string;
+  name: string;
+}
+export interface FittingView {
+  id: string;
+  itemDef: string;
+  fitting: string;
+  condition: number;
+  maxCondition: number;
+  usesLeft: number;
+  maker: MakerView | null;
+}
+export type WearStateName = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
+/** One instance: condition in wear points (maxCondition 0: never wears). */
+export interface InstanceView {
+  id: string;
+  itemDef: string;
+  condition: number;
+  maxCondition: number;
+  usesLeft: number;
+  state: WearStateName;
+  wardenSet: boolean;
+  fittings: FittingView[];
+  maker: MakerView | null;
+}
+export interface StackView {
+  itemDef: string;
+  qty: number;
+  maker: MakerView | null;
+}
+export interface SlotView {
+  slot: string;
+  itemDef: string | null;
+  instance: string | null;
+}
+export interface OffHandView {
+  open: boolean;
+  class: string | null;
+  itemDef: string | null;
+  instance: string | null;
+}
+export interface ThanksView {
+  fromName: string;
+  itemDef: string;
+  at: number;
+}
+/** What the caller carries, in the item model (GET /api/items and every item mutation). */
+export interface ItemsView {
+  stacks: StackView[];
+  instances: InstanceView[];
+  /** One per open pocket (one, or two with carry gear). */
+  pockets: SlotView[];
+  offHand: OffHandView;
+  /** World pickups this player has already taken. */
+  pickedUp: string[];
+  /** Recent thank-yous for things you made. */
+  thanks: ThanksView[];
+}
+export interface ItemsResponse extends Snapshot {
+  items: ItemsView;
+}
+export interface WearResult {
+  broke: boolean;
+  state: string;
+  wornOut: string[];
+  returned: string[];
+  itemDef: string;
+  usesLeft: number;
+  condition: number;
+  instance: InstanceView | null;
+}
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup';
+export interface ItemsActionResponse extends Snapshot {
+  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[] };
 }
 
 /** GET /api/calendar (public; Unix seconds). */
@@ -410,19 +497,27 @@ export interface CalendarResponse {
 /** Which chest at home: the shared one, or the caller's own small one. */
 export type ChestId = 'shared' | 'personal';
 
-export interface StorageResponse extends Snapshot {
-  home: HomeView;
+/**
+ * The workshop: your pack, your own chest (always reachable: it goes with
+ * you), and, with a Workshop home, that home and its shared chest. Without
+ * one, home and storage are null and `shared` says why.
+ */
+export interface WorkshopView {
+  home: HomeView | null;
   inventory: AssetCounts;
-  storage: AssetCounts;
+  storage: AssetCounts | null;
   personal: AssetCounts;
+  shared: 'open' | 'not-a-member' | 'tier-required' | string;
 }
 
+export interface StorageResponse extends Snapshot, WorkshopView {}
+
 export interface StorageMoveResponse extends Snapshot {
-  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; personal: AssetCounts };
+  result: WorkshopView;
 }
 
 export interface CraftResponse extends Snapshot {
-  result: { home: HomeView; inventory: AssetCounts; storage: AssetCounts; personal: AssetCounts; recipeId: string; output: Asset; instanceIds: string[] };
+  result: WorkshopView & { recipeId: string; output: Asset; instanceIds: string[] };
 }
 
 export interface Mail {

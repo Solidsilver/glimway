@@ -133,7 +133,7 @@ func TestFix4InventoryAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	state.State.Inventory = append(state.State.Inventory, "beeswax-candle", "ember-charm", "invented")
-	if _, err = tx.Exec("INSERT INTO inventory VALUES('alice','beeswax-candle',1)"); err != nil {
+	if _, err = tx.Exec("INSERT INTO item_stacks VALUES('pack','alice','beeswax-candle','',1)"); err != nil {
 		t.Fatal(err)
 	}
 	if err = store.Persist(ctx, tx, &state, x.now.Load()); err != nil {
@@ -150,7 +150,7 @@ func TestFix4InventoryAuthority(t *testing.T) {
 			t.Fatal("authoritative inventory copied", id)
 		}
 	}
-	if _, err = tx.Exec("DELETE FROM inventory WHERE habitica_id='alice'"); err != nil {
+	if _, err = tx.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def NOT IN ('timber','stone','fiber','amber')"); err != nil {
 		t.Fatal(err)
 	}
 	// Old documents must also stop reviving revoked items.

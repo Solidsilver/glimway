@@ -146,6 +146,11 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 	x.homeOp(ac, &a, "place", map[string]any{"itemId": stools.Result.InstanceIDs[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0}, 200)
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "material", "id": "timber", "qty": 3}}), ac, 200).Snapshot
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-stool", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "decoration", "id": "wooden-stool", "qty": 1}}), ac, 200).Snapshot
+	// A tool with a fitting goes in the chest too (the item model).
+	axe := x.instance("alice", "bench-axe", -1, "alice")
+	nail := x.instance("alice", "loose-road-nail", -1, "")
+	x.op(ac, &a, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
+	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-axe", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}), ac, 200).Snapshot
 	x.homeOp(ac, &a, "leave", nil, 200)
 	x.now.Add(int64(content.HomeRules.Desolation.DeedLostAfterDays) * 86400)
 	// The session idled out over the fortnight: sign in again.
@@ -156,7 +161,7 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 		t.Fatal("the deed should be lost")
 	}
 	// The shared chest's ledger currencies net to nothing once it is gone.
-	for _, cur := range []string{"storage:material:timber", "storage:decoration:wooden-stool"} {
+	for _, cur := range []string{"storage:material:timber", "storage:decoration:wooden-stool", "storage:instance:bench-axe"} {
 		if n := count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE currency=?", cur); n != 0 {
 			t.Fatalf("%s still sums to %d after the deed was lost", cur, n)
 		}
@@ -168,6 +173,14 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='deed-lost' AND currency='homestead'") != 1 {
 		t.Fatal("no record of the lost deed itself")
 	}
+	// The chest's tool and the fitting on it are gone, and both are named.
+	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id IN (?,?)", axe, nail) != 0 {
+		t.Fatal("the chest's tool outlived the deed")
+	}
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='deed-lost' AND currency='fitted:loose-road-nail' AND ref LIKE ?", "%"+nail) != 1 {
+		t.Fatal("the fitting's loss is not in the ledger")
+	}
+	x.conserved("alice")
 }
 
 // Review finding 5: the last one out can take their deed back while the land

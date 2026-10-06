@@ -68,7 +68,11 @@ func newRig(t *testing.T) *rig {
 			p = profile(id, 1, 0, 20)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": false}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
+		class := ""
+		if p.Class != nil {
+			class = *p.Class
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
 	}))
 	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-fingersnap"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
 	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })

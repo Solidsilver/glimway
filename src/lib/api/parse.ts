@@ -9,6 +9,16 @@ import { ApiError } from './errors.ts';
 import type {
   Asset,
   AssetCounts,
+  FittingView,
+  InstanceView,
+  ItemsActionResponse,
+  ItemsResponse,
+  ItemsView,
+  MakerView,
+  SlotView,
+  StackView,
+  ThanksView,
+  WorkshopView,
   CalendarResponse,
   ContributeResponse,
   CraftResponse,
@@ -419,7 +429,7 @@ export function parseHomeAction(raw: unknown): HomeActionResponse {
 
 // ------------------------------------------------------------ phase 5
 
-const ASSET_KINDS = ['material', 'item', 'decoration'];
+const ASSET_KINDS = ['material', 'item', 'decoration', 'instance'];
 
 function countMap(v: unknown): Record<string, number> {
   return materials(v);
@@ -428,12 +438,105 @@ function countMap(v: unknown): Record<string, number> {
 export function parseAsset(raw: unknown): Asset {
   const o = obj(raw);
   if (!ASSET_KINDS.includes(o.kind as string)) throw new ApiError('bad-response');
-  return { kind: o.kind as Asset['kind'], id: str(o.id), qty: int(o.qty, 0) };
+  const a: Asset = { kind: o.kind as Asset['kind'], id: str(o.id), qty: int(o.qty, 0) };
+  if (typeof o.instance === 'string' && o.instance) a.instance = o.instance;
+  if (typeof o.maker === 'string') a.maker = o.maker;
+  return a;
 }
 
 export function parseCounts(raw: unknown): AssetCounts {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
-  return { materials: countMap(o.materials), items: countMap(o.items), decorations: countMap(o.decorations) };
+  const out: AssetCounts = { materials: countMap(o.materials), items: countMap(o.items), decorations: countMap(o.decorations) };
+  if (Array.isArray(o.instances)) out.instances = o.instances.map(parseInstance);
+  return out;
+}
+
+// ------------------------------------------------------------ items
+
+const WEAR_STATES = ['whole', 'worn', 'blunt', 'cracked', 'dull'];
+
+function maker(v: unknown): MakerView | null {
+  if (v === null || v === undefined) return null;
+  const o = obj(v);
+  return { id: str(o.id), name: name(o.name) };
+}
+function optStr(v: unknown): string | null {
+  return typeof v === 'string' && v ? v : null;
+}
+
+export function parseInstance(raw: unknown): InstanceView {
+  const o = obj(raw);
+  if (!WEAR_STATES.includes(o.state as string) || !Array.isArray(o.fittings ?? [])) throw new ApiError('bad-response');
+  const condition = int(o.condition);
+  const maxCondition = int(o.maxCondition);
+  if (condition > maxCondition) throw new ApiError('bad-response');
+  return {
+    id: str(o.id),
+    itemDef: str(o.itemDef),
+    condition,
+    maxCondition,
+    usesLeft: int(o.usesLeft),
+    state: o.state as InstanceView['state'],
+    wardenSet: o.wardenSet === true,
+    maker: maker(o.maker),
+    fittings: ((o.fittings ?? []) as unknown[]).map((f): FittingView => {
+      const r = obj(f);
+      return { id: str(r.id), itemDef: str(r.itemDef), fitting: str(r.fitting), condition: int(r.condition), maxCondition: int(r.maxCondition), usesLeft: int(r.usesLeft), maker: maker(r.maker) };
+    }),
+  };
+}
+
+export function parseItemsView(raw: unknown): ItemsView {
+  const o = obj(raw);
+  if (!Array.isArray(o.stacks) || !Array.isArray(o.instances) || !Array.isArray(o.pockets)) throw new ApiError('bad-response');
+  const hand = obj(o.offHand);
+  return {
+    stacks: o.stacks.map((v): StackView => {
+      const r = obj(v);
+      return { itemDef: str(r.itemDef), qty: int(r.qty, 1), maker: maker(r.maker) };
+    }),
+    instances: o.instances.map(parseInstance),
+    pockets: o.pockets.map((v): SlotView => {
+      const r = obj(v);
+      return { slot: str(r.slot), itemDef: optStr(r.itemDef), instance: optStr(r.instance) };
+    }),
+    offHand: { open: hand.open === true, class: optStr(hand.class), itemDef: optStr(hand.itemDef), instance: optStr(hand.instance) },
+    pickedUp: Array.isArray(o.pickedUp) ? o.pickedUp.filter((v): v is string => typeof v === 'string') : [],
+    thanks: Array.isArray(o.thanks)
+      ? o.thanks.map((v): ThanksView => {
+          const r = obj(v);
+          return { fromName: name(r.fromName), itemDef: str(r.itemDef), at: num(r.at) };
+        })
+      : [],
+  };
+}
+
+export function parseItems(raw: unknown): ItemsResponse {
+  return { ...parseSnapshot(raw), items: parseItemsView(obj(raw).items) };
+}
+
+export function parseItemsAction(raw: unknown): ItemsActionResponse {
+  const r = obj(obj(raw).result);
+  const result: ItemsActionResponse['result'] = { items: parseItemsView(r.items) };
+  if (r.wear) {
+    const w = obj(r.wear);
+    result.wear = {
+      broke: w.broke === true,
+      state: typeof w.state === 'string' ? w.state : '',
+      wornOut: Array.isArray(w.wornOut) ? w.wornOut.filter((v): v is string => typeof v === 'string') : [],
+      returned: Array.isArray(w.returned) ? w.returned.filter((v): v is string => typeof v === 'string') : [],
+      itemDef: typeof w.itemDef === 'string' ? w.itemDef : '',
+      usesLeft: int(w.usesLeft ?? 0),
+      condition: int(w.condition ?? 0),
+      instance: w.instance ? parseInstance(w.instance) : null,
+    };
+  }
+  if (typeof r.used === 'string' && r.used) result.used = r.used;
+  if (typeof r.pickup === 'string' && r.pickup) result.pickup = r.pickup;
+  if (typeof r.mended === 'string' && r.mended) result.mended = r.mended;
+  if (r.given) result.given = parseAsset(r.given);
+  if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
+  return { ...parseSnapshot(raw), result };
 }
 
 export function parseCalendar(raw: unknown): CalendarResponse {
@@ -452,14 +555,19 @@ export function parseCalendar(raw: unknown): CalendarResponse {
   };
 }
 
+/** The workshop view; older servers always sent a home and a shared chest. */
+function parseWorkshop(o: Obj): WorkshopView {
+  const home = o.home === null || o.home === undefined ? null : parseHomeView(o.home);
+  const storage = o.storage === null || o.storage === undefined ? null : parseCounts(o.storage);
+  return { home, inventory: parseCounts(o.inventory), storage, personal: parseCounts(o.personal), shared: typeof o.shared === 'string' ? o.shared : home ? 'open' : 'not-a-member' };
+}
+
 export function parseStorage(raw: unknown): StorageResponse {
-  const o = obj(raw);
-  return { ...parseSnapshot(raw), home: parseHomeView(o.home), inventory: parseCounts(o.inventory), storage: parseCounts(o.storage), personal: parseCounts(o.personal) };
+  return { ...parseSnapshot(raw), ...parseWorkshop(obj(raw)) };
 }
 
 export function parseStorageMove(raw: unknown): StorageMoveResponse {
-  const r = obj(obj(raw).result);
-  return { ...parseSnapshot(raw), result: { home: parseHomeView(r.home), inventory: parseCounts(r.inventory), storage: parseCounts(r.storage), personal: parseCounts(r.personal) } };
+  return { ...parseSnapshot(raw), result: parseWorkshop(obj(obj(raw).result)) };
 }
 
 export function parseCraft(raw: unknown): CraftResponse {
@@ -467,10 +575,7 @@ export function parseCraft(raw: unknown): CraftResponse {
   return {
     ...parseSnapshot(raw),
     result: {
-      home: parseHomeView(r.home),
-      inventory: parseCounts(r.inventory),
-      storage: parseCounts(r.storage),
-      personal: parseCounts(r.personal),
+      ...parseWorkshop(r),
       recipeId: str(r.recipeId),
       output: parseAsset(r.output),
       instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],

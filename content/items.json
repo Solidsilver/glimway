@@ -1,0 +1,447 @@
+{
+  "rules": {
+    "grades": {
+      "cheap": { "slots": 1, "atZero": "breaks" },
+      "heirloom": { "slots": 3, "atZero": "blunt", "bound": true },
+      "special": { "slots": 0, "atZero": "never" }
+    },
+    "wear": {
+      "pointsPerUse": 3,
+      "holdPointsPerUse": 2,
+      "fittingUses": 30,
+      "wornBelowPercent": 50,
+      "wardenDullUses": 40
+    },
+    "pockets": { "base": 1, "withCarryGear": 2 },
+    "offHand": { "tuckDuring": ["chop", "dig", "sit", "draw", "fight"] },
+    "give": { "radiusTiles": 3 },
+    "thanks": { "nearbyTiles": 6 },
+    "menders": [
+      { "npc": "silas", "name": "Silas", "area": "commons", "tx": 51, "ty": 21, "radiusTiles": 4 },
+      { "npc": "orrin", "name": "Orrin", "area": "village", "tx": 21, "ty": 9, "radiusTiles": 4 }
+    ]
+  },
+  "items": [
+    {
+      "id": "bench-axe",
+      "name": "Bench axe",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": ["chop"],
+      "marked": true,
+      "blurb": "Pine haft, soft scrap-iron head. Chops trees in the Tangle and on your land."
+    },
+    {
+      "id": "bench-pick",
+      "name": "Bench pick",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": ["break"],
+      "marked": true,
+      "blurb": "Breaks boulders into quarry stone and drift-stone."
+    },
+    {
+      "id": "bench-spade",
+      "name": "Bench spade",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": ["dig"],
+      "marked": true,
+      "blurb": "Digs saplings, roots, herbs, turncap spawn and wild honey."
+    },
+    {
+      "id": "stave-bucket",
+      "name": "Stave bucket",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": ["draw"],
+      "marked": true,
+      "blurb": "Oak staves, iron hoops. Draws water at the well. The hoops loosen with use."
+    },
+    {
+      "id": "watering-can",
+      "name": "Tin watering can",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": ["water"],
+      "blurb": "Tarrow tin, bought from Silas. Waters a bed in one go. Watering is never required."
+    },
+    {
+      "id": "brack-felling-axe",
+      "name": "Brack felling axe",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "heirloom",
+      "uses": 80,
+      "actions": ["chop"],
+      "repair": { "bench": { "timber": 2, "wooden-peg": 1 }, "mender": { "timber": 2, "wooden-peg": 1 } },
+      "blurb": "Ash haft, iron head forged by Maren Brack, Hollis's sister. Rehafted by Orrin with a trunnel through the eye."
+    },
+    {
+      "id": "nans-lamplighter-pole",
+      "name": "Nan's lamplighter pole",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "heirloom",
+      "uses": 80,
+      "atZero": "cracked",
+      "actions": ["trim"],
+      "offHand": true,
+      "held": [{ "type": "light", "amount": 6 }],
+      "repair": { "bench": { "fiber": 2 }, "mender": { "fiber": 2 } },
+      "blurb": "A long pole with a hook and a wick-trimmer. Sets lamp heads and trims wicks. Carried, it lights the way a little further than a lantern."
+    },
+    {
+      "id": "oak-mark-punch",
+      "name": "Oak-mark punch",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "special",
+      "actions": ["mark"],
+      "blurb": "The Hall's wheel-and-wave stamp. Strikes a wax seal into a standing iron-oak. Never wears."
+    },
+    {
+      "id": "carters-lantern",
+      "name": "Carter's lantern",
+      "tab": "tools",
+      "kind": "off-hand",
+      "held": [{ "type": "light", "amount": 4 }, { "type": "wisps-keep-off" }],
+      "affinity": { "class": "warrior", "held": [{ "type": "light", "amount": 5 }, { "type": "wisps-keep-off", "amount": 2 }] },
+      "blurb": "Lights the way in the dark Tangle; wisps keep a little further off. A fill of candle oil lasts a long while."
+    },
+    {
+      "id": "runners-whistle",
+      "name": "Your own whistle",
+      "tab": "tools",
+      "kind": "off-hand",
+      "held": [{ "type": "whistle" }],
+      "affinity": { "class": "rogue", "held": [{ "type": "whistle", "amount": 2 }, { "type": "papers-chime" }] },
+      "blurb": "A plain tin whistle from Pip that you dent to your own note. Echoes nearby answer it."
+    },
+    {
+      "id": "forager-satchel",
+      "name": "Forager's satchel",
+      "tab": "tools",
+      "kind": "carry-gear",
+      "marked": true,
+      "blurb": "Salt-stained canvas, string ties. Elara's style. Room for a second keepsake."
+    },
+    {
+      "id": "work-apron",
+      "name": "Work apron",
+      "tab": "tools",
+      "kind": "carry-gear",
+      "marked": true,
+      "blurb": "Leather, with a pencil pocket. Silas's style. Room for a second keepsake."
+    },
+    {
+      "id": "carting-coat",
+      "name": "Carting coat",
+      "tab": "tools",
+      "kind": "carry-gear",
+      "marked": true,
+      "blurb": "Old Compact cut, deep pockets. Room for a second keepsake."
+    },
+    {
+      "id": "timber",
+      "name": "Timber",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Windfall, mostly. Leave three leafy branches at every stump, as the custom runs."
+    },
+    {
+      "id": "stone",
+      "name": "Stone",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Flat quarry stone for footings and hearths. Never drift-stone for a wall."
+    },
+    {
+      "id": "fiber",
+      "name": "Fiber",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Bracken and bark-strip, tough enough to weave."
+    },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Sap the woods have let go of. Amber is the woods' own memory, set hard and glowing."
+    },
+    {
+      "id": "beeswax",
+      "name": "Beeswax",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Comes with wild honey. For wax seals and waxed cord."
+    },
+    {
+      "id": "tallow",
+      "name": "Tallow",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Bought cheaply from Hazel's kitchen. For oils and salves."
+    },
+    {
+      "id": "lamp-wick",
+      "name": "Lamp Wick",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Braided fiber, waxed at the tip. A lamp is only as good as its wick."
+    },
+    {
+      "id": "oilcloth-wrap",
+      "name": "Oilcloth Wrap",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Fiber cloth rubbed with linseed. Keeps a paper dry on the road."
+    },
+    {
+      "id": "wooden-peg",
+      "name": "Wooden Peg",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "A peg for a hook or a hinge. The kind of thing you only miss once."
+    },
+    {
+      "id": "fibre-rope",
+      "name": "Fibre rope",
+      "tab": "supplies",
+      "kind": "part",
+      "marked": true,
+      "blurb": "Good for the well's rotten rope, and for lashings."
+    },
+    {
+      "id": "loose-road-nail",
+      "name": "Loose road-nail",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "hold",
+      "blurb": "Common at old lamp-stones. Not one of the Eleven. Fitted to a tool, it wears slower."
+    },
+    {
+      "id": "tarrow-edge-strip",
+      "name": "Tarrow-steel edge strip",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "bite",
+      "blurb": "Salvaged from crate-straps at abandoned carts. Fitted to a tool, it bites deeper: fewer swings."
+    },
+    {
+      "id": "amber-bead",
+      "name": "Amber bead",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "glow",
+      "marked": true,
+      "blurb": "Polished at the bench from amber. Fitted to a tool, it gives a faint light in the dark."
+    },
+    {
+      "id": "waxed-cord",
+      "name": "Waxed cord",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "grip",
+      "marked": true,
+      "blurb": "Fiber and beeswax. Wrapped round a haft, the tool is rarely dropped and a little quieter near wisps."
+    },
+    {
+      "id": "warden-sliver",
+      "name": "Warden-stone sliver",
+      "tab": "supplies",
+      "kind": "fitting",
+      "fitting": "remember",
+      "blurb": "Drift-stone that has learned one shape and always walks back to it. A tool carrying one never breaks."
+    },
+    {
+      "id": "comfrey-root",
+      "name": "Comfrey root",
+      "tab": "supplies",
+      "kind": "seed",
+      "blurb": "Knobbly, two leaves still on it. Planted, it grows into a comfrey bed."
+    },
+    {
+      "id": "keepers-twists",
+      "name": "Keeper's Twists",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [{ "type": "restore-hp", "amount": 10 }],
+      "blurb": "Hazel's butter batch. A small mend. \"Not quite right,\" she says."
+    },
+    {
+      "id": "oatcakes",
+      "name": "Finn's oatcakes",
+      "tab": "supplies",
+      "kind": "consumable",
+      "use": [{ "type": "restore-hp", "amount": 5 }],
+      "blurb": "A little mend. Sold in fives, of course."
+    },
+    {
+      "id": "saltings-tea",
+      "name": "Saltings tea",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [{ "type": "restore-mana", "amount": 8, "seconds": 60 }],
+      "blurb": "Grey-green and salty. Mana comes back slowly over a minute."
+    },
+    {
+      "id": "comfrey-salve",
+      "name": "Comfrey salve",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [{ "type": "clear-unmoored" }],
+      "blurb": "Clears the drift's sway at once. \"The hands keep more memory than the head.\""
+    },
+    {
+      "id": "whittled-fox",
+      "name": "Whittled Fox",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "silas",
+      "pocket": [{ "type": "papers-glint" }],
+      "blurb": "A carter's door-fox in soft pine, one ear carved longer than the other. Meant for a lintel somewhere."
+    },
+    {
+      "id": "knotted-halter",
+      "name": "Knotted Ox-Halter",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "ada",
+      "pocket": [{ "type": "notice-later", "target": "beetles" }],
+      "blurb": "Rope worked in a patient, talkative knot, the kind a driver ties while chatting to the oxen."
+    },
+    {
+      "id": "work-glove",
+      "name": "Work Glove",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "pocket": [{ "type": "gather-more", "target": "fiber" }],
+      "blurb": "Taken off for a fiddly job and never fetched. It still holds the shape of the hand that left it."
+    },
+    {
+      "id": "river-glass-bead",
+      "name": "River Glass Bead",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "pocket": [{ "type": "pond-skip" }],
+      "blurb": "Frosted green glass off a carter's harness, tumbled smooth. The Wend brings down what the first frost throws."
+    },
+    {
+      "id": "tin-whistle",
+      "name": "Tin Whistle",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "hazel",
+      "offHand": true,
+      "held": [{ "type": "whistle" }],
+      "blurb": "Dented to one clear note. Runners dent their whistles until the note is theirs. Whose note this was, nobody says."
+    },
+    {
+      "id": "beeswax-candle",
+      "name": "Beeswax Candle",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "blurb": "Never lit, saved for a birthday. The Wilds kept it a long while. Now they've handed it back."
+    },
+    {
+      "id": "spare-bootlace",
+      "name": "Spare Bootlace",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "blurb": "Waxed leather, still knotted in the double hitch runners use, as if the boot came off a moment ago."
+    },
+    {
+      "id": "road-nails",
+      "name": "Stamped Road-Nails",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "blurb": "Eleven iron nails, each stamped with the wheel and wave. Lantern-post nails. Eleven exactly."
+    },
+    {
+      "id": "ember-charm",
+      "name": "Ember Charm",
+      "tab": "keepsakes",
+      "kind": "keepsake",
+      "bound": true,
+      "blurb": "A chip of hearth-grade amber in a twist of wire, still warm from the Ashwatch chest. Your strikes find the gaps more often."
+    },
+    {
+      "id": "tool-rack",
+      "name": "Tool Rack",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Pegs for every tool, each one's fittings on show."
+    },
+    {
+      "id": "stone-hearth",
+      "name": "Stone Hearth",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "Where hearth recipes are made."
+    }
+  ],
+  "pickups": [
+    {
+      "id": "well-rope-coil",
+      "item": "fibre-rope",
+      "qty": 1,
+      "area": "village",
+      "tx": 10,
+      "ty": 9,
+      "label": "Pick up the coil of rope",
+      "found": "A coil of rope, left by the well. Someone meant to mend it."
+    },
+    {
+      "id": "lane-glove",
+      "item": "work-glove",
+      "qty": 1,
+      "area": "commons",
+      "tx": 30,
+      "ty": 22,
+      "label": "Pick up the lost glove",
+      "found": "A work glove on the lane, still holding the shape of a hand."
+    },
+    {
+      "id": "dropped-bucket",
+      "item": "stave-bucket",
+      "qty": 1,
+      "area": "woodland",
+      "tx": 12,
+      "ty": 18,
+      "usesLeft": 12,
+      "label": "Pick up the dropped bucket",
+      "found": "A stave bucket in the bracken, hoops a little loose. The woods give things back."
+    },
+    {
+      "id": "oatcake-parcel",
+      "item": "oatcakes",
+      "qty": 5,
+      "area": "village",
+      "tx": 31,
+      "ty": 8,
+      "label": "Pick up the paper parcel",
+      "found": "Five of Finn's oatcakes, wrapped in paper. Five, of course."
+    }
+  ]
+}
