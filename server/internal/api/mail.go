@@ -66,7 +66,9 @@ func mailSlice(ctx context.Context, tx *sql.Tx, s store.Snapshot, pending bool, 
 	params = append(params, limit+1)
 	// Separate indexed sender/recipient slices bound sorting work even for a
 	// large legacy history. A player cannot mail themselves, so they are disjoint.
-	query := `WITH sent AS (SELECT id FROM mail WHERE world_id=? AND from_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?), received AS (SELECT id FROM mail WHERE world_id=? AND to_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?) SELECT m.id,m.world_id,m.from_id,m.to_id,f.display_name,t.display_name,m.kind,m.item_def,m.qty,m.sent_at,m.claimed_at,m.returned_at,m.return_reason FROM mail m JOIN (SELECT id FROM sent UNION ALL SELECT id FROM received) chosen ON chosen.id=m.id JOIN players f ON f.habitica_id=m.from_id JOIN players t ON t.habitica_id=m.to_id ORDER BY m.sent_at DESC,m.id DESC LIMIT ?`
+	// Thank-you notes reach their recipient in any world (they carry no goods,
+	// and a move shouldn't lose them).
+	query := `WITH sent AS (SELECT id FROM mail WHERE world_id=? AND from_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?), received AS (SELECT id FROM mail WHERE (world_id=? OR kind='thanks') AND to_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?) SELECT m.id,m.world_id,m.from_id,m.to_id,f.display_name,t.display_name,m.kind,m.item_def,m.qty,m.sent_at,m.claimed_at,m.returned_at,m.return_reason FROM mail m JOIN (SELECT id FROM sent UNION ALL SELECT id FROM received) chosen ON chosen.id=m.id JOIN players f ON f.habitica_id=m.from_id JOIN players t ON t.habitica_id=m.to_id ORDER BY m.sent_at DESC,m.id DESC LIMIT ?`
 	args := append(slices.Clone(params), params...)
 	args = append(args, limit+1)
 	rows, err := tx.QueryContext(ctx, query, args...)
@@ -255,7 +257,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if world != s.WorldID || to != s.HabiticaID {
+		if world != s.WorldID && v.Kind != "thanks" || to != s.HabiticaID {
 			return nil, fail(403, "mail-access-denied")
 		}
 		if claimed.Valid {

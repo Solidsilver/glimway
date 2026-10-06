@@ -50,9 +50,10 @@ they differ):
   world or joins the inviter's; every member may have three codes
   outstanding and create five in all. Worlds never move players on their own.
 - **The party counts as an invite.** An allowlisted newcomer with no invite
-  code joins their party's world (the oldest world linked to the party); a
-  code still wins. New worlds link to the creator's party and the owner can
-  link or unlink. A settled member whose party plays elsewhere is asked once
+  code joins their party's world (the lived-in world linked to the party,
+  its owner's first); a code still wins. A party links one world: a new world
+  takes the link only if the party has none, and an owner linking a world
+  unlinks the others. Owners can unlink a world they've left. A settled member whose party plays elsewhere is asked once
   ("Your party plays in <owner>'s world. Join them?"), and the Menu keeps the
   offer. Leaving a party never moves anyone.
 - **Moving takes only what's yours.** This replaces the move rules under
@@ -62,7 +63,8 @@ they differ):
   chest, shelf stock, Wilds claims and project contributions stay. Moves start
   from the village or the Commons with nothing pending and no parcels of yours
   on the road (recall them first); parcels waiting for you go back to their
-  senders. Moving back is the same flow.
+  senders, and your unused invite codes now admit friends to the new world.
+  Moving back is the same flow.
 - **Readable invite codes.** Six words from a fixed 256-word list plus four
   digits (`amber-fox-river-lantern-moss-ivy-7392`, about 61 bits),
   case-insensitive and tolerant of spaces; old hex codes still work.

@@ -95,8 +95,8 @@ func TestPartyFirstSignInJoinsThePartyWorld(t *testing.T) {
 		t.Fatal("new world not linked to the creator's party", party, err)
 	}
 
-	// A code that names no world still decides: a world of their own (linked
-	// to their party too, but younger than Olive's).
+	// A code that names no world still decides: a world of their own, not
+	// linked (the party already has Olive's: a party links one world).
 	x.now.Add(10)
 	x.hero("pip", "Pip", "p1")
 	code, err := x.db.Invite(context.Background(), "")
@@ -108,8 +108,11 @@ func TestPartyFirstSignInJoinsThePartyWorld(t *testing.T) {
 	if pipWorld == o.WorldID {
 		t.Fatal("a world-less invite joined the party world")
 	}
+	if count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND habitica_party_id IS NULL", pipWorld) != 1 {
+		t.Fatal("a second world took the party's link")
+	}
 
-	// Allowlisted, no code: the party's world, the oldest one linked.
+	// Allowlisted, no code: the party's world.
 	x.now.Add(10)
 	x.hero("rue", "Rue", "p1")
 	rc, _ := x.ready("rue")
@@ -150,7 +153,8 @@ func TestPartyFirstSignInJoinsThePartyWorld(t *testing.T) {
 		t.Fatal("refused player created")
 	}
 
-	// Only the owner links or unlinks; unlinked, the next oldest is the party's.
+	// Only the owner links or unlinks. Unlinked, the party has no world: the
+	// next newcomer starts one, and it becomes the party's.
 	x.worldReq("POST", "/api/world/party", map[string]any{"link": false}, rc, 403)
 	x.worldReq("POST", "/api/world/party", map[string]any{}, oc, 400)
 	if v = x.worldReq("POST", "/api/world/party", map[string]any{"link": false}, oc, 200); v.Linked || v.LinkedToMine {
@@ -158,11 +162,16 @@ func TestPartyFirstSignInJoinsThePartyWorld(t *testing.T) {
 	}
 	x.hero("uma", "Uma", "p1")
 	x.ready("uma")
-	if x.worldOf("uma") != pipWorld {
-		t.Fatal("unlinked world still drew the party")
+	umaWorld := x.worldOf("uma")
+	if umaWorld == o.WorldID || umaWorld == pipWorld || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND habitica_party_id='p1'", umaWorld) != 1 {
+		t.Fatal("unlinked world still drew the party, or the new world wasn't linked")
 	}
+	// Linking is exclusive: Olive's link takes the party back from Uma's world.
 	if v = x.worldReq("POST", "/api/world/party", map[string]any{"link": true}, oc, 200); !v.Linked || !v.LinkedToMine {
 		t.Fatal("relink", v.raw)
+	}
+	if count(t, x.db, "SELECT count(*) FROM worlds WHERE habitica_party_id='p1'") != 1 || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND habitica_party_id='p1'", o.WorldID) != 1 {
+		t.Fatal("link not exclusive")
 	}
 	// An owner with no party has nothing to link.
 	x.hero("vic", "Vic", "")
@@ -486,7 +495,176 @@ func TestThanksReadableAfterSenderMoves(t *testing.T) {
 	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", own, "hal", "seed", x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
-	x.worldReq("POST", "/api/world/move", moveBody(h, "home", own, "village"), hc, 200)
+	// And one to Hal, still unread when they go.
+	toHal := id + "-to-hal"
+	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", toHal, o.WorldID, "bob", "hal", x.now.Load()); err != nil {
+		t.Fatal(err)
+	}
+	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "home", own, "village"), hc, 200)
+	if moved.Result.Returned != 0 || count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND returned_at IS NULL", toHal) != 1 {
+		t.Fatal("a thank-you note was sent back")
+	}
 	x.refresh(bc, &b)
 	x.p5("POST", "/api/mail/"+id+"/claim", body(b, "read", nil), bc, 200)
+	// Hal still finds Bob's note in the new world, and can read it.
+	h.Snapshot = moved.Snapshot
+	box := x.p5("GET", "/api/mail", nil, hc, 200)
+	found := false
+	for _, m := range box.Mail {
+		found = found || m.ID == toHal
+	}
+	if !found {
+		t.Fatal("thank-you note lost in the move", store.JSON(box.Mail))
+	}
+	x.p5("POST", "/api/mail/"+toHal+"/claim", body(h, "read-hal", nil), hc, 200)
+}
+
+// The party's world is one someone lives in, its owner's first. Stale links
+// never draw newcomers, an owner can unlink a world they left, and a move
+// goes only to the party's world (or a world you own).
+func TestPartyWorldIsLivedIn(t *testing.T) {
+	x := newRig(t)
+	x.hero("olive", "Olive", "p1")
+	oc, o := x.ready("olive")
+	x.now.Add(10)
+	// Bob settled before the party; his world carries an old link to it
+	// (from before links were exclusive).
+	x.hero("bob", "Bob", "")
+	x.ready("bob")
+	x.hero("bob", "Bob", "p1")
+	bc, b := x.again("bob")
+	bobWorld := b.WorldID
+	if _, err := x.db.DB.Exec("UPDATE worlds SET habitica_party_id='p1' WHERE id=?", bobWorld); err != nil {
+		t.Fatal(err)
+	}
+	// Both linked and lived in by their owners: the oldest wins.
+	if v := x.worldReq("GET", "/api/world", nil, bc, 200); v.PartyWorld == nil || v.PartyWorld.ID != o.WorldID || !v.PartyWorld.OwnerHere {
+		t.Fatal("party world", v.raw)
+	}
+	// Bob can't move into his party's other linked world unless he owns it,
+	// and Hal can't move into Bob's at all.
+	x.now.Add(10)
+	x.hero("hal", "Hal", "")
+	x.ready("hal")
+	x.hero("hal", "Hal", "p1")
+	hc, h := x.again("hal")
+	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "into-bob", bobWorld, "village"), hc, 403).Error.Code; e != "world-access-denied" {
+		t.Fatal(e)
+	}
+	// Bob moves into Olive's world; his own is left linked but empty.
+	moved := x.worldReq("POST", "/api/world/move", moveBody(b, "join", o.WorldID, "village"), bc, 200)
+	b.Snapshot = moved.Snapshot
+	// Olive moves away to a world of her own: hers still has Bob in it, but
+	// a lived-in world whose owner is home comes first.
+	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at,habitica_party_id) VALUES('olive-2','olive','seed',?,'p1')", x.now.Load()); err != nil {
+		t.Fatal(err)
+	}
+	x.refresh(oc, &o)
+	x.worldReq("POST", "/api/world/move", moveBody(o, "away", "olive-2", "village"), oc, 200)
+	v := x.worldReq("GET", "/api/world", nil, hc, 200)
+	if v.PartyWorld == nil || v.PartyWorld.ID != "olive-2" {
+		t.Fatal("owner-at-home world not preferred", v.raw)
+	}
+	// Olive unlinks the world she left (she owns it); Bob can unlink his.
+	x.worldReq("POST", "/api/world/party", map[string]any{"link": false, "worldId": o.WorldID}, oc, 200)
+	x.worldReq("POST", "/api/world/party", map[string]any{"link": false, "worldId": o.WorldID}, bc, 403)
+	x.worldReq("POST", "/api/world/party", map[string]any{"link": false, "worldId": "nowhere"}, bc, 404)
+	bv := x.worldReq("GET", "/api/world", nil, bc, 200)
+	if bv.OwnWorld == nil || bv.OwnWorld.ID != bobWorld || !bv.OwnWorld.Linked {
+		t.Fatal("bob's own world", bv.raw)
+	}
+	if bv = x.worldReq("POST", "/api/world/party", map[string]any{"link": false, "worldId": bobWorld}, bc, 200); bv.OwnWorld == nil || bv.OwnWorld.Linked {
+		t.Fatal("unlink a world left behind", bv.raw)
+	}
+	// Olive also unlinks her new world: nothing linked has anyone in it, so a
+	// newcomer starts a world, and it becomes the party's.
+	x.worldReq("POST", "/api/world/party", map[string]any{"link": false}, oc, 200)
+	if _, err := x.db.DB.Exec("UPDATE worlds SET habitica_party_id='p1' WHERE id=?", bobWorld); err != nil {
+		t.Fatal(err)
+	}
+	x.hero("cal", "Cal", "p1")
+	x.ready("cal")
+	if w := x.worldOf("cal"); w == bobWorld || w == o.WorldID || w == "olive-2" {
+		t.Fatal("an empty linked world drew a newcomer", w)
+	}
+	if count(t, x.db, "SELECT count(*) FROM worlds WHERE habitica_party_id='p1'") != 1 {
+		t.Fatal("the new party world's link isn't exclusive")
+	}
+}
+
+// A mover's unused codes now admit friends to the world they moved to.
+func TestWorldMoveRetargetsInvites(t *testing.T) {
+	x := newRig(t)
+	x.hero("olive", "Olive", "p1")
+	_, o := x.ready("olive")
+	x.now.Add(10)
+	x.hero("hal", "Hal", "")
+	x.ready("hal")
+	x.hero("hal", "Hal", "p1")
+	hc, h := x.again("hal")
+	from := h.WorldID
+	waiting := inviteReq(t, x, "POST", "/api/invites", hc, 200)
+	revoked := inviteReq(t, x, "POST", "/api/invites", hc, 200)
+	inviteReq(t, x, "DELETE", "/api/invites/"+revoked.ID, hc, 200)
+	used := inviteReq(t, x, "POST", "/api/invites", hc, 200)
+	x.login("early", used.Code)
+	if x.worldOf("early") != from {
+		t.Fatal("setup")
+	}
+	x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "village"), hc, 200)
+	if count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash=? AND world_id=?", waiting.ID, o.WorldID) != 1 {
+		t.Fatal("waiting code still points at the old world")
+	}
+	if count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash IN (?,?) AND world_id=?", revoked.ID, used.ID, from) != 2 {
+		t.Fatal("used or revoked codes changed")
+	}
+	x.login("friend", waiting.Code)
+	if x.worldOf("friend") != o.WorldID {
+		t.Fatal("a friend with Hal's code didn't join Hal")
+	}
+}
+
+// The confirmation warns about warden-set tools left in the shared chest,
+// and says a deed in the next world costs embers once you've had one.
+func TestWorldMoveLeavingWarnings(t *testing.T) {
+	x := newRig(t)
+	x.hero("hal", "Hal", "")
+	hc, h := x.ready("hal")
+	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.Leaving.DeedCost != 0 || v.Leaving.WardenTools != 0 {
+		t.Fatal("first deed free", v.raw)
+	}
+	h = x.openWorkshop(hc, h)
+	axe := x.instance("hal", "bench-axe", -1, "")
+	sliver := x.instance("hal", "warden-sliver", -1, "")
+	x.op(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
+	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
+	v := x.worldReq("GET", "/api/world", nil, hc, 200)
+	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != content.HomeRules.Deeds.Embers || v.Leaving.DeedCost == 0 {
+		t.Fatal("leaving warnings", v.raw)
+	}
+}
+
+// A mover whose new room is full is told it's empty there, not left with
+// the old world's players.
+func TestWorldMoveIntoAFullRoom(t *testing.T) {
+	x := newRig(t)
+	cfg := presenceTestConfig()
+	cfg.MaxRoomPlayers = 1
+	ts := startPresence(t, x, cfg)
+	x.hero("olive", "Olive", "p1")
+	oc, o := x.ready("olive")
+	x.now.Add(10)
+	x.hero("hal", "Hal", "")
+	x.ready("hal")
+	x.hero("hal", "Hal", "p1")
+	hc, h := x.again("hal")
+	olive := wsConnect(t, ts, oc, o.Lease)
+	olive.join("village")
+	hal := wsConnect(t, ts, hc, h.Lease)
+	hal.join("village")
+	x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "village"), hc, 200)
+	if r := hal.expect("room"); r.Area != "village" || len(r.Players) != 0 {
+		t.Fatal("full room", r.Raw)
+	}
+	olive.none()
 }

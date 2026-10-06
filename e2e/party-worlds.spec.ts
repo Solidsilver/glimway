@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, serverState, setHabitica, waitForWorld } from './connected'
 import { partyOwner, settledElsewhere, signInPage } from './party-helpers'
-import { expectToast, warp } from './helpers'
+import { expectToast, waitForWilds, warp, wilds } from './helpers'
 
 /**
  * Party-linked worlds (docs/expansion-design.md "Worlds"): being in the same
@@ -55,6 +55,11 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await expect(other.locator('.hud')).toBeVisible()
   await expect(other.getByTestId('party-prompt')).toHaveCount(0)
 
+  // A look at Hal's own Wilds first (the region read is kept a while).
+  await warp(other, 'wilds', 2, 22)
+  await waitForWilds(other)
+  const ownEpoch = (await wilds(other)).epochId
+
   // Found again in the Menu. Not from the woods, though.
   await warp(other, 'woodland', 15, 20)
   await other.keyboard.press('Escape')
@@ -90,5 +95,15 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await expect(other.getByTestId('world-settings')).toContainText('You live in Olive’s world.')
   await expect(other.getByTestId('world-own-offer')).toBeVisible()
   await expect(other.getByTestId('world-party-offer')).toHaveCount(0)
+
+  // The Wilds are Olive's now, not the ones Hal walked a minute ago.
+  await other.getByRole('button', { name: 'Back to the road' }).click()
+  await warp(page, 'wilds', 2, 22)
+  await waitForWilds(page)
+  await warp(other, 'wilds', 2, 22)
+  await waitForWilds(other)
+  const now = (await wilds(other)).epochId
+  expect(now).not.toBe(ownEpoch)
+  expect(now).toBe((await wilds(page)).epochId)
   await ctx.close()
 })

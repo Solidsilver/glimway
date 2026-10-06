@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { isUnreachable } from '../lib/api/errors'
+  import { errorCode, isUnreachable } from '../lib/api/errors'
   import type { WorldRef, WorldView } from '../lib/api/types'
   import { worldCopy } from '../content/world-moves'
   import { api } from './account'
@@ -22,24 +22,39 @@
       view = await api.world()
       error = ''
     } catch (err) {
-      error = isUnreachable(err) ? worldCopy.offline : worldCopy.failed
+      error = isUnreachable(err) ? worldCopy.offline : worldCopy.readFailed
     }
   }
 
-  async function setLink(link: boolean): Promise<void> {
+  /** Link or unlink where you live, or (`worldId`) your own world that you left. */
+  async function setLink(link: boolean, worldId?: string): Promise<void> {
     if (busy) return
     busy = true
     error = ''
     try {
-      view = await api.worldParty(link)
+      view = await api.worldParty(link, worldId)
     } catch (err) {
-      error = isUnreachable(err) ? worldCopy.offline : worldCopy.failed
+      const code = errorCode(err)
+      error = isUnreachable(err) ? worldCopy.offline : code === 'no-party' ? worldCopy.noParty : code === 'not-world-owner' ? worldCopy.ownerOnly : worldCopy.linkFailed
+      void refresh()
     } finally {
       busy = false
     }
   }
 
-  const linkLine = $derived(view ? (view.linkedToMine ? worldCopy.linkedMine : view.linked ? worldCopy.linkedOther : worldCopy.unlinked) : '')
+  const linkLine = $derived(
+    !view
+      ? ''
+      : view.linkedToMine
+        ? view.partyWorld
+          ? worldCopy.linkedElsewhere(view.partyWorld.ownerName)
+          : worldCopy.linkedMine
+        : view.linked
+          ? worldCopy.linkedOther
+          : view.partyWorld
+            ? worldCopy.unlinkedElsewhere(view.partyWorld.ownerName)
+            : worldCopy.unlinked
+  )
 
   onMount(() => {
     void refresh()
@@ -48,7 +63,7 @@
 
 <div class="world-settings" data-testid="world-settings">
   {#if view}
-    <p class="lives"><Icon name="world" size={14} /> <span>{worldCopy.livesIn(view.world.ownerName, view.isOwner)}</span> <small>{worldCopy.members(view.world.members)}</small></p>
+    <p class="lives"><Icon name="world" size={14} /> <span>{worldCopy.livesIn(view.world.ownerName, view.isOwner)}</span> <small>{view.isOwner ? worldCopy.members(view.world.members) : worldCopy.travelers(view.world.members, view.world.ownerName, view.world.ownerHere)}</small></p>
 
     {#if view.partyWorld}
       <div class="offer party" data-testid="world-party-offer">
@@ -60,7 +75,11 @@
     {#if view.ownWorld}
       <div class="offer own" data-testid="world-own-offer">
         <span class="badge" aria-hidden="true"><Icon name="lantern" size={14} /></span>
-        <span class="text">{worldCopy.ownThere}</span>
+        <span class="text">
+          {worldCopy.ownThere}
+          <small>{worldCopy.travelers(view.ownWorld.members, view.ownWorld.ownerName, view.ownWorld.ownerHere)}</small>
+          {#if view.ownWorld.linked}<small class="linked">{worldCopy.ownLinked} <button type="button" class="ghost tiny-btn" onclick={() => setLink(false, view!.ownWorld!.id)} disabled={busy}>{worldCopy.unlink}</button></small>{/if}
+        </span>
         <button type="button" class="small" onclick={() => onMove(view!.ownWorld!, true, view!)}>{worldCopy.goHome}</button>
       </div>
     {/if}
@@ -72,7 +91,7 @@
         {#if view.linkedToMine}
           <button type="button" class="small" onclick={() => setLink(false)} disabled={busy}>{worldCopy.unlink}</button>
         {:else if view.inParty}
-          <button type="button" class="small" onclick={() => setLink(true)} disabled={busy}>{worldCopy.link}</button>
+          <button type="button" class="small" onclick={() => setLink(true)} disabled={busy}>{view.partyWorld ? worldCopy.linkHere : worldCopy.link}</button>
         {:else}
           <p class="tiny">{worldCopy.noParty}</p>
         {/if}
@@ -134,6 +153,23 @@
   .text {
     font-size: 14px;
     line-height: 1.35;
+  }
+  .text small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+  .text small.linked {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--text-soft);
+  }
+  .tiny-btn {
+    padding: 1px 8px;
+    font-size: 12px;
   }
   .link {
     padding-top: 4px;

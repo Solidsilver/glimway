@@ -215,38 +215,54 @@ players to the inviter's world and preserve existing players' world membership.
 
 ### Party-linked worlds and world moves
 
-Being in the same Habitica party counts as an invite to a world linked to that
-party; the allowlist still decides who may sign in at all. The party id comes
-from the one identity read at sign-in (`players.habitica_party_id`) and is
-never read in between; leaving a party moves no one.
+Being in the same Habitica party counts as an invite to the party's world;
+the allowlist still decides who may sign in at all. The party id comes from
+the one identity read at sign-in (`players.habitica_party_id`) and is never
+read in between; leaving a party moves no one.
 
-- **New worlds** are linked to their creator's party. The owner links or
-  unlinks with `POST /api/world/party {"link": true|false}` (session only, no
-  lease; linking uses the party from the owner's last sign-in).
+- **The party's world** is one of the worlds linked to the party that someone
+  lives in: one whose owner lives there first, then the oldest. An empty
+  world, or one its owner left, never draws newcomers ahead of a lived-in one.
+- **Linking is exclusive:** a party links one world. Linking a world unlinks
+  the same party from every other world. A new world takes its creator's
+  party only when the party has no world yet (a newcomer an invite code sent
+  to a world of their own doesn't take the link from the party's world).
+- **Owners** link or unlink with `POST /api/world/party {"link": true|false,
+  "worldId"?}` (session only, no lease; linking uses the party from the
+  owner's last sign-in). Without `worldId` it acts on the world they live
+  in; with it, on a world they own and left (the Menu's "Go back…" card).
 - **First sign-in:** a valid invite code decides the world (the one it names,
   else a new solo world), also for an already allowlisted newcomer, whose code
-  is then used up. Without one, an allowlisted newcomer whose party is linked
-  joins that party's world: the oldest world linked to it. Otherwise a solo
-  world.
+  is then used up. Without one, an allowlisted newcomer joins the party's
+  world, or starts one.
 - **Settled players** see `GET /api/world` report their party's world when it
   isn't theirs, with `prompt: true` until `POST /api/world/prompt {"worldId"}`
   records that the join prompt was shown (once per player and party world;
-  table `party_prompts`, migration 021). The offer stays in the Menu.
+  table `party_prompts`, migration 022). The client sends that only once the
+  prompt is on screen. The offer stays in the Menu.
 - **Moving:** `POST /api/world/move {worldId, lease, baseRev, key, progress}`
   is one keyed, idempotent transaction under the usual lease and current-
-  revision rules. Allowed targets: a world linked to your party, or one you
-  own (moving back). Only from the village or the Commons, and only with no
-  goods parcels you sent still in transit (`mail-in-flight`: recall them
-  first; a recall can land a tool in the old homestead's storage, so the move
-  doesn't recall for you). Your character, story, embers, pack and personal
-  chest come along (they belong to the player, not the world). Your homestead
-  membership ends as a "leave" does (the last member out starts desolation);
-  placed furniture, the shared chest, gate shelf stock, Wilds claims and
-  project contributions stay. Parcels waiting for you go back to their senders
-  (`recipient-removed`); thank-you notes you sent stay readable. The ledger
-  records a zero-delta `world-move` row (`ref` = `from>to`). A live presence
-  socket is moved to the new world's rooms (the old room sees `leave`). A
-  replay with the same key returns the first answer and moves nothing.
+  revision rules.
+  - Allowed targets: the party's world, or a world you own (moving back).
+  - Only from the village or the Commons, and only with no goods parcels you
+    sent still in transit (`mail-in-flight`: recall them first; a move never
+    takes back a gift on its own). A recalled or returned warden-set tool goes
+    to the sender's personal chest when they already carry one, so it travels
+    with them.
+  - Your character, story, embers, pack and personal chest come along (they
+    belong to the player, not the world). Your homestead membership ends as a
+    "leave" does (the last member out starts desolation); placed furniture,
+    the shared chest (`GET /api/world` counts warden-set tools left in it, for
+    a warning), gate shelf stock, Wilds claims and project contributions stay.
+    `leaving.deedCost` says what a deed costs in the next world (the first
+    deed is free; later ones aren't).
+  - Parcels waiting for you go back to their senders (`recipient-removed`).
+    Thank-you notes stay readable on both sides, in any world.
+  - Your unused, unexpired invite codes are retargeted to the new world.
+  - The ledger records a zero-delta `world-move` row (`ref` = `from>to`).
+  - A live presence socket is moved to the new world's rooms (the old room
+    sees `leave`; a full room sends the mover an empty roster).
+  - A replay with the same key returns the first answer and moves nothing.
 
 `invites [player]` prints one JSON metadata record per code, optionally filtered
 by creator, including creator, recipient, world, expiry and revocation timestamps.

@@ -24,24 +24,30 @@ export function moveBlocks(o: { area: string; outgoing: number; online: boolean;
   return out
 }
 
-/** A refused move, in the move screen's terms. */
-export function moveRefusal(code: string): MoveBlock | 'denied' | 'failed' {
+/**
+ * A refused move, in the move screen's terms. `here`: already in that world
+ * (another device moved first), so the page steps in; `retry`: a passing
+ * refusal (busy, stale, taken over) that a second try may clear.
+ */
+export function moveRefusal(code: string): 'area' | 'mail' | 'offline' | 'pending' | 'retry' | 'here' | 'denied' | 'failed' {
   switch (code) {
     case 'not-at-safe-boundary':
       return 'area'
     case 'mail-in-flight':
       return 'mail'
     case 'offline':
-    case 'superseded':
       return 'offline'
     case 'pending':
-    case 'busy':
     case 'resolved':
-    case 'stale-revision':
       return 'pending'
+    case 'busy':
+    case 'stale-revision':
+    case 'superseded':
+      return 'retry'
+    case 'already-in-world':
+      return 'here'
     case 'world-access-denied':
     case 'world-not-found':
-    case 'already-in-world':
       return 'denied'
     default:
       return 'failed'

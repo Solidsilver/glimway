@@ -358,7 +358,8 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 }
 
 // moveWorld: the old room sees the player leave; they rejoin their area's
-// room in the new world (or wait for their next join if it is full).
+// room in the new world. If that room is full they get an empty roster (so
+// the old world's players clear) and wait for their next join.
 func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 	if p.area != "" {
 		h.broadcast(p, struct {
@@ -378,6 +379,11 @@ func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 		}
 	}
 	if n >= h.config.MaxRoomPlayers {
+		h.send(p, struct {
+			Type    string           `json:"type"`
+			Area    string           `json:"area"`
+			Players []presencePlayer `json:"players"`
+		}{"room", p.area, []presencePlayer{}})
 		p.area = ""
 		return
 	}

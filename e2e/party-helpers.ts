@@ -1,6 +1,6 @@
 import { expect, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, TOKEN, waitForWorld } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, TOKEN, waitForWorld } from './connected'
 
 /** Players for the party-world playtests (party-worlds*.spec.ts). */
 
@@ -32,9 +32,27 @@ export async function settledElsewhere(browser: Browser, baseURL: string, name: 
   return { id, world }
 }
 
-/** Sign in from the title as an existing player and play. */
-export async function signInPage(browser: Browser, baseURL: string, id: string, viewport = { width: 1200, height: 760 }): Promise<{ ctx: BrowserContext; other: Page }> {
-  const ctx = await browser.newContext({ baseURL, viewport })
+/**
+ * Test lever: the player alone on a deed at lot 3 of their world (as if
+ * they had bought it from Silas), so a move leaves the land to go quiet.
+ */
+export function homesteadAlone(id: string, world: string): void {
+  const home = `home-${id}`
+  const now = Math.floor(Date.now() / 1000)
+  sql(`INSERT INTO homesteads(id,world_id,gate,tier,posts_bought,claimed_at) VALUES('${home}','${world}',2,1,0,${now});
+INSERT INTO homestead_members VALUES('${id}','${home}',${now});
+INSERT INTO player_deeds VALUES('${id}',1);`)
+}
+
+/** Sign in from the title as an existing player and play (`touch`: a phone with a touchscreen). */
+export async function signInPage(
+  browser: Browser,
+  baseURL: string,
+  id: string,
+  viewport = { width: 1200, height: 760 },
+  touch = false
+): Promise<{ ctx: BrowserContext; other: Page }> {
+  const ctx = await browser.newContext({ baseURL, viewport, ...(touch ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}) })
   await routeHabitica(ctx)
   const other = await ctx.newPage()
   await openTitleGuide(other)

@@ -1,12 +1,13 @@
 import { expect, test, type Page } from './fixtures'
 import { setHabitica } from './connected'
 import { warp } from './helpers'
-import { partyOwner, settledElsewhere, signInPage } from './party-helpers'
+import { homesteadAlone, partyOwner, settledElsewhere, signInPage } from './party-helpers'
 
 /**
  * Screenshots of the party prompt, the Menu's world card and the move
- * confirmation, at desktop and phone sizes. Only with SCREENS=1 (saved to
- * .agent/screens/).
+ * confirmation, on a desktop and on a touchscreen phone (on-screen controls
+ * showing). Hal holds a deed alone, so the confirmation shows the land going
+ * quiet. Only with SCREENS=1 (saved to .agent/screens/).
  */
 test.use({ server: true })
 
@@ -37,20 +38,41 @@ for (const [name, vp] of sizes) {
     }
     const { party } = await partyOwner(page)
     const hal = await settledElsewhere(browser, baseURL!, 'Hal')
+    homesteadAlone(hal.id, hal.world)
     await setHabitica(hal.id, { party })
-    const { ctx, other } = await signInPage(browser, baseURL!, hal.id, vp)
+    const phone = name === 'phone'
+    const { ctx, other } = await signInPage(browser, baseURL!, hal.id, vp, phone)
     await other.evaluate(() => document.fonts.ready)
 
     const prompt = other.getByTestId('party-prompt')
     await expect(prompt).toBeVisible()
     await fits(other, vp, prompt.getByRole('button', { name: 'Join them…' }))
+    if (phone) {
+      // The touch controls are up, and the card sits clear of them.
+      const pad = other.locator('.controls')
+      await expect(pad).toBeVisible()
+      const card = (await prompt.boundingBox())!
+      for (const b of await other.locator('.controls .pad, .controls button').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top))) {
+        expect(card.y + card.height).toBeLessThanOrEqual(b)
+      }
+    }
     await shot(other, 'party-01-prompt')
 
     await prompt.getByRole('button', { name: 'Join them…' }).click()
     const move = other.getByRole('dialog', { name: 'Move to Olive’s world?' })
     await expect(move).toBeVisible()
     await expect(move.getByRole('button', { name: 'Move to Olive’s world' })).toBeEnabled()
+    await expect(move.getByTestId('move-last')).toContainText('the land will slowly go quiet')
+    await expect(move.getByTestId('move-deed')).toBeVisible()
     await shot(other, 'party-02-move-confirm')
+    // Scroll the panel itself to its end, as a thumb would.
+    const panel = move.locator('.panel')
+    const scrolled = await panel.evaluate((el) => {
+      el.scrollTop = el.scrollHeight
+      return el.scrollTop
+    })
+    if (phone) expect(scrolled).toBeGreaterThan(0)
+    await expect(move.getByText('Old homes aren’t kept for you.')).toBeInViewport()
     await fits(other, vp, move.getByRole('button', { name: 'Move to Olive’s world' }))
     await shot(other, 'party-03-move-confirm-scrolled')
     await move.getByRole('button', { name: 'Stay here' }).click()

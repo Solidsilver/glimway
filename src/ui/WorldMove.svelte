@@ -12,14 +12,17 @@
   /**
    * The move confirmation (design: "Moving to another world"): what comes
    * along, what stays, and anything that has to happen first. The move is
-   * one keyed request; the world waits for its answer.
+   * one keyed request; the world waits for its answer, and the screen stays
+   * up ("Arriving…") until the new world is open.
    */
   let {
     session,
     target,
     home,
     view: initial,
+    arriving,
     onMoved,
+    onHere,
     onCancel
   }: {
     session: Session
@@ -27,7 +30,11 @@
     /** Going back to a world you own. */
     home: boolean
     view: WorldView | null
+    /** The move landed; the new world is opening. */
+    arriving: boolean
     onMoved: (res: WorldMoveResponse) => void
+    /** Already in that world (another device moved first): step in. */
+    onHere: () => void
     onCancel: () => void
   } = $props()
 
@@ -35,20 +42,25 @@
   let view = $state<WorldView | null>(initial)
   let busy = $state(false)
   let error = $state('')
-  /** A refusal the server gave that the local checks didn't see. */
-  let refused = $state<MoveBlock | null>(null)
+  /** A lost request's answer is still unknown (the link's, read when it may have changed). */
+  // svelte-ignore state_referenced_locally
+  let pending = $state(!!session.link?.pendingOperation)
+  /** The server says not from here (the local area check didn't see it). */
+  let unsafe = $state(false)
 
-  const here = $derived(view ? (view.isOwner ? 'Your world' : `${view.world.ownerName}’s world`) : '…')
-  const there = $derived(home ? 'Your world' : `${target.ownerName}’s world`)
+  const working = $derived(busy || arriving)
+  const here = $derived(view ? (view.isOwner ? 'Your world' : worldCopy.worldOf(view.world.ownerName)) : '…')
+  const there = $derived(home ? 'Your world' : worldCopy.worldOf(target.ownerName))
   const leaving = $derived(view?.leaving ?? null)
+  const homestead = $derived(!!leaving && leaving.gate >= 0)
   const blocks = $derived.by(() => {
     const b = moveBlocks({
       area: session.state.area,
       outgoing: leaving?.outgoing ?? 0,
       online: ui.link?.status === 'online',
-      pending: !!session.link?.pendingOperation
+      pending
     })
-    if (refused && !b.includes(refused)) b.push(refused)
+    if (unsafe && !b.includes('area')) b.push('area')
     return b
   })
   const blocked = $derived(!view || blocks.length > 0)
@@ -61,6 +73,7 @@
   }
 
   async function refresh(): Promise<void> {
+    pending = !!session.link?.pendingOperation
     try {
       view = await api.world()
     } catch {
@@ -70,25 +83,30 @@
 
   async function go(): Promise<void> {
     const link = session.link
-    if (busy || blocked || !link) return
+    if (working || blocked || !link) return
     busy = true
     error = ''
-    refused = null
     const r = await link.mutate<WorldMoveResponse>({ kind: 'world-move', fields: { worldId: target.id } })
+    pending = !!link.pendingOperation
     if (r.ok) {
       onMoved(r.res)
+      busy = false
       return
     }
     busy = false
     const why = moveRefusal(r.code)
-    if (why === 'denied') error = worldCopy.denied
+    if (why === 'here') return onHere()
+    if (why === 'area') unsafe = true
+    else if (why === 'denied') error = worldCopy.denied
+    else if (why === 'offline') error = worldCopy.blockOffline
+    else if (why === 'pending' || why === 'retry') error = worldCopy.blockPending
     else if (why === 'failed') error = worldCopy.failed
-    else refused = why
-    if (why === 'mail') void refresh()
+    // Mail on the road the screen didn't know about: show it as it is now.
+    if (why === 'mail' || why === 'retry') void refresh()
   }
 
   function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape' && !busy) {
+    if (e.key === 'Escape' && !working) {
       e.stopPropagation()
       onCancel()
     }
@@ -99,7 +117,7 @@
   })
 </script>
 
-<div class="overlay gate" role="dialog" aria-modal="true" aria-labelledby="move-title" aria-busy={busy} tabindex="-1" onkeydown={onKey} data-testid="world-move">
+<div class="overlay gate" role="dialog" aria-modal="true" aria-labelledby="move-title" aria-busy={working} tabindex="-1" onkeydown={onKey} data-testid="world-move">
   <div class="panel gate-panel wide" use:focusTrap={{ initial: '.stay' }}>
     <p class="gate-eyebrow"><Icon name="world" size={14} /> {worldCopy.eyebrow}</p>
     <h2 class="gate-title" id="move-title">{home ? worldCopy.titleHome : worldCopy.title(target.ownerName)}</h2>
@@ -107,7 +125,7 @@
     <div class="route" aria-label={`From ${here} to ${there}`}>
       <span class="stop from"><Icon name="lantern" size={13} /> {here}</span>
       <span class="trail" aria-hidden="true"><span></span><span></span><span></span><Icon name="map" size={14} /><span></span><span></span><span></span></span>
-      <span class="stop to"><Icon name="world" size={13} /> {there} <small>{home ? worldCopy.members(target.members) : worldCopy.travelers(target.members, target.ownerName)}</small></span>
+      <span class="stop to"><Icon name="world" size={13} /> {there} <small>{worldCopy.travelers(target.members, target.ownerName, target.ownerHere)}</small></span>
     </div>
 
     <p class="gate-lead">{worldCopy.lead}</p>
@@ -125,7 +143,7 @@
       <section class="side stays" aria-labelledby="stays-title">
         <h3 id="stays-title"><Icon name="home" size={14} /> {worldCopy.stays}</h3>
         <ul>
-          {#if leaving && leaving.gate >= 0}
+          {#if leaving && homestead}
             <li>
               <span class="ic stay"><Icon name="home" size={11} /></span>
               <span>
@@ -136,15 +154,21 @@
           {:else if leaving}
             <li class="muted"><span class="ic stay"><Icon name="home" size={11} /></span>{worldCopy.stayNoHome}</li>
           {/if}
-          <li><span class="ic stay"><Icon name="stone" size={11} /></span>{worldCopy.stayGoods}</li>
+          {#if homestead}<li><span class="ic stay"><Icon name="stone" size={11} /></span>{worldCopy.stayGoods}</li>{/if}
           <li><span class="ic stay"><Icon name="map" size={11} /></span>{worldCopy.stayWilds}</li>
           <li><span class="ic stay"><Icon name="star" size={11} /></span>{worldCopy.stayProjects}</li>
         </ul>
       </section>
     </div>
 
+    {#if leaving && leaving.wardenTools > 0}
+      <p class="note warn-note" data-testid="move-warden"><Icon name="tools" size={13} /> {worldCopy.wardenTools(leaving.wardenTools)}</p>
+    {/if}
     {#if leaving && leaving.incoming > 0}
       <p class="note" data-testid="move-incoming"><Icon name="scroll" size={13} /> {worldCopy.incoming(leaving.incoming)}</p>
+    {/if}
+    {#if leaving && leaving.deedCost > 0}
+      <p class="note" data-testid="move-deed"><Icon name="ember" size={13} /> {worldCopy.deedCost(leaving.deedCost)}</p>
     {/if}
 
     {#if view && blocks.length > 0}
@@ -154,15 +178,15 @@
     {/if}
     {#if error}<p class="gate-error" role="alert">{error}</p>{/if}
 
-    {#if busy}
-      <p class="gate-status" role="status"><span class="gate-spinner" aria-hidden="true"></span> {worldCopy.working}</p>
+    <p class="gate-fine again">{worldCopy.again}</p>
+    {#if working}
+      <p class="gate-status" role="status"><span class="gate-spinner" aria-hidden="true"></span> {arriving ? worldCopy.arriving : worldCopy.working}</p>
     {:else}
       <div class="row">
         <button type="button" class="stay" onclick={onCancel}>{worldCopy.cancel}</button>
         <button type="button" class="primary" onclick={go} disabled={blocked}>{home ? worldCopy.confirmHome : worldCopy.confirm(target.ownerName)}</button>
       </div>
     {/if}
-    <p class="gate-fine">{worldCopy.again}</p>
   </div>
 </div>
 
@@ -282,11 +306,23 @@
   }
   .note {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     margin: 4px 0;
     font-size: 13.5px;
     color: var(--text-soft);
+    text-align: left;
+  }
+  .note :global(svg) {
+    flex: none;
+    margin-top: 3px;
+  }
+  .warn-note {
+    font-weight: 600;
+    color: var(--ember-deep);
+  }
+  .again {
+    margin-top: 10px;
   }
   .blocks {
     margin: 8px 0;

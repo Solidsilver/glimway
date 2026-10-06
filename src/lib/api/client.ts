@@ -123,8 +123,8 @@ export interface RawApi {
   revokeInvite(id: string): Promise<void>;
   /** Your world, its party link, and your party's world (needs the session only). */
   world(): Promise<WorldView>;
-  /** Owner only: link this world to your party, or unlink it. No lease. */
-  worldParty(link: boolean): Promise<WorldView>;
+  /** Owner only: link this world (or `worldId`, one you own and left) to your party, or unlink it. No lease. */
+  worldParty(link: boolean, worldId?: string): Promise<WorldView>;
   /** The party world's join prompt was shown (once per party world). */
   worldPrompt(worldId: string): Promise<WorldView>;
   /** Move to another world (keyed; from the village or the Commons). */
@@ -278,8 +278,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async world() {
       return parseWorld(await request('GET', '/api/world'));
     },
-    async worldParty(link) {
-      return parseWorld(await request('POST', '/api/world/party', { link }));
+    async worldParty(link, worldId) {
+      return parseWorld(await request('POST', '/api/world/party', worldId ? { link, worldId } : { link }));
     },
     async worldPrompt(worldId) {
       return parseWorld(await request('POST', '/api/world/prompt', { worldId }));
@@ -392,7 +392,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
     world: () => run((r) => r.world()),
-    worldParty: (link) => run((r) => r.worldParty(link)),
+    worldParty: (link, worldId) => run((r) => r.worldParty(link, worldId)),
     worldPrompt: (worldId) => run((r) => r.worldPrompt(worldId)),
     worldMove: (req) => run((r) => r.worldMove(req)),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),

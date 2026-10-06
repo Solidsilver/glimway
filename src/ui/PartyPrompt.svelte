@@ -1,19 +1,29 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+  import type { WorldRef } from '../lib/api/types'
   import { worldCopy } from '../content/world-moves'
+  import { api } from './account'
+  import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
 
   /**
-   * Shown once when your party plays in a world that isn't yours (the server
-   * remembers it was shown). Never a modal: the world goes on around it.
+   * Shown once when your party plays in a world that isn't yours. The server
+   * remembers it was shown only once it has really been on screen (this
+   * mounting). Never a modal: the world goes on around it.
    */
-  let { owner, members, onJoin, onLater }: { owner: string; members: number; onJoin: () => void; onLater: () => void } = $props()
+  let { world, onJoin, onLater }: { world: WorldRef; onJoin: () => void; onLater: () => void } = $props()
+  const touch = isTouchFirst()
+
+  onMount(() => {
+    void api.worldPrompt(world.id).catch(() => undefined)
+  })
 </script>
 
-<div class="notice panel" role="status" aria-live="polite" data-testid="party-prompt">
+<div class="notice panel" class:touch role="status" aria-live="polite" data-testid="party-prompt">
   <span class="badge" aria-hidden="true"><Icon name="world" size={20} /></span>
   <div class="body">
-    <strong>{worldCopy.prompt(owner)}</strong>
-    <p><span class="who"><Icon name="person" size={11} /> {worldCopy.travelers(members, owner)}</span> <span class="note">{worldCopy.promptNote}</span></p>
+    <strong>{worldCopy.prompt(world.ownerName)}</strong>
+    <p><span class="who"><Icon name="person" size={11} /> {worldCopy.travelers(world.members, world.ownerName, world.ownerHere)}</span> <span class="note">{worldCopy.promptNote}</span></p>
   </div>
   <div class="actions">
     <button type="button" class="primary" onclick={onJoin}>{worldCopy.join}</button>
@@ -38,6 +48,10 @@
     z-index: 30;
     border-color: var(--gold-deep);
     animation: notice-in 0.3s ease-out;
+  }
+  /* Touch: above the joystick, the action buttons and the "Talk" prompt. */
+  .notice.touch {
+    bottom: calc(env(safe-area-inset-bottom) + 228px);
   }
   .badge {
     display: grid;

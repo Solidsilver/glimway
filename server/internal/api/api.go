@@ -431,10 +431,12 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if existing == 0 {
 		// Being in the same Habitica party counts as an invite: without a
 		// code, a newcomer joins their party's world when it has one.
+		party, err := partyWorld(ctx, tx, p.PartyID)
+		if err != nil {
+			return err
+		}
 		if !invited {
-			if world, err = partyWorld(ctx, tx, p.PartyID); err != nil {
-				return err
-			}
+			world = party
 		}
 		if world == "" {
 			world, err = store.Random()
@@ -445,8 +447,15 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at,habitica_party_id) VALUES(?,?,?,?,?)", world, p.ID, seed, now, p.PartyID); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", world, p.ID, seed, now); err != nil {
 				return err
+			}
+			// A new world becomes its creator's party's world, unless the
+			// party already has one (a code sent them to a world of their own).
+			if party == "" {
+				if err = linkParty(ctx, tx, world, p.PartyID); err != nil {
+					return err
+				}
 			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {

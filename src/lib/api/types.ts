@@ -138,6 +138,10 @@ export interface WorldRef {
   ownerId: string;
   ownerName: string;
   members: number;
+  /** The owner lives there. */
+  ownerHere: boolean;
+  /** Linked to a party. */
+  linked: boolean;
 }
 
 /** What a move would leave behind (GET /api/world). */
@@ -150,6 +154,10 @@ export interface WorldLeaving {
   outgoing: number;
   /** Parcels waiting for you (they go back to their senders). */
   incoming: number;
+  /** Warden-set tools in your homestead's shared chest (they stay behind). */
+  wardenTools: number;
+  /** Embers a deed costs in the next world (0: your first, free). */
+  deedCost: number;
 }
 
 /** GET /api/world: your world, its party link, and the party's world. */
