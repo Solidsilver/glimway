@@ -518,6 +518,18 @@ export function journalEntries(stage: QuestStage, flags: readonly string[] = [])
     }
     entries.push(...residentJournal(flags, STAGE_ORDER[i]));
   }
+  if (flags.includes('unmoored:felt')) {
+    entries.push({
+      title: 'The Drift’s Sway',
+      body: 'The woods began to sway and the ground went soft and uncertain underfoot. Not a storm, just the land forgetting its own shape for a while.',
+    });
+  }
+  if (flags.includes('unmoored:cleared')) {
+    entries.push({
+      title: 'Finding the Anchor',
+      body: 'The edges settled and the ground stood still again. Lamplight, comfrey salve, or patience — the world remembers when you remind it.',
+    });
+  }
   return entries;
 }
 

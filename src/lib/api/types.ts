@@ -428,6 +428,8 @@ export interface InstanceView {
   wardenSet: boolean;
   fittings: FittingView[];
   maker: MakerView | null;
+  dullness?: number;
+  speed?: number;
 }
 export interface StackView {
   itemDef: string;

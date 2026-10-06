@@ -23,6 +23,8 @@ import {
   usableNow,
   validateItems,
   wearRuleLine,
+  toolDullness,
+  toolWorkSpeed,
   type Items,
 } from '../src/lib/items.ts';
 import { fitTargets, groupInventory, modelEntries } from '../src/lib/inventory.ts';
@@ -49,7 +51,7 @@ test('items.json loads with a representative set and the shared rules', () => {
   assert.equal(atZeroRule(itemDef('nans-lamplighter-pole')!), 'cracked');
   assert.equal(atZeroRule(itemDef('oak-mark-punch')!), 'never');
   assert.equal(usableNow(itemDef('keepers-twists')!), true);
-  assert.equal(usableNow(itemDef('comfrey-salve')!), false, 'unmoored is not in the game yet');
+  assert.equal(usableNow(itemDef('comfrey-salve')!), true);
   assert.equal(giveable(itemDef('whittled-fox')!), false, 'story keepsakes are kept or returned');
   assert.equal(giveable(itemDef('work-glove')!), true);
   assert.equal(assetKind(itemDef('timber')!), 'material');
@@ -322,3 +324,55 @@ test('a storage read without a home still carries your own chest', () => {
   assert.equal(r.shared, 'not-a-member');
   assert.equal(r.personal.materials.stone, 5);
 });
+
+test('warden-set tools compute dullness and working speed correctly', () => {
+  // Non-warden tool: dullness 0, speed 1
+  assert.equal(toolDullness({ condition: 50, maxCondition: 120, wardenSet: false }), 0);
+  assert.equal(toolWorkSpeed({ condition: 50, maxCondition: 120, wardenSet: false }), 1);
+
+  // Sharp warden tool
+  assert.equal(toolDullness({ condition: 120, maxCondition: 120, wardenSet: true }), 0);
+  assert.equal(toolWorkSpeed({ condition: 120, maxCondition: 120, wardenSet: true }), 1);
+
+  // Half worn
+  assert.equal(toolDullness({ condition: 60, maxCondition: 120, wardenSet: true }), 0.5);
+  assert.equal(toolWorkSpeed({ condition: 60, maxCondition: 120, wardenSet: true }), 0.75);
+  // Half worn with Bite
+  assert.equal(toolWorkSpeed({ condition: 60, maxCondition: 120, wardenSet: true, fittings: [{ fitting: 'bite' }] }), 0.88);
+
+  // Dullest (0 condition)
+  assert.equal(toolDullness({ condition: 0, maxCondition: 120, wardenSet: true }), 1);
+  assert.equal(toolWorkSpeed({ condition: 0, maxCondition: 120, wardenSet: true }), 0.5);
+  // Dullest with Bite
+  assert.equal(toolWorkSpeed({ condition: 0, maxCondition: 120, wardenSet: true, fittings: [{ fitting: 'bite' }] }), 0.75);
+});
+
+test('modelEntries formats warden-set descriptions across all dullness stages', () => {
+  const baseView: ItemsView = {
+    stacks: [],
+    instances: [
+      { id: 'w1', itemDef: 'bench-axe', condition: 120, maxCondition: 120, usesLeft: 40, state: 'whole', wardenSet: true, fittings: [{ id: 'f1', itemDef: 'warden-sliver', fitting: 'remember', condition: 0, maxCondition: 0, usesLeft: 0, maker: null }], maker: null },
+      { id: 'w2', itemDef: 'bench-axe', condition: 60, maxCondition: 120, usesLeft: 20, state: 'whole', wardenSet: true, fittings: [{ id: 'f2', itemDef: 'warden-sliver', fitting: 'remember', condition: 0, maxCondition: 0, usesLeft: 0, maker: null }], maker: null },
+      { id: 'w3', itemDef: 'bench-axe', condition: 0, maxCondition: 120, usesLeft: 0, state: 'dull', wardenSet: true, fittings: [{ id: 'f3', itemDef: 'warden-sliver', fitting: 'remember', condition: 0, maxCondition: 0, usesLeft: 0, maker: null }], maker: null },
+      { id: 'w4', itemDef: 'bench-axe', condition: 0, maxCondition: 120, usesLeft: 0, state: 'dull', wardenSet: true, fittings: [{ id: 'f4', itemDef: 'warden-sliver', fitting: 'remember', condition: 0, maxCondition: 0, usesLeft: 0, maker: null }, { id: 'f5', itemDef: 'tarrow-edge-strip', fitting: 'bite', condition: 10, maxCondition: 10, usesLeft: 10, maker: null }], maker: null },
+    ],
+    pockets: [],
+    offHand: { open: false, class: null, itemDef: null, instance: null },
+    pickedUp: [],
+    thanks: [],
+  };
+
+  const entries = modelEntries(baseView, { pack: [], decorations: [] });
+  const e1 = entries.find((e) => e.key === 'inst:w1')!;
+  assert.equal(e1.rule, 'Warden-set: sharp. Never breaks; dulls with use and heals overnight or on a lit tool rack.');
+
+  const e2 = entries.find((e) => e.key === 'inst:w2')!;
+  assert.equal(e2.rule, 'Warden-set: dulling with use (20 uses left). Heals overnight or on a lit tool rack.');
+
+  const e3 = entries.find((e) => e.key === 'inst:w3')!;
+  assert.equal(e3.rule, 'Warden-set: at its dullest (works at half speed). Sharp by morning or after an hour on a lit tool rack.');
+
+  const e4 = entries.find((e) => e.key === 'inst:w4')!;
+  assert.equal(e4.rule, 'Warden-set: at its dullest (works at three-quarters speed). Sharp by morning or after an hour on a lit tool rack.');
+});
+

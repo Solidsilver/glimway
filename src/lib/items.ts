@@ -18,7 +18,7 @@ export const USE_EFFECTS = ['restore-hp', 'restore-mana', 'clear-unmoored', 'eas
 export const POCKET_EFFECTS = ['papers-glint', 'notice-later', 'gather-more', 'pond-skip', 'wend-gives-more'] as const;
 export const HELD_EFFECTS = ['light', 'wisps-keep-off', 'compass', 'remedy-at-hand', 'whistle', 'papers-chime'] as const;
 /** Use effects the game applies today; a consumable is usable when all of its are. */
-export const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana'];
+export const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored'];
 export const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
 
 export type ItemTab = (typeof ITEM_TABS)[number];
@@ -266,6 +266,21 @@ export function usableNow(d: ItemDef): boolean {
 /** Condition as a 0..1 fraction (1 for things that never wear). */
 export function conditionFraction(v: { condition: number; maxCondition: number }): number {
   return v.maxCondition > 0 ? Math.max(0, Math.min(1, v.condition / v.maxCondition)) : 1;
+}
+
+/** Dullness as a 0..1 fraction for warden-set tools (0: sharp, 1: dullest). */
+export function toolDullness(v: { condition: number; maxCondition: number; wardenSet?: boolean }): number {
+  if (!v.wardenSet || v.maxCondition === 0) return 0;
+  return Math.max(0, Math.min(1, 1 - v.condition / v.maxCondition));
+}
+
+/** Working speed multiplier for a warden-set tool (1.0 sharp; 0.5 dullest, 0.75 with Bite). */
+export function toolWorkSpeed(v: { condition: number; maxCondition: number; wardenSet?: boolean; fittings?: Array<{ fitting: string }> }): number {
+  if (!v.wardenSet || v.maxCondition === 0) return 1;
+  const dullness = toolDullness(v);
+  const hasBite = v.fittings?.some((f) => f.fitting === 'bite') ?? false;
+  const minSpeed = hasBite ? 0.75 : 0.5;
+  return Math.round((1 - dullness * (1 - minSpeed)) * 100) / 100;
 }
 
 /**

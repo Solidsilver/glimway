@@ -63,7 +63,7 @@
         "src/game/entities/item-pickups.ts",
         "src/game/entities/off-hand.ts"
       ],
-      "specs": ["items.spec.ts", "inventory.spec.ts"]
+      "specs": ["items.spec.ts", "inventory.spec.ts", "warden.spec.ts"]
     },
     {
       "paths": ["src/game/entities/enemies.ts", "src/game/entities/hero.ts", "src/game/entities/projectiles.ts", "src/game/entities/fx.ts", "src/lib/combat.ts"],

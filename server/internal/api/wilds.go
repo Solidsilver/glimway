@@ -396,6 +396,9 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = grantLoot(ctx, tx, s, loot, "wilds-claim", e.ID+":"+entity.ID, now); err != nil {
 				return nil, err
 			}
+			if err = maybeGrantWardenSliver(ctx, tx, s, e.RegionID, entity, cx, cy, now); err != nil {
+				return nil, err
+			}
 			m, err := materials(ctx, tx, s.HabiticaID)
 			if err != nil {
 				return nil, err
@@ -570,3 +573,47 @@ func nearWilds(s store.Snapshot, e regionEpoch, x, y int) error {
 	}
 	return nil
 }
+
+func intAbs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) error {
+	isWhitequiet := regionID == "outer-1"
+	isDeepTangle := regionID == "inner-1" && ((intAbs(cx-1)+intAbs(cy-1) >= 2) || entity.Kind == "chest")
+	if !isWhitequiet && !isDeepTangle {
+		return nil
+	}
+	day := utcDay(now)
+	var count int
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM warden_finds WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	chance := uint32(20)
+	if entity.Kind == "chest" {
+		chance = 50
+	}
+	roll := wilds.Hash(s.HabiticaID, entity.ID, int(day), "warden-sliver", cx, cy) % 1000
+	if roll >= chance {
+		return nil
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO warden_finds(habitica_id, utc_day) VALUES(?,?)", s.HabiticaID, day); err != nil {
+		return err
+	}
+	sliverDef, ok := content.ItemFor("warden-sliver")
+	if !ok {
+		return nil
+	}
+	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.HabiticaID}, "", sliverDef.MaxPoints(), now); err != nil {
+		return err
+	}
+	return currency(ctx, tx, s.HabiticaID, content.StackCurrency("warden-sliver"), 1, "wilds-find", entity.ID, now)
+}
+

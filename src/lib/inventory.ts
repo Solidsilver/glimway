@@ -20,7 +20,7 @@ import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './embers.ts';
 import type { InstanceView, ItemsView, MakerView } from './api/types.ts';
-import { atZeroRule, effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
+import { effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
 export type InventoryTab = 'tools' | 'supplies' | 'keepsakes' | 'home' | 'papers';
 export type ItemTab = Exclude<InventoryTab, 'papers'>;
@@ -260,7 +260,6 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
     const d = itemDef(inst.itemDef);
     if (!d) continue;
     const state = iconState(d.id, inst.state);
-    const zero = atZeroRule(d);
     out.push(
       modelEntry(
         d,
@@ -271,7 +270,15 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
           maker: inst.maker,
           stateArt: state ? `item-${iconId(d.id)}-${state}` : null,
           mendable: !!d.repair && inst.condition < inst.maxCondition,
-          rule: inst.wardenSet ? 'Warden-set: it never breaks. It dulls with use and is sharp again by morning.' : zero === 'never' ? wearRuleLine(d) : wearRuleLine(d),
+          rule: inst.wardenSet
+            ? inst.condition === inst.maxCondition
+              ? 'Warden-set: sharp. Never breaks; dulls with use and heals overnight or on a lit tool rack.'
+              : inst.condition === 0
+                ? inst.fittings?.some((f) => f.fitting === 'bite')
+                  ? 'Warden-set: at its dullest (works at three-quarters speed). Sharp by morning or after an hour on a lit tool rack.'
+                  : 'Warden-set: at its dullest (works at half speed). Sharp by morning or after an hour on a lit tool rack.'
+                : `Warden-set: dulling with use (${inst.usesLeft === 1 ? '1 use left' : `${inst.usesLeft} uses left`}). Heals overnight or on a lit tool rack.`
+            : wearRuleLine(d),
         },
         view,
       ),

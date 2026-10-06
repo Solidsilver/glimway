@@ -53,10 +53,12 @@ import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { homeArea, parseHomeArea } from '../../lib/homestead'
 import { homesteadsFor } from '../homestead'
 import { isSafeArea } from '../../lib/habitica/sync'
+import { ui } from '../../ui/store.svelte'
 import { COMMONS_FROM_WILDS } from '../commons'
 import {
   OUTER_REGION_ID,
   WILDS_AREA,
+  WILDS_REGION_ID,
   fromRegionPosition,
   inRegion,
   isWildsArea,
@@ -157,6 +159,11 @@ export class WorldScene extends Phaser.Scene {
 
   private pendingEntry: { tx: number; ty: number } | null = null
   private pendingDefeatToast = false
+  private deepTangleTimer = 0
+  private lamplightTimer = 0
+  private easingTimer = 0
+  private unmooredVeil: Phaser.GameObjects.Rectangle | null = null
+  private unmooredEdges: Phaser.GameObjects.Rectangle[] = []
 
   create(): void {
     this.session = this.registry.get('session') as Session
@@ -549,8 +556,18 @@ export class WorldScene extends Phaser.Scene {
       body: (() => {
         const b = this.hero.sprite.body as Phaser.Physics.Arcade.Body
         return { vx: b.velocity.x, vy: b.velocity.y, moves: b.moves, enable: b.enable, physicsPaused: this.physics.world.isPaused }
-      })()
+      })(),
+      unmoored: uiState.unmoored
     })
+    ;(window as unknown as { __fsEmit?: (event: string, ...args: unknown[]) => void }).__fsEmit = (event: string, ...args: unknown[]) =>
+      bus.emit(event, ...args)
+    ;(window as unknown as { __fsUnmoored?: (val?: boolean) => boolean }).__fsUnmoored = (val?: boolean) => {
+      if (typeof val === 'boolean') {
+        uiState.unmoored = val
+        if (!val) uiState.unmooredEasing = false
+      }
+      return uiState.unmoored
+    }
 
     if (this.pendingDefeatToast) {
       this.pendingDefeatToast = false
@@ -561,12 +578,24 @@ export class WorldScene extends Phaser.Scene {
     // wick's end while we stand here) shifts the outer Wilds under us.
     bus.on(EV.turning, this.onTurning, this)
     bus.on(EV.clock, this.onClock, this)
-    const offTurning = () => {
+    const onClearUnmoored = (p: { instant: boolean }) => this.onClearUnmoored(p)
+    const onStir = () => this.triggerUnmoored()
+    bus.on('game:clear-unmoored', onClearUnmoored)
+    bus.on('game:stir', onStir)
+    const offAll = () => {
       bus.off(EV.turning, this.onTurning, this)
       bus.off(EV.clock, this.onClock, this)
+      bus.off('game:clear-unmoored', onClearUnmoored)
+      bus.off('game:stir', onStir)
+      this.clearUnmooredVisuals()
     }
-    this.events.once('shutdown', offTurning)
-    this.events.once('destroy', offTurning)
+    this.events.once('shutdown', offAll)
+    this.events.once('destroy', offAll)
+
+    ;(window as unknown as { fsUnmoored?: { trigger: () => void; clear: () => void } }).fsUnmoored = {
+      trigger: () => this.triggerUnmoored(),
+      clear: () => this.clearUnmoored(),
+    }
     if (this.pendingTurned || turnedAway) {
       const live = this.pendingTurned
       this.pendingTurned = false
@@ -581,6 +610,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onTurning(): void {
+    this.triggerUnmoored()
     if (this.inOuterWilds()) this.playTurning()
   }
 
@@ -649,6 +679,95 @@ export class WorldScene extends Phaser.Scene {
     const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
     const paper = calendarFind('turning', ctx)
     if (paper) this.time.delayedCall(1400, () => grantPaper(s, paper))
+    this.triggerUnmoored()
+  }
+
+  triggerUnmoored(): void {
+    ui.unmoored = true
+    ui.unmooredEasing = false
+    this.lamplightTimer = 0
+    if (!this.session.state.flags.includes('unmoored:felt')) {
+      this.session.addFlag('unmoored:felt')
+      emitResidents(this.session)
+      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll' })
+    }
+  }
+
+  onClearUnmoored(p: { instant: boolean }): void {
+    if (!ui.unmoored) return
+    if (p.instant) {
+      this.clearUnmoored()
+    } else {
+      ui.unmooredEasing = true
+      this.easingTimer = 15
+    }
+  }
+
+  clearUnmoored(): void {
+    if (!ui.unmoored && !ui.unmooredEasing) return
+    ui.unmoored = false
+    ui.unmooredEasing = false
+    this.lamplightTimer = 0
+    this.easingTimer = 0
+    this.clearUnmooredVisuals()
+    if (!this.session.state.flags.includes('unmoored:cleared')) {
+      this.session.addFlag('unmoored:cleared')
+      emitResidents(this.session)
+      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll' })
+    }
+  }
+
+  private updateUnmooredVisuals(time: number, _dt: number): void {
+    const cam = this.cameras.main
+    if (!cam) return
+    const factor = ui.unmooredEasing ? Math.max(0, this.easingTimer / 15) : 1.0
+
+    if (this.reducedMotion) {
+      if (!this.unmooredVeil) {
+        this.unmooredVeil = this.add.rectangle(cam.centerX, cam.centerY, cam.width * 2, cam.height * 2, 0xa8b4c0, 0.18 * factor).setScrollFactor(0).setDepth(8500)
+      } else {
+        this.unmooredVeil.setPosition(cam.centerX, cam.centerY).setSize(cam.width * 2, cam.height * 2).setAlpha(0.18 * factor)
+      }
+      cam.setRotation(0)
+      return
+    }
+
+    if (!this.unmooredVeil) {
+      this.unmooredVeil = this.add.rectangle(cam.centerX, cam.centerY, cam.width * 2, cam.height * 2, 0xd0dbe6, 0.12 * factor).setScrollFactor(0).setDepth(8500)
+    } else {
+      this.unmooredVeil.setPosition(cam.centerX, cam.centerY).setSize(cam.width * 2, cam.height * 2).setAlpha((0.12 + Math.sin(time * 0.0015) * 0.04) * factor)
+    }
+
+    if (this.unmooredEdges.length === 0) {
+      const top = this.add.rectangle(cam.centerX, 0, cam.width * 2, 28, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const bottom = this.add.rectangle(cam.centerX, cam.height, cam.width * 2, 28, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const left = this.add.rectangle(0, cam.centerY, 28, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const right = this.add.rectangle(cam.width, cam.centerY, 28, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      this.unmooredEdges = [top, bottom, left, right]
+    } else {
+      const edgeAlpha = (0.2 + Math.sin(time * 0.0022) * 0.08) * factor
+      this.unmooredEdges[0].setPosition(cam.centerX, 0).setSize(cam.width * 2, 28).setAlpha(edgeAlpha)
+      this.unmooredEdges[1].setPosition(cam.centerX, cam.height).setSize(cam.width * 2, 28).setAlpha(edgeAlpha)
+      this.unmooredEdges[2].setPosition(0, cam.centerY).setSize(28, cam.height * 2).setAlpha(edgeAlpha)
+      this.unmooredEdges[3].setPosition(cam.width, cam.centerY).setSize(28, cam.height * 2).setAlpha(edgeAlpha)
+    }
+
+    const sway = Math.sin(time * 0.0018) * 0.007 * factor
+    cam.setRotation(sway)
+  }
+
+  private clearUnmooredVisuals(): void {
+    if (this.cameras?.main) {
+      this.cameras.main.setRotation(0)
+    }
+    if (this.unmooredVeil) {
+      this.unmooredVeil.destroy()
+      this.unmooredVeil = null
+    }
+    for (const r of this.unmooredEdges) {
+      r.destroy()
+    }
+    this.unmooredEdges = []
   }
 
   // ------------------------------------------------------------- update loop
@@ -666,6 +785,39 @@ export class WorldScene extends Phaser.Scene {
     }
     this.hero.tick(dt)
     this.session.tickPlaySeconds(dt)
+
+    const chunk = parseChunkArea(this.world.areaId)
+    const inDeepTangle = !!(chunk && chunk.region === WILDS_REGION_ID && (chunk.cx !== 1 || chunk.cy !== 1))
+    if (inDeepTangle) {
+      this.deepTangleTimer += dt
+      if (this.deepTangleTimer >= 45) {
+        this.triggerUnmoored()
+        this.deepTangleTimer = 0
+      }
+    } else {
+      this.deepTangleTimer = Math.max(0, this.deepTangleTimer - dt * 0.5)
+    }
+
+    if (ui.unmoored) {
+      if (isSafeArea(this.world.areaId)) {
+        this.lamplightTimer += dt
+        if (this.lamplightTimer >= 15) {
+          this.clearUnmoored()
+        }
+      } else {
+        this.lamplightTimer = 0
+      }
+
+      if (ui.unmooredEasing) {
+        this.easingTimer -= dt
+        if (this.easingTimer <= 0) {
+          this.clearUnmoored()
+        }
+      }
+      this.updateUnmooredVisuals(time, dt)
+    } else {
+      this.clearUnmooredVisuals()
+    }
 
     // While a sync persistence owns the save file the world freezes its
     // resource/combat mutations: the committed snapshot must never revert a

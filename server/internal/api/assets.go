@@ -389,6 +389,19 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 		if len(got.IDs) != 1 {
 			return fail(409, "item-not-available")
 		}
+		warden, err := isWardenSet(ctx, tx, got.IDs[0])
+		if err != nil {
+			return err
+		}
+		if warden {
+			has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID)
+			if err != nil {
+				return err
+			}
+			if has {
+				return fail(409, "two-wardens-grind")
+			}
+		}
 		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.HabiticaID}); err != nil {
 			return err
 		}

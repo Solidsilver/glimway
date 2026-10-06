@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 )
 
 // The item system core (docs/items/): instances with condition, fittings
@@ -58,6 +59,8 @@ type instanceView struct {
 	UsesLeft     int           `json:"usesLeft"`
 	State        string        `json:"state"`
 	WardenSet    bool          `json:"wardenSet"`
+	Dullness     *float64      `json:"dullness,omitempty"`
+	Speed        *float64      `json:"speed,omitempty"`
 	Fittings     []fittingView `json:"fittings"`
 	Maker        *makerView    `json:"maker"`
 }
@@ -67,15 +70,16 @@ type instanceRow struct {
 	Condition, Max           int
 	Maker                    string
 	WornDay                  int64
+	WornAt                   int64
 }
 
 func scanInstance(row interface{ Scan(...any) error }) (instanceRow, error) {
 	var v instanceRow
-	err := row.Scan(&v.ID, &v.Def, &v.Location, &v.Owner, &v.Condition, &v.Max, &v.Maker, &v.WornDay)
+	err := row.Scan(&v.ID, &v.Def, &v.Location, &v.Owner, &v.Condition, &v.Max, &v.Maker, &v.WornDay, &v.WornAt)
 	return v, err
 }
 
-const instanceColumns = "id,item_def,location,owner,condition,max_condition,maker_id,worn_day"
+const instanceColumns = "id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at"
 
 func loadInstance(ctx context.Context, tx *sql.Tx, id string) (instanceRow, error) {
 	v, err := scanInstance(tx.QueryRowContext(ctx, "SELECT "+instanceColumns+" FROM item_instances WHERE id=?", id))
@@ -111,7 +115,7 @@ func newInstance(ctx context.Context, tx *sql.Tx, def content.ItemDef, at instan
 	if condition < 0 || condition > full {
 		condition = full
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES(?,?,?,?,?,?,?,?)", id, def.ID, at.location, at.owner, condition, full, maker, now)
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, def.ID, at.location, at.owner, condition, full, maker, 0, now, now)
 	return id, err
 }
 
@@ -229,6 +233,16 @@ func viewInstance(ctx context.Context, tx *sql.Tx, v instanceRow, makers map[str
 	out := instanceView{ID: v.ID, ItemDef: v.Def, Condition: v.Condition, MaxCondition: v.Max, State: toolState(def, v, warden), WardenSet: warden, Fittings: []fittingView{}}
 	if v.Max > 0 {
 		out.UsesLeft = usesLeft(v.Condition, wearCost(v.Max, fittings))
+		if warden {
+			dull := math.Max(0, math.Min(1, 1.0-float64(v.Condition)/float64(v.Max)))
+			minSpeed := 0.5
+			if hasFitting(fittings, "bite") {
+				minSpeed = 0.75
+			}
+			speed := math.Round((1.0-dull*(1.0-minSpeed))*100) / 100
+			out.Dullness = &dull
+			out.Speed = &speed
+		}
 	}
 	if out.Maker, err = makerOf(ctx, tx, v.Maker, makers); err != nil {
 		return out, err
@@ -283,11 +297,91 @@ func instancesAt(ctx context.Context, tx *sql.Tx, at instanceAt) ([]instanceView
 
 func utcDay(now int64) int64 { return now / 86400 }
 
-// healWardens: warden-set tools in a pack are sharp again the morning after.
+// healWardens: warden-set tools heal overnight (the next calendar day / worn_day < utcDay(now))
+// or over ~1 hour (3600s) of real time on a lit tool rack in home storage.
 func healWardens(ctx context.Context, tx *sql.Tx, player string, now int64) error {
-	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition WHERE location='pack' AND owner=? AND worn_day<? AND condition<max_condition
- AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, player, utcDay(now))
-	return err
+	today := utcDay(now)
+	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition, worn_day=?
+WHERE (location='pack' OR location='personal') AND owner=? AND worn_day<? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, today, player, today)
+	if err != nil {
+		return err
+	}
+	var homeID string
+	_ = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", player).Scan(&homeID)
+	if homeID != "" {
+		return healWardensHome(ctx, tx, homeID, now)
+	}
+	return nil
+}
+
+func healWardensHome(ctx context.Context, tx *sql.Tx, homeID string, now int64) error {
+	today := utcDay(now)
+	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition, worn_day=?
+WHERE location='storage' AND owner=? AND worn_day<? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, today, homeID, today)
+	if err != nil {
+		return err
+	}
+	var hasRack bool
+	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='tool-rack' AND location='placed')", homeID).Scan(&hasRack)
+	if err != nil || !hasRack {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id, condition, max_condition, worn_at FROM item_instances
+WHERE location='storage' AND owner=? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, homeID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type rackTool struct {
+		id            string
+		cond, maxCond int
+		wornAt        int64
+	}
+	var tools []rackTool
+	for rows.Next() {
+		var t rackTool
+		if err := rows.Scan(&t.id, &t.cond, &t.maxCond, &t.wornAt); err != nil {
+			return err
+		}
+		tools = append(tools, t)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, t := range tools {
+		elapsed := now - t.wornAt
+		if t.wornAt == 0 || elapsed >= 3600 {
+			if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=max_condition, worn_at=? WHERE id=?", now, t.id); err != nil {
+				return err
+			}
+		} else if elapsed > 0 {
+			add := int(float64(t.maxCond) * float64(elapsed) / 3600.0)
+			if add > 0 {
+				newCond := min(t.maxCond, t.cond+add)
+				if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?, worn_at=? WHERE id=?", newCond, now, t.id); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func isWardenSet(ctx context.Context, tx *sql.Tx, instanceID string) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM item_instances WHERE location='fitted' AND owner=? AND item_def IN ("+wardenDefs()+")", instanceID).Scan(&count)
+	return count > 0, err
+}
+
+func hasWardenSetInPack(ctx context.Context, tx *sql.Tx, player string) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM item_instances t
+WHERE t.location='pack' AND t.owner=?
+ AND EXISTS (SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def IN (`+wardenDefs()+`))`, player).Scan(&count)
+	return count > 0, err
 }
 func wardenDefs() string {
 	ids := []string{}
@@ -363,7 +457,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 			return out, fail(409, "tool-blunt")
 		}
 		v.Condition = max(0, v.Condition-wearCost(v.Max, fittings))
-		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=? WHERE id=?", v.Condition, utcDay(now), v.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=?,worn_at=? WHERE id=?", v.Condition, utcDay(now), now, v.ID); err != nil {
 			return out, err
 		}
 		// One draw is one bucket: a full stave bucket of well water.
@@ -586,6 +680,9 @@ type itemsView struct {
 
 func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (itemsView, error) {
 	v := itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
+	if err := healWardens(ctx, tx, s.HabiticaID, time.Now().Unix()); err != nil {
+		return v, err
+	}
 	makers := map[string]*makerView{}
 	rows, err := tx.QueryContext(ctx, "SELECT item_def,maker_id,qty FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def,maker_id", s.HabiticaID)
 	if err != nil {
@@ -725,6 +822,7 @@ type itemRequest struct {
 	Asset    *content.Asset  `json:"asset,omitempty"`
 	Pickup   string          `json:"pickup,omitempty"`
 	Target   string          `json:"target,omitempty"`
+	Unmoored bool            `json:"unmoored,omitempty"`
 }
 
 // itemResult: the caller's items after the change, and what happened.
@@ -830,6 +928,10 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 			if s.State.Mana < s.State.MaxMana {
 				helps = true
 				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.Amount))
+			}
+		case "clear-unmoored", "ease-unmoored":
+			if req.Unmoored {
+				helps = true
 			}
 		}
 	}
@@ -954,6 +1056,15 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 	if hasFitting(fitted, fdef.Fitting) {
 		return fail(409, "fitting-kind-taken")
 	}
+	if fdef.Fitting == "remember" {
+		has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID)
+		if err != nil {
+			return err
+		}
+		if has {
+			return fail(409, "two-wardens-grind")
+		}
+	}
 	if err = moveInstance(ctx, tx, f.ID, f.Def, from, instanceAt{"fitted", tool.ID}); err != nil {
 		return err
 	}
@@ -1032,6 +1143,21 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	radius := float64(content.ItemsRules.Rules.Give.RadiusTiles * wildsTileSize)
 	if a.presence == nil || !a.presence.together(s.WorldID, s.HabiticaID, req.ToID, radius) {
 		return "", fail(409, "not-together")
+	}
+	if v.Kind == "instance" {
+		warden, err := isWardenSet(ctx, tx, v.Instance)
+		if err != nil {
+			return "", err
+		}
+		if warden {
+			has, err := hasWardenSetInPack(ctx, tx, req.ToID)
+			if err != nil {
+				return "", err
+			}
+			if has {
+				return "", fail(409, "two-wardens-grind")
+			}
+		}
 	}
 	to := pack(req.ToID)
 	got, err := takeAsset(ctx, tx, s, v, to, "give", req.ToID, now)
@@ -1145,6 +1271,15 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 	def, _ := content.ItemFor(p.Item)
 	out.Pickup = p.ID
 	if def.Instanced() {
+		if def.Fitting == "remember" {
+			has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID)
+			if err != nil {
+				return err
+			}
+			if has {
+				return fail(409, "two-wardens-grind")
+			}
+		}
 		condition := -1
 		if p.UsesLeft > 0 {
 			condition = p.UsesLeft * content.ItemsRules.Rules.Wear.PointsPerUse
