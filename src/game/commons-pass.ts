@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, blitKey, fitRect, type PackedManifest, type PackedRect } from './atlas-plan.ts'
+import { artDataUrl, artDensity, artSource, contextDensity, drawArt, resampleFor, setDensity } from './density.ts'
 
 /**
  * Typed port of `assets/generated/commons-pass/integration.js`: the Commons
@@ -8,10 +9,12 @@ import { PACKED_MANIFEST_KEY, blitKey, fitRect, type PackedManifest, type Packed
  * are high-resolution irregular atlases with individually measured
  * rectangles — never a fixed grid. Each manifest frame becomes one
  * native-size canvas texture (`commons-art:<frame>`): its measured
- * `sourceRect` sampled nearest-neighbour into its `destinationRect`, so
- * foot-anchored origins stay put between frames. That sampling now happens
- * at build time (scripts/build-atlases.ts) and ships packed; the loader
- * copies the baked pixels. Source PNGs are never modified.
+ * `sourceRect` box-filtered into its `destinationRect`, so foot-anchored
+ * origins stay put between frames. That sampling happens at build time
+ * (scripts/build-atlases.ts) at ART_DENSITY texels per world px and ships
+ * packed; the loader copies the baked pixels into dense textures
+ * (./density.ts) that draw at the native world size. Source PNGs are never
+ * modified.
  *
  * Code-drawn placeholders (./commons-art.ts, ./textures.ts, the Wilds art)
  * stay the fallback layer: every frame is optional, so a pack that fails to
@@ -98,6 +101,9 @@ export function preloadCommonsPass(scene: Phaser.Scene, base: string = COMMONS_P
 let aliases: Record<string, string> = {}
 let frames = new Map<string, CommonsPassFrame>()
 let packedBlits: Record<string, PackedRect> = {}
+/** The packed atlas's pixels, kept for the baked samples `blitFrame` draws later. */
+let packedAtlas: CanvasImageSource | null = null
+let packedDensity = 1
 
 /** The manifest entry for a frame or alias (null when the pack isn't loaded). */
 export function commonsFrame(key: string): CommonsPassFrame | null {
@@ -105,13 +111,14 @@ export function commonsFrame(key: string): CommonsPassFrame | null {
 }
 
 /**
- * Build the native textures and the 11 looping animations. Idempotent
- * (existing keys are skipped). Each native canvas is copied 1:1 from the
- * packed atlas, which holds exactly what blitting the measured source rect
- * into the native canvas produced (scripts/build-atlases.ts). Frames
- * missing from the atlas are left out, and so are animations missing any
- * frame. Returns the manifest, or null when the pack didn't load (the
- * placeholders carry on alone).
+ * Build the native textures and the 11 looping animations, once at boot
+ * (existing keys are skipped; the packed atlas texture is released after,
+ * so a second call returns null). Each native texture is copied 1:1 from
+ * the packed atlas, which holds the measured source rect box-filtered into
+ * the native canvas at ART_DENSITY (scripts/build-atlases.ts), and drawn at
+ * its native world size (./density.ts). Frames missing from the atlas are
+ * left out, and so are animations missing any frame. Returns the manifest,
+ * or null when the pack didn't load (the placeholders carry on alone).
  */
 export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | null {
   const manifest = scene.cache.json.get(COMMONS_PASS_MANIFEST_KEY) as CommonsPassManifest | undefined
@@ -121,18 +128,24 @@ export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | nu
   aliases = { ...manifest.aliases }
   frames = new Map()
   packedBlits = packed.blits ?? {}
+  packedDensity = packed.density ?? 1
+  const k = artDensity(scene)
   for (const item of manifest.frames) {
     const r = packed.frames[item.key]
     if (!r) continue
     frames.set(item.key, item)
     const key = artKey(item.key)
     if (scene.textures.exists(key)) continue
-    const output = scene.textures.createCanvas(key, item.width, item.height)
+    const output = scene.textures.createCanvas(key, item.width * k, item.height * k)
     if (!output) continue
-    output.context.imageSmoothingEnabled = false
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3])
+    resampleFor(output.context, packed.density ?? 1, k)
+    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
     output.refresh()
+    setDensity(output, k)
   }
+  // The atlas was staging: its GPU copy goes (the image stays for blitFrame).
+  packedAtlas = atlas
+  scene.textures.remove(COMMONS_PACKED_KEY)
   for (const definition of manifest.animations) {
     const key = artKey(definition.key)
     if (scene.anims.exists(key) || !definition.frames.every((f) => frames.has(f))) continue
@@ -147,32 +160,32 @@ export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | nu
 }
 
 /**
- * Draw a frame's measured source crop into `dest` on `context`, as sampling
- * the source sheet nearest-neighbour would: at its native destination size
- * that's the native canvas's pixels; at other sizes (or mirrored) it's a
- * sample baked into the atlas (`commonsBlitPlan`). A size nobody baked
- * resamples the native frame instead — run `npm run atlases` after adding
- * one to the plan.
+ * Draw a frame's measured source crop into `dest` (world px) on `context`
+ * (world px: an `artCanvas` context, or a plain one at density 1), as
+ * filtering the source sheet would: at its native destination size that's
+ * the native texture's texels; at other sizes (or mirrored) it's a sample
+ * baked into the atlas (`commonsBlitPlan`). A size nobody baked resamples
+ * the native frame instead — run `npm run atlases` after adding one to the
+ * plan.
  */
 export function blitFrame(scene: Phaser.Scene, frame: CommonsPassFrame, context: CanvasRenderingContext2D, dest: CommonsPassRect, flipX = false): void {
-  const key = artKey(frame.key)
-  if (!scene.textures.exists(key)) return
-  const native = scene.textures.get(key).getSourceImage() as CanvasImageSource
+  const native = artSource(scene, artKey(frame.key))
+  if (!native) return
   const d = frame.destinationRect
   context.save()
   context.imageSmoothingEnabled = false
   const baked = packedBlits[blitKey(frame.key, dest.w, dest.h, flipX)]
   if (!flipX && dest.w === d.w && dest.h === d.h) {
-    context.drawImage(native, d.x, d.y, d.w, d.h, dest.x, dest.y, dest.w, dest.h)
-  } else if (baked && scene.textures.exists(COMMONS_PACKED_KEY)) {
-    const atlas = scene.textures.get(COMMONS_PACKED_KEY).getSourceImage() as CanvasImageSource
-    context.drawImage(atlas, baked[0], baked[1], baked[2], baked[3], dest.x, dest.y, dest.w, dest.h)
+    drawArt(context, native, dest.x, dest.y, dest.w, dest.h, d.x, d.y, d.w, d.h)
+  } else if (baked && packedAtlas) {
+    resampleFor(context, packedDensity, contextDensity(context))
+    context.drawImage(packedAtlas, baked[0], baked[1], baked[2], baked[3], dest.x, dest.y, dest.w, dest.h)
   } else {
     if (flipX) {
       context.translate(dest.x * 2 + dest.w, 0)
       context.scale(-1, 1)
     }
-    context.drawImage(native, d.x, d.y, d.w, d.h, dest.x, dest.y, dest.w, dest.h)
+    drawArt(context, native, dest.x, dest.y, dest.w, dest.h, d.x, d.y, d.w, d.h)
   }
   context.restore()
 }
@@ -191,18 +204,14 @@ export function commonsAnim(scene: Phaser.Scene, animation: string): string | nu
   return scene.anims.exists(key) ? key : null
 }
 
-/** A crisp data URL of a delivered frame, scaled up by a whole number (UI). */
+/**
+ * A crisp data URL of a delivered frame (UI): `scale` image px per world
+ * px, or the frame's own density when that is finer.
+ */
 export function commonsDataUrl(scene: Phaser.Scene, frame: string, scale = 1): string | null {
   const key = commonsArt(scene, frame)
-  if (!key) return null
-  const src = scene.textures.get(key).getSourceImage() as HTMLCanvasElement
-  const o = document.createElement('canvas')
-  o.width = src.width * scale
-  o.height = src.height * scale
-  const ctx = o.getContext('2d')!
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(src, 0, 0, o.width, o.height)
-  return o.toDataURL()
+  const src = key ? artSource(scene, key) : null
+  return src ? artDataUrl(src, scale) : null
 }
 
 /**

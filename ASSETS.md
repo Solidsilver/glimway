@@ -387,6 +387,12 @@ record here):
   atlases are re-sampled at their largest on-screen size; the two
   illustrations ship as WebP. See `docs/runtime-asset-spec.md` ("Packed
   atlases").
+- 2026-10-06 — Dense packs: the Commons, runtime and items passes and the
+  terrain tileset are baked at 4 texels per world px (64 per 16-px tile),
+  box-filtered from the sources, and drawn at the same world size
+  (`src/game/density.ts`; phones keep 2×). `packed/` grows to ~9 MB
+  (`commons.png` 3.4 MB, `items.png` 1.7 MB). See
+  `docs/runtime-asset-spec.md` ("Packed atlases").
 - 2026-10-05 — Register G added for the Items pass
   (`assets/generated/items-pass/` + a trimmed
   `public/assets/fingersnap/items-pass/`): inventory icons for tools,
