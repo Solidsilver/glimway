@@ -1729,7 +1729,18 @@ export class HomesteadLayer implements InteractionProvider {
         g.lineStyle(1, 0xffd98a, 0.8)
         g.strokeCircle(bx + TILE / 2, by - TILE / 2, (HOMESTEAD_DATA.lanternPosts.radius + 0.5) * TILE)
       }
-      if (this.scene.textures.exists(key)) {
+      // Runtime art when it exists, else the items pass's world sprite (or
+      // its commons alias) — the same fallback the placed piece draws.
+      const art = this.scene.textures.exists(key) ? null : itemWorldArt(it.itemDef)
+      const hasArt = !!art && this.scene.textures.exists(art)
+      if (hasArt) {
+        const f = itemsFrame(art!.slice('items-art:'.length))
+        const fw = f ? f.width : w * TILE
+        const fh = f ? f.height : h * TILE
+        const scale = Math.min((w * TILE) / fw, (h * TILE) / fh) || 1
+        p.ghost = this.scene.add.image(bx + (w * TILE) / 2, by, art!).setOrigin(0.5, 1).setScale(scale).setDepth(5300).setAlpha(0.85)
+        if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
+      } else if (!art) {
         p.ghost = this.scene.add.image(bx, by, key).setOrigin(0, 1).setDepth(5300).setAlpha(0.85)
         if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
       }

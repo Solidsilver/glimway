@@ -5,7 +5,7 @@ import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
 import { assetKind, isStackable, itemDef } from './items.ts';
 export interface Asset { kind: 'material' | 'item' | 'decoration' | 'instance'; id: string; qty: number }
-export interface Recipe { id: string; name: string; minTier: number; materials: Record<string, number>; output: Asset }
+export interface Recipe { id: string; name: string; minTier: number; materials: Record<string, number>; output: Asset; page?: string; found?: string }
 export interface Crafting { utilityItems: { id: string; name: string }[]; recipes: Recipe[]; hearthRecipes?: Recipe[] }
 export interface Project { id: string; name: string; materials: Record<string, number>; papers: string[]; worldFlag: string }
 export interface Projects { projects: Project[] }
@@ -31,6 +31,10 @@ export function validateCrafting(value: unknown): Crafting {
     if (!Array.isArray(c.hearthRecipes)) return bad();
     for (const r of c.hearthRecipes) {
       if (!object(r) || !id(r.id) || typeof r.name !== 'string' || !r.name || recipes.has(r.id) || r.minTier !== 1 || !validRecipeCosts(r.materials) || !object(r.output) || !positive(r.output.qty, 100)) return bad();
+      // A found recipe names the page that teaches it (a recipe paper you
+      // hold); a starting recipe names neither.
+      if ((r.page === undefined) !== (r.found === undefined)) return bad();
+      if (r.page !== undefined) { const p = itemDef(r.page); if (!p || p.kind !== 'paper') return bad(); }
       const d = itemDef(r.output.id);
       if (!d || assetKind(d) !== r.output.kind || (r.output.kind !== 'item' && r.output.kind !== 'material')) return bad();
       recipes.add(r.id);

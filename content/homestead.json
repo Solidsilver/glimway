@@ -268,7 +268,8 @@
       ],
       "minTier": 1,
       "embers": 5,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "wash-basin",
@@ -318,7 +319,7 @@
       "minTier": 1,
       "embers": 0,
       "materials": {
-        "timber": 10,
+        "seasoned-timber": 10,
         "fiber": 6
       }
     },
@@ -426,7 +427,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "writing-desk",
@@ -441,7 +443,8 @@
       ],
       "minTier": 1,
       "embers": 4,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "keepsake-cabinet",
@@ -456,7 +459,8 @@
       ],
       "minTier": 1,
       "embers": 4,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "drying-rack",
@@ -472,7 +476,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "apothecary-shelf",
@@ -487,7 +492,8 @@
       ],
       "minTier": 1,
       "embers": 4,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "woodpile",
@@ -502,7 +508,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "raised-bed",
@@ -517,7 +524,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "window-lamp",
@@ -532,7 +540,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "naming-frame",
@@ -547,7 +556,8 @@
       ],
       "minTier": 1,
       "embers": 2,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "pencil-map",
@@ -562,7 +572,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "pressed-flowers",
@@ -577,7 +588,8 @@
       ],
       "minTier": 1,
       "embers": 2,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "candle-hulls",
@@ -593,7 +605,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "carting-bunting",
@@ -609,7 +622,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "empty-chair",
@@ -624,7 +638,8 @@
       ],
       "minTier": 1,
       "embers": 4,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "closure-lamp",
@@ -640,7 +655,8 @@
       ],
       "minTier": 1,
       "embers": 3,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "door-fox",
@@ -656,7 +672,8 @@
       ],
       "minTier": 1,
       "embers": 2,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     }
   ]
 }

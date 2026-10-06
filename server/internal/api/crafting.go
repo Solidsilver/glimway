@@ -10,7 +10,7 @@ import (
 )
 
 // cottageHearth returns the homestead ID if the caller is a member of a
-// homestead that has Cottage tier (tier 1+) or a placed stone hearth.
+// homestead with Cottage tier (tier 1+): the doc's hearth rule.
 func cottageHearth(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
 	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
 	if err != nil {
@@ -23,14 +23,7 @@ func cottageHearth(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, 
 	if err = tx.QueryRowContext(ctx, "SELECT tier FROM homesteads WHERE id=?", home).Scan(&tier); err != nil {
 		return "", err
 	}
-	if tier >= 1 {
-		return home, nil
-	}
-	var placed bool
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='stone-hearth' AND location='placed')", home).Scan(&placed); err != nil {
-		return "", err
-	}
-	if !placed {
+	if tier < 1 {
 		return "", fail(409, "tier-required")
 	}
 	return home, nil
@@ -99,6 +92,17 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		recipe, ok := content.HearthRecipeFor(req.RecipeID)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
+		}
+		// A found recipe is only known once its page is held (the doc's
+		// "Recipe source" column; starting recipes need no page).
+		if recipe.Page != "" {
+			held, err := stackTotal(ctx, tx, packOf(s.HabiticaID), recipe.Page)
+			if err != nil {
+				return nil, err
+			}
+			if held <= 0 {
+				return nil, fail(409, "recipe-unknown")
+			}
 		}
 		if req.Qty < 1 || req.Qty > 100 {
 			return nil, fail(400, "invalid-quantity")
@@ -205,6 +209,12 @@ type woodpileStackView struct {
 	Remaining   int64  `json:"remaining"`
 }
 
+// woodpileCurrency is the ledger currency for timber on a woodpile: +n on
+// the stacker's ledger, −n on the collector's, −n written off when the deed
+// is lost — so the pile's timber is visible in the ledger the way the shared
+// chest's storage:<kind>:<id> currencies are.
+const woodpileCurrency = "woodpile:material:timber"
+
 type woodpileView struct {
 	HomesteadID string              `json:"homesteadId"`
 	Placed      bool                `json:"placed"`
@@ -216,7 +226,7 @@ type woodpileView struct {
 func readWoodpile(ctx context.Context, tx *sql.Tx, homeID string, now int64) (woodpileView, error) {
 	v := woodpileView{HomesteadID: homeID, Stacks: []woodpileStackView{}}
 	var placed bool
-	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='woodpile' AND location IN ('room', 'outdoor'))", homeID).Scan(&placed); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='woodpile' AND location='placed')", homeID).Scan(&placed); err != nil {
 		return v, err
 	}
 	v.Placed = placed
@@ -314,6 +324,11 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if _, err := tx.ExecContext(ctx, "INSERT INTO woodpile_stacks(id, homestead_id, habitica_id, qty, stacked_at) VALUES(?, ?, ?, ?, ?)", id, homeID, s.HabiticaID, req.Qty, now); err != nil {
 				return nil, err
 			}
+			// The pile's own currency, so the ledger can see the timber on
+			// it (as the shared chest's storage:<kind>:<id> does).
+			if err := currency(ctx, tx, s.HabiticaID, woodpileCurrency, req.Qty, "woodpile:stack", homeID, now); err != nil {
+				return nil, err
+			}
 		case "collect":
 			var rows *sql.Rows
 			if req.StackID != "" {
@@ -343,6 +358,10 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 				if _, err := tx.ExecContext(ctx, "DELETE FROM woodpile_stacks WHERE id=?", id); err != nil {
 					return nil, err
 				}
+			}
+			// Whatever stacks came out, the collector takes them off the pile.
+			if err := currency(ctx, tx, s.HabiticaID, woodpileCurrency, -collectedQty, "woodpile:collect", homeID, now); err != nil {
+				return nil, err
 			}
 			if err := packPut(ctx, tx, s.HabiticaID, "seasoned-timber", []makerQty{{"", collectedQty}}, "woodpile:collect", homeID, now); err != nil {
 				return nil, err

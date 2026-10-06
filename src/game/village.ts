@@ -92,6 +92,10 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'Your world’s post office can’t recall parcels yet.'
     case 'invalid-recipe':
       return 'That isn’t a recipe anyone keeps here.'
+    case 'recipe-unknown':
+      return 'You never learned that recipe. Its page teaches it, once you find it.'
+    case 'craft-only':
+      return 'Silas doesn’t sell that piece. It’s made at the bench, or given.'
     case 'desk-required':
       return 'That needs a writing desk set out at home.'
     case 'woodpile-required':

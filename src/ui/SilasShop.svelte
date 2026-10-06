@@ -44,8 +44,8 @@
     }
   })
 
-  const emberItems = HOMESTEAD_DATA.items.filter((i) => i.embers > 0)
-  const materialItems = HOMESTEAD_DATA.items.filter((i) => i.embers === 0)
+  const emberItems = HOMESTEAD_DATA.items.filter((i) => i.embers > 0 && !i.craftOnly)
+  const materialItems = HOMESTEAD_DATA.items.filter((i) => i.embers === 0 && !i.craftOnly)
   const cottage = HOMESTEAD_DATA.tiers[1]
   const cottageBlurb = HOMESTEAD_TIERS[1].blurb
   const workshop = HOMESTEAD_DATA.tiers[2]

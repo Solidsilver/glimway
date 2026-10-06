@@ -83,7 +83,7 @@
   <div class="panel" use:focusTrap>
     <button type="button" class="modal-close" onclick={onClose} aria-label="Close the woodpile"><Icon name="close" size={14} /></button>
     <h2 class="panel-title" id="woodpile-title"><Icon name="home" size={20} /> The Woodpile</h2>
-    <p class="lede">“Green wood sinks, dry wood sings.” Stack green timber here and it seasons after a real day. Fine work — tables, chairs, shelves, desks — wants seasoned timber.</p>
+    <p class="lede">“Green wood sinks, dry wood sings.” Stack green timber and it seasons after a real day. Fine work wants seasoned.</p>
     <p class="carried"><span><ArtIcon art="icon-timber" name="sparkle" size={16} /> {timber} green timber carried</span></p>
     {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
     {#if loaded !== 'ready'}

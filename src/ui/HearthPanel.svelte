@@ -13,7 +13,7 @@
 
   // The cottage hearth (docs/items/crafting-and-repair.md): food, remedies
   // and oils, each batch carrying your maker's mark. Needs the Cottage
-  // (tier 1) or a stone hearth set out.
+  // (tier 1). Found recipes open only once their page is held.
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
@@ -33,6 +33,9 @@
     void version
     return { ...(village.inventory?.materials ?? {}), ...(village.inventory?.items ?? {}) }
   })
+
+  /** A found recipe is locked until its page is held. */
+  const known = (page?: string): boolean => !page || (carried[page] ?? 0) > 0
 
   /** Every material the hearth recipes can ask for, in a steady order. */
   const hearthMaterials = $derived.by(() => {
@@ -73,24 +76,33 @@
       {#each HEARTH_RECIPES as r (r.id)}
         {@const can = batchesAffordable(r, carried)}
         {@const n = effectiveBatches(batches[r.id], can)}
-        <li class="recipe" class:can={can > 0} data-recipe={r.id}>
+        {@const learned = known(r.page)}
+        <li class="recipe" class:can={can > 0 && learned} class:locked={!learned} data-recipe={r.id}>
           <span class="thumb" aria-hidden="true"><ArtIcon art={`icon-${r.output.id}`} name="sparkle" size={32} /></span>
           <span class="txt">
             <span class="name">{r.name}</span>
-            <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
-            <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
+            {#if learned}
+              <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
+              <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
+            {:else}
+              <span class="can">You never learned this recipe — {r.found}.</span>
+            {/if}
           </span>
           <span class="go">
-            {#if can > 1}
-              <span class="batch">
-                <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
-                <span class="bn">{n}</span>
-                <button type="button" class="tiny" aria-label="More" disabled={n >= can} onclick={() => (batches = { ...batches, [r.id]: n + 1 })}>+</button>
-              </span>
+            {#if learned}
+              {#if can > 1}
+                <span class="batch">
+                  <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
+                  <span class="bn">{n}</span>
+                  <button type="button" class="tiny" aria-label="More" disabled={n >= can} onclick={() => (batches = { ...batches, [r.id]: n + 1 })}>+</button>
+                </span>
+              {/if}
+              <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={busy !== null || can <= 0} onclick={() => craft(r.id)}>
+                {busy === `craft:${r.id}` ? 'Making…' : 'Make'}
+              </button>
+            {:else}
+              <span class="locked-tag" data-testid="locked">page not found</span>
             {/if}
-            <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={busy !== null || can <= 0} onclick={() => craft(r.id)}>
-              {busy === `craft:${r.id}` ? 'Making…' : 'Make'}
-            </button>
           </span>
         </li>
       {/each}
@@ -150,6 +162,18 @@
   .recipe.can {
     opacity: 1;
     background: rgba(255, 255, 255, 0.32);
+  }
+  .recipe.locked {
+    opacity: 0.62;
+    border-style: dashed;
+  }
+  .locked-tag {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-soft);
+    border: 2px dashed var(--paper-line);
+    border-radius: 8px;
+    padding: 3px 8px;
   }
   .thumb {
     flex: none;

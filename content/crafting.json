@@ -522,6 +522,20 @@
         "id": "closure-lamp",
         "qty": 1
       }
+    },
+    {
+      "id": "craft-bookshelf",
+      "name": "Bookshelf",
+      "minTier": 2,
+      "materials": {
+        "seasoned-timber": 5,
+        "wooden-peg": 2
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "bookshelf",
+        "qty": 1
+      }
     }
   ],
   "hearthRecipes": [
@@ -579,7 +593,9 @@
         "kind": "item",
         "id": "willow-bark-tea",
         "qty": 2
-      }
+      },
+      "page": "recipe-page-willow-tea",
+      "found": "Found on another Cotta leaf out in the Wilds"
     },
     {
       "id": "hearth-hearth-oil",
@@ -593,7 +609,9 @@
         "kind": "item",
         "id": "hearth-oil",
         "qty": 1
-      }
+      },
+      "page": "recipe-page-hearth-oil",
+      "found": "Found on a leaf of Ada’s oil receipts"
     },
     {
       "id": "hearth-keepers-twists",
@@ -607,7 +625,9 @@
         "kind": "item",
         "id": "keepers-twists",
         "qty": 4
-      }
+      },
+      "page": "recipe-card-twists",
+      "found": "Found on Hazel’s recipe card in the village"
     },
     {
       "id": "hearth-oil-twists",
@@ -622,7 +642,9 @@
         "kind": "item",
         "id": "oil-twists",
         "qty": 4
-      }
+      },
+      "page": "recipe-card-oil-twists",
+      "found": "Hazel’s card, once the oil comes back"
     },
     {
       "id": "hearth-wax-seal",
@@ -635,7 +657,9 @@
         "kind": "item",
         "id": "wax-seal",
         "qty": 2
-      }
+      },
+      "page": "recipe-page-wax-seal",
+      "found": "Found on a Brackenwood handbook page"
     },
     {
       "id": "hearth-storm-oil",
@@ -649,7 +673,9 @@
         "kind": "material",
         "id": "storm-oil",
         "qty": 1
-      }
+      },
+      "page": "recipe-page-storm-oil",
+      "found": "Found in a margin of Wenna’s ledger"
     }
   ]
 }

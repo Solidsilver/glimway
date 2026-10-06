@@ -27,6 +27,10 @@ type Recipe struct {
 	MinTier   int            `json:"minTier"`
 	Materials map[string]int `json:"materials"`
 	Output    Asset          `json:"output"`
+	// Hearth recipes only: the recipe page a found recipe asks for (empty
+	// for a starting recipe), and where the world says it is found.
+	Page  string `json:"page,omitempty"`
+	Found string `json:"found,omitempty"`
 }
 type Crafting struct {
 	UtilityItems  []UtilityItem `json:"utilityItems"`
@@ -103,6 +107,17 @@ func ValidateCrafting(c Crafting) error {
 	for _, r := range c.HearthRecipes {
 		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 1 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 {
 			return bad
+		}
+		// A found recipe names the page that teaches it (a recipe paper you
+		// hold); a starting recipe names neither.
+		if (r.Page == "") != (r.Found == "") {
+			return bad
+		}
+		if r.Page != "" {
+			d, ok := ItemFor(r.Page)
+			if !ok || d.Kind != "paper" {
+				return bad
+			}
 		}
 		if r.Output.Kind != "item" && r.Output.Kind != "material" {
 			return bad

@@ -266,7 +266,12 @@ export function itemWorldArt(itemId: string, state?: string): string | null {
     if (byState) return itemsArtKey(byState.key)
   }
   const byItem = worldByItemId.get(itemId)
-  return byItem ? itemsArtKey(byItem.key) : null
+  if (byItem) return itemsArtKey(byItem.key)
+  // No world sprite: a commons alias (e.g. woodpile → commons:woodpile)
+  // names a runtime texture the scenes already have.
+  const alias = aliases[itemId]
+  if (alias?.startsWith('commons:')) return 'commons-art:' + alias.slice('commons:'.length)
+  return null
 }
 
 /**

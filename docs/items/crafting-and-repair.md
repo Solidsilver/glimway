@@ -73,6 +73,16 @@ The other fittings are **found only** (see the catalogue).
 | The Empty Chair | seasoned timber 4, amberfall sap 1 |
 | Closure Night lamp | frost-glass 2, lamp wick 1, hearth oil 1 |
 
+All of these are **bench-only**: Silas doesn't sell them (nor the door-fox,
+which he carves at deed time, nor Pip's pencil map, which is Pip's gift). The
+deliberate exceptions are the **oak table** and the **reading chair**, which
+Silas still sells to anyone with the embers — fine work for players who
+haven't the bench yet. The **carved bed** and the **bookshelf** take seasoned
+timber: the bed's purchase bill and the bookshelf's recipe both do.
+
+The pressed-flower frame's recipe waits on **dried flowers** (bloom flowers
+drying over a season — the seasons work); it takes fresh blooms until then.
+
 ### Seasoned timber
 
 - Chopped timber arrives **green**. Stacked on a **woodpile**, it becomes

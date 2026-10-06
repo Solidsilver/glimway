@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { sql } from './connected'
 import { waitForLive } from './helpers'
-import { claimDeed, earnEmbers, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
+import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
 /**
  * Crafting at the hearth and the writing desk, against the real Go server
@@ -43,6 +43,21 @@ async function cottagePlayer(page: Page): Promise<string> {
   return id
 }
 
+/** A cottage with the Workshop built on (tier 2); one round of embers, and
+ * the workshop build's materials in the pack before Silas first reads them. */
+async function workshopPlayer(page: Page): Promise<string> {
+  const id = await freshPlayer(page)
+  await fund(id, { materials: { timber: 20, stone: 10, fiber: 13, 'seasoned-timber': 6 } })
+  await earnPlenty(page, id)
+  await claimDeed(page)
+  await silasSays(page, /Raise a cottage/)
+  await readOn(page, /Steady as a route stone/)
+  await silasSays(page, /Build on a workshop/)
+  await readOn(page, /Steady|eaves/)
+  await expect.poll(async () => (await myHome(page)).tier).toBe(2)
+  return id
+}
+
 /** Stand at a spot in the cottage and open the crafting panel at it. */
 async function openPanel(page: Page, spot: { x: number; y: number }, prompt: RegExp | string, name: string): Promise<ReturnType<Page['getByRole']>> {
   await place(page, spot.x, spot.y)
@@ -55,6 +70,7 @@ async function openPanel(page: Page, spot: { x: number; y: number }, prompt: Reg
 }
 
 test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it', async ({ page }) => {
+  test.setTimeout(300_000)
   const id = await cottagePlayer(page)
 
   // No wild thyme, no tea: the recipe row says so, and the hearth refuses.
@@ -63,38 +79,63 @@ test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it'
   const panel = await openPanel(page, { x: 159, y: 70 }, 'Cook at the hearth', 'The Hearth')
   await expect(panel.locator('[data-recipe="hearth-saltings-tea"]')).toContainText('Not enough materials')
 
-  // With thyme and water: two teas, marked by their maker.
+  // With thyme and water: two teas, marked by their maker. A found recipe
+  // (the wax seal) stays locked until its page is held.
   await panel.getByRole('button', { name: 'Close the hearth' }).click()
   await expect(panel).toBeHidden()
   fund(id, { materials: { 'wild-thyme': 4, water: 2 } })
   await waitForLive(page)
   await page.keyboard.press('e')
   await expect(panel).toBeVisible()
+  await expect(panel.locator('[data-recipe="hearth-wax-seal"]')).toContainText('You never learned this recipe')
+  await expect(panel.locator('[data-recipe="hearth-wax-seal"] [data-testid="locked"]')).toBeVisible()
+  fund(id, { items: { 'recipe-page-wax-seal': 1 }, materials: { beeswax: 2 } })
+  await panel.getByRole('button', { name: 'Close the hearth' }).click()
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(panel).toBeVisible()
   await panel.locator('[data-craft="hearth-saltings-tea"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Made 2 Saltings tea')
+  // The page in hand: the wax seals unlock and carry the maker's mark.
+  await panel.locator('[data-craft="hearth-wax-seal"]').click()
+  await expect(panel.locator('.msg.ok')).toContainText('Made 2 Wax seals')
   await panel.getByRole('button', { name: 'Close the hearth' }).click()
   await expect(panel).toBeHidden()
   const st = await (await page.request.get('/api/storage')).json()
   expect(st.inventory.items['saltings-tea']).toBe(2)
   expect(st.inventory.items['wild-thyme']).toBe(2)
+  expect(st.inventory.items['wax-seal']).toBe(2)
   // The maker's mark went on: the stack in the pack reads its maker.
   const mark = sql(`SELECT maker_id FROM item_stacks WHERE owner='${id}' AND item_def='saltings-tea' AND location='pack';`)
   expect(mark).toBe(id)
   await shot(page, 'hearth-craft-desktop')
 })
 
-test('the writing desk: buy it, set it out in the cottage, sit down, copy a recipe page you hold, one fiber a copy', async ({ page }) => {
-  const id = await cottagePlayer(page)
+test('the writing desk: craft it at the bench, set it out, sit down, copy a recipe page you hold, one fiber a copy', async ({ page }) => {
+  test.setTimeout(300_000)
+  const id = await workshopPlayer(page)
 
-  // Buy the desk from Silas's yard (ember goods are his trade).
+  // Silas doesn't sell the desk (it's made at the bench): no row of his.
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
-  await shop.locator('[data-buy="writing-desk"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Writing desk is yours')
+  await expect(shop.locator('[data-buy="writing-desk"]')).toHaveCount(0)
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
-  // Inside the cottage: the arrange tray sets it out on the room grid.
+  // The bench: seasoned timber in, one writing desk out.
   await intoCottage(page)
+  await place(page, 115, 66)
+  await expect(page.locator('.prompt')).toContainText('Work at the bench')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  const workshop = page.getByRole('dialog', { name: 'The Workshop' })
+  await expect(workshop).toBeVisible()
+  await workshop.getByRole('tab', { name: 'Crafting bench' }).click()
+  await workshop.locator('[data-craft="craft-writing-desk"]').click()
+  await expect(workshop.locator('.msg.ok')).toContainText('Made a Writing desk')
+  await workshop.getByRole('button', { name: 'Close the workshop' }).click()
+
+  // Inside the cottage: the arrange tray sets it out on the room grid.
+  await waitForLive(page)
   await page.getByTestId('arrange').click()
   await carryTo(page, 'writing-desk', 2, 2)
   const tray = page.getByTestId('placement-tray')

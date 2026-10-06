@@ -18,6 +18,8 @@ import {
   preloadItemsPass,
   type ItemsPassManifest,
 } from '../src/game/items-pass.ts'
+import { COMMONS_DECORATION_IDS } from '../src/game/atlas-plan.ts'
+import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/assets/fingersnap/items-pass/', import.meta.url))
 const SOURCE_DIR = fileURLToPath(new URL('../assets/generated/items-pass/', import.meta.url))
@@ -209,4 +211,16 @@ test('itemWorldArt resolves placed pieces to their world sprites', () => {
   assert.equal(itemWorldArt('window-lamp'), 'items-art:world-window-lamp-unlit-pane')
   // No world sprite for an unknown item, and no invented art.
   assert.equal(itemWorldArt('unknown-item'), null)
+  // A commons alias stands in when there's no world sprite (the placed
+  // woodpile draws the commons pass's pile).
+  assert.equal(itemWorldArt('woodpile'), 'commons-art:woodpile')
+  assert.equal(itemWorldArt('candle-hulls'), 'commons-art:candle-hull-0')
+  assert.equal(itemWorldArt('carting-bunting'), 'commons-art:bunting')
+})
+
+test('every home good resolves to art: runtime deco, world sprite or commons alias', () => {
+  for (const it of HOMESTEAD_DATA.items) {
+    const ok = COMMONS_DECORATION_IDS.has(it.id) || itemWorldArt(it.id) !== null
+    assert.ok(ok, `${it.id} has no deco key, world sprite or commons alias`)
+  }
 })
