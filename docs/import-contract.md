@@ -180,6 +180,9 @@ maxMp           = 2 * effective(int) + 30
 - `gearBonus` = Σ `item[stat]` over `items.gear.equipped` keys (once each).
 - `classBonus` = Σ `item[stat]` **once** for items whose `klass`/`specialClass`
   matches the character class (class bonus applied once per matching item).
+  Habitica spells the mage class `wizard` (stats.class and gear
+  klass/specialClass); both spellings are accepted at every intake and mapped
+  onto the internal `mage`, so gear klass `wizard` matches class `mage`.
 - Costume gear NEVER contributes stats (visuals only).
 - Unknown/uncatalogued gear keys contribute 0 (the `/user` payload carries
   keys only; stat values come from `GearStatsLookup`, defaulting to the
@@ -276,7 +279,7 @@ hand-computed expected effective stats:
 | key | Proves |
 |---|---|
 | `lowLevel` | level bonus floor(lvl/2), class-matching gear counted twice |
-| `highLevel` | buffs, cap `MAX_LEVEL`, heavy INT gear → derived `maxMp` |
+| `highLevel` | real Habitica `wizard` class spelling imports as `mage`; buffs, cap `MAX_LEVEL`, heavy INT gear → derived `maxMp` |
 | `classless` | `flags.classSelected: false` → `class: null`, no class bonus |
 | `lowHp` | fractional imported HP (expedition difficulty source) |
 | `variedEquipment` | mixed klass/specialClass/unknown keys; no double-counting |

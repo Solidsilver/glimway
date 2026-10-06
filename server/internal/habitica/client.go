@@ -188,7 +188,13 @@ func Map(b []byte) (rules.Profile, error) {
 		p.MaxHP = *s.MaxHealth
 	}
 	if u.Flags.ClassSelected == nil || *u.Flags.ClassSelected {
-		p.Class = &s.Class
+		// Habitica reports the mage class as "wizard"; map it onto the
+		// internal "mage" here so nothing downstream sees the alias.
+		c, ok := rules.NormalizeClass(s.Class)
+		if !ok {
+			return rules.Profile{}, bad
+		}
+		p.Class = &c
 	}
 	bonus := math.Floor(math.Min(p.Level, 100) / 2)
 	p.Stats = rules.Stats{Str: *s.Str + s.Buffs.Str + bonus, Int: *s.Int + s.Buffs.Int + bonus, Con: *s.Con + s.Buffs.Con + bonus, Per: *s.Per + s.Buffs.Per + bonus}
@@ -201,7 +207,7 @@ func Map(b []byte) (rules.Profile, error) {
 			continue
 		}
 		m := 1.
-		if p.Class != nil && (g.Klass == *p.Class || g.SpecialClass == *p.Class) {
+		if p.Class != nil && (rules.GearMatchesClass(g.Klass, *p.Class) || rules.GearMatchesClass(g.SpecialClass, *p.Class)) {
 			m = 2
 		}
 		p.Stats.Str += m * g.Str

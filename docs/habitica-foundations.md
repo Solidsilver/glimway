@@ -77,6 +77,11 @@ user.stats.buffs.{str,int,con,per}`, and for each equipped item in
 `classBonus += item[stat]` **again** when the item's `klass`/`specialClass`
 matches `user.stats.class`.
 
+Habitica spells the mage class **`wizard`** in both `stats.class` and gear
+`klass`/`specialClass`. Fingersnap accepts both spellings at every intake and
+maps `wizard` onto the internal `mage`; gear klass `wizard` therefore matches
+an internal `mage` for the class bonus.
+
 Pitfalls for the Fingersnap mapping (plan already requires "Avoid counting
 equipment and buffs twice"):
 

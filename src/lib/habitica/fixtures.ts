@@ -165,16 +165,20 @@ const lowLevel: HabiticaFixture = {
 
 /**
  * Level 100 mage at the level cap: buffs included, heavy INT gear with
- * class-match doubling, derived maxMp from effective INT.
+ * class-match doubling, derived maxMp from effective INT. Real Habitica
+ * payloads spell the mage class `wizard` (stats.class) and label wizard
+ * gear `klass: 'wizard'` — the mapping must accept both and still apply
+ * the class bonus for the internal `mage`.
  */
 const highLevel: HabiticaFixture = {
   key: 'highLevel',
-  description: 'Level-cap mage with buffs and heavy INT gear (verification priority: high-level)',
+  description:
+    'Level-cap mage (Habitica class `wizard`) with buffs and heavy INT gear (verification priority: high-level)',
   user: userFixture({
     id: 'fixture-high-level-00000000000000001',
     name: 'Vesper',
     level: 100,
-    class: 'mage',
+    class: 'wizard',
     hp: 50,
     mp: 300,
     base: { str: 30, int: 65, con: 40, per: 45 },
@@ -189,9 +193,9 @@ const highLevel: HabiticaFixture = {
     mounts: { 'Dragon-Red': true, 'Wolf-Base': true },
   }),
   gearStats: {
-    weapon_wizard_1: { int: 9, klass: 'mage' },
-    armor_wizard_1: { int: 5, con: 2, klass: 'mage' },
-    head_wizard_1: { int: 4, klass: 'mage' },
+    weapon_wizard_1: { int: 9, klass: 'wizard' },
+    armor_wizard_1: { int: 5, con: 2, klass: 'wizard' },
+    head_wizard_1: { int: 4, klass: 'wizard' },
     shield_mystery: { per: 10 },
     shield_base_0: {},
     head_base_0: {},
@@ -211,6 +215,7 @@ const highLevel: HabiticaFixture = {
     maxMp: 332,
     // level bonus 50 (capped); buffs str 5 / per 2;
     // INT gear 18 + class 18; con gear 2 + class 2; per gear 10 only
+    // (wizard-klass gear matches the internal mage class)
     stats: { str: 85, int: 151, con: 94, per: 107 },
   },
 };

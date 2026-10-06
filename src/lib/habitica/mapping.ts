@@ -31,7 +31,22 @@ export class InvalidHabiticaUserError extends Error {
   }
 }
 
+/**
+ * The game's internal classes. Habitica's API spells the mage class
+ * `wizard` (user stats.class AND gear klass/specialClass, see
+ * content/habitica-gear.json) — HABITICA_CLASSES is the raw API domain we
+ * accept, and `toInternalClass` maps it onto this list so the rest of the
+ * game (combat kits, art, UI) only ever sees `mage`.
+ */
 const CLASSES: readonly string[] = ['warrior', 'mage', 'rogue', 'healer'];
+
+const HABITICA_CLASSES: readonly string[] = ['warrior', 'mage', 'wizard', 'rogue', 'healer'];
+
+/** Habitica `wizard` → internal `mage`; other known classes pass through. */
+export function toInternalClass(raw: unknown): HabiticaClass | null {
+  if (typeof raw !== 'string' || !HABITICA_CLASSES.includes(raw)) return null;
+  return (raw === 'wizard' ? 'mage' : raw) as HabiticaClass;
+}
 
 const STAT_KEYS = ['str', 'int', 'con', 'per'] as const;
 
@@ -93,7 +108,8 @@ export function effectiveStatsFor(
       gearBonus += contribution;
       const matchesClass =
         characterClass !== null &&
-        (item.klass === characterClass || item.specialClass === characterClass);
+        (toInternalClass(item.klass) === characterClass ||
+          toInternalClass(item.specialClass) === characterClass);
       if (matchesClass) classBonus += contribution;
     }
     out[stat] = base[stat] + buffs[stat] + gearBonus + classBonus + levelBonus;
@@ -169,13 +185,13 @@ export function toHabiticaProfile(user: unknown, gearStats?: GearStatsLookup): H
   const rawClass = statsRaw.class;
   let characterClass: HabiticaClass | null = null;
   if (classSelected) {
-    if (typeof rawClass !== 'string' || !CLASSES.includes(rawClass)) {
+    characterClass = toInternalClass(rawClass);
+    if (characterClass === null) {
       throw new InvalidHabiticaUserError(
-        `expected one of ${CLASSES.join(', ')}, got ${JSON.stringify(rawClass)}`,
+        `expected one of ${HABITICA_CLASSES.join(', ')}, got ${JSON.stringify(rawClass)}`,
         'stats.class',
       );
     }
-    characterClass = rawClass as HabiticaClass;
   }
 
   const level = requireNumber(statsRaw.lvl, 'stats.lvl', { min: 1 });
