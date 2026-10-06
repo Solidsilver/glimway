@@ -8,10 +8,13 @@
  * src/game/atlas-plan.ts for what each atlas holds and why.
  *
  * The baking runs in headless Chromium (Playwright's, already a dev
- * dependency) with the same canvas calls the loaders used at boot — a
- * native-size canvas, `imageSmoothingEnabled = false`, `drawImage(source,
- * sourceRect, destinationRect)` — so the packed pixels are exactly what the
- * game drew before. After writing, every frame is read back from the encoded
+ * dependency). The canvas packs (the Commons, runtime and items passes, the
+ * terrain) are dense: each native frame canvas is ART_DENSITY texels per
+ * world px, its measured source rect box-filtered (area-averaged) into its
+ * destination rect, so the game keeps the paintings' detail and draws them
+ * nearest-neighbour at the same world size (src/game/density.ts). The
+ * GPU-scaled atlases keep their nearest-neighbour blit at their largest
+ * on-screen size. After writing, every frame is read back from the encoded
  * PNG and compared with the canvas it came from; any difference fails the
  * build. The output is committed (deploy builds don't need a browser), and
  * tests/atlases.test.ts fails when an input changed without a re-run.
@@ -22,6 +25,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
 import {
+  ART_DENSITY,
   ATLAS_GENERATOR_VERSION,
   BACKDROPS,
   MAX_SCREEN_SCALE,
@@ -47,7 +51,11 @@ function read(path: string): Buffer {
 }
 const readJson = <T>(path: string): T => JSON.parse(read(path).toString('utf8')) as T
 
-/** One canvas to bake: a source crop sampled into a `w`×`h` canvas. */
+/**
+ * One canvas to bake: a source crop sampled into a `w`×`h` canvas. `box`
+ * area-averages the source into each texel (the dense canvas packs);
+ * otherwise it's the old nearest-neighbour blit (the GPU-scaled atlases).
+ */
 interface Job {
   id: string
   src: string
@@ -56,6 +64,13 @@ interface Job {
   h: number
   d: [number, number, number, number]
   flipX?: boolean
+  box?: boolean
+}
+
+/** A pack job at ART_DENSITY: a native `w`×`h` world-px canvas, `d` in world px. */
+function dense(id: string, src: string, s: [number, number, number, number], w: number, h: number, d: [number, number, number, number], flipX?: boolean): Job {
+  const k = ART_DENSITY
+  return { id, src, s, w: w * k, h: h * k, d: [d[0] * k, d[1] * k, d[2] * k, d[3] * k], flipX, box: true }
 }
 
 interface AtlasFrameJson {
@@ -93,53 +108,40 @@ async function main(): Promise<void> {
   const commons = readJson<CommonsPassManifest>('assets/generated/commons-pass/manifest.json')
   const commonsSrc = new Map(commons.sources.map((s) => [s.key, `assets/generated/commons-pass/${s.file}`]))
   for (const path of commonsSrc.values()) read(path)
-  const commonsJobs: Job[] = commons.frames.map((f) => ({
-    id: f.key,
-    src: commonsSrc.get(f.source)!,
-    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
-    w: f.width,
-    h: f.height,
-    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
-  }))
+  const commonsJobs: Job[] = commons.frames.map((f) =>
+    dense(f.key, commonsSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], f.width, f.height, [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h]),
+  )
   const byKey = new Map(commons.frames.map((f) => [f.key, f]))
   const blits = commonsBlitPlan(commons.frames)
   const blitJobs: Job[] = blits.map((b) => {
     const f = byKey.get(b.frame)!
-    return { id: blitKey(b.frame, b.w, b.h, b.flipX), src: commonsSrc.get(f.source)!, s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], w: b.w, h: b.h, d: [0, 0, b.w, b.h], flipX: b.flipX }
+    return dense(blitKey(b.frame, b.w, b.h, b.flipX), commonsSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], b.w, b.h, [0, 0, b.w, b.h], b.flipX)
   })
 
   const runtime = readJson<RuntimeArtManifest>('assets/generated/runtime-pass/manifest.json')
   const runtimeSrc = new Map(runtime.sources.map((s) => [s.key, `assets/generated/runtime-pass/${s.file}`]))
   for (const path of runtimeSrc.values()) read(path)
-  const runtimeJobs: Job[] = runtime.frames.map((f) => ({
-    id: f.key,
-    src: runtimeSrc.get(f.source)!,
-    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
-    w: f.width,
-    h: f.height,
-    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
-  }))
+  const runtimeJobs: Job[] = runtime.frames.map((f) =>
+    dense(f.key, runtimeSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], f.width, f.height, [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h]),
+  )
 
   const items = readJson<ItemsPassManifest>('assets/generated/items-pass/manifest.json')
   const itemsSrc = new Map(items.sources.map((s) => [s.key, `assets/generated/items-pass/${s.file}`]))
   for (const path of itemsSrc.values()) read(path)
-  const itemsJobs: Job[] = items.frames.map((f) => ({
-    id: f.key,
-    src: itemsSrc.get(f.source)!,
-    s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h],
-    w: f.width,
-    h: f.height,
-    d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h],
-  }))
+  const itemsJobs: Job[] = items.frames.map((f) =>
+    dense(f.key, itemsSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], f.width, f.height, [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h]),
+  )
 
-  // The terrain tileset createFingersnapTerrain built: 16 named cells → 4×4 of 32 px.
+  // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
+  // ART_DENSITY (64 texels at 4×). A cell delivered at that size is copied
+  // texel for texel; larger paintings are box-filtered down.
   const expansion = readJson<{ terrain: { tiles: Record<string, string> } }>('assets/generated/expansion/manifest.json')
   const terrainAtlas = readJson<{ frames: Record<string, AtlasFrameJson> }>('assets/generated/expansion/fingersnap-terrain.atlas.json')
   read('assets/generated/expansion/fingersnap-terrain.png')
-  const TILE = 32
+  const TILE = 16 * ART_DENSITY
   const terrainJobs: Job[] = Array.from({ length: 16 }, (_, i) => {
     const c = terrainAtlas.frames[expansion.terrain.tiles[i]].frame
-    return { id: `cell-${i}`, src: 'assets/generated/expansion/fingersnap-terrain.png', s: [c.x, c.y, c.w, c.h], w: TILE, h: TILE, d: [0, 0, TILE, TILE] }
+    return dense(`cell-${i}`, 'assets/generated/expansion/fingersnap-terrain.png', [c.x, c.y, c.w, c.h], 16, 16, [0, 0, 16, 16])
   })
 
   // GPU-scaled atlases: each group at its largest on-screen size (never above source).
@@ -189,6 +191,65 @@ async function main(): Promise<void> {
             img.src = url
           })
         for (const j of placed) if (!images.has(j.src)) images.set(j.src, await load(origin + j.src))
+        // Source pixels, read once per sheet (box filtering).
+        const pixels = new Map<string, ImageData>()
+        const sourcePixels = (src: string) => {
+          if (!pixels.has(src)) {
+            const img = images.get(src)!
+            const c = document.createElement('canvas')
+            c.width = img.naturalWidth
+            c.height = img.naturalHeight
+            const ctx = c.getContext('2d', { willReadFrequently: true })!
+            ctx.drawImage(img, 0, 0)
+            pixels.set(src, ctx.getImageData(0, 0, c.width, c.height))
+          }
+          return pixels.get(src)!
+        }
+        /** Each output texel's source span on one axis: [source index, overlap] pairs. */
+        const spans = (s0: number, sn: number, n: number) =>
+          Array.from({ length: n }, (_, i) => {
+            const a = s0 + (i * sn) / n
+            const b = s0 + ((i + 1) * sn) / n
+            const out: [number, number][] = []
+            for (let p = Math.floor(a); p < b; p++) out.push([p, Math.min(b, p + 1) - Math.max(a, p)])
+            return out
+          })
+        /**
+         * Area-average the source rect into a `dw`×`dh` ImageData: each texel
+         * is the mean of the source it covers, colour weighted by alpha so a
+         * transparent neighbour never darkens an edge.
+         */
+        const boxFilter = (src: ImageData, s: number[], dw: number, dh: number, flipX: boolean) => {
+          const out = new ImageData(dw, dh)
+          const xs = spans(s[0], s[2], dw)
+          const ys = spans(s[1], s[3], dh)
+          const d = src.data
+          for (let y = 0; y < dh; y++) {
+            for (let x = 0; x < dw; x++) {
+              let r = 0, g = 0, b = 0, a = 0, t = 0
+              for (const [sy, wy] of ys[y]) {
+                for (const [sx, wx] of xs[x]) {
+                  const w = wx * wy
+                  const i = (sy * src.width + sx) * 4
+                  const al = d[i + 3] * w
+                  r += d[i] * al
+                  g += d[i + 1] * al
+                  b += d[i + 2] * al
+                  a += al
+                  t += w
+                }
+              }
+              const o = (y * dw + (flipX ? dw - 1 - x : x)) * 4
+              if (a > 0) {
+                out.data[o] = Math.round(r / a)
+                out.data[o + 1] = Math.round(g / a)
+                out.data[o + 2] = Math.round(b / a)
+                out.data[o + 3] = Math.round(a / t)
+              }
+            }
+          }
+          return out
+        }
         const atlas = document.createElement('canvas')
         atlas.width = size[0]
         atlas.height = size[1]
@@ -196,17 +257,22 @@ async function main(): Promise<void> {
         actx.imageSmoothingEnabled = false
         const canvases: HTMLCanvasElement[] = []
         for (const j of placed) {
-          // Exactly the loaders' blit (commons-pass blitFrame / runtime-art / terrain).
           const c = document.createElement('canvas')
           c.width = j.w
           c.height = j.h
           const ctx = c.getContext('2d')!
           ctx.imageSmoothingEnabled = false
-          if (j.flipX) {
-            ctx.translate(j.d[0] * 2 + j.d[2], 0)
-            ctx.scale(-1, 1)
+          if (j.box) {
+            // The source crop box-filtered into the destination rect (mirrored in place).
+            ctx.putImageData(boxFilter(sourcePixels(j.src), j.s, j.d[2], j.d[3], !!j.flipX), j.d[0], j.d[1])
+          } else {
+            // Nearest neighbour, the loaders' old blit.
+            if (j.flipX) {
+              ctx.translate(j.d[0] * 2 + j.d[2], 0)
+              ctx.scale(-1, 1)
+            }
+            ctx.drawImage(images.get(j.src)!, j.s[0], j.s[1], j.s[2], j.s[3], j.d[0], j.d[1], j.d[2], j.d[3])
           }
-          ctx.drawImage(images.get(j.src)!, j.s[0], j.s[1], j.s[2], j.s[3], j.d[0], j.d[1], j.d[2], j.d[3])
           actx.drawImage(c, j.at[0], j.at[1])
           canvases.push(c)
         }
@@ -313,15 +379,16 @@ async function main(): Promise<void> {
     inputs: Object.fromEntries(Object.entries(inputs).sort(([a], [b]) => a.localeCompare(b))),
     // What the plan asked for (the staleness test re-derives it).
     plan: {
+      density: ART_DENSITY,
       maxScreenScale: MAX_SCREEN_SCALE,
       blits: blits.map((b) => blitKey(b.frame, b.w, b.h, b.flipX)).sort(),
       scaled: Object.fromEntries(scaled.map(({ plan, frames }) => [plan.key, Object.fromEntries(frames.map(({ name, k }) => [name, Number(k.toFixed(6))]))])),
       backdrops: BACKDROPS,
     },
-    commons: { image: 'commons.png', size: cPack.size, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
-    runtime: { image: 'runtime.png', size: rPack.size, frames: rects(runtimeJobs, rPack.at) },
-    items: { image: 'items.png', size: iPack.size, frames: rects(itemsJobs, iPack.at) },
-    terrain: { image: 'terrain.png', size: [TILE * 4, TILE * 4] },
+    commons: { image: 'commons.png', size: cPack.size, density: ART_DENSITY, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
+    runtime: { image: 'runtime.png', size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
+    items: { image: 'items.png', size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
+    terrain: { image: 'terrain.png', size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     atlases,
     backdrops,
   }

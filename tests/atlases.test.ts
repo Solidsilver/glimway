@@ -5,6 +5,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  ART_DENSITY,
   ATLAS_GENERATOR_VERSION,
   BACKDROPS,
   MAX_SCREEN_SCALE,
@@ -28,7 +29,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const PACKED = join(ROOT, 'public/assets/fingersnap/packed')
 const RERUN = 'stale packed atlases: run `npm run atlases`'
 
-type Built = PackedManifest & { generatorVersion: number; plan: { maxScreenScale: number; blits: string[]; scaled: Record<string, Record<string, number>>; backdrops: unknown } }
+type Built = PackedManifest & { generatorVersion: number; plan: { density: number; maxScreenScale: number; blits: string[]; scaled: Record<string, Record<string, number>>; backdrops: unknown } }
 const built = JSON.parse(readFileSync(join(PACKED, 'atlases.json'), 'utf8')) as Built
 const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pass/manifest.json'), 'utf8')) as CommonsPassManifest
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
@@ -62,6 +63,7 @@ test('every input the atlases were baked from is unchanged', () => {
 })
 
 test('the plan asks for nothing that wasn’t baked', () => {
+  assert.equal(built.plan.density, ART_DENSITY, RERUN)
   assert.equal(built.plan.maxScreenScale, MAX_SCREEN_SCALE, RERUN)
   const blits = commonsBlitPlan(commons.frames).map((b) => blitKey(b.frame, b.w, b.h, b.flipX)).sort()
   assert.deepEqual(built.plan.blits, blits, RERUN)
@@ -81,7 +83,7 @@ test('the plan asks for nothing that wasn’t baked', () => {
   assert.deepEqual(built.plan.backdrops, JSON.parse(JSON.stringify(BACKDROPS)), RERUN)
 })
 
-test('canvas packs hold every native frame whole, inside their atlas', () => {
+test('canvas packs hold every native frame whole, at ART_DENSITY, inside their atlas', () => {
   for (const [pack, frames] of [
     [built.commons, commons.frames],
     [built.runtime, runtime.frames],
@@ -90,15 +92,27 @@ test('canvas packs hold every native frame whole, inside their atlas', () => {
     const [w, h, color] = pngSize(join(PACKED, pack.image))
     assert.deepEqual([w, h], pack.size, `${pack.image} size`)
     assert.equal(color, 6, `${pack.image} keeps alpha`)
+    assert.equal(pack.density, ART_DENSITY, `${pack.image} density`)
     for (const f of frames) {
       const r = pack.frames[f.key]
       assert.ok(r, `${pack.image}: ${f.key} missing`)
-      assert.deepEqual([r[2], r[3]], [f.width, f.height], `${f.key} is its native canvas`)
+      assert.deepEqual([r[2], r[3]], [f.width * ART_DENSITY, f.height * ART_DENSITY], `${f.key} is its native canvas at ART_DENSITY`)
       assert.ok(r[0] >= 0 && r[1] >= 0 && r[0] + r[2] <= w && r[1] + r[3] <= h, `${f.key} inside ${pack.image}`)
     }
-    for (const [key, r] of Object.entries(pack.blits ?? {})) assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${key} inside ${pack.image}`)
+    for (const [key, r] of Object.entries(pack.blits ?? {})) {
+      const m = /@(\d+)x(\d+)/.exec(key)!
+      assert.deepEqual([r[2], r[3]], [+m[1] * ART_DENSITY, +m[2] * ART_DENSITY], `${key} at ART_DENSITY`)
+      assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${key} inside ${pack.image}`)
+    }
   }
-  assert.deepEqual(pngSize(join(PACKED, built.terrain.image)).slice(0, 2), [128, 128], 'terrain is the 4×4 tileset of 32-px cells')
+  // Every atlas fits a phone GPU's texture limit.
+  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, ...Object.values(built.atlases).map((a) => a.image)]) {
+    const [w, h] = pngSize(join(PACKED, image))
+    assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
+  }
+  const cell = 16 * ART_DENSITY
+  assert.deepEqual([built.terrain.cell, built.terrain.density], [cell, ART_DENSITY])
+  assert.deepEqual(pngSize(join(PACKED, built.terrain.image)).slice(0, 2), [cell * 4, cell * 4], `terrain is the 4×4 tileset of ${cell}-texel cells`)
 })
 
 test('scaled atlases keep every frame name, at their baked size', () => {

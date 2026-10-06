@@ -13,6 +13,7 @@
  */
 import type Phaser from 'phaser'
 import { blitFrame, commonsFrame } from './commons-pass.ts'
+import { addArtCanvas, artCanvas, artDensity, artSource, drawArt } from './density.ts'
 import { ROOM_HEARTH } from './cottage.ts'
 
 type C = CanvasRenderingContext2D
@@ -69,15 +70,15 @@ function paint(c: C, rows: string[], pal: Record<string, string>, ox = 0, oy = 0
   })
 }
 
-function makeTexture(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c: C) => void): void {
+/**
+ * A `w`×`h` world-px texture drawn by `draw` in world px; `density` texels
+ * a world px (./density.ts) when it composes delivered art.
+ */
+function makeTexture(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c: C) => void, density = 1): void {
   if (scene.textures.exists(key)) return
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const c = canvas.getContext('2d')!
-  c.imageSmoothingEnabled = false
+  const [canvas, c] = artCanvas(w, h, density)
   draw(c)
-  scene.textures.addCanvas(key, canvas)
+  addArtCanvas(scene, key, canvas, density)
 }
 
 /** Outline a drawn silhouette: every clear pixel touching a filled one becomes O. */
@@ -205,23 +206,23 @@ function deliveredRun(scene: Phaser.Scene, key: string, kind: 'hedge' | 'fence',
   const lift = kind === 'hedge' ? 6 : 0
   if (dir === 'v') {
     const upright = piece(kind === 'hedge' ? 'straight-v' : 'corner')
-    if (!upright || !scene.textures.exists(`commons-art:${upright.key}`)) return false
-    const src = scene.textures.get(`commons-art:${upright.key}`).getSourceImage() as HTMLCanvasElement
+    const src = upright ? artSource(scene, `commons-art:${upright.key}`) : null
+    if (!src) return false
     const h = n * 16
     makeTexture(scene, key, 16, h + lift, (c) => {
       if (kind === 'fence') {
         // The corner piece's post (its left 4 px), one a tile, on the old line.
-        for (let i = 0; i < n; i++) c.drawImage(src, 0, 0, 4, 16, 6, i * 16, 4, 16)
+        for (let i = 0; i < n; i++) drawArt(c, src, 6, i * 16, 4, 16, 0, 0, 4, 16)
         return
       }
       // Hedge: the piece's crown, its leafy middle repeated, then its foot.
-      c.drawImage(src, 0, 0, 16, 4, 0, lift, 16, 4)
+      drawArt(c, src, 0, lift, 16, 4, 0, 0, 16, 4)
       for (let y = 4; y < h - 4; y += 8) {
         const rows = Math.min(8, h - 4 - y)
-        c.drawImage(src, 0, 4, 16, rows, 0, lift + y, 16, rows)
+        drawArt(c, src, 0, lift + y, 16, rows, 0, 4, 16, rows)
       }
-      c.drawImage(src, 0, 12, 16, 4, 0, lift + h - 4, 16, 4)
-    })
+      drawArt(c, src, 0, lift + h - 4, 16, 4, 0, 12, 16, 4)
+    }, src.density)
     return true
   }
   const pieces: { name: string; flip?: boolean }[] = []
@@ -235,22 +236,27 @@ function deliveredRun(scene: Phaser.Scene, key: string, kind: 'hedge' | 'fence',
   if (!pieces.every((p) => piece(p.name))) return false
   const w = n * 16
   const h = 16 + lift
+  const k = artDensity(scene)
   makeTexture(scene, key, w, h, (c) => {
     pieces.forEach((p, i) => {
       const f = piece(p.name)!
       const d = f.destinationRect
       blitFrame(scene, f, c, { x: i * 16 + d.x, y: lift + d.y, w: d.w, h: d.h }, p.flip)
     })
-    const img = c.getImageData(0, 0, w, h)
+    // In texels: copy world-px columns (k texels each) over the joins.
+    const tw = w * k
+    const img = c.getImageData(0, 0, tw, h * k)
     const px = img.data
     const copy = (fx: number, tx: number, y: number) => {
-      const a = (y * w + fx) * 4
-      const b = (y * w + tx) * 4
-      for (let k = 0; k < 4; k++) px[b + k] = px[a + k]
+      for (let t = 0; t < k; t++) {
+        const a = (y * tw + fx * k + t) * 4
+        const b = (y * tw + tx * k + t) * 4
+        for (let n = 0; n < 4; n++) px[b + n] = px[a + n]
+      }
     }
     for (let j = 1; j < n; j++) {
       const at = j * 16
-      for (let y = lift; y < h; y++) {
+      for (let y = lift * k; y < h * k; y++) {
         if (kind === 'hedge') {
           copy(at - 2, at - 1, y)
           copy(at + 1, at, y)
@@ -258,7 +264,7 @@ function deliveredRun(scene: Phaser.Scene, key: string, kind: 'hedge' | 'fence',
       }
     }
     c.putImageData(img, 0, 0)
-  })
+  }, k)
   return true
 }
 

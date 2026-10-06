@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
+import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, resampleFor, setDensity } from './density.ts'
 
 /**
  * Typed port and loader module for `assets/generated/items-pass/`:
@@ -149,9 +150,10 @@ export function preloadItemsPass(scene: Phaser.Scene, base: string = ITEMS_PASS_
 }
 
 /**
- * Build native canvas textures and the three looping mill animations.
- * Idempotent (existing keys are skipped). Each native canvas is copied 1:1
- * from the packed atlas.
+ * Build native canvas textures and the three looping mill animations, once
+ * at boot (existing keys are skipped; the packed atlas texture is released
+ * after). Each native texture is copied 1:1 from the packed atlas, dense
+ * (./density.ts).
  *
  * State groups are discrete states (never animations). Loops are only created
  * for the three mill animations (mill-wheel, mill-wheel-mended, mill-froth).
@@ -164,17 +166,22 @@ export function createItemsPass(scene: Phaser.Scene): ItemsPassManifest | null {
 
   initItemsManifest(manifest)
 
+  // Dense textures (./density.ts): the packed texels, drawn at native world size.
+  const k = artDensity(scene)
   for (const item of manifest.frames) {
     const r = packed.frames[item.key]
     if (!r) continue
     const key = itemsArtKey(item.key)
     if (scene.textures.exists(key)) continue
-    const output = scene.textures.createCanvas(key, item.width, item.height)
+    const output = scene.textures.createCanvas(key, item.width * k, item.height * k)
     if (!output) continue
-    output.context.imageSmoothingEnabled = false
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3])
+    resampleFor(output.context, packed.density ?? 1, k)
+    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
     output.refresh()
+    setDensity(output, k)
   }
+  // The atlas was staging: release its GPU copy.
+  scene.textures.remove(ITEMS_PACKED_KEY)
 
   // Fallback 16×16 texture for items without art
   if (!scene.textures.exists(ITEM_ART_FALLBACK)) {
@@ -239,18 +246,11 @@ export function installItemsPass(scene: Phaser.Scene): void {
     'mill-froth-1',
   ]
   for (const name of millFrames) {
-    const deliveredKey = itemsArtKey(name)
-    if (!scene.textures.exists(deliveredKey)) continue
-    if (scene.textures.exists(name)) {
-      scene.textures.remove(name)
-    }
-    const source = scene.textures.get(deliveredKey).getSourceImage()
-    const output = scene.textures.createCanvas(name, source.width, source.height)
-    if (output) {
-      output.context.imageSmoothingEnabled = false
-      output.context.drawImage(source as CanvasImageSource, 0, 0)
-      output.refresh()
-    }
+    const source = artSource(scene, itemsArtKey(name))
+    if (!source) continue
+    const [c, ctx] = artCanvas(source.w, source.h, source.density)
+    drawArt(ctx, source, 0, 0)
+    addArtCanvas(scene, name, c, source.density)
   }
 }
 
@@ -313,22 +313,15 @@ export function itemIcon(itemId: string, state?: string, fallback: string = ITEM
   return fallback
 }
 
-/** A crisp data URL of a delivered item frame, scaled up by a whole number (UI). */
+/** A UI data URL of a delivered item frame, `scale` image px per world px. */
 export function itemDataUrl(scene: Phaser.Scene, frameOrKey: string, scale = 1): string | null {
   const key = frameOrKey.startsWith(ITEMS_ART_PREFIX) || frameOrKey.startsWith('commons-art:')
     ? frameOrKey
     : (aliases[frameOrKey]?.startsWith('commons:')
         ? 'commons-art:' + aliases[frameOrKey].slice('commons:'.length)
         : itemsArtKey(aliases[frameOrKey] ?? frameOrKey))
-  if (!scene.textures.exists(key)) return null
-  const src = scene.textures.get(key).getSourceImage() as HTMLCanvasElement
-  const o = document.createElement('canvas')
-  o.width = src.width * scale
-  o.height = src.height * scale
-  const ctx = o.getContext('2d')!
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(src, 0, 0, o.width, o.height)
-  return o.toDataURL()
+  const src = artSource(scene, key)
+  return src ? artDataUrl(src, scale) : null
 }
 
 /**

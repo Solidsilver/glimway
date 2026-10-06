@@ -19,19 +19,41 @@ build and the runtime share, `src/game/packed.ts` loads it in
 `BootScene.preload`. What `public/assets/fingersnap/` holds now: the five
 small JSON manifests (`commons-pass/manifest.json`,
 `runtime-pass/manifest.json`, `items-pass/manifest.json`, `expansion/manifest.json`,
-`expansion/animations.json`) and `packed/` (~3.7 MB, was 60 MB):
+`expansion/animations.json`) and `packed/` (~9 MB, was 60 MB):
 
-- **Canvas-blitted packs — pixel-identical.** The Commons pass (173 native
-  frames + 20 off-size samples), the runtime pass (27 frames), the items
-  pass (170 frames), and the expansion terrain tileset (4×4 cells of 32 px)
-  are baked in headless Chromium with the loaders' own canvas calls (native
-  canvas, smoothing off, `drawImage(sheet, sourceRect, destinationRect)`),
-  packed, and copied back out 1:1 at boot (`commons.png`, `runtime.png`,
-  `items.png`, `terrain.png`). The build reads every frame back from the encoded
-  PNG and fails on any difference; `e2e/atlases.spec.ts` redoes the old blits
-  from the source sheets in the browser and compares them with the game's textures.
-  Off-size samples (the refitted 2×1 decorations, the Wilds decor boxes, the
-  mirrored fence corner) come from `commonsBlitPlan`; `blitFrame` fetches them by key.
+- **Canvas-blitted packs — dense, box-filtered.** The Commons pass (173
+  native frames + 20 off-size samples), the runtime pass (27 frames), the
+  items pass (170 frames), and the expansion terrain tileset (4×4 cells, one
+  16-px world tile each) are baked in headless Chromium at `ART_DENSITY`
+  (4) texels per world px: each frame's measured source rect is
+  box-filtered (area-averaged, alpha-weighted) into its destination rect on
+  a native canvas 4× its world size, packed (`commons.png`, `runtime.png`,
+  `items.png`, `terrain.png`), and copied back out 1:1 at boot. The build
+  reads every frame back from the encoded PNG and fails on any difference;
+  `e2e/atlases.spec.ts` checks the game holds exactly the packed texels and
+  draws each texture at its native world size. Off-size samples (the
+  refitted 2×1 decorations, the Wilds decor boxes, the mirrored fence
+  corner) come from `commonsBlitPlan`; `blitFrame` fetches them by key.
+  Terrain cells delivered at 64 px (the playtest-1 seamless tiles) pass
+  through texel for texel.
+- **Dense textures at runtime** (`src/game/density.ts`). A dense texture's
+  frame reports its world size (so `image.width`, origins, physics bodies,
+  hit areas, depth and camera framing are what they were) while its UVs span
+  the whole canvas; the game draws it nearest-neighbour (`pixelArt`). Code
+  that reads pixels gets them through `artSource` / `drawArt` /
+  `artCanvas` (a composite canvas whose context is scaled to world px).
+  Sampling ties are biased by `TIE_BIAS` (1/64 texel) so the ground and
+  sprites don't shimmer as the camera moves. Phones (screen short side
+  under 600 CSS px, always framed at 2 canvas px per world px) keep
+  `PHONE_ART_DENSITY` (2), box-filtered from the packs at boot; the Canvas
+  renderer gets density 1. The packed atlases are staging: their GPU
+  copies are released once the frame textures exist.
+- **Ground.** The village, Commons, cottage and Woodland ground is a Phaser
+  tilemap (`src/game/area/terrain.ts`) over a boot-built tileset of the 16
+  terrain cells and the Commons' path-edge overlays (extruded 1 texel), its
+  layers scaled to 16-px tiles: it costs no texture memory past the tileset
+  (a baked 4× ground would be ~60 MB for the Commons). The Wilds keep their
+  per-pixel floor.
 - **GPU-scaled atlases — same look, re-sampled.** The hero walk, enemies,
   foreground occluders and props are drawn with `setScale(display / frame
   size)` and the camera zooms 1.5–5× (1.3× more in the lantern beat), so the
@@ -58,10 +80,10 @@ the manifest and animations; the art ships packed (see "Packed atlases"). Typed 
 `assets/generated/expansion/integration.js`); the runtime agent owns the
 wiring in `BootScene`/`WorldScene`.
 
-- **Terrain** (`fingersnap-terrain`): 16 named 32px tiles with unequal source
-  cells — `createFingersnapTerrain` normalizes them into a uniform 4×4 runtime
-  tileset at 32px; `WorldScene.buildGround` blits cells into 16px world tiles
-  via an explicit `TERRAIN_TO_EXPANSION` mapping (grass→grass, flowers→
+- **Terrain** (`fingersnap-terrain`): 16 named tiles with unequal source
+  cells — the atlas build normalizes them into a uniform 4×4 runtime
+  tileset of 64-texel cells (16 world px at 4×); `buildGround` lays them out
+  as 16px world tiles via an explicit `TERRAIN_TO_EXPANSION` mapping (grass→grass, flowers→
   flower-grass, paths→packed-dirt, water→pond-water, bridge→wood-planks,
   stone→cobblestone/shrine-stone, roofs/walls→wood/dark-wood-planks…). Source
   PNG is never treated as an even grid.

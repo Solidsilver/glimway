@@ -40,6 +40,7 @@ import type { LandWorld } from '../homeland'
 import { COTTAGE_H, decoFlat, decoKey } from '../commons-art'
 import { itemsFrame, itemWorldArt } from '../items-pass'
 import { commonsAnim, commonsDataUrl } from '../commons-pass'
+import { artDataUrl, artSource, densityOf, drawArt, opaqueBox } from '../density'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { presence } from '../presence'
@@ -292,17 +293,16 @@ export class HomesteadLayer implements InteractionProvider {
     const out: Record<string, string> = {}
     for (const it of HOMESTEAD_DATA.items) {
       try {
-        const src = this.scene.textures.get(decoKey(it.id, 0)).getSourceImage() as HTMLCanvasElement
-        // Trimmed to the art (a chair stands in the bottom of its two-tile canvas).
-        const b = opaqueBounds(src)
+        const src = artSource(this.scene, decoKey(it.id, 0))
+        if (!src) continue
+        // Trimmed to the art (a chair stands in the bottom of its two-tile
+        // canvas), in whole world px, scaled up as it always was.
+        const o = opaqueBox(src)
+        const x0 = o ? Math.floor(o.x) : 0
+        const y0 = o ? Math.floor(o.y) : 0
+        const b = o ? { x: x0, y: y0, w: Math.ceil(o.x + o.w) - x0, h: Math.ceil(o.y + o.h) - y0 } : { x: 0, y: 0, w: src.w, h: src.h }
         const scale = Math.max(1, Math.floor(36 / Math.max(b.w, b.h)))
-        const o = document.createElement('canvas')
-        o.width = b.w * scale
-        o.height = b.h * scale
-        const ctx = o.getContext('2d')!
-        ctx.imageSmoothingEnabled = false
-        ctx.drawImage(src, b.x, b.y, b.w, b.h, 0, 0, o.width, o.height)
-        out[it.id] = o.toDataURL()
+        out[it.id] = artDataUrl(src, scale, b)
       } catch {
         /* thumbnails are decoration */
       }
@@ -318,13 +318,15 @@ export class HomesteadLayer implements InteractionProvider {
       return
     }
     try {
-      const src = this.scene.textures.get('silas-idle-0').getSourceImage() as HTMLCanvasElement
+      const src = artSource(this.scene, 'silas-idle-0')
+      if (!src) return
       const o = document.createElement('canvas')
       o.width = 14
       o.height = 14
       const ctx = o.getContext('2d')!
-      ctx.imageSmoothingEnabled = false
-      ctx.drawImage(src, 1, 1, 14, 13, 0, 1, 14, 13)
+      ctx.imageSmoothingEnabled = src.density > 1
+      ctx.imageSmoothingQuality = 'high'
+      drawArt(ctx, src, 0, 1, 14, 13, 1, 1, 14, 13)
       bus.emit(EV.portraits, { [SILAS.name]: o.toDataURL() })
     } catch {
       /* portraits are decoration */
@@ -781,6 +783,12 @@ export class HomesteadLayer implements InteractionProvider {
     const f = img.frame
     const id = `${img.texture.key}:${f.name}`
     let b = this.opaque.get(id)
+    if (!b && densityOf(img.texture) !== 1) {
+      // A dense texture (../density.ts): its texels' box, in world px.
+      const o = opaqueBox(artSource(this.scene, img.texture.key)!)
+      b = o ? { l: o.x, t: o.y, r: o.x + o.w, b: o.y + o.h } : { l: 0, t: 0, r: f.width, b: f.height }
+      this.opaque.set(id, b)
+    }
     if (!b) {
       b = { l: f.width, t: f.height, r: 0, b: 0 }
       for (let y = 0; y < f.height; y++)
@@ -2037,22 +2045,4 @@ export function workshopShort(embers: number, materials: Record<string, number>)
 
 function short(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s
-}
-
-/** The rect of a canvas's non-transparent pixels (the whole canvas when empty). */
-function opaqueBounds(src: HTMLCanvasElement): { x: number; y: number; w: number; h: number } {
-  const data = src.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, src.width, src.height).data
-  let x0 = src.width
-  let y0 = src.height
-  let x1 = -1
-  let y1 = -1
-  for (let y = 0; y < src.height; y++)
-    for (let x = 0; x < src.width; x++)
-      if (data[(y * src.width + x) * 4 + 3] > 0) {
-        x0 = Math.min(x0, x)
-        y0 = Math.min(y0, y)
-        x1 = Math.max(x1, x)
-        y1 = Math.max(y1, y)
-      }
-  return x1 < 0 ? { x: 0, y: 0, w: src.width, h: src.height } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 }
 }
