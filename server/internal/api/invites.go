@@ -21,7 +21,9 @@ type InviteMetadata struct {
 // Player invites require authentication and persistent world membership, but
 // no play lease. The raw code is returned once and never persisted. A party's
 // world is for that party only: its residents invite no one (from a world of
-// their own, they can).
+// their own, they can). An account let in through a party invites no one
+// anywhere: its invitee would count as let in by the operator and could open
+// their own party's world, so party admission would chain.
 func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	var req struct{}
 	if err := decode(w, r, &req); err != nil {
@@ -43,6 +45,11 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	}
 	if owner.String == "" {
 		return fail(409, "party-world-invites")
+	}
+	if admitted, err := partyAdmitted(ctx, tx, s.HabiticaID); err != nil {
+		return err
+	} else if admitted {
+		return fail(403, "party-admitted-invites")
 	}
 	if s.Flagged {
 		return fail(403, "player-flagged")
@@ -106,8 +113,13 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM worlds WHERE id=? AND owner_id='')", s.WorldID).Scan(&partyWorld); err != nil {
 		return err
 	}
+	admitted, err := partyAdmitted(r.Context(), tx, s.HabiticaID)
+	if err != nil {
+		return err
+	}
 	// partyWorld: they live in a party's world, which takes no codes.
-	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites, "partyWorld": partyWorld})
+	// partyAdmitted: they came in through a party and make no codes anywhere.
+	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites, "partyWorld": partyWorld, "partyAdmitted": admitted})
 }
 func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/api/invites/")

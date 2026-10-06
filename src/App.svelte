@@ -633,10 +633,21 @@
       g.busy = false
       g.picked = null
       if (code === 'party-closed' || code === 'party-open-denied' || code === 'no-party') {
-        // The party's world can't be had now: ask again with what's left.
+        // The party's world can't be had now: ask again with what's left,
+        // or (nothing left to ask) step into the world of their own made for them.
         try {
           g.choice = accountChoice = await api.worldChoice()
-        } catch {
+        } catch (again) {
+          if (errorCode(again) === 'world-chosen') {
+            gate = null
+            accountChoice = null
+            try {
+              await onSignedIn(await api.state(), null)
+            } catch {
+              accountError = firstWorldCopy.offline
+            }
+            return
+          }
           /* keep the old question */
         }
         g.error = firstWorldCopy.partyGone

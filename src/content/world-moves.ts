@@ -141,9 +141,11 @@ export const firstWorldCopy = {
     label: 'Start a world of your own',
     yours: 'Yours alone: its own road, its own lamps, its own Wilds.',
     friends: 'Invite friends with a code from the Menu.',
+    /** Let in through the party: codes come from elsewhere. */
+    friendsParty: 'Invite codes come from whoever keeps this server, or from a friend who was invited.',
     later: 'Your party’s world stays on offer in the Menu, if you change your mind.',
   },
-  note: 'Either way you can move later from the Menu. Travelers rest a day between worlds.',
+  note: 'Either way you can move later from the Menu: the first move is open at once, then travelers rest a day between worlds.',
   later: 'Not now',
   working: 'Setting down your pack…',
   failed: 'That didn’t go through. Choose again in a moment.',

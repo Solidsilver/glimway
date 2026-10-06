@@ -28,6 +28,9 @@ type worldChoiceView struct {
 	PartyWorld *worldRef `json:"partyWorld"`
 	// PartyCanOpen: the party has no world here yet and choosing it opens one.
 	PartyCanOpen bool `json:"partyCanOpen"`
+	// PartyAdmitted: let in through the party, so they make no invite codes
+	// (createInvite), even from a world of their own.
+	PartyAdmitted bool `json:"partyAdmitted"`
 }
 
 // worldChoiceAnswer wraps it, so a client tells it apart from a snapshot.
@@ -50,9 +53,45 @@ func pendingSession(ctx context.Context, tx *sql.Tx, hash string, now int64) (pe
 	return p, err
 }
 
+// partyAdmitted: the account came in through a party (allowlist added_by
+// 'party'), not by the operator's hand or a code.
+func partyAdmitted(ctx context.Context, tx *sql.Tx, id string) (bool, error) {
+	var n int
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM allowlist WHERE habitica_id=? AND added_by='party'", id).Scan(&n)
+	return n > 0, err
+}
+
+// partyShut: no one comes in through the party now (party admission is off,
+// or the operator closed it).
+func (a *Server) partyShut(ctx context.Context, tx *sql.Tx, party string) (bool, error) {
+	if a.Config.PartyAdmissionOff {
+		return true, nil
+	}
+	return partyClosed(ctx, tx, party)
+}
+
+// partyWorldFor is the party's world as the newcomer may choose it: none
+// for an account let in through the party once that party is shut (the
+// operator's brake holds for sign-ins it already let in, too).
+func (a *Server) partyWorldFor(ctx context.Context, tx *sql.Tx, id string, party *string, admitted bool) (string, error) {
+	pw, err := partyWorld(ctx, tx, party)
+	if pw == "" || err != nil || !admitted {
+		return pw, err
+	}
+	if shut, err := a.partyShut(ctx, tx, *party); err != nil || shut {
+		return "", err
+	}
+	return pw, nil
+}
+
 func (a *Server) loadWorldChoice(ctx context.Context, tx *sql.Tx, id, name string, party *string) (worldChoiceView, error) {
 	v := worldChoiceView{HabiticaID: id, DisplayName: name}
-	pw, err := partyWorld(ctx, tx, party)
+	admitted, err := partyAdmitted(ctx, tx, id)
+	if err != nil {
+		return v, err
+	}
+	v.PartyAdmitted = admitted
+	pw, err := a.partyWorldFor(ctx, tx, id, party, admitted)
 	if err != nil {
 		return v, err
 	}
@@ -115,7 +154,9 @@ func (a *Server) heldSignIn(ctx context.Context, tx *sql.Tx, r *http.Request, no
 }
 
 // worldChoiceRead (GET /api/world/choice) asks again: a reload, or a tab
-// closed mid-choice. Reading slides the held sign-in like any session.
+// closed mid-choice. Reading slides the held sign-in like any session. When
+// there is nothing left to ask, it settles them in a world of their own and
+// answers world-chosen (read the state next).
 func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	tx, err := a.Store.DB.BeginTx(ctx, nil)
@@ -136,6 +177,18 @@ func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if v.PartyWorld == nil && !v.PartyCanOpen {
+		// Nothing left to ask (the party shut, or its world can't be opened
+		// any more): a world of their own, as sign-in would have made, and
+		// the answer every chosen sign-in gets.
+		if _, err = a.settleChoice(ctx, tx, p, "own", now); err != nil {
+			return err
+		}
+		if err = tx.Commit(); err != nil {
+			return err
+		}
+		return fail(409, "world-chosen")
+	}
 	var expires int64
 	if err = tx.QueryRowContext(ctx, "UPDATE pending_sessions SET expires_at=MIN(?,created_at+?) WHERE id_hash=? RETURNING expires_at", now+int64(SessionIdleTTL.Seconds()), int64(SessionTTL.Seconds()), hash).Scan(&expires); err != nil {
 		return err
@@ -150,11 +203,7 @@ func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 }
 
 // worldChoose (POST /api/world/choose {"choice":"party"|"own"}) makes the
-// player in the world chosen, once: "party" joins the party's world (opening
-// it, when it has none and they may), "own" makes a world theirs alone. The
-// choice isn't a move: the first move after it is open at once, and the
-// cooldown counts from that. Choosing their own world records the party's
-// offer as shown (the Menu keeps it).
+// player in the world chosen, once (settleChoice).
 func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Choice string `json:"choice"`
@@ -176,51 +225,70 @@ func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	s, err := a.settleChoice(ctx, tx, held, req.Choice, now)
+	if err != nil {
+		return err
+	}
+	return a.finish(w, r, tx, s)
+}
+
+// settleChoice makes the held newcomer's player: "party" joins the party's
+// world (opening it, when it has none and they may; an account let in
+// through the party is refused once the party is shut), "own" makes a world
+// theirs alone. The choice isn't a move: the first move after it is open at
+// once, and the cooldown counts from that. Choosing their own world records
+// the party's offer as shown (the Menu keeps it).
+func (a *Server) settleChoice(ctx context.Context, tx *sql.Tx, held pendingRow, choice string, now int64) (store.Snapshot, error) {
 	var p rules.Profile
-	if err = json.Unmarshal([]byte(held.Profile), &p); err != nil || p.Exp == nil || p.ID != held.HabiticaID {
-		return fail(500, "internal")
+	if err := json.Unmarshal([]byte(held.Profile), &p); err != nil || p.Exp == nil || p.ID != held.HabiticaID {
+		return store.Snapshot{}, fail(500, "internal")
 	}
 	if held.Party.Valid {
 		p.PartyID = &held.Party.String
 	}
 	var world string
-	if req.Choice == "party" {
-		if world, err = partyWorld(ctx, tx, p.PartyID); err != nil {
-			return err
+	if choice == "party" {
+		admitted, err := partyAdmitted(ctx, tx, p.ID)
+		if err != nil {
+			return store.Snapshot{}, err
+		}
+		if world, err = a.partyWorldFor(ctx, tx, p.ID, p.PartyID, admitted); err != nil {
+			return store.Snapshot{}, err
 		}
 		if world == "" {
+			if pw, err := partyWorld(ctx, tx, p.PartyID); err != nil {
+				return store.Snapshot{}, err
+			} else if pw != "" {
+				return store.Snapshot{}, fail(409, "party-closed")
+			}
 			switch why, err := a.mayOpenParty(ctx, tx, p.ID, p.PartyID); {
 			case err != nil:
-				return err
+				return store.Snapshot{}, err
 			case why != "":
-				return fail(409, why)
+				return store.Snapshot{}, fail(409, why)
 			}
 			if world, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now); err != nil {
-				return err
+				return store.Snapshot{}, err
 			}
 		}
 	} else {
 		own, err := ownWorld(ctx, tx, p.ID, now)
 		if err != nil {
-			return err
+			return store.Snapshot{}, err
 		}
 		world = own.ID
 	}
-	if err = createPlayer(ctx, tx, p, world, held.CreatedAt, now); err != nil {
-		return err
+	if err := createPlayer(ctx, tx, p, world, held.CreatedAt, now); err != nil {
+		return store.Snapshot{}, err
 	}
-	if req.Choice == "own" {
+	if choice == "own" {
 		if pw, err := partyWorld(ctx, tx, p.PartyID); err != nil {
-			return err
+			return store.Snapshot{}, err
 		} else if pw != "" {
 			if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", p.ID, pw, now); err != nil {
-				return err
+				return store.Snapshot{}, err
 			}
 		}
 	}
-	s, err := store.Load(ctx, tx, p.ID)
-	if err != nil {
-		return err
-	}
-	return a.finish(w, r, tx, s)
+	return store.Load(ctx, tx, p.ID)
 }

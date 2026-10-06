@@ -54,7 +54,9 @@ test('a newcomer in a party is asked where to live, is asked again after closing
   await expect(gate.getByTestId('world-choice-party')).toContainText('Join your party’s world')
   await expect(gate.getByTestId('world-choice-party')).toContainText('One traveler calls it home.')
   await expect(gate.getByTestId('world-choice-own')).toContainText('Start a world of your own')
-  await expect(gate).toContainText('Either way you can move later from the Menu.')
+  // Rue came in through the party: codes aren't hers to give, and the gate says so.
+  await expect(gate.getByTestId('world-choice-own')).toContainText('Invite codes come from whoever keeps this server')
+  await expect(gate).toContainText('the first move is open at once, then travelers rest a day between worlds.')
   await other.waitForTimeout(300)
   await shot(other, '01-choice-desktop')
   // Signed in once, the token not kept: the server holds the sign-in, and
@@ -105,6 +107,10 @@ test('a newcomer on a phone starts a world of their own, and the party’s world
   await expect(offer).toContainText('Your party has a world of its own here.')
   await offer.scrollIntoViewIfNeeded()
   await shot(other, '04-own-world-menu-phone')
+  // Let in through the party, Sam makes no invite codes, even from his own world.
+  const invites = other.getByTestId('invite-party-admitted')
+  await expect(invites).toContainText('You came in with your party, so codes aren’t yours to give.')
+  expect((await other.request.post('/api/invites', { data: {} })).status()).toBe(403)
   await ctx.close()
 })
 

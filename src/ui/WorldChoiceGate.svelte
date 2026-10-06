@@ -69,7 +69,7 @@
         </span>
         <span class="opt-list">
           <span class="li"><span class="ic ok"><Icon name="check" size={11} /></span>{copy.own.yours}</span>
-          <span class="li"><span class="ic home"><Icon name="key" size={12} /></span>{copy.own.friends}</span>
+          <span class="li"><span class="ic home"><Icon name="key" size={12} /></span>{choice.partyAdmitted ? copy.own.friendsParty : copy.own.friends}</span>
           {#if partyOffered}<span class="li"><span class="ic home"><Icon name="world" size={12} /></span>{copy.own.later}</span>{/if}
         </span>
       </button>

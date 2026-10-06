@@ -45,6 +45,8 @@ test('someone outside the party still needs a code', async ({ page }) => {
 })
 
 test('a settled member is asked once, then moves into the party’s world', async ({ page, browser, baseURL }) => {
+  // Two sign-ins, a move and both worlds' Wilds: more than the usual budget.
+  test.setTimeout(150_000)
   const { party, world } = await partyOwner(page)
   const hal = await settledElsewhere(browser, baseURL!, 'Hal')
   expect(hal.world).not.toBe(world)
@@ -130,9 +132,15 @@ test('a party’s world takes no invite codes, and a member who leaves the party
   const rue = newUser()
   await setHabitica(rue, { name: 'Rue', party })
   let { ctx, other } = await signInPage(browser, baseURL!, rue)
-  // The Menu says why there's no invite button here.
+  // The Menu says why there's no invite button here: for Olive (the
+  // operator's), this world takes none; Rue came in through the party, so
+  // she makes none anywhere.
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('invite-party-world')).toContainText('This world is for your party alone, so it takes no invite codes.')
+  await expect(page.getByRole('button', { name: 'Create an invite code' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
   await other.keyboard.press('Escape')
-  await expect(other.getByTestId('invite-party-world')).toContainText('This world is for your party alone, so it takes no invite codes.')
+  await expect(other.getByTestId('invite-party-admitted')).toContainText('You came in with your party, so codes aren’t yours to give.')
   await expect(other.getByRole('button', { name: 'Create an invite code' })).toHaveCount(0)
   // Signing out lets the play lease go, so the next sign-in plays at once.
   expect((await other.request.delete('/api/session')).ok()).toBe(true)
@@ -152,5 +160,7 @@ test('a party’s world takes no invite codes, and a member who leaves the party
   expect((await serverState(other)).body.worldId).not.toBe(world)
   await other.keyboard.press('Escape')
   await expect(other.getByTestId('world-settings')).toContainText('You live in your own world.')
+  // Her own world now, but still no codes: party admission doesn't chain.
+  await expect(other.getByTestId('invite-party-admitted')).toBeVisible()
   await ctx.close()
 })

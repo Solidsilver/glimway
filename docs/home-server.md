@@ -321,7 +321,12 @@ stored, and the party is never read in between.
   added to the allowlist (`added_by` = `party`) and stay on it. Everyone else still
   needs an invite code or the allowlist. An account removed with
   `allowlist remove` is not let back in by its party (only `allowlist add` or
-  a CLI code does that).
+  a CLI code does that). An account let in through a party makes **no invite
+  codes anywhere**, not even from a world of its own (`POST /api/invites` →
+  403 `party-admitted-invites`; `GET /api/invites` says `partyAdmitted: true`,
+  and the Menu says codes come from the operator or an invited friend).
+  Otherwise its invitee would count as operator-admitted and open their own
+  party's world, and admission would chain. `allowlist add` lifts it.
 - **No codes into a party's world.** A resident can't make invites
   (`POST /api/invites` → `party-world-invites`; `GET /api/invites` says
   `partyWorld: true`, and the Menu says why), `invite WORLD-ID` refuses one,
@@ -345,11 +350,17 @@ stored, and the party is never read in between.
   - Until it is answered every other call (state, origin, play, world reads,
     invites, …) refuses with 409 `world-choice-required`, and presence admits
     no socket. `GET /api/world/choice` asks again (a reload, or a tab closed
-    mid-choice: the cookie still holds it; it slides like a session).
+    mid-choice: the cookie still holds it; it slides like a session). Its
+  `partyAdmitted` says the newcomer came in through the party (the gate then
+  says invite codes come from elsewhere). When nothing is left to ask (the
+  party's world can't be had any more), it makes them a world of their own,
+  as sign-in would have, and answers 409 `world-chosen` (read the state).
   - `POST /api/world/choose {"choice":"party"|"own"}` answers it once: the
     player is made in the party's world (opening it now, with `opened_by`, if
     it has none and they may: `party-closed` / `party-open-denied` /
-    `no-party` otherwise, the question still standing) or in a new world of
+    `no-party` otherwise, the question still standing; an account let in
+    through the party gets `party-closed` once the party is closed or party
+    admission is off, even though its world exists) or in a new world of
     their own, and the held sign-in becomes a session with the same cookie,
     answered with the snapshot. Any other device's held sign-in for the same
     account becomes a session in that world too. Asked again afterwards:
@@ -459,7 +470,9 @@ Echo it was. No migration, no new route.
   already made keep working for the people in them.
 - `parties` prints one JSON record per party world (and per closed party):
   party id, world, members, who opened it (`openedBy`, `openedByName`), how
-  many accounts came in through the party (`admitted`), and `closedAt`.
+  many accounts came in through the party (`admitted`), how many of those
+  signed in but are still choosing a world (`held`: closing the party keeps
+  them out of its world), and `closedAt`.
 - `party close PARTY-ID` stops admitting that party (no codeless sign-ins
   through it, and no world is made for it); `party open PARTY-ID` resumes.
   Its world, and everyone already in, stay. Table `party_closures`.

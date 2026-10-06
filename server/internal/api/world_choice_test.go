@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fingersnap/server/internal/store"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -248,9 +250,103 @@ func TestWorldChoicePartyClosedMeanwhile(t *testing.T) {
 	if st, _, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "party"}, c); st != 409 || e != "party-closed" || x.players("olive") != 0 {
 		t.Fatal(st, e)
 	}
-	st, v, _, _ := x.request("GET", "/api/world/choice", nil, c)
-	if st != 200 || v.WorldChoice.PartyCanOpen || v.WorldChoice.PartyWorld != nil {
-		t.Fatal("asked again", st)
+	// Nothing left to ask: asking again settles her in a world of her own,
+	// as sign-in would have, and says the world is chosen.
+	if st, _, e, _ := x.request("GET", "/api/world/choice", nil, c); st != 409 || e != "world-chosen" {
+		t.Fatal("asked again with nothing to ask", st, e)
 	}
-	x.expect("POST", "/api/world/choose", map[string]any{"choice": "own"}, c, 200)
+	s := x.expect("GET", "/api/state", nil, c, 200)
+	if count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='olive'", s.WorldID) != 1 || x.partyWorldOf("p1") != "" {
+		t.Fatal("not in a world of her own", s.WorldID)
+	}
+}
+
+// The review's chain: Olive (the operator's) opens p1; Rue comes in through
+// p1 and takes a world of her own; she can't hand out a code, so Zed of p2
+// can't come in on it and open p2's world for his party.
+func TestPartyAdmittedMakeNoInvites(t *testing.T) {
+	x := newRig(t)
+	x.hero("olive", "Olive", "p1")
+	oc, _ := x.ready("olive")
+	x.hero("rue", "Rue", "p1")
+	q, rc := x.signInAsked("rue", "p1", "")
+	if !q.PartyAdmitted {
+		t.Fatalf("question %+v", q)
+	}
+	x.expect("POST", "/api/world/choose", map[string]any{"choice": "own"}, rc, 200)
+	if st, _, e, _ := x.request("POST", "/api/invites", map[string]any{}, rc); st != 403 || e != "party-admitted-invites" {
+		t.Fatal("party-admitted invite", st, e)
+	}
+	var list struct {
+		PartyAdmitted bool `json:"partyAdmitted"`
+		PartyWorld    bool `json:"partyWorld"`
+	}
+	r := httptest.NewRequest("GET", "/api/invites", nil)
+	r.AddCookie(rc)
+	w := httptest.NewRecorder()
+	x.api.ServeHTTP(w, r)
+	if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil || w.Code != 200 || !list.PartyAdmitted || list.PartyWorld {
+		t.Fatalf("list %d %+v %v", w.Code, list, err)
+	}
+	if count(t, x.db, "SELECT count(*) FROM invites WHERE created_by='rue'") != 0 {
+		t.Fatal("a code was made")
+	}
+	// Zed of p2 has no code and no allowlist entry, and p2 has no world: turned away.
+	x.hero("zed", "Zed", "p2")
+	if st, e, _ := x.signIn("zed", "p2"); st != 403 || e != "access-denied" || x.partyWorldOf("p2") != "" {
+		t.Fatal("zed", st, e)
+	}
+	// The operator's own accounts still invite from their worlds; Olive lives
+	// in the party's world, which takes none.
+	if st, _, e, _ := x.request("POST", "/api/invites", map[string]any{}, oc); st != 409 || e != "party-world-invites" {
+		t.Fatal("olive", st, e)
+	}
+	x.hero("ann", "Ann", "")
+	ac, _ := x.ready("ann")
+	x.expect("POST", "/api/invites", map[string]any{}, ac, 200)
+	// `allowlist add` makes Rue the operator's: then she may.
+	if err := x.db.Allow(context.Background(), "rue", true); err != nil {
+		t.Fatal(err)
+	}
+	x.expect("POST", "/api/invites", map[string]any{}, rc, 200)
+}
+
+// The operator's brake holds for a sign-in it already let in: once p1 is
+// closed, Rue (let in through p1, still choosing) can't join its world.
+func TestWorldChoiceClosedPartyRefusesPartyAdmitted(t *testing.T) {
+	x := newRig(t)
+	x.hero("olive", "Olive", "p1")
+	x.ready("olive")
+	x.hero("rue", "Rue", "p1")
+	_, c := x.signInAsked("rue", "p1", "")
+	parties, err := x.db.Parties(context.Background())
+	if err != nil || len(parties) != 1 || parties[0].Held != 1 || parties[0].Admitted != 0 {
+		t.Fatalf("parties %+v %v", parties, err)
+	}
+	if err := x.db.SetPartyOpen(context.Background(), "p1", false); err != nil {
+		t.Fatal(err)
+	}
+	if st, _, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "party"}, c); st != 409 || e != "party-closed" || x.players("rue") != 0 {
+		t.Fatal("joined a closed party's world", st, e)
+	}
+	// Nothing left to ask: her own world.
+	if st, _, e, _ := x.request("GET", "/api/world/choice", nil, c); st != 409 || e != "world-chosen" {
+		t.Fatal(st, e)
+	}
+	if s := x.expect("GET", "/api/state", nil, c, 200); s.WorldID == x.partyWorldOf("p1") {
+		t.Fatal("in the closed party's world")
+	}
+	if parties, _ = x.db.Parties(context.Background()); parties[0].Held != 0 {
+		t.Fatalf("still held %+v", parties)
+	}
+	// An operator-admitted newcomer of the closed party still may join its
+	// world (the closure stops admission through the party, not them).
+	x.hero("ida", "Ida", "p1")
+	if err := x.db.Allow(context.Background(), "ida", true); err != nil {
+		t.Fatal(err)
+	}
+	_, ic := x.signInAsked("ida", "p1", "")
+	if s := x.expect("POST", "/api/world/choose", map[string]any{"choice": "party"}, ic, 200); s.WorldID != x.partyWorldOf("p1") {
+		t.Fatal("ida", s.WorldID)
+	}
 }

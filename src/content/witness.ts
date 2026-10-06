@@ -22,10 +22,31 @@ export function isWitnessBeat(beat: unknown): beat is WitnessBeat {
   return typeof beat === 'string' && beat.startsWith('echo:') && ECHO_MEMBERS.includes(beat.slice(5));
 }
 
-/** A traveler's name as a line can carry it. */
+/** A traveler's name as a line can carry it (40 characters, never a split one). */
 export function witnessName(name: unknown): string {
-  const s = String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40);
+  const s = Array.from(String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim()).slice(0, 40).join('').trim();
   return s || 'A fellow traveler';
+}
+
+/** The server takes no story flag over 128 UTF-8 bytes (rules.DecodeProgress): one would stop every save. */
+export const WITNESS_FLAG_BYTES = 128;
+/** Witness lines kept per beat (the Warden, the lantern, each Echo): the first few travelers seen. */
+export const WITNESS_KEEP_PER_BEAT = 5;
+
+const utf8 = new TextEncoder();
+const byteLength = (s: string): number => utf8.encode(s).length;
+
+/** The longest start of `s` within `max` UTF-8 bytes, cut between characters. */
+export function fitBytes(s: string, max: number): string {
+  let out = '';
+  let used = 0;
+  for (const ch of s) {
+    const n = byteLength(ch);
+    if (used + n > max) break;
+    out += ch;
+    used += n;
+  }
+  return out;
 }
 
 const kind = (beat: WitnessBeat): 'warden' | 'lantern' | 'echo' => (beat === 'warden' || beat === 'lantern' ? beat : 'echo');
@@ -38,9 +59,22 @@ export function witnessFlagPrefix(beat: WitnessBeat, doerId: string): string {
   return `witness:${beatKey(beat)}:${doerId}:`;
 }
 
-/** The story flag a witness keeps: `witness:<beat>:<their id>:<their name>`. */
-export function witnessFlag(beat: WitnessBeat, doerId: string, name: string): string {
-  return witnessFlagPrefix(beat, doerId) + witnessName(name);
+/**
+ * The story flag a witness keeps: `witness:<beat>:<their id>:<their name>`,
+ * the name cut to fit WITNESS_FLAG_BYTES. Null when the id can't make one.
+ */
+export function witnessFlag(beat: WitnessBeat, doerId: string, name: string): string | null {
+  if (!doerId || doerId.includes(':')) return null;
+  const prefix = witnessFlagPrefix(beat, doerId);
+  const room = WITNESS_FLAG_BYTES - byteLength(prefix);
+  if (room < 0) return null;
+  return prefix + fitBytes(witnessName(name), room).trim();
+}
+
+/** Room for another witness line of this beat (the first WITNESS_KEEP_PER_BEAT travelers). */
+export function keepsWitness(flags: readonly string[], beat: WitnessBeat): boolean {
+  const prefix = `witness:${beatKey(beat)}:`;
+  return flags.filter((f) => f.startsWith(prefix)).length < WITNESS_KEEP_PER_BEAT;
 }
 
 /** Already witnessed (the once-per-beat-and-traveler rule). */

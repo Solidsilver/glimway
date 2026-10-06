@@ -177,6 +177,7 @@ export function parseInviteList(raw: unknown): InviteList {
   if (remaining !== undefined) out.remaining = remaining;
   if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
   if (o.partyWorld === true) out.partyWorld = true;
+  if (o.partyAdmitted === true) out.partyAdmitted = true;
   return out;
 }
 
@@ -231,6 +232,7 @@ export function parseWorldChoice(raw: unknown): WorldChoice | null {
     displayName: str(o.displayName).slice(0, 128),
     partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
     partyCanOpen: o.partyCanOpen === true,
+    partyAdmitted: o.partyAdmitted === true,
   };
 }
 

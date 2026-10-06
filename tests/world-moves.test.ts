@@ -99,6 +99,10 @@ test('the sign-in screen tells a party member they can come straight in, in shor
   assert.match(signInCopy.partyWelcome, /no invite code/i);
   assert.equal(signInCopy.inviteOnlyBody, 'Your Habitica hero is fine. To come in you need an invite code, or a party that already plays here.');
   assert.ok(inviteCopy.partyWorld.length <= 160 && /party/.test(inviteCopy.partyWorld));
+  assert.ok(inviteCopy.partyAdmitted.length <= 160 && /party/.test(inviteCopy.partyAdmitted));
+  assert.equal(parseInviteList({ invites: [], partyAdmitted: true }).partyAdmitted, true);
+  assert.equal(parseInviteList({ invites: [] }).partyAdmitted, undefined);
+  assert.equal(errorFromResponse(403, { error: { code: 'party-admitted-invites' } }).code, 'party-admitted-invites');
 });
 
 const view = {
@@ -160,7 +164,8 @@ test('a move answer carries the snapshot and the new world', () => {
 
 test('the first sign-in’s world question: parsed apart from a snapshot, its copy short and in voice', () => {
   const q = parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false } });
-  assert.deepEqual(q, { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false });
+  assert.deepEqual(q, { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false, partyAdmitted: false });
+  assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: null, partyCanOpen: true, partyAdmitted: true } })?.partyAdmitted, true);
   assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'olive', displayName: 'Olive', partyWorld: null, partyCanOpen: true } })?.partyCanOpen, true);
   // A snapshot is not a question.
   assert.equal(parseWorldChoice({ habiticaId: 'rue', state: {} }), null);

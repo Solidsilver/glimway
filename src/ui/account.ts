@@ -69,7 +69,17 @@ export async function probeServer(): Promise<Probe> {
       try {
         return { kind: 'choose-world', choice: await api.worldChoice() }
       } catch (again) {
-        return errorCode(again) === 'unauthorized' ? { kind: 'signed-out' } : { kind: 'unavailable' }
+        const next = errorCode(again)
+        if (next === 'world-chosen') {
+          // Chosen meanwhile (another device), or nothing was left to ask:
+          // the world is there now.
+          try {
+            return { kind: 'signed-in', snapshot: await api.state() }
+          } catch (last) {
+            return errorCode(last) === 'unauthorized' ? { kind: 'signed-out' } : { kind: 'unavailable' }
+          }
+        }
+        return next === 'unauthorized' ? { kind: 'signed-out' } : { kind: 'unavailable' }
       }
     }
     return code === 'unauthorized' ? { kind: 'signed-out' } : { kind: 'unavailable' }

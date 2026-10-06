@@ -132,6 +132,8 @@ export interface InviteList {
   outstandingLimit?: number;
   /** You live in a party's world, which takes no codes. */
   partyWorld?: boolean;
+  /** You came in through a party: you make no codes anywhere. */
+  partyAdmitted?: boolean;
 }
 
 // ------------------------------------------------------------- worlds
@@ -161,6 +163,8 @@ export interface WorldChoice {
   partyWorld: WorldRef | null;
   /** The party has no world here yet: choosing it opens one. */
   partyCanOpen: boolean;
+  /** Let in through the party: they make no invite codes, even from a world of their own. */
+  partyAdmitted: boolean;
 }
 
 /** What a move would leave behind (GET /api/world). */

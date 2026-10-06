@@ -51,7 +51,7 @@ import { Thoughts } from '../entities/thoughts'
 import { presence } from '../presence'
 import { presenceAreaFor } from '../../lib/presence-client'
 import type { EmotePayload } from '../events'
-import { hasWitnessed, isWitnessBeat, witnessCopy, witnessFlag, witnessMoment } from '../../content/witness'
+import { hasWitnessed, isWitnessBeat, keepsWitness, witnessCopy, witnessFlag, witnessMoment } from '../../content/witness'
 import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
 import { ITEM_ART_FALLBACK, itemIcon, itemIconUrls } from '../items-pass'
@@ -1094,8 +1094,12 @@ export class WorldScene extends Phaser.Scene {
     const s = this.session
     if (!s.link || !p || !isWitnessBeat(p.beat) || !p.habiticaId) return
     if (hasWitnessed(s.state.flags, p.beat, p.habiticaId)) return
-    s.addFlag(witnessFlag(p.beat, p.habiticaId, p.name))
-    emitResidents(s)
+    // The line is kept for the first few travelers of each beat; the moment shows every time.
+    const flag = witnessFlag(p.beat, p.habiticaId, p.name)
+    if (flag && keepsWitness(s.state.flags, p.beat)) {
+      s.addFlag(flag)
+      emitResidents(s)
+    }
     bus.emit(EV.toast, { text: witnessMoment(p.beat, p.name), icon: 'lantern' })
     bus.emit(EV.emote, { habiticaId: p.habiticaId, id: 'lantern' } satisfies EmotePayload)
     if (p.beat === 'warden' && this.world.areaId === 'ruin') {
