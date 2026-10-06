@@ -6,7 +6,7 @@
  * `chunk:<regionId>:<cx>:<cy>`) the scene must resolve — see the report.
  */
 import type { AreaId } from '../state.ts';
-import type { WorldData } from '../../game/worlds.ts';
+import type { GatherSpot, WorldData } from '../../game/worlds.ts';
 import { TILE } from '../../game/textures.ts';
 import { tangleFrame } from '../../game/wilds/tangle-key.ts';
 import { lookAtlasKey } from '../../game/wilds/wilds-looks.ts';
@@ -38,6 +38,22 @@ export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: strin
   fern: { target: 'sapling', label: 'Dig for seedlings' },
   log: { target: 'hollow-tree', label: 'Dig the hollow log' },
 };
+
+/**
+ * The workable pieces of a chunk (trees, boulders, stumps, patches): one
+ * per tile, the standing piece over the patch at its foot (working a tile
+ * fells what's drawn there).
+ */
+function gatherSpots(chunk: ChunkTerrain, atlas: string): GatherSpot[] {
+  const byTile = new Map<string, (typeof chunk.decor)[number]>();
+  for (const d of chunk.decor) {
+    if (!GATHER_OF[d.kind]) continue;
+    const key = `${d.tx},${d.ty}`;
+    const had = byTile.get(key);
+    if (!had || (DECOR_ART[d.kind].blocking && !DECOR_ART[had.kind].blocking)) byTile.set(key, d);
+  }
+  return [...byTile.values()].map((d) => ({ target: GATHER_OF[d.kind]!.target, label: GATHER_OF[d.kind]!.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } }));
+}
 
 /** Chebyshev distance (capped at 3) from a tile to the nearest walkable one. */
 function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
@@ -91,10 +107,7 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
       tx: d.tx,
       ty: d.ty,
     })),
-    // The workable pieces of this chunk (trees, boulders, stumps, patches).
-    gathering: chunk.decor
-      .filter((d) => GATHER_OF[d.kind])
-      .map((d) => ({ target: GATHER_OF[d.kind]!.target, label: GATHER_OF[d.kind]!.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } })),
+    gathering: gatherSpots(chunk, atlas),
     storySites: chunk.sites.map((s) => ({ id: s.id, kind: s.kind, tx: s.tx, ty: s.ty })),
     groundStyle: chunk.look,
     groundMark: chunk.mark,

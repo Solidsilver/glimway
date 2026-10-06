@@ -66,6 +66,20 @@
       "specs": ["items.spec.ts", "inventory.spec.ts"]
     },
     {
+      "paths": [
+        "src/game/entities/gathering.ts",
+        "src/lib/gathering.ts",
+        "src/game/homeland.ts",
+        "src/lib/wilds/world-data.ts",
+        "src/game/area/**",
+        "src/game/items.ts",
+        "src/ui/InventoryPanel.svelte",
+        "server/internal/api/items.go",
+        "server/internal/land/**"
+      ],
+      "specs": ["gathering.spec.ts"]
+    },
+    {
       "paths": ["src/game/entities/enemies.ts", "src/game/entities/hero.ts", "src/game/entities/projectiles.ts", "src/game/entities/fx.ts", "src/lib/combat.ts"],
       "specs": ["combat.spec.ts", "quest.spec.ts", "naming-screens.spec.ts"]
     },

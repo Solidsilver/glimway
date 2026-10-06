@@ -619,7 +619,6 @@ function buildRuin(): WorldData {
     enemies,
     exits: [{ tx: 0, ty: 12, tw: 1, th: 3, to: 'woodland', entry: { tx: 53, ty: 22 } }],
     props,
-    gathering: rocks.map((r) => ({ target: 'boulder', label: 'Break the boulder', tx: r.tx, ty: r.ty })),
     discoverySpots: [],
     well: null,
     mural,

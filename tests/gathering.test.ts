@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GATHERING_DATA, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, visitIdFor, visitKey } from '../src/lib/gathering.ts';
+import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, keepsWork, swingPlan, SWING_MS, visitIdFor, visitKey, visitWork, yieldLine } from '../src/lib/gathering.ts';
 import { itemDef } from '../src/lib/items.ts';
 import { chunkTerrain } from '../src/lib/wilds/index.ts';
 import { toWorldData, GATHER_OF } from '../src/lib/wilds/world-data.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { setLandSource } from '../src/game/homeland.ts';
-import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
+import { plantScenery, setLandSource } from '../src/game/homeland.ts';
+import { HOMESTEAD_DATA, plantable, plantTileNear } from '../src/lib/homestead.ts';
+import { LAND, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts';
 
 const epoch = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' } as const;
 
@@ -83,6 +84,8 @@ test('the Tangle offers work: trees and boulders stand on solid ground, patches 
       else assert.ok(solid, `a ${spot.target} stands on solid ground at ${spot.tx},${spot.ty}`);
       assert.ok(spot.art, 'a woods piece carries its art (a felled tree leaves its stump)');
     }
+    const tiles = (w.gathering ?? []).map((s) => `${s.tx},${s.ty}`);
+    assert.equal(new Set(tiles).size, tiles.length, 'one piece of work to a tile');
   }
 });
 
@@ -130,4 +133,121 @@ test('a kept stump (inside lamplight) is workable ground; a planted piece is not
   } finally {
     setLandSource({ worldId: () => 'guest', state: () => null });
   }
+});
+
+test('a tool’s feel: Bite takes a swing off, Heft quickens, a dull warden-set tool slows (less with Bite)', () => {
+  const plain = { bite: false, heft: false, dull: false };
+  assert.deepEqual(swingPlan('chop', plain), { swings: 3, ms: SWING_MS });
+  assert.deepEqual(swingPlan('chop', { ...plain, bite: true }), { swings: 2, ms: SWING_MS });
+  assert.ok(swingPlan('chop', { ...plain, heft: true }).ms < SWING_MS);
+  assert.equal(swingPlan('dig', { ...plain, dull: true }).ms, SWING_MS * 2, 'half speed at its dullest');
+  assert.equal(swingPlan('dig', { ...plain, dull: true, bite: true }).ms, Math.round((SWING_MS * 4) / 3), 'three-quarters with Bite');
+  assert.equal(swingPlan('dig', { ...plain, bite: true }).swings, 1, 'never fewer than one swing');
+});
+
+test('the drift: only your land inside lamplight keeps what you work; everywhere else regrows', () => {
+  for (const area of ['wilds', 'woodland', 'home:0']) assert.ok(gatherArea(area), `${area} offers work`);
+  for (const area of ['village', 'ruin', 'commons', 'cottage']) assert.ok(!gatherArea(area), `${area} offers none`);
+  assert.equal(keepsWork('home:3', true), true, 'inside lamplight: a stump stays a stump');
+  assert.equal(keepsWork('home:3', false), false, 'the unlit edge regrows like the Tangle');
+  assert.equal(keepsWork('wilds', true), false, 'the Tangle always comes back');
+  assert.equal(keepsWork('woodland', false), false);
+});
+
+test('the woods by the village offer trees and boulders; the ruin and the village none', () => {
+  const woods = buildArea('woodland');
+  const spots = woods.gathering ?? [];
+  assert.ok(spots.some((s) => s.target === 'tree') && spots.some((s) => s.target === 'boulder'));
+  for (const s of spots) assert.ok(gatheringTarget(s.target), s.target);
+  assert.equal(new Set(spots.map((s) => `${s.tx},${s.ty}`)).size, spots.length, 'one piece of work to a tile');
+  assert.equal((buildArea('ruin').gathering ?? []).length, 0);
+  assert.equal((buildArea('village').gathering ?? []).length, 0);
+});
+
+test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand again, open ground stays open', () => {
+  const land = generateLand(1234);
+  const lights = homeLights([]);
+  const lit = { x: -1, y: -1 };
+  const dark = { x: -1, y: -1 };
+  for (let y = 1; y < land.height - 1; y++) {
+    for (let x = 1; x < land.width - 1; x++) {
+      if (land.tiles[y * land.width + x] !== LAND.TREE) continue;
+      if (isLit(lights, x, y) && lit.x < 0) Object.assign(lit, { x, y });
+      if (!isLit(lights, x, y) && dark.x < 0) Object.assign(dark, { x, y });
+    }
+  }
+  assert.ok(lit.x >= 0 && dark.x >= 0, 'seed 1234 has lit and dark trees');
+  // What the server keeps: only the lit stump (the dark chop is never stored).
+  setLandSource({ worldId: () => 'w', seed: () => 1234, state: () => ({ cleared: [], stumps: [[lit.x, lit.y]], plants: [], desolate: false }) });
+  try {
+    const w = buildArea('home:0');
+    const at = (x: number, y: number) => (w.gathering ?? []).find((s) => s.tx === x && s.ty === y)?.target;
+    assert.equal(at(lit.x, lit.y), 'stump', 'the lit stump stays');
+    assert.ok(['tree', 'iron-oak'].includes(at(dark.x, dark.y) ?? ''), 'the dark tree stands again');
+    assert.ok(w.solid[lit.y][lit.x], 'a stump is still in the way');
+  } finally {
+    setLandSource({ worldId: () => 'guest', state: () => null });
+  }
+  setLandSource({ worldId: () => 'w', seed: () => 1234, state: () => ({ cleared: [[lit.x, lit.y]], stumps: [], plants: [], desolate: false }) });
+  try {
+    const w = buildArea('home:0');
+    assert.ok(!(w.gathering ?? []).some((s) => s.tx === lit.x && s.ty === lit.y), 'a dug stump leaves nothing to work');
+    assert.ok(!w.solid[lit.y][lit.x], 'and open ground');
+  } finally {
+    setLandSource({ worldId: () => 'guest', state: () => null });
+  }
+});
+
+test('planting goes into open grass only, near your feet', () => {
+  const home = { landSeed: 1234, cleared: [] as [number, number][], items: [], plants: [] as { x: number; y: number }[] };
+  const land = generateLand(1234);
+  const site = HOMESTEAD_DATA.land.site;
+  let tree: [number, number] | null = null;
+  let grass: [number, number] | null = null;
+  for (let y = 1; y < land.height - 1 && (!tree || !grass); y++) {
+    for (let x = 1; x < land.width - 1; x++) {
+      const k = land.tiles[y * land.width + x];
+      if (k === LAND.TREE && !tree) tree = [x, y];
+      if (k === LAND.GRASS && !grass && plantable(home, x, y)) grass = [x, y];
+    }
+  }
+  assert.ok(tree && grass);
+  assert.ok(!plantable(home, tree[0], tree[1]), 'not into a tree');
+  assert.ok(!plantable(home, site.x, site.y), 'not on the home site');
+  assert.ok(plantable({ ...home, cleared: [tree] }, tree[0], tree[1]), 'cleared ground takes a sapling');
+  assert.ok(!plantable({ ...home, plants: [{ x: grass[0], y: grass[1] }] }, grass[0], grass[1]), 'one plant to a tile');
+  // Standing on open grass: it goes in at your feet.
+  assert.deepEqual(plantTileNear(home, { x: grass[0] * 16 + 8, y: grass[1] * 16 + 10 }), grass);
+  // Standing in the middle of the home site: nowhere to plant.
+  assert.equal(plantTileNear(home, { x: (site.x + site.w / 2) * 16, y: (site.y + site.h / 2) * 16 }), null);
+});
+
+test('a planted sapling is drawn as itself, an herb or spawn as a patch of the woods', () => {
+  const sap = plantScenery({ itemDef: 'birch-sapling', x: 4, y: 5 }, 'atlas');
+  assert.equal(sap.frame, undefined);
+  assert.equal(sap.x, 4 * 16 + 8);
+  assert.equal(sap.y, 6 * 16);
+  const thyme = plantScenery({ itemDef: 'wild-thyme', x: 4, y: 5 }, 'atlas');
+  assert.equal(thyme.key, 'atlas');
+  assert.match(thyme.frame ?? '', /^flowers-/);
+  assert.match(plantScenery({ itemDef: 'turncap-spawn', x: 1, y: 1 }, 'atlas').frame ?? '', /^turncaps-/);
+});
+
+test('a stay remembers its work; a new visit starts fresh', () => {
+  const first = visitIdFor('wilds', null);
+  const done = visitWork(first);
+  done.worked.set('chunk:inner-1:0:0:4,5', 'stump');
+  done.enough.add('chop');
+  assert.equal(visitWork(visitIdFor('wilds', null)).worked.get('chunk:inner-1:0:0:4,5'), 'stump', 'a rebuild in the same stay keeps it');
+  visitIdFor('commons', null);
+  const again = visitWork(visitIdFor('wilds', null));
+  assert.equal(again.worked.size, 0, 'leaving and coming back: the woods have regrown');
+  assert.equal(again.enough.size, 0, 'and give again');
+});
+
+test('the yield in words: stuff counted as stuff, things as things', () => {
+  assert.equal(yieldLine([{ itemDef: 'timber', qty: 4 }]), '4 timber');
+  assert.equal(yieldLine([{ itemDef: 'stone', qty: 3 }, { itemDef: 'drift-stone', qty: 1 }]), '3 stone and a little drift-stone');
+  assert.equal(yieldLine([{ itemDef: 'timber', qty: 2 }, { itemDef: 'green-ash-haft', qty: 1 }]), '2 timber and a green-ash haft');
+  assert.equal(yieldLine([{ itemDef: 'hazel-whip', qty: 1 }]), 'a hazel whip');
 });

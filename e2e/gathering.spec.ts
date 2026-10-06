@@ -1,15 +1,19 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand } from './home-helpers'
+import { sql } from './connected'
+import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
+import { plantable } from '../src/lib/homestead.ts'
+import { homeLights, isLit } from '../src/lib/homestead-land.ts'
 
 /**
  * Gathering against the worker's own Go server (docs/items/crafting-and-repair.md,
  * "Gathering"): chopping a tree in the Tangle wears the axe, pays timber and
  * leaves a stump you can dig; the woods regrow when you leave and come back
- * (the drift); at the visit cap the wood's soft line shows and the trees
- * shuffle out of reach. On your own land, inside lamplight a stump stays,
- * and a sapling planted from the inventory stands where you put it.
+ * (the drift); past the cap the wood's soft line shows and the trees
+ * shuffle out of reach. On your own land, inside lamplight a stump stays
+ * while your unlit edge regrows, and a sapling planted from the inventory
+ * stands where you put it.
  * SCREENS=1 saves screenshots to .agent/screens/.
  */
 test.use({ server: true })
@@ -98,16 +102,6 @@ async function candidates(page: Page, targets: string[], lit?: boolean, strict =
   }, [targets, lit, strict] as const)
 }
 
-/** The DOM prompt's text once it matches (or null). The game's own election. */
-async function promptIs(page: Page, pattern: RegExp): Promise<string | null> {
-  for (let w = 0; w < 4; w++) {
-    const dom = await page.locator('.prompt').textContent().catch(() => null)
-    if (dom && pattern.test(dom)) return dom
-    await frames(page, 12)
-  }
-  return null
-}
-
 /** Candidates nearest the hero first: small moves, fewer merges in flight. */
 async function candidatesNear(page: Page, targets: string[], lit?: boolean, strict = true): Promise<Candidate[]> {
   const cands = await candidates(page, targets, lit, strict)
@@ -153,119 +147,114 @@ async function promptOn(page: Page, spot: { tx: number; ty: number }, prompt: Re
   return false
 }
 
-/** Work the nearest electable piece: stand, prompt, press, and hear the wood pay. */
-async function chopOne(page: Page, targets: string[], prompt: RegExp, lit?: boolean): Promise<Spot> {
-  const cands = await candidatesNear(page, targets, lit)
-  for (const c of cands) {
-    await settle(page, c.hero)
-    if (!(await promptOn(page, c.spot, prompt))) continue
-    await waitForLive(page)
-    await page.keyboard.press('e')
-    // A claim's discovery (a POI was the nearest press) opens a reading
-    // panel that holds the screen: read it away before going on.
-    await readDialogue(page).catch(() => null)
-    await expectToast(page, /Found: /, { timeout: 15_000 })
-    return c.spot
+/**
+ * Work the nearest electable piece (or the one at `at`): stand, prompt,
+ * press, and hear the answer. Strict first (the spot the game would
+ * elect), then loose (any spot the prompt lands on), in case a wandering
+ * creature or a merge spoiled the first round.
+ */
+async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { lit?: boolean; says?: RegExp; at?: { tx: number; ty: number } } = {}): Promise<Spot & { from: { x: number; y: number } }> {
+  const tried: string[] = []
+  for (const strict of [true, false]) {
+    const cands = (await candidatesNear(page, targets, opts.lit, strict)).filter((c) => !opts.at || (c.spot.tx === opts.at.tx && c.spot.ty === opts.at.ty))
+    tried.push(`${strict ? 'strict' : 'loose'}:${cands.length}`)
+    for (const c of cands.slice(0, 8)) {
+      if (!(await settle(page, c.hero))) {
+        tried.push('unsettled')
+        continue
+      }
+      if (!(await promptOn(page, c.spot, prompt))) {
+        tried.push(`prompt=${JSON.stringify((await gather(page))?.prompt)}/${await page.locator('.prompt').textContent().catch(() => null)}`)
+        continue
+      }
+      await waitForLive(page)
+      await page.keyboard.press('e')
+      // A claim's discovery (a POI was the nearest press) opens a reading
+      // panel that holds the screen: read it away before going on.
+      await readDialogue(page).catch(() => null)
+      try {
+        await expectToast(page, opts.says ?? /Found: /, { timeout: 15_000 })
+      } catch (err) {
+        throw new Error(`no answer at ${c.spot.target} ${c.spot.tx},${c.spot.ty}: last=${(await gather(page))?.last}, hero=${JSON.stringify(await player(page))} vs ${JSON.stringify(c.hero)}; ${String(err).slice(0, 200)}`)
+      }
+      return { ...c.spot, from: c.hero }
+    }
   }
-  throw new Error(`nothing to work (${targets.join('/')})`)
+  throw new Error(`nothing to work (${targets.join('/')}): ${tried.join(' ')}`)
 }
 
+/** Work the piece at a spot again from where you stood (the felled tree's stump). */
+async function workAgain(page: Page, spot: Spot & { from: { x: number; y: number } }, prompt: RegExp): Promise<void> {
+  expect(await settle(page, spot.from), 'back where you stood').toBe(true)
+  expect(await promptOn(page, spot, prompt), `the prompt on ${spot.tx},${spot.ty}`).toBe(true)
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expectToast(page, /Found: /, { timeout: 15_000 })
+}
+
+const stack = (page: Page, def: string) =>
+  page.evaluate(
+    (d) => (window as unknown as { __fsItems: () => { stacks: { itemDef: string; qty: number }[] } | null }).__fsItems()?.stacks.find((s) => s.itemDef === d)?.qty ?? 0,
+    def
+  )
+
+/** A home as the gathering sees it (the stumps kept in lamplight, the plants). */
+type LandHome = Home & { stumps?: [number, number][]; plants?: { id: string; itemDef: string; x: number; y: number; lit?: boolean }[] }
+const landAt = async (page: Page, gate: number) => (await homeAt(page, gate)) as LandHome | null
+
+const spotAt = async (page: Page, s: { tx: number; ty: number }) => (await gather(page))?.spots.find((o) => o.tx === s.tx && o.ty === s.ty)?.target ?? null
+
 test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth', async ({ page }) => {
-  test.setTimeout(120_000)
+  test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Teo')
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
+  const spade = giveInstance(id, 'bench-spade', { max: 90 })
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  const spot = await chopOne(page, ['tree', 'ash'], /Chop the (tree|ash)/)
+  const spot = await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/)
   // The axe wore one use; the tree paid timber and left a stump to dig.
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)
-  const timber = await page.evaluate(
-    () => (window as unknown as { __fsItems: () => { stacks: { itemDef: string; qty: number }[] } | null }).__fsItems()?.stacks.find((s) => s.itemDef === 'timber')?.qty ?? 0
-  )
-  expect(timber).toBeGreaterThanOrEqual(2)
-  await expect.poll(async () => (await gather(page))!.spots.some((s) => s.target === 'stump' && s.tx === spot.tx && s.ty === spot.ty)).toBe(true)
+  expect(await stack(page, 'timber')).toBeGreaterThanOrEqual(2)
+  await expect.poll(async () => spotAt(page, spot)).toBe('stump')
   await shot(page, 'gathering-tangle-chop')
+
+  // The stump digs out (turncap spawn), and the ground opens.
+  await workAgain(page, spot, /Dig the stump/)
+  await expect.poll(async () => usesLeft(page, spade)).toBe(29)
+  expect(await stack(page, 'turncap-spawn')).toBeGreaterThanOrEqual(1)
+  await expect.poll(async () => spotAt(page, spot)).toBeNull()
 
   // The drift: leave, come back, and the woods have regrown.
   await warp(page, 'commons', 23, 19)
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  await expect.poll(async () => (await gather(page))!.spots.some((s) => s.target === 'tree' && s.tx === spot.tx && s.ty === spot.ty)).toBe(true)
+  await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tree|ash)$/)
 })
 
-test('the wood gives enough for one visit, and says so in words', async ({ page }) => {
-  test.setTimeout(240_000)
+test('past the cap the wood says so in words, and the trees shuffle out of reach', async ({ page }) => {
+  test.setTimeout(120_000)
   const id = await freshPlayer(page, 'Ash')
-  const heirloom = giveInstance(id, 'brack-felling-axe', { max: 240 })
+  const axe = giveInstance(id, 'bench-axe', { max: 90 })
+  // One tree short of the day's cap (numbers live on the server only).
+  const day = Math.floor(Date.now() / 1000 / 86400)
+  sql(`INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${id}','chop',${day},29,'','',0,0);`)
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  // Press until eight gathers have landed (the axe's wear count is the
-  // server's own tally: one wear is one gather, so this is exact whatever
-  // the presses did — a press a claim ate just doesn't count). Loose: the
-  // game's own prompt is the election, and which tree it elects doesn't
-  // matter. The walks rotate through the candidate list, so a crowding fern
-  // cannot clog the same first five.
-  const areaBefore = (await gather(page))?.area
-  const from80 = await usesLeft(page, heirloom)
-  await expect.poll(async () => usesLeft(page, heirloom)).toBeGreaterThanOrEqual(from80) // the model is read
-  let from = 0
-  let cands: Candidate[] = []
-  for (let presses = 0; presses < 24; presses++) {
-    const left = await usesLeft(page, heirloom)
-    if (left >= 0 && left <= from80 - 8) break
-    if (from >= cands.length - 1) {
-      cands = await candidatesNear(page, ['tree', 'ash'], undefined, false)
-      from = 0
-    }
-    for (const c of cands.slice(from, from + 5)) {
-      from++
-      if (!(await settle(page, c.hero))) continue
-      if (!(await promptIs(page, /Chop the (tree|ash)/))) continue
-      await waitForLive(page)
-      await page.keyboard.press('e')
-      await readDialogue(page).catch(() => null)
-      break
-    }
-    await frames(page, 100)
-  }
-  await expect.poll(async () => usesLeft(page, heirloom)).toBe(from80 - 8)
-  // The ninth gather: the wood's soft line, said in words, and every tree
-  // shuffles out of reach.
-  {
-    if (from >= cands.length - 1) {
-      cands = await candidatesNear(page, ['tree', 'ash'], undefined, false)
-      from = 0
-    }
-    let pressed = false
-    for (const c of cands.slice(from, from + 8)) {
-      from++
-      if (!(await settle(page, c.hero))) continue
-      if (!(await promptIs(page, /Chop the (tree|ash)/))) continue
-      await waitForLive(page)
-      await page.keyboard.press('e')
-      await readDialogue(page).catch(() => null)
-      pressed = true
-      break
-    }
-    expect(pressed, 'a tree still standing for the ninth press').toBe(true)
-    await expectToast(page, /given enough here today/, { timeout: 20_000 })
-    await expect.poll(async () => usesLeft(page, heirloom)).toBe(from80 - 8)
-  }
-  // The trees shuffled out of reach — unless a stale merge rebuilt the chunk
-  // (fresh woods, the same server-side cap).
-  if ((await gather(page))?.area === areaBefore) {
-    await expect.poll(async () => (await gather(page))!.spots.filter((s) => s.target === 'tree' || s.target === 'ash').length).toBe(0)
-  }
-  // Back another visit (leave and return): the woods give again.
-  await warp(page, 'commons', 23, 19)
-  await warp(page, 'wilds', 20, 20)
-  await waitForWilds(page)
-  await expect.poll(async () => (await gather(page))!.spots.some((s) => s.target === 'tree')).toBe(true)
+  await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/)
+  await expect.poll(async () => usesLeft(page, axe)).toBe(29)
+  // The next: the soft line, no number, no wear, and no tree answers again.
+  await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/, { says: /The wood’s given enough here today\./ })
+  await expect.poll(async () => (await gather(page))?.last).toBe('refused:gathered-enough')
+  expect(await usesLeft(page, axe)).toBe(29)
+  await expect.poll(async () => (await gather(page))!.spots.filter((s) => s.target === 'tree' || s.target === 'ash').length).toBe(0)
+  await shot(page, 'gathering-soft-line')
+  // The boulders are another kind of work, and still answer.
+  expect((await gather(page))!.spots.some((s) => s.target === 'boulder')).toBe(true)
 })
 
-test('on your land: inside the lamps a stump stays, and a planted sapling stands', async ({ page }) => {
+test('on your land: inside the lamps a stump stays, the unlit edge regrows, and a planted sapling stands', async ({ page }) => {
   test.setTimeout(180_000)
   const id = await freshPlayer(page, 'Ruta')
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
@@ -274,37 +263,59 @@ test('on your land: inside the lamps a stump stays, and a planted sapling stands
   const land = await toMyLand(page)
   await expect.poll(async () => (await gather(page))?.spots.length ?? 0).toBeGreaterThan(0)
 
-  const spot = await chopOne(page, ['tree', 'iron-oak'], /Chop the/, true)
-  // The map rebuilds from the homestead state: the stump is kept, not regrown.
-  await expect.poll(async () => (await homeAt(page, land.gate))?.stumps ?? []).toContainEqual([spot.tx, spot.ty])
-  await expect.poll(async () => (await gather(page))!.spots.some((s) => s.target === 'stump' && s.tx === spot.tx && s.ty === spot.ty)).toBe(true)
+  // Inside the lamplight: the stump is kept by the server.
+  const lit = await workOne(page, ['tree', 'iron-oak'], /Chop the/, { lit: true })
+  await expect.poll(async () => (await landAt(page, land.gate))?.stumps ?? []).toContainEqual([lit.tx, lit.ty])
+  await expect.poll(async () => spotAt(page, lit)).toBe('stump')
   await shot(page, 'gathering-land-stump')
+  // Out on the unlit edge: felled here and now, never kept.
+  const dark = await workOne(page, ['tree', 'iron-oak'], /Chop the/, { lit: false })
+  await expect.poll(async () => spotAt(page, dark)).toBe('stump')
+  expect((await landAt(page, land.gate))?.stumps ?? []).not.toContainEqual([dark.tx, dark.ty])
+  await expect.poll(async () => usesLeft(page, axe)).toBe(28)
 
-  // Plant a sapling where you stand (the hero kept the spot through the rebuild).
-  const here = await player(page)
-  const tile = { tx: Math.floor(here.x / 16), ty: Math.floor(here.y / 16) }
+  // Plant a sapling on open grass in the lamplight, from the inventory.
+  const home = (await landAt(page, land.gate))!
+  const lights = homeLights(home.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null) as { x: number; y: number }[])
+  const at = await player(page)
+  const open: [number, number][] = []
+  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, plants: home.plants ?? [] }, x, y)) open.push([x, y])
+  open.sort((a, b) => Math.hypot(a[0] * 16 - at.x, a[1] * 16 - at.y) - Math.hypot(b[0] * 16 - at.x, b[1] * 16 - at.y))
+  let tile: [number, number] | null = null
+  for (const t of open) {
+    if (await settle(page, { x: t[0] * 16 + 8, y: t[1] * 16 + 10 })) {
+      tile = t
+      break
+    }
+  }
+  expect(tile, 'open grass in the lamplight to stand on').not.toBeNull()
   await page.keyboard.press('i')
   const dialog = page.getByRole('dialog', { name: 'Inventory' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('tab', { name: /Supplies/ }).click()
-  const sapling = dialog.locator('[data-item="item:birch-sapling"]')
-  await sapling.getByRole('button', { name: 'Plant' }).click()
+  await dialog.locator('[data-item="item:birch-sapling"]').getByRole('button', { name: 'Plant' }).click()
   await expect(dialog.getByTestId('inv-message')).toHaveText('You planted a birch sapling.')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect.poll(async () => (await homeAt(page, land.gate))?.plants ?? []).toContainEqual(
-    expect.objectContaining({ itemDef: 'birch-sapling', x: tile.tx, y: tile.ty })
-  )
+  await expect.poll(async () => (await landAt(page, land.gate))?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile![0], y: tile![1], lit: true }))
+  // Step off it to see it standing there.
+  const beside = open.find((t) => t !== tile && Math.abs(t[0] - tile![0]) + Math.abs(t[1] - tile![1]) === 2)
+  if (beside) await settle(page, { x: beside[0] * 16 + 8, y: beside[1] * 16 + 10 })
+  await shot(page, 'gathering-land-planted')
 
-  // It survives a reload, and the stump with it.
+  // Leave and come back: the lit stump and the sapling stay, the edge has regrown.
+  await toMyLand(page)
+  await expect.poll(async () => spotAt(page, lit)).toBe('stump')
+  await expect.poll(async () => spotAt(page, dark)).toMatch(/^(tree|iron-oak)$/)
+  // And through a reload.
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
     return !!s && !s.transitioning && s.areaId === a
   }, `home:${land.gate}`)
-  const after = await homeAt(page, land.gate)
-  expect(after?.stumps ?? []).toContainEqual([spot.tx, spot.ty])
-  expect(after?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile.tx, y: tile.ty }))
-  await expect.poll(async () => usesLeft(page, axe)).toBe(29)
+  const after = await landAt(page, land.gate)
+  expect(after?.stumps ?? []).toContainEqual([lit.tx, lit.ty])
+  expect(after?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile![0], y: tile![1] }))
+  await expect.poll(async () => usesLeft(page, axe)).toBe(28)
 })

@@ -374,12 +374,10 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EV.profileChanged, this.onProfileChanged, this)
     bus.on(EV.worldRefresh, this.onWorldRefresh, this)
     bus.on(EV.relocate, this.onRelocate, this)
-    bus.on(EV.rebuildWorld, this.onRebuildWorld, this)
     this.events.once('shutdown', () => {
       bus.off(EV.profileChanged, this.onProfileChanged, this)
       bus.off(EV.worldRefresh, this.onWorldRefresh, this)
       bus.off(EV.relocate, this.onRelocate, this)
-      bus.off(EV.rebuildWorld, this.onRebuildWorld, this)
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -870,11 +868,6 @@ export class WorldScene extends Phaser.Scene {
     this.refreshMarkers()
     this.interactables.invalidatePrompt()
     emitResidents(this.session)
-  }
-
-  /** The map no longer matches the data (a plant, a kept stump): rebuild it. */
-  private onRebuildWorld(): void {
-    if (!this.room) this.rebuildArea()
   }
 
   /** My homestead's lamps on this land (the light that holds the ground). */

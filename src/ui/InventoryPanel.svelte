@@ -3,7 +3,7 @@
   import type { Session } from '../game/session'
   import { VILLAGE_EV, villageFor } from '../game/village'
   import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { ITEMS_EV, giftPhrase, itemsFor } from '../game/items'
+  import { ITEMS_EV, giftPhrase, itemErrorText, itemsFor } from '../game/items'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
   import { fitTargets, groupInventory, inventoryEntries, modelEntries, newTabs, type InventoryEntry, type InventoryTab } from '../lib/inventory'
@@ -11,6 +11,7 @@
   import type { Asset, InstanceView } from '../lib/api/types'
   import { INVENTORY_TABS, inventoryCopy } from '../content/inventory'
   import { isPlantableSeed } from '../lib/gathering'
+  import { parseHomeArea, plantTileNear } from '../lib/homestead'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -160,17 +161,28 @@
     void act(`carry:${e.key}`, () => items.offHand(e.instance ? { instance: e.instance.id } : { itemDef: e.id }), `You carry ${giftPhrase(e.id, 1)} in your off hand.`)
   }
 
+  /** Seeds and saplings go into your own land, at your feet. */
+  function plantable(e: InventoryEntry): boolean {
+    const gate = parseHomeArea(session.state.area)
+    return isPlantableSeed(e.id) && gate !== null && homes.mine?.gate === gate
+  }
+
   function plantIt(e: InventoryEntry): void {
-    const tx = Math.floor(session.state.position.x / 16)
-    const ty = Math.floor(session.state.position.y / 16)
+    const gate = parseHomeArea(session.state.area)
+    const mine = homes.mine
+    const tile = mine ? plantTileNear(mine, session.state.position) : null
+    if (gate === null || !tile) {
+      message = { text: itemErrorText('land-blocked'), kind: 'error' }
+      return
+    }
     void act(
       `plant:${e.key}`,
       () =>
-        items.plant(e.id, session.state.area, [tx, ty]).then(async (r) => {
-          // The planted piece stands on the land map: read it fresh, rebuild.
-          if (r.ok) {
-            await homes.load()
-            bus.emit(EV.rebuildWorld, {})
+        items.plant(e.id, tile).then((r) => {
+          // The scene draws it now; the home's state keeps it for next time.
+          if (r.ok && r.value.plant) {
+            bus.emit(EV.planted, { plant: r.value.plant })
+            void homes.fetchHome(gate)
           }
           return r
         }),
@@ -297,7 +309,7 @@
           {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}
           {#if e.kind === 'fitting' && e.instance}<button type="button" class="act" data-act="fit" aria-expanded={open === `fit:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`fit:${e.key}`)}>{inventoryCopy.actions.fit}…</button>{/if}
           {#if e.giveable}<button type="button" class="act" data-act="give" aria-expanded={open === `give:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`give:${e.key}`)}>{inventoryCopy.actions.give}…</button>{/if}
-          {#if isPlantableSeed(e.id) && session.state.area.startsWith('home:')}<button type="button" class="act" data-act="plant" disabled={busy !== null} onclick={() => plantIt(e)}>Plant</button>{/if}
+          {#if plantable(e)}<button type="button" class="act" data-act="plant" disabled={busy !== null} onclick={() => plantIt(e)}>{inventoryCopy.actions.plant}</button>{/if}
         </span>
         {#if open === `give:${e.key}`}
           {@const people = nearby()}

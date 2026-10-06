@@ -1,7 +1,7 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { loadWilds } from './wilds/data.ts';
-import { buildableKind, effectiveKind, homeLights, isLit, type Land, type Light } from './homestead-land.ts';
+import { LAND, buildableKind, clearedSet, effectiveKind, generateLand, homeLights, isLit, type Land, type Light } from './homestead-land.ts';
 
 /** Material ids a purchase bill may name: the Wilds materials, plus any material in the catalogue (seasoned timber). */
 const MATERIAL_ITEMS = new Set(
@@ -263,6 +263,48 @@ export function checkPlacement(
     if (def.id === data.lanternPosts.item && !everythingLit(moved, data)) return 'post-holds-land';
   }
   return null;
+}
+
+/** What planting needs to know of a home's land. */
+export interface PlantLand {
+  landSeed: number;
+  cleared: readonly [number, number][];
+  items: readonly HomeInstance[];
+  plants?: readonly { x: number; y: number }[];
+}
+
+/**
+ * Ground a seed or sapling can go into (the server's plantBlocked): open
+ * grass, off the home site and the gate path, clear of placed pieces and
+ * of other plants. Stumps kept in lamplight stand on tree tiles, so they
+ * never count as grass.
+ */
+export function plantable(home: PlantLand, tx: number, ty: number, data: HomesteadData = HOMESTEAD_DATA, land: Land = generateLand(home.landSeed, data.land)): boolean {
+  if (effectiveKind(land, clearedSet(home.cleared), tx, ty) !== LAND.GRASS) return false;
+  const here = { x: tx, y: ty, w: 1, h: 1 };
+  if (data.outdoorReserved.some((r) => overlaps(here, r))) return false;
+  for (const it of home.items) {
+    if (it.scene !== 'outdoor') continue;
+    const r = footprintRect(it, data);
+    if (r && overlaps(here, r)) return false;
+  }
+  return !(home.plants ?? []).some((p) => p.x === tx && p.y === ty);
+}
+
+/** The plantable tile nearest a spot on the land (px), within a step of it; null when there's none. */
+export function plantTileNear(home: PlantLand, at: { x: number; y: number }, data: HomesteadData = HOMESTEAD_DATA): [number, number] | null {
+  const land = generateLand(home.landSeed, data.land);
+  const cx = Math.floor(at.x / 16);
+  const cy = Math.floor(at.y / 16);
+  let best: { d: number; tile: [number, number] } | null = null;
+  for (let ty = cy - 1; ty <= cy + 1; ty++) {
+    for (let tx = cx - 1; tx <= cx + 1; tx++) {
+      const d = Math.hypot(at.x - (tx * 16 + 8), at.y - (ty * 16 + 8));
+      if (d > 24 || !plantable(home, tx, ty, data, land)) continue;
+      if (!best || d < best.d) best = { d, tile: [tx, ty] };
+    }
+  }
+  return best?.tile ?? null;
 }
 
 /** Can this placed piece be put away without leaving anything in the dark? */

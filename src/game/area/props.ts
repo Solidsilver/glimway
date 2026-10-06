@@ -12,9 +12,13 @@ import { ensureSceneryTexture } from '../commons-art'
 import { ensureTangleAtlas } from '../wilds/tangle-art'
 import { ensureMillTexture } from '../mill-art'
 
-/** Code-drawn scenery textures: the Commons' runs, the Tangle's woods, the Tolley mill. */
+/**
+ * Code-drawn scenery textures: the Commons' runs, the Tangle's woods, the
+ * Tolley mill; or a texture already loaded (an item's own art, for a
+ * planted sapling).
+ */
 export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
-  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || ensureMillTexture(scene, key)
+  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || ensureMillTexture(scene, key) || scene.textures.exists(key)
 }
 
 export interface PropsBuilt {

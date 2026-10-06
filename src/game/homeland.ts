@@ -19,7 +19,26 @@ import { DECOR_ART } from '../lib/wilds/tangle.ts'
 import { TILE } from './textures.ts'
 import { tangleFrame } from './wilds/tangle-key.ts'
 import { lookAtlasKey } from './wilds/wilds-looks.ts'
+import { itemIcon } from './items-pass.ts'
 import type { ScenerySpot, WorldData, GatherSpot } from './worlds.ts'
+
+/** Planted things drawn as a patch of the woods' own (the rest as their sapling). */
+const PLANTED_PATCH: Partial<Record<string, DecorKind>> = {
+  'comfrey-root': 'flowers',
+  'wild-thyme': 'flowers',
+  'turncap-spawn': 'turncaps',
+  'iron-oak-acorn': 'fern'
+}
+
+/**
+ * How a planted thing is drawn: a sapling as its own sprite, an herb or
+ * spawn as a patch of the woods' own. Small, and walked through.
+ */
+export function plantScenery(p: { itemDef: string; x: number; y: number }, atlas: string): ScenerySpot {
+  const patch = PLANTED_PATCH[p.itemDef]
+  const at = { x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, depth: 'y' as const, flipX: h32(p.x, p.y, 6) < 0.5, tx: p.x, ty: p.y }
+  return patch ? { key: atlas, frame: tangleFrame(patch, Math.floor(h32(p.x, p.y, 13) * 16)), ...at } : { key: itemIcon(p.itemDef), ...at }
+}
 
 /** What the land map needs from the homestead state (none: a guest, or not read yet). */
 export interface LandSource {
@@ -190,15 +209,10 @@ export function buildLand(gate: number): LandWorld {
   }
   // The gate mouth stays open (the way back to the Commons).
   for (let x = L.gate.x; x < L.gate.x + L.gate.w; x++) solid[H - 1][x] = false
-  for (const p of plants) {
-    let decorKind: DecorKind = 'flowers'
-    if (p.itemDef.includes('birch')) decorKind = 'birch'
-    else if (p.itemDef.includes('pine')) decorKind = 'pine'
-    else if (p.itemDef.includes('oak')) decorKind = 'oak'
-    else if (p.itemDef.includes('turncap')) decorKind = 'turncaps'
-    else if (p.itemDef.includes('willow')) decorKind = 'snag'
-    decor(decorKind, p.x, p.y, 0)
-  }
+  // Planted things stand where the server says (inside lamplight where
+  // they were put; outside, wherever they've wandered to). Small, and
+  // walked through: a sapling is its own sprite, a patch the woods' own.
+  for (const p of plants) scenery.push(plantScenery(p, atlas))
   const area = homeArea(gate)
   const door = { tx: s.x + Math.floor(s.w / 2) - 1, ty: s.y + s.h - 2 }
   return {

@@ -11,6 +11,7 @@
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { effectLine, giftPhrase, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
+import { GATHERING_DATA } from '../lib/gathering'
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
 import type { Session } from './session'
@@ -29,11 +30,15 @@ export function itemErrorText(code: ApiErrorCode | string): string {
     case 'tool-blunt':
       return 'It’s too blunt to work with. Mend it first.'
     case 'gathered-enough':
-      return 'The wood’s given enough here today.'
+      return GATHERING_DATA.softCapLine
     case 'cannot-gather-here':
-      return 'Nothing to gather here.'
+      return 'There’s nothing there to work.'
     case 'cannot-plant-here':
-      return 'Can’t plant here.'
+      return 'Plant it on your own land.'
+    case 'not-your-land':
+      return 'That’s someone else’s land. Leave it as you found it.'
+    case 'land-blocked':
+      return 'There’s no open ground to plant in here.'
     case 'not-a-seed':
       return 'That isn’t something you can plant.'
     case 'wrong-tool':
@@ -172,15 +177,19 @@ export class Items {
     return { ok: true, value: r.res.result }
   }
 
-  /** Gathering action (chop, break, dig) on a target resource. */
-  gather(tool: string, action: string, target: string, area: string, visitId: string, tile?: [number, number]) {
-    return this.run('gather', { tool, action, target, area, visitId, ...(tile ? { tile } : {}) })
+  /**
+   * One chop, break or dig with a tool, where the hero stands (the server
+   * reads the area from the progress that rides along). On home land the
+   * tile names the piece; elsewhere the woods are scenery.
+   */
+  gather(tool: string, action: string, target: string, visitId: string, tile?: [number, number]) {
+    return this.run('gather', { tool, action, target, visitId, ...(tile ? { tile } : {}) })
   }
-  /** Plant a seed or sapling at a tile on homestead land. */
-  plant(itemDef: string, area: string, tile: [number, number]) {
-    return this.run('plant', { itemDef, area, tile })
+  /** Plant a seed or sapling on your own land, at a tile beside you. */
+  plant(itemDef: string, tile: [number, number]) {
+    return this.run('plant', { itemDef, tile })
   }
-  /** One use of a tool (gathering will call this; the dev hook does now). */
+  /** One use of a tool (gathering wears tools through gather; the dev hook calls this). */
   useTool(instance: string, action?: string) {
     return this.run('use', { instance, ...(action ? { action } : {}) })
   }

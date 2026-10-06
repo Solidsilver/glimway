@@ -181,6 +181,10 @@ export const SERVER_ERROR_CODES = [
   'cannot-gather-here',
   'cannot-plant-here',
   'not-a-seed',
+  'not-your-land',
+  'tile-required',
+  'invalid-tool',
+  'invalid-visit',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
