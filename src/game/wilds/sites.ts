@@ -16,7 +16,8 @@
 import type Phaser from 'phaser'
 import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
 import { paperFlag } from '../../content/papers.ts'
-import { HEIRLOOMS } from '../../content/heirlooms.ts'
+import { HEIRLOOMS, HEIRLOOM_GUEST_LINES } from '../../content/heirlooms.ts'
+import { itemsFor } from '../items'
 import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
 import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
 import type { Epoch } from '../../lib/wilds/types.ts'
@@ -425,13 +426,24 @@ export class WildsSites {
     const session = this.deps.session
     if (session.state.flags.includes('heirloom:nans-lamplighter-pole')) return
     const h = HEIRLOOMS['nans-lamplighter-pole']
+    if (!session.link) {
+      uiState.dialogueOpen = true
+      bus.emit(EV.dialogue, {
+        id: 'wilds-heirloom:nans-lamplighter-pole',
+        speaker: h.speaker,
+        lines: [HEIRLOOM_GUEST_LINES.nan]
+      })
+      return
+    }
+    if (itemsFor(session).isGrantInFlight('nans-lamplighter-pole')) return
     uiState.dialogueOpen = true
     bus.emit(EV.dialogue, {
       id: 'wilds-heirloom:nans-lamplighter-pole',
       speaker: h.speaker,
       lines: [...h.dialogueLines],
       choices: [
-        { text: 'Take the lamplighter pole', action: 'heirloom:grant:nans-lamplighter-pole' }
+        { text: 'Take the lamplighter pole', action: 'heirloom:grant:nans-lamplighter-pole' },
+        { text: 'Not yet' }
       ]
     })
   }

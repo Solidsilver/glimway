@@ -50,6 +50,8 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'Your own chest is full. It’s a small one.'
     case 'not-a-member':
       return 'That chest belongs to the folk on this deed.'
+    case 'not-giveable':
+      return 'That was given to you. It stays with you.'
     case 'item-not-available':
       return 'That piece isn’t free to move just now.'
     case 'invalid-quantity':

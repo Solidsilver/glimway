@@ -1286,12 +1286,43 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 		return fail(400, "invalid-item")
 	}
 
+	// Proximity check per heirloom giver
+	switch itemID {
+	case "brack-felling-axe":
+		m, ok := content.MenderFor("silas")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+			return fail(409, "too-far-away")
+		}
+	case "orrins-mason-pick":
+		m, ok := content.MenderFor("orrin")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+			return fail(409, "too-far-away")
+		}
+	case "ada-garden-spade":
+		spot, ok := content.ResidentFor("ada")
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+			return fail(409, "too-far-away")
+		}
+	case "nans-lamplighter-pole":
+		if s.State.Area != "wilds" {
+			return fail(409, "too-far-away")
+		}
+	default:
+		return fail(400, "invalid-item")
+	}
+
 	// Validate story conditions per heirloom tool
 	switch itemID {
 	case "brack-felling-axe":
 		// Silas: Hollis's name known
-		// The same list as HOLLIS_NAME_FLAGS in src/content/heirlooms.ts.
-		met := slices.Contains(s.State.Flags, "returned:whittled-fox") ||
+		// Authoritative check on server ledger for Silas's returned fox,
+		// plus echo and paper flags from progress.
+		var foxReturned bool
+		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM ledger WHERE habitica_id=? AND reason='return-keepsake' AND ref='silas:whittled-fox')", s.HabiticaID).Scan(&foxReturned)
+		if err != nil {
+			return err
+		}
+		met := foxReturned ||
 			slices.Contains(s.State.Flags, "echo:hollis") ||
 			slices.Contains(s.State.Flags, "paper:ashwatch-ledger-excerpts") ||
 			slices.Contains(s.State.Flags, "paper:silas-pine-offcut-scrap")
@@ -1301,32 +1332,23 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 
 	case "orrins-mason-pick":
 		// Orrin: north bridge mended
-		met := slices.Contains(s.State.Flags, "project:north-bridge:complete")
-		if !met {
-			var completed sql.NullInt64
-			err := tx.QueryRowContext(ctx, "SELECT completed_at FROM projects WHERE world_id=? AND project_def='north-bridge'", s.WorldID).Scan(&completed)
-			if err == nil && completed.Valid && completed.Int64 > 0 {
-				met = true
-			}
+		// Authoritative check on the projects table only.
+		var completed sql.NullInt64
+		err := tx.QueryRowContext(ctx, "SELECT completed_at FROM projects WHERE world_id=? AND project_def='north-bridge'", s.WorldID).Scan(&completed)
+		if err != nil && err != sql.ErrNoRows {
+			return err
 		}
-		if !met {
+		if err == sql.ErrNoRows || !completed.Valid || completed.Int64 <= 0 {
 			return fail(409, "condition-unmet")
 		}
 
 	case "ada-garden-spade":
 		// Ada: window oil brought 3 times
+		// Authoritative count on outcomes table only.
 		var oilCount int
 		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&oilCount)
 		if err != nil {
 			return err
-		}
-		for _, f := range s.State.Flags {
-			if strings.HasPrefix(f, "ada-oil-gifts:") {
-				var n int
-				if _, scanErr := fmt.Sscanf(f, "ada-oil-gifts:%d", &n); scanErr == nil && n > oilCount {
-					oilCount = n
-				}
-			}
 		}
 		if oilCount < 3 {
 			return fail(409, "condition-unmet")
@@ -1367,51 +1389,36 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	return currency(ctx, tx, s.HabiticaID, content.StackCurrency(itemID), 1, "heirloom", itemID, now)
 }
 
-// giveAdaOil accepts hearth-oil/window-oil for Ada's window, up to 3 gifts.
+// giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
 func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
-	oilDef := req.ItemDef
-	if oilDef == "" {
-		oilDef = "hearth-oil"
+	spot, ok := content.ResidentFor("ada")
+	if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+		return fail(409, "too-far-away")
+	}
+
+	if req.ItemDef != "hearth-oil" {
+		return fail(400, "invalid-item")
+	}
+
+	// Count check runs first before checking pack inventory
+	var currentGifts int
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&currentGifts)
+	if err != nil {
+		return err
+	}
+	if currentGifts >= 3 {
+		return fail(409, "not-needed")
 	}
 
 	haveHearth, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "hearth-oil")
 	if err != nil {
 		return err
 	}
-	haveWindow, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "window-oil")
-	if err != nil {
-		return err
-	}
-
-	toTake := oilDef
-	if oilDef == "window-oil" && haveWindow > 0 {
-		toTake = "window-oil"
-	} else if haveHearth > 0 {
-		toTake = "hearth-oil"
-	} else if haveWindow > 0 {
-		toTake = "window-oil"
-	} else {
+	if haveHearth <= 0 {
 		return fail(409, "insufficient-items")
 	}
 
-	var currentGifts int
-	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&currentGifts)
-	if err != nil {
-		return err
-	}
-	for _, f := range s.State.Flags {
-		if strings.HasPrefix(f, "ada-oil-gifts:") {
-			var n int
-			if _, scanErr := fmt.Sscanf(f, "ada-oil-gifts:%d", &n); scanErr == nil && n > currentGifts {
-				currentGifts = n
-			}
-		}
-	}
-	if currentGifts >= 3 {
-		return fail(409, "not-needed")
-	}
-
-	if _, err := packTake(ctx, tx, s.HabiticaID, toTake, nil, 1, "ada-oil", "ada", now); err != nil {
+	if _, err := packTake(ctx, tx, s.HabiticaID, "hearth-oil", nil, 1, "ada-oil", "ada", now); err != nil {
 		return err
 	}
 
@@ -1422,6 +1429,6 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 
 	s.State.Flags = rules.AddUnique(s.State.Flags, fmt.Sprintf("ada-oil-gifts:%d", nextCount))
 	out.AdaOilCount = nextCount
-	out.Used = toTake
+	out.Used = "hearth-oil"
 	return nil
 }

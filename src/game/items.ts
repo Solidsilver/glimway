@@ -114,6 +114,8 @@ export { giftPhrase } from '../lib/items'
 export class Items {
   view: ItemsView | null = null
   status: ItemsStatus
+  private inFlightGrants = new Set<string>()
+  private inFlightAdaOil = false
 
   constructor(private session: Session) {
     this.status = session.link ? 'idle' : 'guest'
@@ -209,11 +211,25 @@ export class Items {
   returnKeepsake(itemDef: string, target: string) {
     return this.run('return', { itemDef, target })
   }
-  grantHeirloom(itemDef: string) {
-    return this.run('heirloom', { itemDef })
+  isGrantInFlight(itemDef: string): boolean {
+    return this.inFlightGrants.has(itemDef)
   }
-  giveAdaOil(itemDef = 'hearth-oil') {
-    return this.run('ada-oil', { itemDef })
+  isAdaOilInFlight(): boolean {
+    return this.inFlightAdaOil
+  }
+  grantHeirloom(itemDef: string) {
+    if (this.inFlightGrants.has(itemDef)) return Promise.resolve(fail('busy'))
+    this.inFlightGrants.add(itemDef)
+    return this.run('heirloom', { itemDef }).finally(() => {
+      this.inFlightGrants.delete(itemDef)
+    })
+  }
+  giveAdaOil() {
+    if (this.inFlightAdaOil) return Promise.resolve(fail('busy'))
+    this.inFlightAdaOil = true
+    return this.run('ada-oil', { itemDef: 'hearth-oil' }).finally(() => {
+      this.inFlightAdaOil = false
+    })
   }
 
   // ------------------------------------------------------------ reads

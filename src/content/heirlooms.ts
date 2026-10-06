@@ -107,6 +107,15 @@ export const ADA_OIL_REPLIES: Record<number, string[]> = {
   2: ['For the window. Thank you.'],
 };
 
+/** Canon lines spoken to guests (without a link) when an heirloom beat would otherwise trigger. */
+export const HEIRLOOM_GUEST_LINES = {
+  silas: 'Brack’s felling axe will keep on the wall. Sign in to your world and I’ll put it in your hands.',
+  orrin: 'The mason pick will keep on the bench. Sign in to your world and come take it.',
+  adaSpade: 'The garden spade will keep by the door. Sign in to your world and it’s yours.',
+  adaOil: 'Hearth oil will keep in the flask. Sign in to your world before you spare it.',
+  nan: 'The pole will keep by the stump until you’re signed in to your world.',
+} as const;
+
 /** All lines authored for heirlooms (for tests/world.test.ts text rules). */
 export function allHeirloomLines(): string[] {
   const lines: string[] = [];
@@ -114,6 +123,7 @@ export function allHeirloomLines(): string[] {
     lines.push(...h.dialogueLines);
   }
   lines.push(...ADA_OIL_REPLIES[1], ...ADA_OIL_REPLIES[2]);
+  lines.push(...Object.values(HEIRLOOM_GUEST_LINES));
   return lines;
 }
 

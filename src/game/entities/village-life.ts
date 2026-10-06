@@ -68,7 +68,8 @@ export class VillageLayer implements InteractionProvider {
       calendar: this.village.calendar,
       source: this.village.calendarSource,
       worldFlags: this.village.worldFlags,
-      projectsStatus: this.village.projectsStatus
+      projectsStatus: this.village.projectsStatus,
+      loadProjects: () => this.village.loadProjects()
     })
     this.village.ensureCalendar()
     if (deps.session.link && Date.now() - projectsReadAt > 60_000) {

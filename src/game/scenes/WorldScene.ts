@@ -48,6 +48,7 @@ import { HomesteadLayer } from '../entities/homesteads'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
 import { itemIconUrls } from '../items-pass'
 import { emitResidents } from '../residents'
+import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
@@ -208,7 +209,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Entities
     const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion })
-    this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, papers })
+    this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, papers, village: villageFor(this.session) })
     // Read-only: found-text pickups still lying in this area (playtests).
     ;(window as unknown as { __fsPapers?: () => string[] }).__fsPapers = () => papers.lying()
     this.hero = new Hero(
@@ -428,6 +429,7 @@ export class WorldScene extends Phaser.Scene {
         this.hero.damagePlayer(n, this.hero.sprite.x - 1)
       }
       w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
+      w.__fsDevAddFlag = (flag: string) => this.session.addFlag(flag)
       // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
       // checks the packed atlases give the loaders the pixels they had).
       w.__fsDevTextureHash = (key: string) => {
@@ -490,7 +492,10 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     // Read-only: the item model as last read (null for guests or before a read).
-    ;(window as unknown as { __fsItems?: () => unknown }).__fsItems = () => itemsFor(this.session).view
+    const fsItems = Object.assign(() => itemsFor(this.session).view, {
+      load: () => itemsFor(this.session).load()
+    })
+    ;(window as unknown as { __fsItems?: typeof fsItems }).__fsItems = fsItems
     // Read-only: the hero's vitals as the save holds them.
     ;(window as unknown as { __fsVitals?: () => { hp: number; maxHp: number; mana: number; maxMana: number } }).__fsVitals = () => {
       const st = this.session.state
@@ -1033,63 +1038,39 @@ export class WorldScene extends Phaser.Scene {
 
   private grantHeirloom(id: string): void {
     const items = itemsFor(this.session)
-    if (!this.session.link) {
-      this.session.addFlag(`heirloom:${id}`)
-      const h = HEIRLOOMS[id as HeirloomId]
-      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
-      return
-    }
+    if (!this.session.link) return
     void items.grantHeirloom(id).then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
         return
       }
-      this.session.addFlag(`heirloom:${id}`)
       const h = HEIRLOOMS[id as HeirloomId]
       if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
+      emitResidents(this.session)
     })
   }
 
   private giveAdaOil(): void {
     const items = itemsFor(this.session)
-    if (!this.session.link) {
-      const current = countAdaOilGifts(this.session.state.flags)
-      const next = current + 1
-      this.session.addFlag(`ada-oil-gifts:${next}`)
-      if (next >= 3) {
-        const h = HEIRLOOMS['ada-garden-spade']
-        bus.emit(EV.dialogue, {
-          id: 'ada-spade-grant',
-          speaker: h.speaker,
-          lines: [...h.dialogueLines],
-          choices: [{ text: 'Take the spade', action: 'heirloom:grant:ada-garden-spade' }]
-        })
-      } else {
-        const reply = ADA_OIL_REPLIES[next] ?? ['Good oil for the window. Thank you.']
-        bus.emit(EV.dialogue, {
-          id: 'ada-oil-thanks',
-          speaker: 'Ada',
-          lines: [...reply]
-        })
-      }
-      return
-    }
+    if (!this.session.link) return
     void items.giveAdaOil().then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
         return
       }
-      const count = r.value.adaOilCount ?? (countAdaOilGifts(this.session.state.flags) + 1)
-      this.session.addFlag(`ada-oil-gifts:${count}`)
+      const count = r.value.adaOilCount ?? countAdaOilGifts(this.session.state.flags)
       if (count >= 3) {
         const h = HEIRLOOMS['ada-garden-spade']
         bus.emit(EV.dialogue, {
           id: 'ada-spade-grant',
           speaker: h.speaker,
           lines: [...h.dialogueLines],
-          choices: [{ text: 'Take the spade', action: 'heirloom:grant:ada-garden-spade' }]
+          choices: [
+            { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' },
+            { text: 'Not yet' }
+          ]
         })
       } else {
         const reply = ADA_OIL_REPLIES[count] ?? ['Good oil for the window. Thank you.']
