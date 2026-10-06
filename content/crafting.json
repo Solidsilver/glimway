@@ -248,6 +248,47 @@
       }
     },
     {
+      "id": "craft-split-rail",
+      "name": "Split rail",
+      "minTier": 2,
+      "materials": {
+        "timber": 2,
+        "wooden-peg": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "split-rail",
+        "qty": 1
+      }
+    },
+    {
+      "id": "craft-slates",
+      "name": "Slates",
+      "minTier": 2,
+      "materials": {
+        "stone": 3
+      },
+      "output": {
+        "kind": "item",
+        "id": "slates",
+        "qty": 3
+      }
+    },
+    {
+      "id": "craft-oak-slat",
+      "name": "Oak slat",
+      "minTier": 2,
+      "materials": {
+        "timber": 1,
+        "wooden-peg": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "oak-slat",
+        "qty": 1
+      }
+    },
+    {
       "id": "craft-forager-satchel",
       "name": "Forager's satchel",
       "minTier": 2,

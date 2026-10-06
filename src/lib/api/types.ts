@@ -475,9 +475,9 @@ export interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return';
 export interface ItemsActionResponse extends Snapshot {
-  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[] };
+  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[]; returned?: string; paper?: string };
 }
 
 /** GET /api/calendar (public; Unix seconds). */
@@ -573,3 +573,53 @@ export interface ProjectsResponse extends Snapshot, ProjectsView {}
 export interface ContributeResponse extends Snapshot {
   result: ProjectsView & { projectId: string; materials: Record<string, number> };
 }
+
+export interface ChoreView {
+  id: string;
+  name: string;
+  part: string;
+  area: string;
+  target: string;
+  pos: { tx: number; ty: number };
+  resident: string;
+  hint: string;
+  description: string;
+}
+
+export interface MendedView {
+  repairId: string;
+  mendedBy: string;
+  displayName: string;
+  mendedAt: number;
+}
+
+export interface ChoreHistoryView {
+  id: string;
+  repairId: string;
+  repairName: string;
+  mendedBy: string;
+  displayName: string;
+  mendedAt: number;
+}
+
+export interface RepairsView {
+  open: ChoreView[];
+  mended: MendedView[];
+  worldFlags: string[];
+  history: ChoreHistoryView[];
+}
+
+export interface RepairsResponse extends Snapshot, RepairsView {}
+
+export interface MendResult {
+  repairs: RepairsView;
+  mended: string;
+  reaction: string;
+  gift?: { kind: string; id: string; qty: number };
+  items: ItemsView;
+}
+
+export interface MendResponse extends Snapshot {
+  result: MendResult;
+}
+

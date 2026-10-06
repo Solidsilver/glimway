@@ -11,7 +11,7 @@
 import { calendarAt, type CalendarDay } from '../lib/calendar'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village'
 import { MAIL } from '../lib/mail'
-import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, Mail, MailActionResponse, ProjectView, ProjectsView, StorageMoveResponse } from '../lib/api/types'
+import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, StorageMoveResponse } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
@@ -82,6 +82,12 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'That project doesn’t take that material.'
     case 'project-not-found':
       return 'Mara can’t find that project in the ledger.'
+    case 'repair-not-found':
+      return 'There’s no such chore on the board.'
+    case 'repair-not-open':
+      return 'That chore isn’t open in this world yet.'
+    case 'already-mended':
+      return 'It’s mended already. Someone got there first.'
     case 'recall-unsupported':
       return 'Your world’s post office can’t recall parcels yet.'
     case 'offline':
@@ -109,6 +115,8 @@ export class Village {
   projects: ProjectView[] = blankProjects()
   worldFlags: string[] = []
   projectsStatus: Status
+  repairs: RepairsView = { open: [], mended: [], worldFlags: [], history: [] }
+  repairsStatus: Status
   inventory: AssetCounts | null = null
   storage: AssetCounts | null = null
   /** Your own small chest at home (goes with you if you leave the deed). */
@@ -135,6 +143,7 @@ export class Village {
     })
     this.calendar = calendarAt(this.now())
     this.projectsStatus = session.link ? 'idle' : 'guest'
+    this.repairsStatus = session.link ? 'idle' : 'guest'
     this.mailStatus = session.link ? 'idle' : 'guest'
   }
 
@@ -150,12 +159,15 @@ export class Village {
     if (k === 'contribute') {
       await this.loadProjects()
       await this.loadMail() // carried counts
+    } else if (k === 'mend') {
+      this.repairsStatus = 'idle'
+      await this.loadRepairs()
     } else if (k === 'storage' || k === 'craft') await this.loadStorage()
     else {
       await this.loadMail()
       await this.loadHomeAfterMail() // a piece sent, claimed or recalled
     }
-    const what = k === 'contribute' ? 'gift to the project' : k === 'craft' ? 'work at the bench' : k === 'storage' ? 'trip to the chest' : 'parcel'
+    const what = k === 'contribute' ? 'gift to the project' : k === 'mend' ? 'repair' : k === 'craft' ? 'work at the bench' : k === 'storage' ? 'trip to the chest' : 'parcel'
     bus.emit(EV.toast, { text: p.outcome === 'landed' ? `Your last ${what} went through after all.` : `Your last ${what} didn’t go through. Nothing changed.`, icon: 'scroll' })
   }
 
@@ -290,7 +302,39 @@ export class Village {
   }
 
   hasWorldFlag(flag: string): boolean {
-    return this.worldFlags.includes(flag)
+    return this.worldFlags.includes(flag) || (this.repairs?.worldFlags.includes(flag) ?? false)
+  }
+
+  async loadRepairs(): Promise<void> {
+    const link = this.session.link
+    if (!link) {
+      this.repairsStatus = 'guest'
+      return
+    }
+    if (this.repairsStatus === 'ready') return
+    this.repairsStatus = 'loading'
+    const r = await link.readWith((raw) => raw.repairs())
+    if (!r.ok) {
+      this.repairsStatus = 'offline'
+      return
+    }
+    this.adoptRepairs(r.value)
+  }
+
+  private adoptRepairs(v: RepairsView): void {
+    this.repairs = v
+    this.repairsStatus = 'ready'
+    this.emit('repairs')
+    bus.emit(VILLAGE_EV.changed)
+  }
+
+  async mend(repairId: string): Promise<VillageResult<MendResult>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.mutate<MendResponse>({ kind: 'mend', id: repairId })
+    if (!r.ok) return fail(r.code)
+    this.adoptRepairs(r.res.result.repairs)
+    return { ok: true, value: r.res.result }
   }
 
   async contribute(projectId: string, materials: Record<string, number>): Promise<VillageResult<{ completed: boolean }>> {

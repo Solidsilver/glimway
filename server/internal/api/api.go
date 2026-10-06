@@ -126,6 +126,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, "/api/items/") {
 		route = "/api/items/:action"
 	}
+	if strings.HasPrefix(r.URL.Path, "/api/repairs/") {
+		route = "/api/repairs/:id/mend"
+	}
 	defer func() {
 		class := "none"
 		if observed.status == 502 {
@@ -197,8 +200,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /api/items":
 		err = a.itemsRead(w, r)
 	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
-		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup":
+		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return":
 		err = a.itemsMutation(w, r)
+	case "GET /api/repairs":
+		err = a.repairsRead(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
 			if strings.HasSuffix(r.URL.Path, "/recall") {
@@ -208,6 +213,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/projects/") {
 			err = a.projectContribute(w, r)
+		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/repairs/") && strings.HasSuffix(r.URL.Path, "/mend") {
+			err = a.repairMend(w, r)
 		} else if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
 			err = a.revokeInvite(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/") {

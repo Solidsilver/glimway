@@ -522,6 +522,18 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		}
 	}
 	if loot.Trinket != nil {
+		// A story keepsake is a single, real thing: the Wilds give a bound
+		// keepsake to a player once, and never repeat it (the roll may name
+		// it again, but nothing is granted). Unbound trinkets repeat.
+		if def, ok := content.ItemFor(*loot.Trinket); ok && def.Kind == "keepsake" && def.Bound {
+			first, err := store.Outcome(ctx, tx, s.HabiticaID, "story-keepsake:"+*loot.Trinket, reason, now)
+			if err != nil {
+				return err
+			}
+			if !first {
+				return nil
+			}
+		}
 		if err := packPut(ctx, tx, s.HabiticaID, *loot.Trinket, []makerQty{{"", 1}}, reason, ref, now); err != nil {
 			return err
 		}

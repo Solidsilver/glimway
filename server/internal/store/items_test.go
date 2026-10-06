@@ -115,12 +115,12 @@ func TestOutOfOrderMigrationIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// As if 012 had landed after 013 was already applied here.
+	// As if 012 had landed after a newer migration was already applied here.
 	if _, err = s.DB.Exec("DELETE FROM schema_migrations WHERE name='012_items.sql'"); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()
-	if _, err = Open(path); err == nil || !strings.Contains(err.Error(), "out-of-order migration 012_items.sql after 013_mail_instances.sql") {
+	if _, err = Open(path); err == nil || !strings.Contains(err.Error(), "out-of-order migration 012_items.sql after ") {
 		t.Fatal("opened with an out-of-order migration", err)
 	}
 	// Reopening an up-to-date database is untouched by the check.

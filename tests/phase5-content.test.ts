@@ -22,8 +22,8 @@ test('calendar loader rejects invalid durations, order, epochs and festivals', (
   for (const mutate of [(c: typeof CALENDAR) => { c.wickDays=0; }, (c: typeof CALENDAR) => { c.wicks.reverse(); }, (c: typeof CALENDAR) => { c.epoch='2026-02-30T00:00:00Z'; }, (c: typeof CALENDAR) => { c.festivals[0].day=20; }, (c: typeof CALENDAR) => { c.festivals[0].wick='Absent'; }]) { const c=structuredClone(CALENDAR);mutate(c);assert.throws(()=>validateCalendar(c)); }
   assert.throws(()=>calendarAt(NaN));
 });
-test('workshop has twenty bounded recipes using known decorations, utility items and item definitions', () => {
-  assert.equal(CRAFTING.recipes.length,20); assert.equal(HOMESTEAD_DATA.tiers[2].purchasable,true);assert.ok(HOMESTEAD_DATA.tiers[2].embers>0);assert.ok(Object.keys(HOMESTEAD_DATA.tiers[2].materials!).length>0);
+test('workshop has twenty-three bounded recipes using known decorations, utility items and item definitions', () => {
+  assert.equal(CRAFTING.recipes.length,23); assert.equal(HOMESTEAD_DATA.tiers[2].purchasable,true);assert.ok(HOMESTEAD_DATA.tiers[2].embers>0);assert.ok(Object.keys(HOMESTEAD_DATA.tiers[2].materials!).length>0);
   for (const r of CRAFTING.recipes) if (r.output.kind==='decoration') assert.ok(HOMESTEAD_DATA.items.some(v=>v.id===r.output.id));
   for (const mutate of [(c: typeof CRAFTING)=>{c.recipes[0].output.id='absent';},(c: typeof CRAFTING)=>{c.recipes[0].materials={};},(c: typeof CRAFTING)=>{c.recipes[0].output.qty=0;},(c: typeof CRAFTING)=>{c.recipes[0].minTier=1;},(c: typeof CRAFTING)=>{c.recipes[1].id=c.recipes[0].id;}]){const c=structuredClone(CRAFTING);mutate(c);assert.throws(()=>validateCrafting(c));}
   for (const v of [null,{},[],{...CRAFTING,recipes:[null]}]) assert.throws(()=>validateCrafting(v));

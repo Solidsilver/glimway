@@ -170,8 +170,8 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
   }
 }
 
-const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute', 'items'];
-const ITEM_OPS = ['use', 'repair', 'fit', 'unfit', 'give', 'pocket', 'offhand', 'pickup'];
+const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute', 'items', 'mend'];
+const ITEM_OPS = ['use', 'repair', 'fit', 'unfit', 'give', 'pocket', 'offhand', 'pickup', 'return'];
 const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade', 'claim', 'clear', 'invite', 'joint', 'leave'];
 
 /**
@@ -187,7 +187,7 @@ export function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] 
   if (!MUTATION_KINDS.includes(op.kind as string)) return undefined;
   if (op.kind === 'home' && !HOME_OPS.includes(op.op as string)) return undefined;
   if (op.kind === 'items' && !ITEM_OPS.includes(op.op as string)) return undefined;
-  if (['mail-claim', 'mail-recall', 'contribute'].includes(op.kind as string) && (typeof op.id !== 'string' || !op.id)) return undefined;
+  if (['mail-claim', 'mail-recall', 'contribute', 'mend'].includes(op.kind as string) && (typeof op.id !== 'string' || !op.id)) return undefined;
   if (op.fields !== undefined && (typeof op.fields !== 'object' || op.fields === null || Array.isArray(op.fields))) return undefined;
   if (typeof body.key !== 'string' || !body.key || !Number.isInteger(body.baseRev)) return undefined;
   return { op: structuredClone(op), body: structuredClone(body), at: typeof u.at === 'number' ? u.at : 0 };

@@ -77,6 +77,12 @@ export interface ItemMender {
   ty: number;
   radiusTiles: number;
 }
+export interface ItemResident {
+  id: string;
+  area: string;
+  tx: number;
+  ty: number;
+}
 export interface ItemRules {
   grades: Record<'cheap' | 'heirloom' | 'special', { slots: number; atZero: AtZero; bound?: boolean }>;
   wear: { pointsPerUse: number; holdPointsPerUse: number; fittingUses: number; wornBelowPercent: number; wardenDullUses: number };
@@ -85,6 +91,8 @@ export interface ItemRules {
   give: { radiusTiles: number };
   thanks: { nearbyTiles: number };
   menders: ItemMender[];
+  /** Where the named residents stand (shared with the server's checks). */
+  residents: ItemResident[];
 }
 export interface Items {
   rules: ItemRules;
@@ -157,6 +165,11 @@ export function validateItems(value: unknown): Items {
   for (const m of r.menders ?? []) {
     if (!validId(m.npc) || !m.name || npcs.has(m.npc) || !(PICKUP_AREAS as readonly string[]).includes(m.area) || !isInt(m.tx) || !isInt(m.ty) || !isInt(m.radiusTiles, 1)) return bad(`mender ${m.npc}`);
     npcs.add(m.npc);
+  }
+  const placed = new Set<string>();
+  for (const res of r.residents ?? []) {
+    if (!validId(res.id) || placed.has(res.id) || !(PICKUP_AREAS as readonly string[]).includes(res.area) || !isInt(res.tx) || !isInt(res.ty)) return bad(`resident ${res.id}`);
+    placed.add(res.id);
   }
   const defs = new Map<string, ItemDef>();
   for (const d of v.items) {

@@ -32,8 +32,11 @@ import { Projectiles } from '../entities/projectiles'
 import { Interactables } from '../entities/interactables'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
+import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { itemsFor } from '../items'
+import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
+import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
@@ -247,6 +250,10 @@ export class WorldScene extends Phaser.Scene {
     const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
     this.interactables.setExtra(pickups)
     ;(window as unknown as { __fsPickups?: () => string[] }).__fsPickups = () => pickups.ids()
+    // The village's broken things, mended with the right part (shared per world).
+    const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    this.interactables.setExtra(repairs)
+    ;(window as unknown as { __fsRepairs?: () => string[] }).__fsRepairs = () => repairs.ids()
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -442,11 +449,12 @@ export class WorldScene extends Phaser.Scene {
       // Read-only: where the save says the hero is (area and position).
       w.__fsDevSaved = () => ({ area: this.session.state.area, position: { ...this.session.state.position } })
       // One use of a carried tool through the real server path (gathering,
-      // which will use tools, isn't in the game yet). Resolves to the wear result.
-      w.__fsDevUseTool = async (instance: string, n = 1) => {
+      // which will use tools, isn't in the game yet). Resolves to the wear
+      // result; an `action` (draw water at the well) goes through as such.
+      w.__fsDevUseTool = async (instance: string, n = 1, action?: string) => {
         let last: unknown = null
         for (let i = 0; i < n; i++) {
-          const r = await itemsFor(this.session).useTool(instance)
+          const r = await itemsFor(this.session).useTool(instance, action)
           if (!r.ok) return { error: r.code }
           last = r.value.wear
         }
@@ -929,6 +937,11 @@ export class WorldScene extends Phaser.Scene {
       void this.homesteads?.onAction(action)
       return
     }
+    if (action.startsWith('keep:return:')) {
+      const parsed = parseKeepsakeAction(action)
+      if (parsed) this.returnKeepsake(parsed.def, parsed.target)
+      return
+    }
     const spend: EmberSpend | null =
       action === 'rest' ? { kind: 'rest' }
         : action === 'home-rest' ? { kind: 'home-rest' }
@@ -953,6 +966,30 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     this.spendPayoff(spend)
+  }
+
+  /**
+   * A keepsake given back at the end of a conversation (docs/items/
+   * overview.md, "Returning keepsakes"): the thanks wait for the server's
+   * yes — the return is a keyed mutation, and a refusal leaves the keepsake
+   * with you and says so. On a yes the resident speaks their thanks and the
+   * paper's own toast marks the find.
+   */
+  private returnKeepsake(def: string, target: string): void {
+    const items = itemsFor(this.session)
+    void items.returnKeepsake(def, target).then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      const thanks = keepsakeThanks(r.value.returned ?? def)
+      if (thanks.length) bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
+      if (r.value.paper) {
+        const paper = paperById(r.value.paper)
+        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll' })
+      }
+    })
   }
 
   /**

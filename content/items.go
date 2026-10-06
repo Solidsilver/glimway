@@ -103,6 +103,16 @@ type ItemRules struct {
 		NearbyTiles int `json:"nearbyTiles"`
 	} `json:"thanks"`
 	Menders []ItemMender `json:"menders"`
+	// Where the named residents stand, shared by the server's proximity
+	// checks (returning a keepsake) and the client's placement.
+	Residents []ItemResident `json:"residents"`
+}
+
+type ItemResident struct {
+	ID   string `json:"id"`
+	Area string `json:"area"`
+	TX   int    `json:"tx"`
+	TY   int    `json:"ty"`
 }
 type Items struct {
 	Rules   ItemRules    `json:"rules"`
@@ -261,11 +271,18 @@ func ValidateItems(v Items) error {
 		}
 	}
 	npcs := map[string]bool{}
+	residents := map[string]bool{}
 	for _, m := range r.Menders {
 		if !ValidContentID(m.NPC) || m.Name == "" || npcs[m.NPC] || !slices.Contains(PickupAreas, m.Area) || m.TX < 0 || m.TY < 0 || m.RadiusTiles < 1 {
 			return bad("mender %q", m.NPC)
 		}
 		npcs[m.NPC] = true
+	}
+	for _, res := range r.Residents {
+		if !ValidContentID(res.ID) || residents[res.ID] || !slices.Contains(PickupAreas, res.Area) || res.TX < 0 || res.TY < 0 {
+			return bad("resident %q", res.ID)
+		}
+		residents[res.ID] = true
 	}
 	defs := map[string]ItemDef{}
 	for _, d := range v.Items {
@@ -415,6 +432,17 @@ func MenderFor(npc string) (ItemMender, bool) {
 		}
 	}
 	return ItemMender{}, false
+}
+
+// ResidentFor is where a named resident stands (shared content; the client
+// places them from the same rows).
+func ResidentFor(id string) (ItemResident, bool) {
+	for _, r := range ItemsRules.Rules.Residents {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return ItemResident{}, false
 }
 
 // SortedCosts walks a bill in a fixed order (stable ledgers and errors).

@@ -168,6 +168,14 @@ export const SERVER_ERROR_CODES = [
   'pickup-not-found',
   'already-picked-up',
   'too-weak',
+  // village repairs and returning keepsakes (docs/items/crafting-and-repair.md)
+  'repair-not-found',
+  'repair-not-open',
+  'already-mended',
+  'well-rope-broken',
+  'wrong-recipient',
+  'invalid-target',
+  'unknown-target',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

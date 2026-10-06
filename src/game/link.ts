@@ -70,6 +70,7 @@ export type MutationOp =
   | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
   | { kind: 'contribute'; id: string; fields: Record<string, unknown> }
   | { kind: 'items'; op: ItemsOp; fields: Record<string, unknown> }
+  | { kind: 'mend'; id: string; fields?: Record<string, unknown> }
 
 /** A mutation sent whose answer never came: the exact body, key and all. */
 export interface Unresolved {
@@ -124,6 +125,8 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.contribute(op.id, req)
     case 'items':
       return raw.itemAction(op.op, req)
+    case 'mend':
+      return raw.repairMend(op.id, req)
   }
 }
 
