@@ -167,7 +167,7 @@ export class HomesteadLayer implements InteractionProvider {
       mine: this.homes.mine,
       goal: this.homes.goal(),
       here: this.gate === null ? null : this.homes.homes.get(this.gate) ?? null,
-      slots: this.commons?.gates.map((g) => ({ gate: g.gate, tx: g.tx, ty: g.ty, side: g.side, sign: g.sign, entry: g.entry })) ?? [],
+      slots: this.commons?.gates.map((g) => ({ gate: g.gate, tx: g.tx, ty: g.ty, side: g.side, sign: g.sign, entry: g.entry, shelf: g.shelf })) ?? [],
       features: this.commons?.features ?? null,
       land: this.land ? { gate: this.land.gate, door: this.land.door, doorstep: this.land.doorstep, mailbox: this.land.mailbox, site: this.land.site, desolate: this.land.desolate } : null,
       guide: this.guide ? { x: this.guide.marker.x, y: this.guide.marker.y, arrow: this.guide.arrow.visible } : null,
@@ -398,7 +398,18 @@ export class HomesteadLayer implements InteractionProvider {
       this.clear(d)
       this.gateDrawn.set(slot.gate, d)
       this.drawGateSign(d, slot)
+      this.drawGateShelf(d, slot)
     }
+  }
+
+  private drawGateShelf(d: Drawn, slot: GateSlot): void {
+    const info = this.homes.gateInfo(slot.gate)
+    if (!info?.shelf) return
+    const x = slot.shelf.tx * TILE + 8
+    const y = slot.shelf.ty * TILE + TILE
+    const key = info.shelfStocked ? 'gate-shelf-stocked' : 'gate-shelf'
+    this.add(d, this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y))
+    this.addBody(d, x, y - 4, 12, 8)
   }
 
   /** The words on a gate's signpost. */
@@ -780,7 +791,18 @@ export class HomesteadLayer implements InteractionProvider {
     out.push({ id: 'home:well', ...at({ tx: f.well.tx, ty: f.well.ty }, 4), label: 'Look into the well' })
     out.push({ id: 'home:toolbox', ...at(f.toolbox), label: 'Look in Silas’s toolbox' })
     out.push({ id: 'home:firebox', ...at(f.firebox, 2), label: 'Look at the firebox' })
-    for (const slot of this.commons.gates) out.push({ id: `home:sign:${slot.gate}`, ...at(slot.sign, 2), label: `Read the sign · ${lotName(slot.gate)}` })
+    for (const slot of this.commons.gates) {
+      out.push({ id: `home:sign:${slot.gate}`, ...at(slot.sign, 2), label: `Read the sign · ${lotName(slot.gate)}` })
+      const info = this.homes.gateInfo(slot.gate)
+      if (info?.shelf) {
+        out.push({ id: `home:shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf' })
+      } else if (info?.mine) {
+        const unplaced = this.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
+        if (unplaced) {
+          out.push({ id: `home:place-shelf:${unplaced.id}`, ...at(slot.shelf, 2), label: 'Set out your gate shelf' })
+        }
+      }
+    }
     return out
   }
 
@@ -818,6 +840,8 @@ export class HomesteadLayer implements InteractionProvider {
     if (id.startsWith('home:desk:')) return 'Sit'
     if (id.startsWith('home:woodpile:')) return 'Stack'
     if (id === SILAS_ID) return 'Talk'
+    if (id.startsWith('home:shelf:')) return 'Look'
+    if (id.startsWith('home:place-shelf:')) return 'Place'
     if (id.startsWith('home:sign:') || id === 'home:stake' || id.startsWith('home:post:')) return 'Read'
     return 'Look'
   }
@@ -826,6 +850,17 @@ export class HomesteadLayer implements InteractionProvider {
     if (id === SILAS_ID) return this.talkToSilas()
     if (id === 'home:bed' || (id === 'home:hearth' && this.ownRoom())) return this.offerRest(id === 'home:bed' ? 'Your bedroll' : 'Your hearth')
     if (id === 'home:door') return void this.goInside()
+    if (id.startsWith('home:shelf:')) {
+      const gate = Number(id.slice('home:shelf:'.length))
+      sfx('open')
+      bus.emit(VILLAGE_EV.open, { panel: 'shelf', gate })
+      return
+    }
+    if (id.startsWith('home:place-shelf:')) {
+      const itemId = id.slice('home:place-shelf:'.length)
+      void this.placeGateShelf(itemId)
+      return
+    }
     if (id.startsWith('home:sign:')) return this.readSign(Number(id.slice('home:sign:'.length)))
     if (id.startsWith('home:post:')) {
       const post = this.here()?.items.find((i) => i.id === id.slice('home:post:'.length))
@@ -935,6 +970,17 @@ export class HomesteadLayer implements InteractionProvider {
       return
     }
     const names = info.names.length ? info.names.join(', ') : 'nobody now'
+    const choices: DialogueChoice[] = []
+    if (info.mine) {
+      if (info.shelf) {
+        choices.push({ text: 'Look at your gift shelf', action: `home:shelf:${gate}` })
+      } else {
+        const unplaced = this.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
+        if (unplaced) {
+          choices.push({ text: 'Set out your gate shelf', action: `home:place-shelf:${unplaced.id}` })
+        }
+      }
+    }
     this.say({
       speaker: lotName(gate),
       lines: [
@@ -943,7 +989,8 @@ export class HomesteadLayer implements InteractionProvider {
           : info.mine
             ? `Your sign: ${names}. Silas cut the letters deep so the weather has to work for it.`
             : `${names}. A neighbour’s place: walk through to visit.`
-      ]
+      ],
+      choices: choices.length ? choices : undefined
     })
   }
 
@@ -1113,6 +1160,13 @@ export class HomesteadLayer implements InteractionProvider {
 
   /** A choice picked in a homestead conversation. */
   async onAction(action: string): Promise<void> {
+    if (action.startsWith('home:shelf:')) {
+      const gate = Number(action.slice('home:shelf:'.length))
+      sfx('open')
+      bus.emit(VILLAGE_EV.open, { panel: 'shelf', gate })
+      return
+    }
+    if (action.startsWith('home:place-shelf:')) return this.placeGateShelf(action.slice('home:place-shelf:'.length))
     if (action.startsWith('home:claim:')) return this.claim(Number(action.slice('home:claim:'.length)))
     if (action.startsWith('home:sign:')) return this.signDeed(action.slice('home:sign:'.length))
     if (action.startsWith('home:offer:')) return this.offerDeed(action.slice('home:offer:'.length))
@@ -1143,6 +1197,17 @@ export class HomesteadLayer implements InteractionProvider {
       } else {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
       }
+    }
+  }
+
+  private async placeGateShelf(itemId: string): Promise<void> {
+    const r = await this.homes.act({ op: 'place', itemId, scene: 'gate', x: 0, y: 0, rotation: 0 })
+    if (r.ok) {
+      sfx('pop')
+      this.deps.rebuild()
+    } else {
+      sfx('fizzle')
+      this.say({ speaker: 'Gate Shelf', lines: [r.text] })
     }
   }
 

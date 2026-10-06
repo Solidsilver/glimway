@@ -83,6 +83,8 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 				}
 			}
 		}
+	case "thanks":
+		// Thanks mail has no items or instances attached.
 	default:
 		return false, fmt.Errorf("invalid mail asset")
 	}
@@ -90,12 +92,14 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if reason == "recalled" {
 		ledgerReason = "mail-recall"
 	}
-	for _, delta := range []struct {
-		currency string
-		amount   int
-	}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
-		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
-			return false, err
+	if kind != "thanks" {
+		for _, delta := range []struct {
+			currency string
+			amount   int
+		}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
+				return false, err
+			}
 		}
 	}
 	if bumpRevision {

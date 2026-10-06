@@ -10,7 +10,7 @@ const MATERIAL_ITEMS = new Set(
 
 export interface HomeGrid { width: number; height: number }
 export interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor')[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
+export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor' | 'gate')[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
 export interface HomeRect { x: number; y: number; w: number; h: number }
 /**
@@ -63,7 +63,7 @@ export interface HomesteadData {
   personalChest: { maxUnits: number };
   items: HomeItem[];
 }
-export type HomeScene = 'indoor' | 'outdoor';
+export type HomeScene = 'indoor' | 'outdoor' | 'gate';
 const integer = (n: unknown, min = 0): n is number => Number.isSafeInteger(n) && (n as number) >= min;
 const object = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 function validReserved(list: unknown, g: HomeGrid): boolean {
@@ -104,7 +104,7 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   }
   const seen = new Set<string>();
   for (const v of h.items) {
-    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || typeof v.name !== 'string' || !v.name || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.footprint) || v.footprint.length !== 2 || !integer(v.footprint[0], 1) || !integer(v.footprint[1], 1) || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
+    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || typeof v.name !== 'string' || !v.name || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.footprint) || v.footprint.length !== 2 || !integer(v.footprint[0], 1) || !integer(v.footprint[1], 1) || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor', 'gate'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
     if (v.craftOnly !== undefined && typeof v.craftOnly !== 'boolean') return bad();
     for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || !integer(qty, 1)) return bad();
     seen.add(v.id);
@@ -243,6 +243,10 @@ export function checkPlacement(
   const def = data.items.find((i) => i.id === instance.itemDef);
   if (!def || ![0, 90, 180, 270].includes(rotation) || !def.where.includes(scene)) return 'invalid-placement';
   if (home.tier < def.minTier || (scene === 'indoor' && home.tier < 1)) return 'tier-required';
+  if (scene === 'gate') {
+    if (home.items.some((i) => i.id !== instance.id && i.scene === 'gate')) return 'placement-overlap';
+    return null;
+  }
   const grid = scene === 'indoor' ? data.indoor : landGrid(data);
   const [w, h] = rotatedFootprint(def, rotation);
   if (x < 0 || y < 0 || x > grid.width - w || y > grid.height - h) return 'out-of-bounds';

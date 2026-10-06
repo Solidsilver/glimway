@@ -11,7 +11,7 @@
  * Commons and wild land behind every gate, with no homes: building needs a
  * world.
  */
-import { HOMESTEAD_DATA, homeItem, type HomeInstance } from '../lib/homestead'
+import { HOMESTEAD_DATA, homeItem, type HomeInstance, type HomeScene } from '../lib/homestead'
 import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types'
 import type { CommonsLaneView, MutationOp } from './link'
 import type { ApiErrorCode } from '../lib/api/errors'
@@ -102,7 +102,7 @@ export interface PlacementItemView {
 }
 
 export interface PlacementView {
-  scene: 'outdoor' | 'indoor'
+  scene: HomeScene
   tier: number
   items: PlacementItemView[]
   selected: string | null
@@ -146,6 +146,8 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'You’re short on materials for that.'
     case 'already-placed':
       return 'That’s already set out.'
+    case 'shelf-not-empty':
+      return 'Take the gifts off your shelf before putting it away.'
     case 'not-placed':
       return 'That’s already put away.'
     case 'item-not-owned':

@@ -14,6 +14,7 @@ import { effectLine, giftPhrase, itemDef, menderNear, pickupById, pocketHelps } 
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
 import type { Session } from './session'
+import { presence } from './presence'
 
 export const ITEMS_EV = {
   /** The carried items changed: { what?: string }. */
@@ -165,12 +166,29 @@ export class Items {
   }
 
   /** One use of a tool (gathering will call this; the dev hook does now). */
-  useTool(instance: string, action?: string) {
-    return this.run('use', { instance, ...(action ? { action } : {}) })
+  async useTool(instance: string, action?: string) {
+    const makerId = this.view?.instances.find((i) => i.id === instance)?.maker?.id
+    const r = await this.run('use', { instance, ...(action ? { action } : {}) })
+    if (r.ok && r.value?.wear?.condition === 0 && makerId && makerId !== this.session.link?.habiticaId) {
+      this.thankNearby(makerId)
+    }
+    return r
   }
   /** Eat or drink one (any maker's, unmarked first, unless one is named). */
-  useItem(itemDef: string, maker?: string) {
-    return this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}) })
+  async useItem(itemDef: string, maker?: string) {
+    const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}) })
+    if (r.ok && maker && maker !== this.session.link?.habiticaId) {
+      this.thankNearby(maker)
+    }
+    return r
+  }
+
+  private thankNearby(makerId: string): void {
+    const feed = presence()
+    if (!feed) return
+    if (feed.isNearby(makerId)) {
+      bus.emit(EV.emote, { habiticaId: makerId, id: 'thanks' })
+    }
   }
   /** Mend an heirloom at your bench ('bench') or by a mender ('silas', 'orrin'). */
   repair(instance: string, at: string) {

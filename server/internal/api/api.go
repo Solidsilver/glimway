@@ -188,6 +188,10 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.woodpileRead(w, r)
 	case "POST /api/homestead/woodpile":
 		err = a.woodpileMutation(w, r)
+	case "GET /api/homestead/shelf":
+		err = a.shelfRead(w, r)
+	case "POST /api/homestead/shelf":
+		err = a.shelfMutation(w, r)
 	case "GET /api/mail":
 		err = a.mailRead(w, r)
 	case "POST /api/mail":

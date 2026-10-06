@@ -61,7 +61,12 @@
     message = null
     const r = await village.claim(m.id)
     busy = null
-    message = r.ok ? { text: `You collect ${assetPhrase(m.asset)} from ${m.fromName}.`, kind: 'ok' } : { text: r.text, kind: 'error' }
+    message = r.ok
+      ? {
+          text: m.asset.kind === 'thanks' ? `${m.fromName} used the ${assetName(m.asset).toLowerCase()} you made.` : `You collect ${assetPhrase(m.asset)} from ${m.fromName}.`,
+          kind: 'ok'
+        }
+      : { text: r.text, kind: 'error' }
   }
 
   async function recall(m: Mail): Promise<void> {
@@ -117,9 +122,27 @@
       <ul class="list">
         {#each view.buckets.waiting as m (m.id)}
           <li class="parcel" data-mail={m.id}>
-            <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<ArtIcon art={icon(m.asset)} name="sparkle" size={16} />{/if}</span>
-            <span class="txt"><span class="what">{assetPhrase(m.asset)}</span><span class="from">from {m.fromName} · {when(m.sentAt)}</span></span>
-            <button type="button" class="primary small" data-claim={m.id} disabled={busy !== null} onclick={() => claim(m)}>{busy === m.id ? 'Opening…' : 'Collect'}</button>
+            <span class="thumb">
+              {#if m.asset.kind === 'thanks'}
+                <Icon name="heart" size={16} />
+              {:else if art(m.asset)}
+                <img src={art(m.asset)} alt="" />
+              {:else}
+                <ArtIcon art={icon(m.asset)} name="sparkle" size={16} />
+              {/if}
+            </span>
+            <span class="txt">
+              {#if m.asset.kind === 'thanks'}
+                <span class="what">{m.fromName} used the {assetName(m.asset).toLowerCase()} you made.</span>
+                <span class="from">{when(m.sentAt)}</span>
+              {:else}
+                <span class="what">{assetPhrase(m.asset)}</span>
+                <span class="from">from {m.fromName} · {when(m.sentAt)}</span>
+              {/if}
+            </span>
+            <button type="button" class="primary small" data-claim={m.id} disabled={busy !== null} onclick={() => claim(m)}>
+              {busy === m.id ? (m.asset.kind === 'thanks' ? 'Reading…' : 'Opening…') : (m.asset.kind === 'thanks' ? 'Read' : 'Collect')}
+            </button>
           </li>
         {/each}
       </ul>
@@ -130,7 +153,7 @@
           <li class="parcel" data-sent={m.id}>
             <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<ArtIcon art={icon(m.asset)} name="sparkle" size={16} />{/if}</span>
             <span class="txt"><span class="what">{assetPhrase(m.asset)}</span><span class="from">to {m.toName} · {when(m.sentAt)}</span></span>
-            {#if view.recall}
+            {#if view.recall && m.asset.kind !== 'thanks'}
               <button type="button" class="small" data-recall={m.id} disabled={busy !== null} onclick={() => recall(m)}>{busy === m.id ? 'Recalling…' : 'Recall'}</button>
             {/if}
           </li>

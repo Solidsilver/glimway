@@ -55,6 +55,14 @@ func validAsset(v content.Asset) error {
 	return nil
 }
 
+func isGiveable(v content.Asset) bool {
+	if v.Kind == "decoration" {
+		return v.ID != "door-fox"
+	}
+	d, ok := content.ItemFor(v.ID)
+	return ok && d.Giveable()
+}
+
 // ------------------------------------------------------------ stacks
 
 // stackAt is where a stack lies: a player's pack or personal chest

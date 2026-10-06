@@ -41,6 +41,8 @@ export interface GateSlot {
   side: 'east' | 'west'
   /** The signpost on the lane verge beside the gate. */
   sign: { tx: number; ty: number }
+  /** The gift shelf on the lane verge beside the gate. */
+  shelf: { tx: number; ty: number }
   /** Where you stand on the lane coming back out. */
   entry: { tx: number; ty: number }
 }
@@ -117,7 +119,7 @@ export function gateSlot(gate: number): GateSlot {
   const laneX = side === 'west' ? tx + 1 : tx - 1
   // The signpost stands on the verge a step out from the fence, just up the lane.
   const signX = side === 'west' ? tx + 2 : tx - 2
-  return { gate, tx, ty, side, sign: { tx: signX, ty: ty - 1 }, entry: { tx: laneX, ty } }
+  return { gate, tx, ty, side, sign: { tx: signX, ty: ty - 1 }, shelf: { tx: signX, ty: ty + 2 }, entry: { tx: laneX, ty } }
 }
 
 /** Gate rows a Commons needs for `gateCount` gates. */

@@ -906,6 +906,12 @@ const DECO: Record<string, DecoArt> = {
       void h
     }
   },
+  'gate-shelf': {
+    rise: 4,
+    draw(c) {
+      drawGateShelf(c, false)
+    }
+  },
   'wash-basin': {
     rise: 2,
     draw(c) {
@@ -1115,7 +1121,26 @@ function drawRoomFire(c: C, frame: number): void {
 // ---------------------------------------------------------------- boot
 
 /** Register every fixed Commons/homestead texture (BootScene, after the game's own). */
-// ---------------------------------------------------------------- phase 5: village life
+function drawGateShelf(c: C, stocked: boolean): void {
+  // A rustic wooden shelf on posts by the gate.
+  box(c, 2, 4, 2, 16, OAK.dk)
+  box(c, 14, 4, 2, 16, OAK.dk)
+  box(c, 1, 4, 16, 2, OAK.md)
+  box(c, 1, 10, 16, 2, OAK.md)
+  box(c, 1, 16, 16, 2, OAK.md)
+  for (let i = 0; i < 2; i++) rect(c, i, 2 - i, 18 - i * 2, 2, OAK.lt)
+  rect(c, 0, 3, 18, 1, OAK.dk)
+  if (stocked) {
+    box(c, 3, 1, 4, 3, '#7f9fae')
+    px(c, 4, 0, '#4a5560')
+    box(c, 11, 1, 4, 3, '#c9922e')
+    px(c, 12, 0, '#8a5a34')
+    box(c, 4, 7, 4, 3, '#c4523a')
+    box(c, 10, 7, 5, 3, '#efe2c0')
+    box(c, 5, 13, 3, 3, '#3f8f6b')
+    box(c, 11, 13, 4, 3, '#8c5a3c')
+  }
+}
 
 function drawMailbox(c: C, flag: boolean): void {
   // A carter's post box on a stake: a little slate roof, a slot, a flag.
@@ -1224,6 +1249,8 @@ function drawBridge(c: C): void {
 }
 
 export function generateCommonsArt(scene: Phaser.Scene): void {
+  makeTexture(scene, 'gate-shelf', 18, 20, (c) => drawGateShelf(c, false))
+  makeTexture(scene, 'gate-shelf-stocked', 18, 20, (c) => drawGateShelf(c, true))
   makeTexture(scene, 'mailbox', 19, 22, (c) => drawMailbox(c, false))
   makeTexture(scene, 'mailbox-flag', 19, 22, (c) => drawMailbox(c, true))
   makeTexture(scene, 'workshop-chest', 28, 22, drawChest)

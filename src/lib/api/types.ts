@@ -321,6 +321,8 @@ export interface GateInfo {
   price: number | null;
   /** The caller was on this empty home's deed and can take it back, free, until the deed is lost. */
   reclaim: boolean;
+  shelf?: boolean;
+  shelfStocked?: boolean;
 }
 
 /** A joint-deed invitation the caller is part of. */
@@ -346,7 +348,7 @@ export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade' | 'claim' |
 /** The op-specific fields of a homestead POST (lease, rev, key and progress are added by the link). */
 export type HomeAction =
   | { op: 'buy'; itemDef: string }
-  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor'; x: number; y: number; rotation: number; name?: string }
+  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor' | 'gate'; x?: number; y?: number; rotation?: number; name?: string }
   | { op: 'remove'; itemId: string }
   | { op: 'upgrade'; tier: number }
   | { op: 'claim'; gate: number }
@@ -362,7 +364,7 @@ export interface HomeActionRequest {
   progress?: Progress;
   itemDef?: string;
   itemId?: string;
-  scene?: 'indoor' | 'outdoor';
+  scene?: 'indoor' | 'outdoor' | 'gate';
   x?: number;
   y?: number;
   rotation?: number;
@@ -385,7 +387,7 @@ export interface HomeActionResponse extends Snapshot {
  * its id. `maker` picks one maker's stack ('' = unmarked); absent takes any.
  */
 export interface Asset {
-  kind: 'material' | 'item' | 'decoration' | 'instance';
+  kind: 'material' | 'item' | 'decoration' | 'instance' | 'thanks';
   id: string;
   qty: number;
   instance?: string;
@@ -663,3 +665,48 @@ export interface MendResponse extends Snapshot {
   result: MendResult;
 }
 
+// ------------------------------------------------------------ gate shelf
+
+export interface ShelfSlotView {
+  slot: number;
+  kind: 'material' | 'item' | 'decoration' | 'instance';
+  itemDef: string;
+  qty: number;
+  maker?: MakerView | null;
+  instance?: string | null;
+  stockedBy: string;
+  stockedAt: number;
+}
+
+export interface ShelfView {
+  gate: number;
+  homeId: string;
+  ownerName: string;
+  names: string[];
+  slots: ShelfSlotView[];
+  takenToday: boolean;
+  canStock: boolean;
+  hasShelf: boolean;
+}
+
+export interface ShelfResponse extends Snapshot {
+  shelf: ShelfView;
+}
+
+export interface ShelfRequest {
+  lease: string;
+  baseRev: number;
+  key: string;
+  progress?: Progress;
+  op: 'stock' | 'take';
+  gate: number;
+  slot: number;
+  asset?: Asset;
+}
+
+export interface ShelfActionResponse extends Snapshot {
+  shelf: ShelfView;
+  inventory: AssetCounts;
+  taken?: Asset;
+  line?: string;
+}

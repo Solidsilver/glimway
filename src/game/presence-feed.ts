@@ -140,6 +140,16 @@ export class PresenceFeed {
     return this.client.status === 'live'
   }
 
+  get currentArea(): string | null {
+    return this.area
+  }
+
+  /** Whether player is currently in the same area without having left. */
+  isNearby(habiticaId: string): boolean {
+    if (!this.area) return false
+    return Array.from(this.peers.values()).some((p) => p.habiticaId === habiticaId && p.area === this.area && p.leftAt === null)
+  }
+
   /** Peers to draw in `area`, including ones fading out. */
   peersIn(area: string): Peer[] {
     const t = this.now()
