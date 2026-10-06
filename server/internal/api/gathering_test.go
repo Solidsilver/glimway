@@ -470,6 +470,7 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	x.refresh(c, &s)
 	x.stack(s.HabiticaID, "wild-thyme", "", content.GatheringRules.PlantsPerHome+5)
 	plant := func(tile [2]int, status int) itemsResponse {
+		t.Helper()
 		return x.op(c, &s, "plant", map[string]any{"itemDef": "wild-thyme", "tile": tile, "progress": standAt(s, area, tile[0], tile[1])}, status)
 	}
 	unique := func(h homeView) {
@@ -527,21 +528,18 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	}
 
 	// A home tends so many plants; past that the ground is full.
+	// Each read re-walks the older plants against today's ground, so a new
+	// plant can move where they stand: read the home again before each one.
 	h = x.home(c)
 	open = plantGround(h)
-	taken := map[[2]int]bool{}
-	for _, p := range h.Plants {
-		taken[[2]int{p.X, p.Y}] = true
-	}
 	for y := 1; y < content.HomeRules.Land.Height-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; y++ {
 		for x2 := 1; x2 < content.HomeRules.Land.Width-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; x2 += 3 {
 			tl := [2]int{x2, y}
-			if !open[tl] || taken[tl] {
+			if !open[tl] || slices.ContainsFunc(h.Plants, func(p homePlantView) bool { return p.X == tl[0] && p.Y == tl[1] }) {
 				continue
 			}
 			plant(tl, 200)
-			taken[tl] = true
-			h.Plants = append(h.Plants, homePlantView{X: tl[0], Y: tl[1]})
+			h = x.home(c)
 		}
 	}
 	h = x.home(c)
