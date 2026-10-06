@@ -1,4 +1,4 @@
--- Migration 020: storm-grade drop finds are spaced like warden-sliver finds
+-- Migration 021: storm-grade drop finds are spaced like warden-sliver finds
 -- (docs/items/crafting-and-repair.md: very rare, deep Tangle and the Whitequiet).
 CREATE TABLE storm_finds(
  habitica_id TEXT NOT NULL REFERENCES players(habitica_id),

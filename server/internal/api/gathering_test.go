@@ -23,11 +23,25 @@ func standAt(s response, area string, tx, ty int) rules.State {
 	return doc
 }
 
-// gatherIn is one gather's fields, standing at a tile of an area.
+// gatherIn is one gather's fields, standing at a tile of an area (in the
+// Wilds, the Tangle unless the fields say otherwise).
 func gatherIn(s response, area string, tile [2]int, tool, action, target, visit string) map[string]any {
 	f := map[string]any{"tool": tool, "action": action, "target": target, "visitId": visit, "progress": standAt(s, area, tile[0], tile[1])}
 	if rules.HomeGate(area) >= 0 {
 		f["tile"] = tile
+	}
+	if area == "wilds" {
+		f["region"] = tangleRegion
+	}
+	return f
+}
+
+// inRegion is a wilds gather's fields in another region ("" sends none).
+func inRegion(f map[string]any, region string) map[string]any {
+	if region == "" {
+		delete(f, "region")
+	} else {
+		f["region"] = region
 	}
 	return f
 }

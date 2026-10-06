@@ -738,6 +738,7 @@
       "tab": "supplies",
       "kind": "material",
       "icon": "bloom-flowers",
+      "iconState": "dried",
       "blurb": "Bloom flowers gone brown and papery in the shade. Nothing is lost: dried posies press just as flat."
     },
     {
@@ -1187,7 +1188,7 @@
           "qty": 1,
           "embers": 1,
           "label": "Buy a lump of tallow · 1 ember",
-          "line": "Tallow's a ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
+          "line": "Tallow's an ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
         }
       ]
     },
@@ -1223,7 +1224,7 @@
           "embers": 1,
           "cap": 4,
           "label": "Buy madder scraps · 1 ember",
-          "line": "Red scraps off the dyer's boards, swept up at the fair's end. An ember a handful — no haggling, that's the Hall price."
+          "line": "Red scraps off the dyer's boards. An ember a handful — no haggling, it's fair day."
         }
       ]
     }

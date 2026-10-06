@@ -25,6 +25,7 @@ import type { Session } from '../session'
 import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
 import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { yieldLine } from '../../lib/gathering'
+import { sellerFor } from '../../lib/items'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
 import { Hero } from '../entities/hero'
@@ -1329,14 +1330,18 @@ export class WorldScene extends Phaser.Scene {
   private marketBuy(seller: string, good: string): void {
     const items = itemsFor(this.session)
     if (!this.session.link) return
+    // The server checks you stand by the seller: where you stand now rides along.
+    this.notePosition()
     void items.buy(seller, good).then((r) => {
       if (!this.sys.isActive()) return
       if (!r.ok) {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
         return
       }
+      // The seller's own words for what changed hands.
       const bought = r.value.bought
-      if (bought) bus.emit(EV.toast, { text: `Found: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'sparkle', art: `icon-${bought.itemDef}` })
+      const line = bought ? sellerFor(bought.seller)?.goods.find((g) => g.item === bought.itemDef)?.line : undefined
+      if (bought) bus.emit(EV.toast, { text: line ?? `Bought: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'bag', art: `icon-${bought.itemDef}` })
     })
   }
 

@@ -4,6 +4,9 @@ import { GATHERING_DATA, gatherArea, gatheringOffered, gatheringTarget, inSeason
 import { itemDef, sellerFor, ITEMS } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { CALENDAR, calendarAt } from '../src/lib/calendar.ts';
+import { chunkTerrain } from '../src/lib/wilds/index.ts';
+import { toWorldData } from '../src/lib/wilds/world-data.ts';
+import { modelEntries } from '../src/lib/inventory.ts';
 
 // The seasonal materials and the last material sources
 // (docs/items/crafting-and-repair.md, "Seasonal materials"; the brief's
@@ -77,7 +80,8 @@ test('bloom flowers dry into dried flowers, and the frame takes either', () => {
   const dried = itemDef('dried-flowers');
   assert.ok(fresh && dried, 'both flowers in the catalogue');
   assert.equal(dried?.kind, 'material');
-  assert.equal(dried?.icon, 'bloom-flowers', 'the dried posy borrows the fresh one’s icon');
+  assert.equal(dried?.icon, 'bloom-flowers', 'the dried posy is drawn from the bloom flowers’ art');
+  assert.equal(dried?.iconState, 'dried', '…in its dried state (item-bloom-flowers-dried)');
   const frame = CRAFTING.recipes.find((r) => r.id === 'craft-pressed-flowers');
   assert.ok(frame, 'the pressed-flower frame recipe');
   assert.equal(frame?.materials['bloom-flowers'], 3);
@@ -126,4 +130,54 @@ test('the seasons’ words are cozy, in-world, and fit the box', () => {
     assert.ok(line.length > 0 && line.length <= 160, `${line.length} chars: ${line}`);
     assert.doesNotMatch(line, OUT_OF_WORLD, line);
   }
+});
+
+// The Wilds' gather pieces by the calendar day (src/lib/wilds/world-data.ts).
+const tangle = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' } as const;
+const outer = { ...tangle, regionId: 'outer-1' } as const;
+const CHUNKS = [[0, 0], [1, 1], [2, 0], [1, 0], [0, 1]] as const;
+function targets(epoch: typeof tangle | typeof outer, day: { wick: string } | null): Map<string, number> {
+  const n = new Map<string, number>();
+  for (const [cx, cy] of CHUNKS) {
+    for (const g of toWorldData(chunkTerrain(epoch, cx, cy), 'wilds', day).gathering ?? []) n.set(g.target, (n.get(g.target) ?? 0) + 1);
+  }
+  return n;
+}
+
+test('in Bloom-wick the Tangle’s flower patches are bloom patches; the rest of the year, herbs', () => {
+  const bloom = dayAt(firstOf('wick', 'Bloom'));
+  assert.equal(bloom.mark, 'Carting', 'Bloom is a wick, inside the Carting mark');
+  const inBloom = targets(tangle, bloom);
+  assert.ok((inBloom.get('bloom-patch') ?? 0) > 0, 'bloom patches stand in Bloom-wick');
+  assert.equal(inBloom.get('herbs') ?? 0, 0, 'every flower patch is picked for blooms');
+  for (const wick of ['Bud', 'Light']) {
+    const other = targets(tangle, dayAt(firstOf('wick', wick)));
+    assert.equal(other.get('bloom-patch') ?? 0, 0, `no bloom patches in ${wick}-wick`);
+    assert.equal(other.get('herbs'), inBloom.get('bloom-patch'), `the same patches are herbs in ${wick}-wick`);
+  }
+  assert.equal(targets(tangle, null).get('bloom-patch') ?? 0, 0, 'without a day, the year-round pieces');
+});
+
+test('the Tangle’s trees are Tangle trees; the outer drift’s are plain trees, with no sap', () => {
+  const amberfall = dayAt(firstOf('mark', 'Amberfall'));
+  const inner = targets(tangle, amberfall);
+  assert.ok((inner.get('tangle-tree') ?? 0) > 0);
+  assert.equal(inner.get('tree') ?? 0, 0);
+  const drift = targets(outer, amberfall);
+  assert.equal(drift.get('tangle-tree') ?? 0, 0, 'no Tangle trees past the crossing');
+  assert.ok((drift.get('tree') ?? 0) > 0, 'the outer drift’s trees are plain trees');
+  assert.equal(gatheringTarget('tree')?.yields.some((y) => y.item === 'amberfall-sap'), false);
+  for (const t of [...inner.keys(), ...drift.keys()]) assert.ok(gatheringOffered('wilds', t), `the server allows ${t} in the wilds`);
+});
+
+test('a dried-flower stack draws the delivered dried posy', () => {
+  const view = {
+    stacks: [{ itemDef: 'dried-flowers', qty: 2, maker: null }, { itemDef: 'bloom-flowers', qty: 1, maker: null }],
+    instances: [], pockets: [], offHand: { open: false, itemDef: null, instance: null, class: null }, pickedUp: [], thanks: [],
+  };
+  const entries = modelEntries(view as never, { pack: [], decorations: [] } as never);
+  const dried = entries.find((e) => e.id === 'dried-flowers');
+  const fresh = entries.find((e) => e.id === 'bloom-flowers');
+  assert.equal(dried?.stateArt, 'item-bloom-flowers-dried');
+  assert.equal(fresh?.stateArt ?? null, null, 'fresh flowers draw their own art');
 });

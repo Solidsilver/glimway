@@ -35,9 +35,9 @@ function wildsKind(epoch: Epoch, cx: number, cy: number): AreaKind {
       const chunk = chunkTerrain(epoch, cx, cy);
       // WorldData's exits keep the generator's raw targets (`chunk:…`,
       // `commons`); the scene resolves them into transitions. The
-      // calendar's mark decides the seasons' pieces (bloom patches); the
-      // server re-checks the season from its own clock.
-      return toWorldData(chunk, areaId, calendarAt(gameNow()).mark);
+      // calendar day decides the seasons' pieces (bloom patches in
+      // Bloom-wick); the server re-checks the season from its own clock.
+      return toWorldData(chunk, areaId, calendarAt(gameNow()));
     },
     foreground: wildsForeground,
   };

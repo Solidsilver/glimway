@@ -73,6 +73,7 @@ func ValidMaterialCosts(costs map[string]int) bool {
 	}
 	return true
 }
+
 // validateSwaps: a swap names a material on the bill and stand-ins that
 // are carried stacks of their own, never a bill item or a repeat.
 func validateSwaps(r Recipe, defs map[string]ItemDef) bool {

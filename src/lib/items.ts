@@ -7,6 +7,7 @@
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
+import { CALENDAR } from './calendar.ts';
 import economy from '../../content/economy.json' with { type: 'json' };
 
 export const ITEM_TABS = ['tools', 'supplies', 'keepsakes', 'home', 'papers'] as const;
@@ -42,6 +43,8 @@ export interface ItemDef {
   kind: ItemKind;
   blurb: string;
   icon?: string;
+  /** The icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon. */
+  iconState?: string;
   grade?: 'cheap' | 'heirloom' | 'special';
   uses?: number;
   atZero?: 'breaks' | 'blunt' | 'cracked';
@@ -196,7 +199,7 @@ export function validateItems(value: unknown): Items {
   }
   const defs = new Map<string, ItemDef>();
   for (const d of v.items) {
-    if (!isObj(d) || !validId(d.id) || defs.has(d.id) || typeof d.name !== 'string' || !d.name || typeof d.blurb !== 'string' || !d.blurb || !ITEM_KINDS.includes(d.kind) || KIND_TAB[d.kind] !== d.tab || (d.icon !== undefined && !validId(d.icon))) return bad(`item ${String(d?.id)}`);
+    if (!isObj(d) || !validId(d.id) || defs.has(d.id) || typeof d.name !== 'string' || !d.name || typeof d.blurb !== 'string' || !d.blurb || !ITEM_KINDS.includes(d.kind) || KIND_TAB[d.kind] !== d.tab || (d.icon !== undefined && !validId(d.icon)) || (d.iconState !== undefined && (d.icon === undefined || !validId(d.iconState)))) return bad(`item ${String(d?.id)}`);
     defs.set(d.id, d);
   }
   for (const d of v.items) {
@@ -239,12 +242,12 @@ export function validateItems(value: unknown): Items {
   }
   // Sellers: people and stalls that sell goods for embers (a festival
   // seller stands on its day only).
-  const CALENDAR_FESTIVALS = ['The Breaking', 'Carting Day', 'Amberwake', 'Closure Night'];
+  const festivals = CALENDAR.festivals.map((f) => f.name);
   const sellers = new Set<string>();
   for (const s of v.sellers ?? []) {
     if (!isObj(s) || !validId(s.id) || sellers.has(s.id) || typeof s.npc !== 'string' || !s.npc || s.npc.length > 40 ||
       !(PICKUP_AREAS as readonly string[]).includes(s.area) || !isInt(s.tx) || !isInt(s.ty) || !isInt(s.radiusTiles, 1, 16) ||
-      !Array.isArray(s.goods) || !s.goods.length || (s.festival !== undefined && !CALENDAR_FESTIVALS.includes(s.festival))) return bad(`seller ${String(s?.id)}`);
+      !Array.isArray(s.goods) || !s.goods.length || (s.festival !== undefined && !festivals.includes(s.festival))) return bad(`seller ${String(s?.id)}`);
     sellers.add(s.id);
     const goods = new Set<string>();
     for (const g of s.goods) {

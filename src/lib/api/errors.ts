@@ -99,6 +99,7 @@ export const SERVER_ERROR_CODES = [
   'generator-unavailable',
   // seasons: seasonal materials and the sellers (docs/items/)
   'not-in-season',
+  'invalid-region',
   'sold-out',
   'invalid-seller',
   'invalid-good',

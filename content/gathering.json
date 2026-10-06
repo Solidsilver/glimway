@@ -14,7 +14,7 @@
   "softCapLine": "The wood’s given enough here today.",
   "plantsPerHome": 40,
   "areas": {
-    "wilds": ["tangle-tree", "iron-oak", "willow", "boulder", "lamp-stone", "stump", "herbs", "bloom-patch", "sapling", "hollow-tree"],
+    "wilds": ["tangle-tree", "tree", "iron-oak", "willow", "boulder", "lamp-stone", "stump", "herbs", "bloom-patch", "sapling", "hollow-tree"],
     "woodland": ["tree", "ash", "boulder"],
     "home": ["tree", "iron-oak", "boulder", "lamp-stone", "stump"],
     "village": ["freshet-shore", "pond-ice"],

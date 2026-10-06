@@ -151,28 +151,65 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 			}
 		}
 	}
+
+	// The outer drift is not the Tangle either: a wilds gather names its
+	// region, the Tangle's own trees are refused out there (before any
+	// wear or cap), and its plain trees give timber only.
+	x.now.Add(86400)
+	c = x.login("alice", "")
+	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), ""), 400).Error.Code != "invalid-region" {
+		t.Fatal("a wilds gather without its region")
+	}
+	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "made-up"), 400).Error.Code != "invalid-region" {
+		t.Fatal("a wilds gather in a made-up region")
+	}
+	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
+		t.Fatal("a Tangle tree out in the drift")
+	}
+	for i := 0; i < content.GatheringRules.Caps.Day.Chop; i++ {
+		r := x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/content.GatheringRules.Caps.Visit.Chop)), whitequietRegion), 200)
+		for _, g := range r.Result.Gathered {
+			if g.ItemDef == "amberfall-sap" {
+				t.Fatal("the outer drift's trees gave sap")
+			}
+		}
+	}
 	x.conserved(s.HabiticaID)
 }
 
-func TestBloomFlowersDryAfterTheirWick(t *testing.T) {
+func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
-	// Fresh in the Bloom wick: nothing dries while it lasts.
+	// Fresh in the Bloom wick, and through the rest of its season (the
+	// Carting mark: Light-wick, Cart-wick): they "dry after a season".
 	c = x.jumpToAs("alice", "wick", "Bloom")
 	x.stack(s.HabiticaID, "bloom-flowers", "", 5)
 	v := x.items("GET", "/api/items", nil, c, 200)
 	if stackQty(v.Items, "bloom-flowers") != 5 || stackQty(v.Items, "dried-flowers") != 0 {
 		t.Fatal("fresh flowers dried in their own wick")
 	}
+	for _, wick := range []string{"Light", "Cart"} {
+		c = x.jumpToAs("alice", "wick", wick)
+		v = x.items("GET", "/api/items", nil, c, 200)
+		if stackQty(v.Items, "bloom-flowers") != 5 || stackQty(v.Items, "dried-flowers") != 0 {
+			t.Fatalf("fresh flowers dried in %s-wick, inside their season", wick)
+		}
+	}
 
-	// The wick turns: the pack's posies dry, one for one, and the ledger
-	// says so.
-	c = x.jumpToAs("alice", "wick", "Smoke")
+	// The season turns (Haze-wick, Amberfall): the pack's posies dry, one
+	// for one, and the ledger says so.
+	c = x.jumpToAs("alice", "wick", "Haze")
 	v = x.items("GET", "/api/items", nil, c, 200)
 	if stackQty(v.Items, "bloom-flowers") != 0 || stackQty(v.Items, "dried-flowers") != 5 {
 		t.Fatalf("drying %d/%d", stackQty(v.Items, "bloom-flowers"), stackQty(v.Items, "dried-flowers"))
 	}
+	var rows int
+	if err := x.db.DB.QueryRow("SELECT count(*) FROM ledger WHERE habitica_id=? AND reason='dry' AND ref='bloom-season-turned'", s.HabiticaID).Scan(&rows); err != nil || rows != 2 {
+		t.Fatalf("drying ledger rows %d (%v)", rows, err)
+	}
+	// A second read finds nothing left to dry.
+	x.items("GET", "/api/items", nil, c, 200)
 	x.conserved(s.HabiticaID)
 
 	// Dried flowers press as well as fresh: the frame takes either.

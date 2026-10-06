@@ -40,6 +40,7 @@ type ItemDef struct {
 	Kind      string        `json:"kind"`
 	Blurb     string        `json:"blurb"`
 	Icon      string        `json:"icon,omitempty"`
+	IconState string        `json:"iconState,omitempty"` // the icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon
 	Grade     string        `json:"grade,omitempty"`
 	Uses      int           `json:"uses,omitempty"`
 	AtZero    string        `json:"atZero,omitempty"`
@@ -83,9 +84,9 @@ type ItemPickup struct {
 
 // ItemGood is one thing a seller sells (for embers), and what it says.
 type ItemGood struct {
-	Item  string `json:"item"`
-	Qty   int    `json:"qty"`
-	Embers int   `json:"embers"`
+	Item   string `json:"item"`
+	Qty    int    `json:"qty"`
+	Embers int    `json:"embers"`
 	// Cap: the most one player can buy of it a day (0: no cap).
 	Cap   int    `json:"cap,omitempty"`
 	Label string `json:"label"`
@@ -313,7 +314,7 @@ func ValidateItems(v Items) error {
 	}
 	defs := map[string]ItemDef{}
 	for _, d := range v.Items {
-		if !ValidContentID(d.ID) || defs[d.ID].ID != "" || d.Name == "" || d.Blurb == "" || !slices.Contains(ItemKinds, d.Kind) || kindTab[d.Kind] != d.Tab || (d.Icon != "" && !ValidContentID(d.Icon)) {
+		if !ValidContentID(d.ID) || defs[d.ID].ID != "" || d.Name == "" || d.Blurb == "" || !slices.Contains(ItemKinds, d.Kind) || kindTab[d.Kind] != d.Tab || (d.Icon != "" && !ValidContentID(d.Icon)) || (d.IconState != "" && (d.Icon == "" || !ValidContentID(d.IconState))) {
 			return bad("item %q", d.ID)
 		}
 		defs[d.ID] = d

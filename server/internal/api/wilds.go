@@ -588,37 +588,55 @@ func intAbs(n int) int {
 	return n
 }
 
-func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
-	isWhitequiet := regionID == "outer-1"
-	entryX, entryY := 1, 1
-	for _, region := range content.WildsRules.Regions {
-		if region.ID == regionID {
-			entryX, entryY = region.EntryX, region.EntryY
-			break
-		}
+// The two Wilds regions (content/wilds.json): the Tangle, permanent, and
+// the outer drift past its crossing (the Whitequiet).
+const (
+	tangleRegion     = "inner-1"
+	whitequietRegion = "outer-1"
+)
+
+// deepCountry: where the rare finds turn up — the Whitequiet, or the
+// Tangle at least DeepTangleManhattanDistance chunks from its entry.
+func deepCountry(regionID string, cx, cy int) bool {
+	if regionID == whitequietRegion {
+		return true
 	}
-	isDeepTangle := regionID == "inner-1" && intAbs(cx-entryX)+intAbs(cy-entryY) >= content.WildsRules.DeepTangleManhattanDistance
-	if !isWhitequiet && !isDeepTangle {
-		return false, nil
+	r, ok := regionDefinition(regionID)
+	if !ok {
+		r.EntryX, r.EntryY = 1, 1
 	}
+	return regionID == tangleRegion && intAbs(cx-r.EntryX)+intAbs(cy-r.EntryY) >= content.WildsRules.DeepTangleManhattanDistance
+}
+
+// weeklyFind rolls one rare find on a deep-country claim: a thin chance (a
+// chest's more likely), seeded per player, entity, week and chunk so a
+// replay rolls the same, and at most one a week per player, the finds
+// spaced in their own table. A landed roll is recorded there; the caller
+// grants the find.
+func weeklyFind(ctx context.Context, tx *sql.Tx, player, table, salt string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
 	var count int
-	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM warden_finds WHERE habitica_id=? AND found_at>?", s.HabiticaID, now-7*86400).Scan(&count)
-	if err != nil {
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE habitica_id=? AND found_at>?", player, now-7*86400).Scan(&count)
+	if err != nil || count > 0 {
 		return false, err
-	}
-	if count > 0 {
-		return false, nil
 	}
 	chance := uint32(2)
 	if entity.Kind == "chest" {
 		chance = 5
 	}
 	week := now / (7 * 86400)
-	roll := wilds.Hash(s.HabiticaID, entity.ID, int(week), "warden-sliver", cx, cy) % 1000
-	if roll >= chance {
+	if wilds.Hash(player, entity.ID, int(week), salt, cx, cy)%1000 >= chance {
 		return false, nil
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO warden_finds(habitica_id, found_at) VALUES(?,?)", s.HabiticaID, now); err != nil {
+	_, err = tx.ExecContext(ctx, "INSERT INTO "+table+"(habitica_id, found_at) VALUES(?,?)", player, now)
+	return err == nil, err
+}
+
+func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
+	if !deepCountry(regionID, cx, cy) {
+		return false, nil
+	}
+	found, err := weeklyFind(ctx, tx, s.HabiticaID, "warden_finds", "warden-sliver", entity, cx, cy, now)
+	if err != nil || !found {
 		return false, err
 	}
 	sliverDef, ok := content.ItemFor("warden-sliver")
@@ -641,36 +659,11 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 // (docs/items/crafting-and-repair.md, "Warden-stone"; the catalogue,
 // "Storm-grade drop"). The same deep country keeps both finds.
 func maybeGrantStormDrop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
-	isWhitequiet := regionID == "outer-1"
-	entryX, entryY := 1, 1
-	for _, region := range content.WildsRules.Regions {
-		if region.ID == regionID {
-			entryX, entryY = region.EntryX, region.EntryY
-			break
-		}
-	}
-	isDeepTangle := regionID == "inner-1" && intAbs(cx-entryX)+intAbs(cy-entryY) >= content.WildsRules.DeepTangleManhattanDistance
-	if !isWhitequiet && !isDeepTangle {
+	if !deepCountry(regionID, cx, cy) {
 		return false, nil
 	}
-	var count int
-	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM storm_finds WHERE habitica_id=? AND found_at>?", s.HabiticaID, now-7*86400).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	if count > 0 {
-		return false, nil
-	}
-	chance := uint32(2)
-	if entity.Kind == "chest" {
-		chance = 5
-	}
-	week := now / (7 * 86400)
-	roll := wilds.Hash(s.HabiticaID, entity.ID, int(week), "storm-drop", cx, cy) % 1000
-	if roll >= chance {
-		return false, nil
-	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO storm_finds(habitica_id, found_at) VALUES(?,?)", s.HabiticaID, now); err != nil {
+	found, err := weeklyFind(ctx, tx, s.HabiticaID, "storm_finds", "storm-drop", entity, cx, cy, now)
+	if err != nil || !found {
 		return false, err
 	}
 	if err = packPut(ctx, tx, s.HabiticaID, "storm-grade-drop", []makerQty{{"", 1}}, "wilds-find", entity.ID, now); err != nil {

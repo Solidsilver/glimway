@@ -308,8 +308,11 @@ export class VillageLayer implements InteractionProvider {
     if (name === 'Carting Day') {
       if (w.areaId === 'commons') {
         const c = w as CommonsWorld
-        // Stalls along the cross lane between the gate and the square.
-        for (const [key, tx, ty] of [['stall-a', 8, 18], ['stall-b', 13, 18], ['stall-c', 10, 24]] as const) {
+        // Stalls along the cross lane between the gate and the square; the
+        // red one is the madder stall, where its seller row stands.
+        const madder = sellerFor('madder-stall')
+        const stalls: [string, number, number][] = [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]]
+        for (const [key, tx, ty] of stalls) {
           const x = tx * TILE + 8
           const y = (ty + 1) * TILE
           this.add(this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y))

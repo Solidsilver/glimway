@@ -3,7 +3,7 @@
  * from code (seeded) — part of the original, code-native asset set.
  */
 import type { AreaId } from '../lib/state.ts'
-import { ITEM_RULES } from '../lib/items.ts'
+import { ITEM_RULES, sellerFor } from '../lib/items.ts'
 import { repairFor } from '../lib/repairs.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { TERRAIN, TILE } from './textures.ts'
@@ -357,13 +357,14 @@ function buildVillage(): WorldData {
   // Hazel in the square below the well with her basket, Finn at his mill
   // door, Ada under her window on the east house (village-life.ts
   // ADA_HOUSE_WINDOW). All off the quest route. Ada and Hazel stand where
-  // the shared residents data says (the server checks proximity against
-  // the same rows).
+  // the shared residents data says, Finn where his mill-door seller row
+  // does (the server checks proximity against the same rows).
   for (const res of ITEM_RULES.residents) {
     if (res.area !== 'village') continue
     npcs.push({ id: res.id as NpcId, tx: res.tx, ty: res.ty })
   }
-  npcs.push({ id: 'finn', tx: 30, ty: 23 })
+  const finnsDoor = sellerFor('finns-mill-door')!
+  npcs.push({ id: 'finn', tx: finnsDoor.tx, ty: finnsDoor.ty })
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [

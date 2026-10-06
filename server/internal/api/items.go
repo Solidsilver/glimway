@@ -905,6 +905,9 @@ type itemRequest struct {
 	Unmoored bool    `json:"unmoored,omitempty"`
 	VisitID  string  `json:"visitId,omitempty"`
 	Tile     *[2]int `json:"tile,omitempty"`
+	// Region: which Wilds region a wilds gather is in (the progress area
+	// is "wilds" for both; the client's save marker names the region).
+	Region string `json:"region,omitempty"`
 	// Buying from a seller (Hazel's kitchen, Finn's mill door, a market stall).
 	Seller string `json:"seller,omitempty"`
 	Good   string `json:"good,omitempty"`
@@ -1544,6 +1547,18 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	area := s.State.Area
 	if !content.GatheringOffered(area, req.Target) {
 		return fail(409, "cannot-gather-here")
+	}
+	// The Wilds: the request names its region (the progress area is
+	// "wilds" for both). The Tangle's own trees, and their Amberfall sap,
+	// stand in the Tangle only ("on trees in the Tangle"); the outer
+	// drift's trees are plain trees.
+	if area == "wilds" {
+		if _, ok := regionDefinition(req.Region); !ok {
+			return fail(400, "invalid-region")
+		}
+		if req.Target == "tangle-tree" && req.Region != tangleRegion {
+			return fail(409, "cannot-gather-here")
+		}
 	}
 	var home *homeView
 	var tile [2]int

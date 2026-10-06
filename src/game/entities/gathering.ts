@@ -25,6 +25,7 @@ import { itemErrorText, itemsFor } from '../items'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
+import { parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { sfx } from '../sfx'
@@ -214,7 +215,8 @@ export class Gathering {
       }
       const home = parseHomeArea(session.state.area) !== null
       this.deps.notePosition()
-      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, home ? [spot.tx, spot.ty] : undefined)
+      const region = session.state.area === WILDS_AREA ? (parseChunkArea(this.deps.world.areaId)?.region ?? regionOfState(session.state)) : undefined
+      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile: home ? [spot.tx, spot.ty] : undefined, region })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
       const live = Gathering.live?.deps.world.areaId === this.deps.world.areaId ? Gathering.live : null

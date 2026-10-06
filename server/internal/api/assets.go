@@ -544,23 +544,28 @@ func debitMaterialsAny(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs
 	return refreshItems(ctx, tx, s)
 }
 
+// bloomSeason: the Mark Bloom-wick falls in (Carting, by the calendar).
+var bloomSeason = content.CalendarRules.Marks[slices.Index(content.CalendarRules.Wicks, "Bloom")]
+
 // dryFlowers: bloom flowers age (docs/items/overview.md, "Nothing punishes
-// waiting" — they dry, they don't rot). Once the server's calendar has
-// turned past Bloom-wick, the pack's fresh posies dry into dried flowers,
-// one for one, in a keyed sweep (the same shape as healWardens). Flowers in
-// a chest keep: nothing expires, and a dried posy is what comes back out.
+// waiting" — they dry, they don't rot). They "dry after a season"
+// (docs/items/crafting-and-repair.md): once the server's calendar has
+// turned out of the Mark Bloom-wick falls in, the pack's fresh posies dry
+// into dried flowers, one for one, in a keyed sweep (the same shape as
+// healWardens). Flowers in a chest keep: nothing expires, and a dried posy
+// is what comes back out.
 func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
-	if content.CalendarAt(content.CalendarRules, now).Wick == "Bloom" {
+	if content.CalendarAt(content.CalendarRules, now).Mark == bloomSeason {
 		return nil
 	}
 	n, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "bloom-flowers")
 	if err != nil || n <= 0 {
 		return err
 	}
-	if err = materialChange(ctx, tx, s.HabiticaID, "bloom-flowers", -n, "dry", "bloom-wick-passed", now); err != nil {
+	if err = materialChange(ctx, tx, s.HabiticaID, "bloom-flowers", -n, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
-	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{"", n}}, "dry", "bloom-wick-passed", now); err != nil {
+	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{"", n}}, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
 	return refreshItems(ctx, tx, s)

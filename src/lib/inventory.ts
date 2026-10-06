@@ -223,6 +223,9 @@ function modelEntry(d: ItemDef, base: Partial<InventoryEntry> & { key: string; q
     name: d.name,
     blurb: d.blurb,
     art: legacyArt ?? iconId(d.id),
+    // A stack drawn in a state of another item's art (dried flowers: the
+    // bloom flowers' dried posy); the panel falls back to `art`.
+    stateArt: d.iconState ? `item-${iconId(d.id)}-${d.iconState}` : null,
     icon: d.kind === 'material' ? (MATERIAL_ICON[d.id] ?? 'stone') : d.kind === 'tool' ? 'sword' : d.kind === 'keepsake' ? 'sparkle' : 'bag',
     maker: null,
     usable: usableNow(d),

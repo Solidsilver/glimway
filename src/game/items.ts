@@ -95,6 +95,8 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t something to carry in your off hand.'
     case 'already-picked-up':
       return 'You’ve already picked that up.'
+    case 'invalid-region':
+      return 'The woods have shifted under you. Step back a moment.'
     case 'not-in-season':
       return 'Not now — that belongs to another season. Come back when it turns.'
     case 'sold-out':
@@ -196,12 +198,13 @@ export class Items {
   /**
    * One chop, break or dig with a tool, where the hero stands (the server
    * reads the area from the progress that rides along). On home land the
-   * tile names the piece; elsewhere the woods are scenery. A made tool that
-   * wears out here thanks its maker, as any use does.
+   * tile names the piece; elsewhere the woods are scenery. In the Wilds the
+   * region rides along (the Tangle's trees stand in the Tangle only). A made
+   * tool that wears out here thanks its maker, as any use does.
    */
-  async gather(tool: string, action: string, target: string, visitId: string, tile?: [number, number]) {
+  async gather(tool: string, action: string, target: string, visitId: string, where: { tile?: [number, number]; region?: string } = {}) {
     const makerId = this.view?.instances.find((i) => i.id === tool)?.maker?.id
-    const r = await this.run('gather', { tool, action, target, visitId, ...(tile ? { tile } : {}) })
+    const r = await this.run('gather', { tool, action, target, visitId, ...(where.tile ? { tile: where.tile } : {}), ...(where.region ? { region: where.region } : {}) })
     if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
       this.thankNearby(makerId)
     }
