@@ -1,12 +1,13 @@
 <script lang="ts">
   import { home } from './home.svelte'
   import { villageUi } from './village.svelte'
-  import { dateLine, MARK_NOTES } from '../lib/village'
-  import { ui } from './store.svelte'
+  import { calendarLine, MARK_NOTES } from '../lib/village'
+  import { ui, type Gain } from './store.svelte'
   import { getCombatKit } from '../lib/combat'
   import { EMBER_COSTS } from '../lib/embers'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
   import { offlineCopy } from '../content/connected'
   import { presenceCopy } from '../content/presence'
   import { papers } from './papers.svelte'
@@ -17,7 +18,8 @@
     onInventory,
     inventoryNew = 0,
     onMenu,
-    onEmote
+    onEmote,
+    prompt = null
   }: {
     onJournal: () => void
     onCharacter: () => void
@@ -26,9 +28,15 @@
     inventoryNew?: number
     onMenu: () => void
     onEmote?: () => void
+    /** What E does here right now ("Talk to Mara"), when the world may act on it (desktop shows it on the E slot). */
+    prompt?: string | null
   } = $props()
   const presenceLive = $derived(ui.presence.status === 'live')
 
+  /**
+   * Phones get a slim strip (bars, place, one line of goal) and three
+   * buttons; Character lives in the bag there. Desktop keeps the card.
+   */
   const touch = isTouchFirst()
   const showBars = $derived(ui.stats.maxHp > 0)
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
@@ -37,10 +45,13 @@
   const kit = $derived(getCombatKit(ui.importedProfile))
   const canAfford = $derived(ui.stats.mana >= kit.manaCost)
   const resting = $derived(ui.stats.hp <= 0 && ui.vitalsSource === 'imported')
-  /** The E/Space slot follows context: talking beats swinging. */
-  const actLabel = $derived(ui.prompt.label ? (ui.prompt.label.startsWith('Talk') ? 'Talk' : 'Use') : kit.basicName)
+  /** The E/Space slot says what it will do here: the prompt's verb, else the swing. */
+  const actLabel = $derived(ui.prompt.label ? (ui.prompt.verb ?? 'Use') : kit.basicName)
   let objectiveOpen = $state(false)
   const showEmbers = $derived(ui.stats.embers > 0 || ui.vitalsSource === 'imported')
+  /** Phones show the numbers on the bars only when asked or when health runs low. */
+  let numbersOpen = $state(false)
+  const showNumbers = $derived(!touch || numbersOpen || lowHp)
   /** Bumps when the balance grows, to replay the little glow. */
   let emberPulse = $state(0)
   let lastEmbers = -1
@@ -49,104 +60,159 @@
     if (lastEmbers >= 0 && n > lastEmbers) emberPulse += 1
     lastEmbers = n
   })
+
+  // ---- the place name: it changes over in place, and says where you came from
+  /** "from Hearthwick", for a moment after walking somewhere already seen. */
+  let cameFrom = $state<string | null>(null)
+  let lastPlace: string | null = null
+  let fromTimer: number | null = null
+  $effect(() => {
+    const name = ui.area.name
+    const prev = lastPlace
+    lastPlace = name
+    if (prev === null || prev === name) return
+    // A first visit has its storybook card; the chip is for coming back.
+    const carded = ui.banners.some((b) => b.kind === 'area')
+    if (fromTimer !== null) window.clearTimeout(fromTimer)
+    cameFrom = carded ? null : prev
+    fromTimer = window.setTimeout(() => (cameFrom = null), 2200)
+  })
+
+  // ---- status chips: an icon and a word; the sentence on hover or tap
+  type Chip = { id: string; icon: string; text: string; why: string; tone: string; testid?: string }
+  const chips = $derived.by((): Chip[] => {
+    const out: Chip[] = []
+    if (ui.link?.busy) out.push({ id: 'pending', icon: 'clock', text: offlineCopy.pending, why: offlineCopy.pending, tone: 'busy', testid: 'net-pending' })
+    else if (ui.link?.status === 'offline' && ui.link.trouble) out.push({ id: 'trouble', icon: 'cloud', text: offlineCopy.troubleChip, why: offlineCopy.troubleTitle, tone: 'trouble', testid: 'net-trouble' })
+    else if (ui.link?.status === 'offline') out.push({ id: 'offline', icon: 'cloud', text: offlineCopy.chip, why: offlineCopy.chipTitle, tone: 'off', testid: 'net-offline' })
+    if (presenceLive && ui.presence.here > 0) out.push({ id: 'here', icon: 'person', text: presenceCopy.here(ui.presence.here), why: presenceCopy.hereTitle, tone: 'here', testid: 'presence-here' })
+    if (resting) out.push({ id: 'resting', icon: 'heart', text: 'Resting', why: `Resting in Hearthwick: heal on Habitica and sync, or rest by the lantern with ${EMBER_COSTS.rest} embers earned on Habitica.`, tone: 'trouble' })
+    return out
+  })
+  let openChip = $state<string | null>(null)
+  let chipTimer: number | null = null
+  function toggleChip(id: string): void {
+    openChip = openChip === id ? null : id
+    if (chipTimer !== null) window.clearTimeout(chipTimer)
+    if (openChip) chipTimer = window.setTimeout(() => (openChip = null), 5000)
+  }
+  const unmooredWhy = 'Unmoored: the drift’s sway holds you. Rest in lamplight or take a remedy.'
+  const openWhy = $derived.by(() => {
+    if (!openChip) return null
+    if (openChip === 'date' && villageUi.calendar) {
+      const c = villageUi.calendar
+      return `${calendarLine(c)}. ${MARK_NOTES[c.mark] ?? ''}`.trim()
+    }
+    if (openChip === 'unmoored') return ui.unmoored ? unmooredWhy : null
+    return chips.find((c) => c.id === openChip)?.why ?? null
+  })
+
+  const gainOf = (to: Gain['to']): Gain | null => [...ui.gains].reverse().find((g) => g.to === to) ?? null
+  const bagGain = $derived(gainOf('bag'))
+  const journalGain = $derived(gainOf('journal'))
 </script>
 
-<div class="hud" class:hidden={ui.cinematic} aria-hidden={ui.cinematic}>
-  <div class="card panel" class:open={objectiveOpen}>
-    <div class="place">
-      <Icon name="lantern" size={14} />
-      <span>{ui.area.name}</span>
-      {#if showEmbers}
-        {#key emberPulse}
-          <span class="embers" class:pulse={emberPulse > 0} title="Embers — earned from your Habitica XP, spent at lanterns" aria-label={`${ui.stats.embers} embers`}>
-            <Icon name="ember" size={13} />{ui.stats.embers}
-          </span>
-        {/key}
-      {/if}
-    </div>
-    {#if villageUi.calendar}
-      {@const c = villageUi.calendar}
-      <div class="date" data-testid="calendar-line" title={MARK_NOTES[c.mark] ?? c.mark}>
-        <span>{dateLine(c)} — {c.mark}</span>
-        {#if c.festival}<span class="fest">{c.festival}</span>{/if}
-      </div>
-    {/if}
-    {#if presenceLive && ui.presence.here > 0}
-      <div class="net">
-        <span class="pill here" title={presenceCopy.hereTitle} data-testid="presence-here"><Icon name="person" size={12} />{presenceCopy.here(ui.presence.here)}</span>
-      </div>
-    {/if}
-    {#if ui.link && (ui.link.status === 'offline' || ui.link.busy)}
-      <div class="net" role="status" aria-live="polite">
-        {#if ui.link.busy}
-          <span class="pill busy" data-testid="net-pending"><span class="dots" aria-hidden="true"></span>{offlineCopy.pending}</span>
-        {:else}
-          {#if ui.link.trouble}
-            <span class="pill off trouble" title={offlineCopy.troubleTitle} data-testid="net-trouble"><Icon name="cloud" size={12} />{offlineCopy.troubleChip}</span>
-            <span class="why">{offlineCopy.troubleTitle}</span>
-          {:else}
-            <span class="pill off" title={offlineCopy.chipTitle} data-testid="net-offline"><Icon name="cloud" size={12} />{offlineCopy.chip}</span>
-            <span class="why">{offlineCopy.chipTitle}</span>
-          {/if}
-        {/if}
-      </div>
-    {/if}
-    <button
-      type="button"
-      class="objective"
-      onclick={() => (objectiveOpen = !objectiveOpen)}
-      aria-expanded={objectiveOpen}
-      title="Current goal"
-    >
-      <span class="goal-icon"><Icon name="star" size={12} /></span>
-      <span class="goal-text">{ui.quest.objective}</span>
-    </button>
-    {#if home.goal}
-      <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> {home.goal}</p>
-    {/if}
-    {#if ui.unmoored}
-      <div class="unmoored-hint" data-testid="unmoored-hint" title="Unmoored: the drift’s sway holds you. Rest in lamplight or take a remedy.">
-        <Icon name="sparkle" size={11} />
-        <span>Unmoored</span>
-      </div>
-    {/if}
-    {#if showBars}
-      <div class="bars">
-        <div class="vital" class:low={lowHp} title="Health">
-          <span class="vi hp"><Icon name="heart" size={14} /></span>
-          <div class="bar hp" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax={ui.stats.maxHp} aria-valuenow={ui.stats.hp}>
-            <div class="fill" style={`width:${hpPct}%`}></div>
-          </div>
-          <span class="num">{ui.stats.hp}<small>/{ui.stats.maxHp}</small></span>
-        </div>
-        <div class="vital" title="Mana">
-          <span class="vi mana"><Icon name="drop" size={14} /></span>
-          <div class="bar mana" role="meter" aria-label="Mana" aria-valuemin="0" aria-valuemax={ui.stats.maxMana} aria-valuenow={ui.stats.mana}>
-            <div class="fill" style={`width:${manaPct}%`}></div>
-          </div>
-          <span class="num">{ui.stats.mana}<small>/{ui.stats.maxMana}</small></span>
-        </div>
-      </div>
-    {/if}
-    {#if resting}
-      <div class="resting">Resting in Hearthwick — heal on Habitica and sync, or rest by the lantern with {EMBER_COSTS.rest} embers earned on Habitica.</div>
-    {/if}
-  </div>
+{#snippet placeName()}
+  <span class="place-name">
+    {#key ui.area.name}<span class="nm">{ui.area.name}</span>{/key}
+    {#if cameFrom}<span class="from" aria-hidden="true">from {cameFrom}</span>{/if}
+  </span>
+{/snippet}
 
+{#snippet embers()}
+  {#if showEmbers}
+    {#key emberPulse}
+      <span class="embers" class:pulse={emberPulse > 0} title="Embers: earned from your Habitica XP, spent at lanterns" aria-label={`${ui.stats.embers} embers`}>
+        <Icon name="ember" size={13} />{ui.stats.embers}
+      </span>
+    {/key}
+  {/if}
+{/snippet}
+
+{#snippet statusChips()}
+  {#if villageUi.calendar}
+    {@const c = villageUi.calendar}
+    <button type="button" class="chip date" data-testid="calendar-line" title={`${calendarLine(c)}. ${MARK_NOTES[c.mark] ?? ''}`} aria-expanded={openChip === 'date'} onclick={() => toggleChip('date')}>
+      <span aria-hidden="true">{c.wick} {c.day}</span>
+      <span class="sr">{calendarLine(c).replace(` · ${c.festival}`, '')}</span>
+      {#if c.festival}<span class="fest">{c.festival}</span>{/if}
+    </button>
+  {/if}
+  {#each chips as chip (chip.id)}
+    <button type="button" class="chip {chip.tone}" data-testid={chip.testid} title={chip.why} aria-expanded={openChip === chip.id} onclick={() => toggleChip(chip.id)}>
+      {#if chip.id === 'pending'}<span class="dots" aria-hidden="true"></span>{:else}<Icon name={chip.icon} size={12} />{/if}
+      <span>{chip.text}</span>
+    </button>
+  {/each}
+  {#if ui.unmoored}
+    <button type="button" class="chip unmoored-hint" data-testid="unmoored-hint" title={unmooredWhy} aria-expanded={openChip === 'unmoored'} onclick={() => toggleChip('unmoored')}>
+      <Icon name="sparkle" size={11} />
+      <span>Unmoored</span>
+    </button>
+  {/if}
+{/snippet}
+
+{#snippet goal()}
+  <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title="Current goal">
+    <span class="goal-icon"><Icon name="star" size={12} /></span>
+    <span class="goal-text">{ui.quest.objective}</span>
+  </button>
+  {#if home.goal}
+    <p class="home-goal" data-testid="home-goal"><Icon name="home" size={11} /> <span>{home.goal}</span></p>
+  {/if}
+{/snippet}
+
+{#snippet bars()}
+  {#if showBars}
+    <svelte:element this={touch ? 'button' : 'div'} type={touch ? 'button' : undefined} class="bars" class:nums={showNumbers} onclick={touch ? () => (numbersOpen = !numbersOpen) : undefined} aria-label={touch ? 'Health and mana: show the numbers' : undefined} role={touch ? undefined : 'group'}>
+      <span class="vital" class:low={lowHp} title="Health">
+        <span class="vi hp"><Icon name="heart" size={touch ? 12 : 14} /></span>
+        <span class="bar hp" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax={ui.stats.maxHp} aria-valuenow={ui.stats.hp}>
+          <span class="fill" style={`width:${hpPct}%`}></span>
+        </span>
+        {#if showNumbers}<span class="num">{ui.stats.hp}<small>/{ui.stats.maxHp}</small></span>{/if}
+      </span>
+      <span class="vital" title="Mana">
+        <span class="vi mana"><Icon name="drop" size={touch ? 12 : 14} /></span>
+        <span class="bar mana" role="meter" aria-label="Mana" aria-valuemin="0" aria-valuemax={ui.stats.maxMana} aria-valuenow={ui.stats.mana}>
+          <span class="fill" style={`width:${manaPct}%`}></span>
+        </span>
+        {#if showNumbers}<span class="num">{ui.stats.mana}<small>/{ui.stats.maxMana}</small></span>{/if}
+      </span>
+    </svelte:element>
+  {/if}
+{/snippet}
+
+{#snippet gainTag(g: Gain | null)}
+  {#if g}
+    {#key g.id}
+      <span class="gain" aria-hidden="true">
+        <ArtIcon art={g.art ?? (g.itemDef ? `icon-${g.itemDef}` : null)} name={g.icon ?? (g.to === 'journal' ? 'scroll' : 'sparkle')} size={14} />
+        <span>+{g.label}</span>
+      </span>
+    {/key}
+  {/if}
+{/snippet}
+
+{#snippet buttons()}
   <nav class="buttons" aria-label="Menus">
     <button type="button" class="hb" onclick={onJournal} aria-label={papers.unread.length ? `Journal (J), ${papers.unread.length} new paper${papers.unread.length === 1 ? '' : 's'}` : 'Journal (J)'} title="Journal">
       <Icon name="book" size={20} />
       {#if papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span>{/if}
       {#if !touch}<span class="kbd">J</span>{/if}
+      {@render gainTag(journalGain)}
     </button>
-    <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
-      <Icon name="person" size={20} />
-      {#if !touch}<span class="kbd">C</span>{/if}
-    </button>
+    {#if !touch}
+      <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
+        <Icon name="person" size={20} />
+        <span class="kbd">C</span>
+      </button>
+    {/if}
     <button type="button" class="hb" onclick={onInventory} aria-label={inventoryNew ? `Inventory (I), ${inventoryNew} new` : 'Inventory (I)'} title="Inventory" data-testid="inventory-button">
       <Icon name="bag" size={20} />
       {#if inventoryNew > 0}<span class="newdot" aria-hidden="true"></span>{/if}
       {#if !touch}<span class="kbd">I</span>{/if}
+      {@render gainTag(bagGain)}
     </button>
     {#if presenceLive && onEmote}
       <button type="button" class="hb" class:on={ui.emoteOpen} onclick={onEmote} aria-label="Emote (G)" title="Emote" data-testid="emote-button">
@@ -159,10 +225,48 @@
       {#if !touch}<span class="kbd">Esc</span>{/if}
     </button>
   </nav>
+{/snippet}
+
+<div class="hud" class:slim={touch} class:hidden={ui.cinematic} aria-hidden={ui.cinematic}>
+  {#if touch}
+    <div class="strip panel">
+      {@render bars()}
+      {@render embers()}
+      <span class="place"><Icon name="lantern" size={12} />{@render placeName()}</span>
+    </div>
+    <div class="goalbar panel" class:open={objectiveOpen}>
+      {@render goal()}
+      <span class="chips">{@render statusChips()}</span>
+    </div>
+    {@render buttons()}
+  {:else}
+    <div class="card panel" class:open={objectiveOpen}>
+      <div class="place">
+        <Icon name="lantern" size={14} />
+        {@render placeName()}
+        {@render embers()}
+      </div>
+      <div class="row chips">
+        {@render statusChips()}
+      </div>
+      {@render goal()}
+      {@render bars()}
+    </div>
+    {@render buttons()}
+  {/if}
+  {#if openWhy}
+    <p class="why" role="status">{openWhy}</p>
+  {/if}
+  <!-- Gains, read out in full (the tags only show "+7 Fiber"). -->
+  <p class="sr" aria-live="polite">{bagGain?.text ?? ''} {journalGain?.text ?? ''}</p>
 </div>
 
 {#if !touch && showBars}
   <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen}>
+    {#if prompt}
+      <!-- The E slot says what it will do here; tests and players read it as the prompt. -->
+      <div class="prompt" role="status"><span class="kbd">E</span><span>{prompt}</span></div>
+    {/if}
     <div class="slot" class:context={!!ui.prompt.label}>
       <div class="face"><Icon name={ui.prompt.label ? 'sparkle' : 'sword'} size={22} /></div>
       <span class="kbd">E</span>
@@ -218,26 +322,21 @@
     transform: translateY(-6px);
     pointer-events: none;
   }
-  .date {
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .row {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 2px 6px;
-    margin: 1px 0 3px 20px;
-    font-size: 12px;
-    font-style: italic;
-    color: var(--text-soft);
+    min-width: 0;
   }
-  .fest {
-    font-style: normal;
-    font-family: var(--font-display);
-    font-size: 11px;
-    padding: 0 6px;
-    border-radius: 999px;
-    color: var(--wood-dark);
-    background: linear-gradient(180deg, #ffe9a6, #f2c95a);
-    border: 1.5px solid var(--gold-deep);
-  }
+
+  /* ---- desktop card ---- */
   .card {
     padding: 10px 14px 12px;
     width: min(340px, 62vw);
@@ -247,6 +346,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
     font-family: var(--font-display);
     font-size: 17px;
     font-weight: 600;
@@ -255,9 +355,51 @@
   }
   .place :global(.icon) {
     color: var(--gold-deep);
+    flex: none;
+  }
+  .place-name {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .place-name .nm {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: name-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  }
+  .from {
+    flex: none;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text-soft);
+    animation: from-life 2.2s ease forwards;
+  }
+  @keyframes name-in {
+    from { transform: translateX(14px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes from-life {
+    0% { opacity: 0; transform: translateX(-6px); }
+    15%, 75% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; }
+  }
+  .card .chips {
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 4px 0 2px;
+  }
+  .card .chips:empty {
+    display: none;
   }
   .embers {
     margin-left: auto;
+    flex: none;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -269,8 +411,9 @@
     border: 2px solid var(--wood-dark);
     border-radius: 999px;
     box-shadow: 0 2px 0 var(--wood-dark);
+    font-family: var(--font-display);
   }
-  .place .embers :global(.icon) {
+  .embers :global(.icon) {
     color: var(--ember-deep);
   }
   .embers.pulse {
@@ -281,93 +424,103 @@
     40% { transform: scale(1.18); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 8px rgba(255, 179, 92, 0); }
     100% { transform: scale(1); }
   }
-  .net {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 4px 0 0;
-    min-width: 0;
-  }
-  .pill {
+
+  /* ---- status chips ---- */
+  .chip {
+    all: unset;
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     flex: none;
-    padding: 1px 9px 1px 7px;
+    min-height: 22px;
+    padding: 1px 8px 1px 6px;
     font-family: var(--font-display);
-    font-size: 12.5px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--wood-dark);
+    background: rgba(255, 249, 230, 0.7);
+    border: 1.5px solid rgba(74, 50, 32, 0.45);
     border-radius: 999px;
-    border: 2px solid var(--wood-dark);
+    cursor: pointer;
   }
-  .pill.off {
+  .chip:focus-visible {
+    outline: 3px solid var(--gold);
+  }
+  .chip.date {
+    font-style: normal;
+    color: var(--text-soft);
+  }
+  .fest {
+    padding: 0 6px;
+    margin-right: -4px;
+    border-radius: 999px;
+    color: var(--wood-dark);
+    background: linear-gradient(180deg, #ffe9a6, #f2c95a);
+    border: 1.5px solid var(--gold-deep);
+  }
+  .chip.off {
     color: #1f3c66;
     background: linear-gradient(180deg, #dbe8ff, #b5cdf5);
+    border-color: #1f3c66;
   }
-  .pill.here {
+  .chip.here {
     color: #173f3c;
     background: linear-gradient(180deg, #d6f2ee, #a9dcd5);
+    border-color: #173f3c;
   }
-  .pill.trouble {
+  .chip.trouble {
     color: #5a1a0e;
     background: linear-gradient(180deg, #ffe1d6, #f4b8a3);
+    border-color: #5a1a0e;
   }
-  .pill.busy {
+  .chip.busy {
     color: #5a2410;
     background: linear-gradient(180deg, #fff2c9, #ffd98a);
   }
+  .chip.unmoored-hint {
+    color: var(--wood-dark);
+    background: rgba(180, 195, 208, 0.6);
+    border-color: rgba(90, 105, 120, 0.7);
+  }
   .dots {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border-radius: 2px;
     background: var(--ember);
     animation: net-pulse 0.9s ease-in-out infinite;
-  }
-  .why {
-    font-size: 11.5px;
-    line-height: 1.25;
-    color: var(--text-soft);
-    min-width: 0;
-  }
-  @media (max-width: 560px) {
-    .why {
-      display: none;
-    }
   }
   @keyframes net-pulse {
     0%, 100% { opacity: 0.35; transform: scale(0.8); }
     50% { opacity: 1; transform: scale(1); }
   }
-  .home-goal {
-    margin: 4px 0 0;
-    padding: 3px 8px;
-    font-size: 11px;
-    line-height: 1.3;
-    border-radius: 6px;
-    background: rgba(255, 243, 196, 0.92);
-    color: var(--wood-dark);
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    max-width: 260px;
+  .why {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    max-width: min(340px, calc(100vw - 32px));
+    margin: 0;
+    padding: 7px 11px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #fff6dc;
+    background: rgba(36, 28, 40, 0.94);
+    border: 2px solid rgba(255, 210, 74, 0.5);
+    border-radius: 10px;
+    pointer-events: none;
+    animation: why-in 0.18s ease-out;
   }
-  .unmoored-hint {
-    margin: 4px 0 0;
-    padding: 3px 8px;
-    font-size: 11px;
-    line-height: 1.3;
-    border-radius: 6px;
-    background: rgba(180, 195, 208, 0.45);
-    border: 1px solid rgba(130, 145, 160, 0.5);
-    color: var(--wood-dark);
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
+  @keyframes why-in {
+    from { opacity: 0; transform: translateY(-4px); }
   }
+
+  /* ---- goal ---- */
   .objective {
     all: unset;
     display: flex;
     gap: 6px;
     align-items: flex-start;
+    min-width: 0;
     margin-top: 4px;
     font-family: var(--font-body);
     font-size: 13.5px;
@@ -376,31 +529,48 @@
     cursor: pointer;
     border-radius: 6px;
   }
-  .objective:hover:not(:disabled),
-  .objective:active:not(:disabled) {
-    background: none;
-    box-shadow: none;
-    transform: none;
-  }
   .objective:focus-visible {
     outline: 3px solid var(--gold);
   }
   .goal-icon {
+    flex: none;
     color: var(--gold-deep);
     margin-top: 2px;
   }
   .goal-text {
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .card.open .goal-text {
+  .open .goal-text {
     -webkit-line-clamp: unset;
     line-clamp: unset;
   }
+  .home-goal {
+    margin: 4px 0 0;
+    padding: 3px 8px;
+    font-size: 12px;
+    line-height: 1.3;
+    border-radius: 6px;
+    background: rgba(255, 243, 196, 0.92);
+    color: var(--wood-dark);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    min-width: 0;
+  }
+  .home-goal span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---- vitals ---- */
   .bars {
+    all: unset;
+    box-sizing: border-box;
     display: grid;
     gap: 6px;
     margin-top: 10px;
@@ -419,6 +589,7 @@
   }
   .bar {
     position: relative;
+    display: block;
     height: 12px;
     background: #4a3a30;
     border: 2px solid var(--wood-dark);
@@ -427,6 +598,7 @@
     box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
   }
   .bar .fill {
+    display: block;
     height: 100%;
     border-radius: 3px 0 0 3px;
     transition: width 0.25s ease-out;
@@ -455,15 +627,8 @@
   .vital.low .vi {
     animation: beat 0.9s ease-in-out infinite;
   }
-  .resting {
-    margin-top: 8px;
-    padding: 6px 8px;
-    font-size: 12.5px;
-    border-radius: 6px;
-    background: rgba(196, 82, 58, 0.12);
-    color: #7a2e1e;
-  }
 
+  /* ---- menu buttons ---- */
   .buttons {
     display: flex;
     gap: 8px;
@@ -505,7 +670,169 @@
     height: 20px;
     min-width: 20px;
   }
+  /* "+7 Fiber" under the bag (or the journal) for a moment. */
+  .gain {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: -4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px 2px 6px;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--wood-dark);
+    background: linear-gradient(180deg, #fff6d0, #ffd98a);
+    border: 2px solid var(--wood-dark);
+    border-radius: 999px;
+    box-shadow: 0 3px 0 rgba(20, 12, 16, 0.45);
+    pointer-events: none;
+    animation: gain-life 2.4s ease forwards;
+  }
+  @keyframes gain-life {
+    0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+    12% { opacity: 1; transform: translateY(0) scale(1.08); }
+    20% { transform: scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-4px); }
+  }
 
+  /* ---- phone: a strip of vitals and place, a line of goal, three buttons ---- */
+  .hud.slim {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    align-items: center;
+  }
+  .strip,
+  .goalbar {
+    min-width: 0;
+    pointer-events: auto;
+    background: rgba(251, 241, 218, 0.92);
+    box-shadow: inset 0 0 0 2px rgba(255, 249, 230, 0.8), 0 3px 0 rgba(20, 12, 16, 0.35);
+    border-width: 2px;
+    border-radius: 12px;
+  }
+  .strip {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 10px;
+  }
+  .goalbar {
+    grid-column: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 8px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 4px 10px;
+  }
+  .slim .bars {
+    flex: 1 1 0;
+    min-width: 84px;
+    max-width: 220px;
+    margin: 0;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .slim .vital {
+    grid-template-columns: 12px 1fr auto;
+    gap: 4px;
+  }
+  .slim .bar {
+    height: 8px;
+    border-width: 1.5px;
+    border-radius: 4px;
+  }
+  .slim .num {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .slim .num small {
+    font-size: 9px;
+  }
+  .slim .embers {
+    margin-left: 0;
+    padding: 0 6px 0 4px;
+    font-size: 12px;
+    border-width: 1.5px;
+    box-shadow: 0 1.5px 0 var(--wood-dark);
+  }
+  .slim .place {
+    flex: 0 1 auto;
+    margin-left: auto;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .slim .from {
+    display: none;
+  }
+  .slim .objective {
+    flex: 1 1 0;
+    margin: 0;
+    font-size: 12.5px;
+  }
+  .slim .home-goal {
+    order: 3;
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 11.5px;
+    padding: 1px 6px;
+  }
+  .slim .chips {
+    display: flex;
+    flex: none;
+    gap: 4px;
+  }
+  .slim .chips:empty {
+    display: none;
+  }
+  .slim .chip {
+    font-size: 11px;
+    min-height: 22px;
+  }
+  .slim .buttons {
+    grid-column: 2;
+    gap: 6px;
+  }
+  .slim .hb {
+    width: 44px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  .slim .gain {
+    top: calc(100% + 8px);
+  }
+  .slim .why {
+    top: calc(100% + 6px);
+  }
+  /* Phone landscape: everything on one row along the top. */
+  @media (orientation: landscape) {
+    .hud.slim {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+    .strip {
+      grid-column: 1;
+      min-height: 40px;
+      box-sizing: border-box;
+    }
+    .slim .bars {
+      flex: none;
+      width: 130px;
+    }
+    .goalbar {
+      grid-column: 2;
+    }
+    .slim .buttons {
+      grid-column: 3;
+    }
+  }
+
+  /* ---- desktop action bar ---- */
   .actionbar {
     position: absolute;
     right: max(16px, env(safe-area-inset-right));
@@ -515,6 +842,41 @@
     z-index: 20;
     pointer-events: none;
     transition: opacity 250ms ease, transform 250ms ease;
+  }
+  /* What E does here, sitting on the E slot (no separate pill mid-screen). */
+  .prompt {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: 0;
+    min-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 8px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: #fff6dc;
+    white-space: nowrap;
+    background: rgba(36, 28, 40, 0.92);
+    border: 2px solid rgba(255, 210, 74, 0.7);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(10, 6, 12, 0.4);
+    animation: prompt-in 0.18s ease-out;
+  }
+  .prompt::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 26px;
+    border: 7px solid transparent;
+    border-top-color: rgba(255, 210, 74, 0.7);
+  }
+  .prompt .kbd {
+    position: static;
+  }
+  @keyframes prompt-in {
+    from { opacity: 0; transform: translateY(4px); }
   }
   .slot {
     position: relative;
@@ -634,28 +996,21 @@
     50% { opacity: 1; }
   }
 
+  /* A narrow desktop window (no touch): the card shrinks, buttons stack. */
   @media (max-width: 560px) {
     .card {
       width: auto;
       flex: 1;
-      max-width: none;
       padding: 8px 12px 10px;
     }
-    .place {
+    .card .place {
       font-size: 15px;
     }
-    .objective {
-      font-size: 12.5px;
-    }
-    .goal-text {
-      -webkit-line-clamp: 1;
-      line-clamp: 1;
-    }
-    .buttons {
+    .hud:not(.slim) .buttons {
       flex-direction: column;
       gap: 6px;
     }
-    .hb {
+    .hud:not(.slim) .hb {
       width: 42px;
       height: 42px;
       border-radius: 10px;

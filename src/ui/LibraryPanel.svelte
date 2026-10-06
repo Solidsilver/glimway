@@ -5,6 +5,7 @@
   import { PAPER_COLLECTIONS, PAPERS, paperById, paperFlag } from '../content/papers'
   import type { ShelfEntry } from '../lib/papers/library'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import { papers } from './papers.svelte'
   import PaperReader, { KIND_LABEL } from './PaperReader.svelte'
   import Icon from './Icon.svelte'
@@ -83,10 +84,12 @@
   const canDonate = (id: string) => session.state.flags.includes(paperFlag(id)) && !shelf.has(id)
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="library-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="library-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the library"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="library-title"><Icon name="book" size={20} /> Hearthwick Library</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the library"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="library-title"><Icon name="book" size={20} /> Hearthwick Library</h2>
+    </header>
 
     {#if current}
       <PaperReader paper={current} onBack={back} backLabel="The shelves">

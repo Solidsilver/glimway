@@ -9,6 +9,7 @@
   import { homeItem } from '../lib/homestead'
   import type { Asset, ShelfSlotView, ShelfView } from '../lib/api/types'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
@@ -172,13 +173,15 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="shelf-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="shelf-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the gift shelf"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="shelf-title">
-      <Icon name="home" size={20} />
-      {view ? (view.ownerName ? `${view.ownerName}’s Gift Shelf` : `Lot ${view.gate + 1} Gift Shelf`) : 'The Gift Shelf'}
-    </h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the gift shelf"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="shelf-title">
+        <Icon name="home" size={20} />
+        {view ? (view.ownerName ? `${view.ownerName}’s Gift Shelf` : `Lot ${view.gate + 1} Gift Shelf`) : 'The Gift Shelf'}
+      </h2>
+    </header>
     <p class="lede">Pure gifts for travellers walking past on the Commons lane. Take one into your pack: exactly one gift per traveller each day.</p>
     {#if view?.takenToday}
       <p class="notice"><Icon name="check" size={14} /> You have taken your gift from this shelf today. Walk past again tomorrow.</p>

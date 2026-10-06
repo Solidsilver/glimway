@@ -1,12 +1,20 @@
 <script lang="ts">
   import { bus, EV } from '../game/events'
-  import { touchVec } from '../game/input'
+  import { heroScreen, touchVec } from '../game/input'
   import { getCombatKit } from '../lib/combat'
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import { settings } from './settings.svelte'
 
   const show = isTouchFirst()
+  /** fixed: the corner joystick. floating: it appears under the thumb. hold: walk toward the finger. */
+  const mode = $derived(settings.stick)
+
+  // The floating stick's resting hint shows for the first few visits only.
+  const FLOAT_HINT_SESSIONS = 3
+  if (show && settings.stick === 'floating') settings.set('floatingSessions', settings.value.floatingSessions + 1)
+  const floatHint = $derived(mode === 'floating' && settings.value.floatingSessions <= FLOAT_HINT_SESSIONS)
 
   // ---- joystick: one pad, analog direction, slide freely between directions
 
@@ -49,6 +57,100 @@
     setVec(0, 0)
   }
 
+  // ---- floating stick: a press on the left of the screen puts the stick under the thumb
+
+  /** Where the floating stick sits while held (viewport px), or null at rest. */
+  let floatAt = $state<{ x: number; y: number } | null>(null)
+
+  function floatDown(e: PointerEvent): void {
+    e.preventDefault()
+    if (activePointer !== null) return
+    activePointer = e.pointerId
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    center = { x: e.clientX, y: e.clientY }
+    floatAt = { ...center }
+    setVec(0, 0)
+  }
+
+  function floatMove(e: PointerEvent): void {
+    if (e.pointerId !== activePointer) return
+    setVec(e.clientX - center.x, e.clientY - center.y)
+  }
+
+  function floatUp(e: PointerEvent): void {
+    if (e.pointerId !== activePointer) return
+    activePointer = null
+    floatAt = null
+    setVec(0, 0)
+  }
+
+  // ---- hold to walk: the hero heads for the finger while it stays down
+
+  /** The held finger (viewport px), or null. */
+  let holdAt = $state<{ x: number; y: number } | null>(null)
+  let holdFrame = 0
+  /** The canvas's offset on the page (the scene reports the hero in canvas px). */
+  let canvasOrigin = { x: 0, y: 0 }
+  /** Close enough to the finger: stop instead of jittering on the spot. */
+  const HOLD_STOP = 14
+
+  function steer(): void {
+    holdFrame = 0
+    if (!holdAt) return
+    const dx = holdAt.x - (canvasOrigin.x + heroScreen.x)
+    const dy = holdAt.y - (canvasOrigin.y + heroScreen.y)
+    const len = Math.hypot(dx, dy)
+    if (len < HOLD_STOP) {
+      touchVec.x = 0
+      touchVec.y = 0
+    } else {
+      // Full speed a little way out; ease in only for the last few pixels.
+      const strength = Math.min(1, (len - HOLD_STOP) / 24 + 0.35)
+      touchVec.x = (dx / len) * strength
+      touchVec.y = (dy / len) * strength
+    }
+    holdFrame = requestAnimationFrame(steer)
+  }
+
+  function holdDown(e: PointerEvent): void {
+    e.preventDefault()
+    if (activePointer !== null) return
+    activePointer = e.pointerId
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    const r = document.querySelector('.stage canvas')?.getBoundingClientRect()
+    canvasOrigin = { x: r?.left ?? 0, y: r?.top ?? 0 }
+    holdAt = { x: e.clientX, y: e.clientY }
+    if (!holdFrame) steer()
+  }
+
+  function holdMove(e: PointerEvent): void {
+    if (e.pointerId !== activePointer || !holdAt) return
+    holdAt = { x: e.clientX, y: e.clientY }
+  }
+
+  function holdUp(e: PointerEvent): void {
+    if (e.pointerId !== activePointer) return
+    activePointer = null
+    holdAt = null
+    if (holdFrame) cancelAnimationFrame(holdFrame)
+    holdFrame = 0
+    setVec(0, 0)
+  }
+
+  const zoneDown = (e: PointerEvent) => (mode === 'hold' ? holdDown(e) : floatDown(e))
+  const zoneMove = (e: PointerEvent) => (mode === 'hold' ? holdMove(e) : floatMove(e))
+  const zoneUp = (e: PointerEvent) => (mode === 'hold' ? holdUp(e) : floatUp(e))
+
+  /** Let go of any stick or held finger (hidden controls, a mode change). */
+  function releaseWalk(): void {
+    activePointer = null
+    floatAt = null
+    holdAt = null
+    if (holdFrame) cancelAnimationFrame(holdFrame)
+    holdFrame = 0
+    setVec(0, 0)
+  }
+
   // ---- action buttons
 
   let actionRepeat: number | null = null
@@ -88,32 +190,72 @@
   // The dialogue box covers this corner on phones; tapping it advances.
   const hidden = $derived(ui.cinematic || ui.dialogueOpen)
 
-  // Never leave a held-swing repeat running behind a hidden/unmounted pad.
+  // Never leave a held-swing repeat or a walk running behind a hidden/unmounted pad.
   $effect(() => {
-    if (hidden) actionUp()
+    if (hidden) {
+      actionUp()
+      releaseWalk()
+    }
+  })
+  // A new stick mode (picked in the Menu) starts from rest.
+  $effect(() => {
+    void mode
+    releaseWalk()
   })
   $effect(() => () => {
     actionUp()
-    setVec(0, 0)
+    releaseWalk()
   })
 </script>
 
 {#if show}
-  <div class="controls" class:hidden aria-label="Touch controls">
+  {#if mode !== 'fixed'}
+    <!-- Under the HUD, the prompt and every button: only bare world reaches it. -->
     <div
-      class="pad"
-      bind:this={padEl}
-      onpointerdown={padDown}
-      onpointermove={padMove}
-      onpointerup={padUp}
-      onpointercancel={padUp}
+      class="walk-zone {mode}"
+      class:hidden
+      onpointerdown={zoneDown}
+      onpointermove={zoneMove}
+      onpointerup={zoneUp}
+      onpointercancel={zoneUp}
       oncontextmenu={(e) => e.preventDefault()}
       role="application"
-      aria-label="Movement joystick"
-    >
-      <span class="ring"></span>
-      <span class="knob" style={`transform: translate(${knob.x}px, ${knob.y}px)`}></span>
-    </div>
+      aria-label={mode === 'hold' ? 'Hold to walk toward your finger' : 'Movement: touch the left side to walk'}
+      data-testid="walk-zone"
+    ></div>
+    {#if mode === 'floating' && (floatAt || floatHint) && !hidden}
+      <div
+        class="float-stick"
+        class:hint={!floatAt}
+        style={floatAt ? `left:${floatAt.x}px; top:${floatAt.y}px` : ''}
+        aria-hidden="true"
+        data-testid="float-stick"
+      >
+        <span class="ring"></span>
+        {#if floatAt}<span class="knob" style={`transform: translate(${knob.x}px, ${knob.y}px)`}></span>{/if}
+      </div>
+    {/if}
+    {#if mode === 'hold' && holdAt && !hidden}
+      <span class="hold-mark" style={`left:${holdAt.x}px; top:${holdAt.y}px`} aria-hidden="true"></span>
+    {/if}
+  {/if}
+  <div class="controls" class:hidden aria-label="Touch controls">
+    {#if mode === 'fixed'}
+      <div
+        class="pad"
+        bind:this={padEl}
+        onpointerdown={padDown}
+        onpointermove={padMove}
+        onpointerup={padUp}
+        onpointercancel={padUp}
+        oncontextmenu={(e) => e.preventDefault()}
+        role="application"
+        aria-label="Movement joystick"
+      >
+        <span class="ring"></span>
+        <span class="knob" style={`transform: translate(${knob.x}px, ${knob.y}px)`}></span>
+      </div>
+    {/if}
 
     <div class="actions">
       <div class="col">
@@ -194,6 +336,68 @@
     display: grid;
     place-items: center;
   }
+  .walk-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    z-index: 14;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .walk-zone.hold {
+    width: 100%;
+  }
+  .walk-zone.hidden {
+    pointer-events: none;
+  }
+  .float-stick {
+    position: absolute;
+    width: 112px;
+    height: 112px;
+    margin: -56px 0 0 -56px;
+    display: grid;
+    place-items: center;
+    z-index: 25;
+    pointer-events: none;
+  }
+  /* At rest (first few visits): a faint ring where the thumb usually lands. */
+  .float-stick.hint {
+    left: calc(max(18px, env(safe-area-inset-left)) + 64px);
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 8px);
+    margin: 0 0 0 -56px;
+    opacity: 0.45;
+    animation: hint-breathe 2.4s ease-in-out infinite;
+  }
+  .float-stick .knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: -27px 0 0 -27px;
+  }
+  .hold-mark {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 243, 196, 0.85);
+    box-shadow: 0 0 0 2px rgba(43, 29, 26, 0.45), 0 0 12px rgba(255, 210, 74, 0.5);
+    z-index: 25;
+    pointer-events: none;
+    animation: hold-pulse 0.9s ease-in-out infinite alternate;
+  }
+  @keyframes hint-breathe {
+    0%, 100% { transform: scale(0.96); }
+    50% { transform: scale(1.02); }
+  }
+  @keyframes hold-pulse {
+    from { transform: scale(0.85); opacity: 0.75; }
+    to { transform: scale(1.1); opacity: 1; }
+  }
   .ring {
     position: absolute;
     inset: 0;
@@ -213,6 +417,7 @@
     transition: transform 40ms linear;
   }
   .actions {
+    margin-left: auto;
     display: flex;
     gap: 14px;
     align-items: flex-end;

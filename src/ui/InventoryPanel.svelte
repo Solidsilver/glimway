@@ -17,6 +17,9 @@
   import { inventory } from './inventory.svelte'
   import { papers } from './papers.svelte'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
+  import { isTouchFirst } from './device'
+  import { DEMO_CHARACTER } from '../content/world'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
@@ -29,7 +32,28 @@
    * off hand, and what you can do with each thing (use, pocket, carry,
    * give, mend, fit). Guests see the save's pack. App owns the I/Escape keys.
    */
-  let { session, onClose, onOwnChest }: { session: Session; onClose: () => void; onOwnChest?: () => void } = $props()
+  let {
+    session,
+    onClose,
+    onOwnChest,
+    onCharacter
+  }: {
+    session: Session
+    onClose: () => void
+    onOwnChest?: () => void
+    /** Phones: the HUD has no Character button, so the bag leads to it. */
+    onCharacter?: () => void
+  } = $props()
+
+  const touch = isTouchFirst()
+  let panelEl: HTMLDivElement | undefined = $state()
+  const hero = $derived.by(() => {
+    const p = ui.importedProfile
+    const cls = p?.class ? p.class[0].toUpperCase() + p.class.slice(1) : p ? 'Adventurer' : 'Wayfarer'
+    return { name: p?.name ?? DEMO_CHARACTER.name, line: `Level ${p?.level ?? DEMO_CHARACTER.level} ${cls}`, portrait: !p ? ui.portraits['You'] ?? null : null }
+  })
+  /** Phone copy never names keys. */
+  const blurbOf = (e: InventoryEntry) => (touch ? inventoryCopy.touchBlurbs[e.id] ?? e.blurb : e.blurb)
 
   const village = $derived(villageFor(session))
   const homes = $derived(homesteadsFor(session))
@@ -99,6 +123,8 @@
     tab = t
     open = null
     message = null
+    // A new tab starts at its top, under the pinned header.
+    panelEl?.scrollTo({ top: 0 })
   }
 
   function onTabKey(e: KeyboardEvent): void {
@@ -281,7 +307,7 @@
         {#if e.pocket}<span class="tag" data-testid="in-pocket">In pocket {e.pocket}</span>{/if}
         {#if e.inHand}<span class="tag" data-testid="in-hand">In your off hand</span>{/if}
       </span>
-      {#if e.blurb}<small>{e.blurb}</small>{/if}
+      {#if e.blurb}<small>{blurbOf(e)}</small>{/if}
       {#if e.maker}<small class="maker" data-testid="maker">{inventoryCopy.madeBy(e.maker.name)}</small>{/if}
       {#if e.instance && e.instance.maxCondition > 0}
         <span class="wear">
@@ -362,10 +388,41 @@
   </li>
 {/snippet}
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="inv-title">
-  <div class="panel inventory" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label={inventoryCopy.close}><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="inv-title"><Icon name="bag" size={20} /> {inventoryCopy.title}</h2>
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="inv-title">
+  <div class="panel inventory" use:focusTrap bind:this={panelEl}>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label={inventoryCopy.close}><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="inv-title"><Icon name="bag" size={20} /> {inventoryCopy.title}</h2>
+      {#if message}<p class="msg {message.kind}" role="status" data-testid="inv-message">{message.text}</p>{/if}
+      <div class="tabs" role="tablist" aria-label="Inventory">
+        {#each INVENTORY_TABS as t (t.id)}
+          <button
+            type="button"
+            role="tab"
+            id={`inv-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`inv-page-${t.id}`}
+            tabindex={tab === t.id ? 0 : -1}
+            class:active={tab === t.id}
+            onclick={() => select(t.id)}
+            onkeydown={onTabKey}
+          >
+            <span class="ti"><Icon name={t.icon} size={14} /></span>
+            <span class="tl">{#if 'short' in t}{t.short}<span class="tl-more">{t.label.slice(t.short.length)}</span>{:else}{t.label}{/if}</span>
+            {#if count(t.id) > 0}<span class="tc">{count(t.id)}</span>{/if}
+            {#if tabHasNew(t.id)}<span class="newdot" aria-hidden="true"></span><span class="sr">, new</span>{/if}
+          </button>
+        {/each}
+      </div>
+    </header>
+
+    {#if touch && onCharacter}
+      <button type="button" class="hero-entry" onclick={onCharacter} data-testid="open-character">
+        <span class="hero-face">{#if hero.portrait}<img src={hero.portrait} alt="" />{:else}{hero.name[0]}{/if}</span>
+        <span class="hero-who"><b>{hero.name}</b><small>{hero.line}</small></span>
+        <span class="hero-go">{inventoryCopy.heroEntry} ›</span>
+      </button>
+    {/if}
 
     {#if model}
       <div class="carry" data-testid="carry-strip">
@@ -402,32 +459,10 @@
     {:else if connected && items.status === 'loading'}
       <p class="fine">{inventoryCopy.loading}</p>
     {/if}
-    {#if message}<p class="msg {message.kind}" role="status" data-testid="inv-message">{message.text}</p>{/if}
-
-    <div class="tabs" role="tablist" aria-label="Inventory">
-      {#each INVENTORY_TABS as t (t.id)}
-        <button
-          type="button"
-          role="tab"
-          id={`inv-tab-${t.id}`}
-          aria-selected={tab === t.id}
-          aria-controls={`inv-page-${t.id}`}
-          tabindex={tab === t.id ? 0 : -1}
-          class:active={tab === t.id}
-          onclick={() => select(t.id)}
-          onkeydown={onTabKey}
-        >
-          <span class="ti"><Icon name={t.icon} size={14} /></span>
-          <span class="tl">{t.label}</span>
-          {#if count(t.id) > 0}<span class="tc">{count(t.id)}</span>{/if}
-          {#if tabHasNew(t.id)}<span class="newdot" aria-hidden="true"></span><span class="sr">, new</span>{/if}
-        </button>
-      {/each}
-    </div>
 
     <div class="page" role="tabpanel" id={`inv-page-${tab}`} aria-labelledby={`inv-tab-${tab}`} data-testid={`inv-page-${tab}`}>
       {#if tab === 'papers'}
-        <p class="fine">{inventoryCopy.papersNote}</p>
+        <p class="fine">{touch ? inventoryCopy.papersNoteTouch : inventoryCopy.papersNote}</p>
         <PapersTab />
       {:else}
         <p class="fine">{inventoryCopy.intro[tab]}</p>
@@ -808,8 +843,69 @@
   .tl {
     white-space: nowrap;
   }
+  /* The touch way to the hero: a slim row at the top of the bag. */
+  .hero-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 6px 10px 6px 6px;
+    text-align: left;
+    font-family: inherit;
+  }
+  .hero-face {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 2px solid var(--wood-dark);
+    border-radius: 9px;
+    background: radial-gradient(circle at 50% 70%, #fff8e0, #e9d3a1);
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--wood);
+  }
+  .hero-face img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    align-self: end;
+  }
+  .hero-who {
+    display: grid;
+    flex: 1;
+    line-height: 1.2;
+  }
+  .hero-who b {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--wood-dark);
+  }
+  .hero-who small {
+    color: var(--text-soft);
+    font-size: 12.5px;
+  }
+  .hero-go {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--wood);
+  }
   /* Phones: five equal tabs, icon over label, so none scrolls out of sight. */
   @media (max-width: 560px) {
+    .tl {
+      white-space: nowrap;
+    }
+    .tl-more {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
     .tabs {
       grid-template-columns: repeat(5, 1fr);
       gap: 3px;
@@ -822,7 +918,6 @@
       line-height: 1.1;
     }
     .tl {
-      white-space: normal;
       text-align: center;
     }
     .tc {

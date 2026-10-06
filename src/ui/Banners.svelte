@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ui } from './store.svelte'
+  import { home } from './home.svelte'
   import { sfx } from '../game/sfx'
   import Icon from './Icon.svelte'
 
@@ -8,7 +9,11 @@
    * changes get a big storybook title card. Banners wait while a cinematic
    * owns the screen so they land after the moment, not on top of it.
    */
-  const current = $derived(!ui.cinematic && ui.defeat === 'none' ? ui.banners[0] ?? null : null)
+  const current = $derived(!ui.cinematic && ui.defeat === 'none' && !home.placement ? ui.banners[0] ?? null : null)
+  // Placement mode owns the screen: an area card would only show through the grid, and by the end it's old news.
+  $effect(() => {
+    if (home.placement && ui.banners.some((b) => b.kind === 'area')) ui.banners = ui.banners.filter((b) => b.kind !== 'area')
+  })
   let timer: number | null = null
   let shownId: string | null = null
 
@@ -70,10 +75,12 @@
 {/if}
 
 <style>
+  /* Both sit in the upper third, under the HUD (--hud-bottom, set by
+     App.svelte), and clear of the hero, who stands mid-screen. */
   .quest {
     all: unset;
     position: absolute;
-    top: 22%;
+    top: max(14%, calc(var(--hud-bottom, 0px) + 14px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 36;
@@ -123,7 +130,7 @@
 
   .area {
     position: absolute;
-    top: 30%;
+    top: max(10%, calc(var(--hud-bottom, 0px) + 6px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 34;
@@ -133,7 +140,7 @@
     gap: 6px;
     text-align: center;
     pointer-events: none;
-    padding: 26px 24px;
+    padding: 18px 24px;
     color: #fff6dc;
     text-shadow: 0 2px 0 rgba(20, 12, 16, 0.85), 0 0 24px rgba(20, 12, 16, 0.8);
     background: radial-gradient(ellipse at center, rgba(20, 14, 24, 0.62) 0%, rgba(20, 14, 24, 0.35) 45%, transparent 72%);
@@ -149,7 +156,7 @@
   .area .title {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(34px, 7vw, 56px);
+    font-size: clamp(30px, 6vw, 52px);
     line-height: 1;
     letter-spacing: 0.04em;
   }

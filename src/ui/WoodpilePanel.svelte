@@ -6,6 +6,7 @@
   import { countOf } from '../lib/village'
   import type { WoodpileView } from '../lib/api/types'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
@@ -79,13 +80,15 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="woodpile-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="woodpile-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the woodpile"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="woodpile-title"><Icon name="home" size={20} /> The Woodpile</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the woodpile"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="woodpile-title"><Icon name="home" size={20} /> The Woodpile</h2>
+      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    </header>
     <p class="lede">“Green wood sinks, dry wood sings.” Stack green timber and it seasons after a real day. Fine work wants seasoned.</p>
     <p class="carried"><span><ArtIcon art="icon-timber" name="sparkle" size={16} /> {timber} green timber carried</span></p>
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
     {#if loaded !== 'ready'}
       <p class="msg">{loaded === 'loading' ? 'Counting the stack…' : loaded}</p>
     {:else if view}

@@ -6,6 +6,7 @@
   import { countOf } from '../lib/village'
   import { itemDef, itemName } from '../lib/items'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
@@ -62,13 +63,15 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="desk-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="desk-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the desk"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="desk-title"><Icon name="scroll" size={20} /> The Writing Desk</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the desk"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="desk-title"><Icon name="scroll" size={20} /> The Writing Desk</h2>
+      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    </header>
     <p class="lede">A slant-top desk, a jar of quills, rag paper. Choose a page you carry and strike copies to give away — one fiber each, your mark on every copy.</p>
     <p class="carried"><span><ArtIcon art="icon-fiber" name="sparkle" size={16} /> {fiber} fiber carried</span></p>
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
     {#if loaded !== 'ready'}
       <p class="msg">Dipping the quill…</p>
     {:else if pages.length === 0}

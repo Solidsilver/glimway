@@ -180,7 +180,7 @@ export class Interactables {
       }
       this.markers.set(it.id, img)
     }
-    this.keyHint = this.scene.add.image(0, 0, isTouchFirst() ? 'key-a' : 'key-e')
+    this.keyHint = this.scene.add.image(0, 0, isTouchFirst() ? 'key-tap' : 'key-e')
       .setOrigin(0.5, 1)
       .setDepth(6001)
       .setVisible(false)
@@ -298,7 +298,7 @@ export class Interactables {
           meetResident(session, target.id)
           // What they'd say next time is old news by then, too.
           heardAt.add(`${target.id}@${residentTalk(target.id, residentContext(session)).topic}`)
-          bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book' })
+          bus.emit(EV.toast, { text: `${residentFullName(target.id)}: noted in your journal.`, icon: 'book', kind: 'gain', gain: { to: 'journal' } })
         }
       } else payload = this.isEmberSpot(target.id)
         ? emberDialogue(target.id, session.state, {

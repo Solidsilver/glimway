@@ -14,6 +14,8 @@ import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 
 type SeatView = { seated: boolean; bonus: number; mana: number; maxMana: number; x: number; y: number }
 const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSeat?: () => SeatView }).__fsSeat?.() ?? null)
+/** The thought above the hero now (src/game/entities/thoughts.ts), or null. */
+const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fsThoughts?: () => { current: string | null } }).__fsThoughts?.().current ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
 /** The Mana meter shows `value` within `seconds` of game time (regen runs on the game clock). */
 const manaShows = (page: Page, value: string, seconds: number) =>
@@ -54,7 +56,8 @@ test('smelling the flowers says something different each time', async ({ page })
   const before = await toastCount(page)
   await waitForLive(page)
   await page.keyboard.press('e')
-  await expect(page.locator('.toast').first()).toBeVisible()
+  // A passing thought above the hero, not a toast (it's still in the toast log).
+  await expect.poll(async () => FLOWER_LINES.includes((await thought(page)) ?? '')).toBe(true)
   const first = await toastAfter(page, before)
   expect(FLOWER_LINES).toContain(first!.trim())
 
@@ -106,9 +109,7 @@ test.describe('phone', () => {
     const act = page.locator('.controls .act')
     await expect(act).toHaveAttribute('aria-label', 'Smell the flowers')
     await act.tap()
-    const toast = page.locator('.toast').last()
-    await expect(toast).toBeVisible()
-    await expect.poll(async () => FLOWER_LINES.includes((await toast.textContent())!.trim())).toBe(true)
+    await expect.poll(async () => FLOWER_LINES.includes((await thought(page)) ?? '')).toBe(true)
   })
 })
 
@@ -136,13 +137,13 @@ test.describe('screens (SCREENS=1)', () => {
     await page.keyboard.press('e')
     await expect.poll(async () => (await seat(page))?.seated).toBe(true)
     await expect(page.locator('.prompt')).toContainText('Stand up')
-    await expect.poll(async () => SIT_LINES.includes((await page.locator('.toast').last().textContent())!.trim())).toBe(true)
+    await expect.poll(async () => SIT_LINES.includes((await thought(page)) ?? '')).toBe(true)
     await shot(page, 'touch-sit')
 
     await warp(page, 'village', 22, 8)
     await expect(page.locator('.prompt')).toContainText('Smell the flowers')
     await page.keyboard.press('e')
-    await expect.poll(async () => FLOWER_LINES.includes((await page.locator('.toast').last().textContent())!.trim())).toBe(true)
+    await expect.poll(async () => FLOWER_LINES.includes((await thought(page)) ?? '')).toBe(true)
     await shot(page, 'touch-flowers')
   })
 })

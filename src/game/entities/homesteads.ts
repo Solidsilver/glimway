@@ -706,15 +706,19 @@ export class HomesteadLayer implements InteractionProvider {
     const gate = this.gate!
     const home = this.here()
     const mine = !!home?.member
+    // `key` names the place for first-visit memory: whose it is, inside or out.
+    const whose = mine ? 'mine' : home ? 'visit' : 'wild'
     if (this.deps.room) {
       bus.emit(HOME_EV.room, {
-        eyebrow: 'Hearthwick Commons',
+        key: `cottage:${gate}:${whose}`,
+        eyebrow: mine ? 'Home' : lotName(gate),
         title: mine ? 'Your cottage' : this.placeName(home, gate),
         body: mine ? 'Steady as a route stone. She’ll creak come autumn.' : 'Wipe your boots. Look, don’t touch.'
       })
       return
     }
     bus.emit(HOME_EV.room, {
+      key: `land:${gate}:${whose}`,
       eyebrow: `${lotName(gate)} · Behind the Commons gates`,
       title: mine ? 'Your land' : home ? this.placeName(home, gate) : 'Unclaimed land',
       body: mine

@@ -8,6 +8,7 @@
   import type { Asset } from '../lib/api/types'
   import { itemName } from '../lib/items'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
@@ -65,13 +66,15 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="hearth-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="hearth-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close the hearth"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="hearth-title"><Icon name="ember" size={20} /> The Hearth</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the hearth"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="hearth-title"><Icon name="ember" size={20} /> The Hearth</h2>
+      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+    </header>
     <p class="lede">The kettle’s on and the griddle’s warm. Each batch takes the materials shown from what you carry, and everything made here carries your maker’s mark.</p>
     <p class="carried">You carry: {#each hearthMaterials as m (m)}<span><ArtIcon art={`icon-${m}`} name="sparkle" size={16} /> {carried[m] ?? 0} {itemName(m).toLowerCase()}</span>{/each}</p>
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
     <ul class="recipes">
       {#each HEARTH_RECIPES as r (r.id)}
         {@const can = batchesAffordable(r, carried)}

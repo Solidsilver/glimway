@@ -5,6 +5,7 @@
   import { setMuted, sfx } from '../game/sfx'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import ConnectGuide from './ConnectGuide.svelte'
@@ -14,6 +15,14 @@
   import { accountCopy, offlineCopy } from '../content/connected'
   import { CONTROLS, TOUCH_CONTROLS } from '../content/controls'
   import { isTouchFirst } from './device'
+  import { settings, type StickMode } from './settings.svelte'
+
+  /** Ways to walk on a touch screen; the picture is a little phone seen from above. */
+  const STICKS: Array<{ id: StickMode; name: string; note: string }> = [
+    { id: 'fixed', name: 'Joystick', note: 'In the corner' },
+    { id: 'floating', name: 'Floating stick', note: 'Under your thumb' },
+    { id: 'hold', name: 'Hold to walk', note: 'Toward your finger' }
+  ]
 
   let {
     session,
@@ -113,10 +122,12 @@
   }
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close menu"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="menu-title"><Icon name="menu" size={20} /> Menu</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close menu"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="menu-title"><Icon name="menu" size={20} /> Menu</h2>
+    </header>
 
     <div class="quick">
       <button type="button" class="primary" onclick={onClose}>Back to the road</button>
@@ -124,6 +135,39 @@
         <Icon name={ui.muted ? 'mute' : 'sound'} size={16} /> Sound {ui.muted ? 'off' : 'on'}
       </button>
     </div>
+
+    {#if touch}
+      <div class="sticks" role="radiogroup" aria-label="How you walk" data-testid="stick-modes">
+        {#each STICKS as m (m.id)}
+          <button
+            type="button"
+            role="radio"
+            class="stick"
+            class:on={settings.stick === m.id}
+            aria-checked={settings.stick === m.id}
+            data-stick={m.id}
+            onclick={() => {
+              settings.set('stick', m.id)
+              sfx('click')
+            }}
+          >
+            <svg class="pic" viewBox="0 0 36 22" aria-hidden="true">
+              <rect x="1" y="1" width="34" height="20" rx="4" class="phone" />
+              {#if m.id === 'fixed'}
+                <circle cx="8" cy="15" r="4.5" class="ring" /><circle cx="8" cy="15" r="2" class="dot" />
+              {:else if m.id === 'floating'}
+                <rect x="2.5" y="2.5" width="14" height="17" rx="2" class="zone" />
+                <circle cx="11" cy="10" r="4.5" class="ring" /><circle cx="12.5" cy="9" r="2" class="dot" />
+              {:else}
+                <circle cx="13" cy="13" r="2" class="dot" /><path d="M15 11.5 L24 7" class="trail" /><circle cx="26" cy="6" r="3" class="ring" />
+              {/if}
+            </svg>
+            <span class="nm">{m.name}</span>
+            <span class="nt">{m.note}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     {#if ui.account}
       <section class="card world" data-testid="world-card">
@@ -250,6 +294,57 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+  .sticks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .stick {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    min-height: 44px;
+    padding: 8px 4px;
+    line-height: 1.15;
+  }
+  .stick.on {
+    background: linear-gradient(180deg, #fff3b8, #f5cf5c);
+    box-shadow: inset 0 0 0 2px var(--gold-deep);
+  }
+  .stick .pic {
+    width: 36px;
+    height: 22px;
+  }
+  .stick .phone {
+    fill: rgba(255, 252, 240, 0.7);
+    stroke: var(--wood-dark);
+    stroke-width: 1.5;
+  }
+  .stick .zone {
+    fill: rgba(107, 76, 46, 0.12);
+  }
+  .stick .ring {
+    fill: none;
+    stroke: var(--wood);
+    stroke-width: 1.5;
+  }
+  .stick .dot {
+    fill: var(--wood-dark);
+  }
+  .stick .trail {
+    stroke: var(--wood);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 2;
+  }
+  .stick .nm {
+    font-family: var(--font-display);
+    font-size: 13px;
+  }
+  .stick .nt {
+    font-size: 12px;
+    color: var(--text-soft);
   }
   .card {
     margin-top: 14px;

@@ -13,7 +13,7 @@ export interface ControlRow {
 }
 
 export const CONTROLS: ControlRow[] = [
-  { keys: ['W', 'A', 'S', 'D'], does: 'Walk (arrows work too)', touch: 'Joystick (bottom left)' },
+  { keys: ['W', 'A', 'S', 'D'], does: 'Walk (arrows work too)', touch: 'Joystick, or pick how you walk in the Menu' },
   { keys: ['E', 'Space'], does: 'Talk, use, attack — or speak the naming', touch: 'The big action button (its label says what it will do)' },
   { keys: ['F'], does: 'Signature ability', touch: 'The ✦ button (shows its mana cost)' },
   { keys: ['Shift'], does: 'Dodge roll — move when the enemy flashes white', touch: 'The Roll button' },

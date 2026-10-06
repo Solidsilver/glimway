@@ -16,8 +16,12 @@
   "rules": [
     {
       "paths": ["src/main.ts", "src/game/main.ts", "src/game/scenes/**", "index.html"],
-      "specs": ["quest.spec.ts", "combat.spec.ts"],
+      "specs": ["quest.spec.ts", "combat.spec.ts", "camera.spec.ts"],
       "smoke": true
+    },
+    {
+      "paths": ["src/game/viewport.ts", "src/ui/Hud.svelte", "src/ui/TouchControls.svelte"],
+      "specs": ["camera.spec.ts"]
     },
     {
       "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
@@ -203,6 +207,18 @@
         "src/game/sfx.ts"
       ],
       "specs": ["polish.spec.ts", "quest.spec.ts", "onboarding-layout.spec.ts", "embers.spec.ts"]
+    },
+    {
+      "paths": ["src/app.css", "src/ui/sheet.ts"],
+      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "connected-screens.spec.ts", "onboarding-layout.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/settings.svelte.ts"],
+      "specs": ["touch.spec.ts"]
+    },
+    {
+      "paths": ["src/game/entities/thoughts.ts"],
+      "specs": ["touches.spec.ts", "gathering.spec.ts"]
     }
   ]
 }

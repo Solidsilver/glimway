@@ -79,6 +79,7 @@
   import { presence, startPresence, stopPresence } from './game/presence'
   import { EMOTES } from './content/presence'
   import { accountCopy, leaseCopy, originCopy } from './content/connected'
+  import { setPlayInsets } from './game/viewport'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
   type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
@@ -194,19 +195,22 @@
     const onArea = (p: AreaPayload) => {
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
-      ui.area = { areaId: p.areaId, name: info.name, description: info.description }
       // A homestead's land and its cottage announce themselves (whose place, in words).
       const homestead = /^home:\d+$/.test(p.areaId) || p.areaId === 'cottage'
+      ui.area = { areaId: p.areaId, name: homestead && roomName ? roomName : info.name, description: info.description }
       if (phase === 'playing' && moved && !homestead) {
         areaShown = true
-        ui.banner({ kind: 'area', eyebrow: info.eyebrow, title: info.name, body: info.tagline })
+        // The storybook card is for a first visit; after that the HUD's place
+        // name changes over on its own (src/ui/Hud.svelte).
+        if (firstVisit(placeKey(p.areaId))) ui.banner({ kind: 'area', eyebrow: info.eyebrow, title: info.name, body: info.tagline })
       }
     }
     const onWilds = (p: WildsPayload) => {
       ui.materials = p.materials
     }
     const onPrompt = (p: PromptPayload) => {
-      ui.prompt = p
+      // Every prompt gets a verb for its button: "Copy the naming…" → Copy.
+      ui.prompt = p.label ? { ...p, verb: p.verb ?? verbOf(p.label) } : p
     }
     const onToast = (p: ToastPayload) => ui.toast(p)
     const onDefeat = (p: DefeatPayload) => {
@@ -286,8 +290,12 @@
       villageUi.calendar = v.calendar
       villageUi.waiting = v.waitingCount()
     }
-    const onRoom = (v: { eyebrow: string; title: string; body: string }) => {
-      if (phase === 'playing') ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
+    const onRoom = (v: { key: string; eyebrow: string; title: string; body: string }) => {
+      if (phase !== 'playing') return
+      // The HUD names the place the way its card does ("Your land", "Ada's Place").
+      roomName = v.title
+      if (/^home:\d+$/.test(ui.area.areaId) || ui.area.areaId === 'cottage') ui.area = { ...ui.area, name: v.title }
+      if (firstVisit(v.key)) ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
     }
     const pairs: [string, (...args: never[]) => void][] = [
       [EV.stats, onStats],
@@ -324,8 +332,41 @@
       for (const [ev, fn] of pairs) bus.off(ev, fn)
     }
   }
+  /** The action button's word for a prompt without one: its first word ("Pick up" keeps its particle). */
+  function verbOf(label: string): string {
+    const words = label.replace(/·.*$/, '').trim().split(/\s+/)
+    const particle = ['up', 'in', 'out', 'down', 'on', 'off', 'back']
+    return words.length > 1 && particle.includes(words[1].toLowerCase()) ? `${words[0]} ${words[1]}` : words[0]
+  }
+
   let areaShown = false
+  /** The last homestead place announced (its HUD name). */
+  let roomName: string | null = null
   let pendingStats: StatsPayload | null = null
+
+  /**
+   * The place a title card is about: the area, or for the Wilds the region
+   * (and the outer Wilds' season, which redraws them).
+   */
+  function placeKey(areaId: string): string {
+    if (areaId !== 'wilds') return areaId
+    const st = session?.state
+    const region = st?.wildsRegion ?? 'inner-1'
+    return region.startsWith('outer') && st?.outerSeason ? `wilds:${region}:${st.outerSeason}` : `wilds:${region}`
+  }
+
+  /**
+   * True the first time the player arrives somewhere (remembered in the save
+   * as a `seen:` flag). Waking after a fall never counts as arriving: the
+   * wake-up card already says where you are.
+   */
+  function firstVisit(key: string): boolean {
+    if (!session) return false
+    const flag = `seen:${key}`
+    if (session.state.flags.includes(flag)) return false
+    session.addFlag(flag)
+    return ui.defeat === 'none'
+  }
 
   onMount(() => {
     const cleanupBus = wireBus()
@@ -779,6 +820,72 @@
     ui.emoteOpen = false
   }
 
+  /**
+   * Measure what the interface covers while playing: the HUD along the top,
+   * the touch buttons along the bottom. The camera keeps the hero out of it
+   * (src/game/viewport.ts), and the cards and toasts sit under the HUD
+   * (--hud-bottom). On a phone the prompt docks beside the action button.
+   */
+  let promptDock = $state<{ right: number; bottom: number } | null>(null)
+  $effect(() => {
+    if (phase !== 'playing') return
+    let raf = 0
+    const measure = () => {
+      raf = 0
+      const vh = window.innerHeight
+      const vw = window.innerWidth
+      const hud = document.querySelector<HTMLElement>('.hud:not(.hidden)')
+      const hudBottom = hud ? Math.max(0, ...[...hud.children].filter((c) => !c.classList.contains('why') && !c.classList.contains('sr')).map((c) => c.getBoundingClientRect().bottom)) : 0
+      document.documentElement.style.setProperty('--hud-bottom', `${Math.round(hudBottom)}px`)
+      if (!touch) {
+        // Desktop: the HUD is a corner card on a wide screen; the camera centres as before.
+        setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
+        return
+      }
+      // The buttons at the bottom right always; the joystick at the bottom left when it's fixed there.
+      const box = (sel: string) => {
+        const r = document.querySelector<HTMLElement>(`.controls:not(.hidden) ${sel}`)?.getBoundingClientRect()
+        return r && r.height > 0 ? r : null
+      }
+      const actions = box('.actions')
+      const pad = box('.pad')
+      if (vw > vh) {
+        // Landscape: the thumbs sit at the sides, so the hero keeps to the middle band.
+        setPlayInsets({ top: hudBottom, right: actions ? vw - actions.left : 0, bottom: 0, left: pad ? pad.right : 0 })
+      } else {
+        const tops = [actions?.top, pad?.top].filter((t): t is number => t !== undefined)
+        setPlayInsets({ top: hudBottom, right: 0, bottom: tops.length ? vh - Math.min(...tops) : 0, left: 0 })
+      }
+      // The prompt sits just above the button cluster (and the Arrange button, when it's out), right-aligned with the action button.
+      const act = box('.act')
+      const arrange = document.querySelector<HTMLElement>('[data-testid="arrange"]')?.getBoundingClientRect()
+      const above = Math.min(actions?.top ?? vh, arrange && arrange.height > 0 ? arrange.top : vh)
+      promptDock = act && actions ? { right: Math.round(vw - act.right), bottom: Math.round(vh - above + 8) } : null
+    }
+    const soon = () => {
+      if (!raf) raf = requestAnimationFrame(measure)
+    }
+    const ro = new ResizeObserver(soon)
+    const watch = () => {
+      ro.disconnect()
+      for (const el of document.querySelectorAll('.hud, .hud > *, .controls, .controls .actions, .controls .pad, [data-testid="arrange"]')) ro.observe(el)
+      soon()
+    }
+    // The HUD and controls re-render (chips come and go, the stick mode changes): re-watch now and then.
+    const mo = new MutationObserver(watch)
+    const main = document.querySelector('main')
+    if (main) mo.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    window.addEventListener('resize', soon)
+    watch()
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+      window.removeEventListener('resize', soon)
+      if (raf) cancelAnimationFrame(raf)
+      setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
+    }
+  })
+
   const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen && !home.placement)
 </script>
 
@@ -788,13 +895,21 @@
   <div class="stage" bind:this={stageEl}></div>
 
   {#if phase === 'playing' && session}
-    <Hud onJournal={() => toggle('journal')} onCharacter={() => toggle('character')} onInventory={() => toggle('inventory')} {inventoryNew} onMenu={() => toggle('menu')} onEmote={() => (ui.emoteOpen = !ui.emoteOpen)} />
+    <Hud
+      onJournal={() => toggle('journal')}
+      onCharacter={() => toggle('character')}
+      onInventory={() => toggle('inventory')}
+      {inventoryNew}
+      onMenu={() => toggle('menu')}
+      onEmote={() => (ui.emoteOpen = !ui.emoteOpen)}
+      prompt={showPrompt && !touch ? ui.prompt.label : null}
+    />
     {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
       <EmotePicker onPick={sendEmote} onClose={() => (ui.emoteOpen = false)} />
     {/if}
-    {#if showPrompt}
-      <div class="prompt" class:touch>
-        {#if !touch}<span class="kbd">E</span>{/if}
+    {#if showPrompt && touch}
+      <!-- Phones: the prompt sits beside the action button that does it. -->
+      <div class="prompt touch" class:docked={!!promptDock} style={promptDock ? `right:${promptDock.right}px;bottom:${promptDock.bottom}px` : ''}>
         <span>{ui.prompt.label}</span>
       </div>
     {/if}
@@ -838,6 +953,7 @@
       <InventoryPanel
         {session}
         onClose={() => toggle('inventory')}
+        onCharacter={() => (panel = 'character')}
         onOwnChest={session?.link
           ? () => {
               chestPick = 'personal'
@@ -1111,12 +1227,22 @@
     white-space: nowrap;
     animation: prompt-in 0.18s ease-out;
   }
-  .prompt .kbd {
-    font-size: 12px;
-  }
   .prompt.touch {
     bottom: max(170px, calc(env(safe-area-inset-bottom) + 170px));
     padding-left: 14px;
+  }
+  /* Docked: a tag just above the action buttons, right-aligned with the big one. */
+  .prompt.touch.docked {
+    left: auto;
+    max-width: min(70vw, 360px);
+    transform: none;
+    border-radius: 12px;
+    white-space: normal;
+    line-height: 1.2;
+    animation: prompt-dock-in 0.18s ease-out;
+  }
+  @keyframes prompt-dock-in {
+    from { opacity: 0; transform: translateY(6px); }
   }
   @keyframes prompt-in {
     from { opacity: 0; transform: translate(-50%, 6px); }

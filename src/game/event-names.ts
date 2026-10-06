@@ -11,6 +11,8 @@ export const EV = {
   prompt: 'ui:prompt',
   dialogue: 'ui:dialogue',
   toast: 'ui:toast',
+  /** A passing thought shown above the hero (flavour, not news): { text }. Sent by the UI for `kind: 'thought'` toasts. */
+  thought: 'game:thought',
   defeat: 'ui:defeat',
   /** Session committed a new imported profile — the world avatar/pet refresh. */
   profileChanged: 'ui:profile-changed',
@@ -99,7 +101,14 @@ export interface PromptPayload {
 
 export interface ToastPayload {
   text: string
-  kind?: 'info' | 'error'
+  /**
+   * info: a toast. error: a red toast that stays longer. thought: the hero
+   * noticing something (a line above the hero, no toast). gain: something
+   * went into the bag or the journal (the button shows it, no toast).
+   */
+  kind?: 'info' | 'error' | 'thought' | 'gain'
+  /** For `kind: 'gain'`: where it went, and what (merged per item for a moment). */
+  gain?: { to: 'bag' | 'journal'; itemDef?: string; qty?: number }
   /** Icon name (src/ui/Icon.svelte); defaults to a sparkle. */
   icon?: string
   /** A delivered icon frame (`icon-timber`, …) shown instead, when loaded. */

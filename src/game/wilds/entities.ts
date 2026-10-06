@@ -43,7 +43,7 @@ import {
 } from './store.ts'
 import { WildsSites } from './sites.ts'
 import { grantPaper } from '../papers'
-import { bus, EV } from '../events'
+import { bus, EV, type ToastPayload } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
 import { emitResidents } from '../residents'
@@ -218,6 +218,14 @@ const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
 /** The delivered icon for a loot toast: the find, else the first material. */
 const lootArt = (drop: { materials: { id: string }[]; trinket: string | null }): string | undefined =>
   drop.trinket ? `icon-${drop.trinket}` : drop.materials[0] ? `icon-${drop.materials[0].id}` : undefined
+
+/** What a drop put in the bag, for the bag button (the first item; its count when it's the only one). */
+const lootGain = (drop: { materials: { id: string; qty: number }[]; trinket: string | null }): ToastPayload['gain'] => {
+  const first = drop.trinket ?? drop.materials[0]?.id
+  if (!first) return undefined
+  const single = drop.materials.length + (drop.trinket ? 1 : 0) === 1
+  return { to: 'bag', itemDef: first, ...(single ? { qty: drop.trinket ? 1 : drop.materials[0].qty } : {}) }
+}
 
 const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? id
 const materialOf = (id: string) => MATERIALS.find((m) => m.id === id)
@@ -396,7 +404,7 @@ export class WildsEntities {
     this.lootFeedback(target, drop)
     if (res.result.wardenSliverFound) {
       const session = this.deps.session
-      bus.emit(EV.toast, { text: 'A chip of grey stone with an amber fleck. It sits very still in your hand.', icon: 'sparkle' })
+      bus.emit(EV.toast, { text: 'A chip of grey stone with an amber fleck. It sits very still in your hand.', icon: 'sparkle', kind: 'thought' })
       if (!session.state.flags.includes('warden-sliver:found')) {
         session.addFlag('warden-sliver:found')
         emitResidents(session)
@@ -441,7 +449,7 @@ export class WildsEntities {
     const text = own ? FALLEN_HERO_LANTERNS.yourOwnLantern : FALLEN_HERO_LANTERNS.relitByFriend
     bus.emit(EV.toast, { text, icon: 'lantern' })
     if (res.result.rewarded && lootText(res.result.loot)) {
-      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle', art: lootArt(res.result.loot) })
+      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle', art: lootArt(res.result.loot), kind: 'gain', gain: lootGain(res.result.loot) })
     }
   }
 
@@ -455,7 +463,9 @@ export class WildsEntities {
     else if (entity.kind === 'chest') text = loot ? `${pick(CHEST_OPEN_FLAVOR, entity.id)} ${loot}.` : pick(CHEST_OPEN_FLAVOR, entity.id) + '.'
     else if (entity.kind === 'node') text = `Harvested: ${loot}.`
     else text = loot ? `The Wilds give back: ${loot}.` : ''
-    if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop) })
+    // Loot goes to the bag button; a chest's flavour alone is a passing thought.
+    const kind: ToastPayload['kind'] = loot ? 'gain' : entity.kind === 'chest' ? 'thought' : 'info'
+    if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop), kind, ...(loot ? { gain: lootGain(drop) } : {}) })
 
     // Found texts ride their personal claim (see ./placements.ts).
     const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
@@ -671,7 +681,7 @@ export class WildsEntities {
       const at = this.entityPx(e)
       if (Math.hypot(this.heroPx.x - at.x, this.heroPx.y - at.y) > 56) continue
       this.greeted.add(e.id)
-      bus.emit(EV.toast, { text: pick(CAMP_WALK_IN_LINES, e.id), icon: 'sparkle' })
+      bus.emit(EV.toast, { text: pick(CAMP_WALK_IN_LINES, e.id), icon: 'sparkle', kind: 'thought' })
     }
   }
 

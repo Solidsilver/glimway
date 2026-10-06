@@ -1,6 +1,6 @@
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { stepToWarden, talkThrough, warden, warp } from './helpers'
+import { frames, player, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
@@ -52,4 +52,79 @@ test('phone: the action button speaks the naming to the warden', async ({ page }
   await expect(act.locator('.cap')).toHaveText('Speak')
   await act.tap()
   await expect.poll(async () => (await warden(page)).speakings).toBe(1)
+})
+
+/** Touch input as a phone sends it (Chromium turns it into pointer events). */
+async function fingers(page: import('@playwright/test').Page) {
+  const cdp = await page.context().newCDPSession(page)
+  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] })
+  return {
+    down: (x: number, y: number) => send('touchStart', x, y),
+    move: (x: number, y: number) => send('touchMove', x, y),
+    up: () => send('touchEnd')
+  }
+}
+
+async function startWithStick(page: import('@playwright/test').Page, stick: string): Promise<void> {
+  await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
+  await page.goto('/')
+  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+  await warp(page, 'woodland', 15, 20)
+  await waitForLive(page)
+}
+
+test('phone: the floating stick appears under the thumb and walks the hero', async ({ page }) => {
+  await startWithStick(page, 'floating')
+  await expect(page.getByRole('application', { name: 'Movement joystick' })).toHaveCount(0)
+  const vh = page.viewportSize()!.height
+  const start = await player(page)
+  const f = await fingers(page)
+  await f.down(70, vh - 200)
+  await expect(page.getByTestId('float-stick')).toBeVisible()
+  const box = (await page.getByTestId('float-stick').boundingBox())!
+  expect(Math.abs(box.x + box.width / 2 - 70)).toBeLessThan(4)
+  await f.move(130, vh - 200)
+  await expect.poll(async () => (await player(page)).x - start.x).toBeGreaterThan(12)
+  await f.up()
+  // Let go: the hero stops.
+  await frames(page, 6)
+  const stopped = (await player(page)).x
+  await frames(page, 10)
+  expect((await player(page)).x).toBe(stopped)
+})
+
+test('phone: hold to walk heads for the finger and stops on release', async ({ page }) => {
+  await startWithStick(page, 'hold')
+  const start = await player(page)
+  // A finger a little right of the middle of the screen, where the camera keeps the hero.
+  const at = await page.evaluate(() => {
+    const r = document.querySelector('.stage canvas')!.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  })
+  const f = await fingers(page)
+  await f.down(at.x + 110, at.y)
+  await expect.poll(async () => (await player(page)).x - start.x).toBeGreaterThan(12)
+  await f.up()
+  await frames(page, 6)
+  const stopped = (await player(page)).x
+  await frames(page, 10)
+  expect((await player(page)).x).toBe(stopped)
+  // The walk layer sits under the HUD: its buttons still answer.
+  await page.getByRole('button', { name: /^Inventory/ }).tap()
+  await expect(page.getByRole('dialog', { name: /Inventory/ })).toBeVisible()
+})
+
+test('phone: the Menu picks how you walk', async ({ page }) => {
+  await startWithStick(page, 'fixed')
+  await page.getByRole('button', { name: 'Menu (Esc)' }).tap()
+  const modes = page.getByTestId('stick-modes')
+  await expect(modes.getByRole('radio', { name: /Joystick/ })).toHaveAttribute('aria-checked', 'true')
+  await modes.getByRole('radio', { name: /Floating stick/ }).tap()
+  await expect(modes.getByRole('radio', { name: /Floating stick/ })).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('button', { name: 'Back to the road' }).tap()
+  await expect(page.getByTestId('walk-zone')).toBeAttached()
+  await expect(page.getByRole('application', { name: 'Movement joystick' })).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fingersnap:settings') ?? '{}').stick)).toBe('floating')
 })

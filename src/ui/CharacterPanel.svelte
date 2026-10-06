@@ -6,6 +6,7 @@
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import { isTouchFirst } from './device'
 
@@ -42,22 +43,24 @@
   const touch = isTouchFirst()
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="char-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="char-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
 
-    <header class="hero">
-      <div class="avatar">
-        {#if !profile && ui.portraits['You']}
-          <img class="pixel" src={ui.portraits['You']} alt="" />
-        {:else}
-          <span class="initial">{name[0]}</span>
-        {/if}
-      </div>
-      <div class="who">
-        <h2 id="char-title">{name}</h2>
-        <p class="sub">Level {level} {className}</p>
-        <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+      <div class="hero">
+        <div class="avatar">
+          {#if !profile && ui.portraits['You']}
+            <img class="pixel" src={ui.portraits['You']} alt="" />
+          {:else}
+            <span class="initial">{name[0]}</span>
+          {/if}
+        </div>
+        <div class="who">
+          <h2 id="char-title">{name}</h2>
+          <p class="sub">Level {level} {className}</p>
+          <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+        </div>
       </div>
     </header>
 
@@ -160,6 +163,18 @@
 </div>
 
 <style>
+  /* Phones: a smaller portrait, so the pinned header leaves room for the sheet. */
+  :global(:root.touch) .avatar {
+    width: 60px;
+    height: 60px;
+  }
+  :global(:root.touch) .avatar img {
+    width: 52px;
+    height: 52px;
+  }
+  :global(:root.touch) .who h2 {
+    font-size: 22px;
+  }
   .hero {
     display: flex;
     align-items: center;

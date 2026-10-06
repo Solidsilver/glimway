@@ -3,6 +3,7 @@
   import type { QuestStage } from '../lib/state'
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
+  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
   import PapersTab from './PapersTab.svelte'
   import { papers } from './papers.svelte'
@@ -42,29 +43,31 @@
   )
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="journal-title">
+<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="journal-title">
   <div class="panel" use:focusTrap>
-    <button type="button" class="modal-close" onclick={onClose} aria-label="Close journal"><Icon name="close" size={14} /></button>
-    <h2 class="panel-title" id="journal-title"><Icon name="book" size={20} /> Journal</h2>
+    <header class="panel-head">
+      <button type="button" class="modal-close" onclick={onClose} aria-label="Close journal"><Icon name="close" size={14} /></button>
+      <h2 class="panel-title" id="journal-title"><Icon name="book" size={20} /> Journal</h2>
 
-    <div class="tabs" role="tablist" aria-label="Journal pages">
-      {#each TABS as t (t.id)}
-        <button
-          type="button"
-          role="tab"
-          id={`journal-tab-${t.id}`}
-          aria-selected={tab === t.id}
-          aria-controls={`journal-page-${t.id}`}
-          tabindex={tab === t.id ? 0 : -1}
-          class:active={tab === t.id}
-          onclick={() => (tab = t.id)}
-          onkeydown={onTabKey}
-        >
-          {t.label}
-          {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
-        </button>
-      {/each}
-    </div>
+      <div class="tabs" role="tablist" aria-label="Journal pages">
+        {#each TABS as t (t.id)}
+          <button
+            type="button"
+            role="tab"
+            id={`journal-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`journal-page-${t.id}`}
+            tabindex={tab === t.id ? 0 : -1}
+            class:active={tab === t.id}
+            onclick={() => (tab = t.id)}
+            onkeydown={onTabKey}
+          >
+            {t.label}
+            {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
+          </button>
+        {/each}
+      </div>
+    </header>
 
     {#if tab === 'papers'}
       <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">

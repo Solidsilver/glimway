@@ -15,7 +15,8 @@ export const INVENTORY_TABS = [
   { id: 'tools', label: 'Tools', icon: 'sword' },
   { id: 'supplies', label: 'Supplies', icon: 'ember' },
   { id: 'keepsakes', label: 'Keepsakes', icon: 'sparkle' },
-  { id: 'home', label: 'Home goods', icon: 'lantern' },
+  // `short`: the phone tab shows only this much (the rest stays for screen readers).
+  { id: 'home', label: 'Home goods', short: 'Home', icon: 'lantern' },
   { id: 'papers', label: 'Papers', icon: 'scroll' },
 ] as const
 
@@ -40,6 +41,13 @@ export const inventoryCopy = {
   placed: (n: number) => `${n} set out`,
   stored: (n: number) => `${n} put away`,
   papersNote: 'Also in your Journal (J).',
+  papersNoteTouch: 'Also in your Journal.',
+  /** The bag's way to the hero on phones (the HUD has no Character button there). */
+  heroEntry: 'Character',
+  /** Phone versions of item lines that name a key. */
+  touchBlurbs: {
+    'field-journal': 'Half-full of other people’s roads, all in pencil. Out here the ground forgets; paper shouldn’t. Open it with the book button.',
+  } as Record<string, string>,
   newBadge: 'New',
   characterPointer: 'Your pack, materials and keepsakes are in the Inventory.',
   open: 'Open the inventory',

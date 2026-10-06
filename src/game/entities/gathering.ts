@@ -286,8 +286,10 @@ export class Gathering {
   /** What the wood gave, said and shown; a change kept at home is read again. */
   private paid(result: ItemsActionResponse['result']): void {
     const gathered = result.gathered ?? []
-    if (gathered.length > 0) bus.emit(EV.toast, { text: `Found: ${yieldLine(gathered)}.`, icon: 'sparkle', art: `icon-${gathered[0].itemDef}` })
-    else bus.emit(EV.toast, { text: EMPTY_YIELD_LINE, icon: 'sparkle' })
+    if (gathered.length > 0) {
+      const gain = { to: 'bag' as const, itemDef: gathered[0].itemDef, ...(gathered.length === 1 ? { qty: gathered[0].qty } : {}) }
+      bus.emit(EV.toast, { text: `Found: ${yieldLine(gathered)}.`, icon: 'sparkle', art: `icon-${gathered[0].itemDef}`, kind: 'gain', gain })
+    } else bus.emit(EV.toast, { text: EMPTY_YIELD_LINE, icon: 'sparkle', kind: 'thought' })
     // What the work did to the tool, when it's worth a word.
     const worn = wearLine(result.wear)
     if (worn) bus.emit(EV.toast, { text: worn, icon: 'bag' })
@@ -336,7 +338,7 @@ export class Gathering {
       bus.emit(EV.toast, { text: itemErrorText(code), kind: 'error' })
       return
     }
-    bus.emit(EV.toast, { text: GATHERING_DATA.softCapLine, icon: 'sparkle' })
+    bus.emit(EV.toast, { text: GATHERING_DATA.softCapLine, icon: 'sparkle', kind: 'thought' })
     const hero = this.deps.hero().sprite
     const same = (s: GatherSpot) => (gatheringTarget(s.target)?.action ?? 'chop') === action
     if (!this.deps.reducedMotion) {

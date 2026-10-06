@@ -2,22 +2,11 @@
   import { ui } from './store.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
-  // Read-only, for playtests (dev builds): every toast shown so far, in
-  // order, so a test can check one that came and went while it looked away.
+  // Read-only, for playtests (dev builds): every toast handed to the UI so
+  // far, in order, whatever its kind (a thought or a gain shows elsewhere),
+  // so a test can check one that came and went while it looked away.
   if (import.meta.env.DEV) {
-    const seen: { n: number; text: string; kind: string }[] = []
-    const ids = new Set<string>()
-    let count = 0
-    $effect(() => {
-      for (const t of ui.toasts) {
-        if (ids.has(t.id)) continue
-        ids.add(t.id)
-        count += 1
-        seen.push({ n: count, text: t.text, kind: t.kind ?? 'info' })
-        if (seen.length > 100) seen.shift()
-      }
-    })
-    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count, seen: [...seen] })
+    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count: ui.toastCount, seen: [...ui.toastLog] })
   }
 </script>
 
@@ -72,11 +61,8 @@
     from { transform: translateY(-8px) scale(0.96); opacity: 0; }
     to { transform: translateY(0) scale(1); opacity: 1; }
   }
-  /* Narrower screens: drop below the HUD card instead of between widgets. */
+  /* Narrower screens: under the HUD (App.svelte measures it) instead of between widgets. */
   @media (max-width: 940px) {
-    .toasts { top: calc(max(10px, env(safe-area-inset-top)) + 140px); }
-  }
-  @media (max-width: 560px) {
-    .toasts { top: calc(max(10px, env(safe-area-inset-top)) + 112px); }
+    .toasts { top: calc(max(10px, var(--hud-bottom, 140px)) + 8px); }
   }
 </style>
