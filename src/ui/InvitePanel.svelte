@@ -17,6 +17,8 @@
   /** Lifetime creations left (undefined until the server says). */
   let remaining = $state<number | undefined>(undefined)
   let outstandingLimit = $state(INVITE_LIMIT)
+  /** You live in a party's world: it takes no codes (the server refuses them too). */
+  let partyWorld = $state(false)
   let loaded = $state(false)
   let fresh = $state<CreatedInvite | null>(null)
   let copied = $state(false)
@@ -37,6 +39,10 @@
     if (code === 'invite-limit') return inviteCopy.limit(outstandingLimit)
     if (code === 'invite-budget') return inviteCopy.budget
     if (code === 'player-flagged') return inviteCopy.flagged
+    if (code === 'party-world-invites') {
+      partyWorld = true
+      return ''
+    }
     if (code === 'unauthorized') return inviteCopy.signedOut
     if (isUnreachable(err)) return inviteCopy.offline
     return inviteCopy.failed
@@ -48,6 +54,7 @@
       invites = list.invites
       if (list.remaining !== undefined) remaining = list.remaining
       if (list.outstandingLimit !== undefined) outstandingLimit = list.outstandingLimit
+      partyWorld = list.partyWorld === true
       loaded = true
     } catch (err) {
       error = explain(err)
@@ -101,6 +108,9 @@
 </script>
 
 <div class="invites">
+  {#if partyWorld}
+    <p class="fine" data-testid="invite-party-world">{inviteCopy.partyWorld}</p>
+  {:else}
   <p class="fine">{inviteCopy.intro}</p>
 
   {#if remaining !== undefined}
@@ -137,6 +147,7 @@
     <p class="tiny" data-testid="invite-why">{inviteCopy.budget}</p>
   {:else if !error && atLimit && loaded}
     <p class="tiny" data-testid="invite-why">{inviteCopy.limit(outstandingLimit)}</p>
+  {/if}
   {/if}
 
   {#if error}<p class="error" role="alert">{error}</p>{/if}

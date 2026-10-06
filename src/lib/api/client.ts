@@ -129,6 +129,10 @@ export interface RawApi {
   worldPrompt(worldId: string): Promise<WorldView>;
   /** Move to another world (keyed; from the village or the Commons). */
   worldMove(req: Envelope & { worldId: string }): Promise<WorldMoveResponse>;
+  /** Left the party whose world you live in: go to your own world now (keyed; no cooldown). */
+  worldLeave(req: Envelope): Promise<WorldMoveResponse>;
+  /** The "you were moved out" notice was shown. */
+  worldNotice(): Promise<WorldView>;
   wildsRegion(regionId: string): Promise<WildsRegionResponse>;
   wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
   wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
@@ -243,6 +247,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const body: LoginRequest = { userId: req.userId, token: req.token };
       const invite = req.invite ? normalizeInviteCode(req.invite) : '';
       if (invite) body.invite = invite;
+      if (req.party && req.party.length <= 128) body.party = req.party;
       return parseSnapshot(await request('POST', '/api/session', body));
     },
     async logout() {
@@ -286,6 +291,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
     async worldMove(req) {
       return parseWorldMove(await request('POST', '/api/world/move', req));
+    },
+    async worldLeave(req) {
+      return parseWorldMove(await request('POST', '/api/world/leave', req));
+    },
+    async worldNotice() {
+      return parseWorld(await request('POST', '/api/world/notice', {}));
     },
     async wildsRegion(regionId) {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
@@ -395,6 +406,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     worldParty: () => run((r) => r.worldParty()),
     worldPrompt: (worldId) => run((r) => r.worldPrompt(worldId)),
     worldMove: (req) => run((r) => r.worldMove(req)),
+    worldLeave: (req) => run((r) => r.worldLeave(req)),
+    worldNotice: () => run((r) => r.worldNotice()),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
     wildsClaim: (req) => run((r) => r.wildsClaim(req)),
     wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),

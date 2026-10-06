@@ -36,6 +36,24 @@ export const worldCopy = {
   partyMissing: 'Your party has no world here yet. Open one, and party members can come straight in.',
   partyOpen: 'Open it',
   partyOpenFailed: 'That didn’t take. Try again in a moment.',
+  // Left the party whose world you live in.
+  leaver: (when: string) => `You’ve left your party. Unless you rejoin it, you’ll be moved out of its world ${when}.`,
+  leaverNote: (hasOwn: boolean) =>
+    hasOwn ? 'Rejoin and sign in again to stay. Your own world still keeps its lamps lit.' : 'Rejoin and sign in again to stay. If you go, a world of your own will be waiting.',
+  leaveNow: 'Leave now…',
+  movedOut: 'You left your party, so you’ve been moved out of its world. You’re in a world of your own now.',
+  movedOutOk: 'All right',
+  /** How long until something happens, from seconds left, in round words. */
+  within: (seconds: number) => {
+    const s = Number(seconds)
+    if (!Number.isFinite(s) || s <= 0) return 'when you next sign in'
+    if (s >= 36 * 3600) return `in ${Math.round(s / 86400)} days`
+    if (s <= 90) return 'in a minute or so'
+    const m = Math.round(s / 60)
+    if (m < 55) return `in about ${m} minutes`
+    const h = Math.round(s / 3600)
+    return h <= 1 ? 'in about an hour' : `in about ${h} hours`
+  },
   readFailed: 'Couldn’t read your world just now. Try again in a moment.',
   ownThere: 'Your own world still keeps its lamps lit, if you’d like to go back.',
   goHome: 'Go back…',
@@ -43,6 +61,9 @@ export const worldCopy = {
   eyebrow: 'Moving worlds',
   title: (where: string) => `Move to ${where}?`,
   titleHome: 'Go back to your own world?',
+  titleNew: 'Go to a world of your own?',
+  newWorld: 'A world of your own',
+  confirmLeave: 'Leave now',
   lead: 'Everything you carry comes along. What you built stays where it stands.',
   comes: 'Comes with you',
   stays: 'Stays behind',
@@ -80,6 +101,12 @@ export const worldCopy = {
   working: 'Packing up…',
   arriving: 'Arriving…',
   again: 'Moving back works the same way, a day from now at the soonest. Old homes aren’t kept for you.',
+  /** Leaving a world that is neither yours nor your party's. */
+  againNoReturn: 'This world isn’t yours or your party’s. Once you leave, you can’t come back without a new invitation.',
+  /** Leaving the world of a party you've left. */
+  againLeaver: 'Rejoin your party and you can come back, a day from now at the soonest. Old homes aren’t kept for you.',
+  /** Moving into a world no one lives in yet. */
+  aloneThere: 'No one lives there yet. You’ll be the only one, and you can’t come back until tomorrow.',
   done: (where: string) => `You set down your pack in ${where}.`,
   doneHome: 'You’re back in your own world. The lamps remember you.',
   landed: 'Your move went through. You set down your pack in a new world.',

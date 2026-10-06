@@ -77,6 +77,7 @@
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
   import PartyPrompt from './ui/PartyPrompt.svelte'
+  import LeaverNotice from './ui/LeaverNotice.svelte'
   import WorldMove from './ui/WorldMove.svelte'
   import { worldCopy } from './content/world-moves'
   import EmotePicker from './ui/EmotePicker.svelte'
@@ -126,7 +127,9 @@
   /** Your party plays in a world that isn't yours: the one-time prompt. */
   let partyPrompt = $state<WorldView | null>(null)
   /** The move confirmation (from the prompt or the Menu); `arriving` once it landed and the new world is opening. */
-  let moving = $state<{ target: WorldRef; home: boolean; view: WorldView | null; arriving: boolean } | null>(null)
+  let moving = $state<{ target: WorldRef; home: boolean; view: WorldView | null; arriving: boolean; leave?: boolean } | null>(null)
+  /** Left the party whose world you live in (or were moved out of it): said once a sign-in. */
+  let leaverNotice = $state<WorldView | null>(null)
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
@@ -265,7 +268,7 @@
       ui.link = p
     }
     const onResolved = (p: { op: { kind: string }; outcome: string }) => {
-      if (p?.op?.kind !== 'world-move') return
+      if (p?.op?.kind !== 'world-move' && p?.op?.kind !== 'world-leave') return
       // A move whose answer was lost, replayed: it never went through…
       if (p.outcome !== 'landed') {
         ui.toast({ text: worldCopy.replayRefused, icon: 'world' })
@@ -683,16 +686,30 @@
     try {
       const v = await api.world()
       // PartyPrompt records it as shown when it is really on screen.
-      if (session === s && v.prompt && v.partyWorld) partyPrompt = v
+      if (session !== s) return
+      if (v.movedOutAt > 0 || v.leaver) leaverNotice = v
+      else if (v.prompt && v.partyWorld) partyPrompt = v
     } catch {
       /* the Menu still offers it */
     }
   }
 
-  function openMove(target: WorldRef, home: boolean, view: WorldView | null): void {
+  function openMove(target: WorldRef, home: boolean, view: WorldView | null, leave = false): void {
     panel = null
     partyPrompt = null
-    moving = { target, home, view, arriving: false }
+    leaverNotice = null
+    moving = { target, home, view, arriving: false, leave }
+  }
+
+  /** "Leave now": to your own world, or one made for you (the move screen, no cooldown). */
+  function openLeave(view: WorldView): void {
+    openMove(view.ownWorld ?? { id: '', ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, true, view, true)
+  }
+
+  /** The "you were moved out" notice was seen: the server stops reporting it. */
+  function closeLeaverNotice(): void {
+    if (leaverNotice && leaverNotice.movedOutAt > 0) void api.worldNotice().catch(() => undefined)
+    leaverNotice = null
   }
 
   /**
@@ -706,6 +723,7 @@
     if (moving) moving.arriving = true
     else moving = { target: { id: snapshot.worldId, ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, home: false, view: null, arriving: true }
     partyPrompt = null
+    leaverNotice = null
     const prev = session
     try {
       // Its link already adopted the move's answer; nothing is left to upload.
@@ -735,7 +753,10 @@
   function onMoved(res: WorldMoveResponse): void {
     const m = moving
     const v = res.result.world
-    void afterMove(res, m?.home ? worldCopy.doneHome : worldCopy.done(worldCopy.place(m?.target ?? v.world, m ? true : v.partyHome)))
+    void afterMove(
+      res,
+      m?.leave && !m.target.id ? worldCopy.done(worldCopy.newWorld.toLowerCase()) : m?.home ? worldCopy.doneHome : worldCopy.done(worldCopy.place(m?.target ?? v.world, m ? true : v.partyHome))
+    )
   }
 
   /** Already in that world (another device moved first): step in. */
@@ -1092,9 +1113,12 @@
     {#if partyPrompt?.partyWorld && promptClear}
       {@const pw = partyPrompt.partyWorld}
       <PartyPrompt world={pw} onJoin={() => openMove(pw, false, partyPrompt)} onLater={() => (partyPrompt = null)} />
+    {:else if leaverNotice && promptClear}
+      {@const lv = leaverNotice}
+      <LeaverNotice view={lv} onLeave={() => openLeave(lv)} onClose={closeLeaverNotice} />
     {/if}
     {#if moving}
-      <WorldMove {session} target={moving.target} home={moving.home} view={moving.view} arriving={moving.arriving} {onMoved} {onHere} onCancel={() => (moving = null)} />
+      <WorldMove {session} target={moving.target} home={moving.home} leave={moving.leave ?? false} view={moving.view} arriving={moving.arriving} {onMoved} {onHere} onCancel={() => (moving = null)} />
     {/if}
     {#if panel === 'journal'}
       <JournalPanel onClose={() => toggle('journal')} />
@@ -1144,6 +1168,7 @@
           void continueAccount()
         }}
         onMove={openMove}
+        onLeave={openLeave}
       />
     {/if}
   {/if}

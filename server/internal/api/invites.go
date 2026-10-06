@@ -19,7 +19,9 @@ type InviteMetadata struct {
 }
 
 // Player invites require authentication and persistent world membership, but
-// no play lease. The raw code is returned once and never persisted.
+// no play lease. The raw code is returned once and never persisted. A party's
+// world is for that party only: its residents invite no one (from a world of
+// their own, they can).
 func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	var req struct{}
 	if err := decode(w, r, &req); err != nil {
@@ -32,12 +34,15 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	var worldExists int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM worlds WHERE id=?", s.WorldID).Scan(&worldExists); err != nil {
+	var owner sql.NullString
+	if err = tx.QueryRowContext(ctx, "SELECT owner_id FROM worlds WHERE id=?", s.WorldID).Scan(&owner); err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	if worldExists != 1 {
+	if !owner.Valid {
 		return fail(403, "world-required")
+	}
+	if owner.String == "" {
+		return fail(409, "party-world-invites")
 	}
 	if s.Flagged {
 		return fail(403, "player-flagged")
@@ -97,7 +102,12 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(r.Context(), "SELECT count(*) FROM invites WHERE created_by=?", s.HabiticaID).Scan(&lifetime); err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites})
+	var partyWorld bool
+	if err = tx.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM worlds WHERE id=? AND owner_id='')", s.WorldID).Scan(&partyWorld); err != nil {
+		return err
+	}
+	// partyWorld: they live in a party's world, which takes no codes.
+	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites, "partyWorld": partyWorld})
 }
 func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/api/invites/")

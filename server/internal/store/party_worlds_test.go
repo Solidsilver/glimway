@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// Migration 023: a party's world belongs to the party. Older links from a
-// person's world to a party are cleared (the worlds and their residents stay),
-// and a party has at most one world from then on.
+// Migrations 023 and 024: a party's world belongs to the party. Older links
+// from a person's world to a party stay as a record (for prompts and `party
+// adopt`) but never make it the party's world, and a party has at most one.
 func TestPartyOwnedWorldsUpgrade(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "party.sqlite")
 	old, err := sql.Open("sqlite", path)
@@ -72,12 +72,16 @@ func TestPartyOwnedWorldsUpgrade(t *testing.T) {
 		}
 		return v
 	}
-	if n("SELECT count(*) FROM worlds WHERE habitica_party_id IS NOT NULL") != 0 || n("SELECT count(*) FROM worlds") != 3 {
-		t.Fatal("person-owned links not cleared, or a world lost")
+	if n("SELECT count(*) FROM worlds WHERE habitica_party_id='p1' AND owner_id!=''") != 2 || n("SELECT count(*) FROM worlds") != 3 || n("SELECT count(*) FROM worlds WHERE opened_by IS NOT NULL") != 0 {
+		t.Fatal("person-owned links not kept as a record, or a world lost")
 	}
 	if n("SELECT count(*) FROM players WHERE world_id='olive-w'") != 2 || n("SELECT count(*) FROM party_prompts") != 0 {
 		t.Fatal("residents moved, or a stale prompt kept")
 	}
+	if n("SELECT count(*) FROM players WHERE party_left_at IS NULL AND party_moved_out_at IS NULL") != 3 || n("SELECT count(*) FROM party_closures") != 0 {
+		t.Fatal("024's columns")
+	}
+	// Two person-owned worlds carry p1, and the party can still have its own.
 	if _, err = s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES('p1-w','','s','p1',9)"); err != nil {
 		t.Fatal(err)
 	}

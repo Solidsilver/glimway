@@ -124,3 +124,33 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   expect(now).toBe((await wilds(page)).epochId)
   await ctx.close()
 })
+
+test('a party’s world takes no invite codes, and a member who leaves the party is warned and can leave at once', async ({ page, browser, baseURL }) => {
+  const { party, world } = await partyOwner(page)
+  const rue = newUser()
+  await setHabitica(rue, { name: 'Rue', party })
+  let { ctx, other } = await signInPage(browser, baseURL!, rue)
+  // The Menu says why there's no invite button here.
+  await other.keyboard.press('Escape')
+  await expect(other.getByTestId('invite-party-world')).toContainText('This world is for your party alone, so it takes no invite codes.')
+  await expect(other.getByRole('button', { name: 'Create an invite code' })).toHaveCount(0)
+  // Signing out lets the play lease go, so the next sign-in plays at once.
+  expect((await other.request.delete('/api/session')).ok()).toBe(true)
+  await ctx.close()
+
+  // Rue leaves the party; her next sign-in says what will happen.
+  await setHabitica(rue, { party: '' })
+  ;({ ctx, other } = await signInPage(browser, baseURL!, rue))
+  const notice = other.getByTestId('party-leaver')
+  await expect(notice).toContainText('You’ve left your party. Unless you rejoin it, you’ll be moved out of its world in 3 days.')
+  await notice.getByRole('button', { name: 'Leave now…' }).click()
+  const move = other.getByRole('dialog', { name: 'Go to a world of your own?' })
+  await expect(move.getByTestId('move-again')).toContainText('Rejoin your party and you can come back')
+  await move.getByRole('button', { name: 'Leave now' }).click()
+  await expectToast(other, 'You set down your pack in a world of your own.')
+  await waitForWorld(other)
+  expect((await serverState(other)).body.worldId).not.toBe(world)
+  await other.keyboard.press('Escape')
+  await expect(other.getByTestId('world-settings')).toContainText('You live in your own world.')
+  await ctx.close()
+})

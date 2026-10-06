@@ -90,7 +90,10 @@ func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
 	if c.LoginWindow <= 0 {
 		c.LoginWindow = time.Minute
 	}
-	return &Server{presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	if c.LoginPartyRate <= 0 {
+		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
+	}
+	return &Server{presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
 }
 func (a *Server) clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -124,14 +127,21 @@ func ipBucket(ip net.IP) string {
 	}
 	return ip.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
+
+// inviteUsable: an invite row (args: now) still admits someone: unused,
+// unrevoked, unexpired, and not naming a party's world (those take no codes).
+const inviteUsable = "used_by IS NULL AND revoked_at IS NULL AND expires_at>? AND NOT EXISTS(SELECT 1 FROM worlds pw WHERE pw.id=invites.world_id AND pw.owner_id='')"
+
 // precheck turns away, before Habitica is asked, a sign-in that can't
-// succeed: no allowlist entry, no valid code, and no party world here its
-// verified party could be (the party is only known after the identity
-// check, so any party world lets an account not removed by the CLI through
-// to it; the login limits still bound how often).
-func (a *Server) precheck(ctx context.Context, id, invite string) (bool, error) {
-	var allowed bool
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?)
- OR EXISTS(SELECT 1 FROM worlds WHERE owner_id='' AND habitica_party_id IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)`, id, id, store.Hash(store.NormalizeInvite(invite)), a.Config.Now().Unix(), id).Scan(&allowed)
-	return allowed, err
+// succeed, and says which way it could: "listed" (the allowlist, or a usable
+// invite code) or "party" (only through the party the client says it is in:
+// that party has an open world here, and the CLI hasn't removed the
+// account). The verified party is checked against the claim afterwards.
+func (a *Server) precheck(ctx context.Context, id, invite, party string) (string, error) {
+	var route string
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT CASE
+ WHEN EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND `+inviteUsable+`) THEN 'listed'
+ WHEN ? AND ?!='' AND EXISTS(SELECT 1 FROM worlds WHERE owner_id='' AND habitica_party_id=?) AND NOT EXISTS(SELECT 1 FROM party_closures WHERE party_id=?) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?) THEN 'party'
+ ELSE '' END`, id, id, store.Hash(store.NormalizeInvite(invite)), a.Config.Now().Unix(), !a.Config.PartyAdmissionOff, party, party, party, id).Scan(&route)
+	return route, err
 }

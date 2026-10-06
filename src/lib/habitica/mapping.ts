@@ -243,7 +243,14 @@ export function toHabiticaProfile(user: unknown, gearStats?: GearStatsLookup): H
     useCostume: readUseCostume(user.preferences),
     selectedPet: readCompanion(items.currentPet),
     selectedMount: readCompanion(items.currentMount),
+    ...readParty(user.party),
   };
+}
+
+/** party._id, when the account is in a party (absent otherwise). */
+function readParty(raw: unknown): { partyId?: string } {
+  const id = isRecord(raw) ? raw._id : undefined;
+  return typeof id === 'string' && id.length > 0 && id.length <= 128 ? { partyId: id } : {};
 }
 
 function readUseCostume(raw: unknown): boolean {
@@ -369,5 +376,6 @@ export function validateHabiticaProfile(data: unknown): HabiticaProfile {
       data.selectedMount === undefined || data.selectedMount === null
         ? null
         : requireString(data.selectedMount, 'selectedMount'),
+    ...readParty({ _id: data.partyId }),
   };
 }

@@ -13,12 +13,15 @@
    * The move confirmation (design: "Moving to another world"): what comes
    * along, what stays, and anything that has to happen first. The move is
    * one keyed request; the world waits for its answer, and the screen stays
-   * up ("Arriving…") until the new world is open.
+   * up ("Arriving…") until the new world is open. `leave`: "Leave now" from
+   * the world of a party you've left, to your own world (`target`, or one
+   * made for you when its id is empty), with no cooldown.
    */
   let {
     session,
     target,
     home,
+    leave = false,
     view: initial,
     arriving,
     onMoved,
@@ -29,6 +32,8 @@
     target: WorldRef
     /** Going back to a world you own. */
     home: boolean
+    /** Leaving the world of a party you've left (POST /api/world/leave). */
+    leave?: boolean
     view: WorldView | null
     /** The move landed; the new world is opening. */
     arriving: boolean
@@ -50,11 +55,24 @@
 
   const working = $derived(busy || arriving)
   const here = $derived(view ? (view.isOwner ? 'Your world' : worldCopy.name(view.world, view.partyHome)) : '…')
-  const there = $derived(home ? 'Your world' : worldCopy.name(target))
+  const there = $derived(home ? (target.id ? 'Your world' : worldCopy.newWorld) : worldCopy.name(target))
   /** Lowercase, mid-sentence: "your party’s world", "Olive’s world". */
   const thereIn = $derived(worldCopy.place(target))
-  /** Seconds now, ticking while the screen is up, so the cooldown lifts on its own. */
+  /** Seconds now on this device, ticking while the screen is up, so the cooldown lifts on its own. */
   let now = $state(Date.now() / 1000)
+  /**
+   * When the road opens, on this device's clock: the server's seconds-left
+   * counted from when its answer arrived, so a fast or slow device clock
+   * changes nothing.
+   */
+  const opensBy = (v: WorldView | null): number => (v && v.moveOpensIn > 0 ? Date.now() / 1000 + v.moveOpensIn : 0)
+  // svelte-ignore state_referenced_locally
+  let opens = $state(opensBy(initial))
+  /** The server refused for the cooldown: show it, whatever the count says. */
+  let cooled = $state(false)
+  const opensIn = $derived(Math.max(0, opens - now))
+  /** Leaving a world that isn't yours or your party's: no way back. */
+  const noReturn = $derived(!!view && !view.isOwner && !view.partyHome && !view.leaver)
   const leaving = $derived(view?.leaving ?? null)
   const homestead = $derived(!!leaving && leaving.gate >= 0)
   const blocks = $derived.by(() => {
@@ -63,8 +81,9 @@
       outgoing: leaving?.outgoing ?? 0,
       online: ui.link?.status === 'online',
       pending,
-      opensAt: view?.moveOpensAt ?? 0,
-      now
+      // "Leave now" waits for no cooldown.
+      opensIn: leave ? 0 : opensIn,
+      cooled: !leave && cooled
     })
     if (unsafe && !b.includes('area')) b.push('area')
     return b
@@ -75,7 +94,7 @@
     if (b === 'area') return worldCopy.blockArea
     if (b === 'mail') return worldCopy.blockMail(Math.max(1, leaving?.outgoing ?? 1))
     if (b === 'offline') return worldCopy.blockOffline
-    if (b === 'cooldown') return worldCopy.blockCooldown(worldCopy.opensIn((view?.moveOpensAt ?? 0) - now))
+    if (b === 'cooldown') return worldCopy.blockCooldown(worldCopy.opensIn(opensIn))
     return worldCopy.blockPending
   }
 
@@ -83,6 +102,8 @@
     pending = !!session.link?.pendingOperation
     try {
       view = await api.world()
+      opens = opensBy(view)
+      cooled = false
     } catch {
       if (!view) error = worldCopy.offline
     }
@@ -93,7 +114,9 @@
     if (working || blocked || !link) return
     busy = true
     error = ''
-    const r = await link.mutate<WorldMoveResponse>({ kind: 'world-move', fields: { worldId: target.id } })
+    const r = leave
+      ? await link.mutate<WorldMoveResponse>({ kind: 'world-leave', fields: {} })
+      : await link.mutate<WorldMoveResponse>({ kind: 'world-move', fields: { worldId: target.id } })
     pending = !!link.pendingOperation
     if (r.ok) {
       onMoved(r.res)
@@ -104,7 +127,11 @@
     const why = moveRefusal(r.code)
     if (why === 'here') return onHere()
     if (why === 'area') unsafe = true
-    else if (why === 'cooldown') void refresh()
+    else if (why === 'cooldown') {
+      // Shown from the refusal itself; the fresh view then says until when.
+      cooled = true
+      void refresh().then(() => (cooled = cooled || opens <= Date.now() / 1000))
+    }
     else if (why === 'denied') error = worldCopy.denied
     else if (why === 'offline') error = worldCopy.blockOffline
     else if (why === 'pending' || why === 'retry') error = worldCopy.blockPending
@@ -130,7 +157,7 @@
 <div class="overlay gate" role="dialog" aria-modal="true" aria-labelledby="move-title" aria-busy={working} tabindex="-1" onkeydown={onKey} data-testid="world-move">
   <div class="panel gate-panel wide" use:focusTrap={{ initial: '.stay' }}>
     <p class="gate-eyebrow"><Icon name="world" size={14} /> {worldCopy.eyebrow}</p>
-    <h2 class="gate-title" id="move-title">{home ? worldCopy.titleHome : worldCopy.title(thereIn)}</h2>
+    <h2 class="gate-title" id="move-title">{home ? (target.id ? worldCopy.titleHome : worldCopy.titleNew) : worldCopy.title(thereIn)}</h2>
 
     <div class="route" aria-label={`From ${here} to ${there}`}>
       <span class="stop from"><Icon name="lantern" size={13} /> {here}</span>
@@ -188,13 +215,16 @@
     {/if}
     {#if error}<p class="gate-error" role="alert">{error}</p>{/if}
 
-    <p class="gate-fine again">{worldCopy.again}</p>
+    {#if !home && target.members === 0}
+      <p class="note warn-note" data-testid="move-alone"><Icon name="person" size={13} /> {worldCopy.aloneThere}</p>
+    {/if}
+    <p class="gate-fine again" class:no-return={noReturn} data-testid="move-again">{leave ? worldCopy.againLeaver : noReturn ? worldCopy.againNoReturn : worldCopy.again}</p>
     {#if working}
       <p class="gate-status" role="status"><span class="gate-spinner" aria-hidden="true"></span> {arriving ? worldCopy.arriving : worldCopy.working}</p>
     {:else}
       <div class="row">
         <button type="button" class="stay" onclick={onCancel}>{worldCopy.cancel}</button>
-        <button type="button" class="primary" onclick={go} disabled={blocked}>{home ? worldCopy.confirmHome : worldCopy.confirm(thereIn)}</button>
+        <button type="button" class="primary" onclick={go} disabled={blocked}>{leave ? worldCopy.confirmLeave : home ? worldCopy.confirmHome : worldCopy.confirm(thereIn)}</button>
       </div>
     {/if}
   </div>
@@ -333,6 +363,10 @@
   }
   .again {
     margin-top: 10px;
+  }
+  .again.no-return {
+    font-weight: 600;
+    color: var(--ember-deep);
   }
   .blocks {
     margin: 8px 0;

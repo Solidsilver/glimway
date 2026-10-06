@@ -180,7 +180,7 @@
    */
   async function serverSignIn(creds: { userId: string; apiToken: string }, profile: HabiticaProfile): Promise<'done' | 'stop' | 'local'> {
     try {
-      const snapshot = await api.login({ userId: creds.userId, token: creds.apiToken, invite: inviteCode })
+      const snapshot = await api.login({ userId: creds.userId, token: creds.apiToken, invite: inviteCode, party: profile.partyId ?? '' })
       await rememberIfAsked(creds)
       clearPaste()
       inviteOnly = false

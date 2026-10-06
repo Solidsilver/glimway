@@ -19,7 +19,7 @@ export const signInCopy = {
   /** Read before anything about codes: a party member needs none. */
   partyWelcome: 'Already in a Habitica party that plays here? Connect and come straight in. No invite code needed.',
   inviteOnlyTitle: 'This world is invite-only',
-  inviteOnlyBody: 'Your Habitica hero is fine, but your party has no world here yet. To come in, ask someone already here for an invite code.',
+  inviteOnlyBody: 'Your Habitica hero is fine. To come in you need an invite code, or a party that already plays here.',
   inviteJoin: 'Join with this code',
   playLocal: 'Play on this device instead',
   playLocalNote: 'Your journey stays in this browser, like a guest save with your Habitica hero.',
@@ -99,6 +99,8 @@ export const accountCopy = {
 export const inviteCopy = {
   section: 'Invite a friend',
   intro: 'Invite codes let a friend join your world. Each works once and lasts 30 days.',
+  /** In a party's world, which takes no codes. */
+  partyWorld: 'This world is for your party alone, so it takes no invite codes. Invite friends from a world of your own.',
   budgetLine: (left: number, total: number) => `${left} of ${total} invite codes left`,
   waitingLine: (limit: number) => `Up to ${limit} can wait at once.`,
   pasteHint: 'Your friend pastes it in “Have an invite code?” when they connect.',

@@ -330,3 +330,17 @@ test('validateHabiticaProfile strips credential-shaped keys from costume', () =>
   assert.ok(!('apiToken' in (clean.costume ?? {})));
   assert.equal(clean.selectedPet, 'Wolf-Base');
 });
+
+test('the party id maps from party._id, survives a stored round trip, and is absent without one', () => {
+  const fixture = FIXTURES_BY_KEY.lowLevel;
+  const user = structuredClone(fixture.user) as HabiticaUserJson;
+  (user as Record<string, unknown>).party = { _id: 'party-123' };
+  const profile = toHabiticaProfile(user, gearLookupFor(fixture.gearStats));
+  assert.equal(profile.partyId, 'party-123');
+  assert.equal(validateHabiticaProfile(JSON.parse(JSON.stringify(profile))).partyId, 'party-123');
+  for (const party of [undefined, null, { _id: null }, { _id: '' }, { _id: 7 }, { _id: 'x'.repeat(129) }]) {
+    const u = structuredClone(fixture.user) as HabiticaUserJson;
+    (u as Record<string, unknown>).party = party;
+    assert.equal('partyId' in toHabiticaProfile(u, gearLookupFor(fixture.gearStats)), false, JSON.stringify(party));
+  }
+});

@@ -216,6 +216,10 @@ export const SERVER_ERROR_CODES = [
   'mail-in-flight',
   'move-cooldown',
   'no-party',
+  'still-in-party',
+  'party-closed',
+  'party-open-denied',
+  'party-world-invites',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

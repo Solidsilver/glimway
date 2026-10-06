@@ -35,6 +35,7 @@ each step points to the detail further down.
    | `habiticaUrl` | `https://habitica.com` | Used only for the login identity check |
    | `xClient` | the creator's public client id | Habitica `X-Client` header |
    | `trustedProxies` | `[ "127.0.0.1" "::1" ]` | Peers allowed to supply `X-Forwarded-For`; empty trusts none |
+   | `partyAdmission` | `true` | Party members sign in without a code, and party worlds are made (`-party-admission`; see "Party worlds and world moves") |
    | `backupRetentionDays` | `30` | Nightly `VACUUM INTO` at 03:15 (±10 min) |
 
    The service runs as the `fingersnap-server` system user with Secure
@@ -192,10 +193,14 @@ using `go mod vendor -o /tmp/fingersnap-vendor` and
 
 The backend pre-checks allowlist membership or an eligible unused/unexpired
 invite before creating a limiter bucket or calling Habitica, then rechecks
-access in the transaction. Once any party world exists, an account the CLI
-hasn't removed also passes the pre-check with neither (its party is only known
-after Habitica answers; see "Party worlds and world moves"), so the login limits
-below are what bound those calls. Default limits are four concurrent identity proofs,
+access in the transaction. A sign-in with neither passes the pre-check only
+when the client names the Habitica party it expects (`party` in
+`POST /api/session`, read from the profile the browser already fetched), that
+party has an open world here, and the CLI hasn't removed the account; the
+verified party must then match the claim (see "Party worlds and world moves").
+Those party-only attempts spend their own upstream budget, a quarter of the
+global one (at least one a minute), so strangers can't use up the calls that
+allowlisted and invited players need. Default limits are four concurrent identity proofs,
 ten eligible attempts per IPv4 address or IPv6 /64 per minute, and sixty actual
 upstream calls globally per minute (including the single permitted 429 retry).
 Flags are `-login-concurrency`, `-login-rate`, and `-login-global-rate`.
@@ -220,22 +225,37 @@ players to the inviter's world and preserve existing players' world membership.
 
 A Habitica party's world belongs to the party, not to a person: its
 `worlds.owner_id` is empty and `habitica_party_id` names the party. A party has
-at most one (a unique index, migration 023). The party id comes only from the
-identity check at sign-in (`players.habitica_party_id`); the token is never
+at most one (a unique index, migration 023). It is **for that party only**: no
+invite code leads into it. The party id comes only from the identity check at
+sign-in (`players.habitica_party_id`); the token is used once and never
 stored, and the party is never read in between.
 
-- **Made at sign-in.** When a member of a party with no world here signs in
-  (and is let in), the server makes the party's world in the same
-  transaction. Two members signing in at once still make one. A member whose
-  session predates it can ask: `POST /api/world/party {}` (session only, no
-  lease; `no-party` when their last sign-in reported none). Making it moves
-  no one.
-- **Members come in without a code.** A player whose verified party has a
-  world here may sign in with no invite and no allowlist entry; they're added
-  to the allowlist (`added_by` = `party`) and stay on it. Everyone else still
+- **Who opens one.** When an account the operator let in (an `allowlist add`
+  entry, or an invite code: `allowlist.added_by` other than `party`) signs in
+  and its party has no world here, the server makes it in the same
+  transaction (`worlds.opened_by`, migration 024). Two members signing in at
+  once still make one. An account let in *through* a party never opens
+  another party's world, by signing in or by asking, so party admission can't
+  chain from one party to the next. `allowlist add` on such an account makes
+  it the operator's (`added_by` becomes `cli`). A member whose session
+  predates the world can ask: `POST /api/world/party {}` (session only, no
+  lease; `no-party`, `party-closed`, or `party-open-denied` for an account
+  let in through a party). `GET /api/world` says `partyCanOpen`. Making a
+  world moves no one.
+- **Members come in without a code.** A player whose verified party has an
+  open world here may sign in with no invite and no allowlist entry, when the
+  client named that same party; they land in the party's world, are added to
+  the allowlist (`added_by` = `party`) and stay on it. Everyone else still
   needs an invite code or the allowlist. An account removed with
-  `allowlist remove` is not let back in by its party (only `allowlist add`
-  or a CLI code does that). Leaving the Habitica party removes no one.
+  `allowlist remove` is not let back in by its party (only `allowlist add` or
+  a CLI code does that).
+- **No codes into a party's world.** A resident can't make invites
+  (`POST /api/invites` → `party-world-invites`; `GET /api/invites` says
+  `partyWorld: true`, and the Menu says why), `invite WORLD-ID` refuses one,
+  and an older code naming one admits no one (refused at the pre-check and at
+  redemption, and left unused). Friends outside the party are invited from a
+  world of your own. A move into a party's world leaves your waiting codes
+  naming the world you left.
 - **First sign-in:** a code that names a world decides (also for an already
   allowlisted newcomer, whose code is then used up). Otherwise a party member
   lands in the party's world, and a newcomer with no party gets a solo world
@@ -246,20 +266,39 @@ stored, and the party is never read in between.
   join prompt was shown (once per player and party world; table
   `party_prompts`). `partyHome` says they live in it. The offer stays in the
   Menu.
+- **Leaving the Habitica party.** At sign-in, a resident of a party's world
+  whose verified party is no longer that one is warned: `party_left_at`
+  records the first such sign-in, and `GET /api/world` carries `leaver`
+  (`moveOutAt`, `moveOutIn`, `hasOwn`). They keep playing for `PartyGrace`,
+  three days. Rejoining and signing in again clears it. **Leave now**
+  (`POST /api/world/leave {lease, baseRev, key, progress}`, keyed) moves them
+  at once to the oldest world they own, or a new one made for them, with no
+  move cooldown (from the village or the Commons, parcels home first;
+  `still-in-party` if they haven't left). At the first sign-in after the
+  grace period the server moves them out the same way, wherever they stand
+  (off the village and the Commons they arrive in the village; parcels they
+  sent stay on the road for their recipients): pack and personal chest come
+  along, homestead membership, placed things and shared chests stay, the
+  ledger records the move and a live presence socket follows.
+  `movedOutAt` stays set until `POST /api/world/notice {}`, so the next screen
+  says what happened.
 - **Older person-owned links** (migration 022 let an owner link their world
-  to a party) are cleared by migration 023, with their prompt rows. Those
-  worlds keep working: the owner and everyone living there stay, the owner
-  can always move back to it, and invite codes still lead into it. What they
-  no longer do is count as the party's world: a resident who came by the old
-  link and leaves can't move back in (only its owner can).
+  to a party). Migration 023 keeps the party id on those worlds only as a
+  record: they never count as the party's world, and their residents aren't
+  prompted to leave for the party's world. They keep working: the owner and
+  everyone living there stay, the owner can always move back, and invite
+  codes still lead into them. To fold such a group into its party's world,
+  the operator runs `party adopt WORLD-ID` (below); until then a resident who
+  isn't its owner and leaves can't come back, and the move screen says so.
 - **Moving:** `POST /api/world/move {worldId, lease, baseRev, key, progress}`
   is one keyed, idempotent transaction under the usual lease and current-
   revision rules.
   - Allowed targets: your party's world, or a world you own (moving back).
   - **At most one move per 24 hours** (`move-cooldown`), counted from the
     last `world-move` ledger row. `GET /api/world` (and the move's answer)
-    carries `moveOpensAt`, the unix second the next move is allowed (0: now);
-    the move screen says when the road opens again.
+    carries `moveOpensAt` (server clock) and `moveOpensIn` (seconds left); the
+    move screen counts down from `moveOpensIn` on the device's own clock, and
+    a `move-cooldown` refusal always shows the line.
   - Only from the village or the Commons, and only with no goods parcels you
     sent still in transit (`mail-in-flight`: recall them first; a move never
     takes back a gift on its own). A recalled or returned warden-set tool goes
@@ -274,12 +313,34 @@ stored, and the party is never read in between.
     deed is free; later ones aren't).
   - Parcels waiting for you go back to their senders (`recipient-removed`).
     Thank-you notes stay readable on both sides, in any world.
-  - Your unused, unexpired invite codes are retargeted to the new world.
+  - Your unused, unexpired invite codes are retargeted to the new world,
+    unless it's a party's.
   - The ledger records a zero-delta `world-move` row (`ref` = `from>to`).
   - A live presence socket is moved to the new world's rooms (the old room
     sees `leave`; a full room sends the mover an empty roster).
   - A replay with the same key returns the first answer and moves nothing,
     during the cooldown too.
+
+**Operator controls** (run as the service user, like `allowlist`):
+
+- `-party-admission=false` (env `FINGERSNAP_PARTY_ADMISSION`, Nix
+  `partyAdmission`): no one signs in through a party and no party world is
+  made, so an upgrade can be deployed without opening anything. Party worlds
+  already made keep working for the people in them.
+- `parties` prints one JSON record per party world (and per closed party):
+  party id, world, members, who opened it (`openedBy`, `openedByName`), how
+  many accounts came in through the party (`admitted`), and `closedAt`.
+- `party close PARTY-ID` stops admitting that party (no codeless sign-ins
+  through it, and no world is made for it); `party open PARTY-ID` resumes.
+  Its world, and everyone already in, stay. Table `party_closures`.
+- `party adopt WORLD-ID` makes a person's world that an older link tied to a
+  party (022) that party's world: `owner_id` becomes empty, the party id
+  stays, and the former owner is recorded as `opened_by`. Everyone living
+  there stays. If the party already has a world no one lives in (one made at
+  a sign-in after the upgrade), it is set aside first (it keeps its rows but
+  belongs to no party); a lived-in one is never replaced. Residents who
+  aren't in the party are then warned at their next sign-in, as leavers.
+  Take a `backup` first.
 
 `invites [player]` prints one JSON metadata record per code, optionally filtered
 by creator, including creator, recipient, world, expiry and revocation timestamps.

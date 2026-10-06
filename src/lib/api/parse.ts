@@ -71,6 +71,7 @@ import type {
   WildsLoot,
   WildsMaterials,
   WildsRegionResponse,
+  WorldLeaver,
   WorldMoveResponse,
   WorldRef,
   WorldView,
@@ -174,6 +175,7 @@ export function parseInviteList(raw: unknown): InviteList {
   const outstandingLimit = count(o.outstandingLimit);
   if (remaining !== undefined) out.remaining = remaining;
   if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
+  if (o.partyWorld === true) out.partyWorld = true;
   return out;
 }
 
@@ -182,6 +184,11 @@ export function parseInviteList(raw: unknown): InviteList {
 function parseWorldRef(raw: unknown): WorldRef {
   const o = obj(raw);
   return { id: str(o.id), ownerId: str(o.ownerId), ownerName: str(o.ownerName).slice(0, 128), members: count(o.members) ?? 0, ownerHere: o.ownerHere === true, party: o.party === true };
+}
+
+function parseLeaver(raw: unknown): WorldLeaver {
+  const o = obj(raw);
+  return { leftAt: count(o.leftAt) ?? 0, moveOutAt: count(o.moveOutAt) ?? 0, moveOutIn: count(o.moveOutIn) ?? 0, hasOwn: o.hasOwn === true };
 }
 
 export function parseWorld(raw: unknown): WorldView {
@@ -194,6 +201,7 @@ export function parseWorld(raw: unknown): WorldView {
     inParty: o.inParty === true,
     partyHome: o.partyHome === true,
     partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
+    partyCanOpen: o.partyCanOpen === true,
     ownWorld: o.ownWorld == null ? null : parseWorldRef(o.ownWorld),
     prompt: o.prompt === true,
     leaving: {
@@ -205,6 +213,9 @@ export function parseWorld(raw: unknown): WorldView {
       deedCost: count(l.deedCost) ?? 0,
     },
     moveOpensAt: count(o.moveOpensAt) ?? 0,
+    moveOpensIn: count(o.moveOpensIn) ?? 0,
+    leaver: o.leaver == null ? null : parseLeaver(o.leaver),
+    movedOutAt: count(o.movedOutAt) ?? 0,
   };
 }
 

@@ -4,7 +4,8 @@ import { MOVE_AREAS, moveBlocks, moveRefusal } from '../src/lib/world-moves.ts';
 import { worldCopy } from '../src/content/world-moves.ts';
 import { parseWorld, parseWorldMove } from '../src/lib/api/parse.ts';
 import { errorFromResponse } from '../src/lib/api/errors.ts';
-import { signInCopy } from '../src/content/connected.ts';
+import { inviteCopy, signInCopy } from '../src/content/connected.ts';
+import { parseInviteList } from '../src/lib/api/parse.ts';
 
 test('a move starts only from the village or the Commons, online, with nothing pending or on the road, a day after the last', () => {
   assert.deepEqual(MOVE_AREAS, ['village', 'commons']);
@@ -14,10 +15,12 @@ test('a move starts only from the village or the Commons, online, with nothing p
     assert.deepEqual(moveBlocks({ area, outgoing: 0, online: true, pending: false }), ['area'], area);
   }
   assert.deepEqual(moveBlocks({ area: 'home:2', outgoing: 2, online: false, pending: true }), ['offline', 'pending', 'area', 'mail']);
-  // One move a day: blocked until the server's opensAt, open from then on (0: never moved).
-  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensAt: 1000, now: 999 }), ['cooldown']);
-  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensAt: 1000, now: 1000 }), []);
-  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensAt: 0, now: 5 }), []);
+  // One move a day: blocked while seconds remain (counted on this device from
+  // the server's figure), and always after the server refused for it.
+  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensIn: 1 }), ['cooldown']);
+  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensIn: 0 }), []);
+  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensIn: 0, cooled: true }), ['cooldown']);
+  assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false }), []);
 });
 
 test('server refusals map to what the move screen says', () => {
@@ -32,11 +35,12 @@ test('server refusals map to what the move screen says', () => {
   assert.equal(moveRefusal('already-in-world'), 'here');
   assert.equal(moveRefusal('world-access-denied'), 'denied');
   assert.equal(moveRefusal('world-not-found'), 'denied');
+  assert.equal(moveRefusal('still-in-party'), 'denied');
   assert.equal(moveRefusal('internal'), 'failed');
 });
 
 test('the server’s world refusals reach the move screen as themselves, not as unknown', () => {
-  for (const code of ['mail-in-flight', 'not-at-safe-boundary', 'already-in-world', 'world-access-denied', 'world-not-found', 'no-party', 'move-cooldown', 'invalid-request']) {
+  for (const code of ['mail-in-flight', 'not-at-safe-boundary', 'already-in-world', 'world-access-denied', 'world-not-found', 'no-party', 'move-cooldown', 'invalid-request', 'still-in-party', 'party-closed', 'party-open-denied', 'party-world-invites']) {
     assert.equal(errorFromResponse(409, { error: { code } }).code, code);
   }
   assert.equal(moveRefusal(errorFromResponse(409, { error: { code: 'mail-in-flight' } }).code), 'mail');
@@ -77,6 +81,14 @@ test('world copy stays short, in voice, and off real-life apps', () => {
   assert.equal(worldCopy.opensIn(70 * 60), 'in about an hour');
   assert.equal(worldCopy.opensIn(23.6 * 3600), 'in about 24 hours');
   assert.equal(worldCopy.blockCooldown('in about 5 hours'), 'Travelers rest a day between worlds. The road opens again in about 5 hours.');
+  // Leaving a party: the warning, in round words, and what happens after.
+  assert.equal(worldCopy.within(3 * 86400), 'in 3 days');
+  assert.equal(worldCopy.within(5 * 3600), 'in about 5 hours');
+  assert.equal(worldCopy.within(0), 'when you next sign in');
+  assert.equal(worldCopy.leaver(worldCopy.within(3 * 86400)), 'You’ve left your party. Unless you rejoin it, you’ll be moved out of its world in 3 days.');
+  assert.match(worldCopy.againNoReturn, /can’t come back without a new invitation/);
+  assert.match(worldCopy.aloneThere, /only one/);
+  assert.match(worldCopy.aloneThere, /until tomorrow/);
 });
 
 test('the sign-in screen tells a party member they can come straight in, in short lines', () => {
@@ -85,7 +97,8 @@ test('the sign-in screen tells a party member they can come straight in, in shor
   }
   assert.match(signInCopy.partyWelcome, /party/i);
   assert.match(signInCopy.partyWelcome, /no invite code/i);
-  assert.match(signInCopy.inviteOnlyBody, /party/i);
+  assert.equal(signInCopy.inviteOnlyBody, 'Your Habitica hero is fine. To come in you need an invite code, or a party that already plays here.');
+  assert.ok(inviteCopy.partyWorld.length <= 160 && /party/.test(inviteCopy.partyWorld));
 });
 
 const view = {
@@ -94,20 +107,31 @@ const view = {
   inParty: true,
   partyHome: false,
   partyWorld: { id: 'w2', ownerId: '', ownerName: '', members: 2, ownerHere: false, party: true },
+  partyCanOpen: false,
   ownWorld: null,
   prompt: true,
   leaving: { gate: 4, last: true, outgoing: 1, incoming: 2, wardenTools: 1, deedCost: 15 },
   moveOpensAt: 1791402314,
+  moveOpensIn: 3600,
+  leaver: { leftAt: 1791000000, moveOutAt: 1791259200, moveOutIn: 200000, hasOwn: true },
+  movedOutAt: 0,
 };
 
 test('world views parse, with unknown or broken fields made safe', () => {
   assert.deepEqual(parseWorld(view), view);
-  const odd = parseWorld({ ...view, world: { id: 'w1', ownerId: 'o', ownerName: 'O', members: 1, ownerHere: 'yes' }, partyWorld: undefined, prompt: 'yes', leaving: { gate: -3, last: true, outgoing: -1, incoming: 1.5, wardenTools: -2 }, moveOpensAt: -4, extra: 1 });
+  const odd = parseWorld({ ...view, world: { id: 'w1', ownerId: 'o', ownerName: 'O', members: 1, ownerHere: 'yes' }, partyWorld: undefined, prompt: 'yes', leaving: { gate: -3, last: true, outgoing: -1, incoming: 1.5, wardenTools: -2 }, moveOpensAt: -4, moveOpensIn: 'soon', leaver: undefined, partyCanOpen: 'yes', extra: 1 });
   assert.equal(odd.partyWorld, null);
   assert.equal(odd.prompt, false);
   assert.equal(odd.world.ownerHere, false);
   assert.equal(odd.world.party, false);
   assert.equal(odd.moveOpensAt, 0);
+  assert.equal(odd.moveOpensIn, 0);
+  assert.equal(odd.leaver, null);
+  assert.equal(odd.partyCanOpen, false);
+  assert.deepEqual(parseWorld({ ...view, leaver: { leftAt: 'x', hasOwn: 1 } }).leaver, { leftAt: 0, moveOutAt: 0, moveOutIn: 0, hasOwn: false });
+  // The invite list says when you live in a party's world.
+  assert.equal(parseInviteList({ invites: [], partyWorld: true }).partyWorld, true);
+  assert.equal(parseInviteList({ invites: [], partyWorld: 'yes' }).partyWorld, undefined);
   assert.deepEqual(odd.leaving, { gate: -1, last: false, outgoing: 0, incoming: 0, wardenTools: 0, deedCost: 0 });
   assert.throws(() => parseWorld({ ...view, world: { id: 1 } }));
   assert.throws(() => parseWorld({ ...view, leaving: null }));

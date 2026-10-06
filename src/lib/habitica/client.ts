@@ -12,10 +12,11 @@ export const HABITICA_BASE_URL = 'https://habitica.com';
 /**
  * Minimal field projection for the character mapping (docs/habitica-foundations.md:
  * `?userFields=` returns a projection instead of the full document). Includes
- * costume gear and selected companions so imported profiles carry them.
+ * costume gear and selected companions so imported profiles carry them, and
+ * the party id, which signing in to a world tells the server to expect.
  */
 export const USER_FIELDS =
-  'stats,items.gear.equipped,items.gear.costume,items.pets,items.mounts,items.currentPet,items.currentMount,preferences,profile.name,flags.classSelected';
+  'stats,items.gear.equipped,items.gear.costume,items.pets,items.mounts,items.currentPet,items.currentMount,preferences,profile.name,flags.classSelected,party._id';
 
 export type HabiticaErrorKind =
   | 'auth'

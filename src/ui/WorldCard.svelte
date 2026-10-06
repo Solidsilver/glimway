@@ -9,10 +9,11 @@
   /**
    * The Menu's world settings: where you live, your party's world (the join
    * prompt, findable again here, or opening it when your party has none
-   * yet), and going back to a world you own. Reads need the session only,
-   * not the lease.
+   * yet and you may), going back to a world you own, and, when you've left
+   * the party whose world you live in, when you'll be moved out and "Leave
+   * now". Reads need the session only, not the lease.
    */
-  let { onMove }: { onMove: (target: WorldRef, home: boolean, view: WorldView) => void } = $props()
+  let { onMove, onLeave }: { onMove: (target: WorldRef, home: boolean, view: WorldView) => void; onLeave?: (view: WorldView) => void } = $props()
 
   let view = $state<WorldView | null>(null)
   let busy = $state(false)
@@ -51,6 +52,16 @@
   {#if view}
     <p class="lives"><Icon name="world" size={14} /> <span>{worldCopy.livesIn(worldCopy.place(view.world, view.partyHome), view.isOwner)}</span> <small>{view.isOwner ? worldCopy.members(view.world.members) : worldCopy.travelers(view.world.members, view.world.ownerName, view.world.ownerHere)}</small></p>
     {#if view.partyHome}<p class="tiny" data-testid="world-party-home">{worldCopy.partyHome}</p>{/if}
+    {#if view.leaver}
+      <div class="offer party" data-testid="world-leaver">
+        <span class="badge" aria-hidden="true"><Icon name="clock" size={14} /></span>
+        <span class="text">
+          {worldCopy.leaver(worldCopy.within(view.leaver.moveOutIn))}
+          <small>{worldCopy.leaverNote(view.leaver.hasOwn)}</small>
+        </span>
+        {#if onLeave}<button type="button" class="primary small" onclick={() => onLeave(view!)}>{worldCopy.leaveNow}</button>{/if}
+      </div>
+    {/if}
 
     {#if view.partyWorld}
       <div class="offer party" data-testid="world-party-offer">
@@ -61,14 +72,14 @@
         </span>
         <button type="button" class="primary small" onclick={() => onMove(view!.partyWorld!, false, view!)}>{worldCopy.join(view.partyWorld.members)}</button>
       </div>
-    {:else if view.inParty && !view.partyHome}
+    {:else if view.partyCanOpen}
       <div class="offer party" data-testid="world-party-missing">
         <span class="badge" aria-hidden="true"><Icon name="person" size={14} /></span>
         <span class="text">{worldCopy.partyMissing}</span>
         <button type="button" class="small" onclick={openPartyWorld} disabled={busy}>{worldCopy.partyOpen}</button>
       </div>
     {/if}
-    {#if view.ownWorld}
+    {#if view.ownWorld && !view.leaver}
       <div class="offer own" data-testid="world-own-offer">
         <span class="badge" aria-hidden="true"><Icon name="lantern" size={14} /></span>
         <span class="text">

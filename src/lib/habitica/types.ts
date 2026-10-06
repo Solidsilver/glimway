@@ -92,6 +92,11 @@ export interface HabiticaProfile {
   selectedPet?: string | null;
   /** items.currentMount — the selected mount, not merely an owned mount. */
   selectedMount?: string | null;
+  /**
+   * party._id — the Habitica party, when in one. Sent at sign-in so a party
+   * member can come in without a code (the server checks it with Habitica).
+   */
+  partyId?: string;
 }
 
 /**

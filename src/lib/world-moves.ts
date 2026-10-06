@@ -12,16 +12,17 @@ export const MOVE_AREAS: readonly string[] = ['village', 'commons']
  * - `pending`: an earlier request's answer is still unknown;
  * - `area`: not in the village or the Commons;
  * - `mail`: parcels you sent are still on the road (recall them first);
- * - `cooldown`: you moved less than a day ago (`opensAt`, unix seconds, is
- *   when the next move is allowed; 0 or past: now).
+ * - `cooldown`: you moved less than a day ago (`opensIn`: seconds left,
+ *   counted down on this device from the server's figure; `cooled`: the
+ *   server just refused for it, whatever this device's count says).
  */
 export type MoveBlock = 'offline' | 'pending' | 'area' | 'mail' | 'cooldown'
 
-export function moveBlocks(o: { area: string; outgoing: number; online: boolean; pending: boolean; opensAt?: number; now?: number }): MoveBlock[] {
+export function moveBlocks(o: { area: string; outgoing: number; online: boolean; pending: boolean; opensIn?: number; cooled?: boolean }): MoveBlock[] {
   const out: MoveBlock[] = []
   if (!o.online) out.push('offline')
   if (o.pending) out.push('pending')
-  if ((o.opensAt ?? 0) > (o.now ?? Date.now() / 1000)) out.push('cooldown')
+  if ((o.opensIn ?? 0) > 0 || o.cooled) out.push('cooldown')
   if (!MOVE_AREAS.includes(o.area)) out.push('area')
   if (o.outgoing > 0) out.push('mail')
   return out
@@ -53,6 +54,7 @@ export function moveRefusal(code: string): 'area' | 'mail' | 'cooldown' | 'offli
       return 'here'
     case 'world-access-denied':
     case 'world-not-found':
+    case 'still-in-party':
       return 'denied'
     default:
       return 'failed'

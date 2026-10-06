@@ -49,14 +49,20 @@ they differ):
 - **Persistent worlds with player invites.** A first login creates a solo
   world or joins the inviter's; every member may have three codes
   outstanding and create five in all. Worlds never move players on their own.
-- **A party's world belongs to the party.** The first member of a Habitica
-  party to sign in makes it (no personal owner; one per party). Members sign
-  in with no code and no allowlist entry and land there; everyone else still
-  needs a code or the allowlist, and a code that names a world still wins.
-  Solo worlds stay their owners'. A settled member whose party has a world is
-  asked once ("Your party has a world of its own here. Join them?"), and the
-  Menu keeps the offer. Moves are at most one a day. Leaving a party never
-  moves or removes anyone (the CLI removes).
+- **A party's world belongs to the party, and is for that party only.** The
+  first operator-admitted member of a Habitica party to sign in makes it (no
+  personal owner; one per party); an account let in through a party never
+  opens another. Members sign in with no code and no allowlist entry and land
+  there; everyone else still needs a code or the allowlist. No invite code
+  leads into a party's world: friends outside the party are invited to a
+  personal world. Solo worlds stay their owners'. A settled member whose party
+  has a world is asked once ("Your party has a world of its own here. Join
+  them?"), and the Menu keeps the offer. Moves are at most one a day. Someone
+  who leaves the party whose world they live in is warned at sign-in, may
+  leave at once, and is moved to a world of their own at the first sign-in
+  after three days, unless they rejoin. The operator can list parties, close
+  or reopen one, adopt an older linked world as its party's world, and turn
+  party admission off.
 - **Moving takes only what's yours.** This replaces the move rules under
   "Worlds" below: the homestead does **not** move. You keep your character,
   story, embers, pack and personal chest; your deed membership ends as
@@ -108,7 +114,8 @@ Revision 2 incorporated the first review. Main changes from revision 1:
   server-owned balances, with a field-by-field migration rule, save revisions,
   conditional writes, and an offline policy.
 - Worlds are persistent Fingersnap worlds with explicit membership, optionally
-  linked to a Habitica party. Leaving a party no longer moves anyone's home.
+  linked to a Habitica party. Leaving a party moves no one at once (a party's
+  world moves a leaver out after three days).
 - Generated regions pin their generator version, so generator updates never
   reshape existing land. Personal chest claims and respawn cycles have their
   own schema.
