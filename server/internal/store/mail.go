@@ -76,6 +76,12 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 			if n != 1 {
 				return false, fmt.Errorf("mail instance unavailable")
 			}
+			if kind == "instance" {
+				// The tool's fittings come back with it: so does their audit.
+				if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) SELECT ?,'fitted:'||item_def,1,0,?,?,? FROM item_instances WHERE location='fitted' AND owner=? ORDER BY item_def,id", sender, map[bool]string{true: "mail-recall", false: "mail-return"}[reason == "recalled"], id, now, instance); err != nil {
+					return false, err
+				}
+			}
 		}
 	default:
 		return false, fmt.Errorf("invalid mail asset")

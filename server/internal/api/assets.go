@@ -357,6 +357,9 @@ func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.HabiticaID}, to.instancePlace()); err != nil {
 			return moved{}, err
 		}
+		if err := fittedLedger(ctx, tx, s.HabiticaID, v.Instance, -1, reason, ref, now); err != nil {
+			return moved{}, err
+		}
 		return moved{Makers: []makerQty{}, IDs: []string{v.Instance}}, currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.ID), -1, reason, ref, now)
 	default:
 		ids, err := decorationIDs(ctx, tx, pack(s.HabiticaID), v.ID, v.Qty)
@@ -387,6 +390,9 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 			return fail(409, "item-not-available")
 		}
 		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.HabiticaID}); err != nil {
+			return err
+		}
+		if err := fittedLedger(ctx, tx, s.HabiticaID, got.IDs[0], 1, reason, ref, now); err != nil {
 			return err
 		}
 		return currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.ID), 1, reason, ref, now)

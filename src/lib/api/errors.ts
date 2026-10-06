@@ -167,6 +167,7 @@ export const SERVER_ERROR_CODES = [
   'not-for-the-off-hand',
   'pickup-not-found',
   'already-picked-up',
+  'too-weak',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
