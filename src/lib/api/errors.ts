@@ -167,6 +167,12 @@ export const SERVER_ERROR_CODES = [
   'not-for-the-off-hand',
   'pickup-not-found',
   'already-picked-up',
+  // village repairs and returning keepsakes (docs/items/crafting-and-repair.md)
+  'repair-not-found',
+  'repair-not-open',
+  'already-mended',
+  'well-rope-broken',
+  'wrong-recipient',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

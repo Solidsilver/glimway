@@ -36,6 +36,8 @@ import { commonsAnim, commonsDataUrl } from '../commons-pass'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { presence } from '../presence'
+import { itemsFor } from '../items'
+import { keepsakeAsk } from '../keepsakes'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
 import { openBoard } from './village-life'
 import { costPhrase, WORKSHOP_TIER } from '../../lib/village'
@@ -890,8 +892,18 @@ export class HomesteadLayer implements InteractionProvider {
 
   private say(d: Dialogue): void {
     uiState.dialogueOpen = true
+    // Carrying Hollis's fox adds the quiet line (give it back / not yet).
+    let lines = d.lines
+    let choices = d.choices
+    if (d.speaker === SILAS.name) {
+      const ask = keepsakeAsk('silas', this.deps.session.state.flags, itemsFor(this.deps.session).view?.stacks.map((s) => s.itemDef) ?? [])
+      if (ask) {
+        lines = [...lines, ask.line]
+        choices = [...(choices ?? []), ...ask.choices]
+      }
+    }
     sfx('open')
-    bus.emit(EV.dialogue, { id: 'home', speaker: d.speaker, lines: d.lines, choices: d.choices })
+    bus.emit(EV.dialogue, { id: 'home', speaker: d.speaker, lines, choices })
   }
 
   /** Who stands at Silas's table right now (presence, this world), but you. */

@@ -515,6 +515,8 @@
       "name": "Beeswax Candle",
       "tab": "keepsakes",
       "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "bett",
       "blurb": "Never lit, saved for a birthday. The Wilds kept it a long while. Now they've handed it back."
     },
     {
@@ -529,6 +531,8 @@
       "name": "Stamped Road-Nails",
       "tab": "keepsakes",
       "kind": "keepsake",
+      "bound": true,
+      "belongsTo": "nan",
       "blurb": "Eleven iron nails, each stamped with the wheel and wave. Lantern-post nails. Eleven exactly."
     },
     {
