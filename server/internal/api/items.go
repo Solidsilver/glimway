@@ -368,7 +368,9 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=? WHERE id=?", v.Condition, utcDay(now), v.ID); err != nil {
 			return out, err
 		}
-		// One draw is one bucket: a full stave bucket of well water.
+	}
+	// One draw is one bucket: a full stave bucket of well water.
+	if action == "draw" {
 		if err = itemChange(ctx, tx, s, "water", 1, "draw", v.ID, now); err != nil {
 			return out, err
 		}
@@ -1172,11 +1174,6 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 
 // ------------------------------------------------------------ gathering & planting
 
-// gatherAreas: where the woods can be worked (docs/items/crafting-and-repair.md,
-// "Gathering"): the Tangle and the Whitequiet (both "wilds" on the server),
-// the woods, and your own homestead land.
-var gatherAreas = []string{"wilds", "woodland"}
-
 func gatherCaps(action string) (visit, day int) {
 	c := content.GatheringRules.Caps
 	switch action {
@@ -1236,6 +1233,23 @@ func homeTarget(k byte, target, action string, lit bool) bool {
 	return target == "stump" && (k == land.Stump || k == land.Tree && !lit)
 }
 
+// gatherReach: how far from a piece's foot you can work it, in px. The
+// client prompts within 36 px and stops a swing past 46 (REACH and LEAVE
+// in src/game/entities/gathering.ts), so the server never refuses a swing
+// the client let you make.
+const gatherReach = 48
+
+// nearPiece measures as the client does: from a little above the hero's
+// feet to the foot of the piece's tile (where its art stands).
+func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
+	if s.State.Area != area {
+		return false
+	}
+	dx := s.State.Position.X - float64(tx*wildsTileSize+wildsTileSize/2)
+	dy := s.State.Position.Y - 8 - float64((ty+1)*wildsTileSize)
+	return dx*dx+dy*dy <= gatherReach*gatherReach
+}
+
 // gather: one chop, break or dig (docs/items/crafting-and-repair.md,
 // "Gathering"). Trees are client scenery: the server checks the tool, the
 // area, the caps and rolls the yields, not the individual tree, except on
@@ -1255,12 +1269,16 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	if len(req.VisitID) > 64 {
 		return fail(400, "invalid-visit")
 	}
-	// Where the player is, from the progress this mutation carried.
+	// Where the player is, from the progress this mutation carried, and
+	// whether that place has such a piece at all.
 	area := s.State.Area
+	if !content.GatheringOffered(area, req.Target) {
+		return fail(409, "cannot-gather-here")
+	}
 	var home *homeView
 	var tile [2]int
 	lit := false
-	if !slices.Contains(gatherAreas, area) {
+	if rules.HomeGate(area) >= 0 {
 		var err error
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return err
@@ -1269,7 +1287,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 			return fail(400, "tile-required")
 		}
 		tile = *req.Tile
-		if !nearTile(s, area, tile[0], tile[1], 3) {
+		if !nearPiece(s, area, tile[0], tile[1]) {
 			return fail(409, "too-far-away")
 		}
 		lit = land.Lit(connectedLights(placedItems(*home), ""), tile[0], tile[1])
@@ -1380,25 +1398,36 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 	return err
 }
 
-// plantBlocked: ground a plant can't stand on (or wander onto): anything
-// but open grass, the home site and gate path, placed pieces, and the
-// tiles in `taken` (other plants).
-func plantBlocked(h homeView, g ground, taken map[[2]int]bool, x, y int) bool {
-	if g.land.Effective(g.cleared, x, y) != land.Grass || taken[[2]int{x, y}] {
-		return true
-	}
-	here := rect{x, y, 1, 1}
-	for _, v := range content.HomeRules.OutdoorReserved {
-		if here.overlaps(rect{v.X, v.Y, v.W, v.H}) {
-			return true
+// plantGround: the tiles a plant can stand on (or wander onto): open
+// grass, off the home site and gate path, clear of placed pieces. Worked
+// out once per read of the land.
+func plantGround(h homeView) map[[2]int]bool {
+	g := groundOf(h)
+	blocked := map[[2]int]bool{}
+	mark := func(r rect) {
+		for y := r.y; y < r.y+r.h; y++ {
+			for x := r.x; x < r.x+r.w; x++ {
+				blocked[[2]int{x, y}] = true
+			}
 		}
+	}
+	for _, v := range content.HomeRules.OutdoorReserved {
+		mark(rect{v.X, v.Y, v.W, v.H})
 	}
 	for _, v := range placedItems(h) {
-		if r, ok := placedRect(v); ok && *v.Scene == "outdoor" && here.overlaps(r) {
-			return true
+		if r, ok := placedRect(v); ok && *v.Scene == "outdoor" {
+			mark(r)
 		}
 	}
-	return false
+	open := map[[2]int]bool{}
+	for y := 0; y < g.land.Height; y++ {
+		for x := 0; x < g.land.Width; x++ {
+			if g.land.Effective(g.cleared, x, y) == land.Grass && !blocked[[2]int{x, y}] {
+				open[[2]int{x, y}] = true
+			}
+		}
+	}
+	return open
 }
 
 // plantWanderDays and plantWanderReach: an unlit plant takes at most one
@@ -1412,12 +1441,20 @@ const (
 // stays put; one outside it wanders a little each day (docs/items/
 // overview.md, "The drift and your things"). Worked out from the planting
 // and the day alone, so reading the land never writes it.
+//
+// The walk is replayed against today's land (its lamps, pieces and other
+// plants) over the last plantWanderDays days, so when the land changes
+// (a post set, a bench placed, a plant set nearby) or the window slides
+// on, a plant can jump to another spot within its reach at once rather
+// than a step. Harmless, and in keeping with the drift.
 func plantsOf(h homeView, raw []homePlantView, now int64) []homePlantView {
 	lights := connectedLights(placedItems(h), "")
-	g := groundOf(h)
-	taken := map[[2]int]bool{}
+	open := plantGround(h)
+	// How many plants stand on each tile (a new plant can go where an old
+	// one started out; counting keeps one from stepping back onto it).
+	taken := map[[2]int]int{}
 	for _, p := range raw {
-		taken[[2]int{p.X, p.Y}] = true
+		taken[[2]int{p.X, p.Y}]++
 	}
 	today := utcDay(now)
 	dirs := [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
@@ -1429,13 +1466,15 @@ func plantsOf(h homeView, raw []homePlantView, now int64) []homePlantView {
 				break
 			}
 			step := dirs[wilds.NewRng(wilds.Hash(p.ID, "plant-wander", int(d))).NextInt(len(dirs))]
-			nx, ny := x+step[0], y+step[1]
-			if abs(nx-p.X) > plantWanderReach || abs(ny-p.Y) > plantWanderReach || plantBlocked(h, g, taken, nx, ny) {
+			to := [2]int{x + step[0], y + step[1]}
+			if abs(to[0]-p.X) > plantWanderReach || abs(to[1]-p.Y) > plantWanderReach || !open[to] || taken[to] > 0 {
 				continue
 			}
-			delete(taken, [2]int{x, y})
-			taken[[2]int{nx, ny}] = true
-			x, y = nx, ny
+			if taken[[2]int{x, y}]--; taken[[2]int{x, y}] <= 0 {
+				delete(taken, [2]int{x, y})
+			}
+			taken[to]++
+			x, y = to[0], to[1]
 		}
 		p.X, p.Y, p.Lit = x, y, land.Lit(lights, x, y)
 		out = append(out, p)
@@ -1466,12 +1505,14 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req i
 	if !nearTile(s, s.State.Area, x, y, 2) {
 		return fail(409, "too-far-away")
 	}
-	taken := map[[2]int]bool{}
-	for _, p := range h.Plants {
-		taken[[2]int{p.X, p.Y}] = true
-	}
-	if plantBlocked(*h, groundOf(*h), taken, x, y) {
+	// A home tends so many plants, then the ground is full.
+	if len(h.Plants) >= content.GatheringRules.PlantsPerHome || !plantGround(*h)[[2]int{x, y}] {
 		return fail(409, "land-blocked")
+	}
+	for _, p := range h.Plants {
+		if p.X == x && p.Y == y {
+			return fail(409, "land-blocked")
+		}
 	}
 	if _, err = packTake(ctx, tx, s.HabiticaID, req.ItemDef, nil, 1, "plant", req.ItemDef, now); err != nil {
 		return err

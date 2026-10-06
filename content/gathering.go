@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // Gathering rules and yields (content/gathering.json; docs/items/crafting-and-repair.md).
@@ -35,11 +36,17 @@ type GatheringTarget struct {
 }
 
 type Gathering struct {
-	Caps        GatheringCaps              `json:"caps"`
-	SoftCapLine string                     `json:"softCapLine"`
-	Swings      map[string]int             `json:"swings"`
-	Targets     map[string]GatheringTarget `json:"targets"`
-	Seeds       []string                   `json:"seeds"`
+	Caps        GatheringCaps `json:"caps"`
+	SoftCapLine string        `json:"softCapLine"`
+	// PlantsPerHome: how many plants one home's land tends; past it the
+	// ground is full.
+	PlantsPerHome int `json:"plantsPerHome"`
+	// Areas: the targets each kind of place has ("wilds" for the Tangle and
+	// the Whitequiet, "woodland", "home" for any homestead's land).
+	Areas   map[string][]string        `json:"areas"`
+	Swings  map[string]int             `json:"swings"`
+	Targets map[string]GatheringTarget `json:"targets"`
+	Seeds   []string                   `json:"seeds"`
 }
 
 var GatheringRules Gathering
@@ -69,12 +76,36 @@ func LoadGathering() (Gathering, error) {
 			return g, fmt.Errorf("gathering target %s has empty action or yields", id)
 		}
 	}
+	if g.PlantsPerHome <= 0 {
+		return g, fmt.Errorf("plantsPerHome must be positive")
+	}
+	for _, area := range []string{"wilds", "woodland", "home"} {
+		if len(g.Areas[area]) == 0 {
+			return g, fmt.Errorf("gathering area %s offers nothing", area)
+		}
+	}
+	for area, targets := range g.Areas {
+		for _, t := range targets {
+			if _, ok := g.Targets[t]; !ok {
+				return g, fmt.Errorf("gathering area %s names unknown target %s", area, t)
+			}
+		}
+	}
 	return g, nil
 }
 
 func GatheringTargetFor(targetID string) (GatheringTarget, bool) {
 	t, ok := GatheringRules.Targets[targetID]
 	return t, ok
+}
+
+// GatheringOffered: whether a place (a progress area: "wilds", "woodland",
+// "home:<gate>") has pieces of a target at all. Anywhere else has none.
+func GatheringOffered(area, target string) bool {
+	if strings.HasPrefix(area, "home:") {
+		area = "home"
+	}
+	return slices.Contains(GatheringRules.Areas[area], target)
 }
 
 func IsGatheringSeed(itemDef string) bool {

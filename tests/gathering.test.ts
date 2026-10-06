@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, keepsWork, swingPlan, SWING_MS, visitIdFor, visitKey, visitWork, yieldLine } from '../src/lib/gathering.ts';
+import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, keepsWork, swingPlan, SWING_MS, visitIdFor, visitKey, visitWork, yieldLine, leftBehind, wearLine, gatheringOffered, EMPTY_YIELD_LINE, PLANTS_FULL_LINE } from '../src/lib/gathering.ts';
 import { itemDef } from '../src/lib/items.ts';
 import { chunkTerrain } from '../src/lib/wilds/index.ts';
 import { toWorldData, GATHER_OF } from '../src/lib/wilds/world-data.ts';
 import { buildArea } from '../src/game/worlds.ts';
 import { plantScenery, setLandSource } from '../src/game/homeland.ts';
-import { HOMESTEAD_DATA, plantable, plantTileNear } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, checkPlacement, plantable, plantTileNear } from '../src/lib/homestead.ts';
 import { LAND, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts';
 
 const epoch = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' } as const;
@@ -250,4 +250,48 @@ test('the yield in words: stuff counted as stuff, things as things', () => {
   assert.equal(yieldLine([{ itemDef: 'stone', qty: 3 }, { itemDef: 'drift-stone', qty: 1 }]), '3 stone and a little drift-stone');
   assert.equal(yieldLine([{ itemDef: 'timber', qty: 2 }, { itemDef: 'green-ash-haft', qty: 1 }]), '2 timber and a green-ash haft');
   assert.equal(yieldLine([{ itemDef: 'hazel-whip', qty: 1 }]), 'a hazel whip');
+});
+
+test('what a worked piece leaves: a stump, pebbles, or nothing where a stump was dug out', () => {
+  assert.equal(leftBehind('chop', 'stump'), 'stump');
+  assert.equal(leftBehind('break', 'open'), 'pebbles');
+  assert.equal(leftBehind('dig', 'open'), null);
+  // A rebuild replays a chopped-then-dug tree from the tree: open ground, nothing drawn.
+  assert.equal(leftBehind('chop', 'open'), null);
+});
+
+test('wear is told in a line: giving out, going blunt, a fitting wearing away', () => {
+  const base = { broke: false, state: 'worn', wornOut: [] as string[], returned: [] as string[], itemDef: 'bench-axe', usesLeft: 12 };
+  assert.equal(wearLine(base), null, 'an ordinary swing says nothing');
+  assert.equal(wearLine(undefined), null);
+  assert.equal(wearLine({ ...base, broke: true, usesLeft: 0 }), 'Your bench axe gave out.');
+  assert.match(wearLine({ ...base, broke: true, returned: ['loose-road-nail'] }) ?? '', /^Your bench axe gave out\. You kept the loose road-?nail\.$/i);
+  assert.match(wearLine({ ...base, itemDef: 'brack-felling-axe', state: 'blunt', usesLeft: 0 }) ?? '', /^The Brack felling axe has gone blunt\. Mend it/);
+  assert.match(wearLine({ ...base, itemDef: 'ada-garden-spade', state: 'blunt', usesLeft: 0 }) ?? '', /^Ada['’]s garden spade has gone blunt/);
+  assert.match(wearLine({ ...base, wornOut: ['waxed-cord'] }) ?? '', /^The waxed cord wore away\.$/);
+  for (const line of [EMPTY_YIELD_LINE, PLANTS_FULL_LINE, wearLine({ ...base, itemDef: 'brack-felling-axe', state: 'cracked' })!]) {
+    assert.ok(line.length <= 160, line);
+    assert.ok(!/\d/.test(line), `no numbers: ${line}`);
+  }
+});
+
+test('each place offers only the pieces the server allows there', () => {
+  for (const [cx, cy] of [[0, 0], [1, 1], [2, 0]] as const) {
+    for (const s of toWorldData(chunkTerrain(epoch, cx, cy), 'wilds').gathering ?? []) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
+  }
+  for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("wilds", s!.target), `wilds kind: ${s!.target}`);
+  for (const s of buildArea('woodland').gathering ?? []) assert.ok(gatheringOffered('woodland', s.target), `woodland: ${s.target}`);
+  for (const s of buildArea('home:0').gathering ?? []) assert.ok(gatheringOffered('home:0', s.target), `home: ${s.target}`);
+  assert.ok(!gatheringOffered('woodland', 'hollow-tree'));
+  assert.ok(!gatheringOffered('village', 'tree'));
+  assert.ok(GATHERING_DATA.plantsPerHome > 0);
+});
+
+test('nothing is set out on top of something growing', () => {
+  const s = HOMESTEAD_DATA.land.startLight;
+  const stool = { id: 'st', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null } as never;
+  const home = { tier: 0, items: [stool] };
+  const spot = [s.x - 3, s.y + 3] as const;
+  assert.equal(checkPlacement(home, stool, 'outdoor', spot[0], spot[1], 0), null);
+  assert.equal(checkPlacement({ ...home, plants: [{ x: spot[0], y: spot[1] }] }, stool, 'outdoor', spot[0], spot[1], 0), 'plant-in-the-way');
 });

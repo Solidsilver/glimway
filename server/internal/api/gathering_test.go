@@ -32,6 +32,43 @@ func gatherIn(s response, area string, tile [2]int, tool, action, target, visit 
 	return f
 }
 
+// packDelta: how each definition's count changed between two reads of the
+// pack (stacks, every maker together, and instances).
+func packDelta(before, after itemsView) map[string]int {
+	count := func(v itemsView) map[string]int {
+		n := map[string]int{}
+		for _, st := range v.Stacks {
+			n[st.ItemDef] += st.Qty
+		}
+		for _, in := range v.Instances {
+			n[in.ItemDef]++
+		}
+		return n
+	}
+	a, b := count(before), count(after)
+	out := map[string]int{}
+	for def, q := range b {
+		if q != a[def] {
+			out[def] = q - a[def]
+		}
+	}
+	for def, q := range a {
+		if _, ok := b[def]; !ok {
+			out[def] = -q
+		}
+	}
+	return out
+}
+
+// gatheredDelta is a gather's `gathered`, as a pack change.
+func gatheredDelta(g []stackView) map[string]int {
+	out := map[string]int{}
+	for _, st := range g {
+		out[st.ItemDef] += st.Qty
+	}
+	return out
+}
+
 // landTiles are a home's tiles of one kind, lit or not, in reading order.
 func landTiles(h homeView, kind byte, lit bool) [][2]int {
 	lights := connectedLights(placedItems(h), "")
@@ -89,8 +126,13 @@ func TestGatheringWearAndYields(t *testing.T) {
 	}
 	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "nothing", "v1"), 400)
 
-	// A tree in the Tangle: one use off the axe, timber 2–4.
+	// A tree in the Tangle: one use off the axe, timber 2–4, and nothing
+	// else in the pack changes (no water, no stray yields).
+	before := x.items("GET", "/api/items", nil, c, 200).Items
 	r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tree", "v1"), 200)
+	if got, want := packDelta(before, r.Result.Items), gatheredDelta(r.Result.Gathered); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("the pack changed by %v, the gather said %v", got, want)
+	}
 	if r.Result.Wear == nil || r.Result.Wear.UsesLeft != 29 {
 		t.Fatalf("wear %+v", r.Result.Wear)
 	}
@@ -99,9 +141,26 @@ func TestGatheringWearAndYields(t *testing.T) {
 	}
 	// The woods by the village give too.
 	pick := x.instance(s.HabiticaID, "bench-pick", -1, "")
+	before = x.items("GET", "/api/items", nil, c, 200).Items
 	r = x.op(c, &s, "gather", gatherIn(s, "woodland", here, pick, "break", "boulder", "w1"), 200)
 	if n := stackQty(r.Result.Items, "stone"); n < 2 || n > 4 {
 		t.Fatal("stone", n)
+	}
+	if got, want := packDelta(before, r.Result.Items), gatheredDelta(r.Result.Gathered); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("the pack changed by %v, the gather said %v", got, want)
+	}
+	// Each kind of place has its own pieces: no hives or lamp-stones in the
+	// woods, no ash in the Tangle, no willow at home.
+	spade := x.instance(s.HabiticaID, "bench-spade", -1, "")
+	for _, c2 := range []struct{ area, tool, action, target string }{
+		{"woodland", spade, "dig", "hollow-tree"},
+		{"woodland", pick, "break", "lamp-stone"},
+		{"woodland", axe, "chop", "iron-oak"},
+		{"wilds", axe, "chop", "ash"},
+	} {
+		if x.op(c, &s, "gather", gatherIn(s, c2.area, here, c2.tool, c2.action, c2.target, "w1"), 409).Error.Code != "cannot-gather-here" {
+			t.Fatal("offered", c2)
+		}
 	}
 
 	// An heirloom blunts at zero and then stops working.
@@ -134,7 +193,7 @@ func TestGatheringInstancedYieldsAndReplay(t *testing.T) {
 	// Ash now and then gives a green-ash haft: a fitting, so an instance.
 	hafts := 0
 	for i := 0; i < content.GatheringRules.Caps.Day.Chop && hafts == 0; i++ {
-		r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "ash", fmt.Sprintf("v%d", i/8)), 200)
+		r := x.op(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("v%d", i/8)), 200)
 		for _, id := range r.Result.Created {
 			if findInstance(r.Result.Items, id).ItemDef == "green-ash-haft" {
 				hafts++
@@ -220,14 +279,23 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 	if x.op(c, &s, "gather", gatherIn(s, area, litTree, pick, "break", "boulder", "h1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("broke a tree as a boulder")
 	}
-	far := gatherIn(s, area, litTree, axe, "chop", "tree", "h1")
-	far["progress"] = standAt(s, area, litTree[0]+6, litTree[1])
-	if x.op(c, &s, "gather", far, 409).Error.Code != "too-far-away" {
+	// Reach is measured as the client measures it: from just above the
+	// hero's feet to the foot of the piece. Straight south, the client
+	// prompts at 36 px and lets a swing finish at 46; the server takes both.
+	south := func(px int) map[string]any {
+		f := gatherIn(s, area, litTree, axe, "chop", "tree", "h1")
+		doc := s.State
+		doc.Area = area
+		doc.Position = rules.Position{X: float64(litTree[0]*16 + 8), Y: float64((litTree[1]+1)*16 + 8 + px)}
+		f["progress"] = doc
+		return f
+	}
+	if x.op(c, &s, "gather", south(52), 409).Error.Code != "too-far-away" {
 		t.Fatal("chopped from afar")
 	}
 
 	// Inside lamplight a felled tree stays a stump.
-	r := x.op(c, &s, "gather", gatherIn(s, area, litTree, axe, "chop", "tree", "h1"), 200)
+	r := x.op(c, &s, "gather", south(46), 200)
 	if r.Result.Land == nil || !r.Result.Land.Stump || r.Result.Land.Tile != litTree {
 		t.Fatalf("land %+v", r.Result.Land)
 	}
@@ -236,6 +304,10 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 	}
 	if x.op(c, &s, "gather", gatherIn(s, area, litTree, axe, "chop", "tree", "h1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("felled a stump")
+	}
+	// Reaching from the edge of the client's prompt works as well.
+	if x.op(c, &s, "gather", south(36), 409).Error.Code != "cannot-gather-here" {
+		t.Fatal("the stump is no tree, from any distance in reach")
 	}
 	// Digging the stump leaves open ground (and turncap spawn).
 	r = x.op(c, &s, "gather", gatherIn(s, area, litTree, spade, "dig", "stump", "h1"), 200)
@@ -373,4 +445,157 @@ func TestPlantingAtHome(t *testing.T) {
 	}
 	x.conserved(s.HabiticaID)
 	x.conserved("bob")
+}
+
+func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
+	x := newRig(t)
+	c, s, h := x.homePlayer("alice")
+	area := fmt.Sprintf("home:%d", h.Gate)
+	x.seedAssets(s.HabiticaID)
+	x.refresh(c, &s)
+	x.stack(s.HabiticaID, "wild-thyme", "", content.GatheringRules.PlantsPerHome+5)
+	plant := func(tile [2]int, status int) itemsResponse {
+		return x.op(c, &s, "plant", map[string]any{"itemDef": "wild-thyme", "tile": tile, "progress": standAt(s, area, tile[0], tile[1])}, status)
+	}
+	unique := func(h homeView) {
+		t.Helper()
+		seen := map[[2]int]bool{}
+		for _, p := range h.Plants {
+			if seen[[2]int{p.X, p.Y}] {
+				t.Fatal("two plants on one tile", h.Plants)
+			}
+			seen[[2]int{p.X, p.Y}] = true
+		}
+	}
+
+	// Nothing is set out on top of something growing.
+	lit := litSpots(h)[0]
+	plant(lit, 200)
+	stool := x.homeOp(c, &s, "buy", map[string]any{"itemDef": "wooden-stool"}, 200).Result.ItemID
+	if x.homeOp(c, &s, "place", map[string]any{"itemId": stool, "scene": "outdoor", "x": lit[0], "y": lit[1], "rotation": 0}, 409).Error.Code != "plant-in-the-way" {
+		t.Fatal("a stool on a sapling")
+	}
+
+	// Silas clearing a kept stump leaves no stump behind in the data.
+	axe := x.instance(s.HabiticaID, "bench-axe", -1, "")
+	tree := landTiles(h, land.Tree, true)[0]
+	x.op(c, &s, "gather", gatherIn(s, area, tree, axe, "chop", "tree", "h1"), 200)
+	x.homeOp(c, &s, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
+	if count(t, x.db, "SELECT count(*) FROM homestead_stumps WHERE x=? AND y=?", tree[0], tree[1]) != 0 {
+		t.Fatal("a cleared tile kept its stump row")
+	}
+
+	// A plant set where another one started out: they never share a tile.
+	h = x.home(c)
+	open := plantGround(h)
+	var start [2]int
+	for _, tl := range landTiles(h, land.Grass, false) {
+		if open[tl] && open[[2]int{tl[0] + 1, tl[1]}] && open[[2]int{tl[0] - 1, tl[1]}] && open[[2]int{tl[0], tl[1] + 1}] && open[[2]int{tl[0], tl[1] - 1}] {
+			start = tl
+			break
+		}
+	}
+	plant(start, 200)
+	for day := 0; day < 10; day++ {
+		x.now.Add(86400)
+		if h = x.home(c); !slices.ContainsFunc(h.Plants, func(p homePlantView) bool { return p.X == start[0] && p.Y == start[1] }) {
+			break
+		}
+	}
+	if slices.ContainsFunc(h.Plants, func(p homePlantView) bool { return p.X == start[0] && p.Y == start[1] }) {
+		t.Fatal("the thyme never stepped off")
+	}
+	plant(start, 200)
+	for day := 0; day < 15; day++ {
+		x.now.Add(86400)
+		unique(x.home(c))
+	}
+
+	// A home tends so many plants; past that the ground is full.
+	h = x.home(c)
+	open = plantGround(h)
+	taken := map[[2]int]bool{}
+	for _, p := range h.Plants {
+		taken[[2]int{p.X, p.Y}] = true
+	}
+	for y := 1; y < content.HomeRules.Land.Height-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; y++ {
+		for x2 := 1; x2 < content.HomeRules.Land.Width-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; x2 += 3 {
+			tl := [2]int{x2, y}
+			if !open[tl] || taken[tl] {
+				continue
+			}
+			plant(tl, 200)
+			taken[tl] = true
+			h.Plants = append(h.Plants, homePlantView{X: tl[0], Y: tl[1]})
+		}
+	}
+	h = x.home(c)
+	if len(h.Plants) != content.GatheringRules.PlantsPerHome {
+		t.Fatal("plants", len(h.Plants))
+	}
+	unique(h)
+	for tl := range open {
+		if !slices.ContainsFunc(h.Plants, func(p homePlantView) bool { return p.X == tl[0] && p.Y == tl[1] }) {
+			if plant(tl, 409).Error.Code != "land-blocked" {
+				t.Fatal("planted past the cap")
+			}
+			break
+		}
+	}
+	x.conserved(s.HabiticaID)
+}
+
+// A plant set where another one started out: the walk never brings the
+// first back onto it (plantsOf counts who stands where).
+func TestPlantsNeverShareATile(t *testing.T) {
+	h := homeView{Gate: 0, LandSeed: 1234, Items: []homeInstance{}}
+	open := plantGround(h)
+	var r [2]int
+	for _, tl := range landTiles(h, land.Grass, false) {
+		if open[tl] && open[[2]int{tl[0] + 1, tl[1]}] && open[[2]int{tl[0] - 1, tl[1]}] && open[[2]int{tl[0], tl[1] + 1}] && open[[2]int{tl[0], tl[1] - 1}] {
+			r = tl
+			break
+		}
+	}
+	const day0 = int64(20000)
+	at := func(day int64) int64 { return day*86400 + 3600 }
+	// A first plant whose walk leaves its tile on day `off` and comes back on day `back`.
+	var q homePlantView
+	var off, back int64
+	for i := 0; i < 500 && back == 0; i++ {
+		q = homePlantView{ID: fmt.Sprintf("q%d", i), ItemDef: "wild-thyme", X: r[0], Y: r[1], PlantedDay: day0}
+		off = 0
+		for d := day0 + 1; d <= day0+20; d++ {
+			p := plantsOf(h, []homePlantView{q}, at(d))[0]
+			here := [2]int{p.X, p.Y} == r
+			if !here && off == 0 {
+				off = d
+			}
+			if here && off != 0 {
+				back = d
+				break
+			}
+		}
+	}
+	if back == 0 {
+		t.Fatal("no walk that comes back")
+	}
+	// The second goes in on the day the first stepped off, and (alone)
+	// would still be standing there the day the first comes back.
+	var p homePlantView
+	for i := 0; i < 500 && p.ID == ""; i++ {
+		c := homePlantView{ID: fmt.Sprintf("p%d", i), ItemDef: "wild-thyme", X: r[0], Y: r[1], PlantedDay: off}
+		if got := plantsOf(h, []homePlantView{c}, at(back))[0]; got.X == r[0] && got.Y == r[1] {
+			p = c
+		}
+	}
+	if p.ID == "" {
+		t.Fatal("no second plant that stays")
+	}
+	for d := off; d <= back+5; d++ {
+		got := plantsOf(h, []homePlantView{q, p}, at(d))
+		if got[0].X == got[1].X && got[0].Y == got[1].Y {
+			t.Fatalf("day %d: two plants on %d,%d", d-day0, got[0].X, got[0].Y)
+		}
+	}
 }

@@ -18,7 +18,7 @@
  * stump is still there. Planting draws the new sapling where it went in.
  */
 import type Phaser from 'phaser'
-import { GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, swingPlan, visitIdFor, visitWork, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
+import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
 import { parseHomeArea } from '../../lib/homestead'
 import { itemDef } from '../../lib/items'
 import { itemErrorText, itemsFor } from '../items'
@@ -47,6 +47,8 @@ export interface GatheringDeps {
   fx: Effects
   reducedMotion: boolean
   hero: () => Hero
+  /** Write the hero's spot into the save now (the server measures reach from it). */
+  notePosition: () => void
   /** A broken or dug piece leaves open ground: the scene opens the tile. */
   clearSolid: (tx: number, ty: number) => void
   /** The sprites standing for a tile (the piece's own art). */
@@ -60,9 +62,6 @@ const REACH = 36
 const LEAVE = REACH + 10
 /** At the soft cap, pieces this near shuffle out of reach. */
 const SHUFFLE_RADIUS = 6 * TILE
-
-/** What a worked piece leaves behind, in the Tangle's atlas. */
-const LEFT_AT: Partial<Record<string, string>> = { chop: 'stump-0', break: 'pebbles-0' }
 
 export class Gathering {
   /** The build of the area that's up now (an answer may outlive the build that asked). */
@@ -160,6 +159,14 @@ export class Gathering {
     return { target: this.current.spot.target, tx: this.current.spot.tx, ty: this.current.spot.ty, label: this.current.label }
   }
 
+  /** Read-only: what this build has drawn where pieces were worked (playtests). */
+  leftView(): { tx: number; ty: number; frame: string }[] {
+    return [...this.drawn.entries()].map(([k, imgs]) => {
+      const [tx, ty] = k.split(',').map(Number)
+      return { tx, ty, frame: String(imgs[0]?.frame.name ?? '') }
+    })
+  }
+
   /** The last gather's outcome (playtests: what the server said). */
   lastOutcome(): string {
     return this.last
@@ -206,6 +213,7 @@ export class Gathering {
         }
       }
       const home = parseHomeArea(session.state.area) !== null
+      this.deps.notePosition()
       const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, home ? [spot.tx, spot.ty] : undefined)
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
@@ -278,9 +286,11 @@ export class Gathering {
   /** What the wood gave, said and shown; a change kept at home is read again. */
   private paid(result: ItemsActionResponse['result']): void {
     const gathered = result.gathered ?? []
-    if (gathered.length > 0) {
-      bus.emit(EV.toast, { text: `Found: ${yieldLine(gathered)}.`, icon: 'sparkle', art: `icon-${gathered[0].itemDef}` })
-    }
+    if (gathered.length > 0) bus.emit(EV.toast, { text: `Found: ${yieldLine(gathered)}.`, icon: 'sparkle', art: `icon-${gathered[0].itemDef}` })
+    else bus.emit(EV.toast, { text: EMPTY_YIELD_LINE, icon: 'sparkle' })
+    // What the work did to the tool, when it's worth a word.
+    const worn = wearLine(result.wear)
+    if (worn) bus.emit(EV.toast, { text: worn, icon: 'bag' })
     // Inside your lamplight the server kept the change: read the home again
     // so the next build of the land (a reload, a later visit) shows it.
     const gate = parseHomeArea(this.deps.session.state.area)
@@ -304,11 +314,12 @@ export class Gathering {
     this.deps.fell(spot.tx, spot.ty)
     const atlas = spot.art?.key ?? lookAtlasKey('tangle', null)
     const action = gatheringTarget(spot.target)?.action ?? 'chop'
-    const leftFrame = LEFT_AT[now === 'stump' ? 'chop' : action]
+    const left = leftBehind(action, now)
+    const leftFrame = left ? `${left}-0` : null
     if (leftFrame && ensureSceneryArt(this.scene, atlas) && this.scene.textures.get(atlas).has(leftFrame)) {
-      const flat = leftFrame.startsWith('pebbles')
-      const left = this.scene.add.image(x, y, atlas, leftFrame).setOrigin(0.5, 1).setDepth(flat ? -5 : y)
-      this.drawn.set(`${spot.tx},${spot.ty}`, [left])
+      const flat = left === 'pebbles'
+      const img = this.scene.add.image(x, y, atlas, leftFrame).setOrigin(0.5, 1).setDepth(flat ? -5 : y)
+      this.drawn.set(`${spot.tx},${spot.ty}`, [img])
     }
     const i = this.spots.indexOf(spot)
     if (now === 'stump') {

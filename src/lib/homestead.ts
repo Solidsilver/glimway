@@ -183,7 +183,7 @@ export interface HomeInstance {
   name?: string | null;
 }
 
-export type PlacementProblem = 'invalid-placement' | 'tier-required' | 'out-of-bounds' | 'placement-overlap' | 'land-blocked' | 'unlit' | 'post-holds-land' | 'name-required';
+export type PlacementProblem = 'invalid-placement' | 'tier-required' | 'out-of-bounds' | 'placement-overlap' | 'plant-in-the-way' | 'land-blocked' | 'unlit' | 'post-holds-land' | 'name-required';
 
 const overlaps = (a: HomeRect, b: HomeRect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
@@ -231,7 +231,7 @@ export function everythingLit(items: readonly HomeInstance[], data: HomesteadDat
  * the land outdoors (omitted: only the grid rules are checked).
  */
 export function checkPlacement(
-  home: { tier: number; items: readonly HomeInstance[] },
+  home: { tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
   instance: HomeInstance,
   scene: HomeScene,
   x: number,
@@ -254,6 +254,8 @@ export function checkPlacement(
     const r = footprintRect(other, data);
     if (r && overlaps(here, r)) return 'placement-overlap';
   }
+  // Nothing goes down on top of something growing.
+  if (scene === 'outdoor' && (home.plants ?? []).some((p) => overlaps(here, { x: p.x, y: p.y, w: 1, h: 1 }))) return 'plant-in-the-way';
   if (scene === 'outdoor' && ground) {
     for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!buildableKind(effectiveKind(ground.land, ground.cleared, tx, ty))) return 'land-blocked';
   }

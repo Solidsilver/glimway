@@ -10,7 +10,7 @@
   import { assetKind, conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { Asset, InstanceView } from '../lib/api/types'
   import { INVENTORY_TABS, inventoryCopy } from '../content/inventory'
-  import { isPlantableSeed } from '../lib/gathering'
+  import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
   import { parseHomeArea, plantTileNear } from '../lib/homestead'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
@@ -170,6 +170,12 @@
   function plantIt(e: InventoryEntry): void {
     const gate = parseHomeArea(session.state.area)
     const mine = homes.mine
+    // Where the hero stands now (the server measures reach from the save).
+    bus.emit(EV.notePosition)
+    if (mine && (mine.plants?.length ?? 0) >= GATHERING_DATA.plantsPerHome) {
+      message = { text: PLANTS_FULL_LINE, kind: 'error' }
+      return
+    }
     const tile = mine ? plantTileNear(mine, session.state.position) : null
     if (gate === null || !tile) {
       message = { text: itemErrorText('land-blocked'), kind: 'error' }

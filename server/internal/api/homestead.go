@@ -35,6 +35,7 @@ type homeInstance struct {
 	Rotation *int    `json:"rotation"`
 	Name     *string `json:"name"`
 }
+
 // homePlantView: a seed or sapling on the land, where it stands today
 // (plantsOf); PlantedDay is the UTC day it went in.
 type homePlantView struct {
@@ -989,6 +990,12 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	if r.Scene != "outdoor" {
 		return nil
 	}
+	// Nothing goes down on top of something growing.
+	for _, p := range h.Plants {
+		if here.overlaps(rect{p.X, p.Y, 1, 1}) {
+			return fail(409, "plant-in-the-way")
+		}
+	}
 	g := groundOf(h)
 	for y := here.y; y < here.y+here.h; y++ {
 		for x := here.x; x < here.x+here.w; x++ {
@@ -1087,6 +1094,10 @@ func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, r
 		return fail(409, "unlit")
 	}
 	if err := debitEmbers(ctx, tx, s, content.HomeRules.ClearTileEmbers, "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
+		return err
+	}
+	// Cleared ground has no stump: drop a kept one with it.
+	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_stumps WHERE homestead_id=? AND x=? AND y=?", h.ID, x, y); err != nil {
 		return err
 	}
 	_, err := tx.ExecContext(ctx, "INSERT INTO homestead_cleared VALUES(?,?,?)", h.ID, x, y)

@@ -1475,7 +1475,7 @@ export class HomesteadLayer implements InteractionProvider {
     const g = this.ground()
     for (let y = 0; y <= p.rows - h; y++)
       for (let x = 0; x <= p.cols - w; x++) {
-        if (checkPlacement({ tier: Math.max(1, home.tier), items: home.items }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g)) continue
+        if (checkPlacement({ tier: Math.max(1, home.tier), items: home.items, plants: home.plants }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g)) continue
         const d = Math.hypot(x - cx, (y - cy) * 1.3)
         if (d < bestD) {
           bestD = d

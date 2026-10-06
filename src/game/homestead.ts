@@ -132,6 +132,8 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'That one doesn’t belong there.'
     case 'land-blocked':
       return 'A tree or a rock is in the way. Build around it, or have Silas clear it.'
+    case 'plant-in-the-way':
+      return 'Something’s growing there.'
     case 'unlit':
       return 'That ground is past your lamplight. Set a lantern post nearer to hold it.'
     case 'post-holds-land':

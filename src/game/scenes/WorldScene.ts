@@ -274,6 +274,7 @@ export class WorldScene extends Phaser.Scene {
       fx: this.fx,
       reducedMotion: this.reducedMotion,
       hero: () => this.hero,
+      notePosition: () => this.notePosition(),
       clearSolid: (tx, ty) => this.clearSolidTile(tx, ty),
       spritesAt: (tx, ty) => this.scenerySprites.get(`${tx},${ty}`) ?? [],
       fell: (tx, ty) => {
@@ -374,10 +375,12 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EV.profileChanged, this.onProfileChanged, this)
     bus.on(EV.worldRefresh, this.onWorldRefresh, this)
     bus.on(EV.relocate, this.onRelocate, this)
+    bus.on(EV.notePosition, this.notePosition, this)
     this.events.once('shutdown', () => {
       bus.off(EV.profileChanged, this.onProfileChanged, this)
       bus.off(EV.worldRefresh, this.onWorldRefresh, this)
       bus.off(EV.relocate, this.onRelocate, this)
+      bus.off(EV.notePosition, this.notePosition, this)
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -476,6 +479,8 @@ export class WorldScene extends Phaser.Scene {
       w.__fsDevDodge = (dx: number, dy: number) => this.hero.tryDodge(new Phaser.Math.Vector2(dx, dy))
       // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
       w.__fsDevAttack = () => this.hero.tryAttack()
+      // Set the area's creatures aside (frozen, off the map) for a quiet chunk.
+      w.__fsDevParkCreatures = () => this.enemies.parkAll()
       w.__fsDevStrike = (n: number, type?: EnemyType) => {
         for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
       }
@@ -536,17 +541,25 @@ export class WorldScene extends Phaser.Scene {
     ;(window as unknown as { __fsWilds?: () => ReturnType<WildsEntities['debug']> }).__fsWilds = () => this.wilds?.debug() ?? null
     // Read-only: the workable pieces of this area, and (at home) the lamps
     // whose light holds the ground (playtests: the drift rule).
-    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; last: string; lights: { x: number; y: number; radius: number }[] } | null }).__fsGather = () => {
+    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; left: { tx: number; ty: number; frame: string }[]; last: string; lights: { x: number; y: number; radius: number }[] } | null }).__fsGather = () => {
       if (!this.gathering) return null
       const lights = this.myLights()
       return {
         area: this.world.areaId,
         spots: this.gathering.spotsView().map((s) => ({ ...s, lit: isLandLit(lights, s.tx, s.ty) })),
         prompt: this.gathering.prompted(),
+        left: this.gathering.leftView(),
         last: this.gathering.lastOutcome(),
         lights
       }
     }
+    // Read-only: whether any collision body covers a tile (playtests: a
+    // broken rock leaves no invisible wall).
+    ;(window as unknown as { __fsSolidAt?: (tx: number, ty: number) => boolean }).__fsSolidAt = (tx, ty) =>
+      this.solidGroup.getChildren().some((c) => {
+        const b = (c as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.StaticBody | null
+        return !!b && b.x < (tx + 1) * TILE && b.right > tx * TILE && b.y < (ty + 1) * TILE && b.bottom > ty * TILE
+      })
     // Sync-safety snapshot for the UI gate (read-only).
     ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
       const px = this.hero.sprite.x
@@ -756,14 +769,24 @@ export class WorldScene extends Phaser.Scene {
     // In a cottage the save keeps the doorstep (set on the way in). Nor while
     // a move began this frame (an exit, above): the save already names the
     // destination, and this spot belongs to the area being left.
-    if ((this.positionTimer > 1 || this.devSampleEveryFrame) && !this.room && !this.transitioning) {
+    if (this.positionTimer > 1 || this.devSampleEveryFrame) {
       this.positionTimer = 0
-      // Wilds: saved progress is region-wide pixels (one convention for
-      // saves, reloads, claims and defeat reports).
-      this.session.state.position = this.wildsEntryNow()
-        ? this.wildsPosition(Math.round(this.hero.sprite.x), Math.round(this.hero.sprite.y))
-        : { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+      this.notePosition()
     }
+  }
+
+  /**
+   * Write where the hero stands into the save, now (the frame loop does it
+   * once a second; a gather or a planting does it first, so the server
+   * measures reach from where the hero really is).
+   */
+  private notePosition(): void {
+    if (this.room || this.transitioning) return
+    // Wilds: saved progress is region-wide pixels (one convention for
+    // saves, reloads, claims and defeat reports).
+    this.session.state.position = this.wildsEntryNow()
+      ? this.wildsPosition(Math.round(this.hero.sprite.x), Math.round(this.hero.sprite.y))
+      : { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
   }
 
   /** Tell the presence feed where the hero is (it paces the wire itself). */
@@ -1325,6 +1348,12 @@ export class WorldScene extends Phaser.Scene {
    * prop body there goes with it. Scenery-only: regrows on the next visit.
    */
   private clearSolidTile(tx: number, ty: number): void {
+    // A prop's own body first (the woods' rocks are props on open ground).
+    for (const body of this.solidProps.get(`${tx},${ty}`) ?? []) {
+      this.solidGroup.remove(body)
+      body.destroy()
+    }
+    this.solidProps.delete(`${tx},${ty}`)
     if (!this.world.solid[ty]?.[tx]) return
     this.world.solid[ty][tx] = false
     const i = this.solidRuns.findIndex((r) => r.y === ty && tx >= r.x0 && tx <= r.x1)
@@ -1345,11 +1374,6 @@ export class WorldScene extends Phaser.Scene {
         this.solidRuns.push({ x0, x1, y: ty, body })
       }
     }
-    for (const body of this.solidProps.get(`${tx},${ty}`) ?? []) {
-      this.solidGroup.remove(body)
-      body.destroy()
-    }
-    this.solidProps.delete(`${tx},${ty}`)
   }
 
   /**

@@ -50,6 +50,8 @@ export const EV = {
   turning: 'game:turning',
   /** Something was planted on the land you stand on: { plant } (a HomePlantView). */
   planted: 'game:planted',
+  /** Write the hero's spot into the save now (before a mutation that measures reach). */
+  notePosition: 'game:note-position',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',

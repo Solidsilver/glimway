@@ -22,6 +22,7 @@ type GatherView = {
   area: string
   spots: { target: string; tx: number; ty: number; lit: boolean }[]
   prompt: { target: string; tx: number; ty: number; label: string } | null
+  left: { tx: number; ty: number; frame: string }[]
   last: string
   lights: { x: number; y: number; radius: number }[]
 }
@@ -102,6 +103,10 @@ async function candidates(page: Page, targets: string[], lit?: boolean, strict =
   }, [targets, lit, strict] as const)
 }
 
+/** Set the area's creatures aside (dev hook): frozen, off the map, back on the next build. */
+const parkCreatures = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => number }).__fsDevParkCreatures?.() ?? 0)
+
 /** Candidates nearest the hero first: small moves, fewer merges in flight. */
 async function candidatesNear(page: Page, targets: string[], lit?: boolean, strict = true): Promise<Candidate[]> {
   const cands = await candidates(page, targets, lit, strict)
@@ -155,8 +160,19 @@ async function promptOn(page: Page, spot: { tx: number; ty: number }, prompt: Re
  */
 async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { lit?: boolean; says?: RegExp; at?: { tx: number; ty: number } } = {}): Promise<Spot & { from: { x: number; y: number } }> {
   const tried: string[] = []
+  // A quiet chunk: the creatures set aside (a wisp near every tree empties
+  // the candidate list, and its knockback moves the hero off the prompt).
+  await parkCreatures(page)
   for (const strict of [true, false]) {
-    const cands = (await candidatesNear(page, targets, opts.lit, strict)).filter((c) => !opts.at || (c.spot.tx === opts.at.tx && c.spot.ty === opts.at.ty))
+    // The list can be empty for a moment (a rebuild, a creature on its way
+    // out): look again for a few seconds before giving up on this round.
+    let cands: Candidate[] = []
+    for (let look = 0; look < 6; look++) {
+      cands = (await candidatesNear(page, targets, opts.lit, strict)).filter((c) => !opts.at || (c.spot.tx === opts.at.tx && c.spot.ty === opts.at.ty))
+      if (cands.length) break
+      await parkCreatures(page)
+      await frames(page, 30)
+    }
     tried.push(`${strict ? 'strict' : 'loose'}:${cands.length}`)
     for (const c of cands.slice(0, 8)) {
       if (!(await settle(page, c.hero))) {
@@ -185,6 +201,7 @@ async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { li
 
 /** Work the piece at a spot again from where you stood (the felled tree's stump). */
 async function workAgain(page: Page, spot: Spot & { from: { x: number; y: number } }, prompt: RegExp): Promise<void> {
+  await parkCreatures(page)
   expect(await settle(page, spot.from), 'back where you stood').toBe(true)
   expect(await promptOn(page, spot, prompt), `the prompt on ${spot.tx},${spot.ty}`).toBe(true)
   await waitForLive(page)
@@ -225,11 +242,38 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   expect(await stack(page, 'turncap-spawn')).toBeGreaterThanOrEqual(1)
   await expect.poll(async () => spotAt(page, spot)).toBeNull()
 
+  // The same chunk built again within the visit: the dug-out tree stays
+  // open ground, with nothing drawn on it.
+  const chunk = (await gather(page))!.area
+  await warp(page, 'wilds', 20, 20)
+  await waitForWilds(page)
+  expect((await gather(page))!.area).toBe(chunk)
+  await expect.poll(async () => spotAt(page, spot)).toBeNull()
+  expect((await gather(page))!.left.filter((l) => l.tx === spot.tx && l.ty === spot.ty)).toEqual([])
+
   // The drift: leave, come back, and the woods have regrown.
   await warp(page, 'commons', 23, 19)
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
   await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tree|ash)$/)
+})
+
+test('in the woods a boulder breaks to open ground, and a worn-out pick says so', async ({ page }) => {
+  test.setTimeout(120_000)
+  const id = await freshPlayer(page, 'Oriel')
+  // One use left: this break is its last.
+  const pick = giveInstance(id, 'bench-pick', { uses: 1, max: 90 })
+
+  await warp(page, 'woodland', 2, 15)
+  const rock = await workOne(page, ['boulder'], /Break the boulder/)
+  await expectToast(page, 'Your bench pick gave out.')
+  await expect.poll(async () => usesLeft(page, pick)).toBe(-1)
+  expect(await stack(page, 'stone')).toBeGreaterThanOrEqual(2)
+  // The rock's body went with it: no invisible wall where it stood.
+  await expect.poll(async () => spotAt(page, rock)).toBeNull()
+  expect(await page.evaluate(([x, y]) => (window as unknown as { __fsSolidAt: (x: number, y: number) => boolean }).__fsSolidAt(x, y), [rock.tx, rock.ty] as const)).toBe(false)
+  expect((await gather(page))!.left).toContainEqual(expect.objectContaining({ tx: rock.tx, ty: rock.ty, frame: 'pebbles-0' }))
+  await shot(page, 'gathering-woods-boulder')
 })
 
 test('past the cap the wood says so in words, and the trees shuffle out of reach', async ({ page }) => {

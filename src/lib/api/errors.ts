@@ -185,6 +185,7 @@ export const SERVER_ERROR_CODES = [
   'tile-required',
   'invalid-tool',
   'invalid-visit',
+  'plant-in-the-way',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
