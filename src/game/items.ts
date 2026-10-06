@@ -10,11 +10,12 @@
  */
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
-import { effectLine, giftPhrase, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
+import { effectLine, giftPhrase, ITEM_RULES, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
 import { GATHERING_DATA } from '../lib/gathering'
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
 import type { Session } from './session'
+import { presence } from './presence'
 
 export const ITEMS_EV = {
   /** The carried items changed: { what?: string }. */
@@ -71,7 +72,7 @@ export function itemErrorText(code: ApiErrorCode | string): string {
     case 'not-together':
       return 'Stand next to them to hand it over.'
     case 'not-giveable':
-      return 'That was given to you. It stays with you.'
+      return 'That one stays with you.'
     case 'well-rope-broken':
       return 'The well rope is rotten through. Mend it first.'
     case 'already-returned':
@@ -195,31 +196,50 @@ export class Items {
   /**
    * One chop, break or dig with a tool, where the hero stands (the server
    * reads the area from the progress that rides along). On home land the
-   * tile names the piece; elsewhere the woods are scenery.
+   * tile names the piece; elsewhere the woods are scenery. A made tool that
+   * wears out here thanks its maker, as any use does.
    */
-  gather(tool: string, action: string, target: string, visitId: string, tile?: [number, number]) {
-    return this.run('gather', { tool, action, target, visitId, ...(tile ? { tile } : {}) })
+  async gather(tool: string, action: string, target: string, visitId: string, tile?: [number, number]) {
+    const makerId = this.view?.instances.find((i) => i.id === tool)?.maker?.id
+    const r = await this.run('gather', { tool, action, target, visitId, ...(tile ? { tile } : {}) })
+    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
+      this.thankNearby(makerId)
+    }
+    return r
   }
   /** Plant a seed or sapling on your own land, at a tile beside you. */
   plant(itemDef: string, tile: [number, number]) {
     return this.run('plant', { itemDef, tile })
   }
   /** One use of a tool (gathering wears tools through gather; the dev hook calls this). */
-  useTool(instance: string, action?: string) {
-    return this.run('use', { instance, ...(action ? { action } : {}) })
+  async useTool(instance: string, action?: string) {
+    const makerId = this.view?.instances.find((i) => i.id === instance)?.maker?.id
+    const r = await this.run('use', { instance, ...(action ? { action } : {}) })
+    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
+      this.thankNearby(makerId)
+    }
+    return r
   }
   /** Eat or drink one (any maker's, unmarked first, unless one is named). */
-  useItem(itemDef: string, maker?: string, unmoored?: boolean) {
-    return this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) }).then((r) => {
-      if (r.ok) {
-        if (itemDef === 'comfrey-salve') {
-          bus.emit('game:clear-unmoored', { instant: true })
-        } else if (itemDef === 'willow-bark-tea') {
-          bus.emit('game:clear-unmoored', { instant: false })
-        }
+  async useItem(itemDef: string, maker?: string, unmoored?: boolean) {
+    const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) })
+    if (r.ok) {
+      if (itemDef === 'comfrey-salve') {
+        bus.emit('game:clear-unmoored', { instant: true })
+      } else if (itemDef === 'willow-bark-tea') {
+        bus.emit('game:clear-unmoored', { instant: false })
       }
-      return r
-    })
+      if (maker && maker !== this.session.link?.habiticaId) this.thankNearby(maker)
+    }
+    return r
+  }
+
+  private thankNearby(makerId: string): void {
+    const feed = presence()
+    if (!feed) return
+    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * 16)) {
+      bus.emit(EV.emote, { habiticaId: makerId, id: 'heart' })
+    }
   }
   /** Mend an heirloom at your bench ('bench') or by a mender ('silas', 'orrin'). */
   repair(instance: string, at: string) {

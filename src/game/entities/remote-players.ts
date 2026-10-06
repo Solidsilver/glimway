@@ -113,9 +113,9 @@ class RemotePlayersLayer implements RemotePlayers {
     if (!v) return
     v.bubble?.destroy()
     // Above the name tag, which stays readable under it.
-    const b = showEmoteBubble(this.scene, v.root, p.id, -AVATAR_DISPLAY - 21)
+    const b = p.id === 'heart' ? showHeart(this.scene, v.root, -AVATAR_DISPLAY - 13) : showEmoteBubble(this.scene, v.root, p.id, -AVATAR_DISPLAY - 21)
     v.bubble = b
-    v.bubbleText = emoteSay(p.id)
+    v.bubbleText = p.id === 'heart' ? '' : emoteSay(p.id)
     b.once('destroy', () => {
       if (v.bubble !== b) return
       v.bubble = null
@@ -247,6 +247,25 @@ class RemotePlayersLayer implements RemotePlayers {
     v.root.destroy()
     this.views.delete(id)
   }
+}
+
+/** Wordless maker's mark: a small pixel heart above the maker. */
+function showHeart(scene: Phaser.Scene, follow: { x: number; y: number }, offsetY: number): Phaser.GameObjects.Container {
+  const g = scene.add.graphics()
+  g.fillStyle(0xc94b59, 1)
+  g.fillRect(-5, -3, 4, 4).fillRect(1, -3, 4, 4)
+  g.fillRect(-7, -1, 14, 4).fillRect(-5, 3, 10, 3).fillRect(-3, 6, 6, 2)
+  const heart = scene.add.container(follow.x, follow.y + offsetY, [g]).setDepth(9000).setAlpha(0)
+  scene.tweens.add({ targets: heart, alpha: 1, y: heart.y - 3, duration: 160, ease: 'Quad.easeOut' })
+  const tick = () => {
+    if (heart.active) heart.setPosition(follow.x, follow.y + offsetY - 3)
+  }
+  scene.events.on('postupdate', tick)
+  scene.time.delayedCall(BUBBLE_MS, () => {
+    if (heart.active) scene.tweens.add({ targets: heart, alpha: 0, duration: 260, onComplete: () => { scene.events.off('postupdate', tick); heart.destroy() } })
+  })
+  heart.once('destroy', () => scene.events.off('postupdate', tick))
+  return heart
 }
 
 /**

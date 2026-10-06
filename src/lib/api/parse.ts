@@ -39,6 +39,10 @@ import type {
   RepairsView,
   RepairsResponse,
   MendResponse,
+  ShelfSlotView,
+  ShelfView,
+  ShelfResponse,
+  ShelfActionResponse,
   StorageMoveResponse,
   StorageResponse,
   CommonsResponse,
@@ -316,7 +320,7 @@ export function parseWildsLantern(raw: unknown): WildsLanternResponse {
 
 // ------------------------------------------------------------ homesteads
 
-const SCENES = ['indoor', 'outdoor'];
+const SCENES = ['indoor', 'outdoor', 'gate'];
 const ROTATIONS = [0, 90, 180, 270];
 
 function int(v: unknown, min = 0): number {
@@ -342,7 +346,7 @@ export function parseHomeView(raw: unknown): HomeView {
     return {
       id: str(r.id),
       itemDef: str(r.itemDef),
-      scene: placed ? (r.scene as 'indoor' | 'outdoor') : null,
+      scene: placed ? (r.scene as 'indoor' | 'outdoor' | 'gate') : null,
       x: placed ? int(r.x) : null,
       y: placed ? int(r.y) : null,
       rotation: placed ? (r.rotation as 0 | 90 | 180 | 270) : null,
@@ -431,6 +435,8 @@ export function parseCommons(raw: unknown): CommonsResponse {
       mine: r.mine === true,
       price: nullableInt(r.price),
       reclaim: r.reclaim === true,
+      shelf: r.shelf === true,
+      shelfStocked: r.shelfStocked === true,
     };
   });
   const mine = o.mine && typeof o.mine === 'object' ? { homeId: str(obj(o.mine).homeId), gate: int(obj(o.mine).gate) } : null;
@@ -464,7 +470,7 @@ export function parseHomeAction(raw: unknown): HomeActionResponse {
 
 // ------------------------------------------------------------ phase 5
 
-const ASSET_KINDS = ['material', 'item', 'decoration', 'instance'];
+const ASSET_KINDS = ['material', 'item', 'decoration', 'instance', 'thanks'];
 
 function countMap(v: unknown): Record<string, number> {
   return materials(v);
@@ -557,6 +563,7 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
     const w = obj(r.wear);
     result.wear = {
       broke: w.broke === true,
+      woreOut: w.woreOut === true,
       state: typeof w.state === 'string' ? w.state : '',
       wornOut: Array.isArray(w.wornOut) ? w.wornOut.filter((v): v is string => typeof v === 'string') : [],
       returned: Array.isArray(w.returned) ? w.returned.filter((v): v is string => typeof v === 'string') : [],
@@ -861,4 +868,55 @@ export function parseMend(raw: unknown): MendResponse {
       items: parseItemsView(r.items),
     },
   };
+}
+
+// ------------------------------------------------------------ gate shelf
+
+export function parseShelfSlot(raw: unknown): ShelfSlotView {
+  const o = obj(raw);
+  return {
+    slot: int(o.slot),
+    kind: o.kind as ShelfSlotView['kind'],
+    itemDef: str(o.itemDef),
+    qty: int(o.qty),
+    maker: maker(o.maker),
+    instance: typeof o.instance === 'string' ? o.instance : null,
+    stockedBy: str(o.stockedBy),
+    stockedAt: num(o.stockedAt),
+  };
+}
+
+export function parseShelfView(raw: unknown): ShelfView {
+  const o = obj(raw);
+  return {
+    gate: int(o.gate),
+    homeId: str(o.homeId),
+    ownerName: str(o.ownerName),
+    names: Array.isArray(o.names) ? o.names.map(name) : [],
+    slots: Array.isArray(o.slots) ? o.slots.map(parseShelfSlot) : [],
+    takenToday: o.takenToday === true,
+    canStock: o.canStock === true,
+    hasShelf: o.hasShelf === true,
+  };
+}
+
+export function parseShelf(raw: unknown): ShelfResponse {
+  const o = obj(raw);
+  return {
+    ...parseSnapshot(raw),
+    shelf: parseShelfView(o.shelf),
+  };
+}
+
+export function parseShelfAction(raw: unknown): ShelfActionResponse {
+  const o = obj(raw);
+  const r = obj(o.result);
+  const out: ShelfActionResponse = {
+    ...parseSnapshot(raw),
+    shelf: parseShelfView(r.shelf),
+    inventory: parseCounts(r.inventory),
+  };
+  if (r.taken) out.taken = parseAsset(r.taken);
+  if (typeof r.line === 'string') out.line = r.line;
+  return out;
 }

@@ -107,7 +107,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   const twists = dialog(page).locator('[data-item="item:keepers-twists"]')
   await expect(twists).toContainText('Mends you a little')
   await twists.getByRole('button', { name: 'Use' }).click()
-  await expect(dialog(page).getByTestId('inv-message')).toHaveText("You used a Keeper's Twists.")
+  await expect(dialog(page).getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
   await expect(dialog(page).getByTestId('qty-item:keepers-twists')).toHaveText('1')
   await expect.poll(async () => (await vitals(page)).hp).toBe(Math.min(before + 10, (await vitals(page)).maxHp))
 
@@ -221,11 +221,11 @@ test('standing together, one player hands another something they made', async ({
   await expect(wick.getByTestId('give-to')).toContainText('Rowan')
   await shot(page, 'items-give-chooser-desktop')
   await wick.locator(`[data-give-to="${rowan}"]`).click()
-  await expect(dialog(page).getByTestId('inv-message')).toHaveText('You gave Rowan a Lamp Wick.')
+  await expect(dialog(page).getByTestId('inv-message')).toHaveText('You gave Rowan a lamp wick.')
   await expect(dialog(page).getByTestId(`qty-item:lamp-wick@${ash}`)).toHaveText('1')
 
   // Rowan hears it at once, and the wick carries Ash's mark.
-  await expectToast(other, 'Ash gave you a Lamp Wick.')
+  await expectToast(other, 'Ash gave you a lamp wick.')
   await expect.poll(async () => (await items(other))?.stacks.find((s) => s.itemDef === 'lamp-wick')?.maker?.name).toBe('Ash')
   await other.bringToFront()
   await openInventory(other, /Supplies/)

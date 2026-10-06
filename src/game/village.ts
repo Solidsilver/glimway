@@ -11,7 +11,7 @@
 import { calendarAt, type CalendarDay } from '../lib/calendar'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village'
 import { MAIL } from '../lib/mail'
-import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types'
+import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
@@ -25,11 +25,11 @@ import type { Session } from './session'
 export const VILLAGE_EV = {
   /** Something here changed: { what: 'calendar' | 'projects' | 'goods' | 'mail' }. */
   changed: 'village:changed',
-  /** Open a panel: { panel: 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile', to?: string }. */
+  /** Open a panel: { panel: 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf', to?: string, gate?: number }. */
   open: 'ui:village-open'
 } as const
 
-export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile'
+export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
 
 export type Status = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
 
@@ -49,9 +49,33 @@ export function villageErrorText(code: ApiErrorCode | string): string {
     case 'chest-full':
       return 'Your own chest is full. It’s a small one.'
     case 'not-a-member':
-      return 'That chest belongs to the folk on this deed.'
+      return 'That’s for the folk on this deed.'
+    case 'already-taken-today':
+      return 'One gift from this shelf each day. Walk by again tomorrow.'
+    case 'slot-occupied':
+      return 'Something is already in that slot.'
+    case 'slot-empty':
+      return 'That slot is empty.'
+    case 'shelf-not-placed':
+      return 'There is no gift shelf set out at this gate.'
+    case 'shelf-not-empty':
+      return 'Clear the gifts from the shelf before putting it away.'
+    case 'homestead-desolate':
+      return 'The old deed has gone quiet.'
+    case 'homestead-not-found':
+      return 'There is no deed behind that gate.'
+    case 'cannot-recall-thanks':
+      return 'A thank-you cannot be called back.'
+    case 'asset-required':
+      return 'Choose something to leave on the shelf.'
+    case 'gate-required':
+      return 'Choose a gate first.'
+    case 'invalid-slot':
+      return 'That shelf slot is out of reach.'
+    case 'invalid-operation':
+      return 'That is not something the shelf can do.'
     case 'not-giveable':
-      return 'That was given to you. It stays with you.'
+      return 'That one stays with you.'
     case 'item-not-available':
       return 'That piece isn’t free to move just now.'
     case 'two-wardens-grind':
@@ -455,6 +479,28 @@ export class Village {
     if (!r.ok) return fail(r.code)
     this.adoptWorkshop(r.res.result)
     return { ok: true, value: { woodpile: r.res.result.woodpile, collectedQty: r.res.result.collectedQty } }
+  }
+
+  /** Read the gift shelf at a Commons gate. */
+  async loadShelf(gate: number): Promise<VillageResult<ShelfView>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.readWith((raw) => raw.shelf(gate))
+    if (!r.ok) return fail(r.code)
+    return { ok: true, value: r.value.shelf }
+  }
+
+  /** Stock or take from the gift shelf. */
+  async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<VillageResult<ShelfActionResponse>> {
+    const link = this.session.link
+    if (!link) return fail('guest')
+    const r = await link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: req })
+    if (!r.ok) return fail(r.code)
+    if (r.res.inventory) {
+      this.inventory = r.res.inventory
+      this.emit('goods')
+    }
+    return { ok: true, value: r.res }
   }
 
   private adoptWorkshop(w: WorkshopView): void {

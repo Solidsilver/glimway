@@ -285,11 +285,13 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if v.Kind == "instance" && len(got.IDs) == 1 {
 			v.Instance = got.IDs[0]
 		}
-		if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
-			return nil, err
-		}
-		if err = currency(ctx, tx, from, "mail:"+v.Kind+":"+v.ID, -v.Qty, "mail-claim", id, now); err != nil {
-			return nil, err
+		if v.Kind != "thanks" {
+			if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
+				return nil, err
+			}
+			if err = currency(ctx, tx, from, "mail:"+v.Kind+":"+v.ID, -v.Qty, "mail-claim", id, now); err != nil {
+				return nil, err
+			}
 		}
 		if _, err = tx.ExecContext(ctx, "UPDATE mail SET claimed_at=? WHERE id=? AND claimed_at IS NULL AND returned_at IS NULL", now, id); err != nil {
 			return nil, err
@@ -317,7 +319,7 @@ func mailSendLimits(ctx context.Context, tx *sql.Tx, sender, recipient string, n
 		limit            int
 	}{{"from_id", sender, "mail-sender-limit", content.MailRules.MaxOutstandingSent}, {"to_id", recipient, "mail-recipient-limit", content.MailRules.MaxOutstandingReceived}} {
 		var n int
-		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM mail WHERE "+check.column+"=? AND claimed_at IS NULL AND returned_at IS NULL", check.id).Scan(&n); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM mail WHERE "+check.column+"=? AND kind != 'thanks' AND claimed_at IS NULL AND returned_at IS NULL", check.id).Scan(&n); err != nil {
 			return err
 		}
 		if n >= check.limit {
@@ -363,6 +365,9 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		}
 		if world != s.WorldID || from != s.HabiticaID {
 			return nil, fail(403, "mail-access-denied")
+		}
+		if asset.Kind == "thanks" {
+			return nil, fail(400, "cannot-recall-thanks")
 		}
 		if claimed.Valid {
 			return nil, fail(409, "already-claimed")

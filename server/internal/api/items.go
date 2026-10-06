@@ -33,6 +33,8 @@ func (h holder) instancePlace() instanceAt {
 		return instanceAt{"pack", h.player}
 	case "storage":
 		return instanceAt{"storage", h.home}
+	case "shelf":
+		return instanceAt{"shelf", h.home}
 	}
 	return instanceAt{h.location, h.player}
 }
@@ -463,6 +465,7 @@ func wardenDefs() string {
 
 type wearResult struct {
 	Broke     bool          `json:"broke"`
+	WoreOut   bool          `json:"woreOut"`
 	State     string        `json:"state"`
 	WornOut   []string      `json:"wornOut"`
 	Instance  *instanceView `json:"instance"`
@@ -470,6 +473,7 @@ type wearResult struct {
 	ItemDef   string        `json:"itemDef"`
 	UsesLeft  int           `json:"usesLeft"`
 	Condition int           `json:"condition"`
+	MakerID   string        `json:"makerId,omitempty"`
 }
 
 // useTool spends one use of a tool in the caller's pack. The use that
@@ -486,6 +490,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 	if err != nil {
 		return out, err
 	}
+	out.MakerID = v.Maker
 	def, _ := content.ItemFor(v.Def)
 	if v.Location != "pack" || v.Owner != s.HabiticaID {
 		return out, fail(404, "item-not-found")
@@ -517,6 +522,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		return out, err
 	}
 	warden := hasFitting(fittings, "remember")
+	conditionBeforeUse := v.Condition
 	if v.Max > 0 {
 		if v.Condition == 0 && !warden {
 			return out, fail(409, "tool-blunt")
@@ -585,6 +591,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		out.State = "broken"
 		return out, currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.Def), -1, "tool-broke", v.ID, now)
 	}
+	out.WoreOut = conditionBeforeUse > 0 && v.Condition == 0 && !warden
 	view, err := viewInstance(ctx, tx, v, map[string]*makerView{})
 	if err != nil {
 		return out, err
@@ -1004,7 +1011,15 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	if req.Instance != "" {
 		res, err := useTool(ctx, tx, s, req.Instance, req.Action, now)
 		out.Wear = &res
-		return err
+		if err != nil {
+			return err
+		}
+		if (res.Broke || res.WoreOut) && res.MakerID != "" {
+			if err = a.thankMaker(ctx, tx, s, res.MakerID, res.ItemDef, now); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	def, ok := content.ItemFor(req.ItemDef)
 	if !ok || def.Kind != "consumable" {
@@ -1047,18 +1062,46 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	out.Used = def.ID
 	// A quiet thank-you to the maker, unless they're right here.
 	for _, m := range split {
-		if m.Maker == "" || m.Maker == s.HabiticaID {
-			continue
-		}
-		radius := float64(content.ItemsRules.Rules.Thanks.NearbyTiles * wildsTileSize)
-		if a.presence != nil && a.presence.together(s.WorldID, s.HabiticaID, m.Maker, radius) {
-			continue
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO item_thanks(maker_id,user_id,item_def,at) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM players WHERE habitica_id=? AND world_id=?)", m.Maker, s.HabiticaID, def.ID, now, m.Maker, s.WorldID); err != nil {
+		if err = a.thankMaker(ctx, tx, s, m.Maker, def.ID, now); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, makerID, itemDef string, now int64) error {
+	if makerID == "" || makerID == s.HabiticaID {
+		return nil
+	}
+	radius := float64(content.ItemsRules.Rules.Thanks.NearbyTiles * wildsTileSize)
+	if a.presence != nil && a.presence.together(s.WorldID, s.HabiticaID, makerID, radius) {
+		return nil
+	}
+	var makerWorld string
+	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=? AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)", makerID, makerID).Scan(&makerWorld)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if makerWorld != s.WorldID {
+		return nil
+	}
+	todayStart := now - (now % 86400)
+	var already bool
+	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM mail WHERE kind='thanks' AND from_id=? AND to_id=? AND sent_at>=?)", s.HabiticaID, makerID, todayStart).Scan(&already); err != nil {
+		return err
+	}
+	if already {
+		return nil
+	}
+	mailID, err := store.Random()
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,0,'[]','[]',?)", mailID, s.WorldID, s.HabiticaID, makerID, "thanks", itemDef, now)
+	return err
 }
 
 // repairTool mends an heirloom at the caller's bench (Workshop) or by a
@@ -1552,6 +1595,12 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		return err
 	}
 	out.Wear = &res
+	// A made tool that wears out on this swing thanks its maker, as any use does.
+	if (res.Broke || res.WoreOut) && res.MakerID != "" {
+		if err = a.thankMaker(ctx, tx, s, res.MakerID, res.ItemDef, now); err != nil {
+			return err
+		}
+	}
 	dayCount++
 	visitCount++
 	_, err = tx.ExecContext(ctx, `INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES(?,?,?,?,?,?,?,?)

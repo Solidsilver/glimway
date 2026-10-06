@@ -19,6 +19,7 @@ import {
 } from '../src/lib/state.ts';
 import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
 import { allHeirloomJournal, allHeirloomLines } from '../src/content/heirlooms.ts';
+import { allEchoKeepsakeJournal, allEchoKeepsakeLines } from '../src/content/echoes.ts';
 
 const NPC_IDS = ['mara', 'pip', 'orrin', 'clue', 'lantern'];
 
@@ -200,6 +201,9 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
   lines.push(...allResidentLines());
   // The heirlooms (Silas, Orrin, Ada, Nan's camp): every line they say.
   lines.push(...allHeirloomLines());
+  // The Echo camps' keepsake offers (leaving Bett's candle, Nan's road-nails):
+  // the leave choice, the offers, the guest line, the leaving and the softer settle.
+  lines.push(...allEchoKeepsakeLines());
   for (const line of lines) {
     assert.ok(line.length <= 160, `${line.length} chars: ${line}`);
     assert.doesNotMatch(line, OUT_OF_WORLD, line);
@@ -208,6 +212,7 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     ...journalEntries('complete').flatMap((e) => [e.title, e.body]),
     ...allResidentJournal().flatMap((e) => [e.title, e.body]),
     ...allHeirloomJournal().flatMap((e) => [e.title, e.body]),
+    ...allEchoKeepsakeJournal().flatMap((e) => [e.title, e.body]),
     ...Object.values(locations).flatMap((l) => [l.name, l.eyebrow, l.tagline, l.description]),
     ...[...expansion.POIS, ...expansion.TRINKETS, ...expansion.MORE_TRINKETS].map((t) => ('discoveryText' in t ? t.discoveryText : t.blurb)),
   ];
@@ -261,9 +266,23 @@ test('the warden is settled, not slain, in every story beat', () => {
     ...allResidentLines(),
     ...allHeirloomLines(),
     ...allHeirloomJournal().map((e) => e.body),
+    ...allEchoKeepsakeLines(),
+    ...allEchoKeepsakeJournal().map((e) => e.body),
   ].join('\n');
   assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
   assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
+});
+
+test('the Echo camps take their person’s keepsake: journal once, and a softer settle', async () => {
+  const { ECHOES, echoKeepsakeJournalEntries } = await import('../src/content/echoes.ts');
+  // Dorrit has no keepsake item yet; Bett's and Nan's do.
+  assert.deepEqual(ECHOES.filter((e) => e.keepsake).map((e) => e.member).sort(), ['bett', 'nan']);
+  // The journal writes each keep the first time it is left, and only then.
+  assert.deepEqual(echoKeepsakeJournalEntries([]), []);
+  const entries = echoKeepsakeJournalEntries(['returned:beeswax-candle', 'returned:road-nails']);
+  assert.equal(entries.length, 2);
+  const nan = ECHOES.find((e) => e.member === 'nan')!.keepsake!;
+  assert.deepEqual(echoKeepsakeJournalEntries(['returned:road-nails']), [{ ...nan.journal }]);
 });
 
 test('the journal checklist follows the objectives: copy the naming, then settle the warden', () => {

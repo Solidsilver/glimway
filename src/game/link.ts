@@ -68,6 +68,7 @@ export type MutationOp =
   | { kind: 'hearth'; fields: Record<string, unknown> }
   | { kind: 'desk'; fields: Record<string, unknown> }
   | { kind: 'woodpile'; fields: Record<string, unknown> }
+  | { kind: 'shelf'; fields: Record<string, unknown> }
   | { kind: 'mail-send'; fields: Record<string, unknown> }
   | { kind: 'mail-claim'; id: string; fields?: Record<string, unknown> }
   | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
@@ -124,6 +125,8 @@ export function dispatchMutation(raw: RawApi, op: MutationOp, body: Record<strin
       return raw.deskCopy(req)
     case 'woodpile':
       return raw.woodpileAction(req)
+    case 'shelf':
+      return raw.shelfAction(req)
     case 'mail-send':
       return raw.mailSend(req)
     case 'mail-claim':

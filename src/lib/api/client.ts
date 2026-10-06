@@ -28,6 +28,8 @@ import {
   parseCommons,
   parseHome,
   parseHomeAction,
+  parseShelf,
+  parseShelfAction,
   parseItems,
   parseItemsAction,
   parseCreatedInvite,
@@ -58,6 +60,9 @@ import type {
   ProjectsResponse,
   RepairsResponse,
   MendResponse,
+  ShelfResponse,
+  ShelfRequest,
+  ShelfActionResponse,
   StorageMoveResponse,
   StorageResponse,
   ChestId,
@@ -121,6 +126,10 @@ export interface RawApi {
   home(gate: number): Promise<HomeResponse>;
   /** The Commons lane: every gate shown, who holds it, and deed invitations. */
   commons(): Promise<CommonsResponse>;
+  /** The shelf at a Commons gate (who holds it, slots, whether you've taken today). */
+  shelf(gate: number): Promise<ShelfResponse>;
+  /** A keyed gate shelf mutation (stock or take). */
+  shelfAction(req: ShelfRequest): Promise<ShelfActionResponse>;
   /** A keyed homestead mutation (claim, buy, place, …, joint, leave). */
   homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
   /** The Hearthwick calendar (public, no session). */
@@ -272,6 +281,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async commons() {
       return parseCommons(await request('GET', '/api/commons'));
     },
+    async shelf(gate) {
+      return parseShelf(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`));
+    },
+    async shelfAction(req) {
+      return parseShelfAction(await request('POST', '/api/homestead/shelf', req));
+    },
     async homeAction(op, req) {
       return parseHomeAction(await request('POST', `/api/homestead/${op}`, req));
     },
@@ -358,6 +373,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     wildsLantern: (req) => run((r) => r.wildsLantern(req)),
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
+    shelf: (gate: number) => run((r) => r.shelf(gate)),
+    shelfAction: (req: ShelfRequest) => run((r) => r.shelfAction(req)),
     homeAction: (op, req) => run((r) => r.homeAction(op, req)),
     calendar: () => run((r) => r.calendar()),
     storage: () => run((r) => r.storage()),

@@ -21,7 +21,7 @@
     },
     {
       "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
-      "specs": ["wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts"]
+      "specs": ["wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts"]
     },
     {
       "paths": [
@@ -41,6 +41,14 @@
         "server/internal/land/**"
       ],
       "specs": ["homestead.spec.ts", "village.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "art-screens.spec.ts"]
+    },
+    {
+      "paths": [
+        "src/ui/GateShelfPanel.svelte",
+        "server/internal/api/gifts_test.go",
+        "e2e/gifts.spec.ts"
+      ],
+      "specs": ["gifts.spec.ts"]
     },
     {
       "paths": [

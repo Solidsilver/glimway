@@ -8,7 +8,7 @@
 import { CALENDAR, calendarAt, type CalendarDay } from './calendar.ts';
 import { HOMESTEAD_DATA, homeItem } from './homestead.ts';
 import { CRAFTING, PROJECTS, type Recipe } from './workshop.ts';
-import { giveable, itemDef, itemName } from './items.ts';
+import { giftPhrase, giveable, itemDef, itemName } from './items.ts';
 import type { Asset, AssetCounts, Mail, ProjectView } from './api/types.ts';
 
 export type { CalendarDay };
@@ -207,6 +207,7 @@ export function assetName(a: Pick<Asset, 'kind' | 'id'>): string {
 /** "12 timber", "a Whittled Fox", "2 Wooden Stools". */
 export function assetPhrase(a: Asset): string {
   const name = assetName(a);
+  if (a.kind === 'thanks') return `a thank-you for ${giftPhrase(a.id, 1)} you made`;
   if (a.kind === 'material') return `${a.qty} ${name.toLowerCase()}`;
   if (a.qty === 1) return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
   return `${a.qty} ${name}${name.endsWith('s') ? '' : 's'}`;
@@ -240,7 +241,7 @@ export const WORKSHOP_TIER = HOMESTEAD_DATA.tiers[2];
 
 /** How a settled parcel ended, in words. */
 export function settledLine(m: Mail): string {
-  if (m.claimedAt !== null) return 'collected'
+  if (m.claimedAt !== null) return m.asset.kind === 'thanks' ? 'read' : 'collected'
   switch (m.returnReason) {
     case 'expired':
       return 'returned after 30 days'

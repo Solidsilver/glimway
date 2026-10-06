@@ -43,6 +43,7 @@
   import HearthPanel from './ui/HearthPanel.svelte'
   import DeskPanel from './ui/DeskPanel.svelte'
   import WoodpilePanel from './ui/WoodpilePanel.svelte'
+  import GateShelfPanel from './ui/GateShelfPanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
   import { VILLAGE_EV, villageFor, type VillagePanel } from './game/village'
   import { villageUi } from './ui/village.svelte'
@@ -87,6 +88,8 @@
   let panel = $state<Panel>(null)
   /** Mail panel opened at a neighbour's mailbox: who to send to. */
   let mailTo = $state<string | null>(null)
+  /** Shelf panel opened at a Commons gate: which gate. */
+  let shelfGate = $state(0)
   /** Which chest the workshop opens on (the inventory's "your own chest" asks for the personal one). */
   let chestPick = $state<'shared' | 'personal'>('shared')
   let recovery = $state<{ message: string; raw: string } | null>(null)
@@ -271,9 +274,10 @@
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
     }
-    const onVillageOpen = (v: { panel: VillagePanel; to?: string }) => {
+    const onVillageOpen = (v: { panel: VillagePanel; to?: string; gate?: number }) => {
       if (panel !== null) return
       mailTo = v.to ?? null
+      shelfGate = v.gate ?? 0
       toggle(v.panel)
     }
     const onVillageChanged = () => {
@@ -824,6 +828,8 @@
       <DeskPanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'woodpile'}
       <WoodpilePanel {session} onClose={() => (panel = null)} />
+    {:else if panel === 'shelf'}
+      <GateShelfPanel {session} gate={shelfGate} onClose={() => (panel = null)} />
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}

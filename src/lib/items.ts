@@ -469,12 +469,19 @@ export function offHandTuck(a: HeroActivity, now: number, tuckedUntil: number): 
   return { tucked: now < until, until };
 }
 
-/** "a comfrey salve", "2 Lamp Wicks", "a Nan's lamplighter pole". */
+/** "a comfrey salve", "2 Lamp Wicks", "Finn's oatcakes", "the Empty Chair". */
 export function giftPhrase(itemId: string, qty: number): string {
   const name = itemName(itemId);
-  // Names that start with a person or are already Title Case keep their capitals.
-  const proper = /’s|'s/.test(name) || /^[A-Z][a-z]+ [A-Z]/.test(name);
-  const shown = proper ? name : name.charAt(0).toLowerCase() + name.slice(1);
-  if (qty === 1) return `${/^[aeiou]/i.test(shown) ? 'an' : 'a'} ${shown}`;
-  return `${qty} ${shown}${shown.endsWith('s') ? '' : 's'}`;
+  // Preserve names that already carry an article, a maker's name, or proper-name casing.
+  const article = name.match(/^(a|an|the)\s/i)?.[1]?.toLowerCase();
+  const proper = /[’']s\b/.test(name);
+  const articleName = name.replace(/^(?:a|an|the)\s/i, '');
+  const shown = article ? `${article} ${article === 'the' ? articleName : articleName.toLowerCase()}` : proper ? name : name.toLowerCase();
+  if (qty === 1) {
+    if (article) return shown;
+    if (proper) return shown;
+    return `${/^[aeiou]/i.test(shown) ? 'an' : 'a'} ${shown}`;
+  }
+  if (article) return `${qty} ${shown.replace(/^(?:a|an|the)\s/i, '')}`;
+  return `${qty} ${name}${name.endsWith('s') ? '' : 's'}`;
 }

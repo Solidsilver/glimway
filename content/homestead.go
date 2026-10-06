@@ -222,7 +222,7 @@ func ValidateHomestead(h Homestead) error {
 		seen[v.ID] = true
 		places := map[string]bool{}
 		for _, p := range v.Where {
-			if (p != "indoor" && p != "outdoor") || places[p] {
+			if (p != "indoor" && p != "outdoor" && p != "gate") || places[p] {
 				return bad
 			}
 			places[p] = true
