@@ -21,6 +21,8 @@ export interface GatheringYield {
   min: number;
   max: number;
   chancePermille?: number;
+  /** The yield only turns up in this mark (a season; the server's clock decides). */
+  mark?: string;
 }
 
 export interface GatheringTarget {
@@ -28,6 +30,11 @@ export interface GatheringTarget {
   toolAction: 'chop' | 'break' | 'dig';
   name: string;
   yields: GatheringYield[];
+  /** The button word when the work isn't a chop, break or dig ("Sweep", "Pick"). */
+  verb?: string;
+  /** The piece only stands in its season: a mark, or one wick's week. */
+  mark?: string;
+  wick?: string;
 }
 
 export interface GatheringData {
@@ -35,8 +42,8 @@ export interface GatheringData {
   softCapLine: string;
   /** How many plants one home's land tends; past it the ground is full. */
   plantsPerHome: number;
-  /** The targets each kind of place has: wilds (the Tangle, the Whitequiet), woodland, home. */
-  areas: Record<'wilds' | 'woodland' | 'home', string[]>;
+  /** The targets each kind of place has: wilds (the Tangle, the Whitequiet), woodland, home, the village, the Commons. */
+  areas: Record<string, string[]>;
   swings: Record<string, number>;
   targets: Record<string, GatheringTarget>;
   seeds: string[];
@@ -51,7 +58,27 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string): boolean {
   const kind = area.startsWith('home:') ? 'home' : area;
-  return (GATHERING_DATA.areas[kind as keyof GatheringData['areas']] ?? []).includes(target);
+  return (GATHERING_DATA.areas[kind] ?? []).includes(target);
+}
+
+/**
+ * The seasons (docs/items/crafting-and-repair.md, "Seasonal materials"): a
+ * piece or a yield only turns up in its mark, or its one wick's week — the
+ * server's own clock and calendar decide, never the client.
+ */
+export function inSeason(gate: { mark?: string; wick?: string }, day: { mark: string; wick: string }): boolean {
+  if (gate.mark && day.mark !== gate.mark) return false;
+  return !gate.wick || day.wick === gate.wick;
+}
+
+/**
+ * A seasonal piece stays standing through its season however often it's
+ * worked (the freshet keeps washing shells up, the pond keeps freezing
+ * over): the day's caps hold you, not the map. Everything else leaves a
+ * stump or open ground.
+ */
+export function keepsStanding(target: string): boolean {
+  return target === 'freshet-shore' || target === 'bloom-patch' || target === 'pond-ice';
 }
 
 /** The line when a home's land already tends all the plants it can. */
@@ -88,9 +115,9 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
   return { swings: gatheringSwings(action, tool.bite), ms: Math.round(ms) };
 }
 
-/** Where the woods can be worked: the Tangle and the Whitequiet, the woods, and home land. */
+/** Where the woods can be worked: the Tangle and the Whitequiet, the woods, home land, and the village's water (in season). */
 export function gatherArea(area: string): boolean {
-  return area === 'wilds' || area === 'woodland' || area.startsWith('home:');
+  return area === 'wilds' || area === 'woodland' || area === 'village' || area === 'commons' || area.startsWith('home:');
 }
 
 /**
@@ -103,8 +130,9 @@ export function keepsWork(area: string, lit: boolean): boolean {
   return area.startsWith('home:') && lit;
 }
 
-/** The button word for a gathering action (the touch action button). */
-export function gatheringVerb(action: string): string {
+/** The button word for a gathering action (the touch action button); a target's own word wins. */
+export function gatheringVerb(action: string, override?: string): string {
+  if (override) return override;
   return action === 'chop' ? 'Chop' : action === 'break' ? 'Break' : action === 'dig' ? 'Dig' : 'Work';
 }
 

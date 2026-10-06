@@ -1199,6 +1199,23 @@ function drawCandleHull(c: C): void {
   for (let y = 2; y < 5; y++) rect(c, 6, y, 3 - (y - 2), 1, '#7fb35c')
 }
 
+function drawPondIce(c: C): void {
+  // Cloudy ice on the frozen pond, in the Quiet: a pale sheet with a
+  // frost-glass glint the pick can bite at.
+  const sheet = (ox: number, oy: number, w: number, h: number) => {
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const edge = x === 0 || y === 0 || x === w - 1 || y === h - 1
+        const cloudy = h01(x + ox, y + oy, 7)
+        px(c, ox + x, oy + y, edge ? O : cloudy < 0.3 ? '#9cc3d8' : cloudy < 0.85 ? '#c3dcea' : '#fffbef')
+      }
+  }
+  sheet(2, 3, 11, 6)
+  sheet(7, 8, 8, 4)
+  px(c, 9, 5, '#fffbef')
+  px(c, 10, 5, '#fffbef')
+}
+
 function drawWellCanopy(c: C): void {
   // A slate canopy over the village well: Orrin cut a mark on the lintel.
   for (const x of [2, 25]) box(c, x, 9, 3, 19, OAK.md)
@@ -1234,6 +1251,7 @@ export function generateCommonsArt(scene: Phaser.Scene): void {
   makeTexture(scene, 'bunting-64', 64, 10, (c) => drawBunting(c, 64))
   makeTexture(scene, 'bunting-96', 96, 10, (c) => drawBunting(c, 96))
   makeTexture(scene, 'candle-hull', 11, 10, drawCandleHull)
+  makeTexture(scene, 'pond-ice', 16, 13, drawPondIce)
   makeTexture(scene, 'well-canopy', 30, 28, drawWellCanopy)
   makeTexture(scene, 'mended-bridge', 48, 26, drawBridge)
   makeTexture(scene, 'cottage-workshop', COTTAGE_W, COTTAGE_H, (c) => drawCottage(c, { roof: ['#8a9aa8', '#6f7f8f', '#55606e', '#3f4854'], silas: false, workshop: true }))

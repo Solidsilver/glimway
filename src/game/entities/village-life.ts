@@ -26,6 +26,7 @@ import type { InteractId, WorldData } from '../worlds'
 import type { CommonsWorld } from '../commons'
 import { VILLAGE_EV, villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
+import { sellerFor } from '../../lib/items'
 import { grantPaper } from '../papers'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
 
@@ -95,13 +96,33 @@ export class VillageLayer implements InteractionProvider {
   }
 
   verb(id: InteractId): string {
-    return id === 'village:hopper' ? 'Look' : 'Read'
+    if (id === 'village:hopper') return 'Look'
+    if (id === 'village:stall') return 'Buy'
+    return 'Read'
   }
 
   activate(id: InteractId): void {
     if (id === 'village:board') openBoard()
     if (id === 'village:hame') this.readHameRoll()
     if (id === 'village:hopper') this.lookAtHopper()
+    if (id === 'village:stall') this.visitStall()
+  }
+
+  /** The madder stall on Carting Day: what the dyers' scrap baskets hold. */
+  private visitStall(): void {
+    const stall = sellerFor('madder-stall')
+    if (!stall) return
+    const connected = !!this.deps.session.link
+    uiState.dialogueOpen = true
+    sfx('open')
+    bus.emit(EV.dialogue, {
+      id: 'village:stall',
+      speaker: stall.npc,
+      lines: stall.goods.map((g) => g.line),
+      choices: connected
+        ? [...stall.goods.map((g) => ({ text: g.label, action: `buy:${stall.id}:${g.item}` })), { text: 'Not yet' }]
+        : undefined
+    })
   }
 
   /** The Tolley mill's hopper, with the tally scratched in its side. */
@@ -131,6 +152,12 @@ export class VillageLayer implements InteractionProvider {
     if (w.areaId === 'commons' && c.features && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
       const h = c.features.hame
       list.push({ id: 'village:hame', x: h.tx * TILE + 8, y: (h.ty + 1) * TILE + 6, label: 'Read the polishers’ roll' })
+    }
+    // The Carting Day market: the madder stall stands between the gate and
+    // the square on the day, and not otherwise.
+    if (w.areaId === 'commons' && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
+      const stall = sellerFor('madder-stall')!
+      list.push({ id: 'village:stall', x: stall.tx * TILE + 8, y: stall.ty * TILE + TILE + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall' })
     }
     // Only when it changed: replacing the list rebuilds its markers.
     const key = list.map((i) => i.id).join(',')

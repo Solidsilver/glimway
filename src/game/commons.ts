@@ -27,9 +27,11 @@
  */
 import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../lib/homestead.ts'
 import { ITEM_RULES } from '../lib/items.ts'
+import { calendarAt } from '../lib/calendar.ts'
 import { landEntry } from './homeland.ts'
+import { gameNow } from './clock.ts'
 import { TERRAIN, TILE } from './textures.ts'
-import type { ExitDef, ForegroundSpot, PropSpot, ScenerySpot, WorldData } from './worlds.ts'
+import type { ExitDef, ForegroundSpot, GatherSpot, PropSpot, ScenerySpot, WorldData } from './worlds.ts'
 
 /** One homestead gate on the lane, in Commons tiles. */
 export interface GateSlot {
@@ -357,6 +359,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   }
 
   // ---- meadow details: stumps, tall grass, wildflowers (not on paths)
+  const flowerTufts = new Set<string>()
   const free = (x: number, y: number) =>
     !solid[y][x] && (ground[y][x] === TERRAIN.grass_a || ground[y][x] === TERRAIN.grass_b || ground[y][x] === TERRAIN.grass_c || ground[y][x] === TERRAIN.flowers)
   for (let y = 3; y < H - 2; y++) {
@@ -372,7 +375,28 @@ export function buildCommons(gateCount = 0): CommonsWorld {
       } else if (r < 0.2) {
         put(r < 0.11 ? 'tall-grass-a' : 'tall-grass-b', x, y, { x: x * TILE + 4 + Math.floor(hash(x, y, 3) * 8), depth: 'y' })
       } else if (r < 0.24 && ground[y][x] === TERRAIN.flowers) {
+        flowerTufts.add(`${x},${y}`)
         put('wildflowers', x, y, { depth: 'y' })
+      }
+    }
+  }
+
+  // ---- Bloom-wick: the meadow's wildflowers are picked, not just looked
+  // at (content/gathering.json "bloom-patch"; docs/items/crafting-and-
+  // repair.md, "Seasonal materials"). The spots stay all week — the day's
+  // caps hold you — and the server re-checks the season from its own
+  // clock and calendar.
+  const gathering: GatherSpot[] = []
+  if (calendarAt(gameNow()).wick === 'Bloom') {
+    let n = 0
+    for (let y = BAND.y0; y <= BAND.y1 && n < 8; y++) {
+      for (let x = 6; x < YARD.x0 - 2 && n < 8; x++) {
+        if (solid[y][x] || ground[y][x] !== TERRAIN.flowers || flowerTufts.has(`${x},${y}`)) continue
+        const roomy = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => !solid[y + dy][x + dx])
+        if (!roomy) continue
+        scenery.push({ key: 'wildflowers', x: x * TILE + 8, y: (y + 1) * TILE, depth: 'y', tx: x, ty: y })
+        gathering.push({ target: 'bloom-patch', label: 'Pick the bloom flowers', tx: x, ty: y, art: { key: 'wildflowers' } })
+        n++
       }
     }
   }
@@ -433,6 +457,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     exits,
     props,
     scenery,
+    gathering,
     discoverySpots: [],
     well: null,
     mural: null,

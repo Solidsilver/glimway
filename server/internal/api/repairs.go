@@ -439,7 +439,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		items, err := readItems(ctx, tx, s)
+		items, err := readItems(ctx, tx, s, now)
 		if err != nil {
 			return nil, err
 		}

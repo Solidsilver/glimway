@@ -473,6 +473,91 @@ func checkMaterials(ctx context.Context, tx *sql.Tx, id string, cost map[string]
 	return nil
 }
 
+// swapOK: a recipe's swaps (a material's stand-ins, one for one), or none.
+func swapFor(swaps map[string][]string, def string) []string {
+	if swaps == nil {
+		return nil
+	}
+	return swaps[def]
+}
+
+// checkMaterialsAny is checkMaterials, with each bill line payable in its
+// primary material or any of its swaps (a pressed-flower frame takes dried
+// flowers when the fresh ones are gone). Refuses before any ledger row.
+func checkMaterialsAny(ctx context.Context, tx *sql.Tx, id string, cost map[string]int, swaps map[string][]string) error {
+	for _, def := range content.SortedCosts(cost) {
+		need := cost[def]
+		have := 0
+		for _, d := range append([]string{def}, swapFor(swaps, def)...) {
+			n, err := stackTotal(ctx, tx, packOf(id), d)
+			if err != nil {
+				return err
+			}
+			have += n
+			if have >= need {
+				break
+			}
+		}
+		if have < need {
+			return shortfall(def)
+		}
+	}
+	return nil
+}
+
+// debitMaterialsAny pays a bill with swaps: the primary first, then its
+// stand-ins in a fixed order, so the ledger reads the same way every time.
+func debitMaterialsAny(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int, swaps map[string][]string, qty int, reason, ref string, now int64) error {
+	for _, id := range content.SortedCosts(costs) {
+		left := costs[id] * qty
+		if left <= 0 {
+			continue
+		}
+		for _, d := range append([]string{id}, swapFor(swaps, id)...) {
+			if left <= 0 {
+				break
+			}
+			n, err := stackTotal(ctx, tx, packOf(s.HabiticaID), d)
+			if err != nil {
+				return err
+			}
+			take := min(n, left)
+			if take > 0 {
+				if err := materialChange(ctx, tx, s.HabiticaID, d, -take, reason, ref, now); err != nil {
+					return err
+				}
+				left -= take
+			}
+		}
+		if left > 0 {
+			return shortfall(id)
+		}
+	}
+	return refreshItems(ctx, tx, s)
+}
+
+// dryFlowers: bloom flowers age (docs/items/overview.md, "Nothing punishes
+// waiting" — they dry, they don't rot). Once the server's calendar has
+// turned past Bloom-wick, the pack's fresh posies dry into dried flowers,
+// one for one, in a keyed sweep (the same shape as healWardens). Flowers in
+// a chest keep: nothing expires, and a dried posy is what comes back out.
+func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
+	if content.CalendarAt(content.CalendarRules, now).Wick == "Bloom" {
+		return nil
+	}
+	n, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "bloom-flowers")
+	if err != nil || n <= 0 {
+		return err
+	}
+	if err = materialChange(ctx, tx, s.HabiticaID, "bloom-flowers", -n, "dry", "bloom-wick-passed", now); err != nil {
+		return err
+	}
+	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{"", n}}, "dry", "bloom-wick-passed", now); err != nil {
+		return err
+	}
+	return refreshItems(ctx, tx, s)
+}
+
 // workshop is the caller's homestead when it has a workshop (tier 2+):
 // the shared chest and the bench live there.
 func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {

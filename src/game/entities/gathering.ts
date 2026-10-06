@@ -18,7 +18,7 @@
  * stump is still there. Planting draws the new sapling where it went in.
  */
 import type Phaser from 'phaser'
-import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
+import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, keepsStanding, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
 import { parseHomeArea } from '../../lib/homestead'
 import { itemDef } from '../../lib/items'
 import { itemErrorText, itemsFor } from '../items'
@@ -133,7 +133,7 @@ export class Gathering {
     this.current = {
       spot,
       label: spot.label,
-      verb: gatheringVerb(gatheringTarget(spot.target)?.action ?? 'chop'),
+      verb: gatheringVerb(gatheringTarget(spot.target)?.action ?? 'chop', gatheringTarget(spot.target)?.verb),
       x: spot.tx * TILE + 8,
       y: (spot.ty + 1) * TILE - 6,
       work: () => void this.work(spot)
@@ -303,10 +303,13 @@ export class Gathering {
 
   /**
    * A worked piece as it is now: a felled tree is a stump (still in the
-   * way, and diggable); a broken boulder or a dug stump is open ground.
+   * way, and diggable); a broken boulder or a dug stump is open ground. A
+   * seasonal piece stays standing however often it's worked — the caps
+   * hold you, not the map.
    */
   private change(spot: GatherSpot, now: 'stump' | 'open'): void {
     if (spot.target === 'stump' && now === 'stump') return // the map already has it
+    if (keepsStanding(spot.target)) return // the freshet shore, the bloom patches, the pond ice
     const x = spot.tx * TILE + 8
     const y = (spot.ty + 1) * TILE
     for (const img of this.drawn.get(`${spot.tx},${spot.ty}`) ?? []) img.destroy()

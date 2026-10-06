@@ -229,7 +229,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  const spot = await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/)
+  const spot = await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/)
   // The axe wore one use; the tree paid timber and left a stump to dig.
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)
   expect(await stack(page, 'timber')).toBeGreaterThanOrEqual(2)
@@ -255,7 +255,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   await warp(page, 'commons', 23, 19)
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tree|ash)$/)
+  await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tangle-tree|ash)$/)
 })
 
 test('in the woods a boulder breaks to open ground, and a worn-out pick says so', async ({ page }) => {
@@ -286,13 +286,13 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/)
+  await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/)
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)
   // The next: the soft line, no number, no wear, and no tree answers again.
-  await workOne(page, ['tree', 'ash'], /Chop the (tree|ash)/, { says: /The wood’s given enough here today\./ })
+  await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/, { says: /The wood’s given enough here today\./ })
   await expect.poll(async () => (await gather(page))?.last).toBe('refused:gathered-enough')
   expect(await usesLeft(page, axe)).toBe(29)
-  await expect.poll(async () => (await gather(page))!.spots.filter((s) => s.target === 'tree' || s.target === 'ash').length).toBe(0)
+  await expect.poll(async () => (await gather(page))!.spots.filter((s) => s.target === 'tangle-tree' || s.target === 'ash').length).toBe(0)
   await shot(page, 'gathering-soft-line')
   // The boulders are another kind of work, and still answer.
   expect((await gather(page))!.spots.some((s) => s.target === 'boulder')).toBe(true)

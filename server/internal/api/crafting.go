@@ -107,10 +107,14 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if req.Qty < 1 || req.Qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}
-		if err := checkMaterials(ctx, tx, s.HabiticaID, scaled(recipe.Materials, req.Qty)); err != nil {
+		// Bloom flowers in the pack dry once their wick has turned.
+		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := debitMaterials(ctx, tx, s, recipe.Materials, req.Qty, "hearth", recipe.ID, now); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.HabiticaID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+			return nil, err
+		}
+		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "hearth", recipe.ID, now); err != nil {
 			return nil, err
 		}
 		output := recipe.Output

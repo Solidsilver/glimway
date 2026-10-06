@@ -720,6 +720,18 @@
   "offHand": false
  },
  {
+  "id": "dried-flowers",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "material",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
   "id": "iron-oak-wedge",
   "instanced": true,
   "stackable": false,

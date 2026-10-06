@@ -733,6 +733,14 @@
       "blurb": "Picked in Bloom. Fresh posies for garlands and pressed-flower frames; they dry over time."
     },
     {
+      "id": "dried-flowers",
+      "name": "Dried flowers",
+      "tab": "supplies",
+      "kind": "material",
+      "icon": "bloom-flowers",
+      "blurb": "Bloom flowers gone brown and papery in the shade. Nothing is lost: dried posies press just as flat."
+    },
+    {
       "id": "iron-oak-wedge",
       "name": "Iron-oak wedge",
       "tab": "supplies",
@@ -1163,6 +1171,61 @@
       "ty": 8,
       "label": "Pick up the paper parcel",
       "found": "Five of Finn's oatcakes, wrapped in paper. Five, of course."
+    }
+  ],
+  "sellers": [
+    {
+      "id": "hazels-kitchen",
+      "npc": "Hazel",
+      "area": "village",
+      "tx": 12,
+      "ty": 15,
+      "radiusTiles": 4,
+      "goods": [
+        {
+          "item": "tallow",
+          "qty": 1,
+          "embers": 1,
+          "label": "Buy a lump of tallow · 1 ember",
+          "line": "Tallow's a ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
+        }
+      ]
+    },
+    {
+      "id": "finns-mill-door",
+      "npc": "Finn",
+      "area": "village",
+      "tx": 30,
+      "ty": 23,
+      "radiusTiles": 4,
+      "goods": [
+        {
+          "item": "flour",
+          "qty": 1,
+          "embers": 1,
+          "label": "Buy a sack of flour · 1 ember",
+          "line": "The fine sift, not the grist — I milled it while the wheel held. Forty-one and holding, this morning."
+        }
+      ]
+    },
+    {
+      "id": "madder-stall",
+      "npc": "The madder stall",
+      "area": "commons",
+      "tx": 8,
+      "ty": 18,
+      "radiusTiles": 4,
+      "festival": "Carting Day",
+      "goods": [
+        {
+          "item": "madder-scraps",
+          "qty": 1,
+          "embers": 1,
+          "cap": 4,
+          "label": "Buy madder scraps · 1 ember",
+          "line": "Red scraps off the dyer's boards, swept up at the fair's end. An ember a handful — no haggling, that's the Hall price."
+        }
+      ]
     }
   ]
 }

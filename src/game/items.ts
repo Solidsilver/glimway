@@ -94,6 +94,13 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t something to carry in your off hand.'
     case 'already-picked-up':
       return 'You’ve already picked that up.'
+    case 'not-in-season':
+      return 'Not now — that belongs to another season. Come back when it turns.'
+    case 'sold-out':
+      return 'That’s all they had today. Come back tomorrow.'
+    case 'invalid-seller':
+    case 'invalid-good':
+      return 'There’s nothing like that to buy here.'
     case 'condition-unmet':
       return 'You aren’t ready for that yet.'
     case 'already-granted':
@@ -266,6 +273,10 @@ export class Items {
     return this.run('ada-oil', { itemDef: 'hearth-oil' }).finally(() => {
       this.inFlightAdaOil = false
     })
+  }
+  /** Buy a good from a seller (Hazel's kitchen, Finn's mill door, the Carting Day stall). */
+  buy(seller: string, good: string) {
+    return this.run('buy', { seller, good })
   }
 
   // ------------------------------------------------------------ reads

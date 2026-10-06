@@ -8,6 +8,7 @@
 import type Phaser from 'phaser'
 import { dialogueFor, emberDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
 import { EMBER_COSTS, isLit, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { ITEMS } from '../../lib/items'
 import { bus, EV, type PromptPayload } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
@@ -318,6 +319,20 @@ export class Interactables {
       ? keepsakeAsk(target.id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
       : null
     if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
+    // What a resident sells at their own door (Hazel's kitchen, Finn's
+    // mill door): a choice at the end of the talk, when there's a world to
+    // keep the books.
+    const seller = (ITEMS.sellers ?? []).find((sl) => sl.npc.toLowerCase() === target.id && !sl.festival)
+    if (seller && session.link) {
+      payload = {
+        ...payload,
+        choices: [
+          ...(payload.choices ?? []),
+          ...seller.goods.map((g) => ({ text: g.label, action: `buy:${seller.id}:${g.item}` })),
+          { text: 'Not yet' }
+        ]
+      }
+    }
     const withChoiceAndNotYet = (existing: DialogueChoice[] | undefined, newChoice: DialogueChoice): DialogueChoice[] => {
       const nonNotYet = (existing ?? []).filter((c) => c.text !== 'Not yet')
       return [...nonNotYet, newChoice, { text: 'Not yet' }]

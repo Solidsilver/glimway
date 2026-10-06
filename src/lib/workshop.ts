@@ -5,7 +5,7 @@ import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
 import { assetKind, isStackable, itemDef } from './items.ts';
 export interface Asset { kind: 'material' | 'item' | 'decoration' | 'instance'; id: string; qty: number }
-export interface Recipe { id: string; name: string; minTier: number; materials: Record<string, number>; output: Asset; page?: string; found?: string }
+export interface Recipe { id: string; name: string; minTier: number; materials: Record<string, number>; swaps?: Record<string, string[]>; output: Asset; page?: string; found?: string }
 export interface Crafting { utilityItems: { id: string; name: string }[]; recipes: Recipe[]; hearthRecipes?: Recipe[] }
 export interface Project { id: string; name: string; materials: Record<string, number>; papers: string[]; worldFlag: string }
 export interface Projects { projects: Project[] }
@@ -15,6 +15,13 @@ const positive = (v: unknown, max = 1_000_000): v is number => Number.isSafeInte
 export function validMaterialCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => loadWilds().materials.includes(k) && positive(n)); }
 /** A recipe's bill: any carried stack (materials, parts, wax…). */
 export function validRecipeCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => { const d = itemDef(k); return !!d && isStackable(d) && positive(n); }); }
+/** A material's stand-ins, one for one (a pressed-flower frame takes dried flowers): on the bill, carried stacks of their own, never repeats. */
+export function validRecipeSwaps(v: unknown, materials: Record<string, number>): v is Record<string, string[]> {
+  return v === undefined || (object(v) && Object.entries(v).every(([k, swaps]) => {
+    if (!(k in materials) || !Array.isArray(swaps) || !swaps.length) return false;
+    return swaps.every((s) => !(s in materials) && s !== k && itemDef(s) !== null && isStackable(itemDef(s)!));
+  }));
+}
 export function validateCrafting(value: unknown): Crafting {
   const c = value as Crafting;
   const bad = (): never => { throw new Error('invalid crafting'); };
@@ -22,7 +29,7 @@ export function validateCrafting(value: unknown): Crafting {
   const items = new Set<string>(); const recipes = new Set<string>();
   for (const v of c.utilityItems) { const d = object(v) ? itemDef(v.id) : null; if (!object(v) || !id(v.id) || typeof v.name !== 'string' || !v.name || items.has(v.id) || d?.kind !== 'part' || d.name !== v.name) return bad(); items.add(v.id); }
   for (const r of c.recipes) {
-    if (!object(r) || !id(r.id) || typeof r.name !== 'string' || !r.name || recipes.has(r.id) || r.minTier !== 2 || !validRecipeCosts(r.materials) || !object(r.output) || !positive(r.output.qty, 100)) return bad();
+    if (!object(r) || !id(r.id) || typeof r.name !== 'string' || !r.name || recipes.has(r.id) || r.minTier !== 2 || !validRecipeCosts(r.materials) || !validRecipeSwaps(r.swaps, r.materials) || !object(r.output) || !positive(r.output.qty, 100)) return bad();
     if (r.output.kind === 'decoration') { const def = HOMESTEAD_DATA.items.find(v => v.id === r.output.id); if (!def || def.minTier > r.minTier) return bad(); }
     else { const d = itemDef(r.output.id); if (!d || assetKind(d) !== r.output.kind || (r.output.kind === 'instance' && r.output.qty !== 1)) return bad(); }
     recipes.add(r.id);
@@ -30,7 +37,7 @@ export function validateCrafting(value: unknown): Crafting {
   if (c.hearthRecipes) {
     if (!Array.isArray(c.hearthRecipes)) return bad();
     for (const r of c.hearthRecipes) {
-      if (!object(r) || !id(r.id) || typeof r.name !== 'string' || !r.name || recipes.has(r.id) || r.minTier !== 1 || !validRecipeCosts(r.materials) || !object(r.output) || !positive(r.output.qty, 100)) return bad();
+      if (!object(r) || !id(r.id) || typeof r.name !== 'string' || !r.name || recipes.has(r.id) || r.minTier !== 1 || !validRecipeCosts(r.materials) || !validRecipeSwaps(r.swaps, r.materials) || !object(r.output) || !positive(r.output.qty, 100)) return bad();
       // A found recipe names the page that teaches it (a recipe paper you
       // hold); a starting recipe names neither.
       if ((r.page === undefined) !== (r.found === undefined)) return bad();

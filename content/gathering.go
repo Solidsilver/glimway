@@ -26,6 +26,9 @@ type GatheringYield struct {
 	Min            int    `json:"min"`
 	Max            int    `json:"max"`
 	ChancePermille int    `json:"chancePermille,omitempty"`
+	// Mark: the yield only turns up in this Mark (a season; the server's
+	// clock and calendar decide, never the client).
+	Mark string `json:"mark,omitempty"`
 }
 
 type GatheringTarget struct {
@@ -33,6 +36,24 @@ type GatheringTarget struct {
 	ToolAction string           `json:"toolAction"`
 	Name       string           `json:"name"`
 	Yields     []GatheringYield `json:"yields"`
+	// Verb: the button word when the work isn't a chop, break or dig
+	// ("Sweep", "Pick"); the action's own word when empty.
+	Verb string `json:"verb,omitempty"`
+	// Mark or Wick: the piece only stands in its season (a Mark for the
+	// seasons, a wick for a single wick's week). Empty: always there.
+	Mark string `json:"mark,omitempty"`
+	Wick string `json:"wick,omitempty"`
+}
+
+// InSeason: whether a piece (or yield) turns up on the given calendar day.
+func (g GatheringYield) InSeason(d CalendarDay) bool {
+	return g.Mark == "" || d.Mark == g.Mark
+}
+func (t GatheringTarget) InSeason(d CalendarDay) bool {
+	if t.Mark != "" && d.Mark != t.Mark {
+		return false
+	}
+	return t.Wick == "" || d.Wick == t.Wick
 }
 
 type Gathering struct {
@@ -79,6 +100,10 @@ func LoadGathering() (Gathering, error) {
 	if g.PlantsPerHome <= 0 {
 		return g, fmt.Errorf("plantsPerHome must be positive")
 	}
+	cal, err := LoadCalendar()
+	if err != nil {
+		return g, fmt.Errorf("calendar: %v", err)
+	}
 	for _, area := range []string{"wilds", "woodland", "home"} {
 		if len(g.Areas[area]) == 0 {
 			return g, fmt.Errorf("gathering area %s offers nothing", area)
@@ -88,6 +113,16 @@ func LoadGathering() (Gathering, error) {
 		for _, t := range targets {
 			if _, ok := g.Targets[t]; !ok {
 				return g, fmt.Errorf("gathering area %s names unknown target %s", area, t)
+			}
+		}
+	}
+	for id, t := range g.Targets {
+		if len(t.Verb) > 30 || t.Mark != "" && !slices.Contains(cal.Marks, t.Mark) || t.Wick != "" && !slices.Contains(cal.Wicks, t.Wick) {
+			return g, fmt.Errorf("gathering target %s has an invalid verb or season", id)
+		}
+		for _, y := range t.Yields {
+			if y.Mark != "" && !slices.Contains(cal.Marks, y.Mark) {
+				return g, fmt.Errorf("gathering target %s yield %s has an invalid mark", id, y.Item)
 			}
 		}
 	}

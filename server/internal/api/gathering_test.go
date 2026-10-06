@@ -127,16 +127,17 @@ func TestGatheringWearAndYields(t *testing.T) {
 	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "nothing", "v1"), 400)
 
 	// A tree in the Tangle: one use off the axe, timber 2–4, and nothing
-	// else in the pack changes (no water, no stray yields).
+	// else in the pack changes (no water, no stray yields; in Amberfall
+	// the sap rides along, and the delta check keeps the pack honest).
 	before := x.items("GET", "/api/items", nil, c, 200).Items
-	r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tree", "v1"), 200)
+	r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "v1"), 200)
 	if got, want := packDelta(before, r.Result.Items), gatheredDelta(r.Result.Gathered); fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("the pack changed by %v, the gather said %v", got, want)
 	}
 	if r.Result.Wear == nil || r.Result.Wear.UsesLeft != 29 {
 		t.Fatalf("wear %+v", r.Result.Wear)
 	}
-	if n := stackQty(r.Result.Items, "timber"); n < 2 || n > 4 || len(r.Result.Gathered) != 1 || r.Result.Gathered[0].Qty != n {
+	if n := stackQty(r.Result.Items, "timber"); n < 2 || n > 4 || len(r.Result.Gathered) < 1 || r.Result.Gathered[0].ItemDef != "timber" || r.Result.Gathered[0].Qty != n {
 		t.Fatalf("timber %d, gathered %+v", n, r.Result.Gathered)
 	}
 	// The woods by the village give too.
@@ -165,18 +166,18 @@ func TestGatheringWearAndYields(t *testing.T) {
 
 	// An heirloom blunts at zero and then stops working.
 	brack := x.instance(s.HabiticaID, "brack-felling-axe", 3, "")
-	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tree", "v1"), 200); r.Result.Wear == nil || r.Result.Wear.State != "blunt" {
+	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || r.Result.Wear.State != "blunt" {
 		t.Fatalf("brack %+v", r.Result.Wear)
 	}
-	if x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tree", "v1"), 409).Error.Code != "tool-blunt" {
+	if x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 409).Error.Code != "tool-blunt" {
 		t.Fatal("chopped with a blunt axe")
 	}
 	// A cheap tool breaks at zero and is gone.
 	cheap := x.instance(s.HabiticaID, "bench-axe", 3, "")
-	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tree", "v1"), 200); r.Result.Wear == nil || !r.Result.Wear.Broke {
+	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || !r.Result.Wear.Broke {
 		t.Fatalf("cheap %+v", r.Result.Wear)
 	}
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tree", "v1"), 404)
+	x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 404)
 
 	// A refused gather wears nothing.
 	if left := findInstance(x.items("GET", "/api/items", nil, c, 200).Items, axe).UsesLeft; left != 29 {
@@ -223,7 +224,7 @@ func TestGatheringCaps(t *testing.T) {
 	pick := x.instance(s.HabiticaID, "bench-pick", -1, "")
 	here := [2]int{20, 20}
 	chop := func(visit string, status int) itemsResponse {
-		return x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tree", visit), status)
+		return x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", visit), status)
 	}
 	caps := content.GatheringRules.Caps
 
@@ -259,7 +260,7 @@ func TestGatheringCaps(t *testing.T) {
 	// A new day (UTC), and the woods give again.
 	x.now.Add(86400)
 	chop("tomorrow", 200)
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tree", string(make([]byte, 65))), 400)
+	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", string(make([]byte, 65))), 400)
 	x.conserved(s.HabiticaID)
 }
 

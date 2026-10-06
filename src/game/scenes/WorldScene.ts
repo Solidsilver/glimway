@@ -24,6 +24,7 @@ import { TILE } from '../textures'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
 import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { yieldLine } from '../../lib/gathering'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
 import { Hero } from '../entities/hero'
@@ -1232,6 +1233,11 @@ export class WorldScene extends Phaser.Scene {
       this.giveAdaOil()
       return
     }
+    if (action.startsWith('buy:')) {
+      const [, seller, good] = action.split(':')
+      if (seller && good) this.marketBuy(seller, good)
+      return
+    }
     const spend: EmberSpend | null =
       action === 'rest' ? { kind: 'rest' }
         : action === 'home-rest' ? { kind: 'home-rest' }
@@ -1294,6 +1300,21 @@ export class WorldScene extends Phaser.Scene {
       const h = HEIRLOOMS[id as HeirloomId]
       if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
       emitResidents(this.session)
+    })
+  }
+
+  /** Buying from a seller (a resident's kitchen door, or the day's market stall). */
+  private marketBuy(seller: string, good: string): void {
+    const items = itemsFor(this.session)
+    if (!this.session.link) return
+    void items.buy(seller, good).then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      const bought = r.value.bought
+      if (bought) bus.emit(EV.toast, { text: `Found: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'sparkle', art: `icon-${bought.itemDef}` })
     })
   }
 
