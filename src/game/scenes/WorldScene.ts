@@ -92,6 +92,7 @@ import { kindForKey, stepKind } from '../../lib/belt'
 import { pinnedProgress } from '../guide-pin'
 import type { GuideWhere } from '../../content/guides'
 import { MAX_SCREEN_SCALE } from '../atlas-plan'
+import { densityOf } from '../density'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
 
@@ -555,6 +556,29 @@ export class WorldScene extends Phaser.Scene {
         let h = 2166136261
         for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619)
         return `${c.width}x${c.height}:${(h >>> 0).toString(16)}`
+      }
+      // A texture's frame size (world px) and density (texels per world px).
+      w.__fsDevTextureSize = (key: string) => {
+        if (!this.textures.exists(key)) return null
+        const t = this.textures.get(key)
+        return { w: t.get().width, h: t.get().height, density: densityOf(t) }
+      }
+      // Texture memory as the GPU holds it (RGBA, 4 bytes a texel), by
+      // texture and in total; `largest` the biggest side of any texture.
+      w.__fsDevTextureMemory = () => {
+        const out: Record<string, number> = {}
+        let total = 0
+        let largest = 0
+        for (const key of this.textures.getTextureKeys()) {
+          let bytes = 0
+          for (const src of this.textures.get(key).source) {
+            bytes += src.width * src.height * 4
+            largest = Math.max(largest, src.width, src.height)
+          }
+          out[key] = bytes
+          total += bytes
+        }
+        return { total, largest, textures: out }
       }
       // Roll in a given direction from inside the frame loop, so playtests can
       // react to an aim lock without input latency.
@@ -1336,13 +1360,15 @@ export class WorldScene extends Phaser.Scene {
         if (frame && !tex.has(frame)) return
         const f = frame ? tex.get(frame) : tex.get()
         const src = f.source.image as CanvasImageSource
-        const w = f.cutWidth
-        const h = f.cutHeight
+        // Dense textures (../density.ts): read their texels, `k` a world px.
+        const k = frame ? 1 : densityOf(tex)
+        const w = f.cutWidth * k
+        const h = f.cutHeight * k
         const c = document.createElement('canvas')
         c.width = w
         c.height = h
         const ctx = c.getContext('2d', { willReadFrequently: true })!
-        ctx.drawImage(src, f.cutX, f.cutY, w, h, 0, 0, w, h)
+        ctx.drawImage(src, f.cutX * k, f.cutY * k, w, h, 0, 0, w, h)
         const data = ctx.getImageData(0, 0, w, h).data
         let minX = w, minY = h, maxX = -1, maxY = -1
         for (let y = 0; y < h; y++) {
@@ -1359,15 +1385,17 @@ export class WorldScene extends Phaser.Scene {
         const bw = maxX - minX + 1
         const bh = maxY - minY + 1
         const cropH = bust ? Math.max(1, Math.ceil(bh * 0.58)) : bh
-        const size = Math.max(bw, cropH) + 2
+        // The portrait stays world-px sized (the UI sizes it by its natural size).
+        const size = Math.ceil(Math.max(bw, cropH) / k) + 2
         const o = document.createElement('canvas')
         o.width = size
         o.height = size
         const octx = o.getContext('2d')!
-        octx.imageSmoothingEnabled = false
-        const dx = Math.floor((size - bw) / 2)
-        const dy = bust ? size - cropH : Math.floor((size - bh) / 2)
-        octx.drawImage(c, minX, minY, bw, cropH, dx, dy, bw, cropH)
+        octx.imageSmoothingEnabled = k > 1
+        octx.imageSmoothingQuality = 'high'
+        const dx = Math.floor((size - bw / k) / 2)
+        const dy = bust ? size - cropH / k : Math.floor((size - bh / k) / 2)
+        octx.drawImage(c, minX, minY, bw, cropH, dx, dy, bw / k, cropH / k)
         out[name] = o.toDataURL()
       } catch {
         /* portrait is optional decoration */

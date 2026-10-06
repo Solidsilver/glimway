@@ -28,8 +28,21 @@ import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 1
+export const ATLAS_GENERATOR_VERSION = 2
 export const PACKED_MANIFEST_KEY = 'fingersnap-packed'
+
+/**
+ * Texels per world px of the canvas-blitted packs and the terrain (the
+ * hero, trees and props are GPU-scaled, below, and denser still). The
+ * build box-filters each frame down from its full-resolution sheet to this
+ * density; scenes draw it at the same world size (./density.ts).
+ */
+export const ART_DENSITY = 4
+/**
+ * What phones keep (./density.ts `artDensity`): they frame the world at 2
+ * screen px per world px, so the packs are box-filtered 2:1 at boot.
+ */
+export const PHONE_ART_DENSITY = 2
 
 /** Largest camera zoom (WorldScene.zoomFor). */
 export const MAX_SCREEN_SCALE = 5
@@ -42,6 +55,8 @@ export type PackedRect = [number, number, number, number]
 export interface PackedCanvasPack {
   image: string
   size: [number, number]
+  /** Texels per world px (ART_DENSITY); rects below are in texels. */
+  density: number
   /** Native frame canvases, whole (transparent margins included). */
   frames: Record<string, PackedRect>
   /** Off-native samples of a frame, by `blitKey`. */
@@ -56,7 +71,8 @@ export interface PackedManifest {
   commons: PackedCanvasPack
   runtime: PackedCanvasPack
   items: PackedCanvasPack
-  terrain: { image: string; size: [number, number] }
+  /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
+  terrain: { image: string; size: [number, number]; cell: number; density: number }
   /** Phaser atlases (image + JSON hash), loaded under their old texture keys. */
   atlases: Record<string, { image: string; json: string }>
   backdrops: Record<string, string>
