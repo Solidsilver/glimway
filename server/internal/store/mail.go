@@ -84,25 +84,15 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 					if err != nil {
 						return false, err
 					}
+					// A second warden-set tool can't be carried. It goes to the
+					// sender's personal chest, which travels with them (a shared
+					// chest stays with the homestead when they leave or move).
 					if senderHasWardenInPack {
-						var homeID string
-						err = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", sender).Scan(&homeID)
-						if err != nil && err != sql.ErrNoRows {
-							return false, err
-						}
-						if err == nil && homeID != "" {
-							destLocation = "storage"
-							destOwner = homeID
-							rackedAt = now
-							pack = "storage:instance:" + def
-							isRedirected = true
-						} else {
-							destLocation = "personal"
-							destOwner = sender
-							rackedAt = 0
-							pack = "personal:instance:" + def
-							isRedirected = true
-						}
+						destLocation = "personal"
+						destOwner = sender
+						rackedAt = 0
+						pack = "personal:instance:" + def
+						isRedirected = true
 					}
 				}
 				result, err = tx.ExecContext(ctx, "UPDATE item_instances SET location=?,owner=?,racked_at=? WHERE id=? AND owner=? AND item_def=? AND location='mail'", destLocation, destOwner, rackedAt, instance, sender, def)

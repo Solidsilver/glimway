@@ -6,7 +6,7 @@
  *
  * GET  /api/v3/user        → the "Tansy" fixture, with `_id` = X-Api-User and
  *                            any per-user overrides. X-Api-Key "wrong" → 401.
- * POST /__user             → { id, name?, lvl?, exp?, hp?, mp? } sets overrides.
+ * POST /__user             → { id, name?, lvl?, exp?, hp?, mp?, party? } sets overrides.
  * GET  /__health           → 200 (readiness check).
  *
  * Each Playwright worker starts its own in-process copy (e2e/server/backend.ts,
@@ -23,6 +23,8 @@ interface Overrides {
   exp?: number
   hp?: number
   mp?: number
+  /** The hero's Habitica party id (none by default). */
+  party?: string
 }
 
 function userFor(users: Map<string, Overrides>, id: string): unknown {
@@ -39,7 +41,7 @@ function userFor(users: Map<string, Overrides>, id: string): unknown {
   if (o.lvl !== undefined) base.stats.lvl = o.lvl
   if (o.hp !== undefined) base.stats.hp = o.hp
   if (o.mp !== undefined) base.stats.mp = o.mp
-  return { ...base, party: { _id: null } }
+  return { ...base, party: { _id: o.party ?? null } }
 }
 
 /** A fake Habitica with its own users; port 0 picks a free port. */

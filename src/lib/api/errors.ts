@@ -209,6 +209,13 @@ export const SERVER_ERROR_CODES = [
   'invalid-tool',
   'invalid-visit',
   'plant-in-the-way',
+  // worlds: party links and moves (server/internal/api/worlds.go)
+  'invalid-request',
+  'world-not-found',
+  'already-in-world',
+  'mail-in-flight',
+  'not-world-owner',
+  'no-party',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

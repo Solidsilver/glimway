@@ -37,8 +37,8 @@ export const allow = (id: string): void => void admin('allowlist', 'add', id)
 /** Owner CLI: a single-use invite code. */
 export const adminInvite = (): string => admin('invite')
 
-/** Change what the fake Habitica reports for a user (XP, vitals, name). */
-export async function setHabitica(id: string, o: { name?: string; lvl?: number; exp?: number; hp?: number; mp?: number }): Promise<void> {
+/** Change what the fake Habitica reports for a user (XP, vitals, name, party). */
+export async function setHabitica(id: string, o: { name?: string; lvl?: number; exp?: number; hp?: number; mp?: number; party?: string }): Promise<void> {
   const res = await fetch(`${habiticaURL()}/__user`, { method: 'POST', body: JSON.stringify({ id, ...o }) })
   expect(res.ok).toBe(true)
 }
