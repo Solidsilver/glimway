@@ -475,9 +475,9 @@ export interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'heirloom' | 'ada-oil';
 export interface ItemsActionResponse extends Snapshot {
-  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[]; returned?: string; paper?: string };
+  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[]; returned?: string; paper?: string; heirloom?: string; adaOilCount?: number };
 }
 
 /** GET /api/calendar (public; Unix seconds). */

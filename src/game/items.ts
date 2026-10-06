@@ -79,6 +79,10 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t something to carry in your off hand.'
     case 'already-picked-up':
       return 'You’ve already picked that up.'
+    case 'condition-unmet':
+      return 'You aren’t ready for that yet.'
+    case 'already-granted':
+      return 'You’ve already received that heirloom.'
     case 'insufficient-items':
       return 'You don’t have that any more.'
     case 'insufficient-materials':
@@ -110,6 +114,8 @@ export { giftPhrase } from '../lib/items'
 export class Items {
   view: ItemsView | null = null
   status: ItemsStatus
+  private inFlightGrants = new Set<string>()
+  private inFlightAdaOil = false
 
   constructor(private session: Session) {
     this.status = session.link ? 'idle' : 'guest'
@@ -204,6 +210,26 @@ export class Items {
   }
   returnKeepsake(itemDef: string, target: string) {
     return this.run('return', { itemDef, target })
+  }
+  isGrantInFlight(itemDef: string): boolean {
+    return this.inFlightGrants.has(itemDef)
+  }
+  isAdaOilInFlight(): boolean {
+    return this.inFlightAdaOil
+  }
+  grantHeirloom(itemDef: string) {
+    if (this.inFlightGrants.has(itemDef)) return Promise.resolve(fail('busy'))
+    this.inFlightGrants.add(itemDef)
+    return this.run('heirloom', { itemDef }).finally(() => {
+      this.inFlightGrants.delete(itemDef)
+    })
+  }
+  giveAdaOil() {
+    if (this.inFlightAdaOil) return Promise.resolve(fail('busy'))
+    this.inFlightAdaOil = true
+    return this.run('ada-oil', { itemDef: 'hearth-oil' }).finally(() => {
+      this.inFlightAdaOil = false
+    })
   }
 
   // ------------------------------------------------------------ reads

@@ -208,7 +208,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /api/items":
 		err = a.itemsRead(w, r)
 	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
-		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return":
+		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return",
+		"POST /api/items/heirloom", "POST /api/items/ada-oil":
 		err = a.itemsMutation(w, r)
 	case "GET /api/repairs":
 		err = a.repairsRead(w, r)

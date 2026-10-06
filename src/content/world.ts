@@ -3,6 +3,7 @@ import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLan
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER } from './echoes.ts';
 import { residentJournal } from './residents.ts';
+import { heirloomJournalEntries } from './heirlooms.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -518,6 +519,7 @@ export function journalEntries(stage: QuestStage, flags: readonly string[] = [])
     }
     entries.push(...residentJournal(flags, STAGE_ORDER[i]));
   }
+  entries.push(...heirloomJournalEntries(flags));
   return entries;
 }
 

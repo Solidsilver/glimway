@@ -44,7 +44,7 @@ export function meetResident(session: Session, id: ResidentId): void {
 
 /** Tell the interface who this save has met (load, merges, meetings). */
 export function emitResidents(session: Session): void {
-  const met = session.state.flags.filter((f) => RESIDENT_IDS.some((id) => f.startsWith(`met:${id}@`)))
+  const met = session.state.flags.filter((f) => RESIDENT_IDS.some((id) => f.startsWith(`met:${id}@`)) || f.startsWith('heirloom:'))
   const payload: ResidentsMetPayload = { met }
   bus.emit(RESIDENT_EV.met, payload)
 }

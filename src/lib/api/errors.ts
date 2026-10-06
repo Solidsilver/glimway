@@ -176,6 +176,9 @@ export const SERVER_ERROR_CODES = [
   'wrong-recipient',
   'invalid-target',
   'unknown-target',
+  // heirlooms
+  'condition-unmet',
+  'already-granted',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

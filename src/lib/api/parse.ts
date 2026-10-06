@@ -549,6 +549,8 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   if (typeof r.paper === 'string' && r.paper) result.paper = r.paper;
   if (r.given) result.given = parseAsset(r.given);
   if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
+  if (typeof r.heirloom === 'string' && r.heirloom) result.heirloom = r.heirloom;
+  if (typeof r.adaOilCount === 'number') result.adaOilCount = r.adaOilCount;
   return { ...parseSnapshot(raw), result };
 }
 

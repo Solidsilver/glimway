@@ -6,7 +6,7 @@
  * wording follows quest progress), and opening conversations.
  */
 import type Phaser from 'phaser'
-import { dialogueFor, emberDialogue, type Dialogue } from '../../content/world'
+import { dialogueFor, emberDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
 import { EMBER_COSTS, isLit, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { bus, EV, type PromptPayload } from '../events'
 import { uiState } from '../input'
@@ -20,8 +20,9 @@ import { isResident, residentFullName, residentTalk } from '../../content/reside
 import { meetResident, residentContext } from '../residents'
 import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
-import { VILLAGE_EV } from '../village'
+import { VILLAGE_EV, villageFor, type Village } from '../village'
 import { HOME_EV } from '../homestead'
+import { HEIRLOOMS, HEIRLOOM_GUEST_LINES, countAdaOilGifts } from '../../content/heirlooms'
 import type { PaperPickups } from './papers'
 
 export interface Interactable {
@@ -63,6 +64,7 @@ export interface InteractableDeps {
   papers?: PaperPickups
   /** Runtime interaction points owned by features (homesteads, village life). */
   extras?: InteractionProvider[]
+  village?: Village
 }
 
 /**
@@ -90,8 +92,10 @@ export class Interactables {
   private markers = new Map<string, Phaser.GameObjects.Image>()
   /** Keycap hint floating above the current interaction target. */
   private keyHint: Phaser.GameObjects.Image | null = null
+  private readonly village: Village
 
   constructor(private scene: Phaser.Scene, private deps: InteractableDeps) {
+    this.village = deps.village ?? villageFor(deps.session)
     const { world } = deps
     for (const n of world.npcs) {
       this.list.push({
@@ -209,13 +213,18 @@ export class Interactables {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else if (isResident(it.id)) {
         const talk = residentTalk(it.id, residentContext(this.deps.session))
-        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
+        const flags = this.deps.session.state.flags
+        const adaSpade = it.id === 'ada' && Boolean(this.deps.session.link) && countAdaOilGifts(flags) >= 3 && !flags.includes('heirloom:ada-garden-spade') && !itemsFor(this.deps.session).isGrantInFlight('ada-garden-spade')
+        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, flags) || adaSpade) kind = 'talk'
       } else {
+        const flags = this.deps.session.state.flags
+        const orrinPick = it.id === 'orrin' && Boolean(this.deps.session.link) && this.village.hasWorldFlag('project:north-bridge:complete') && !flags.includes('heirloom:orrins-mason-pick') && !itemsFor(this.deps.session).isGrantInFlight('orrins-mason-pick')
         try {
           const d = dialogueFor(it.id, stage)
           if (d.event) kind = 'quest'
+          else if (orrinPick) kind = 'talk'
           else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
-          else if (it.id in NPC_NAMES && handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
+          else if (it.id in NPC_NAMES && handoverFor(it.id, stage, flags)) kind = 'talk'
         } catch {
           kind = null
         }
@@ -309,6 +318,60 @@ export class Interactables {
       ? keepsakeAsk(target.id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
       : null
     if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
+    const withChoiceAndNotYet = (existing: DialogueChoice[] | undefined, newChoice: DialogueChoice): DialogueChoice[] => {
+      const nonNotYet = (existing ?? []).filter((c) => c.text !== 'Not yet')
+      return [...nonNotYet, newChoice, { text: 'Not yet' }]
+    }
+
+    // Heirloom beats: Orrin's mason pick and Ada's garden spade
+    if (target.id === 'orrin' && this.village.hasWorldFlag('project:north-bridge:complete') && !session.state.flags.includes('heirloom:orrins-mason-pick')) {
+      if (!session.link) {
+        payload = {
+          ...payload,
+          lines: [...payload.lines, HEIRLOOM_GUEST_LINES.orrin]
+        }
+      } else if (!itemsFor(session).isGrantInFlight('orrins-mason-pick')) {
+        const h = HEIRLOOMS['orrins-mason-pick']
+        payload = {
+          ...payload,
+          lines: [...payload.lines, ...h.dialogueLines],
+          choices: withChoiceAndNotYet(payload.choices, { text: 'Take Orrin’s mason pick', action: 'heirloom:grant:orrins-mason-pick' })
+        }
+      }
+    } else if (target.id === 'ada') {
+      const gifts = countAdaOilGifts(session.state.flags)
+      if (gifts >= 3 && !session.state.flags.includes('heirloom:ada-garden-spade')) {
+        if (!session.link) {
+          payload = {
+            ...payload,
+            lines: [...payload.lines, HEIRLOOM_GUEST_LINES.adaSpade]
+          }
+        } else if (!itemsFor(session).isGrantInFlight('ada-garden-spade')) {
+          const h = HEIRLOOMS['ada-garden-spade']
+          payload = {
+            ...payload,
+            lines: [...payload.lines, ...h.dialogueLines],
+            choices: withChoiceAndNotYet(payload.choices, { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' })
+          }
+        }
+      } else if (gifts < 3) {
+        const carriesOil = session.state.inventory.some((i) => i === 'hearth-oil') ||
+          (itemsFor(session).view?.stacks.some((s) => s.itemDef === 'hearth-oil' && s.qty > 0) ?? false)
+        if (carriesOil) {
+          if (!session.link) {
+            payload = {
+              ...payload,
+              lines: [...payload.lines, HEIRLOOM_GUEST_LINES.adaOil]
+            }
+          } else if (!itemsFor(session).isAdaOilInFlight()) {
+            payload = {
+              ...payload,
+              choices: withChoiceAndNotYet(payload.choices, { text: 'Give hearth oil for the window', action: 'ada:oil' })
+            }
+          }
+        }
+      }
+    }
     uiState.dialogueOpen = true
     heardAt.add(heardKey)
     this.refreshMarkers()
