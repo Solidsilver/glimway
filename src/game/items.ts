@@ -34,6 +34,8 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t a tool.'
     case 'not-needed':
       return 'No need just now.'
+    case 'too-weak':
+      return 'You’re too far gone to eat. Rest by a hearth first.'
     case 'not-usable-yet':
       return 'Keep it for when you need it.'
     case 'cannot-mend':

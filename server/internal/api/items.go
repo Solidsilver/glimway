@@ -132,6 +132,22 @@ func moveInstance(ctx context.Context, tx *sql.Tx, id, def string, from, to inst
 	return err
 }
 
+// fittedLedger moves the audit of a tool's fittings with the tool: whoever
+// holds a tool in their pack carries `fitted:<def>` for each fitting on it.
+// delta is -1 as it leaves a holder's pack, +1 as it arrives in one.
+func fittedLedger(ctx context.Context, tx *sql.Tx, player, tool string, delta int, reason, ref string, now int64) error {
+	fittings, err := fittingRows(ctx, tx, tool)
+	if err != nil {
+		return err
+	}
+	for _, f := range fittings {
+		if err = currency(ctx, tx, player, "fitted:"+f.Def, delta, reason, ref, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func makerOf(ctx context.Context, tx *sql.Tx, id string, cache map[string]*makerView) (*makerView, error) {
 	if id == "" {
 		return nil, nil
@@ -744,6 +760,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		if err = refreshItems(ctx, tx, s); err != nil {
 			return nil, err
 		}
+		// Every view of the pack shows warden-set tools healed overnight.
+		if err = healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+			return nil, err
+		}
 		out.Items, err = readItems(ctx, tx, s)
 		return out, err
 	}, func() {
@@ -767,6 +787,11 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	}
 	if !def.UsableNow() {
 		return fail(409, "not-usable-yet")
+	}
+	// A hero at 0 HP is too far gone to eat or drink. Only a sync, a rest or
+	// a revive (as the rules define them) lifts the zero-HP lock.
+	if s.State.HP <= 0 {
+		return fail(409, "too-weak")
 	}
 	helps := false
 	for _, e := range def.Use {
@@ -992,7 +1017,9 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	case "material", "item":
 		err = packPut(ctx, tx, req.ToID, v.ID, got.Makers, "gift", s.HabiticaID, now)
 	case "instance":
-		err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.HabiticaID, now)
+		if err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.HabiticaID, now); err == nil {
+			err = fittedLedger(ctx, tx, req.ToID, v.Instance, 1, "gift", s.HabiticaID, now)
+		}
 	default:
 		err = currency(ctx, tx, req.ToID, "decoration:"+v.ID, v.Qty, "gift", s.HabiticaID, now)
 	}

@@ -103,6 +103,24 @@ func migrate(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	// Migrations apply in name order, once each. A pending one that sorts
+	// before the newest applied one would run against tables that later
+	// migrations already reshaped (or dropped) on upgraded databases, though
+	// a fresh database runs it in order: refuse to start instead. New
+	// migrations always take the next number above the current highest.
+	var newest string
+	if err = tx.QueryRow("SELECT COALESCE(MAX(name),'') FROM schema_migrations").Scan(&newest); err != nil {
+		return err
+	}
+	for _, f := range files {
+		var applied int
+		if err = tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE name=?", f.Name()).Scan(&applied); err != nil {
+			return err
+		}
+		if applied == 0 && f.Name() < newest {
+			return fmt.Errorf("out-of-order migration %s after %s: renumber it above the newest applied migration", f.Name(), newest)
+		}
+	}
 	for _, f := range files {
 		var exists int
 		if err = tx.QueryRow("SELECT count(*) FROM schema_migrations WHERE name=?", f.Name()).Scan(&exists); err != nil {
