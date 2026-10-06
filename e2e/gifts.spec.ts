@@ -28,7 +28,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const gateWren = homeWren.gate
 
   // Fund Wren with 2 comfrey salves and grant an unplaced gate-shelf
-  fund(idWren, { items: { 'comfrey-salve': 2 } })
+  fund(idWren, { items: { 'comfrey-salve': 2 }, materials: { timber: 1 } })
   sql(`INSERT INTO homestead_items (id, item_def, location, habitica_id, homestead_id)
        VALUES ('shelf-${idWren}', 'gate-shelf', 'inventory', '${idWren}', NULL);
        INSERT INTO ledger (habitica_id, currency, delta, earned_delta, reason, ref, created_at)
@@ -81,6 +81,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await shelfModal.locator('button', { hasText: '+ Put a gift' }).first().click()
   await shelfModal.locator('.stock-btn', { hasText: /Comfrey salve/ }).first().click()
 
+  // Materials use their own wire kind and can be stocked too.
+  await shelfModal.locator('button', { hasText: '+ Put a gift' }).first().click()
+  await shelfModal.locator('.stock-btn', { hasText: 'Timber' }).first().click()
+  await expect(shelfModal.locator('.item-info .name', { hasText: 'Timber' })).toBeVisible()
+
   // Close the shelf panel
   await shelfModal.getByLabel('Close the gift shelf').click()
   await expect(shelfModal).toBeHidden()
@@ -126,6 +131,61 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const shelfCount = sql(`SELECT COUNT(*) FROM gate_shelf_slots WHERE homestead_id = '${homeWren.id}' AND slot = 0;`)
   expect(shelfCount).toBe('0')
   await ctxFinn.close()
+
+  // Ira takes the stocked material from another slot.
+  const inviteIra = await page.request.post('/api/invites', { data: {} })
+  const ctxIra = await browser.newContext({ baseURL })
+  const pageIra = await ctxIra.newPage()
+  const idIra = await freshPlayer(pageIra, 'Ira', (await inviteIra.json()).code as string)
+  await go(pageIra, 'commons', 25, 10)
+  await expect.poll(async () => (await homes(pageIra)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
+  await place(pageIra, shelfPx, shelfPy)
+  await expect(pageIra.locator('.prompt')).toContainText('Look at the gift shelf')
+  await pageIra.keyboard.press('e')
+  const iraShelf = pageIra.getByRole('dialog', { name: /Gift Shelf/ })
+  await expect(iraShelf).toBeVisible()
+  await iraShelf.getByTestId('take-slot-2').click()
+  await expectToast(pageIra, /You took a timber from Wren’s shelf/)
+  expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${idIra}' AND item_def='timber';`)).toContain('timber|1')
+  await ctxIra.close()
+
+  // Two travellers read the same remaining slot before either takes it.
+  // One succeeds; the other sees the server's slot-empty refusal in the panel.
+  const inviteOne = await page.request.post('/api/invites', { data: {} })
+  const inviteTwo = await page.request.post('/api/invites', { data: {} })
+  const ctxOne = await browser.newContext({ baseURL })
+  const ctxTwo = await browser.newContext({ baseURL })
+  const pageOne = await ctxOne.newPage()
+  const pageTwo = await ctxTwo.newPage()
+  await freshPlayer(pageOne, 'Moss', (await inviteOne.json()).code as string)
+  await freshPlayer(pageTwo, 'Reed', (await inviteTwo.json()).code as string)
+  for (const traveller of [pageOne, pageTwo]) {
+    await go(traveller, 'commons', 25, 10)
+    await expect.poll(async () => (await homes(traveller)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
+    await place(traveller, shelfPx, shelfPy)
+    await expect(traveller.locator('.prompt')).toContainText('Look at the gift shelf')
+    await traveller.keyboard.press('e')
+    await expect(traveller.getByRole('dialog', { name: /Gift Shelf/ })).toBeVisible()
+  }
+  await Promise.all([
+    pageOne.getByTestId('take-slot-1').click(),
+    pageTwo.getByTestId('take-slot-1').click()
+  ])
+  await expect.poll(async () => {
+    const lines = await Promise.all([pageOne, pageTwo].map(async (p) => p.locator('.msg.error').allTextContents()))
+    return lines.flat().some((line) => line.includes('That slot is empty.'))
+  }).toBe(true)
+  await ctxOne.close()
+  await ctxTwo.close()
+
+  // Wren can put the now-empty shelf away from its panel.
+  await place(page, shelfPx, shelfPy)
+  await page.keyboard.press('e')
+  const ownerShelf = page.getByRole('dialog', { name: /Gift Shelf/ })
+  await expect(ownerShelf).toBeVisible()
+  await ownerShelf.getByRole('button', { name: 'Take down shelf' }).click()
+  await expect(ownerShelf).toBeHidden()
+  await expect.poll(async () => (await homes(page)).mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')).toBe(false)
 })
 
 test('maker thank-you mail: when item made by someone else is used, maker receives thank-you mail', async ({ page, browser, baseURL }) => {
@@ -162,7 +222,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   const salveRow = inv.locator(`[data-item="item:keepers-twists@${idWren}"]`)
   await expect(salveRow).toContainText('Made by Wren')
   await salveRow.getByRole('button', { name: 'Use' }).click()
-  await expect(inv.getByTestId('inv-message')).toHaveText("You used a Keeper's Twists.")
+  await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
   await pageFinn.keyboard.press('Escape')
   await ctxFinn.close()
 
@@ -179,6 +239,6 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await expect(mailPanel).toBeVisible()
 
   // The thank-you mail appears in the mailbox
-  await expect(mailPanel).toContainText("Finn used the keeper's twists you made.")
+  await expect(mailPanel).toContainText("Finn used Keeper's Twists you made.")
   await mailPanel.locator('button', { hasText: 'Read' }).click()
 })

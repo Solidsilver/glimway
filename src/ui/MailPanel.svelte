@@ -5,6 +5,7 @@
   import { HOME_EV, homesteadsFor } from '../game/homestead'
   import { bus } from '../game/events'
   import { assetKey, assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
+  import { giftPhrase } from '../lib/items'
   import { MAIL } from '../lib/mail'
   import type { Asset, Mail } from '../lib/api/types'
   import { focusTrap } from './focus'
@@ -48,7 +49,8 @@
     const neighbours = homes.neighbours()
     const goods = movableAssets(village.inventory)
     const buckets = mailBuckets(village.mail, me)
-    return { buckets, neighbours, goods, status: village.mailStatus, recall: !village.recallUnsupported, more: !!village.mailCursor, full: buckets.outgoing.length >= MAIL.maxOutstandingSent }
+    const pendingParcels = buckets.outgoing.filter((m) => m.asset.kind !== 'thanks')
+    return { buckets, neighbours, goods, status: village.mailStatus, recall: !village.recallUnsupported, more: !!village.mailCursor, full: pendingParcels.length >= MAIL.maxOutstandingSent }
   })
   const chosen = $derived(view.goods.find((g) => assetKey(g) === pick) ?? null)
 
@@ -63,7 +65,7 @@
     busy = null
     message = r.ok
       ? {
-          text: m.asset.kind === 'thanks' ? `${m.fromName} used the ${assetName(m.asset).toLowerCase()} you made.` : `You collect ${assetPhrase(m.asset)} from ${m.fromName}.`,
+          text: m.asset.kind === 'thanks' ? `${m.fromName} used ${giftPhrase(m.asset.id, 1)} you made.` : `You collect ${assetPhrase(m.asset)} from ${m.fromName}.`,
           kind: 'ok'
         }
       : { text: r.text, kind: 'error' }
@@ -133,7 +135,7 @@
             </span>
             <span class="txt">
               {#if m.asset.kind === 'thanks'}
-                <span class="what">{m.fromName} used the {assetName(m.asset).toLowerCase()} you made.</span>
+                <span class="what">{m.fromName} used {giftPhrase(m.asset.id, 1)} you made.</span>
                 <span class="from">{when(m.sentAt)}</span>
               {:else}
                 <span class="what">{assetPhrase(m.asset)}</span>
@@ -152,7 +154,7 @@
         {#each view.buckets.outgoing as m (m.id)}
           <li class="parcel" data-sent={m.id}>
             <span class="thumb">{#if art(m.asset)}<img src={art(m.asset)} alt="" />{:else}<ArtIcon art={icon(m.asset)} name="sparkle" size={16} />{/if}</span>
-            <span class="txt"><span class="what">{assetPhrase(m.asset)}</span><span class="from">to {m.toName} · {when(m.sentAt)}</span></span>
+            <span class="txt"><span class="what">{m.asset.kind === 'thanks' ? `Your thanks to ${m.toName} for ${giftPhrase(m.asset.id, 1)}` : assetPhrase(m.asset)}</span><span class="from">to {m.toName} · {when(m.sentAt)}</span></span>
             {#if view.recall && m.asset.kind !== 'thanks'}
               <button type="button" class="small" data-recall={m.id} disabled={busy !== null} onclick={() => recall(m)}>{busy === m.id ? 'Recalling…' : 'Recall'}</button>
             {/if}
@@ -165,7 +167,11 @@
           <ul class="list history">
             {#each view.buckets.history as m (m.id)}
               <li class="line">
-                {m.fromId === me ? `To ${m.toName}` : `From ${m.fromName}`}: {assetPhrase(m.asset)} ·
+                {#if m.asset.kind === 'thanks' && m.fromId === me}
+                  Your thanks to {m.toName} for {giftPhrase(m.asset.id, 1)} ·
+                {:else}
+                  {m.fromId === me ? `To ${m.toName}` : `From ${m.fromName}`}: {assetPhrase(m.asset)} ·
+                {/if}
                 {settledLine(m)}{m.claimedAt ? ` ${when(m.claimedAt)}` : m.returnedAt ? ` ${when(m.returnedAt)}` : ''}
               </li>
             {/each}

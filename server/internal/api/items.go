@@ -463,6 +463,7 @@ func wardenDefs() string {
 
 type wearResult struct {
 	Broke     bool          `json:"broke"`
+	WoreOut   bool          `json:"woreOut"`
 	State     string        `json:"state"`
 	WornOut   []string      `json:"wornOut"`
 	Instance  *instanceView `json:"instance"`
@@ -519,6 +520,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		return out, err
 	}
 	warden := hasFitting(fittings, "remember")
+	conditionBeforeUse := v.Condition
 	if v.Max > 0 {
 		if v.Condition == 0 && !warden {
 			return out, fail(409, "tool-blunt")
@@ -585,6 +587,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		out.State = "broken"
 		return out, currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.Def), -1, "tool-broke", v.ID, now)
 	}
+	out.WoreOut = conditionBeforeUse > 0 && v.Condition == 0 && !warden
 	view, err := viewInstance(ctx, tx, v, map[string]*makerView{})
 	if err != nil {
 		return out, err
@@ -980,7 +983,7 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 		if err != nil {
 			return err
 		}
-		if res.Condition == 0 && res.MakerID != "" {
+		if (res.Broke || res.WoreOut) && res.MakerID != "" {
 			if err = a.thankMaker(ctx, tx, s, res.MakerID, res.ItemDef, now); err != nil {
 				return err
 			}
@@ -1045,11 +1048,14 @@ func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 	var makerWorld string
 	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=? AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)", makerID, makerID).Scan(&makerWorld)
-	if err == sql.ErrNoRows || makerWorld != s.WorldID {
+	if err == sql.ErrNoRows {
 		return nil
 	}
 	if err != nil {
 		return err
+	}
+	if makerWorld != s.WorldID {
+		return nil
 	}
 	todayStart := now - (now % 86400)
 	var already bool

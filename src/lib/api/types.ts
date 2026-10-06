@@ -472,6 +472,7 @@ export interface ItemsResponse extends Snapshot {
 }
 export interface WearResult {
   broke: boolean;
+  woreOut: boolean;
   state: string;
   wornOut: string[];
   returned: string[];

@@ -69,6 +69,7 @@ export class PresenceFeed {
   private area: string | null = null
   private poll: unknown = null
   private stopped = false
+  private localPosition: { x: number; y: number } | null = null
   private readonly link: FeedLink
   private readonly bus: FeedBus
   private readonly now: () => number
@@ -126,6 +127,7 @@ export class PresenceFeed {
   }
 
   position(pos: PresencePosition): void {
+    this.localPosition = { x: pos.x, y: pos.y }
     this.client.position(pos)
   }
 
@@ -148,6 +150,17 @@ export class PresenceFeed {
   isNearby(habiticaId: string): boolean {
     if (!this.area) return false
     return Array.from(this.peers.values()).some((p) => p.habiticaId === habiticaId && p.area === this.area && p.leftAt === null)
+  }
+
+  /** Whether a live peer is within the server's pixel radius of our last position. */
+  isWithin(habiticaId: string, radius: number): boolean {
+    if (!this.area || !this.localPosition) return false
+    const t = this.now()
+    return Array.from(this.peers.values()).some((p) => {
+      if (p.habiticaId !== habiticaId || p.leftAt !== null || p.area !== this.area) return false
+      const at = p.track.at(t)
+      return !!at && Math.hypot(at.x - this.localPosition!.x, at.y - this.localPosition!.y) <= radius
+    })
   }
 
   /** Peers to draw in `area`, including ones fading out. */

@@ -9,8 +9,21 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
+
+func TestGiftPhrasePreservesMakersArticlesAndNamedPieces(t *testing.T) {
+	for _, tc := range []struct{ name, want string }{
+		{"Finn's oatcakes", "Finn's oatcakes"},
+		{"A pinch of Blue Moss", "a pinch of blue moss"},
+		{"The Empty Chair", "the Empty Chair"},
+	} {
+		if got := giftPhrase(tc.name, 1); got != tc.want {
+			t.Errorf("giftPhrase(%q) = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
 
 func (x *rig) decoration(owner, def string) string {
 	x.t.Helper()
@@ -426,6 +439,61 @@ func TestGateShelfTakeReplayIsConserved(t *testing.T) {
 	x.conserved("bob")
 }
 
+func TestConcurrentGateShelfTakesSerializeOneAvailableSlot(t *testing.T) {
+	x := newRig(t)
+	ac, a := x.ready("alice")
+	bc, b := x.member("bob", a.WorldID)
+	cc, c := x.member("charlie", a.WorldID)
+	x.claimGate(ac, &a, 0)
+	x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0")
+	shelfItem := x.decoration("alice", "gate-shelf")
+	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.stack("alice", "comfrey-salve", "alice", 1)
+	x.shelfOp(ac, &a, map[string]any{
+		"op": "stock", "gate": 0, "slot": 0,
+		"asset": map[string]any{"kind": "item", "id": "comfrey-salve", "qty": 1},
+	}, 200)
+
+	type result struct {
+		status int
+		body   shelfActionRes
+	}
+	results := make(chan result, 2)
+	var wg sync.WaitGroup
+	for _, taker := range []struct {
+		cookie   *http.Cookie
+		snapshot *response
+	}{{bc, &b}, {cc, &c}} {
+		wg.Add(1)
+		go func(cookie *http.Cookie, snapshot *response) {
+			defer wg.Done()
+			x.refresh(cookie, snapshot)
+			fields := map[string]any{"op": "take", "gate": 0, "slot": 0}
+			payload := body(*snapshot, fmt.Sprintf("parallel-take-%s", snapshot.HabiticaID), fields)
+			req := httptest.NewRequest("POST", "/api/homestead/shelf", bytes.NewBufferString(store.JSON(payload)))
+			req.Header.Set("Content-Type", "application/json")
+			req.AddCookie(cookie)
+			w := httptest.NewRecorder()
+			x.api.ServeHTTP(w, req)
+			var v shelfActionRes
+			_ = json.Unmarshal(w.Body.Bytes(), &v)
+			results <- result{status: w.Code, body: v}
+		}(taker.cookie, taker.snapshot)
+	}
+	wg.Wait()
+	close(results)
+	status := map[int]int{}
+	for r := range results {
+		status[r.status]++
+		if r.status != 200 && (r.status != 404 || r.body.Error.Code != "slot-empty") {
+			t.Fatalf("unexpected concurrent take response: status=%d code=%s", r.status, r.body.Error.Code)
+		}
+	}
+	if status[200] != 1 || status[404] != 1 {
+		t.Fatalf("expected one take and one slot-empty refusal, got statuses %+v", status)
+	}
+}
+
 func TestGateShelfLostDeedWriteOff(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
@@ -625,5 +693,50 @@ func TestToolWearOutThankYouMail(t *testing.T) {
 	}
 	if mailList.Mail[0].Asset.Kind != "thanks" || mailList.Mail[0].Asset.ID != "bench-axe" {
 		t.Fatalf("unexpected thank-you mail: %+v", mailList.Mail[0])
+	}
+}
+
+func TestWardenDullingDoesNotThankMaker(t *testing.T) {
+	x := newRig(t)
+	_, a := x.ready("alice")
+	bc, b := x.member("bob", a.WorldID)
+	axe := x.instance("bob", "bench-axe", 1, "alice")
+	sliver := x.instance("bob", "warden-sliver", -1, "")
+	if _, err := x.db.DB.Exec("UPDATE item_instances SET location='fitted',owner=? WHERE id=?", axe, sliver); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.db.DB.Exec("UPDATE item_instances SET worn_day=? WHERE id=?", utcDay(x.now.Load()), axe); err != nil {
+		t.Fatal(err)
+	}
+	used := x.op(bc, &b, "use", map[string]any{"instance": axe}, 200)
+	if used.Result.Wear == nil || used.Result.Wear.Broke || used.Result.Wear.Condition != 0 {
+		t.Fatalf("expected the warden-set axe to dull at zero: %+v", used.Result.Wear)
+	}
+	if count(t, x.db, "SELECT COUNT(*) FROM mail WHERE kind='thanks' AND from_id='bob' AND to_id='alice'") != 0 {
+		t.Fatal("dulling a warden-set tool sent a thank-you")
+	}
+}
+
+func TestThanksNeverReturnOrBumpSenderRevision(t *testing.T) {
+	x := newRig(t)
+	_, a := x.ready("alice")
+	x.member("bob", a.WorldID)
+	before := count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'")
+	if _, err := x.db.DB.Exec(`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at)
+VALUES('thanks-old',?,'alice','bob','thanks','comfrey-salve',0,'[]','[]',?)`, a.WorldID, x.now.Load()-60*86400); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+		t.Fatal(err)
+	}
+	n, err := x.db.ReturnDueMail(context.Background(), x.now.Load())
+	if err != nil || n != 0 {
+		t.Fatalf("thank-you should stay in the mailbox: returned=%d err=%v", n, err)
+	}
+	if got := count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'"); got != before {
+		t.Fatalf("thank-you changed sender revision: before=%d after=%d", before, got)
+	}
+	if count(t, x.db, "SELECT COUNT(*) FROM mail WHERE id='thanks-old' AND returned_at IS NULL") != 1 {
+		t.Fatal("thank-you was marked returned")
 	}
 }

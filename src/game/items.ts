@@ -10,7 +10,7 @@
  */
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
-import { effectLine, giftPhrase, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
+import { effectLine, giftPhrase, ITEM_RULES, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
 import type { Session } from './session'
@@ -59,7 +59,7 @@ export function itemErrorText(code: ApiErrorCode | string): string {
     case 'not-together':
       return 'Stand next to them to hand it over.'
     case 'not-giveable':
-      return 'That was given to you. It stays with you.'
+      return 'That one stays with you.'
     case 'well-rope-broken':
       return 'The well rope is rotten through. Mend it first.'
     case 'already-returned':
@@ -177,7 +177,7 @@ export class Items {
   async useTool(instance: string, action?: string) {
     const makerId = this.view?.instances.find((i) => i.id === instance)?.maker?.id
     const r = await this.run('use', { instance, ...(action ? { action } : {}) })
-    if (r.ok && r.value?.wear?.condition === 0 && makerId && makerId !== this.session.link?.habiticaId) {
+    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
       this.thankNearby(makerId)
     }
     return r
@@ -199,8 +199,8 @@ export class Items {
   private thankNearby(makerId: string): void {
     const feed = presence()
     if (!feed) return
-    if (feed.isNearby(makerId)) {
-      bus.emit(EV.emote, { habiticaId: makerId, id: 'thanks' })
+    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * 16)) {
+      bus.emit(EV.emote, { habiticaId: makerId, id: 'heart' })
     }
   }
   /** Mend an heirloom at your bench ('bench') or by a mender ('silas', 'orrin'). */

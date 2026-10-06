@@ -58,9 +58,24 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'That slot is empty.'
     case 'shelf-not-placed':
       return 'There is no gift shelf set out at this gate.'
-      return 'That chest belongs to the folk on this deed.'
+    case 'shelf-not-empty':
+      return 'Clear the gifts from the shelf before putting it away.'
+    case 'homestead-desolate':
+      return 'The old deed has gone quiet.'
+    case 'homestead-not-found':
+      return 'There is no deed behind that gate.'
+    case 'cannot-recall-thanks':
+      return 'A thank-you cannot be called back.'
+    case 'asset-required':
+      return 'Choose something to leave on the shelf.'
+    case 'gate-required':
+      return 'Choose a gate first.'
+    case 'invalid-slot':
+      return 'That shelf slot is out of reach.'
+    case 'invalid-operation':
+      return 'That is not something the shelf can do.'
     case 'not-giveable':
-      return 'That was given to you. It stays with you.'
+      return 'That one stays with you.'
     case 'item-not-available':
       return 'That piece isn’t free to move just now.'
     case 'two-wardens-grind':

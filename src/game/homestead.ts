@@ -349,9 +349,21 @@ export class Homesteads {
     if (row) {
       row.tier = home.tier
       row.desolate = home.desolate
+      row.shelf = home.items.some((item) => item.itemDef === 'gate-shelf' && item.scene === 'gate')
+      if (!row.shelf) row.shelfStocked = false
     }
     this.reconcilePapers()
     this.emit('home', home.gate)
+  }
+
+  /** Refresh lane art after a slot is stocked, emptied, or a shelf is moved. */
+  adoptShelfState(gate: number, hasShelf: boolean, stocked: boolean): void {
+    const row = this.gateInfo(gate)
+    if (row) {
+      row.shelf = hasShelf
+      row.shelfStocked = hasShelf && stocked
+    }
+    this.emit('shelf', gate)
   }
 
   /**

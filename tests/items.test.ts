@@ -62,6 +62,12 @@ test('items.json loads with a representative set and the shared rules', () => {
   assert.equal(itemName('wooden-stool'), 'Wooden Stool', 'home goods from homestead.json');
 });
 
+test('gift phrases preserve makers, articles, and named pieces', () => {
+  assert.equal(giftPhrase('oatcakes', 1), "Finn's oatcakes");
+  assert.equal(giftPhrase('blue-moss', 1), 'a pinch of blue moss');
+  assert.equal(giftPhrase('empty-chair', 1), 'the Empty Chair');
+});
+
 test('the Go loader derives the same rules (content/vectors/items.json is current)', () => {
   assert.equal(readFileSync(new URL('../content/vectors/items.json', import.meta.url), 'utf8'), serializeItemVectors(), 'run npm run vectors:items');
 });
@@ -162,7 +168,7 @@ test('a gift reads like a line someone would say', () => {
   assert.equal(giftPhrase('comfrey-salve', 1), 'a comfrey salve');
   assert.equal(giftPhrase('amber-bead', 1), 'an amber bead');
   assert.equal(giftPhrase('lamp-wick', 2), '2 Lamp Wicks');
-  assert.equal(giftPhrase('nans-lamplighter-pole', 1), "a Nan's lamplighter pole");
+  assert.equal(giftPhrase('nans-lamplighter-pole', 1), "Nan's lamplighter pole");
 });
 
 // ------------------------------------------------------------ pickups
@@ -375,4 +381,3 @@ test('modelEntries formats warden-set descriptions across all dullness stages', 
   const e4 = entries.find((e) => e.key === 'inst:w4')!;
   assert.equal(e4.rule, 'Warden-set: at its dullest (works at three-quarters speed). Sharp by morning or after an hour on a lit tool rack.');
 });
-

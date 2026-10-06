@@ -5,7 +5,7 @@
   import { itemsFor, ITEMS_EV } from '../game/items'
   import { homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
-  import { itemDef, giveable } from '../lib/items'
+  import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
   import type { Asset, ShelfSlotView, ShelfView } from '../lib/api/types'
   import { focusTrap } from './focus'
@@ -28,6 +28,7 @@
     const r = await village.loadShelf(gate)
     if (r.ok) {
       view = r.value
+      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       loaded = 'ready'
     } else {
       if (loaded === 'loading') loaded = r.code
@@ -70,7 +71,7 @@
       const d = itemDef(s.itemDef)
       if (d && giveable(d)) {
         out.push({
-          asset: { kind: 'item', id: s.itemDef, qty: 1, maker: s.maker?.id ?? '' },
+          asset: { kind: assetKind(d), id: s.itemDef, qty: 1, maker: s.maker?.id ?? '' },
           name: d.name,
           maker: s.maker?.name
         })
@@ -124,6 +125,7 @@
     busy = null
     if (r.ok) {
       view = r.value.shelf
+      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       const line = r.value.line ?? 'You took a gift from the shelf.'
       message = { text: line, kind: 'ok' }
       bus.emit(EV.toast, { text: line, icon: 'gift' })
@@ -143,6 +145,7 @@
     pickingSlot = null
     if (r.ok) {
       view = r.value.shelf
+      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       message = { text: 'Placed on the shelf for travellers to take.', kind: 'ok' }
       bus.emit(VILLAGE_EV.changed)
       bus.emit(ITEMS_EV.changed)
@@ -183,8 +186,9 @@
     {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
 
     {#if loaded !== 'ready'}
-      <p class="msg">{loaded === 'loading' ? 'Looking at the shelf…' : loaded}</p>
+      <p class="msg">{loaded === 'loading' ? 'Looking at the shelf…' : villageErrorText(loaded)}</p>
     {:else if view}
+      {#if !view.hasShelf}<p class="none">No shelf is set out at this gate.</p>{/if}
       <ul class="slots" aria-label="Shelf slots">
         {#each slots as slot, i}
           <li class="slot-card" class:occupied={slot !== null}>
@@ -211,7 +215,7 @@
               <div class="empty-info">
                 <span class="empty-lbl">Empty slot</span>
               </div>
-              {#if view.canStock}
+              {#if view.hasShelf && view.canStock}
                 <button
                   type="button"
                   class="small"

@@ -243,6 +243,10 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 		}
 		out = append(out, row{"shelf:" + kind + ":" + def, -n, ref})
 	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
 	rows.Close()
 	rows, err = tx.QueryContext(ctx, `SELECT f.id,f.item_def FROM item_instances f JOIN item_instances t ON t.id=f.owner WHERE f.location='fitted' AND t.location='shelf' AND t.owner=? ORDER BY f.id`, home)
 	if err != nil {
@@ -255,6 +259,10 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 			return err
 		}
 		out = append(out, row{"fitted:" + def, 0, ref + ":" + id})
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return err
 	}
 	rows.Close()
 	out = append(out, row{"homestead", 0, ref})
@@ -924,6 +932,48 @@ func placedItems(h homeView) []homeInstance {
 	return out
 }
 
+// giftPhrase is the server port of src/lib/items.ts giftPhrase. Keep a maker's
+// name and authored articles intact while making common item names readable.
+func giftPhrase(name string, qty int) string {
+	original := name
+	article := ""
+	for _, a := range []string{"a ", "an ", "the "} {
+		if strings.HasPrefix(strings.ToLower(name), a) {
+			article = a
+			name = name[len(a):]
+			break
+		}
+	}
+	proper := strings.Contains(name, "'s") || strings.Contains(name, "’s")
+	if article != "" {
+		if strings.TrimSpace(article) != "the" {
+			name = strings.ToLower(name)
+		}
+		if qty == 1 {
+			return article + name
+		}
+		return fmt.Sprintf("%d %s", qty, name)
+	}
+	shown := name
+	if !proper && shown != "" {
+		shown = strings.ToLower(shown)
+	}
+	if qty != 1 {
+		if !strings.HasSuffix(original, "s") {
+			original += "s"
+		}
+		return fmt.Sprintf("%d %s", qty, original)
+	}
+	if proper {
+		return shown
+	}
+	article = "a"
+	if len(shown) > 0 && strings.ContainsRune("aeiou", unicode.ToLower([]rune(shown)[0])) {
+		article = "an"
+	}
+	return article + " " + shown
+}
+
 // validatePlacement mirrors checkPlacement in src/lib/homestead.ts; the
 // server owns the buildable area.
 func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
@@ -1068,6 +1118,9 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 			err = currency(ctx, tx, s.HabiticaID, "decoration:"+item.ItemDef, -1, "homestead-place", item.ID, now)
 		}
 	case "move":
+		if req.Scene == "gate" {
+			return "", fail(400, "invalid-placement")
+		}
 		if err = validatePlacement(h, *item, req); err != nil {
 			return "", err
 		}
@@ -1279,7 +1332,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 	if len(out.Names) > 0 {
 		out.OwnerName = out.Names[0]
 	} else {
-		out.OwnerName = "Nobody"
+		out.OwnerName = ""
 	}
 	day := utcDay(now)
 	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND habitica_id=? AND day=?)", homeID, s.HabiticaID, day).Scan(&out.TakenToday); err != nil {
@@ -1416,6 +1469,8 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 		if desolate(vacantSince, now) {
 			return nil, fail(409, "homestead-desolate")
 		}
+		// Shelf actions are not proximity-gated yet: Commons gate coordinates are
+		// client layout data. The server still enforces one take per traveller/day.
 		var hasShelf bool
 		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND scene='gate')", homeID).Scan(&hasShelf); err != nil {
 			return nil, err
@@ -1551,11 +1606,10 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			} else if h, ok := content.HomeItemFor(itemDef); ok {
 				itemDisplayName = h.Name
 			}
-			article := "a"
-			if len(itemDisplayName) > 0 && strings.ContainsRune("aeiouAEIOU", rune(itemDisplayName[0])) {
-				article = "an"
+			line := fmt.Sprintf("You took %s from %s’s shelf.", giftPhrase(itemDisplayName, 1), shelf.OwnerName)
+			if shelf.OwnerName == "" {
+				line = fmt.Sprintf("You took %s from Lot %d’s shelf.", giftPhrase(itemDisplayName, 1), req.Gate+1)
 			}
-			line := fmt.Sprintf("You took %s %s from %s’s shelf.", article, strings.ToLower(itemDisplayName), shelf.OwnerName)
 			return shelfActionResponse{
 				Shelf:     shelf,
 				Inventory: inv,

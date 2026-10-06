@@ -46,11 +46,11 @@
               disabled={!it.fits || p.busy}
               data-piece={it.itemDef}
               onclick={() => send({ kind: 'select', itemId: it.id })}
-              title={it.fits ? it.name : `${it.name} belongs ${p.scene === 'indoor' ? 'outdoors' : 'indoors'}`}
+              title={it.itemDef === 'gate-shelf' ? 'By your gate' : it.fits ? it.name : `${it.name} belongs ${p.scene === 'indoor' ? 'outdoors' : 'indoors'}`}
             >
               <span class="art">{#if home.thumbs[it.itemDef]}<img src={home.thumbs[it.itemDef]} alt="" />{/if}</span>
               <span class="nm">{it.name}</span>
-              <span class="st">{it.fits ? stateOf(it) : p.scene === 'indoor' ? 'Outdoors only' : 'Indoors only'}</span>
+              <span class="st">{it.itemDef === 'gate-shelf' ? 'By your gate' : it.fits ? stateOf(it) : p.scene === 'indoor' ? 'Outdoors only' : 'Indoors only'}</span>
             </button>
           </li>
         {/each}

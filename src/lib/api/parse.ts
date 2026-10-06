@@ -541,6 +541,7 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
     const w = obj(r.wear);
     result.wear = {
       broke: w.broke === true,
+      woreOut: w.woreOut === true,
       state: typeof w.state === 'string' ? w.state : '',
       wornOut: Array.isArray(w.wornOut) ? w.wornOut.filter((v): v is string => typeof v === 'string') : [],
       returned: Array.isArray(w.returned) ? w.returned.filter((v): v is string => typeof v === 'string') : [],

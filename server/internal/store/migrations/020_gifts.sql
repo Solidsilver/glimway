@@ -1,4 +1,4 @@
--- 019_gifts.sql: gate shelf and maker's-mark thank-you mail
+-- 020_gifts.sql: gate shelf and maker's-mark thank-you mail
 
 -- Allow 'thanks' mail kind (qty = 0, no items attached).
 CREATE TABLE mail_v3(
@@ -77,9 +77,28 @@ CREATE TABLE gate_shelf_slots(
  instance_id TEXT DEFAULT NULL,
  stocked_by TEXT NOT NULL REFERENCES players(habitica_id),
  stocked_at INTEGER NOT NULL,
+ CHECK((kind IN ('instance','decoration')) = (instance_id IS NOT NULL)),
  PRIMARY KEY(homestead_id, slot)
 );
 CREATE INDEX gate_shelf_slots_home ON gate_shelf_slots(homestead_id);
+
+-- Older builds allowed the shelf to be placed outdoors. Keep one per deed and
+-- put any extra copies back in shared storage before moving the surviving one.
+WITH ranked AS (
+ SELECT id,homestead_id,ROW_NUMBER() OVER (PARTITION BY homestead_id ORDER BY id) AS n
+ FROM homestead_items
+ WHERE item_def='gate-shelf' AND location='placed' AND scene='outdoor'
+)
+UPDATE homestead_items
+ SET location='storage',scene=NULL,x=NULL,y=NULL,rotation=NULL
+ WHERE id IN (SELECT id FROM ranked WHERE n>1);
+WITH ranked AS (
+ SELECT id,ROW_NUMBER() OVER (PARTITION BY homestead_id ORDER BY id) AS n
+ FROM homestead_items
+ WHERE item_def='gate-shelf' AND location='placed' AND scene='outdoor'
+)
+UPDATE homestead_items SET scene='gate',x=0,y=0,rotation=0
+WHERE id IN (SELECT id FROM ranked WHERE n=1);
 
 -- One take per player per shelf per day (UTC day).
 CREATE TABLE gate_shelf_takes(
