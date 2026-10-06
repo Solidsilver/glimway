@@ -149,6 +149,7 @@ export const SERVER_ERROR_CODES = [
   'not-a-tool',
   'wrong-tool',
   'tool-blunt',
+  'two-wardens-grind',
   'not-needed',
   'not-usable-yet',
   'cannot-mend',
@@ -176,6 +177,9 @@ export const SERVER_ERROR_CODES = [
   'wrong-recipient',
   'invalid-target',
   'unknown-target',
+  // heirlooms
+  'condition-unmet',
+  'already-granted',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

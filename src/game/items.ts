@@ -29,6 +29,8 @@ export function itemErrorText(code: ApiErrorCode | string): string {
   switch (code) {
     case 'tool-blunt':
       return 'It’s too blunt to work with. Mend it first.'
+    case 'two-wardens-grind':
+      return 'Two slivers in one pack pull toward each other’s pose and grind.'
     case 'wrong-tool':
       return 'That isn’t the tool for this.'
     case 'not-a-tool':
@@ -80,6 +82,10 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t something to carry in your off hand.'
     case 'already-picked-up':
       return 'You’ve already picked that up.'
+    case 'condition-unmet':
+      return 'You aren’t ready for that yet.'
+    case 'already-granted':
+      return 'You’ve already received that heirloom.'
     case 'insufficient-items':
       return 'You don’t have that any more.'
     case 'insufficient-materials':
@@ -111,6 +117,8 @@ export { giftPhrase } from '../lib/items'
 export class Items {
   view: ItemsView | null = null
   status: ItemsStatus
+  private inFlightGrants = new Set<string>()
+  private inFlightAdaOil = false
 
   constructor(private session: Session) {
     this.status = session.link ? 'idle' : 'guest'
@@ -175,10 +183,15 @@ export class Items {
     return r
   }
   /** Eat or drink one (any maker's, unmarked first, unless one is named). */
-  async useItem(itemDef: string, maker?: string) {
-    const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}) })
-    if (r.ok && maker && maker !== this.session.link?.habiticaId) {
-      this.thankNearby(maker)
+  async useItem(itemDef: string, maker?: string, unmoored?: boolean) {
+    const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) })
+    if (r.ok) {
+      if (itemDef === 'comfrey-salve') {
+        bus.emit('game:clear-unmoored', { instant: true })
+      } else if (itemDef === 'willow-bark-tea') {
+        bus.emit('game:clear-unmoored', { instant: false })
+      }
+      if (maker && maker !== this.session.link?.habiticaId) this.thankNearby(maker)
     }
     return r
   }
@@ -222,6 +235,26 @@ export class Items {
   }
   returnKeepsake(itemDef: string, target: string) {
     return this.run('return', { itemDef, target })
+  }
+  isGrantInFlight(itemDef: string): boolean {
+    return this.inFlightGrants.has(itemDef)
+  }
+  isAdaOilInFlight(): boolean {
+    return this.inFlightAdaOil
+  }
+  grantHeirloom(itemDef: string) {
+    if (this.inFlightGrants.has(itemDef)) return Promise.resolve(fail('busy'))
+    this.inFlightGrants.add(itemDef)
+    return this.run('heirloom', { itemDef }).finally(() => {
+      this.inFlightGrants.delete(itemDef)
+    })
+  }
+  giveAdaOil() {
+    if (this.inFlightAdaOil) return Promise.resolve(fail('busy'))
+    this.inFlightAdaOil = true
+    return this.run('ada-oil', { itemDef: 'hearth-oil' }).finally(() => {
+      this.inFlightAdaOil = false
+    })
   }
 
   // ------------------------------------------------------------ reads

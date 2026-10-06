@@ -24,15 +24,17 @@ type itemsResponse struct {
 	store.Snapshot
 	Items  itemsView `json:"items"`
 	Result struct {
-		Items    itemsView      `json:"items"`
-		Wear     *wearResult    `json:"wear"`
-		Used     string         `json:"used"`
-		Pickup   string         `json:"pickup"`
-		Given    *content.Asset `json:"given"`
-		Mended   string         `json:"mended"`
-		Created  []string       `json:"created"`
-		Returned string         `json:"returned"`
-		Paper    *string        `json:"paper"`
+		Items       itemsView      `json:"items"`
+		Wear        *wearResult    `json:"wear"`
+		Used        string         `json:"used"`
+		Pickup      string         `json:"pickup"`
+		Given       *content.Asset `json:"given"`
+		Mended      string         `json:"mended"`
+		Created     []string       `json:"created"`
+		Returned    string         `json:"returned"`
+		Paper       *string        `json:"paper"`
+		Heirloom    string         `json:"heirloom"`
+		AdaOilCount int            `json:"adaOilCount"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`
@@ -472,9 +474,10 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	if x.op(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 409).Error.Code != "insufficient-items" {
 		t.Fatal("bob's twists ran out")
 	}
-	if x.op(c, &s, "use", map[string]any{"itemDef": "comfrey-salve"}, 409).Error.Code != "not-usable-yet" {
-		t.Fatal("unmoored isn't in the game yet")
+	if x.op(c, &s, "use", map[string]any{"itemDef": "comfrey-salve"}, 409).Error.Code != "not-needed" {
+		t.Fatal("comfrey-salve when not unmoored should be not-needed")
 	}
+	x.op(c, &s, "use", map[string]any{"itemDef": "comfrey-salve", "unmoored": true}, 200)
 	x.op(c, &s, "use", map[string]any{"itemDef": "timber"}, 400)
 	// At full health a twist would be wasted.
 	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.hp',50) WHERE habitica_id='alice'"); err != nil {

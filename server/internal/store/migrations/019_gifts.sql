@@ -1,4 +1,4 @@
--- 017_gifts.sql: gate shelf and maker's-mark thank-you mail
+-- 019_gifts.sql: gate shelf and maker's-mark thank-you mail
 
 -- Allow 'thanks' mail kind (qty = 0, no items attached).
 CREATE TABLE mail_v3(
@@ -38,9 +38,12 @@ CREATE TABLE item_instances_v2(
  max_condition INTEGER NOT NULL CHECK(max_condition>=0 AND condition<=max_condition),
  maker_id TEXT NOT NULL DEFAULT '',
  worn_day INTEGER NOT NULL DEFAULT 0,
- created_at INTEGER NOT NULL
+ created_at INTEGER NOT NULL,
+ worn_at INTEGER NOT NULL DEFAULT 0,
+ racked_at INTEGER NOT NULL DEFAULT 0
 );
-INSERT INTO item_instances_v2 SELECT * FROM item_instances;
+INSERT INTO item_instances_v2(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,created_at,worn_at,racked_at)
+ SELECT id,item_def,location,owner,condition,max_condition,maker_id,worn_day,created_at,worn_at,racked_at FROM item_instances;
 DROP TABLE item_instances;
 ALTER TABLE item_instances_v2 RENAME TO item_instances;
 CREATE INDEX item_instances_owner ON item_instances(location,owner,item_def);

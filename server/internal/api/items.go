@@ -7,6 +7,7 @@ import (
 	"fingersnap/content"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fmt"
 	"math"
 	"net/http"
 	"slices"
@@ -60,6 +61,8 @@ type instanceView struct {
 	UsesLeft     int           `json:"usesLeft"`
 	State        string        `json:"state"`
 	WardenSet    bool          `json:"wardenSet"`
+	Dullness     *float64      `json:"dullness,omitempty"`
+	Speed        *float64      `json:"speed,omitempty"`
 	Fittings     []fittingView `json:"fittings"`
 	Maker        *makerView    `json:"maker"`
 }
@@ -69,15 +72,17 @@ type instanceRow struct {
 	Condition, Max           int
 	Maker                    string
 	WornDay                  int64
+	WornAt                   int64
+	RackedAt                 int64
 }
 
 func scanInstance(row interface{ Scan(...any) error }) (instanceRow, error) {
 	var v instanceRow
-	err := row.Scan(&v.ID, &v.Def, &v.Location, &v.Owner, &v.Condition, &v.Max, &v.Maker, &v.WornDay)
+	err := row.Scan(&v.ID, &v.Def, &v.Location, &v.Owner, &v.Condition, &v.Max, &v.Maker, &v.WornDay, &v.WornAt, &v.RackedAt)
 	return v, err
 }
 
-const instanceColumns = "id,item_def,location,owner,condition,max_condition,maker_id,worn_day"
+const instanceColumns = "id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at,racked_at"
 
 func loadInstance(ctx context.Context, tx *sql.Tx, id string) (instanceRow, error) {
 	v, err := scanInstance(tx.QueryRowContext(ctx, "SELECT "+instanceColumns+" FROM item_instances WHERE id=?", id))
@@ -113,14 +118,22 @@ func newInstance(ctx context.Context, tx *sql.Tx, def content.ItemDef, at instan
 	if condition < 0 || condition > full {
 		condition = full
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES(?,?,?,?,?,?,?,?)", id, def.ID, at.location, at.owner, condition, full, maker, now)
+	rackedAt := int64(0)
+	if at.location == "storage" {
+		rackedAt = now
+	}
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at,racked_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, def.ID, at.location, at.owner, condition, full, maker, 0, now, rackedAt, now)
 	return id, err
 }
 
 // moveInstance moves one instance (its fittings travel with it); anything
 // that leaves a pack leaves that player's pockets and off hand too.
-func moveInstance(ctx context.Context, tx *sql.Tx, id, def string, from, to instanceAt) error {
-	res, err := tx.ExecContext(ctx, "UPDATE item_instances SET location=?,owner=? WHERE id=? AND item_def=? AND location=? AND owner=?", to.location, to.owner, id, def, from.location, from.owner)
+func moveInstance(ctx context.Context, tx *sql.Tx, id, def string, from, to instanceAt, now int64) error {
+	rackedAt := int64(0)
+	if to.location == "storage" {
+		rackedAt = now
+	}
+	res, err := tx.ExecContext(ctx, "UPDATE item_instances SET location=?,owner=?,racked_at=? WHERE id=? AND item_def=? AND location=? AND owner=?", to.location, to.owner, rackedAt, id, def, from.location, from.owner)
 	if err != nil {
 		return err
 	}
@@ -179,20 +192,11 @@ func hasFitting(fittings []instanceRow, kind string) bool {
 	})
 }
 
-// wearCost is the points one use takes off a tool: less with a Hold fitting;
-// a warden-set tool dulls from sharp in rules.wear.wardenDullUses uses (half
-// as fast with Hold).
-func wearCost(max int, fittings []instanceRow) int {
+// wearCost is the points one use takes off an ordinary tool: less with a
+// Hold fitting. Warden-set tools dull by wardenWear instead.
+func wearCost(fittings []instanceRow) int {
 	w := content.ItemsRules.Rules.Wear
-	hold := hasFitting(fittings, "hold")
-	if hasFitting(fittings, "remember") {
-		cost := int(math.Ceil(float64(max) / float64(w.WardenDullUses)))
-		if hold {
-			cost = (cost + 1) / 2
-		}
-		return max1(cost)
-	}
-	if hold {
+	if hasFitting(fittings, "hold") {
 		return w.HoldPointsPerUse
 	}
 	return w.PointsPerUse
@@ -200,6 +204,44 @@ func wearCost(max int, fittings []instanceRow) int {
 func max1(n int) int { return max(1, n) }
 func usesLeft(condition, cost int) int {
 	return (condition + cost - 1) / max1(cost)
+}
+
+// A warden-set tool dulls from sharp in rules.wear.wardenDullUses uses on
+// every tool, half as fast with Hold. Dulling is counted in half-uses: a
+// use takes two (one with Hold) out of 2×wardenDullUses, and condition is
+// that count scaled onto the tool's points.
+func wardenSteps() int { return 2 * content.ItemsRules.Rules.Wear.WardenDullUses }
+func wardenStep(fittings []instanceRow) int {
+	if hasFitting(fittings, "hold") {
+		return 1
+	}
+	return 2
+}
+
+// wardenSpent: half-uses already spent at a condition (a partly healed
+// tool rounds toward dull).
+func wardenSpent(maxCond, condition int) int {
+	steps := wardenSteps()
+	used := maxCond - max(0, min(maxCond, condition))
+	return min(steps, (used*steps+maxCond-1)/max1(maxCond))
+}
+func wardenCondition(maxCond, spent int) int {
+	return maxCond - maxCond*spent/wardenSteps()
+}
+func wardenWear(maxCond, condition int, fittings []instanceRow) int {
+	next := wardenCondition(maxCond, min(wardenSteps(), wardenSpent(maxCond, condition)+wardenStep(fittings)))
+	// Every use takes at least a point while any are left.
+	if next >= condition && condition > 0 {
+		next = condition - 1
+	}
+	return max(0, next)
+}
+func wardenUsesLeft(maxCond, condition int, fittings []instanceRow) int {
+	if condition <= 0 {
+		return 0
+	}
+	step := wardenStep(fittings)
+	return (wardenSteps() - wardenSpent(maxCond, condition) + step - 1) / step
 }
 
 func toolState(def content.ItemDef, v instanceRow, warden bool) string {
@@ -230,7 +272,18 @@ func viewInstance(ctx context.Context, tx *sql.Tx, v instanceRow, makers map[str
 	warden := hasFitting(fittings, "remember")
 	out := instanceView{ID: v.ID, ItemDef: v.Def, Condition: v.Condition, MaxCondition: v.Max, State: toolState(def, v, warden), WardenSet: warden, Fittings: []fittingView{}}
 	if v.Max > 0 {
-		out.UsesLeft = usesLeft(v.Condition, wearCost(v.Max, fittings))
+		out.UsesLeft = usesLeft(v.Condition, wearCost(fittings))
+		if warden {
+			out.UsesLeft = wardenUsesLeft(v.Max, v.Condition, fittings)
+			dull := math.Max(0, math.Min(1, 1.0-float64(v.Condition)/float64(v.Max)))
+			minSpeed := 0.5
+			if hasFitting(fittings, "bite") {
+				minSpeed = 0.75
+			}
+			speed := math.Round((1.0-dull*(1.0-minSpeed))*100) / 100
+			out.Dullness = &dull
+			out.Speed = &speed
+		}
 	}
 	if out.Maker, err = makerOf(ctx, tx, v.Maker, makers); err != nil {
 		return out, err
@@ -285,11 +338,115 @@ func instancesAt(ctx context.Context, tx *sql.Tx, at instanceAt) ([]instanceView
 
 func utcDay(now int64) int64 { return now / 86400 }
 
-// healWardens: warden-set tools in a pack are sharp again the morning after.
+// healWardens: warden-set tools heal overnight (the next calendar day / worn_day < utcDay(now))
+// or over ~1 hour (3600s) of real time on a lit tool rack in home storage.
 func healWardens(ctx context.Context, tx *sql.Tx, player string, now int64) error {
-	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition WHERE location='pack' AND owner=? AND worn_day<? AND condition<max_condition
- AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, player, utcDay(now))
-	return err
+	today := utcDay(now)
+	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition, worn_day=?
+WHERE (location='pack' OR location='personal') AND owner=? AND worn_day<? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, today, player, today)
+	if err != nil {
+		return err
+	}
+	var homeID string
+	_ = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", player).Scan(&homeID)
+	if homeID != "" {
+		return healWardensHome(ctx, tx, homeID, now)
+	}
+	return nil
+}
+
+func healWardensHome(ctx context.Context, tx *sql.Tx, homeID string, now int64) error {
+	today := utcDay(now)
+	_, err := tx.ExecContext(ctx, `UPDATE item_instances SET condition=max_condition, worn_day=?
+WHERE location='storage' AND owner=? AND worn_day<? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, today, homeID, today)
+	if err != nil {
+		return err
+	}
+	h, err := loadHome(ctx, tx, homeID, "", now)
+	if err != nil || h.Desolate {
+		return err
+	}
+	// Shared storage is the rack: its tools heal only while a placed rack stands in lamplight.
+	rackLit := false
+	for _, item := range h.Items {
+		if item.ItemDef != "tool-rack" || item.Scene == nil {
+			continue
+		}
+		if *item.Scene == "indoor" {
+			rackLit = true
+			break
+		}
+		if r, ok := placedRect(item); ok && rectLit(connectedLights(h.Items, ""), r) {
+			rackLit = true
+			break
+		}
+	}
+	if !rackLit {
+		return nil
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id, condition, max_condition, racked_at FROM item_instances
+WHERE location='storage' AND owner=? AND condition<max_condition
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=item_instances.id AND f.item_def IN (`+wardenDefs()+`))`, homeID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type rackTool struct {
+		id            string
+		cond, maxCond int
+		rackedAt      int64
+	}
+	var tools []rackTool
+	for rows.Next() {
+		var t rackTool
+		if err := rows.Scan(&t.id, &t.cond, &t.maxCond, &t.rackedAt); err != nil {
+			return err
+		}
+		tools = append(tools, t)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, t := range tools {
+		if t.rackedAt == 0 {
+			if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET racked_at=? WHERE id=?", now, t.id); err != nil {
+				return err
+			}
+			continue
+		}
+		elapsed := now - t.rackedAt
+		if elapsed >= 3600 {
+			if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=max_condition, racked_at=? WHERE id=?", now, t.id); err != nil {
+				return err
+			}
+		} else if elapsed > 0 {
+			add := int(float64(t.maxCond) * float64(elapsed) / 3600.0)
+			if add > 0 {
+				newCond := min(t.maxCond, t.cond+add)
+				advanced := int64(add * 3600 / max1(t.maxCond))
+				if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?, racked_at=racked_at+? WHERE id=?", newCond, advanced, t.id); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func isWardenSet(ctx context.Context, tx *sql.Tx, instanceID string) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM item_instances WHERE location='fitted' AND owner=? AND item_def IN ("+wardenDefs()+")", instanceID).Scan(&count)
+	return count > 0, err
+}
+
+func hasWardenSetInPack(ctx context.Context, tx *sql.Tx, player, exceptTool string) (bool, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM item_instances t
+WHERE t.location='pack' AND t.owner=? AND t.id<>?
+		AND EXISTS (SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def IN (`+wardenDefs()+`))`, player, exceptTool).Scan(&count)
+	return count > 0, err
 }
 func wardenDefs() string {
 	ids := []string{}
@@ -366,8 +523,12 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		if v.Condition == 0 && !warden {
 			return out, fail(409, "tool-blunt")
 		}
-		v.Condition = max(0, v.Condition-wearCost(v.Max, fittings))
-		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=? WHERE id=?", v.Condition, utcDay(now), v.ID); err != nil {
+		if warden {
+			v.Condition = wardenWear(v.Max, v.Condition, fittings)
+		} else {
+			v.Condition = max(0, v.Condition-wearCost(fittings))
+		}
+		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=?,worn_at=? WHERE id=?", v.Condition, utcDay(now), now, v.ID); err != nil {
 			return out, err
 		}
 		// One draw is one bucket: a full stave bucket of well water.
@@ -403,7 +564,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 			return out, err
 		}
 		for _, f := range remaining {
-			if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", v.ID}, instanceAt{"pack", s.HabiticaID}); err != nil {
+			if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", v.ID}, instanceAt{"pack", s.HabiticaID}, now); err != nil {
 				return out, err
 			}
 			if err = currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, -1, "tool-broke", v.ID, now); err != nil {
@@ -729,19 +890,23 @@ type itemRequest struct {
 	Asset    *content.Asset  `json:"asset,omitempty"`
 	Pickup   string          `json:"pickup,omitempty"`
 	Target   string          `json:"target,omitempty"`
+	// Unmoored comes from client UI state; remedy consumption remains a keyed server mutation.
+	Unmoored bool `json:"unmoored,omitempty"`
 }
 
 // itemResult: the caller's items after the change, and what happened.
 type itemResult struct {
-	Items    itemsView      `json:"items"`
-	Wear     *wearResult    `json:"wear,omitempty"`
-	Used     string         `json:"used,omitempty"`
-	Pickup   string         `json:"pickup,omitempty"`
-	Given    *content.Asset `json:"given,omitempty"`
-	Mended   string         `json:"mended,omitempty"`
-	Created  []string       `json:"created,omitempty"`
-	Returned string         `json:"returned,omitempty"`
-	Paper    *string        `json:"paper,omitempty"`
+	Items       itemsView      `json:"items"`
+	Wear        *wearResult    `json:"wear,omitempty"`
+	Used        string         `json:"used,omitempty"`
+	Pickup      string         `json:"pickup,omitempty"`
+	Given       *content.Asset `json:"given,omitempty"`
+	Mended      string         `json:"mended,omitempty"`
+	Created     []string       `json:"created,omitempty"`
+	Returned    string         `json:"returned,omitempty"`
+	Paper       *string        `json:"paper,omitempty"`
+	Heirloom    string         `json:"heirloom,omitempty"`
+	AdaOilCount int            `json:"adaOilCount,omitempty"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -777,6 +942,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = pickUp(ctx, tx, s, req, now, &out)
 		case "return":
 			err = a.returnKeepsake(ctx, tx, s, req, now, &out)
+		case "heirloom":
+			err = a.grantHeirloom(ctx, tx, s, req, now, &out)
+		case "ada-oil":
+			err = a.giveAdaOil(ctx, tx, s, req, now, &out)
 		default:
 			err = fail(404, "not-found")
 		}
@@ -842,6 +1011,10 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 			if s.State.Mana < s.State.MaxMana {
 				helps = true
 				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.Amount))
+			}
+		case "clear-unmoored", "ease-unmoored":
+			if req.Unmoored {
+				helps = true
 			}
 		}
 	}
@@ -991,7 +1164,20 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 	if hasFitting(fitted, fdef.Fitting) {
 		return fail(409, "fitting-kind-taken")
 	}
-	if err = moveInstance(ctx, tx, f.ID, f.Def, from, instanceAt{"fitted", tool.ID}); err != nil {
+	if fdef.Fitting == "remember" {
+		exceptTool := ""
+		if from.location == "fitted" {
+			exceptTool = from.owner
+		}
+		has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID, exceptTool)
+		if err != nil {
+			return err
+		}
+		if has {
+			return fail(409, "two-wardens-grind")
+		}
+	}
+	if err = moveInstance(ctx, tx, f.ID, f.Def, from, instanceAt{"fitted", tool.ID}, now); err != nil {
 		return err
 	}
 	if from.location == "pack" {
@@ -1019,7 +1205,7 @@ func unfitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemReque
 	if err != nil || tool.Location != "pack" || tool.Owner != s.HabiticaID {
 		return fail(404, "item-not-found")
 	}
-	if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", tool.ID}, instanceAt{"pack", s.HabiticaID}); err != nil {
+	if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", tool.ID}, instanceAt{"pack", s.HabiticaID}, now); err != nil {
 		return err
 	}
 	if err = currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, -1, "unfit", tool.ID, now); err != nil {
@@ -1069,6 +1255,21 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	radius := float64(content.ItemsRules.Rules.Give.RadiusTiles * wildsTileSize)
 	if a.presence == nil || !a.presence.together(s.WorldID, s.HabiticaID, req.ToID, radius) {
 		return "", fail(409, "not-together")
+	}
+	if v.Kind == "instance" {
+		warden, err := isWardenSet(ctx, tx, v.Instance)
+		if err != nil {
+			return "", err
+		}
+		if warden {
+			has, err := hasWardenSetInPack(ctx, tx, req.ToID, "")
+			if err != nil {
+				return "", err
+			}
+			if has {
+				return "", fail(409, "two-wardens-grind")
+			}
+		}
 	}
 	to := pack(req.ToID)
 	got, err := takeAsset(ctx, tx, s, v, to, "give", req.ToID, now)
@@ -1306,5 +1507,163 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 
 	out.Returned = itemID
 	out.Paper = paperGranted
+	return nil
+}
+
+// grantHeirloom validates conditions and grants an heirloom tool once per player.
+func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	itemID := req.ItemDef
+	if itemID == "" {
+		return fail(400, "invalid-item")
+	}
+	def, ok := content.ItemFor(itemID)
+	if !ok || def.Grade != "heirloom" {
+		return fail(400, "invalid-item")
+	}
+
+	// Proximity check per heirloom giver
+	switch itemID {
+	case "brack-felling-axe":
+		m, ok := content.MenderFor("silas")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+			return fail(409, "too-far-away")
+		}
+	case "orrins-mason-pick":
+		m, ok := content.MenderFor("orrin")
+		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+			return fail(409, "too-far-away")
+		}
+	case "ada-garden-spade":
+		spot, ok := content.ResidentFor("ada")
+		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+			return fail(409, "too-far-away")
+		}
+	case "nans-lamplighter-pole":
+		if s.State.Area != "wilds" {
+			return fail(409, "too-far-away")
+		}
+	default:
+		return fail(400, "invalid-item")
+	}
+
+	// Validate story conditions per heirloom tool
+	switch itemID {
+	case "brack-felling-axe":
+		// Silas: Hollis's name known
+		// Authoritative check on server ledger for Silas's returned fox,
+		// plus echo and paper flags from progress.
+		var foxReturned bool
+		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM ledger WHERE habitica_id=? AND reason='return-keepsake' AND ref='silas:whittled-fox')", s.HabiticaID).Scan(&foxReturned)
+		if err != nil {
+			return err
+		}
+		met := foxReturned ||
+			slices.Contains(s.State.Flags, "echo:hollis") ||
+			slices.Contains(s.State.Flags, "paper:ashwatch-ledger-excerpts") ||
+			slices.Contains(s.State.Flags, "paper:silas-pine-offcut-scrap")
+		if !met {
+			return fail(409, "condition-unmet")
+		}
+
+	case "orrins-mason-pick":
+		// Orrin: north bridge mended
+		// Authoritative check on the projects table only.
+		var completed sql.NullInt64
+		err := tx.QueryRowContext(ctx, "SELECT completed_at FROM projects WHERE world_id=? AND project_def='north-bridge'", s.WorldID).Scan(&completed)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if err == sql.ErrNoRows || !completed.Valid || completed.Int64 <= 0 {
+			return fail(409, "condition-unmet")
+		}
+
+	case "ada-garden-spade":
+		// Ada: window oil brought 3 times
+		// Authoritative count on outcomes table only.
+		var oilCount int
+		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&oilCount)
+		if err != nil {
+			return err
+		}
+		if oilCount < 3 {
+			return fail(409, "condition-unmet")
+		}
+
+	case "nans-lamplighter-pole":
+		// Nan: echo settled
+		met := slices.Contains(s.State.Flags, "echo:nan")
+		if !met {
+			return fail(409, "condition-unmet")
+		}
+
+	default:
+		return fail(400, "invalid-item")
+	}
+
+	// Outcomes table guarantees once per player
+	added, err := store.Outcome(ctx, tx, s.HabiticaID, "heirloom:"+itemID, "heirloom", now)
+	if err != nil {
+		return err
+	}
+	if !added {
+		return fail(409, "already-granted")
+	}
+
+	condition := -1
+	if def.Uses > 0 {
+		condition = def.Uses * content.ItemsRules.Rules.Wear.PointsPerUse
+	}
+	instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", condition, now)
+	if err != nil {
+		return err
+	}
+	out.Created = []string{instID}
+	out.Heirloom = itemID
+	s.State.Flags = rules.AddUnique(s.State.Flags, "heirloom:"+itemID)
+
+	return currency(ctx, tx, s.HabiticaID, content.StackCurrency(itemID), 1, "heirloom", itemID, now)
+}
+
+// giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
+func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	spot, ok := content.ResidentFor("ada")
+	if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, 4) {
+		return fail(409, "too-far-away")
+	}
+
+	if req.ItemDef != "hearth-oil" {
+		return fail(400, "invalid-item")
+	}
+
+	// Count check runs first before checking pack inventory
+	var currentGifts int
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&currentGifts)
+	if err != nil {
+		return err
+	}
+	if currentGifts >= 3 {
+		return fail(409, "not-needed")
+	}
+
+	haveHearth, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "hearth-oil")
+	if err != nil {
+		return err
+	}
+	if haveHearth <= 0 {
+		return fail(409, "insufficient-items")
+	}
+
+	if _, err := packTake(ctx, tx, s.HabiticaID, "hearth-oil", nil, 1, "ada-oil", "ada", now); err != nil {
+		return err
+	}
+
+	nextCount := currentGifts + 1
+	if _, err := store.Outcome(ctx, tx, s.HabiticaID, fmt.Sprintf("ada-oil:%d", nextCount), "ada-oil", now); err != nil {
+		return err
+	}
+
+	s.State.Flags = rules.AddUnique(s.State.Flags, fmt.Sprintf("ada-oil-gifts:%d", nextCount))
+	out.AdaOilCount = nextCount
+	out.Used = "hearth-oil"
 	return nil
 }

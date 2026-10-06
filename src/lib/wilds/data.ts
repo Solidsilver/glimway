@@ -79,13 +79,14 @@ export function validateWildsData(raw: unknown): WildsData {
   const d = raw as Record<string, unknown>;
   const keys = Object.keys(d).sort();
   const want = [
-    'chunkSize', 'campMixes', 'enemyKinds', 'entityKinds', 'generatorVersion',
+    'chunkSize', 'deepTangleManhattanDistance', 'campMixes', 'enemyKinds', 'entityKinds', 'generatorVersion',
     'lootTables', 'materials', 'poiIds', 'regions', 'timers',
     'trinketChancePermille', 'trinkets',
   ].sort();
   if (keys.join(',') !== want.join(',')) throw new Error(`wilds: unexpected keys ${keys.join(',')}`);
   if (!isInt(d.generatorVersion) || d.generatorVersion !== 1) throw new Error('wilds: generatorVersion must be 1');
   if (!isInt(d.chunkSize) || d.chunkSize < 12 || d.chunkSize % 2 !== 0) throw new Error('wilds: chunkSize must be an even integer >= 12');
+  if (!isInt(d.deepTangleManhattanDistance) || d.deepTangleManhattanDistance < 1) throw new Error('wilds: deepTangleManhattanDistance must be positive');
   if (!Array.isArray(d.regions) || d.regions.length === 0 || !d.regions.every(isRegion)) throw new Error('wilds: bad regions');
   const ids = new Set<string>();
   for (const r of d.regions as WildsRegion[]) {

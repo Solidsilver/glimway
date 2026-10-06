@@ -201,6 +201,7 @@ export interface WildsTimers {
 export interface WildsData {
   generatorVersion: number;
   chunkSize: number;
+  deepTangleManhattanDistance: number;
   regions: WildsRegion[];
   enemyKinds: string[];
   campMixes: string[][];

@@ -22,6 +22,9 @@ type workshopView struct {
 }
 
 func readWorkshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (workshopView, error) {
+	if err := healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+		return workshopView{}, err
+	}
 	v := workshopView{Shared: "open"}
 	var err error
 	home, err := workshop(ctx, tx, s)
@@ -130,6 +133,11 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 		ledger += ledgerKind(v)
 		switch req.Direction {
 		case "deposit":
+			if chest.location != "personal" {
+				if d, ok := content.ItemFor(v.ID); ok && v.Kind != "decoration" && !d.Giveable() {
+					return nil, fail(409, "not-giveable")
+				}
+			}
 			if chest.location == "personal" {
 				c, err := chestCounts(ctx, tx, chest)
 				if err != nil {

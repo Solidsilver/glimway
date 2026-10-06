@@ -3,6 +3,7 @@ import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLan
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER } from './echoes.ts';
 import { residentJournal } from './residents.ts';
+import { heirloomJournalEntries } from './heirlooms.ts';
 
 export interface DialogueChoice {
   text: string;
@@ -517,6 +518,25 @@ export function journalEntries(stage: QuestStage, flags: readonly string[] = [])
       entries.push({ title: entry.title, body: entry.body });
     }
     entries.push(...residentJournal(flags, STAGE_ORDER[i]));
+  }
+  entries.push(...heirloomJournalEntries(flags));
+  if (flags.includes('unmoored:felt')) {
+    entries.push({
+      title: 'The Drift’s Sway',
+      body: 'The woods began to sway and the ground went soft and uncertain underfoot. Not a storm, just the land forgetting its own shape for a while.',
+    });
+  }
+  if (flags.includes('unmoored:cleared')) {
+    entries.push({
+      title: 'Finding the Anchor',
+      body: 'The edges settled and the ground stood still again. Lamplight, comfrey salve, or patience — the world remembers when you remind it.',
+    });
+  }
+  if (flags.includes('warden-sliver:found')) {
+    entries.push({
+      title: 'A Still Stone',
+      body: 'A chip of grey stone with an amber fleck. It sits very still in your hand.',
+    });
   }
   return entries;
 }

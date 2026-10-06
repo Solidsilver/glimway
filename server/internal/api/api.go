@@ -212,7 +212,8 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /api/items":
 		err = a.itemsRead(w, r)
 	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
-		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return":
+		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return",
+		"POST /api/items/heirloom", "POST /api/items/ada-oil":
 		err = a.itemsMutation(w, r)
 	case "GET /api/repairs":
 		err = a.repairsRead(w, r)
@@ -621,6 +622,23 @@ func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error 
 		if added {
 			if err = store.Credit(ctx, tx, s, rules.E.QuestEmbers[g.event], 0, "quest", g.event, nil, now); err != nil {
 				return err
+			}
+		}
+	}
+	if slices.Index(rules.Stages, s.State.Quest) >= slices.Index(rules.Stages, "guardian-defeated") {
+		sliverAdded, err := store.Outcome(ctx, tx, s.HabiticaID, "quest-gift:warden-sliver", "quest", now)
+		if err != nil {
+			return err
+		}
+		if sliverAdded {
+			sliverDef, ok := content.ItemFor("warden-sliver")
+			if ok {
+				if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.HabiticaID}, "", sliverDef.MaxPoints(), now); err != nil {
+					return err
+				}
+				if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency("warden-sliver"), 1, "story-grant", "defeat-guardian", now); err != nil {
+					return err
+				}
 			}
 		}
 	}

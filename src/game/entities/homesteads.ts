@@ -23,6 +23,7 @@ import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
 import { paperFlag } from '../../content/papers'
+import { HEIRLOOMS, HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
@@ -1053,25 +1054,34 @@ export class HomesteadLayer implements InteractionProvider {
     const lines = SILAS.dialogue
     const first = !s.state.flags.includes(HOME_FLAGS.met)
     s.addFlag(HOME_FLAGS.met)
+
+    const canAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe') && !itemsFor(s).isGrantInFlight('brack-felling-axe')
+    const axeChoice: DialogueChoice = { text: 'Take the Brack felling axe', action: 'heirloom:grant:brack-felling-axe' }
+    const axeLines = canAxe ? HEIRLOOMS['brack-felling-axe'].dialogueLines : []
+
     if (!this.homes.connected) {
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : [lines.idleLines[this.nextIdle()]]),
+          ...(canAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
           'Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.'
         ]
       })
       return
     }
     if (this.homes.status !== 'ready') {
+      const choices: DialogueChoice[] = canAxe ? [axeChoice, { text: 'Not yet' }] : []
       this.say({
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : []),
+          ...axeLines,
           this.homes.status === 'offline'
             ? 'Can’t make out the plot book just now. Weather, likely. Come back when the road to your world is clear.'
             : 'Hold on, I’m finding your page in the plot book.'
-        ]
+        ],
+        choices: choices.length ? choices : undefined
       })
       if (this.homes.status !== 'loading') void this.homes.load()
       return
@@ -1080,6 +1090,7 @@ export class HomesteadLayer implements InteractionProvider {
     if (!this.homes.claimed) {
       const invite = this.homes.inviteForMe()
       const choices: DialogueChoice[] = []
+      if (canAxe) choices.push(axeChoice)
       if (invite) choices.push({ text: `Sign ${short(invite.from.name, 14)}’s deed`, note: `${lotName(invite.gate)} · together, at the table`, action: `home:sign:${invite.homeId}` })
       for (const g of this.homes.reclaimable().slice(0, 2)) choices.push({ text: `Take back ${lotName(g.gate)}`, note: 'Your old deed, as it stands · free', action: `home:claim:${g.gate}` })
       for (const g of this.homes.unclaimed().slice(0, 4)) {
@@ -1092,6 +1103,7 @@ export class HomesteadLayer implements InteractionProvider {
         speaker: SILAS.name,
         lines: [
           ...(first ? lines.firstMeeting.lines : ['There you are, neighbour.']),
+          ...axeLines,
           invite
             ? `${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`
             : this.homes.reclaimable().length
@@ -1103,11 +1115,21 @@ export class HomesteadLayer implements InteractionProvider {
       return
     }
     if (!mine) {
-      this.say({ speaker: SILAS.name, lines: ['Hold on, I’m finding your page in the plot book.'] })
+      const choices: DialogueChoice[] = canAxe ? [axeChoice, { text: 'Not yet' }] : []
+      this.say({
+        speaker: SILAS.name,
+        lines: [
+          ...(first ? lines.firstMeeting.lines : []),
+          ...axeLines,
+          'Hold on, I’m finding your page in the plot book.'
+        ],
+        choices: choices.length ? choices : undefined
+      })
       void this.homes.load()
       return
     }
     const choices: DialogueChoice[] = []
+    if (canAxe) choices.push(axeChoice)
     if (mine.tier === 0) {
       const cost = this.homes.cottagePrice()
       const short = s.state.embers < cost
@@ -1120,13 +1142,21 @@ export class HomesteadLayer implements InteractionProvider {
     choices.push({ text: 'See what you’ve finished', action: 'home:shop' })
     choices.push({ text: 'Share the deed', note: 'Someone at the table with you', action: 'home:share' })
     choices.push({ text: 'Give up my place on the deed', action: 'home:leave' })
-    choices.push({ text: 'Just passing' })
+    choices.push({ text: canAxe ? 'Not yet' : 'Just passing' })
     const intro = mine.tier === 0
       ? [s.state.embers < this.homes.cottagePrice() ? lines.notEnoughEmbers.lines[0] : 'Your camp’s holding. Four skids and a slate roof, and you’d have a door to hang a fox over. Say the word.']
       : mine.tier === 1
         ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
         : [lines.sellDecorations.lines[0]]
-    this.say({ speaker: SILAS.name, lines: mine.tier === 0 ? intro : [lines.idleLines[this.nextIdle()], ...intro], choices })
+    this.say({
+      speaker: SILAS.name,
+      lines: [
+        ...(first ? lines.firstMeeting.lines : (mine.tier === 0 ? [] : [lines.idleLines[this.nextIdle()]])),
+        ...axeLines,
+        ...intro
+      ],
+      choices
+    })
   }
 
   private nextIdle(): number {

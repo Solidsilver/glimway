@@ -134,7 +134,7 @@ var (
 	PickupAreas     = []string{"village", "woodland", "ruin", "commons"}
 	kindTab         = map[string]string{"tool": "tools", "off-hand": "tools", "carry-gear": "tools", "consumable": "supplies", "material": "supplies", "fitting": "supplies", "part": "supplies", "seed": "supplies", "keepsake": "keepsakes", "home-good": "home", "paper": "papers"}
 	instancedKinds  = []string{"tool", "off-hand", "carry-gear", "fitting"}
-	ImplementedUses = []string{"restore-hp", "restore-mana"}
+	ImplementedUses = []string{"restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored"}
 	atZeroForGrade  = map[string][]string{"cheap": {"breaks"}, "heirloom": {"blunt", "cracked"}, "special": {"never"}}
 )
 
