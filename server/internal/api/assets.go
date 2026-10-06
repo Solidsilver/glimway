@@ -354,7 +354,7 @@ func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 		}
 		return moved{Makers: split, IDs: []string{}}, refreshItems(ctx, tx, s)
 	case "instance":
-		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.HabiticaID}, to.instancePlace()); err != nil {
+		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.HabiticaID}, to.instancePlace(), now); err != nil {
 			return moved{}, err
 		}
 		if err := fittedLedger(ctx, tx, s.HabiticaID, v.Instance, -1, reason, ref, now); err != nil {
@@ -394,7 +394,7 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 			return err
 		}
 		if warden {
-			has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID)
+			has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID, "")
 			if err != nil {
 				return err
 			}
@@ -402,7 +402,7 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 				return fail(409, "two-wardens-grind")
 			}
 		}
-		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.HabiticaID}); err != nil {
+		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.HabiticaID}, now); err != nil {
 			return err
 		}
 		if err := fittedLedger(ctx, tx, s.HabiticaID, got.IDs[0], 1, reason, ref, now); err != nil {

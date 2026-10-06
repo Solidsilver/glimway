@@ -74,6 +74,7 @@ import { SEASON_SHIFT_NOTICE } from '../../content/expansion-writing'
 import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
 import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
 import { seasonMark } from '../../lib/wilds/outer'
+import { loadWilds } from '../../lib/wilds/data'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
 
@@ -557,16 +558,22 @@ export class WorldScene extends Phaser.Scene {
         const b = this.hero.sprite.body as Phaser.Physics.Arcade.Body
         return { vx: b.velocity.x, vy: b.velocity.y, moves: b.moves, enable: b.enable, physicsPaused: this.physics.world.isPaused }
       })(),
-      unmoored: uiState.unmoored
+      unmoored: ui.unmoored
     })
-    ;(window as unknown as { __fsEmit?: (event: string, ...args: unknown[]) => void }).__fsEmit = (event: string, ...args: unknown[]) =>
-      bus.emit(event, ...args)
-    ;(window as unknown as { __fsUnmoored?: (val?: boolean) => boolean }).__fsUnmoored = (val?: boolean) => {
-      if (typeof val === 'boolean') {
-        uiState.unmoored = val
-        if (!val) uiState.unmooredEasing = false
+    if (import.meta.env.DEV) {
+      ;(window as unknown as { __fsEmit?: (event: string, ...args: unknown[]) => void }).__fsEmit = (event: string, ...args: unknown[]) =>
+        bus.emit(event, ...args)
+      ;(window as unknown as { __fsUnmoored?: (val?: boolean) => boolean }).__fsUnmoored = (val?: boolean) => {
+        if (typeof val === 'boolean') {
+          ui.unmoored = val
+          if (!val) ui.unmooredEasing = false
+        }
+        return ui.unmoored
       }
-      return uiState.unmoored
+      ;(window as unknown as { fsUnmoored?: { trigger: () => void; clear: () => void } }).fsUnmoored = {
+        trigger: () => this.triggerUnmoored(),
+        clear: () => this.clearUnmoored(),
+      }
     }
 
     if (this.pendingDefeatToast) {
@@ -579,23 +586,16 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EV.turning, this.onTurning, this)
     bus.on(EV.clock, this.onClock, this)
     const onClearUnmoored = (p: { instant: boolean }) => this.onClearUnmoored(p)
-    const onStir = () => this.triggerUnmoored()
     bus.on('game:clear-unmoored', onClearUnmoored)
-    bus.on('game:stir', onStir)
     const offAll = () => {
       bus.off(EV.turning, this.onTurning, this)
       bus.off(EV.clock, this.onClock, this)
       bus.off('game:clear-unmoored', onClearUnmoored)
-      bus.off('game:stir', onStir)
       this.clearUnmooredVisuals()
     }
     this.events.once('shutdown', offAll)
     this.events.once('destroy', offAll)
 
-    ;(window as unknown as { fsUnmoored?: { trigger: () => void; clear: () => void } }).fsUnmoored = {
-      trigger: () => this.triggerUnmoored(),
-      clear: () => this.clearUnmoored(),
-    }
     if (this.pendingTurned || turnedAway) {
       const live = this.pendingTurned
       this.pendingTurned = false
@@ -684,8 +684,7 @@ export class WorldScene extends Phaser.Scene {
 
   triggerUnmoored(): void {
     ui.unmoored = true
-    ui.unmooredEasing = false
-    this.lamplightTimer = 0
+    if (!ui.unmooredEasing) this.lamplightTimer = 0
     if (!this.session.state.flags.includes('unmoored:felt')) {
       this.session.addFlag('unmoored:felt')
       emitResidents(this.session)
@@ -699,7 +698,7 @@ export class WorldScene extends Phaser.Scene {
       this.clearUnmoored()
     } else {
       ui.unmooredEasing = true
-      this.easingTimer = 15
+      this.easingTimer = 45
     }
   }
 
@@ -708,6 +707,7 @@ export class WorldScene extends Phaser.Scene {
     ui.unmoored = false
     ui.unmooredEasing = false
     this.lamplightTimer = 0
+    this.deepTangleTimer = 0
     this.easingTimer = 0
     this.clearUnmooredVisuals()
     if (!this.session.state.flags.includes('unmoored:cleared')) {
@@ -720,7 +720,7 @@ export class WorldScene extends Phaser.Scene {
   private updateUnmooredVisuals(time: number, _dt: number): void {
     const cam = this.cameras.main
     if (!cam) return
-    const factor = ui.unmooredEasing ? Math.max(0, this.easingTimer / 15) : 1.0
+    const factor = ui.unmooredEasing ? Math.max(0, this.easingTimer / 45) : 1.0
 
     if (this.reducedMotion) {
       if (!this.unmooredVeil) {
@@ -739,17 +739,21 @@ export class WorldScene extends Phaser.Scene {
     }
 
     if (this.unmooredEdges.length === 0) {
-      const top = this.add.rectangle(cam.centerX, 0, cam.width * 2, 28, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const bottom = this.add.rectangle(cam.centerX, cam.height, cam.width * 2, 28, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const left = this.add.rectangle(0, cam.centerY, 28, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const right = this.add.rectangle(cam.width, cam.centerY, 28, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const ex = (cam.width / 2) * (1 - 1 / cam.zoom)
+      const ey = (cam.height / 2) * (1 - 1 / cam.zoom)
+      const top = this.add.rectangle(cam.centerX, ey + 14 / cam.zoom, cam.width * 2, 28 / cam.zoom, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const bottom = this.add.rectangle(cam.centerX, cam.height - ey - 14 / cam.zoom, cam.width * 2, 28 / cam.zoom, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const left = this.add.rectangle(ex + 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
+      const right = this.add.rectangle(cam.width - ex - 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
       this.unmooredEdges = [top, bottom, left, right]
     } else {
       const edgeAlpha = (0.2 + Math.sin(time * 0.0022) * 0.08) * factor
-      this.unmooredEdges[0].setPosition(cam.centerX, 0).setSize(cam.width * 2, 28).setAlpha(edgeAlpha)
-      this.unmooredEdges[1].setPosition(cam.centerX, cam.height).setSize(cam.width * 2, 28).setAlpha(edgeAlpha)
-      this.unmooredEdges[2].setPosition(0, cam.centerY).setSize(28, cam.height * 2).setAlpha(edgeAlpha)
-      this.unmooredEdges[3].setPosition(cam.width, cam.centerY).setSize(28, cam.height * 2).setAlpha(edgeAlpha)
+      const ex = (cam.width / 2) * (1 - 1 / cam.zoom)
+      const ey = (cam.height / 2) * (1 - 1 / cam.zoom)
+      this.unmooredEdges[0].setPosition(cam.centerX, ey + 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(edgeAlpha)
+      this.unmooredEdges[1].setPosition(cam.centerX, cam.height - ey - 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(edgeAlpha)
+      this.unmooredEdges[2].setPosition(ex + 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(edgeAlpha)
+      this.unmooredEdges[3].setPosition(cam.width - ex - 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(edgeAlpha)
     }
 
     const sway = Math.sin(time * 0.0018) * 0.007 * factor
@@ -787,21 +791,25 @@ export class WorldScene extends Phaser.Scene {
     this.session.tickPlaySeconds(dt)
 
     const chunk = parseChunkArea(this.world.areaId)
-    const inDeepTangle = !!(chunk && chunk.region === WILDS_REGION_ID && (chunk.cx !== 1 || chunk.cy !== 1))
+    const tangleEntry = loadWilds().regions.find((region) => region.id === WILDS_REGION_ID)
+    const inDeepTangle = !!(
+      chunk && tangleEntry && chunk.region === WILDS_REGION_ID &&
+      Math.abs(chunk.cx - tangleEntry.entryX) + Math.abs(chunk.cy - tangleEntry.entryY) >= loadWilds().deepTangleManhattanDistance
+    )
     if (inDeepTangle) {
       this.deepTangleTimer += dt
-      if (this.deepTangleTimer >= 45) {
+      if (this.deepTangleTimer >= 240) {
         this.triggerUnmoored()
         this.deepTangleTimer = 0
       }
     } else {
-      this.deepTangleTimer = Math.max(0, this.deepTangleTimer - dt * 0.5)
+      this.deepTangleTimer = 0
     }
 
     if (ui.unmoored) {
       if (isSafeArea(this.world.areaId)) {
         this.lamplightTimer += dt
-        if (this.lamplightTimer >= 15) {
+        if (this.lamplightTimer >= 120) {
           this.clearUnmoored()
         }
       } else {

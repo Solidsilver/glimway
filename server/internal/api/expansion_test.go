@@ -37,15 +37,16 @@ type expansionResponse struct {
 	} `json:"mine"`
 	Invites []inviteView `json:"invites"`
 	Result  struct {
-		Home      *homeView      `json:"home"`
-		Status    string         `json:"status"`
-		ItemID    string         `json:"itemId"`
-		LanternID string         `json:"lanternId"`
-		Rewarded  bool           `json:"rewarded"`
-		Loot      wilds.LootDrop `json:"loot"`
-		Entity    entityView     `json:"entity"`
-		Materials map[string]int `json:"materials"`
-		Lanterns  []lanternView  `json:"lanterns"`
+		Home              *homeView      `json:"home"`
+		Status            string         `json:"status"`
+		ItemID            string         `json:"itemId"`
+		LanternID         string         `json:"lanternId"`
+		Rewarded          bool           `json:"rewarded"`
+		Loot              wilds.LootDrop `json:"loot"`
+		Entity            entityView     `json:"entity"`
+		Materials         map[string]int `json:"materials"`
+		WardenSliverFound bool           `json:"wardenSliverFound"`
+		Lanterns          []lanternView  `json:"lanterns"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

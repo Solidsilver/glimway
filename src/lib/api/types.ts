@@ -217,6 +217,7 @@ export interface WildsClaimResult {
   entity: WildsEntityView;
   loot: WildsLoot;
   materials: WildsMaterials;
+  wardenSliverFound?: boolean;
 }
 
 export interface WildsClaimResponse extends Snapshot {
@@ -664,4 +665,3 @@ export interface MendResult {
 export interface MendResponse extends Snapshot {
   result: MendResult;
 }
-

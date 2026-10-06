@@ -4,6 +4,7 @@ import { createQueue } from '../src/lib/api/queue.ts';
 import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERROR_CODES } from '../src/lib/api/errors.ts';
 import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
+import { parseWildsClaim } from '../src/lib/api/parse.ts';
 import type { Progress } from '../src/lib/api/types.ts';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -46,6 +47,21 @@ test('queue: tasks run one at a time, in order', async () => {
   assert.deepEqual(results, ['a', 'b', 'c']);
   assert.deepEqual(log, ['start a', 'end a', 'start b', 'end b', 'start c', 'end c']);
   assert.equal(q.size, 0);
+});
+
+test('Wilds claim parser preserves and validates rare warden sliver finds', () => {
+  const raw = {
+    ...snapshot(),
+    result: {
+      epoch: 'epoch-1',
+      entity: { id: 'node-1', kind: 'node', tx: 1, ty: 1, tier: 0, cycle: 1, state: 'harvested', available_at: 0, by: null, at: null },
+      loot: { materials: [], trinket: null },
+      materials: {},
+      wardenSliverFound: true,
+    },
+  };
+  assert.equal(parseWildsClaim(raw).result.wardenSliverFound, true);
+  assert.throws(() => parseWildsClaim({ ...raw, result: { ...raw.result, wardenSliverFound: 'yes' } }));
 });
 
 test('queue: a failure goes to its own caller and the queue keeps going', async () => {

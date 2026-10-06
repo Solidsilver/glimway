@@ -3,6 +3,9 @@ package api
 import (
 	"context"
 	"fingersnap/content"
+	"fingersnap/server/internal/store"
+	"fingersnap/server/internal/wilds"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -78,6 +81,74 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 
 	x.conserved("alice")
 	x.conserved("bob")
+}
+
+func TestWardenSliverMovesBetweenToolsAtBench(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	s = x.openWorkshop(c, s)
+	axe := x.instance("alice", "bench-axe", -1, "")
+	pick := x.instance("alice", "bench-pick", -1, "")
+	sliver := x.instance("alice", "warden-sliver", -1, "")
+	x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
+	moved := x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver}, 200)
+	if view := findInstance(moved.Result.Items, axe); view == nil || view.WardenSet {
+		t.Fatal("expected source axe to release its warden fitting")
+	}
+	if view := findInstance(moved.Result.Items, pick); view == nil || !view.WardenSet {
+		t.Fatal("expected destination pick to receive the warden fitting")
+	}
+	x.conserved("alice")
+}
+
+func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
+	for _, mode := range []string{"recall-to-shared", "expiry-to-personal"} {
+		t.Run(mode, func(t *testing.T) {
+			x := newRig(t)
+			c, s := x.ready("alice")
+			x.member("bob", s.WorldID)
+			s = x.openWorkshop(c, s)
+			axe := x.instance("alice", "bench-axe", -1, "")
+			axeSliver := x.instance("alice", "warden-sliver", -1, "")
+			pick := x.instance("alice", "bench-pick", -1, "")
+			pickSliver := x.instance("alice", "warden-sliver", -1, "")
+			x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": axeSliver}, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send-warden", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), c, 200)
+			s.Snapshot = sent.Snapshot
+			x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": pickSliver}, 200)
+			expectedLocation, expectedOwner := "storage", ""
+			if mode == "expiry-to-personal" {
+				if _, err := x.db.DB.Exec("DELETE FROM homestead_members WHERE habitica_id='alice'"); err != nil {
+					t.Fatal(err)
+				}
+				expectedLocation, expectedOwner = "personal", "alice"
+				if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=? WHERE id=?", x.now.Load()-30*86400, sent.Result.MailID); err != nil {
+					t.Fatal(err)
+				}
+				if n, err := x.db.ReturnDueMail(context.Background(), x.now.Load()); err != nil || n != 1 {
+					t.Fatalf("automatic return: %d, %v", n, err)
+				}
+			} else {
+				var homeID string
+				if err := x.db.DB.QueryRow("SELECT homestead_id FROM homestead_members WHERE habitica_id='alice'").Scan(&homeID); err != nil {
+					t.Fatal(err)
+				}
+				expectedOwner = homeID
+				x.p5("POST", "/api/mail/"+sent.Result.MailID+"/recall", body(s, "recall-warden", nil), c, 200)
+			}
+			var location, owner string
+			if err := x.db.DB.QueryRow("SELECT location,owner FROM item_instances WHERE id=?", axe).Scan(&location, &owner); err != nil {
+				t.Fatal(err)
+			}
+			if location != expectedLocation || owner != expectedOwner {
+				t.Fatalf("returned warden tool at %s/%s, want %s/%s", location, owner, expectedLocation, expectedOwner)
+			}
+			if count(t, x.db, "SELECT count(*) FROM item_instances t WHERE t.location='pack' AND t.owner='alice' AND EXISTS (SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def='warden-sliver')") != 1 {
+				t.Fatal("return created a second warden-set tool in the pack")
+			}
+			x.conserved("alice")
+		})
+	}
 }
 
 func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
@@ -173,6 +244,32 @@ func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
 	x.conserved("alice")
 }
 
+func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
+	hold := []instanceRow{{Def: "loose-road-nail"}}
+	for _, tool := range content.ItemsRules.Items {
+		if tool.Kind != "tool" || tool.MaxPoints() <= 0 {
+			continue
+		}
+		for _, tc := range []struct {
+			name     string
+			fittings []instanceRow
+			want     int
+		}{{"plain", nil, 40}, {"hold", hold, 80}} {
+			condition, uses := tool.MaxPoints(), 0
+			for condition > 0 {
+				condition = wardenWear(tool.MaxPoints(), condition, tc.fittings)
+				uses++
+				if uses > 100 {
+					t.Fatalf("%s/%s never dulled", tool.ID, tc.name)
+				}
+			}
+			if uses != tc.want {
+				t.Errorf("%s/%s dulled after %d uses, want %d", tool.ID, tc.name, uses, tc.want)
+			}
+		}
+	}
+}
+
 func TestWardenSliverStoryGrantOnGuardianDefeated(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -254,45 +351,71 @@ func TestUnmooredConsumables(t *testing.T) {
 	x.conserved("alice")
 }
 
-func TestWardenSliverDailyCap(t *testing.T) {
+func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
 	x := newRig(t)
-	_, s := x.ready("alice")
-	now := x.now.Load()
-	ctx := context.Background()
-
-	tx1, err := x.db.DB.Begin()
-	if err != nil {
-		t.Fatal(err)
+	seedCookie, seed := x.ready("probe")
+	v := x.region(seedCookie)
+	entryX, entryY := 1, 1
+	for _, region := range content.WildsRules.Regions {
+		if region.ID == "inner-1" {
+			entryX, entryY = region.EntryX, region.EntryY
+		}
 	}
-	defer tx1.Rollback()
-
-	// Direct grant check on day 1
-	day1 := utcDay(now)
-	// Seed warden_finds with day 1
-	_, err = tx1.ExecContext(ctx, "INSERT INTO warden_finds(habitica_id, utc_day) VALUES(?,?)", s.HabiticaID, day1)
-	if err != nil {
-		t.Fatal(err)
+	deep := []entityView{}
+	for _, entity := range v.Entities {
+		var cx, cy int
+		fmt.Sscanf(entity.ID, entity.Kind+":%d:%d:", &cx, &cy)
+		if (entity.Kind == "node" || entity.Kind == "chest") && intAbs(cx-entryX)+intAbs(cy-entryY) >= content.WildsRules.DeepTangleManhattanDistance {
+			deep = append(deep, entity)
+		}
 	}
-
-	// Another attempt on day 1 should be blocked by daily cap (warden_finds check).
-	var count int
-	err = tx1.QueryRowContext(ctx, "SELECT count(*) FROM warden_finds WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day1).Scan(&count)
-	if err != nil || count != 1 {
-		t.Fatalf("expected 1 find on day1, got %d (err: %v)", count, err)
+	if len(deep) < 2 {
+		t.Fatal("expected at least two entities in deep Tangle")
 	}
-
-	// On day 2, no record exists in warden_finds yet
-	day2 := day1 + 1
-	err = tx1.QueryRowContext(ctx, "SELECT count(*) FROM warden_finds WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day2).Scan(&count)
-	if err != nil || count != 0 {
-		t.Fatalf("expected 0 finds on day2, got %d", count)
+	week := int(x.now.Load() / (7 * 86400))
+	player := ""
+	first := entityView{}
+	for n := 0; n < 10000 && player == ""; n++ {
+		candidate := fmt.Sprintf("sliver-hunter-%04d", n)
+		for _, entity := range deep {
+			var cx, cy int
+			fmt.Sscanf(entity.ID, entity.Kind+":%d:%d:", &cx, &cy)
+			if wilds.Hash(candidate, entity.ID, week, "warden-sliver", cx, cy)%1000 < 2 {
+				player, first = candidate, entity
+				break
+			}
+		}
 	}
-
-	if err = tx1.Commit(); err != nil {
-		t.Fatal(err)
+	if player == "" {
+		t.Fatal("could not find deterministic player/entity with a rare sliver roll")
 	}
-
-	x.conserved("alice")
+	c, s := x.member(player, seed.WorldID)
+	v = x.region(c)
+	var second entityView
+	for _, e := range deep {
+		if e.ID != first.ID {
+			second = e
+			break
+		}
+	}
+	request := body(s, "rare-find", map[string]any{"epoch": v.Epoch.ID, "entityId": first.ID, "progress": nearEntity(s, first), "cycle": 0})
+	grant := x.exp("POST", "/api/wilds/claim", request, c, 200)
+	if !grant.Result.WardenSliverFound {
+		t.Fatal("expected claim response to report the warden sliver")
+	}
+	replay := x.exp("POST", "/api/wilds/claim", request, c, 200)
+	if store.JSON(replay) != store.JSON(grant) {
+		t.Fatal("claim replay changed the response")
+	}
+	update(&s, grant)
+	blocked := x.exp("POST", "/api/wilds/claim", body(s, "weekly-cap", map[string]any{"epoch": v.Epoch.ID, "entityId": second.ID, "progress": nearEntity(s, second), "cycle": 0}), c, 200)
+	if blocked.Result.WardenSliverFound || count(t, x.db, "SELECT count(*) FROM warden_finds WHERE habitica_id=?", player) != 1 {
+		t.Fatal("weekly cap granted a second sliver")
+	}
+	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE location='pack' AND owner=? AND item_def='warden-sliver'", player) != 1 {
+		t.Fatal("expected exactly one sliver instance")
+	}
+	x.conserved(player)
 }
 
 func instanceFromList(list []instanceView, id string) *instanceView {

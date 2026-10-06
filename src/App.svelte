@@ -228,7 +228,7 @@
       ui.portraits = { ...ui.portraits, ...p }
     }
     const onResidentsMet = (p: ResidentsMetPayload) => {
-      ui.residentsMet = [...p.met]
+      ui.residentsMet = [...p.journalFlags]
     }
     const onArtIcons = (p: Record<string, string>) => {
       ui.artIcons = { ...ui.artIcons, ...p }

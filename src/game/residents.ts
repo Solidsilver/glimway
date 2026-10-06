@@ -12,12 +12,12 @@ import type { Session } from './session'
 import { villageFor } from './village'
 
 export const RESIDENT_EV = {
-  /** The save's resident-meeting flags: { met: string[] } (the journal reads them). */
+  /** Flags used to assemble journal entries, including first meetings. */
   met: 'ui:residents-met'
 } as const
 
 export interface ResidentsMetPayload {
-  met: string[]
+  journalFlags: string[]
 }
 
 export function residentContext(session: Session): ResidentContext {
@@ -44,7 +44,7 @@ export function meetResident(session: Session, id: ResidentId): void {
 
 /** Tell the interface who this save has met (load, merges, meetings). */
 export function emitResidents(session: Session): void {
-  const met = session.state.flags.filter((f) => RESIDENT_IDS.some((id) => f.startsWith(`met:${id}@`)) || f.startsWith('unmoored:'))
-  const payload: ResidentsMetPayload = { met }
+  const journalFlags = session.state.flags.filter((f) => RESIDENT_IDS.some((id) => f.startsWith(`met:${id}@`)) || f.startsWith('unmoored:') || f === 'warden-sliver:found')
+  const payload: ResidentsMetPayload = { journalFlags }
   bus.emit(RESIDENT_EV.met, payload)
 }

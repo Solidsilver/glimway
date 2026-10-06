@@ -530,6 +530,12 @@ export function journalEntries(stage: QuestStage, flags: readonly string[] = [])
       body: 'The edges settled and the ground stood still again. Lamplight, comfrey salve, or patience — the world remembers when you remind it.',
     });
   }
+  if (flags.includes('warden-sliver:found')) {
+    entries.push({
+      title: 'A Still Stone',
+      body: 'A chip of grey stone with an amber fleck. It sits very still in your hand.',
+    });
+  }
   return entries;
 }
 

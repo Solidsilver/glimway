@@ -47,15 +47,16 @@ test('unmoored status shows HUD hint, and using comfrey salve clears it', async 
   const hint = page.locator('.unmoored-hint')
   await expect(hint).toBeHidden()
 
-  // Trigger stir event to activate unmoored
+  // This DEV-only hook places the HUD in the unmoored state for its UI check.
   await page.evaluate(() => {
-    ;(window as unknown as { __fsEmit?: (event: string) => void }).__fsEmit?.('game:stir')
+    ;(window as unknown as { __fsUnmoored?: (val?: boolean) => boolean }).__fsUnmoored?.(true)
   })
 
   // HUD hint should now be visible
   await expect(hint).toBeVisible()
   await expect(hint).toContainText('Unmoored')
   await expect(hint).toHaveAttribute('title', /the drift’s sway holds you/)
+  await shot(page, 'unmoored-edge-bands')
 
   // Open inventory and use comfrey-salve
   await openInventory(page, /Supplies/)
