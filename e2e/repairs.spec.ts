@@ -1,16 +1,18 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { fund, freshPlayer, giveInstance, go, shot } from './home-helpers'
+import { serverState } from './connected'
+import { expectToast, dialogueState, openTalk, readDialogue, untilLine, waitForLive } from './helpers'
+import { freshPlayer, fund, giveInstance, go, shot } from './home-helpers'
 
 /**
- * The village's repairs and the returning keepsakes, against the real Go
- * server (docs/items/crafting-and-repair.md "Village repairs", overview
- * "Returning keepsakes"): the well's rotten rope stands visible on the well,
- * the chores list is on the notice board, mending takes the part from the
- * pack (shared per world), Hazel answers, and water can be drawn once the
- * rope is sound. Carrying Tam's halter brings Ada's quiet line, and giving
- * it back is one-time and grants her oil receipts. SCREENS=1 saves
- * screenshots to .agent/screens/.
+ * The village's repairs and the returning keepsakes, against this worker's
+ * own Go server (docs/items/crafting-and-repair.md "Village repairs",
+ * overview "Returning keepsakes"): the well's rotten rope stands visible on
+ * the well, the chores list is on the notice board, mending takes the part
+ * from the pack (shared per world), Hazel answers, and water can be drawn
+ * once the rope is sound. Carrying Tam's halter brings Ada's quiet line,
+ * and giving it back is one-time, grants her oil receipts, and thanks only
+ * after the world agrees. SCREENS=1 saves screenshots to .agent/screens/.
  */
 test.use({ server: true })
 
@@ -28,46 +30,43 @@ const drawWater = (page: Page, instance: string) =>
     instance
   )
 
+/** The pack (re)read holding `def`: opening the inventory asks the server
+ * for the item model, the way a player looks at what they carry. */
+async function packHolds(page: Page, def: string): Promise<void> {
+  await page.keyboard.press('i')
+  await expect(page.getByRole('dialog', { name: 'Inventory' })).toBeVisible()
+  await expect.poll(() => items(page), { timeout: 15_000 }).not.toBeNull()
+  await expect
+    .poll(async () => (await items(page))!.stacks.some((s) => s.itemDef === def), { message: `the pack holds ${def}`, timeout: 15_000 })
+    .toBe(true)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Inventory' })).toBeHidden()
+}
+
 const dialogue = (page: Page) => page.getByRole('dialog', { name: /Conversation with/ })
 
-/** Read a conversation to its end, picking the reply named by `pick` when it
- * shows. Resolves to true when the pick was offered and clicked. Only the
- * line being typed is in the dialog at once, so choices are the evidence. */
-async function readThrough(page: Page, pick?: RegExp): Promise<boolean> {
-  let picked = !pick
-  for (let i = 0; i < 40 && (await dialogue(page).isVisible()); i++) {
-    const first = page.locator('.choice').first()
-    if (!picked && (await first.isVisible().catch(() => false))) {
-      const offer = page.locator('.choice', { hasText: pick! })
-      if (await offer.isVisible().catch(() => false)) {
-        await offer.click()
-        picked = true
-      } else {
-        await first.click()
-      }
-    } else if (await first.isVisible().catch(() => false)) {
-      await page.keyboard.press('Escape')
-    } else {
-      await page.keyboard.press('e')
-    }
-    await page.waitForTimeout(250)
-  }
-  await expect(dialogue(page)).toBeHidden()
-  return picked
+async function openBoard(page: Page): Promise<ReturnType<Page['getByRole']>> {
+  await go(page, 'village', 15, 10)
+  await expect(page.locator('.prompt')).toContainText('Read the notice board')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  const board = page.getByRole('dialog', { name: 'Notice Board' })
+  await expect(board).toBeVisible()
+  return board
 }
 
 test('the well rope: on the board, on the well, mended with the rope, then water', async ({ page }) => {
   const id = await freshPlayer(page, 'Wren')
   const bucket = giveInstance(id, 'stave-bucket', { max: 90 })
   fund(id, { items: { 'fibre-rope': 1 } })
+  await packHolds(page, 'fibre-rope')
+
+  // Drawing water waits for the rope.
+  await go(page, 'village', 13, 14)
+  await expect(drawWater(page, bucket)).resolves.toEqual({ error: 'well-rope-broken' })
 
   // The chores list on the notice board points at the well.
-  await go(page, 'village', 15, 10)
-  await expect(page.locator('.prompt')).toContainText('Read the notice board')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  const board = page.getByRole('dialog', { name: 'Notice Board' })
-  await expect(board).toBeVisible()
+  const board = await openBoard(page)
   const chores = board.getByTestId('chores-list')
   await expect(chores).toContainText("The well's rotten rope")
   await expect(chores).toContainText('Fibre rope')
@@ -75,80 +74,76 @@ test('the well rope: on the board, on the well, mended with the rope, then water
   await page.keyboard.press('Escape')
   await expect(board).toBeHidden()
 
-  // Drawing water waits for the rope.
-  await go(page, 'village', 13, 14)
-  await expect(drawWater(page, bucket)).resolves.toEqual({ error: 'well-rope-broken' })
-
   // The broken rope stands on the well, and mending takes the part.
+  await go(page, 'village', 13, 14)
   await expect.poll(() => repairs(page), { timeout: 15_000 }).toContain('well-rope')
+  // The part is carried: the pack read lands before the mend can take it.
+  await expect.poll(() => items(page), { timeout: 15_000 }).not.toBeNull()
   await expect(page.locator('.prompt')).toContainText("Mend the well's rotten rope")
-  await page.waitForTimeout(300)
+  await waitForLive(page)
   await page.keyboard.press('e')
-  await expect(page.locator('.toast', { hasText: 'Bread tastes of the well again.' })).toBeVisible()
-  await expect(page.locator('.toast', { hasText: 'Hazel hands you' })).toBeVisible()
+  await expectToast(page, 'Bread tastes of the well again.')
+  await expectToast(page, 'Hazel hands you')
   await expect.poll(() => repairs(page), { timeout: 15_000 }).not.toContain('well-rope')
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'fibre-rope')).toBeUndefined()
   await shot(page, 'repairs-well-mended')
 
   // The board remembers who mended it, and points at the next chore.
-  await go(page, 'village', 15, 10)
-  await expect(page.locator('.prompt')).toContainText('Read the notice board')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  await expect(board).toBeVisible()
-  await expect(board.getByTestId('chores-list')).toContainText('A fallen fence rail')
-  await expect(board.getByTestId('repairs-history')).toContainText("The well's rotten rope")
-  await expect(board.getByTestId('repairs-history')).toContainText('mended by Wren')
+  const board2 = await openBoard(page)
+  await expect(board2.getByTestId('chores-list')).toContainText('A fallen fence rail')
+  await expect(board2.getByTestId('repairs-history')).toContainText("The well's rotten rope")
+  await expect(board2.getByTestId('repairs-history')).toContainText('mended by Wren')
   await page.keyboard.press('Escape')
-  await expect(board).toBeHidden()
+  await expect(board2).toBeHidden()
 
   // Water draws again: one draw, one bucket use.
+  await go(page, 'village', 13, 14)
   await expect(drawWater(page, bucket)).resolves.toMatchObject({ itemDef: 'stave-bucket', condition: 87 })
 })
 
 test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', async ({ page }) => {
   const id = await freshPlayer(page, 'Ivy')
   fund(id, { items: { 'knotted-halter': 1 } })
+  await packHolds(page, 'knotted-halter')
 
   await go(page, 'village', 34, 9)
-  // Carrying is observable: the pack read lands before the ask can ride.
-  await expect.poll(() => items(page), { timeout: 15_000 }).not.toBeNull()
-  await expect(page.locator('.prompt')).toContainText('Talk to Ada')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  await expect(dialogue(page)).toBeVisible()
-  const kept = await readThrough(page, /Not yet/)
-  expect(kept).toBe(true)
+  await openTalk(page, /Talk to Ada/)
+  await untilLine(page, /Tam knotted every splice/)
+  await readDialogue(page, { pick: /Not yet/ })
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')?.qty).toBe(1)
 
   // Ask again, and give it back: the return lands (the world's word), her
   // thanks ride a fresh conversation, and the story piece is on the save.
-  await expect(page.locator('.prompt')).toContainText('Talk to Ada')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  await expect(dialogue(page)).toBeVisible()
-  const gave = await readThrough(page, /Give it back/)
-  expect(gave).toBe(true)
+  await openTalk(page, /Talk to Ada/)
+  await untilLine(page, /Tam knotted every splice/)
+  await readDialogue(page, { pick: /Give it back/ })
   await expect
     .poll(async () => {
-      const st = await page.request.get('/api/state').then((r) => r.json())
-      return [st.state.flags.includes('returned:knotted-halter'), st.state.flags.includes('paper:adas-oil-receipts')]
+      const st = await serverState(page)
+      const flags = st.body?.state?.flags ?? []
+      return [flags.includes('returned:knotted-halter'), flags.includes('paper:adas-oil-receipts')]
     }, { timeout: 15_000 })
     .toEqual([true, true])
+  // The thanks are the server's to give: a word more the world adds once
+  // the return has landed (read like a person would).
+  await expect
+    .poll(async () => (await dialogueState(page)).seen.some((x) => /oil receipts|knot holding/.test(x.text)), {
+      message: 'Ada’s thanks after the return'
+    })
+    .toBe(true)
+  if ((await dialogueState(page)).open) await readDialogue(page)
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')).toBeUndefined()
 
-  // The world's word: the flags, and the line never asks again.
-  const state = await page.request.get('/api/state').then((r) => r.json())
-  expect(state.state.flags).toContain('returned:knotted-halter')
-  expect(state.state.flags).toContain('paper:adas-oil-receipts')
+  // The line never asks again (the world's word says it is done).
   await go(page, 'village', 34, 9)
   fund(id, { items: { 'knotted-halter': 1 } })
-  await expect(page.locator('.prompt')).toContainText('Talk to Ada')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  await expect(dialogue(page)).toBeVisible()
-  const askedAgain = await readThrough(page, /Give it back/)
-  expect(askedAgain).toBe(false)
+  await packHolds(page, 'knotted-halter')
+  await openTalk(page, /Talk to Ada/)
+  await readDialogue(page)
+  await expect(dialogue(page)).toBeHidden()
+  // `said` is the last conversation's whole text.
+  expect((await dialogueState(page)).said.join('\n')).not.toMatch(/Tam knotted every splice/)
+  expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')?.qty).toBe(1)
 })
 
 test('a refused return never plays the thanks: the world answers first', async ({ page }) => {
@@ -161,15 +156,13 @@ test('a refused return never plays the thanks: the world answers first', async (
     route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'too-far-away' } }) })
   )
 
+  fund(id, { items: { 'knotted-halter': 1 } })
+  await packHolds(page, 'knotted-halter')
   await go(page, 'village', 34, 9)
-  await expect(page.locator('.prompt')).toContainText('Talk to Ada')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('e')
-  await expect(dialogue(page)).toBeVisible()
-  // Giving back closes on the neutral line only; the thanks are the
-  // server's to give, and it refused.
-  await readThrough(page, /Give it back/)
+  await openTalk(page, /Talk to Ada/)
+  await untilLine(page, /Tam knotted every splice/)
+  await readDialogue(page, { pick: /Give it back/ })
   await expect(dialogue(page)).toBeHidden()
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')?.qty).toBe(1)
-  await expect(page.locator('.toast', { hasText: 'You need to be right there.' })).toBeVisible()
+  await expectToast(page, 'You need to be right there.')
 })
