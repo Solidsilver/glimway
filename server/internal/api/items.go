@@ -7,6 +7,7 @@ import (
 	"fingersnap/content"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fmt"
 	"math"
 	"net/http"
 	"slices"
@@ -725,15 +726,17 @@ type itemRequest struct {
 
 // itemResult: the caller's items after the change, and what happened.
 type itemResult struct {
-	Items    itemsView      `json:"items"`
-	Wear     *wearResult    `json:"wear,omitempty"`
-	Used     string         `json:"used,omitempty"`
-	Pickup   string         `json:"pickup,omitempty"`
-	Given    *content.Asset `json:"given,omitempty"`
-	Mended   string         `json:"mended,omitempty"`
-	Created  []string       `json:"created,omitempty"`
-	Returned string         `json:"returned,omitempty"`
-	Paper    *string        `json:"paper,omitempty"`
+	Items       itemsView      `json:"items"`
+	Wear        *wearResult    `json:"wear,omitempty"`
+	Used        string         `json:"used,omitempty"`
+	Pickup      string         `json:"pickup,omitempty"`
+	Given       *content.Asset `json:"given,omitempty"`
+	Mended      string         `json:"mended,omitempty"`
+	Created     []string       `json:"created,omitempty"`
+	Returned    string         `json:"returned,omitempty"`
+	Paper       *string        `json:"paper,omitempty"`
+	Heirloom    string         `json:"heirloom,omitempty"`
+	AdaOilCount int            `json:"adaOilCount,omitempty"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -769,6 +772,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = pickUp(ctx, tx, s, req, now, &out)
 		case "return":
 			err = a.returnKeepsake(ctx, tx, s, req, now, &out)
+		case "heirloom":
+			err = a.grantHeirloom(ctx, tx, s, req, now, &out)
+		case "ada-oil":
+			err = a.giveAdaOil(ctx, tx, s, req, now, &out)
 		default:
 			err = fail(404, "not-found")
 		}
@@ -1268,3 +1275,153 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	return nil
 }
 
+// grantHeirloom validates conditions and grants an heirloom tool once per player.
+func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	itemID := req.ItemDef
+	if itemID == "" {
+		return fail(400, "invalid-item")
+	}
+	def, ok := content.ItemFor(itemID)
+	if !ok || def.Grade != "heirloom" {
+		return fail(400, "invalid-item")
+	}
+
+	// Validate story conditions per heirloom tool
+	switch itemID {
+	case "brack-felling-axe":
+		// Silas: Hollis's name known
+		// The same list as HOLLIS_NAME_FLAGS in src/content/heirlooms.ts.
+		met := slices.Contains(s.State.Flags, "returned:whittled-fox") ||
+			slices.Contains(s.State.Flags, "echo:hollis") ||
+			slices.Contains(s.State.Flags, "paper:ashwatch-ledger-excerpts") ||
+			slices.Contains(s.State.Flags, "paper:silas-pine-offcut-scrap")
+		if !met {
+			return fail(409, "condition-unmet")
+		}
+
+	case "orrins-mason-pick":
+		// Orrin: north bridge mended
+		met := slices.Contains(s.State.Flags, "project:north-bridge:complete")
+		if !met {
+			var completed sql.NullInt64
+			err := tx.QueryRowContext(ctx, "SELECT completed_at FROM projects WHERE world_id=? AND project_def='north-bridge'", s.WorldID).Scan(&completed)
+			if err == nil && completed.Valid && completed.Int64 > 0 {
+				met = true
+			}
+		}
+		if !met {
+			return fail(409, "condition-unmet")
+		}
+
+	case "ada-garden-spade":
+		// Ada: window oil brought 3 times
+		var oilCount int
+		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&oilCount)
+		if err != nil {
+			return err
+		}
+		for _, f := range s.State.Flags {
+			if strings.HasPrefix(f, "ada-oil-gifts:") {
+				var n int
+				if _, scanErr := fmt.Sscanf(f, "ada-oil-gifts:%d", &n); scanErr == nil && n > oilCount {
+					oilCount = n
+				}
+			}
+		}
+		if oilCount < 3 {
+			return fail(409, "condition-unmet")
+		}
+
+	case "nans-lamplighter-pole":
+		// Nan: echo settled
+		met := slices.Contains(s.State.Flags, "echo:nan")
+		if !met {
+			return fail(409, "condition-unmet")
+		}
+
+	default:
+		return fail(400, "invalid-item")
+	}
+
+	// Outcomes table guarantees once per player
+	added, err := store.Outcome(ctx, tx, s.HabiticaID, "heirloom:"+itemID, "heirloom", now)
+	if err != nil {
+		return err
+	}
+	if !added {
+		return fail(409, "already-granted")
+	}
+
+	condition := -1
+	if def.Uses > 0 {
+		condition = def.Uses * content.ItemsRules.Rules.Wear.PointsPerUse
+	}
+	instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", condition, now)
+	if err != nil {
+		return err
+	}
+	out.Created = []string{instID}
+	out.Heirloom = itemID
+	s.State.Flags = rules.AddUnique(s.State.Flags, "heirloom:"+itemID)
+
+	return currency(ctx, tx, s.HabiticaID, content.StackCurrency(itemID), 1, "heirloom", itemID, now)
+}
+
+// giveAdaOil accepts hearth-oil/window-oil for Ada's window, up to 3 gifts.
+func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	oilDef := req.ItemDef
+	if oilDef == "" {
+		oilDef = "hearth-oil"
+	}
+
+	haveHearth, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "hearth-oil")
+	if err != nil {
+		return err
+	}
+	haveWindow, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "window-oil")
+	if err != nil {
+		return err
+	}
+
+	toTake := oilDef
+	if oilDef == "window-oil" && haveWindow > 0 {
+		toTake = "window-oil"
+	} else if haveHearth > 0 {
+		toTake = "hearth-oil"
+	} else if haveWindow > 0 {
+		toTake = "window-oil"
+	} else {
+		return fail(409, "insufficient-items")
+	}
+
+	var currentGifts int
+	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&currentGifts)
+	if err != nil {
+		return err
+	}
+	for _, f := range s.State.Flags {
+		if strings.HasPrefix(f, "ada-oil-gifts:") {
+			var n int
+			if _, scanErr := fmt.Sscanf(f, "ada-oil-gifts:%d", &n); scanErr == nil && n > currentGifts {
+				currentGifts = n
+			}
+		}
+	}
+	if currentGifts >= 3 {
+		return fail(409, "not-needed")
+	}
+
+	if _, err := packTake(ctx, tx, s.HabiticaID, toTake, nil, 1, "ada-oil", "ada", now); err != nil {
+		return err
+	}
+
+	nextCount := currentGifts + 1
+	if _, err := store.Outcome(ctx, tx, s.HabiticaID, fmt.Sprintf("ada-oil:%d", nextCount), "ada-oil", now); err != nil {
+		return err
+	}
+
+	s.State.Flags = rules.AddUnique(s.State.Flags, fmt.Sprintf("ada-oil-gifts:%d", nextCount))
+	out.AdaOilCount = nextCount
+	out.Used = toTake
+	return nil
+}

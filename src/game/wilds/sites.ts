@@ -16,6 +16,7 @@
 import type Phaser from 'phaser'
 import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
 import { paperFlag } from '../../content/papers.ts'
+import { HEIRLOOMS } from '../../content/heirlooms.ts'
 import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
 import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
 import type { Epoch } from '../../lib/wilds/types.ts'
@@ -383,7 +384,13 @@ export class WildsSites {
     const spot = { x: Math.round(at.x), y: Math.round(at.y - 20) }
     if (s.kind === 'echo') {
       const def = this.echoes.get(s.id)
-      if (!def || echoSettled(c.flags, def.member)) return null
+      if (!def) return null
+      if (echoSettled(c.flags, def.member)) {
+        if (def.member === 'nan' && !c.flags.includes('heirloom:nans-lamplighter-pole')) {
+          return { entityId: `site:${s.id}`, label: 'Take Nan’s lamplighter pole', verb: 'Take', x: spot.x, y: spot.y, claim: () => this.takeNanPole() }
+        }
+        return null
+      }
       return { entityId: `site:${s.id}`, label: def.verb, verb: 'Settle', x: spot.x, y: spot.y, claim: () => this.settle(s, def) }
     }
     const paper = siteFind(s.kind, c)
@@ -412,6 +419,21 @@ export class WildsSites {
     bus.emit(EV.dialogue, { id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle] })
     if (def.paper && !session.state.flags.includes(paperFlag(def.paper))) grantPaper(session, def.paper)
     this.render()
+  }
+
+  private takeNanPole(): void {
+    const session = this.deps.session
+    if (session.state.flags.includes('heirloom:nans-lamplighter-pole')) return
+    const h = HEIRLOOMS['nans-lamplighter-pole']
+    uiState.dialogueOpen = true
+    bus.emit(EV.dialogue, {
+      id: 'wilds-heirloom:nans-lamplighter-pole',
+      speaker: h.speaker,
+      lines: [...h.dialogueLines],
+      choices: [
+        { text: 'Take the lamplighter pole', action: 'heirloom:grant:nans-lamplighter-pole' }
+      ]
+    })
   }
 
   private find(s: StorySite, paper: string): void {

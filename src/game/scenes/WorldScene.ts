@@ -38,6 +38,7 @@ import { itemsFor } from '../items'
 import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
 import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
+import { HEIRLOOMS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
 import { NPC_NAMES, Npcs } from '../entities/npcs'
 import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
 import { presence } from '../presence'
@@ -971,6 +972,15 @@ export class WorldScene extends Phaser.Scene {
       if (parsed) this.returnKeepsake(parsed.def, parsed.target)
       return
     }
+    if (action.startsWith('heirloom:grant:')) {
+      const id = action.slice('heirloom:grant:'.length)
+      this.grantHeirloom(id)
+      return
+    }
+    if (action === 'ada:oil') {
+      this.giveAdaOil()
+      return
+    }
     const spend: EmberSpend | null =
       action === 'rest' ? { kind: 'rest' }
         : action === 'home-rest' ? { kind: 'home-rest' }
@@ -1017,6 +1027,77 @@ export class WorldScene extends Phaser.Scene {
       if (r.value.paper) {
         const paper = paperById(r.value.paper)
         if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll' })
+      }
+    })
+  }
+
+  private grantHeirloom(id: string): void {
+    const items = itemsFor(this.session)
+    if (!this.session.link) {
+      this.session.addFlag(`heirloom:${id}`)
+      const h = HEIRLOOMS[id as HeirloomId]
+      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
+      return
+    }
+    void items.grantHeirloom(id).then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      this.session.addFlag(`heirloom:${id}`)
+      const h = HEIRLOOMS[id as HeirloomId]
+      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag' })
+    })
+  }
+
+  private giveAdaOil(): void {
+    const items = itemsFor(this.session)
+    if (!this.session.link) {
+      const current = countAdaOilGifts(this.session.state.flags)
+      const next = current + 1
+      this.session.addFlag(`ada-oil-gifts:${next}`)
+      if (next >= 3) {
+        const h = HEIRLOOMS['ada-garden-spade']
+        bus.emit(EV.dialogue, {
+          id: 'ada-spade-grant',
+          speaker: h.speaker,
+          lines: [...h.dialogueLines],
+          choices: [{ text: 'Take the spade', action: 'heirloom:grant:ada-garden-spade' }]
+        })
+      } else {
+        const reply = ADA_OIL_REPLIES[next] ?? ['Good oil for the window. Thank you.']
+        bus.emit(EV.dialogue, {
+          id: 'ada-oil-thanks',
+          speaker: 'Ada',
+          lines: [...reply]
+        })
+      }
+      return
+    }
+    void items.giveAdaOil().then((r) => {
+      if (!this.sys.isActive()) return
+      if (!r.ok) {
+        bus.emit(EV.toast, { text: r.text, kind: 'error' })
+        return
+      }
+      const count = r.value.adaOilCount ?? (countAdaOilGifts(this.session.state.flags) + 1)
+      this.session.addFlag(`ada-oil-gifts:${count}`)
+      if (count >= 3) {
+        const h = HEIRLOOMS['ada-garden-spade']
+        bus.emit(EV.dialogue, {
+          id: 'ada-spade-grant',
+          speaker: h.speaker,
+          lines: [...h.dialogueLines],
+          choices: [{ text: 'Take the spade', action: 'heirloom:grant:ada-garden-spade' }]
+        })
+      } else {
+        const reply = ADA_OIL_REPLIES[count] ?? ['Good oil for the window. Thank you.']
+        bus.emit(EV.dialogue, {
+          id: 'ada-oil-thanks',
+          speaker: 'Ada',
+          lines: [...reply]
+        })
       }
     })
   }

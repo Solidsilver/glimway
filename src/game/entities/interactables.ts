@@ -22,6 +22,7 @@ import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
 import { VILLAGE_EV } from '../village'
 import { HOME_EV } from '../homestead'
+import { HEIRLOOMS, countAdaOilGifts } from '../../content/heirlooms'
 import type { PaperPickups } from './papers'
 
 export interface Interactable {
@@ -209,13 +210,18 @@ export class Interactables {
         kind = this.emberSpotReady(it.id) ? 'talk' : null
       } else if (isResident(it.id)) {
         const talk = residentTalk(it.id, residentContext(this.deps.session))
-        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
+        const flags = this.deps.session.state.flags
+        const adaSpade = it.id === 'ada' && countAdaOilGifts(flags) >= 3 && !flags.includes('heirloom:ada-garden-spade')
+        if (!heardAt.has(`${it.id}@${talk.topic}`) || handoverFor(it.id, stage, flags) || adaSpade) kind = 'talk'
       } else {
+        const flags = this.deps.session.state.flags
+        const orrinPick = it.id === 'orrin' && flags.includes('project:north-bridge:complete') && !flags.includes('heirloom:orrins-mason-pick')
         try {
           const d = dialogueFor(it.id, stage)
           if (d.event) kind = 'quest'
+          else if (orrinPick) kind = 'talk'
           else if (it.id in NPC_NAMES && !heardAt.has(`${it.id}@${stage}`)) kind = 'talk'
-          else if (it.id in NPC_NAMES && handoverFor(it.id, stage, this.deps.session.state.flags)) kind = 'talk'
+          else if (it.id in NPC_NAMES && handoverFor(it.id, stage, flags)) kind = 'talk'
         } catch {
           kind = null
         }
@@ -309,6 +315,41 @@ export class Interactables {
       ? keepsakeAsk(target.id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
       : null
     if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
+    // Heirloom beats: Orrin's mason pick and Ada's garden spade
+    if (target.id === 'orrin' && session.state.flags.includes('project:north-bridge:complete') && !session.state.flags.includes('heirloom:orrins-mason-pick')) {
+      const h = HEIRLOOMS['orrins-mason-pick']
+      payload = {
+        speaker: 'Orrin',
+        lines: [...h.dialogueLines],
+        choices: [
+          { text: 'Take Orrin’s mason pick', action: 'heirloom:grant:orrins-mason-pick' }
+        ]
+      }
+    } else if (target.id === 'ada') {
+      const gifts = countAdaOilGifts(session.state.flags)
+      if (gifts >= 3 && !session.state.flags.includes('heirloom:ada-garden-spade')) {
+        const h = HEIRLOOMS['ada-garden-spade']
+        payload = {
+          speaker: 'Ada',
+          lines: [...h.dialogueLines],
+          choices: [
+            { text: 'Take Ada’s garden spade', action: 'heirloom:grant:ada-garden-spade' }
+          ]
+        }
+      } else if (gifts < 3) {
+        const carriesOil = session.state.inventory.some((i) => i === 'hearth-oil' || i === 'window-oil') ||
+          (itemsFor(session).view?.stacks.some((s) => (s.itemDef === 'hearth-oil' || s.itemDef === 'window-oil') && s.qty > 0) ?? false)
+        if (carriesOil) {
+          payload = {
+            ...payload,
+            choices: [
+              ...(payload.choices ?? []),
+              { text: 'Give hearth oil for the window', action: 'ada:oil' }
+            ]
+          }
+        }
+      }
+    }
     uiState.dialogueOpen = true
     heardAt.add(heardKey)
     this.refreshMarkers()

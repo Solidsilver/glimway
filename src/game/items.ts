@@ -79,6 +79,10 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'That isn’t something to carry in your off hand.'
     case 'already-picked-up':
       return 'You’ve already picked that up.'
+    case 'condition-unmet':
+      return 'You aren’t ready for that yet.'
+    case 'already-granted':
+      return 'You’ve already received that heirloom.'
     case 'insufficient-items':
       return 'You don’t have that any more.'
     case 'insufficient-materials':
@@ -204,6 +208,12 @@ export class Items {
   }
   returnKeepsake(itemDef: string, target: string) {
     return this.run('return', { itemDef, target })
+  }
+  grantHeirloom(itemDef: string) {
+    return this.run('heirloom', { itemDef })
+  }
+  giveAdaOil(itemDef = 'hearth-oil') {
+    return this.run('ada-oil', { itemDef })
   }
 
   // ------------------------------------------------------------ reads

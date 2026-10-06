@@ -23,6 +23,7 @@ import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
 import { paperFlag } from '../../content/papers'
+import { HEIRLOOMS, knowsHollisName } from '../../content/heirlooms'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
@@ -945,6 +946,17 @@ export class HomesteadLayer implements InteractionProvider {
     const lines = SILAS.dialogue
     const first = !s.state.flags.includes(HOME_FLAGS.met)
     s.addFlag(HOME_FLAGS.met)
+    if (knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe')) {
+      const h = HEIRLOOMS['brack-felling-axe']
+      this.say({
+        speaker: SILAS.name,
+        lines: [...h.dialogueLines],
+        choices: [
+          { text: 'Take the Brack felling axe', action: 'heirloom:grant:brack-felling-axe' }
+        ]
+      })
+      return
+    }
     if (!this.homes.connected) {
       this.say({
         speaker: SILAS.name,
