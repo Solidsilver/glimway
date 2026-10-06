@@ -7,6 +7,7 @@ import (
 	"fingersnap/content"
 	"fingersnap/server/internal/store"
 	"net/http"
+	"slices"
 )
 
 type choreView struct {
@@ -135,6 +136,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			}
 			isOpen := map[string]bool{}
 			known := map[string]bool{}
+			mendedAt := map[string]int64{}
 			for rows.Next() {
 				var rid string
 				var mAt sql.NullInt64
@@ -143,7 +145,9 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 					return out, err
 				}
 				known[rid] = true
-				if !mAt.Valid {
+				if mAt.Valid {
+					mendedAt[rid] = mAt.Int64
+				} else {
 					isOpen[rid] = true
 				}
 			}
@@ -173,21 +177,38 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			}
 
 			if lastBreakWick+int64(perWick) <= wick {
-				for _, def := range content.RepairRules.Repairs {
+				// What breaks next: the least-recently-mended of the pool —
+				// a chore that never broke yet comes first — so weather
+				// works through the list instead of wearing one chore.
+				// Never the same thing twice in a row (the last mend sits
+				// out), and never what weather can't take (the well: water
+				// is a dependency, not a chore).
+				var pick *content.RepairDef
+				var pickMended int64 = -1
+				for i, def := range content.RepairRules.Repairs {
 					if currentOpen >= maxOpen {
 						break
 					}
-					if isOpen[def.ID] || def.ID == lastMended || def.OpenFrom != nil {
+					if !def.WeatherTakes() || def.OpenFrom != nil || isOpen[def.ID] || def.ID == lastMended {
 						continue
 					}
-					if err = openBreak(def); err != nil {
+					mAt := int64(-1)
+					if known[def.ID] {
+						mAt = mendedAt[def.ID]
+					}
+					if pick == nil || mAt < pickMended {
+						pick = &content.RepairRules.Repairs[i]
+						pickMended = mAt
+					}
+				}
+				if pick != nil {
+					if err = openBreak(*pick); err != nil {
 						return out, err
 					}
 					// One breakage per read; the clock paces the rest by wick.
 					if _, err = tx.ExecContext(ctx, "UPDATE village_repair_clock SET last_break_wick=? WHERE world_id=?", wick, s.WorldID); err != nil {
 						return out, err
 					}
-					break
 				}
 			}
 
@@ -392,6 +413,20 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		// Optional reward gift: its ledger row must land with the mend.
 		if def.Gift != nil {
 			if err = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{"", def.Gift.Qty}}, "village-reward", ref, now); err != nil {
+				return nil, err
+			}
+		}
+
+		// The scripted chores teach mending once; the weather starts the
+		// wick after the last of them is mended (it only ever sets this if
+		// it never started — the clock is not rewound later).
+		if slices.Contains(content.RepairRules.Rules.Scripted, id) {
+			wick := content.CalendarAt(content.CalendarRules, now).WickNumber
+			if _, err = tx.ExecContext(ctx, `
+				INSERT INTO village_repair_clock(world_id, last_break_wick) VALUES(?, ?)
+				ON CONFLICT(world_id) DO UPDATE SET last_break_wick=excluded.last_break_wick
+				WHERE last_break_wick = 0
+			`, s.WorldID, wick); err != nil {
 				return nil, err
 			}
 		}

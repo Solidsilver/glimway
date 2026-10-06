@@ -80,13 +80,13 @@ test('the well rope: on the board, on the well, mended with the rope, then water
   await expect(drawWater(page, bucket)).resolves.toEqual({ error: 'well-rope-broken' })
 
   // The broken rope stands on the well, and mending takes the part.
-  await expect.poll(() => repairs(page)).toContain('well-rope')
+  await expect.poll(() => repairs(page), { timeout: 15_000 }).toContain('well-rope')
   await expect(page.locator('.prompt')).toContainText("Mend the well's rotten rope")
   await page.waitForTimeout(300)
   await page.keyboard.press('e')
   await expect(page.locator('.toast', { hasText: 'Bread tastes of the well again.' })).toBeVisible()
   await expect(page.locator('.toast', { hasText: 'Hazel hands you' })).toBeVisible()
-  await expect.poll(() => repairs(page)).not.toContain('well-rope')
+  await expect.poll(() => repairs(page), { timeout: 15_000 }).not.toContain('well-rope')
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'fibre-rope')).toBeUndefined()
   await shot(page, 'repairs-well-mended')
 

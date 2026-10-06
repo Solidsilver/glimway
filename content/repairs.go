@@ -37,6 +37,14 @@ type RepairDef struct {
 	MendedDescription string          `json:"mendedDescription"`
 	WorldFlag         string          `json:"worldFlag"`
 	OpenFrom          *RepairOpenFrom `json:"openFrom,omitempty"`
+	// Weather can break it again (the default). Repairs the village can't
+	// do without — the well's rope — mend once and stay mended.
+	Weather *bool `json:"weather,omitempty"`
+}
+
+// WeatherTakes says whether weather can break this repair again.
+func (d RepairDef) WeatherTakes() bool {
+	return d.Weather == nil || *d.Weather
 }
 
 type RepairsRulesConfig struct {

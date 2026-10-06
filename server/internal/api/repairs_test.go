@@ -278,11 +278,12 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.conserved("alice")
 }
 
-// The break weather (review finding 2): after the scripted two, one new
-// breakage opens per wick, never the same thing twice in a row, up to
-// maxOpen. Repairs must come back (re-break) or the chores list empties
-// for good. Candidates run in content order, so the rotation cycles through
-// the list, skipping whatever was mended last.
+// The break weather (review finding 2, N1): after the scripted two, one new
+// breakage opens per wick — starting the wick after the last scripted chore
+// is mended — picking the least-recently-mended repair (never-opened first),
+// never the same thing twice in a row, up to maxOpen. Repairs must come back
+// (re-break) or the chores list empties for good, and the well (water is a
+// dependency, not a chore) never breaks again.
 func TestRepairsWeatherPacing(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -310,28 +311,93 @@ func TestRepairsWeatherPacing(t *testing.T) {
 		x.mend(c, &s, chore.id, map[string]any{"progress": chore.doc}, 200)
 	}
 
-	// One weather breakage opens now (the wick's first), not all of them:
-	// the oldest mend (the well rope) rots again first.
+	// The weather holds off the rest of this wick: it starts the next one.
 	read := x.repairsReq("GET", "/api/repairs", nil, c, 200)
-	if len(read.Open) != 1 || read.Open[0].ID != "well-rope" {
-		t.Fatalf("expected exactly the well rope open after the fence, got %+v", read.Open)
+	if len(read.Open) != 0 {
+		t.Fatalf("expected no weather yet in the fence's wick, got %+v", read.Open)
 	}
-	// A second read in the same wick opens nothing more.
+
+	// Next wick: the library roof (never-opened first), one breakage only.
+	read = nextWick()
+	if len(read.Open) != 1 || read.Open[0].ID != "library-roof" {
+		t.Fatalf("expected the library roof next wick, got %+v", read.Open)
+	}
 	read = x.repairsReq("GET", "/api/repairs", nil, c, 200)
 	if len(read.Open) != 1 {
 		t.Fatalf("expected the same single chore on re-read, got %+v", read.Open)
 	}
 
-	// A wick later, the fence takes its turn (never the same thing twice in
-	// a row), and a re-broken repair is not mended any more.
-	x.stack("alice", "fibre-rope", "", 1)
-	x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
+	// Mended, the next wick takes the bench (the roof, mended last, sits out).
+	roofDoc := s.State
+	roofDoc.Area = "village"
+	roofDoc.Position = rules.Position{X: float64(4*16 + 8), Y: float64(17*16 + 8)}
+	x.stack("alice", "slates", "", 1)
+	x.mend(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
 	read = nextWick()
-	if len(read.Open) != 1 || read.Open[0].ID != "fence-rail" {
-		t.Fatalf("expected the fence rail next wick, got %+v", read.Open)
+	if len(read.Open) != 1 || read.Open[0].ID != "bench-slat" {
+		t.Fatalf("expected the bench next wick, got %+v", read.Open)
 	}
-	if slices.ContainsFunc(read.Mended, func(m mendedView) bool { return m.RepairID == "fence-rail" }) {
+	if slices.ContainsFunc(read.Mended, func(m mendedView) bool { return m.RepairID == "bench-slat" }) {
 		t.Fatal("a re-broken repair is not mended any more")
+	}
+	// The well rope never comes back with the weather.
+	for _, o := range read.Open {
+		if o.ID == "well-rope" {
+			t.Fatal("the well never breaks again")
+		}
+	}
+	x.conserved("alice")
+}
+
+// Over many wicks the weather works through every chore (N1): each weather
+// chore eventually appears, and the well stays mended the whole time —
+// water keeps drawing.
+func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+
+	// The scripted two, mended.
+	byID := map[string]content.RepairDef{}
+	for _, def := range content.RepairRules.Repairs {
+		byID[def.ID] = def
+	}
+	doc := func(id string, st *response) map[string]any {
+		def := byID[id]
+		d := st.State
+		d.Area = def.Area
+		d.Position = rules.Position{X: float64(def.Pos.TX*16 + 8), Y: float64(def.Pos.TY*16 + 8)}
+		return map[string]any{"progress": d}
+	}
+	for _, id := range content.RepairRules.Rules.Scripted {
+		x.stack("alice", byID[id].Part, "", 1)
+		x.mend(c, &s, id, doc(id, &s), 200)
+	}
+
+	seen := map[string]bool{}
+	for wick := 0; wick < 30; wick++ {
+		read := x.repairsReq("GET", "/api/repairs", nil, c, 200)
+		// The well stays out of the weather: mended is mended.
+		if !slices.Contains(read.WorldFlags, "repair:well-rope:mended") {
+			t.Fatalf("the well's mend was forgotten in wick %d", wick)
+		}
+		for _, o := range read.Open {
+			if o.ID == "well-rope" {
+				t.Fatal("the well never breaks again")
+			}
+			x.stack("alice", o.Part, "", 1)
+			x.mend(c, &s, o.ID, doc(o.ID, &s), 200)
+			seen[o.ID] = true
+		}
+		// Eight-day jumps sweep every day of the wick, so the hame's
+		// Carting Day window (day 5+) gets sampled.
+		x.now.Add(8*86400 + 3600)
+		c = x.login("alice", "")
+		x.refresh(c, &s)
+	}
+	for _, id := range []string{"fence-rail", "library-roof", "bench-slat", "village-lamp", "gate-hame"} {
+		if !seen[id] {
+			t.Fatalf("%s never broke in 30 wicks", id)
+		}
 	}
 	x.conserved("alice")
 }

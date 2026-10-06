@@ -28,7 +28,8 @@
       "hint": "The village well in the square",
       "description": "The well rope is rotten through; water cannot be drawn.",
       "mendedDescription": "A sound fibre rope hangs on the well. Water can be drawn again.",
-      "worldFlag": "repair:well-rope:mended"
+      "worldFlag": "repair:well-rope:mended",
+      "weather": false
     },
     {
       "id": "fence-rail",

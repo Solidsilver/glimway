@@ -32,6 +32,8 @@ export interface RepairDef {
   worldFlag: string;
   /** Festival chores only break from this day of this wick (the hame before Carting Day). */
   openFrom?: RepairOpenFrom;
+  /** Weather can break it again (default true). The well's rope mends once and stays mended. */
+  weather?: boolean;
 }
 
 export interface RepairsRulesConfig {
