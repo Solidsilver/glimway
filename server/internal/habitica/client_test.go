@@ -13,6 +13,31 @@ import (
 
 const valid = `{"success":true,"data":{"_id":"alice","profile":{"name":"Hero"},"flags":{"classSelected":false},"stats":{"lvl":1,"exp":0,"hp":5,"mp":10,"str":0,"int":0,"con":0,"per":0}}}`
 
+// A real mage account: stats.class "wizard" and wizard-klass gear, with the
+// stat block of the real catalog's weapon_wizard_1 (int 3, per 1).
+const wizardUser = `{"success":true,"data":{"_id":"vesper","profile":{"name":"Vesper"},"flags":{"classSelected":true},"stats":{"lvl":1,"exp":0,"hp":50,"mp":30,"class":"%s","str":5,"int":5,"con":5,"per":5},"items":{"gear":{"equipped":{"weapon":"weapon_wizard_1"}}}}}`
+
+func TestWizardUserImportsAsMageWithClassBonus(t *testing.T) {
+	for _, class := range []string{"wizard", "mage"} {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(strings.Replace(wizardUser, "%s", class, 1)))
+		}))
+		p, err := New(s.URL, "tag").Verify(context.Background(), "vesper", "secret")
+		s.Close()
+		if err != nil {
+			t.Fatalf("class %q rejected: %v", class, err)
+		}
+		if p.Class == nil || *p.Class != "mage" {
+			t.Fatalf("class %q imported as %v, want mage", class, p.Class)
+		}
+		// weapon_wizard_1 (int 3, per 1, klass wizard) counts twice for a mage:
+		// int 5+3+3 = 11, per 5+1+1 = 7; maxMp = 2*11+30.
+		if p.Stats.Int != 11 || p.Stats.Per != 7 || p.Stats.Str != 5 || p.Stats.Con != 5 || p.MaxMP != 52 {
+			t.Fatalf("class bonus missing for wizard gear: %+v", p.Stats)
+		}
+	}
+}
+
 func TestRetryAfterOnce(t *testing.T) {
 	for _, always := range []bool{false, true} {
 		var n atomic.Int64
