@@ -98,7 +98,11 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 		return err
 	}
 	for _, v := range all {
+		if err = writeOffLostDeed(ctx, tx, v.id, v.gate, now); err != nil {
+			return err
+		}
 		for _, q := range []string{
+			"DELETE FROM homestead_departures WHERE homestead_id=?",
 			"DELETE FROM homestead_invites WHERE homestead_id=?",
 			"DELETE FROM homestead_cleared WHERE homestead_id=?",
 			"DELETE FROM item_stacks WHERE location='storage' AND owner=?",
@@ -113,6 +117,74 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO lost_gates(world_id,gate,lost_at) VALUES(?,?,?) ON CONFLICT(world_id,gate) DO UPDATE SET lost_at=excluded.lost_at", world, v.gate, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeOffLostDeed records what a lost deed takes with it, on the ledger of
+// the last member to leave: an offsetting row for everything in the home
+// chest (so the per-currency sums still balance), a zero row naming every
+// piece set out on the land, and one for the deed itself.
+func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, now int64) error {
+	var last string
+	err := tx.QueryRowContext(ctx, "SELECT habitica_id FROM homestead_departures WHERE homestead_id=? ORDER BY left_at DESC,habitica_id LIMIT 1", home).Scan(&last)
+	if err == sql.ErrNoRows {
+		return nil // nobody ever left it (it can't be vacant then)
+	}
+	if err != nil {
+		return err
+	}
+	ref := fmt.Sprintf("%s:gate:%d", home, gate)
+	type row struct {
+		currency string
+		delta    int
+		ref      string
+	}
+	out := []row{}
+	rows, err := tx.QueryContext(ctx, "SELECT kind,item_def,qty FROM home_storage WHERE homestead_id=? ORDER BY kind,item_def", home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var kind, def string
+		var n int
+		if err = rows.Scan(&kind, &def, &n); err != nil {
+			rows.Close()
+			return err
+		}
+		out = append(out, row{"storage:" + kind + ":" + def, -n, ref})
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,location FROM homestead_items WHERE homestead_id=? ORDER BY id", home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id, def, location string
+		if err = rows.Scan(&id, &def, &location); err != nil {
+			rows.Close()
+			return err
+		}
+		if location == "storage" {
+			out = append(out, row{"storage:decoration:" + def, -1, ref + ":" + id})
+		} else {
+			out = append(out, row{"decoration:" + def, 0, ref + ":" + id})
+		}
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	out = append(out, row{"homestead", 0, ref})
+	for _, r := range out {
+		if err = currency(ctx, tx, last, r.currency, r.delta, "deed-lost", r.ref, now); err != nil {
 			return err
 		}
 	}
@@ -297,6 +369,8 @@ type gateView struct {
 	Desolate bool         `json:"desolate"`
 	Mine     bool         `json:"mine"`
 	Price    *int         `json:"price"`
+	// Reclaim: the caller was on this vacant home's deed and can take it back.
+	Reclaim bool `json:"reclaim"`
 }
 type person struct {
 	ID   string `json:"id"`
@@ -369,6 +443,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 		g := &gates[v.gate]
 		id := v.id
 		g.HomeID, g.Tier, g.Desolate, g.Mine = &id, v.tier, desolate(v.vacantSince, now), v.id == mineID
+		g.Reclaim = v.vacantSince != nil && mineID == "" && departed(ctx, tx, v.id, s.HabiticaID)
 		if g.Members, err = members(ctx, tx, v.id); err != nil {
 			return err
 		}
@@ -532,12 +607,19 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 		return fail(404, "invalid-gate")
 	}
 	gate := *req.Gate
-	var taken int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&taken); err != nil {
+	var held string
+	var vacant *int64
+	err = tx.QueryRowContext(ctx, "SELECT id,vacant_since FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&held, &vacant)
+	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	if taken > 0 {
-		return fail(409, "gate-taken")
+	if err == nil {
+		// Still under its deed. The last ones out may take it back, as it
+		// stands, until the deed is lost; anyone else asks a member.
+		if vacant == nil || !departed(ctx, tx, held, s.HabiticaID) {
+			return fail(409, "gate-taken")
+		}
+		return reclaim(ctx, tx, s, held, now)
 	}
 	price, err := deedPrice(ctx, tx, s.HabiticaID, s.WorldID, gate)
 	if err != nil {
@@ -566,6 +648,30 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 		return err
 	}
 	return addDeed(ctx, tx, s.HabiticaID)
+}
+
+// departed: the player was on this home's deed and gave up their place.
+func departed(ctx context.Context, tx *sql.Tx, home, player string) bool {
+	var n int
+	return tx.QueryRowContext(ctx, "SELECT count(*) FROM homestead_departures WHERE homestead_id=? AND habitica_id=?", home, player).Scan(&n) == nil && n > 0
+}
+
+// reclaim puts a former member back on their vacant home's deed: the land,
+// the cottage, the posts and the chest as they were, and no charge.
+func reclaim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, home string, now int64) error {
+	for _, q := range []struct {
+		sql  string
+		args []any
+	}{
+		{"UPDATE homesteads SET vacant_since=NULL WHERE id=?", []any{home}},
+		{"INSERT INTO homestead_members VALUES(?,?,?)", []any{s.HabiticaID, home, now}},
+		{"DELETE FROM homestead_departures WHERE homestead_id=? AND habitica_id=?", []any{home, s.HabiticaID}},
+	} {
+		if _, err := tx.ExecContext(ctx, q.sql, q.args...); err != nil {
+			return err
+		}
+	}
+	return store.Credit(ctx, tx, s, 0, 0, "homestead-reclaim", home, nil, now)
 }
 
 func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) error {
@@ -662,13 +768,29 @@ func placedRect(v homeInstance) (rect, bool) {
 	return rect{*v.X, *v.Y, w, h}, true
 }
 
-// lightsWithout: the home's own light and every placed post but `except`.
-func lightsWithout(items []homeInstance, except string) []land.Light {
+// connectedLights: the home's own light and every placed post (but
+// `except`) whose light connects back to it: a post counts once its tile
+// stands in the home's light or in the light of a post that already counts.
+// Posts can't hold each other up out in the dark.
+func connectedLights(items []homeInstance, except string) []land.Light {
 	s := content.HomeRules.Land.StartLight
 	out := []land.Light{{X: s.X, Y: s.Y, Radius: s.Radius}}
+	waiting := []homeInstance{}
 	for _, v := range items {
 		if v.ItemDef == content.HomeRules.LanternPosts.Item && v.ID != except && v.Scene != nil && *v.Scene == "outdoor" && v.X != nil && v.Y != nil {
-			out = append(out, land.Light{X: *v.X, Y: *v.Y, Radius: content.HomeRules.LanternPosts.Radius})
+			waiting = append(waiting, v)
+		}
+	}
+	for grew := true; grew; {
+		grew = false
+		for i := 0; i < len(waiting); i++ {
+			v := waiting[i]
+			if land.Lit(out, *v.X, *v.Y) {
+				out = append(out, land.Light{X: *v.X, Y: *v.Y, Radius: content.HomeRules.LanternPosts.Radius})
+				waiting = append(waiting[:i], waiting[i+1:]...)
+				i--
+				grew = true
+			}
 		}
 	}
 	return out
@@ -684,14 +806,19 @@ func rectLit(lights []land.Light, r rect) bool {
 	return true
 }
 
-// everythingLit: every outdoor piece stands in light other than its own, so
-// land never floats on a chain of posts back to nothing.
+// everythingLit: every outdoor piece stands in light connected to the home's
+// own lamp (a post by light other than its own), so land never floats.
 func everythingLit(items []homeInstance) bool {
+	all := connectedLights(items, "")
 	for _, v := range items {
 		if v.Scene == nil || *v.Scene != "outdoor" {
 			continue
 		}
-		if r, ok := placedRect(v); ok && !rectLit(lightsWithout(items, v.ID), r) {
+		lights := all
+		if v.ItemDef == content.HomeRules.LanternPosts.Item {
+			lights = connectedLights(items, v.ID)
+		}
+		if r, ok := placedRect(v); ok && !rectLit(lights, r) {
 			return false
 		}
 	}
@@ -756,7 +883,7 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 			}
 		}
 	}
-	if !rectLit(lightsWithout(placed, item.ID), here) {
+	if !rectLit(connectedLights(placed, item.ID), here) {
 		return fail(409, "unlit")
 	}
 	if def.ID == content.HomeRules.LanternPosts.Item {
@@ -842,7 +969,7 @@ func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, r
 	if g.cleared[[2]int{x, y}] {
 		return fail(409, "already-cleared")
 	}
-	if !land.Lit(lightsWithout(placedItems(h), ""), x, y) {
+	if !land.Lit(connectedLights(placedItems(h), ""), x, y) {
 		return fail(409, "unlit")
 	}
 	if err := debitEmbers(ctx, tx, s, content.HomeRules.ClearTileEmbers, "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
@@ -948,6 +1075,9 @@ func (a *Server) joint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 // leaves the land vacant: desolate in a while, the deed lost after that.
 func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now int64) error {
 	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_members WHERE habitica_id=?", s.HabiticaID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "INSERT INTO homestead_departures VALUES(?,?,?) ON CONFLICT(homestead_id,habitica_id) DO UPDATE SET left_at=excluded.left_at", h.ID, s.HabiticaID, now); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE homestead_id=? AND from_id=?", h.ID, s.HabiticaID); err != nil {

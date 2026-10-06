@@ -35,6 +35,7 @@
   import { PAPER_EV } from './game/papers'
   import { HOME_EV, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
+  import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
   import SilasShop from './ui/SilasShop.svelte'
   import NoticeBoard from './ui/NoticeBoard.svelte'
@@ -1017,7 +1018,7 @@
       title="Give up your place on the deed?"
       body={home.leaveAsk.shared
         ? `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the others.`
-        : `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the land. With nobody on the deed, it will go wild, and in a while the deed is lost.`}
+        : `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the land. With nobody on the deed it goes wild after ${HOMESTEAD_DATA.desolation.desolateAfterDays} days, and after ${HOMESTEAD_DATA.desolation.deedLostAfterDays} days the deed is lost. Until then Silas will give it back to you, as it stands.`}
       confirmLabel="Strike my name"
       danger
       onConfirm={() => {

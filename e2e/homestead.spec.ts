@@ -427,12 +427,25 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
-  // The last name off the deed: the land is empty from now.
-  await silasSays(page, /Give up my place on the deed/)
-  await page.getByRole('alertdialog', { name: /Give up your place/ }).getByRole('button', { name: 'Strike my name' }).click()
-  await readOn(page, /I’ll strike your name/)
-  await expect.poll(async () => (await lane(page)).mine).toBeNull()
+  // The last name off the deed: the land is empty from now. The confirmation
+  // says how long it waits.
+  const leaveNow = async () => {
+    await silasSays(page, /Give up my place on the deed/)
+    const confirm = page.getByRole('alertdialog', { name: /Give up your place/ })
+    await expect(confirm).toContainText(`${HOMESTEAD_DATA.desolation.deedLostAfterDays} days`)
+    await confirm.getByRole('button', { name: 'Strike my name' }).click()
+    await readOn(page, /I’ll strike your name/)
+    await expect.poll(async () => (await lane(page)).mine).toBeNull()
+  }
+  await leaveNow()
   expect((await homeAt(page, gate))!.desolate).toBe(false)
+  // Changed her mind: Silas gives the deed back, as it stands, for nothing.
+  const embers = (await serverState(page)).body.state.embers
+  await silasSays(page, new RegExp(`Take back Lot ${gate + 1}`))
+  await expect.poll(async () => (await lane(page)).mine?.gate).toBe(gate)
+  expect((await myHome(page)).tier).toBe(1)
+  expect((await serverState(page)).body.state.embers).toBe(embers)
+  await leaveNow()
 
   // Days pass (the e2e database's clock is moved back instead).
   const ago = (days: number) =>
