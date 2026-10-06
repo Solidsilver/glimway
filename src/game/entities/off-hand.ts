@@ -52,7 +52,7 @@ export class OffHandVisual {
     if (!img) return
     const h = this.hero()
     const fighting = h.attackCooldown > 0 || h.castCooldown > 0 || h.dashTime > 0 || h.iframes > 0
-    const t = offHandTuck({ seated: h.isSeated, fighting }, time, this.until)
+    const t = offHandTuck({ seated: h.isSeated, fighting, working: h.isGathering }, time, this.until)
     this.until = t.until
     img.setVisible(!t.tucked)
     if (t.tucked) return

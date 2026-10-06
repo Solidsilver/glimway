@@ -29,7 +29,10 @@ type itemsResponse struct {
 		Pickup  string         `json:"pickup"`
 		Given   *content.Asset `json:"given"`
 		Mended  string         `json:"mended"`
-		Created []string       `json:"created"`
+		Created  []string         `json:"created"`
+		Gathered []stackView      `json:"gathered"`
+		Plant    *homePlantView   `json:"plant"`
+		Land     *homeLandChange  `json:"land"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

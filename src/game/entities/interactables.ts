@@ -333,6 +333,21 @@ export class Interactables {
     this.keyHint?.setVisible(false)
   }
 
+  /**
+   * How far away the nearest thing you could press E at is (as of the last
+   * prompt update — one frame old at most). A working spot proposes its
+   * prompt only when it is nearer than this (a fallen bucket right there
+   * outranks the woods behind it).
+   */
+  nearest(player: { x: number; y: number }): number {
+    let best = Infinity
+    for (const it of this.list) {
+      const d = Math.hypot(player.x - it.x, player.y - 8 - (it.y - 8))
+      if (d < best) best = d
+    }
+    return best
+  }
+
   /** Force the next updatePrompt to re-emit (an ember spend changed the wording). */
   invalidatePrompt(): void {
     this.lastPrompt = undefined

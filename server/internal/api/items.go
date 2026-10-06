@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fingersnap/content"
+	"fingersnap/server/internal/land"
+	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fingersnap/server/internal/wilds"
 	"math"
 	"net/http"
 	"slices"
@@ -688,17 +691,24 @@ type itemRequest struct {
 	ToID     string          `json:"toId,omitempty"`
 	Asset    *content.Asset  `json:"asset,omitempty"`
 	Pickup   string          `json:"pickup,omitempty"`
+	Target   string          `json:"target,omitempty"`
+	Area     string          `json:"area,omitempty"`
+	VisitID  string          `json:"visitId,omitempty"`
+	Tile     *[2]int         `json:"tile,omitempty"`
 }
 
 // itemResult: the caller's items after the change, and what happened.
 type itemResult struct {
-	Items   itemsView      `json:"items"`
-	Wear    *wearResult    `json:"wear,omitempty"`
-	Used    string         `json:"used,omitempty"`
-	Pickup  string         `json:"pickup,omitempty"`
-	Given   *content.Asset `json:"given,omitempty"`
-	Mended  string         `json:"mended,omitempty"`
-	Created []string       `json:"created,omitempty"`
+	Items    itemsView       `json:"items"`
+	Wear     *wearResult     `json:"wear,omitempty"`
+	Used     string          `json:"used,omitempty"`
+	Pickup   string          `json:"pickup,omitempty"`
+	Given    *content.Asset  `json:"given,omitempty"`
+	Mended   string          `json:"mended,omitempty"`
+	Created  []string        `json:"created,omitempty"`
+	Gathered []stackView     `json:"gathered,omitempty"`
+	Plant    *homePlantView  `json:"plant,omitempty"`
+	Land     *homeLandChange `json:"land,omitempty"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -732,6 +742,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = offHandItem(ctx, tx, s, req)
 		case "pickup":
 			err = pickUp(ctx, tx, s, req, now, &out)
+		case "gather":
+			err = a.gather(ctx, tx, s, req, now, &out)
+		case "plant":
+			err = a.plant(ctx, tx, s, req, now, &out)
 		default:
 			err = fail(404, "not-found")
 		}
@@ -1105,6 +1119,281 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 		return currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "pickup", p.ID, now)
 	}
 	return packPut(ctx, tx, s.HabiticaID, def.ID, []makerQty{{"", p.Qty}}, "pickup", p.ID, now)
+}
+
+// ------------------------------------------------------------ gathering & planting
+
+func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	toolID := req.Tool
+	if toolID == "" {
+		toolID = req.Instance
+	}
+	if toolID == "" {
+		return fail(400, "invalid-tool")
+	}
+	if req.Action != "chop" && req.Action != "break" && req.Action != "dig" {
+		return fail(400, "invalid-action")
+	}
+	targetDef, ok := content.GatheringTargetFor(req.Target)
+	if !ok {
+		return fail(400, "invalid-target")
+	}
+	if targetDef.Action != req.Action {
+		return fail(409, "wrong-tool")
+	}
+	area := req.Area
+	if area == "" {
+		area = s.State.Area
+	}
+	isHome := rules.HomeGate(area) >= 0
+	isWilds := area == "wilds" || strings.HasPrefix(area, "chunk:") || area == "woodland" || area == "ruin"
+	if !isHome && !isWilds {
+		return fail(409, "cannot-gather-here")
+	}
+
+	currentDay := utcDay(now)
+	visitID := req.VisitID
+	if visitID == "" {
+		visitID = area
+	}
+	var capDay int64
+	var dayCount int
+	var capArea, capVisitID string
+	var visitCount int
+	err := tx.QueryRowContext(ctx, "SELECT day,day_count,area,visit_id,visit_count FROM gathering_caps WHERE habitica_id=? AND action=?", s.HabiticaID, req.Action).Scan(&capDay, &dayCount, &capArea, &capVisitID, &visitCount)
+	if err == sql.ErrNoRows {
+		dayCount = 0
+		visitCount = 0
+	} else if err != nil {
+		return err
+	} else {
+		if capDay != currentDay {
+			dayCount = 0
+		}
+		if capArea != area || capVisitID != visitID {
+			visitCount = 0
+		}
+	}
+
+	var dayLimit, visitLimit int
+	switch req.Action {
+	case "chop":
+		dayLimit = content.GatheringRules.Caps.Day.Chop
+		visitLimit = content.GatheringRules.Caps.Visit.Chop
+	case "break":
+		dayLimit = content.GatheringRules.Caps.Day.Break
+		visitLimit = content.GatheringRules.Caps.Visit.Break
+	case "dig":
+		dayLimit = content.GatheringRules.Caps.Day.Dig
+		visitLimit = content.GatheringRules.Caps.Visit.Dig
+	}
+
+	if dayCount >= dayLimit || visitCount >= visitLimit {
+		return fail(409, "gathered-enough")
+	}
+
+	res, err := useTool(ctx, tx, s, toolID, targetDef.ToolAction, now)
+	if err != nil {
+		return err
+	}
+	out.Wear = &res
+
+	dayCount++
+	visitCount++
+	_, err = tx.ExecContext(ctx, `INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at)
+VALUES(?,?,?,?,?,?,?,?)
+ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=excluded.day_count,area=excluded.area,visit_id=excluded.visit_id,visit_count=excluded.visit_count,updated_at=excluded.updated_at`,
+		s.HabiticaID, req.Action, currentDay, dayCount, area, visitID, visitCount, now)
+	if err != nil {
+		return err
+	}
+
+	// A pocketed keepsake's gather-more help adds one of what it names (the
+	// work glove's is fiber; the Wilds nodes give that).
+	gatherMore := map[string]bool{}
+	slotList, err := slots(ctx, tx, s.HabiticaID)
+	if err != nil {
+		return err
+	}
+	for _, sl := range slotList {
+		if sl.def == "" {
+			continue
+		}
+		d, _ := content.ItemFor(sl.def)
+		for _, e := range d.Pocket {
+			if e.Type == "gather-more" && e.Target != "" {
+				gatherMore[e.Target] = true
+			}
+		}
+	}
+
+	rng := wilds.NewRng(wilds.Hash(s.HabiticaID, req.Target, int(now), dayCount))
+	out.Gathered = []stackView{}
+	for _, y := range targetDef.Yields {
+		if y.ChancePermille > 0 {
+			if rng.NextInt(1000) >= y.ChancePermille {
+				continue
+			}
+		}
+		qty := y.Min
+		if y.Max > y.Min {
+			qty = y.Min + rng.NextInt(y.Max-y.Min+1)
+		}
+		if gatherMore[y.Item] {
+			qty++
+		}
+		if qty <= 0 {
+			continue
+		}
+		def, ok := content.ItemFor(y.Item)
+		if !ok {
+			continue
+		}
+		if def.Instanced() {
+			instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", -1, now)
+			if err != nil {
+				return err
+			}
+			if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
+				return err
+			}
+			out.Created = append(out.Created, instID)
+			out.Gathered = append(out.Gathered, stackView{ItemDef: y.Item, Qty: 1})
+		} else {
+			if err = packPut(ctx, tx, s.HabiticaID, y.Item, []makerQty{{"", qty}}, "gather", req.Target, now); err != nil {
+				return err
+			}
+			out.Gathered = append(out.Gathered, stackView{ItemDef: y.Item, Qty: qty})
+		}
+	}
+
+	if isHome && req.Tile != nil {
+		txCoord, tyCoord := (*req.Tile)[0], (*req.Tile)[1]
+		homeID, isMember, err := memberOf(ctx, tx, s.HabiticaID)
+		if err == nil && isMember {
+			h, err := loadHome(ctx, tx, homeID, s.HabiticaID, now)
+			if err == nil && h.Gate == rules.HomeGate(area) {
+				lights := connectedLights(placedItems(h), "")
+				if land.Lit(lights, txCoord, tyCoord) {
+					changed := false
+					change := homeLandChange{Tile: [2]int{txCoord, tyCoord}}
+					if req.Action == "chop" {
+						if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_stumps VALUES(?,?,?,?)", h.ID, txCoord, tyCoord, now); err != nil {
+							return err
+						}
+						change.Stump = true
+						changed = true
+					} else if req.Action == "break" {
+						if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_cleared VALUES(?,?,?)", h.ID, txCoord, tyCoord); err != nil {
+							return err
+						}
+						change.Cleared = true
+						changed = true
+					} else if req.Action == "dig" && req.Target == "stump" {
+						if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_stumps WHERE homestead_id=? AND x=? AND y=?", h.ID, txCoord, tyCoord); err != nil {
+							return err
+						}
+						if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_cleared VALUES(?,?,?)", h.ID, txCoord, tyCoord); err != nil {
+							return err
+						}
+						change.Cleared = true
+						changed = true
+					}
+					if changed {
+						out.Land = &change
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	area := req.Area
+	if area == "" {
+		area = s.State.Area
+	}
+	gate := rules.HomeGate(area)
+	if gate < 0 {
+		return fail(409, "cannot-plant-here")
+	}
+	homeID, isMember, err := memberOf(ctx, tx, s.HabiticaID)
+	if err != nil || !isMember {
+		return fail(409, "not-a-member")
+	}
+	h, err := loadHome(ctx, tx, homeID, s.HabiticaID, now)
+	if err != nil {
+		return err
+	}
+	if h.Gate != gate {
+		return fail(409, "not-on-homestead")
+	}
+	if !content.IsGatheringSeed(req.ItemDef) {
+		return fail(400, "not-a-seed")
+	}
+	tot, err := stackTotal(ctx, tx, packOf(s.HabiticaID), req.ItemDef)
+	if err != nil || tot <= 0 {
+		return fail(409, "insufficient-items")
+	}
+	if req.Tile == nil {
+		return fail(400, "tile-required")
+	}
+	txCoord, tyCoord := (*req.Tile)[0], (*req.Tile)[1]
+	cfg := content.HomeRules.Land
+	W, H := cfg.Width, cfg.Height
+	site := cfg.Site
+	if txCoord < 1 || txCoord >= W-1 || tyCoord < 1 || tyCoord >= H-1 {
+		return fail(409, "out-of-bounds")
+	}
+	if txCoord >= site.X && txCoord < site.X+site.W && tyCoord >= site.Y && tyCoord < site.Y+site.H {
+		return fail(409, "land-blocked")
+	}
+
+	for _, it := range placedItems(h) {
+		if it.Scene != nil && *it.Scene == "outdoor" && it.X != nil && it.Y != nil && *it.X == txCoord && *it.Y == tyCoord {
+			return fail(409, "land-blocked")
+		}
+	}
+	for _, st := range h.Stumps {
+		if st[0] == txCoord && st[1] == tyCoord {
+			return fail(409, "land-blocked")
+		}
+	}
+	for _, pl := range h.Plants {
+		if pl.X == txCoord && pl.Y == tyCoord {
+			return fail(409, "land-blocked")
+		}
+	}
+
+	_, err = packTake(ctx, tx, s.HabiticaID, req.ItemDef, nil, 1, "plant", req.ItemDef, now)
+	if err != nil {
+		return err
+	}
+
+	plantID, err := store.Random()
+	if err != nil {
+		return err
+	}
+	curDay := utcDay(now)
+	_, err = tx.ExecContext(ctx, "INSERT INTO homestead_plants VALUES(?,?,?,?,?,?,?)", plantID, h.ID, req.ItemDef, txCoord, tyCoord, now, curDay)
+	if err != nil {
+		return err
+	}
+
+	lights := connectedLights(placedItems(h), "")
+	lit := land.Lit(lights, txCoord, tyCoord)
+	out.Plant = &homePlantView{
+		ID:         plantID,
+		ItemDef:    req.ItemDef,
+		X:          txCoord,
+		Y:          tyCoord,
+		PlantedAt:  now,
+		PlantedDay: curDay,
+		Lit:        lit,
+	}
+	return nil
 }
 
 // ------------------------------------------------------------ presence

@@ -48,6 +48,8 @@ export const EV = {
   clock: 'game:clock',
   /** The outer Wilds turned under the player (an ended epoch): { reason }. */
   turning: 'game:turning',
+  /** The map no longer matches the data (a plant, a kept stump): rebuild it. */
+  rebuildWorld: 'game:rebuild-world',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',

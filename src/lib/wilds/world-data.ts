@@ -11,12 +11,33 @@ import { TILE } from '../../game/textures.ts';
 import { tangleFrame } from '../../game/wilds/tangle-key.ts';
 import { lookAtlasKey } from '../../game/wilds/wilds-looks.ts';
 import { DECOR_ART } from './tangle.ts';
-import type { ChunkTerrain } from './types.ts';
+import type { ChunkTerrain, DecorKind } from './types.ts';
 
 /** Flat decals (roots, litter, pebbles) sit just above the ground. */
 const DECAL_DEPTH = -5;
 /** Tint by how far a piece stands from open ground: the deep woods are darker. */
 const DEPTH_TINT = [undefined, undefined, 0xc4c4cc, 0xa4a4b4] as const;
+
+/**
+ * What each kind of woods piece is to work on (docs/items/crafting-and-repair.md,
+ * "Gathering"): the content/gathering.json target its yields come from, said
+ * in words. Pieces that aren't worked are left out.
+ */
+export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: string }>> = {
+  oak: { target: 'tree', label: 'Chop the tree' },
+  pine: { target: 'tree', label: 'Chop the tree' },
+  birch: { target: 'tree', label: 'Chop the tree' },
+  'iron-oak': { target: 'iron-oak', label: 'Chop the iron-oak' },
+  snag: { target: 'willow', label: 'Chop the willow snag' },
+  boulder: { target: 'boulder', label: 'Break the boulder' },
+  cairn: { target: 'lamp-stone', label: 'Break the old lamp-stone' },
+  stump: { target: 'stump', label: 'Dig the stump' },
+  'ring-stump': { target: 'stump', label: 'Dig the stump' },
+  turncaps: { target: 'stump', label: 'Dig the turncaps' },
+  flowers: { target: 'herbs', label: 'Dig the herb patch' },
+  fern: { target: 'sapling', label: 'Dig for seedlings' },
+  log: { target: 'hollow-tree', label: 'Dig the hollow log' },
+};
 
 /** Chebyshev distance (capped at 3) from a tile to the nearest walkable one. */
 function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
@@ -67,7 +88,13 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId): WorldData {
       flipX: d.flip,
       fade: d.overhang,
       tint: DEPTH_TINT[woodsDepth(chunk, d.tx, d.ty)],
+      tx: d.tx,
+      ty: d.ty,
     })),
+    // The workable pieces of this chunk (trees, boulders, stumps, patches).
+    gathering: chunk.decor
+      .filter((d) => GATHER_OF[d.kind])
+      .map((d) => ({ target: GATHER_OF[d.kind]!.target, label: GATHER_OF[d.kind]!.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } })),
     storySites: chunk.sites.map((s) => ({ id: s.id, kind: s.kind, tx: s.tx, ty: s.ty })),
     groundStyle: chunk.look,
     groundMark: chunk.mark,

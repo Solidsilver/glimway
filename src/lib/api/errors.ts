@@ -167,6 +167,11 @@ export const SERVER_ERROR_CODES = [
   'not-for-the-off-hand',
   'pickup-not-found',
   'already-picked-up',
+  // gathering & planting
+  'gathered-enough',
+  'cannot-gather-here',
+  'cannot-plant-here',
+  'not-a-seed',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

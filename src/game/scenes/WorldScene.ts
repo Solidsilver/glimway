@@ -12,7 +12,7 @@ import Phaser from 'phaser'
 import type { AreaId, QuestEvent } from '../../lib/state'
 import { itemInfo } from '../../content/world'
 import { buildGround } from '../area/terrain'
-import { buildSolids } from '../area/collision'
+import { buildSolids, type SolidRun } from '../area/collision'
 import { buildProps } from '../area/props'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
 import { buildExitSigns } from '../area/exits'
@@ -32,6 +32,7 @@ import { Projectiles } from '../entities/projectiles'
 import { Interactables } from '../entities/interactables'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
+import { Gathering } from '../entities/gathering'
 import { OffHandVisual } from '../entities/off-hand'
 import { itemsFor } from '../items'
 import { Effects } from '../entities/fx'
@@ -48,6 +49,7 @@ import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { homeArea, parseHomeArea } from '../../lib/homestead'
+import { homeLights, isLit as isLandLit } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { COMMONS_FROM_WILDS } from '../commons'
@@ -108,6 +110,13 @@ export class WorldScene extends Phaser.Scene {
   private wilds: WildsEntities | null = null
   /** Collisions for terrain tiles and prop footprints (area/collision). */
   private solidGroup!: Phaser.Physics.Arcade.StaticGroup
+  /** The solid tiles' merged runs and per-tile prop bodies (a cleared tile opens). */
+  private solidRuns: SolidRun[] = []
+  private solidProps = new Map<string, Phaser.Physics.Arcade.Image[]>()
+  /** Tile-anchored sprites (a felled tree removes its own). */
+  private scenerySprites = new Map<string, Phaser.GameObjects.Image[]>()
+  /** Gathering: the workable pieces of this area (null where there are none). */
+  private gathering: Gathering | null = null
   /** Atlas-prop lanterns that can glow when lit (area/lanterns owns visuals). */
   private lightProps: LightProp[] = []
   /** Foreground canopies/arches that fade when something walks beneath. */
@@ -197,8 +206,13 @@ export class WorldScene extends Phaser.Scene {
     // Area construction from WorldData (a new area kind is data + a small
     // builder — see the registry in src/game/worlds.ts).
     buildGround(this, this.world)
-    this.solidGroup = buildSolids(this, this.world)
-    this.lightProps = buildProps(this, this.world, this.solidGroup)
+    const solids = buildSolids(this, this.world)
+    this.solidGroup = solids.group
+    this.solidRuns = solids.runs
+    this.solidProps = solids.props
+    const props = buildProps(this, this.world, this.solidGroup)
+    this.lightProps = props.lights
+    this.scenerySprites = props.sprites
 
     // Entities
     const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion })
@@ -247,6 +261,21 @@ export class WorldScene extends Phaser.Scene {
     const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
     this.interactables.setExtra(pickups)
     ;(window as unknown as { __fsPickups?: () => string[] }).__fsPickups = () => pickups.ids()
+    // The workable pieces (trees, boulders, stumps, patches) — wilds chunks,
+    // the woods, and homestead land; nowhere else (there's nothing to work).
+    this.gathering = new Gathering(this, {
+      world: this.world,
+      session: this.session,
+      fx: this.fx,
+      reducedMotion: this.reducedMotion,
+      hero: () => this.hero,
+      clearSolid: (tx, ty) => this.clearSolidTile(tx, ty),
+      spritesAt: (tx, ty) => this.scenerySprites.get(`${tx},${ty}`) ?? [],
+      fell: (tx, ty) => {
+        for (const img of this.scenerySprites.get(`${tx},${ty}`) ?? []) img.destroy()
+        this.scenerySprites.delete(`${tx},${ty}`)
+      }
+    })
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -336,10 +365,12 @@ export class WorldScene extends Phaser.Scene {
     bus.on(EV.profileChanged, this.onProfileChanged, this)
     bus.on(EV.worldRefresh, this.onWorldRefresh, this)
     bus.on(EV.relocate, this.onRelocate, this)
+    bus.on(EV.rebuildWorld, this.onRebuildWorld, this)
     this.events.once('shutdown', () => {
       bus.off(EV.profileChanged, this.onProfileChanged, this)
       bus.off(EV.worldRefresh, this.onWorldRefresh, this)
       bus.off(EV.relocate, this.onRelocate, this)
+      bus.off(EV.rebuildWorld, this.onRebuildWorld, this)
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -389,9 +420,9 @@ export class WorldScene extends Phaser.Scene {
     // Read-only warden snapshot: dormant, active (and whether it stands open), or settled.
     ;(window as unknown as { __fsWarden?: () => ReturnType<EnemySystem['wardenView']> }).__fsWarden = () => this.enemies.wardenView()
     // Read-only map geometry, so playtests can check the hero is confined to it.
-    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; solid: boolean[][] } }).__fsWorld = () => {
+    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; solid: boolean[][]; exits: { tx: number; ty: number; tw: number; th: number; to: string }[] } }).__fsWorld = () => {
       const b = this.physics.world.bounds
-      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: this.world.solid }
+      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: this.world.solid, exits: this.world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to) })) }
     }
     // Dev-only playtest lever: deal damage through the normal hurt path so
     // low-health and defeat beats can be checked without a long fight.
@@ -429,10 +460,16 @@ export class WorldScene extends Phaser.Scene {
       // rules (skipping the encounter); without it, the real rules apply.
       w.__fsDevSpeakNaming = (force = false) => this.enemies.speakNaming(force)
       // Set the hero down at a spot in this area (no scene restart), so a
-      // playtest can step up to the warden inside its opening.
+      // playtest can step up to the warden inside its opening. The save's
+      // position follows, in the save's own convention (the Wilds keep
+      // region-wide pixels), so an upload's merge never snaps the hero back.
       w.__fsDevPlace = (x: number, y: number) => {
         this.hero.sprite.setPosition(x, y)
         this.hero.sprite.setVelocity(0, 0)
+        this.session.state.position = this.wildsEntryNow()
+          ? this.wildsPosition(Math.round(x), Math.round(y))
+          : { x: Math.round(x), y: Math.round(y) }
+        this.session.saveSoon()
       }
       // Add an exit to this area until the scene restarts, so a playtest can
       // walk into a destination no area kind is registered for (the guard).
@@ -464,6 +501,19 @@ export class WorldScene extends Phaser.Scene {
     ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null
     // Read-only Wilds snapshot for playtests (null outside the Wilds).
     ;(window as unknown as { __fsWilds?: () => ReturnType<WildsEntities['debug']> }).__fsWilds = () => this.wilds?.debug() ?? null
+    // Read-only: the workable pieces of this area, and (at home) the lamps
+    // whose light holds the ground (playtests: the drift rule).
+    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; last: string; lights: { x: number; y: number; radius: number }[] } | null }).__fsGather = () => {
+      if (!this.gathering) return null
+      const lights = this.myLights()
+      return {
+        area: this.world.areaId,
+        spots: this.gathering.spotsView().map((s) => ({ ...s, lit: isLandLit(lights, s.tx, s.ty) })),
+        prompt: this.gathering.prompted(),
+        last: this.gathering.lastOutcome(),
+        lights
+      }
+    }
     // Sync-safety snapshot for the UI gate (read-only).
     ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
       const px = this.hero.sprite.x
@@ -658,7 +708,10 @@ export class WorldScene extends Phaser.Scene {
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
     const speak = this.enemies.speakTarget()
     const wildsAction: WildsAction | null = this.wilds?.promptAction(this.hero.sprite) ?? null
-    const action = wildsAction ?? (speak ? { label: 'Speak the naming', verb: 'Speak', ...speak } : null)
+    // Gathering proposes only when its piece is nearer than the nearest
+    // interactable (a pickup or a person right there outranks the woods).
+    const gatherAction = this.gathering?.promptAction(this.hero.sprite, this.interactables.nearest(this.hero.sprite)) ?? null
+    const action = wildsAction ?? gatherAction ?? (speak ? { label: 'Speak the naming', verb: 'Speak', ...speak } : null)
     this.interactables.updatePrompt(this.hero.sprite, this.time.now, action)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
@@ -752,6 +805,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.enemies.speakNaming()) return
     // Wilds claims (harvest, camp, chest, POI, lantern) outrank talking.
     if (this.wilds?.handleAction()) return
+    // Gathering (chop, break, dig) outranks talking: the woods come first.
+    if (this.gathering?.handleAction()) return
     if (this.interactables.currentTarget) {
       // Free village activities stay available at zero HP: talking is fine.
       this.interactables.open(this.interactables.currentTarget)
@@ -778,6 +833,21 @@ export class WorldScene extends Phaser.Scene {
     this.refreshMarkers()
     this.interactables.invalidatePrompt()
     emitResidents(this.session)
+  }
+
+  /** The map no longer matches the data (a plant, a kept stump): rebuild it. */
+  private onRebuildWorld(): void {
+    if (!this.room) this.rebuildArea()
+  }
+
+  /** My homestead's lamps on this land (the light that holds the ground). */
+  private myLights(): { x: number; y: number; radius: number }[] {
+    if (parseHomeArea(this.world.areaId) === null) return []
+    const mine = homesteadsFor(this.session).mine
+    if (!mine) return []
+    return homeLights(
+      mine.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null && i.y !== null) as { x: number; y: number }[]
+    )
   }
 
   /**
@@ -1188,6 +1258,39 @@ export class WorldScene extends Phaser.Scene {
     this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
     const entry = { tx: Math.floor(this.hero.sprite.x / TILE), ty: Math.floor(this.hero.sprite.y / TILE) }
     this.time.delayedCall(0, () => this.scene.restart({ entry }))
+  }
+
+  /**
+   * A worked piece leaves open ground (a broken boulder, a dug stump): the
+   * tile opens in the solid grid, its run body is split or dropped, and any
+   * prop body there goes with it. Scenery-only: regrows on the next visit.
+   */
+  private clearSolidTile(tx: number, ty: number): void {
+    if (!this.world.solid[ty]?.[tx]) return
+    this.world.solid[ty][tx] = false
+    const i = this.solidRuns.findIndex((r) => r.y === ty && tx >= r.x0 && tx <= r.x1)
+    if (i >= 0) {
+      const run = this.solidRuns.splice(i, 1)[0]
+      this.solidGroup.remove(run.body)
+      run.body.destroy()
+      for (const [x0, x1] of [
+        [run.x0, tx - 1],
+        [tx + 1, run.x1]
+      ] as const) {
+        if (x1 < x0) continue
+        const body = this.physics.add.staticImage((x0 + (x1 - x0 + 1) / 2) * TILE, ty * TILE + TILE / 2, 'px')
+          .setDisplaySize((x1 - x0 + 1) * TILE, TILE)
+          .refreshBody()
+        body.setVisible(false)
+        this.solidGroup.add(body)
+        this.solidRuns.push({ x0, x1, y: ty, body })
+      }
+    }
+    for (const body of this.solidProps.get(`${tx},${ty}`) ?? []) {
+      this.solidGroup.remove(body)
+      body.destroy()
+    }
+    this.solidProps.delete(`${tx},${ty}`)
   }
 
   /**

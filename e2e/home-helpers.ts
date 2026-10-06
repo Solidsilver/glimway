@@ -21,6 +21,10 @@ export interface Home {
   desolate: boolean
   landSeed: number
   cleared: [number, number][]
+  /** Trees felled inside lamplight (gathering: a stump stays). */
+  stumps?: [number, number][]
+  /** Seeds and saplings planted on the land. */
+  plants?: { id: string; itemDef: string; x: number; y: number; lit?: boolean }[]
   postsBought: number
   nextPost: Record<string, number>
   items: Item[]

@@ -19,14 +19,19 @@ import { DECOR_ART } from '../lib/wilds/tangle.ts'
 import { TILE } from './textures.ts'
 import { tangleFrame } from './wilds/tangle-key.ts'
 import { lookAtlasKey } from './wilds/wilds-looks.ts'
-import type { ScenerySpot, WorldData } from './worlds.ts'
+import type { ScenerySpot, WorldData, GatherSpot } from './worlds.ts'
 
 /** What the land map needs from the homestead state (none: a guest, or not read yet). */
 export interface LandSource {
   /** The world's id (seeds every gate's land); "guest" without a world. */
   worldId(): string
-  /** Tiles cleared and whether the place has gone desolate. */
-  state(gate: number): { cleared: readonly [number, number][]; desolate: boolean } | null
+  /** Tiles cleared, stumps, plants, and whether the place has gone desolate. */
+  state(gate: number): {
+    cleared: readonly [number, number][]
+    stumps?: readonly [number, number][]
+    plants?: readonly { id: string; itemDef: string; x: number; y: number }[]
+    desolate: boolean
+  } | null
   /** The server's seed for a gate, once read (it wins over the local one). */
   seed?(gate: number): number | null
 }
@@ -89,6 +94,8 @@ export function buildLand(gate: number): LandWorld {
   const land = generateLand(seed)
   const st = source.state(gate)
   const cleared = new Set((st?.cleared ?? []).map(([x, y]) => `${x},${y}`))
+  const stumps = new Set((st?.stumps ?? []).map(([x, y]) => `${x},${y}`))
+  const plants = st?.plants ?? []
   const desolate = st?.desolate ?? false
   const W = land.width
   const H = land.height
@@ -96,6 +103,7 @@ export function buildLand(gate: number): LandWorld {
   const ground: number[][] = []
   const solid: boolean[][] = []
   const scenery: ScenerySpot[] = []
+  const gathering: GatherSpot[] = []
   const decor = (kind: DecorKind, tx: number, ty: number, v: number, opts: Partial<ScenerySpot> = {}) =>
     scenery.push({
       key: atlas,
@@ -104,6 +112,8 @@ export function buildLand(gate: number): LandWorld {
       y: (ty + 1) * TILE,
       depth: DECOR_ART[kind].flat ? -5 : 'y',
       flipX: h32(tx, ty, 6) < 0.5,
+      tx,
+      ty,
       ...opts
     })
   const s = L.site
@@ -114,6 +124,7 @@ export function buildLand(gate: number): LandWorld {
     for (let x = 0; x < W; x++) {
       let k = land.tiles[y * W + x]
       const r = h32(x, y, 11)
+      if (stumps.has(`${x},${y}`)) k = LAND.STUMP
       if ((k === LAND.TREE || k === LAND.STUMP || k === LAND.BOULDER) && cleared.has(`${x},${y}`)) k = LAND.GRASS
       switch (k) {
         case LAND.EDGE:
@@ -124,16 +135,27 @@ export function buildLand(gate: number): LandWorld {
         case LAND.TREE:
           g.push(TANGLE_GROUND.woods)
           so.push(true)
+          gathering.push(
+            r < 0.08
+              ? { target: 'iron-oak', label: 'Chop the iron-oak', tx: x, ty: y }
+              : { target: 'tree', label: 'Chop the tree', tx: x, ty: y }
+          )
           decor(r < 0.08 ? 'iron-oak' : TREES[Math.floor(h32(x, y, 3) * TREES.length)], x, y, Math.floor(r * 16))
           break
         case LAND.STUMP:
           g.push(TANGLE_GROUND.moss)
           so.push(true)
+          gathering.push({ target: 'stump', label: 'Dig the stump', tx: x, ty: y })
           decor(r < 0.3 ? 'ring-stump' : 'stump', x, y, Math.floor(r * 16))
           break
         case LAND.BOULDER:
           g.push(TANGLE_GROUND.moss)
           so.push(true)
+          gathering.push(
+            r < 0.2
+              ? { target: 'lamp-stone', label: 'Break the old lamp-stone', tx: x, ty: y }
+              : { target: 'boulder', label: 'Break the boulder', tx: x, ty: y }
+          )
           decor(r < 0.2 ? 'cairn' : 'boulder', x, y, Math.floor(r * 16))
           break
         case LAND.WATER:
@@ -168,6 +190,15 @@ export function buildLand(gate: number): LandWorld {
   }
   // The gate mouth stays open (the way back to the Commons).
   for (let x = L.gate.x; x < L.gate.x + L.gate.w; x++) solid[H - 1][x] = false
+  for (const p of plants) {
+    let decorKind: DecorKind = 'flowers'
+    if (p.itemDef.includes('birch')) decorKind = 'birch'
+    else if (p.itemDef.includes('pine')) decorKind = 'pine'
+    else if (p.itemDef.includes('oak')) decorKind = 'oak'
+    else if (p.itemDef.includes('turncap')) decorKind = 'turncaps'
+    else if (p.itemDef.includes('willow')) decorKind = 'snag'
+    decor(decorKind, p.x, p.y, 0)
+  }
   const area = homeArea(gate)
   const door = { tx: s.x + Math.floor(s.w / 2) - 1, ty: s.y + s.h - 2 }
   return {
@@ -186,6 +217,7 @@ export function buildLand(gate: number): LandWorld {
     exits: [{ tx: L.gate.x, ty: H - 1, tw: L.gate.w, th: 1, to: 'commons', entry: commonsEntryFor(gate) }],
     props: [],
     scenery,
+    gathering,
     discoverySpots: [],
     groundStyle: 'tangle',
     groundMark: null,

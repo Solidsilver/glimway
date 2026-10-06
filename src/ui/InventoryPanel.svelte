@@ -5,11 +5,12 @@
   import { HOME_EV, homesteadsFor } from '../game/homestead'
   import { ITEMS_EV, giftPhrase, itemsFor } from '../game/items'
   import { presence } from '../game/presence'
-  import { bus } from '../game/events'
+  import { bus, EV } from '../game/events'
   import { fitTargets, groupInventory, inventoryEntries, modelEntries, newTabs, type InventoryEntry, type InventoryTab } from '../lib/inventory'
   import { assetKind, conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { Asset, InstanceView } from '../lib/api/types'
   import { INVENTORY_TABS, inventoryCopy } from '../content/inventory'
+  import { isPlantableSeed } from '../lib/gathering'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -159,6 +160,24 @@
     void act(`carry:${e.key}`, () => items.offHand(e.instance ? { instance: e.instance.id } : { itemDef: e.id }), `You carry ${giftPhrase(e.id, 1)} in your off hand.`)
   }
 
+  function plantIt(e: InventoryEntry): void {
+    const tx = Math.floor(session.state.position.x / 16)
+    const ty = Math.floor(session.state.position.y / 16)
+    void act(
+      `plant:${e.key}`,
+      () =>
+        items.plant(e.id, session.state.area, [tx, ty]).then(async (r) => {
+          // The planted piece stands on the land map: read it fresh, rebuild.
+          if (r.ok) {
+            await homes.load()
+            bus.emit(EV.rebuildWorld, {})
+          }
+          return r
+        }),
+      `You planted ${giftPhrase(e.id, 1)}.`
+    )
+  }
+
   /** Players standing close enough to hand something to. */
   function nearby(): { habiticaId: string; displayName: string }[] {
     const feed = presence()
@@ -278,6 +297,7 @@
           {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}
           {#if e.kind === 'fitting' && e.instance}<button type="button" class="act" data-act="fit" aria-expanded={open === `fit:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`fit:${e.key}`)}>{inventoryCopy.actions.fit}…</button>{/if}
           {#if e.giveable}<button type="button" class="act" data-act="give" aria-expanded={open === `give:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`give:${e.key}`)}>{inventoryCopy.actions.give}…</button>{/if}
+          {#if isPlantableSeed(e.id) && session.state.area.startsWith('home:')}<button type="button" class="act" data-act="plant" disabled={busy !== null} onclick={() => plantIt(e)}>Plant</button>{/if}
         </span>
         {#if open === `give:${e.key}`}
           {@const people = nearby()}

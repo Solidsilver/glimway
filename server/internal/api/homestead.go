@@ -8,6 +8,7 @@ import (
 	"fingersnap/server/internal/land"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fingersnap/server/internal/wilds"
 	"fmt"
 	"net/http"
 	"slices"
@@ -35,6 +36,24 @@ type homeInstance struct {
 	Rotation *int    `json:"rotation"`
 	Name     *string `json:"name"`
 }
+type homePlantView struct {
+	ID         string `json:"id"`
+	ItemDef    string `json:"itemDef"`
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	PlantedAt  int64  `json:"plantedAt"`
+	PlantedDay int64  `json:"plantedDay"`
+	Lit        bool   `json:"lit"`
+}
+
+// homeLandChange: a gather that changed home land inside lamplight (the
+// drift rule: a stump stays, open ground stays open). The client rebuilds
+// the land map when it sees one.
+type homeLandChange struct {
+	Tile    [2]int `json:"tile"`
+	Stump   bool   `json:"stump"`
+	Cleared bool   `json:"cleared"`
+}
 type homeView struct {
 	ID          string            `json:"id"`
 	Gate        int               `json:"gate"`
@@ -46,6 +65,8 @@ type homeView struct {
 	VacantSince *int64            `json:"vacantSince"`
 	LandSeed    uint32            `json:"landSeed"`
 	Cleared     [][2]int          `json:"cleared"`
+	Stumps      [][2]int          `json:"stumps"`
+	Plants      []homePlantView   `json:"plants"`
 	PostsBought int               `json:"postsBought"`
 	NextPost    map[string]int    `json:"nextPost"`
 	Outdoor     content.HomeGrid  `json:"outdoor"`
@@ -105,6 +126,8 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			"DELETE FROM homestead_departures WHERE homestead_id=?",
 			"DELETE FROM homestead_invites WHERE homestead_id=?",
 			"DELETE FROM homestead_cleared WHERE homestead_id=?",
+			"DELETE FROM homestead_stumps WHERE homestead_id=?",
+			"DELETE FROM homestead_plants WHERE homestead_id=?",
 			"DELETE FROM item_stacks WHERE location='storage' AND owner=?",
 			"DELETE FROM item_instances WHERE location='fitted' AND owner IN (SELECT id FROM item_instances WHERE location='storage' AND owner=?)",
 			"DELETE FROM item_instances WHERE location='storage' AND owner=?",
@@ -281,7 +304,7 @@ func scanInstances(rows *sql.Rows, out []homeInstance) ([]homeInstance, error) {
 // loadHome is a homestead as `caller` sees it: everything placed, and the
 // caller's own pack decorations when they are a member (to set out).
 func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (homeView, error) {
-	h := homeView{ID: id, Outdoor: content.HomeRules.Outdoor(), Items: []homeInstance{}, Cleared: [][2]int{}}
+	h := homeView{ID: id, Outdoor: content.HomeRules.Outdoor(), Items: []homeInstance{}, Cleared: [][2]int{}, Stumps: [][2]int{}, Plants: []homePlantView{}}
 	err := tx.QueryRowContext(ctx, "SELECT world_id,gate,tier,posts_bought,vacant_since FROM homesteads WHERE id=?", id).Scan(&h.WorldID, &h.Gate, &h.Tier, &h.PostsBought, &h.VacantSince)
 	if err != nil {
 		return h, err
@@ -314,6 +337,23 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if err != nil {
 		return h, err
 	}
+	rows, err = tx.QueryContext(ctx, "SELECT x,y FROM homestead_stumps WHERE homestead_id=? ORDER BY y,x", id)
+	if err != nil {
+		return h, err
+	}
+	for rows.Next() {
+		var st [2]int
+		if err = rows.Scan(&st[0], &st[1]); err != nil {
+			rows.Close()
+			return h, err
+		}
+		h.Stumps = append(h.Stumps, st)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return h, err
+	}
 	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE homestead_id=? AND location='placed' ORDER BY id", id)
 	if err != nil {
 		return h, err
@@ -325,8 +365,83 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if err != nil {
 		return h, err
 	}
-	h.Items, err = scanInstances(rows, h.Items)
+	if h.Items, err = scanInstances(rows, h.Items); err != nil {
+		return h, err
+	}
+	h.Plants, err = loadAndSettlePlants(ctx, tx, h, now)
 	return h, err
+}
+
+func loadAndSettlePlants(ctx context.Context, tx *sql.Tx, h homeView, now int64) ([]homePlantView, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,x,y,planted_at,planted_day FROM homestead_plants WHERE homestead_id=? ORDER BY planted_at,id", h.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type rawPlant struct {
+		id, def string
+		x, y    int
+		at, day int64
+	}
+	raw := []rawPlant{}
+	for rows.Next() {
+		var p rawPlant
+		if err = rows.Scan(&p.id, &p.def, &p.x, &p.y, &p.at, &p.day); err != nil {
+			return nil, err
+		}
+		raw = append(raw, p)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	lights := connectedLights(placedItems(h), "")
+	curDay := utcDay(now)
+	cfg := content.HomeRules.Land
+	W, H := cfg.Width, cfg.Height
+	site := cfg.Site
+
+	occupied := map[[2]int]bool{}
+	for _, it := range placedItems(h) {
+		if it.Scene != nil && *it.Scene == "outdoor" && it.X != nil && it.Y != nil {
+			occupied[[2]int{*it.X, *it.Y}] = true
+		}
+	}
+	for _, s := range h.Stumps {
+		occupied[s] = true
+	}
+	for _, p := range raw {
+		occupied[[2]int{p.x, p.y}] = true
+	}
+
+	out := make([]homePlantView, 0, len(raw))
+	for _, p := range raw {
+		isLit := land.Lit(lights, p.x, p.y)
+		if !isLit && curDay > p.day {
+			rng := wilds.NewRng(wilds.Hash(p.id, "plant-wander", int(curDay)))
+			dirs := [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
+			dir := dirs[rng.NextInt(len(dirs))]
+			nx, ny := p.x+dir[0], p.y+dir[1]
+			if nx >= 1 && nx < W-1 && ny >= 1 && ny < H-1 && !(nx >= site.X && nx < site.X+site.W && ny >= site.Y && ny < site.Y+site.H) && !occupied[[2]int{nx, ny}] {
+				delete(occupied, [2]int{p.x, p.y})
+				occupied[[2]int{nx, ny}] = true
+				p.x = nx
+				p.y = ny
+				p.day = curDay
+				_, _ = tx.ExecContext(ctx, "UPDATE homestead_plants SET x=?,y=?,planted_day=? WHERE id=?", p.x, p.y, p.day, p.id)
+				isLit = land.Lit(lights, p.x, p.y)
+			}
+		}
+		out = append(out, homePlantView{
+			ID:         p.id,
+			ItemDef:    p.def,
+			X:          p.x,
+			Y:          p.y,
+			PlantedAt:  p.at,
+			PlantedDay: p.day,
+			Lit:        isLit,
+		})
+	}
+	return out, nil
 }
 
 // myHome is the caller's homestead view, or nil.

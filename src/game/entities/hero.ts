@@ -75,6 +75,9 @@ export class Hero {
     return this.seat !== null
   }
 
+  /** Gathering / working (chops, digs, breaks; tucks off-hand). */
+  isGathering = false
+
   /** Mana a second added while seated (the scene's playtests read this). */
   get seatedBonus(): number {
     return this.seat ? SEATED_MANA_BONUS : 0

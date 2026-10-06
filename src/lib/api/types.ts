@@ -299,6 +299,18 @@ export interface HomeView {
   /** null below the Cottage (tier 1). */
   indoor: { width: number; height: number } | null;
   items: HomeInstance[];
+  stumps?: [number, number][];
+  plants?: HomePlantView[];
+}
+
+export interface HomePlantView {
+  id: string;
+  itemDef: string;
+  x: number;
+  y: number;
+  plantedAt?: number;
+  plantedDay?: number;
+  lit?: boolean;
 }
 
 export interface HomeResponse extends Snapshot {
@@ -475,9 +487,21 @@ export interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'gather' | 'plant';
 export interface ItemsActionResponse extends Snapshot {
-  result: { items: ItemsView; wear?: WearResult; used?: string; pickup?: string; given?: Asset; mended?: string; created?: string[] };
+  result: {
+    items: ItemsView;
+    wear?: WearResult;
+    used?: string;
+    pickup?: string;
+    given?: Asset;
+    mended?: string;
+    created?: string[];
+    gathered?: { itemDef: string; qty: number }[];
+    plant?: HomePlantView;
+    /** A gather that changed home land inside lamplight (a stump stays, open ground stays open). */
+    land?: { tile: [number, number]; stump: boolean; cleared: boolean };
+  };
 }
 
 /** GET /api/calendar (public; Unix seconds). */

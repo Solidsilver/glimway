@@ -28,6 +28,14 @@ export function itemErrorText(code: ApiErrorCode | string): string {
   switch (code) {
     case 'tool-blunt':
       return 'It’s too blunt to work with. Mend it first.'
+    case 'gathered-enough':
+      return 'The wood’s given enough here today.'
+    case 'cannot-gather-here':
+      return 'Nothing to gather here.'
+    case 'cannot-plant-here':
+      return 'Can’t plant here.'
+    case 'not-a-seed':
+      return 'That isn’t something you can plant.'
     case 'wrong-tool':
       return 'That isn’t the tool for this.'
     case 'not-a-tool':
@@ -151,6 +159,14 @@ export class Items {
     return { ok: true, value: r.res.result }
   }
 
+  /** Gathering action (chop, break, dig) on a target resource. */
+  gather(tool: string, action: string, target: string, area: string, visitId: string, tile?: [number, number]) {
+    return this.run('gather', { tool, action, target, area, visitId, ...(tile ? { tile } : {}) })
+  }
+  /** Plant a seed or sapling at a tile on homestead land. */
+  plant(itemDef: string, area: string, tile: [number, number]) {
+    return this.run('plant', { itemDef, area, tile })
+  }
   /** One use of a tool (gathering will call this; the dev hook does now). */
   useTool(instance: string, action?: string) {
     return this.run('use', { instance, ...(action ? { action } : {}) })

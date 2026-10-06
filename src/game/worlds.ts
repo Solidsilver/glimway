@@ -82,6 +82,25 @@ export interface ScenerySpot {
   groundUnder?: { tx: number; ty: number; tw: number; th: number; tile: number }
   /** A canopy someone can walk beneath: drawn by the foreground pass so it fades. */
   fade?: boolean
+  /** The anchor tile, when the piece stands for a map tile (gathering removals). */
+  tx?: number
+  ty?: number
+}
+
+/**
+ * A place to work (docs/items/crafting-and-repair.md, "Gathering"): what the
+ * piece is for the server's target ids, said in words for the prompt, and
+ * where it stands. Trees are client scenery: the server validates the tool,
+ * area, caps and yields, not individual pieces.
+ */
+export interface GatherSpot {
+  /** A content/gathering.json target id (tree, boulder, stump…). */
+  target: string
+  label: string
+  tx: number
+  ty: number
+  /** The piece's own art, so a felled tree can leave its stump. */
+  art?: { key: string; frame: string }
 }
 
 export interface WorldData {
@@ -119,6 +138,8 @@ export interface WorldData {
   mill?: { tx: number; ty: number; tw: number; th: number; door: { tx: number; ty: number }; wheel: { x: number; y: number }; hopper: { tx: number; ty: number } }
   /** Code-drawn scenery sprites (the Commons, the Tangle's woods). */
   scenery?: ScenerySpot[]
+  /** Places to work: trees, boulders, stumps and patches (gathering). */
+  gathering?: GatherSpot[]
   /**
    * Ground painter: the Wilds paint their woods floor per pixel
    * (src/game/wilds/tangle-art.ts) — 'tangle', or 'outer' (the deep drift)
@@ -462,6 +483,12 @@ function buildWoodland(): WorldData {
   const trees = collectTrees(g)
   const bushes = scatter(g, rng, 10, [...npcs, marker, ...roadLanterns]).filter((b) => !nearExit({ exits: woodlandExits }, b.tx, b.ty))
   const rocks = scatter(g, rng, 8, [...npcs, marker, ...roadLanterns]).filter((r) => !nearExit({ exits: woodlandExits }, r.tx, r.ty))
+  // Gathering: the woods' trees (one ash in nine: its haft comes green),
+  // and the scattered rocks are boulders a pick can break.
+  const gathering: GatherSpot[] = [
+    ...trees.map((t, i) => ({ target: i % 9 === 0 ? 'ash' : 'tree', label: i % 9 === 0 ? 'Chop the ash' : 'Chop the tree', tx: t.tx, ty: t.ty })),
+    ...rocks.map((r) => ({ target: 'boulder', label: 'Break the boulder', tx: r.tx, ty: r.ty }))
+  ]
 
   const props: PropSpot[] = [
     { frame: 'trail-sign', tx: 25, ty: 13, h: 24, body: [10, 6] },
@@ -487,6 +514,7 @@ function buildWoodland(): WorldData {
     enemies,
     exits: woodlandExits,
     props,
+    gathering,
     discoverySpots: [
       { id: 'route-marker', label: 'the faded route marker', tx: 25, ty: 13 }
     ],
@@ -580,6 +608,7 @@ function buildRuin(): WorldData {
     enemies,
     exits: [{ tx: 0, ty: 12, tw: 1, th: 3, to: 'woodland', entry: { tx: 53, ty: 22 } }],
     props,
+    gathering: rocks.map((r) => ({ target: 'boulder', label: 'Break the boulder', tx: r.tx, ty: r.ty })),
     discoverySpots: [],
     well: null,
     mural,

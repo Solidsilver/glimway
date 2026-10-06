@@ -197,7 +197,13 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /api/items":
 		err = a.itemsRead(w, r)
 	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
-		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup":
+		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/gather", "POST /api/items/plant":
+		err = a.itemsMutation(w, r)
+	case "POST /api/gather":
+		r.URL.Path = "/api/items/gather"
+		err = a.itemsMutation(w, r)
+	case "POST /api/plant":
+		r.URL.Path = "/api/items/plant"
 		err = a.itemsMutation(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {

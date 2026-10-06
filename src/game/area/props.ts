@@ -1,7 +1,8 @@
 /**
  * Area construction — props. Visible trees/bushes/rocks/well/mural and the
  * supplied atlas props, with explicit collision boxes at their bases.
- * Light-capable props are collected for the lantern visuals.
+ * Light-capable props are collected for the lantern visuals. Tile-anchored
+ * sprites (the woods' pieces) come back by tile so gathering can fell them.
  */
 import type Phaser from 'phaser'
 import { TILE } from '../textures'
@@ -16,20 +17,33 @@ export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
   return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || ensureMillTexture(scene, key)
 }
 
+export interface PropsBuilt {
+  lights: LightProp[]
+  /** Standing sprites by anchor tile (`tx,ty`): a felled piece removes its own. */
+  sprites: Map<string, Phaser.GameObjects.Image[]>
+}
+
 export function buildProps(
   scene: Phaser.Scene,
   world: WorldData,
   solidGroup: Phaser.Physics.Arcade.StaticGroup
-): LightProp[] {
+): PropsBuilt {
   const lightProps: LightProp[] = []
+  const sprites = new Map<string, Phaser.GameObjects.Image[]>()
+  const keep = (tx: number, ty: number, img: Phaser.GameObjects.Image) => {
+    const key = `${tx},${ty}`
+    const list = sprites.get(key) ?? []
+    list.push(img)
+    sprites.set(key, list)
+  }
   for (const t of world.trees) {
-    scene.add.image(t.tx * TILE + 8, t.ty * TILE + TILE, 'tree').setOrigin(0.5, 1)
+    keep(t.tx, t.ty, scene.add.image(t.tx * TILE + 8, t.ty * TILE + TILE, 'tree').setOrigin(0.5, 1))
   }
   for (const b of world.bushes) {
     scene.add.image(b.tx * TILE + 8, b.ty * TILE + TILE, 'bush').setOrigin(0.5, 1).setDepth(b.ty * TILE + TILE)
   }
   for (const r of world.rocks) {
-    scene.add.image(r.tx * TILE + 8, r.ty * TILE + TILE, 'rock').setOrigin(0.5, 1).setDepth(r.ty * TILE + TILE)
+    keep(r.tx, r.ty, scene.add.image(r.tx * TILE + 8, r.ty * TILE + TILE, 'rock').setOrigin(0.5, 1).setDepth(r.ty * TILE + TILE))
   }
   if (world.well) {
     const w = world.well
@@ -78,6 +92,7 @@ export function buildProps(
     const img = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
     img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
     if (s.tint !== undefined) img.setTint(s.tint)
+    if (s.tx !== undefined && s.ty !== undefined) keep(s.tx, s.ty, img)
   }
-  return lightProps
+  return { lights: lightProps, sprites }
 }

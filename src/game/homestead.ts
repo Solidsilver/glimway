@@ -533,7 +533,7 @@ export function homesteadsFor(session: Session): Homesteads {
       worldId: () => session.link?.worldId || 'guest',
       state: (gate) => {
         const h = homes.homes.get(gate)
-        return h ? { cleared: h.cleared, desolate: h.desolate } : null
+        return h ? { cleared: h.cleared, stumps: h.stumps ?? [], plants: h.plants ?? [], desolate: h.desolate } : null
       },
       seed: (gate) => homes.seeds.get(gate) ?? null
     })
