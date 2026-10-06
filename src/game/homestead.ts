@@ -132,6 +132,8 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'That one doesn’t belong there.'
     case 'land-blocked':
       return 'A tree or a rock is in the way. Build around it, or have Silas clear it.'
+    case 'plant-in-the-way':
+      return 'Something’s growing there.'
     case 'unlit':
       return 'That ground is past your lamplight. Set a lantern post nearer to hold it.'
     case 'post-holds-land':
@@ -533,7 +535,7 @@ export function homesteadsFor(session: Session): Homesteads {
       worldId: () => session.link?.worldId || 'guest',
       state: (gate) => {
         const h = homes.homes.get(gate)
-        return h ? { cleared: h.cleared, desolate: h.desolate } : null
+        return h ? { cleared: h.cleared, stumps: h.stumps ?? [], plants: h.plants ?? [], desolate: h.desolate } : null
       },
       seed: (gate) => homes.seeds.get(gate) ?? null
     })

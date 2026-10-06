@@ -356,6 +356,26 @@ export function parseHomeView(raw: unknown): HomeView {
         return [int(c[0]), int(c[1])];
       })
     : [];
+  const stumps = Array.isArray(o.stumps)
+    ? o.stumps.map((c): [number, number] => {
+        if (!Array.isArray(c) || c.length !== 2) throw new ApiError('bad-response');
+        return [int(c[0]), int(c[1])];
+      })
+    : [];
+  const plants = Array.isArray(o.plants)
+    ? o.plants.map((p) => {
+        const po = obj(p);
+        return {
+          id: str(po.id),
+          itemDef: str(po.itemDef),
+          x: int(po.x),
+          y: int(po.y),
+          plantedAt: nullableInt(po.plantedAt) ?? undefined,
+          plantedDay: nullableInt(po.plantedDay) ?? undefined,
+          lit: po.lit === true,
+        };
+      })
+    : [];
   return {
     id: str(o.id),
     gate: int(o.gate),
@@ -367,6 +387,8 @@ export function parseHomeView(raw: unknown): HomeView {
     vacantSince: nullableInt(o.vacantSince),
     landSeed: int(o.landSeed),
     cleared,
+    stumps,
+    plants,
     postsBought: int(o.postsBought ?? 0),
     nextPost: materials(o.nextPost),
     indoor,
@@ -553,6 +575,33 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
   if (typeof r.heirloom === 'string' && r.heirloom) result.heirloom = r.heirloom;
   if (typeof r.adaOilCount === 'number') result.adaOilCount = r.adaOilCount;
+  if (Array.isArray(r.gathered)) {
+    result.gathered = r.gathered.map((g) => {
+      const go = obj(g);
+      return { itemDef: str(go.itemDef), qty: int(go.qty) };
+    });
+  }
+  if (r.plant) {
+    const po = obj(r.plant);
+    result.plant = {
+      id: str(po.id),
+      itemDef: str(po.itemDef),
+      x: int(po.x),
+      y: int(po.y),
+      plantedAt: nullableInt(po.plantedAt) ?? undefined,
+      plantedDay: nullableInt(po.plantedDay) ?? undefined,
+      lit: po.lit === true,
+    };
+  }
+  if (r.land) {
+    const lo = obj(r.land);
+    const tile = lo.tile;
+    result.land = {
+      tile: Array.isArray(tile) && tile.length === 2 ? [int(tile[0]), int(tile[1])] : [0, 0],
+      stump: lo.stump === true,
+      cleared: lo.cleared === true,
+    };
+  }
   return { ...parseSnapshot(raw), result };
 }
 

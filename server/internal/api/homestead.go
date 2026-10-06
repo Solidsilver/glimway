@@ -35,6 +35,27 @@ type homeInstance struct {
 	Rotation *int    `json:"rotation"`
 	Name     *string `json:"name"`
 }
+
+// homePlantView: a seed or sapling on the land, where it stands today
+// (plantsOf); PlantedDay is the UTC day it went in.
+type homePlantView struct {
+	ID         string `json:"id"`
+	ItemDef    string `json:"itemDef"`
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	PlantedAt  int64  `json:"plantedAt"`
+	PlantedDay int64  `json:"plantedDay"`
+	Lit        bool   `json:"lit"`
+}
+
+// homeLandChange: a gather that changed home land inside lamplight (the
+// drift rule: a stump stays, open ground stays open). The client reads the
+// home again when it sees one, so the next build of the land shows it.
+type homeLandChange struct {
+	Tile    [2]int `json:"tile"`
+	Stump   bool   `json:"stump"`
+	Cleared bool   `json:"cleared"`
+}
 type homeView struct {
 	ID          string            `json:"id"`
 	Gate        int               `json:"gate"`
@@ -46,6 +67,8 @@ type homeView struct {
 	VacantSince *int64            `json:"vacantSince"`
 	LandSeed    uint32            `json:"landSeed"`
 	Cleared     [][2]int          `json:"cleared"`
+	Stumps      [][2]int          `json:"stumps"`
+	Plants      []homePlantView   `json:"plants"`
 	PostsBought int               `json:"postsBought"`
 	NextPost    map[string]int    `json:"nextPost"`
 	Outdoor     content.HomeGrid  `json:"outdoor"`
@@ -105,6 +128,8 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			"DELETE FROM homestead_departures WHERE homestead_id=?",
 			"DELETE FROM homestead_invites WHERE homestead_id=?",
 			"DELETE FROM homestead_cleared WHERE homestead_id=?",
+			"DELETE FROM homestead_stumps WHERE homestead_id=?",
+			"DELETE FROM homestead_plants WHERE homestead_id=?",
 			"DELETE FROM item_stacks WHERE location='storage' AND owner=?",
 			"DELETE FROM item_instances WHERE location='fitted' AND owner IN (SELECT id FROM item_instances WHERE location='storage' AND owner=?)",
 			"DELETE FROM item_instances WHERE location='storage' AND owner=?",
@@ -292,7 +317,7 @@ func scanInstances(rows *sql.Rows, out []homeInstance) ([]homeInstance, error) {
 // loadHome is a homestead as `caller` sees it: everything placed, and the
 // caller's own pack decorations when they are a member (to set out).
 func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (homeView, error) {
-	h := homeView{ID: id, Outdoor: content.HomeRules.Outdoor(), Items: []homeInstance{}, Cleared: [][2]int{}}
+	h := homeView{ID: id, Outdoor: content.HomeRules.Outdoor(), Items: []homeInstance{}, Cleared: [][2]int{}, Stumps: [][2]int{}, Plants: []homePlantView{}}
 	err := tx.QueryRowContext(ctx, "SELECT world_id,gate,tier,posts_bought,vacant_since FROM homesteads WHERE id=?", id).Scan(&h.WorldID, &h.Gate, &h.Tier, &h.PostsBought, &h.VacantSince)
 	if err != nil {
 		return h, err
@@ -325,12 +350,37 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if err != nil {
 		return h, err
 	}
+	rows, err = tx.QueryContext(ctx, "SELECT x,y FROM homestead_stumps WHERE homestead_id=? ORDER BY y,x", id)
+	if err != nil {
+		return h, err
+	}
+	for rows.Next() {
+		var st [2]int
+		if err = rows.Scan(&st[0], &st[1]); err != nil {
+			rows.Close()
+			return h, err
+		}
+		h.Stumps = append(h.Stumps, st)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return h, err
+	}
 	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE homestead_id=? AND location='placed' ORDER BY id", id)
 	if err != nil {
 		return h, err
 	}
-	if h.Items, err = scanInstances(rows, h.Items); err != nil || !h.Member {
+	if h.Items, err = scanInstances(rows, h.Items); err != nil {
 		return h, err
+	}
+	plants, err := homePlants(ctx, tx, id)
+	if err != nil {
+		return h, err
+	}
+	h.Plants = plantsOf(h, plants, now)
+	if !h.Member {
+		return h, nil
 	}
 	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE habitica_id=? AND location='inventory' ORDER BY id", caller)
 	if err != nil {
@@ -338,6 +388,25 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	}
 	h.Items, err = scanInstances(rows, h.Items)
 	return h, err
+}
+
+// homePlants reads the land's plants as planted (plantsOf says where they
+// stand today).
+func homePlants(ctx context.Context, tx *sql.Tx, id string) ([]homePlantView, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,x,y,planted_at,planted_day FROM homestead_plants WHERE homestead_id=? ORDER BY planted_at,id", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []homePlantView{}
+	for rows.Next() {
+		var p homePlantView
+		if err = rows.Scan(&p.ID, &p.ItemDef, &p.X, &p.Y, &p.PlantedAt, &p.PlantedDay); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }
 
 // myHome is the caller's homestead view, or nil.
@@ -921,6 +990,12 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	if r.Scene != "outdoor" {
 		return nil
 	}
+	// Nothing goes down on top of something growing.
+	for _, p := range h.Plants {
+		if here.overlaps(rect{p.X, p.Y, 1, 1}) {
+			return fail(409, "plant-in-the-way")
+		}
+	}
 	g := groundOf(h)
 	for y := here.y; y < here.y+here.h; y++ {
 		for x := here.x; x < here.x+here.w; x++ {
@@ -1019,6 +1094,10 @@ func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, r
 		return fail(409, "unlit")
 	}
 	if err := debitEmbers(ctx, tx, s, content.HomeRules.ClearTileEmbers, "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
+		return err
+	}
+	// Cleared ground has no stump: drop a kept one with it.
+	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_stumps WHERE homestead_id=? AND x=? AND y=?", h.ID, x, y); err != nil {
 		return err
 	}
 	_, err := tx.ExecContext(ctx, "INSERT INTO homestead_cleared VALUES(?,?,?)", h.ID, x, y)

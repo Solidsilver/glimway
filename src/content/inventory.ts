@@ -57,7 +57,7 @@ export const inventoryCopy = {
   neverWears: 'Never wears',
   state: { blunt: 'Blunt. Mend it to use it again.', cracked: 'Cracked. Mend it to use it again.', dull: 'Dull. Sharp again by morning.' } as Record<string, string>,
   fittings: 'Fittings',
-  actions: { use: 'Use', pocket: 'Pocket', unpocket: 'Take out', carry: 'Carry', putAway: 'Put away', give: 'Give', mend: 'Mend', fit: 'Fit to', takeOff: 'Take off' },
+  actions: { use: 'Use', pocket: 'Pocket', unpocket: 'Take out', carry: 'Carry', putAway: 'Put away', give: 'Give', mend: 'Mend', fit: 'Fit to', takeOff: 'Take off', plant: 'Plant' },
   giveTo: 'Hand it to',
   giveNobody: 'Stand next to someone to hand it over.',
   mendAt: (who: string, cost: string) => `${who} (${cost})`,

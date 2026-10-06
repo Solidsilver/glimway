@@ -9,10 +9,15 @@ playtest. The short version is in the README's "Tests" section.
 |---|---|---|
 | `npm run verify` | typecheck, svelte-check, unit tests, build | every change |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
+| `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
 | `npm run test:smoke` | the `@smoke` playtests (7 tests, a few minutes at most) | while working, often |
 | `npm run test:changed` | the playtests mapped to what this branch changed | while working, before handing back |
 | `npm run test:e2e` | the full Playwright suite | once per merge batch, and after changing shared test code |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
+
+Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
+machine it can pass Go's default 10-minute test timeout while still working.
+Keep the `-timeout 30m`.
 
 **Agents:** run `test:smoke` and `test:changed` while you work. The full suite
 runs once per merge batch, not once per agent. `test:changed` itself runs the

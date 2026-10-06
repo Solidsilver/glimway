@@ -24,17 +24,20 @@ type itemsResponse struct {
 	store.Snapshot
 	Items  itemsView `json:"items"`
 	Result struct {
-		Items       itemsView      `json:"items"`
-		Wear        *wearResult    `json:"wear"`
-		Used        string         `json:"used"`
-		Pickup      string         `json:"pickup"`
-		Given       *content.Asset `json:"given"`
-		Mended      string         `json:"mended"`
-		Created     []string       `json:"created"`
-		Returned    string         `json:"returned"`
-		Paper       *string        `json:"paper"`
-		Heirloom    string         `json:"heirloom"`
-		AdaOilCount int            `json:"adaOilCount"`
+		Items       itemsView       `json:"items"`
+		Wear        *wearResult     `json:"wear"`
+		Used        string          `json:"used"`
+		Pickup      string          `json:"pickup"`
+		Given       *content.Asset  `json:"given"`
+		Mended      string          `json:"mended"`
+		Created     []string        `json:"created"`
+		Gathered    []stackView     `json:"gathered"`
+		Plant       *homePlantView  `json:"plant"`
+		Land        *homeLandChange `json:"land"`
+		Returned    string          `json:"returned"`
+		Paper       *string         `json:"paper"`
+		Heirloom    string          `json:"heirloom"`
+		AdaOilCount int             `json:"adaOilCount"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

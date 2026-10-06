@@ -180,6 +180,16 @@ export const SERVER_ERROR_CODES = [
   // heirlooms
   'condition-unmet',
   'already-granted',
+  // gathering & planting
+  'gathered-enough',
+  'cannot-gather-here',
+  'cannot-plant-here',
+  'not-a-seed',
+  'not-your-land',
+  'tile-required',
+  'invalid-tool',
+  'invalid-visit',
+  'plant-in-the-way',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

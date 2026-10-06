@@ -11,6 +11,7 @@
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
 import { effectLine, giftPhrase, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
+import { GATHERING_DATA } from '../lib/gathering'
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
 import type { Session } from './session'
@@ -30,6 +31,18 @@ export function itemErrorText(code: ApiErrorCode | string): string {
       return 'It’s too blunt to work with. Mend it first.'
     case 'two-wardens-grind':
       return 'Two slivers in one pack pull toward each other’s pose and grind.'
+    case 'gathered-enough':
+      return GATHERING_DATA.softCapLine
+    case 'cannot-gather-here':
+      return 'There’s nothing there to work.'
+    case 'cannot-plant-here':
+      return 'Plant it on your own land.'
+    case 'not-your-land':
+      return 'That’s someone else’s land. Leave it as you found it.'
+    case 'land-blocked':
+      return 'There’s no open ground to plant in here.'
+    case 'not-a-seed':
+      return 'That isn’t something you can plant.'
     case 'wrong-tool':
       return 'That isn’t the tool for this.'
     case 'not-a-tool':
@@ -172,7 +185,19 @@ export class Items {
     return { ok: true, value: r.res.result }
   }
 
-  /** One use of a tool (gathering will call this; the dev hook does now). */
+  /**
+   * One chop, break or dig with a tool, where the hero stands (the server
+   * reads the area from the progress that rides along). On home land the
+   * tile names the piece; elsewhere the woods are scenery.
+   */
+  gather(tool: string, action: string, target: string, visitId: string, tile?: [number, number]) {
+    return this.run('gather', { tool, action, target, visitId, ...(tile ? { tile } : {}) })
+  }
+  /** Plant a seed or sapling on your own land, at a tile beside you. */
+  plant(itemDef: string, tile: [number, number]) {
+    return this.run('plant', { itemDef, tile })
+  }
+  /** One use of a tool (gathering wears tools through gather; the dev hook calls this). */
   useTool(instance: string, action?: string) {
     return this.run('use', { instance, ...(action ? { action } : {}) })
   }

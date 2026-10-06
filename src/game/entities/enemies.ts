@@ -49,6 +49,8 @@ export interface Enemy {
   /** Atlas art prefix for small enemies ('slime' | 'mushroom' | 'beetle'). */
   art: string
   dead: boolean
+  /** Dev only: set aside off the map and frozen (playtests that need a quiet chunk). */
+  parked?: boolean
   /** Warden only: which attack the current telegraph leads into. */
   attack: 'lunge' | 'sweep'
   /** Warden only: recovering after a lunge, so the naming can be spoken. */
@@ -171,6 +173,24 @@ export class EnemySystem {
 
   get enemies(): Enemy[] {
     return this._enemies
+  }
+
+  /**
+   * Dev only: set every live creature aside, off the map and frozen, so a
+   * playtest can work a chunk without a wisp wandering into the hero. Not
+   * a defeat: nothing is claimed, and the next build of the area brings
+   * them back.
+   */
+  parkAll(): number {
+    let n = 0
+    for (const e of this._enemies) {
+      if (e.dead || e.parked || e.type === 'guardian') continue
+      e.parked = true
+      e.sprite.setVelocity(0, 0).setPosition(-2000, -2000).setVisible(false)
+      ;(e.sprite.body as Phaser.Physics.Arcade.Body).enable = false
+      n++
+    }
+    return n
   }
 
   /**
@@ -416,7 +436,7 @@ export class EnemySystem {
     const px = hero.sprite.x
     const py = hero.sprite.y - 8
     for (const enemy of [...this.enemies]) {
-      if (enemy.dead) continue
+      if (enemy.dead || enemy.parked) continue
       const ex = enemy.sprite.x
       const ey = enemy.sprite.y - 6
       const dist = Math.hypot(px - ex, py - ey)
@@ -477,6 +497,7 @@ export class EnemySystem {
   updateEnemyBars(): void {
     this.hpBars.clear()
     for (const enemy of this.enemies) {
+      if (enemy.parked) continue
       if (enemy.type === 'guardian') {
         this.drawWardenPips(enemy)
         continue

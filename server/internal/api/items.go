@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fingersnap/content"
+	"fingersnap/server/internal/land"
 	"fingersnap/server/internal/rules"
 	"fingersnap/server/internal/store"
+	"fingersnap/server/internal/wilds"
 	"fmt"
 	"math"
 	"net/http"
@@ -527,7 +529,9 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=?,worn_at=? WHERE id=?", v.Condition, utcDay(now), now, v.ID); err != nil {
 			return out, err
 		}
-		// One draw is one bucket: a full stave bucket of well water.
+	}
+	// One draw is one bucket: a full stave bucket of well water.
+	if action == "draw" {
 		if err = itemChange(ctx, tx, s, "water", 1, "draw", v.ID, now); err != nil {
 			return out, err
 		}
@@ -887,22 +891,27 @@ type itemRequest struct {
 	Pickup   string          `json:"pickup,omitempty"`
 	Target   string          `json:"target,omitempty"`
 	// Unmoored comes from client UI state; remedy consumption remains a keyed server mutation.
-	Unmoored bool `json:"unmoored,omitempty"`
+	Unmoored bool    `json:"unmoored,omitempty"`
+	VisitID  string  `json:"visitId,omitempty"`
+	Tile     *[2]int `json:"tile,omitempty"`
 }
 
 // itemResult: the caller's items after the change, and what happened.
 type itemResult struct {
-	Items       itemsView      `json:"items"`
-	Wear        *wearResult    `json:"wear,omitempty"`
-	Used        string         `json:"used,omitempty"`
-	Pickup      string         `json:"pickup,omitempty"`
-	Given       *content.Asset `json:"given,omitempty"`
-	Mended      string         `json:"mended,omitempty"`
-	Created     []string       `json:"created,omitempty"`
-	Returned    string         `json:"returned,omitempty"`
-	Paper       *string        `json:"paper,omitempty"`
-	Heirloom    string         `json:"heirloom,omitempty"`
-	AdaOilCount int            `json:"adaOilCount,omitempty"`
+	Items       itemsView       `json:"items"`
+	Wear        *wearResult     `json:"wear,omitempty"`
+	Used        string          `json:"used,omitempty"`
+	Pickup      string          `json:"pickup,omitempty"`
+	Given       *content.Asset  `json:"given,omitempty"`
+	Mended      string          `json:"mended,omitempty"`
+	Created     []string        `json:"created,omitempty"`
+	Gathered    []stackView     `json:"gathered,omitempty"`
+	Plant       *homePlantView  `json:"plant,omitempty"`
+	Land        *homeLandChange `json:"land,omitempty"`
+	Returned    string          `json:"returned,omitempty"`
+	Paper       *string         `json:"paper,omitempty"`
+	Heirloom    string          `json:"heirloom,omitempty"`
+	AdaOilCount int             `json:"adaOilCount,omitempty"`
 }
 
 func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -936,6 +945,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = offHandItem(ctx, tx, s, req)
 		case "pickup":
 			err = pickUp(ctx, tx, s, req, now, &out)
+		case "gather":
+			err = a.gather(ctx, tx, s, req, now, &out)
+		case "plant":
+			err = a.plant(ctx, tx, s, req, now, &out)
 		case "return":
 			err = a.returnKeepsake(ctx, tx, s, req, now, &out)
 		case "heirloom":
@@ -1358,6 +1371,363 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 		return currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "pickup", p.ID, now)
 	}
 	return packPut(ctx, tx, s.HabiticaID, def.ID, []makerQty{{"", p.Qty}}, "pickup", p.ID, now)
+}
+
+// ------------------------------------------------------------ gathering & planting
+
+func gatherCaps(action string) (visit, day int) {
+	c := content.GatheringRules.Caps
+	switch action {
+	case "chop":
+		return c.Visit.Chop, c.Day.Chop
+	case "break":
+		return c.Visit.Break, c.Day.Break
+	}
+	return c.Visit.Dig, c.Day.Dig
+}
+
+// ownLand: the caller's homestead when `area` is its land (nil, refused,
+// for anyone else's: visiting is read-only).
+func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
+	gate := rules.HomeGate(area)
+	if gate < 0 {
+		return nil, fail(409, refusal)
+	}
+	id, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fail(409, "not-your-land")
+	}
+	h, err := loadHome(ctx, tx, id, s.HabiticaID, now)
+	if err != nil {
+		return nil, err
+	}
+	if h.Gate != gate {
+		return nil, fail(409, "not-your-land")
+	}
+	return &h, nil
+}
+
+// landKind is what stands on a home tile now: the generated land, with
+// cleared tiles open and kept stumps (felled inside lamplight) counted.
+func landKind(h homeView, x, y int) byte {
+	g := groundOf(h)
+	k := g.land.Effective(g.cleared, x, y)
+	if k == land.Tree && slices.Contains(h.Stumps, [2]int{x, y}) {
+		return land.Stump
+	}
+	return k
+}
+
+// homeTarget: whether a gathering target matches what stands on a home
+// tile. Out on the unlit edge a tree felled this visit is drawn as a
+// stump the server never kept, so a dig there may name a standing tree.
+func homeTarget(k byte, target, action string, lit bool) bool {
+	switch action {
+	case "chop":
+		return k == land.Tree && (target == "tree" || target == "iron-oak")
+	case "break":
+		return k == land.Boulder && (target == "boulder" || target == "lamp-stone")
+	}
+	return target == "stump" && (k == land.Stump || k == land.Tree && !lit)
+}
+
+// gatherReach: how far from a piece's foot you can work it, in px. The
+// client prompts within 36 px and stops a swing past 46 (REACH and LEAVE
+// in src/game/entities/gathering.ts), so the server never refuses a swing
+// the client let you make.
+const gatherReach = 48
+
+// nearPiece measures as the client does: from a little above the hero's
+// feet to the foot of the piece's tile (where its art stands).
+func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
+	if s.State.Area != area {
+		return false
+	}
+	dx := s.State.Position.X - float64(tx*wildsTileSize+wildsTileSize/2)
+	dy := s.State.Position.Y - 8 - float64((ty+1)*wildsTileSize)
+	return dx*dx+dy*dy <= gatherReach*gatherReach
+}
+
+// gather: one chop, break or dig (docs/items/crafting-and-repair.md,
+// "Gathering"). Trees are client scenery: the server checks the tool, the
+// area, the caps and rolls the yields, not the individual tree, except on
+// home land, where the land is the server's own and a change inside
+// lamplight is kept (the drift: a stump stays, open ground stays open).
+func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	if req.Tool == "" {
+		return fail(400, "invalid-tool")
+	}
+	target, ok := content.GatheringTargetFor(req.Target)
+	if !ok {
+		return fail(400, "invalid-target")
+	}
+	if target.Action != req.Action {
+		return fail(409, "wrong-tool")
+	}
+	if len(req.VisitID) > 64 {
+		return fail(400, "invalid-visit")
+	}
+	// Where the player is, from the progress this mutation carried, and
+	// whether that place has such a piece at all.
+	area := s.State.Area
+	if !content.GatheringOffered(area, req.Target) {
+		return fail(409, "cannot-gather-here")
+	}
+	var home *homeView
+	var tile [2]int
+	lit := false
+	if rules.HomeGate(area) >= 0 {
+		var err error
+		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
+			return err
+		}
+		if req.Tile == nil {
+			return fail(400, "tile-required")
+		}
+		tile = *req.Tile
+		if !nearPiece(s, area, tile[0], tile[1]) {
+			return fail(409, "too-far-away")
+		}
+		lit = land.Lit(connectedLights(placedItems(*home), ""), tile[0], tile[1])
+		if !homeTarget(landKind(*home, tile[0], tile[1]), req.Target, req.Action, lit) {
+			return fail(409, "cannot-gather-here")
+		}
+	}
+
+	// The caps: per area visit and per day, per kind of work.
+	day := utcDay(now)
+	visit := req.VisitID
+	if visit == "" {
+		visit = area
+	}
+	var capDay int64
+	var dayCount, visitCount int
+	var capArea, capVisit string
+	err := tx.QueryRowContext(ctx, "SELECT day,day_count,area,visit_id,visit_count FROM gathering_caps WHERE habitica_id=? AND action=?", s.HabiticaID, req.Action).Scan(&capDay, &dayCount, &capArea, &capVisit, &visitCount)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if capDay != day {
+		dayCount = 0
+	}
+	if capArea != area || capVisit != visit {
+		visitCount = 0
+	}
+	visitCap, dayCap := gatherCaps(req.Action)
+	if dayCount >= dayCap || visitCount >= visitCap {
+		return fail(409, "gathered-enough")
+	}
+
+	res, err := useTool(ctx, tx, s, req.Tool, target.ToolAction, now)
+	if err != nil {
+		return err
+	}
+	out.Wear = &res
+	dayCount++
+	visitCount++
+	_, err = tx.ExecContext(ctx, `INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES(?,?,?,?,?,?,?,?)
+ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=excluded.day_count,area=excluded.area,visit_id=excluded.visit_id,visit_count=excluded.visit_count,updated_at=excluded.updated_at`,
+		s.HabiticaID, req.Action, day, dayCount, area, visit, visitCount, now)
+	if err != nil {
+		return err
+	}
+
+	// The yields. A pocketed keepsake's gather-more help adds one of what it
+	// names. Seeded per player and gather, so a replay rolls the same.
+	more := map[string]bool{}
+	slotList, err := slots(ctx, tx, s.HabiticaID)
+	if err != nil {
+		return err
+	}
+	for _, sl := range slotList {
+		d, _ := content.ItemFor(sl.def)
+		for _, e := range d.Pocket {
+			if e.Type == "gather-more" {
+				more[e.Target] = true
+			}
+		}
+	}
+	rng := wilds.NewRng(wilds.Hash(s.HabiticaID, req.Target, int(now), int(day), dayCount))
+	out.Gathered = []stackView{}
+	for _, y := range target.Yields {
+		if y.ChancePermille > 0 && rng.NextInt(1000) >= y.ChancePermille {
+			continue
+		}
+		qty := y.Min + rng.NextInt(y.Max-y.Min+1)
+		if more[y.Item] {
+			qty++
+		}
+		def, _ := content.ItemFor(y.Item)
+		if def.Instanced() {
+			for range qty {
+				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", -1, now)
+				if err != nil {
+					return err
+				}
+				if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
+					return err
+				}
+				out.Created = append(out.Created, id)
+			}
+		} else if err = packPut(ctx, tx, s.HabiticaID, y.Item, []makerQty{{"", qty}}, "gather", req.Target, now); err != nil {
+			return err
+		}
+		out.Gathered = append(out.Gathered, stackView{ItemDef: y.Item, Qty: qty})
+	}
+
+	// Home land inside lamplight remembers: a felled tree stays a stump, a
+	// broken boulder or a dug stump leaves open ground. The unlit edge
+	// regrows like the Tangle, so nothing is kept there.
+	if home == nil || !lit {
+		return nil
+	}
+	change := homeLandChange{Tile: tile}
+	switch {
+	case req.Action == "chop":
+		_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_stumps VALUES(?,?,?,?)", home.ID, tile[0], tile[1], now)
+		change.Stump = true
+	default:
+		if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_stumps WHERE homestead_id=? AND x=? AND y=?", home.ID, tile[0], tile[1]); err == nil {
+			_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_cleared VALUES(?,?,?)", home.ID, tile[0], tile[1])
+		}
+		change.Cleared = true
+	}
+	out.Land = &change
+	return err
+}
+
+// plantGround: the tiles a plant can stand on (or wander onto): open
+// grass, off the home site and gate path, clear of placed pieces. Worked
+// out once per read of the land.
+func plantGround(h homeView) map[[2]int]bool {
+	g := groundOf(h)
+	blocked := map[[2]int]bool{}
+	mark := func(r rect) {
+		for y := r.y; y < r.y+r.h; y++ {
+			for x := r.x; x < r.x+r.w; x++ {
+				blocked[[2]int{x, y}] = true
+			}
+		}
+	}
+	for _, v := range content.HomeRules.OutdoorReserved {
+		mark(rect{v.X, v.Y, v.W, v.H})
+	}
+	for _, v := range placedItems(h) {
+		if r, ok := placedRect(v); ok && *v.Scene == "outdoor" {
+			mark(r)
+		}
+	}
+	open := map[[2]int]bool{}
+	for y := 0; y < g.land.Height; y++ {
+		for x := 0; x < g.land.Width; x++ {
+			if g.land.Effective(g.cleared, x, y) == land.Grass && !blocked[[2]int{x, y}] {
+				open[[2]int{x, y}] = true
+			}
+		}
+	}
+	return open
+}
+
+// plantWanderDays and plantWanderReach: an unlit plant takes at most one
+// step a day, never more than a couple of tiles from where it was set.
+const (
+	plantWanderDays  = 60
+	plantWanderReach = 2
+)
+
+// plantsOf: where the land's plants stand today. A plant in lamplight
+// stays put; one outside it wanders a little each day (docs/items/
+// overview.md, "The drift and your things"). Worked out from the planting
+// and the day alone, so reading the land never writes it.
+//
+// The walk is replayed against today's land (its lamps, pieces and other
+// plants) over the last plantWanderDays days, so when the land changes
+// (a post set, a bench placed, a plant set nearby) or the window slides
+// on, a plant can jump to another spot within its reach at once rather
+// than a step. Harmless, and in keeping with the drift.
+func plantsOf(h homeView, raw []homePlantView, now int64) []homePlantView {
+	lights := connectedLights(placedItems(h), "")
+	open := plantGround(h)
+	// How many plants stand on each tile (a new plant can go where an old
+	// one started out; counting keeps one from stepping back onto it).
+	taken := map[[2]int]int{}
+	for _, p := range raw {
+		taken[[2]int{p.X, p.Y}]++
+	}
+	today := utcDay(now)
+	dirs := [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
+	out := make([]homePlantView, 0, len(raw))
+	for _, p := range raw {
+		x, y := p.X, p.Y
+		for d := max(p.PlantedDay+1, today-plantWanderDays+1); d <= today; d++ {
+			if land.Lit(lights, x, y) {
+				break
+			}
+			step := dirs[wilds.NewRng(wilds.Hash(p.ID, "plant-wander", int(d))).NextInt(len(dirs))]
+			to := [2]int{x + step[0], y + step[1]}
+			if abs(to[0]-p.X) > plantWanderReach || abs(to[1]-p.Y) > plantWanderReach || !open[to] || taken[to] > 0 {
+				continue
+			}
+			if taken[[2]int{x, y}]--; taken[[2]int{x, y}] <= 0 {
+				delete(taken, [2]int{x, y})
+			}
+			taken[to]++
+			x, y = to[0], to[1]
+		}
+		p.X, p.Y, p.Lit = x, y, land.Lit(lights, x, y)
+		out = append(out, p)
+	}
+	return out
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+// plant: a seed or sapling set into your own land at a tile beside you.
+func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	if !content.IsGatheringSeed(req.ItemDef) {
+		return fail(400, "not-a-seed")
+	}
+	h, err := ownLand(ctx, tx, s, s.State.Area, now, "cannot-plant-here")
+	if err != nil {
+		return err
+	}
+	if req.Tile == nil {
+		return fail(400, "tile-required")
+	}
+	x, y := (*req.Tile)[0], (*req.Tile)[1]
+	if !nearTile(s, s.State.Area, x, y, 2) {
+		return fail(409, "too-far-away")
+	}
+	// A home tends so many plants, then the ground is full.
+	if len(h.Plants) >= content.GatheringRules.PlantsPerHome || !plantGround(*h)[[2]int{x, y}] {
+		return fail(409, "land-blocked")
+	}
+	for _, p := range h.Plants {
+		if p.X == x && p.Y == y {
+			return fail(409, "land-blocked")
+		}
+	}
+	if _, err = packTake(ctx, tx, s.HabiticaID, req.ItemDef, nil, 1, "plant", req.ItemDef, now); err != nil {
+		return err
+	}
+	id, err := store.Random()
+	if err != nil {
+		return err
+	}
+	day := utcDay(now)
+	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_plants VALUES(?,?,?,?,?,?,?)", id, h.ID, req.ItemDef, x, y, now, day); err != nil {
+		return err
+	}
+	out.Plant = &homePlantView{ID: id, ItemDef: req.ItemDef, X: x, Y: y, PlantedAt: now, PlantedDay: day, Lit: land.Lit(connectedLights(placedItems(*h), ""), x, y)}
+	return nil
 }
 
 // ------------------------------------------------------------ presence
