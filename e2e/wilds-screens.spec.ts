@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { allow, linkCaughtUp, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, sql, waitForWorld } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, sql, waitForWorld } from './connected'
 import { beginNewJourney, holdUntil, warp, waitForWilds, wilds, type WildsDump, readDialogue, settled, expectToast } from './helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
 
@@ -118,7 +118,6 @@ for (const [device, vp] of sizes) {
 
 /** Fall in the Tangle; the fallen-hero lantern waits where the hero fell. */
 async function fallAndFindLantern(page: Page, device: string): Promise<void> {
-  await linkCaughtUp(page)
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
   // The collapse wakes the hero back in the village; wait for it to settle.
   await page.waitForFunction(() => window.__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
@@ -131,23 +130,26 @@ async function fallAndFindLantern(page: Page, device: string): Promise<void> {
   // on a chunk edge, where tile 0's neighbour would be out of bounds).
   const lx = lantern.x % 24
   const ly = lantern.y % 24
-  const beside = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+  // A harvest node right beside it would win the prompt: try each side.
+  const sides = [[-1, 0], [1, 0], [0, -1], [0, 1]]
     .map(([ox, oy]) => [lx + ox, ly + oy])
-    .find(([tx, ty]) => tx >= 1 && ty >= 1 && tx <= 22 && ty <= 22)!
-  await warp(page, chunkAreaId(Math.floor(lantern.x / 24), Math.floor(lantern.y / 24)), beside[0], beside[1])
-  await waitForWilds(page)
+    .filter(([tx, ty]) => tx >= 1 && ty >= 1 && tx <= 22 && ty <= 22)
+  const chunk = chunkAreaId(Math.floor(lantern.x / 24), Math.floor(lantern.y / 24))
+  for (const [tx, ty] of sides) {
+    await warp(page, chunk, tx, ty)
+    await waitForWilds(page)
+    if (/lantern/i.test((await page.locator('.prompt').textContent({ timeout: 2_000 }).catch(() => null)) ?? '')) break
+  }
   await expect(page.locator('.prompt')).toContainText(/lantern/i)
   await shot(page, `27-wilds-lantern-${device}`)
 }
 
-// Known product bug, quarantined (see .agent/REPORT.md): falling in the
-// Tangle while connected sends the defeat report and a progress upload
-// together; about one fall in ten, the hero comes to in the Tangle at 0 HP
-// instead of in the village (the upload's stale answer appears to put the
-// area back during the collapse). wilds.spec.ts still checks the lantern
-// after a fall. Remove fixme with the fix.
+// A fall in the Tangle sends the defeat report; the recovery's upload used to
+// be built on the revision before the report's answer, land as a stale write,
+// and its answer put the hero back in the Tangle at 0 HP (bugs #3,
+// tests/link.test.ts).
 for (const [device, vp] of sizes) {
-  test.fixme(`wilds screens: the fallen-hero lantern (${device})`, async ({ page, context }) => {
+  test(`wilds screens: the fallen-hero lantern (${device})`, async ({ page, context }) => {
     await page.setViewportSize(vp)
     const id = newUser()
     allow(id)
@@ -155,6 +157,11 @@ for (const [device, vp] of sizes) {
     await openTitleGuide(page)
     await pasteAndConnect(page, id)
     await waitForWorld(page)
+    // Pinned to a seed whose camps sit far from the entry: in a random world
+    // a camp by the entry can knock the hero back through the Commons gap
+    // before the fall (wilds.spec.ts, handoffWorld).
+    const worldId = (await serverState(page)).body.worldId as string
+    sql(`UPDATE worlds SET seed='handoff-tiles' WHERE id='${worldId}' AND id NOT IN (SELECT world_id FROM region_epochs);`)
     await warp(page, 'wilds', 2, 22)
     await waitForWilds(page)
     await fallAndFindLantern(page, device)

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   STABLE_MS,
+  STOP_REPEAT_MS,
   PresenceClient,
   closeAction,
   isPresenceArea,
@@ -163,13 +164,15 @@ test('positions go out at most 8 Hz while moving; the latest sample is not lost;
   assert.ok(pos.length <= 10, `${pos.length} position messages in ~1.3 s`);
   assert.ok(pos.length >= 8);
   assert.deepEqual(pos[pos.length - 1], { type: 'pos', x: 60, y: 100, facing: { x: 1, y: 0 }, moving: false }, 'the final stop');
-  // Standing still afterwards sends nothing more.
+  // Standing still afterwards repeats the stop once (in case it was dropped), then nothing.
   const n = r.sock().sent.length;
   for (let i = 0; i < 30; i++) {
     r.client.position(at(60, false));
     r.clock.advance(100);
   }
-  assert.equal(r.sock().sent.filter((m) => m.type === 'pos').length, pos.length);
+  const after = r.sock().sent.filter((m) => m.type === 'pos');
+  assert.equal(after.length, pos.length + 1);
+  assert.deepEqual(after[after.length - 1], pos[pos.length - 1], 'the same stop, once more');
   assert.ok(r.sock().sent.length >= n);
 });
 
@@ -191,6 +194,55 @@ test('position spacing never drops below 125 ms', () => {
   }
   r.clock.advance(500);
   for (let i = 1; i < stamps.length; i++) assert.ok(stamps[i] - stamps[i - 1] >= 125, `gap ${stamps[i] - stamps[i - 1]}`);
+});
+
+test('bugs #1: a final stop the server dropped for arriving too soon still lands', () => {
+  // The server (presence.go) drops a position that arrives within 125 ms of
+  // the last one it took. Model it, with network jitter on each send.
+  const r = rig();
+  r.live();
+  r.client.setArea('village');
+  r.sock().push({ type: 'room', area: 'village', players: [] });
+  const s = r.sock();
+  const jitter = [60, 0, 60, 0, 60, 0, 60, 0, 60, 0];
+  let n = 0;
+  let lastTaken = -Infinity;
+  let shown: { x: number; moving: boolean } | null = null;
+  s.send = (d: string) => {
+    const m = JSON.parse(d);
+    if (m.type !== 'pos') return;
+    const arrives = r.clock.now + jitter[n++ % jitter.length];
+    if (arrives - lastTaken < 125) return; // dropped
+    lastTaken = arrives;
+    shown = { x: m.x, moving: m.moving };
+  };
+  for (let i = 0; i < 30; i++) {
+    r.client.position(at(i));
+    r.clock.advance(1000 / 60);
+  }
+  r.client.position(at(30, false));
+  r.clock.advance(STOP_REPEAT_MS + 200);
+  assert.deepEqual(shown, { x: 30, moving: false }, 'the others see the hero stopped where they stopped');
+});
+
+test('bugs #1: the stop repeat yields to a newer move and to a room change', () => {
+  const r = rig();
+  r.live();
+  r.client.setArea('village');
+  r.sock().push({ type: 'room', area: 'village', players: [] });
+  r.client.position(at(5, false));
+  r.clock.advance(50);
+  r.client.position(at(6)); // walking again before the repeat
+  r.clock.advance(STOP_REPEAT_MS + 200);
+  const pos = r.sock().sent.filter((m) => m.type === 'pos');
+  assert.deepEqual(pos.map((m) => [m.x, m.moving]), [[5, false], [6, true]]);
+  // A stop, then a move to another area: no repeat into the new room.
+  r.client.position(at(6, false));
+  r.clock.advance(200);
+  r.client.setArea('woodland');
+  r.clock.advance(STOP_REPEAT_MS + 3000);
+  const later = r.sock().sent.filter((m) => m.type === 'pos').slice(pos.length);
+  assert.deepEqual(later.map((m) => [m.x, m.moving]), [[6, false]]);
 });
 
 test('area changes are paced by the join cooldown, and the latest area wins', () => {

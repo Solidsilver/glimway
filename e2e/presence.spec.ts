@@ -92,15 +92,10 @@ test('two players in the village see each other move, and walking somewhere else
   await ctx.close()
 })
 
-// Known product bug, quarantined (see .agent/REPORT.md): the client paces
-// positions at exactly 1/positionHz (125 ms) and the server drops any that
-// arrive sooner after the last one (server/internal/api/presence.go). With
-// network jitter the final "stopped" position can be the one dropped, and the
-// others see you stop a few pixels short until you move again. It shows at a
-// real frame rate (GPU rendering); at SwiftShader's ~8 fps it hardly ever did.
-// Remove fixme once the server always admits a stop (or the client paces
-// with some slack).
-test.fixme('the others see you come to rest exactly where you stopped', async ({ page, browser, baseURL }) => {
+// The server drops a position that arrives within 125 ms of the last one;
+// the client paces with slack and repeats a final stop once, so the stop
+// always lands (bugs #1, tests/presence-client.test.ts).
+test('the others see you come to rest exactly where you stopped', async ({ page, browser, baseURL }) => {
   const { other, ctx } = await twoPlayers(page, browser, baseURL!)
   await seeEachOther(page, other)
   const { rest } = await walkEastAndRest(other)

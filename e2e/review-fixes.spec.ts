@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { linkCaughtUp, linkStatus, serverState } from './connected'
+import { linkRev, linkStatus, serverState } from './connected'
 import { beginNewJourney, dialogueState, frames, readDialogue, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, silasSays } from './home-helpers'
 
@@ -40,6 +40,11 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.error')).toContainText('may have gone through')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  // A step while offline: the reconnect has a write of its own to send before
+  // it replays the purchase (whose stored answer then carries an older rev).
+  await expect.poll(() => linkStatus(page)).toBe('offline')
+  const silas = (await homes(page)).features!.silas
+  await go(page, 'commons', silas.tx, silas.ty + 3)
   // The link reconnects by itself and replays the same request: it landed.
   await expectToast(page, 'went through after all', { timeout: 30_000 })
   await expect.poll(() => linkStatus(page)).toBe('online')
@@ -49,9 +54,11 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
 
   // A lost upgrade: tier 1 lands, and Orrin's foundation paper still arrives.
   // (expectToast below needs a newer 'went through' toast than the purchase's.)
-  // Spend only once the link has adopted the replayed purchase's revision: a
-  // spend sent before that is refused as stale (see .agent/REPORT.md).
-  await linkCaughtUp(page)
+  // The replay leaves the link on the server's revision, so the next spend
+  // isn't refused as stale (bugs #4: it used to fall a revision behind).
+  await expect
+    .poll(async () => (await linkRev(page)) === (await serverState(page)).body.rev, { message: 'the link is on the server’s revision', timeout: 5_000 })
+    .toBe(true)
   await loseNextAnswer(page, '/api/homestead/upgrade')
   await silasSays(page, /Raise a cottage/)
   await expectToast(page, 'may have gone through')
