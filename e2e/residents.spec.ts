@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, savedFlags, seedSave, warp } from './helpers'
+import { beginNewJourney, dialogueState, readDialogue, savedFlags, seedSave, warp, waitForLive, expectToast } from './helpers'
 import { shot } from './home-helpers'
 
 /**
@@ -40,34 +40,21 @@ async function setDay(page: Page, wick: number, day: number): Promise<void> {
  */
 async function converse(page: Page, name: string, snap?: string, opts: { bust?: boolean; toast?: string } = {}): Promise<string[]> {
   await expect(page.locator('.prompt')).toContainText(`Talk to ${name}`)
-  await page.waitForTimeout(200)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: `Conversation with ${name}` })
   await expect(dialogue).toBeVisible()
   // The delivered 64-px dialogue bust (Commons pass).
   if (opts.bust) await expect(dialogue.locator('.portrait.bust img')).toBeVisible()
   // A first meeting notes them in the journal (the toast lasts a few seconds).
-  if (opts.toast) await expect(page.locator('.toast', { hasText: opts.toast })).toBeVisible()
-  const lines: string[] = []
-  for (let i = 0; i < 30 && (await dialogue.isVisible()); i++) {
-    // Finish the typewriter, read the line, then move on.
-    const caretOn = await dialogue.locator('.caret.on').count()
-    if (caretOn) {
-      await page.keyboard.press('e')
-      await page.waitForTimeout(120)
-      continue
-    }
-    const text = (await dialogue.locator('.line').textContent())?.trim() ?? ''
-    if (text && lines.at(-1) !== text) {
-      lines.push(text)
-      if (snap && lines.length === 1) {
-        await page.waitForTimeout(400)
-        await shot(page, snap)
-      }
-    }
-    await page.keyboard.press('e')
-    await page.waitForTimeout(220)
+  if (opts.toast) await expectToast(page, opts.toast)
+  if (snap && process.env.SCREENS) {
+    // The first line, typed out.
+    await page.waitForFunction(() => !(window as unknown as { __fsDialogue: () => { typing: boolean } }).__fsDialogue().typing)
+    await shot(page, snap)
   }
+  await readDialogue(page)
+  const lines = (await dialogueState(page)).said.map((l) => l.trim())
   await expect(dialogue).toBeHidden()
   return lines
 }

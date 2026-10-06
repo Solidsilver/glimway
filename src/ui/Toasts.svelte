@@ -1,6 +1,24 @@
 <script lang="ts">
   import { ui } from './store.svelte'
   import ArtIcon from './ArtIcon.svelte'
+
+  // Read-only, for playtests (dev builds): every toast shown so far, in
+  // order, so a test can check one that came and went while it looked away.
+  if (import.meta.env.DEV) {
+    const seen: { n: number; text: string; kind: string }[] = []
+    const ids = new Set<string>()
+    let count = 0
+    $effect(() => {
+      for (const t of ui.toasts) {
+        if (ids.has(t.id)) continue
+        ids.add(t.id)
+        count += 1
+        seen.push({ n: count, text: t.text, kind: t.kind ?? 'info' })
+        if (seen.length > 100) seen.shift()
+      }
+    })
+    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count, seen: [...seen] })
+  }
 </script>
 
 <div class="toasts" aria-live="polite">

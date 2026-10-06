@@ -1,6 +1,6 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, hold, warp, waitForArea } from './helpers'
+import { beginNewJourney, holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, waitFrames, expectLine } from './helpers'
 import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 
 /**
@@ -15,14 +15,19 @@ import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 type SeatView = { seated: boolean; bonus: number; mana: number; maxMana: number; x: number; y: number }
 const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSeat?: () => SeatView }).__fsSeat?.() ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
+/** The Mana meter shows `value` within `seconds` of game time (regen runs on the game clock). */
+const manaShows = (page: Page, value: string, seconds: number) =>
+  waitFrames(page, (v: string) => document.querySelector('.bar.mana[role="meter"]')?.getAttribute('aria-valuenow') === v, value, { seconds, message: `mana ${value}` })
 
 test('the bench seats the hero, mana comes back, movement stands up', async ({ page }) => {
   await beginNewJourney(page)
 
   // Spend some mana first, so the seated regen has something to fill.
   await warp(page, 'village', 9, 14)
+  await waitForLive(page)
   await page.keyboard.press('f')
-  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '5', { timeout: 10_000 })
+  await manaShows(page, '5', 10)
+  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '5')
 
   await expect(page.locator('.prompt')).toContainText('Sit on the bench')
   await page.keyboard.press('e')
@@ -31,10 +36,11 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
   await expect.poll(async () => (await seat(page))?.bonus).toBe(5)
 
   // Seated, mana returns quickly to full (5/s standing would take twice as long).
-  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '20', { timeout: 10_000 })
+  await manaShows(page, '20', 10)
+  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '20')
 
   // Any movement key stands the hero up, back where they sat from.
-  await hold(page, 'ArrowLeft', 400)
+  await holdUntil(page, 'ArrowLeft', async () => (await seat(page))?.seated === false)
   await expect.poll(async () => (await seat(page))?.seated).toBe(false)
   const spot = await seat(page)
   expect(spot!.bonus).toBe(0)
@@ -45,14 +51,15 @@ test('smelling the flowers says something different each time', async ({ page })
   await warp(page, 'village', 22, 8) // the planter by the lane
   await expect(page.locator('.prompt')).toContainText('Smell the flowers')
 
+  const before = await toastCount(page)
+  await waitForLive(page)
   await page.keyboard.press('e')
   await expect(page.locator('.toast').first()).toBeVisible()
-  const first = await page.locator('.toast').last().textContent()
+  const first = await toastAfter(page, before)
   expect(FLOWER_LINES).toContain(first!.trim())
 
-  await page.waitForTimeout(400)
   await page.keyboard.press('e')
-  const second = await page.locator('.toast').last().textContent()
+  const second = await toastAfter(page, before + 1)
   expect(FLOWER_LINES).toContain(second!.trim())
   expect(second!.trim(), 'the flowers vary their line').not.toBe(first!.trim())
 })
@@ -64,11 +71,8 @@ test('reading the signpost opens a conversation and closes it', async ({ page })
   await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
   await expect(dialogue).toBeVisible()
-  await expect(dialogue).toContainText('signpost')
-  for (let i = 0; i < 10 && (await dialogue.isVisible()); i++) {
-    await page.keyboard.press('e')
-    await page.waitForTimeout(250)
-  }
+  await expectLine(page, 'signpost')
+  await readDialogue(page)
   await expect(dialogue).toBeHidden()
 })
 

@@ -336,26 +336,32 @@ npm test            # unit tests: node --test tests/*.test.ts
 npm run build       # production bundle in dist/
 npm run verify      # all four of the above
 go vet ./... && go test ./...   # the server, shared content and parity vectors
-npm run test:e2e    # browser playtests (Playwright)
+npm run test:smoke  # the critical-path playtests (a few minutes)
+npm run test:changed  # the playtests for what this branch changed
+npm run test:e2e    # every browser playtest (Playwright)
 npm run verify:all  # verify, then the playtests
 ```
 
 First time running the playtests: `npx playwright install chromium`.
 
-The playtests start their own servers: Vite with the dev-only playtest levers,
-the real Go server with a throwaway database under `.e2e-server/`, and a fake
-habitica.com for its login check. Guest specs block `/api` in the browser, so
-they still play as if no server existed. Give each git worktree its own ports:
+The playtests run in parallel (`E2E_WORKERS`, default half the cores, 2 to
+6). Each worker starts its own Go server, database and fake habitica.com on
+free ports, the first time it runs a connected test; one Vite dev server, with
+the dev-only playtest levers, is shared, and sends each browser's `/api` to its
+worker's server. Guest specs block `/api` in the browser, so they still play as
+if no server existed. Give each git worktree its own Vite port:
 
 ```sh
-E2E_PORT=5203 E2E_API_PORT=18203 E2E_HABITICA_PORT=18303 npm run test:e2e
+E2E_PORT=5203 npm run test:smoke
 E2E_PORT=5203 npx playwright test e2e/presence.spec.ts   # one spec
 ```
 
-Defaults are 5199, 18203 and 18303. The config runs **one worker**: the
-playtests drive real-time movement, and two browsers on one busy machine drop
-enough frames to miss timed walks. On a heavily loaded machine an occasional
-90-second timeout can still happen; rerun with `npx playwright test --last-failed`.
+While working, run `test:smoke` and `test:changed`; run the full suite once per
+merge batch. `test:changed` maps changed files to specs through
+`e2e/changed-map.json` (add your spec there). Tests wait on game state
+through read-only dev hooks, never on fixed pauses. The tiers, the per-worker
+servers, how to write a playtest and how to debug a flaky one are in
+[docs/testing.md](docs/testing.md).
 
 The playtests in `e2e/` cover the whole quest including settling the warden,
 combat and dodging, embers, onboarding and its layout, the Commons and
@@ -436,6 +442,9 @@ Provenance, licenses and attribution: [ASSETS.md](ASSETS.md),
 The page exposes read-only hooks for playtests: `__fsPlayer`, `__fsEnemies`,
 `__fsWarden`, `__fsWorld`, `__fsSafety`, `__fsDebug`, `__fsLink`, `__fsWilds`,
 `__fsPapers`, `__fsHomes`, `__fsVillage`, `__fsRemote` and `__fsPresence`.
+Dev builds add read-only hooks the tests wait on: `__fsFrame` (frames since the
+area was built, the fade, whether input is live), `__fsDialogue`, `__fsToasts`,
+`__fsBanners` and `__fsDevSaved` (see docs/testing.md).
 Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
 `__fsDevStrike(n)`, `__fsDevWarp(area, tx, ty)`, `__fsDevDodge(dx, dy)`,
 `__fsDevSpeakNaming(force)`, `__fsDevPlace(x, y)` and `__fsDevCalendar(unix)`.

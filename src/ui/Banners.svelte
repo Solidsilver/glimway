@@ -12,6 +12,16 @@
   let timer: number | null = null
   let shownId: string | null = null
 
+  // Read-only, for playtests (dev builds): the banners shown so far, in
+  // order (a card lasts a few seconds of wall time, which a busy test can miss).
+  const shownLog: { kind: string; title: string }[] = []
+  if (import.meta.env.DEV) {
+    ;(window as unknown as { __fsBanners?: () => unknown }).__fsBanners = () => ({
+      current: current ? { kind: current.kind, title: current.title } : null,
+      shown: [...shownLog]
+    })
+  }
+
   $effect(() => {
     const b = current
     if (!b) {
@@ -25,6 +35,7 @@
     if (b.id === shownId) return
     shownId = b.id
     ui.shownBannerId = b.id
+    if (import.meta.env.DEV) shownLog.push({ kind: b.kind, title: b.title })
     sfx(b.kind === 'quest' ? 'quest' : 'step-area')
     if (timer !== null) window.clearTimeout(timer)
     timer = window.setTimeout(() => dismiss(b.id), b.kind === 'quest' ? 4200 : 2600)

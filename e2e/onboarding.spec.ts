@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { MOCK_TOKEN, MOCK_USER, mockHabitica, rememberedRecord, savedRecordText, waitForArea, warp } from './helpers'
+import { MOCK_TOKEN, MOCK_USER, mockHabitica, rememberedRecord, savedRecordText, waitForArea, warp, frames, expectToast } from './helpers'
 
 const labeled = `User ID: ${MOCK_USER}\nAPI Token: ${MOCK_TOKEN}`
 
@@ -140,13 +140,14 @@ test('connect guide also works from the Menu, and Pip nudges a guest once', asyn
 
   // Pip, once, at the gate.
   await warp(page, 'village', 39, 10)
-  await expect(page.locator('.toast', { hasText: 'connect your Habitica hero' })).toBeVisible()
+  await expectToast(page, 'connect your Habitica hero')
   await expect.poll(async () => (await savedRecordText(page)).includes('nudge:pip-gate')).toBe(true)
   const nudge = page.locator('.toast', { hasText: 'connect your Habitica hero' })
   await expect(nudge).toBeHidden({ timeout: 8000 })
   await warp(page, 'village', 10, 10)
   await warp(page, 'village', 39, 10)
-  await page.waitForTimeout(800)
+  // Pip would speak up within a few frames at the gate: give him the chance.
+  await frames(page, 48)
   await expect(nudge).toHaveCount(0)
 
   // Menu: same guide.

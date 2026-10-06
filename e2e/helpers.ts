@@ -4,7 +4,12 @@ import { expect, type Page } from '@playwright/test'
  * Playtest helpers. Movement and interaction go through real keyboard input;
  * the dev hooks are only used to skip long walks (__fsDevWarp), long fights
  * (__fsDevStrike) and the warden encounter (__fsDevSpeakNaming), and the
- * read-only hooks for assertions.
+ * read-only hooks for assertions and for waiting.
+ *
+ * Wait on game state, never on the clock: under parallel workers a frame
+ * can take far longer than usual, so a fixed pause is either too short
+ * (flaky) or too long (slow). `settled`, `waitForLive`, `readDialogue` and
+ * `holdUntil` cover the usual cases; see docs/testing.md.
  */
 
 type AreaId = 'village' | 'woodland' | 'ruin' | (string & {})
@@ -17,6 +22,118 @@ type Hooks = {
   __fsDevSpeakNaming?: (force?: boolean) => boolean
   __fsWarden?: () => WardenView
   __fsWilds?: () => WildsDump | null
+  __fsFrame?: () => FrameView
+  __fsDialogue?: () => DialogueView
+  __fsToasts?: () => ToastsView
+}
+
+/** Per page and per text: the newest toast an expectToast already matched. */
+const toastsMatched = new WeakMap<Page, Map<string, number>>()
+
+/**
+ * A toast saying `text` has been shown: on screen now, or shown and faded
+ * already (toasts last ~4 s of wall time; a busy test can look too late).
+ * Each call matches a newer toast than the last call with the same text, so
+ * asserting the same toast twice needs it shown twice. For "after this
+ * action" precision, take toastCount before and use toastAfter.
+ */
+export async function expectToast(page: Page, text: RegExp | string, opts: { timeout?: number } = {}): Promise<string> {
+  const key = String(text)
+  const seen = toastsMatched.get(page) ?? new Map<string, number>()
+  toastsMatched.set(page, seen)
+  let hit: { n: number; text: string } | undefined
+  await expect
+    .poll(
+      async () => {
+        const t = await page.evaluate(() => (window as unknown as Hooks).__fsToasts?.() ?? { count: 0, seen: [] })
+        hit = t.seen.find((x) => x.n > (seen.get(key) ?? 0) && (typeof text === 'string' ? x.text.includes(text) : text.test(x.text)))
+        return !!hit
+      },
+      { message: `a toast saying ${text}`, timeout: opts.timeout }
+    )
+    .toBe(true)
+  seen.set(key, hit!.n)
+  return hit!.text
+}
+
+/** The area title cards shown so far, in order (dev hook; a card lasts ~2.6 s of wall time). */
+export async function areaCards(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    (window as unknown as { __fsBanners: () => { shown: { kind: string; title: string }[] } }).__fsBanners().shown.filter((b) => b.kind === 'area').map((b) => b.title)
+  )
+}
+
+/**
+ * The area title card for `title` has been shown and no other card since; one
+ * still on screen names it. (Instead of expecting `.area .title` on screen,
+ * which a busy test can check after the card has gone.)
+ */
+export async function expectAreaCard(page: Page, title: string): Promise<void> {
+  await expect.poll(async () => (await areaCards(page)).at(-1), { message: `the area card says ${title}` }).toBe(title)
+  const cards = await areaCards(page)
+  const since = cards.slice(cards.lastIndexOf(title))
+  expect(since, 'no other card after it').toEqual(since.map(() => title))
+  const onScreen = await page.evaluate(() => document.querySelector('.area .title')?.textContent?.trim() ?? null)
+  if (onScreen !== null) expect(onScreen).toBe(title)
+}
+
+/** window.__fsToasts(): every toast shown since the page loaded (dev builds). */
+export type ToastsView = { count: number; seen: { n: number; text: string; kind: string }[] }
+
+/** How many toasts have been shown so far (a mark for toastAfter). */
+export async function toastCount(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as Hooks).__fsToasts?.().count ?? 0)
+}
+
+/**
+ * The text of the first toast after toast number `since` (matching `text`,
+ * when given), even if it has already faded: toasts last ~4 s of wall time,
+ * which a busy test can miss.
+ */
+export async function toastAfter(page: Page, since: number, text?: RegExp | string, timeout?: number): Promise<string> {
+  let found = ''
+  await expect
+    .poll(async () => {
+      const t = await page.evaluate(() => (window as unknown as Hooks).__fsToasts?.() ?? { count: 0, seen: [] })
+      const hit = t.seen.find((x) => x.n > since && (text === undefined || (typeof text === 'string' ? x.text.includes(text) : text.test(x.text))))
+      found = hit?.text ?? ''
+      return !!hit
+    }, { message: `a toast${text ? ` saying ${text}` : ''} after #${since}`, timeout })
+    .toBe(true)
+  return found
+}
+
+/** window.__fsFrame(): how settled the current area is (dev builds). */
+export type FrameView = {
+  areaId: AreaId
+  /** Frames drawn since this area's scene was built. */
+  frames: number
+  /** Frames drawn since the game started (survives scene restarts). */
+  loop: number
+  /** The camera fade (in or out) is running. */
+  fading: boolean
+  transitioning: boolean
+  cinematic: boolean
+  /** World input (keys, E) would act right now. */
+  live: boolean
+}
+
+/** window.__fsDialogue(): the conversation panel (dev builds). */
+export type DialogueView = {
+  open: boolean
+  speaker: string
+  line: number
+  lines: number
+  /** Every line of this (or the last) conversation, replies included. */
+  said: string[]
+  typing: boolean
+  /** Replies come after the last line's typing ends. */
+  pending: boolean
+  /** The replies on screen now (null when none are offered). */
+  choices: { text: string; disabled: boolean }[] | null
+  /** Conversations opened since the page loaded, and the latest ones' text. */
+  opened: number
+  seen: { speaker: string; text: string }[]
 }
 
 /** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug). */
@@ -73,25 +190,121 @@ export async function beginNewJourney(page: Page): Promise<void> {
   await waitForArea(page, 'village')
 }
 
+/**
+ * The area's scene is built and settled: not mid-transition, its fade-in done
+ * and a few frames drawn, so held keys and E reach the new scene. (Replaces
+ * the old fixed 700 ms pause.) `match` narrows the area id.
+ */
+export async function settled(page: Page, match: { area?: string; prefix?: string } = {}): Promise<string> {
+  const handle = await page.waitForFunction(({ area, prefix }) => {
+    const f = (window as unknown as Hooks).__fsFrame?.()
+    if (!f || f.transitioning || f.fading || f.frames < 3) return null
+    const id = String(f.areaId)
+    if (area !== undefined && id !== area) return null
+    if (prefix !== undefined && !id.startsWith(prefix)) return null
+    return id
+  }, match)
+  return (await handle.jsonValue()) as string
+}
+
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
   const wilds = typeof area === 'string' && (area === 'wilds' || area.startsWith('chunk:inner-1'))
-  await page.waitForFunction(([a, inWilds]) => {
-    const s = (window as unknown as Hooks).__fsSafety?.()
-    if (!s || s.transitioning) return false
-    return inWilds ? String(s.areaId).startsWith('chunk:inner-1') : s.areaId === a
-  }, [String(area), wilds] as const)
-  // Let the fade-in and the input cool-down settle before driving keys.
-  await page.waitForTimeout(700)
+  await settled(page, wilds ? { prefix: 'chunk:inner-1' } : { area: String(area) })
 }
 
 /** The Wilds chunk scene that is live now (its chunk area id); `region` narrows it. */
 export async function waitForWilds(page: Page, region = 'inner-1'): Promise<string> {
-  const handle = await page.waitForFunction((r) => {
-    const s = (window as unknown as Hooks).__fsSafety?.()
-    return !!s && !s.transitioning && String(s.areaId).startsWith(`chunk:${r}`) ? s.areaId : null
-  }, region)
-  await page.waitForTimeout(700)
-  return (await handle.jsonValue()) as string
+  return settled(page, { prefix: `chunk:${region}` })
+}
+
+/** The frame state now (null before the world is up). */
+export async function frame(page: Page): Promise<FrameView | null> {
+  return page.evaluate(() => (window as unknown as Hooks).__fsFrame?.() ?? null)
+}
+
+/**
+ * World input is live: no dialogue or panel, not mid-transition, and past the
+ * short grace after a conversation closes (an E inside it is ignored).
+ */
+export async function waitForLive(page: Page, timeout?: number): Promise<void> {
+  await page.waitForFunction(() => (window as unknown as Hooks).__fsFrame?.()?.live === true, undefined, { timeout })
+}
+
+/**
+ * Wait for game behaviour that has a time window ("the slime lunges within
+ * two seconds"), measured in game time: a busy machine draws fewer frames per
+ * second and the game clock slows with it (each frame advances it at most
+ * 50 ms), so a wall-clock timeout would fail a game that is only slow. The
+ * window is `seconds` × 60 frames (and at least `seconds` of wall time);
+ * `wallCap` bounds it in wall time. Returns the last value read.
+ */
+export async function waitGame<T>(
+  page: Page,
+  read: () => Promise<T>,
+  ok: (v: T) => boolean,
+  opts: { seconds: number; message?: string; wallCap?: number }
+): Promise<T> {
+  const loop = async () => (await frame(page))?.loop ?? 0
+  const start = await loop()
+  const t0 = Date.now()
+  const cap = opts.wallCap ?? 60_000
+  for (;;) {
+    const v = await read()
+    if (ok(v)) return v
+    const late = (await loop()) - start > opts.seconds * 60 && Date.now() - t0 > opts.seconds * 1000
+    if (late || Date.now() - t0 > cap) {
+      throw new Error(`${opts.message ?? 'condition'}: not met within ${opts.seconds}s of game time (${Date.now() - t0} ms wall); last: ${JSON.stringify(v)}`)
+    }
+    await frames(page, 1)
+  }
+}
+
+/**
+ * Like waitGame, but checked inside the page on every frame, so a short-lived
+ * state (a slime's wind-up) can't slip between two polls. `predicate` runs
+ * in the page (no outer variables; pass them in `arg`) and returns a truthy
+ * value when done. `seconds` is game time, as in waitGame.
+ */
+export async function waitFrames<A, T>(
+  page: Page,
+  predicate: (arg: A) => T,
+  arg: A,
+  opts: { seconds: number; message?: string; wallCap?: number }
+): Promise<NonNullable<T>> {
+  const token = Math.random().toString(36).slice(2)
+  const handle = await page.waitForFunction(
+    ({ src, arg, seconds, token }) => {
+      type Wait = { loop: number; t: number; f: (a: unknown) => unknown }
+      const w = window as unknown as { __fsWaits?: Record<string, Wait>; __fsFrame?: () => { loop: number } }
+      const waits = (w.__fsWaits ??= {})
+      const loop = w.__fsFrame?.()?.loop ?? 0
+      const st = (waits[token] ??= { loop, t: performance.now(), f: (0, eval)(`(${src})`) as (a: unknown) => unknown })
+      const v = st.f(arg)
+      if (v) {
+        delete waits[token]
+        return { v }
+      }
+      if (loop - st.loop > seconds * 60 && performance.now() - st.t > seconds * 1000) {
+        delete waits[token]
+        return { late: true }
+      }
+      return null
+    },
+    { src: predicate.toString(), arg, seconds: opts.seconds, token },
+    { polling: 'raf', timeout: opts.wallCap ?? 60_000 }
+  )
+  const out = (await handle.jsonValue()) as { v?: T; late?: boolean }
+  if (out.late) throw new Error(`${opts.message ?? 'condition'}: not met within ${opts.seconds}s of game time`)
+  return out.v as NonNullable<T>
+}
+
+/** Let `n` more frames be drawn (game time, not wall time). */
+export async function frames(page: Page, n: number): Promise<void> {
+  await page.evaluate((count) => new Promise<void>((resolve) => {
+    let left = count
+    const tick = () => (--left <= 0 ? resolve() : requestAnimationFrame(tick))
+    requestAnimationFrame(tick)
+  }), n)
 }
 
 /** The read-only Wilds dump (null outside the Wilds). */
@@ -102,8 +315,8 @@ export async function wilds(page: Page): Promise<WildsDump> {
 }
 
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
+  // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => (window as unknown as Hooks).__fsDevWarp!(a, x, y), [area, tx, ty] as const)
-  await page.waitForFunction(() => (window as unknown as Hooks).__fsSafety?.().transitioning === true, undefined, { timeout: 2000 }).catch(() => {})
   await waitForArea(page, area)
 }
 
@@ -185,7 +398,10 @@ export async function stepToWarden(page: Page, dist: number, whenOpen: boolean):
   }), [dist, whenOpen] as const)
 }
 
-/** Hold a key for a while (real keydown/keyup, so Phaser sees it held). */
+/**
+ * Hold a key for a while (real keydown/keyup, so Phaser sees it held).
+ * Prefer holdUntil: how far a fixed hold walks depends on the frame rate.
+ */
 export async function hold(page: Page, key: string, ms: number): Promise<void> {
   await page.keyboard.down(key)
   await page.waitForTimeout(ms)
@@ -193,19 +409,15 @@ export async function hold(page: Page, key: string, ms: number): Promise<void> {
 }
 
 /**
- * Hold a key until a check passes (or a timeout): walks must survive a
- * loaded machine, where a fixed-duration hold may only cross half a tile.
- * The check runs between frames; the key lifts as soon as it passes.
+ * Hold a key until a check passes: walks must survive a loaded machine, where
+ * a fixed-duration hold may only cross half a tile. The check runs between
+ * frames; the key lifts as soon as it passes. `ms` is game time (see
+ * waitGame), so a slow machine is given the frames it needs.
  */
 export async function holdUntil(page: Page, key: string, check: () => Promise<boolean>, ms = 25_000): Promise<void> {
-  const until = Date.now() + ms
   await page.keyboard.down(key)
   try {
-    while (Date.now() < until) {
-      if (await check()) return
-      await page.waitForTimeout(120)
-    }
-    throw new Error(`holdUntil: ${key} never got there`)
+    await waitGame(page, check, (v) => v, { seconds: ms / 1000, message: `holdUntil: ${key} never got there`, wallCap: 120_000 })
   } finally {
     await page.keyboard.up(key)
   }
@@ -236,6 +448,130 @@ export async function expectStage(page: Page, stage: string): Promise<void> {
   await expect.poll(() => savedStage(page), { timeout: 10_000 }).toBe(stage)
 }
 
+export async function dialogueState(page: Page): Promise<DialogueView> {
+  return page.evaluate(() => (window as unknown as Hooks).__fsDialogue!())
+}
+
+/**
+ * Finish typing the last line before its replies. E would do it too, but if
+ * the typing ends on its own just before the key lands, E picks the focused
+ * reply instead; a click on the line only ever finishes typing. (Waiting the
+ * typing out is no good either: under load a line can take half a minute.)
+ */
+async function finishLine(page: Page): Promise<void> {
+  await page.locator('.dialogue .line').dispatchEvent('click')
+}
+
+/**
+ * Read the open conversation to its end, one press per change of state: E
+ * finishes or advances a line, and replies are picked when they show (`pick`
+ * names one; otherwise the first, by its number key). The last line before
+ * the replies is finished with a click (see finishLine), not E.
+ * Returns once the panel has closed.
+ */
+export async function readDialogue(page: Page, opts: { pick?: RegExp; picked?: (text: string) => void } = {}): Promise<void> {
+  let picked = false
+  for (let i = 0; i < 80; i++) {
+    const s = await dialogueState(page)
+    if (!s.open) return
+    const before = JSON.stringify([s.open, s.line, s.lines, s.typing, !!s.choices])
+    if (s.choices) {
+      const want = !picked && opts.pick ? s.choices.findIndex((c) => opts.pick!.test(c.text)) : 0
+      if (want < 0) throw new Error(`no reply matches ${opts.pick}: ${s.choices.map((c) => c.text).join(' | ')}`)
+      picked = true
+      opts.picked?.(s.choices[want].text)
+      await page.keyboard.press(String(want + 1))
+    } else if (s.typing && s.pending && s.line + 1 >= s.lines) {
+      await finishLine(page)
+    } else {
+      await page.keyboard.press('e')
+    }
+    await page
+      .waitForFunction((b) => {
+        const d = (window as unknown as Hooks).__fsDialogue!()
+        return JSON.stringify([d.open, d.line, d.lines, d.typing, !!d.choices]) !== b
+      }, before, { timeout: 5000 })
+      .catch(() => {}) // a press that didn't land is simply pressed again
+  }
+  throw new Error('the conversation never closed')
+}
+
+/** Press E at an interactable once its prompt shows and world input is live; the conversation opens. */
+export async function openTalk(page: Page, prompt: RegExp | string): Promise<void> {
+  await expect(page.locator('.prompt')).toContainText(prompt)
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
+}
+
+/**
+ * Talk at the prompt and read the conversation through (first replies picked);
+ * returns everything said in the conversations it opened.
+ */
+export async function talkText(page: Page, prompt: RegExp | string): Promise<string> {
+  const from = (await dialogueState(page)).opened
+  await openTalk(page, prompt)
+  await readDialogue(page)
+  await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeHidden()
+  const d = await dialogueState(page)
+  return d.seen.filter((_, i) => d.opened - d.seen.length + i >= from).map((x) => x.text).join('\n')
+}
+
+/**
+ * The open conversation's current line (or its speaker) says `text`. Checks
+ * the whole line, not the typed-out part: under load the typewriter can take
+ * half a minute over one line.
+ */
+export async function expectLine(page: Page, text: RegExp | string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const d = await dialogueState(page)
+        return d.open ? `${d.speaker}\n${d.said[d.line] ?? ''}` : null
+      },
+      { message: `the conversation's line says ${text}` }
+    )
+    .toMatch(typeof text === 'string' ? new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) : text)
+}
+
+/** Press on through the open conversation until the line on screen matches `line`. */
+export async function untilLine(page: Page, line: RegExp): Promise<void> {
+  for (let i = 0; i < 40; i++) {
+    const s = await dialogueState(page)
+    if (!s.open) throw new Error(`the conversation closed before a line matching ${line}`)
+    if (line.test(s.said[s.line] ?? '')) return
+    if (s.choices || (s.typing && s.pending && s.line + 1 >= s.lines)) throw new Error(`replies came before a line matching ${line}`)
+    const before = JSON.stringify([s.line, s.typing])
+    await page.keyboard.press('e')
+    await page
+      .waitForFunction((b) => {
+        const d = (window as unknown as Hooks).__fsDialogue!()
+        return !d.open || JSON.stringify([d.line, d.typing]) !== b
+      }, before, { timeout: 5000 })
+      .catch(() => {})
+  }
+  throw new Error(`no line matching ${line}`)
+}
+
+/** Press on through the open conversation until its replies are on screen. */
+export async function untilChoices(page: Page): Promise<NonNullable<DialogueView['choices']>> {
+  for (let i = 0; i < 80; i++) {
+    const s = await dialogueState(page)
+    if (!s.open) throw new Error('the conversation closed without offering replies')
+    if (s.choices) return s.choices
+    const before = JSON.stringify([s.line, s.typing])
+    if (s.typing && s.pending && s.line + 1 >= s.lines) await finishLine(page)
+    else await page.keyboard.press('e')
+    await page
+      .waitForFunction((b) => {
+        const d = (window as unknown as Hooks).__fsDialogue!()
+        return !d.open || !!d.choices || JSON.stringify([d.line, d.typing]) !== b
+      }, before, { timeout: 5000 })
+      .catch(() => {})
+  }
+  throw new Error('no replies were offered')
+}
+
 /**
  * Press E at an interactable (its prompt must be showing), then read the
  * conversation through: E finishes/advances lines, and the first reply is
@@ -243,14 +579,11 @@ export async function expectStage(page: Page, stage: string): Promise<void> {
  */
 export async function talkThrough(page: Page, prompt: RegExp): Promise<void> {
   await expect(page.locator('.prompt')).toContainText(prompt)
+  await waitForLive(page)
   await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
   await expect(dialogue).toBeVisible()
-  for (let i = 0; i < 40 && (await dialogue.isVisible()); i++) {
-    if (await page.locator('.choice').first().isVisible().catch(() => false)) await page.keyboard.press('1')
-    else await page.keyboard.press('e')
-    await page.waitForTimeout(250)
-  }
+  await readDialogue(page)
   await expect(dialogue).toBeHidden()
 }
 
@@ -325,11 +658,45 @@ export async function savedRecordText(page: Page): Promise<string> {
 }
 
 /**
+ * The guest save on disk has caught up with the game: no debounced save is
+ * waiting, and its area and position are the ones the game holds. Wait for it
+ * before editing the save by hand or reloading to test persistence.
+ */
+export async function savedToDisk(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const mem = (window as unknown as { __fsDevSaved?: () => { area: string; position: { x: number; y: number }; pending: boolean } }).__fsDevSaved?.()
+          if (!mem || mem.pending) return false
+          const db = await new Promise<IDBDatabase>((resolve, reject) => {
+            const req = indexedDB.open('fingersnap')
+            req.onsuccess = () => resolve(req.result)
+            req.onerror = () => reject(req.error)
+          })
+          try {
+            const rec = await new Promise<{ state?: { area?: string; position?: { x: number; y: number } } } | undefined>((resolve) => {
+              const req = db.transaction('saves').objectStore('saves').get('current')
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => resolve(undefined)
+            })
+            const s = rec?.state
+            return !!s && s.area === mem.area && s.position?.x === mem.position.x && s.position?.y === mem.position.y
+          } finally {
+            db.close()
+          }
+        }),
+      { message: 'the save on disk matches the game' }
+    )
+    .toBe(true)
+}
+
+/**
  * Rewrite the saved guest game (story flags added, quest stage set), then
  * reload and Continue: the quick way to a late-story save in a playtest.
  */
 export async function seedSave(page: Page, flags: string[], quest: string): Promise<void> {
-  await page.waitForTimeout(800)
+  await savedToDisk(page)
   await page.evaluate(
     async ([extra, stage]) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
