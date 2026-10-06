@@ -43,6 +43,26 @@ function pngSize(path: string): [number, number, number] {
   return [d.readUInt32BE(16), d.readUInt32BE(20), d.readUInt8(25)]
 }
 
+/** A WebP's pixel size (a VP8X, VP8L or VP8 payload). */
+function webpSize(path: string): [number, number] {
+  const d = readFileSync(path)
+  assert.equal(d.subarray(0, 4).toString('latin1') + d.subarray(8, 12).toString('latin1'), 'RIFFWEBP', `${path} is WebP`)
+  const chunk = d.subarray(12, 16).toString('latin1')
+  if (chunk === 'VP8X') return [d.readUIntLE(24, 3) + 1, d.readUIntLE(27, 3) + 1]
+  if (chunk === 'VP8L') {
+    // After the 0x2f signature: 14 bits width-1, then 14 bits height-1 (LSB first).
+    const bits = d.readUIntLE(21, 4)
+    return [(bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1]
+  }
+  assert.equal(chunk, 'VP8 ', `${path}: unexpected WebP chunk`)
+  return [d.readUInt16LE(26) & 0x3fff, d.readUInt16LE(28) & 0x3fff]
+}
+
+/** An image's pixel size, PNG or WebP (the dense packs ship as lossless WebP). */
+function imageSize(path: string): [number, number] {
+  return readFileSync(path).subarray(8, 12).toString('latin1') === 'WEBP' ? webpSize(path) : (pngSize(path).slice(0, 2) as [number, number])
+}
+
 test('every input the atlases were baked from is unchanged', () => {
   assert.equal(built.generatorVersion, ATLAS_GENERATOR_VERSION, RERUN)
   const expected = [
@@ -89,9 +109,10 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
     [built.runtime, runtime.frames],
     [built.items, items.frames],
   ] as const) {
-    const [w, h, color] = pngSize(join(PACKED, pack.image))
+    // Lossless WebP, verified texel-exact against its PNG by the build (which
+    // also keeps every frame's alpha: the read-back compares all four channels).
+    const [w, h] = webpSize(join(PACKED, pack.image))
     assert.deepEqual([w, h], pack.size, `${pack.image} size`)
-    assert.equal(color, 6, `${pack.image} keeps alpha`)
     assert.equal(pack.density, ART_DENSITY, `${pack.image} density`)
     for (const f of frames) {
       const r = pack.frames[f.key]
@@ -107,12 +128,12 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
   }
   // Every atlas fits a phone GPU's texture limit.
   for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, ...Object.values(built.atlases).map((a) => a.image)]) {
-    const [w, h] = pngSize(join(PACKED, image))
+    const [w, h] = imageSize(join(PACKED, image))
     assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
   }
   const cell = 16 * ART_DENSITY
   assert.deepEqual([built.terrain.cell, built.terrain.density], [cell, ART_DENSITY])
-  assert.deepEqual(pngSize(join(PACKED, built.terrain.image)).slice(0, 2), [cell * 4, cell * 4], `terrain is the 4×4 tileset of ${cell}-texel cells`)
+  assert.deepEqual(imageSize(join(PACKED, built.terrain.image)), [cell * 4, cell * 4], `terrain is the 4×4 tileset of ${cell}-texel cells`)
 })
 
 test('scaled atlases keep every frame name, at their baked size', () => {

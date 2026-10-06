@@ -7,7 +7,7 @@ import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, re
  * inventory icons for tools, supplies, keepsakes, home goods and papers,
  * plus world sprites and the Tolley Mill. The 12 source PNGs stay in
  * assets/generated/items-pass/; the build bakes their native frames into
- * the packed atlas (scripts/build-atlases.ts → packed-items / items.png).
+ * the packed atlas (scripts/build-atlases.ts → packed-items / items.webp).
  *
  * Each frame becomes one native-size canvas texture under `items-art:<frame>`,
  * nearest-neighbour blitted from the packed atlas. Tool conditions and item

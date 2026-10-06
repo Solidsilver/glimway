@@ -12,16 +12,21 @@
  * terrain) are dense: each native frame canvas is ART_DENSITY texels per
  * world px, its measured source rect box-filtered (area-averaged) into its
  * destination rect, so the game keeps the paintings' detail and draws them
- * nearest-neighbour at the same world size (src/game/density.ts). The
- * GPU-scaled atlases keep their nearest-neighbour blit at their largest
+ * nearest-neighbour at the same world size (src/game/density.ts). The GPU-scaled
+ * atlases keep their nearest-neighbour blit at their largest
  * on-screen size. After writing, every frame is read back from the encoded
  * PNG and compared with the canvas it came from; any difference fails the
- * build. The output is committed (deploy builds don't need a browser), and
- * tests/atlases.test.ts fails when an input changed without a re-run.
+ * build. The dense packs then ship as lossless WebP (cwebp, dev machine
+ * only): the build verifies the WebP decodes to exactly the PNG's texels
+ * before writing it. The output is committed (deploy builds don't need a
+ * browser), and tests/atlases.test.ts fails when an input changed without a
+ * re-run.
  */
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { chromium } from '@playwright/test'
 import {
@@ -104,6 +109,17 @@ function pack(boxes: { id: string; w: number; h: number }[], pad: number): { siz
 }
 
 async function main(): Promise<void> {
+  // The dense packs ship as lossless WebP, so cwebp (and dwebp, which checks
+  // the encodes) must be installed (the art build only runs on the dev
+  // machine; the server never runs it).
+  for (const tool of ['cwebp', 'dwebp']) {
+    try {
+      execFileSync(tool, ['-version'], { stdio: 'ignore' })
+    } catch {
+      throw new Error(`${tool} not found: the atlas build encodes the dense packs as lossless WebP and verifies them — \`brew install webp\``)
+    }
+  }
+
   // ---- plan every canvas
   const commons = readJson<CommonsPassManifest>('assets/generated/commons-pass/manifest.json')
   const commonsSrc = new Map(commons.sources.map((s) => [s.key, `assets/generated/commons-pass/${s.file}`]))
@@ -177,11 +193,16 @@ async function main(): Promise<void> {
   })
   await page.goto(ORIGIN)
 
-  /** Bake jobs, pack them, encode, read back and verify. Returns PNG bytes. */
-  const bake = async (jobs: Job[], positions: Map<string, [number, number]>, size: [number, number]): Promise<Buffer> => {
+  /**
+   * Bake jobs, pack them, encode, read back and verify. Returns the PNG
+   * data URL, and optionally the atlas canvas's raw texels (base64 RGBA) —
+   * canvas-drawn content read back exactly, the same pixels the loaders'
+   * PNG decode provably holds (the read-back check compares them).
+   */
+  const bake = async (jobs: Job[], positions: Map<string, [number, number]>, size: [number, number], wantRaw = false): Promise<{ url: string; raw?: string }> => {
     const placed = jobs.map((j) => ({ ...j, at: positions.get(j.id)! }))
     const result = await page.evaluate(
-      async ({ placed, size, origin }) => {
+      async ({ placed, size, origin, wantRaw }) => {
         const images = new Map<string, HTMLImageElement>()
         const load = (url: string) =>
           new Promise<HTMLImageElement>((resolve, reject) => {
@@ -292,12 +313,71 @@ async function main(): Promise<void> {
           const b = canvases[i].getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, j.w, j.h).data
           for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) { bad.push(j.id); break }
         })
-        return { url, bad }
+        // The atlas canvas's raw texels, for the WebP decode check (base64 RGBA).
+        let raw: string | undefined
+        if (wantRaw) {
+          const data = actx.getImageData(0, 0, size[0], size[1]).data
+          let bin = ''
+          for (let i = 0; i < data.length; i += 0x8000) bin += String.fromCharCode(...data.subarray(i, i + 0x8000))
+          raw = btoa(bin)
+        }
+        return { url, bad, raw }
       },
-      { placed, size, origin: ORIGIN },
+      { placed, size, origin: ORIGIN, wantRaw },
     )
     if (result.bad.length) throw new Error(`encoded atlas differs from its canvases: ${result.bad.join(', ')}`)
-    return Buffer.from(result.url.slice(result.url.indexOf(',') + 1), 'base64')
+    return result
+  }
+
+  /**
+   * cwebp's lossless encoding of a pack PNG (`-exact` keeps transparent
+   * texels' RGB), with its exact decoded texels: dwebp's PAM dump is the
+   * untouched decode (2D-canvas reads premultiply WebP, which rounds
+   * low-alpha RGB, so the check can't go through one).
+   */
+  const encodeWebp = (png: Buffer): { webp: Buffer; w: number; h: number; rgba: Buffer } => {
+    const dir = mkdtempSync(join(tmpdir(), 'fingersnap-cwebp-'))
+    try {
+      const src = join(dir, 'pack.png')
+      writeFileSync(src, png)
+      execFileSync('cwebp', ['-lossless', '-z', '9', '-exact', '-quiet', src, '-o', join(dir, 'pack.webp')])
+      const webp = readFileSync(join(dir, 'pack.webp'))
+      execFileSync('dwebp', [join(dir, 'pack.webp'), '-pam', '-quiet', '-o', join(dir, 'pack.pam')])
+      const pam = readFileSync(join(dir, 'pack.pam'))
+      const mark = 'ENDHDR\n'
+      const end = pam.indexOf(mark) + mark.length
+      const field = (k: string): number => {
+        const m = new RegExp(`^${k} (\\d+)$`, 'm').exec(pam.subarray(0, end).toString('latin1'))
+        if (!m) throw new Error(`unexpected PAM header from dwebp (no ${k})`)
+        return Number(m[1])
+      }
+      const depth = field('DEPTH')
+      if (depth !== 4) throw new Error(`dwebp decoded ${depth} channels, expected RGBA`)
+      return { webp, w: field('WIDTH'), h: field('HEIGHT'), rgba: pam.subarray(end) }
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  /**
+   * Bake a dense pack and ship it as lossless WebP only: the WebP must
+   * decode to exactly the same texels as the PNG (which the read-back check
+   * above already holds to the baked canvases), or the build fails.
+   */
+  const bakeDenseWebp = async (name: string, jobs: Job[], positions: Map<string, [number, number]>, size: [number, number]): Promise<string> => {
+    const { url, raw } = await bake(jobs, positions, size, true)
+    const { webp, w, h, rgba } = encodeWebp(Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'))
+    const expect = Buffer.from(raw!, 'base64')
+    if (w !== size[0] || h !== size[1] || !rgba.equals(expect)) {
+      let at = 0
+      while (at < rgba.length && rgba[at] === expect[at]) at++
+      const p = Math.floor(at / 4)
+      throw new Error(
+        `${name}.webp does not decode to the PNG's texels: ${w}×${h} vs ${size[0]}×${size[1]}, texel (${p % size[0]}, ${Math.floor(p / size[0])}) channel ${at % 4}: ${expect[at]} → ${rgba[at]}`,
+      )
+    }
+    writeFileSync(join(OUT, `${name}.webp`), webp)
+    return `${name}.webp`
   }
 
   const rects = (jobs: Job[], at: Map<string, [number, number]>): Record<string, PackedRect> =>
@@ -309,19 +389,20 @@ async function main(): Promise<void> {
   // Canvas packs: frames are copied out whole, so no padding is needed.
   const cAll = [...commonsJobs, ...blitJobs]
   const cPack = pack(cAll.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
-  writeFileSync(join(OUT, 'commons.png'), await bake(cAll, cPack.at, cPack.size))
+  const commonsImage = await bakeDenseWebp('commons', cAll, cPack.at, cPack.size)
   const rPack = pack(runtimeJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
-  writeFileSync(join(OUT, 'runtime.png'), await bake(runtimeJobs, rPack.at, rPack.size))
+  const runtimeImage = await bakeDenseWebp('runtime', runtimeJobs, rPack.at, rPack.size)
   const iPack = pack(itemsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
-  writeFileSync(join(OUT, 'items.png'), await bake(itemsJobs, iPack.at, iPack.size))
+  const itemsImage = await bakeDenseWebp('items', itemsJobs, iPack.at, iPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
-  writeFileSync(join(OUT, 'terrain.png'), await bake(terrainJobs, tAt, [TILE * 4, TILE * 4]))
+  const terrainImage = await bakeDenseWebp('terrain', terrainJobs, tAt, [TILE * 4, TILE * 4])
 
   // GPU-scaled atlases: 2 px apart so scaled sampling never reaches a neighbour.
   const atlases: PackedManifest['atlases'] = {}
   for (const { plan, frames, jobs } of scaled) {
     const p = pack(jobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 2)
-    writeFileSync(join(OUT, `${plan.key}.png`), await bake(jobs, p.at, p.size))
+    const baked = await bake(jobs, p.at, p.size)
+    writeFileSync(join(OUT, `${plan.key}.png`), Buffer.from(baked.url.slice(baked.url.indexOf(',') + 1), 'base64'))
     const out: Record<string, AtlasFrameJson> = {}
     for (const { name, k, f } of frames) {
       const j = jobs.find((x) => x.id === name)!
@@ -385,10 +466,10 @@ async function main(): Promise<void> {
       scaled: Object.fromEntries(scaled.map(({ plan, frames }) => [plan.key, Object.fromEntries(frames.map(({ name, k }) => [name, Number(k.toFixed(6))]))])),
       backdrops: BACKDROPS,
     },
-    commons: { image: 'commons.png', size: cPack.size, density: ART_DENSITY, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
-    runtime: { image: 'runtime.png', size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
-    items: { image: 'items.png', size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
-    terrain: { image: 'terrain.png', size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
+    commons: { image: commonsImage, size: cPack.size, density: ART_DENSITY, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
+    runtime: { image: runtimeImage, size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
+    items: { image: itemsImage, size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
+    terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     atlases,
     backdrops,
   }

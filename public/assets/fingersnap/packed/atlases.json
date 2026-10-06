@@ -1,7 +1,7 @@
 {
  "version": 1,
  "generator": "scripts/build-atlases.ts",
- "generatorVersion": 2,
+ "generatorVersion": 3,
  "inputs": {
   "assets/generated/commons-pass/fingersnap-boundaries.png": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
   "assets/generated/commons-pass/fingersnap-camp-home.png": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
@@ -151,7 +151,7 @@
   ]
  },
  "commons": {
-  "image": "commons.png",
+  "image": "commons.webp",
   "size": [
    1763,
    1580
@@ -1321,7 +1321,7 @@
   }
  },
  "runtime": {
-  "image": "runtime.png",
+  "image": "runtime.webp",
   "size": [
    491,
    488
@@ -1493,7 +1493,7 @@
   }
  },
  "items": {
-  "image": "items.png",
+  "image": "items.webp",
   "size": [
    1136,
    1088
@@ -2523,7 +2523,7 @@
   }
  },
  "terrain": {
-  "image": "terrain.png",
+  "image": "terrain.webp",
   "size": [
    256,
    256
