@@ -125,6 +125,17 @@
       "specs": ["residents.spec.ts", "village.spec.ts", "mill.spec.ts"]
     },
     {
+      "paths": [
+        "src/game/repairs-art.ts",
+        "src/game/entities/repairs.ts",
+        "src/game/keepsakes.ts",
+        "src/lib/repairs.ts",
+        "content/repairs.json",
+        "server/internal/api/repairs.go"
+      ],
+      "specs": ["repairs.spec.ts"]
+    },
+    {
       "paths": ["src/game/nudges.ts", "src/lib/nudges.ts", "src/lib/habitica/**", "src/ui/habitica-local.ts", "src/ui/NamePrompt.svelte"],
       "specs": ["onboarding.spec.ts", "onboarding-layout.spec.ts", "connected.spec.ts"]
     },
