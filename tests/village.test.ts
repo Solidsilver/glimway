@@ -69,8 +69,8 @@ test('late project papers wait for the lit road', () => {
 
 test('recipes: batches the pack pays for, capped at the server’s 100', () => {
   const table = RECIPES.find((r) => r.id === 'craft-oak-table')!;
-  assert.equal(batchesAffordable(table, { timber: 17, fiber: 9 }), 2);
-  assert.equal(batchesAffordable(table, { timber: 17 }), 0);
+  assert.equal(batchesAffordable(table, { 'seasoned-timber': 17, fiber: 9 }), 2);
+  assert.equal(batchesAffordable(table, { 'seasoned-timber': 17 }), 0);
   const peg = RECIPES.find((r) => r.id === 'craft-wooden-peg')!;
   assert.equal(batchesAffordable(peg, { timber: 10_000 }), 100);
 });

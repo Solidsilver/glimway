@@ -115,6 +115,24 @@ export interface CommonsBlit {
  * (`decorationLayout`), the Wilds decor boxes, and the mirrored fence corner
  * at the end of a run. Native-size draws copy the native canvas instead.
  */
+export const COMMONS_DECORATION_IDS = new Set([
+  'wooden-stool',
+  'reading-chair',
+  'braided-rug',
+  'iron-lantern',
+  'oak-table',
+  'potted-fern',
+  'bookshelf',
+  'wash-basin',
+  'lantern-post',
+  'stone-hearth',
+  'carved-bed',
+  'woven-basket',
+  'display-stand',
+  'tool-rack',
+  'amber-sconce',
+])
+
 export function commonsBlitPlan(frames: readonly CommonsPassFrame[]): CommonsBlit[] {
   const byKey = new Map(frames.map((f) => [f.key, f]))
   const out = new Map<string, CommonsBlit>()
@@ -123,6 +141,7 @@ export function commonsBlitPlan(frames: readonly CommonsPassFrame[]): CommonsBli
     out.set(blitKey(frame.key, w, h, flipX), { frame: frame.key, w, h, flipX })
   }
   for (const it of HOMESTEAD_DATA.items) {
+    if (!COMMONS_DECORATION_IDS.has(it.id)) continue
     const f = byKey.get(it.id)
     if (!f) continue
     for (const quarter of [false, true]) {

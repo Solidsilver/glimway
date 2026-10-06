@@ -520,6 +520,46 @@ export interface CraftResponse extends Snapshot {
   result: WorkshopView & { recipeId: string; output: Asset; instanceIds: string[] };
 }
 
+/** Made at the cottage hearth (food, remedies, oils): the workshop view plus what the batch made. */
+export interface HearthCraftResponse extends Snapshot {
+  result: WorkshopView & { recipeId: string; output: Asset };
+}
+
+/** A recipe page copied at the writing desk: the workshop view plus the copies. */
+export interface DeskCopyResponse extends Snapshot {
+  result: WorkshopView & { pageId: string; qty: number };
+}
+
+/** One stack of green timber on a placed woodpile (seasons after a real day). */
+export interface WoodpileStack {
+  id: string;
+  homesteadId: string;
+  habiticaId: string;
+  qty: number;
+  stackedAt: number;
+  ready: boolean;
+  /** Seconds until it is seasoned (0 once ready). */
+  remaining: number;
+}
+
+export interface WoodpileView {
+  homesteadId: string;
+  placed: boolean;
+  stacks: WoodpileStack[];
+  readyCount: number;
+  totalTimber: number;
+}
+
+/** GET /api/homestead/woodpile: the stacks and the snapshot. */
+export interface WoodpileResponse extends Snapshot {
+  woodpile: WoodpileView;
+}
+
+/** Stack green timber, or collect seasoned timber (POST /api/homestead/woodpile). */
+export interface WoodpileActionResponse extends Snapshot {
+  result: WorkshopView & { woodpile: WoodpileView; action: 'stack' | 'collect' | string; collectedQty?: number };
+}
+
 export interface Mail {
   id: string;
   worldId: string;

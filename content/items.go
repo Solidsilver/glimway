@@ -143,7 +143,7 @@ var (
 // homestead instances (homestead_items) and papers are story flags.
 func (d ItemDef) Instanced() bool { return slices.Contains(instancedKinds, d.Kind) }
 func (d ItemDef) Stackable() bool {
-	return !d.Instanced() && d.Kind != "home-good" && d.Kind != "paper"
+	return !d.Instanced() && d.Kind != "home-good"
 }
 
 // AssetKind is the wire kind for moving it (mail, chests, gifts).

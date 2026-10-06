@@ -1,10 +1,16 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
+import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { loadWilds } from './wilds/data.ts';
 import { buildableKind, effectiveKind, homeLights, isLit, type Land, type Light } from './homestead-land.ts';
 
+/** Material ids a purchase bill may name: the Wilds materials, plus any material in the catalogue (seasoned timber). */
+const MATERIAL_ITEMS = new Set(
+  ((itemsRaw as { items: { id: string; kind: string }[] }).items ?? []).filter((i) => i.kind === 'material').map((i) => i.id)
+);
+
 export interface HomeGrid { width: number; height: number }
 export interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor')[]; minTier: number; embers: number; materials: Record<string, number> }
+export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor')[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
 export interface HomeRect { x: number; y: number; w: number; h: number }
 /**
@@ -98,8 +104,9 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   }
   const seen = new Set<string>();
   for (const v of h.items) {
-    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || typeof v.name !== 'string' || !v.name || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.footprint) || v.footprint.length !== 2 || !integer(v.footprint[0], 1) || !integer(v.footprint[1], 1) || v.footprint[0] > 12 || v.footprint[1] > 10 || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
-    for (const [id, qty] of Object.entries(v.materials)) if (!loadWilds().materials.includes(id) || !integer(qty, 1)) return bad();
+    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || typeof v.name !== 'string' || !v.name || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.footprint) || v.footprint.length !== 2 || !integer(v.footprint[0], 1) || !integer(v.footprint[1], 1) || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
+    if (v.craftOnly !== undefined && typeof v.craftOnly !== 'boolean') return bad();
+    for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || !integer(qty, 1)) return bad();
     seen.add(v.id);
   }
   if (!seen.has(h.lanternPosts.item)) return bad();

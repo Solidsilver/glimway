@@ -366,6 +366,10 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		if _, err = tx.ExecContext(ctx, "UPDATE item_instances SET condition=?,worn_day=? WHERE id=?", v.Condition, utcDay(now), v.ID); err != nil {
 			return out, err
 		}
+		// One draw is one bucket: a full stave bucket of well water.
+		if err = itemChange(ctx, tx, s, "water", 1, "draw", v.ID, now); err != nil {
+			return out, err
+		}
 	}
 	// Fittings wear on their own.
 	per := content.ItemsRules.Rules.Wear.PointsPerUse

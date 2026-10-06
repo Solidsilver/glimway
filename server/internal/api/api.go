@@ -103,7 +103,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items"}, r.URL.Path) {
+	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -180,6 +180,14 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.storageMutation(w, r)
 	case "POST /api/craft":
 		err = a.craft(w, r)
+	case "POST /api/hearth/craft":
+		err = a.hearthCraft(w, r)
+	case "POST /api/desk/copy":
+		err = a.deskCopy(w, r)
+	case "GET /api/homestead/woodpile":
+		err = a.woodpileRead(w, r)
+	case "POST /api/homestead/woodpile":
+		err = a.woodpileMutation(w, r)
 	case "GET /api/mail":
 		err = a.mailRead(w, r)
 	case "POST /api/mail":

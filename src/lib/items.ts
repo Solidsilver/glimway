@@ -135,7 +135,7 @@ function validEffects(list: unknown, allowed: readonly string[]): boolean {
 }
 
 export const isInstanced = (d: Pick<ItemDef, 'kind'>): boolean => INSTANCED.includes(d.kind);
-export const isStackable = (d: Pick<ItemDef, 'kind'>): boolean => !isInstanced(d) && d.kind !== 'home-good' && d.kind !== 'paper';
+export const isStackable = (d: Pick<ItemDef, 'kind'>): boolean => !isInstanced(d) && d.kind !== 'home-good';
 
 function validCosts(v: unknown, defs: Map<string, ItemDef>): boolean {
   if (!isObj(v) || Object.keys(v).length === 0) return false;

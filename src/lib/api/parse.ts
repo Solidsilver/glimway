@@ -22,6 +22,11 @@ import type {
   CalendarResponse,
   ContributeResponse,
   CraftResponse,
+  DeskCopyResponse,
+  HearthCraftResponse,
+  WoodpileActionResponse,
+  WoodpileResponse,
+  WoodpileView,
   Mail,
   MailActionResponse,
   MailResponse,
@@ -587,6 +592,71 @@ export function parseCraft(raw: unknown): CraftResponse {
       recipeId: str(r.recipeId),
       output: parseAsset(r.output),
       instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],
+    },
+  };
+}
+
+export function parseHearthCraft(raw: unknown): HearthCraftResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      recipeId: str(r.recipeId),
+      output: parseAsset(r.output),
+    },
+  };
+}
+
+export function parseDeskCopy(raw: unknown): DeskCopyResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      pageId: str(r.pageId),
+      qty: int(r.qty, 1),
+    },
+  };
+}
+
+export function parseWoodpile(v: unknown): WoodpileView {
+  const o = obj(v);
+  const stacks = Array.isArray(o.stacks) ? o.stacks : [];
+  return {
+    homesteadId: str(o.homesteadId),
+    placed: o.placed === true,
+    stacks: stacks.map((s) => {
+      const w = obj(s);
+      const remaining = num(w.remaining);
+      return {
+        id: str(w.id),
+        homesteadId: str(w.homesteadId),
+        habiticaId: str(w.habiticaId),
+        qty: int(w.qty, 1),
+        stackedAt: num(w.stackedAt),
+        ready: w.ready === true || remaining <= 0,
+        remaining: Math.max(0, remaining),
+      };
+    }),
+    readyCount: int(o.readyCount, 0),
+    totalTimber: int(o.totalTimber, 0),
+  };
+}
+
+export function parseWoodpileRead(raw: unknown): WoodpileResponse {
+  return { ...parseSnapshot(raw), woodpile: parseWoodpile(obj(raw).woodpile) };
+}
+
+export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
+  const r = obj(obj(raw).result);
+  return {
+    ...parseSnapshot(raw),
+    result: {
+      ...parseWorkshop(r),
+      woodpile: parseWoodpile(r.woodpile),
+      action: str(r.action),
+      collectedQty: typeof r.collectedQty === 'number' ? r.collectedQty : undefined,
     },
   };
 }

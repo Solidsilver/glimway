@@ -268,7 +268,8 @@
       ],
       "minTier": 1,
       "embers": 5,
-      "materials": {}
+      "materials": {},
+      "craftOnly": true
     },
     {
       "id": "wash-basin",
@@ -318,7 +319,7 @@
       "minTier": 1,
       "embers": 0,
       "materials": {
-        "timber": 10,
+        "seasoned-timber": 10,
         "fiber": 6
       }
     },
@@ -412,6 +413,267 @@
         "stone": 4,
         "amber": 1
       }
+    },
+    {
+      "id": "gate-shelf",
+      "name": "Gate shelf",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "writing-desk",
+      "name": "Writing desk",
+      "category": "furniture",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "keepsake-cabinet",
+      "name": "Keepsake cabinet",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "drying-rack",
+      "name": "Herb drying rack",
+      "category": "utility",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "apothecary-shelf",
+      "name": "Apothecary shelf",
+      "category": "furniture",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "woodpile",
+      "name": "Woodpile",
+      "category": "utility",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "raised-bed",
+      "name": "Raised bed",
+      "category": "utility",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "window-lamp",
+      "name": "Window lamp",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "naming-frame",
+      "name": "Naming-slip frame",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "pencil-map",
+      "name": "Pip's pencil map",
+      "category": "decor",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "pressed-flowers",
+      "name": "Pressed-flower frame",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "candle-hulls",
+      "name": "Candle hulls",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "carting-bunting",
+      "name": "Carting bunting",
+      "category": "decor",
+      "footprint": [
+        2,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "empty-chair",
+      "name": "The Empty Chair",
+      "category": "furniture",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor"
+      ],
+      "minTier": 1,
+      "embers": 4,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "closure-lamp",
+      "name": "Closure Night lamp",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 3,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
+      "id": "door-fox",
+      "name": "Door-fox",
+      "category": "decor",
+      "footprint": [
+        1,
+        1
+      ],
+      "where": [
+        "indoor",
+        "outdoor"
+      ],
+      "minTier": 1,
+      "embers": 2,
+      "materials": {},
+      "craftOnly": true
     }
   ]
 }

@@ -27,6 +27,7 @@ type HomeItem struct {
 	MinTier   int            `json:"minTier"`
 	Embers    int            `json:"embers"`
 	Materials map[string]int `json:"materials"`
+	CraftOnly bool           `json:"craftOnly,omitempty"`
 }
 
 // HomeRect is a rectangle in local grid tiles (reserved scenery on the land or in a room).
@@ -179,6 +180,27 @@ func validPosts(p LanternPosts) bool {
 	return true
 }
 
+// catalogueMaterials reads the catalogue's material ids straight from the
+// file (not the validated rules, which would make an initialization cycle:
+// the items loader checks its home goods against this file's homestead).
+var catalogueMaterials = func() map[string]bool {
+	var raw struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Kind string `json:"kind"`
+		} `json:"items"`
+	}
+	out := map[string]bool{}
+	if b, err := FS.ReadFile("items.json"); err == nil && json.Unmarshal(b, &raw) == nil {
+		for _, v := range raw.Items {
+			if v.Kind == "material" {
+				out[v.ID] = true
+			}
+		}
+	}
+	return out
+}()
+
 func ValidateHomestead(h Homestead) error {
 	bad := fmt.Errorf("invalid homestead")
 	if len(h.Tiers) != 5 || h.Indoor.Width != 12 || h.Indoor.Height != 10 || !validLand(h.Land) || !validLane(h.Lane) || !validReserved(h.OutdoorReserved, h.Outdoor()) || !validReserved(h.IndoorReserved, h.Indoor) || !validPosts(h.LanternPosts) || len(h.Items) == 0 {
@@ -206,7 +228,12 @@ func ValidateHomestead(h Homestead) error {
 			places[p] = true
 		}
 		for m, n := range v.Materials {
-			if !slices.Contains(WildsRules.Materials, m) || n <= 0 {
+			// A purchase bill may name any carried material (seasoned
+			// timber and their like), not only the Wilds four.
+			if !slices.Contains(WildsRules.Materials, m) && !catalogueMaterials[m] {
+				return bad
+			}
+			if n <= 0 {
 				return bad
 			}
 		}

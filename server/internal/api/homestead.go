@@ -108,6 +108,8 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			"DELETE FROM item_stacks WHERE location='storage' AND owner=?",
 			"DELETE FROM item_instances WHERE location='fitted' AND owner IN (SELECT id FROM item_instances WHERE location='storage' AND owner=?)",
 			"DELETE FROM item_instances WHERE location='storage' AND owner=?",
+			// The woodpile's stacks reference the homestead: they go before it.
+			"DELETE FROM woodpile_stacks WHERE homestead_id=?",
 			"DELETE FROM homestead_items WHERE homestead_id=?",
 			"DELETE FROM homestead_members WHERE homestead_id=?",
 			"DELETE FROM homesteads WHERE id=?",
@@ -143,6 +145,15 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 		ref      string
 	}
 	out := []row{}
+	// The woodpile's green timber (the pile's own currency), written off
+	// like the chest's stacks: it was on nobody's pack any more.
+	var pile int
+	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(qty),0) FROM woodpile_stacks WHERE homestead_id=?", home).Scan(&pile); err != nil {
+		return err
+	}
+	if pile > 0 {
+		out = append(out, row{woodpileCurrency, -pile, ref})
+	}
 	// The shared chest's stacks (every maker together), in the currencies
 	// the deposits used: storage:material:<id> / storage:item:<id>.
 	rows, err := tx.QueryContext(ctx, "SELECT item_def,SUM(qty) FROM item_stacks WHERE location='storage' AND owner=? GROUP BY item_def ORDER BY item_def", home)
@@ -725,6 +736,10 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	def, ok := content.HomeItemFor(req.ItemDef)
 	if !ok {
 		return "", fail(400, "invalid-item")
+	}
+	// Pieces made at the bench (or given by the story) are never sold.
+	if def.CraftOnly {
+		return "", fail(409, "craft-only")
 	}
 	if def.MinTier > h.Tier {
 		return "", fail(409, "tier-required")
