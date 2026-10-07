@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fingersnap/server/internal/store"
+	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"

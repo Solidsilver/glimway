@@ -16,7 +16,7 @@ export default function globalSetup(): void {
   }
   const dir = `.e2e-server/run-${process.pid}`
   mkdirSync(dir, { recursive: true })
-  execFileSync('go', ['build', '-o', `${dir}/fingersnap-server`, './server/cmd/fingersnap-server'], { stdio: 'inherit' })
+  execFileSync('go', ['build', '-o', `${dir}/glimway-server`, './server/cmd/glimway-server'], { stdio: 'inherit' })
   rmSync('.e2e-server/latest', { force: true })
   symlinkSync(`run-${process.pid}`, '.e2e-server/latest')
   // Workers inherit the environment the global setup leaves.

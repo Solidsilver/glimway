@@ -2,7 +2,7 @@ package land
 
 import (
 	"encoding/json"
-	"fingersnap/content"
+	"glimway/content"
 	"maps"
 	"os"
 	"slices"

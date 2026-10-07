@@ -36,7 +36,7 @@
   }: {
     session: Session
     onClose: () => void
-    /** The guide signed in to the Fingersnap server (connected mode starts). */
+    /** The guide signed in to the Glimway server (connected mode starts). */
     onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
     onLogout?: () => void
     /** Signed in but playing the guest save: switch to the world. */
@@ -113,7 +113,7 @@
           importError = 'That code looked right, but this browser wouldn’t let us save it.'
         })
     } catch {
-      importError = 'Hmm, that doesn’t look like a Fingersnap save code.'
+      importError = 'Hmm, that doesn’t look like a Glimway save code.'
     }
   }
 
@@ -267,13 +267,15 @@
     <section class="card">
       <h3 class="section-title"><Icon name="lantern" size={14} /> About</h3>
       {#if connected}
-        <p class="fine">Fingersnap plays in your browser. Your journey is kept in your world on the Fingersnap server; your Habitica token never is.</p>
+        <p class="fine">Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.</p>
       {:else}
-        <p class="fine">Fingersnap plays entirely in your browser — no account needed, and your saves never leave this device.</p>
+        <p class="fine">Glimway plays entirely in your browser — no account needed, and your saves never leave this device.</p>
       {/if}
-      <p class="tiny">
-        Avatar and companion art derived from Habitica (habitica.com), © HabitRPG / Weirdly Wonderful,
-        licensed CC BY-NC-SA 3.0; gear statistics derived from Habitica content data (GPL v3).
+      <p class="tiny" data-testid="credits">
+        Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed
+        <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>;
+        gear statistics derived from Habitica's content data (GPL-3.0). Glimway is not affiliated with or
+        endorsed by Habitica.
       </p>
       {#if !connected}
         <div class="row">
@@ -414,6 +416,9 @@
     font-size: 12px;
     color: var(--text-faint);
     line-height: 1.45;
+  }
+  .tiny a {
+    color: inherit;
   }
   .row {
     display: flex;

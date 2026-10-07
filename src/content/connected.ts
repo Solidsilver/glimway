@@ -1,5 +1,5 @@
 /**
- * Copy for connected play: signing in to a Fingersnap world, the first-login
+ * Copy for connected play: signing in to a Glimway world, the first-login
  * origin choice, the play lease, offline play, and invites. Plain and short.
  */
 import economyJson from '../../content/economy.json' with { type: 'json' }

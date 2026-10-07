@@ -1,6 +1,6 @@
 # Testing
 
-How Fingersnap is tested, which tier to run when, and how to chase a flaky
+How Glimway is tested, which tier to run when, and how to chase a flaky
 playtest. This is the one reference for the test workflow; the README's
 "Tests" section is the short version, and older notes (`build-status.md`,
 playtest records) describe how things ran at the time.
@@ -93,7 +93,7 @@ The suite runs in parallel: `E2E_WORKERS` workers (default: half the cores,
   `E2E_API_PORT` and `E2E_HABITICA_PORT` are no longer used. The Go binary is
   built once per run by `e2e/global-setup.ts`, into the run's own directory.
 - **Routing:** each browser context of a worker carries a `fs-e2e-api=<port>`
-  cookie, and the playtest Vite (`FINGERSNAP_E2E_ROUTING=1`,
+  cookie, and the playtest Vite (`GLIMWAY_E2E_ROUTING=1`,
   `e2e/server/vite-routing.mjs`) sends `/api` and the `/ws` socket to that
   port. Contexts a test makes itself with `browser.newContext()` get the cookie
   too.
@@ -129,7 +129,7 @@ same worker server.
 - `allow`, `adminInvite`, `setHabitica`, `fund`, `giveInstance` work as before;
 - `sql(statements)` from `e2e/connected.ts` runs SQL against this worker's
   database; `habiticaURL()` is the fake Habitica;
-- never hard-code `.e2e-server/fingersnap.sqlite` or a server port. (An old
+- never hard-code `.e2e-server/glimway.sqlite` or a server port. (An old
   spec that still passes that path to `execFileSync` is pointed at its
   worker's database, with a warning, so branches written before this change
   keep working.)

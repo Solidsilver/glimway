@@ -6,9 +6,9 @@ import (
 	"slices"
 	"testing"
 
-	"fingersnap/content"
-	"fingersnap/server/internal/land"
-	"fingersnap/server/internal/rules"
+	"glimway/content"
+	"glimway/server/internal/land"
+	"glimway/server/internal/rules"
 )
 
 func TestGatheringUnknownDefinitionsRollBack(t *testing.T) {

@@ -1,4 +1,4 @@
-module fingersnap
+module glimway
 
 go 1.26.0
 

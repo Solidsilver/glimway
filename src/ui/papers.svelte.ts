@@ -8,6 +8,7 @@ import { bus } from '../game/events'
 import { PAPER_EV, type PaperFoundPayload, type PapersSyncPayload } from '../game/papers'
 import { readJson, stringList, writeJson } from '../lib/local-json'
 
+// `fingersnap:` is the game's old name, kept so saved settings load.
 const SEEN_KEY = 'fingersnap:papers-seen'
 
 const loadSeen = (): string[] => readJson(SEEN_KEY, stringList, [])

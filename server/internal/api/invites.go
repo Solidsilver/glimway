@@ -3,8 +3,8 @@ package api
 import (
 	"database/sql"
 	"encoding/hex"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"net/http"
 	"strings"
 )

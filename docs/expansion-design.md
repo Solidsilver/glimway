@@ -1,4 +1,4 @@
-# Fingersnap expansion design: onboarding, homesteads, shared worlds
+# Glimway expansion design: onboarding, homesteads, shared worlds
 
 Status: revision 4 (2026-10-04), approved for implementation on the
 `expansion` branch.
@@ -115,13 +115,13 @@ Revision 3 incorporated a second review:
 
 Revision 2 incorporated the first review. Main changes from revision 1:
 
-- Logging in to Fingersnap and syncing with Habitica are now separate, and
+- Logging in to Glimway and syncing with Habitica are now separate, and
   there is an explicit design for remembering the sync credential
   ("sealed token").
 - Connected saves are split into a client-writable progress document and
   server-owned balances, with a field-by-field migration rule, save revisions,
   conditional writes, and an offline policy.
-- Worlds are persistent Fingersnap worlds with explicit membership, optionally
+- Worlds are persistent Glimway worlds with explicit membership, optionally
   linked to a Habitica party. Leaving a party moves no one at once (a party's
   world moves a leaver out after three days).
 - Generated regions pin their generator version, so generator updates never
@@ -165,7 +165,7 @@ changes an existing rule (mainly the security invariants and ember rules in
 
 ## Principles
 
-- **Habitica is who you are; Fingersnap is what you do in the world.** The
+- **Habitica is who you are; Glimway is what you do in the world.** The
   rules and audit are in [habitica-boundary.md](habitica-boundary.md).
 - **Habitica stays the source of progression.** Embers (XP turned currency)
   remain the main way real-life work enters the game. Homesteads and shared
@@ -240,7 +240,7 @@ An expandable section in the guide:
   game limits itself to reads in code that is public.
 - Where the token goes: memory only, unless the player ticks **Remember on
   this device** (see "Remembering the token" in section 4); sent to the
-  Fingersnap server only at login, to prove the account is theirs.
+  Glimway server only at login, to prove the account is theirs.
 
 ### In-world nudge
 
@@ -470,7 +470,7 @@ shared. Projects are authored content; only progress is server state.
 
 ### Shape
 
-- One Go binary, `fingersnap-server`, built from `server/` in this repo (one
+- One Go binary, `glimway-server`, built from `server/` in this repo (one
   Go module rooted at the repository root; see "Shared content and
   repository layout").
 - SQLite via `modernc.org/sqlite` (pure Go, no CGO, simple Nix packaging), in
@@ -478,12 +478,12 @@ shared. Projects are authored content; only progress is server state.
 - WebSockets via `github.com/coder/websocket` for presence (phase 6).
 - Runs on the home server next to the static site. Caddy handles TLS and
   routes `/api/*` and `/ws` to the Go server; `dist/` stays served as today.
-- Packaged with a NixOS module beside `deploy/nixos/fingersnap.nix`.
+- Packaged with a NixOS module beside `deploy/nixos/glimway.nix`.
 - Nightly SQLite backups (`VACUUM INTO`), with a tested restore procedure.
 
 ```
  Browser ──HTTPS──► Caddy ──► dist/ (static)
-    │                  └────► fingersnap-server ──► SQLite
+    │                  └────► glimway-server ──► SQLite
     │                                │
     │                                └──► habitica.com (one GET /user per login)
     └──────────────────────────────────► habitica.com (syncs, as today)
@@ -491,13 +491,13 @@ shared. Projects are authored content; only progress is server state.
 
 ### Login and sync are separate
 
-The Fingersnap session cookie proves who you are *to Fingersnap*. It cannot
+The Glimway session cookie proves who you are *to Glimway*. It cannot
 replace Habitica credentials, which every sync still needs. The two stay
 apart:
 
 | | What it is | Lifetime | Gives access to |
 |---|---|---|---|
-| **Fingersnap session** | HTTP-only cookie | 30 days, sliding | Your save, homestead, world |
+| **Glimway session** | HTTP-only cookie | 30 days, sliding | Your save, homestead, world |
 | **Habitica token** | Raw token, in memory or remembered on the device (opt-in) | Per visit, or until Forget | Reading your Habitica profile, from the browser |
 
 **Syncs go from the browser to Habitica, as today.** The server sees a token
@@ -531,10 +531,10 @@ per-IP rate limit is not a concern at this scale.
 - The connect guide offers **Remember on this device**, off by default.
 - When on, the User ID and token are stored in IndexedDB, in their own store,
   separate from saves. They are never included in save exports, never sent to
-  the Fingersnap server after login, and never logged.
+  the Glimway server after login, and never logged.
 - A visible **Forget** button deletes them. Disconnecting asks whether to
   forget too.
-- Exposure, stated plainly in the guide: a script injection on the Fingersnap
+- Exposure, stated plainly in the guide: a script injection on the Glimway
   origin could read a remembered token, and that token can write to the
   Habitica account. Players who don't want that leave the box unticked and
   paste per visit.
@@ -599,7 +599,7 @@ worlds) this is acceptable, with three limits:
 
 ### Worlds
 
-**A world is a persistent Fingersnap group with explicit membership.** It can
+**A world is a persistent Glimway group with explicit membership.** It can
 optionally be linked to a Habitica party.
 
 - A player's first login creates their own solo world, or joins one via the
@@ -608,7 +608,7 @@ optionally be linked to a Habitica party.
 - **Party link (optional convenience).** If a world is linked to a Habitica
   party, the server can tell members "these party members are allowlisted but
   not in this world" and offer them a join prompt. That is all the link does.
-- **Leaving a Habitica party changes nothing in Fingersnap.** Sync never moves
+- **Leaving a Habitica party changes nothing in Glimway.** Sync never moves
   a player between worlds; it does not even read the party.
 
 **Moving to another world** is a deliberate player action with a
@@ -911,7 +911,7 @@ content/                    Go package "content", canonical shared data
   embed.go                  //go:embed *.json  → content.FS
   items.json  tiers.json  loot.json  projects.json
   vectors/                  test vectors (sync rules, Wilds generation)
-server/                     Go packages (cmd/fingersnap-server, internal/…)
+server/                     Go packages (cmd/glimway-server, internal/…)
 src/                        frontend, imports ../content/*.json via Vite
 ```
 
@@ -981,7 +981,7 @@ src/                        frontend, imports ../content/*.json via Vite
 - `src/game/scenes/WorldScene.ts` is about 2,300 lines. Before adding the
   Commons, the Wilds, or remote players, split it into area construction,
   entity/enemy logic, and a network layer.
-- Add a Fingersnap API client beside `src/lib/habitica/`, with the same typed
+- Add a Glimway API client beside `src/lib/habitica/`, with the same typed
   error approach as `client.ts`.
 - Add event-bus events for server state (state loaded, superseded, epoch
   ended, homestead loaded).
@@ -1015,7 +1015,7 @@ Each phase ships on its own and delivers its own progression.
 
 Resolved in revision 2:
 
-- **What defines a world:** persistent Fingersnap worlds with explicit
+- **What defines a world:** persistent Glimway worlds with explicit
   membership; a Habitica party link is optional and only drives join prompts.
 - **Remembering credentials:** opt-in IndexedDB storage on the device, in
   phase 1 (revision 4).

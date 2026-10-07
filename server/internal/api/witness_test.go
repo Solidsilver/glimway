@@ -2,7 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"fingersnap/server/internal/rules"
+	"glimway/server/internal/rules"
 	"net/http"
 	"slices"
 	"testing"

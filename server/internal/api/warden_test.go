@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"fingersnap/content"
-	"fingersnap/server/internal/store"
-	"fingersnap/server/internal/wilds"
 	"fmt"
+	"glimway/content"
+	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"testing"
 	"time"
 )

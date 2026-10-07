@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
 	"fmt"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"slices"
 	"strings"
 	"testing"

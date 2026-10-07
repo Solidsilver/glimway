@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fingersnap/content"
+	"glimway/content"
 	"net/http"
 	"strings"
 	"testing"

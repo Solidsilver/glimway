@@ -1,5 +1,8 @@
 # Docs index
 
+> The game was called **Fingersnap** until October 2026, when it became Glimway. Older docs
+> (the history below) still use the old name.
+
 The project [README](../README.md) is the guide to the game, running it and
 its architecture. This folder holds two kinds of document:
 
@@ -36,6 +39,16 @@ its architecture. This folder holds two kinds of document:
 | [lore/chronicle.md](lore/chronicle.md) | The canon. `lore/texts/` holds the papers' source (`npm run papers`); `lore/drafts/` is unpublished writing |
 | [scaling.md](scaling.md) | Notes on scaling, for later (not needed yet) |
 | [ideas.md](ideas.md) | A canvas of ideas; nothing there is planned |
+
+**Habitica, licences and deploys**
+
+| Doc | What it covers |
+|---|---|
+| [habitica-boundary.md](habitica-boundary.md) | What the game may take from Habitica, and what stays there |
+| [habitica-policy.md](habitica-policy.md) | Habitica's rules for third-party tools, and the plan for telling staff |
+| [habitica-gold.md](habitica-gold.md) | Research and design for the gold purse |
+| [licensing-and-funding.md](licensing-and-funding.md) | Licence decisions, the Habitica art terms, funding research, the name |
+| [deploy-notes/](deploy-notes/glimway-rename.md) | One-off steps for the owner's server: [the Glimway rename](deploy-notes/glimway-rename.md) |
 
 Outside this folder: [ASSETS.md](../ASSETS.md) is the art and licence
 register, and `assets/generated/README.md` the art direction.

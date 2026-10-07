@@ -100,7 +100,7 @@ export interface HabiticaProfile {
 
 /**
  * Read-only Habitica surface. There are deliberately NO write methods:
- * Fingersnap never scores tasks, spends gold, changes stats, or touches
+ * Glimway never scores tasks, spends gold, changes stats, or touches
  * inventory (plan boundary).
  */
 export interface HabiticaClient {
@@ -138,6 +138,7 @@ export interface SaveExtras {
  * (no saveFormat) load as vitalsSource 'demo' with no imported profile.
  */
 export interface SaveDocumentV2 {
+  // The game's old name, kept so save codes made before the rename still import.
   kind: 'fingersnap-save';
   version: 1;
   saveFormat: 2;

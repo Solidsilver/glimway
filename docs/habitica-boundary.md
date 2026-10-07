@@ -7,10 +7,10 @@ that touches Habitica data, or that adds an item, slot or currency.
 
 ## The principle
 
-**Habitica is who you are. Fingersnap is what you do in the world.**
+**Habitica is who you are. Glimway is what you do in the world.**
 
 Your look, your class, your gear, your companions, your gold and your record
-of showing up all belong to Habitica, and you earn them there. Fingersnap
+of showing up all belong to Habitica, and you earn them there. Glimway
 shows the real ones and never hands out its own. The game fills the gaps:
 work tools, materials, crafted goods, homes, keepsakes and embers, which
 Habitica doesn't have. Keeping the earning in Habitica keeps the reason to
@@ -22,16 +22,16 @@ open Habitica.
 2. The game never makes its own copy of something Habitica has. If Habitica
    has it, show the player's real one. If the player doesn't own it, show
    nothing, not a stand-in.
-3. Game items fill gaps. A Fingersnap item must be something Habitica has no
+3. Game items fill gaps. A Glimway item must be something Habitica has no
    version of, or must do a job (chop, dig, carry, light) that Habitica gear
    doesn't do.
-4. Habitica gear decides how you look. Fingersnap items never draw over the
-   hero's worn Habitica gear, and Habitica gear never works as a Fingersnap
+4. Habitica gear decides how you look. Glimway items never draw over the
+   hero's worn Habitica gear, and Habitica gear never works as a Glimway
    tool.
 5. Any write to Habitica needs explicit consent each time, says what it will
    change in Habitica's own words ("this spends 120 of your Habitica gold"),
    and is logged in-game where the player can read it.
-6. Value flows into the game only. Nothing in Fingersnap pays out to Habitica
+6. Value flows into the game only. Nothing in Glimway pays out to Habitica
    (no gold, gems, items or XP).
 7. Guests have no Habitica self. The guest hero (Wren, classless, default
    look) is a stand-in for "no account", not a copy of anyone's things. Rules
@@ -48,7 +48,7 @@ and `server/internal/habitica/client.go`, plus what's planned.
 |---|---|---|---|
 | Who you are | `_id`, `profile.name` | Account key, name tags | OK |
 | Appearance | `preferences` (size, shirt, skin, hair, background, costume flag) | Hero and presence avatars | OK |
-| Class | `stats.class`, `flags.classSelected` | Combat kit, off-hand affinity | OK. The kits (bolt, cleave, dash, heal) are Fingersnap's own moves, not copies of Habitica skills |
+| Class | `stats.class`, `flags.classSelected` | Combat kit, off-hand affinity | OK. The kits (bolt, cleave, dash, heal) are Glimway's own moves, not copies of Habitica skills |
 | Worn gear | `items.gear.equipped`, `items.gear.costume` | Avatar layers; gear stats feed combat | OK |
 | Owned gear | `items.gear.owned` | Not read | Planned: in-game wardrobe, cosmetic only |
 | Pets and mounts | `items.pets`, `items.mounts`, `currentPet`, `currentMount` | Current pet and mount drawn on the avatar | OK. Planned: companions that follow you |
@@ -66,7 +66,7 @@ a genuine external change at sync. That's fine under the rules: the game
 never writes HP back and never lets a rest stand in for a Habitica heal at
 0 HP (that still needs embers earned from XP, or a real heal on Habitica).
 
-### From Fingersnap only
+### From Glimway only
 
 | What | Examples (`content/items.json`) |
 |---|---|
@@ -88,7 +88,7 @@ things sit near the line.
 
 1. **The off hand overlaps Habitica's shield slot.** Habitica's `shield` slot
    is the off hand, and the avatar already draws it. `OffHandVisual`
-   (`src/game/entities/off-hand.ts`) draws Fingersnap's carried thing at the
+   (`src/game/entities/off-hand.ts`) draws Glimway's carried thing at the
    hero's side too, so a hero with a Habitica Mystic Lamp equipped can show
    two lights in two hands. The game even uses Habitica's word for the slot,
    "the off hand" (it opens when you take a class,
@@ -98,7 +98,7 @@ things sit near the line.
 2. **Some tools share a name or idea with Habitica Armoire gear.** Habitica
    has a Lamplighter weapon (with a Lamplighter's Greatcoat and Top Hat), a
    Gardener's Spade, a Mining Pickax, a Battle Axe, a Bucket, a Mystic Lamp,
-   a Lifeguard Whistle, and several aprons and coats. Fingersnap has Nan's
+   a Lifeguard Whistle, and several aprons and coats. Glimway has Nan's
    lamplighter pole, Ada's garden spade, Orrin's mason pick, the bench axe,
    the stave bucket, Carter's lantern, whistles, the work apron and the
    carting coat. Under rule 3 these pass, because they're working tools with
@@ -128,7 +128,7 @@ Answer each before a brief goes out:
       player's real one, or leave it out.
 - [ ] Does the feature grant, unlock or earn anything that Habitica grants?
       It must not.
-- [ ] Does a Fingersnap item draw on the hero where Habitica gear is drawn
+- [ ] Does a Glimway item draw on the hero where Habitica gear is drawn
       (head, body, armor, back, weapon, shield, eyewear, headAccessory, pet,
       mount)? It must not.
 - [ ] Does it write to Habitica? Then: explicit consent each time, the exact
@@ -146,7 +146,7 @@ Answer each before a brief goes out:
 ## Open questions
 
 - **The wardrobe.** Owned but unequipped Habitica gear, shown as cosmetics.
-  Can a player wear a different outfit in Fingersnap than in Habitica, or
+  Can a player wear a different outfit in Glimway than in Habitica, or
   does the game always show Habitica's equipped and costume sets? Changing
   the outfit in Habitica would be a write (`POST /user/equip/...`).
 - **Companions.** Which pet follows: the current pet only, or any owned pet
@@ -158,6 +158,6 @@ Answer each before a brief goes out:
 - **Streaks and achievements.** What can recognition be (plaques, titles,
   a line from an NPC) without becoming a reward that pays in game items?
 - **Habitica gold beyond the purse.** Could a later feature buy Habitica
-  gear for the player from inside Fingersnap? That's a Habitica purchase
+  gear for the player from inside Glimway? That's a Habitica purchase
   made from the game; the rules say no until the owner says otherwise.
 - **The off-hand rename.** Owner's pick of name and placement (item 1 above).

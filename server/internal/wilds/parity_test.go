@@ -50,10 +50,10 @@ func TestTypeScriptParity(t *testing.T) {
 			Result           uint32 `json:"result"`
 		} `json:"lootSeeds"`
 		Entities []struct {
-			Epoch Epoch `json:"epoch"`
+			Epoch  Epoch `json:"epoch"`
 			Chunks []struct {
-				CX      int      `json:"cx"`
-				CY      int      `json:"cy"`
+				CX       int      `json:"cx"`
+				CY       int      `json:"cy"`
 				Entities []Entity `json:"entities"`
 			} `json:"chunks"`
 		} `json:"entities"`

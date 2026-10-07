@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fingersnap/content"
 	"fmt"
+	"glimway/content"
 	"strings"
 )
 

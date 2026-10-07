@@ -17,7 +17,7 @@ dist
 
 # Local Go backend data and binaries
 .data/
-/fingersnap-server
+/glimway-server
 
 # Connected playtests: throwaway server database and binary
 /.e2e-server/

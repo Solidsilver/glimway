@@ -1,6 +1,6 @@
 # Habitica's rules for third-party tools, and our plan
 
-Fingersnap is a third-party tool built on Habitica's API. This page sums up what Habitica asks of
+Glimway is a third-party tool built on Habitica's API. This page sums up what Habitica asks of
 such tools, where we stand today, and the plan for telling Habitica staff about the game. The gold
 research behind the purse is in [habitica-gold.md](habitica-gold.md), and what the game may take
 from Habitica is in [habitica-boundary.md](habitica-boundary.md).
@@ -34,17 +34,17 @@ from Habitica is in [habitica-boundary.md](habitica-boundary.md).
 The rules don't mention gold or editing user data, except for the stop-when-you-can't rule. The form
 is a heads-up, not an approval step. Tools don't need permission to use the API.
 
-## Where Fingersnap stands today (read-only)
+## Where Glimway stands today (read-only)
 
 | Rule | Status |
 |---|---|
-| `x-client` header | Done. The server sends `<owner id>-fingersnap` (`server/cmd/fingersnap-server/main.go`). |
+| `x-client` header | Done. The server sends `<owner id>-glimway` (`server/cmd/glimway-server/main.go`). |
 | API v3 only | Done. |
 | Rate limit | Done. Sign-in makes a handful of calls, and our own login limits sit well below Habitica's. |
 | Background pacing | Not applicable. Nothing runs without the player. |
 | Stop on failure | Not applicable while read-only. The purse design follows it. |
 | Token openness | Done. The server never stores the token. The opt-in "remember" keeps it only in the player's browser, and the connect guide says so. |
-| Public code | **Not yet.** The repo has no remote and isn't public. |
+| Public code | **Ready, not yet pushed.** AGPL-3.0-or-later, with the licences, the README and `CONTRIBUTING.md` in place; publishing is the owner's step (`https://github.com/Solidsilver/glimway`). |
 | Told staff | **Not yet.** Planned once it's polished (below). |
 
 **Using the read-only game on your own account is fine.** Reading your own profile with your own
@@ -62,6 +62,12 @@ it. See [habitica-gold.md](habitica-gold.md).
   so it shouldn't apply. Mention it when submitting anyway.
 - **"Read-only" copy:** the README, the connect guide and the import contract all promise the game
   is read-only. Change all three in the same release as the purse.
+
+  > **TODO (gold purse):** the read-only promise is still true and still stated. When the purse
+  > ships, rewrite it in the README ("How your Habitica token is handled"), the connect guide
+  > (`src/content/connect-guide.ts`) and
+  > [import-contract.md](import-contract.md) to say exactly what the purse writes, and check the
+  > in-game About card.
 - **Testing:** test against a throwaway Habitica account before any real one.
 
 ## Plan for telling Habitica
@@ -73,9 +79,9 @@ Before publishing:
 - **Secrets and history.** Scan the whole git history for tokens, keys, `.data/` databases and
   private notes, since publishing exposes every past commit. Commits carry the owner's Gmail
   address as author; decide whether that's fine.
-- **Licences.** Pick a code licence, and separately a licence for the original Fingersnap art.
-  `ASSETS.md` says neither is chosen yet. Check that every bundled Habitica sprite carries Habitica's
-  CC-BY-NC-SA terms in `ASSETS.md`.
+- ~~**Licences.**~~ Done 2026-10-07: code AGPL-3.0-or-later, our art CC0 1.0, and Habitica's
+  sprites (CC BY-NC-SA 3.0, HabitRPG, Inc.) and gear numbers (GPL-3.0) each carry a notice. See
+  `ASSETS.md` and the README.
 - **Size.** `.git` is about 154 MB, mostly generated art. That's fine for GitHub, but Git LFS for
   `assets/generated/` is worth considering before history grows further.
 - **Working notes.** The `.agent/` folders are gitignored. Check that no review or brief with

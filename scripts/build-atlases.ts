@@ -541,7 +541,7 @@ async function main(): Promise<void> {
    * low-alpha RGB, so the check can't go through one).
    */
   const encodeWebp = (png: Buffer): { webp: Buffer; w: number; h: number; rgba: Buffer } => {
-    const dir = mkdtempSync(join(tmpdir(), 'fingersnap-cwebp-'))
+    const dir = mkdtempSync(join(tmpdir(), 'glimway-cwebp-'))
     try {
       const src = join(dir, 'pack.png')
       writeFileSync(src, png)
@@ -779,7 +779,7 @@ async function main(): Promise<void> {
     }
     writeFileSync(
       join(OUT, `${plan.key}.json`),
-      JSON.stringify({ frames: out, meta: { app: 'Fingersnap build-atlases', image: `${plan.key}.png`, format: 'RGBA8888', size: { w: p.size[0], h: p.size[1] }, scale: '1' } }, null, 1) + '\n',
+      JSON.stringify({ frames: out, meta: { app: 'Glimway build-atlases', image: `${plan.key}.png`, format: 'RGBA8888', size: { w: p.size[0], h: p.size[1] }, scale: '1' } }, null, 1) + '\n',
     )
     atlases[plan.key] = { image: `${plan.key}.png`, json: `${plan.key}.json` }
   }

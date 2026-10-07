@@ -30,6 +30,7 @@ export const INNER_REGION_ID = 'inner-1';
 export const OUTER_REGION_ID = 'outer-1';
 
 /** Guests' world seed (both regions). */
+// The game's old name, kept so guests' wilds stay the same.
 export const GUEST_WORLD_SEED = 'fingersnap-guest';
 
 // ------------------------------------------------------------ epochs

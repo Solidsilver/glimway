@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fingersnap/server/internal/api"
-	"fingersnap/server/internal/habitica"
-	"fingersnap/server/internal/store"
 	"flag"
 	"fmt"
+	"glimway/server/internal/api"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/store"
 	"log"
 	"net"
 	"net/http"
@@ -19,36 +19,61 @@ import (
 	"time"
 )
 
+// env reads GLIMWAY_<name>, then the deprecated FINGERSNAP_<name> (the
+// game's old name, still read so existing deploys keep working).
 func env(name, fallback string) string {
-	if v := os.Getenv(name); v != "" {
-		return v
+	for _, prefix := range []string{"GLIMWAY_", "FINGERSNAP_"} {
+		if v := os.Getenv(prefix + name); v != "" {
+			return v
+		}
 	}
 	return fallback
 }
+
+// lookupEnv is env for settings where an empty value means something.
+func lookupEnv(name string) (string, bool) {
+	if v, ok := os.LookupEnv("GLIMWAY_" + name); ok {
+		return v, true
+	}
+	return os.LookupEnv("FINGERSNAP_" + name)
+}
+
+// defaultDB is .data/glimway.sqlite, or the old .data/fingersnap.sqlite when
+// only that one exists, so a local database from before the rename still opens.
+func defaultDB() string {
+	const path, old = ".data/glimway.sqlite", ".data/fingersnap.sqlite"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if _, err = os.Stat(old); err == nil {
+			return old
+		}
+	}
+	return path
+}
+
 func run(args []string) error {
-	f := flag.NewFlagSet("fingersnap-server", flag.ContinueOnError)
-	addr := f.String("listen", env("FINGERSNAP_LISTEN", "127.0.0.1:8090"), "HTTP listener")
-	path := f.String("db", env("FINGERSNAP_DB", ".data/fingersnap.sqlite"), "SQLite database path")
-	base := f.String("habitica-url", env("FINGERSNAP_HABITICA_URL", "https://habitica.com"), "Habitica base URL")
-	spriteBase := f.String("habitica-assets-url", env("FINGERSNAP_HABITICA_ASSETS_URL", api.DefaultSpriteBaseURL), "Habitica sprite host (outfit art the bundled cache lacks)")
-	spriteDir := f.String("sprite-cache", env("FINGERSNAP_SPRITE_CACHE", ""), "Folder for fetched Habitica sprites (default: habitica-sprites beside the database)")
-	tag := f.String("x-client", env("FINGERSNAP_X_CLIENT", "5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap"), "Habitica creator-id-appname")
+	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
+	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
+	path := f.String("db", env("DB", defaultDB()), "SQLite database path")
+	base := f.String("habitica-url", env("HABITICA_URL", "https://habitica.com"), "Habitica base URL")
+	spriteBase := f.String("habitica-assets-url", env("HABITICA_ASSETS_URL", api.DefaultSpriteBaseURL), "Habitica sprite host (outfit art the bundled cache lacks)")
+	spriteDir := f.String("sprite-cache", env("SPRITE_CACHE", ""), "Folder for fetched Habitica sprites (default: habitica-sprites beside the database)")
+	tag := f.String("x-client", env("X_CLIENT", "5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway"), "Habitica creator-id-appname")
 	trustedDefault := "127.0.0.1,::1"
-	if v, ok := os.LookupEnv("FINGERSNAP_TRUSTED_PROXIES"); ok {
+	if v, ok := lookupEnv("TRUSTED_PROXIES"); ok {
 		trustedDefault = v
 	}
 	trusted := f.String("trusted-proxies", trustedDefault, "Comma-separated trusted proxy IPs (empty disables forwarded headers)")
 	concurrency := f.Int("login-concurrency", 4, "Maximum simultaneous upstream login proofs")
 	rate := f.Int("login-rate", 10, "Login attempts per IP or IPv6 /64 per minute")
 	globalRate := f.Int("login-global-rate", 60, "Maximum upstream login calls per minute, including retries")
-	secureDefault, err := strconv.ParseBool(env("FINGERSNAP_COOKIE_SECURE", "true"))
+	secureDefault, err := strconv.ParseBool(env("COOKIE_SECURE", "true"))
 	if err != nil {
-		return fmt.Errorf("invalid FINGERSNAP_COOKIE_SECURE")
+		return fmt.Errorf("invalid GLIMWAY_COOKIE_SECURE")
 	}
 	secure := f.Bool("cookie-secure", secureDefault, "Secure session cookies (disable only for local HTTP)")
-	partyDefault, err := strconv.ParseBool(env("FINGERSNAP_PARTY_ADMISSION", "true"))
+	partyDefault, err := strconv.ParseBool(env("PARTY_ADMISSION", "true"))
 	if err != nil {
-		return fmt.Errorf("invalid FINGERSNAP_PARTY_ADMISSION")
+		return fmt.Errorf("invalid GLIMWAY_PARTY_ADMISSION")
 	}
 	partyAdmission := f.Bool("party-admission", partyDefault, "Let members of a party with a world here sign in without a code, and make party worlds")
 	if err = f.Parse(args); err != nil {
@@ -225,7 +250,7 @@ func run(args []string) error {
 			return fmt.Errorf("unknown command")
 		}
 	}
-	logger := log.New(os.Stdout, "fingersnap ", log.LstdFlags|log.LUTC)
+	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
 	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission})
 	defer handler.ClosePresence()
 	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}

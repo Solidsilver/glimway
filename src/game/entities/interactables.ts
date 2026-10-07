@@ -330,7 +330,7 @@ export class Interactables {
         })
         : this.storyTalk(target.id, dialogueFor(target.id, session.questStage))
     } catch (err) {
-      console.warn('[fingersnap] no dialogue available for', target.id, err)
+      console.warn('[glimway] no dialogue available for', target.id, err)
       return
     }
     // A paper to hand over rides at the end of the NPC's usual lines.

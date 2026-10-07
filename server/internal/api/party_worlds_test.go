@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fingersnap/content"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"reflect"

@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fingersnap/content"
 	"fmt"
+	"glimway/content"
 	"io"
 	"net/http"
 	"os"
@@ -72,7 +72,7 @@ var errSpriteMissing = errors.New("sprite-missing")
 
 func newSpriteProxy(dir, base string, now func() time.Time) *spriteProxy {
 	if dir == "" {
-		dir = filepath.Join(os.TempDir(), "fingersnap-sprites")
+		dir = filepath.Join(os.TempDir(), "glimway-sprites")
 	}
 	if base == "" {
 		base = DefaultSpriteBaseURL

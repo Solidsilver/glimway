@@ -47,7 +47,7 @@ export function connectSession(userId: string, apiToken: string): HabiticaCreden
   const credentials: HabiticaCredentials = {
     userId,
     apiToken,
-    clientTag: `${creator ?? 'unknown-creator'}-fingersnap`
+    clientTag: `${creator ?? 'unknown-creator'}-glimway`
   }
   connectionSession.credentials = credentials
   // No gearStats passed: the shared client applies its own default, the

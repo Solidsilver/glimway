@@ -1,0 +1,26 @@
+Habitica sprites: CC BY-NC-SA 3.0, (c) HabitRPG, Inc.
+
+The images in this folder are Habitica's avatar, gear, pet and mount art,
+by HabitRPG, Inc. and the volunteer artists who assigned their work to it.
+They are copied byte for byte from Habitica's public image host
+(https://habitica-assets.s3.amazonaws.com/mobileApp/images/), unmodified;
+manifest.json records each file's source URL and checksum.
+
+They are licensed under the Creative Commons Attribution-NonCommercial-
+ShareAlike 3.0 Unported licence (CC BY-NC-SA 3.0):
+https://creativecommons.org/licenses/by-nc-sa/3.0/
+Habitica's own licence statement:
+https://github.com/HabitRPG/habitica/blob/develop/LICENSE
+
+What that means here:
+- Credit: HabitRPG, Inc. (https://habitica.com), with a link to the licence.
+- Non-commercial: anyone who copies these files, or runs a Glimway server that
+  serves them (from this folder or from the server's sprite cache), must not
+  do so in a way primarily intended for or directed toward commercial
+  advantage or private monetary compensation. This limit applies to this art,
+  not to Glimway's code (AGPL-3.0-or-later) or its own art (CC0).
+- ShareAlike: a changed version of any of these images must carry the same
+  licence. Glimway only draws them as they are, layered the way Habitica does.
+
+Glimway is not affiliated with or endorsed by Habitica or HabitRPG, Inc.
+"Habitica" is a trademark of HabitRPG, Inc.

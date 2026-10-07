@@ -1,7 +1,7 @@
 package store
 
 import (
-	"fingersnap/content"
+	"glimway/content"
 	"slices"
 	"strconv"
 	"strings"

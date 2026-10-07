@@ -7,6 +7,7 @@
  */
 import { readJson, stringList, writeJson } from '../lib/local-json'
 
+// `fingersnap:` is the game's old name, kept so saved settings load.
 const SEEN_KEY = 'fingersnap:inventory-seen'
 /** When each key was seen: one stamp per look at the bag (a batch), newest highest. */
 const SEEN_AT_KEY = 'fingersnap:inventory-seen-at'

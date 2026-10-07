@@ -105,7 +105,7 @@ export class Session {
           importedProfile: save.importedProfile ?? null
         })
       } catch (err) {
-        console.warn('[fingersnap] sync save failed', err)
+        console.warn('[glimway] sync save failed', err)
         bus.emit(EV.toast, {
           text: 'Your character arrived, but this browser wouldn\u2019t let us save it. Nothing changed.',
           kind: 'error'
@@ -156,7 +156,7 @@ export class Session {
     try {
       this.state = advanceQuest(this.state, event)
     } catch (err) {
-      console.warn('[fingersnap] advanceQuest rejected event', event, err)
+      console.warn('[glimway] advanceQuest rejected event', event, err)
       const toast: ToastPayload = { text: 'The story hiccupped — that step didn\u2019t take. Try again?', kind: 'error' }
       bus.emit(EV.toast, toast)
       return
@@ -369,7 +369,7 @@ export class Session {
         importedProfile: this.importedProfile
       })
     } catch (err) {
-      console.warn('[fingersnap] save failed', err)
+      console.warn('[glimway] save failed', err)
       bus.emit(EV.toast, {
         text: 'Couldn\u2019t save just now — your latest steps may not stick.',
         kind: 'error'
@@ -422,7 +422,7 @@ export class Session {
       vitalsSource: finalVitalsSource,
       importedProfile: finalProfile
     }).catch((err) => {
-      console.warn('[fingersnap] final save failed', err)
+      console.warn('[glimway] final save failed', err)
     })
   }
 }

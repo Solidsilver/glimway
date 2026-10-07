@@ -7,7 +7,7 @@ installLegacyDbPath()
  * Shared test fixture: every playtest fails on an uncaught page error, so new
  * runtime code can't throw silently behind a passing assertion.
  *
- * Guest playtests also run as if no Fingersnap server existed (a static
+ * Guest playtests also run as if no Glimway server existed (a static
  * deploy): same-origin /api requests fail like a dead network. Connected
  * specs opt in with `test.use({ server: true })` and reach their worker's own
  * Go server (e2e/server/backend.ts) through the shared Vite: every browser

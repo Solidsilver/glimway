@@ -15,6 +15,7 @@ import { itemDef } from '../lib/items'
 import { HEARTH_RECIPES } from '../lib/workshop'
 
 /** One pin per player and world on this device (src/game/held.ts deviceKey). */
+// `fingersnap:` is the game's old name, kept so saved pins load.
 let key = 'fingersnap:pinned-guide:guest'
 
 function load(): string | null {

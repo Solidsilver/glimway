@@ -82,7 +82,7 @@ function parseRetryAfterMs(headerValue: string | null): number {
 /**
  * Read-only Habitica client. Exactly one operation: fetch and map the
  * authenticated user's profile. There are no write methods by design —
- * Fingersnap never changes a Habitica account.
+ * Glimway never changes a Habitica account.
  */
 export function createHabiticaClient(options: HabiticaClientOptions): HabiticaClient {
   const {

@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"fingersnap/server/internal/store"
+	"glimway/server/internal/store"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,12 +40,12 @@ func TestServerSourcesAreNotGitIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, line := range strings.Split(string(b), "\n") {
-		if strings.TrimSpace(line) == "fingersnap-server" {
+		if strings.TrimSpace(line) == "glimway-server" {
 			t.Fatal("binary ignore also excludes server sources")
 		}
 	}
 	for _, name := range []string{"main.go", "main_test.go"} {
-		path := "server/cmd/fingersnap-server/" + name
+		path := "server/cmd/glimway-server/" + name
 		if _, err = os.Stat("../../../" + path); err != nil {
 			t.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func TestServerSourcesAreNotGitIgnored(t *testing.T) {
 	}
 }
 func TestNixUsesEnvCGO(t *testing.T) {
-	b, err := os.ReadFile("../../../deploy/nixos/fingersnap-server.nix")
+	b, err := os.ReadFile("../../../deploy/nixos/glimway-server.nix")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,5 +101,23 @@ func TestPartyCommands(t *testing.T) {
 		if err = run(append([]string{"-db", path}, cmd...)); err == nil {
 			t.Fatalf("accepted invalid CLI %v", cmd)
 		}
+	}
+}
+
+// GLIMWAY_* wins; the deprecated FINGERSNAP_* name still works on its own.
+func TestEnvFallsBackToOldName(t *testing.T) {
+	t.Setenv("GLIMWAY_LISTEN", "")
+	t.Setenv("FINGERSNAP_LISTEN", "old:1")
+	if got := env("LISTEN", "default"); got != "old:1" {
+		t.Fatalf("old name ignored: %q", got)
+	}
+	t.Setenv("GLIMWAY_LISTEN", "new:2")
+	if got := env("LISTEN", "default"); got != "new:2" {
+		t.Fatalf("new name lost to old: %q", got)
+	}
+	t.Setenv("FINGERSNAP_TRUSTED_PROXIES", "10.0.0.1")
+	t.Setenv("GLIMWAY_TRUSTED_PROXIES", "")
+	if v, ok := lookupEnv("TRUSTED_PROXIES"); !ok || v != "" {
+		t.Fatalf("an empty GLIMWAY_TRUSTED_PROXIES must trust none, got %q %v", v, ok)
 	}
 }

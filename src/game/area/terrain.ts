@@ -93,7 +93,7 @@ export interface GroundTileset {
 export function groundTileset(scene: Phaser.Scene): GroundTileset {
   const k = artDensity(scene)
   const cell = TILE * k
-  const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
+  const manifest = scene.cache.json.get('glimway-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
   const names: string[] = []
   for (let i = 0; i < 16; i++) names.push(manifest?.terrain.tiles[i] ?? `cell-${i}`)
   const edges = EDGE_FRAMES.filter((f) => scene.textures.exists(`commons-art:${f}`))
@@ -346,7 +346,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   )
 
   // The tileset's cells: the base tiles, the old cells, then each overlay (×4 when it shows water).
-  const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
+  const manifest = scene.cache.json.get('glimway-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
   const oldNames = Array.from({ length: 16 }, (_, i) => manifest?.terrain.tiles[i] ?? `cell-${i}`)
   const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
   const art = sceneArt(scene)
@@ -587,7 +587,7 @@ export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: World
       if (key) edges.set(key, edgeHasWater(parseEdgeKey(key).n))
     }),
   )
-  const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
+  const manifest = scene.cache.json.get('glimway-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
   const oldNames = Array.from({ length: 16 }, (_, i) => manifest?.terrain.tiles[i] ?? `cell-${i}`)
   const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
   forceMainThread = true

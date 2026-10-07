@@ -2,7 +2,7 @@ package store
 
 import (
 	"database/sql"
-	"fingersnap/server/internal/rules"
+	"glimway/server/internal/rules"
 	"os"
 	"path/filepath"
 	"sync"

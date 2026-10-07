@@ -41,7 +41,7 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(typeof createItemsPass, 'function')
   assert.equal(typeof installItemsPass, 'function')
   assert.equal(typeof itemIcon, 'function')
-  assert.equal(ITEMS_PASS_MANIFEST_KEY, 'fingersnap-items-pass')
+  assert.equal(ITEMS_PASS_MANIFEST_KEY, 'glimway-items-pass')
   assert.equal(ITEMS_PASS_BASE, '/assets/fingersnap/items-pass/')
   assert.equal(ITEMS_ART_PREFIX, 'items-art:')
   assert.equal(ITEMS_PACKED_KEY, 'packed-items')

@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fingersnap/content"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"net/http"
 )
 

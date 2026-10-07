@@ -38,7 +38,7 @@ adapter starts from evidence instead of assumptions. No credentials were used.
   The CORS preflight confirms `x-client` is allowed (live).
 - **Background automation** (guidelines doc): 30 s delay between API calls,
   including GET. Stop automatic calls when an action can no longer complete.
-  Fingersnap is manual/conservative sync only: one `GET /user` per explicit
+  Glimway is manual/conservative sync only: one `GET /user` per explicit
   sync action, never per frame or per combat event.
 - **Public repository**: tools used by others must have publicly reviewable
   source (guidelines doc). Plan already commits to this.
@@ -57,7 +57,7 @@ adapter starts from evidence instead of assumptions. No credentials were used.
   before shipping** (unverified until then).
 - Useful read endpoints for the planned mapping (source: controllers):
   - `GET /api/v3/user` (character stats/class/gear/appearance/pets/mounts)
-  - `GET /api/v3/tasks/user` (reward tasks incl. custom Fingersnap rewards
+  - `GET /api/v3/tasks/user` (reward tasks incl. custom Glimway rewards
     and their gold `value`)
   - `GET /api/v3/user/in-app-rewards` (shop-style rewards listing)
 
@@ -78,11 +78,11 @@ user.stats.buffs.{str,int,con,per}`, and for each equipped item in
 matches `user.stats.class`.
 
 Habitica spells the mage class **`wizard`** in both `stats.class` and gear
-`klass`/`specialClass`. Fingersnap accepts both spellings at every intake and
+`klass`/`specialClass`. Glimway accepts both spellings at every intake and
 maps `wizard` onto the internal `mage`; gear klass `wizard` therefore matches
 an internal `mage` for the class bonus.
 
-Pitfalls for the Fingersnap mapping (plan already requires "Avoid counting
+Pitfalls for the Glimway mapping (plan already requires "Avoid counting
 equipment and buffs twice"):
 
 1. `user.stats.str` etc. are **base stats only** — they exclude gear, buffs,
@@ -90,7 +90,7 @@ equipment and buffs twice"):
    have not already applied gear elsewhere. Never combine a precomputed
    effective value with per-item gear sums.
 2. Class-matching gear contributes **twice** in Habitica's own formula (once
-   in `gearBonus`, once in `classBonus`). If Fingersnap wants flatter
+   in `gearBonus`, once in `classBonus`). If Glimway wants flatter
    balance, that is a deliberate rules change, not an import — document any
    deviation from `statsComputed`.
 3. `user.stats.buffs` includes temporary buffs (skills, potions, seasonal
@@ -108,7 +108,7 @@ equipment and buffs twice"):
    documented constants; do not copy GPL code into our codebase without a
    license decision.
 7. Equipment wear/owned items must never be consumed or modified by
-   Fingersnap (plan boundary): reads of `items.gear` are display/combat
+   Glimway (plan boundary): reads of `items.gear` are display/combat
    inputs only.
 
 ## Licenses (verified in LICENSE file, live)
@@ -117,7 +117,7 @@ equipment and buffs twice"):
 - **Assets and content designed for HabitRPG**: CC BY-NC-SA 3.0.
 - **Assets and content designed for Mozilla BrowserQuest**: CC BY-SA 3.0.
 
-Consequences for Fingersnap (per plan): adapted assets keep their
+Consequences for Glimway (per plan): adapted assets keep their
 share-alike/noncommercial conditions; our own code license is a separate
 decision; the asset register (`ASSETS.md`) tracks each third-party asset
 individually. Presenting as an independent project; no official endorsement.

@@ -12,6 +12,7 @@ import type { Session } from './session'
 import { expose } from './dev-hooks'
 
 /** One choice per player and world on this device (a guest has its own). */
+// `fingersnap:` is the game's old name, kept so saved choices load.
 let key = 'fingersnap:held'
 
 /** The localStorage key for a session: `fingersnap:held:<player>@<world>`. */

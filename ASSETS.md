@@ -1,4 +1,4 @@
-# Fingersnap asset register
+# Glimway asset register
 
 Provenance and license record for every asset used in the project. The
 runtime-facing loading notes live in `docs/runtime-asset-spec.md` (art slots
@@ -18,18 +18,31 @@ does not import Habitica's asset license. When licensed Habitica assets are
 introduced later, they enter this register individually with their own
 license lines (see "Third-party assets" below).
 
-## License status — decision pending
+## Licences
 
-**No distribution license has been selected for original Fingersnap art.**
-Until one is chosen and recorded here:
+Decided 2026-10-07 (reasons in `docs/licensing-and-funding.md`). Each
+register below carries its own licence line.
 
-- No public deployment, store listing, advertising, sponsorship, or
-  redistribution of the art pack.
-- Local development and private playtesting are fine.
-- Source prompts and provenance stay with the assets (already true of the
-  delivered pack).
+- **Our art: CC0 1.0** (public domain dedication). Every register of our own
+  art (A, B's output, D, E, F, G, H) is AI-generated: made with OpenAI's
+  image generation through Codex, then measured, cut and packed by scripts,
+  not repainted. With no human author there is likely no copyright to
+  license, so it is dedicated to the public domain and needs no credit. The
+  notices are `assets/generated/LICENSE` (the source packs) and
+  `public/assets/fingersnap/LICENSE` (the packed copies the game loads).
+- **Future human-made art** gets its own folder with its own `LICENSE`
+  (for example CC BY-SA 4.0), chosen per work, and its own register here
+  with its licence and attribution line. Don't mix it into the CC0 folders.
+- **Code: AGPL-3.0-or-later** (`LICENSE` at the root), including the code
+  that draws the Register B placeholders.
+- **Habitica's material keeps Habitica's terms**, kept apart and labelled:
+  the sprites in `public/assets/habitica/` are CC BY-NC-SA 3.0, © HabitRPG,
+  Inc. (notice: `public/assets/habitica/LICENSE`); the gear numbers in
+  `content/habitica-gear.json` are GPL-3.0-derived (notice:
+  `content/habitica-gear.NOTICE.md`). See "Third-party assets" below.
 
-Per the plan, code license and art license are separate decisions.
+The provenance records here and in `assets/generated/` stay: they show what
+was generated and what, if anything, was made by people.
 
 ## Register A — original generated art pack (delivered)
 
@@ -65,11 +78,10 @@ collision maps; prop frames are static (no animation/open states); generated
 pixel art is not authored on a strict 16/32 px grid and may need grid cleanup
 to match eventual avatar scale.
 
-Provenance attributes for the register table: **Author** — Fingersnap project
+Provenance attributes for the register table: **Author** — Glimway project
 (external asset agent via built-in image_gen). **Source** — original
 generation, prompts in-repo. **Modifications** — none yet (atlas frames are
-measured from the sheet, not edited). **License** — pending (see above).
-**Attribution text** — TBD with license choice.
+measured from the sheet, not edited). **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 ## Register B — original procedural placeholders (current)
 
@@ -78,9 +90,9 @@ tiles, and simple pixel figures drawn in code; no external files, no
 third-party sources). Used by the runtime for anything the delivered pack does
 not cover (walkable-area marks, temporary sprites, UI stand-ins).
 
-| Item | Source | Author | License | Notes |
+| Item | Source | Author | Licence | Notes |
 |---|---|---|---|---|
-| Code-drawn placeholder shapes/tiles/sprites produced at runtime or build time | Project source (`src/game/` placeholder generators, runtime-owned) | Fingersnap project | pending (same as Register A) | Original; style direction per "Art direction" above; no third-party bytes |
+| Code-drawn placeholder shapes/tiles/sprites produced at runtime or build time | Project source (`src/game/` placeholder generators, runtime-owned) | Glimway project | Generators: AGPL-3.0-or-later (code). What they draw: CC0 1.0, as Register A | Original; style direction per "Art direction" above; no third-party bytes |
 
 Each placeholder generator is original code; treat its output as original
 art. When a delivered or licensed asset replaces a placeholder, keep the row
@@ -112,8 +124,8 @@ removed (2026-10-07).
 | `fingersnap-foreground.png` + `.atlas.json` | `fingersnap-foreground` | 1254×1254 | 6 transparent occluders (canopies, arches, roof, ferns) | `foreground` |
 | `fingersnap-demo-walk.png` + `.atlas.json` | `fingersnap-demo-walk` | 1254×1254 | 16 frames, 4-direction demo walk (stand-in hero) | `hero-walk` |
 | `fingersnap-enemies.png` + `.atlas.json` | `fingersnap-enemies` | 1448×1086 | 12 frames: slime/mushroom/beetle idle+squash+windup+hurt | `enemies` |
-| `animations.json` | `fingersnap-expansion-animations` | — | 7 animation defs (4 walks, 3 enemy idles) | — |
-| `manifest.json` | `fingersnap-expansion-manifest` | — | Tile index map, frame lists, `runtimeTexture` key | — |
+| `animations.json` | `glimway-expansion-animations` | — | 7 animation defs (4 walks, 3 enemy idles) | — |
+| `manifest.json` | `glimway-expansion-manifest` | — | Tile index map, frame lists, `runtimeTexture` key | — |
 
 Frame names: terrain `grass, flower-grass, forest-moss, packed-dirt,
 cobblestone, mossy-cobblestone, shrine-stone, cave-gravel, pond-water,
@@ -133,12 +145,11 @@ available but no full combat anim set; trimmed frames carry
 `spriteSourceSize` offsets (handled by Phaser atlas loader); no collision or
 walkability metadata (runtime authors it).
 
-Provenance attributes: **Author** — Fingersnap project (external asset agent
+Provenance attributes: **Author** — Glimway project (external asset agent
 via built-in image_gen). **Source** — original generation, prompts in-repo.
 **Modifications** — none to source PNGs; atlas rects measured by
 `build_atlases.py`; the shipped tileset and atlases are resampled by
-`scripts/build-atlases.ts`. **License** — pending (same decision as Register A).
-**Attribution text** — TBD with license choice.
+`scripts/build-atlases.ts`. **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 ## Register E — runtime art pass (NPCs, guardian, class effects)
 
@@ -168,7 +179,7 @@ covered by `tests/runtime-art.test.ts`.
 | `fingersnap-npcs.png` | `fingersnap-npcs` (source sheet) | 1024×1535 | Mara/Pip/Orrin, 2 breathing poses each (6 measured frames → 16×16 native) | `npcs` |
 | `fingersnap-guardian.png` | `fingersnap-guardian` (source sheet) | 1536×1024 | Stone guardian idle/windup/lunge/hurt/defeat (5 measured frames → 24×24 native) | `guardian` |
 | `fingersnap-class-effects.png` | `fingersnap-class-effects` (source sheet) | 1254×1254 | Cleave, magic bolt, dash trail, healing pulse, 4 stages each (16 measured frames) | `effects` |
-| `manifest.json` | `fingersnap-runtime-art` | — | 27 measured frame rects, 7 animation defs, 7 compat aliases | — |
+| `manifest.json` | `glimway-runtime-art` | — | 27 measured frame rects, 7 animation defs, 7 compat aliases | — |
 | `build_manifest.py`, `preview.html`, `README.md`, `prompts.json` | — | — | Provenance/helper metadata (not game art) | — |
 
 Frame keys: `mara-idle-0/1`, `pip-idle-0/1`, `orrin-idle-0/1`,
@@ -197,13 +208,12 @@ NPC poses are front-facing only; no collision or walkability metadata
 (runtime keeps the authored NPC 10×8 and guardian 20×10 foot bodies); no
 audio.
 
-Provenance attributes: **Author** — Fingersnap project (external asset agent
+Provenance attributes: **Author** — Glimway project (external asset agent
 via built-in image_gen). **Source** — original generation, prompts in-repo.
 **Modifications** — cleanup prompt pass (background/halo removal) applied at
 generation time; source PNGs byte-unchanged since delivery; runtime canvas
-textures are derived at load time (not files). **License** — pending (same
-decision as Register A; this original generated pack does not inherit
-Habitica's artwork license). **Attribution text** — TBD with license choice.
+textures are derived at load time (not files). **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required. This
+generated pack does not inherit Habitica's artwork licence.
 
 ## Register F — Commons pass (Commons, homes, village life, Wilds, icons)
 
@@ -224,6 +234,7 @@ the optional Hazel, Ada and Wilds sets. Integration: `src/game/commons-pass.ts`
 `src/game/commons-pass-install.ts` (boot swap onto placeholder keys);
 contract in `tests/commons-pass.test.ts`; wiring notes in
 `docs/runtime-asset-spec.md`. Register B placeholders stay as the fallback.
+**Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 Recorded limits/quirks: sources are irregular high-resolution atlases
 (never a grid); native canvases are tiny, so detail simplifies at 16 px;
@@ -250,7 +261,7 @@ aliases); answers `docs/art-requests.md` items pass in full. Integration:
 helper with discrete states and fallbacks, `itemIconUrls`); Tolley mill
 replacement in `installItemsPass`; contract in `tests/items-pass.test.ts`;
 wiring notes in `docs/runtime-asset-spec.md`. Register B placeholders stay
-as the fallback.
+as the fallback. **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 Recorded limits/quirks: sources are irregular high-resolution sheets
 (never a grid); native canvases are tiny (16×16 for item icons); tool
@@ -307,19 +318,20 @@ wheel's frames (items pass) are fitted the same way to one wall height and
 pivot, mirrored to put the wall against the mill. `e2e/sprite-anchors.spec.ts`
 checks the shipped texels.
 
-Provenance attributes: **Author** — Fingersnap project (Codex built-in image
+Provenance attributes: **Author** — Glimway project (Codex built-in image
 generation). **Source** — original generation, prompts in-repo.
 **Modifications** — none to source PNGs; the shipped packs are box-filtered
 to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
 `scripts/build-atlases.ts`.
-**License** — pending (same decision as Register A). **Attribution text** —
-TBD with license choice.
+**Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 ## Register C — pending delivered art (not yet in repo)
 
 Expected from the external asset agent; **not present, not licensed, not
 integrated**. When delivered, copy into `assets/generated/` (or a dated
 subfolder), attach the exact source prompts, and add a Register A-style table.
+**Licence** — none yet. Generated art joins the CC0 folders; human-made art
+goes in its own folder with its own `LICENSE` and register.
 
 | Expected asset | Purpose | Status |
 |---|---|---|
@@ -365,9 +377,9 @@ one row each:
 
 | File | Source URL | Author | License + link | Attribution text | Modifications | Register date |
 |---|---|---|---|---|---|---|
-| `content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG / Habitica contributors | GPL v3 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE | "Game data derived from Habitica (habitica.com), © HabitRPG, licensed GPL v3." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
-| `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG / Weirdly Wonderful (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ | "Avatar and companion art derived from Habitica (habitica.com), © HabitRPG / Weirdly Wonderful, licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
-| Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG / Habitica contributors | GPL v3 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
+| `content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE (notice: `content/habitica-gear.NOTICE.md`) | "Gear statistics derived from Habitica's content data (GPL-3.0)." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
+| `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG, Inc. (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ (notice: `public/assets/habitica/LICENSE`) | "Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
+| Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
 
 Rules (from the plan): Habitica source code is GPL v3; Habitica original
 artwork/content is CC BY-NC-SA 3.0; BrowserQuest-derived artwork/content is
@@ -376,33 +388,33 @@ Adapted assets keep share-alike conditions. Keep notices in credits. Free
 access does not settle noncommercial-license questions; revisit before any
 monetization or partnership.
 
-### Third-party use boundaries (Fingersnap)
+### Third-party use boundaries (Glimway)
 
 - The CC BY-NC-SA art subset is **non-commercial**: no store listing, ads,
-  sponsorship, or paid version while it ships. This is stricter than the
-  original-art decision above and blocks public monetization independently
-  of it.
+  sponsorship, or paid version while it ships. Our own art is CC0 and
+  free of this limit, but the limit binds every instance that serves the
+  Habitica sprites (from the repo or through the sprite proxy).
 - Share-alike: distributing a build that includes the cached art subset
   requires the same CC BY-NC-SA 3.0 terms for those files (see license
   link). Keep this register + attribution text in any shipped credits.
 - The GPL v3 data snapshot: if the catalog is redistributed as part of a
   binary or data package, GPL source-availability obligations apply to the
-  derived data. **Nothing satisfies that today** — this workspace is not a
-  git repository and no public source distribution is in place (the plan's
-  "publicly reviewable source" commitment is a plan intent, not a current
-  fact). Any redistribution must first publish corresponding source (this
-  repo included) or keep the catalog out of the shipped artifact.
+  derived data. The whole source is published under AGPL-3.0-or-later
+  (`https://github.com/Solidsilver/glimway`), with the catalog and its GPL-3.0 notice
+  (`content/habitica-gear.NOTICE.md`), which satisfies that.
 
 ## Credits text (ship in-game)
 
-Place in the Character panel / credits UI (runtime wires this; text of
-record here):
+Text of record:
 
-> Fingersnap uses game data derived from [Habitica](https://habitica.com)
-> (© HabitRPG, GPL v3) and a subset of Habitica avatar art (© HabitRPG /
-> Weirdly Wonderful, [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/)).
-> Habitica is not affiliated with and does not endorse Fingersnap. Original
-> Fingersnap art and code: see repository.
+> Avatar, gear and companion art from [Habitica](https://habitica.com),
+> © HabitRPG, Inc., licensed
+> [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/);
+> gear statistics derived from Habitica's content data (GPL-3.0). Glimway is
+> not affiliated with or endorsed by Habitica.
+
+This is the About card in the Menu (`src/ui/MenuPanel.svelte`). Never call
+any instance, the main one included, "official".
 
 ## Changelog
 
@@ -476,3 +488,10 @@ record here):
   as copies, and the terrain tileset is baked by the atlas build. The four
   archived `integration.js` references (expansion, runtime, Commons, items)
   removed; their ports in `src/game/` remain. License still pending.
+- 2026-10-07 — The game is renamed Glimway (it was Fingersnap). Licences
+  chosen: our art CC0 1.0 (`LICENSE` in `assets/generated/` and
+  `public/assets/fingersnap/`; the folder keeps its old name because the
+  packs' provenance scripts write there), code AGPL-3.0-or-later. Habitica's
+  sprites get a notice (`public/assets/habitica/LICENSE`) and the gear
+  catalog a GPL-3.0 notice. Credits corrected: Habitica's art is by
+  HabitRPG, Inc.; "Weirdly Wonderful" was wrong and is gone.

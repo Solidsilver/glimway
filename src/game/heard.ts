@@ -28,6 +28,7 @@ export function markStory(session: Session, who: string, what: string): void {
 
 // ------------------------------------------------------- lines about the day
 
+// `fingersnap:` is the game's old name, kept so saved settings load.
 const DAY_KEY = 'fingersnap:heard-day'
 const DAY_MAX = 200
 let day: string[] | null = null

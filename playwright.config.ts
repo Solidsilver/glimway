@@ -65,7 +65,7 @@ export default defineConfig({
       // Never reuse: an existing Vite would not route /api to the workers' servers.
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { FINGERSNAP_E2E_ROUTING: '1' }
+      env: { GLIMWAY_E2E_ROUTING: '1' }
     }
   ]
 })
