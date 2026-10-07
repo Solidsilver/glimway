@@ -241,7 +241,35 @@ export function groundView(): GroundView | null {
  * need, painted here — laid out as a tilemap: base, overlay, then the
  * planks of a bridge. Water and the overlays that show it animate by
  * swapping their cells' texture coordinates (no texture upload).
+ *
+ * A painted ground tileset is kept across scene builds: the paint is a pure
+ * function of the map's ground (and the art packs), so an unchanged map
+ * reuses the canvas instead of repainting it. Repainting was seconds of
+ * main-thread work on the Commons (hundreds of painted edge overlays), and
+ * every scene build and rebuild paid it — a placed shelf froze the lane
+ * for seconds.
  */
+interface PaintedTileset {
+  canvas: HTMLCanvasElement
+  names: string[]
+  index: Map<string, number>
+  animated: { index: number; frames: number }[]
+  edgeCount: number
+}
+/** Recent tilesets, keyed by the paint's inputs (a player visits a few areas). */
+const paintedTilesets = new Map<string, PaintedTileset>()
+const PAINTED_TILESETS = 4
+/** The signature of the canvas the `GROUND_TILESET_KEY` texture holds now. */
+let textureSig: string | null = null
+
+/** Everything the painted tileset depends on, as one string. */
+function tilesetSignature(world: WorldData, under: Map<string, number>, k: number, oldNames: string[], sheet: boolean): string {
+  const parts: string[] = [String(k), String(sheet), oldNames.join(',')]
+  for (const row of world.ground) parts.push(row.join('.'))
+  for (const [p, v] of [...under.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) parts.push(`${p}=${v}`)
+  return parts.join('|')
+}
+
 function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
   const k = artDensity(scene)
   const cell = TILE * k
@@ -271,6 +299,70 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
   // The tileset's cells: the base tiles, the old cells, then each overlay (×4 when it shows water).
   const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
   const oldNames = Array.from({ length: 16 }, (_, i) => manifest?.terrain.tiles[i] ?? `cell-${i}`)
+  const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
+  const sig = tilesetSignature(world, under, k, oldNames, !!sheet)
+  let painted = paintedTilesets.get(sig)
+  if (painted) {
+    // Refresh the recency order.
+    paintedTilesets.delete(sig)
+    paintedTilesets.set(sig, painted)
+  } else {
+    const eldest = paintedTilesets.keys().next()
+    if (paintedTilesets.size >= PAINTED_TILESETS && !eldest.done) paintedTilesets.delete(eldest.value)
+    painted = paintTileset(scene, packed, sheet, oldNames, edges, cell, k)
+    paintedTilesets.set(sig, painted)
+  }
+  const { canvas, names, index, animated, edgeCount } = painted
+
+  // A texture is the game's own (scenes come and go): (re)add the painted
+  // canvas unless the texture under the key already shows it.
+  if (!scene.textures.exists(GROUND_TILESET_KEY) || textureSig !== sig) {
+    addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
+    textureSig = sig
+  }
+
+  const depth = Math.max(...stacks.flat().map((s) => s.length))
+  const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: cell, tileHeight: cell })
+  const tiles = map.addTilesetImage(GROUND_TILESET_KEY, GROUND_TILESET_KEY, cell, cell, 1, 2)
+  if (!tiles) return
+  const coords = tiles.texCoordinates as { x: number; y: number }[]
+  if (k > 1) for (const c of coords) {
+    c.x += TIE_BIAS
+    c.y += TIE_BIAS
+  }
+  for (let l = 0; l < depth; l++) {
+    const layer = map.createBlankLayer(`ground-${l}`, tiles)
+    if (!layer) continue
+    layer.putTilesAt(stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))), 0, 0, false)
+    layer.setScale(1 / k).setDepth(-10)
+  }
+  lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k }
+  // Read-only, for playtests.
+  ;(window as unknown as { __fsGround?: () => GroundView | null }).__fsGround = groundView
+  // Water: each animated cell shows its frame f's texture coordinates.
+  if (prefersReducedMotion()) return
+  const frames = animated.map((a) => Array.from({ length: a.frames }, (_, f) => coords[a.index + f]))
+  let f = 0
+  scene.time.addEvent({
+    delay: 1000 / WATER_FPS,
+    loop: true,
+    callback: () => {
+      f++
+      animated.forEach((a, i) => (coords[a.index] = frames[i][f % a.frames]))
+    },
+  })
+}
+
+/** Paint the tileset canvas for one map: base tiles, old cells, then each edge overlay. */
+function paintTileset(
+  scene: Phaser.Scene,
+  packed: PackedManifest['ground'],
+  sheet: HTMLImageElement | HTMLCanvasElement | null,
+  oldNames: string[],
+  edges: Map<string, boolean>,
+  cell: number,
+  k: number,
+): PaintedTileset {
   const names: string[] = [...GROUND_TILES, ...oldNames.map((n) => `old:${n}`)]
   const animated: { index: number; frames: number }[] = []
   const edgeStart = new Map<string, number>()
@@ -311,7 +403,6 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
     const at = packed.tiles[name]
     draw(i, pack, (at % packed.cols) * packed.cell, Math.floor(at / packed.cols) * packed.cell, packed.cell, packed.cell)
   })
-  const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
   if (sheet) {
     const sc = sheet.width / 4
     for (let i = 0; i < 16; i++) draw(GROUND_TILES.length + i, sheet, (i % 4) * sc, Math.floor(i / 4) * sc, sc, sc)
@@ -342,37 +433,5 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
       extrude(i)
     }
   }
-  if (scene.textures.exists(GROUND_TILESET_KEY)) scene.textures.remove(GROUND_TILESET_KEY)
-  addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
-
-  const depth = Math.max(...stacks.flat().map((s) => s.length))
-  const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: cell, tileHeight: cell })
-  const tiles = map.addTilesetImage(GROUND_TILESET_KEY, GROUND_TILESET_KEY, cell, cell, 1, 2)
-  if (!tiles) return
-  const coords = tiles.texCoordinates as { x: number; y: number }[]
-  if (k > 1) for (const c of coords) {
-    c.x += TIE_BIAS
-    c.y += TIE_BIAS
-  }
-  for (let l = 0; l < depth; l++) {
-    const layer = map.createBlankLayer(`ground-${l}`, tiles)
-    if (!layer) continue
-    layer.putTilesAt(stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))), 0, 0, false)
-    layer.setScale(1 / k).setDepth(-10)
-  }
-  lastView = { cells: names.length, edges: edges.size, animated: animated.length, tileset: [canvas.width, canvas.height], density: k }
-  // Read-only, for playtests.
-  ;(window as unknown as { __fsGround?: () => GroundView | null }).__fsGround = groundView
-  // Water: each animated cell shows its frame f's texture coordinates.
-  if (prefersReducedMotion()) return
-  const frames = animated.map((a) => Array.from({ length: a.frames }, (_, f) => coords[a.index + f]))
-  let f = 0
-  scene.time.addEvent({
-    delay: 1000 / WATER_FPS,
-    loop: true,
-    callback: () => {
-      f++
-      animated.forEach((a, i) => (coords[a.index] = frames[i][f % a.frames]))
-    },
-  })
+  return { canvas, names, index, animated, edgeCount: edges.size }
 }

@@ -34,7 +34,7 @@
   import JournalPanel from './ui/JournalPanel.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { PAPER_EV } from './game/papers'
-  import { HOME_EV, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
+  import { HOME_EV, homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
@@ -474,6 +474,10 @@
     // The Wilds need their region before the first chunk builds: guests get
     // the local epoch, connected players the world's frozen one.
     await prepareWilds(session)
+    // The Commons builds for the lane as the server holds it: reading the
+    // lane here, before the scene builds, saves a rebuild (a second ground
+    // repaint) when the scene's own read arrives and the lane has grown.
+    await homesteadsFor(session).load().catch(() => {})
     // World text (damage numbers, exit labels) uses the display font: make
     // sure it is ready before the first frame draws any.
     try {
@@ -779,6 +783,9 @@
       stopGame(game)
       areaShown = false
       await prepareWilds(next)
+      // The new world's lane may count different gates: read it before the
+      // scenes build (see begin()).
+      await homesteadsFor(next).load().catch(() => {})
       game = startGame(stageEl, next)
     } else {
       await begin()
