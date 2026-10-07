@@ -10,22 +10,22 @@ import { loadWilds } from './wilds/data.ts';
 import { CALENDAR } from './calendar.ts';
 import economy from '../../content/economy.json' with { type: 'json' };
 
-export const ITEM_TABS = ['tools', 'supplies', 'keepsakes', 'home', 'papers'] as const;
-export const ITEM_KINDS = ['tool', 'consumable', 'material', 'fitting', 'part', 'seed', 'keepsake', 'home-good', 'paper', 'off-hand', 'carry-gear'] as const;
-export const FITTING_KINDS = ['bite', 'hold', 'heft', 'glow', 'grip', 'remember'] as const;
-export const TOOL_ACTIONS = ['chop', 'break', 'dig', 'draw', 'water', 'trim', 'mark'] as const;
-export const PLAYER_CLASSES = ['warrior', 'mage', 'healer', 'rogue'] as const;
-export const USE_EFFECTS = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored', 'wisps-forget', 'refill-lantern', 'light-post'] as const;
-export const POCKET_EFFECTS = ['papers-glint', 'notice-later', 'gather-more', 'pond-skip', 'wend-gives-more'] as const;
-export const HELD_EFFECTS = ['light', 'wisps-keep-off', 'compass', 'remedy-at-hand', 'whistle', 'papers-chime'] as const;
+const ITEM_TABS = ['tools', 'supplies', 'keepsakes', 'home', 'papers'] as const;
+const ITEM_KINDS = ['tool', 'consumable', 'material', 'fitting', 'part', 'seed', 'keepsake', 'home-good', 'paper', 'off-hand', 'carry-gear'] as const;
+const FITTING_KINDS = ['bite', 'hold', 'heft', 'glow', 'grip', 'remember'] as const;
+const TOOL_ACTIONS = ['chop', 'break', 'dig', 'draw', 'water', 'trim', 'mark'] as const;
+const PLAYER_CLASSES = ['warrior', 'mage', 'healer', 'rogue'] as const;
+const USE_EFFECTS = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored', 'wisps-forget', 'refill-lantern', 'light-post'] as const;
+const POCKET_EFFECTS = ['papers-glint', 'notice-later', 'gather-more', 'pond-skip', 'wend-gives-more'] as const;
+const HELD_EFFECTS = ['light', 'wisps-keep-off', 'compass', 'remedy-at-hand', 'whistle', 'papers-chime'] as const;
 /** Use effects the game applies today; a consumable is usable when all of its are. */
-export const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored'];
-export const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
+const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored'];
+const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
 
-export type ItemTab = (typeof ITEM_TABS)[number];
-export type ItemKind = (typeof ITEM_KINDS)[number];
-export type FittingKind = (typeof FITTING_KINDS)[number];
-export type PlayerClass = (typeof PLAYER_CLASSES)[number];
+type ItemTab = (typeof ITEM_TABS)[number];
+type ItemKind = (typeof ITEM_KINDS)[number];
+type FittingKind = (typeof FITTING_KINDS)[number];
+type PlayerClass = (typeof PLAYER_CLASSES)[number];
 export type AtZero = 'breaks' | 'blunt' | 'cracked' | 'never';
 /** How a tool looks and behaves now (server-computed; also the icon state). */
 export type WearState = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
@@ -73,7 +73,7 @@ export interface ItemPickup {
   found: string;
 }
 /** One thing a seller sells (for embers), and what they say. */
-export interface ItemGood {
+interface ItemGood {
   item: string;
   qty: number;
   embers: number;
@@ -102,7 +102,7 @@ export interface ItemMender {
   ty: number;
   radiusTiles: number;
 }
-export interface ItemResident {
+interface ItemResident {
   id: string;
   area: string;
   tx: number;

@@ -1,16 +1,16 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld } from './connected'
-import { waitForArea, frames, warp, waitFrames, waitGame } from './helpers'
+import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld } from './connected'
+import { animationsDone, waitForArea, waitForLive, frames, warp, waitFrames, waitGame } from './helpers'
 
 /**
- * Presence (phase 6) against the real Go server: two players in one world
+ * Presence against the real Go server: two players in one world
  * (the second joins with the first one's invite), each in their own browser
  * context. SCREENS=1 saves screenshots to .agent/screens/.
  */
 test.use({ server: true })
 
-type Remote = { id: string; name: string; x: number; y: number; alpha: number; moving: boolean; avatar: boolean; bubble: string | null }
+type Remote = { id: string; name: string; x: number; y: number; alpha: number; moving: boolean; avatar: boolean; bubble: string | null; bubbleAlpha: number | null }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
 const presenceState = (page: Page) =>
   page.evaluate(() => (window as unknown as { __fsPresence?: () => { status: string; area: string | null; peers: string[] } }).__fsPresence?.() ?? null)
@@ -150,6 +150,9 @@ test('a takeover stops the old tab\'s presence socket; the new tab takes its pla
   const { other, ctx } = await twoPlayers(page, browser, baseURL!)
   await seeEachOther(page, other)
   expect((await presenceState(page))?.status).toBe('live')
+  // Every presence socket the old tab opens from here on (there must be none).
+  const reopened: string[] = []
+  page.on('websocket', (ws) => void (ws.url().endsWith('/ws') && reopened.push(ws.url())))
 
   const second = await context.newPage()
   await second.goto('/')
@@ -158,12 +161,15 @@ test('a takeover stops the old tab\'s presence socket; the new tab takes its pla
   await waitForWorld(second)
   // The old tab's socket is closed by the server (4002) and never reopens.
   await expect.poll(async () => (await presenceState(page))?.status, { timeout: 10_000 }).toMatch(/superseded|off/)
-  // A window for a reconnect that must not come (the socket's own timers are wall-clock).
-  await page.waitForTimeout(2_500)
+  // The old tab's link learns of the takeover (the presence feed asks it at
+  // once): from then on the feed keeps the socket off, so no reconnect can come.
+  await expect.poll(() => linkStatus(page), { timeout: 10_000 }).toBe('superseded')
   expect((await presenceState(page))?.status).toMatch(/superseded|off/)
   // Rowan still sees Ash: the new tab.
   await expect.poll(async () => (await remotes(other)).map((r) => r.name), { timeout: 10_000 }).toEqual(['Ash'])
   await expect.poll(async () => (await remotes(second)).map((r) => r.name), { timeout: 10_000 }).toEqual(['Rowan'])
+  expect(reopened, 'the old tab opened no presence socket').toEqual([])
+  expect((await presenceState(page))?.status).toMatch(/superseded|off/)
   await ctx.close()
 })
 
@@ -173,8 +179,8 @@ test('guests have no presence socket', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Wander as a guest/ }).click()
   await waitForArea(page, 'village')
-  // A window for a socket that must not open.
-  await page.waitForTimeout(1_000)
+  // Live play has begun: connected play would have started its feed by now.
+  await waitForLive(page)
   expect(sockets.filter((u) => u.endsWith('/ws'))).toEqual([])
   expect(await presenceState(page)).toBeNull()
   await expect(page.getByTestId('emote-button')).toHaveCount(0)
@@ -186,7 +192,7 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     const { other, ctx } = await twoPlayers(page, browser, baseURL!, vp)
     const shot = async (n: string) => {
       if (!process.env.SCREENS) return
-      await page.waitForTimeout(400)
+      await animationsDone(page)
       await page.screenshot({ path: `.agent/screens/${n}-${name}.png` })
     }
     await go(page, 'village', 16, 18)
@@ -197,6 +203,8 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await other.keyboard.press('1')
     await expect.poll(async () => (await remotes(page))[0]?.bubble, { timeout: 5_000 }).toBe('Hello!')
     await page.bringToFront()
+    // The bubble fades in on the canvas (a Phaser tween): wait until it is fully shown.
+    await expect.poll(async () => (await remotes(page))[0]?.bubbleAlpha, { timeout: 5_000 }).toBe(1)
     await shot('20-presence-village')
 
     await go(page, 'commons', 23, 19)

@@ -184,7 +184,6 @@ export const ECHOES: readonly EchoDef[] = [
   },
 ];
 
-export const ECHO_UNSETTLED_EYEBROW = 'An Echo';
 export const ECHO_SETTLED_LINE = 'A settled camp. The owed lamp burns steady on its hook; nothing here is waiting any more.';
 
 /** Story flag for a settled Echo (one per member, kept forever). */

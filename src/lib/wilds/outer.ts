@@ -67,12 +67,6 @@ export function seasonMark(season: string, cal: Calendar = CALENDAR): string | n
   return b ? calendarAt(b.startsAt, cal).mark : null;
 }
 
-/** The wick name an outer season falls in (Thaw … Quiet). */
-export function seasonWick(season: string, cal: Calendar = CALENDAR): string | null {
-  const b = seasonBounds(season, cal);
-  return b ? calendarAt(b.startsAt, cal).wick : null;
-}
-
 /** Has this epoch ended at `unix`? Permanent epochs never do. */
 export function epochEnded(season: string, unix: number, endsAt?: number | null): boolean {
   const end = endsAt ?? seasonBounds(season)?.endsAt ?? null;
@@ -95,13 +89,13 @@ function regionById(id: string): WildsRegion {
 }
 
 /** Where stepping through the crossing lands in the outer entry chunk. */
-export function crossingOuterArrival(): Tile {
+function crossingOuterArrival(): Tile {
   const S = loadWilds().chunkSize;
   return { tx: HOME_GAP_TX + 1, ty: S - 2 };
 }
 
 /** Where stepping back through the crossing lands in the Tangle. */
-export function crossingInnerArrival(): Tile {
+function crossingInnerArrival(): Tile {
   const S = loadWilds().chunkSize;
   return { tx: S / 2, ty: 1 };
 }
@@ -166,7 +160,7 @@ export interface StorySite {
 }
 
 /** Echo camps per outer epoch. */
-export const ECHO_SITES = 3;
+const ECHO_SITES = 3;
 
 function mulberry(seed: number): () => number {
   let a = seed >>> 0;
@@ -249,17 +243,6 @@ export function chunkSites(epoch: Epoch, cx: number, cy: number, exits: readonly
       break;
     }
     if (spot) out.push({ id: w.id, kind: w.kind, cx, cy, ...spot });
-  }
-  return out;
-}
-
-/** Every story site of an epoch, region-wide (chunk by chunk). */
-export function regionSites(epoch: Epoch, exitsFor: (cx: number, cy: number) => readonly ChunkExit[]): StorySite[] {
-  const chunks = new Set(siteChunks(epoch).map((s) => `${s.cx},${s.cy}`));
-  const out: StorySite[] = [];
-  for (const k of chunks) {
-    const [cx, cy] = k.split(',').map(Number);
-    out.push(...chunkSites(epoch, cx, cy, exitsFor(cx, cy)));
   }
   return out;
 }

@@ -55,7 +55,7 @@ export function fnv1a32(input: string): number {
 }
 
 /** One mixing step: fold `v` into `h`. */
-export function mix(h: number, v: number): number {
+function mix(h: number, v: number): number {
   let x = (h ^ v) >>> 0;
   x = Math.imul(x, FNV_PRIME) >>> 0;
   x = (x ^ (x >>> 15)) >>> 0;

@@ -1,7 +1,6 @@
 /**
- * Habitica import contract types — PUBLISHED FIRST.
+ * Habitica import contract types.
  *
- * `snap_runtime` mirrors this file when wiring the CharacterPanel import UI.
  * Nothing here ever holds credentials at rest: `HabiticaCredentials` is an
  * in-memory-only transport for the read-only client and is structurally
  * excluded from every persisted/exported shape (`HabiticaProfile`,

@@ -27,10 +27,10 @@ export const EMBER_COSTS = economy.costs;
 export const ROAD_LANTERNS = economy.roadLanterns;
 export type RoadLanternId = (typeof ROAD_LANTERNS)[number];
 
-export const CHEST_ID = economy.chestId;
+const CHEST_ID = economy.chestId;
 export const CHARM_ITEM = economy.charmItem;
 /** Extra crit chance while carrying the Ember Charm. */
-export const CHARM_CRIT_BONUS = 0.1;
+const CHARM_CRIT_BONUS = 0.1;
 
 /** A combat kit with the Ember Charm's crit bonus applied when carried. */
 export function withCharm<K extends { critChance: number }>(kit: K, inventory: readonly string[]): K {
@@ -150,11 +150,11 @@ export interface SpendContext {
   imported?: boolean;
 }
 
-export function isRevive(state: GameState, spend: EmberSpend, ctx: SpendContext): boolean {
+function isRevive(state: GameState, spend: EmberSpend, ctx: SpendContext): boolean {
   return (spend.kind === 'rest' || spend.kind === 'home-rest') && ctx.imported === true && state.hp <= 0;
 }
 
-export function spendCost(spend: EmberSpend): number {
+function spendCost(spend: EmberSpend): number {
   switch (spend.kind) {
     case 'home-rest':
       return EMBER_COSTS.homeRest;

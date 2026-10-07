@@ -9,27 +9,10 @@
  * The Go port (server/internal/wilds) reproduces the first two exactly;
  * parity is enforced by content/vectors/wilds.json in both test suites.
  */
-export type {
-  ChunkCoord,
-  ChunkExit,
-  ChunkTerrain,
-  Epoch,
-  ExitDir,
-  LootDrop,
-  MaterialQty,
-  Tile,
-  WildsData,
-  WildsEntity,
-  WildsEntityKind,
-  WildsEntityKindRule,
-  WildsGenerator,
-  WildsLootEntry,
-  WildsRegion,
-  WildsTimers,
-} from './types.ts';
-export { Rng, fnv1a32, hash, mix, chunkSeed, lootSeed } from './hash.ts';
+export type { ChunkExit, ChunkTerrain, Epoch, LootDrop, Tile, WildsEntity } from './types.ts';
+export { Rng, fnv1a32, hash, chunkSeed, lootSeed } from './hash.ts';
 export { loadWilds, validateWildsData } from './data.ts';
-export { generatorFor, generatorVersions } from './registry.ts';
+export { generatorFor } from './registry.ts';
 export { buildExits, genV1 } from './gen-v1.ts';
 export { toWorldData } from './world-data.ts';
 

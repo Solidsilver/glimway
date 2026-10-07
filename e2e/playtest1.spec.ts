@@ -7,7 +7,7 @@ import { claimDeed, earnEmbers, freshPlayer, homes, intoCottage, toMyLand, go } 
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 
 /**
- * Fixes from the owner's first real playtest (.agent/BRIEF.md):
+ * Fixes from the owner's first real playtest:
  *  1. A real outfit's pieces the bundled cache lacks come through our sprite
  *     proxy and are kept on the device: drawn, no "left off" notice, and not
  *     fetched again on a reload.

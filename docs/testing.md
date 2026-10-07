@@ -1,7 +1,23 @@
 # Testing
 
 How Fingersnap is tested, which tier to run when, and how to chase a flaky
-playtest. The short version is in the README's "Tests" section.
+playtest. This is the one reference for the test workflow; the README's
+"Tests" section is the short version, and older notes (`build-status.md`,
+playtest records) describe how things ran at the time.
+
+## Prerequisites
+
+Node 24+ (the unit tests run TypeScript directly) and `npm ci`,
+plus a few programs that aren't npm packages:
+
+| Program | Needed for | Called from |
+|---|---|---|
+| Playwright's Chromium | every playtest | `npx playwright install chromium` once |
+| `go` (the version in `go.mod`) | `go test`, `npm run server`, and every playtest: the run builds the server first | `e2e/global-setup.ts` |
+| `sqlite3` | connected playtests that set up server state with `sql()` | `e2e/connected.ts` |
+| `cwebp` and `dwebp` (`brew install webp`) | `npm run atlases` only (encoding and checking the packed art) | `scripts/build-atlases.ts` |
+
+`npx knip` lists these as "unlisted binaries": that's expected.
 
 ## The tiers
 
@@ -18,6 +34,16 @@ playtest. The short version is in the README's "Tests" section.
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
 machine it can pass Go's default 10-minute test timeout while still working.
 Keep the `-timeout 30m`.
+
+Generated shared data has its own scripts. Run the one for what you changed;
+the unit tests fail when the committed output has drifted from its inputs:
+
+| Command | Writes |
+|---|---|
+| `npm run vectors` | economy and sync parity vectors (`content/vectors/`) |
+| `npm run vectors:wilds`, `vectors:homestead`, `vectors:calendar`, `vectors:items` | the other parity vectors the Go tests read |
+| `npm run papers` | `src/content/papers-text.ts` and `content/papers.json` from `docs/lore/texts` |
+| `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
 **Agents:** run `test:smoke` and `test:changed` while you work. The full suite
 runs once per merge batch, not once per agent. `test:changed` itself runs the
@@ -102,7 +128,7 @@ same worker server.
 
 - `allow`, `adminInvite`, `setHabitica`, `fund`, `giveInstance` work as before;
 - `sql(statements)` from `e2e/connected.ts` runs SQL against this worker's
-  database; `dbPath()` is its path; `habiticaURL()` is the fake Habitica;
+  database; `habiticaURL()` is the fake Habitica;
 - never hard-code `.e2e-server/fingersnap.sqlite` or a server port. (An old
   spec that still passes that path to `execFileSync` is pointed at its
   worker's database, with a warning, so branches written before this change
@@ -125,11 +151,17 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | `expect(toast).toBeVisible()` | `expectToast(page, text)` (shown, even if already faded; each call needs a newer toast than the last with that text), or `toastCount` before and `toastAfter(page, mark, text)` after |
 | `expect(dialogue).toContainText(…)` | `expectLine(page, text)` (the whole current line; the typewriter can lag far behind under load) |
 | `.area .title` on screen | `expectAreaCard(page, title)` |
+| a pause for a banner to clear | poll `__fsBanners().current` until it is `null` (see `coop.spec.ts`) |
+| a pause before a screenshot | `animationsDone(page)` (running transitions and fades finished, then two frames) |
 | a pause before editing or reloading a guest save | `savedToDisk(page)` |
 
-A fixed wait is still right for one thing: proving that something does *not*
-happen within a window that runs on wall-clock timers (a socket that must not
-reopen). Say so in a comment.
+**Proving something does *not* happen.** Wait for an observable state that
+rules it out, and record what the page does in the meantime:
+`page.on('request')` or `page.on('websocket')` from before the action, then
+assert the list is empty (`presence.spec.ts` waits for the old tab's link to
+show the takeover, after which no socket can reopen; `review-fixes.spec.ts`
+checks no placement was sent after 30 frames). Keep a fixed wait only when
+nothing observable exists, and say why in a comment.
 
 **Dev hooks** (read-only, dev builds only) used by these helpers:
 `__fsFrame()` (frames since the area was built, fade, transitioning, whether

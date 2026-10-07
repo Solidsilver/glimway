@@ -66,13 +66,13 @@ export class InvalidSaveError extends Error {
 
 // Curated areas are buildable by the existing standalone frontend.
 export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
-export const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'wilds'];
+const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'wilds'];
 
 /** A homestead's land behind Commons gate g: `home:<g>` (0..9999, no leading zeros). */
 export const HOME_AREA_RE = /^home:(0|[1-9]\d{0,3})$/;
 
 /** Can a save say it is here? The fixed areas, plus any homestead's land. */
-export function isSaveArea(area: unknown): area is AreaId {
+function isSaveArea(area: unknown): area is AreaId {
   return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || HOME_AREA_RE.test(area));
 }
 
@@ -405,13 +405,11 @@ export function questObjective(stage: QuestStage): string {
 }
 
 /**
- * Demo-only defeat/recovery rule: the player returns to the Hearthwick spawn
- * and recovers full demo health and mana. Quest stage, inventory, discoveries,
- * defeated enemies, and play time are kept, so story progress survives defeat.
- *
- * This is a placeholder for milestone 2. Real imported-Habitica health
- * reconciliation and a final recovery rule are deferred; see
- * docs/runtime-contract.md.
+ * The guest (demo vitals) defeat rule: the player returns to the Hearthwick
+ * spawn and recovers full demo health and mana. Quest stage, inventory,
+ * discoveries, defeated enemies, and play time are kept, so story progress
+ * survives defeat. Imported vitals go through resolveDefeatRecovery
+ * (src/lib/habitica/sync.ts), which caps them; see docs/runtime-contract.md.
  */
 export function recoverFromDefeat(state: GameState): GameState {
   const current = validateSave(state);

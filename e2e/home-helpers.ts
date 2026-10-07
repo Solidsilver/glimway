@@ -7,10 +7,10 @@ import { beginNewJourney, dialogueState, frames, readDialogue, waitForArea, wait
  * SCREENS=1 makes `shot` save desktop + phone screenshots to .agent/screens/.
  */
 
-export const OUT = '.agent/screens'
+const OUT = '.agent/screens'
 export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'cottage' | `home:${number}`
 
-export type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
+type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
 export interface Home {
   id: string
   gate: number
@@ -159,7 +159,7 @@ export async function readOn(page: Page, says: RegExp): Promise<void> {
 }
 
 /** Silas's spot in his yard (the Commons map; fixed). */
-export const SILAS_AT = { tx: 51, ty: 21 }
+const SILAS_AT = { tx: 51, ty: 21 }
 
 export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
   const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT

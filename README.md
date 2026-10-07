@@ -182,6 +182,8 @@ ever writes to your Habitica account**. (The token itself *can* write to your
 account; the game limits itself to reads, in public code.) The `X-Client`
 header identifies the tool's creator, never you.
 
+What comes from Habitica and what only from the game: [docs/habitica-boundary.md](docs/habitica-boundary.md).
+
 **Where your token goes.**
 
 - It stays in this tab's memory, and is never in saves, save codes, the

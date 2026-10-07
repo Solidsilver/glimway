@@ -351,7 +351,7 @@ test('remote-only layers are flagged for the runtime', () => {
 });
 
 // ---------------------------------------------------------------------------
-// avatar-render loader robustness (temporary snap_assets ownership).
+// avatar-render loader robustness.
 // Phaser is imported type-only there, so these run under the Node runner with
 // a fake scene: no DOM, no new deps.
 // ---------------------------------------------------------------------------

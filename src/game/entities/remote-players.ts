@@ -139,7 +139,9 @@ class RemotePlayersLayer implements RemotePlayers {
         alpha: v.root.alpha,
         moving: v.moving,
         avatar: v.demo === null,
-        bubble: v.bubble?.active ? v.bubbleText : null
+        bubble: v.bubble?.active ? v.bubbleText : null,
+        // 1 once the bubble's fade-in tween has finished (screenshots wait for it).
+        bubbleAlpha: v.bubble?.active ? v.bubble.alpha : null
       })),
       scene
     )

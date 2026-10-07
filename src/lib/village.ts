@@ -119,7 +119,7 @@ export function assetKey(a: Pick<Asset, 'kind' | 'id' | 'instance'>): string {
 // ------------------------------------------------------------ projects
 
 /** How much more of each material a project takes. */
-export function remaining(p: Pick<ProjectView, 'required' | 'contributed'>): Record<string, number> {
+function remaining(p: Pick<ProjectView, 'required' | 'contributed'>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [m, need] of Object.entries(p.required)) out[m] = Math.max(0, need - (p.contributed[m] ?? 0));
   return out;
@@ -163,7 +163,7 @@ export function blankProjects(): ProjectView[] {
  * Papers that wait for the road to be lit, whatever a project says: the
  * reveal order keeps survival texts late (src/content/papers.ts).
  */
-export const LATE_PROJECT_PAPERS = ['count-house-tally-book-scrap', 'note-in-the-linseed-box', 'forty-one-and-holding'];
+const LATE_PROJECT_PAPERS = ['count-house-tally-book-scrap', 'note-in-the-linseed-box', 'forty-one-and-holding'];
 
 /** Which granted papers to hand over now, given what's held and the quest. */
 export function papersDue(grantable: readonly string[], held: (id: string) => boolean, questComplete: boolean): string[] {

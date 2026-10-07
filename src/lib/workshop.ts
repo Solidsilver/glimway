@@ -4,19 +4,19 @@ import papersRaw from '../../content/papers.json' with { type: 'json' };
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
 import { assetKind, isStackable, itemDef } from './items.ts';
-export interface Asset { kind: 'material' | 'item' | 'decoration' | 'instance'; id: string; qty: number }
+interface Asset { kind: 'material' | 'item' | 'decoration' | 'instance'; id: string; qty: number }
 export interface Recipe { id: string; name: string; minTier: number; materials: Record<string, number>; swaps?: Record<string, string[]>; output: Asset; page?: string; found?: string }
 export interface Crafting { utilityItems: { id: string; name: string }[]; recipes: Recipe[]; hearthRecipes?: Recipe[] }
-export interface Project { id: string; name: string; materials: Record<string, number>; papers: string[]; worldFlag: string }
+interface Project { id: string; name: string; materials: Record<string, number>; papers: string[]; worldFlag: string }
 export interface Projects { projects: Project[] }
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const id = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,100}$/.test(v);
 const positive = (v: unknown, max = 1_000_000): v is number => Number.isSafeInteger(v) && (v as number) >= 1 && (v as number) <= max;
-export function validMaterialCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => loadWilds().materials.includes(k) && positive(n)); }
+function validMaterialCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => loadWilds().materials.includes(k) && positive(n)); }
 /** A recipe's bill: any carried stack (materials, parts, wax…). */
-export function validRecipeCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => { const d = itemDef(k); return !!d && isStackable(d) && positive(n); }); }
+function validRecipeCosts(v: unknown): v is Record<string, number> { return object(v) && Object.keys(v).length > 0 && Object.entries(v).every(([k,n]) => { const d = itemDef(k); return !!d && isStackable(d) && positive(n); }); }
 /** A material's stand-ins, one for one (a pressed-flower frame takes dried flowers): on the bill, carried stacks of their own, never repeats. */
-export function validRecipeSwaps(v: unknown, materials: Record<string, number>): v is Record<string, string[]> {
+function validRecipeSwaps(v: unknown, materials: Record<string, number>): v is Record<string, string[]> {
   return v === undefined || (object(v) && Object.entries(v).every(([k, swaps]) => {
     if (!(k in materials) || !Array.isArray(swaps) || !swaps.length) return false;
     return swaps.every((s) => !(s in materials) && s !== k && itemDef(s) !== null && isStackable(itemDef(s)!));
@@ -64,7 +64,4 @@ export function validateProjects(value: unknown): Projects {
 }
 export const CRAFTING = validateCrafting(craftingRaw);
 export const HEARTH_RECIPES = CRAFTING.hearthRecipes ?? [];
-export function hearthRecipe(id: string): Recipe | undefined {
-  return HEARTH_RECIPES.find((r) => r.id === id);
-}
 export const PROJECTS = validateProjects(projectsRaw);

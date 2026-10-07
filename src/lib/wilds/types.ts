@@ -158,7 +158,6 @@ export interface ChunkTerrain {
   mark: string | null;
 }
 
-export type { StorySite } from './outer.ts';
 import type { StorySite } from './outer.ts';
 
 /** The public API of one generator version. */
@@ -193,7 +192,7 @@ export interface WildsLootEntry {
   chancePermille: number;
 }
 
-export interface WildsTimers {
+interface WildsTimers {
   campRespawnSeconds: number;
   nodeRegrowSeconds: number;
 }
