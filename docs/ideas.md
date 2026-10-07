@@ -59,10 +59,34 @@ worth thinking about; **(later)** means parked on purpose.
   (a map, breadcrumbs, or a door or teleport item). This needs a better generation system; hold a
   brainstorming session when we explore it.
 
+- **Exploration for every class and playstyle** (maybe): the Wilds and future expansions give each
+  Habitica class (warrior, mage, healer, rogue) and each playstyle (fighting, gathering, crafting,
+  exploring, socialising) something worth doing out there.
+- **Tunnels and caves** (maybe): dig or explore tunnels and caves for spelunking and boss fights.
+  Keep it simple. Needs the layers idea below.
+- **Layers, interiors and multi-storey buildings** (maybe, needs design):
+  - a layer system for going underground;
+  - entering a house as its own area, which allows richer interiors;
+  - both together for multi-storey buildings and floors.
+  - Some residents could mostly live indoors, so you go inside to talk to them, which leans
+    naturally into shops.
+
 ## Social
 - **Party notice board** (maybe).
 - **See which friends are online, and where** (maybe).
 - **Gate-shelf gifts flagged for party members** (maybe).
+
+## Game systems (design sessions)
+
+- **A pet overhaul** (maybe, needs a design session): pets come from Habitica but feel tacked on
+  today. Ideas: pet storage, mounts done properly, and pets that matter in the world. Check against
+  [habitica-boundary.md](habitica-boundary.md).
+- **A bigger magic system** (maybe, needs a design session): today there's a single Fingersnap
+  ability. Expand it into a real system, perhaps tied to class.
+- **A quest overhaul** (maybe, needs a design session):
+  - quests as a tree, so new ones can be added over time;
+  - the first quest is a "tutorial by doing" without feeling like a tutorial: it teaches the
+    guided-task system, talking to people, using your weapon, and so on.
 
 ## Polish
 - **Sound** (agreed): ambience, UI sounds, footsteps. `ASSETS.md` lists audio as pending.
