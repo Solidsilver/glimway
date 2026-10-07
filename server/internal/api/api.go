@@ -105,7 +105,7 @@ func problem(w http.ResponseWriter, err error) {
 	if !errors.As(err, &f) {
 		f = &failure{500, "internal"}
 	}
-	write(w, f.status, map[string]any{"error": map[string]string{"code": f.code}})
+	write(w, f.status, map[string]any{"error": map[string]string{"code": errorCodeWire(errorCodeProto(f.code))}})
 }
 func write(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -234,7 +234,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /api/commons":
 		err = a.commons(w, r)
 	case "GET /api/calendar":
-		write(w, 200, content.CalendarAt(content.CalendarRules, a.Config.Now().Unix()))
+		writeProto(w, 200, calendarResponse(content.CalendarAt(content.CalendarRules, a.Config.Now().Unix())))
 	case "GET /api/storage":
 		err = a.storageRead(w, r)
 	case "POST /api/storage":

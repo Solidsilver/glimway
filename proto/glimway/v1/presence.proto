@@ -1,0 +1,66 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+// One event per frame. The websocket subprotocol versions the binary envelope.
+message PresenceMessage {
+  oneof event {
+    PresenceAuth auth = 1;
+    PresenceJoin join = 2;
+    PresencePosition pos = 3;
+    PresenceEmote emote = 4;
+    PresenceHeartbeat heartbeat = 5;
+    PresenceReady ready = 6;
+    PresenceRoom room = 7;
+    PresenceLeave leave = 8;
+    PresenceGift gift = 9;
+    PresenceWitness witness = 10;
+  }
+}
+message PresenceAuth { string lease = 1; }
+message PresenceHeartbeat {}
+message PresenceReady { string habitica_id = 1; }
+message PresenceJoin { string area = 1; PresencePlayer player = 2; }
+message PresenceRoom { string area = 1; repeated PresencePlayer players = 2; }
+message PresenceLeave { string habitica_id = 1; }
+message PresenceEmote { string id = 1; optional string habitica_id = 2; }
+message PresenceGift { string from_name = 1; string kind = 2; string item_def = 3; int32 qty = 4; }
+message PresenceWitness { string beat = 1; string habitica_id = 2; string name = 3; }
+// Explicit presence preserves the JSON reader's required-coordinate checks.
+message PresenceFacing { optional double x = 1; optional double y = 2; }
+message PresencePosition {
+  optional double x = 1;
+  optional double y = 2;
+  PresenceFacing facing = 3;
+  optional bool moving = 4;
+  optional string habitica_id = 5;
+}
+message PresencePlayer {
+  string habitica_id = 1;
+  string display_name = 2;
+  PresenceAvatar avatar = 3;
+  PresencePosition pos = 4;
+}
+message PresenceAvatar {
+  PresenceAppearance appearance = 1;
+  // Existing JSON maps have explicit null equipment slots.
+  map<string, google.protobuf.Value> equipped = 2;
+  map<string, google.protobuf.Value> costume = 3;
+  bool use_costume = 4;
+  google.protobuf.StringValue selected_pet = 5;
+  google.protobuf.StringValue selected_mount = 6;
+}
+message PresenceAppearance {
+  string size = 1;
+  string shirt = 2;
+  string skin = 3;
+  string hair_color = 4;
+  double hair_style = 5;
+  string background = 6;
+  double hair_bangs = 7;
+  double hair_mustache = 8;
+  double hair_beard = 9;
+  double hair_flower = 10;
+}

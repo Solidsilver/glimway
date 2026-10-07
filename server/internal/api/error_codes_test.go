@@ -2,32 +2,25 @@ package api
 
 import (
 	"bytes"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-// Until protobuf owns the catalog, scan production Go sources so adding a
-// refusal cannot silently turn the client's existing copy into an unknown error.
+// Scan production refusal sources against the generated enum. Dynamic error
+// sources must remain explicitly covered when new refusals are introduced.
 func TestClientErrorCodesCoverServer(t *testing.T) {
-	b, err := os.ReadFile("../../../src/lib/api/errors.ts")
-	if err != nil {
-		t.Fatal(err)
-	}
-	list := strings.Split(strings.Split(string(b), "export const SERVER_ERROR_CODES = [")[1], "] as const;")[0]
 	codes := map[string]bool{}
-	for _, m := range regexp.MustCompile(`'([a-z-]+)'`).FindAllStringSubmatch(list, -1) {
-		if codes[m[1]] {
-			t.Errorf("duplicate client error code %q", m[1])
+	for n := range contract.ErrorCode_name {
+		if n != 0 {
+			codes[errorCodeWire(contract.ErrorCode(n))] = true
 		}
-		codes[m[1]] = true
 	}
 	fset := token.NewFileSet()
 	check := func(expr ast.Expr) {

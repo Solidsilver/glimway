@@ -1,5 +1,5 @@
 import raw from '../../content/presence.json' with { type: 'json' };
-import type { HabiticaProfile } from './habitica/types.ts';
+import type { PresenceMessage as GeneratedMessage, PresencePosition as GeneratedPosition, PresencePlayer as GeneratedPlayer, PresenceAvatar as GeneratedAvatar, PresenceAppearance } from './gen/glimway/v1/presence_pb.js';
 export interface PresenceRules {
   maxSessionConnections: number; maxPlayerConnections: number; revalidateFailures: number;
   incomingMessagesPerSecond: number; incomingBurst: number; incomingExcessMs: number;
@@ -18,24 +18,29 @@ export function validatePresence(value: unknown): PresenceRules {
   return p;
 }
 export const PRESENCE = validatePresence(raw);
-/** Visual fields only; no stats, vitals, XP, credentials or collection lists. */
-export type PresenceAvatar = Pick<HabiticaProfile, 'appearance' | 'equipped' | 'costume' | 'useCostume' | 'selectedPet' | 'selectedMount'>;
-export interface PresencePosition { x: number; y: number; facing: { x: number; y: number }; moving: boolean }
-export interface PresencePlayer { habiticaId: string; displayName: string; avatar: PresenceAvatar | null; pos: PresencePosition | null }
-export type PresenceClientMessage =
-  | { type: 'auth'; lease: string }
-  | { type: 'join'; area: string }
-  | ({ type: 'pos' } & PresencePosition)
-  | { type: 'emote'; id: string }
-  | { type: 'heartbeat' };
-export type PresenceServerMessage =
-  | { type: 'ready'; habiticaId: string }
-  | { type: 'room'; area: string; players: PresencePlayer[] }
-  | { type: 'join'; area: string; player: PresencePlayer }
-  | { type: 'leave'; habiticaId: string }
+type Fields<T> = Omit<T, '$typeName' | '$unknown'>;
+type Payload<K> = Fields<Extract<GeneratedMessage['event'], { case: K }>['value']>;
+type Event<K> = { type: K } & Payload<K>;
+/** Views of generated payloads normalize nullable JSON fields for the game. */
+export type PresenceAvatar = Omit<Fields<GeneratedAvatar>, 'appearance' | 'equipped' | 'costume' | 'selectedPet' | 'selectedMount'> & {
+  appearance: Fields<PresenceAppearance>;
+  equipped: Record<string, string | null>;
+  costume: Record<string, string | null>;
+  selectedPet: string | null;
+  selectedMount: string | null;
+};
+export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'habiticaId'>> & {
+  facing: Required<Fields<NonNullable<GeneratedPosition['facing']>>>;
+};
+export type PresencePlayer = Omit<Fields<GeneratedPlayer>, 'avatar' | 'pos'> & {
+  avatar: PresenceAvatar | null;
+  pos: PresencePosition | null;
+};
+export type PresenceClientMessage = Event<'auth'> | Pick<Event<'join'>, 'type' | 'area'>
+  | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>;
+export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
+  | (Pick<Event<'room'>, 'type' | 'area'> & { players: PresencePlayer[] })
+  | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; habiticaId: string } & PresencePosition)
-  | { type: 'emote'; habiticaId: string; id: string }
-  | { type: 'gift'; fromName: string; kind: string; itemDef: string; qty: number }
-  /** Someone near you reached a shared story beat (relayed from the server's record of it). */
-  | { type: 'witness'; beat: string; habiticaId: string; name: string };
+  | (Event<'emote'> & { habiticaId: string });
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004 } as const;

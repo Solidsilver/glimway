@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  - local: .cache/proto/bin/protoc-gen-go
+    out: server/internal/gen
+    opt: paths=source_relative
+  - local: node_modules/.bin/protoc-gen-es
+    out: src/lib/gen
+    opt: target=js+dts,import_extension=js

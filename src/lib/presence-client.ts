@@ -4,7 +4,7 @@
  * (deployment notes in docs/home-server.md, "Phase 6 presence WebSockets");
  * shared types and limits: `src/lib/presence.ts`.
  *
- * - Auth goes in the first text message (never the URL); nothing else is sent
+ * - Auth goes in the first negotiated-format message (never the URL); nothing else is sent
  *   until `ready`.
  * - `join` on every area change, paced by the server's join cooldown (the
  *   latest wanted area wins).
@@ -18,12 +18,15 @@
  * Pure: the socket and timers are injected, so this runs under node --test.
  * It never sees credentials beyond the lease, and never logs messages.
  */
+import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 /** The WebSocket surface the client uses (the browser's WebSocket fits). */
 export interface SocketLike {
   readonly readyState: number;
-  send(data: string): void;
+  readonly protocol?: string;
+  binaryType?: string;
+  send(data: string | Uint8Array): void;
   close(code?: number, reason?: string): void;
   onopen: ((ev: unknown) => void) | null;
   onmessage: ((ev: { data: unknown }) => void) | null;
@@ -75,7 +78,7 @@ const realTimers: Timers = {
 
 export interface PresenceClientOptions {
   url: string;
-  makeSocket: (url: string) => SocketLike;
+  makeSocket: (url: string, protocols?: string[]) => SocketLike;
   handlers?: PresenceHandlers;
   timers?: Timers;
   /** Jitter source for backoff (tests pin it). */
@@ -284,7 +287,8 @@ export class PresenceClient {
     this.setStatus(this.attempts > 0 ? 'retrying' : 'connecting');
     let socket: SocketLike;
     try {
-      socket = this.opts.makeSocket(this.opts.url);
+      socket = this.opts.makeSocket(this.opts.url, [PRESENCE_PROTOCOL]);
+      socket.binaryType = 'arraybuffer';
     } catch {
       this.scheduleRetry();
       return;
@@ -331,7 +335,9 @@ export class PresenceClient {
   private onMessage(data: unknown): void {
     let m: PresenceServerMessage;
     try {
-      m = JSON.parse(String(data)) as PresenceServerMessage;
+      const decoded = decodePresence(data);
+      if (!decoded) return;
+      m = decoded;
     } catch {
       return;
     }
@@ -464,7 +470,7 @@ export class PresenceClient {
     const s = this.socket;
     if (!s || s.readyState !== OPEN) return;
     try {
-      s.send(JSON.stringify(m));
+      s.send(s.protocol === PRESENCE_PROTOCOL ? encodePresence(m) : JSON.stringify(m));
       this.lastSentAt = this.timers.now();
     } catch {
       /* onclose will follow */

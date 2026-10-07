@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -17,6 +18,10 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	contract "glimway/server/internal/gen/glimway/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type presenceTestLog struct {
@@ -63,6 +68,22 @@ func TestPresenceLogsExcludeSecrets(t *testing.T) {
 	}
 }
 
+// Independent legacy client views keep JSON compatibility checks meaningful.
+type presenceAvatar struct {
+	Appearance    rules.Appearance   `json:"appearance"`
+	Equipped      map[string]*string `json:"equipped"`
+	Costume       map[string]*string `json:"costume"`
+	UseCostume    bool               `json:"useCostume"`
+	SelectedPet   *string            `json:"selectedPet"`
+	SelectedMount *string            `json:"selectedMount"`
+}
+type presencePlayer struct {
+	HabiticaID  string            `json:"habiticaId"`
+	DisplayName string            `json:"displayName"`
+	Avatar      *presenceAvatar   `json:"avatar"`
+	Pos         *presencePosition `json:"pos"`
+}
+
 type wsEvent struct {
 	Type       string                 `json:"type"`
 	Area       string                 `json:"area"`
@@ -91,9 +112,15 @@ func TestPresenceAvatarIsBoundedVisualData(t *testing.T) {
 	p.Appearance.Skin = strings.Repeat("a", 65)
 	p.Appearance.Background = "<script>"
 	v := visualAvatar(p)
-	if len(v.Equipped) != len(rules.Slots) || len(v.Costume) != len(rules.Slots) || *v.Equipped["weapon"] != gear || v.Equipped["shield"] != nil || v.Costume["head"] != nil || v.SelectedPet != nil || v.SelectedMount != nil || v.Appearance.Skin != "" || v.Appearance.Background != "" {
+	if len(v.Equipped) != len(rules.Slots) || len(v.Costume) != len(rules.Slots) || v.Equipped["weapon"].GetStringValue() != gear || v.Equipped["shield"].GetKind() == nil || v.Equipped["shield"].GetStringValue() != "" || v.Costume["head"].GetKind() == nil || v.Costume["head"].GetStringValue() != "" || v.SelectedPet != nil || v.SelectedMount != nil || v.Appearance.Skin != "" || v.Appearance.Background != "" {
 		t.Fatal("unsafe or oversized avatar descriptor", store.JSON(v))
 	}
+	for _, value := range []*structpb.Value{v.Equipped["shield"], v.Costume["head"]} {
+		if _, ok := value.Kind.(*structpb.Value_NullValue); !ok {
+			t.Fatal("empty equipment slot lost its explicit null")
+		}
+	}
+
 	if strings.Contains(store.JSON(v), "apiToken") {
 		t.Fatal("unknown equipment slot relayed")
 	}
@@ -151,9 +178,28 @@ func readPresence(t *testing.T, conn *websocket.Conn) *wsClient {
 	w := &wsClient{t: t, conn: conn, events: make(chan wsEvent, 1024), closed: make(chan error, 1)}
 	go func() {
 		for {
-			_, b, err := conn.Read(context.Background())
+			typ, b, err := conn.Read(context.Background())
 			if err != nil {
 				w.closed <- err
+				return
+			}
+			if conn.Subprotocol() == presenceProtocol {
+				if typ != websocket.MessageBinary {
+					w.closed <- fmt.Errorf("expected binary response")
+					return
+				}
+				var envelope contract.PresenceMessage
+				if err = proto.Unmarshal(b, &envelope); err != nil {
+					w.closed <- err
+					return
+				}
+				b, err = presenceJSON(&envelope, true)
+				if err != nil {
+					w.closed <- err
+					return
+				}
+			} else if typ != websocket.MessageText {
+				w.closed <- fmt.Errorf("expected JSON response")
 				return
 			}
 			var e wsEvent
@@ -178,7 +224,32 @@ func (w *wsClient) send(v any) {
 	w.t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := w.conn.Write(ctx, websocket.MessageText, []byte(store.JSON(v))); err != nil {
+	b := []byte(store.JSON(v))
+	typ := websocket.MessageText
+	if w.conn.Subprotocol() == presenceProtocol {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(b, &fields); err != nil {
+			w.t.Fatal(err)
+		}
+		var event string
+		if err := json.Unmarshal(fields["type"], &event); err != nil {
+			w.t.Fatal(err)
+		}
+		delete(fields, "type")
+		payload, _ := json.Marshal(fields)
+		envelopeJSON, _ := json.Marshal(map[string]json.RawMessage{event: payload})
+		var envelope contract.PresenceMessage
+		if err := protojson.Unmarshal(envelopeJSON, &envelope); err != nil {
+			w.t.Fatal(err)
+		}
+		var err error
+		b, err = proto.Marshal(&envelope)
+		if err != nil {
+			w.t.Fatal(err)
+		}
+		typ = websocket.MessageBinary
+	}
+	if err := w.conn.Write(ctx, typ, b); err != nil {
 		w.t.Fatal(err)
 	}
 }

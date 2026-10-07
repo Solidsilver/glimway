@@ -19,7 +19,6 @@ import type {
   StackView,
   ThanksView,
   WorkshopView,
-  CalendarResponse,
   ContributeResponse,
   CraftResponse,
   DeskCopyResponse,
@@ -688,21 +687,7 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   return { ...parseSnapshot(raw), result };
 }
 
-export function parseCalendar(raw: unknown): CalendarResponse {
-  const o = obj(raw);
-  return {
-    wick: str(o.wick),
-    wickNumber: num(o.wickNumber),
-    year: num(o.year),
-    day: int(o.day, 1),
-    mark: str(o.mark),
-    festival: typeof o.festival === 'string' ? o.festival : null,
-    startsAt: num(o.startsAt),
-    nextTurning: num(o.nextTurning),
-    notice: typeof o.notice === 'string' ? o.notice : null,
-    wickDays: int(o.wickDays, 1),
-  };
-}
+export { parseCalendar } from './calendar.ts';
 
 /** The workshop view; older servers always sent a home and a shared chest. */
 function parseWorkshop(o: Obj): WorkshopView {

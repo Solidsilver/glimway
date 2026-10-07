@@ -1,6 +1,7 @@
 package api
 
 import (
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
@@ -63,13 +64,6 @@ func (a *Server) witnessed(s store.Snapshot, beats []string) func() {
 	}
 }
 
-type witnessMessage struct {
-	Type       string `json:"type"`
-	Beat       string `json:"beat"`
-	HabiticaID string `json:"habiticaId"`
-	Name       string `json:"name"`
-}
-
 // presenceWitness sends the beat to every player connected in the doer's
 // world and room who last stood within WitnessTiles of where the doer last
 // stood. Nothing when the doer isn't standing in that room right now (an
@@ -86,7 +80,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 		return
 	}
 	radius := float64(WitnessTiles * wildsTileSize)
-	m := witnessMessage{"witness", beat, doer, capDonor(name)}
+	m := &contract.PresenceWitness{Beat: beat, HabiticaId: doer, Name: capDonor(name)}
 	for _, q := range h.peers {
 		if q == p || q.detached || q.identity.World != world || q.area != p.area || q.pos == nil || q.queue == nil {
 			continue

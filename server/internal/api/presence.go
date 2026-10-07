@@ -20,6 +20,10 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	contract "glimway/server/internal/gen/glimway/v1"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -31,35 +35,22 @@ const (
 
 func millis(n int) time.Duration { return time.Duration(n) * time.Millisecond }
 
-type presenceAvatar struct {
-	Appearance    rules.Appearance   `json:"appearance"`
-	Equipped      map[string]*string `json:"equipped"`
-	Costume       map[string]*string `json:"costume"`
-	UseCostume    bool               `json:"useCostume"`
-	SelectedPet   *string            `json:"selectedPet"`
-	SelectedMount *string            `json:"selectedMount"`
-}
 type presencePosition struct {
 	X      float64        `json:"x"`
 	Y      float64        `json:"y"`
 	Facing rules.Position `json:"facing"`
 	Moving bool           `json:"moving"`
 }
-type presencePlayer struct {
-	HabiticaID  string            `json:"habiticaId"`
-	DisplayName string            `json:"displayName"`
-	Avatar      *presenceAvatar   `json:"avatar"`
-	Pos         *presencePosition `json:"pos"`
-}
 type presenceIdentity struct {
 	ID, World, Name, Lease, Session string
-	Avatar                          *presenceAvatar
+	Avatar                          *contract.PresenceAvatar
 }
 
 type presencePeer struct {
 	identity    presenceIdentity
 	account     *presenceAccount
 	conn        *websocket.Conn
+	binary      bool
 	ctx         context.Context
 	cancel      context.CancelFunc
 	queue       chan []byte
@@ -160,11 +151,11 @@ func (h *presenceHub) release(reservation presenceReservation) {
 		h.drainOnce.Do(func() { close(h.drained) })
 	}
 }
-func (h *presenceHub) send(p *presencePeer, v any) {
+func (h *presenceHub) send(p *presencePeer, v proto.Message) {
 	if p.detached || p.ctx.Err() != nil {
 		return
 	}
-	b, err := json.Marshal(v)
+	b, err := encodePresence(v, p.binary)
 	if err != nil {
 		p.stop(websocket.StatusInternalError, "internal")
 		return
@@ -180,7 +171,7 @@ func (h *presenceHub) send(p *presencePeer, v any) {
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 	}
 }
-func (h *presenceHub) broadcast(sender *presencePeer, v any) {
+func (h *presenceHub) broadcast(sender *presencePeer, v proto.Message) {
 	for _, p := range h.peers {
 		if p != sender && p.identity.World == sender.identity.World && p.area == sender.area && p.area != "" {
 			h.send(p, v)
@@ -196,10 +187,7 @@ func (h *presenceHub) remove(p *presencePeer) {
 	}
 	delete(h.peers, p.identity.ID)
 	if p.area != "" {
-		h.broadcast(p, struct {
-			Type       string `json:"type"`
-			HabiticaID string `json:"habiticaId"`
-		}{"leave", p.identity.ID})
+		h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
 	}
 }
 func (h *presenceHub) detach(p *presencePeer) {
@@ -362,10 +350,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 // the old world's players clear) and wait for their next join.
 func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 	if p.area != "" {
-		h.broadcast(p, struct {
-			Type       string `json:"type"`
-			HabiticaID string `json:"habiticaId"`
-		}{"leave", p.identity.ID})
+		h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
 	}
 	p.identity.World = world
 	p.pos = nil
@@ -379,20 +364,12 @@ func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 		}
 	}
 	if n >= h.config.MaxRoomPlayers {
-		h.send(p, struct {
-			Type    string           `json:"type"`
-			Area    string           `json:"area"`
-			Players []presencePlayer `json:"players"`
-		}{"room", p.area, []presencePlayer{}})
+		h.send(p, &contract.PresenceRoom{Area: p.area, Players: []*contract.PresencePlayer{}})
 		p.area = ""
 		return
 	}
 	h.room(p)
-	h.broadcast(p, struct {
-		Type   string         `json:"type"`
-		Area   string         `json:"area"`
-		Player presencePlayer `json:"player"`
-	}{"join", p.area, p.player()})
+	h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 }
 
 // Bump before querying so in-flight first-message auth must re-check. Pointer
@@ -499,7 +476,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	controller := http.NewResponseController(w)
 	_ = controller.SetReadDeadline(time.Time{})
 	_ = controller.SetWriteDeadline(time.Time{})
-	conn, err := websocket.Accept(w, r, nil)
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{presenceProtocol}})
 	if err != nil {
 		return nil
 	}
@@ -524,7 +501,12 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		Type  string `json:"type"`
 		Lease string `json:"lease"`
 	}
-	if typ != websocket.MessageText || strictPresenceJSON(b, &auth) != nil || auth.Type != "auth" || len(auth.Lease) != 64 {
+	binary := conn.Subprotocol() == presenceProtocol
+	wireType := websocket.MessageText
+	if binary {
+		wireType = websocket.MessageBinary
+	}
+	if typ != wireType || decodePresence(b, binary, &auth) != nil || auth.Type != "auth" || len(auth.Lease) != 64 {
 		_ = conn.Close(presenceUnauthorized, "unauthorized")
 		return nil
 	}
@@ -579,7 +561,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	peerCtx, peerCancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, h.config.QueueMessages), lastActivity: time.Now()}
+	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, binary: binary, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, h.config.QueueMessages), lastActivity: time.Now()}
 	if old := h.peers[identity.ID]; old != nil {
 		if old.identity.Lease == identity.Lease && old.identity.World == identity.World {
 			if old.grace != nil {
@@ -597,17 +579,10 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	h.peers[identity.ID] = p
-	h.send(p, struct {
-		Type       string `json:"type"`
-		HabiticaID string `json:"habiticaId"`
-	}{"ready", identity.ID})
+	h.send(p, &contract.PresenceReady{HabiticaId: identity.ID})
 	if p.area != "" {
 		h.room(p)
-		h.broadcast(p, struct {
-			Type   string         `json:"type"`
-			Area   string         `json:"area"`
-			Player presencePlayer `json:"player"`
-		}{"join", p.area, p.player()})
+		h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 	}
 	h.mu.Unlock()
 	done := make(chan struct{})
@@ -624,22 +599,18 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (p *presencePeer) player() presencePlayer {
-	return presencePlayer{p.identity.ID, p.identity.Name, p.identity.Avatar, p.pos}
+func (p *presencePeer) player() *contract.PresencePlayer {
+	return &contract.PresencePlayer{HabiticaId: p.identity.ID, DisplayName: p.identity.Name, Avatar: p.identity.Avatar, Pos: presencePositionProto(p.pos)}
 }
 func (h *presenceHub) room(p *presencePeer) {
-	players := []presencePlayer{}
+	players := []*contract.PresencePlayer{}
 	for _, other := range h.peers {
 		if other != p && other.area == p.area && other.identity.World == p.identity.World {
 			players = append(players, other.player())
 		}
 	}
-	slices.SortFunc(players, func(a, b presencePlayer) int { return strings.Compare(a.HabiticaID, b.HabiticaID) })
-	h.send(p, struct {
-		Type    string           `json:"type"`
-		Area    string           `json:"area"`
-		Players []presencePlayer `json:"players"`
-	}{"room", p.area, players})
+	slices.SortFunc(players, func(a, b *contract.PresencePlayer) int { return strings.Compare(a.HabiticaId, b.HabiticaId) })
+	h.send(p, &contract.PresenceRoom{Area: p.area, Players: players})
 }
 func (a *Server) presenceReader(p *presencePeer) {
 	h := a.presence
@@ -652,8 +623,16 @@ func (a *Server) presenceReader(p *presencePeer) {
 		if p.ctx.Err() != nil {
 			return
 		}
-		if typ != websocket.MessageText {
-			p.stop(websocket.StatusUnsupportedData, "text-required")
+		wireType := websocket.MessageText
+		if p.binary {
+			wireType = websocket.MessageBinary
+		}
+		if typ != wireType {
+			reason := "text-required"
+			if p.binary {
+				reason = "binary-required"
+			}
+			p.stop(websocket.StatusUnsupportedData, reason)
 			return
 		}
 		admitted, sustained := ingress.admit(time.Now(), h.config)
@@ -676,7 +655,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			} `json:"facing,omitempty"`
 			Moving *bool `json:"moving,omitempty"`
 		}
-		if strictPresenceJSON(b, &message) != nil {
+		if decodePresence(b, p.binary, &message) != nil {
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			return
 		}
@@ -723,19 +702,12 @@ func (a *Server) presenceReader(p *presencePeer) {
 				return
 			}
 			if p.area != "" {
-				h.broadcast(p, struct {
-					Type       string `json:"type"`
-					HabiticaID string `json:"habiticaId"`
-				}{"leave", p.identity.ID})
+				h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
 			}
 			p.area = message.Area
 			p.pos = nil
 			h.room(p)
-			h.broadcast(p, struct {
-				Type   string         `json:"type"`
-				Area   string         `json:"area"`
-				Player presencePlayer `json:"player"`
-			}{"join", p.area, p.player()})
+			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 		case "pos":
 			if p.area == "" || message.X == nil || message.Y == nil || message.Facing == nil || message.Facing.X == nil || message.Facing.Y == nil || message.Moving == nil {
 				p.stop(websocket.StatusPolicyViolation, "invalid-position")
@@ -755,11 +727,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.lastPos = now
 			p.pos = &presencePosition{x, y, rules.Position{X: fx, Y: fy}, *message.Moving}
-			h.broadcast(p, struct {
-				Type       string `json:"type"`
-				HabiticaID string `json:"habiticaId"`
-				presencePosition
-			}{"pos", p.identity.ID, *p.pos})
+			position := presencePositionProto(p.pos)
+			position.HabiticaId = proto.String(p.identity.ID)
+			h.broadcast(p, position)
 		case "emote":
 			if p.area == "" || !slices.Contains(h.config.Emotes, message.ID) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-emote")
@@ -771,11 +741,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 				continue
 			}
 			p.lastEmote = now
-			h.broadcast(p, struct {
-				Type       string `json:"type"`
-				HabiticaID string `json:"habiticaId"`
-				ID         string `json:"id"`
-			}{"emote", p.identity.ID, message.ID})
+			h.broadcast(p, &contract.PresenceEmote{HabiticaId: proto.String(p.identity.ID), Id: message.ID})
 		default:
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			h.mu.Unlock()
@@ -807,7 +773,11 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			// Cancelling coder/websocket Write closes the transport. Let a bounded
 			// in-flight write finish so takeover can send its explicit close code.
 			ctx, cancel := context.WithTimeout(context.Background(), millis(h.config.WriteTimeoutMs))
-			err := p.conn.Write(ctx, websocket.MessageText, b)
+			wireType := websocket.MessageText
+			if p.binary {
+				wireType = websocket.MessageBinary
+			}
+			err := p.conn.Write(ctx, wireType, b)
 			cancel()
 			if err != nil {
 				p.stop(websocket.StatusTryAgainLater, "slow-consumer")
@@ -830,7 +800,7 @@ func (a *Server) presenceWriter(p *presencePeer) {
 		}
 	}
 }
-func visualAvatar(p rules.Profile) *presenceAvatar {
+func visualAvatar(p rules.Profile) *contract.PresenceAvatar {
 	// Asset keys are short ASCII identifiers. Reject controls/markup rather than
 	// allowing JSON escaping to amplify a roster beyond the outgoing byte limit.
 	assetKey := func(s string, limit int) bool {
@@ -844,15 +814,14 @@ func visualAvatar(p rules.Profile) *presenceAvatar {
 		}
 		return true
 	}
-	cleanMap := func(input map[string]*string) map[string]*string {
-		out := map[string]*string{}
+	cleanMap := func(input map[string]*string) map[string]*structpb.Value {
+		out := map[string]*structpb.Value{}
 		for _, slot := range rules.Slots {
 			v := input[slot]
 			if v != nil && assetKey(*v, 128) {
-				copy := *v
-				out[slot] = &copy
+				out[slot] = structpb.NewStringValue(*v)
 			} else {
-				out[slot] = nil
+				out[slot] = structpb.NewNullValue()
 			}
 		}
 		return out
@@ -863,14 +832,16 @@ func visualAvatar(p rules.Profile) *presenceAvatar {
 			*v = ""
 		}
 	}
-	selected := func(v *string) *string {
+	selected := func(v *string) *wrapperspb.StringValue {
 		if v == nil || !assetKey(*v, 128) {
 			return nil
 		}
-		copy := *v
-		return &copy
+		return wrapperspb.String(*v)
 	}
-	return &presenceAvatar{visual, cleanMap(p.Equipped), cleanMap(p.Costume), p.UseCostume, selected(p.SelectedPet), selected(p.SelectedMount)}
+	return &contract.PresenceAvatar{
+		Appearance: &contract.PresenceAppearance{Size: visual.Size, Shirt: visual.Shirt, Skin: visual.Skin, HairColor: visual.HairColor, HairStyle: visual.HairStyle, Background: visual.Background, HairBangs: visual.HairBangs, HairMustache: visual.HairMustache, HairBeard: visual.HairBeard, HairFlower: visual.HairFlower},
+		Equipped:   cleanMap(p.Equipped), Costume: cleanMap(p.Costume), UseCostume: p.UseCostume, SelectedPet: selected(p.SelectedPet), SelectedMount: selected(p.SelectedMount),
+	}
 }
 
 // Reader-owned token bucket: denied messages never parse JSON or take h.mu.
