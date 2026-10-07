@@ -28,6 +28,11 @@ worth thinking about; **(later)** means parked on purpose.
   shared in the world, such as lighting a stretch of road together, so doing your dailies helps
   your friends.
 
+- **Backups for everything Habitica supplies** (agreed, standing goal): our own versions of the
+  avatar (the player body), gear, pets and sprites, so a spin-off not tied to Habitica stays
+  possible. Lean on Habitica's art for now.
+- **Human-made art** (agreed, when resources allow): replace the generated art, and welcome artists.
+
 ## Story and world
 - **A longer main road** (agreed, later): 2–3 chapters past the Warden, gated on real time and
   Habitica activity. Hooks: the lost expedition, the open account, the Sallow Ford lamp.
