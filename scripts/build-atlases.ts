@@ -13,7 +13,11 @@
  * terrain) are dense: each native frame canvas is ART_DENSITY texels per
  * world px, its measured source rect box-filtered (area-averaged) into its
  * destination rect, so the game keeps the paintings' detail and draws them
- * nearest-neighbour at the same world size (src/game/density.ts). The GPU-scaled
+ * nearest-neighbour at the same world size (src/game/density.ts). The
+ * residents, the held tools and the mill wheel are cut out of their sheets
+ * figure by figure (src/game/figures.ts) rather than by the delivered crops,
+ * and fitted to one scale and anchor per group (src/game/atlas-plan.ts
+ * PERSON_HEIGHT, HELD_LEAN, MILL_WALL). The GPU-scaled
  * atlases keep their nearest-neighbour blit at their largest
  * on-screen size. After writing, every frame is read back from the encoded
  * PNG and compared with the canvas it came from; any difference fails the
@@ -46,8 +50,19 @@ import {
   POND_SIZE,
   POND_SOURCE,
   POND_TILES,
+  HELD_LEAN,
   HELD_TEXELS,
+  heldSheetRows,
+  MILL_SHEET_ROWS,
+  MILL_WALL,
+  MILL_WALL_FOOT,
+  MILL_WALL_STRIP,
   PEOPLE,
+  PERSON_CANVAS,
+  PERSON_FACINGS,
+  PERSON_FOOT,
+  PERSON_HEIGHT,
+  personSheetRows,
   PLAYTEST1_DIR,
   PLAYTEST1_RECORDS,
   playtest1Records,
@@ -60,6 +75,8 @@ import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
 import { installDirs, installStaged } from './atlas-install.ts'
+import { decodePng } from './png-decode.ts'
+import { extractFigure, footPoint, grow, layoutFigures, overlap, placeAt, type Box, type Figure, type Rgba as SheetRgba } from '../src/game/figures.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const PACKED = join(ROOT, 'public/assets/fingersnap/packed')
@@ -92,6 +109,47 @@ interface Job {
   d: [number, number, number, number]
   flipX?: boolean
   box?: boolean
+  /** `src` is a figure cut out of its sheet in Node (`raw/<id>`, straight RGBA this size), not an image file. */
+  raw?: [number, number]
+}
+
+/**
+ * Figures cut out of their sheets (src/game/figures.ts), served to the bake
+ * page as raw RGBA: a frame then samples its own figure's pixels and nothing
+ * of a neighbouring cell.
+ */
+const rawSources = new Map<string, Buffer>()
+function rawFigure(id: string, img: SheetRgba, f: Figure, region: Box): { src: string; raw: [number, number]; at: [number, number] } {
+  const cut = extractFigure(img, f, region)
+  const src = `raw/${id}`
+  rawSources.set(src, Buffer.from(cut.data))
+  return { src, raw: [cut.w, cut.h], at: [cut.x, cut.y] }
+}
+
+/** The union of two boxes. */
+const union = (a: Box, b: Box): Box => {
+  const x = Math.min(a.x, b.x)
+  const y = Math.min(a.y, b.y)
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y }
+}
+
+/**
+ * A figure named by a sheet's layout must be the one the delivered crop for
+ * that name covers most of.
+ */
+function named(img: SheetRgba, figures: Map<string, Figure>, name: string, crop: Box): Figure {
+  const f = figures.get(name)
+  if (!f) throw new Error(`${name}: not on its sheet's layout`)
+  const most = Math.max(...[...figures.values()].map((g) => overlap(img, g, crop)))
+  if (overlap(img, f, crop) < most || most === 0) throw new Error(`${name}: the sheet's layout and its delivered crop disagree about which figure it is`)
+  return f
+}
+
+/** A sheet's decoded texels, by path (each read once, and hashed as an input). */
+const sheets = new Map<string, SheetRgba>()
+function sheet(path: string): SheetRgba {
+  if (!sheets.has(path)) sheets.set(path, decodePng(read(path)))
+  return sheets.get(path)!
 }
 
 /** A pack job at ART_DENSITY: a native `w`×`h` world-px canvas, `d` in world px. */
@@ -166,9 +224,34 @@ async function main(): Promise<void> {
   const items = readJson<ItemsPassManifest>('assets/generated/items-pass/manifest.json')
   const itemsSrc = new Map(items.sources.map((s) => [s.key, `assets/generated/items-pass/${s.file}`]))
   for (const path of itemsSrc.values()) read(path)
-  const itemsJobs: Job[] = items.frames.map((f) =>
-    dense(f.key, itemsSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], f.width, f.height, [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h]),
-  )
+  // The mill wheel's frames: one wall height and pivot, mirrored (MILL_WALL).
+  const millFrame = items.frames.find((f) => f.key === 'mill-wheel-0')
+  const millPath = millFrame && itemsSrc.get(millFrame.source)!
+  const millFigures = millPath ? layoutFigures(sheet(millPath), MILL_SHEET_ROWS, 'items-pass Tolley mill sheet') : new Map<string, Figure>()
+  const itemsJobs: Job[] = items.frames.map((f) => {
+    const fig = f.key.startsWith('mill-wheel-') ? millFigures.get(f.key) : undefined
+    if (!fig) return dense(f.key, itemsSrc.get(f.source)!, [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], f.width, f.height, [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h])
+    const img = sheet(millPath!)
+    named(img, millFigures, f.key, f.sourceRect)
+    // The wall: the solid rows of the figure's outer strip.
+    let top = Infinity
+    let bottom = -1
+    for (const p of fig.pixels) {
+      const x = p % img.w
+      const y = (p - x) / img.w
+      if (x < fig.x + fig.w - MILL_WALL_STRIP || img.data[p * 4 + 3] < 128) continue
+      top = Math.min(top, y)
+      bottom = Math.max(bottom, y)
+    }
+    const k = ART_DENSITY
+    const scale = (MILL_WALL * k) / (bottom + 1 - top)
+    const [W, H] = [f.width * k, f.height * k]
+    // Placed unmirrored at the mirror image of the pivot, then mirrored about the canvas.
+    const { s, d } = placeAt(fig, { x: fig.x + fig.w, y: bottom + 1 }, [W - MILL_WALL_FOOT[0] * k, MILL_WALL_FOOT[1] * k], scale)
+    const cut = rawFigure(f.key, img, fig, grow(fig, 2 / scale + 2))
+    if (d[0] < 0 || d[1] < 0 || d[0] + d[2] > W || d[1] + d[3] > H) throw new Error(`${f.key}: the wheel (${d.join(', ')}) overflows its ${W}×${H} canvas`)
+    return { id: f.key, src: cut.src, raw: cut.raw, s: [s[0] - cut.at[0], s[1] - cut.at[1], s[2], s[3]], w: W, h: H, d: [W - d[0] - d[2], d[1], d[2], d[3]], flipX: true, box: true }
+  })
 
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
   // ART_DENSITY (64 texels at 4×). A cell delivered at that size is copied
@@ -213,30 +296,58 @@ async function main(): Promise<void> {
     read(p1Src(f.source))
     return dense(name, p1Src(f.source), [f.x, f.y, f.w, f.h], 16, 16, [0, 0, 16, 16])
   })
-  // People: the residents' 64×128 canvases (16×32 world px, feet at the
-  // bottom centre) and the held tools at HELD_TEXELS, at ART_DENSITY.
-  const k4 = ART_DENSITY / 4
+  // People: each resident's frames are their figures on the sheet, found
+  // afresh (src/game/figures.ts; the pass's measured crops cut figures in
+  // half and span cells), drawn at one scale per person and facing
+  // (PERSON_HEIGHT over the median height of that facing's frames) with
+  // every figure's foot point on the canvas's (PERSON_FOOT), and only its
+  // own pixels.
   const residentFrames = Object.keys(p1.frames).filter((n) => PEOPLE.some((id) => n.startsWith(`resident-${id}-`)))
   const heldFrames = Object.keys(p1.frames).filter((n) => n.startsWith('held-'))
-  const peopleJobs: (Job & { hand?: [number, number] })[] = [
-    ...residentFrames.map((name) => {
-      const f = p1Frame(name)
-      read(p1Src(f.source))
-      const r = f.destinationRect
-      return { id: name, src: p1Src(f.source), s: [f.x, f.y, f.w, f.h], w: 64 * k4, h: 128 * k4, d: [r.x * k4, r.y * k4, r.w * k4, r.h * k4], box: true } as Job
-    }),
-    ...heldFrames.map((name) => {
-      const f = p1Frame(name)
-      read(p1Src(f.source))
-      const s = HELD_TEXELS / HELD_SOURCE
-      const r = f.destinationRect
-      const x0 = Math.round(r.x * s)
-      const y0 = Math.round(r.y * s)
-      const d: [number, number, number, number] = [x0, y0, Math.round((r.x + r.w) * s) - x0, Math.round((r.y + r.h) * s) - y0]
-      const hand: [number, number] = [Math.round(f.handAnchor!.x * s), Math.round(f.handAnchor!.y * s)]
-      return { id: name, src: p1Src(f.source), s: [f.x, f.y, f.w, f.h] as [number, number, number, number], w: HELD_TEXELS, h: HELD_TEXELS, d, box: true, hand }
-    }),
-  ]
+  const fits: PackedPeople['fits'] = {}
+  const [canvasW, canvasH] = [PERSON_CANVAS[0] * ART_DENSITY, PERSON_CANVAS[1] * ART_DENSITY]
+  const residentJobs: Job[] = PEOPLE.flatMap((id) => {
+    const rows = personSheetRows(id)
+    const names = rows.flat()
+    const missing = residentFrames.filter((n) => n.startsWith(`resident-${id}-`) && !names.includes(n))
+    if (missing.length) throw new Error(`${id}: frames outside the sheet layout: ${missing.join(', ')}`)
+    const img = sheet(p1Src(p1Frame(names[0]).source))
+    const figures = layoutFigures(img, rows, `resident-${id} sheet`)
+    // (No check against the delivered crops here: some of them cover more of a neighbour than of their own figure.)
+    const facings = Object.fromEntries(
+      PERSON_FACINGS.map((dir) => {
+        const hs = names.filter((n) => n.startsWith(`resident-${id}-${dir}-`)).map((n) => figures.get(n)!.h).sort((x, y) => x - y)
+        const measured = (hs[(hs.length - 1) >> 1] + hs[hs.length >> 1]) / 2
+        return [dir, { measured, scale: (PERSON_HEIGHT[id] * ART_DENSITY) / measured }]
+      }),
+    )
+    fits[id] = { height: PERSON_HEIGHT[id], facings: Object.fromEntries(Object.entries(facings).map(([dir, f]) => [dir, { measured: f.measured, scale: Number(f.scale.toFixed(6)) }])) }
+    return names.map((name) => {
+      const fig = figures.get(name)!
+      const { scale } = facings[PERSON_FACINGS.find((dir) => name.startsWith(`resident-${id}-${dir}-`)) ?? 'down']
+      const { s, d } = placeAt(fig, footPoint(img, fig), [PERSON_FOOT[0] * ART_DENSITY, PERSON_FOOT[1] * ART_DENSITY], scale)
+      if (d[0] < 0 || d[1] < 0 || d[0] + d[2] > canvasW || d[1] + d[3] > canvasH) throw new Error(`${name}: the figure (${d.join(', ')}) overflows its ${canvasW}×${canvasH} canvas`)
+      const cut = rawFigure(name, img, fig, grow(fig, 2 / scale + 2))
+      return { id: name, src: cut.src, raw: cut.raw, s: [s[0] - cut.at[0], s[1] - cut.at[1], s[2], s[3]], w: canvasW, h: canvasH, d, box: true }
+    })
+  })
+  // The held tools: the delivered crops and destination rects, sampling only
+  // their own figure (the sheet's layout, heldSheetRows); grips are measured
+  // on the baked art below.
+  const heldImg = heldFrames.length ? sheet(p1Src(p1Frame(heldFrames[0]).source)) : null
+  const heldFigures = heldImg ? layoutFigures(heldImg, heldSheetRows(), 'held-tools sheet') : new Map<string, Figure>()
+  const heldJobs: (Job & { anchor: [number, number] })[] = heldFrames.map((name) => {
+    const f = p1Frame(name)
+    const fig = named(heldImg!, heldFigures, name, f)
+    const cut = rawFigure(name, heldImg!, fig, grow(union(fig, f), 1))
+    const s = HELD_TEXELS / HELD_SOURCE
+    const r = f.destinationRect
+    const x0 = Math.round(r.x * s)
+    const y0 = Math.round(r.y * s)
+    const d: [number, number, number, number] = [x0, y0, Math.round((r.x + r.w) * s) - x0, Math.round((r.y + r.h) * s) - y0]
+    return { id: name, src: cut.src, raw: cut.raw, s: [f.x - cut.at[0], f.y - cut.at[1], f.w, f.h], w: HELD_TEXELS, h: HELD_TEXELS, d, box: true, anchor: [f.handAnchor!.x * s, f.handAnchor!.y * s] }
+  })
+  const peopleJobs: Job[] = [...residentJobs, ...heldJobs]
   // Buildings: each frame's whole canvas (texels at the pass's density),
   // its measured source box-filtered into its destination rect.
   type P1Building = P1Frame & { canvasSize: { w: number; h: number } }
@@ -278,6 +389,7 @@ async function main(): Promise<void> {
   await page.route(`${ORIGIN}**`, (route) => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname.slice(1))
     if (path === '') return route.fulfill({ body: '<!doctype html><title>bake</title>', contentType: 'text/html' })
+    if (rawSources.has(path)) return route.fulfill({ body: rawSources.get(path)!, contentType: 'application/octet-stream' })
     route.fulfill({ body: readFileSync(join(ROOT, path)), contentType: path.endsWith('.png') ? 'image/png' : 'application/octet-stream' })
   })
   await page.goto(ORIGIN)
@@ -300,9 +412,13 @@ async function main(): Promise<void> {
             img.onerror = () => reject(new Error(`cannot load ${url}`))
             img.src = url
           })
-        for (const j of placed) if (!images.has(j.src)) images.set(j.src, await load(origin + j.src))
-        // Source pixels, read once per sheet (box filtering).
+        // Source pixels, read once per sheet (box filtering); figures cut out in Node come as raw RGBA.
         const pixels = new Map<string, ImageData>()
+        for (const j of placed) {
+          if (j.raw) {
+            if (!pixels.has(j.src)) pixels.set(j.src, new ImageData(new Uint8ClampedArray(await (await fetch(origin + j.src)).arrayBuffer()), j.raw[0], j.raw[1]))
+          } else if (!images.has(j.src)) images.set(j.src, await load(origin + j.src))
+        }
         const sourcePixels = (src: string) => {
           if (!pixels.has(src)) {
             const img = images.get(src)!
@@ -537,20 +653,69 @@ async function main(): Promise<void> {
 
   // The playtest-1 people: baked whole once to find each frame's opaque box
   // (rounded out to 4 texels, so 2× and 1× copies stay exact), then baked
-  // trimmed and shelf-packed (2 texels apart, rounded to 4).
+  // trimmed and shelf-packed (2 texels apart, rounded to 4). The held tools'
+  // grips and leaning are measured on the whole bake; a tool leaning right is
+  // mirrored (HELD_LEAN) and the whole bake done again.
   const untrimmedCols = 16
   const pW = Math.max(...peopleJobs.map((j) => j.w))
   const pH = Math.max(...peopleJobs.map((j) => j.h))
   const uAt = new Map(peopleJobs.map((j, i) => [j.id, [(i % untrimmedCols) * pW, Math.floor(i / untrimmedCols) * pH] as [number, number]]))
   const uSize: [number, number] = [untrimmedCols * pW, Math.ceil(peopleJobs.length / untrimmedCols) * pH]
-  const uRaw = Buffer.from((await bake(peopleJobs, uAt, uSize, true)).raw!, 'base64')
+  const bakeWhole = async () => {
+    const raw = Buffer.from((await bake(peopleJobs, uAt, uSize, true)).raw!, 'base64')
+    return (j: Job, x: number, y: number): number => {
+      const [ax, ay] = uAt.get(j.id)!
+      return raw[((ay + y) * uSize[0] + ax + x) * 4 + 3]
+    }
+  }
+  /**
+   * A held frame's grip (canvas texels): the solid texel nearest the
+   * delivered hand anchor, centred across the solid run (the handle) it's in;
+   * and how far the art's centre leans from it.
+   */
+  const gripOf = (alpha: (j: Job, x: number, y: number) => number, j: Job, anchor: [number, number]): { hand: [number, number]; lean: number } => {
+    let best: [number, number] | null = null
+    let bd = Infinity
+    let sx = 0
+    let sa = 0
+    for (let y = 0; y < j.h; y++)
+      for (let x = 0; x < j.w; x++) {
+        const a = alpha(j, x, y)
+        sx += (x + 0.5) * a
+        sa += a
+        if (a < 128) continue
+        const dist = (x + 0.5 - anchor[0]) ** 2 + (y + 0.5 - anchor[1]) ** 2
+        if (dist < bd) {
+          bd = dist
+          best = [x, y]
+        }
+      }
+    if (!best) throw new Error(`${j.id}: no solid texel to grip`)
+    let [x0, x1] = [best[0], best[0]]
+    while (x0 > 0 && alpha(j, x0 - 1, best[1]) >= 128) x0--
+    while (x1 < j.w - 1 && alpha(j, x1 + 1, best[1]) >= 128) x1++
+    const hand: [number, number] = [(x0 + x1 + 1) / 2, best[1] + 0.5]
+    return { hand, lean: sx / sa - hand[0] }
+  }
+  let alphaAt = await bakeWhole()
+  for (const j of heldJobs) {
+    if (gripOf(alphaAt, j, j.anchor).lean <= HELD_LEAN) continue
+    j.flipX = true
+    j.d = [j.w - j.d[0] - j.d[2], j.d[1], j.d[2], j.d[3]]
+    j.anchor = [j.w - j.anchor[0], j.anchor[1]]
+  }
+  if (heldJobs.some((j) => j.flipX)) alphaAt = await bakeWhole()
+  const hands = new Map(heldJobs.map((j) => {
+    const g = gripOf(alphaAt, j, j.anchor)
+    if (g.lean > HELD_LEAN) throw new Error(`${j.id}: still leans right of its grip after mirroring`)
+    return [j.id, g.hand]
+  }))
   const trim = new Map<string, [number, number, number, number]>()
   for (const j of peopleJobs) {
-    const [ax, ay] = uAt.get(j.id)!
     let x0 = j.w, y0 = j.h, x1 = -1, y1 = -1
     for (let y = 0; y < j.h; y++)
       for (let x = 0; x < j.w; x++)
-        if (uRaw[((ay + y) * uSize[0] + ax + x) * 4 + 3] > 0) {
+        if (alphaAt(j, x, y) > 0) {
           x0 = Math.min(x0, x)
           y0 = Math.min(y0, y)
           x1 = Math.max(x1, x)
@@ -583,9 +748,11 @@ async function main(): Promise<void> {
       peopleJobs.map((j) => {
         const [tx, ty, tw, th] = trim.get(j.id)!
         const [x, y] = pAt.get(j.id)!
-        return [j.id, { frame: [x, y, tw, th], at: [tx, ty], source: [j.w, j.h], ...(j.hand ? { hand: j.hand } : {}) }]
+        const hand = hands.get(j.id)
+        return [j.id, { frame: [x, y, tw, th], at: [tx, ty], source: [j.w, j.h], ...(hand ? { hand } : {}) }]
       }),
     ),
+    fits,
     animations,
   }
 

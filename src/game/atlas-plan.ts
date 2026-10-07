@@ -29,7 +29,7 @@ import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 4
+export const ATLAS_GENERATOR_VERSION = 5
 export const PACKED_MANIFEST_KEY = 'fingersnap-packed'
 
 /**
@@ -90,7 +90,7 @@ export interface PackedPersonFrame {
   at: [number, number]
   /** The whole canvas (residents 64×128; held tools HELD_TEXELS a side). */
   source: [number, number]
-  /** Held tools: the hand's grip on the canvas (texels). */
+  /** Held tools: the grip on the canvas (texels; measured on the baked art, the handle's centre). */
   hand?: [number, number]
 }
 
@@ -105,6 +105,12 @@ export interface PackedPeople {
   size: [number, number]
   density: number
   frames: Record<string, PackedPersonFrame>
+  /**
+   * Each resident's scale per facing (texels per sheet px; the seated pose
+   * takes `down`'s): `height` world px (PERSON_HEIGHT) over `measured`, the
+   * median height (sheet px) of that facing's breathing and walking frames.
+   */
+  fits: Record<string, { height: number; facings: Record<string, { measured: number; scale: number }> }>
   animations: { key: string; frames: string[]; frameRate: number; repeat: number }[]
 }
 
@@ -147,6 +153,59 @@ export const PEOPLE = ['mara', 'pip', 'orrin', 'silas', 'elara', 'finn', 'hazel'
 export type PersonId = (typeof PEOPLE)[number]
 
 /**
+ * The hero's height (world px, head to feet): the Habitica figure fills
+ * rows 24–84 of its 90-px canvas, drawn 22 px tall (./entities/avatar.ts).
+ */
+export const HERO_HEIGHT = (60 * 22) / 90
+
+/**
+ * How tall each resident stands (world px, head to feet): adults the hero's
+ * height, the elderly a touch shorter, Pip (a child) smaller. The build
+ * draws a person's frames facing one way at one scale: this height over the
+ * median height of that facing's breathing and walking frames as measured
+ * on the sheet (src/game/figures.ts), so walking and breathing never change
+ * size.
+ * One scale per facing, not per person: the painter drew some side views
+ * taller than the front (Silas by 12%, Orrin 7%), and a person shouldn't
+ * grow when they turn. The packed manifest records it (`people.fits`).
+ */
+export const PERSON_HEIGHT: Readonly<Record<PersonId, number>> = {
+  mara: HERO_HEIGHT,
+  elara: HERO_HEIGHT,
+  finn: HERO_HEIGHT,
+  hazel: HERO_HEIGHT,
+  orrin: HERO_HEIGHT - 1,
+  silas: HERO_HEIGHT - 1,
+  ada: HERO_HEIGHT - 1,
+  pip: HERO_HEIGHT * 0.8,
+}
+
+/** A resident's frame canvas (world px), and where the feet stand on it. */
+export const PERSON_CANVAS: readonly [number, number] = [16, 32]
+export const PERSON_FOOT: readonly [number, number] = [8, 32]
+
+/** The facings, in the order of the delivered sheets' rows. */
+export const PERSON_FACINGS = ['down', 'up', 'left', 'right'] as const
+
+/**
+ * A resident sheet's figures, row by row: per facing, two breathing then
+ * four walking frames; then the seated pose.
+ */
+export function personSheetRows(id: PersonId): string[][] {
+  return [
+    ...PERSON_FACINGS.map((d) => [0, 1].map((i) => `resident-${id}-${d}-idle-${i}`).concat([0, 1, 2, 3].map((i) => `resident-${id}-${d}-walk-${i}`))),
+    [`resident-${id}-sit-down`],
+  ]
+}
+
+/** The held-tool sheet's columns, left to right (its rows are PERSON_FACINGS). */
+export const HELD_TOOLS = ['bench-axe', 'felling-axe', 'pick', 'spade', 'stave-bucket', 'watering-can', 'short-blade', 'carter-lantern'] as const
+
+export function heldSheetRows(): string[][] {
+  return PERSON_FACINGS.map((d) => HELD_TOOLS.map((t) => `held-${t}-${d}`))
+}
+
+/**
  * Held tools: the delivered frames sit on a 32×32 canvas (8 world px at the
  * pass's density). They're drawn HELD_WORLD world px a side, so the build
  * bakes them at that size (HELD_TEXELS at ART_DENSITY), the destination
@@ -155,6 +214,37 @@ export type PersonId = (typeof PEOPLE)[number]
 export const HELD_WORLD = 10
 export const HELD_TEXELS = HELD_WORLD * ART_DENSITY
 export const HELD_SOURCE = 32
+/**
+ * Every held frame is baked leaning the same way: its head (blade, spout)
+ * out to the left of the grip, art-left, where the Habitica figure's weapon
+ * hand is; the avatar's mirroring turns it round facing right. A frame
+ * delivered leaning right is mirrored at bake time. Leaning means the art's
+ * centre sits more than this many texels to one side of the grip.
+ */
+export const HELD_LEAN = 2
+
+/**
+ * The Tolley mill sheet's figures, row by row (items-pass
+ * fingersnap-tolley-mill-1.png).
+ */
+export const MILL_SHEET_ROWS = [
+  ['mill-house', 'mill-wheel-0', 'mill-wheel-1', 'mill-wheel-2'],
+  ['mill-wheel-3', 'mill-wheel-mended-0', 'mill-wheel-mended-1', 'mill-wheel-mended-2'],
+  ['mill-wheel-mended-3', 'mill-froth-0', 'mill-froth-1', 'mill-hopper'],
+] as const
+
+/**
+ * The waterwheel's frames. The painter drew them at slightly different
+ * sizes (the turning wheel wobbled), so each is scaled so its stone wall
+ * (the strip of MILL_WALL_STRIP sheet px at the figure's outer edge, top to
+ * bottom) is MILL_WALL world px tall, the wall's outer edge and foot pinned
+ * to one point of the 32-px canvas (MILL_WALL_FOOT). The art has the wall on
+ * the east, out in the pond; the mill stands west of the wheel, so it's
+ * mirrored to put the wall against the house.
+ */
+export const MILL_WALL = 24
+export const MILL_WALL_STRIP = 20
+export const MILL_WALL_FOOT: readonly [number, number] = [0.5, 31]
 
 /**
  * The playtest-1 frames the build samples, by name: the ground tiles and the

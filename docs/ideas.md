@@ -84,7 +84,7 @@ worth thinking about; **(later)** means parked on purpose.
 - **Automated database backups** on the home server (agreed).
 - **Scaling** (later): notes in [scaling.md](scaling.md). Measure before acting.
 - **A binary wire format (protobuf) for presence** (later): see [scaling.md](scaling.md).
-- **Lossy WebP for the people atlas** (later): it would roughly halve 1.4 MB, but the owner wants
+- **Lossy WebP for the people atlas** (later): it would roughly halve its 0.7 MB, but the owner wants
   exact pixels for now.
 - **A faster scene build on phones** (maybe): after the ground fix, about 0.4–0.5 s remains on a
   throttled phone, from props, portraits and the HUD's icons.

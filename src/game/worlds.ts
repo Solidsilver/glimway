@@ -370,7 +370,8 @@ function buildVillage(): WorldData {
   const mill = {
     ...millAt,
     door: { tx: 29, ty: 22 },
-    wheel: { x: 32 * TILE + 9, y: 21 * TILE + 4 },
+    // The wheel's stone support (the west edge of its art) against the mill's east wall.
+    wheel: { x: 32 * TILE + 7, y: 21 * TILE + 4 },
     hopper: millHopper
   }
   // The residents, placed after the scatter too (the seeded layout stays):
