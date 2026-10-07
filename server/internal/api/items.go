@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -1913,13 +1914,7 @@ func (a *Server) presenceGift(world, to, fromName string, v content.Asset) {
 	if p == nil || p.identity.World != world || p.queue == nil {
 		return
 	}
-	h.send(p, struct {
-		Type     string `json:"type"`
-		FromName string `json:"fromName"`
-		Kind     string `json:"kind"`
-		ItemDef  string `json:"itemDef"`
-		Qty      int    `json:"qty"`
-	}{"gift", capDonor(fromName), v.Kind, v.ID, v.Qty})
+	h.send(p, &contract.PresenceGift{FromName: capDonor(fromName), Kind: v.Kind, ItemDef: v.ID, Qty: int32(v.Qty)})
 }
 
 func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {

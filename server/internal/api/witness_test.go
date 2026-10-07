@@ -10,6 +10,14 @@ import (
 	"github.com/coder/websocket"
 )
 
+// Legacy JSON client view, independent of the generated payload.
+type witnessMessage struct {
+	Type       string `json:"type"`
+	Beat       string `json:"beat"`
+	HabiticaID string `json:"habiticaId"`
+	Name       string `json:"name"`
+}
+
 func TestStoryBeats(t *testing.T) {
 	st := func(quest string, flags ...string) rules.State {
 		return rules.State{Quest: quest, Flags: flags}

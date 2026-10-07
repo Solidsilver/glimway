@@ -54,7 +54,7 @@ export interface FeedDeps {
   link: FeedLink
   bus: FeedBus
   url: string
-  makeSocket: (url: string) => SocketLike
+  makeSocket: (url: string, protocols?: string[]) => SocketLike
   /** Client timers (tests pin them); the link check uses `every`. */
   timers?: Timers
   every?: (fn: () => void, ms: number) => unknown

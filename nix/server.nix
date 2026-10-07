@@ -9,7 +9,7 @@ buildGoModule rec {
     root = ../.;
     fileset = lib.fileset.unions [ ../go.mod ../go.sum ../server ../content ../.gitignore ../nix/server.nix ];
   };
-  vendorHash = "sha256-6q2leQnJ7FfPu9yqLeqFzdZKbsPKrsY12GkoBzjf4zg=";
+  vendorHash = "sha256-wH2HpPg5800enNpyq6FORmTtC8NLnM6bPhf9lUAWfsA=";
   subPackages = [ "server/cmd/glimway-server" ];
   env.CGO_ENABLED = 0;
   ldflags = [ "-s" "-w" "-X main.version=${version}" ] ++ lib.optional (build != null) "-X main.build=${build}";

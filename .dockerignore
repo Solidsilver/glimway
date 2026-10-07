@@ -3,6 +3,7 @@
 .agents
 .codex
 node_modules
+.cache
 dist
 .env
 .env.*

@@ -218,3 +218,20 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await ctx.close()
   })
 }
+
+test('a connection without the binary protocol stops with reload needed', async ({ page, browser, baseURL }) => {
+  await page.addInitScript(() => {
+    const NativeSocket = window.WebSocket
+    window.WebSocket = class extends NativeSocket {
+      constructor(url: string | URL, protocols?: string | string[]) {
+        super(url, new URL(String(url), location.href).pathname === '/ws' ? undefined : protocols)
+      }
+    }
+  })
+  const { other, ctx } = await twoPlayers(page, browser, baseURL!)
+  try {
+    await expect.poll(async () => (await presenceState(page))?.status).toBe('reload-needed')
+    expect(await remotes(page)).toEqual([])
+    expect(await remotes(other)).toEqual([])
+  } finally { await ctx.close() }
+})

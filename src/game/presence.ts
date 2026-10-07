@@ -25,7 +25,7 @@ export function startPresence(link: Link): PresenceFeed | null {
     link,
     bus,
     url: `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
-    makeSocket: (url) => new WebSocket(url) as unknown as SocketLike
+    makeSocket: (url, protocols) => new WebSocket(url, protocols) as unknown as SocketLike
   })
   const feed = current
   // Read-only state for playtests.

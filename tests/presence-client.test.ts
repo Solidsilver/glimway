@@ -1,3 +1,5 @@
+import { encodeTestPresence, decodeTestPresence } from './presence-wire.ts';
+import { PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -49,6 +51,7 @@ function fakeTimers() {
 }
 
 class FakeSocket implements SocketLike {
+  readonly protocol = PRESENCE_PROTOCOL;
   readyState = 0;
   sent: any[] = [];
   closedWith: number | null = null;
@@ -60,8 +63,8 @@ class FakeSocket implements SocketLike {
   constructor(url: string) {
     this.url = url;
   }
-  send(data: string) {
-    this.sent.push(JSON.parse(data));
+  send(data: string | Uint8Array) {
+    this.sent.push(decodeTestPresence(data));
   }
   close(code?: number) {
     this.closedWith = code ?? 1000;
@@ -73,7 +76,7 @@ class FakeSocket implements SocketLike {
     this.onopen?.({});
   }
   push(m: object) {
-    this.onmessage?.({ data: JSON.stringify(m) });
+    this.onmessage?.({ data: encodeTestPresence(m) });
   }
   drop(code: number) {
     this.readyState = 3;
@@ -184,7 +187,7 @@ test('position spacing never drops below 125 ms', () => {
   const s = r.sock();
   const send = s.send.bind(s);
   s.send = (d: string) => {
-    if (JSON.parse(d).type === 'pos') stamps.push(r.clock.now);
+    if (decodeTestPresence(d).type === 'pos') stamps.push(r.clock.now);
     send(d);
   };
   r.client.setArea('village');
@@ -210,7 +213,7 @@ test('bugs #1: a final stop the server dropped for arriving too soon still lands
   let lastTaken = -Infinity;
   let shown: { x: number; moving: boolean } | null = null;
   s.send = (d: string) => {
-    const m = JSON.parse(d);
+    const m = decodeTestPresence(d);
     if (m.type !== 'pos') return;
     const arrives = r.clock.now + jitter[n++ % jitter.length];
     if (arrives - lastTaken < 125) return; // dropped

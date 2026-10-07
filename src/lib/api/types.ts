@@ -613,19 +613,7 @@ export interface ItemsActionResponse extends Snapshot {
   };
 }
 
-/** GET /api/calendar (public; Unix seconds). */
-export interface CalendarResponse {
-  wick: string;
-  wickNumber: number;
-  year: number;
-  day: number;
-  mark: string;
-  festival: string | null;
-  startsAt: number;
-  nextTurning: number;
-  notice: string | null;
-  wickDays: number;
-}
+export type { CalendarResponse } from './calendar.ts';
 
 /** Which chest at home: the shared one, or the caller's own small one. */
 export type ChestId = 'shared' | 'personal';

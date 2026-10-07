@@ -1,0 +1,18 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+
+// HTTP retains numeric Unix seconds, including dates beyond int32's 2038 limit.
+message CalendarResponse {
+  string wick = 1;
+  double wick_number = 2;
+  double year = 3;
+  int32 day = 4;
+  string mark = 5;
+  google.protobuf.StringValue festival = 6;
+  double starts_at = 7;
+  double next_turning = 8;
+  google.protobuf.StringValue notice = 9;
+  int32 wick_days = 10;
+}

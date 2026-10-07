@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/coder/websocket v1.8.15
+	google.golang.org/protobuf v1.36.11
 	modernc.org/sqlite v1.60.1
 )
 
@@ -18,3 +19,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
+
+tool google.golang.org/protobuf/cmd/protoc-gen-go
