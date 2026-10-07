@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-06",
+  "project": "Fingersnap",
+  "generator": "Codex built-in image generation",
+  "sharedStyle": "Cute, lived-in woodland fantasy; Tangle-inspired hand-painted pixel clusters; three-quarter top-down character view; warm upper-left light; emerald foliage, teal shadows, russet and honey stone; dark warm outline at final density; crisp edges and no soft gradients.",
+  "sheets": [
+    {
+      "key": "ground-base",
+      "source": "ground/fingersnap-ground-base.png",
+      "request": "24 square tile cells: grass 4, flowered grass 2, forest moss 2, packed dirt 3, old cobbled road 3, farmland rows 2, village-square flagstones 2, sand 2, gentle water animation 4. Each cell is a 64\u00d764 world tile authored at four-times density; seamless repeat requested."
+    },
+    {
+      "key": "transition-dirt",
+      "source": "ground/fingersnap-ground-transition-dirt.png",
+      "request": "24 grass-to-packed-dirt transition cells, ragged edges, 16 cardinal masks plus eight alternatives; source edge-art reference: commons-pass/fingersnap-path-edges.png."
+    },
+    {
+      "key": "transition-road",
+      "source": "ground/fingersnap-ground-transition-road.png",
+      "request": "24 grass-to-old-cobbled-road transition cells, ragged edges, 16 cardinal masks plus eight alternatives; source edge-art reference: commons-pass/fingersnap-path-edges.png."
+    },
+    {
+      "key": "transition-flagstones",
+      "source": "ground/fingersnap-ground-transition-flagstones.png",
+      "request": "24 grass-to-honey-flagstone transition cells, ragged edges, 16 cardinal masks plus eight alternatives; source edge-art reference: commons-pass/fingersnap-path-edges.png."
+    },
+    {
+      "key": "transition-sand",
+      "source": "ground/fingersnap-ground-transition-sand.png",
+      "request": "24 grass-to-sand transition cells, ragged stream-bank edges, 16 primary shapes plus eight alternatives; source edge-art reference: commons-pass/fingersnap-path-edges.png."
+    },
+    {
+      "key": "transition-water",
+      "source": "ground/fingersnap-ground-transition-water.png",
+      "request": "24 grass-to-shallow-water transition cells, ragged shore edges, 16 primary shapes plus eight alternatives; source edge-art reference: commons-pass/fingersnap-path-edges.png."
+    },
+    {
+      "key": "resident-mara",
+      "source": "residents/fingersnap-resident-mara.png",
+      "identity": "Mara Hale, 27; auburn bun, deep-blue dress, cream apron, amber lantern; six columns \u00d7 five rows: idle0/1 + walk0..3 across down/up/left/right rows, sit-down in final row."
+    },
+    {
+      "key": "resident-pip",
+      "source": "residents/fingersnap-resident-pip.png",
+      "identity": "Pip Penhallow, 12; small child proportions, tousled dark hair, pink flower clip, berry tunic, leather courier satchel; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-orrin",
+      "source": "residents/fingersnap-resident-orrin.png",
+      "identity": "Orrin, 60s; white swept hair and beard, russet builder tunic, folding rule at belt; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-silas",
+      "source": "residents/fingersnap-resident-silas.png",
+      "identity": "Silas, 64; white moustache, olive-brown cap, slate-blue shirt, russet work apron; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-elara",
+      "source": "residents/fingersnap-resident-elara.png",
+      "identity": "Elara Quill, 30s; dark bun with pale band and gold ear pin, sage coat, field satchel with bottles; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-finn",
+      "source": "residents/fingersnap-resident-finn.png",
+      "identity": "Finn Tolley, 36; flax-blond hair and tan miller cap, ivory shirt, flour apron, olive trousers; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-hazel",
+      "source": "residents/fingersnap-resident-hazel.png",
+      "identity": "Hazel Penhallow; copper bob, moss-green sleeves, cream apron, wicker bread basket; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "resident-ada",
+      "source": "residents/fingersnap-resident-ada.png",
+      "identity": "Ada Cooley, 88; silver-white bun, plum shawl, brown dress and cream apron, amber lantern; same 6\u00d75 direction/pose layout."
+    },
+    {
+      "key": "held-tools",
+      "source": "hand-items/fingersnap-held-tools.png",
+      "request": "Eight tools (bench axe, felling axe, pick, spade, stave bucket, watering can, short blade, carter lantern) \u00d7 four facing directions. 32\u00d732 final texel frames with hand-grip anchors."
+    },
+    {
+      "key": "player-body",
+      "source": "player-body/fingersnap-player-body-index-atlas.png",
+      "request": "8x5 player prototype: four directions with idle/walk/swing, four sitting directions, and four hairstyle design references. Separate material color families requested for recoloring.",
+      "note": "Prototype color-family sheet only; not true indexed color or physically separated PNG layers. Four hair references delivered; fifth style outstanding."
+    }
+  ],
+  "layout": {
+    "residentColumns": [
+      "idle-0",
+      "idle-1",
+      "walk-0",
+      "walk-1",
+      "walk-2",
+      "walk-3"
+    ],
+    "residentRows": [
+      "down",
+      "up",
+      "left",
+      "right",
+      "sit-down in column 0; remaining cells unused"
+    ],
+    "residentTransparentBackground": true,
+    "residentFootPoint": {
+      "x": 32,
+      "y": 128
+    },
+    "playerBodyColumns": [
+      "idle-0",
+      "idle-1",
+      "walk-0",
+      "walk-1",
+      "walk-2",
+      "walk-3",
+      "swing-0",
+      "swing-1"
+    ],
+    "playerBodyRows": [
+      "down",
+      "up",
+      "left",
+      "right",
+      "sit-down/up/left/right in columns 0-3; hair references in columns 4-7"
+    ]
+  }
+}

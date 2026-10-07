@@ -1,0 +1,7297 @@
+{
+  "frames": {
+    "ground-grass-01": {
+      "source": "ground-base",
+      "x": 0,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-grass-02": {
+      "source": "ground-base",
+      "x": 256,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-grass-03": {
+      "source": "ground-base",
+      "x": 512,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-grass-04": {
+      "source": "ground-base",
+      "x": 768,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-flowered-grass-01": {
+      "source": "ground-base",
+      "x": 1024,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-flowered-grass-02": {
+      "source": "ground-base",
+      "x": 1280,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-forest-moss-01": {
+      "source": "ground-base",
+      "x": 0,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-forest-moss-02": {
+      "source": "ground-base",
+      "x": 256,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-packed-dirt-01": {
+      "source": "ground-base",
+      "x": 512,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-packed-dirt-02": {
+      "source": "ground-base",
+      "x": 768,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-packed-dirt-03": {
+      "source": "ground-base",
+      "x": 1024,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-old-cobbled-road-01": {
+      "source": "ground-base",
+      "x": 1280,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-old-cobbled-road-02": {
+      "source": "ground-base",
+      "x": 0,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-old-cobbled-road-03": {
+      "source": "ground-base",
+      "x": 256,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-farmland-rows-01": {
+      "source": "ground-base",
+      "x": 512,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-farmland-rows-02": {
+      "source": "ground-base",
+      "x": 768,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-village-flagstones-01": {
+      "source": "ground-base",
+      "x": 1024,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-village-flagstones-02": {
+      "source": "ground-base",
+      "x": 1280,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-sand-by-water-01": {
+      "source": "ground-base",
+      "x": 0,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-sand-by-water-02": {
+      "source": "ground-base",
+      "x": 256,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-gentle-0": {
+      "source": "ground-base",
+      "x": 512,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-gentle-1": {
+      "source": "ground-base",
+      "x": 768,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-gentle-2": {
+      "source": "ground-base",
+      "x": 1024,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-gentle-3": {
+      "source": "ground-base",
+      "x": 1280,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-00": {
+      "source": "transition-dirt",
+      "x": 2,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-01": {
+      "source": "transition-dirt",
+      "x": 258,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-02": {
+      "source": "transition-dirt",
+      "x": 514,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-03": {
+      "source": "transition-dirt",
+      "x": 770,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-04": {
+      "source": "transition-dirt",
+      "x": 1026,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-05": {
+      "source": "transition-dirt",
+      "x": 1282,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-06": {
+      "source": "transition-dirt",
+      "x": 2,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-07": {
+      "source": "transition-dirt",
+      "x": 258,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-08": {
+      "source": "transition-dirt",
+      "x": 514,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-09": {
+      "source": "transition-dirt",
+      "x": 770,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-10": {
+      "source": "transition-dirt",
+      "x": 1026,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-11": {
+      "source": "transition-dirt",
+      "x": 1282,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-12": {
+      "source": "transition-dirt",
+      "x": 2,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-13": {
+      "source": "transition-dirt",
+      "x": 258,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-14": {
+      "source": "transition-dirt",
+      "x": 514,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-dirt-15": {
+      "source": "transition-dirt",
+      "x": 770,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-dirt-16": {
+      "source": "transition-dirt",
+      "x": 1026,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-17": {
+      "source": "transition-dirt",
+      "x": 1282,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-18": {
+      "source": "transition-dirt",
+      "x": 2,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-19": {
+      "source": "transition-dirt",
+      "x": 258,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-20": {
+      "source": "transition-dirt",
+      "x": 514,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-21": {
+      "source": "transition-dirt",
+      "x": 770,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-22": {
+      "source": "transition-dirt",
+      "x": 1026,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-dirt-23": {
+      "source": "transition-dirt",
+      "x": 1282,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-00": {
+      "source": "transition-road",
+      "x": 2,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-road-01": {
+      "source": "transition-road",
+      "x": 258,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-road-02": {
+      "source": "transition-road",
+      "x": 514,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-road-03": {
+      "source": "transition-road",
+      "x": 770,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-road-04": {
+      "source": "transition-road",
+      "x": 1026,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-road-05": {
+      "source": "transition-road",
+      "x": 1282,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-road-06": {
+      "source": "transition-road",
+      "x": 2,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-road-07": {
+      "source": "transition-road",
+      "x": 258,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-road-08": {
+      "source": "transition-road",
+      "x": 514,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-road-09": {
+      "source": "transition-road",
+      "x": 770,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-road-10": {
+      "source": "transition-road",
+      "x": 1026,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-road-11": {
+      "source": "transition-road",
+      "x": 1282,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-road-12": {
+      "source": "transition-road",
+      "x": 2,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-road-13": {
+      "source": "transition-road",
+      "x": 258,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-road-14": {
+      "source": "transition-road",
+      "x": 514,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-road-15": {
+      "source": "transition-road",
+      "x": 770,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-road-16": {
+      "source": "transition-road",
+      "x": 1026,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-17": {
+      "source": "transition-road",
+      "x": 1282,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-18": {
+      "source": "transition-road",
+      "x": 2,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-19": {
+      "source": "transition-road",
+      "x": 258,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-20": {
+      "source": "transition-road",
+      "x": 514,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-21": {
+      "source": "transition-road",
+      "x": 770,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-22": {
+      "source": "transition-road",
+      "x": 1026,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-road-23": {
+      "source": "transition-road",
+      "x": 1282,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-00": {
+      "source": "transition-flagstones",
+      "x": 2,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-01": {
+      "source": "transition-flagstones",
+      "x": 258,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-02": {
+      "source": "transition-flagstones",
+      "x": 514,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-03": {
+      "source": "transition-flagstones",
+      "x": 770,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-04": {
+      "source": "transition-flagstones",
+      "x": 1026,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-05": {
+      "source": "transition-flagstones",
+      "x": 1282,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-06": {
+      "source": "transition-flagstones",
+      "x": 2,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-07": {
+      "source": "transition-flagstones",
+      "x": 258,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-08": {
+      "source": "transition-flagstones",
+      "x": 514,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-09": {
+      "source": "transition-flagstones",
+      "x": 770,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-10": {
+      "source": "transition-flagstones",
+      "x": 1026,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-11": {
+      "source": "transition-flagstones",
+      "x": 1282,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-12": {
+      "source": "transition-flagstones",
+      "x": 2,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-13": {
+      "source": "transition-flagstones",
+      "x": 258,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-14": {
+      "source": "transition-flagstones",
+      "x": 514,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-flagstones-15": {
+      "source": "transition-flagstones",
+      "x": 770,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-flagstones-16": {
+      "source": "transition-flagstones",
+      "x": 1026,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-17": {
+      "source": "transition-flagstones",
+      "x": 1282,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-18": {
+      "source": "transition-flagstones",
+      "x": 2,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-19": {
+      "source": "transition-flagstones",
+      "x": 258,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-20": {
+      "source": "transition-flagstones",
+      "x": 514,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-21": {
+      "source": "transition-flagstones",
+      "x": 770,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-22": {
+      "source": "transition-flagstones",
+      "x": 1026,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-flagstones-23": {
+      "source": "transition-flagstones",
+      "x": 1282,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-00": {
+      "source": "transition-sand",
+      "x": 2,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-sand-01": {
+      "source": "transition-sand",
+      "x": 258,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-sand-02": {
+      "source": "transition-sand",
+      "x": 514,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-sand-03": {
+      "source": "transition-sand",
+      "x": 770,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-sand-04": {
+      "source": "transition-sand",
+      "x": 1026,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-sand-05": {
+      "source": "transition-sand",
+      "x": 1282,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-sand-06": {
+      "source": "transition-sand",
+      "x": 2,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-sand-07": {
+      "source": "transition-sand",
+      "x": 258,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-sand-08": {
+      "source": "transition-sand",
+      "x": 514,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-sand-09": {
+      "source": "transition-sand",
+      "x": 770,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-sand-10": {
+      "source": "transition-sand",
+      "x": 1026,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-sand-11": {
+      "source": "transition-sand",
+      "x": 1282,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-sand-12": {
+      "source": "transition-sand",
+      "x": 2,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-sand-13": {
+      "source": "transition-sand",
+      "x": 258,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-sand-14": {
+      "source": "transition-sand",
+      "x": 514,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-sand-15": {
+      "source": "transition-sand",
+      "x": 770,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-sand-16": {
+      "source": "transition-sand",
+      "x": 1026,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-17": {
+      "source": "transition-sand",
+      "x": 1282,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-18": {
+      "source": "transition-sand",
+      "x": 2,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-19": {
+      "source": "transition-sand",
+      "x": 258,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-20": {
+      "source": "transition-sand",
+      "x": 514,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-21": {
+      "source": "transition-sand",
+      "x": 770,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-22": {
+      "source": "transition-sand",
+      "x": 1026,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-sand-23": {
+      "source": "transition-sand",
+      "x": 1282,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-00": {
+      "source": "transition-water",
+      "x": 2,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-water-01": {
+      "source": "transition-water",
+      "x": 258,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-water-02": {
+      "source": "transition-water",
+      "x": 514,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-water-03": {
+      "source": "transition-water",
+      "x": 770,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-water-04": {
+      "source": "transition-water",
+      "x": 1026,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-water-05": {
+      "source": "transition-water",
+      "x": 1282,
+      "y": 2,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-water-06": {
+      "source": "transition-water",
+      "x": 2,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-water-07": {
+      "source": "transition-water",
+      "x": 258,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": false,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-water-08": {
+      "source": "transition-water",
+      "x": 514,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-water-09": {
+      "source": "transition-water",
+      "x": 770,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-water-10": {
+      "source": "transition-water",
+      "x": 1026,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-water-11": {
+      "source": "transition-water",
+      "x": 1282,
+      "y": 258,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": false,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-water-12": {
+      "source": "transition-water",
+      "x": 2,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": false
+      }
+    },
+    "ground-transition-water-13": {
+      "source": "transition-water",
+      "x": 258,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": false,
+        "W": true
+      }
+    },
+    "ground-transition-water-14": {
+      "source": "transition-water",
+      "x": 514,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": false
+      }
+    },
+    "ground-transition-water-15": {
+      "source": "transition-water",
+      "x": 770,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "autotileMask": {
+        "N": true,
+        "E": true,
+        "S": true,
+        "W": true
+      }
+    },
+    "ground-transition-water-16": {
+      "source": "transition-water",
+      "x": 1026,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-17": {
+      "source": "transition-water",
+      "x": 1282,
+      "y": 514,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-18": {
+      "source": "transition-water",
+      "x": 2,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-19": {
+      "source": "transition-water",
+      "x": 258,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-20": {
+      "source": "transition-water",
+      "x": 514,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-21": {
+      "source": "transition-water",
+      "x": 770,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-22": {
+      "source": "transition-water",
+      "x": 1026,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-transition-water-23": {
+      "source": "transition-water",
+      "x": 1282,
+      "y": 770,
+      "w": 252,
+      "h": 252,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "resident-mara-down-idle-0": {
+      "source": "resident-mara",
+      "x": 92,
+      "y": 19,
+      "w": 103,
+      "h": 207,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 48,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-down-idle-1": {
+      "source": "resident-mara",
+      "x": 308,
+      "y": 19,
+      "w": 105,
+      "h": 207,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 48,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-down-walk-0": {
+      "source": "resident-mara",
+      "x": 525,
+      "y": 18,
+      "w": 102,
+      "h": 208,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 47,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-down-walk-1": {
+      "source": "resident-mara",
+      "x": 741,
+      "y": 19,
+      "w": 103,
+      "h": 207,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 48,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-down-walk-2": {
+      "source": "resident-mara",
+      "x": 960,
+      "y": 18,
+      "w": 98,
+      "h": 208,
+      "destinationRect": {
+        "x": 9,
+        "y": 32,
+        "w": 45,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-down-walk-3": {
+      "source": "resident-mara",
+      "x": 1172,
+      "y": 19,
+      "w": 100,
+      "h": 207,
+      "destinationRect": {
+        "x": 9,
+        "y": 32,
+        "w": 46,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-idle-0": {
+      "source": "resident-mara",
+      "x": 99,
+      "y": 242,
+      "w": 107,
+      "h": 202,
+      "destinationRect": {
+        "x": 7,
+        "y": 35,
+        "w": 49,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-idle-1": {
+      "source": "resident-mara",
+      "x": 314,
+      "y": 242,
+      "w": 107,
+      "h": 202,
+      "destinationRect": {
+        "x": 7,
+        "y": 35,
+        "w": 49,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-walk-0": {
+      "source": "resident-mara",
+      "x": 532,
+      "y": 242,
+      "w": 106,
+      "h": 206,
+      "destinationRect": {
+        "x": 7,
+        "y": 33,
+        "w": 49,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-walk-1": {
+      "source": "resident-mara",
+      "x": 746,
+      "y": 242,
+      "w": 107,
+      "h": 206,
+      "destinationRect": {
+        "x": 7,
+        "y": 33,
+        "w": 49,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-walk-2": {
+      "source": "resident-mara",
+      "x": 965,
+      "y": 244,
+      "w": 106,
+      "h": 204,
+      "destinationRect": {
+        "x": 7,
+        "y": 34,
+        "w": 49,
+        "h": 94
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-up-walk-3": {
+      "source": "resident-mara",
+      "x": 1182,
+      "y": 243,
+      "w": 104,
+      "h": 205,
+      "destinationRect": {
+        "x": 8,
+        "y": 33,
+        "w": 48,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-idle-0": {
+      "source": "resident-mara",
+      "x": 97,
+      "y": 464,
+      "w": 91,
+      "h": 205,
+      "destinationRect": {
+        "x": 11,
+        "y": 33,
+        "w": 42,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-idle-1": {
+      "source": "resident-mara",
+      "x": 314,
+      "y": 464,
+      "w": 92,
+      "h": 205,
+      "destinationRect": {
+        "x": 11,
+        "y": 33,
+        "w": 42,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-walk-0": {
+      "source": "resident-mara",
+      "x": 525,
+      "y": 465,
+      "w": 98,
+      "h": 205,
+      "destinationRect": {
+        "x": 9,
+        "y": 33,
+        "w": 45,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-walk-1": {
+      "source": "resident-mara",
+      "x": 736,
+      "y": 465,
+      "w": 106,
+      "h": 203,
+      "destinationRect": {
+        "x": 7,
+        "y": 34,
+        "w": 49,
+        "h": 94
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-walk-2": {
+      "source": "resident-mara",
+      "x": 956,
+      "y": 464,
+      "w": 103,
+      "h": 207,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 48,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-left-walk-3": {
+      "source": "resident-mara",
+      "x": 1171,
+      "y": 465,
+      "w": 103,
+      "h": 206,
+      "destinationRect": {
+        "x": 8,
+        "y": 33,
+        "w": 48,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-idle-0": {
+      "source": "resident-mara",
+      "x": 102,
+      "y": 691,
+      "w": 93,
+      "h": 206,
+      "destinationRect": {
+        "x": 10,
+        "y": 33,
+        "w": 43,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-idle-1": {
+      "source": "resident-mara",
+      "x": 318,
+      "y": 690,
+      "w": 93,
+      "h": 206,
+      "destinationRect": {
+        "x": 10,
+        "y": 33,
+        "w": 43,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-walk-0": {
+      "source": "resident-mara",
+      "x": 527,
+      "y": 691,
+      "w": 103,
+      "h": 206,
+      "destinationRect": {
+        "x": 8,
+        "y": 33,
+        "w": 48,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-walk-1": {
+      "source": "resident-mara",
+      "x": 740,
+      "y": 691,
+      "w": 104,
+      "h": 206,
+      "destinationRect": {
+        "x": 8,
+        "y": 33,
+        "w": 48,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-walk-2": {
+      "source": "resident-mara",
+      "x": 957,
+      "y": 695,
+      "w": 104,
+      "h": 201,
+      "destinationRect": {
+        "x": 8,
+        "y": 35,
+        "w": 48,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-right-walk-3": {
+      "source": "resident-mara",
+      "x": 1175,
+      "y": 691,
+      "w": 104,
+      "h": 206,
+      "destinationRect": {
+        "x": 8,
+        "y": 33,
+        "w": 48,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-mara-sit-down": {
+      "source": "resident-mara",
+      "x": 77,
+      "y": 932,
+      "w": 125,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 39,
+        "w": 58,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-idle-0": {
+      "source": "resident-pip",
+      "x": 171,
+      "y": 50,
+      "w": 58,
+      "h": 179,
+      "destinationRect": {
+        "x": 24,
+        "y": 78,
+        "w": 16,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-idle-1": {
+      "source": "resident-pip",
+      "x": 229,
+      "y": 50,
+      "w": 229,
+      "h": 179,
+      "destinationRect": {
+        "x": 0,
+        "y": 78,
+        "w": 64,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-walk-0": {
+      "source": "resident-pip",
+      "x": 540,
+      "y": 51,
+      "w": 103,
+      "h": 178,
+      "destinationRect": {
+        "x": 17,
+        "y": 78,
+        "w": 29,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-walk-1": {
+      "source": "resident-pip",
+      "x": 730,
+      "y": 51,
+      "w": 104,
+      "h": 178,
+      "destinationRect": {
+        "x": 17,
+        "y": 78,
+        "w": 29,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-walk-2": {
+      "source": "resident-pip",
+      "x": 916,
+      "y": 50,
+      "w": 229,
+      "h": 179,
+      "destinationRect": {
+        "x": 0,
+        "y": 78,
+        "w": 64,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-down-walk-3": {
+      "source": "resident-pip",
+      "x": 1145,
+      "y": 52,
+      "w": 59,
+      "h": 177,
+      "destinationRect": {
+        "x": 24,
+        "y": 79,
+        "w": 16,
+        "h": 49
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-idle-0": {
+      "source": "resident-pip",
+      "x": 170,
+      "y": 229,
+      "w": 59,
+      "h": 229,
+      "destinationRect": {
+        "x": 24,
+        "y": 64,
+        "w": 16,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-idle-1": {
+      "source": "resident-pip",
+      "x": 229,
+      "y": 229,
+      "w": 229,
+      "h": 229,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-walk-0": {
+      "source": "resident-pip",
+      "x": 458,
+      "y": 229,
+      "w": 187,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 64,
+        "w": 52,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-walk-1": {
+      "source": "resident-pip",
+      "x": 734,
+      "y": 229,
+      "w": 100,
+      "h": 229,
+      "destinationRect": {
+        "x": 18,
+        "y": 64,
+        "w": 28,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-walk-2": {
+      "source": "resident-pip",
+      "x": 916,
+      "y": 229,
+      "w": 229,
+      "h": 229,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-up-walk-3": {
+      "source": "resident-pip",
+      "x": 1145,
+      "y": 229,
+      "w": 58,
+      "h": 229,
+      "destinationRect": {
+        "x": 24,
+        "y": 64,
+        "w": 16,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-idle-0": {
+      "source": "resident-pip",
+      "x": 170,
+      "y": 458,
+      "w": 59,
+      "h": 228,
+      "destinationRect": {
+        "x": 24,
+        "y": 64,
+        "w": 16,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-idle-1": {
+      "source": "resident-pip",
+      "x": 229,
+      "y": 458,
+      "w": 227,
+      "h": 228,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 63,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-walk-0": {
+      "source": "resident-pip",
+      "x": 540,
+      "y": 458,
+      "w": 105,
+      "h": 228,
+      "destinationRect": {
+        "x": 17,
+        "y": 64,
+        "w": 29,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-walk-1": {
+      "source": "resident-pip",
+      "x": 731,
+      "y": 458,
+      "w": 105,
+      "h": 227,
+      "destinationRect": {
+        "x": 17,
+        "y": 65,
+        "w": 29,
+        "h": 63
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-walk-2": {
+      "source": "resident-pip",
+      "x": 919,
+      "y": 458,
+      "w": 226,
+      "h": 228,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 63,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-left-walk-3": {
+      "source": "resident-pip",
+      "x": 1145,
+      "y": 458,
+      "w": 62,
+      "h": 227,
+      "destinationRect": {
+        "x": 23,
+        "y": 65,
+        "w": 17,
+        "h": 63
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-idle-0": {
+      "source": "resident-pip",
+      "x": 171,
+      "y": 712,
+      "w": 58,
+      "h": 195,
+      "destinationRect": {
+        "x": 24,
+        "y": 74,
+        "w": 16,
+        "h": 54
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-idle-1": {
+      "source": "resident-pip",
+      "x": 229,
+      "y": 711,
+      "w": 229,
+      "h": 196,
+      "destinationRect": {
+        "x": 0,
+        "y": 73,
+        "w": 64,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-walk-0": {
+      "source": "resident-pip",
+      "x": 544,
+      "y": 712,
+      "w": 101,
+      "h": 195,
+      "destinationRect": {
+        "x": 18,
+        "y": 74,
+        "w": 28,
+        "h": 54
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-walk-1": {
+      "source": "resident-pip",
+      "x": 733,
+      "y": 709,
+      "w": 105,
+      "h": 198,
+      "destinationRect": {
+        "x": 17,
+        "y": 73,
+        "w": 29,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-walk-2": {
+      "source": "resident-pip",
+      "x": 919,
+      "y": 711,
+      "w": 226,
+      "h": 195,
+      "destinationRect": {
+        "x": 0,
+        "y": 74,
+        "w": 63,
+        "h": 54
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-right-walk-3": {
+      "source": "resident-pip",
+      "x": 1145,
+      "y": 712,
+      "w": 64,
+      "h": 195,
+      "destinationRect": {
+        "x": 23,
+        "y": 74,
+        "w": 18,
+        "h": 54
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-pip-sit-down": {
+      "source": "resident-pip",
+      "x": 164,
+      "y": 952,
+      "w": 65,
+      "h": 151,
+      "destinationRect": {
+        "x": 23,
+        "y": 86,
+        "w": 18,
+        "h": 42
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-idle-0": {
+      "source": "resident-orrin",
+      "x": 43,
+      "y": 32,
+      "w": 146,
+      "h": 197,
+      "destinationRect": {
+        "x": 11,
+        "y": 73,
+        "w": 41,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-idle-1": {
+      "source": "resident-orrin",
+      "x": 243,
+      "y": 31,
+      "w": 215,
+      "h": 198,
+      "destinationRect": {
+        "x": 2,
+        "y": 73,
+        "w": 60,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-walk-0": {
+      "source": "resident-orrin",
+      "x": 458,
+      "y": 25,
+      "w": 229,
+      "h": 204,
+      "destinationRect": {
+        "x": 0,
+        "y": 71,
+        "w": 64,
+        "h": 57
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-walk-1": {
+      "source": "resident-orrin",
+      "x": 687,
+      "y": 32,
+      "w": 229,
+      "h": 197,
+      "destinationRect": {
+        "x": 0,
+        "y": 73,
+        "w": 64,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-walk-2": {
+      "source": "resident-orrin",
+      "x": 916,
+      "y": 31,
+      "w": 229,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 73,
+        "w": 64,
+        "h": 55
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-down-walk-3": {
+      "source": "resident-orrin",
+      "x": 1145,
+      "y": 49,
+      "w": 45,
+      "h": 180,
+      "destinationRect": {
+        "x": 25,
+        "y": 78,
+        "w": 13,
+        "h": 50
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-idle-0": {
+      "source": "resident-orrin",
+      "x": 43,
+      "y": 249,
+      "w": 144,
+      "h": 204,
+      "destinationRect": {
+        "x": 12,
+        "y": 71,
+        "w": 40,
+        "h": 57
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-idle-1": {
+      "source": "resident-orrin",
+      "x": 243,
+      "y": 249,
+      "w": 215,
+      "h": 204,
+      "destinationRect": {
+        "x": 2,
+        "y": 71,
+        "w": 60,
+        "h": 57
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-walk-0": {
+      "source": "resident-orrin",
+      "x": 458,
+      "y": 244,
+      "w": 229,
+      "h": 208,
+      "destinationRect": {
+        "x": 0,
+        "y": 70,
+        "w": 64,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-walk-1": {
+      "source": "resident-orrin",
+      "x": 687,
+      "y": 229,
+      "w": 229,
+      "h": 226,
+      "destinationRect": {
+        "x": 0,
+        "y": 65,
+        "w": 64,
+        "h": 63
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-walk-2": {
+      "source": "resident-orrin",
+      "x": 916,
+      "y": 249,
+      "w": 229,
+      "h": 206,
+      "destinationRect": {
+        "x": 0,
+        "y": 70,
+        "w": 64,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-up-walk-3": {
+      "source": "resident-orrin",
+      "x": 1145,
+      "y": 266,
+      "w": 43,
+      "h": 185,
+      "destinationRect": {
+        "x": 26,
+        "y": 76,
+        "w": 12,
+        "h": 52
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-idle-0": {
+      "source": "resident-orrin",
+      "x": 56,
+      "y": 478,
+      "w": 113,
+      "h": 209,
+      "destinationRect": {
+        "x": 16,
+        "y": 70,
+        "w": 32,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-idle-1": {
+      "source": "resident-orrin",
+      "x": 254,
+      "y": 479,
+      "w": 204,
+      "h": 208,
+      "destinationRect": {
+        "x": 3,
+        "y": 70,
+        "w": 57,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-walk-0": {
+      "source": "resident-orrin",
+      "x": 458,
+      "y": 478,
+      "w": 229,
+      "h": 209,
+      "destinationRect": {
+        "x": 0,
+        "y": 70,
+        "w": 64,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-walk-1": {
+      "source": "resident-orrin",
+      "x": 687,
+      "y": 480,
+      "w": 229,
+      "h": 207,
+      "destinationRect": {
+        "x": 0,
+        "y": 70,
+        "w": 64,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-walk-2": {
+      "source": "resident-orrin",
+      "x": 916,
+      "y": 480,
+      "w": 229,
+      "h": 207,
+      "destinationRect": {
+        "x": 0,
+        "y": 70,
+        "w": 64,
+        "h": 58
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-left-walk-3": {
+      "source": "resident-orrin",
+      "x": 1145,
+      "y": 511,
+      "w": 24,
+      "h": 175,
+      "destinationRect": {
+        "x": 28,
+        "y": 79,
+        "w": 7,
+        "h": 49
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-idle-0": {
+      "source": "resident-orrin",
+      "x": 48,
+      "y": 687,
+      "w": 117,
+      "h": 229,
+      "destinationRect": {
+        "x": 15,
+        "y": 64,
+        "w": 33,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-idle-1": {
+      "source": "resident-orrin",
+      "x": 245,
+      "y": 687,
+      "w": 213,
+      "h": 229,
+      "destinationRect": {
+        "x": 2,
+        "y": 64,
+        "w": 60,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-walk-0": {
+      "source": "resident-orrin",
+      "x": 458,
+      "y": 687,
+      "w": 229,
+      "h": 229,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-walk-1": {
+      "source": "resident-orrin",
+      "x": 687,
+      "y": 687,
+      "w": 229,
+      "h": 229,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-walk-2": {
+      "source": "resident-orrin",
+      "x": 916,
+      "y": 687,
+      "w": 229,
+      "h": 229,
+      "destinationRect": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-right-walk-3": {
+      "source": "resident-orrin",
+      "x": 1145,
+      "y": 712,
+      "w": 21,
+      "h": 204,
+      "destinationRect": {
+        "x": 29,
+        "y": 71,
+        "w": 6,
+        "h": 57
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-orrin-sit-down": {
+      "source": "resident-orrin",
+      "x": 49,
+      "y": 916,
+      "w": 135,
+      "h": 200,
+      "destinationRect": {
+        "x": 13,
+        "y": 72,
+        "w": 38,
+        "h": 56
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-idle-0": {
+      "source": "resident-silas",
+      "x": 70,
+      "y": 38,
+      "w": 121,
+      "h": 185,
+      "destinationRect": {
+        "x": 6,
+        "y": 50,
+        "w": 51,
+        "h": 78
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-idle-1": {
+      "source": "resident-silas",
+      "x": 291,
+      "y": 41,
+      "w": 114,
+      "h": 182,
+      "destinationRect": {
+        "x": 8,
+        "y": 52,
+        "w": 48,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-walk-0": {
+      "source": "resident-silas",
+      "x": 508,
+      "y": 38,
+      "w": 119,
+      "h": 190,
+      "destinationRect": {
+        "x": 7,
+        "y": 48,
+        "w": 50,
+        "h": 80
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-walk-1": {
+      "source": "resident-silas",
+      "x": 724,
+      "y": 38,
+      "w": 117,
+      "h": 190,
+      "destinationRect": {
+        "x": 7,
+        "y": 48,
+        "w": 49,
+        "h": 80
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-walk-2": {
+      "source": "resident-silas",
+      "x": 954,
+      "y": 39,
+      "w": 124,
+      "h": 189,
+      "destinationRect": {
+        "x": 6,
+        "y": 49,
+        "w": 52,
+        "h": 79
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-down-walk-3": {
+      "source": "resident-silas",
+      "x": 1190,
+      "y": 39,
+      "w": 122,
+      "h": 189,
+      "destinationRect": {
+        "x": 6,
+        "y": 49,
+        "w": 51,
+        "h": 79
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-idle-0": {
+      "source": "resident-silas",
+      "x": 68,
+      "y": 256,
+      "w": 126,
+      "h": 196,
+      "destinationRect": {
+        "x": 5,
+        "y": 46,
+        "w": 53,
+        "h": 82
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-idle-1": {
+      "source": "resident-silas",
+      "x": 287,
+      "y": 257,
+      "w": 117,
+      "h": 195,
+      "destinationRect": {
+        "x": 7,
+        "y": 46,
+        "w": 49,
+        "h": 82
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-walk-0": {
+      "source": "resident-silas",
+      "x": 503,
+      "y": 254,
+      "w": 124,
+      "h": 198,
+      "destinationRect": {
+        "x": 6,
+        "y": 45,
+        "w": 52,
+        "h": 83
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-walk-1": {
+      "source": "resident-silas",
+      "x": 721,
+      "y": 255,
+      "w": 125,
+      "h": 203,
+      "destinationRect": {
+        "x": 6,
+        "y": 43,
+        "w": 52,
+        "h": 85
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-walk-2": {
+      "source": "resident-silas",
+      "x": 945,
+      "y": 254,
+      "w": 135,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 42,
+        "w": 57,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-up-walk-3": {
+      "source": "resident-silas",
+      "x": 1182,
+      "y": 252,
+      "w": 126,
+      "h": 204,
+      "destinationRect": {
+        "x": 5,
+        "y": 42,
+        "w": 53,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-idle-0": {
+      "source": "resident-silas",
+      "x": 83,
+      "y": 483,
+      "w": 93,
+      "h": 204,
+      "destinationRect": {
+        "x": 12,
+        "y": 42,
+        "w": 39,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-idle-1": {
+      "source": "resident-silas",
+      "x": 302,
+      "y": 483,
+      "w": 91,
+      "h": 204,
+      "destinationRect": {
+        "x": 13,
+        "y": 42,
+        "w": 38,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-walk-0": {
+      "source": "resident-silas",
+      "x": 512,
+      "y": 482,
+      "w": 115,
+      "h": 205,
+      "destinationRect": {
+        "x": 8,
+        "y": 42,
+        "w": 48,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-walk-1": {
+      "source": "resident-silas",
+      "x": 719,
+      "y": 482,
+      "w": 131,
+      "h": 205,
+      "destinationRect": {
+        "x": 4,
+        "y": 42,
+        "w": 55,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-walk-2": {
+      "source": "resident-silas",
+      "x": 945,
+      "y": 458,
+      "w": 145,
+      "h": 229,
+      "destinationRect": {
+        "x": 1,
+        "y": 32,
+        "w": 61,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-left-walk-3": {
+      "source": "resident-silas",
+      "x": 1189,
+      "y": 482,
+      "w": 111,
+      "h": 205,
+      "destinationRect": {
+        "x": 8,
+        "y": 42,
+        "w": 47,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-idle-0": {
+      "source": "resident-silas",
+      "x": 85,
+      "y": 687,
+      "w": 94,
+      "h": 229,
+      "destinationRect": {
+        "x": 12,
+        "y": 32,
+        "w": 39,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-idle-1": {
+      "source": "resident-silas",
+      "x": 300,
+      "y": 687,
+      "w": 94,
+      "h": 229,
+      "destinationRect": {
+        "x": 12,
+        "y": 32,
+        "w": 39,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-walk-0": {
+      "source": "resident-silas",
+      "x": 503,
+      "y": 687,
+      "w": 123,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 52,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-walk-1": {
+      "source": "resident-silas",
+      "x": 722,
+      "y": 687,
+      "w": 125,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 52,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-walk-2": {
+      "source": "resident-silas",
+      "x": 947,
+      "y": 687,
+      "w": 146,
+      "h": 229,
+      "destinationRect": {
+        "x": 1,
+        "y": 32,
+        "w": 61,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-right-walk-3": {
+      "source": "resident-silas",
+      "x": 1178,
+      "y": 687,
+      "w": 124,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 52,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-silas-sit-down": {
+      "source": "resident-silas",
+      "x": 71,
+      "y": 916,
+      "w": 119,
+      "h": 205,
+      "destinationRect": {
+        "x": 7,
+        "y": 42,
+        "w": 50,
+        "h": 86
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-idle-0": {
+      "source": "resident-elara",
+      "x": 91,
+      "y": 16,
+      "w": 91,
+      "h": 189,
+      "destinationRect": {
+        "x": 14,
+        "y": 53,
+        "w": 36,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-idle-1": {
+      "source": "resident-elara",
+      "x": 344,
+      "y": 13,
+      "w": 93,
+      "h": 192,
+      "destinationRect": {
+        "x": 13,
+        "y": 52,
+        "w": 37,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-walk-0": {
+      "source": "resident-elara",
+      "x": 598,
+      "y": 15,
+      "w": 94,
+      "h": 190,
+      "destinationRect": {
+        "x": 13,
+        "y": 53,
+        "w": 37,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-walk-1": {
+      "source": "resident-elara",
+      "x": 851,
+      "y": 15,
+      "w": 89,
+      "h": 190,
+      "destinationRect": {
+        "x": 14,
+        "y": 53,
+        "w": 35,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-walk-2": {
+      "source": "resident-elara",
+      "x": 1101,
+      "y": 13,
+      "w": 94,
+      "h": 192,
+      "destinationRect": {
+        "x": 13,
+        "y": 52,
+        "w": 37,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-down-walk-3": {
+      "source": "resident-elara",
+      "x": 1356,
+      "y": 13,
+      "w": 89,
+      "h": 192,
+      "destinationRect": {
+        "x": 14,
+        "y": 52,
+        "w": 35,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-idle-0": {
+      "source": "resident-elara",
+      "x": 93,
+      "y": 216,
+      "w": 90,
+      "h": 190,
+      "destinationRect": {
+        "x": 14,
+        "y": 53,
+        "w": 36,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-idle-1": {
+      "source": "resident-elara",
+      "x": 346,
+      "y": 216,
+      "w": 91,
+      "h": 190,
+      "destinationRect": {
+        "x": 14,
+        "y": 53,
+        "w": 36,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-walk-0": {
+      "source": "resident-elara",
+      "x": 593,
+      "y": 217,
+      "w": 96,
+      "h": 190,
+      "destinationRect": {
+        "x": 13,
+        "y": 53,
+        "w": 38,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-walk-1": {
+      "source": "resident-elara",
+      "x": 843,
+      "y": 205,
+      "w": 91,
+      "h": 202,
+      "destinationRect": {
+        "x": 14,
+        "y": 48,
+        "w": 36,
+        "h": 80
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-walk-2": {
+      "source": "resident-elara",
+      "x": 1101,
+      "y": 205,
+      "w": 93,
+      "h": 201,
+      "destinationRect": {
+        "x": 13,
+        "y": 49,
+        "w": 37,
+        "h": 79
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-up-walk-3": {
+      "source": "resident-elara",
+      "x": 1357,
+      "y": 205,
+      "w": 93,
+      "h": 201,
+      "destinationRect": {
+        "x": 13,
+        "y": 49,
+        "w": 37,
+        "h": 79
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-idle-0": {
+      "source": "resident-elara",
+      "x": 94,
+      "y": 419,
+      "w": 85,
+      "h": 188,
+      "destinationRect": {
+        "x": 15,
+        "y": 54,
+        "w": 34,
+        "h": 74
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-idle-1": {
+      "source": "resident-elara",
+      "x": 349,
+      "y": 419,
+      "w": 84,
+      "h": 188,
+      "destinationRect": {
+        "x": 15,
+        "y": 54,
+        "w": 33,
+        "h": 74
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-walk-0": {
+      "source": "resident-elara",
+      "x": 598,
+      "y": 418,
+      "w": 86,
+      "h": 189,
+      "destinationRect": {
+        "x": 15,
+        "y": 53,
+        "w": 34,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-walk-1": {
+      "source": "resident-elara",
+      "x": 840,
+      "y": 420,
+      "w": 100,
+      "h": 188,
+      "destinationRect": {
+        "x": 12,
+        "y": 54,
+        "w": 40,
+        "h": 74
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-walk-2": {
+      "source": "resident-elara",
+      "x": 1092,
+      "y": 419,
+      "w": 102,
+      "h": 188,
+      "destinationRect": {
+        "x": 12,
+        "y": 54,
+        "w": 40,
+        "h": 74
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-left-walk-3": {
+      "source": "resident-elara",
+      "x": 1355,
+      "y": 417,
+      "w": 93,
+      "h": 191,
+      "destinationRect": {
+        "x": 13,
+        "y": 53,
+        "w": 37,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-idle-0": {
+      "source": "resident-elara",
+      "x": 88,
+      "y": 622,
+      "w": 90,
+      "h": 186,
+      "destinationRect": {
+        "x": 14,
+        "y": 55,
+        "w": 36,
+        "h": 73
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-idle-1": {
+      "source": "resident-elara",
+      "x": 342,
+      "y": 621,
+      "w": 90,
+      "h": 191,
+      "destinationRect": {
+        "x": 14,
+        "y": 53,
+        "w": 36,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-walk-0": {
+      "source": "resident-elara",
+      "x": 595,
+      "y": 620,
+      "w": 94,
+      "h": 191,
+      "destinationRect": {
+        "x": 13,
+        "y": 53,
+        "w": 37,
+        "h": 75
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-walk-1": {
+      "source": "resident-elara",
+      "x": 840,
+      "y": 620,
+      "w": 108,
+      "h": 192,
+      "destinationRect": {
+        "x": 10,
+        "y": 52,
+        "w": 43,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-walk-2": {
+      "source": "resident-elara",
+      "x": 1097,
+      "y": 620,
+      "w": 114,
+      "h": 192,
+      "destinationRect": {
+        "x": 9,
+        "y": 52,
+        "w": 45,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-right-walk-3": {
+      "source": "resident-elara",
+      "x": 1352,
+      "y": 620,
+      "w": 98,
+      "h": 192,
+      "destinationRect": {
+        "x": 12,
+        "y": 52,
+        "w": 39,
+        "h": 76
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-elara-sit-down": {
+      "source": "resident-elara",
+      "x": 57,
+      "y": 825,
+      "w": 162,
+      "h": 179,
+      "destinationRect": {
+        "x": 0,
+        "y": 57,
+        "w": 64,
+        "h": 71
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-idle-0": {
+      "source": "resident-finn",
+      "x": 97,
+      "y": 16,
+      "w": 102,
+      "h": 213,
+      "destinationRect": {
+        "x": 10,
+        "y": 39,
+        "w": 43,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-idle-1": {
+      "source": "resident-finn",
+      "x": 304,
+      "y": 16,
+      "w": 102,
+      "h": 213,
+      "destinationRect": {
+        "x": 10,
+        "y": 39,
+        "w": 43,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-walk-0": {
+      "source": "resident-finn",
+      "x": 513,
+      "y": 16,
+      "w": 110,
+      "h": 213,
+      "destinationRect": {
+        "x": 9,
+        "y": 39,
+        "w": 46,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-walk-1": {
+      "source": "resident-finn",
+      "x": 738,
+      "y": 16,
+      "w": 111,
+      "h": 213,
+      "destinationRect": {
+        "x": 8,
+        "y": 39,
+        "w": 47,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-walk-2": {
+      "source": "resident-finn",
+      "x": 962,
+      "y": 16,
+      "w": 106,
+      "h": 213,
+      "destinationRect": {
+        "x": 10,
+        "y": 39,
+        "w": 44,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-down-walk-3": {
+      "source": "resident-finn",
+      "x": 1185,
+      "y": 16,
+      "w": 104,
+      "h": 213,
+      "destinationRect": {
+        "x": 10,
+        "y": 39,
+        "w": 44,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-idle-0": {
+      "source": "resident-finn",
+      "x": 97,
+      "y": 229,
+      "w": 99,
+      "h": 228,
+      "destinationRect": {
+        "x": 11,
+        "y": 32,
+        "w": 42,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-idle-1": {
+      "source": "resident-finn",
+      "x": 305,
+      "y": 229,
+      "w": 99,
+      "h": 228,
+      "destinationRect": {
+        "x": 11,
+        "y": 32,
+        "w": 42,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-walk-0": {
+      "source": "resident-finn",
+      "x": 516,
+      "y": 229,
+      "w": 114,
+      "h": 229,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 48,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-walk-1": {
+      "source": "resident-finn",
+      "x": 740,
+      "y": 229,
+      "w": 112,
+      "h": 229,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 47,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-walk-2": {
+      "source": "resident-finn",
+      "x": 961,
+      "y": 229,
+      "w": 109,
+      "h": 229,
+      "destinationRect": {
+        "x": 9,
+        "y": 32,
+        "w": 46,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-up-walk-3": {
+      "source": "resident-finn",
+      "x": 1183,
+      "y": 229,
+      "w": 106,
+      "h": 229,
+      "destinationRect": {
+        "x": 10,
+        "y": 32,
+        "w": 44,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-idle-0": {
+      "source": "resident-finn",
+      "x": 85,
+      "y": 472,
+      "w": 99,
+      "h": 215,
+      "destinationRect": {
+        "x": 11,
+        "y": 38,
+        "w": 42,
+        "h": 90
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-idle-1": {
+      "source": "resident-finn",
+      "x": 297,
+      "y": 471,
+      "w": 100,
+      "h": 216,
+      "destinationRect": {
+        "x": 11,
+        "y": 37,
+        "w": 42,
+        "h": 91
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-walk-0": {
+      "source": "resident-finn",
+      "x": 512,
+      "y": 458,
+      "w": 113,
+      "h": 229,
+      "destinationRect": {
+        "x": 8,
+        "y": 32,
+        "w": 47,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-walk-1": {
+      "source": "resident-finn",
+      "x": 735,
+      "y": 458,
+      "w": 120,
+      "h": 229,
+      "destinationRect": {
+        "x": 7,
+        "y": 32,
+        "w": 50,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-walk-2": {
+      "source": "resident-finn",
+      "x": 961,
+      "y": 458,
+      "w": 121,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 51,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-left-walk-3": {
+      "source": "resident-finn",
+      "x": 1181,
+      "y": 458,
+      "w": 116,
+      "h": 229,
+      "destinationRect": {
+        "x": 7,
+        "y": 32,
+        "w": 49,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-idle-0": {
+      "source": "resident-finn",
+      "x": 92,
+      "y": 687,
+      "w": 100,
+      "h": 229,
+      "destinationRect": {
+        "x": 11,
+        "y": 32,
+        "w": 42,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-idle-1": {
+      "source": "resident-finn",
+      "x": 307,
+      "y": 687,
+      "w": 97,
+      "h": 229,
+      "destinationRect": {
+        "x": 11,
+        "y": 32,
+        "w": 41,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-walk-0": {
+      "source": "resident-finn",
+      "x": 516,
+      "y": 687,
+      "w": 118,
+      "h": 229,
+      "destinationRect": {
+        "x": 7,
+        "y": 32,
+        "w": 49,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-walk-1": {
+      "source": "resident-finn",
+      "x": 731,
+      "y": 687,
+      "w": 125,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 52,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-walk-2": {
+      "source": "resident-finn",
+      "x": 956,
+      "y": 687,
+      "w": 124,
+      "h": 229,
+      "destinationRect": {
+        "x": 6,
+        "y": 32,
+        "w": 52,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-right-walk-3": {
+      "source": "resident-finn",
+      "x": 1187,
+      "y": 687,
+      "w": 116,
+      "h": 229,
+      "destinationRect": {
+        "x": 7,
+        "y": 32,
+        "w": 49,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-finn-sit-down": {
+      "source": "resident-finn",
+      "x": 61,
+      "y": 916,
+      "w": 147,
+      "h": 210,
+      "destinationRect": {
+        "x": 1,
+        "y": 40,
+        "w": 62,
+        "h": 88
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-idle-0": {
+      "source": "resident-hazel",
+      "x": 106,
+      "y": 10,
+      "w": 118,
+      "h": 191,
+      "destinationRect": {
+        "x": 3,
+        "y": 34,
+        "w": 58,
+        "h": 94
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-idle-1": {
+      "source": "resident-hazel",
+      "x": 344,
+      "y": 9,
+      "w": 117,
+      "h": 192,
+      "destinationRect": {
+        "x": 3,
+        "y": 34,
+        "w": 57,
+        "h": 94
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-walk-0": {
+      "source": "resident-hazel",
+      "x": 585,
+      "y": 10,
+      "w": 119,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-walk-1": {
+      "source": "resident-hazel",
+      "x": 826,
+      "y": 10,
+      "w": 120,
+      "h": 193,
+      "destinationRect": {
+        "x": 2,
+        "y": 33,
+        "w": 59,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-walk-2": {
+      "source": "resident-hazel",
+      "x": 1069,
+      "y": 10,
+      "w": 121,
+      "h": 193,
+      "destinationRect": {
+        "x": 2,
+        "y": 33,
+        "w": 59,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-down-walk-3": {
+      "source": "resident-hazel",
+      "x": 1317,
+      "y": 10,
+      "w": 119,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-idle-0": {
+      "source": "resident-hazel",
+      "x": 93,
+      "y": 213,
+      "w": 114,
+      "h": 193,
+      "destinationRect": {
+        "x": 4,
+        "y": 33,
+        "w": 56,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-idle-1": {
+      "source": "resident-hazel",
+      "x": 331,
+      "y": 213,
+      "w": 112,
+      "h": 192,
+      "destinationRect": {
+        "x": 4,
+        "y": 34,
+        "w": 55,
+        "h": 94
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-walk-0": {
+      "source": "resident-hazel",
+      "x": 573,
+      "y": 213,
+      "w": 122,
+      "h": 194,
+      "destinationRect": {
+        "x": 2,
+        "y": 33,
+        "w": 60,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-walk-1": {
+      "source": "resident-hazel",
+      "x": 821,
+      "y": 214,
+      "w": 117,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 57,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-walk-2": {
+      "source": "resident-hazel",
+      "x": 1063,
+      "y": 214,
+      "w": 119,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-up-walk-3": {
+      "source": "resident-hazel",
+      "x": 1309,
+      "y": 214,
+      "w": 118,
+      "h": 193,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-idle-0": {
+      "source": "resident-hazel",
+      "x": 94,
+      "y": 417,
+      "w": 115,
+      "h": 195,
+      "destinationRect": {
+        "x": 4,
+        "y": 32,
+        "w": 56,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-idle-1": {
+      "source": "resident-hazel",
+      "x": 332,
+      "y": 417,
+      "w": 114,
+      "h": 196,
+      "destinationRect": {
+        "x": 4,
+        "y": 32,
+        "w": 56,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-walk-0": {
+      "source": "resident-hazel",
+      "x": 570,
+      "y": 417,
+      "w": 121,
+      "h": 196,
+      "destinationRect": {
+        "x": 2,
+        "y": 32,
+        "w": 59,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-walk-1": {
+      "source": "resident-hazel",
+      "x": 819,
+      "y": 418,
+      "w": 124,
+      "h": 195,
+      "destinationRect": {
+        "x": 1,
+        "y": 32,
+        "w": 61,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-walk-2": {
+      "source": "resident-hazel",
+      "x": 1058,
+      "y": 418,
+      "w": 127,
+      "h": 195,
+      "destinationRect": {
+        "x": 1,
+        "y": 32,
+        "w": 62,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-left-walk-3": {
+      "source": "resident-hazel",
+      "x": 1302,
+      "y": 418,
+      "w": 124,
+      "h": 195,
+      "destinationRect": {
+        "x": 1,
+        "y": 32,
+        "w": 61,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-idle-0": {
+      "source": "resident-hazel",
+      "x": 95,
+      "y": 624,
+      "w": 118,
+      "h": 194,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-idle-1": {
+      "source": "resident-hazel",
+      "x": 335,
+      "y": 624,
+      "w": 119,
+      "h": 194,
+      "destinationRect": {
+        "x": 3,
+        "y": 33,
+        "w": 58,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-walk-0": {
+      "source": "resident-hazel",
+      "x": 573,
+      "y": 624,
+      "w": 125,
+      "h": 194,
+      "destinationRect": {
+        "x": 1,
+        "y": 33,
+        "w": 61,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-walk-1": {
+      "source": "resident-hazel",
+      "x": 817,
+      "y": 624,
+      "w": 129,
+      "h": 195,
+      "destinationRect": {
+        "x": 0,
+        "y": 32,
+        "w": 63,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-walk-2": {
+      "source": "resident-hazel",
+      "x": 1066,
+      "y": 625,
+      "w": 130,
+      "h": 193,
+      "destinationRect": {
+        "x": 0,
+        "y": 33,
+        "w": 64,
+        "h": 95
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-right-walk-3": {
+      "source": "resident-hazel",
+      "x": 1314,
+      "y": 624,
+      "w": 128,
+      "h": 195,
+      "destinationRect": {
+        "x": 0,
+        "y": 32,
+        "w": 63,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-hazel-sit-down": {
+      "source": "resident-hazel",
+      "x": 88,
+      "y": 829,
+      "w": 127,
+      "h": 190,
+      "destinationRect": {
+        "x": 1,
+        "y": 35,
+        "w": 62,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-idle-0": {
+      "source": "resident-ada",
+      "x": 108,
+      "y": 11,
+      "w": 120,
+      "h": 187,
+      "destinationRect": {
+        "x": 4,
+        "y": 40,
+        "w": 56,
+        "h": 88
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-idle-1": {
+      "source": "resident-ada",
+      "x": 351,
+      "y": 11,
+      "w": 119,
+      "h": 187,
+      "destinationRect": {
+        "x": 4,
+        "y": 40,
+        "w": 56,
+        "h": 88
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-walk-0": {
+      "source": "resident-ada",
+      "x": 584,
+      "y": 11,
+      "w": 122,
+      "h": 190,
+      "destinationRect": {
+        "x": 3,
+        "y": 39,
+        "w": 57,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-walk-1": {
+      "source": "resident-ada",
+      "x": 832,
+      "y": 11,
+      "w": 116,
+      "h": 190,
+      "destinationRect": {
+        "x": 5,
+        "y": 39,
+        "w": 54,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-walk-2": {
+      "source": "resident-ada",
+      "x": 1063,
+      "y": 11,
+      "w": 124,
+      "h": 190,
+      "destinationRect": {
+        "x": 3,
+        "y": 39,
+        "w": 58,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-down-walk-3": {
+      "source": "resident-ada",
+      "x": 1312,
+      "y": 11,
+      "w": 115,
+      "h": 190,
+      "destinationRect": {
+        "x": 5,
+        "y": 39,
+        "w": 54,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-idle-0": {
+      "source": "resident-ada",
+      "x": 115,
+      "y": 212,
+      "w": 126,
+      "h": 198,
+      "destinationRect": {
+        "x": 2,
+        "y": 35,
+        "w": 59,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-idle-1": {
+      "source": "resident-ada",
+      "x": 354,
+      "y": 213,
+      "w": 126,
+      "h": 197,
+      "destinationRect": {
+        "x": 2,
+        "y": 36,
+        "w": 59,
+        "h": 92
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-walk-0": {
+      "source": "resident-ada",
+      "x": 590,
+      "y": 212,
+      "w": 128,
+      "h": 198,
+      "destinationRect": {
+        "x": 2,
+        "y": 35,
+        "w": 60,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-walk-1": {
+      "source": "resident-ada",
+      "x": 826,
+      "y": 212,
+      "w": 127,
+      "h": 198,
+      "destinationRect": {
+        "x": 2,
+        "y": 35,
+        "w": 59,
+        "h": 93
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-walk-2": {
+      "source": "resident-ada",
+      "x": 1067,
+      "y": 213,
+      "w": 129,
+      "h": 197,
+      "destinationRect": {
+        "x": 2,
+        "y": 36,
+        "w": 60,
+        "h": 92
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-up-walk-3": {
+      "source": "resident-ada",
+      "x": 1309,
+      "y": 213,
+      "w": 123,
+      "h": 197,
+      "destinationRect": {
+        "x": 3,
+        "y": 36,
+        "w": 58,
+        "h": 92
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-idle-0": {
+      "source": "resident-ada",
+      "x": 110,
+      "y": 410,
+      "w": 119,
+      "h": 204,
+      "destinationRect": {
+        "x": 4,
+        "y": 32,
+        "w": 56,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-idle-1": {
+      "source": "resident-ada",
+      "x": 349,
+      "y": 410,
+      "w": 121,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 32,
+        "w": 57,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-walk-0": {
+      "source": "resident-ada",
+      "x": 585,
+      "y": 410,
+      "w": 121,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 32,
+        "w": 57,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-walk-1": {
+      "source": "resident-ada",
+      "x": 821,
+      "y": 410,
+      "w": 123,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 32,
+        "w": 58,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-walk-2": {
+      "source": "resident-ada",
+      "x": 1059,
+      "y": 410,
+      "w": 124,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 32,
+        "w": 58,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-left-walk-3": {
+      "source": "resident-ada",
+      "x": 1301,
+      "y": 410,
+      "w": 124,
+      "h": 204,
+      "destinationRect": {
+        "x": 3,
+        "y": 32,
+        "w": 58,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-idle-0": {
+      "source": "resident-ada",
+      "x": 111,
+      "y": 614,
+      "w": 117,
+      "h": 205,
+      "destinationRect": {
+        "x": 4,
+        "y": 32,
+        "w": 55,
+        "h": 96
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-idle-1": {
+      "source": "resident-ada",
+      "x": 351,
+      "y": 614,
+      "w": 120,
+      "h": 180,
+      "destinationRect": {
+        "x": 4,
+        "y": 44,
+        "w": 56,
+        "h": 84
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-walk-0": {
+      "source": "resident-ada",
+      "x": 583,
+      "y": 614,
+      "w": 127,
+      "h": 179,
+      "destinationRect": {
+        "x": 2,
+        "y": 44,
+        "w": 59,
+        "h": 84
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-walk-1": {
+      "source": "resident-ada",
+      "x": 821,
+      "y": 614,
+      "w": 132,
+      "h": 179,
+      "destinationRect": {
+        "x": 1,
+        "y": 44,
+        "w": 62,
+        "h": 84
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-walk-2": {
+      "source": "resident-ada",
+      "x": 1070,
+      "y": 614,
+      "w": 122,
+      "h": 179,
+      "destinationRect": {
+        "x": 3,
+        "y": 44,
+        "w": 57,
+        "h": 84
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-right-walk-3": {
+      "source": "resident-ada",
+      "x": 1307,
+      "y": 614,
+      "w": 121,
+      "h": 180,
+      "destinationRect": {
+        "x": 3,
+        "y": 44,
+        "w": 57,
+        "h": 84
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "resident-ada-sit-down": {
+      "source": "resident-ada",
+      "x": 88,
+      "y": 819,
+      "w": 136,
+      "h": 189,
+      "destinationRect": {
+        "x": 0,
+        "y": 39,
+        "w": 64,
+        "h": 89
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "held-bench-axe-down": {
+      "source": "held-tools",
+      "x": 61,
+      "y": 55,
+      "w": 96,
+      "h": 157,
+      "destinationRect": {
+        "x": 7,
+        "y": 2,
+        "w": 17,
+        "h": 28
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-bench-axe-up": {
+      "source": "held-tools",
+      "x": 65,
+      "y": 278,
+      "w": 97,
+      "h": 155,
+      "destinationRect": {
+        "x": 7,
+        "y": 2,
+        "w": 18,
+        "h": 28
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-bench-axe-left": {
+      "source": "held-tools",
+      "x": 61,
+      "y": 471,
+      "w": 96,
+      "h": 177,
+      "destinationRect": {
+        "x": 7,
+        "y": 0,
+        "w": 17,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-bench-axe-right": {
+      "source": "held-tools",
+      "x": 65,
+      "y": 692,
+      "w": 97,
+      "h": 164,
+      "destinationRect": {
+        "x": 7,
+        "y": 1,
+        "w": 18,
+        "h": 30
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-felling-axe-down": {
+      "source": "held-tools",
+      "x": 284,
+      "y": 11,
+      "w": 96,
+      "h": 201,
+      "destinationRect": {
+        "x": 9,
+        "y": 1,
+        "w": 14,
+        "h": 29
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-felling-axe-up": {
+      "source": "held-tools",
+      "x": 289,
+      "y": 230,
+      "w": 97,
+      "h": 203,
+      "destinationRect": {
+        "x": 9,
+        "y": 1,
+        "w": 14,
+        "h": 30
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-felling-axe-left": {
+      "source": "held-tools",
+      "x": 271,
+      "y": 445,
+      "w": 109,
+      "h": 220,
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-felling-axe-right": {
+      "source": "held-tools",
+      "x": 297,
+      "y": 665,
+      "w": 98,
+      "h": 206,
+      "destinationRect": {
+        "x": 9,
+        "y": 1,
+        "w": 14,
+        "h": 30
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-pick-down": {
+      "source": "held-tools",
+      "x": 468,
+      "y": 28,
+      "w": 176,
+      "h": 184,
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 30,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-pick-up": {
+      "source": "held-tools",
+      "x": 468,
+      "y": 250,
+      "w": 175,
+      "h": 183,
+      "destinationRect": {
+        "x": 1,
+        "y": 0,
+        "w": 30,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-pick-left": {
+      "source": "held-tools",
+      "x": 478,
+      "y": 466,
+      "w": 91,
+      "h": 188,
+      "destinationRect": {
+        "x": 8,
+        "y": 0,
+        "w": 15,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-pick-right": {
+      "source": "held-tools",
+      "x": 532,
+      "y": 688,
+      "w": 99,
+      "h": 183,
+      "destinationRect": {
+        "x": 7,
+        "y": 0,
+        "w": 17,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-spade-down": {
+      "source": "held-tools",
+      "x": 736,
+      "y": 18,
+      "w": 81,
+      "h": 194,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-spade-up": {
+      "source": "held-tools",
+      "x": 736,
+      "y": 240,
+      "w": 81,
+      "h": 193,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-spade-left": {
+      "source": "held-tools",
+      "x": 751,
+      "y": 454,
+      "w": 52,
+      "h": 196,
+      "destinationRect": {
+        "x": 12,
+        "y": 0,
+        "w": 8,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-spade-right": {
+      "source": "held-tools",
+      "x": 751,
+      "y": 676,
+      "w": 52,
+      "h": 195,
+      "destinationRect": {
+        "x": 12,
+        "y": 0,
+        "w": 8,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-stave-bucket-down": {
+      "source": "held-tools",
+      "x": 930,
+      "y": 59,
+      "w": 133,
+      "h": 140,
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 27,
+        "h": 28
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "held-stave-bucket-up": {
+      "source": "held-tools",
+      "x": 930,
+      "y": 268,
+      "w": 133,
+      "h": 158,
+      "destinationRect": {
+        "x": 2,
+        "y": 0,
+        "w": 27,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "held-stave-bucket-left": {
+      "source": "held-tools",
+      "x": 919,
+      "y": 494,
+      "w": 137,
+      "h": 141,
+      "destinationRect": {
+        "x": 2,
+        "y": 1,
+        "w": 28,
+        "h": 29
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "held-stave-bucket-right": {
+      "source": "held-tools",
+      "x": 936,
+      "y": 714,
+      "w": 137,
+      "h": 139,
+      "destinationRect": {
+        "x": 2,
+        "y": 2,
+        "w": 28,
+        "h": 28
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "held-watering-can-down": {
+      "source": "held-tools",
+      "x": 1125,
+      "y": 59,
+      "w": 205,
+      "h": 134,
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 32,
+        "h": 21
+      },
+      "handAnchor": {
+        "x": 8,
+        "y": 12
+      }
+    },
+    "held-watering-can-up": {
+      "source": "held-tools",
+      "x": 1122,
+      "y": 283,
+      "w": 199,
+      "h": 131,
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 31,
+        "h": 20
+      },
+      "handAnchor": {
+        "x": 24,
+        "y": 12
+      }
+    },
+    "held-watering-can-left": {
+      "source": "held-tools",
+      "x": 1122,
+      "y": 494,
+      "w": 208,
+      "h": 136,
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 32,
+        "h": 21
+      },
+      "handAnchor": {
+        "x": 8,
+        "y": 12
+      }
+    },
+    "held-watering-can-right": {
+      "source": "held-tools",
+      "x": 1117,
+      "y": 711,
+      "w": 208,
+      "h": 137,
+      "destinationRect": {
+        "x": 0,
+        "y": 5,
+        "w": 32,
+        "h": 21
+      },
+      "handAnchor": {
+        "x": 24,
+        "y": 12
+      }
+    },
+    "held-short-blade-down": {
+      "source": "held-tools",
+      "x": 1330,
+      "y": 24,
+      "w": 130,
+      "h": 182,
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 23,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-short-blade-up": {
+      "source": "held-tools",
+      "x": 1421,
+      "y": 248,
+      "w": 42,
+      "h": 182,
+      "destinationRect": {
+        "x": 12,
+        "y": 0,
+        "w": 7,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-short-blade-left": {
+      "source": "held-tools",
+      "x": 1330,
+      "y": 483,
+      "w": 176,
+      "h": 139,
+      "destinationRect": {
+        "x": 0,
+        "y": 4,
+        "w": 31,
+        "h": 24
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-short-blade-right": {
+      "source": "held-tools",
+      "x": 1381,
+      "y": 703,
+      "w": 111,
+      "h": 139,
+      "destinationRect": {
+        "x": 6,
+        "y": 4,
+        "w": 20,
+        "h": 24
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 28
+      }
+    },
+    "held-carter-lantern-down": {
+      "source": "held-tools",
+      "x": 1623,
+      "y": 14,
+      "w": 83,
+      "h": 189,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 6
+      }
+    },
+    "held-carter-lantern-up": {
+      "source": "held-tools",
+      "x": 1625,
+      "y": 232,
+      "w": 82,
+      "h": 192,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 6
+      }
+    },
+    "held-carter-lantern-left": {
+      "source": "held-tools",
+      "x": 1625,
+      "y": 453,
+      "w": 82,
+      "h": 193,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 31
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 6
+      }
+    },
+    "held-carter-lantern-right": {
+      "source": "held-tools",
+      "x": 1625,
+      "y": 674,
+      "w": 83,
+      "h": 197,
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 13,
+        "h": 32
+      },
+      "handAnchor": {
+        "x": 16,
+        "y": 6
+      }
+    },
+    "player-down-idle-0": {
+      "source": "player-body",
+      "x": 0,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-0",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-idle-1": {
+      "source": "player-body",
+      "x": 198,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-1",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-walk-0": {
+      "source": "player-body",
+      "x": 396,
+      "y": 0,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-0",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-walk-1": {
+      "source": "player-body",
+      "x": 595,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-1",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-walk-2": {
+      "source": "player-body",
+      "x": 793,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-2",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-walk-3": {
+      "source": "player-body",
+      "x": 991,
+      "y": 0,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-3",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-swing-0": {
+      "source": "player-body",
+      "x": 1190,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-0",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-down-swing-1": {
+      "source": "player-body",
+      "x": 1388,
+      "y": 0,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-1",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-idle-0": {
+      "source": "player-body",
+      "x": 0,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-0",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-idle-1": {
+      "source": "player-body",
+      "x": 198,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-1",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-walk-0": {
+      "source": "player-body",
+      "x": 396,
+      "y": 198,
+      "w": 199,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-0",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-walk-1": {
+      "source": "player-body",
+      "x": 595,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-1",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-walk-2": {
+      "source": "player-body",
+      "x": 793,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-2",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-walk-3": {
+      "source": "player-body",
+      "x": 991,
+      "y": 198,
+      "w": 199,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-3",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-swing-0": {
+      "source": "player-body",
+      "x": 1190,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-0",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-up-swing-1": {
+      "source": "player-body",
+      "x": 1388,
+      "y": 198,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-1",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-idle-0": {
+      "source": "player-body",
+      "x": 0,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-0",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-idle-1": {
+      "source": "player-body",
+      "x": 198,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-1",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-walk-0": {
+      "source": "player-body",
+      "x": 396,
+      "y": 397,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-0",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-walk-1": {
+      "source": "player-body",
+      "x": 595,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-1",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-walk-2": {
+      "source": "player-body",
+      "x": 793,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-2",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-walk-3": {
+      "source": "player-body",
+      "x": 991,
+      "y": 397,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-3",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-swing-0": {
+      "source": "player-body",
+      "x": 1190,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-0",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-left-swing-1": {
+      "source": "player-body",
+      "x": 1388,
+      "y": 397,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-1",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-idle-0": {
+      "source": "player-body",
+      "x": 0,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-0",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-idle-1": {
+      "source": "player-body",
+      "x": 198,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "idle-1",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-walk-0": {
+      "source": "player-body",
+      "x": 396,
+      "y": 595,
+      "w": 199,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-0",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-walk-1": {
+      "source": "player-body",
+      "x": 595,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-1",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-walk-2": {
+      "source": "player-body",
+      "x": 793,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-2",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-walk-3": {
+      "source": "player-body",
+      "x": 991,
+      "y": 595,
+      "w": 199,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "walk-3",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-swing-0": {
+      "source": "player-body",
+      "x": 1190,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-0",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-right-swing-1": {
+      "source": "player-body",
+      "x": 1388,
+      "y": 595,
+      "w": 198,
+      "h": 199,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "swing-1",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-sit-down": {
+      "source": "player-body",
+      "x": 0,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "sit",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-sit-up": {
+      "source": "player-body",
+      "x": 198,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "sit",
+      "direction": "up",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-sit-left": {
+      "source": "player-body",
+      "x": 396,
+      "y": 794,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "sit",
+      "direction": "left",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-sit-right": {
+      "source": "player-body",
+      "x": 595,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "sit",
+      "direction": "right",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-hair-reference-short-crop": {
+      "source": "player-body",
+      "x": 793,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "hair-reference",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-hair-reference-bob": {
+      "source": "player-body",
+      "x": 991,
+      "y": 794,
+      "w": 199,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "hair-reference",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-hair-reference-long-braid": {
+      "source": "player-body",
+      "x": 1190,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "hair-reference",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "player-hair-reference-top-knot": {
+      "source": "player-body",
+      "x": 1388,
+      "y": 794,
+      "w": 198,
+      "h": 198,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "pose": "hair-reference",
+      "direction": "down",
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "sources": {
+    "ground-base": {
+      "file": "ground/fingersnap-ground-base.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "transition-dirt": {
+      "file": "ground/fingersnap-ground-transition-dirt.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "transition-road": {
+      "file": "ground/fingersnap-ground-transition-road.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "transition-flagstones": {
+      "file": "ground/fingersnap-ground-transition-flagstones.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "transition-sand": {
+      "file": "ground/fingersnap-ground-transition-sand.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "transition-water": {
+      "file": "ground/fingersnap-ground-transition-water.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "resident-mara": {
+      "file": "residents/fingersnap-resident-mara.png",
+      "width": 1374,
+      "height": 1145
+    },
+    "resident-pip": {
+      "file": "residents/fingersnap-resident-pip.png",
+      "width": 1374,
+      "height": 1145
+    },
+    "resident-orrin": {
+      "file": "residents/fingersnap-resident-orrin.png",
+      "width": 1374,
+      "height": 1145
+    },
+    "resident-silas": {
+      "file": "residents/fingersnap-resident-silas.png",
+      "width": 1374,
+      "height": 1145
+    },
+    "resident-elara": {
+      "file": "residents/fingersnap-resident-elara.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "resident-finn": {
+      "file": "residents/fingersnap-resident-finn.png",
+      "width": 1374,
+      "height": 1145
+    },
+    "resident-hazel": {
+      "file": "residents/fingersnap-resident-hazel.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "resident-ada": {
+      "file": "residents/fingersnap-resident-ada.png",
+      "width": 1536,
+      "height": 1024
+    },
+    "held-tools": {
+      "file": "hand-items/fingersnap-held-tools.png",
+      "width": 1774,
+      "height": 887
+    }
+  }
+}

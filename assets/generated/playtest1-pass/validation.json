@@ -1,0 +1,172 @@
+{
+  "status": "passed",
+  "sources": [
+    {
+      "file": "ground/fingersnap-ground-base.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec"
+    },
+    {
+      "file": "ground/fingersnap-ground-transition-dirt.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "15c855ebb50e8f9512cb9f547c4b0d071a13d7ebd9d4ccc4bb9007d1ab8118d7"
+    },
+    {
+      "file": "ground/fingersnap-ground-transition-road.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "26e5e3caa98a7e1a7120bfb15bf7f4c25e826439042ae1e1068956040f1f93eb"
+    },
+    {
+      "file": "ground/fingersnap-ground-transition-flagstones.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "c96121680dcf8ac8ffb73d7c2a0e2f1a6119c5b84c5459937741cdd492bfff3a"
+    },
+    {
+      "file": "ground/fingersnap-ground-transition-sand.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "72ee23a8d721a934eb159194bb04b950b6621f40d72bedd5c313665c98548dd5"
+    },
+    {
+      "file": "ground/fingersnap-ground-transition-water.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "8c5fd14645591aefb30113185bae5c001dc4ab5cca9b55ebc08e0d9601c10f99"
+    },
+    {
+      "file": "residents/fingersnap-resident-mara.png",
+      "dimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "sha256": "06f24b740efdd8968d0d08eebe5ae034f8cff2f09eb185592b2bf078f337208e"
+    },
+    {
+      "file": "residents/fingersnap-resident-pip.png",
+      "dimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "sha256": "727717f6a6c10ea43561a6d51eb1c784bb3dcacbedc9d90cdae7144636c59a28"
+    },
+    {
+      "file": "residents/fingersnap-resident-orrin.png",
+      "dimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "sha256": "7fc351ee010e2b405a3fc10a7e6f47c060ddaa7c8d53914561477bd28afd9b2b"
+    },
+    {
+      "file": "residents/fingersnap-resident-silas.png",
+      "dimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "sha256": "4579c07b25e47fb3d1d2159810de91c9d19dd5e29f165ff60dbeaf2203ddde69"
+    },
+    {
+      "file": "residents/fingersnap-resident-elara.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "1b37d7cb07b0a8c5375c32f0e7741c8e1c9e40daf41a902f299dcec7f67bfec8"
+    },
+    {
+      "file": "residents/fingersnap-resident-finn.png",
+      "dimensions": [
+        1374,
+        1145
+      ],
+      "mode": "RGBA",
+      "sha256": "095c8c0c512a607516fe1b24f12999a49e21d07b197b210bcc4abce1a9a8a791"
+    },
+    {
+      "file": "residents/fingersnap-resident-hazel.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "2de98f05fb5e84c5286f35acdbca09d050fe76114b01d6d17c5bc45ea581612b"
+    },
+    {
+      "file": "residents/fingersnap-resident-ada.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "398654b673a0c6736787c4696469d64d04c8c44d690a28e11a23602e118d8146"
+    },
+    {
+      "file": "hand-items/fingersnap-held-tools.png",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "mode": "RGBA",
+      "sha256": "44c9be76ef290b26aa458634a6c0e99e7430326369734dceefeb6a67635f224a"
+    },
+    {
+      "file": "player-body/fingersnap-player-body-index-atlas.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "mode": "RGBA",
+      "sha256": "de324fb7fc3c6c2b044c987497cbd55b78569aaf69a2c50f39f41d5363deb675"
+    }
+  ],
+  "frames": 416,
+  "groundTiles": 24,
+  "transitionTiles": 120,
+  "residentFrames": 200,
+  "heldToolFrames": 32,
+  "playerBodyFrames": 40,
+  "animations": 82,
+  "checks": [
+    "unique frame keys",
+    "source crop bounds",
+    "source dimensions and SHA-256",
+    "animation frame references",
+    "transparent PNG source channels",
+    "player/held-item anchors in 64x128 or 32x32 canvases"
+  ],
+  "inGameScenesTested": false,
+  "seamCheck": {
+    "status": "needs-art-review",
+    "meanRgbEdgeDifferenceAfter64pxBoxFilter": 23.77,
+    "maxRgbEdgeDifference": 40.69,
+    "measurement": "mean absolute RGB difference between opposite one-pixel borders of each 64x64 tile"
+  },
+  "errors": []
+}

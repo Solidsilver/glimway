@@ -396,3 +396,9 @@ effect sequences (runtime pass, October 3). Still wanted:
 4. Palette: warm cozy; outline dark warm brown `#3a2a28` on characters.
 5. Audio (ambience, UI, interaction) — tracked as a pending deliverable in
    `ASSETS.md`, not an art slot.
+
+## Playtest-1 art request pass (staged October 6, 2026)
+
+`assets/generated/playtest1-pass/` is a staged source-art pack for the first playtest request: 24 ground tiles, five ground-transition sheets, eight resident pose sheets, eight held tools, and a player-body prototype. It includes `manifest.json`, `atlas.json`, `animations.json`, `prompts.json`, `validation.json`, coverage notes, and a browser preview. Original generated sheets are retained as source assets.
+
+This is a reviewable art drop; it is **not wired into `scripts/build-atlases.ts`, `src/game/atlas-plan.ts`, public assets, or runtime scenes**. Do not treat its manifest as one of the production pack contracts until the runtime owner adds and validates the wiring. Validation covers source dimensions/hashes, frame crop bounds, and animation references; it does not include in-game scene review. The ground edge seam check still needs art review. The player-body sheet is a prototype with color-family guidance, not exact index-color/separated layers; its fifth hairstyle and production-ready recolor layers remain outstanding.

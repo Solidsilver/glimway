@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Fingersnap — Playtest 1 art</title>
+<style>
+body{margin:24px;background:#232923;color:#f2e7ce;font:15px system-ui}header{position:sticky;top:0;background:#232923;padding:12px 0;z-index:2}select{font:inherit;padding:8px}#status{padding:8px 0;color:#c9d5b7}main{display:flex;flex-wrap:wrap;gap:12px}article{background:#343d34;border:1px solid #64705e;border-radius:8px;padding:12px;max-width:420px}small{display:block;max-width:400px;overflow-wrap:anywhere;margin-bottom:8px;color:#f3dfb9}canvas{image-rendering:pixelated;background:repeating-conic-gradient(#52604d 0% 25%,#3f4c3d 0% 50%) 0/16px 16px}
+</style>
+<header><b>Fingersnap · Playtest 1 art</b> <select id="filter"></select><div id="status"></div></header><main id="frames"></main>
+<script type="module">
+const m=await(await fetch('./manifest.json')).json(), images={};
+await Promise.all(m.sources.map(async s=>{const i=new Image();i.src=s.file;await i.decode();images[s.key]=i}));
+const sel=document.querySelector('#filter');sel.add(new Option('All art','all'));for(const s of m.sources)sel.add(new Option(s.key,s.key));
+function show(){const host=document.querySelector('#frames');host.replaceChildren();for(const f of m.frames.filter(x=>sel.value==='all'||x.source===sel.value)){const a=document.createElement('article'),label=document.createElement('small'),c=document.createElement('canvas'),ctx=c.getContext('2d');label.textContent=`${f.key} · ${f.width}×${f.height}${f.direction?' · '+f.direction:''}${f.motion?' · '+f.motion:''}`;c.width=f.width;c.height=f.height;ctx.imageSmoothingEnabled=false;const r=f.sourceRect,d=f.destinationRect;ctx.drawImage(images[f.source],r.x,r.y,r.w,r.h,d.x,d.y,d.w,d.h);const scale=Math.max(2,Math.min(6,Math.floor(360/f.width)));c.style.width=f.width*scale+'px';c.style.height=f.height*scale+'px';a.append(label,c);host.append(a)}document.querySelector('#status').textContent=`${m.sources.length} source sheets · ${m.frames.length} frames · ${m.animations.length} animation groups`}
+sel.onchange=show;show();
+</script>
