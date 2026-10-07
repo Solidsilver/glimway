@@ -15,6 +15,18 @@ from Habitica) and `ASSETS.md` (the asset register).
   word for a light or candle, so a glimway is a road of little lights. Knockout check in section 8;
   rename scope in "Renaming to Glimway" below.
 
+- **2026-10-07: code is AGPL-3.0-or-later.**
+- **2026-10-07: outside contributions use the DCO** (a `Signed-off-by` line on each commit).
+- **2026-10-07: AI is disclosed plainly** in the README and the Habitica form. The game was built
+  by AI agents, and the art was generated with OpenAI's image generation through Codex (the packs'
+  `prompts.json` record "Codex built-in image generation"; confirm the exact model name before
+  publishing). The owner would prefer human-made art and generated it only to make the game
+  playable first. Say that too, and welcome artists.
+- **2026-10-07: lean on Habitica art for now, and keep a way out.** Make it a standing goal that
+  everything Habitica supplies (avatar, gear, pets and the sprites) has a backup of our own, so a
+  spin-off not tied to Habitica stays possible.
+- **Open: the art licence**, CC BY-SA 4.0 or CC0 (explained to the owner).
+
 ## Summary
 
 The owner's guess is half right. Habitica's art is CC BY-NC-SA 3.0, so any instance that serves it
