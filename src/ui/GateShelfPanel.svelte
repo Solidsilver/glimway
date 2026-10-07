@@ -3,7 +3,7 @@
   import type { Session } from '../game/session'
   import { VILLAGE_EV, villageFor, villageErrorText } from '../game/village'
   import { itemsFor, ITEMS_EV } from '../game/items'
-  import { homesteadsFor } from '../game/homestead'
+  import { homesteadsFor, HOME_EV } from '../game/homestead'
   import { bus, EV } from '../game/events'
   import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
@@ -24,6 +24,8 @@
   let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
   let view = $state<ShelfView | null>(null)
   let pickingSlot = $state<number | null>(null)
+  /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
+  let version = $state(0)
 
   async function reread(): Promise<void> {
     const r = await village.loadShelf(gate)
@@ -37,13 +39,22 @@
   }
 
   onMount(() => {
+    const bump = () => (version += 1)
+    // The pack arriving (the read above, or another answer carrying it)
+    // re-opens the choice list as well as re-reading the shelf.
+    const onItems = () => {
+      bump()
+      void reread()
+    }
     bus.on(VILLAGE_EV.changed, reread)
-    bus.on(ITEMS_EV.changed, reread)
+    bus.on(ITEMS_EV.changed, onItems)
+    bus.on(HOME_EV.changed, bump)
     void reread()
     if (session.link) void items.load()
     return () => {
       bus.off(VILLAGE_EV.changed, reread)
-      bus.off(ITEMS_EV.changed, reread)
+      bus.off(ITEMS_EV.changed, onItems)
+      bus.off(HOME_EV.changed, bump)
     }
   })
 
@@ -64,6 +75,7 @@
   }
 
   const stockChoices = $derived.by(() => {
+    void version
     const out: StockChoice[] = []
     if (!items.view) return out
 
