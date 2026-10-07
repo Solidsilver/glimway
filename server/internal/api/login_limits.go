@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fingersnap/server/internal/habitica"
 	"fingersnap/server/internal/store"
 	"net"
 	"net/http"
@@ -76,24 +75,6 @@ func (l *loginLimiter) allow(ip string, now time.Time) bool {
 	b.count++
 	l.buckets[ip] = b
 	return true
-}
-func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
-	if c.LoginConcurrency <= 0 {
-		c.LoginConcurrency = 4
-	}
-	if c.LoginRate <= 0 {
-		c.LoginRate = 10
-	}
-	if c.LoginGlobalRate <= 0 {
-		c.LoginGlobalRate = 60
-	}
-	if c.LoginWindow <= 0 {
-		c.LoginWindow = time.Minute
-	}
-	if c.LoginPartyRate <= 0 {
-		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
-	}
-	return &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
 }
 func (a *Server) clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)

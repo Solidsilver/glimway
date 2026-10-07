@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// keyedMutation shares the phase-2 commit boundary: lease, replay, revision,
+// keyedMutation shares the gameplay commit boundary: lease, replay, revision,
 // optional progress, gameplay, persistence, response cache, commit.
 func (a *Server) keyedMutation(w http.ResponseWriter, r *http.Request, m Mutation, key string, request any, progress json.RawMessage, apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error), afterCommit ...func()) error {
 	tx, s, _, err := a.begin(r)

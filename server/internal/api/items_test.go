@@ -73,7 +73,6 @@ func (x *rig) items(method, path string, b any, c *http.Cookie, status int) item
 func (x *rig) op(c *http.Cookie, s *response, op string, fields map[string]any, status int) itemsResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	x.now.Add(0)
 	v := x.items("POST", "/api/items/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Rev, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		s.Snapshot = v.Snapshot

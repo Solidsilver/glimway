@@ -60,7 +60,6 @@ func (x *rig) repairsReq(method, path string, b any, c *http.Cookie, status int)
 func (x *rig) mend(c *http.Cookie, s *response, repairID string, fields map[string]any, status int) repairsTestResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	x.now.Add(0)
 	v := x.repairsReq("POST", "/api/repairs/"+repairID+"/mend", body(*s, fmt.Sprintf("mend-%s-%d-%d", repairID, s.Rev, keySeq()), fields), c, status)
 	if status == 200 {
 		s.Snapshot = v.Snapshot

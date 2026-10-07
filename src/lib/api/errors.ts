@@ -1,11 +1,11 @@
 /**
- * Typed failures from the Fingersnap server (.agent/BACKEND-REPORT.md, "Error
- * codes"). Every server failure has the shape `{ "error": { "code": "…" } }`.
+ * Typed failures from server/internal/api and forwarded Habitica/rules errors.
+ * Every server failure has the shape `{ "error": { "code": "…" } }`.
  * Messages here are static text: response bodies are never echoed, logged, or
  * shown, so nothing the server or a proxy sends can leak into the interface.
  */
 
-/** Every code the backend contract documents. */
+/** Server codes checked against Go sources by error_codes_test.go. */
 export const SERVER_ERROR_CODES = [
   // 400
   'invalid-json',
@@ -54,7 +54,7 @@ export const SERVER_ERROR_CODES = [
   'login-rate-limited',
   'login-global-rate-limited',
   'login-busy',
-  // Phase 3/4: homesteads and the Wilds (.agent/BACKEND-REPORT.md, "Errors")
+  // Homesteads and the Wilds (server/internal/api/{homestead,wilds}.go)
   'invalid-claim',
   'invalid-position',
   'lantern-id-required',
@@ -111,17 +111,6 @@ export const SERVER_ERROR_CODES = [
   // homesteads (phase 3): 400, 403, 404, 409
   'invalid-item',
   'invalid-placement',
-  'world-access-denied',
-  'item-not-owned',
-  'tier-required',
-  'tier-unavailable',
-  'insufficient-embers',
-  'insufficient-materials',
-  'already-placed',
-  'not-placed',
-  'out-of-bounds',
-  'placement-overlap',
-  'not-at-own-plot',
   // phase 5: storage, crafting, mail, projects
   'invalid-direction',
   'invalid-asset',
@@ -140,7 +129,6 @@ export const SERVER_ERROR_CODES = [
   'mail-recipient-limit',
   'mail-rate-limited',
   'invalid-mail-cursor',
-  'already-claimed',
   'project-not-found',
   'invalid-contribution',
   'project-complete',
@@ -160,7 +148,6 @@ export const SERVER_ERROR_CODES = [
   'self-invite',
   'not-at-table',
   'partner-not-at-table',
-  'invite-not-found',
   'chest-full',
   'invalid-chest',
   // items (docs/items/): wear, mending, fittings, consumables, giving, pockets, pickups
@@ -224,6 +211,24 @@ export const SERVER_ERROR_CODES = [
   // the first sign-in's world choice (server/internal/api/world_choice.go)
   'world-choice-required',
   'world-chosen',
+  // Crafting refusals (server/internal/api/crafting.go)
+  'recipe-unknown',
+  'desk-required',
+  'woodpile-required',
+  'invalid-page',
+  'page-not-held',
+  'nothing-ready',
+  'invalid-action',
+  // Per-account login admission
+  'login-user-rate-limited',
+  // Library, sprite proxy and presence handshake failures
+  'unknown-paper',
+  'already-shelved',
+  'not-held',
+  'upstream',
+  'presence-full',
+  'presence-session-limit',
+  'presence-player-limit',
 ] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

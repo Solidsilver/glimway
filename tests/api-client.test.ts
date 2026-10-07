@@ -119,10 +119,31 @@ test('client: run builds each request when it starts, after earlier calls settle
 // ---------------------------------------------------------------- errors
 
 test('errors: every documented code maps to itself with its status', () => {
+  assert.equal(new Set(SERVER_ERROR_CODES).size, SERVER_ERROR_CODES.length, 'no duplicate codes');
   for (const code of SERVER_ERROR_CODES) {
     const err = errorFromResponse(409, { error: { code } });
     assert.equal(err.code, code);
     assert.equal(err.status, 409);
+  }
+});
+
+test('client: crafting refusals survive the real hearth, desk and woodpile methods', async () => {
+  const envelope = { lease: 'L', baseRev: 3, key: 'craft-refused' };
+  const cases = [
+    { code: 'recipe-unknown', status: 409, path: '/api/hearth/craft', call: (api: ReturnType<typeof createApiClient>) => api.hearthCraft({ ...envelope, recipeId: 'herb-broth', qty: 1 }) },
+    { code: 'desk-required', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'recipe-page', qty: 1 }) },
+    { code: 'invalid-page', status: 400, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'timber', qty: 1 }) },
+    { code: 'page-not-held', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'recipe-page', qty: 1 }) },
+    { code: 'woodpile-required', status: 409, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpile() },
+    { code: 'nothing-ready', status: 409, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpileAction({ ...envelope, action: 'collect' }) },
+    { code: 'invalid-action', status: 400, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpileAction({ ...envelope, action: 'stack', qty: 1 }) },
+  ];
+  for (const c of cases) {
+    const api = createApiClient({ fetchImpl: (async (url: string) => {
+      assert.equal(url, c.path);
+      return json(c.status, { error: { code: c.code } });
+    }) as typeof fetch });
+    await assert.rejects(c.call(api), (e: unknown) => e instanceof ApiError && e.code === c.code && e.status === c.status, c.code);
   }
 });
 

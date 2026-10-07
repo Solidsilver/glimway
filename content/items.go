@@ -8,8 +8,8 @@ import (
 )
 
 // Item definitions (content/items.json; docs/items/). Typed loaders on both
-// sides: this one for Go, src/lib/items.ts for TypeScript. The spec for
-// entering more of the catalogue is in .agent/REPORT.md ("Data format").
+// sides: this one for Go, src/lib/items.ts for TypeScript. Catalogue entries
+// and their rules are described in docs/items/catalogue.md and overview.md.
 
 // ItemEffect is one small, typed help. Which types are allowed depends on
 // where the effect sits: `use` (a consumable, once), `pocket` (a keepsake in
