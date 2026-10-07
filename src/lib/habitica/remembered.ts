@@ -22,6 +22,7 @@ export interface RememberedBackend {
   remove(): Promise<void>
 }
 
+// The game's old name, kept so remembered sign-ins still load.
 export const REMEMBER_DB = 'fingersnap-credentials'
 const STORE = 'credentials'
 const KEY = 'habitica'

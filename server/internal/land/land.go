@@ -6,8 +6,8 @@
 package land
 
 import (
-	"fingersnap/content"
-	"fingersnap/server/internal/wilds"
+	"glimway/content"
+	"glimway/server/internal/wilds"
 )
 
 // Tile kinds (the same numbers as LAND in the TypeScript generator).

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"testing"
 
-	"fingersnap/content"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
-	"fingersnap/server/internal/wilds"
+	"glimway/content"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 )
 
 // The seasonal materials and the last material sources

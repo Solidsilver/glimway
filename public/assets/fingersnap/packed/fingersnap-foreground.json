@@ -146,7 +146,7 @@
   }
  },
  "meta": {
-  "app": "Fingersnap build-atlases",
+  "app": "Glimway build-atlases",
   "image": "fingersnap-foreground.png",
   "format": "RGBA8888",
   "size": {

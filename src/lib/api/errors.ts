@@ -236,7 +236,7 @@ export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
 /**
  * Client-side kinds:
  * - `network`: the request never got an answer (offline, timeout, aborted).
- * - `unavailable`: something answered, but not the Fingersnap server (a static
+ * - `unavailable`: something answered, but not the Glimway server (a static
  *   host's 404 page, an HTML fallback, a proxy error). Guest-only deployments
  *   look like this.
  * - `bad-response`: the server answered 200 with a body that fails validation.
@@ -253,9 +253,9 @@ export function isServerErrorCode(code: string): code is ServerErrorCode {
 }
 
 const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
-  network: 'The Fingersnap server did not answer.',
-  unavailable: 'No Fingersnap server here.',
-  'bad-response': 'The Fingersnap server sent something unexpected.',
+  network: 'The Glimway server did not answer.',
+  unavailable: 'No Glimway server here.',
+  'bad-response': 'The Glimway server sent something unexpected.',
   unauthorized: 'Not signed in.',
   'access-denied': 'This world is invite-only, unless your party already plays here.',
   'habitica-auth': 'Habitica did not recognise those details.',
@@ -272,7 +272,7 @@ export class ApiError extends Error {
   readonly retryAfterMs?: number;
 
   constructor(code: ApiErrorCode, extra: { status?: number; retryAfterMs?: number } = {}) {
-    super(MESSAGES[code] ?? `Fingersnap server error: ${code}.`);
+    super(MESSAGES[code] ?? `Glimway server error: ${code}.`);
     this.name = 'ApiError';
     this.code = code;
     this.status = extra.status;

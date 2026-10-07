@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"fingersnap/server/internal/habitica"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
 	"fmt"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"

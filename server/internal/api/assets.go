@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"database/sql"
-	"fingersnap/content"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"slices"
 	"strings"
 )

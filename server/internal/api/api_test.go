@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fingersnap/server/internal/habitica"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
 	"fmt"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +59,7 @@ func newRig(t *testing.T) *rig {
 	}
 	x.upstream = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		x.calls.Add(1)
-		if r.Method != "GET" || r.URL.Path != "/api/v3/user" || r.Header.Get("X-Client") != "test-creator-fingersnap" {
+		if r.Method != "GET" || r.URL.Path != "/api/v3/user" || r.Header.Get("X-Client") != "test-creator-glimway" {
 			t.Error("invalid upstream request")
 		}
 		id := r.Header.Get("X-Api-User")
@@ -76,7 +76,7 @@ func newRig(t *testing.T) *rig {
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
 	}))
-	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-fingersnap"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
+	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
 	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
 	return x
 }

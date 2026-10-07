@@ -21,7 +21,7 @@ import { startFakeHabitica } from './fake-habitica.ts'
 /** This run's directory (set by e2e/global-setup.ts for the workers). */
 const runDir = (): string => process.env.E2E_RUN_DIR || '.e2e-server/latest'
 /** The Go server binary, built once per run by e2e/global-setup.ts. */
-export const BIN = `${runDir()}/fingersnap-server`
+export const BIN = `${runDir()}/glimway-server`
 /** The cookie the shared Vite reads to pick this worker's Go server. */
 export const ROUTE_COOKIE = 'fs-e2e-api'
 
@@ -82,7 +82,7 @@ async function start(): Promise<Backend> {
   const dir = workerDir()
   rmSync(dir, { recursive: true, force: true })
   mkdirSync(dir, { recursive: true })
-  const db = `${dir}/fingersnap.sqlite`
+  const db = `${dir}/glimway.sqlite`
   const log = `${dir}/server.log`
   const fake = await startFakeHabitica(0)
   const habitica = `http://127.0.0.1:${fake.port}`
@@ -143,11 +143,11 @@ export async function stopBackend(): Promise<void> {
 }
 
 /** The single shared database's path before per-worker servers. */
-const LEGACY_DB = '.e2e-server/fingersnap.sqlite'
+const LEGACY_DB = '.e2e-server/glimway.sqlite'
 
 /**
  * Compat for specs written against the single shared server: an
- * `execFileSync(..., ['.e2e-server/fingersnap.sqlite', ...])` (sqlite3 or the
+ * `execFileSync(..., ['.e2e-server/glimway.sqlite', ...])` (sqlite3 or the
  * admin CLI) is pointed at this worker's database. New specs use `sql()` and
  * `allow()`/`adminInvite()` from e2e/connected.ts instead.
  */

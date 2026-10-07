@@ -2,8 +2,8 @@ package rules_test
 
 import (
 	"encoding/json"
-	"fingersnap/server/internal/habitica"
-	"fingersnap/server/internal/rules"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/rules"
 	"os"
 	"testing"
 )

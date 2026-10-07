@@ -228,10 +228,11 @@ test('scaled atlases keep every frame name, at their baked size', () => {
   }
 })
 
-test('public/assets/fingersnap ships manifests and packed art only — no full-resolution sheets', () => {
+test('public/assets/fingersnap ships its licence, manifests and packed art only — no full-resolution sheets', () => {
   const dir = join(ROOT, 'public/assets/fingersnap')
   const walk = (d: string): string[] => readdirSync(d).flatMap((n: string) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [relative(dir, join(d, n))]))
   const want = [
+    'LICENSE',
     'commons-pass/manifest.json',
     'runtime-pass/manifest.json',
     'expansion/manifest.json',

@@ -1,4 +1,4 @@
-# Fingersnap import contract (M3 — "Make it your character")
+# Glimway import contract (M3 — "Make it your character")
 
 Source of truth for the read-only Habitica import foundation shared between
 the shared-logic modules and the runtime UI.
@@ -18,7 +18,7 @@ same UI are appended at the end of this file.
 ## Security invariants (non-negotiable)
 
 - **Read-only**: `HabiticaClient` has exactly one method, `fetchProfile()`.
-  Fingersnap never scores tasks, spends gold, changes stats, equips items,
+  Glimway never scores tasks, spends gold, changes stats, equips items,
   casts spells, or consumes Habitica possessions. Ordinary gameplay causes
   zero Habitica requests; sync is one explicit `GET /user` per user action.
 - **Token in memory only, unless the player opts in**: `HabiticaCredentials`
@@ -33,10 +33,10 @@ same UI are appended at the end of this file.
   database. They are still never put in GameState, saves, save exports, logs
   or error messages. A visible **Forget** button deletes them, and Disconnect
   asks whether to forget too. The exposure is stated in the UI: a script
-  injection on the Fingersnap origin could read a remembered token, and that
+  injection on the Glimway origin could read a remembered token, and that
   token can write to the Habitica account. All storage access is wrapped in
   try/catch; the game works when IndexedDB is unavailable.
-- **On the Fingersnap server**: the raw token exists only during one login
+- **On the Glimway server**: the raw token exists only during one login
   proof request (`POST /api/session`). It is never stored in files, the
   database, backups, logs or responses. Server logging excludes bodies,
   headers and unrecognized paths/query strings. Syncs go from the browser to
@@ -148,7 +148,7 @@ USER_FIELDS  // minimal ?userFields projection actually sent
 Behavior: `GET {baseUrl}/api/v3/user?userFields=…` with `x-api-user`,
 `x-api-key`, `x-client` headers (guidelines: `X-Client` = `UserID-appname` —
 the **tool creator's** user id, i.e.
-`5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap`, not the player's).
+`5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway`, not the player's).
 401/403 → `auth` error (message names the status only). `429` → sleep for
 `Retry-After` (seconds; default 1000 ms if absent) and retry up to
 `maxRateLimitRetries`, then throw `rate-limited`. Abort/timeout → `timeout`;
@@ -190,7 +190,7 @@ maxMp           = 2 * effective(int) + 30
 
 **Documented deviation** from `statsComputed`: when `flags.classSelected` is
 false the profile is classless (`class: null`) and the class-match bonus is
-skipped. Habitica's formula matches `stats.class` unconditionally; Fingersnap
+skipped. Habitica's formula matches `stats.class` unconditionally; Glimway
 treats "no class selected" as no class bonus (plan: sensible classless
 starter kit). This is a deliberate import-mapping rule, not balance advice.
 
@@ -297,7 +297,7 @@ hand-computed expected effective stats:
 1. Mirror `src/lib/habitica/types.ts`; import types from
    `../lib/habitica/types` (or re-export) — do not redefine shapes.
 2. Suggested flow: player pastes user id + API token into fields → build
-   `HabiticaCredentials` (clientTag `5abfd539-22eb-457f-8e2a-9fb3d66731f1-fingersnap`
+   `HabiticaCredentials` (clientTag `5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway`
    — the **creator** id + app name, not the player's) in a local
    variable → `createHabiticaClient({ credentials })` (gear catalog is the
    default) → `fetchProfile()` → first import via

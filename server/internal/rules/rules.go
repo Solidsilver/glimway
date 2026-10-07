@@ -4,7 +4,7 @@ package rules
 import (
 	"encoding/json"
 	"errors"
-	"fingersnap/content"
+	"glimway/content"
 	"math"
 	"reflect"
 	"slices"

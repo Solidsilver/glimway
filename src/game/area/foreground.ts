@@ -4,7 +4,7 @@
  * worlds.ts, code-drawn scenery marked `fade`, plus the fade update when
  * something walks beneath them.
  */
-import { placeFingersnapOccluder } from '../expansion'
+import { placeGlimwayOccluder } from '../expansion'
 import { TILE } from '../textures'
 import { areaKind, type WorldData } from '../worlds'
 import { ensureSceneryArt } from './props'
@@ -29,7 +29,7 @@ export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder
   const images: Phaser.GameObjects.Image[] = []
   for (const s of spots) {
     const footY = s.ty * TILE + TILE
-    const image = placeFingersnapOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w, false)
+    const image = placeGlimwayOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w, false)
     images.push(image)
     occluders.push({ image, bounds: image.getBounds(), footY })
   }

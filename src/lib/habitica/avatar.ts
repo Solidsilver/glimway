@@ -16,7 +16,7 @@
  * our server's sprite proxy instead (`proxiedSpriteUrl`, same origin; see
  * ./sprite-cache.ts and server/internal/api/sprites.go).
  *
- * Art license: CC BY-NC-SA 3.0 (HabitRPG/Weirdly Wonderful) — attribution
+ * Art license: CC BY-NC-SA 3.0 (HabitRPG, Inc.) — attribution
  * in ASSETS.md. This module holds no credentials and never performs I/O.
  */
 import type { HabiticaProfile } from './types.ts';

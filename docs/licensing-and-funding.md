@@ -195,7 +195,7 @@ From the code, 2026-10-07:
 Interpretation, built on the CC 3.0 legal code (certain quotes):
 - NC (§4(c)) limits *how the sprites are used*: not "in any manner that is primarily intended for or
   directed toward commercial advantage or private monetary compensation". That's a limit on the
-  official instance and on every self-hoster, whatever licence our code has. Our code and our art
+  main instance and on every self-hoster, whatever licence our code has. Our code and our art
   stay under whatever we choose.
 - A server that sends the sprites to browsers is "publicly performing" them ("make available to
   the public … from a place and at a time individually chosen by them"), so the licence conditions
@@ -216,7 +216,9 @@ away, since AGPL can combine with GPLv3 (§13). With MIT we'd keep the file unde
 notice. Habitica's licence also says "content designed for HabitRPG" is NC-SA, which plausibly
 covers item names and descriptions. We strip those; keep it that way.
 
-**Gaps to fix before publishing:**
+**Gaps to fix before publishing** (fixed 2026-10-07 with the rename: the credits name HabitRPG,
+Inc. with the licence link and the not-affiliated line, `public/assets/habitica/LICENSE` exists, and
+the README's licence section says which licence covers which folder):
 - The in-game credits (`src/ui/MenuPanel.svelte`) and `ASSETS.md` name "Weirdly Wonderful"; change
   to **HabitRPG, Inc.**
 - The in-game credits lack the licence link and the "not affiliated with or endorsed by Habitica"
@@ -316,7 +318,7 @@ contributors off. Decide before the first outside pull request.
   CC0 for those works that do not involve a significant degree of human creativity" (certain,
   [CC, 2023](https://creativecommons.org/2023/08/18/understanding-cc-licenses-and-generative-ai/)).
 
-Interpretation for Fingersnap:
+Interpretation for Glimway:
 - `ASSETS.md` records every art pack as generated with image_gen from prompts, with frames measured
   and cut but not repainted. That's the uncopyrightable case. Whatever licence we pick is a request,
   not a right. The atlas layouts, cleanup and arrangement may carry thin human authorship.
@@ -448,6 +450,10 @@ A formal knockout (USPTO plus EUIPO) is worth doing on the final pick before reg
 
 ## Renaming to Glimway
 
+**Done 2026-10-07.** What was kept under the old name, and what the owner changes on the home
+server, is in [deploy-notes/glimway-rename.md](deploy-notes/glimway-rename.md). The plan as it was
+written:
+
 Do it before publishing, as one brief. "Fingersnap" appears about 1,300 times in 260 files.
 
 Rename freely (players and the public see these, or nothing depends on them):
@@ -480,14 +486,10 @@ Also: the in-game lore can use the word. "Glim" is old slang for a candle ("dous
 
 1. ~~The goal.~~ Decided: free, no donations for now.
 2. ~~The name.~~ Decided: Glimway.
-3. **Code licence.** AGPL-3.0-or-later, or something looser (MIT) to invite more reuse?
-4. **Outside contributions.** Plain sign-off (DCO), which makes relicensing contributed parts
-   impossible, or a CLA that keeps your options open?
-5. **Art licence.** CC BY-SA 4.0 (credit and share-alike requested), CC0 (honest about AI art), or
-   CC BY-NC (stops other people's paid hosting but not yours, is still mostly unenforceable on AI
-   art, and isn't "open")?
-6. **AI disclosure.** Comfortable saying in the README and the Habitica form that agents built the
-   game and the art is generated?
+3. ~~Code licence.~~ Decided: AGPL-3.0-or-later.
+4. ~~Outside contributions.~~ Decided: the DCO (`CONTRIBUTING.md`).
+5. ~~Art licence.~~ Decided: CC0 for the current AI-generated art; future human art licensed per work.
+6. ~~AI disclosure.~~ Decided: said plainly, in the README and on the Habitica form.
 7. ~~Platforms~~, 8. ~~asking Habitica about donations~~, 9. ~~supporter thanks~~: deferred with
    donations.
 10. **The long term.** Should the game one day be able to run with Habitica art switched off (our

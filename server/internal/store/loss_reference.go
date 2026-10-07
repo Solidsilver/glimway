@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fingersnap/server/internal/rules"
+	"glimway/server/internal/rules"
 )
 
 // Old databases did not retain a sync-only timestamp. Use the best available

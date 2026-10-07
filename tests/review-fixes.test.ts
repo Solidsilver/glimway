@@ -20,7 +20,7 @@ import { DialogueHold } from '../src/game/dialogue-hold.ts'
 // ---------------------------------------------------------------- atlas install
 
 function packedFixture() {
-  const root = mkdtempSync(join(tmpdir(), 'fingersnap-install-'))
+  const root = mkdtempSync(join(tmpdir(), 'glimway-install-'))
   const dest = join(root, 'public', 'packed')
   mkdirSync(dest, { recursive: true })
   writeFileSync(join(dest, 'atlases.json'), 'old')

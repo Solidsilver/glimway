@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"fingersnap/content"
+	"glimway/content"
 )
 
 // Entity is one generated entity. Flat fields so JSON matches the TypeScript

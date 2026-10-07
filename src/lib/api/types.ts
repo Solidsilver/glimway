@@ -1,5 +1,5 @@
 /**
- * Request/response shapes of the Fingersnap server, mirroring the Go
+ * Request/response shapes of the Glimway server, mirroring the Go
  * handlers in server/internal/api and the snapshot in server/internal/store
  * (answers are checked by ./parse.ts).
  */

@@ -24,7 +24,7 @@ to Habitica. Top-ups are limited per day, not by amount.
   and it's the path Habitica's own wiki lists under cheating.
 - **Habitica keeps no record of it.** There's no gold history in Habitica,
   rewards keep no history, and once we delete the task nothing is left except
-  the lower balance. Fingersnap's purse log is the only record, so it has to
+  the lower balance. Glimway's purse log is the only record, so it has to
   be good.
 - **Habitica gives us no idempotency and no locking.** A timeout on the score
   call leaves "did it charge?" unanswerable from the task. We design around
@@ -140,7 +140,7 @@ which includes Template:Third_Party_Tool_Rules (revised 2025-05-25), and
 
 - **`x-client` header.** Format `<creator's user id>-<app name>`; "the User ID
   of the person who **wrote** the tool, not the player who is using it". We
-  already send `5abfd539-…-fingersnap` (`server/cmd/fingersnap-server/main.go`).
+  already send `5abfd539-…-glimway` (`server/cmd/glimway-server/main.go`).
   The fandom API page says that since late July 2025, authenticated calls
   without it are rejected. In code, the server checks only that it's present
   (`server/middlewares/auth.js` L75–77, behind `ENFORCE_CLIENT_HEADER`).
@@ -220,7 +220,7 @@ inside the request that carries the token:
 - What would force storing it: scheduled or automatic top-ups, or retrying a
   failed top-up later from the server. The design below does neither.
 
-The catch is sessions. A Fingersnap session lasts up to 30 days, so "at
+The catch is sessions. A Glimway session lasts up to 30 days, so "at
 sign-in" can mean once a month. The browser already holds the token during a
 visit (every sync uses it), or the player can paste it. A separate
 `POST /api/purse/top-up` that takes the token in its body, uses it for that
@@ -249,9 +249,9 @@ only, or a Top-up action too. I recommend both, sharing one code path.
    1. Verify (sign-in's `GET /user`, or one `GET ?userFields=stats.gp` for the
       Top-up action). If `gp < amount`, settle as `not-enough` and stop.
    2. `POST /api/v3/tasks/user`
-      `{"type":"reward","text":"Fingersnap purse: 120 gold","notes":"Fingersnap is moving gold into your purse. It removes this reward when it's done.","value":120,"alias":"fingersnap-topup-<row id>"}`.
+      `{"type":"reward","text":"Glimway purse: 120 gold","notes":"Glimway is moving gold into your purse. It removes this reward when it's done.","value":120,"alias":"glimway-topup-<row id>"}`.
       Mark the row `created`.
-   3. `POST /api/v3/tasks/fingersnap-topup-<row id>/score/down`.
+   3. `POST /api/v3/tasks/glimway-topup-<row id>/score/down`.
       - 200: the charge happened. Record `data.gp` as the gold after.
       - 401 "Not Enough Gold": no charge. Settle as `not-enough`.
       - 429: Habitica refused before running it. Wait `Retry-After` (cap a
@@ -260,7 +260,7 @@ only, or a Top-up action too. I recommend both, sharing one code path.
         again.** Do one `GET ?userFields=stats.gp`. If gold fell by at least
         the amount, treat it as charged. If it didn't move, treat it as not
         charged. Anything else, or if the GET fails, settle as `unconfirmed`.
-   4. `DELETE /api/v3/tasks/fingersnap-topup-<row id>`. If this fails, keep
+   4. `DELETE /api/v3/tasks/glimway-topup-<row id>`. If this fails, keep
       a flag on the row; the next time a token is in hand for this player,
       delete the leftover before anything else.
 5. **Settle** (DB transaction 2). For a charge, write a ledger row
@@ -298,10 +298,10 @@ Shown every time, before any request. Plain words, Habitica's own terms:
 > Move [ 200 ] gold   [All]
 >
 > This **spends Habitica gold**. Your Habitica balance goes down by this
-> amount, the same as buying a reward there. Fingersnap never gives gold
+> amount, the same as buying a reward there. Glimway never gives gold
 > back, and purse gold can't go back to Habitica.
 >
-> Fingersnap adds a reward called "Fingersnap purse" to your Habitica
+> Glimway adds a reward called "Glimway purse" to your Habitica
 > Rewards for a moment, buys it, and removes it. Habitica doesn't keep a
 > record of this; your purse log does.
 >
@@ -402,6 +402,6 @@ Today the game promises it never writes. These go in the same change:
 2. One or two top-ups a day? (Recommended: two, UTC day.)
 3. Unconfirmed top-ups: settled by the owner (recommended), or credited
    automatically?
-4. Submit Fingersnap on Habitica's app-submission form and tell staff about
+4. Submit Glimway on Habitica's app-submission form and tell staff about
    the write before it ships? I'd do it, since the tool will start changing
    gold.

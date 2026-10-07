@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fingersnap/server/internal/store"
+	"glimway/server/internal/store"
 	"os"
 	"path/filepath"
 	"strings"

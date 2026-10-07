@@ -49,7 +49,7 @@ function pngHeader(path: string): { width: number; height: number; colorType: nu
 test('commons-pass exposes its loader and load keys', () => {
   assert.equal(typeof preloadCommonsPass, 'function')
   assert.equal(typeof createCommonsPass, 'function')
-  assert.equal(COMMONS_PASS_MANIFEST_KEY, 'fingersnap-commons-pass')
+  assert.equal(COMMONS_PASS_MANIFEST_KEY, 'glimway-commons-pass')
   assert.equal(COMMONS_PASS_BASE, '/assets/fingersnap/commons-pass/')
   assert.equal(manifest.baseUrl, COMMONS_PASS_BASE)
   assert.equal(artKey('cottage'), `${COMMONS_ART_PREFIX}cottage`)

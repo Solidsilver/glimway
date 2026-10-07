@@ -7,10 +7,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fingersnap/content"
-	"fingersnap/server/internal/habitica"
-	"fingersnap/server/internal/rules"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"io"
 	"log"
 	"math"
@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const CookieName = "fingersnap_session"
+const CookieName = "glimway_session"
 const SessionTTL = 30 * 24 * time.Hour
 const SessionIdleTTL = 7 * 24 * time.Hour
 

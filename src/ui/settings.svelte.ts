@@ -16,6 +16,7 @@ interface Settings {
   floatingSessions: number
 }
 
+// `fingersnap:` is the game's old name, kept so saved settings load.
 const KEY = 'fingersnap:settings'
 
 const DEFAULTS: Settings = {

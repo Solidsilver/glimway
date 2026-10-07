@@ -778,7 +778,7 @@ function resolveKind(id: string): AreaKind | null {
 /** Look up an area kind (its data builder plus kind-specific decor). */
 export function areaKind(id: string): AreaKind {
   const kind = resolveKind(id)
-  if (!kind) throw new Error(`[fingersnap] unknown area kind: ${id}`)
+  if (!kind) throw new Error(`[glimway] unknown area kind: ${id}`)
   return kind
 }
 

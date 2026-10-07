@@ -26,6 +26,7 @@ export class CorruptSaveError extends Error {
   }
 }
 
+// The game's old name, kept so saves load.
 const DB_NAME = 'fingersnap';
 const DB_VERSION = 1;
 const STORE_NAME = 'saves';
@@ -54,7 +55,7 @@ function getIndexedDB(): IDBFactory {
   const factory = (globalThis as { indexedDB?: IDBFactory }).indexedDB;
   if (!factory) {
     throw new Error(
-      'IndexedDB is not available in this environment; Fingersnap saves need it (private browsing modes may disable it).',
+      'IndexedDB is not available in this environment; Glimway saves need it (private browsing modes may disable it).',
     );
   }
   return factory;
@@ -90,12 +91,12 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onerror = () =>
       reject(
         request.error ??
-          new Error(`Could not open the Fingersnap save database "${DB_NAME}".`),
+          new Error(`Could not open the Glimway save database "${DB_NAME}".`),
       );
     request.onblocked = () =>
       reject(
         new Error(
-          'The Fingersnap save database is blocked by another tab or window. Close other Fingersnap tabs and try again.',
+          'The Glimway save database is blocked by another tab or window. Close other Glimway tabs and try again.',
         ),
       );
   });
@@ -120,7 +121,7 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 function toCorruptError(err: unknown, raw: unknown): CorruptSaveError {
   const detail = err instanceof Error ? err.message : String(err);
   return new CorruptSaveError(
-    `The stored Fingersnap save is corrupt and will not be used or overwritten: ${detail}. Export it for recovery or explicitly clear it before starting a new game.`,
+    `The stored Glimway save is corrupt and will not be used or overwritten: ${detail}. Export it for recovery or explicitly clear it before starting a new game.`,
     raw,
   );
 }
@@ -285,6 +286,7 @@ export function clearSave(): Promise<void> {
 export function exportSave(state: GameState, extras?: SaveExtras): string {
   const clean = validateSave(state);
   const document: SaveDocumentV2 = {
+    // The game's old name, kept so save codes made before the rename still import.
     kind: 'fingersnap-save',
     version: clean.version,
     saveFormat: SAVE_FORMAT,

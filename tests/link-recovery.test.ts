@@ -133,7 +133,7 @@ test('still unreadable on the immediate replay: pending; asking again resolves i
   assert.ok(sent.every((c) => c.body.key === sent[0].body.key), 'one key throughout');
 });
 
-test('a proxy failure (no Fingersnap answer) is unknown too', async () => {
+test('a proxy failure (no Glimway answer) is unknown too', async () => {
   const s = server();
   s.on('POST /api/craft', { status: 502, raw: '<html>bad gateway</html>' });
   const { l } = link(s);

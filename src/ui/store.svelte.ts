@@ -79,9 +79,9 @@ class UiStore {
   /** True when the player opted to remember their Habitica details on this device. */
   remembered = $state(false)
 
-  /** Fingersnap server: unknown until the first probe; unavailable = guest-only build or offline. */
+  /** Glimway server: unknown until the first probe; unavailable = guest-only build or offline. */
   server = $state<'unknown' | 'available' | 'unavailable'>('unknown')
-  /** Signed in to the Fingersnap server (session cookie), whether or not play has started. */
+  /** Signed in to the Glimway server (session cookie), whether or not play has started. */
   account = $state<{ habiticaId: string; name: string } | null>(null)
   /** Connected play: the running session's server link (null for guests). */
   link = $state<LinkPayload | null>(null)

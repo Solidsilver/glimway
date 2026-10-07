@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fingersnap/content"
-	"fingersnap/server/internal/rules"
+	"glimway/content"
+	"glimway/server/internal/rules"
 	"slices"
 	"testing"
 )

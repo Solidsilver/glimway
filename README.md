@@ -1,24 +1,89 @@
-# Fingersnap
+# Glimway
 
-A cozy, lantern-restoring web RPG where real-life progress on
-[Habitica](https://habitica.com) lights the road. Svelte 5 + TypeScript +
-Phaser 3 + Vite in the browser; an optional Go server for shared worlds.
+A cozy pixel RPG for [Habitica](https://habitica.com) players. Walk the old
+lantern road, relight it, and let the progress you make on Habitica light the
+way: every 10 XP you earn there becomes an ember to spend in the world.
+"Glim" is an old word for a candle, so a glimway is a road of little lights.
+
+It runs in the browser (Svelte 5, TypeScript, Phaser 3, Vite), with an
+optional Go server for small invite-only worlds shared with friends.
+
+**Glimway is not affiliated with or endorsed by Habitica.** It's a
+third-party tool that uses Habitica's public API and, with credit, Habitica's
+avatar art (see [Licences](#licences)).
 
 You can play three ways:
 
 - **As a guest.** No account, no server, no network requests. Everything
-  saves in this browser.
+  saves in your browser.
 - **As your Habitica hero.** Connect Habitica (read-only) and play as your own
-  character: your class, gear, look and health come along, and every 10 XP
-  you earn on Habitica becomes an ember to spend in the world.
-- **In a world.** If a Fingersnap server is running, sign in with the same
+  character: your class, gear, look and health come along, and the XP you earn
+  on Habitica becomes embers.
+- **In a world.** If a Glimway server is running, sign in with the same
   Habitica details to join an invite-only world with friends: homesteads,
   shared Wilds, a shared library, village projects, mail, and seeing each
   other walk around.
 
-Source of truth for the original game: [Fingersnap Plan.md](Fingersnap%20Plan.md).
-The expansion (worlds, homes, the Wilds) is designed in
-[docs/expansion-design.md](docs/expansion-design.md).
+## How it was made
+
+Glimway was built by AI agents, directed and reviewed by one person (the
+owner). The code, the docs and the lore were written by agents.
+
+**All of the game's own art is AI-generated,** made with OpenAI's image
+generation through Codex, then measured, cut and packed by scripts. The owner
+would rather the game had human-made art, and used generated art to make it
+playable first. **Artists are welcome:** human-made art would get its own
+folder, its own licence and credit, and would replace generated art, not sit
+beside it unmarked. Open an issue to talk about it. Provenance for every
+generated sheet (prompts included) is in [ASSETS.md](ASSETS.md).
+
+The avatars, gear, pets and mounts you see on Habitica heroes are Habitica's
+own art, by HabitRPG, Inc., drawn by Habitica's volunteer pixel artists. They
+are shown unmodified, with credit, and are not AI-generated.
+
+## Play
+
+- **Online:** the main instance is at <https://fsnap.example.invalid>. Anyone
+  can play there as a guest; its worlds are invite-only.
+- **On your own machine** (Node 24+):
+
+  ```sh
+  git clone https://github.com/Solidsilver/glimway glimway
+  cd glimway
+  npm install
+  npm run dev        # http://localhost:5173, guest play
+  ```
+
+  For connected play, run a local server too: see [Run it locally](#run-it-locally).
+
+## How your Habitica token is handled
+
+**Glimway is read-only.** It reads your Habitica profile and never writes to
+your Habitica account: no scoring tasks, no spending gold, no changing stats
+or gear. The game makes one explicit `GET /user` per connect or **Sync**
+press, from your browser. (The token itself *can* write to your account;
+the game limits itself to reads, and the code is public so you can check.)
+The `X-Client` header identifies the tool's creator, never you.
+
+**Where your token goes.**
+
+- It stays in the tab's memory, and is never in saves, save codes, the
+  connected cache or logs.
+- **Remember on this device** is opt-in. If you tick it, the User ID and token
+  are kept in this browser in their own IndexedDB database
+  (`fingersnap-credentials`, under the game's old name), apart from your save.
+  Script injected into the site could read them, so leave it off if you'd
+  rather paste per visit. **Forget** deletes them, and Disconnect offers to.
+- **Signing in to a world** sends the token to the Glimway server once, at
+  login, so the server can make one read-only `GET /user` to prove the account
+  is yours. The server never stores, logs or returns it. Every later sync
+  still goes from your browser to Habitica, and the browser reports the
+  result to the server.
+
+What comes from Habitica and what only from the game:
+[docs/habitica-boundary.md](docs/habitica-boundary.md). Habitica's rules for
+tools like this one, and how Glimway follows them:
+[docs/habitica-policy.md](docs/habitica-policy.md).
 
 ## The lantern road
 
@@ -43,8 +108,8 @@ for good.
   (E / Space), a signature ability (F, costs mana) and a dodge roll (Shift).
   Every enemy attack is telegraphed: a windup pose, a "!", a rising tone, then
   a white flash when its aim locks. An imported hero's class picks the kit
-  (warrior slash and cleave, mage bolt and fingersnap, rogue stab and
-  shadowstep dash, healer tap and mending pulse), and their effective stats
+  (warrior slash and cleave, mage bolt and the Fingersnap spell, rogue stab
+  and shadowstep dash, healer tap and mending pulse), and their effective stats
   drive the numbers, with bounded diminishing returns.
 - HP, mana, position, quest stage and defeated enemies persist across
   reloads. Reloading is **never** a heal. Falling wakes you by the village
@@ -116,7 +181,7 @@ materials and lanterns are kept by the server and shared as described.
 
 ### The calendar and the Turning
 
-Fingersnap keeps its own calendar: a **wick** is seven real days, twelve wicks
+Glimway keeps its own calendar: a **wick** is seven real days, twelve wicks
 make a year, and four Marks (Mudrise, Carting, Amberfall, Quiet) name the
 seasons. The HUD shows today ("Sap-wick, 3rd day — Amberfall"), and festivals
 change the village for a day: candle hulls on the pond at the Breaking,
@@ -164,7 +229,7 @@ button) for emotes (wave, nod, cheer, thanks, lantern); they show as a bubble
 over your head. Presence is presentation only: other players never block you
 and have no effect on play.
 
-## Your Habitica character (read-only)
+## Your Habitica character
 
 On a new game the title screen asks how you want to play: **Play as your
 Habitica hero** or **Wander as a guest**. The first opens a three-step connect
@@ -176,29 +241,6 @@ order with a preview and a **Swap** button, and nothing is sent until you
 confirm. Guide copy lives in `src/content/connect-guide.ts`; the parser in
 `src/lib/habitica/paste.ts`.
 
-**What the game reads, and what it never does.** The game makes one explicit
-`GET /user` per connect or **Sync** press, from your browser, and **nothing
-ever writes to your Habitica account**. (The token itself *can* write to your
-account; the game limits itself to reads, in public code.) The `X-Client`
-header identifies the tool's creator, never you.
-
-What comes from Habitica and what only from the game: [docs/habitica-boundary.md](docs/habitica-boundary.md).
-
-**Where your token goes.**
-
-- It stays in this tab's memory, and is never in saves, save codes, the
-  connected cache or logs.
-- **Remember on this device** is opt-in. If you tick it, the User ID and token
-  are kept in this browser in their own IndexedDB database
-  (`fingersnap-credentials`), apart from your save. Script injected into this
-  site could read them, so leave it off if you'd rather paste per visit.
-  **Forget** deletes them, and Disconnect offers to.
-- **Signing in to a world** sends the token to the Fingersnap server once, at
-  login, so the server can make one read-only `GET /user` to prove the account
-  is yours. The server never stores, logs or returns it. Every later sync
-  still goes from your browser to Habitica, and the browser reports the
-  result to the server.
-
 **Health.** Importing replaces the demo vitals once; later syncs credit
 genuine external HP/MP changes **exactly once** (damage plus an unchanged
 profile never refills), and only somewhere safe: Hearthwick, or the Commons
@@ -208,7 +250,7 @@ Habitica or a warm rest paid with embers earned from XP. See [docs/import-contra
 
 ## Playing in a world
 
-When a Fingersnap server answers, connecting Habitica in the guide also signs
+When a Glimway server answers, connecting Habitica in the guide also signs
 you in to your world (with an optional invite code). Worlds are invite-only:
 the server owner allowlists people or hands out single-use codes, and every
 member can invite up to three friends at a time (five in all) from the Menu.
@@ -290,9 +332,9 @@ npm run server     # Go server on 127.0.0.1:8090, database in .data/, HTTP cooki
 npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
 ```
 
-Point Vite at another server with `FINGERSNAP_API=http://127.0.0.1:PORT npm run dev`.
+Point Vite at another server with `GLIMWAY_API=http://127.0.0.1:PORT npm run dev`.
 Extra server flags go after `--`, for example
-`npm run server -- -listen 127.0.0.1:8091 -db /tmp/fs.sqlite`. With no
+`npm run server -- -listen 127.0.0.1:8091 -db /tmp/glimway.sqlite`. With no
 server running, the dev proxy fails and the game plays as a guest.
 
 Server flags and environment variables (flags win; flags come before any
@@ -300,36 +342,76 @@ subcommand):
 
 | Flag | Environment | Default |
 |---|---|---|
-| `-listen` | `FINGERSNAP_LISTEN` | `127.0.0.1:8090` |
-| `-db` | `FINGERSNAP_DB` | `.data/fingersnap.sqlite` |
-| `-habitica-url` | `FINGERSNAP_HABITICA_URL` | `https://habitica.com` |
-| `-x-client` | `FINGERSNAP_X_CLIENT` | the creator's public client id |
-| `-habitica-assets-url` | `FINGERSNAP_HABITICA_ASSETS_URL` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/` (Habitica's sprite host, for outfit pieces the bundle lacks) |
-| `-sprite-cache` | `FINGERSNAP_SPRITE_CACHE` | `habitica-sprites/` beside the database |
-| `-cookie-secure` | `FINGERSNAP_COOKIE_SECURE` | `true` (`npm run server` sets false for local HTTP) |
-| `-trusted-proxies` | `FINGERSNAP_TRUSTED_PROXIES` | `127.0.0.1,::1` |
+| `-listen` | `GLIMWAY_LISTEN` | `127.0.0.1:8090` |
+| `-db` | `GLIMWAY_DB` | `.data/glimway.sqlite` |
+| `-habitica-url` | `GLIMWAY_HABITICA_URL` | `https://habitica.com` |
+| `-x-client` | `GLIMWAY_X_CLIENT` | the creator's public client id |
+| `-habitica-assets-url` | `GLIMWAY_HABITICA_ASSETS_URL` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/` (Habitica's sprite host, for outfit pieces the bundle lacks) |
+| `-sprite-cache` | `GLIMWAY_SPRITE_CACHE` | `habitica-sprites/` beside the database |
+| `-cookie-secure` | `GLIMWAY_COOKIE_SECURE` | `true` (`npm run server` sets false for local HTTP) |
+| `-trusted-proxies` | `GLIMWAY_TRUSTED_PROXIES` | `127.0.0.1,::1` |
+| `-party-admission` | `GLIMWAY_PARTY_ADMISSION` | `true` |
 | `-login-concurrency` / `-login-rate` / `-login-global-rate` | — | `4` / `10` per IP per minute / `60` per minute |
+
+The game was called Fingersnap until October 2026. The old
+`FINGERSNAP_<NAME>` variables are still read when the `GLIMWAY_<NAME>` one is
+unset, but they're deprecated and will be removed in a later release. With no
+`-db`, a local `.data/fingersnap.sqlite` is still opened if `.data/glimway.sqlite`
+doesn't exist.
 
 **Letting people in.** A world is invite-only, so before you can sign in
 locally, allowlist your Habitica User ID or make an invite code with the
 admin CLI (same binary, same database):
 
 ```sh
-go run ./server/cmd/fingersnap-server allowlist add YOUR_HABITICA_USER_ID
-go run ./server/cmd/fingersnap-server allowlist list
-go run ./server/cmd/fingersnap-server invite            # prints a code for a new solo world
-go run ./server/cmd/fingersnap-server invite WORLD_ID   # a code that joins an existing world
-go run ./server/cmd/fingersnap-server invites           # hash-only records, one JSON line each
-go run ./server/cmd/fingersnap-server invite revoke HASH
-go run ./server/cmd/fingersnap-server allowlist remove HABITICA_USER_ID
-go run ./server/cmd/fingersnap-server flagged          # accounts flagged by a login check
-go run ./server/cmd/fingersnap-server notes            # rebirth and large-loss audit notes
-go run ./server/cmd/fingersnap-server flag clear HABITICA_USER_ID
-go run ./server/cmd/fingersnap-server backup /tmp/fingersnap-backup.sqlite
+go run ./server/cmd/glimway-server allowlist add YOUR_HABITICA_USER_ID
+go run ./server/cmd/glimway-server allowlist list
+go run ./server/cmd/glimway-server invite            # prints a code for a new solo world
+go run ./server/cmd/glimway-server invite WORLD_ID   # a code that joins an existing world
+go run ./server/cmd/glimway-server invites           # hash-only records, one JSON line each
+go run ./server/cmd/glimway-server invite revoke HASH
+go run ./server/cmd/glimway-server allowlist remove HABITICA_USER_ID
+go run ./server/cmd/glimway-server flagged          # accounts flagged by a login check
+go run ./server/cmd/glimway-server notes            # rebirth and large-loss audit notes
+go run ./server/cmd/glimway-server flag clear HABITICA_USER_ID
+go run ./server/cmd/glimway-server backup /tmp/glimway-backup.sqlite
 ```
 
-Add `-db PATH` before the subcommand to use another database. Deployment,
-Caddy routes, backups and restore: [docs/home-server.md](docs/home-server.md).
+Add `-db PATH` before the subcommand to use another database.
+
+## Host your own
+
+A Glimway instance is a static site plus, for worlds, one Go binary with a
+SQLite database, on the same origin:
+
+1. **Build the site:** `npm ci && npm run build`, then serve `dist/` with any
+   static file server. That alone is a working guest-only game.
+2. **Build the server:** `go build -o glimway-server ./server/cmd/glimway-server`.
+   It embeds `content/` and applies its database migrations on start. Run it
+   on localhost behind HTTPS (session cookies are Secure).
+3. **Route `/api/*` and `/ws` to the server** from the same host that serves
+   the site (keep the `/api` prefix and the browser's Host header). WebSocket
+   upgrades need nothing extra.
+4. **Let people in** with the admin CLI above.
+
+NixOS modules for both halves are in `deploy/nixos/` (`glimway.nix` for the
+site, `glimway-server.nix` for the server, with nightly backups). The main
+instance's setup, including Caddy routes, backups and restore, is written up
+in [docs/home-server.md](docs/home-server.md).
+
+Things to know before you host:
+
+- **Identify yourself to Habitica.** If you run a changed copy, set
+  `-x-client` to your own Habitica user ID and app name
+  (`<your user id>-<app name>`); Habitica asks every tool to send its
+  creator's ID.
+- **Habitica's art is non-commercial.** Any instance that serves Habitica's
+  sprites (bundled, or fetched through the server's sprite proxy) must not be
+  run mainly to make money: no ads, paid tiers or sales. See [Licences](#licences).
+- **Share your changes.** The code is AGPL-3.0-or-later: if you run a
+  modified copy for other people, offer them its source.
+- **Don't call your instance "official",** and don't suggest that Habitica
+  runs or endorses it.
 
 ## Tests
 
@@ -396,7 +478,7 @@ src/                 the browser game
                      presence protocol
   content/           dialogue, places, papers, copy
 server/              Go server (one module at the repository root)
-  cmd/fingersnap-server   HTTP + WebSocket server and admin CLI
+  cmd/glimway-server   HTTP + WebSocket server and admin CLI
   internal/          api, store (SQLite, migrations), rules, wilds, habitica
 content/             shared JSON the browser imports and the server embeds:
                      economy, homesteads, wilds, calendar, mail, projects,
@@ -422,22 +504,28 @@ deploy/nixos/        NixOS modules for the static site and the server
   generator, the calendar) has generated **parity vectors** that both the
   TypeScript and Go test suites replay.
 
+The original plan, from when the game was called Fingersnap, is
+[Fingersnap Plan.md](Fingersnap%20Plan.md); the expansion (worlds, homes, the
+Wilds) is designed in [docs/expansion-design.md](docs/expansion-design.md).
+The docs index is [docs/README.md](docs/README.md).
+
 ## Art
 
-In-game sprites start from original placeholder art generated at runtime in
-`src/game/textures.ts`, with delivered original generated art layered on top:
-a props atlas, terrain tiles, a 4-direction walk, enemy idle sets, foreground
+In-game sprites start from placeholder art drawn by code in
+`src/game/textures.ts`, with the generated art packs layered on top: a props
+atlas, terrain tiles, a 4-direction walk, enemy idle sets, foreground
 occluders, NPC breathing animations, the warden's poses and per-class effects,
-the Commons and the Tangle. `src/game/runtime-art.ts` builds native-size
-textures from the delivered sheets at boot; procedural placeholders remain the
-fallback.
+the Commons, the Tangle, residents, houses and items. The packs' sources are in
+`assets/generated/`; `scripts/build-atlases.ts` packs them into
+`public/assets/fingersnap/packed/` (the folder keeps the game's old name).
+Procedural placeholders remain the fallback.
 
 Imported characters (and other players) render as layered avatars composed
-from official Habitica sprites; a small same-origin cached subset ships in
-`public/assets/habitica/` (WebGL-safe). Layers that exist only upstream are
-skipped and reported, never fetched cross-origin. Pets follow as separate
-sprites; mounts need their layers cached before riding is granted.
-Provenance, licenses and attribution: [ASSETS.md](ASSETS.md),
+from Habitica's sprites, stacked in Habitica's own order. A small same-origin
+subset ships in `public/assets/habitica/` (WebGL-safe), and the server's
+sprite proxy fetches and caches any other piece the first time it's needed.
+Pets follow as separate sprites; mounts need their layers cached before riding
+is granted. Provenance, licences and attribution: [ASSETS.md](ASSETS.md),
 [docs/habitica-assets.md](docs/habitica-assets.md) and
 `assets/ASSETS_GUIDE.md`.
 
@@ -457,9 +545,36 @@ Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
 
 - The outer Wilds run on the server but aren't walkable in the client yet.
   Garden and Hall home tiers, world moves and co-op combat are later work.
-- Imported avatars render only from the small cached official-art subset.
 - Procedural sound effects only (no music), no gamepad, no installable app.
 - Guest saves are local to one browser; save codes are the manual backup.
-- The generated art pack has no distribution license yet; the bundled
-  Habitica art and gear catalog are non-commercial and attribution-bound. See
-  `ASSETS.md` "Third-party use boundaries".
+- The game's own art is all AI-generated for now (see
+  [How it was made](#how-it-was-made)).
+
+## Contributing
+
+Contributions are welcome: code, writing, playtesting notes, and above all
+human-made art. Sign off each commit (the DCO), run the checks before you open
+a pull request, and read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
+## Licences
+
+| What | Where | Licence |
+|---|---|---|
+| Glimway's code | everything not listed below | [AGPL-3.0-or-later](LICENSE) |
+| Glimway's art (AI-generated) | `assets/generated/`, `public/assets/fingersnap/` | [CC0 1.0](assets/generated/LICENSE): public domain, no credit needed |
+| Habitica's sprites | `public/assets/habitica/` | [CC BY-NC-SA 3.0](public/assets/habitica/LICENSE), © HabitRPG, Inc. |
+| Habitica gear numbers | `content/habitica-gear.json` | [GPL-3.0](content/habitica-gear.NOTICE.md), from Habitica's content data |
+
+Future human-made art will live in its own folder under its own licence,
+recorded in [ASSETS.md](ASSETS.md).
+
+**Credits.** Avatar, gear and companion art from [Habitica](https://habitica.com),
+© HabitRPG, Inc., licensed
+[CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/); gear
+statistics derived from Habitica's content data (GPL-3.0). Glimway is not
+affiliated with or endorsed by Habitica. "Habitica" is a trademark of
+HabitRPG, Inc.
+
+Because Habitica's art is non-commercial, so is any instance that serves it.
+That limit is on the Habitica art only, not on Glimway's own code or art.
+Background: [docs/licensing-and-funding.md](docs/licensing-and-funding.md).

@@ -27,7 +27,7 @@ import { artDataUrl, artDensity, artSource, contextDensity, drawArt, resampleFor
 
 export const COMMONS_PASS_BASE = '/assets/fingersnap/commons-pass/'
 
-export const COMMONS_PASS_MANIFEST_KEY = 'fingersnap-commons-pass'
+export const COMMONS_PASS_MANIFEST_KEY = 'glimway-commons-pass'
 
 /** Namespace for every texture and animation this pack creates. */
 export const COMMONS_ART_PREFIX = 'commons-art:'

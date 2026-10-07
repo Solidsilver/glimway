@@ -106,7 +106,7 @@
   /** New-game flow on the title screen: pick a way to play, or walk the connect guide. */
   let titleView = $state<'choice' | 'guide'>('choice')
 
-  // ---- connected play (Fingersnap server) ----
+  // ---- connected play (Glimway server) ----
   /** Latest server snapshot for the signed-in account (null when offline or signed out). */
   let accountSnapshot = $state<Snapshot | null>(null)
   /** Signed in for the first time, the world not chosen yet (the server holds the sign-in). */
@@ -446,7 +446,7 @@
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err)
         const raw = err && typeof err === 'object' && 'raw' in err && err.raw != null ? JSON.stringify((err as { raw: unknown }).raw, null, 1) : ''
-        console.warn('[fingersnap] save could not be loaded', err)
+        console.warn('[glimway] save could not be loaded', err)
         recovery = { message, raw }
         phase = 'recovery'
       })
@@ -492,7 +492,7 @@
   // ------------------------------------------------------------ connected play
 
   /**
-   * Is there a Fingersnap server, and are we signed in? A valid session
+   * Is there a Glimway server, and are we signed in? A valid session
    * cookie means signed in even with no remembered Habitica token. No server
    * (a guest-only build, or offline) leaves guest play exactly as it was,
    * except that a device with a connected cache can keep playing offline.
@@ -1353,7 +1353,7 @@
       <div class="title-col">
         <div class="logo">
           <span class="lamp"><Icon name="lantern" size={34} /></span>
-          <h1>Fingersnap</h1>
+          <h1>Glimway</h1>
           <p class="tagline">Relight the old lantern road.</p>
         </div>
 

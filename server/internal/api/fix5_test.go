@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fingersnap/content"
-	"fingersnap/server/internal/store"
 	"fmt"
+	"glimway/content"
+	"glimway/server/internal/store"
 	"net/http"
 	"slices"
 	"testing"

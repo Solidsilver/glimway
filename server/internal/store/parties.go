@@ -70,7 +70,7 @@ func (s *Store) SetPartyOpen(ctx context.Context, party string, open bool) error
 }
 
 // AdoptWorld makes a person's world, linked to a party before party worlds
-// (migration 022), that party's world: owner_id '' and the party id kept, its
+// (migration 022), that party's world: owner_id ” and the party id kept, its
 // former owner recorded as the one who opened it. Everyone living there
 // stays. A party world already made for the party is set aside first when no
 // one lives in it (it keeps its rows, but belongs to no party); one someone

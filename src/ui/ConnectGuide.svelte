@@ -35,7 +35,7 @@
     mode: 'title' | 'menu'
     onBack?: () => void
     onReady?: () => void
-    /** A Fingersnap server answered the sign-in: connected mode takes over from here. */
+    /** A Glimway server answered the sign-in: connected mode takes over from here. */
     onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
   } = $props()
 
@@ -173,7 +173,7 @@
   }
 
   /**
-   * Sign in to the Fingersnap server with the details just checked against
+   * Sign in to the Glimway server with the details just checked against
    * Habitica. The server reads Habitica once to prove the account, and never
    * keeps the token. 'local' means no server answered: carry on as today.
    */

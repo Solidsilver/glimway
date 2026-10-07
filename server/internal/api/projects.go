@@ -4,18 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fingersnap/content"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/store"
 	"net/http"
 	"slices"
 )
 
 type projectView struct {
-	ID              string         `json:"id"`
-	Name            string         `json:"name"`
-	Stage           string         `json:"stage"`
-	Required        map[string]int `json:"required"`
-	Contributed     map[string]int `json:"contributed"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Stage       string         `json:"stage"`
+	Required    map[string]int `json:"required"`
+	Contributed map[string]int `json:"contributed"`
 	// Mine is the caller's own running contribution per material.
 	Mine            map[string]int `json:"mine"`
 	CompletedAt     *int64         `json:"completedAt"`

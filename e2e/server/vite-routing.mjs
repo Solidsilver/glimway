@@ -1,5 +1,5 @@
 /**
- * Playtest routing for the shared Vite dev server (FINGERSNAP_E2E_ROUTING=1,
+ * Playtest routing for the shared Vite dev server (GLIMWAY_E2E_ROUTING=1,
  * set by playwright.config.ts). Every Playwright worker runs its own Go
  * server (e2e/server/backend.ts); the browser contexts of a worker carry the
  * `fs-e2e-api=<port>` cookie, and this plugin sends /api requests and the /ws
@@ -22,7 +22,7 @@ function portOf(req) {
 /** @returns {import('vite').Plugin} */
 export default function e2eRouting() {
   return {
-    name: 'fingersnap-e2e-routing',
+    name: 'glimway-e2e-routing',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? ''
@@ -30,7 +30,7 @@ export default function e2eRouting() {
         const port = portOf(req)
         if (!port) {
           res.writeHead(502, { 'content-type': 'text/plain' })
-          res.end('fingersnap e2e routing: no fs-e2e-api cookie on this request (is the test missing test.use({ server: true })?)')
+          res.end('glimway e2e routing: no fs-e2e-api cookie on this request (is the test missing test.use({ server: true })?)')
           return
         }
         const upstream = http.request(
@@ -42,7 +42,7 @@ export default function e2eRouting() {
         )
         upstream.on('error', (e) => {
           if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain' })
-          res.end(`fingersnap e2e routing: ${e.message}`)
+          res.end(`glimway e2e routing: ${e.message}`)
         })
         req.pipe(upstream)
       })

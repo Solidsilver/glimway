@@ -3,8 +3,8 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fingersnap/content"
-	"fingersnap/server/internal/store"
+	"glimway/content"
+	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -14,7 +14,7 @@ import (
 type craftingResponse struct {
 	store.Snapshot
 	Woodpile woodpileView `json:"woodpile"`
-	Result struct {
+	Result   struct {
 		Output       content.Asset `json:"output"`
 		Woodpile     woodpileView  `json:"woodpile"`
 		Action       string        `json:"action"`

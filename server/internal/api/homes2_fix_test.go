@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fingersnap/content"
-	"fingersnap/server/internal/land"
+	"glimway/content"
+	"glimway/server/internal/land"
 	"testing"
 )
 

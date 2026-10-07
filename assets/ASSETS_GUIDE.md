@@ -1,4 +1,4 @@
-# Fingersnap — asset handoff for build agents
+# Glimway — asset handoff for build agents
 
 The generated source assets live in `assets/generated/`. They are saved in this project, not just displayed in the conversation or held in the image generator's cache.
 

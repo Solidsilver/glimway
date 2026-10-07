@@ -1,7 +1,7 @@
 # Scaling notes (for later)
 
 Status: not needed yet. Written 2026-10-06 from reading the code and config, not from
-a load test. Fingersnap's worlds are small invite-only groups, and the current design
+a load test. Glimway's worlds are small invite-only groups, and the current design
 favours simple, correct behaviour over throughput.
 
 ## How the server is built today

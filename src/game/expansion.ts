@@ -1,8 +1,8 @@
 import Phaser from 'phaser'
 
-const FINGERSNAP_EXPANSION_BASE = '/assets/fingersnap/expansion/'
+const EXPANSION_BASE = '/assets/fingersnap/expansion/'
 
-export interface FingersnapAnimationDefinition {
+export interface GlimwayAnimationDefinition {
   key: string
   texture: string
   frames: string[]
@@ -10,7 +10,7 @@ export interface FingersnapAnimationDefinition {
   repeat: number
 }
 
-export interface FingersnapExpansionManifest {
+export interface GlimwayExpansionManifest {
   version: number
   baseUrl: string
   terrain: {
@@ -34,20 +34,20 @@ export interface FingersnapExpansionManifest {
  * The manifest and animation definitions. The art comes packed
  * (./packed.ts): the walk, enemy and foreground atlases re-baked at their
  * largest on-screen size under their old texture keys, and the terrain as
- * the normalized runtime tileset `createFingersnapTerrain` used to build.
+ * the normalized runtime tileset `createGlimwayTerrain` used to build.
  */
-export function preloadFingersnapExpansion(
+export function preloadGlimwayExpansion(
   scene: Phaser.Scene,
-  base: string = FINGERSNAP_EXPANSION_BASE,
+  base: string = EXPANSION_BASE,
 ): void {
-  scene.load.json('fingersnap-expansion-manifest', `${base}manifest.json`)
-  scene.load.json('fingersnap-expansion-animations', `${base}animations.json`)
+  scene.load.json('glimway-expansion-manifest', `${base}manifest.json`)
+  scene.load.json('glimway-expansion-animations', `${base}animations.json`)
 }
 
-export function createFingersnapAnimations(scene: Phaser.Scene): void {
+export function createGlimwayAnimations(scene: Phaser.Scene): void {
   const definitions = scene.cache.json.get(
-    'fingersnap-expansion-animations',
-  ) as FingersnapAnimationDefinition[] | undefined
+    'glimway-expansion-animations',
+  ) as GlimwayAnimationDefinition[] | undefined
   for (const definition of definitions ?? []) {
     if (scene.anims.exists(definition.key) || !scene.textures.exists(definition.texture)) continue
     scene.anims.create({
@@ -70,18 +70,18 @@ export function createFingersnapAnimations(scene: Phaser.Scene): void {
  * so this returns it; it only builds one from a loaded `fingersnap-terrain`
  * source atlas (none ships). Null when neither is there.
  */
-export function createFingersnapTerrain(
+export function createGlimwayTerrain(
   scene: Phaser.Scene,
   tileSize: number = 32,
 ): Phaser.Textures.Texture | null {
   const manifest = scene.cache.json.get(
-    'fingersnap-expansion-manifest',
-  ) as FingersnapExpansionManifest | undefined
+    'glimway-expansion-manifest',
+  ) as GlimwayExpansionManifest | undefined
   const key = manifest?.terrain.runtimeTexture ?? 'fingersnap-terrain-runtime'
   if (scene.textures.exists(key)) return scene.textures.get(key)
   if (!manifest || !scene.textures.exists('fingersnap-terrain')) return null
   const output = scene.textures.createCanvas(key, tileSize * 4, tileSize * 4)
-  if (!output) throw new Error('Could not create Fingersnap terrain texture')
+  if (!output) throw new Error('Could not create Glimway terrain texture')
   const context = output.context
   context.imageSmoothingEnabled = false
   const source = scene.textures.get('fingersnap-terrain')
@@ -110,7 +110,7 @@ export function createFingersnapTerrain(
  * corner. `addToScene` false leaves it off the display list (the caller
  * adds many at once: src/game/area/bulk.ts).
  */
-export function placeFingersnapOccluder(
+export function placeGlimwayOccluder(
   scene: Phaser.Scene,
   frame: string,
   x: number,

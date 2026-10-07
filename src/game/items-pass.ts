@@ -23,7 +23,7 @@ import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, re
 
 export const ITEMS_PASS_BASE = '/assets/fingersnap/items-pass/'
 
-export const ITEMS_PASS_MANIFEST_KEY = 'fingersnap-items-pass'
+export const ITEMS_PASS_MANIFEST_KEY = 'glimway-items-pass'
 
 /** Namespace for every texture and animation this pack creates. */
 export const ITEMS_ART_PREFIX = 'items-art:'

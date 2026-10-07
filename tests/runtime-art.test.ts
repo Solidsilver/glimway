@@ -149,7 +149,7 @@ test('runtime-art exposes the agreed helper exports and load keys', () => {
   assert.equal(typeof preloadRuntimeArt, 'function')
   assert.equal(typeof createRuntimeArt, 'function')
   assert.equal(typeof installRuntimeAliases, 'function')
-  assert.equal(RUNTIME_ART_MANIFEST_KEY, 'fingersnap-runtime-art')
+  assert.equal(RUNTIME_ART_MANIFEST_KEY, 'glimway-runtime-art')
   assert.equal(RUNTIME_ART_BASE, '/assets/fingersnap/runtime-pass/')
   assert.deepEqual(
     [...RUNTIME_ART_SOURCE_KEYS],

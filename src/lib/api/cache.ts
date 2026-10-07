@@ -20,6 +20,7 @@ import { validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
 
+// The game's old name, kept so saves load.
 const DB_NAME = 'fingersnap-connected';
 const DB_VERSION = 2;
 const STORE = 'records';

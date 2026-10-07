@@ -1,6 +1,7 @@
 {
-  "name": "fingersnap",
+  "name": "glimway",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -16,7 +17,7 @@
     "test:changed": "node scripts/e2e-changed.ts",
     "test:screens": "SCREENS=1 playwright test",
     "verify:all": "npm run verify && npm run test:e2e",
-    "server": "go run ./server/cmd/fingersnap-server -cookie-secure=false",
+    "server": "go run ./server/cmd/glimway-server -cookie-secure=false",
     "vectors": "node scripts/backend-vectors.ts",
     "vectors:wilds": "node scripts/wilds-vectors.ts",
     "vectors:homestead": "node scripts/homestead-vectors.ts",

@@ -87,7 +87,7 @@ export interface Unresolved {
 
 /**
  * Failures that say nothing about whether a POST committed: no answer, an
- * answer that isn't the Fingersnap server's (a proxy page), or a 200 whose
+ * answer that isn't the Glimway server's (a proxy page), or a 200 whose
  * body couldn't be read or validated.
  */
 /** The server answered (2xx), but the body couldn't be read or validated. */
@@ -1040,7 +1040,7 @@ export class Link {
         .catch(() => undefined)
       return action
     }
-    console.warn('[fingersnap] server refused a', what, code)
+    console.warn('[glimway] server refused a', what, code)
     if (what === 'upload' && this.session) {
       // Don't resend the same refused document in a loop; the next change
       // tries again. It stays dirty: the cache keeps it.

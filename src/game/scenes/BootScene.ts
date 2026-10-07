@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { generateTextures } from '../textures'
-import { createFingersnapAnimations, createFingersnapTerrain, preloadFingersnapExpansion } from '../expansion'
+import { createGlimwayAnimations, createGlimwayTerrain, preloadGlimwayExpansion } from '../expansion'
 import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../runtime-art'
 import { generateCommonsArt, generateDecorationArt } from '../commons-art'
 import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
@@ -30,7 +30,7 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     // Manifests, then every delivered pack's pixels as game-size atlases
     // (the props atlas included). The scene illustrations are UI-only.
-    preloadFingersnapExpansion(this)
+    preloadGlimwayExpansion(this)
     preloadRuntimeArt(this)
     preloadCommonsPass(this)
     preloadItemsPass(this)
@@ -41,8 +41,8 @@ export class BootScene extends Phaser.Scene {
     // The terrain tileset ships baked (packed/terrain.webp, preloaded under
     // its runtime key), so this finds it; then the placeholder textures for
     // uncovered slots.
-    createFingersnapTerrain(this, 32)
-    createFingersnapAnimations(this)
+    createGlimwayTerrain(this, 32)
+    createGlimwayAnimations(this)
     generateTextures(this)
     // The Commons and homesteads (code-drawn placeholders; see commons-art).
     generateCommonsArt(this)

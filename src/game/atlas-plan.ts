@@ -30,7 +30,7 @@ import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
 export const ATLAS_GENERATOR_VERSION = 5
-export const PACKED_MANIFEST_KEY = 'fingersnap-packed'
+export const PACKED_MANIFEST_KEY = 'glimway-packed'
 
 /**
  * Texels per world px of the canvas-blitted packs and the terrain (the

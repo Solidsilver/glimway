@@ -18,7 +18,7 @@ import { addArtCanvas, artCanvas, artDensity, artSource, drawArt, resampleFor, s
 
 export const RUNTIME_ART_BASE = '/assets/fingersnap/runtime-pass/'
 
-export const RUNTIME_ART_MANIFEST_KEY = 'fingersnap-runtime-art'
+export const RUNTIME_ART_MANIFEST_KEY = 'glimway-runtime-art'
 
 export const RUNTIME_ART_SOURCE_KEYS = [
   'fingersnap-npcs',

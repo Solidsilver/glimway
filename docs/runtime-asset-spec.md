@@ -1,4 +1,4 @@
-# Fingersnap runtime asset spec
+# Glimway runtime asset spec
 
 This is the one drop-in art contract for future art and for what already
 shipped. Ownership split: the art/content agent (snap_mimo) maintains the
@@ -100,7 +100,7 @@ wiring in `BootScene`/`WorldScene`.
 - **Foreground** (`fingersnap-foreground`): oak/pine canopies over existing
   tree bases, leafy/stone arches at area gates, fern clusters, cottage roof —
   visual occluders only, **no new collision**; placed via
-  `placeFingersnapOccluder` with foot-anchored origins at small-world widths
+  `placeGlimwayOccluder` with foot-anchored origins at small-world widths
   (26–118px).
 
 ## Runtime art pass (delivered October 3, 2026)
@@ -148,7 +148,7 @@ wiring in `BootScene`/`WorldScene`. Manifest contract is validated by
   call in this order:
   1. `preloadRuntimeArt(scene, base?)` in `BootScene.preload` (default base
      `/assets/fingersnap/runtime-pass/`; loads the three sheets plus
-     `manifest.json` under `fingersnap-runtime-art`).
+     `manifest.json` under `glimway-runtime-art`).
   2. `createRuntimeArt(scene)` after preload completes and before
      `WorldScene` starts — builds the 27 canvas textures and 7 animations.
      Idempotent (existing keys are skipped); returns the manifest.

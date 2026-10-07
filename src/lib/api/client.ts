@@ -1,5 +1,5 @@
 /**
- * Fingersnap server client. Same-origin JSON with the session cookie, typed
+ * Glimway server client. Same-origin JSON with the session cookie, typed
  * errors (errors.ts), validated responses (parse.ts), and one in-order queue
  * (queue.ts) that every call goes through.
  *
@@ -489,6 +489,7 @@ export function newKey(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
+// The game's old name, kept so tabs open across the rename keep their ids and find each other.
 const CLIENT_ID_KEY = 'fingersnap:client-id';
 const CLAIM_CHANNEL = 'fingersnap-client';
 

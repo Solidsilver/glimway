@@ -12,7 +12,7 @@ import type { HabiticaCredentials } from '../src/lib/habitica/types.ts';
 const CREDENTIALS: HabiticaCredentials = {
   userId: 'user-id-abc123',
   apiToken: 'api-token-secret-xyz789',
-  clientTag: 'user-id-abc123-fingersnap',
+  clientTag: 'user-id-abc123-glimway',
 };
 
 function okBody() {

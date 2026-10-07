@@ -1,12 +1,18 @@
 # Home server deployment
 
+This page describes the main instance. The game was called Glimway until
+October 2026, and the main instance kept its pre-rename paths (the checkout,
+the source copy in `/etc/nixos`, the server's state directory); the switch is
+in [deploy-notes/glimway-rename.md](deploy-notes/glimway-rename.md).
+
 Host: `ssh home.example.invalid` (`example-host`). Source and production bundle:
 `/home/deploy-user/code/fingersnap` and its `dist/` directory.
 
-The NixOS module in `deploy/nixos/fingersnap.nix` is installed at
-`/etc/nixos/services/native/fingersnap.nix` and imported by that directory's
-`default.nix`. It runs Caddy's static file server as `deploy-user` on
-`127.0.0.1:4173`. The main Caddy config at `/etc/nixos/services/caddy.nix`
+The NixOS module in `deploy/nixos/glimway.nix` is installed at
+`/etc/nixos/services/native/glimway.nix` and imported by that directory's
+`default.nix`. It runs Caddy's static file server (`systemd` unit `glimway`)
+as `deploy-user` on `127.0.0.1:4173`; its `root`, `user` and `listen` options
+default to the main instance's values. The main Caddy config at `/etc/nixos/services/caddy.nix`
 maps `fsnap.example.invalid` to this listener and handles HTTPS.
 
 ## Deploy checklist
@@ -21,9 +27,9 @@ each step points to the detail further down.
    (`npm ci && npm run verify`, also under "Update the app"). The static
    service serves `dist/` directly, so a rebuild needs no OS switch.
 3. **Enable the Go server** in `/etc/nixos`. Import both
-   `deploy/nixos/fingersnap.nix` (static site, Caddy file server on
-   `127.0.0.1:4173`) and `deploy/nixos/fingersnap-server.nix`, then set
-   `services.fingersnap-server.enable = true;`. The package builds from the
+   `deploy/nixos/glimway.nix` (static site, Caddy file server on
+   `127.0.0.1:4173`) and `deploy/nixos/glimway-server.nix`, then set
+   `services.glimway-server.enable = true;`. The package builds from the
    repository root, so `content/` is embedded, and needs Go 1.26+. Options and
    defaults:
 
@@ -31,14 +37,15 @@ each step points to the detail further down.
    |---|---|---|
    | `package` | built from this repository | Swap in a package if the pinned nixpkgs' Go is too old |
    | `listen` | `127.0.0.1:8090` | Localhost only; Caddy fronts it |
-   | `database` | `/var/lib/fingersnap-server/fingersnap.sqlite` | WAL mode; state dir mode 0700 |
+   | `stateDirectory` | `glimway-server` | Under `/var/lib`; holds the database, sprite cache and `backups/`. The main instance sets `fingersnap-server` |
+   | `database` | `/var/lib/<stateDirectory>/glimway.sqlite` | WAL mode; state dir mode 0700. The main instance sets `/var/lib/fingersnap-server/fingersnap.sqlite` |
    | `habiticaUrl` | `https://habitica.com` | Used only for the login identity check |
    | `xClient` | the creator's public client id | Habitica `X-Client` header |
    | `trustedProxies` | `[ "127.0.0.1" "::1" ]` | Peers allowed to supply `X-Forwarded-For`; empty trusts none |
    | `partyAdmission` | `true` | Party members sign in without a code, and party worlds are made (`-party-admission`; see "Party worlds and world moves") |
    | `backupRetentionDays` | `30` | Nightly `VACUUM INTO` at 03:15 (±10 min) |
 
-   The service runs as the `fingersnap-server` system user with Secure
+   The service runs as the `glimway-server` system user with Secure
    cookies, needs no token file or credential environment variable, and
    applies its embedded database migrations on start. Login rate flags
    (`-login-concurrency`, `-login-rate`, `-login-global-rate`) keep their
@@ -49,14 +56,15 @@ each step points to the detail further down.
    its own into `/etc/nixos` (there `../..` would be `/etc/nixos`). The host
    config is a git flake, which can't read `/home` and only sees files git
    tracks. Follow the `lifedash-source` pattern: keep the files the Go build
-   needs under `/etc/nixos/services/native/fingersnap-source/` and `git add`
+   needs under `/etc/nixos/services/native/fingersnap-source/` (its
+   pre-rename name) and `git add`
    them. See "Server source in /etc/nixos" below.
 4. **Route `/api/*` and `/ws` to the server in Caddy**, before the static
    handler (see "Caddy on example-host" below). Use
    `handle`, not `handle_path`, and keep the browser's Host header (Caddy's
    default). WebSocket upgrades need no extra configuration.
 5. **Build and switch NixOS** (`nh os build …`, then `nh os switch …`, under
-   "Build and activate NixOS"), and check `systemctl status fingersnap-server`
+   "Build and activate NixOS"), and check `systemctl status glimway-server`
    and `curl -s https://fsnap.example.invalid/api/calendar` (a public JSON
    endpoint).
 6. **Let people in** with the admin CLI (under "Go backend (phase 2)"). Run it
@@ -115,14 +123,19 @@ rsync -a --delete --exclude '*_test.go' \
 git -C /etc/nixos add services/native/fingersnap-source
 ```
 
-The host wrapper `/etc/nixos/services/native/fingersnap-server.nix`, listed in
-that directory's `default.nix` next to `./fingersnap.nix`:
+The host wrapper `/etc/nixos/services/native/glimway-server.nix`, listed in
+that directory's `default.nix` next to `./glimway.nix`. The main instance keeps
+its pre-rename state directory and database:
 
 ```nix
 { ... }:
 {
-  imports = [ ./fingersnap-source/deploy/nixos/fingersnap-server.nix ];
-  services.fingersnap-server.enable = true;
+  imports = [ ./fingersnap-source/deploy/nixos/glimway-server.nix ];
+  services.glimway-server = {
+    enable = true;
+    stateDirectory = "fingersnap-server";
+    database = "/var/lib/fingersnap-server/fingersnap.sqlite";
+  };
 }
 ```
 
@@ -157,9 +170,9 @@ Compression stays off `/ws` so it doesn't interfere with the WebSocket upgrade.
 
 ```sh
 nh os build /etc/nixos --hostname example-host --no-update-lock-file \
-  --out-link ~/fingersnap-nixos-result
+  --out-link ~/glimway-nixos-result
 nh os switch /etc/nixos --hostname example-host
-systemctl status fingersnap --no-pager
+systemctl status glimway --no-pager
 curl -I https://fsnap.example.invalid
 ```
 
@@ -170,10 +183,10 @@ the home server (like `keeper.example.invalid`) for HTTPS to work.
 
 ## Go backend (phase 2)
 
-The backend module is `deploy/nixos/fingersnap-server.nix`. Import it alongside
-`fingersnap.nix` and enable `services.fingersnap-server.enable = true;`. Its
+The backend module is `deploy/nixos/glimway-server.nix`. Import it alongside
+`glimway.nix` and enable `services.glimway-server.enable = true;`. Its
 package builds from the **repository root**, including `content/`, and needs
-Go 1.26 or later in nixpkgs. `services.fingersnap-server.package` can select an
+Go 1.26 or later in nixpkgs. `services.glimway-server.package` can select an
 alternate package if the server's pinned nixpkgs needs a newer Go builder.
 This work does not install or activate anything on the home server.
 
@@ -196,38 +209,50 @@ fsnap.example.invalid {
 
 Use `handle`, not `handle_path`: the Go router needs the `/api` prefix.
 The service listens only on localhost, uses Secure cookies, and keeps its
-SQLite database in `/var/lib/fingersnap-server/fingersnap.sqlite` (WAL mode).
+SQLite database in `/var/lib/glimway-server/glimway.sqlite` by default
+(`/var/lib/fingersnap-server/fingersnap.sqlite` on the main instance; WAL mode).
 No token file or credential environment variable is needed. The only server
 Habitica request is the login proof; later syncs come from the browser.
 
 Build and local development (no deployment):
 
 ```sh
-go build -o /tmp/fingersnap-server ./server/cmd/fingersnap-server
+go build -o /tmp/glimway-server ./server/cmd/glimway-server
 npm run server   # localhost:8090, local .data/ database, HTTP dev cookies
 npm run dev      # Vite proxies /api and WebSocket /ws to localhost:8090
 ```
 
 Configuration is available as flags or environment variables: `-listen` /
-`FINGERSNAP_LISTEN`, `-db` / `FINGERSNAP_DB`, `-habitica-url` /
-`FINGERSNAP_HABITICA_URL`, `-x-client` / `FINGERSNAP_X_CLIENT`,
-`-habitica-assets-url` / `FINGERSNAP_HABITICA_ASSETS_URL` and `-sprite-cache` /
-`FINGERSNAP_SPRITE_CACHE` (Habitica outfit art fetched for players, kept in
+`GLIMWAY_LISTEN`, `-db` / `GLIMWAY_DB`, `-habitica-url` /
+`GLIMWAY_HABITICA_URL`, `-x-client` / `GLIMWAY_X_CLIENT`,
+`-habitica-assets-url` / `GLIMWAY_HABITICA_ASSETS_URL` and `-sprite-cache` /
+`GLIMWAY_SPRITE_CACHE` (Habitica outfit art fetched for players, kept in
 `habitica-sprites/` beside the database by default: the service's state
-directory, already writable), and `-cookie-secure` / `FINGERSNAP_COOKIE_SECURE`
-(default true; false only for local HTTP). Flags precede CLI subcommands. Examples on the server:
+directory, already writable), and `-cookie-secure` / `GLIMWAY_COOKIE_SECURE`
+(default true; false only for local HTTP). Flags precede CLI subcommands.
+
+**Deprecated: `FINGERSNAP_*`.** The server still reads each variable under its
+old name, `FINGERSNAP_<NAME>`, when `GLIMWAY_<NAME>` is unset (empty counts as
+unset, except for `TRUSTED_PROXIES`, where an empty `GLIMWAY_TRUSTED_PROXIES`
+trusts none). The NixOS module sets the `GLIMWAY_*` names. Move any of your
+own settings to the new names; the fallback will be removed in a later
+release. Likewise, `npm run server` with no `-db` opens `.data/glimway.sqlite`,
+or `.data/fingersnap.sqlite` if only that one exists.
+
+Examples on the server (`DB` is the `database` option's value):
 
 ```sh
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist add HABITICA_USER_ID
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist list
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite allowlist remove HABITICA_USER_ID
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invite [WORLD_ID]
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invites [HABITICA_USER_ID]
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite invite revoke HASH
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite flag clear HABITICA_USER_ID
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite flagged
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite notes
-sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite backup /var/lib/fingersnap-server/backups/manual.sqlite
+DB=/var/lib/fingersnap-server/fingersnap.sqlite   # the main instance
+sudo -u glimway-server glimway-server -db "$DB" allowlist add HABITICA_USER_ID
+sudo -u glimway-server glimway-server -db "$DB" allowlist list
+sudo -u glimway-server glimway-server -db "$DB" allowlist remove HABITICA_USER_ID
+sudo -u glimway-server glimway-server -db "$DB" invite [WORLD_ID]
+sudo -u glimway-server glimway-server -db "$DB" invites [HABITICA_USER_ID]
+sudo -u glimway-server glimway-server -db "$DB" invite revoke HASH
+sudo -u glimway-server glimway-server -db "$DB" flag clear HABITICA_USER_ID
+sudo -u glimway-server glimway-server -db "$DB" flagged
+sudo -u glimway-server glimway-server -db "$DB" notes
+sudo -u glimway-server glimway-server -db "$DB" backup "$(dirname "$DB")/backups/manual.sqlite"
 ```
 
 Invoke the installed service package's binary path (from its `ExecStart`) if it
@@ -244,11 +269,12 @@ Backups contain session hashes and gameplay records, never Habitica tokens.
 
 Restore procedure (owner operation, while the service is stopped):
 
-1. Stop `fingersnap-server` and retain a separate copy of the current database
+1. Stop `glimway-server` and retain a separate copy of the current database
    **and** its `-wal`/`-shm` sidecars for recovery.
 2. Move those three files out of the live directory. Copy the chosen standalone
-   backup to `fingersnap.sqlite`; do not leave old WAL/SHM files beside it.
-3. Set owner/group to `fingersnap-server` and mode to `0600`, then start the
+   backup to the database's file name (`glimway.sqlite`, or `fingersnap.sqlite`
+   on the main instance); do not leave old WAL/SHM files beside it.
+3. Set owner/group to `glimway-server` and mode to `0600`, then start the
    service. Embedded migrations run automatically and safely on reopen.
 4. Check `/api/state` for a known account's `rev`, ember balances and outcomes;
    compare ledger sums **per currency** with balances before allowing play.
@@ -259,8 +285,8 @@ Restore procedure (owner operation, while the service is stopped):
 An automated test backs up a live database, reopens the backup as a fresh
 store, and checks state, revision, total ledger deltas and earned deltas.
 When Go dependencies change, regenerate the module's fixed-output vendor hash
-using `go mod vendor -o /tmp/fingersnap-vendor` and
-`nix hash path /tmp/fingersnap-vendor` (start with an absent destination).
+using `go mod vendor -o /tmp/glimway-vendor` and
+`nix hash path /tmp/glimway-vendor` (start with an absent destination).
 
 ### Login limits and player invites
 
@@ -280,7 +306,7 @@ Flags are `-login-concurrency`, `-login-rate`, and `-login-global-rate`.
 The bounded IP map evicts its oldest bucket when full. Client IP is RemoteAddr
 unless its peer is a configured trusted proxy; only then is the last
 X-Forwarded-For hop used. Caddy's localhost peer is trusted by default. Configure
-`-trusted-proxies`, `FINGERSNAP_TRUSTED_PROXIES`, or the Nix `trustedProxies` option;
+`-trusted-proxies`, `GLIMWAY_TRUSTED_PROXIES`, or the Nix `trustedProxies` option;
 an empty value trusts no proxy.
 
 Authenticated, unflagged world members can create an invite with
@@ -464,7 +490,7 @@ Echo it was. No migration, no new route.
 
 **Operator controls** (run as the service user, like `allowlist`):
 
-- `-party-admission=false` (env `FINGERSNAP_PARTY_ADMISSION`, Nix
+- `-party-admission=false` (env `GLIMWAY_PARTY_ADMISSION`, Nix
   `partyAdmission`): no one signs in through a party and no party world is
   made, so an upgrade can be deployed without opening anything. Party worlds
   already made keep working for the people in them.

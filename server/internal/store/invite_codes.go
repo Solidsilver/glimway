@@ -3,8 +3,8 @@ package store
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fingersnap/content"
 	"fmt"
+	"glimway/content"
 	"math/big"
 	"strings"
 	"unicode"

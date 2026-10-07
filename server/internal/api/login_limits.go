@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"fingersnap/server/internal/store"
+	"glimway/server/internal/store"
 	"net"
 	"net/http"
 	"strings"

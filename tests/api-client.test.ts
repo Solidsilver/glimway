@@ -156,7 +156,7 @@ test('errors: messages are static and never echo the body', () => {
   assert.ok(!weird.message.includes(secret));
 });
 
-test('errors: a body without the server shape means no Fingersnap server', () => {
+test('errors: a body without the server shape means no Glimway server', () => {
   assert.equal(errorFromResponse(404, undefined).code, 'unavailable');
   assert.equal(errorFromResponse(502, { message: 'bad gateway' }).code, 'unavailable');
   assert.equal(isUnreachable(errorFromResponse(404, undefined)), true);
@@ -282,7 +282,7 @@ function memoryStorage(initial?: string) {
   return { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), store };
 }
 let channelSeq = 0;
-const freshChannel = () => `fingersnap-client-test-${process.pid}-${channelSeq++}`;
+const freshChannel = () => `glimway-client-test-${process.pid}-${channelSeq++}`;
 /** Open claims keep Node alive: close them even when an assertion fails. */
 const openClaims: Array<{ close(): void }> = [];
 const track = <T extends { close(): void }>(c: T): T => (openClaims.push(c), c);
