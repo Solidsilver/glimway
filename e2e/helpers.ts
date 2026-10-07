@@ -308,9 +308,11 @@ export async function frames(page: Page, n: number): Promise<void> {
 }
 
 /**
- * Every running, finite page animation (Svelte transitions, CSS fades) has
+ * Every running, finite DOM animation (Svelte transitions, CSS fades) has
  * finished, then two frames are drawn: for a screenshot, instead of a fixed
- * pause. Endless animations (pulses, spinners) are left alone.
+ * pause. Endless animations (pulses, spinners) are left alone. DOM only:
+ * Phaser tweens on the canvas aren't Web Animations, so wait for those
+ * through the game's hooks (e.g. `bubbleAlpha` in `__fsRemote()`).
  */
 export async function animationsDone(page: Page): Promise<void> {
   await page.evaluate(async () => {

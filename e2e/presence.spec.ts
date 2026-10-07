@@ -10,7 +10,7 @@ import { animationsDone, waitForArea, waitForLive, frames, warp, waitFrames, wai
  */
 test.use({ server: true })
 
-type Remote = { id: string; name: string; x: number; y: number; alpha: number; moving: boolean; avatar: boolean; bubble: string | null }
+type Remote = { id: string; name: string; x: number; y: number; alpha: number; moving: boolean; avatar: boolean; bubble: string | null; bubbleAlpha: number | null }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
 const presenceState = (page: Page) =>
   page.evaluate(() => (window as unknown as { __fsPresence?: () => { status: string; area: string | null; peers: string[] } }).__fsPresence?.() ?? null)
@@ -203,6 +203,8 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await other.keyboard.press('1')
     await expect.poll(async () => (await remotes(page))[0]?.bubble, { timeout: 5_000 }).toBe('Hello!')
     await page.bringToFront()
+    // The bubble fades in on the canvas (a Phaser tween): wait until it is fully shown.
+    await expect.poll(async () => (await remotes(page))[0]?.bubbleAlpha, { timeout: 5_000 }).toBe(1)
     await shot('20-presence-village')
 
     await go(page, 'commons', 23, 19)
