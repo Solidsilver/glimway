@@ -2,13 +2,12 @@
  * Playtest hooks: the `window.__fs*` handles the e2e suite reads and drives
  * the game through (docs/playtest.md). They exist in dev builds only (e2e
  * runs the Vite dev server), so a production bundle carries none of them,
- * and a hook tied to a scene is deleted when that scene shuts down, so it
- * never keeps a dead scene alive.
+ * and a hook tied to a scene is deleted when that scene ends (shuts down or
+ * is destroyed), so it never keeps a dead scene alive.
  *
  * FsHooks is the one list of them, typed; `e2e/` can import it
  * (`import type { FsHooks } from '../src/game/dev-hooks'`).
  */
-import type Phaser from 'phaser'
 import type { AreaId } from '../lib/state'
 import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
@@ -17,6 +16,7 @@ import type { WildsEntities } from './wilds/entities'
 import type { ItemsResult } from './items'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
+import { onSceneEnd, type SceneEvents } from './scene-end.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
@@ -145,14 +145,27 @@ export interface FsHooks {
 
 /**
  * Put a playtest hook on `window` (dev builds only; a no-op otherwise). With
- * a scene, it is deleted when that scene shuts down, unless a newer one has
- * taken the name meanwhile.
+ * a scene, it is deleted when that scene shuts down or is destroyed, unless a
+ * newer registration has taken the name meanwhile.
  */
-export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: Phaser.Scene): void {
-  if (!import.meta.env.DEV) return
-  const w = window as unknown as Partial<FsHooks>
-  w[name] = fn
-  scene?.events.once('shutdown', () => {
-    if (w[name] === fn) delete w[name]
+export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
+  if (import.meta.env.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+}
+
+/** Who registered each hook last, per target: the same function can be registered twice. */
+const owners = new WeakMap<object, Map<string, object>>()
+
+/** expose's body, on any target (tests use a plain object). */
+export function hook<K extends keyof FsHooks>(target: Partial<FsHooks>, name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
+  let mine = owners.get(target)
+  if (!mine) owners.set(target, (mine = new Map()))
+  const token = {}
+  mine.set(name, token)
+  target[name] = fn
+  if (!scene) return
+  onSceneEnd(scene, () => {
+    if (mine.get(name) !== token) return
+    mine.delete(name)
+    delete target[name]
   })
 }

@@ -267,8 +267,9 @@ record, ~39 MB: 23 source sheets, `atlas.json` with 427 measured frames and
 the source catalog, `manifest.json`, `animations.json` with 82 sequences,
 `prompts.json`, `validation.json`, `preview.html`, README and COVERAGE).
 Nothing from the pass ships as its own file: `scripts/build-atlases.ts`
-samples only the frames in use into `packed/ground.webp` (the ground tiles
-and pond bed, seam-healed after baking), `packed/people.webp` (the eight
+samples only the frames in use into `packed/ground.webp` (the ground tiles,
+seam-healed after baking, and the pond bed, seamless as delivered and cut
+into 4×4 tiles unhealed), `packed/people.webp` (the eight
 residents and the held tools) and `packed/buildings.webp` (the houses and
 the bridge).
 
@@ -298,7 +299,8 @@ prototype without clean recolour layers.
 Provenance attributes: **Author** — Fingersnap project (Codex built-in image
 generation). **Source** — original generation, prompts in-repo.
 **Modifications** — none to source PNGs; the shipped packs are box-filtered
-to ART_DENSITY and the ground seam-healed by `scripts/build-atlases.ts`.
+to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
+`scripts/build-atlases.ts`.
 **License** — pending (same decision as Register A). **Attribution text** —
 TBD with license choice.
 

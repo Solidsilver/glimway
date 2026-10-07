@@ -69,6 +69,8 @@ import {
 import type { Effects } from './fx'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
 import { expose } from '../dev-hooks'
+import { onSceneEnd } from '../scene-end'
+import { DialogueHold } from '../dialogue-hold'
 
 export interface HomesteadDeps {
   world: WorldData
@@ -162,8 +164,12 @@ export class HomesteadLayer implements InteractionProvider {
     bus.on(VILLAGE_EV.changed, onVillage)
     bus.on(HOME_EV.command, onCommand)
     bus.on('game:home-arrange', onArrange)
-    scene.events.once('shutdown', () => {
+    // A destroyed game never shuts its scene down: either way, async work stops.
+    onSceneEnd(scene, () => {
       this.gone = true
+      this.silasHold.release()
+    })
+    scene.events.once('shutdown', () => {
       bus.off(HOME_EV.changed, onChange)
       bus.off(VILLAGE_EV.changed, onVillage)
       bus.off(HOME_EV.command, onCommand)
@@ -210,8 +216,10 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   private announcePending = false
-  /** The scene shut down (async work that outlives it stops). */
+  /** The scene ended (async work that outlives it stops). */
   private gone = false
+  /** The world held still while Silas reads his plot book. */
+  private readonly silasHold = new DialogueHold(uiState)
 
   /** Placement mode owns input: the hero waits. */
   get placing(): boolean {
@@ -1179,13 +1187,11 @@ export class HomesteadLayer implements InteractionProvider {
   /** Silas checks his plot book first (who holds what, who wants a joint deed), then talks. */
   private talkToSilas(): void {
     if (this.homes.connected && this.homes.status === 'ready') {
-      // The world holds still while he reads; a scene gone meanwhile lets go.
-      uiState.dialogueOpen = true
+      // The world holds still while he reads (the scene's end lets go, never this late answer).
+      this.silasHold.take()
       void this.homes.load().finally(() => {
-        if (this.gone) {
-          uiState.dialogueOpen = false
-          return
-        }
+        if (this.gone) return
+        this.silasHold.settle()
         this.talkToSilasNow()
       })
       return

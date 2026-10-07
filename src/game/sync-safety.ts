@@ -12,14 +12,22 @@ export interface SyncSafety {
   enemiesNear: boolean
 }
 
-let current: (() => SyncSafety) | null = null
+let current: { answer: () => SyncSafety } | null = null
 
-/** WorldScene registers its answer on every build of an area. */
-export function setSyncSafety(fn: () => SyncSafety): void {
-  current = fn
+/**
+ * The live world registers its answer when an area is built, and calls the
+ * returned disposer when its scene ends. A disposer only clears its own
+ * registration, never a newer world's.
+ */
+export function setSyncSafety(fn: () => SyncSafety): () => void {
+  const owner = { answer: fn }
+  current = owner
+  return () => {
+    if (current === owner) current = null
+  }
 }
 
-/** The world's state for the sync gate (null until a world has been built). */
+/** The live world's state for the sync gate (null: no world is live). */
 export function syncSafety(): SyncSafety | null {
-  return current ? current() : null
+  return current ? current.answer() : null
 }

@@ -25,7 +25,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -59,13 +59,15 @@ import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from '../src/ga
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
+import { installDirs, installStaged } from './atlas-install.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const PACKED = join(ROOT, 'public/assets/fingersnap/packed')
-// Everything is written here first and swapped in whole when the bake has
-// succeeded, so a failed run leaves the committed atlases as they were.
-// node_modules: on the same disk (the swap is a rename), ignored, never served.
-const OUT = join(ROOT, 'node_modules/.cache/build-atlases/packed')
+// Everything is written to a staging folder beside PACKED and swapped in whole
+// once the bake has succeeded (./atlas-install.ts), so a failed run leaves the
+// committed atlases as they were.
+const DIRS = installDirs(PACKED)
+const OUT = DIRS.staged
 const ORIGIN = 'http://bake.local/'
 
 const inputs: Record<string, string> = {}
@@ -674,15 +676,7 @@ async function main(): Promise<void> {
     backdrops,
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
-  const old = `${OUT}-old`
-  rmSync(old, { recursive: true, force: true })
-  try {
-    renameSync(PACKED, old)
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-  }
-  renameSync(OUT, PACKED)
-  rmSync(old, { recursive: true, force: true })
+  installStaged(PACKED, DIRS)
   console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
 }
 

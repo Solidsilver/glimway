@@ -99,6 +99,7 @@ import { densityOf } from '../density'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
+import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
 
 /** How long a waiting warden rests for someone else's naming before it remembers its pose. */
@@ -497,8 +498,8 @@ export class WorldScene extends Phaser.Scene {
     new Thoughts(this, this.hero.sprite, { reducedMotion: this.reducedMotion, hidden: () => this.cinematic, offsetY: -32 })
     void this.avatar.build() // imported layered avatar (if any)
 
-    // Sync safety for the UI's sync gate (src/game/sync-safety.ts).
-    setSyncSafety(() => {
+    // Sync safety for the UI's sync gate (src/game/sync-safety.ts), while this scene lives.
+    const dropSafety = setSyncSafety(() => {
       const px = this.hero.sprite.x
       const py = this.hero.sprite.y
       return {
@@ -508,6 +509,7 @@ export class WorldScene extends Phaser.Scene {
         enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.sprite.x - px, e.sprite.y - py) < 200)
       }
     })
+    onSceneEnd(this, dropSafety)
     // Playtest hooks (docs/playtest.md), dev builds only.
     if (import.meta.env.DEV) exposeWorldHooks(this, { papers, pickups, repairs })
 

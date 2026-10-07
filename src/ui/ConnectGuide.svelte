@@ -295,7 +295,7 @@
       }
 
       const late = syncSafety()
-      if (mode === 'menu' && late && (late.transitioning || late.dialogueOpen || late.enemiesNear)) {
+      if (mode === 'menu' && (!late || late.transitioning || late.dialogueOpen || late.enemiesNear)) {
         connection = 'error'
         connectionError = syncCopy.midSync
         return false
