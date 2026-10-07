@@ -25,7 +25,11 @@ from Habitica) and `ASSETS.md` (the asset register).
 - **2026-10-07: lean on Habitica art for now, and keep a way out.** Make it a standing goal that
   everything Habitica supplies (avatar, gear, pets and the sprites) has a backup of our own, so a
   spin-off not tied to Habitica stays possible.
-- **Open: the art licence**, CC BY-SA 4.0 or CC0 (explained to the owner).
+- **2026-10-07: our current art is CC0.** All of the non-Habitica art is AI-generated today, so
+  there's nothing to attribute. A licence is chosen per work, so future human-made art can carry a
+  different licence (for example CC BY-SA 4.0). Keep it in its own folder with its own `LICENSE`,
+  and record each asset's licence in `ASSETS.md`. CC0 can't be withdrawn from art already released
+  under it.
 
 ## Summary
 
