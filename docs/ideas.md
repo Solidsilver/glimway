@@ -8,9 +8,13 @@ Tags: **(agreed)** means the owner wants it and it has a place in the order; **(
 worth thinking about; **(later)** means parked on purpose.
 
 ## Habitica integration
-- **Gold purse** (agreed): at sign-in, with clear consent, move Habitica gold into an in-game purse.
-  Gold flows into the game only and never pays out to Habitica. Allow 1–2 top-ups a day, probably
-  with no cap on the amount. Research is in [habitica-gold.md](habitica-gold.md).
+- **Gold purse** (agreed): a Top-up button in the account settings first syncs the latest Habitica
+  gold, then moves gold into an in-game purse, with clear consent. Gold flows into the game only and
+  never pays out to Habitica.
+  - **Limits:** 2 top-ups per UTC day, with no amount cap.
+  - **Unknown outcome:** a top-up whose result is unclear is credited automatically once a balance
+    check confirms it.
+  - Research is in [habitica-gold.md](habitica-gold.md).
 - **Gold and embers as two currencies** (agreed): gold buys shop goods and materials and trades
   between players; embers stay what you earn by doing things in the world.
 - **Player shops** (maybe): players sell to each other for purse gold, perhaps from the gate shelf
@@ -35,6 +39,20 @@ worth thinking about; **(later)** means parked on purpose.
 - **Farmland in homestead gardens** (maybe): the farmland tiles are delivered but unused.
 - **More resident routines** (maybe): the owner likes the strolls and the bench sit; more people
   could have small daily routines.
+
+- **Fishing** (maybe): a rules-based fishing system worked out lazily from elapsed time. Any body of
+  water large enough in a scene (one navigable screen) may hold fish; which waters have fish is
+  still to decide.
+  - **Pond size** sets the most fish a water can hold.
+  - **Repopulation** follows a rate over time, computed when someone enters (no background ticks).
+  - **The current stock** decides which species bite and how long a catch takes. A near-empty pond
+    fishes slowly.
+  - **A water can be fished out** for a while, with a small "a fish got in here somehow" chance.
+  - It's all deterministic and server-checkable, like gathering.
+- **More variety beyond the Tangle** (maybe, needs a brainstorm): mountains, lakes and rivers, and
+  later caves, plus ways to go past the Whitequiet. Unlock those only once players have a way back
+  (a map, breadcrumbs, or a door or teleport item). This needs a better generation system; hold a
+  brainstorming session when we explore it.
 
 ## Social
 - **Party notice board** (maybe).
