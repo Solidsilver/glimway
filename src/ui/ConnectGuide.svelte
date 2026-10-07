@@ -9,6 +9,7 @@
   import { emberLine, guideCopy, guideTabs, syncCopy, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
+  import { syncSafety } from '../game/sync-safety'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import { connectedClient, connectSession, creatorId, disconnectSession, fixtureProfiles, friendlyErrorCopy, isConnected } from './habitica-local'
@@ -106,9 +107,7 @@
    */
   function syncBlocker(): string | null {
     if (mode === 'title') return null // nothing has started: a new game is in the village
-    const safety = (window as unknown as {
-      __fsSafety?: () => { areaId: string; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean }
-    }).__fsSafety?.()
+    const safety = syncSafety()
     if (!safety) return 'The world is still waking up — try again in a moment.'
     if (!isSafeArea(session.state.area)) return syncCopy.goSafe
     if (safety.transitioning) return 'Finish walking through the gate first.'
@@ -295,7 +294,7 @@
         return false
       }
 
-      const late = (window as unknown as { __fsSafety?: () => { transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety?.()
+      const late = syncSafety()
       if (mode === 'menu' && late && (late.transitioning || late.dialogueOpen || late.enemiesNear)) {
         connection = 'error'
         connectionError = syncCopy.midSync

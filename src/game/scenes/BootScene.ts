@@ -38,8 +38,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Normalize the unequal source cells into a uniform runtime tileset first,
-    // then generate placeholder textures for uncovered slots.
+    // The terrain tileset ships baked (packed/terrain.webp, preloaded under
+    // its runtime key), so this finds it; then the placeholder textures for
+    // uncovered slots.
     createFingersnapTerrain(this, 32)
     createFingersnapAnimations(this)
     generateTextures(this)

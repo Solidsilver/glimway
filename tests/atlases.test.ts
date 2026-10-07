@@ -17,6 +17,9 @@ import {
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
+  PLAYTEST1_RECORDS,
+  playtest1Records,
+  playtest1Used,
   POND_SOURCE,
   BUILDINGS,
   type PackedManifest,
@@ -44,10 +47,11 @@ const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/ma
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
+const p1Anims = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'animations.json'), 'utf8')) as { animations: { frames: string[] }[] }
 /** A frame's source sheet (atlas.json's own list). */
 const p1File = (n: string) => p1.sources[p1.frames[n].source].file
-/** The playtest-1 frames the build samples: the ground tiles, the residents' and the held tools'. */
-const p1Used = Object.keys(p1.frames).filter((n) => GROUND_TILES.includes(n) || n === POND_SOURCE || (BUILDINGS as readonly string[]).includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
+/** The playtest-1 frames the build samples. */
+const p1Used = playtest1Used(Object.keys(p1.frames))
 
 const sha = (path: string) => createHash('sha256').update(readFileSync(join(ROOT, path))).digest('hex')
 
@@ -91,12 +95,14 @@ test('every input the atlases were baked from is unchanged', () => {
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
     ...SCALED_ATLASES.flatMap((a) => [a.source, a.json]),
     ...BACKDROPS.map((b) => b.source),
-    `${PLAYTEST1_DIR}/atlas.json`,
-    `${PLAYTEST1_DIR}/animations.json`,
+    PLAYTEST1_RECORDS,
     ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1File(n)}`)),
   ].sort()
   assert.deepEqual(Object.keys(built.inputs).sort(), expected, RERUN)
-  for (const [path, hash] of Object.entries(built.inputs)) assert.equal(sha(path), hash, `${path} changed — ${RERUN}`)
+  for (const [path, hash] of Object.entries(built.inputs)) {
+    const now = path === PLAYTEST1_RECORDS ? createHash('sha256').update(playtest1Records(p1, p1Anims)).digest('hex') : sha(path)
+    assert.equal(now, hash, `${path} changed — ${RERUN}`)
+  }
 })
 
 test('the plan asks for nothing that wasn’t baked', () => {

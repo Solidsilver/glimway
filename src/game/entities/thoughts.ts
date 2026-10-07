@@ -7,6 +7,7 @@
 import Phaser from 'phaser'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
+import { expose } from '../dev-hooks'
 
 /**
  * Time on screen: a base plus enough per character to read it, capped. A
@@ -38,12 +39,7 @@ export class Thoughts {
   ) {
     bus.on(EV.thought, this.onThought, this)
     // Read-only, for playtests (dev builds): the thought on screen now, and every one shown.
-    if (import.meta.env.DEV) {
-      ;(window as unknown as { __fsThoughts?: () => { current: string | null; seen: string[] } }).__fsThoughts = () => ({
-        current: this.current(),
-        seen: [...shownLog]
-      })
-    }
+    expose('__fsThoughts', () => ({ current: this.current(), seen: [...shownLog] }), scene)
     scene.events.on('postupdate', this.tick, this)
     scene.events.once('shutdown', () => this.destroy())
   }

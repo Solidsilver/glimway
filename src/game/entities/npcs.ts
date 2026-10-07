@@ -15,6 +15,7 @@ import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim, sitFrame } from '../p
 import type { PersonId } from '../atlas-plan'
 import { ROUTINES, atHome, newWalker, tickWalker, type Walker } from '../npc-routines'
 import { prefersReducedMotion } from '../sfx'
+import { expose } from '../dev-hooks'
 
 export const NPC_NAMES: Record<string, string> = {
   mara: 'Mara',
@@ -60,7 +61,7 @@ export class Npcs {
   constructor(scene: Phaser.Scene, private world: WorldData) {
     const k = peopleDensity(scene)
     // Read-only, for playtests: the walking residents' poses.
-    ;(window as unknown as { __fsNpcs?: () => unknown }).__fsNpcs = () => this.view()
+    expose('__fsNpcs', () => this.view(), scene)
     for (const n of world.npcs) {
       const x = n.tx * TILE + 8
       const y = n.ty * TILE + TILE

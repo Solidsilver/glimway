@@ -65,11 +65,6 @@ export function isWildsArea(areaId: string): boolean {
   return areaId === WILDS_AREA || parseChunkArea(areaId) !== null;
 }
 
-/** True for a chunk of the outer Wilds. */
-export function isOuterArea(areaId: string): boolean {
-  return parseChunkArea(areaId)?.region === OUTER_REGION_ID;
-}
-
 /** The chunk an area id plays in: `wilds` → the Tangle's entry chunk. Null elsewhere. */
 export function parseChunkArea(areaId: string): { region: string; cx: number; cy: number } | null {
   if (areaId === WILDS_AREA) {

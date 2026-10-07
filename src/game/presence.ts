@@ -11,6 +11,7 @@ import type { SocketLike } from '../lib/presence-client'
 import { bus } from './events'
 import type { Link } from './link'
 import { PresenceFeed } from './presence-feed'
+import { expose } from './dev-hooks'
 
 export { LEAVE_FADE_MS, PresenceFeed, type Peer } from './presence-feed'
 
@@ -28,7 +29,7 @@ export function startPresence(link: Link): PresenceFeed | null {
   })
   const feed = current
   // Read-only state for playtests.
-  ;(window as unknown as { __fsPresence?: () => unknown }).__fsPresence = () => (feed.running ? feed.debugState() : { status: 'off', area: null, peers: [] })
+  expose('__fsPresence', () => (feed.running ? feed.debugState() : { status: 'off', area: null, peers: [] }))
   return current
 }
 

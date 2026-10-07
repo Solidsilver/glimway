@@ -17,6 +17,7 @@ import { prefersReducedMotion } from '../sfx.ts'
 import { EDGE_TEXTURE, WATER_FPS, WATER_FRAME_COUNT, WATER_SETS, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, parseEdgeKey } from './ground-field.ts'
 import { edgeRefNames, putCell, type EdgeJob, type Texels } from './ground-paint.ts'
 import { PaintPool, refreshWhenPainted, startWorkers } from './ground-pool.ts'
+import { expose } from '../dev-hooks.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -395,7 +396,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   }
   lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k, area: world.areaId, complete: painted.complete, canvas }
   // Read-only, for playtests.
-  ;(window as unknown as { __fsGround?: () => GroundView | null }).__fsGround = groundView
+  expose('__fsGround', groundView, scene)
   const pending = painted.complete ? null : painted.done
   // Water: each animated cell shows its frame f's texture coordinates.
   if (prefersReducedMotion()) return pending

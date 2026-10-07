@@ -19,6 +19,7 @@ import { loadPresenceAvatar } from '../avatar-render'
 import { bus, EV, type EmotePayload } from '../events'
 import { emoteSay } from '../../content/presence'
 import { LEAVE_FADE_MS, type Peer, type PresenceFeed } from '../presence'
+import { expose } from '../dev-hooks'
 
 /** Habitica sprite grid (source px) and its on-screen height (as the hero's avatar). */
 const AVATAR_CANVAS = 90
@@ -129,7 +130,7 @@ class RemotePlayersLayer implements RemotePlayers {
     private readonly area: string
   ) {
     bus.on(EV.emote, this.onEmote)
-    ;(window as unknown as { __fsRemote?: () => unknown[] }).__fsRemote = () =>
+    expose('__fsRemote', () =>
       [...this.views.values()].map((v) => ({
         id: v.peer.habiticaId,
         name: v.peer.displayName,
@@ -139,7 +140,9 @@ class RemotePlayersLayer implements RemotePlayers {
         moving: v.moving,
         avatar: v.demo === null,
         bubble: v.bubble?.active ? v.bubbleText : null
-      }))
+      })),
+      scene
+    )
   }
 
   update(_dt: number): void {

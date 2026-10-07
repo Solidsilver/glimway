@@ -988,7 +988,8 @@ export class EnemySystem {
   /**
    * The warden: walks at you, lunges from range (then stops, open, to find its
    * feet — the moment to speak the naming), and sweeps its arms at anyone
-   * crowding it (no opening after a sweep). Showings slow it down.
+   * crowding it (no opening after a sweep). Each speaking of the naming
+   * calms its attacks (WARDEN.calmPerSpeaking).
    */
   private updateGuardian(enemy: Enemy, dt: number, dist: number, px: number, py: number): void {
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body

@@ -461,10 +461,7 @@ export class Link {
       const welcome = !before.flags.includes(FLAGS.welcome) && s.state.flags.includes(FLAGS.welcome) ? Math.min(gained, WELCOME_EMBERS) : 0
       return { ok: true, status: res.status, gained, welcome, credit: res.vitalsCredit }
     } catch (err) {
-      const code = errorCode(err)
-      const action = failureAction(code)
-      if (action === 'offline' || action === 'superseded' || action === 'signed-out') this.onFailure(err, 'sync')
-      return { ok: false, code: action === 'offline' ? 'offline' : code }
+      return { ok: false, code: this.writeFailure(err, 'sync') }
     } finally {
       this.setBusy(false)
     }
@@ -556,7 +553,6 @@ export class Link {
       return { ok: true, res }
     } catch (err) {
       const code = errorCode(err)
-      const fa = failureAction(code)
       if (outcomeUnknown(code) && sent) {
         // No trustworthy answer: it may have committed. Keep the exact request.
         this.unresolved = { op, body: sent, at: Date.now() }
@@ -573,11 +569,7 @@ export class Link {
         this.onFailure(err, 'mutation')
         return { ok: false, code: 'pending' }
       }
-      if (isUnreachable(err) || fa === 'offline' || fa === 'superseded' || fa === 'elsewhere' || fa === 'signed-out') {
-        const action = this.onFailure(err, 'mutation')
-        return { ok: false, code: action === 'superseded' ? 'superseded' : action === 'offline' ? 'offline' : code }
-      }
-      return { ok: false, code }
+      return { ok: false, code: this.writeFailure(err, 'mutation') }
     } finally {
       this.setBusy(false)
     }
@@ -786,19 +778,31 @@ export class Link {
     // Captured now: the request must describe the moment it was made.
     const progress = toProgress(s.state)
     const sentKey = docKey(s.state)
+    // One key per logical write: a stale-revision retry is the same write.
+    const key = newKey()
     this.setBusy(true)
     try {
-      const res = await this.exchange((raw) => call(raw, newKey(), progress), { stateToo: opts.adoptState !== false, sentKey })
+      const res = await this.exchange((raw) => call(raw, key, progress), { stateToo: opts.adoptState !== false, sentKey })
       void this.saveLocal()
       return { ok: true, result: res.result }
     } catch (err) {
-      const code = errorCode(err)
-      const action = failureAction(code)
-      if (action === 'offline' || action === 'superseded' || action === 'signed-out') this.onFailure(err, 'wilds')
-      return { ok: false, code: action === 'offline' ? 'offline' : code }
+      return { ok: false, code: this.writeFailure(err, 'wilds') }
     } finally {
       this.setBusy(false)
     }
+  }
+
+  /**
+   * A keyed write's refusal: losing the server, the lease (here or to another
+   * tab) or the sign-in moves the link's status; anything else is the
+   * write's own answer. Returns the code its caller reports.
+   */
+  private writeFailure(err: unknown, what: string): ApiErrorCode | 'offline' {
+    const code = errorCode(err)
+    const fa = failureAction(code)
+    if (!isUnreachable(err) && fa !== 'offline' && fa !== 'superseded' && fa !== 'elsewhere' && fa !== 'signed-out') return code
+    const action = this.onFailure(err, what)
+    return action === 'superseded' ? 'superseded' : action === 'offline' ? 'offline' : code
   }
 
   private setBusy(busy: boolean): void {

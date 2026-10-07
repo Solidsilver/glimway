@@ -1,17 +1,19 @@
 /**
  * WorldScene — orchestration only: lifecycle (create/update/shutdown), area
  * transitions, camera and zoom, input dispatch, wiring to the session and
- * the event bus, the scripted beats, and the playtest hooks.
+ * the event bus, and the scripted beats. Its playtest hooks live in
+ * ./world-dev-hooks.ts (dev builds only).
  *
  * Area construction lives in src/game/area/ (from WorldData produced by
  * src/game/worlds.ts). Entities — hero, avatar, enemies, projectiles, NPCs,
- * interactables, effects — live in src/game/entities/. Remote players have a
- * wired seam (entities/remote-players.ts) with no networking yet.
+ * interactables, effects — live in src/game/entities/. Remote players
+ * (entities/remote-players.ts) are drawn from the presence feed
+ * (src/game/presence.ts).
  */
 import Phaser from 'phaser'
 import type { AreaId, QuestEvent } from '../../lib/state'
 import { itemInfo } from '../../content/world'
-import { buildGround, devMainThreadTilesetHash } from '../area/terrain'
+import { buildGround } from '../area/terrain'
 import { buildSolids, solidBox, type SolidRun } from '../area/collision'
 import { buildProps } from '../area/props'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
@@ -22,7 +24,7 @@ import { prefersReducedMotion, sfx } from '../sfx'
 import { heroScreen, touchVec, uiBlocked, uiState } from '../input'
 import { TILE } from '../textures'
 import type { Session } from '../session'
-import { buildArea, hasAreaKind, type EnemyType, type WorldData } from '../worlds'
+import { buildArea, hasAreaKind, type WorldData } from '../worlds'
 import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
@@ -61,7 +63,7 @@ import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { buildRoom, ROOM_ENTRY } from '../cottage'
 import { homeArea, parseHomeArea } from '../../lib/homestead'
-import { homeLights, isLit as isLandLit } from '../../lib/homestead-land'
+import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { ui } from '../../ui/store.svelte'
@@ -86,7 +88,7 @@ import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
 import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
 import { seasonMark } from '../../lib/wilds/outer'
 import { loadWilds } from '../../lib/wilds/data'
-import { playInsets, setPlayInsets } from '../viewport'
+import { playInsets } from '../viewport'
 import { GoalGuide } from '../entities/goal-guide'
 import { held, heldNow, setHeld, trackBelt, type HeldPayload } from '../held'
 import { kindForKey, stepKind } from '../../lib/belt'
@@ -96,6 +98,8 @@ import { MAX_SCREEN_SCALE } from '../atlas-plan'
 import { densityOf } from '../density'
 import { grantPaper } from '../papers'
 import { WildsEntities, type WildsAction } from '../wilds/entities'
+import { setSyncSafety } from '../sync-safety'
+import { exposeWorldHooks } from './world-dev-hooks'
 
 /** How long a waiting warden rests for someone else's naming before it remembers its pose. */
 const WITNESS_REST_MS = 4200
@@ -258,8 +262,6 @@ export class WorldScene extends Phaser.Scene {
     // Entities
     const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion })
     this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, papers, village: villageFor(this.session) })
-    // Read-only: found-text pickups still lying in this area (playtests).
-    ;(window as unknown as { __fsPapers?: () => string[] }).__fsPapers = () => papers.lying()
     this.hero = new Hero(
       this,
       {
@@ -279,7 +281,6 @@ export class WorldScene extends Phaser.Scene {
     )
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero)
-    ;(window as unknown as { __fsOffHand?: () => string | null }).__fsOffHand = () => this.offHand?.showing ?? null
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
@@ -302,7 +303,6 @@ export class WorldScene extends Phaser.Scene {
     // Things lying about to pick up (a world's; the server keeps who took what).
     const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
     this.interactables.setExtra(pickups)
-    ;(window as unknown as { __fsPickups?: () => string[] }).__fsPickups = () => pickups.ids()
     // The workable pieces (trees, boulders, stumps, patches) — wilds chunks,
     // the woods, and homestead land; nowhere else (there's nothing to work).
     this.gathering = new Gathering(this, {
@@ -322,7 +322,6 @@ export class WorldScene extends Phaser.Scene {
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
     this.interactables.setExtra(repairs)
-    ;(window as unknown as { __fsRepairs?: () => string[] }).__fsRepairs = () => repairs.ids()
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -498,220 +497,8 @@ export class WorldScene extends Phaser.Scene {
     new Thoughts(this, this.hero.sprite, { reducedMotion: this.reducedMotion, hidden: () => this.cinematic, offsetY: -32 })
     void this.avatar.build() // imported layered avatar (if any)
 
-    // Read-only handle for automated playtesting (docs/playtest.md).
-    ;(window as unknown as { __fsPlayer?: () => { x: number; y: number; body: { x: number; y: number; w: number; h: number }; blocked: Record<string, boolean> } }).__fsPlayer = () => {
-      const b = this.hero.sprite.body as Phaser.Physics.Arcade.Body
-      return {
-        x: this.hero.sprite.x,
-        y: this.hero.sprite.y,
-        body: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) },
-        blocked: { up: b.blocked.up, down: b.blocked.down, left: b.blocked.left, right: b.blocked.right }
-      }
-    }
-    ;(window as unknown as { __fsEnemies?: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: { x: number; y: number; w: number; h: number }; flipX: boolean; type: string; locked: boolean }> }).__fsEnemies =
-      () => this.enemies.enemies.map((e) => {
-        const b = e.sprite.body as Phaser.Physics.Arcade.Body
-        return {
-          x: e.sprite.x,
-          y: e.sprite.y,
-          state: e.state,
-          hp: e.hp,
-          texture: e.sprite.texture.key,
-          body: { x: b.x, y: b.y, w: Math.round(b.width), h: Math.round(b.height) },
-          flipX: e.sprite.flipX,
-          type: e.type,
-          locked: e.state === 'telegraph' && (e.lungeX !== 0 || e.lungeY !== 0),
-          tint: '0x' + e.sprite.tintTopLeft.toString(16).padStart(6, '0')
-        }
-      })
-    // Read-only warden snapshot: dormant, active (and whether it stands open), or settled.
-    ;(window as unknown as { __fsWarden?: () => ReturnType<EnemySystem['wardenView']> }).__fsWarden = () => this.enemies.wardenView()
-    // Read-only map geometry, so playtests can check the hero is confined to it.
-    ;(window as unknown as { __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; solid: boolean[][]; exits: { tx: number; ty: number; tw: number; th: number; to: string }[] } }).__fsWorld = () => {
-      const b = this.physics.world.bounds
-      return { areaId: this.world.areaId, widthPx: this.world.widthPx, heightPx: this.world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: this.world.solid, exits: this.world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to) })) }
-    }
-    // Dev-only playtest lever: deal damage through the normal hurt path so
-    // low-health and defeat beats can be checked without a long fight.
-    if (import.meta.env.DEV) {
-      const w = window as unknown as Record<string, unknown>
-      // Read-only: how settled this area is, so playtests wait on the game
-      // instead of the clock: frames drawn since it was built, the camera
-      // fade, and whether world input is live right now.
-      const builtAt = this.game.loop.frame
-      w.__fsFrame = () => ({
-        areaId: this.world.areaId,
-        frames: this.game.loop.frame - builtAt,
-        loop: this.game.loop.frame,
-        fading: this.cameras.main.fadeEffect.isRunning || this.holdingFade,
-        transitioning: this.transitioning,
-        cinematic: this.cinematic,
-        live: this.worldLive()
-      })
-      // Read-only: the server revision this tab's link is based on (null for
-      // guests), so a playtest can wait for the link to catch up.
-      w.__fsLinkRev = () => this.session.link?.rev ?? null
-      w.__fsDevHurt = (n: number) => {
-        this.hero.iframes = 0
-        this.hero.damagePlayer(n, this.hero.sprite.x - 1)
-      }
-      w.__fsDevWarp = (area: AreaId, tx: number, ty: number) => this.transitionTo(area, { tx, ty })
-      // The screen insets the camera keeps the hero clear of; a playtest can set them.
-      w.__fsDevInsets = (v?: { top: number; right: number; bottom: number; left: number }) => {
-        if (v) setPlayInsets(v)
-        return { ...playInsets }
-      }
-      // Read-only: the hero sprite's box on screen (CSS px from the canvas's top left).
-      w.__fsDevHeroScreen = () => {
-        const cam = this.cameras.main
-        const b = this.hero.sprite.getBounds()
-        return { x: (b.x - cam.worldView.x) * cam.zoom, y: (b.y - cam.worldView.y) * cam.zoom, w: b.width * cam.zoom, h: b.height * cam.zoom, zoom: cam.zoom }
-      }
-      // Read-only: a world point on screen (CSS px from the canvas's top left), for clicks in playtests.
-      w.__fsDevToScreen = (x: number, y: number) => {
-        const cam = this.cameras.main
-        return { x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom }
-      }
-      w.__fsDevAddFlag = (flag: string) => this.session.addFlag(flag)
-      // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
-      // checks the packed atlases give the loaders the pixels they had).
-      // The ground tileset painted again on the main thread (no workers): its hash (e2e/first-paint.spec.ts).
-      w.__fsDevGroundMainThreadHash = () => devMainThreadTilesetHash(this, this.world)
-      w.__fsDevTextureHash = (key: string) => {
-        if (!this.textures.exists(key)) return null
-        const src = this.textures.get(key).getSourceImage() as HTMLCanvasElement | HTMLImageElement
-        const c = document.createElement('canvas')
-        c.width = src.width
-        c.height = src.height
-        const ctx = c.getContext('2d', { willReadFrequently: true })!
-        ctx.drawImage(src, 0, 0)
-        const d = ctx.getImageData(0, 0, c.width, c.height).data
-        let h = 2166136261
-        for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619)
-        return `${c.width}x${c.height}:${(h >>> 0).toString(16)}`
-      }
-      // A texture's frame size (world px) and density (texels per world px).
-      w.__fsDevTextureSize = (key: string) => {
-        if (!this.textures.exists(key)) return null
-        const t = this.textures.get(key)
-        return { w: t.get().width, h: t.get().height, density: densityOf(t) }
-      }
-      // Texture memory as the GPU holds it (RGBA, 4 bytes a texel), by
-      // texture and in total; `largest` the biggest side of any texture.
-      w.__fsDevTextureMemory = () => {
-        const out: Record<string, number> = {}
-        let total = 0
-        let largest = 0
-        for (const key of this.textures.getTextureKeys()) {
-          let bytes = 0
-          for (const src of this.textures.get(key).source) {
-            bytes += src.width * src.height * 4
-            largest = Math.max(largest, src.width, src.height)
-          }
-          out[key] = bytes
-          total += bytes
-        }
-        return { total, largest, textures: out }
-      }
-      // Roll in a given direction from inside the frame loop, so playtests can
-      // react to an aim lock without input latency.
-      w.__fsDevDodge = (dx: number, dy: number) => this.hero.tryDodge(new Phaser.Math.Vector2(dx, dy))
-      // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
-      w.__fsDevAttack = () => this.hero.tryAttack()
-      // Set the area's creatures aside (frozen, off the map) for a quiet chunk.
-      w.__fsDevParkCreatures = () => this.enemies.parkAll()
-      w.__fsDevStrike = (n: number, type?: EnemyType) => {
-        for (const e of [...this.enemies.enemies]) if (!e.dead && (!type || e.type === type)) this.enemies.damageEnemy(e, n, this.hero.sprite.x)
-      }
-      // Speak the naming to the warden. `force` skips the opening/reach
-      // rules (skipping the encounter); without it, the real rules apply.
-      w.__fsDevSpeakNaming = (force = false) => this.enemies.speakNaming(force)
-      // Set the hero down at a spot in this area (no scene restart), so a
-      // playtest can step up to the warden inside its opening. The save's
-      // position follows, in the save's own convention (the Wilds keep
-      // region-wide pixels), so an upload's merge never snaps the hero back.
-      w.__fsDevPlace = (x: number, y: number) => {
-        this.hero.sprite.setPosition(x, y)
-        this.hero.sprite.setVelocity(0, 0)
-        this.session.state.position = this.wildsEntryNow()
-          ? this.wildsPosition(Math.round(x), Math.round(y))
-          : { x: Math.round(x), y: Math.round(y) }
-        this.session.saveSoon()
-      }
-      // Write a spot into the save without moving the hero: the stale sample
-      // an open conversation leaves behind (playtest 1, Silas's axe).
-      w.__fsDevStalePosition = (x: number, y: number) => {
-        this.session.state.position = { x: Math.round(x), y: Math.round(y) }
-      }
-      // Take the saved-position sample every frame, so a playtest can make
-      // the exit check and the sample meet in one frame (bugs #2).
-      w.__fsDevSampleEveryFrame = (on: boolean) => {
-        this.devSampleEveryFrame = on
-      }
-      // Add an exit to this area until the scene restarts, so a playtest can
-      // walk into a destination no area kind is registered for (the guard).
-      w.__fsDevAddExit = (exit: { tx: number; ty: number; tw: number; th: number; to: string }) => {
-        this.world.exits.push({ ...exit, entry: { tx: 1, ty: 1 } })
-      }
-      // Read-only: where the save says the hero is (area and position), and
-      // whether a debounced save is still waiting to be written.
-      // Ask for a save now (the once-a-second position sample doesn't save by itself).
-      w.__fsDevSaveSoon = () => this.session.saveSoon()
-      w.__fsDevSaved = () => {
-        const s = this.session as unknown as { saveTimer: number | null; pendingSave: boolean }
-        return { area: this.session.state.area, position: { ...this.session.state.position }, pending: s.saveTimer !== null || s.pendingSave }
-      }
-      // One use of a carried tool through the real server path (gathering,
-      // which will use tools, isn't in the game yet). Resolves to the wear
-      // result; an `action` (draw water at the well) goes through as such.
-      w.__fsDevUseTool = async (instance: string, n = 1, action?: string) => {
-        let last: unknown = null
-        for (let i = 0; i < n; i++) {
-          const r = await itemsFor(this.session).useTool(instance, action)
-          if (!r.ok) return { error: r.code }
-          last = r.value.wear
-        }
-        return last
-      }
-    }
-    // Read-only: the item model as last read (null for guests or before a read).
-    const fsItems = Object.assign(() => itemsFor(this.session).view, {
-      load: () => itemsFor(this.session).load()
-    })
-    ;(window as unknown as { __fsItems?: typeof fsItems }).__fsItems = fsItems
-    // Read-only: the hero's vitals as the save holds them.
-    ;(window as unknown as { __fsVitals?: () => { hp: number; maxHp: number; mana: number; maxMana: number } }).__fsVitals = () => {
-      const st = this.session.state
-      return { hp: st.hp, maxHp: st.maxHp, mana: st.mana, maxMana: st.maxMana }
-    }
-    // Connected-play status for playtests (read-only; null for guests).
-    ;(window as unknown as { __fsLink?: () => string | null }).__fsLink = () => this.session.link?.status ?? null
-    // Read-only Wilds snapshot for playtests (null outside the Wilds).
-    ;(window as unknown as { __fsWilds?: () => ReturnType<WildsEntities['debug']> }).__fsWilds = () => this.wilds?.debug() ?? null
-    // Read-only: the workable pieces of this area, and (at home) the lamps
-    // whose light holds the ground (playtests: the drift rule).
-    ;(window as unknown as { __fsGather?: () => { area: string; spots: { target: string; tx: number; ty: number; lit: boolean }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; left: { tx: number; ty: number; frame: string }[]; last: string; lights: { x: number; y: number; radius: number }[]; hint: { tx: number; ty: number } | null } | null }).__fsGather = () => {
-      if (!this.gathering) return null
-      const lights = this.myLights()
-      return {
-        area: this.world.areaId,
-        spots: this.gathering.spotsView().map((s) => ({ ...s, lit: isLandLit(lights, s.tx, s.ty) })),
-        prompt: this.gathering.prompted(),
-        left: this.gathering.leftView(),
-        last: this.gathering.lastOutcome(),
-        lights,
-        hint: this.gathering.hinted()
-      }
-    }
-    // Read-only: whether any collision body covers a tile (playtests: a
-    // broken rock leaves no invisible wall).
-    ;(window as unknown as { __fsSolidAt?: (tx: number, ty: number) => boolean }).__fsSolidAt = (tx, ty) =>
-      this.solidGroup.getChildren().some((c) => {
-        const b = (c as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.StaticBody | null
-        return !!b && b.x < (tx + 1) * TILE && b.right > tx * TILE && b.y < (ty + 1) * TILE && b.bottom > ty * TILE
-      })
-    // Sync-safety snapshot for the UI gate (read-only).
-    ;(window as unknown as { __fsSafety?: () => { areaId: AreaId; transitioning: boolean; dialogueOpen: boolean; enemiesNear: boolean } }).__fsSafety = () => {
+    // Sync safety for the UI's sync gate (src/game/sync-safety.ts).
+    setSyncSafety(() => {
       const px = this.hero.sprite.x
       const py = this.hero.sprite.y
       return {
@@ -720,77 +507,9 @@ export class WorldScene extends Phaser.Scene {
         dialogueOpen: uiState.dialogueOpen,
         enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.sprite.x - px, e.sprite.y - py) < 200)
       }
-    }
-    // Read-only seat snapshot for playtests (a bench in the village or Commons).
-    // Seated: the seat's pose and the depths drawn at (the hero's and the
-    // layered avatar's), so a playtest can check the hero sits on the seat.
-    ;(window as unknown as { __fsSeat?: () => unknown }).__fsSeat = () => ({
-      seated: this.hero.isSeated,
-      bonus: this.hero.seatedBonus,
-      mana: Math.floor(this.session.state.mana),
-      maxMana: this.session.state.maxMana,
-      x: this.hero.sprite.x,
-      y: this.hero.sprite.y,
-      seat: this.hero.seat ? { x: this.hero.seat.x, y: this.hero.seat.y, depth: this.hero.seat.depth, facing: this.hero.seat.facing } : null,
-      heroDepth: this.hero.sprite.depth,
-      heroScale: { x: this.hero.sprite.scaleX, y: this.hero.sprite.scaleY },
-      heroCrop: this.hero.sprite.isCropped,
-      avatar: this.avatar.container
-        ? { x: this.avatar.container.x, y: this.avatar.container.y, depth: this.avatar.container.depth, scaleX: this.avatar.container.scaleX, scaleY: this.avatar.container.scaleY, ...this.avatar.pose }
-        : null
     })
-    // Read-only avatar/combat diagnostics for verification (no mutation).
-    ;(window as unknown as { __fsDebug?: () => Record<string, unknown> }).__fsDebug = () => ({
-      avatar: !!this.avatar.container,
-      /** What the layered avatar is drawn holding ('' = its own weapon). */
-      holding: this.avatar.holding,
-      /** The directional held frame drawn ('' = none, or the item's icon). */
-      holdingFrame: this.avatar.holdingFrame,
-      pet: !!this.avatar.pet,
-      riding: this.avatar.riding,
-      playerAlpha: this.hero.sprite.alpha,
-      playerVisible: this.hero.sprite.visible,
-      bolts: this.projectiles ? this.projectiles.length : -1,
-      attackCooldown: this.hero.attackCooldown,
-      castCooldown: this.hero.castCooldown,
-      facing: { x: this.hero.facing.x, y: this.hero.facing.y },
-      heroTex: this.hero.sprite.texture.key,
-      npcs: this.npcs.npcs.map((n) => ({
-        id: n.id,
-        texture: n.sprite.texture.key,
-        anim: n.sprite instanceof Phaser.GameObjects.Sprite ? n.sprite.anims.currentAnim?.key ?? null : null
-      })),
-      keys: {
-        left: this.cursors.left.isDown,
-        right: this.cursors.right.isDown,
-        up: this.cursors.up.isDown,
-        down: this.cursors.down.isDown,
-        E: this.actionKeys.E.isDown,
-        F: this.actionKeys.F.isDown
-      },
-      keyboardEnabled: this.input.keyboard?.enabled ?? null,
-      keyboardActive: (this.input.keyboard as unknown as { isActive?: () => boolean }).isActive?.() ?? null,
-      body: (() => {
-        const b = this.hero.sprite.body as Phaser.Physics.Arcade.Body
-        return { vx: b.velocity.x, vy: b.velocity.y, moves: b.moves, enable: b.enable, physicsPaused: this.physics.world.isPaused }
-      })(),
-      unmoored: ui.unmoored
-    })
-    if (import.meta.env.DEV) {
-      ;(window as unknown as { __fsEmit?: (event: string, ...args: unknown[]) => void }).__fsEmit = (event: string, ...args: unknown[]) =>
-        bus.emit(event, ...args)
-      ;(window as unknown as { __fsUnmoored?: (val?: boolean) => boolean }).__fsUnmoored = (val?: boolean) => {
-        if (typeof val === 'boolean') {
-          ui.unmoored = val
-          if (!val) ui.unmooredEasing = false
-        }
-        return ui.unmoored
-      }
-      ;(window as unknown as { fsUnmoored?: { trigger: () => void; clear: () => void } }).fsUnmoored = {
-        trigger: () => this.triggerUnmoored(),
-        clear: () => this.clearUnmoored(),
-      }
-    }
+    // Playtest hooks (docs/playtest.md), dev builds only.
+    if (import.meta.env.DEV) exposeWorldHooks(this, { papers, pickups, repairs })
 
     if (this.pendingDefeatToast) {
       this.pendingDefeatToast = false

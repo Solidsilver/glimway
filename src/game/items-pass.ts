@@ -7,10 +7,12 @@ import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, re
  * inventory icons for tools, supplies, keepsakes, home goods and papers,
  * plus world sprites and the Tolley Mill. The 12 source PNGs stay in
  * assets/generated/items-pass/; the build bakes their native frames into
- * the packed atlas (scripts/build-atlases.ts → packed-items / items.webp).
+ * the packed atlas (scripts/build-atlases.ts → items.webp, loaded as
+ * `packed-items`).
  *
- * Each frame becomes one native-size canvas texture under `items-art:<frame>`,
- * nearest-neighbour blitted from the packed atlas. Tool conditions and item
+ * Each frame becomes one canvas texture under `items-art:<frame>`, copied
+ * from the packed atlas at the art density and drawn at its native world
+ * size (./density.ts). Tool conditions and item
  * variants are discrete states (never looping animations). Loops are only
  * created for the three authored mill animations: `mill-wheel`,
  * `mill-wheel-mended`, and `mill-froth`.
@@ -133,12 +135,6 @@ export function itemsFrame(key: string): ItemsPassFrame | null {
   const resolved = aliases[key] ?? key
   if (resolved.startsWith('commons:')) return null
   return frames.get(resolved) ?? null
-}
-
-/** `items-art:<animation>` when that delivered animation exists, else null. */
-export function itemsAnim(scene: Phaser.Scene, animation: string): string | null {
-  const key = itemsArtKey(animation)
-  return scene.anims.exists(key) ? key : scene.anims.exists(animation) ? animation : null
 }
 
 /**

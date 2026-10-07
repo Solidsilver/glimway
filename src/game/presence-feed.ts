@@ -143,16 +143,6 @@ export class PresenceFeed {
     return this.client.status === 'live'
   }
 
-  get currentArea(): string | null {
-    return this.area
-  }
-
-  /** Whether player is currently in the same area without having left. */
-  isNearby(habiticaId: string): boolean {
-    if (!this.area) return false
-    return Array.from(this.peers.values()).some((p) => p.habiticaId === habiticaId && p.area === this.area && p.leftAt === null)
-  }
-
   /** Whether a live peer is within the server's pixel radius of our last position. */
   isWithin(habiticaId: string, radius: number): boolean {
     if (!this.area || !this.localPosition) return false

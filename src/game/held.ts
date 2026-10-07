@@ -9,6 +9,7 @@ import { bus, EV } from './events'
 import { BELT_ORDER, beltFor, heldSlot, type BeltKind, type BeltSlot } from '../lib/belt'
 import { ITEMS_EV, itemsFor } from './items'
 import type { Session } from './session'
+import { expose } from './dev-hooks'
 
 /** One choice per player and world on this device (a guest has its own). */
 let key = 'fingersnap:held'
@@ -85,6 +86,4 @@ export function trackBelt(session: Session): () => void {
 bus.on(EV.hold, (p: { kind: BeltKind }) => setHeld(p.kind))
 
 // Read-only, for playtests: what's in hand, and the belt as carried.
-if (import.meta.env.DEV) {
-  ;(window as unknown as { __fsHeld?: () => unknown }).__fsHeld = () => ({ kind: heldNow().kind, chosen: held.kind, belt: held.belt.map((s) => s.kind) })
-}
+expose('__fsHeld', () => ({ kind: heldNow().kind, chosen: held.kind, belt: held.belt.map((s) => s.kind) }))
