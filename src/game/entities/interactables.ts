@@ -139,6 +139,14 @@ export class Interactables {
   /** Interaction points each provider pushes; each provider's set is replaced wholesale. */
   private dynamicBy = new Map<InteractionProvider | undefined, Interactable[]>()
   private markersBuilt = false
+  /** Residents away from their spot (their markers wait there, hidden: ./npcs.ts `away`). */
+  private awayCheck: ((id: string) => boolean) | null = null
+  private awayNow = ''
+
+  /** Say who is away from their spot right now (checked every frame). */
+  setAway(check: (id: string) => boolean): void {
+    this.awayCheck = check
+  }
 
   /** Replace a provider's interaction points (and their markers). */
   setDynamic(list: Interactable[], owner?: InteractionProvider): void {
@@ -233,7 +241,7 @@ export class Interactables {
         }
       }
       if (kind) img.setTexture(kind === 'quest' ? 'mark-quest' : 'mark-talk')
-      img.setVisible(kind !== null && this.currentTarget?.id !== it.id)
+      img.setVisible(kind !== null && this.currentTarget?.id !== it.id && !this.awayCheck?.(it.id))
     }
   }
 
@@ -252,8 +260,10 @@ export class Interactables {
         best = it
       }
     }
-    if (best !== this.currentTarget) {
+    const away = this.awayCheck ? this.list.filter((it) => this.awayCheck!(it.id)).map((it) => it.id).join(',') : ''
+    if (best !== this.currentTarget || away !== this.awayNow) {
       this.currentTarget = best
+      this.awayNow = away
       this.refreshMarkers()
     }
     // Recomputed every frame: the wording follows quest progress even while

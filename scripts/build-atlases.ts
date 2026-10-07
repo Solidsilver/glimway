@@ -37,9 +37,18 @@ import {
   SCALED_ATLASES,
   blitKey,
   commonsBlitPlan,
+  GROUND_COLS,
+  GROUND_FAMILIES,
+  GROUND_TILES,
+  HELD_SOURCE,
+  HELD_TEXELS,
+  PEOPLE,
+  PLAYTEST1_DIR,
   type PackedManifest,
+  type PackedPeople,
   type PackedRect,
 } from '../src/game/atlas-plan.ts'
+import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from '../src/game/ground-heal.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
@@ -159,6 +168,49 @@ async function main(): Promise<void> {
     const c = terrainAtlas.frames[expansion.terrain.tiles[i]].frame
     return dense(`cell-${i}`, 'assets/generated/expansion/fingersnap-terrain.png', [c.x, c.y, c.w, c.h], 16, 16, [0, 0, 16, 16])
   })
+
+  // The playtest-1 pass: its measured frames (atlas.json; manifest.json only
+  // counts them) and animations. Only the frames named there are sampled.
+  type P1Frame = { source: string; x: number; y: number; w: number; h: number; destinationRect: { x: number; y: number; w: number; h: number }; handAnchor?: { x: number; y: number } }
+  const p1 = readJson<{ frames: Record<string, P1Frame>; sources: Record<string, { file: string }> }>(`${PLAYTEST1_DIR}/atlas.json`)
+  const p1Anims = readJson<{ animations: PackedPeople['animations'] }>(`${PLAYTEST1_DIR}/animations.json`)
+  const p1Src = (key: string) => `${PLAYTEST1_DIR}/${p1.sources[key].file}`
+  const p1Frame = (name: string) => {
+    const f = p1.frames[name]
+    if (!f) throw new Error(`playtest1-pass: no frame ${name}`)
+    return f
+  }
+  // Ground: each tile box-filtered to one world tile at ART_DENSITY, healed after baking.
+  const groundJobs: Job[] = GROUND_TILES.map((name) => {
+    const f = p1Frame(name)
+    read(p1Src(f.source))
+    return dense(name, p1Src(f.source), [f.x, f.y, f.w, f.h], 16, 16, [0, 0, 16, 16])
+  })
+  // People: the residents' 64×128 canvases (16×32 world px, feet at the
+  // bottom centre) and the held tools at HELD_TEXELS, at ART_DENSITY.
+  const k4 = ART_DENSITY / 4
+  const residentFrames = Object.keys(p1.frames).filter((n) => PEOPLE.some((id) => n.startsWith(`resident-${id}-`)))
+  const heldFrames = Object.keys(p1.frames).filter((n) => n.startsWith('held-'))
+  const peopleJobs: (Job & { hand?: [number, number] })[] = [
+    ...residentFrames.map((name) => {
+      const f = p1Frame(name)
+      read(p1Src(f.source))
+      const r = f.destinationRect
+      return { id: name, src: p1Src(f.source), s: [f.x, f.y, f.w, f.h], w: 64 * k4, h: 128 * k4, d: [r.x * k4, r.y * k4, r.w * k4, r.h * k4], box: true } as Job
+    }),
+    ...heldFrames.map((name) => {
+      const f = p1Frame(name)
+      read(p1Src(f.source))
+      const s = HELD_TEXELS / HELD_SOURCE
+      const r = f.destinationRect
+      const x0 = Math.round(r.x * s)
+      const y0 = Math.round(r.y * s)
+      const d: [number, number, number, number] = [x0, y0, Math.round((r.x + r.w) * s) - x0, Math.round((r.y + r.h) * s) - y0]
+      const hand: [number, number] = [Math.round(f.handAnchor!.x * s), Math.round(f.handAnchor!.y * s)]
+      return { id: name, src: p1Src(f.source), s: [f.x, f.y, f.w, f.h] as [number, number, number, number], w: HELD_TEXELS, h: HELD_TEXELS, d, box: true, hand }
+    }),
+  ]
+  const animations = p1Anims.animations.filter((a) => a.frames.every((f) => residentFrames.includes(f)))
 
   // GPU-scaled atlases: each group at its largest on-screen size (never above source).
   const scaled = SCALED_ATLASES.map((plan) => {
@@ -380,6 +432,32 @@ async function main(): Promise<void> {
     return `${name}.webp`
   }
 
+  /**
+   * Ship opaque texels worked on in Node (the healed ground) as lossless
+   * WebP: a PNG drawn from them in the page, encoded, and the WebP's decode
+   * checked against the texels.
+   */
+  const encodeRawWebp = async (name: string, raw: Buffer, size: [number, number]): Promise<string> => {
+    for (let i = 3; i < raw.length; i += 4) if (raw[i] !== 255) throw new Error(`${name}: texels must be opaque`)
+    const url = await page.evaluate(
+      ({ b64, w, h }) => {
+        const bin = atob(b64)
+        const data = new Uint8ClampedArray(bin.length)
+        for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i)
+        const c = document.createElement('canvas')
+        c.width = w
+        c.height = h
+        c.getContext('2d')!.putImageData(new ImageData(data, w, h), 0, 0)
+        return c.toDataURL('image/png')
+      },
+      { b64: raw.toString('base64'), w: size[0], h: size[1] },
+    )
+    const { webp, w, h, rgba } = encodeWebp(Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'))
+    if (w !== size[0] || h !== size[1] || !rgba.equals(raw)) throw new Error(`${name}.webp does not decode to its texels`)
+    writeFileSync(join(OUT, `${name}.webp`), webp)
+    return `${name}.webp`
+  }
+
   const rects = (jobs: Job[], at: Map<string, [number, number]>): Record<string, PackedRect> =>
     Object.fromEntries(jobs.map((j) => [j.id, [...at.get(j.id)!, j.w, j.h] as PackedRect]))
 
@@ -396,6 +474,80 @@ async function main(): Promise<void> {
   const itemsImage = await bakeDenseWebp('items', itemsJobs, iPack.at, iPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
   const terrainImage = await bakeDenseWebp('terrain', terrainJobs, tAt, [TILE * 4, TILE * 4])
+
+  // The playtest-1 ground: baked, then each family healed (src/game/ground-heal.ts)
+  // in Node, then encoded from those texels. ATLAS_NO_HEAL=1 skips the
+  // healing (a comparison build; never commit one).
+  const heal = process.env.ATLAS_NO_HEAL !== '1'
+  const gRows = Math.ceil(groundJobs.length / GROUND_COLS)
+  const gSize: [number, number] = [GROUND_COLS * TILE, gRows * TILE]
+  const gAt = new Map(groundJobs.map((j, i) => [j.id, [(i % GROUND_COLS) * TILE, Math.floor(i / GROUND_COLS) * TILE] as [number, number]]))
+  const gRaw = Buffer.from((await bake(groundJobs, gAt, gSize, true)).raw!, 'base64')
+  const gAtlas: Rgba = { w: gSize[0], h: gSize[1], data: gRaw }
+  if (heal) {
+    for (const fam of GROUND_FAMILIES) {
+      const idx = fam.tiles.map((t) => GROUND_TILES.indexOf(t))
+      const healed = healFamily(flattenFamily(idx.map((i) => cellOf(gAtlas, i, TILE, GROUND_COLS)), fam.flatten ?? 0))
+      idx.forEach((i, n) => setCell(gAtlas, i, TILE, GROUND_COLS, healed[n]))
+    }
+  }
+  // Spare cells past the last tile: opaque black (the pack is opaque).
+  for (let i = GROUND_TILES.length; i < gRows * GROUND_COLS; i++) setCell(gAtlas, i, TILE, GROUND_COLS, { w: TILE, h: TILE, data: new Uint8Array(TILE * TILE * 4).map((_, j) => (j % 4 === 3 ? 255 : 0)) })
+  const groundImage = await encodeRawWebp('ground', gRaw, gSize)
+
+  // The playtest-1 people: baked whole once to find each frame's opaque box
+  // (rounded out to 4 texels, so 2× and 1× copies stay exact), then baked
+  // trimmed and shelf-packed (2 texels apart, rounded to 4).
+  const untrimmedCols = 16
+  const pW = Math.max(...peopleJobs.map((j) => j.w))
+  const pH = Math.max(...peopleJobs.map((j) => j.h))
+  const uAt = new Map(peopleJobs.map((j, i) => [j.id, [(i % untrimmedCols) * pW, Math.floor(i / untrimmedCols) * pH] as [number, number]]))
+  const uSize: [number, number] = [untrimmedCols * pW, Math.ceil(peopleJobs.length / untrimmedCols) * pH]
+  const uRaw = Buffer.from((await bake(peopleJobs, uAt, uSize, true)).raw!, 'base64')
+  const trim = new Map<string, [number, number, number, number]>()
+  for (const j of peopleJobs) {
+    const [ax, ay] = uAt.get(j.id)!
+    let x0 = j.w, y0 = j.h, x1 = -1, y1 = -1
+    for (let y = 0; y < j.h; y++)
+      for (let x = 0; x < j.w; x++)
+        if (uRaw[((ay + y) * uSize[0] + ax + x) * 4 + 3] > 0) {
+          x0 = Math.min(x0, x)
+          y0 = Math.min(y0, y)
+          x1 = Math.max(x1, x)
+          y1 = Math.max(y1, y)
+        }
+    if (x1 < 0) throw new Error(`${j.id}: empty frame`)
+    const tx = Math.floor(x0 / 4) * 4
+    const ty = Math.floor(y0 / 4) * 4
+    trim.set(j.id, [tx, ty, Math.ceil((x1 + 1) / 4) * 4 - tx, Math.ceil((y1 + 1) / 4) * 4 - ty])
+  }
+  const trimmedJobs: Job[] = peopleJobs.map((j) => {
+    const [tx, ty, tw, th] = trim.get(j.id)!
+    return { ...j, w: tw, h: th, d: [j.d[0] - tx, j.d[1] - ty, j.d[2], j.d[3]] }
+  })
+  const pPack = pack(trimmedJobs.map((j) => ({ id: j.id, w: j.w + 2, h: j.h + 2 })), 2)
+  const pAt = new Map([...pPack.at].map(([id, [x, y]]) => [id, [Math.ceil(x / 4) * 4, Math.ceil(y / 4) * 4] as [number, number]]))
+  const pSize: [number, number] = [Math.ceil((Math.max(...trimmedJobs.map((j) => pAt.get(j.id)![0] + j.w)) + 2) / 4) * 4, Math.ceil((Math.max(...trimmedJobs.map((j) => pAt.get(j.id)![1] + j.h)) + 2) / 4) * 4]
+  for (const a of trimmedJobs) for (const b of trimmedJobs) {
+    if (a === b) continue
+    const [ax, ay] = pAt.get(a.id)!
+    const [bx, by] = pAt.get(b.id)!
+    if (ax < bx + b.w && bx < ax + a.w && ay < by + b.h && by < ay + a.h) throw new Error(`people pack: ${a.id} overlaps ${b.id}`)
+  }
+  const peopleImage = await bakeDenseWebp('people', trimmedJobs, pAt, pSize)
+  const people: PackedPeople = {
+    image: peopleImage,
+    size: pSize,
+    density: ART_DENSITY,
+    frames: Object.fromEntries(
+      peopleJobs.map((j) => {
+        const [tx, ty, tw, th] = trim.get(j.id)!
+        const [x, y] = pAt.get(j.id)!
+        return [j.id, { frame: [x, y, tw, th], at: [tx, ty], source: [j.w, j.h], ...(j.hand ? { hand: j.hand } : {}) }]
+      }),
+    ),
+    animations,
+  }
 
   // GPU-scaled atlases: 2 px apart so scaled sampling never reaches a neighbour.
   const atlases: PackedManifest['atlases'] = {}
@@ -470,11 +622,13 @@ async function main(): Promise<void> {
     runtime: { image: runtimeImage, size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
     items: { image: itemsImage, size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
+    ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
+    people,
     atlases,
     backdrops,
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
 }
 
 await main()

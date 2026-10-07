@@ -28,7 +28,7 @@ import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 3
+export const ATLAS_GENERATOR_VERSION = 4
 export const PACKED_MANIFEST_KEY = 'fingersnap-packed'
 
 /**
@@ -63,6 +63,50 @@ export interface PackedCanvasPack {
   blits?: Record<string, PackedRect>
 }
 
+/**
+ * The playtest-1 ground tiles: one 16-px world tile each, `cell` texels a
+ * side at `density`, in a `cols`-wide grid in the order of GROUND_TILES. Their
+ * borders are healed at build time (./ground-heal.ts) so every tile of a
+ * family meets every other one without a seam.
+ */
+export interface PackedGround {
+  image: string
+  size: [number, number]
+  cell: number
+  density: number
+  cols: number
+  /** Cell index by frame name. */
+  tiles: Record<string, number>
+  /** Whether the borders were healed (an unhealed bake is for comparisons only). */
+  healed: boolean
+}
+
+/** One frame of the people atlas: a trimmed rect of a `source`-sized canvas (texels). */
+export interface PackedPersonFrame {
+  /** x, y, w, h in the atlas image. */
+  frame: PackedRect
+  /** Where the trimmed rect sits on the frame's whole canvas. */
+  at: [number, number]
+  /** The whole canvas (residents 64×128; held tools HELD_TEXELS a side). */
+  source: [number, number]
+  /** Held tools: the hand's grip on the canvas (texels). */
+  hand?: [number, number]
+}
+
+/**
+ * The playtest-1 people: the residents' walking, breathing and sitting
+ * frames and the held tools, trimmed and packed as one Phaser atlas at
+ * `density` (every rect a multiple of 4 texels, so phones and the Canvas
+ * renderer scale it down exactly).
+ */
+export interface PackedPeople {
+  image: string
+  size: [number, number]
+  density: number
+  frames: Record<string, PackedPersonFrame>
+  animations: { key: string; frames: string[]; frameRate: number; repeat: number }[]
+}
+
 export interface PackedManifest {
   version: number
   generator: string
@@ -73,10 +117,66 @@ export interface PackedManifest {
   items: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
+  ground: PackedGround
+  people: PackedPeople
   /** Phaser atlases (image + JSON hash), loaded under their old texture keys. */
   atlases: Record<string, { image: string; json: string }>
   backdrops: Record<string, string>
 }
+
+/** The playtest-1 pass (assets/generated/playtest1-pass/): its frame atlas and animations. */
+export const PLAYTEST1_DIR = 'assets/generated/playtest1-pass'
+
+/**
+ * The playtest-1 ground tiles by family, each family's tiles healed against
+ * its first: every tile of a family then shares its border texels
+ * (./ground-heal.ts). Flowered grass and moss heal against the grass, so the
+ * accents fade into it at their edges; water's four frames are one tile
+ * each. `flatten` evens out a family's broad shading first (dirt and sand are
+ * painted with light and dark patches that line up into stripes).
+ *
+ * The delivered atlas.json names three cells for what they were asked to be,
+ * not what the image holds: `ground-village-flagstones-02` is sand and
+ * `ground-sand-by-water-02` is a fifth water frame. So the flagstones have
+ * one tile, the sand two, and the unlabelled water cell is left out.
+ */
+export const GROUND_FAMILIES: { name: string; tiles: string[]; flatten?: number }[] = [
+  {
+    name: 'grass',
+    tiles: [
+      'ground-grass-01', 'ground-grass-02', 'ground-grass-03', 'ground-grass-04',
+      'ground-flowered-grass-01', 'ground-flowered-grass-02',
+      'ground-forest-moss-01', 'ground-forest-moss-02',
+    ],
+  },
+  { name: 'dirt', tiles: ['ground-packed-dirt-01', 'ground-packed-dirt-02', 'ground-packed-dirt-03'], flatten: 0.8 },
+  { name: 'road', tiles: ['ground-old-cobbled-road-01', 'ground-old-cobbled-road-02', 'ground-old-cobbled-road-03'], flatten: 0.4 },
+  { name: 'farmland', tiles: ['ground-farmland-rows-01', 'ground-farmland-rows-02'] },
+  { name: 'flagstones', tiles: ['ground-village-flagstones-01'] },
+  { name: 'sand', tiles: ['ground-sand-by-water-01', 'ground-village-flagstones-02'], flatten: 0.8 },
+  { name: 'water-0', tiles: ['ground-water-gentle-0'] },
+  { name: 'water-1', tiles: ['ground-water-gentle-1'] },
+  { name: 'water-2', tiles: ['ground-water-gentle-2'] },
+  { name: 'water-3', tiles: ['ground-water-gentle-3'] },
+]
+/** Every ground tile, in pack order. */
+export const GROUND_TILES = GROUND_FAMILIES.flatMap((f) => f.tiles)
+/** Ground pack grid width (cells). */
+export const GROUND_COLS = 6
+
+/** The residents with walking art (the frame prefix is `resident-<id>-`). */
+export const PEOPLE = ['mara', 'pip', 'orrin', 'silas', 'elara', 'finn', 'hazel', 'ada'] as const
+export type PersonId = (typeof PEOPLE)[number]
+
+/**
+ * Held tools: the delivered frames sit on a 32×32 canvas (8 world px at the
+ * pass's density). They're drawn HELD_WORLD world px a side, so the build
+ * bakes them at that size (HELD_TEXELS at ART_DENSITY), the destination
+ * rects and hand anchors scaled by HELD_TEXELS / 32.
+ */
+export const HELD_WORLD = 10
+export const HELD_TEXELS = HELD_WORLD * ART_DENSITY
+export const HELD_SOURCE = 32
 
 /** Key for a baked off-native sample of a frame. */
 export function blitKey(frame: string, w: number, h: number, flipX: boolean): string {

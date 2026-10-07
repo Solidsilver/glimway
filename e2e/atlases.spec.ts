@@ -66,4 +66,20 @@ test('the game holds the packed texels, drawn at native world size', async ({ pa
   })
   expect(result.bad).toEqual([])
   expect(result.checked).toBeGreaterThan(700)
+
+  // The playtest-1 ground and people: the village is tiled from the healed
+  // ground at full density with its transitions painted, and the residents
+  // stand on the people atlas.
+  const view = await page.evaluate(() => ({
+    ground: (window as unknown as { __fsGround: () => { cells: number; edges: number; animated: number; density: number } | null }).__fsGround(),
+    npcs: (window as unknown as { __fsDebug: () => { npcs: { id: string; texture: string; anim: string | null }[] } }).__fsDebug().npcs,
+  }))
+  expect(view.ground?.density).toBe(4)
+  expect(view.ground?.edges).toBeGreaterThan(100)
+  expect(view.ground?.animated).toBeGreaterThan(1)
+  expect(view.npcs.length).toBeGreaterThan(3)
+  for (const n of view.npcs) {
+    expect(n.texture).toBe('people')
+    expect(n.anim).toMatch(new RegExp(`^people:resident-${n.id}-(down|up|left|right)-(breathing|walking)$`))
+  }
 })

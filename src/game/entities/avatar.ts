@@ -36,6 +36,7 @@ import { SEAT_CUT } from '../seats'
 import { ART_PX, BREATH_SPLIT, avatarMotion } from '../hero-motion'
 import { heldNow } from '../held'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
+import { PEOPLE_KEY, facingOf, heldFrame, heldOrigin, peopleDensity, type Facing } from '../people'
 
 /** Habitica sprite grid (source px) and its on-screen height in the 16px world. */
 const AVATAR_CANVAS = 90
@@ -73,6 +74,8 @@ export class AvatarVisual {
   private handTool: Phaser.GameObjects.Image | null = null
   /** The held item drawn now ('' = none built yet). */
   private handShown = ''
+  /** The facing (and mirroring) the held art was last set for. */
+  private handFacing: string | null = null
   /** What the playtests read: the pose as last drawn. */
   pose = { breath: 0, step: 0, seated: false, mirrored: false }
   /** Stale-async guard: a token invalidates older rebuild completions. */
@@ -231,7 +234,7 @@ export class AvatarVisual {
         this.container.depth = hero.sprite.y + 1
       }
       this.pose = { ...motion, seated: !!seat, mirrored: right }
-      this.drawHand(!!seat, motion.breath * scale)
+      this.drawHand(!!seat, motion.breath * scale, facingOf(hero.facing.x, hero.facing.y, right ? 'right' : 'left'), right)
     }
     if (this.pet) {
       // The pet trails behind, on the side away from where you face.
@@ -252,9 +255,12 @@ export class AvatarVisual {
 
   /**
    * What's in hand, on the hero: the Habitica weapon while the weapon is
-   * held; a tool's icon at the weapon hand otherwise (tucked away seated).
+   * held; otherwise the tool's held art (../people.ts) facing with the hero,
+   * gripped at the weapon hand — behind the body walking away, the side
+   * view turned the right way round inside the mirrored container — or its
+   * item icon when it has no held art. Tucked away seated.
    */
-  private drawHand(seated: boolean, breath: number): void {
+  private drawHand(seated: boolean, breath: number, facing: Facing, mirrored: boolean): void {
     const slot = heldNow()
     const want = slot.kind === 'weapon' || !slot.itemDef ? '' : slot.itemDef
     if (want !== this.handShown) {
@@ -262,24 +268,51 @@ export class AvatarVisual {
       for (const w of this.weaponLayers) w.setVisible(!want)
       this.handTool?.destroy()
       this.handTool = null
+      this.handFacing = null
       if (want && this.container) {
-        let key = itemIcon(want)
-        if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
-        if (this.scene.textures.exists(key)) {
-          // Item icons point their head up and right; the unmirrored figure faces
-          // left with the weapon hand on the left, so flip the icon to point out
-          // ahead of the hero (the container's own mirroring turns it round).
-          const img = this.scene.add.image(HAND.x, HAND.y, key).setOrigin(0.5, 0.85).setFlipX(true)
-          img.setScale(HAND.size / Math.max(img.width, img.height))
+        const k = peopleDensity(this.scene)
+        if (k && heldFrame(this.scene, want, facing)) {
+          const img = this.scene.add.image(HAND.x, HAND.y, PEOPLE_KEY, heldFrame(this.scene, want, facing)!).setScale(1 / k)
           this.container.add(img)
           this.handTool = img
+        } else {
+          let key = itemIcon(want)
+          if (!this.scene.textures.exists(key)) key = ITEM_ART_FALLBACK
+          if (this.scene.textures.exists(key)) {
+            // Item icons point their head up and right; the unmirrored figure faces
+            // left with the weapon hand on the left, so flip the icon to point out
+            // ahead of the hero (the container's own mirroring turns it round).
+            const img = this.scene.add.image(HAND.x, HAND.y, key).setOrigin(0.5, 0.85).setFlipX(true)
+            img.setScale(HAND.size / Math.max(img.width, img.height))
+            this.container.add(img)
+            this.handTool = img
+          }
         }
       }
     }
-    if (this.handTool) {
-      this.handTool.setVisible(!seated)
-      this.handTool.y = HAND.y + breath
+    const tool = this.handTool
+    if (!tool) return
+    if (tool.texture.key === PEOPLE_KEY && this.handFacing !== `${facing}:${mirrored}`) {
+      this.handFacing = `${facing}:${mirrored}`
+      const frame = heldFrame(this.scene, want, facing)
+      if (frame) {
+        tool.setFrame(frame)
+        const [ox, oy] = heldOrigin(this.scene, frame)
+        tool.setOrigin(ox, oy)
+        // The side views are drawn facing their way: undo the container's mirror.
+        tool.setFlipX((facing === 'left' || facing === 'right') && mirrored)
+        // Walking away, the tool is held out in front: from here, behind the body.
+        if (facing === 'up') this.container?.sendToBack(tool)
+        else this.container?.bringToTop(tool)
+      }
     }
+    tool.setVisible(!seated)
+    tool.y = HAND.y + breath
+  }
+
+  /** Read-only, for playtests: which held frame is drawn ('' none or an icon). */
+  get holdingFrame(): string {
+    return this.handTool?.visible && this.handTool.texture.key === PEOPLE_KEY ? String(this.handTool.frame.name) : ''
   }
 
   /** Read-only, for playtests: what the hero is drawn holding ('' = the weapon). */

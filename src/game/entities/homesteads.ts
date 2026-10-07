@@ -16,6 +16,7 @@
  * when that data changes.
  */
 import Phaser from 'phaser'
+import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim } from '../people'
 import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, homeItem, parseHomeArea, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Light } from '../../lib/homestead-land'
 import { checkSpend } from '../../lib/embers'
@@ -273,9 +274,16 @@ export class HomesteadLayer implements InteractionProvider {
     // Silas, at his sawhorse (the Commons pass; code-drawn fallback).
     const sx = f.silas.tx * TILE + 8
     const sy = f.silas.ty * TILE + TILE
-    this.silas = this.scene.add.sprite(sx, sy, 'silas-idle-0').setOrigin(0.5, 1).setDepth(sy)
-    const breathing = commonsAnim(this.scene, 'silas-breathing') ?? 'silas-breathing'
-    if (this.scene.anims.exists(breathing)) this.silas.play(breathing)
+    const k = peopleDensity(this.scene)
+    if (k && hasPerson(this.scene, 'silas')) {
+      // The playtest-1 walking art: he breathes at his post, facing the lane.
+      this.silas = this.scene.add.sprite(sx, sy, PEOPLE_KEY, 'resident-silas-down-idle-0').setOrigin(0.5, 1).setScale(1 / k).setDepth(sy)
+      this.silas.play(personAnim('silas', 'down', false))
+    } else {
+      this.silas = this.scene.add.sprite(sx, sy, 'silas-idle-0').setOrigin(0.5, 1).setDepth(sy)
+      const breathing = commonsAnim(this.scene, 'silas-breathing') ?? 'silas-breathing'
+      if (this.scene.anims.exists(breathing)) this.silas.play(breathing)
+    }
     this.addBody(this.fixtures, sx, sy - 4, 12, 8)
     // The hame on the north gatepost, kept polished: a glint now and then.
     const hx = f.hame.tx * TILE + 8
