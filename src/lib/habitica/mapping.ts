@@ -43,7 +43,7 @@ const CLASSES: readonly string[] = ['warrior', 'mage', 'rogue', 'healer'];
 const HABITICA_CLASSES: readonly string[] = ['warrior', 'mage', 'wizard', 'rogue', 'healer'];
 
 /** Habitica `wizard` → internal `mage`; other known classes pass through. */
-export function toInternalClass(raw: unknown): HabiticaClass | null {
+function toInternalClass(raw: unknown): HabiticaClass | null {
   if (typeof raw !== 'string' || !HABITICA_CLASSES.includes(raw)) return null;
   return (raw === 'wizard' ? 'mage' : raw) as HabiticaClass;
 }

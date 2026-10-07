@@ -31,14 +31,14 @@ const GAIN_MERGE_MS = 1500
 const GAIN_SHOW_MS = 2400
 
 /** Every toast handed to the UI so far, whatever its kind (dev hook `__fsToasts`). */
-export interface ToastLogEntry {
+interface ToastLogEntry {
   n: number
   text: string
   kind: string
 }
 
 /** A quest beat or area title waiting to be shown. */
-export interface Banner {
+interface Banner {
   id: string
   kind: 'quest' | 'area'
   eyebrow: string
@@ -87,7 +87,7 @@ class UiStore {
   link = $state<LinkPayload | null>(null)
   /** Connected play: the reconnect notice ("you played somewhere else"). */
   linkNotice = $state<'played-elsewhere' | null>(null)
-  /** Presence (phase 6): socket status and others in this area. */
+  /** Presence: socket status and others in this area. */
   presence = $state<PresencePayload>({ status: 'off', here: 0 })
   /** The emote picker is open. */
   emoteOpen = $state(false)

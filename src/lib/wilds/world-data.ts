@@ -44,9 +44,9 @@ export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: strin
 };
 
 /** The flowers' piece in Bloom-wick: the same patch, picked, not dug. */
-export const BLOOM_PATCH = { target: 'bloom-patch', label: 'Pick the bloom flowers' };
+const BLOOM_PATCH = { target: 'bloom-patch', label: 'Pick the bloom flowers' };
 /** The outer drift's trees: timber, but no Amberfall sap ("on trees in the Tangle"). */
-export const OUTER_TREE = { target: 'tree', label: 'Chop the tree' };
+const OUTER_TREE = { target: 'tree', label: 'Chop the tree' };
 const TREES: readonly DecorKind[] = ['oak', 'pine', 'birch'];
 
 /**

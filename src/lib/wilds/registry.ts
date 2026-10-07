@@ -15,10 +15,3 @@ export function generatorFor(version: number): WildsGenerator {
   if (!gen) throw new Error(`wilds: unknown generator version ${version}`);
   return gen;
 }
-
-/** Versions with a registered generator, ascending. */
-export function generatorVersions(): number[] {
-  return Object.keys(GENERATORS)
-    .map(Number)
-    .sort((a, b) => a - b);
-}

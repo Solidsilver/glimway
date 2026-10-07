@@ -107,7 +107,7 @@ export function buildExits(data: WildsData, region: WildsRegion, cx: number, cy:
 }
 
 /** Just inside an exit mouth — where stepping through it lands in this chunk. */
-export function exitInward(data: WildsData, e: ChunkExit): Tile {
+function exitInward(data: WildsData, e: ChunkExit): Tile {
   const S = data.chunkSize;
   const mid = S / 2 - 1;
   switch (e.dir) {
@@ -224,7 +224,7 @@ export function chunkEntities(epoch: Epoch, cx: number, cy: number): WildsEntity
   return out;
 }
 
-export function rollLoot(epoch: Epoch, entityId: string, cycle: number): LootDrop {
+function rollLoot(epoch: Epoch, entityId: string, cycle: number): LootDrop {
   const data = loadWilds();
   if (!Number.isSafeInteger(cycle) || cycle < 0) throw new Error('wilds: cycle must be a non-negative integer');
   const parsed = parseEntityId(entityId);
@@ -250,7 +250,7 @@ export function rollLoot(epoch: Epoch, entityId: string, cycle: number): LootDro
 /** Client-only terrain for one chunk: the Tangle's woods (tangle.ts).
  *  Deterministic (mulberry32 floats are fine here), and keeps every entity
  *  and exit reachable by construction plus a final carve pass. */
-export function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain {
+function chunkTerrain(epoch: Epoch, cx: number, cy: number): ChunkTerrain {
   const data = loadWilds();
   const region = regionFor(data, epoch.regionId);
   const S = data.chunkSize;

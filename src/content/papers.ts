@@ -34,7 +34,7 @@ export type PickupLook = 'folded' | 'scroll' | 'slate';
 export type LaterKind = 'commons' | 'wilds-poi' | 'wilds-chest' | 'village-project' | 'turning' | 'echo';
 
 /** Who can hand a paper over: the quest NPCs, and Hazel (./residents.ts). */
-export type QuestNpc = 'mara' | 'pip' | 'orrin' | 'hazel';
+type QuestNpc = 'mara' | 'pip' | 'orrin' | 'hazel';
 
 export type FindSource =
   /** On the Hearthwick Library's shelves from day one: public, no spoilers. */
@@ -228,7 +228,7 @@ export function paperById(id: string): Paper | undefined {
   return BY_ID.get(id);
 }
 
-export const PAPER_FLAG_PREFIX = 'paper:';
+const PAPER_FLAG_PREFIX = 'paper:';
 
 export function paperFlag(id: string): string {
   return PAPER_FLAG_PREFIX + id;
@@ -245,7 +245,7 @@ export function foundPapers(flags: readonly string[]): string[] {
   return out;
 }
 
-export function stageAtLeast(stage: QuestStage, needed: QuestStage): boolean {
+function stageAtLeast(stage: QuestStage, needed: QuestStage): boolean {
   return QUEST_STAGES.indexOf(stage) >= QUEST_STAGES.indexOf(needed);
 }
 

@@ -4,7 +4,7 @@ import { beginNewJourney, waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
- * Regressions for the phase 5 review (.agent/REVIEW-5.md), against the real
+ * Regressions for the phase 5 review, against the real
  * Go server: unreadable answers, stale carried balances, stale homes after
  * mail recovery, the craft batch mismatch, and the calendar across midnight.
  */

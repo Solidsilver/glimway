@@ -12,12 +12,12 @@
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { getCombatKit } from '../lib/combat'
-  import { heldNow, type HeldPayload } from '../game/held'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
   import { parseHomeArea, plantTileNear } from '../lib/homestead'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
+  import { heldUi } from './held.svelte'
   import { papers } from './papers.svelte'
   import { focusTrap } from './focus'
   import { sheet } from './sheet'
@@ -80,8 +80,6 @@
   let headEl: HTMLElement | undefined = $state()
   let cardTop = $state(120)
 
-  // What's in hand (src/game/held.ts): it follows the action bar and the phone ring.
-  let heldKind = $state<BeltKind>(heldNow().kind)
   const kit = $derived(getCombatKit(ui.importedProfile))
 
   onMount(() => {
@@ -89,8 +87,6 @@
     bus.on(VILLAGE_EV.changed, bump)
     bus.on(HOME_EV.changed, bump)
     bus.on(ITEMS_EV.changed, bump)
-    const onHeld = (p: HeldPayload) => (heldKind = p.kind)
-    bus.on(EV.held, onHeld)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces. Offline,
     // what's known shows.
@@ -109,7 +105,6 @@
       bus.off(VILLAGE_EV.changed, bump)
       bus.off(HOME_EV.changed, bump)
       bus.off(ITEMS_EV.changed, bump)
-      bus.off(EV.held, onHeld)
       // Everything carried was on screen (the bag opens on All): seen now.
       markTab('all')
     }
@@ -145,7 +140,8 @@
 
   // ---- the hand, the off hand, the pockets
   const belt = $derived(beltFor(model?.instances))
-  const hand = $derived(heldSlot(belt, heldKind))
+  // What's in hand (src/game/held.ts, through heldUi): it follows the action bar and the phone ring.
+  const hand = $derived(heldSlot(belt, heldUi.kind))
   const handEntry = $derived(hand.instance ? entries.find((e) => e.key === `inst:${hand.instance}`) ?? null : null)
   const offEntry = $derived(entries.find((e) => e.inHand) ?? null)
   const pocketEntry = (n: number) => entries.find((e) => e.pocket === n) ?? null
@@ -156,8 +152,8 @@
     return slot ? slot.kind : null
   }
   function hold(kind: BeltKind): void {
+    // The game answers at once with EV.held, which heldUi follows.
     bus.emit(EV.hold, { kind })
-    heldKind = kind
   }
 
   // ---- the card

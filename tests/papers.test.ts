@@ -307,6 +307,10 @@ test('remote library: shelves, donations, conflicts and a dead network', async (
     entry,
   });
   assert.deepEqual(await createRemoteLibrary(fakeFetch(403, { error: { code: 'not-held' } })).donate('will-of-elias-fenn', 'k'), { ok: false, reason: 'not-held' });
+  // Only the already-shelved answer means "someone was first": other conflicts are errors.
+  for (const code of ['idempotency-mismatch', 'world-choice-required']) {
+    assert.deepEqual(await createRemoteLibrary(fakeFetch(409, { error: { code } })).donate('will-of-elias-fenn', 'k'), { ok: false, reason: 'error' }, code);
+  }
   const dead = { fetchImpl: (async () => { throw new TypeError('network'); }) as unknown as typeof fetch };
   assert.deepEqual(await createRemoteLibrary(dead).load(), { ok: false, reason: 'offline' });
 });

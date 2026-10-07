@@ -50,8 +50,8 @@ export function connectSession(userId: string, apiToken: string): HabiticaCreden
     clientTag: `${creator ?? 'unknown-creator'}-fingersnap`
   }
   connectionSession.credentials = credentials
-  // No gearStats passed: the shared client applies its own catalog default
-  // (gear contributes 0 until snap_assets' catalog lands).
+  // No gearStats passed: the shared client applies its own default, the
+  // bundled gear catalog (gearStatsFor).
   connectionSession.client = createHabiticaClient({ credentials })
   return credentials
 }

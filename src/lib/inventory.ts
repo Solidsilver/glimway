@@ -20,11 +20,11 @@ import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './embers.ts';
 import type { Asset, InstanceView, ItemsView, MakerView } from './api/types.ts';
-import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, isInstanced, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
+import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
 export type InventoryTab = 'tools' | 'supplies' | 'keepsakes' | 'home' | 'papers';
 export type ItemTab = Exclude<InventoryTab, 'papers'>;
-export type ItemKind =
+type ItemKind =
   | 'material'
   | 'crafted'
   | 'trinket'
@@ -307,11 +307,6 @@ export function fitTargets(view: ItemsView, fitting: InstanceView): InstanceView
     return t.fittings.length < slotCount(d) && !t.fittings.some((f) => f.fitting === kind);
   });
 }
-
-export const isModelInstance = (id: string): boolean => {
-  const d = itemDef(id);
-  return !!d && isInstanced(d);
-};
 
 const MATERIAL_ORDER = MATERIALS.map((m) => m.id);
 const KIND_ORDER: Record<ItemKind, number> = {

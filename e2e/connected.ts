@@ -15,7 +15,7 @@ export const TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
 /** This worker's fake Habitica (base URL). */
 export const habiticaURL = (): string => requireBackend().habitica
 /** This worker's SQLite database (the admin CLI and sqlite3 read it). */
-export const dbPath = (): string => requireBackend().db
+const dbPath = (): string => requireBackend().db
 
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()

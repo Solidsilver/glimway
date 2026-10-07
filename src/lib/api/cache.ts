@@ -178,7 +178,7 @@ const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade', 'claim', 'clear',
  * A lost mutation's exact request (game/link.ts `Unresolved`), kept so the
  * next page replays it rather than paying twice. Malformed records are dropped.
  */
-export function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] | undefined {
+function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const u = raw as { op?: Record<string, unknown>; body?: Record<string, unknown>; at?: unknown };
   const op = u.op;
@@ -194,7 +194,7 @@ export function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] 
   return { op: structuredClone(op), body: structuredClone(body), at: typeof u.at === 'number' ? u.at : 0 };
 }
 
-export function normalizeOrphan(raw: unknown): OrphanCopy | null {
+function normalizeOrphan(raw: unknown): OrphanCopy | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const r = raw as Record<string, unknown>;
   try {

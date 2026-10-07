@@ -62,7 +62,7 @@ export class SyncRejectedError extends Error {
  * Matches the server's `rules.IsSafeArea`. A cottage is part of its
  * homestead (the save keeps saying `home:<g>` inside one).
  */
-export const SAFE_AREAS: readonly string[] = ['village', 'commons'];
+const SAFE_AREAS: readonly string[] = ['village', 'commons'];
 
 export function isSafeArea(area: string): boolean {
   return SAFE_AREAS.includes(area) || HOME_AREA_RE.test(area);

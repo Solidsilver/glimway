@@ -4,11 +4,12 @@
  * defaults, never an error. Add a preference by giving it a default in
  * DEFAULTS; old stored records pick the new default up on load.
  */
+import { readJson, writeJson } from '../lib/local-json'
 
 /** How the hero walks on a touch screen. */
 export type StickMode = 'fixed' | 'floating' | 'hold'
 
-export interface Settings {
+interface Settings {
   /** fixed: the joystick in the corner. floating: it appears under the thumb. hold: walk toward the finger. */
   stick: StickMode
   /** Page loads played with the floating stick (its resting hint shows for the first few). */
@@ -22,19 +23,14 @@ const DEFAULTS: Settings = {
   floatingSessions: 0
 }
 
-function load(): Settings {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return { ...DEFAULTS }
-    const parsed = JSON.parse(raw) as Partial<Settings>
-    const out = { ...DEFAULTS, ...parsed }
-    if (!['fixed', 'floating', 'hold'].includes(out.stick)) out.stick = DEFAULTS.stick
-    if (typeof out.floatingSessions !== 'number' || !Number.isFinite(out.floatingSessions)) out.floatingSessions = 0
-    return out
-  } catch {
-    return { ...DEFAULTS }
-  }
+function parse(stored: unknown): Settings {
+  const out = { ...DEFAULTS, ...(stored as Partial<Settings>) }
+  if (!['fixed', 'floating', 'hold'].includes(out.stick)) out.stick = DEFAULTS.stick
+  if (typeof out.floatingSessions !== 'number' || !Number.isFinite(out.floatingSessions)) out.floatingSessions = 0
+  return out
 }
+
+const load = (): Settings => readJson(KEY, parse, { ...DEFAULTS })
 
 class SettingsStore {
   value = $state<Settings>(load())
@@ -45,11 +41,8 @@ class SettingsStore {
 
   set<K extends keyof Settings>(key: K, v: Settings[K]): void {
     this.value = { ...this.value, [key]: v }
-    try {
-      localStorage.setItem(KEY, JSON.stringify(this.value))
-    } catch {
-      /* kept for this visit only */
-    }
+    // Refused by storage: kept for this visit only.
+    writeJson(KEY, this.value)
   }
 }
 

@@ -1,5 +1,6 @@
 import raw from '../../content/calendar.json' with { type: 'json' };
-export interface Festival { name: string; wick: string; day: number }
+import { TURNING_NOTICE_FORMAT } from '../content/expansion-writing.ts';
+interface Festival { name: string; wick: string; day: number }
 export interface Calendar { epoch: string; wickDays: number; wicks: string[]; marks: string[]; festivals: Festival[] }
 export interface CalendarDay { wick: string; wickNumber: number; year: number; day: number; mark: string; festival: string | null; startsAt: number; nextTurning: number; notice: string | null; wickDays: number }
 export function validateCalendar(value: unknown): Calendar {
@@ -23,5 +24,5 @@ export function calendarAt(unix: number, c: Calendar = CALENDAR): CalendarDay {
   const day = Math.floor((unix - startsAt) / 86400) + 1;
   const wick = c.wicks[w]!;
   const nextTurning = startsAt + duration;
-  return { wick, wickNumber: index + 1, year: Math.floor(index / 12) + 1, day, mark: c.marks[w]!, festival: c.festivals.find(f => f.wick === wick && f.day === day)?.name ?? null, startsAt, nextTurning, notice: nextTurning - unix <= 86400 ? `Dark of ${wick}-wick — the outer Wilds will turn.` : null, wickDays: c.wickDays };
+  return { wick, wickNumber: index + 1, year: Math.floor(index / 12) + 1, day, mark: c.marks[w]!, festival: c.festivals.find(f => f.wick === wick && f.day === day)?.name ?? null, startsAt, nextTurning, notice: nextTurning - unix <= 86400 ? TURNING_NOTICE_FORMAT.replace('{wick}', wick) : null, wickDays: c.wickDays };
 }

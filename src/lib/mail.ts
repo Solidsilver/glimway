@@ -1,5 +1,4 @@
 import raw from '../../content/mail.json' with { type: 'json' };
-import type { Asset } from './workshop.ts';
 
 export interface MailRules {
   maxOutstandingSent: number;
@@ -25,17 +24,3 @@ export function validateMail(value: unknown): MailRules {
   return m;
 }
 export const MAIL = validateMail(raw);
-export interface MailEntry {
-  id: string; worldId: string; fromId: string; toId: string;
-  fromName: string; toName: string; asset: Asset; sentAt: number;
-  claimedAt: number | null;
-  returnedAt: number | null;
-  returnReason: 'recalled' | 'expired' | 'recipient-removed' | null;
-}
-/** Cursors are opaque. Each page repeats current pending mail plus a history slice. */
-export interface MailPage {
-  mail: MailEntry[];
-  nextCursor: string | null;
-  /** Only needed for legacy pending mail exceeding the current combined caps. */
-  nextPendingCursor: string | null;
-}

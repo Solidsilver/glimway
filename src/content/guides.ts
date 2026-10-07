@@ -18,7 +18,7 @@ import type { GuideContext } from '../lib/guides.ts';
  */
 export type GuideWhere = 'silas' | 'gate' | 'door' | 'mailbox' | 'bench' | 'hearth' | 'wilds';
 
-export interface GuideStep {
+interface GuideStep {
   text: string;
   done: (ctx: GuideContext) => boolean;
   where?: GuideWhere;
@@ -45,7 +45,7 @@ const materialsTotal = (c: GuideContext) => Object.values(c.materials).reduce((a
 const inTangle = (c: GuideContext) => c.flags.some((f) => f.startsWith('seen:wilds:'));
 
 /** What Silas wants for a workshop (content/homestead.json, tier 2). */
-export const WORKSHOP_MATERIALS = { timber: 20, stone: 10, fiber: 8 };
+const WORKSHOP_MATERIALS = { timber: 20, stone: 10, fiber: 8 };
 
 export const GUIDES: GuideDef[] = [
   {

@@ -19,7 +19,7 @@ import { createServer, type AddressInfo } from 'node:net'
 import { startFakeHabitica } from './fake-habitica.ts'
 
 /** This run's directory (set by e2e/global-setup.ts for the workers). */
-export const runDir = (): string => process.env.E2E_RUN_DIR || '.e2e-server/latest'
+const runDir = (): string => process.env.E2E_RUN_DIR || '.e2e-server/latest'
 /** The Go server binary, built once per run by e2e/global-setup.ts. */
 export const BIN = `${runDir()}/fingersnap-server`
 /** The cookie the shared Vite reads to pick this worker's Go server. */
@@ -36,8 +36,8 @@ export interface Backend {
 }
 
 /** Stable per worker slot: a restarted worker reuses (and wipes) its slot's directory. */
-export const slot = (): number => Number(process.env.TEST_PARALLEL_INDEX ?? 0)
-export const workerDir = (): string => `${runDir()}/w${slot()}`
+const slot = (): number => Number(process.env.TEST_PARALLEL_INDEX ?? 0)
+const workerDir = (): string => `${runDir()}/w${slot()}`
 
 let running: (Backend & { stop: () => Promise<void> }) | null = null
 let starting: Promise<Backend> | null = null
@@ -149,7 +149,7 @@ const LEGACY_DB = '.e2e-server/fingersnap.sqlite'
  * Compat for specs written against the single shared server: an
  * `execFileSync(..., ['.e2e-server/fingersnap.sqlite', ...])` (sqlite3 or the
  * admin CLI) is pointed at this worker's database. New specs use `sql()` and
- * `dbPath()` from e2e/connected.ts instead.
+ * `allow()`/`adminInvite()` from e2e/connected.ts instead.
  */
 export function installLegacyDbPath(): void {
   const cp = childProcess as unknown as { execFileSync: (...a: unknown[]) => unknown; __fsLegacyDb?: boolean }
@@ -161,7 +161,7 @@ export function installLegacyDbPath(): void {
     if (Array.isArray(args) && args.includes(LEGACY_DB) && running) {
       if (!warned) {
         warned = true
-        console.warn(`e2e: ${LEGACY_DB} is now per worker; use sql()/dbPath() from e2e/connected.ts`)
+        console.warn(`e2e: ${LEGACY_DB} is now per worker; use sql() from e2e/connected.ts`)
       }
       args = args.map((a) => (a === LEGACY_DB ? running!.db : a))
     }

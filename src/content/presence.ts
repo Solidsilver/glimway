@@ -1,5 +1,5 @@
 /**
- * Copy for presence (phase 6): emote labels and speech bubbles, and the HUD
+ * Copy for presence: emote labels and speech bubbles, and the HUD
  * line. The emote ids themselves are shared content (content/presence.json,
  * validated by the server too); this only says how each one reads.
  */

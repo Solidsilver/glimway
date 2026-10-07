@@ -18,8 +18,8 @@ export interface GuideTab {
 
 // Source: the open-source clients' current default branches (habitica @
 // develop, habitica-ios @ develop, habitica-android @ main), read 2026-10-04.
-// Full notes and file links: .agent/app-paths.md. The Habitica wiki ("API
-// Options") is outdated on all three platforms; don't copy steps from it.
+// The Habitica wiki ("API Options") is outdated on all three platforms; don't
+// copy steps from it.
 export const guideTabs: GuideTab[] = [
   {
     id: 'website',

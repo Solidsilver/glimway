@@ -156,7 +156,7 @@ export function parseSpend(raw: unknown): SpendResponse {
   return { ...parseSnapshot(raw), outcome: typeof o.outcome === 'string' ? o.outcome : '' };
 }
 
-export function parseInvite(raw: unknown): InviteInfo {
+function parseInvite(raw: unknown): InviteInfo {
   const o = obj(raw);
   return { id: str(o.id), createdAt: num(o.createdAt), expiresAt: num(o.expiresAt), used: o.used === true };
 }
@@ -249,7 +249,7 @@ export function parseWorldMove(raw: unknown): WorldMoveResponse {
 const nullableStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 
 /** Materials map: the four known ids, nonnegative, unknown ids dropped. */
-export function parseMaterials(raw: unknown): WildsMaterials {
+function parseMaterials(raw: unknown): WildsMaterials {
   const o = raw === null || raw === undefined ? {} : obj(raw);
   const out: WildsMaterials = { timber: 0, stone: 0, fiber: 0, amber: 0 };
   for (const key of Object.keys(out) as (keyof WildsMaterials)[]) {
@@ -295,7 +295,7 @@ function parseEntity(raw: unknown): WildsEntityView {
   };
 }
 
-export function parseLoot(raw: unknown): WildsLoot {
+function parseLoot(raw: unknown): WildsLoot {
   const o = obj(raw);
   const materials = Array.isArray(o.materials) ? o.materials : [];
   return {
@@ -408,7 +408,7 @@ function nullableInt(v: unknown): number | null {
   return v === null || v === undefined ? null : int(v);
 }
 
-export function parseHomeView(raw: unknown): HomeView {
+function parseHomeView(raw: unknown): HomeView {
   const o = obj(raw);
   if (!Array.isArray(o.items) || !Array.isArray(o.members)) throw new ApiError('bad-response');
   const items = o.items.map((row) => {
@@ -548,7 +548,7 @@ function countMap(v: unknown): Record<string, number> {
   return materials(v);
 }
 
-export function parseAsset(raw: unknown): Asset {
+function parseAsset(raw: unknown): Asset {
   const o = obj(raw);
   if (!ASSET_KINDS.includes(o.kind as string)) throw new ApiError('bad-response');
   const a: Asset = { kind: o.kind as Asset['kind'], id: str(o.id), qty: int(o.qty, 0) };
@@ -557,7 +557,7 @@ export function parseAsset(raw: unknown): Asset {
   return a;
 }
 
-export function parseCounts(raw: unknown): AssetCounts {
+function parseCounts(raw: unknown): AssetCounts {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const out: AssetCounts = { materials: countMap(o.materials), items: countMap(o.items), decorations: countMap(o.decorations) };
   if (Array.isArray(o.instances)) out.instances = o.instances.map(parseInstance);
@@ -577,7 +577,7 @@ function optStr(v: unknown): string | null {
   return typeof v === 'string' && v ? v : null;
 }
 
-export function parseInstance(raw: unknown): InstanceView {
+function parseInstance(raw: unknown): InstanceView {
   const o = obj(raw);
   if (!WEAR_STATES.includes(o.state as string) || !Array.isArray(o.fittings ?? [])) throw new ApiError('bad-response');
   const condition = int(o.condition);
@@ -599,7 +599,7 @@ export function parseInstance(raw: unknown): InstanceView {
   };
 }
 
-export function parseItemsView(raw: unknown): ItemsView {
+function parseItemsView(raw: unknown): ItemsView {
   const o = obj(raw);
   if (!Array.isArray(o.stacks) || !Array.isArray(o.instances) || !Array.isArray(o.pockets)) throw new ApiError('bad-response');
   const hand = obj(o.offHand);
@@ -756,7 +756,7 @@ export function parseDeskCopy(raw: unknown): DeskCopyResponse {
   };
 }
 
-export function parseWoodpile(v: unknown): WoodpileView {
+function parseWoodpile(v: unknown): WoodpileView {
   const o = obj(v);
   const stacks = Array.isArray(o.stacks) ? o.stacks : [];
   return {
@@ -801,7 +801,7 @@ function optTime(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
-export function parseMailEntry(raw: unknown): Mail {
+function parseMailEntry(raw: unknown): Mail {
   const o = obj(raw);
   const m: Mail = {
     id: str(o.id),
@@ -863,7 +863,7 @@ function parseProject(raw: unknown): ProjectView {
   };
 }
 
-export function parseProjectsView(o: Record<string, unknown>): ProjectsView {
+function parseProjectsView(o: Record<string, unknown>): ProjectsView {
   if (!Array.isArray(o.projects)) throw new ApiError('bad-response');
   const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
   return { projects: o.projects.map(parseProject), worldFlags: strings(o.worldFlags), grantablePapers: strings(o.grantablePapers) };
@@ -916,7 +916,7 @@ function parseChoreHistory(raw: unknown): ChoreHistoryView {
   };
 }
 
-export function parseRepairsView(o: Record<string, unknown>): RepairsView {
+function parseRepairsView(o: Record<string, unknown>): RepairsView {
   if (!Array.isArray(o.open) || !Array.isArray(o.mended)) throw new ApiError('bad-response');
   const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
   return {
@@ -948,7 +948,7 @@ export function parseMend(raw: unknown): MendResponse {
 
 // ------------------------------------------------------------ gate shelf
 
-export function parseShelfSlot(raw: unknown): ShelfSlotView {
+function parseShelfSlot(raw: unknown): ShelfSlotView {
   const o = obj(raw);
   return {
     slot: int(o.slot),
@@ -962,7 +962,7 @@ export function parseShelfSlot(raw: unknown): ShelfSlotView {
   };
 }
 
-export function parseShelfView(raw: unknown): ShelfView {
+function parseShelfView(raw: unknown): ShelfView {
   const o = obj(raw);
   return {
     gate: int(o.gate),

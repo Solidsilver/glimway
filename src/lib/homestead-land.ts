@@ -40,10 +40,9 @@ export const LAND = {
   EDGE: 7,
   PATH: 8,
 } as const;
-export type LandKind = (typeof LAND)[keyof typeof LAND];
 
 /** One character per kind, for parity vectors and debugging. */
-export const LAND_CHARS = '.TSBw~/#=';
+const LAND_CHARS = '.TSBw~/#=';
 
 export type LandConfig = HomesteadData['land'];
 
@@ -140,11 +139,6 @@ const key = (x: number, y: number) => `${x},${y}`;
 export function effectiveKind(land: Land, cleared: ReadonlySet<string>, x: number, y: number): number {
   const k = landAt(land, x, y);
   return clearable(k) && cleared.has(key(x, y)) ? LAND.GRASS : k;
-}
-
-/** Can the hero walk here? */
-export function walkable(kind: number): boolean {
-  return kind === LAND.GRASS || kind === LAND.PATH || kind === LAND.FORD || kind === LAND.SLOPE;
 }
 
 /** Can something be built here (light permitting)? */

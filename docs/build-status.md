@@ -1,5 +1,13 @@
 # Fingersnap build status
 
+> **Historical: a snapshot from 2026-10-04, not kept current.** What the game
+> does now is in the README; how to run the tests is in
+> [testing.md](testing.md). Since this was written the playtests moved to
+> parallel workers with a Go server per worker on free ports, so
+> `E2E_API_PORT`, `E2E_HABITICA_PORT` and the one-worker advice below no
+> longer apply. Several "not built yet" items (world moves among them) have
+> been built since.
+
 Updated: 2026-10-04 (expansion phases 1–6, papers and the library, the
 canon pass, the Commons and the Tangle merged on `expansion`).
 

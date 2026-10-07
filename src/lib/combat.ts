@@ -105,4 +105,4 @@ export function getCombatKit(profile: HabiticaProfile | null): CombatKit {
   };
 }
 
-export type { CombatKit, SignatureAbility };
+export type { CombatKit };

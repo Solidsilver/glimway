@@ -4,7 +4,7 @@ import { beginNewJourney, dialogueState, frames, readDialogue, expectToast } fro
 import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, silasSays } from './home-helpers'
 
 /**
- * Regressions for the phase 3 review (.agent/REVIEW.md), against the real
+ * Regressions for the phase 3 review, against the real
  * Go server: lost answers, the closed Wilds arch, redraw/tween hygiene,
  * modal input ownership, materials on home reads, and Space on the tray.
  */
@@ -143,10 +143,14 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   // Open the Menu from the HUD, press E: nothing is placed underneath it.
   await page.getByRole('button', { name: /^Menu/ }).click()
   await expect(tray).toBeHidden()
+  // Any homestead write the page sends from here on (there must be none).
+  const writes: string[] = []
+  page.on('request', (r) => void (r.method() === 'POST' && r.url().includes('/api/homestead/') && writes.push(r.url())))
   await page.keyboard.press('e')
-  // Nothing may happen: give a placement time to reach the server first.
+  // Nothing may happen: the world reads keys every frame, so after 30 a
+  // placement would have been sent.
   await frames(page, 30)
-  await page.waitForTimeout(500)
+  expect(writes, 'no placement was sent').toEqual([])
   expect((await myHome(page, id)).items.find((i) => i.itemDef === 'wooden-stool')!.scene).toBeNull()
   // Escape closes the Menu only: the piece is still in hand.
   await page.keyboard.press('Escape')

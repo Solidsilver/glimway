@@ -1,6 +1,6 @@
 /**
- * Request/response shapes of the Fingersnap server, mirroring the backend
- * contract (.agent/BACKEND-REPORT.md, "API contract for the frontend").
+ * Request/response shapes of the Fingersnap server, mirroring the Go
+ * handlers in server/internal/api (answers are checked by ./parse.ts).
  */
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
@@ -71,7 +71,7 @@ export interface SpendResponse extends Snapshot {
   outcome: string;
 }
 
-export type SpendKind = 'rest' | 'revive' | 'home-rest' | 'road-lantern' | 'chest';
+type SpendKind = 'rest' | 'revive' | 'home-rest' | 'road-lantern' | 'chest';
 
 export interface LoginRequest {
   userId: string;
@@ -168,7 +168,7 @@ export interface WorldChoice {
 }
 
 /** What a move would leave behind (GET /api/world). */
-export interface WorldLeaving {
+interface WorldLeaving {
   /** Your homestead's gate (-1: none). */
   gate: number;
   /** You are its only member: it goes quiet after you leave. */
@@ -239,7 +239,7 @@ export interface WildsEpoch {
   endsAt: number | null;
 }
 
-export type WildsEntityKind = 'camp' | 'node' | 'chest' | 'poi';
+type WildsEntityKind = 'camp' | 'node' | 'chest' | 'poi';
 export type WildsEntityState = 'available' | 'cleared' | 'harvested' | 'charted';
 
 /**
@@ -366,7 +366,7 @@ export interface WildsLanternResponse extends Snapshot {
 // ------------------------------------------------------------ homesteads
 
 /** A homestead member (everyone on a deed is equal). */
-export interface HomeMember {
+interface HomeMember {
   id: string;
   displayName: string;
 }
@@ -527,7 +527,7 @@ export interface FittingView {
   usesLeft: number;
   maker: MakerView | null;
 }
-export type WearStateName = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
+type WearStateName = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
 /** One instance: condition in wear points (maxCondition 0: never wears). */
 export interface InstanceView {
   id: string;
@@ -552,7 +552,7 @@ export interface SlotView {
   itemDef: string | null;
   instance: string | null;
 }
-export interface OffHandView {
+interface OffHandView {
   open: boolean;
   class: string | null;
   itemDef: string | null;
@@ -578,7 +578,7 @@ export interface ItemsView {
 export interface ItemsResponse extends Snapshot {
   items: ItemsView;
 }
-export interface WearResult {
+interface WearResult {
   broke: boolean;
   woreOut: boolean;
   state: string;
@@ -663,7 +663,7 @@ export interface DeskCopyResponse extends Snapshot {
 }
 
 /** One stack of green timber on a placed woodpile (seasons after a real day). */
-export interface WoodpileStack {
+interface WoodpileStack {
   id: string;
   homesteadId: string;
   habiticaId: string;
