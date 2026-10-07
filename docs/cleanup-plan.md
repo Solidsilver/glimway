@@ -143,15 +143,33 @@ There are also a few **oversized files**:
 - **Timing:** the game lane waits for the art1 merge, because it reworks `terrain.ts` and
   `WorldScene.ts`.
 
-## Decisions for the owner
+## Shared contract: protobuf (between phases 1 and 2)
 
-1. **Placeholder fallback.** Is code-drawn placeholder art still needed if the packed art fails to
-   load? Recommended: **no**. The packed art always ships, so delete the superseded drawers.
-2. **Legacy compatibility code**, for saves and caches from before the first deploy
-   (`LEGACY_STORE`, the pre-stamp inventory branch, older-server defaults). Recommended: remove
-   once versioning lands. Client and server then ship together with a reload prompt.
-3. **Name policy.** Recommended: reject all Unicode control characters on both sides, as the
-   server does.
-4. **A formatter** (Prettier or Biome), applied in one sweep after the lanes merge. Recommended:
-   yes, at the very end.
-5. **Folders for `src/ui`.** Recommended: yes, last.
+The owner wants one source of types for the frontend and backend.
+- **Schema:** `.proto` files generate both the Go structs and the TypeScript types and decoders
+  (`buf`, Go protobuf, `protobuf-es`).
+- **HTTP stays JSON with exactly today's shape.** The schema copies the current field names, so
+  stored replay bytes stay valid and mixed versions keep working during a deploy.
+- **Binary is used only for the presence socket** (the high-frequency position messages). It is
+  also the first domain migrated, to prove the pipeline end to end.
+- **Then one HTTP domain at a time**, with Go response fixtures fed through the TypeScript
+  decoders.
+- **Error codes become a proto enum.** This replaces the server review's generated error catalog
+  (server F1).
+- **The generated code replaces the hand-written `parse.ts` and `types.ts`** (about 1,840 lines),
+  so phase 2 doesn't regroup them.
+- **The library client** moves onto the generated client.
+
+Gotchas to plan for:
+- protobuf JSON writes 64-bit integers as strings, so use 32-bit types or doubles where the JSON
+  has plain numbers today;
+- zero values must always be written;
+- enums must be written as today's strings.
+
+## Decisions (owner, October 7)
+
+1. **No placeholder fallback.** The packed art always ships. Delete the superseded drawers (phase 4).
+2. **Remove the pre-deploy compatibility code** once versioning lands.
+3. **Names:** reject all Unicode control characters on both sides.
+4. **A formatter**, in one sweep at the very end.
+5. **Folders for `src/ui`**, last.
