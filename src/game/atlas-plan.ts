@@ -112,6 +112,8 @@ export interface PackedManifest {
   generator: string
   /** Every input the build read, with its sha256 (the staleness test re-hashes them). */
   inputs: Record<string, string>
+  /** Every image the build wrote, with its sha256: the art's content identity (the ground's paint caches key on it). */
+  outputs?: Record<string, string>
   commons: PackedCanvasPack
   runtime: PackedCanvasPack
   items: PackedCanvasPack
@@ -119,6 +121,8 @@ export interface PackedManifest {
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround
   people: PackedPeople
+  /** The playtest-1 buildings (village houses, the Brackenwood footbridge): whole canvases at ART_DENSITY. */
+  buildings: PackedCanvasPack
   /** Phaser atlases (image + JSON hash), loaded under their old texture keys. */
   atlases: Record<string, { image: string; json: string }>
   backdrops: Record<string, string>
@@ -127,42 +131,15 @@ export interface PackedManifest {
 /** The playtest-1 pass (assets/generated/playtest1-pass/): its frame atlas and animations. */
 export const PLAYTEST1_DIR = 'assets/generated/playtest1-pass'
 
+// The playtest-1 ground tiles (also read by the ground-painting worker).
+export * from './ground-tiles.ts'
+
 /**
- * The playtest-1 ground tiles by family, each family's tiles healed against
- * its first: every tile of a family then shares its border texels
- * (./ground-heal.ts). Flowered grass and moss heal against the grass, so the
- * accents fade into it at their edges; water's four frames are one tile
- * each. `flatten` evens out a family's broad shading first (dirt and sand are
- * painted with light and dark patches that line up into stripes).
- *
- * The delivered atlas.json names three cells for what they were asked to be,
- * not what the image holds: `ground-village-flagstones-02` is sand and
- * `ground-sand-by-water-02` is a fifth water frame. So the flagstones have
- * one tile, the sand two, and the unlabelled water cell is left out.
+ * The playtest-1 buildings, by frame name (the pass's atlas.json): drawn as
+ * dense scenery textures `p1:<name>` (src/game/buildings.ts).
  */
-export const GROUND_FAMILIES: { name: string; tiles: string[]; flatten?: number }[] = [
-  {
-    name: 'grass',
-    tiles: [
-      'ground-grass-01', 'ground-grass-02', 'ground-grass-03', 'ground-grass-04',
-      'ground-flowered-grass-01', 'ground-flowered-grass-02',
-      'ground-forest-moss-01', 'ground-forest-moss-02',
-    ],
-  },
-  { name: 'dirt', tiles: ['ground-packed-dirt-01', 'ground-packed-dirt-02', 'ground-packed-dirt-03'], flatten: 0.8 },
-  { name: 'road', tiles: ['ground-old-cobbled-road-01', 'ground-old-cobbled-road-02', 'ground-old-cobbled-road-03'], flatten: 0.4 },
-  { name: 'farmland', tiles: ['ground-farmland-rows-01', 'ground-farmland-rows-02'] },
-  { name: 'flagstones', tiles: ['ground-village-flagstones-01'] },
-  { name: 'sand', tiles: ['ground-sand-by-water-01', 'ground-village-flagstones-02'], flatten: 0.8 },
-  { name: 'water-0', tiles: ['ground-water-gentle-0'] },
-  { name: 'water-1', tiles: ['ground-water-gentle-1'] },
-  { name: 'water-2', tiles: ['ground-water-gentle-2'] },
-  { name: 'water-3', tiles: ['ground-water-gentle-3'] },
-]
-/** Every ground tile, in pack order. */
-export const GROUND_TILES = GROUND_FAMILIES.flatMap((f) => f.tiles)
-/** Ground pack grid width (cells). */
-export const GROUND_COLS = 6
+export const BUILDINGS = ['house-west', 'house-middle', 'house-ada', 'brackenwood-bridge-worn', 'brackenwood-bridge-mended'] as const
+export type BuildingFrame = (typeof BUILDINGS)[number]
 
 /** The residents with walking art (the frame prefix is `resident-<id>-`). */
 export const PEOPLE = ['mara', 'pip', 'orrin', 'silas', 'elara', 'finn', 'hazel', 'ada'] as const

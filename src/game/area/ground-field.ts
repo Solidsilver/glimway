@@ -19,6 +19,7 @@
  *    overlay cell (a few hundred in the Commons).
  */
 import { TERRAIN } from '../textures.ts'
+import { GROUND_WATER_FRAMES, POND_TILES, pondFrame, pondTile } from '../ground-tiles.ts'
 
 export type GroundClass = 'grass' | 'dirt' | 'road' | 'flag' | 'sand' | 'water'
 /** Ground drawn with the old expansion cells (walls, roofs, fences, bridge planks, the ruin's stone). */
@@ -81,23 +82,34 @@ export const BASE_TILES: Readonly<Record<GroundClass | 'flowers' | 'moss', reado
   moss: ['ground-forest-moss-01', 'ground-forest-moss-02'],
   dirt: ['ground-packed-dirt-01', 'ground-packed-dirt-02', 'ground-packed-dirt-03'],
   road: ['ground-old-cobbled-road-01', 'ground-old-cobbled-road-02', 'ground-old-cobbled-road-03'],
-  flag: ['ground-village-flagstones-01'],
-  // See GROUND_FAMILIES: the second delivered "flagstones" cell is sand.
-  sand: ['ground-sand-by-water-01', 'ground-village-flagstones-02'],
-  water: ['ground-water-gentle-0'],
+  flag: ['ground-village-flagstones-01', 'ground-village-flagstones-03', 'ground-village-flagstones-04'],
+  sand: ['ground-sand-by-water-01', 'ground-sand-by-water-03'],
+  // Water picks its pond tile by position (`baseTile`), never by hash.
+  water: POND_TILES.map((t) => pondFrame(t, 0)),
 }
-/** Water's animation frames (the tile above is frame 0), at WATER_FPS. */
-export const WATER_FRAMES = ['ground-water-gentle-0', 'ground-water-gentle-1', 'ground-water-gentle-2', 'ground-water-gentle-3']
+/**
+ * Every water tile's frames: the 16 pond tiles, each animated in step with
+ * the gentle water's light (src/game/ground-tiles.ts). The gentle water
+ * itself isn't drawn: it only lends the pond its moving light.
+ */
+export const WATER_SETS: readonly (readonly string[])[] = POND_TILES.map((t) => GROUND_WATER_FRAMES.map((_, f) => pondFrame(t, f)))
+/** How many frames the water animates through, at WATER_FPS. */
+export const WATER_FRAME_COUNT = GROUND_WATER_FRAMES.length
 export const WATER_FPS = 3
+/** The water frame shown at a tile (its pond tile, so the bed runs on across tiles). */
+export const waterAt = (tx: number, ty: number, f: number) => pondFrame(pondTile(tx, ty), f % WATER_FRAME_COUNT)
 
-/** The texture each ground's transitions are painted from (its family's reference tile). */
-export const EDGE_TEXTURE: Readonly<Record<GroundClass, string>> = {
+/**
+ * The texture each ground's transitions are painted from (its family's
+ * reference tile; water's is the pond tile at the overlay's own position,
+ * `waterAt`, so a bank's water continues its neighbour's).
+ */
+export const EDGE_TEXTURE: Readonly<Record<Exclude<GroundClass, 'water'>, string>> = {
   grass: 'ground-grass-01',
   dirt: 'ground-packed-dirt-01',
   road: 'ground-old-cobbled-road-01',
   flag: 'ground-village-flagstones-01',
   sand: 'ground-sand-by-water-01',
-  water: 'ground-water-gentle-0',
 }
 
 /** Deterministic 0..1 for integer inputs. */
@@ -137,6 +149,7 @@ export function baseTile(id: number, c: Ground, x: number, y: number): string | 
     if (id === TERRAIN.grass_b && mossNoise(x / MOSS_CLUMP, y / MOSS_CLUMP) > MOSS_SHARE) return pick(BASE_TILES.moss)
     return pick(BASE_TILES.grass)
   }
+  if (c === 'water') return waterAt(x, y, 0)
   return pick(BASE_TILES[c])
 }
 

@@ -51,10 +51,15 @@
   "assets/generated/items-pass/fingersnap-world-sprites-2.png": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153",
   "assets/generated/items-pass/fingersnap-world-sprites-3.png": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98",
   "assets/generated/items-pass/manifest.json": "563ded3b4fd630a249e04e0259d3b3ac4c8b6c3da9e14d66da8b5a2c024be09a",
-  "assets/generated/playtest1-pass/animations.json": "edebae816ae07309abd162ec1ad58827acc7f61074899f2a95d9e65617e329de",
-  "assets/generated/playtest1-pass/atlas.json": "f4e0268846fd89ff0209f81f5bedb1c3bb92efc11582557a9aa8fad72df24cfc",
+  "assets/generated/playtest1-pass/animations.json": "f0322ccc9f8ff3e8e532975d1db9d6518b652a7fc783c83bb7864e2891ee87b9",
+  "assets/generated/playtest1-pass/atlas.json": "c6c2a7fcad80f4145e157993f77d9c17083b4d0bc130374a19db3abd65cb9f79",
+  "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
   "assets/generated/playtest1-pass/ground/fingersnap-ground-base.png": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec",
+  "assets/generated/playtest1-pass/ground/fingersnap-ground-flagstone-variants.png": "4eb5916b4923290c0bc246ccda5976b2e403ae2f2998ccfe574ffd4cd2892f80",
   "assets/generated/playtest1-pass/hand-items/fingersnap-held-tools.png": "44c9be76ef290b26aa458634a6c0e99e7430326369734dceefeb6a67635f224a",
+  "assets/generated/playtest1-pass/houses/fingersnap-house-ada.png": "42ec8b8f6ac702899da02c7f5c9623d1771c27805ddcb1b405bee8f7797f4388",
+  "assets/generated/playtest1-pass/houses/fingersnap-house-middle.png": "032d4cfaca30ea78e75d1f7a110391887323e56d9c847d463c7e9c9641133937",
+  "assets/generated/playtest1-pass/houses/fingersnap-house-west.png": "bdf3206be7c67985c052aa87eaa97d9033cd540d2c9ff0a84473f34ba3d67e52",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-ada.png": "398654b673a0c6736787c4696469d64d04c8c44d690a28e11a23602e118d8146",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-elara.png": "1b37d7cb07b0a8c5375c32f0e7741c8e1c9e40daf41a902f299dcec7f67bfec8",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-finn.png": "095c8c0c512a607516fe1b24f12999a49e21d07b197b210bcc4abce1a9a8a791",
@@ -63,10 +68,26 @@
   "assets/generated/playtest1-pass/residents/fingersnap-resident-orrin.png": "7fc351ee010e2b405a3fc10a7e6f47c060ddaa7c8d53914561477bd28afd9b2b",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-pip.png": "727717f6a6c10ea43561a6d51eb1c784bb3dcacbedc9d90cdae7144636c59a28",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-silas.png": "4579c07b25e47fb3d1d2159810de91c9d19dd5e29f165ff60dbeaf2203ddde69",
+  "assets/generated/playtest1-pass/water/fingersnap-pond-bed-seamless.png": "5bdeca7daaed919cc407f291b307bbbbcdd004cd7f0507cad85eeb42b8e36217",
   "assets/generated/runtime-pass/fingersnap-class-effects.png": "d9f5dea940c4cc74e7d9489036c9ab01017475dc44d302a0149a0a23aaf05ea2",
   "assets/generated/runtime-pass/fingersnap-guardian.png": "8d0c6fc4f5652202cc580356605281fffb11f550c00862bbb2e31ac118a8598f",
   "assets/generated/runtime-pass/fingersnap-npcs.png": "7f19632c18daae28772e4f1ead8c835e9ca1ceae3b26b94cbc6d3edf3647576b",
   "assets/generated/runtime-pass/manifest.json": "0d9ab39e655bf945dcdb4181b47db37370e68cdd1e74e12927a420e16627eda4"
+ },
+ "outputs": {
+  "buildings.webp": "0f4dd3afdf6ddcbd8ec7a842f293591275166d34ca6245555277fd25b2d88cd3",
+  "commons.webp": "ef4c9fbcc8592c70dd1e86c8198b7191aa39f8af05c19fec911bdf9b3a7563eb",
+  "fingersnap-demo-walk.png": "17ee5d810665b334e8406fc62714aea736e8c7ffb17f2f1530974303dd132a9f",
+  "fingersnap-enemies.png": "adedf5d4b5728224ad1a13ed34d0057c4f922f79421151c8183774b0934582b4",
+  "fingersnap-foreground.png": "1f11d2e6b110445499109eb6db0b54bbcbb5a8709912ca91f57543538862536d",
+  "fingersnap-props.png": "b4a3525672e1638ce5f18a5a1e7c8d75ff437aab9a08209c5dee73b5a04a7e5b",
+  "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
+  "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
+  "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
+  "items.webp": "7b36a34159b01b8ae4aaa727bae0442015ca376edc88979b3f36e2a6b5f39cfc",
+  "people.webp": "8b9c8612cc4cf9d8f08eaa10892e9ca7de6a6bf4f0901a3b6dc9c49df2aeb8b3",
+  "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
+  "terrain.webp": "9043dcf3ec13059d338f359ebe382fa1b1521af27eb99a717ddd2b652317790b"
  },
  "plan": {
   "density": 4,
@@ -2547,7 +2568,7 @@
   "image": "ground.webp",
   "size": [
    384,
-   256
+   448
   ],
   "cell": 64,
   "density": 4,
@@ -2570,12 +2591,31 @@
    "ground-farmland-rows-01": 14,
    "ground-farmland-rows-02": 15,
    "ground-village-flagstones-01": 16,
-   "ground-sand-by-water-01": 17,
-   "ground-village-flagstones-02": 18,
-   "ground-water-gentle-0": 19,
-   "ground-water-gentle-1": 20,
-   "ground-water-gentle-2": 21,
-   "ground-water-gentle-3": 22
+   "ground-village-flagstones-03": 17,
+   "ground-village-flagstones-04": 18,
+   "ground-sand-by-water-01": 19,
+   "ground-sand-by-water-03": 20,
+   "ground-water-gentle-0": 21,
+   "ground-water-gentle-1": 22,
+   "ground-water-gentle-2": 23,
+   "ground-water-gentle-3": 24,
+   "ground-water-gentle-4": 25,
+   "ground-pond-0-0": 26,
+   "ground-pond-1-0": 27,
+   "ground-pond-2-0": 28,
+   "ground-pond-3-0": 29,
+   "ground-pond-0-1": 30,
+   "ground-pond-1-1": 31,
+   "ground-pond-2-1": 32,
+   "ground-pond-3-1": 33,
+   "ground-pond-0-2": 34,
+   "ground-pond-1-2": 35,
+   "ground-pond-2-2": 36,
+   "ground-pond-3-2": 37,
+   "ground-pond-0-3": 38,
+   "ground-pond-1-3": 39,
+   "ground-pond-2-3": 40,
+   "ground-pond-3-3": 41
   },
   "healed": true
  },
@@ -7070,6 +7110,46 @@
     "repeat": -1
    }
   ]
+ },
+ "buildings": {
+  "image": "buildings.webp",
+  "size": [
+   813,
+   896
+  ],
+  "density": 4,
+  "frames": {
+   "house-west": [
+    384,
+    384,
+    384,
+    384
+   ],
+   "house-middle": [
+    0,
+    0,
+    448,
+    384
+   ],
+   "house-ada": [
+    0,
+    384,
+    384,
+    384
+   ],
+   "brackenwood-bridge-worn": [
+    128,
+    768,
+    128,
+    128
+   ],
+   "brackenwood-bridge-mended": [
+    0,
+    768,
+    128,
+    128
+   ]
+  }
  },
  "atlases": {
   "fingersnap-demo-walk": {

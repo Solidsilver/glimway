@@ -225,3 +225,35 @@ test('facing: the larger axis wins', () => {
   assert.equal(facingOf(0.1, -1), 'up')
   assert.equal(facingOf(0, 0, 'right'), 'right')
 })
+
+test('tileset assembly: a cell is copied in and ringed by its own edge texels, corners included', async () => {
+  const { putCell } = await import('../src/game/area/ground-paint.ts')
+  const cell = 3
+  const w = cell + 2
+  const t = { w, data: new Uint8ClampedArray(w * w * 4) }
+  const rgba = new Uint8ClampedArray(cell * cell * 4).map((_, i) => (i % 4 === 3 ? 255 : Math.floor(i / 4) + 1))
+  putCell(t, 1, 1, cell, rgba)
+  const at = (x: number, y: number) => t.data[(y * w + x) * 4]
+  // Inside: texels 1..9 row by row.
+  assert.deepEqual([at(1, 1), at(3, 1), at(1, 3), at(3, 3)], [1, 3, 7, 9])
+  // The ring repeats the nearest edge texel (as the four drawImage copies did).
+  assert.deepEqual([at(0, 0), at(2, 0), at(4, 0)], [1, 2, 3])
+  assert.deepEqual([at(0, 2), at(4, 2)], [4, 6])
+  assert.deepEqual([at(0, 4), at(2, 4), at(4, 4)], [7, 8, 9])
+})
+
+test('tileset assembly: jobs paint the same overlays as paintEdge, in any batching', async () => {
+  const { paintEdgeJobs, edgeRefNames } = await import('../src/game/area/ground-paint.ts')
+  const k = 1
+  const n: GroundClass[] = ['grass', 'grass', 'grass', 'water', 'water', 'grass', 'water', 'water', 'water']
+  const key = edgeKey(n, 3, 4)!
+  const jobs = [0, 1, 2].map((f) => ({ key, f, i: 10 + f }))
+  // The bank's water is the pond tile at its own position, one per frame.
+  const names = edgeRefNames(jobs)
+  assert.ok(['ground-pond-3-0@0', 'ground-pond-3-0@1', 'ground-pond-3-0@2'].every((p) => names.includes(p)))
+  const refs = Object.fromEntries(names.map((n, j) => [n, new Uint8ClampedArray(16 * 16 * 4).map((_, i) => (i * 7 + j * 31) & 255)]))
+  const all = paintEdgeJobs(jobs, refs, k)
+  const split = [...paintEdgeJobs(jobs.slice(0, 1), refs, k), ...paintEdgeJobs(jobs.slice(1), refs, k)]
+  assert.deepEqual(all.map((c) => c.i), [10, 11, 12])
+  for (let j = 0; j < 3; j++) assert.deepEqual(Array.from(split[j].rgba), Array.from(all[j].rgba))
+})

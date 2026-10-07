@@ -11,8 +11,8 @@
 import Phaser from 'phaser'
 import type { AreaId, QuestEvent } from '../../lib/state'
 import { itemInfo } from '../../content/world'
-import { buildGround } from '../area/terrain'
-import { buildSolids, type SolidRun } from '../area/collision'
+import { buildGround, devMainThreadTilesetHash } from '../area/terrain'
+import { buildSolids, solidBox, type SolidRun } from '../area/collision'
 import { buildProps } from '../area/props'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
 import { buildExitSigns } from '../area/exits'
@@ -160,6 +160,10 @@ export class WorldScene extends Phaser.Scene {
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private actionKeys!: Record<string, Phaser.Input.Keyboard.Key>
   private transitioning = false
+  /** Dark while the ground's transitions are painted (a first visit; see create). */
+  private holdingFade = false
+  /** Which scene build's hold is current (a restart starts a new one). */
+  private fadeHold = 0
   private reducedMotion = false
   private captureReleased = false
   private cinematic = false
@@ -178,6 +182,8 @@ export class WorldScene extends Phaser.Scene {
 
   init(data: SceneData): void {
     this.transitioning = false
+    this.holdingFade = false
+    this.fadeHold++
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
     this.room = data?.room ?? null
@@ -240,7 +246,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Area construction from WorldData (a new area kind is data + a small
     // builder — see the registry in src/game/worlds.ts).
-    buildGround(this, this.world)
+    const groundPainting = buildGround(this, this.world)
     const solids = buildSolids(this, this.world)
     this.solidGroup = solids.group
     this.solidRuns = solids.runs
@@ -362,7 +368,25 @@ export class WorldScene extends Phaser.Scene {
     const onResize = (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height)
     this.scale.on('resize', onResize)
     this.events.once('shutdown', () => this.scale.off('resize', onResize))
-    this.cameras.main.fadeIn(280, 12, 12, 20)
+    // A first visit paints the ground's transitions off the main thread
+    // (src/game/area/terrain.ts): stay dark until they're in (a second at
+    // most), so the area never shows without its edges.
+    if (groundPainting) {
+      const cam = this.cameras.main
+      cam.fadeOut(1, 12, 12, 20)
+      this.holdingFade = true
+      // Only a newer scene build cancels this hold (a paused scene still lifts it).
+      const token = ++this.fadeHold
+      const show = () => {
+        if (token !== this.fadeHold || !this.holdingFade) return
+        this.holdingFade = false
+        // Already leaving (a warp or an exit during the hold): its fade-out
+        // must finish, or the scene never restarts (fadeIn always forces).
+        if (!this.transitioning) cam.fadeIn(280, 12, 12, 20)
+      }
+      void groundPainting.then(show, show)
+      this.time.delayedCall(1200, show)
+    } else this.cameras.main.fadeIn(280, 12, 12, 20)
 
     // Input
     const kb = this.input.keyboard!
@@ -519,7 +543,7 @@ export class WorldScene extends Phaser.Scene {
         areaId: this.world.areaId,
         frames: this.game.loop.frame - builtAt,
         loop: this.game.loop.frame,
-        fading: this.cameras.main.fadeEffect.isRunning,
+        fading: this.cameras.main.fadeEffect.isRunning || this.holdingFade,
         transitioning: this.transitioning,
         cinematic: this.cinematic,
         live: this.worldLive()
@@ -551,6 +575,8 @@ export class WorldScene extends Phaser.Scene {
       w.__fsDevAddFlag = (flag: string) => this.session.addFlag(flag)
       // A texture's pixels as width, height and a hash (e2e/atlases.spec.ts
       // checks the packed atlases give the loaders the pixels they had).
+      // The ground tileset painted again on the main thread (no workers): its hash (e2e/first-paint.spec.ts).
+      w.__fsDevGroundMainThreadHash = () => devMainThreadTilesetHash(this, this.world)
       w.__fsDevTextureHash = (key: string) => {
         if (!this.textures.exists(key)) return null
         const src = this.textures.get(key).getSourceImage() as HTMLCanvasElement | HTMLImageElement
@@ -629,6 +655,8 @@ export class WorldScene extends Phaser.Scene {
       }
       // Read-only: where the save says the hero is (area and position), and
       // whether a debounced save is still waiting to be written.
+      // Ask for a save now (the once-a-second position sample doesn't save by itself).
+      w.__fsDevSaveSoon = () => this.session.saveSoon()
       w.__fsDevSaved = () => {
         const s = this.session as unknown as { saveTimer: number | null; pendingSave: boolean }
         return { area: this.session.state.area, position: { ...this.session.state.position }, pending: s.saveTimer !== null || s.pendingSave }
@@ -1899,10 +1927,7 @@ export class WorldScene extends Phaser.Scene {
         [tx + 1, run.x1]
       ] as const) {
         if (x1 < x0) continue
-        const body = this.physics.add.staticImage((x0 + (x1 - x0 + 1) / 2) * TILE, ty * TILE + TILE / 2, 'px')
-          .setDisplaySize((x1 - x0 + 1) * TILE, TILE)
-          .refreshBody()
-        body.setVisible(false)
+        const body = solidBox(this, (x0 + (x1 - x0 + 1) / 2) * TILE, ty * TILE + TILE / 2, (x1 - x0 + 1) * TILE, TILE)
         this.solidGroup.add(body)
         this.solidRuns.push({ x0, x1, y: ty, body })
       }

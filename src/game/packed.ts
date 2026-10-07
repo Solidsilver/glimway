@@ -5,6 +5,7 @@ import { RUNTIME_PACKED_KEY } from './runtime-art.ts'
 import { ITEMS_PACKED_KEY } from './items-pass.ts'
 import { GROUND_PACKED_KEY } from './area/terrain.ts'
 import { PEOPLE_PACKED_KEY } from './people.ts'
+import { BUILDINGS_PACKED_KEY } from './buildings.ts'
 
 /**
  * Load the packed atlases (scripts/build-atlases.ts writes them; see
@@ -24,5 +25,6 @@ export function preloadPacked(scene: Phaser.Scene, base: string = PACKED_BASE): 
   scene.load.image('fingersnap-terrain-runtime', `${base}terrain.webp`)
   scene.load.image(GROUND_PACKED_KEY, `${base}ground.webp`)
   scene.load.image(PEOPLE_PACKED_KEY, `${base}people.webp`)
+  scene.load.image(BUILDINGS_PACKED_KEY, `${base}buildings.webp`)
   for (const a of SCALED_ATLASES) scene.load.atlas(a.key, `${base}${a.key}.png`, `${base}${a.key}.json`)
 }

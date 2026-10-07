@@ -9,7 +9,7 @@
  *  - Amberwake: a lamp in every window.
  *  - Closure Night: night falls; every lantern in the village is lit.
  *  - Projects: the well gets its canopy, the north bridge (the stream bridge
- *    in Brackenwood) is mended with rails, Ada's window is lit for good,
+ *    in Brackenwood, worn until then) is mended, Ada's window is lit for good,
  *    and the Tolley mill's groaning wheel is mended and turns smooth.
  */
 import Phaser from 'phaser'
@@ -18,6 +18,7 @@ import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
+import { buildingKey } from '../buildings'
 import { ensureMillTexture, millWheelKeys, MILL_WHEEL_SIZE } from '../mill-art'
 import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
@@ -62,6 +63,11 @@ export class VillageLayer implements InteractionProvider {
     this.syncInteractions()
     if (import.meta.env.DEV) {
       ;(window as unknown as Record<string, unknown>).__fsDevCalendar = (unix: number | null) => this.village.setDevNow(unix)
+      // Pretend the world has finished something (a project's flag): the village redraws.
+      ;(window as unknown as Record<string, unknown>).__fsDevWorldFlag = (flag: string) => {
+        if (!this.village.worldFlags.includes(flag)) this.village.worldFlags = [...this.village.worldFlags, flag]
+        bus.emit(VILLAGE_EV.changed, { what: 'projects' })
+      }
     }
     // Read-only: the mill wheel (playtests).
     ;(window as unknown as { __fsMill?: () => unknown }).__fsMill = () => this.millView && { ...this.millView }
@@ -194,7 +200,7 @@ export class VillageLayer implements InteractionProvider {
     this.syncInteractions()
     const w = this.deps.world
     if (w.areaId === 'village') this.villageChanges()
-    if (w.areaId === 'woodland' && this.village.hasWorldFlag('project:north-bridge:complete')) this.mendedBridge()
+    if (w.areaId === 'woodland') this.footbridge(this.village.hasWorldFlag('project:north-bridge:complete'))
     const festival = this.village.calendar.festival
     if (festival && (w.areaId === 'village' || w.areaId === 'commons')) {
       this.festival(festival)
@@ -292,15 +298,28 @@ export class VillageLayer implements InteractionProvider {
     }
   }
 
-  private mendedBridge(): void {
+  /**
+   * The Brackenwood footbridge over the stream: worn (a plank gone, a
+   * sagging rail) until the village repairs it (the north-bridge project),
+   * then mended. The deck lies on the ground layer, under everyone crossing.
+   * Without the delivered footbridge, the plank tiles stay and the mended
+   * bridge is the Commons pass's old one.
+   */
+  private footbridge(mended: boolean): void {
     const tiles = this.tilesOf(TERRAIN.bridge)
     if (tiles.length === 0) return
     const x0 = Math.min(...tiles.map((t) => t.tx))
     const x1 = Math.max(...tiles.map((t) => t.tx))
     const y = tiles[0].ty
     const cx = ((x0 + x1 + 1) / 2) * TILE
-    this.add(this.scene.add.image(cx, (y + 1) * TILE + 5, 'mended-bridge').setOrigin(0.5, 1).setDepth(-2))
-    this.glow(cx + 20, y * TILE - 2, 0.5)
+    const key = buildingKey(mended ? 'brackenwood-bridge-mended' : 'brackenwood-bridge-worn')
+    if (this.scene.textures.exists(key)) {
+      // The deck's foot point (bottom centre) on the bridge row's base.
+      this.add(this.scene.add.image(cx, (y + 1) * TILE, key).setOrigin(0.5, 0.75).setDepth(-2))
+    } else if (mended) {
+      this.add(this.scene.add.image(cx, (y + 1) * TILE + 5, 'mended-bridge').setOrigin(0.5, 1).setDepth(-2))
+    }
+    if (mended) this.glow(cx + 20, y * TILE - 2, 0.5)
   }
 
   private festival(name: string): void {

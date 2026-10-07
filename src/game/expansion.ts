@@ -114,7 +114,8 @@ export function createFingersnapTerrain(
 /**
  * Occluder texture origins depend on where they attach in the world. Keep
  * canopy depth anchored to its trunk/ground footpoint, not its top-left
- * corner.
+ * corner. `addToScene` false leaves it off the display list (the caller
+ * adds many at once: src/game/area/bulk.ts).
  */
 export function placeFingersnapOccluder(
   scene: Phaser.Scene,
@@ -122,8 +123,9 @@ export function placeFingersnapOccluder(
   x: number,
   footY: number,
   displayWidth: number = 96,
+  addToScene = true,
 ): Phaser.GameObjects.Image {
-  const image = scene.add.image(x, footY, 'fingersnap-foreground', frame)
+  const image = scene.make.image({ x, y: footY, key: 'fingersnap-foreground', frame }, addToScene)
   image.setOrigin(0.5, 1).setScale(displayWidth / image.width).setDepth(footY)
   return image
 }

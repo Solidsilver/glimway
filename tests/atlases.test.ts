@@ -17,6 +17,8 @@ import {
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
+  POND_SOURCE,
+  BUILDINGS,
   type PackedManifest,
 } from '../src/game/atlas-plan.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
@@ -42,8 +44,10 @@ const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/ma
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
+/** A frame's source sheet (atlas.json's own list). */
+const p1File = (n: string) => p1.sources[p1.frames[n].source].file
 /** The playtest-1 frames the build samples: the ground tiles, the residents' and the held tools'. */
-const p1Used = Object.keys(p1.frames).filter((n) => GROUND_TILES.includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
+const p1Used = Object.keys(p1.frames).filter((n) => GROUND_TILES.includes(n) || n === POND_SOURCE || (BUILDINGS as readonly string[]).includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
 
 const sha = (path: string) => createHash('sha256').update(readFileSync(join(ROOT, path))).digest('hex')
 
@@ -89,7 +93,7 @@ test('every input the atlases were baked from is unchanged', () => {
     ...BACKDROPS.map((b) => b.source),
     `${PLAYTEST1_DIR}/atlas.json`,
     `${PLAYTEST1_DIR}/animations.json`,
-    ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1.sources[p1.frames[n].source].file}`)),
+    ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1File(n)}`)),
   ].sort()
   assert.deepEqual(Object.keys(built.inputs).sort(), expected, RERUN)
   for (const [path, hash] of Object.entries(built.inputs)) assert.equal(sha(path), hash, `${path} changed — ${RERUN}`)
@@ -140,13 +144,19 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
     }
   }
   // Every atlas fits a phone GPU's texture limit.
-  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, built.ground.image, built.people.image, ...Object.values(built.atlases).map((a) => a.image)]) {
+  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, built.ground.image, built.people.image, built.buildings.image, ...Object.values(built.atlases).map((a) => a.image)]) {
     const [w, h] = imageSize(join(PACKED, image))
     assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
   }
   const cell = 16 * ART_DENSITY
   assert.deepEqual([built.terrain.cell, built.terrain.density], [cell, ART_DENSITY])
   assert.deepEqual(imageSize(join(PACKED, built.terrain.image)), [cell * 4, cell * 4], `terrain is the 4×4 tileset of ${cell}-texel cells`)
+})
+
+test('the manifest names every packed image by its content hash (the ground paint caches key on them)', () => {
+  const images = readdirSync(PACKED).filter((f: string) => /\.(webp|png)$/.test(f)).sort()
+  assert.deepEqual(Object.keys(built.outputs ?? {}).sort(), images, RERUN)
+  for (const f of images) assert.equal(built.outputs![f], createHash('sha256').update(readFileSync(join(PACKED, f))).digest('hex'), `${f} changed — ${RERUN}`)
 })
 
 test('the playtest-1 ground: every tile, one world tile each, healed', () => {
@@ -157,11 +167,24 @@ test('the playtest-1 ground: every tile, one world tile each, healed', () => {
   assert.deepEqual(webpSize(join(PACKED, built.ground.image)), [GROUND_COLS * cell, Math.ceil(GROUND_TILES.length / GROUND_COLS) * cell])
 })
 
+test('the playtest-1 buildings: every house and bridge state, its whole canvas at ART_DENSITY', () => {
+  const [w, h] = webpSize(join(PACKED, built.buildings.image))
+  assert.deepEqual([w, h], built.buildings.size)
+  assert.deepEqual(Object.keys(built.buildings.frames).sort(), [...BUILDINGS].sort())
+  const atlas = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as { frames: Record<string, { canvasSize: { w: number; h: number } }> }
+  for (const name of BUILDINGS) {
+    const r = built.buildings.frames[name]
+    const c = atlas.frames[name].canvasSize
+    assert.deepEqual([r[2], r[3]], [(c.w / 4) * ART_DENSITY, (c.h / 4) * ART_DENSITY], `${name} canvas`)
+    assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${name} inside the atlas`)
+  }
+})
+
 test('the playtest-1 people: every resident and held frame, trimmed to 4-texel steps inside its canvas', () => {
   const [w, h] = webpSize(join(PACKED, built.people.image))
   assert.deepEqual([w, h], built.people.size)
   assert.equal(built.people.density, ART_DENSITY)
-  assert.deepEqual(Object.keys(built.people.frames).sort(), p1Used.filter((n) => !GROUND_TILES.includes(n)).sort())
+  assert.deepEqual(Object.keys(built.people.frames).sort(), p1Used.filter((n) => !GROUND_TILES.includes(n) && n !== POND_SOURCE && !(BUILDINGS as readonly string[]).includes(n)).sort())
   for (const [name, f] of Object.entries(built.people.frames)) {
     const held = name.startsWith('held-')
     assert.deepEqual(f.source, held ? [HELD_TEXELS, HELD_TEXELS] : [16 * ART_DENSITY, 32 * ART_DENSITY], `${name} canvas`)
@@ -215,6 +238,7 @@ test('public/assets/fingersnap ships manifests and packed art only — no full-r
     `packed/${built.terrain.image}`,
     `packed/${built.ground.image}`,
     `packed/${built.people.image}`,
+    `packed/${built.buildings.image}`,
     ...Object.values(built.atlases).flatMap((a) => [`packed/${a.image}`, `packed/${a.json}`]),
     ...Object.values(built.backdrops).map((f) => `packed/${f}`),
   ].sort()
