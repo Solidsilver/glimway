@@ -66,7 +66,22 @@ it. See [habitica-gold.md](habitica-gold.md).
 
 ## Plan for telling Habitica
 
-When the game is reasonably polished and before the gold purse reaches other players:
+**Owner's plan (October 7):** after the current cleanup batch, push the repo, publish it, then
+submit the form.
+
+Before publishing:
+- **Secrets and history.** Scan the whole git history for tokens, keys, `.data/` databases and
+  private notes, since publishing exposes every past commit. Commits carry the owner's Gmail
+  address as author; decide whether that's fine.
+- **Licences.** Pick a code licence, and separately a licence for the original Fingersnap art.
+  `ASSETS.md` says neither is chosen yet. Check that every bundled Habitica sprite carries Habitica's
+  CC-BY-NC-SA terms in `ASSETS.md`.
+- **Size.** `.git` is about 154 MB, mostly generated art. That's fine for GitHub, but Git LFS for
+  `assets/generated/` is worth considering before history grows further.
+- **Working notes.** The `.agent/` folders are gitignored. Check that no review or brief with
+  private details landed in `docs/`.
+
+Then, when the game is reasonably polished and before the gold purse reaches other players:
 1. **Decide on public code.** The guidelines expect tools used by others to publish their code. Either
    publish the repo, for example on GitHub with a licence and the README, or decide to keep the game
    to a small private group and say so when submitting.
