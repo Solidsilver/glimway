@@ -6,7 +6,7 @@ buildGoModule {
     root = ../.;
     fileset = lib.fileset.unions [ ../go.mod ../go.sum ../server ../content ../.gitignore ../nix/server.nix ];
   };
-  vendorHash = "sha256-HM3XBw07fNMpbkPCPYFs9Rww/4OSnfiQds0L22ojqig=";
+  vendorHash = "sha256-wH2HpPg5800enNpyq6FORmTtC8NLnM6bPhf9lUAWfsA=";
   subPackages = [ "server/cmd/glimway-server" ];
   env.CGO_ENABLED = 0;
   meta = {

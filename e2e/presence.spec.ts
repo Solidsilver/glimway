@@ -219,29 +219,19 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
   })
 }
 
-// A deployed old tab offered no subprotocol. It must continue seeing players
-// running the new binary client, including movement in both directions.
-test('an old JSON tab and a binary tab share a presence room', async ({ page, browser, baseURL }) => {
+test('a connection without the binary protocol stops with reload needed', async ({ page, browser, baseURL }) => {
   await page.addInitScript(() => {
     const NativeSocket = window.WebSocket
     window.WebSocket = class extends NativeSocket {
       constructor(url: string | URL, protocols?: string | string[]) {
         super(url, new URL(String(url), location.href).pathname === '/ws' ? undefined : protocols)
-        if (new URL(String(url), location.href).pathname === '/ws') {
-          this.addEventListener('open', () => {
-            (window as unknown as { __legacyPresenceProtocol?: string }).__legacyPresenceProtocol = this.protocol
-          })
-        }
       }
     }
   })
   const { other, ctx } = await twoPlayers(page, browser, baseURL!)
   try {
-    await seeEachOther(page, other)
-    expect(await page.evaluate(() => (window as unknown as { __legacyPresenceProtocol?: string }).__legacyPresenceProtocol)).toBe('')
-    const { rest } = await walkEastAndRest(other)
-    await expect.poll(async () => (await remotes(page))[0]?.x ?? 0, { timeout: 10_000 }).toBeCloseTo(rest, 0)
-    const ash = await walkEastAndRest(page)
-    await expect.poll(async () => (await remotes(other))[0]?.x ?? 0, { timeout: 10_000 }).toBeCloseTo(ash.rest, 0)
+    await expect.poll(async () => (await presenceState(page))?.status).toBe('reload-needed')
+    expect(await remotes(page)).toEqual([])
+    expect(await remotes(other)).toEqual([])
   } finally { await ctx.close() }
 })

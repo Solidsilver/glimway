@@ -1,12 +1,14 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"log"
+	"math"
 	"net/http"
 	"strings"
+	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -24,12 +26,20 @@ func errorCodeProto(code string) contract.ErrorCode {
 	if n, ok := contract.ErrorCode_value[name]; ok && n != 0 {
 		return contract.ErrorCode(n)
 	}
+	log.Printf("api error code missing from protobuf enum: %q", code)
+	if testing.Testing() {
+		panic("api error code missing from protobuf enum: " + code)
+	}
 	return contract.ErrorCode_ERROR_CODE_INTERNAL
 }
 
 // HTTP uses protojson only for migrated domains. EmitUnpopulated keeps all
 // zero values, [] lists, {} maps and null message fields in their existing shape.
 func writeProto(w http.ResponseWriter, status int, message proto.Message) {
+	if err := finiteProto(message.ProtoReflect()); err != nil {
+		problem(w, err)
+		return
+	}
 	b, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
 	if err != nil {
 		problem(w, err)
@@ -52,48 +62,23 @@ func calendarResponse(day content.CalendarDay) *contract.CalendarResponse {
 
 const presenceProtocol = "glimway.presence.v1"
 
-// The envelope's oneof is the sole event catalog. Both JSON and binary use
-// the same generated payloads; legacy JSON flattens the selected event.
-func presenceEnvelope(v proto.Message) *contract.PresenceMessage {
-	out := &contract.PresenceMessage{}
-	fields := out.ProtoReflect().Descriptor().Fields()
+// The envelope's oneof is the only event catalog. A payload is immutable
+// after construction, and its encoded bytes can be shared by recipient queues.
+func encodePresence(v proto.Message) ([]byte, error) {
+	envelope := &contract.PresenceMessage{}
+	fields := envelope.ProtoReflect().Descriptor().Fields()
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
 		if field.Message().FullName() == v.ProtoReflect().Descriptor().FullName() {
-			out.ProtoReflect().Set(field, protoreflect.ValueOfMessage(v.ProtoReflect()))
-			return out
+			envelope.ProtoReflect().Set(field, protoreflect.ValueOfMessage(v.ProtoReflect()))
+			return proto.Marshal(envelope)
 		}
 	}
-	panic("unsupported presence payload")
-}
-func presenceJSON(v *contract.PresenceMessage, defaults bool) ([]byte, error) {
-	m := v.ProtoReflect()
-	field := m.WhichOneof(m.Descriptor().Oneofs().Get(0))
-	if field == nil {
-		return nil, fmt.Errorf("missing presence event")
-	}
-	payload := m.Get(field).Message().Interface()
-	b, err := (protojson.MarshalOptions{EmitUnpopulated: defaults}).Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-	var fields map[string]json.RawMessage
-	if err = json.Unmarshal(b, &fields); err != nil {
-		return nil, err
-	}
-	fields["type"], _ = json.Marshal(string(field.Name()))
-	return json.Marshal(fields)
-}
-func encodePresence(v proto.Message, binary bool) ([]byte, error) {
-	envelope := presenceEnvelope(v)
-	if binary {
-		return proto.Marshal(envelope)
-	}
-	return presenceJSON(envelope, true)
+	return nil, fmt.Errorf("unsupported presence payload")
 }
 
-// Reject unknown binary fields recursively, just as the legacy JSON reader
-// rejects unknown keys. Unknown outgoing events can still be ignored by clients.
+// Reject unknown binary fields recursively. Unknown outgoing events can still
+// be ignored by clients.
 func knownPresence(m protoreflect.Message) bool {
 	if len(m.GetUnknown()) != 0 {
 		return false
@@ -118,24 +103,53 @@ func knownPresence(m protoreflect.Message) bool {
 	})
 	return known
 }
-func decodePresence(b []byte, binary bool, out any) error {
-	if !binary {
-		return strictPresenceJSON(b, out)
-	}
+func decodePresence(b []byte) (*contract.PresenceMessage, error) {
 	var message contract.PresenceMessage
 	if err := proto.Unmarshal(b, &message); err != nil {
-		return err
+		return nil, err
 	}
-	if !knownPresence(message.ProtoReflect()) {
-		return fmt.Errorf("unknown presence field")
+	if message.Event == nil || !knownPresence(message.ProtoReflect()) {
+		return nil, fmt.Errorf("invalid presence event")
 	}
-	// Leave absent fields absent so required-coordinate and irrelevant-field
-	// checks are identical for both protocols.
-	flat, err := presenceJSON(&message, false)
-	if err != nil {
-		return err
-	}
-	return strictPresenceJSON(flat, out)
+	return &message, nil
+}
+
+// ProtoJSON allows NaN/Inf as strings. HTTP numeric fields must stay finite
+// numbers, including doubles inside nested messages, lists and maps.
+func finiteProto(message protoreflect.Message) error {
+	var err error
+	message.Range(func(field protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+		check := func(kind protoreflect.Kind, value protoreflect.Value) error {
+			switch kind {
+			case protoreflect.DoubleKind, protoreflect.FloatKind:
+				if math.IsNaN(value.Float()) || math.IsInf(value.Float(), 0) {
+					return fmt.Errorf("non-finite number")
+				}
+			case protoreflect.MessageKind, protoreflect.GroupKind:
+				return finiteProto(value.Message())
+			}
+			return nil
+		}
+		switch {
+		case field.IsMap():
+			value.Map().Range(func(_ protoreflect.MapKey, v protoreflect.Value) bool {
+				err = check(field.MapValue().Kind(), v)
+				return err == nil
+			})
+		case field.IsList():
+			list := value.List()
+			for i := 0; i < list.Len() && err == nil; i++ {
+				err = check(field.Kind(), list.Get(i))
+			}
+		default:
+			err = check(field.Kind(), value)
+		}
+		if err != nil {
+			err = fmt.Errorf("%s: %w", field.FullName(), err)
+		}
+		return err == nil
+	})
+	return err
 }
 
 // Internal spatial state stays convenient for proximity calculations. The

@@ -1,6 +1,7 @@
 version: v2
+clean: true
 plugins:
-  - local: .cache/proto/bin/protoc-gen-go
+  - local: [go, tool, protoc-gen-go]
     out: server/internal/gen
     opt: paths=source_relative
   - local: node_modules/.bin/protoc-gen-es

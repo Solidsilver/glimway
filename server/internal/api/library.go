@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"slices"
@@ -146,7 +147,7 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 		write(w, 409, struct {
 			Error map[string]string `json:"error"`
 			Entry *shelfEntry       `json:"entry"`
-		}{map[string]string{"code": "already-shelved"}, &entry})
+		}{map[string]string{"code": errorCodeWire(contract.ErrorCode_ERROR_CODE_ALREADY_SHELVED)}, &entry})
 		return nil
 	}
 	v := struct {

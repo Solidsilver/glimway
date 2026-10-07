@@ -1,3 +1,5 @@
+import { encodeTestPresence, decodeTestPresence } from './presence-wire.ts';
+import { PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PresenceFeed, type FeedLink } from '../src/game/presence-feed.ts';
@@ -42,6 +44,7 @@ function clock() {
 }
 
 class FakeSocket implements SocketLike {
+  readonly protocol = PRESENCE_PROTOCOL;
   readyState = 0;
   sent: any[] = [];
   closed = false;
@@ -49,8 +52,8 @@ class FakeSocket implements SocketLike {
   onmessage: ((ev: { data: unknown }) => void) | null = null;
   onclose: ((ev: { code: number; reason?: string }) => void) | null = null;
   onerror: ((ev: unknown) => void) | null = null;
-  send(d: string) {
-    this.sent.push(JSON.parse(d));
+  send(d: string | Uint8Array) {
+    this.sent.push(decodeTestPresence(d));
   }
   close() {
     this.closed = true;
@@ -61,7 +64,7 @@ class FakeSocket implements SocketLike {
     this.onopen?.({});
   }
   push(m: object) {
-    this.onmessage?.({ data: JSON.stringify(m) });
+    this.onmessage?.({ data: encodeTestPresence(m) });
   }
   drop(code: number, reason = '') {
     this.readyState = 3;

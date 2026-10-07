@@ -1,3 +1,5 @@
+import type { PresenceStatus } from '../lib/presence-client.ts'
+
 /**
  * Event names and payloads for the bus (src/game/events.ts). Kept free of
  * Phaser so plain modules (the server link) and Node tests can use them.
@@ -216,7 +218,7 @@ export interface RelocatePayload {
 
 export interface PresencePayload {
   /** 'off' for guests and before the lease; 'live' once the socket is ready. */
-  status: 'off' | 'connecting' | 'live' | 'retrying' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected'
+  status: PresenceStatus
   /** Other players in this area right now. */
   here: number
 }

@@ -21,7 +21,7 @@ export const PRESENCE = validatePresence(raw);
 type Fields<T> = Omit<T, '$typeName' | '$unknown'>;
 type Payload<K> = Fields<Extract<GeneratedMessage['event'], { case: K }>['value']>;
 type Event<K> = { type: K } & Payload<K>;
-/** Views of generated payloads normalize nullable JSON fields for the game. */
+/** Views of generated payloads normalize nullable fields for the game. */
 export type PresenceAvatar = Omit<Fields<GeneratedAvatar>, 'appearance' | 'equipped' | 'costume' | 'selectedPet' | 'selectedMount'> & {
   appearance: Fields<PresenceAppearance>;
   equipped: Record<string, string | null>;
@@ -43,4 +43,4 @@ export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gif
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; habiticaId: string } & PresencePosition)
   | (Event<'emote'> & { habiticaId: string });
-export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004 } as const;
+export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004, reloadNeeded: 4005 } as const;

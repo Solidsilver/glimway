@@ -1,3 +1,4 @@
+import { decodeTestPresence } from './presence-wire.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -27,13 +28,17 @@ test('generated error enum preserves every original wire string and unknown-vers
   assert.equal(errorFromResponse(409, { error: { code: 'a-future-server-code' } }).code, 'unknown');
 });
 
-test('Go binary fixtures and legacy JSON decode to the same presence events', () => {
+test('Go binary fixtures preserve presence fields in the generated decoder', () => {
   for (const { json, binaryHex } of fixture('presence')) {
     assert.ok(binaryHex);
     const bytes = Uint8Array.from(Buffer.from(binaryHex, 'hex'));
-    assert.deepEqual(decodePresence(bytes), json);
-    assert.deepEqual(decodePresence(bytes.buffer), json);
-    assert.deepEqual(decodePresence(JSON.stringify(json)), json);
+    const clientEvent = ['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('habiticaId' in json) && !('player' in json);
+    if (clientEvent) assert.deepEqual(decodeTestPresence(bytes), json);
+    else {
+      assert.deepEqual(decodePresence(bytes), json);
+      assert.deepEqual(decodePresence(bytes.buffer), json);
+    }
+    assert.equal(decodePresence(JSON.stringify(json)), null);
     if (['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('habiticaId' in json) && !('player' in json)) {
       assert.deepEqual(Buffer.from(encodePresence(json)).toString('hex'), binaryHex);
     }
@@ -56,13 +61,13 @@ class ContractSocket implements SocketLike {
   close() { this.readyState = 3; }
   server(message: Record<string, unknown>) {
     const { type, ...payload } = message;
-    const data = this.protocol ? toBinary(PresenceMessageSchema, fromJson(PresenceMessageSchema, { [String(type)]: payload } as JsonValue)).buffer : JSON.stringify(message);
+    const data = toBinary(PresenceMessageSchema, fromJson(PresenceMessageSchema, { [String(type)]: payload } as JsonValue)).buffer;
     this.onmessage?.({ data });
   }
 }
 
-for (const protocol of ['', PRESENCE_PROTOCOL]) {
-  test(`presence client negotiates and uses ${protocol ? 'binary' : 'legacy JSON'} for the entire connection`, () => {
+for (const protocol of [PRESENCE_PROTOCOL]) {
+  test(`presence client negotiates binary for the entire connection`, () => {
     const socket = new ContractSocket(protocol);
     let offered: string[] | undefined;
     const events: unknown[] = [];
@@ -77,9 +82,9 @@ for (const protocol of ['', PRESENCE_PROTOCOL]) {
       assert.deepEqual(offered, [PRESENCE_PROTOCOL]);
       assert.equal(socket.binaryType, 'arraybuffer');
       socket.onopen?.({});
-      const sent = (): PresenceClientMessage[] => socket.sent.map(data => (typeof data === 'string' ? JSON.parse(data) : decodePresence(data)) as PresenceClientMessage);
+      const sent = (): PresenceClientMessage[] => socket.sent.map(data => decodeTestPresence(data) as PresenceClientMessage);
       assert.deepEqual(sent(), [{ type: 'auth', lease: 'a'.repeat(64) }]);
-      // Same new-server payloads feed both an old JSON connection and a new binary one.
+      // Generated binary payloads drive the real client.
       socket.server({ type: 'ready', habiticaId: 'alice' });
       assert.equal(client.status, 'live');
       assert.deepEqual(sent()[1], { type: 'join', area: 'village' });
@@ -89,3 +94,29 @@ for (const protocol of ['', PRESENCE_PROTOCOL]) {
     } finally { client.stop(); }
   });
 }
+
+for (const negotiated of ['', 'glimway.presence.future']) {
+  test(`missing or incompatible protocol (${negotiated}) requires a reload without auth or retry`, () => {
+    const socket = new ContractSocket(negotiated);
+    let opens = 0;
+    const client = new PresenceClient({ url: 'ws://example/ws', makeSocket: () => { opens++; return socket; } });
+    client.start('a'.repeat(64));
+    socket.onopen?.({});
+    assert.equal(client.status, 'reload-needed');
+    assert.equal(socket.sent.length, 0);
+    client.start('a'.repeat(64));
+    assert.equal(opens, 1);
+    client.stop();
+  });
+}
+test('server close 4005 requires reload and latches the current lease', () => {
+  const socket = new ContractSocket(PRESENCE_PROTOCOL);
+  let opens = 0;
+  const client = new PresenceClient({ url: 'ws://example/ws', makeSocket: () => { opens++; return socket; } });
+  client.start('a'.repeat(64));
+  socket.onclose?.({ code: 4005, reason: 'reload-needed' });
+  assert.equal(client.status, 'reload-needed');
+  client.start('a'.repeat(64));
+  assert.equal(opens, 1);
+  client.stop();
+});

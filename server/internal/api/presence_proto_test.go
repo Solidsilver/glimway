@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -69,44 +71,22 @@ func TestPresenceBinaryCloseCodes(t *testing.T) {
 	})
 }
 
-func TestPresenceMixedVersions(t *testing.T) {
-	for _, binaryFirst := range []bool{false, true} {
-		t.Run(map[bool]string{false: "JSON-first", true: "binary-first"}[binaryFirst], func(t *testing.T) {
-			x := newRig(t)
-			c, s := x.ready("alice")
-			bc, b := x.member("bob", s.WorldID)
-			ts := startPresence(t, x, presenceTestConfig())
-			first, second := wsConnect, wsBinaryConnect
-			if binaryFirst {
-				first, second = second, first
-			}
-			a := first(t, ts, c, s.Lease)
-			a.join("village")
-			bob := second(t, ts, bc, b.Lease)
-			if roster := bob.join("village"); len(roster.Players) != 1 || roster.Players[0].Avatar == nil {
-				t.Fatal("mixed roster", roster.Raw)
-			}
-			a.expect("join")
-			a.send(positionMessage(10))
-			if bob.expect("pos").X != 10 {
-				t.Fatal("first position")
-			}
-			bob.send(positionMessage(20))
-			if a.expect("pos").X != 20 {
-				t.Fatal("second position")
-			}
-			a.send(map[string]any{"type": "emote", "id": "wave"})
-			bob.expect("emote")
-			bob.send(map[string]any{"type": "emote", "id": "nod"})
-			a.expect("emote")
-			// A new socket in the other format resumes the room and replaces the old.
-			replacement := second(t, ts, c, s.Lease)
-			a.closeStatus(presenceReplaced)
-			replacement.expect("room")
-			bob.expect("join")
-			replacement.join("woodland")
-			bob.expect("leave")
-		})
+func TestPresenceRequiresProtocol(t *testing.T) {
+	x := newRig(t)
+	c, _ := x.ready("alice")
+	ts := startPresence(t, x, presenceTestConfig())
+	for _, protocols := range [][]string{nil, {"glimway.presence.future"}} {
+		conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", &websocket.DialOptions{HTTPHeader: http.Header{"Cookie": {c.String()}, "Origin": {ts.URL}}, Subprotocols: protocols})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, _, err = conn.Read(ctx)
+		cancel()
+		conn.CloseNow()
+		if websocket.CloseStatus(err) != presenceReload || !strings.Contains(err.Error(), "reload-needed") {
+			t.Fatalf("protocol rejection: %v", err)
+		}
 	}
 }
 
@@ -123,6 +103,24 @@ func TestPresenceBinaryRejectsMalformedFrames(t *testing.T) {
 		{"missing-position", websocket.MessageBinary, []byte{0x1a, 0}, websocket.StatusPolicyViolation},
 		{"unknown-envelope", websocket.MessageBinary, []byte{0x2a, 0, 0x78, 1}, websocket.StatusPolicyViolation},
 		{"unknown-nested", websocket.MessageBinary, []byte{0x2a, 2, 0x78, 1}, websocket.StatusPolicyViolation},
+	}
+	for name, payload := range map[string]proto.Message{
+		"server-join-player":  &contract.PresenceJoin{Area: "village", Player: &contract.PresencePlayer{HabiticaId: "bob"}},
+		"server-position-id":  &contract.PresencePosition{HabiticaId: proto.String("bob"), X: proto.Float64(0), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
+		"server-emote-id":     &contract.PresenceEmote{Id: "wave", HabiticaId: proto.String("bob")},
+		"server-ready":        &contract.PresenceReady{HabiticaId: "bob"},
+		"non-finite-position": &contract.PresencePosition{X: proto.Float64(math.NaN()), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
+	} {
+		b, err := encodePresence(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cases = append(cases, struct {
+			name  string
+			typ   websocket.MessageType
+			bytes []byte
+			code  websocket.StatusCode
+		}{name, websocket.MessageBinary, b, websocket.StatusPolicyViolation})
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -175,7 +173,7 @@ func TestPresenceGolden(t *testing.T) {
 		if err = protojson.Unmarshal(input, &envelope); err != nil {
 			t.Fatal(err)
 		}
-		flat, err := presenceJSON(&envelope, event != "auth" && event != "heartbeat" && !(event == "join" && envelope.GetJoin().Player == nil))
+		flat, err := presenceFixtureJSON(&envelope)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -202,10 +200,10 @@ func TestPresenceGolden(t *testing.T) {
 }
 
 func TestPresenceEncodedQueueLimits(t *testing.T) {
-	for _, binary := range []bool{false, true} {
+	{
 		h := newPresenceHub(nil)
 		ctx, cancel := context.WithCancel(context.Background())
-		p := &presencePeer{binary: binary, ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
+		p := &presencePeer{ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
 		m := &contract.PresenceReady{HabiticaId: "alice"}
 		h.send(p, m)
 		b := <-p.queue
@@ -219,4 +217,46 @@ func TestPresenceEncodedQueueLimits(t *testing.T) {
 		}
 		cancel()
 	}
+}
+
+// Test-only JSON projection makes fixture keys observable without adding a JSON
+// presence path to the server. Optional zero/false fields are never synthesized.
+func presenceFixtureJSON(envelope *contract.PresenceMessage) ([]byte, error) {
+	b, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(envelope)
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]map[string]any
+	if err = json.Unmarshal(b, &fields); err != nil {
+		return nil, err
+	}
+	for event, payload := range fields {
+		if event == "join" && envelope.GetJoin().Player == nil {
+			delete(payload, "player")
+		}
+		payload["type"] = event
+		return json.Marshal(payload)
+	}
+	return nil, fmt.Errorf("missing event")
+}
+
+func TestPresenceBinaryAuthRejectsUnknownFields(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	ts := startPresence(t, x, presenceTestConfig())
+	conn, _, err := dialPresence(t, ts, c, ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := readPresence(t, conn)
+	auth := &contract.PresenceAuth{Lease: s.Lease}
+	auth.ProtoReflect().SetUnknown([]byte{0x78, 1})
+	b, err := encodePresence(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = conn.Write(context.Background(), websocket.MessageBinary, b); err != nil {
+		t.Fatal(err)
+	}
+	w.closeStatus(presenceUnauthorized)
 }

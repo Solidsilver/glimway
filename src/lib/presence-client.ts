@@ -48,7 +48,9 @@ export type PresenceStatus =
   | 'unauthorized'
   | 'replaced'
   /** Stopped after a protocol rejection (a client bug; no retry loop). */
-  | 'rejected';
+  | 'rejected'
+  /** The server requires a newer presence protocol. Reload before reconnecting. */
+  | 'reload-needed';
 
 export interface PresenceHandlers {
   status?(status: PresenceStatus, closeCode?: number): void;
@@ -95,7 +97,8 @@ export function presenceBackoff(attempt: number, random: () => number = Math.ran
  * What a close code means for the client. Only definite answers stop it;
  * everything else backs off and retries, keeping sign-in and lease state.
  */
-export function closeAction(code: number, reason = ''): 'retry' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected' {
+export function closeAction(code: number, reason = ''): 'retry' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected' | 'reload-needed' {
+  if (code === PRESENCE_CLOSE.reloadNeeded) return 'reload-needed';
   if (code === PRESENCE_CLOSE.superseded) return 'superseded';
   if (code === PRESENCE_CLOSE.unauthorized) return 'unauthorized';
   if (code === PRESENCE_CLOSE.replaced) return 'replaced';
@@ -296,6 +299,11 @@ export class PresenceClient {
     this.socket = socket;
     socket.onopen = () => {
       if (this.socket !== socket || !this.lease) return;
+      if (socket.protocol !== PRESENCE_PROTOCOL) {
+        socket.onclose?.({ code: PRESENCE_CLOSE.reloadNeeded, reason: 'reload-needed' });
+        socket.close(PRESENCE_CLOSE.reloadNeeded, 'reload-needed');
+        return;
+      }
       // The lease rides in the first message, never in the URL.
       this.raw({ type: 'auth', lease: this.lease });
     };
@@ -470,7 +478,7 @@ export class PresenceClient {
     const s = this.socket;
     if (!s || s.readyState !== OPEN) return;
     try {
-      s.send(s.protocol === PRESENCE_PROTOCOL ? encodePresence(m) : JSON.stringify(m));
+      s.send(encodePresence(m));
       this.lastSentAt = this.timers.now();
     } catch {
       /* onclose will follow */

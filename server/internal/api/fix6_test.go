@@ -180,7 +180,7 @@ func TestFix6PresenceSustainedIngressExcessCloses(t *testing.T) {
 	go func() {
 		defer close(done)
 		for {
-			if err := alice.conn.Write(ctx, websocket.MessageText, []byte(`{"type":"heartbeat"}`)); err != nil {
+			if err := alice.conn.Write(ctx, websocket.MessageBinary, []byte{0x2a, 0}); err != nil {
 				return
 			}
 		}

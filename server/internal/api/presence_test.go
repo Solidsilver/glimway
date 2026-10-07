@@ -49,7 +49,7 @@ func TestPresenceLogsExcludeSecrets(t *testing.T) {
 	w := wsConnect(t, ts, c, s.Lease)
 	w.join("village")
 	h := http.Header{"Origin": []string{ts.URL}, "Cookie": []string{c.String()}}
-	conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws?lease="+s.Lease, &websocket.DialOptions{HTTPHeader: h})
+	conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws?lease="+s.Lease, &websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{presenceProtocol}})
 	if conn != nil {
 		conn.CloseNow()
 	}
@@ -68,7 +68,7 @@ func TestPresenceLogsExcludeSecrets(t *testing.T) {
 	}
 }
 
-// Independent legacy client views keep JSON compatibility checks meaningful.
+// Fixture views expose field presence and nullable values for assertions.
 type presenceAvatar struct {
 	Appearance    rules.Appearance   `json:"appearance"`
 	Equipped      map[string]*string `json:"equipped"`
@@ -95,6 +95,7 @@ type wsEvent struct {
 	Y          float64                `json:"y"`
 	Facing     struct{ X, Y float64 } `json:"facing"`
 	Moving     bool                   `json:"moving"`
+	Binary     []byte                 `json:"-"`
 	Raw        string                 `json:"-"`
 }
 
@@ -160,7 +161,7 @@ func dialPresence(t *testing.T, ts *httptest.Server, c *http.Cookie, origin stri
 	if origin != "" {
 		h.Set("Origin", origin)
 	}
-	return websocket.Dial(ctx, "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", &websocket.DialOptions{HTTPHeader: h})
+	return websocket.Dial(ctx, "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", &websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{presenceProtocol}})
 }
 func wsAuthenticate(t *testing.T, ts *httptest.Server, c *http.Cookie, lease string) *wsClient {
 	t.Helper()
@@ -183,23 +184,19 @@ func readPresence(t *testing.T, conn *websocket.Conn) *wsClient {
 				w.closed <- err
 				return
 			}
-			if conn.Subprotocol() == presenceProtocol {
-				if typ != websocket.MessageBinary {
-					w.closed <- fmt.Errorf("expected binary response")
-					return
-				}
-				var envelope contract.PresenceMessage
-				if err = proto.Unmarshal(b, &envelope); err != nil {
-					w.closed <- err
-					return
-				}
-				b, err = presenceJSON(&envelope, true)
-				if err != nil {
-					w.closed <- err
-					return
-				}
-			} else if typ != websocket.MessageText {
-				w.closed <- fmt.Errorf("expected JSON response")
+			if typ != websocket.MessageBinary {
+				w.closed <- fmt.Errorf("expected binary response")
+				return
+			}
+			raw := append([]byte(nil), b...)
+			var envelope contract.PresenceMessage
+			if err = proto.Unmarshal(b, &envelope); err != nil {
+				w.closed <- err
+				return
+			}
+			b, err = presenceFixtureJSON(&envelope)
+			if err != nil {
+				w.closed <- err
 				return
 			}
 			var e wsEvent
@@ -208,6 +205,7 @@ func readPresence(t *testing.T, conn *websocket.Conn) *wsClient {
 				return
 			}
 			e.Raw = string(b)
+			e.Binary = raw
 			w.events <- e
 		}
 	}()
@@ -225,31 +223,27 @@ func (w *wsClient) send(v any) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	b := []byte(store.JSON(v))
-	typ := websocket.MessageText
-	if w.conn.Subprotocol() == presenceProtocol {
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(b, &fields); err != nil {
-			w.t.Fatal(err)
-		}
-		var event string
-		if err := json.Unmarshal(fields["type"], &event); err != nil {
-			w.t.Fatal(err)
-		}
-		delete(fields, "type")
-		payload, _ := json.Marshal(fields)
-		envelopeJSON, _ := json.Marshal(map[string]json.RawMessage{event: payload})
-		var envelope contract.PresenceMessage
-		if err := protojson.Unmarshal(envelopeJSON, &envelope); err != nil {
-			w.t.Fatal(err)
-		}
-		var err error
-		b, err = proto.Marshal(&envelope)
-		if err != nil {
-			w.t.Fatal(err)
-		}
-		typ = websocket.MessageBinary
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		w.t.Fatal(err)
 	}
-	if err := w.conn.Write(ctx, typ, b); err != nil {
+	var event string
+	if err := json.Unmarshal(fields["type"], &event); err != nil {
+		w.t.Fatal(err)
+	}
+	delete(fields, "type")
+	payload, _ := json.Marshal(fields)
+	envelopeJSON, _ := json.Marshal(map[string]json.RawMessage{event: payload})
+	var envelope contract.PresenceMessage
+	if err := protojson.Unmarshal(envelopeJSON, &envelope); err != nil {
+		w.t.Fatal(err)
+	}
+	var err error
+	b, err = proto.Marshal(&envelope)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	if err := w.conn.Write(ctx, websocket.MessageBinary, b); err != nil {
 		w.t.Fatal(err)
 	}
 }
@@ -497,7 +491,7 @@ func TestPresenceAuthentication(t *testing.T) {
 	}
 	t.Run("no-query-auth", func(t *testing.T) {
 		h := http.Header{"Origin": []string{ts.URL}, "Cookie": []string{c.String()}}
-		conn, response, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws?lease="+s.Lease, &websocket.DialOptions{HTTPHeader: h})
+		conn, response, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws?lease="+s.Lease, &websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{presenceProtocol}})
 		if conn != nil {
 			conn.CloseNow()
 		}
@@ -508,7 +502,6 @@ func TestPresenceAuthentication(t *testing.T) {
 	for _, message := range []any{
 		map[string]any{"type": "join", "area": "village"},
 		map[string]any{"type": "auth", "lease": "short"},
-		map[string]any{"type": "auth", "lease": s.Lease, "habiticaId": "bob"},
 	} {
 		conn, _, err := dialPresence(t, ts, c, ts.URL)
 		if err != nil {
@@ -536,8 +529,6 @@ func TestPresenceMessageValidation(t *testing.T) {
 		message any
 		join    bool
 	}{
-		{"unknown-field", map[string]any{"type": "heartbeat", "worldId": "other"}, false},
-		{"unknown-type", map[string]any{"type": "trade"}, false},
 		{"unknown-area", map[string]any{"type": "join", "area": "private-home"}, false},
 		{"unknown-region", map[string]any{"type": "join", "area": "wilds:made-up:0:0"}, false},
 		{"chunk-bounds", map[string]any{"type": "join", "area": "wilds:inner-1:3:0"}, false},
@@ -546,7 +537,6 @@ func TestPresenceMessageValidation(t *testing.T) {
 		{"position-bounds", positionMessage(1e7), true},
 		{"bad-facing", map[string]any{"type": "pos", "x": 0, "y": 0, "moving": false, "facing": map[string]any{"x": 0, "y": 0}}, true},
 		{"missing-moving", map[string]any{"type": "pos", "x": 0, "y": 0, "facing": map[string]any{"x": 0, "y": 1}}, true},
-		{"irrelevant-field", map[string]any{"type": "emote", "id": "wave", "x": 5}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			x := newRig(t)
@@ -566,9 +556,9 @@ func TestPresenceMessageValidation(t *testing.T) {
 		data []byte
 		code websocket.StatusCode
 	}{
-		{"oversized", websocket.MessageText, []byte(`{"type":"heartbeat"}` + strings.Repeat(" ", 1024)), websocket.StatusMessageTooBig},
-		{"binary", websocket.MessageBinary, []byte(`{"type":"heartbeat"}`), websocket.StatusUnsupportedData},
-		{"trailing-json", websocket.MessageText, []byte(`{"type":"heartbeat"}{"type":"heartbeat"}`), websocket.StatusPolicyViolation},
+		{"oversized", websocket.MessageBinary, make([]byte, 2048), websocket.StatusMessageTooBig},
+		{"text", websocket.MessageText, []byte(`{"type":"heartbeat"}`), websocket.StatusUnsupportedData},
+		{"truncated", websocket.MessageBinary, []byte{0x2a, 0x20}, websocket.StatusPolicyViolation},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			x := newRig(t)
@@ -647,7 +637,7 @@ func TestPresencePongTimeout(t *testing.T) {
 	cfg.PongTimeoutMs = 50
 	ts := startPresence(t, x, cfg)
 	h := http.Header{"Origin": []string{ts.URL}, "Cookie": []string{c.String()}}
-	conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", &websocket.DialOptions{HTTPHeader: h, OnPingReceived: func(context.Context, []byte) bool { return false }})
+	conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", &websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{presenceProtocol}, OnPingReceived: func(context.Context, []byte) bool { return false }})
 	if err != nil {
 		t.Fatal(err)
 	}

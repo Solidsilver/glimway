@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/coder/websocket"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -73,6 +74,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	if h == nil {
 		return
 	}
+	encoded, err := encodePresence(&contract.PresenceWitness{Beat: beat, HabiticaId: doer, Name: capDonor(name)})
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	p := h.peers[doer]
@@ -80,14 +82,17 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 		return
 	}
 	radius := float64(WitnessTiles * wildsTileSize)
-	m := &contract.PresenceWitness{Beat: beat, HabiticaId: doer, Name: capDonor(name)}
 	for _, q := range h.peers {
 		if q == p || q.detached || q.identity.World != world || q.area != p.area || q.pos == nil || q.queue == nil {
 			continue
 		}
 		dx, dy := q.pos.X-p.pos.X, q.pos.Y-p.pos.Y
 		if dx*dx+dy*dy <= radius*radius {
-			h.send(q, m)
+			if err != nil {
+				q.stop(websocket.StatusInternalError, "internal")
+			} else {
+				h.enqueue(q, encoded)
+			}
 		}
 	}
 }
