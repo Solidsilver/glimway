@@ -280,6 +280,13 @@ export class WorldScene extends Phaser.Scene {
       },
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
+    // The save names where the hero really stands from the first frame: a
+    // saved spot that's blocked (a fresh game's default, a tile built over)
+    // puts the hero on the area's spawn, and until the first position sample
+    // a second later any save would still write the old spot.
+    const saved = { ...state.position }
+    this.notePosition()
+    if (Math.hypot(state.position.x - saved.x, state.position.y - saved.y) > 1) this.session.saveSoon()
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
