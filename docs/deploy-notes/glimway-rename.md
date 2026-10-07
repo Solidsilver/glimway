@@ -1,139 +1,81 @@
-# Deploy note: the Glimway rename
+# Deploy note: the Glimway rename and service flake
 
-For the owner, for the first deploy after the game became Glimway (October 2026). Nothing here has
-been run on the server by an agent. Paths are the main instance's, as in
-[home-server.md](../home-server.md).
+The game became Glimway in October 2026. New deployments use the
+[self-hosting guide](../home-server.md). Existing deployments can adopt the
+flake while retaining their state directory and database.
 
-## What players notice
+## Player-visible rename
 
-- **Everyone is signed out once.** The session cookie is now `glimway_session`; the old
-  `fingersnap_session` cookie is ignored. Players sign in again with their Habitica details and
-  land in their world as before. Nothing on the server is lost. A player who let this device
-  remember their Habitica details still has them.
-- **Guests notice nothing.** Saves, settings and remembered sign-ins stay in the browser under
-  their old names (the `fingersnap` and `fingersnap-connected` IndexedDB databases,
-  `fingersnap-credentials`, and the `fingersnap:*` keys). Save codes made before the rename still
-  import.
-- **The name.** The title screen, the page title and the credits say Glimway. Habitica now sees
-  the app as `5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway` (the `x-client` header).
+The session cookie is now `glimway_session`; the old `fingersnap_session`
+cookie is ignored, so players sign in again once. Browser saves, settings and
+remembered sign-ins retain their old storage names (`fingersnap`,
+`fingersnap-connected`, `fingersnap-credentials` and `fingersnap:*`). Old save
+codes still import. The title and credits now say Glimway. The default public
+Habitica X-Client app name is `glimway`.
 
-## What stays the same on the server
+## Adopt the flake
 
-- The checkout at `~/code/fingersnap`, the source copy at
-  `/etc/nixos/services/native/fingersnap-source`, the domain `fsnap.example.invalid` and the
-  Caddy config (same ports: 4173 and 8090). Renaming any of them is optional and separate.
-- The state directory `/var/lib/fingersnap-server` and the database
-  `/var/lib/fingersnap-server/fingersnap.sqlite`, through two new module options (below). Nightly
-  backups keep going to `/var/lib/fingersnap-server/backups/`.
+1. Take a consistent backup with the currently installed binary, as its
+   service user, against its actual database. Review the target migrations;
+   migration 010 resets early homestead data and must not run on a real-player
+   database without a preserving migration.
+2. Add `inputs.glimway.url = "github:Solidsilver/glimway"` to your host flake,
+   pass the input to `outputs`, and import `glimway.nixosModules.default`.
+3. Remove the old `deploy/nixos/glimway.nix` and `glimway-server.nix` imports
+   and any source-copy wrappers. Both paths now refer to one unified module.
+   Importing it alone no longer starts the static service; set
+   `services.glimway.enable = true`.
+4. Transfer options using the table below. Set `stateDirectory` and `database`
+   to the existing values; no data move is needed. `webPackage` now supplies
+   the static site, so a checkout's `dist/` directory is optional.
+5. Configure `publicOrigin` (for example `https://glimway.example.org`). Enable
+   `reverseProxy.enable` for the module's Caddy site or keep your own proxy,
+   routing `/api/*` and `/ws` to the backend and other paths to the web listener.
+   Remove any duplicate Caddy site definition when enabling the managed one.
+6. Stage the host configuration as required by its Git flake, build with
+   `nixos-rebuild build --flake /etc/nixos#example`, then switch. Check
+   `systemctl status glimway glimway-server`, the backup timer, and
+   `https://glimway.example.org/api/calendar`. Sign in and check existing data.
 
-## What changes
-
-| Before | After |
+| Previous setting | Unified module setting |
 |---|---|
-| `deploy/nixos/fingersnap.nix`, unit `fingersnap` | `deploy/nixos/glimway.nix`, unit `glimway` |
-| `deploy/nixos/fingersnap-server.nix`, `services.fingersnap-server` | `deploy/nixos/glimway-server.nix`, `services.glimway-server` |
-| units `fingersnap-server`, `fingersnap-server-backup` (+ timer) | `glimway-server`, `glimway-server-backup` (+ timer) |
-| system user and group `fingersnap-server` | `glimway-server` |
-| binary `fingersnap-server` | `glimway-server` |
-| `FINGERSNAP_*` environment variables | `GLIMWAY_*` (the old names still work for now; see below) |
-| default database `/var/lib/fingersnap-server/fingersnap.sqlite` | `/var/lib/<stateDirectory>/glimway.sqlite`, `stateDirectory` defaulting to `glimway-server` |
+| `services.glimway-server.enable` | `services.glimway.enable` |
+| `services.glimway-server.package` | `services.glimway.package` |
+| `services.glimway-server.listen` | `services.glimway.listenAddress` + `port` |
+| `services.glimway-server.stateDirectory`, `database` | `services.glimway.stateDirectory`, `database` (keep actual values) |
+| `services.glimway-server.habiticaUrl`, `xClient` | `services.glimway.habitica.url`, `habitica.xClient` |
+| `services.glimway-server.trustedProxies`, `partyAdmission` | Same names under `services.glimway` |
+| `services.glimway-server.backupRetentionDays` | `services.glimway.backups.retentionDays` |
+| `services.glimway.root` | `services.glimway.web.root`, or omit to use the packaged site |
+| Static `services.glimway.user` | `services.glimway.web.user` + `web.group` for an existing static account |
+| Static `services.glimway.listen` | `services.glimway.web.listenAddress` + `web.port` |
+| CLI login-limit overrides | `services.glimway.login.concurrency`, `rate`, `globalRate` |
 
-## Steps
+Example preserving arbitrary legacy paths:
 
-1. **Back up first**, with the old binary, while the old service still runs:
+```nix
+services.glimway = {
+  enable = true;
+  stateDirectory = "legacy-game";
+  database = "/var/lib/legacy-game/game.sqlite";
+  publicOrigin = "https://glimway.example.org";
+};
+```
 
-   ```sh
-   sudo -u fingersnap-server fingersnap-server -db /var/lib/fingersnap-server/fingersnap.sqlite \
-     backup /var/lib/fingersnap-server/backups/before-glimway.sqlite
-   ```
+The unified module retains `glimway`, `glimway-server`,
+`glimway-server-backup` and its timer. An instance still using `fingersnap*`
+units should remove those old module imports as well. The new default account
+is `glimway-server`; systemd re-owns the configured state directory on startup.
+Directories outside StateDirectory are created with the selected account by
+tmpfiles. If selecting an existing account, set `createUser=false`.
 
-2. **Copy the source and build the site** as in "Update the app" (the rsync to
-   `~/code/fingersnap`, then `npm ci && npm run verify`). The static server keeps serving `dist/`.
+The server reads `GLIMWAY_*`, with deprecated `FINGERSNAP_*` fallbacks. Rename
+custom overrides. Update admin scripts to use `glimway-server` and pass the
+existing database path. The binary and web bundle are now built from the flake
+input: updating that input replaces rsync, server-side npm builds, and source
+copies into the host configuration.
 
-3. **Refresh the source copy in `/etc/nixos`** with the rsync under "Server source in /etc/nixos".
-   Its `--delete` drops the old `deploy/nixos/fingersnap*.nix` and `server/cmd/fingersnap-server`
-   from the copy. Then `git -C /etc/nixos add services/native/fingersnap-source`.
-
-4. **Replace the static-site module.** In `/etc/nixos/services/native/`:
-
-   ```sh
-   cd /etc/nixos/services/native
-   cp ~/code/fingersnap/deploy/nixos/glimway.nix glimway.nix
-   git rm fingersnap.nix
-   git add glimway.nix
-   ```
-
-   In that directory's `default.nix`, change `./fingersnap.nix` to `./glimway.nix`. The module's
-   `root`, `user` and `listen` options default to the main instance's values
-   (`/home/deploy-user/code/fingersnap/dist`, `deploy-user`, `127.0.0.1:4173`), so it needs no
-   settings.
-
-5. **Replace the server wrapper.** Rename `fingersnap-server.nix` to `glimway-server.nix` (the file
-   name is up to you; `default.nix` must match) and make it:
-
-   ```nix
-   { ... }:
-   {
-     imports = [ ./fingersnap-source/deploy/nixos/glimway-server.nix ];
-     services.glimway-server = {
-       enable = true;
-       # Keep the data where it is.
-       stateDirectory = "fingersnap-server";
-       database = "/var/lib/fingersnap-server/fingersnap.sqlite";
-     };
-   }
-   ```
-
-   Carry over any other `services.fingersnap-server.*` settings you had under the new name. Update
-   `default.nix` and `git add` the wrapper (`git rm` the old file if you renamed it).
-
-6. **Environment variables.** The module now sets `GLIMWAY_*`. If you set any `FINGERSNAP_*`
-   yourself (a systemd override, a shell profile for the admin CLI), rename them. The server
-   still reads `FINGERSNAP_<NAME>` when `GLIMWAY_<NAME>` is unset, but that fallback is
-   deprecated and will go in a later release.
-
-7. **Build, then switch:**
-
-   ```sh
-   nh os build /etc/nixos --hostname example-host --no-update-lock-file --out-link ~/glimway-nixos-result
-   nh os switch /etc/nixos --hostname example-host
-   ```
-
-   The switch stops and removes the `fingersnap*` units and starts the `glimway*` ones. The
-   `fingersnap-server` user is no longer declared. On its first start, systemd sees that
-   `/var/lib/fingersnap-server` belongs to another user and re-owns it, recursively, to
-   `glimway-server`. The Nix `vendorHash` is unchanged by the rename (checked).
-
-8. **Check:**
-
-   ```sh
-   systemctl status glimway glimway-server --no-pager
-   systemctl list-timers glimway-server-backup --no-pager
-   ls -ld /var/lib/fingersnap-server            # owned by glimway-server, mode 0700
-   curl -s https://fsnap.example.invalid/api/calendar
-   ```
-
-   Then sign in once in a browser: the menu's About card should say Glimway and credit
-   HabitRPG, Inc.
-
-9. **Admin CLI from now on:**
-
-   ```sh
-   DB=/var/lib/fingersnap-server/fingersnap.sqlite
-   sudo -u glimway-server glimway-server -db "$DB" allowlist list
-   ```
-
-## Rolling back
-
-Switch to the previous NixOS generation (`nixos-rebuild switch --rollback`) and put the previous
-`dist/` back. The old service starts as `fingersnap-server`, and systemd re-owns the state
-directory back the same way. Players are signed out once more, since the old build only knows
-`fingersnap_session`.
-
-## Later, if you want
-
-- Move the checkout to `~/code/glimway` (then set `services.glimway.root`) and the source copy to
-  `glimway-source` (then fix the wrapper's `imports`).
-- Move the data to `/var/lib/glimway-server`: stop `glimway-server`, move the database with its
-  `-wal`/`-shm` files (or restore a backup as `glimway.sqlite`), and drop the two options.
-- A new domain, with the old one redirecting.
+To roll back, switch to the previous NixOS generation. Database migrations are
+not undone; restore a matching backup if needed. Changing between old and new
+cookie names signs players out again. Local machine details and commands are
+kept only in ignored `deploy/local/OWNER-NOTES.md`.

@@ -219,7 +219,7 @@ generated pack does not inherit Habitica's artwork licence.
 
 Delivered 2026-10-05 to `assets/generated/commons-pass/` (archive of
 record: 21 sheets, per-sheet atlases, `manifest.json`, `jobs.json` and
-`portrait-job.json` prompts, `drafts/`, `preview.html`, `validation.json`,
+`portrait-job.json` prompts, `preview.html`, `validation.json`,
 `frame-inspection.json`, `build_manifest.py`, README and
 COVERAGE). `public/assets/fingersnap/commons-pass/` ships only
 `manifest.json`; the frames ship baked into the packed atlas (see the
@@ -247,7 +247,7 @@ runtime from the measured crops (source bytes untouched).
 
 Delivered 2026-10-05 to `assets/generated/items-pass/` (archive of
 record: 12 sheets, per-sheet atlases, `manifest.json`, `jobs.json`,
-`request-index.json`, `drafts/`, `preview.html`, `validation.json`,
+`request-index.json`, `preview.html`, `validation.json`,
 `frame-inspection.json`, `build_manifest.py`, README and
 COVERAGE). `public/assets/fingersnap/items-pass/` ships only `manifest.json`;
 the frames ship baked into the packed atlas (`items.webp`, 1.1 MB).

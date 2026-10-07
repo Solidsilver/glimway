@@ -1,6 +1,6 @@
 # Fingersnap NPC, guardian, and class-effect pass
 
-Made for the game at `/path/to/glimway`, following its `docs/runtime-asset-spec.md`. Original art generated with the built-in image generation tool on October 3, 2026. Generation and cleanup prompts are in `prompts.json`.
+Made for this repository, following `docs/runtime-asset-spec.md`. Original art generated with the built-in image generation tool on October 3, 2026. Generation and cleanup prompts are in `prompts.json`.
 
 ## Delivered sprites
 

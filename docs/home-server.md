@@ -1,200 +1,155 @@
-# Home server deployment
+# Self-hosting Glimway
 
-This page describes the main instance. The game was called Glimway until
-October 2026, and the main instance kept its pre-rename paths (the checkout,
-the source copy in `/etc/nixos`, the server's state directory); the switch is
-in [deploy-notes/glimway-rename.md](deploy-notes/glimway-rename.md).
+Glimway consists of a static web app and one Go server with a SQLite database.
+Use one backend process: presence rooms are held in memory and are not shared
+between instances. The browser talks to `/api/*` and `/ws` on the same origin
+as the site. The server checks the browser's Origin against Host; preserve Host
+through your reverse proxy and do not strip the `/api` prefix.
 
-Host: `ssh home.example.invalid` (`example-host`). Source and production bundle:
-`/home/deploy-user/code/fingersnap` and its `dist/` directory.
+The code is AGPL-3.0-or-later. Habitica avatars, equipment, pets and mounts are
+HabitRPG, Inc. artwork with separate non-commercial terms. Read [ASSETS.md](../ASSETS.md)
+and [the Habitica boundary](habitica-boundary.md) before distributing or charging
+for a deployment. Habitica credentials belong to players; no operator token or
+credential file is required. The backend uses a token only for the login proof
+and does not store it.
 
-The NixOS module in `deploy/nixos/glimway.nix` is installed at
-`/etc/nixos/services/native/glimway.nix` and imported by that directory's
-`default.nix`. It runs Caddy's static file server (`systemd` unit `glimway`)
-as `deploy-user` on `127.0.0.1:4173`; its `root`, `user` and `listen` options
-default to the main instance's values. The main Caddy config at `/etc/nixos/services/caddy.nix`
-maps `fsnap.example.invalid` to this listener and handles HTTPS.
+## NixOS flake
 
-## Deploy checklist
-
-Owner steps, in order. Nothing here has been run on the server by an agent;
-each step points to the detail further down.
-
-1. **Copy the source** to `~/code/fingersnap` with the `rsync` command in
-   "Update the app" (it skips `node_modules`, `dist`, `.env*` secrets and test
-   output).
-2. **Build the static site** on the server with Node from the pinned nixpkgs
-   (`npm ci && npm run verify`, also under "Update the app"). The static
-   service serves `dist/` directly, so a rebuild needs no OS switch.
-3. **Enable the Go server** in `/etc/nixos`. Import both
-   `deploy/nixos/glimway.nix` (static site, Caddy file server on
-   `127.0.0.1:4173`) and `deploy/nixos/glimway-server.nix`, then set
-   `services.glimway-server.enable = true;`. The package builds from the
-   repository root, so `content/` is embedded, and needs Go 1.26+. Options and
-   defaults:
-
-   | Option | Default | Notes |
-   |---|---|---|
-   | `package` | built from this repository | Swap in a package if the pinned nixpkgs' Go is too old |
-   | `listen` | `127.0.0.1:8090` | Localhost only; Caddy fronts it |
-   | `stateDirectory` | `glimway-server` | Under `/var/lib`; holds the database, sprite cache and `backups/`. The main instance sets `fingersnap-server` |
-   | `database` | `/var/lib/<stateDirectory>/glimway.sqlite` | WAL mode; state dir mode 0700. The main instance sets `/var/lib/fingersnap-server/fingersnap.sqlite` |
-   | `habiticaUrl` | `https://habitica.com` | Used only for the login identity check |
-   | `xClient` | the creator's public client id | Habitica `X-Client` header |
-   | `trustedProxies` | `[ "127.0.0.1" "::1" ]` | Peers allowed to supply `X-Forwarded-For`; empty trusts none |
-   | `partyAdmission` | `true` | Party members sign in without a code, and party worlds are made (`-party-admission`; see "Party worlds and world moves") |
-   | `backupRetentionDays` | `30` | Nightly `VACUUM INTO` at 03:15 (±10 min) |
-
-   The service runs as the `glimway-server` system user with Secure
-   cookies, needs no token file or credential environment variable, and
-   applies its embedded database migrations on start. Login rate flags
-   (`-login-concurrency`, `-login-rate`, `-login-global-rate`) keep their
-   built-in defaults unless you add them to `ExecStart`.
-
-   **Getting the source into the build.** The module builds from `../..`, so
-   it must be imported from inside a copy of the repository, not copied on
-   its own into `/etc/nixos` (there `../..` would be `/etc/nixos`). The host
-   config is a git flake, which can't read `/home` and only sees files git
-   tracks. Follow the `lifedash-source` pattern: keep the files the Go build
-   needs under `/etc/nixos/services/native/fingersnap-source/` (its
-   pre-rename name) and `git add`
-   them. See "Server source in /etc/nixos" below.
-4. **Route `/api/*` and `/ws` to the server in Caddy**, before the static
-   handler (see "Caddy on example-host" below). Use
-   `handle`, not `handle_path`, and keep the browser's Host header (Caddy's
-   default). WebSocket upgrades need no extra configuration.
-5. **Build and switch NixOS** (`nh os build …`, then `nh os switch …`, under
-   "Build and activate NixOS"), and check `systemctl status glimway-server`
-   and `curl -s https://fsnap.example.invalid/api/calendar` (a public JSON
-   endpoint).
-6. **Let people in** with the admin CLI (under "Go backend (phase 2)"). Run it
-   as the service user against the live database: add yourself with
-   `allowlist add`, then hand out `invite` codes (readable six-word codes,
-   single use, 30 days). Members can then invite friends from the in-game Menu.
-7. **Backups** run nightly from the module. Take a manual `backup` before any
-   upgrade that adds migrations, and follow the restore procedure below if
-   you need it.
-
-## Update the app
-
-From the local repo, copy source without credentials or machine-specific files:
-
-```sh
-rsync -az --delete --exclude node_modules --exclude dist --exclude .env \
-  --include .env.example --exclude '.env.*' --exclude .playwright-mcp \
-  --exclude playwright-report --exclude test-results --exclude .claude \
-  --exclude .DS_Store --exclude .git --exclude .agent --exclude .data \
-  --exclude .e2e-server ./ home.example.invalid:code/fingersnap/
-```
-
-`--delete` removes files the repo has dropped. Without it, old art in `public/`
-ships in `dist/` and fails the runtime-art tests. Excluded paths are never
-deleted on the server, so its `node_modules` and `dist` stay. `.data` and
-`.e2e-server` hold local test databases and macOS binaries, so they stay off the
-server. Add `--dry-run --itemize-changes` first to preview the changes.
-
-On the server, use Node from the server's pinned nixpkgs to build:
-
-```sh
-nixpkgs_path=$(nix eval --impure --raw --expr \
-  '(builtins.getFlake "/etc/nixos").inputs.nixpkgs.outPath')
-cd ~/code/fingersnap
-nix shell "$nixpkgs_path#nodejs_24" --command bash -c \
-  'npm ci --no-audit --no-fund && npm run verify'
-```
-
-The file server reads `dist/` directly; rebuilding the app does not require an
-OS switch. Change the NixOS module only when service configuration changes.
-
-### Server source in /etc/nixos
-
-The Go server is built by Nix from a copy of the source kept in the host
-flake, so a server update is: copy, stage, build, switch. Copy only what the
-Go build embeds or imports (on the server, after the rsync above):
-
-```sh
-src=/etc/nixos/services/native/fingersnap-source
-mkdir -p "$src"
-rsync -a --delete --exclude '*_test.go' \
-  --include go.mod --include go.sum \
-  --include 'server/***' --include 'content/***' \
-  --include deploy/ --include 'deploy/nixos/***' --exclude '*' \
-  ~/code/fingersnap/ "$src/"
-git -C /etc/nixos add services/native/fingersnap-source
-```
-
-The host wrapper `/etc/nixos/services/native/glimway-server.nix`, listed in
-that directory's `default.nix` next to `./glimway.nix`. The main instance keeps
-its pre-rename state directory and database:
+Add this input to your host's `flake.nix`:
 
 ```nix
-{ ... }:
-{
-  imports = [ ./fingersnap-source/deploy/nixos/glimway-server.nix ];
-  services.glimway-server = {
-    enable = true;
-    stateDirectory = "fingersnap-server";
-    database = "/var/lib/fingersnap-server/fingersnap.sqlite";
+inputs.glimway.url = "github:Solidsilver/glimway";
+```
+
+Pass it to your configuration and import the module:
+
+```nix
+outputs = { nixpkgs, glimway, ... }: {
+  nixosConfigurations.example = nixpkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    modules = [
+      ./configuration.nix
+      glimway.nixosModules.default
+      {
+        services.glimway = {
+          enable = true;
+          publicOrigin = "https://glimway.example.org";
+          reverseProxy.enable = true;
+          openFirewall = true;
+        };
+      }
+    ];
   };
-}
+};
 ```
 
-Run `git -C /etc/nixos add` on the wrapper too. Staged files are enough for the
-build, and committing is up to the owner.
-
-### Caddy on example-host
-
-`/etc/nixos/services/caddy.nix` generates simple site blocks from a
-subdomain-to-port map. Remove `fsnap = 4173;` from that map and add a manual
-override under `virtualHosts` (if you keep both, the override silently replaces the map entry):
+The module builds both packages using the host's `pkgs`; keep that nixpkgs new
+enough for Go 1.26+ and Node 24. Alternatively select packages from Glimway's
+own pinned nixpkgs:
 
 ```nix
-"fsnap.example.invalid".extraConfig = ''
-  handle /api/* {
-    encode zstd gzip
-    reverse_proxy 127.0.0.1:8090
-  }
-  handle /ws {
-    reverse_proxy 127.0.0.1:8090
-  }
-  handle {
-    encode zstd gzip
-    reverse_proxy 127.0.0.1:4173
-  }
-'';
+services.glimway = {
+  package = glimway.packages.x86_64-linux.glimway-server;
+  webPackage = glimway.packages.x86_64-linux.glimway-web;
+};
 ```
 
-Compression stays off `/ws` so it doesn't interfere with the WebSocket upgrade.
+The module's default web package compiles your configured Habitica creator ID
+and app name into the browser bundle. If selecting `webPackage` yourself, use
+`.override { habiticaCreatorId = "YOUR_PUBLIC_CREATOR_ID"; habiticaAppName = "glimway"; }`
+to make its identity agree with the server. These are public application
+identifiers, not a player's credentials. `habitica.xClient` overrides only the
+backend's complete header.
 
-## Build and activate NixOS
+Build and activate the host configuration:
 
 ```sh
-nh os build /etc/nixos --hostname example-host --no-update-lock-file \
-  --out-link ~/glimway-nixos-result
-nh os switch /etc/nixos --hostname example-host
-systemctl status glimway --no-pager
-curl -I https://fsnap.example.invalid
+sudo nixos-rebuild build --flake /etc/nixos#example
+sudo nixos-rebuild switch --flake /etc/nixos#example
+systemctl status glimway glimway-server --no-pager
+systemctl list-timers glimway-server-backup --no-pager
+curl -fsS https://glimway.example.org/api/calendar
 ```
 
-Initial preparation on October 3, 2026 passed `npm run verify` (175 unit tests)
-and `nh os build`. Activation was left to the server owner. At preparation
-time, `fsnap.example.invalid` did not resolve; add its DNS record pointing to
-the home server (like `keeper.example.invalid`) for HTTPS to work.
+Point DNS at the host first so Caddy can obtain a certificate. The module runs
+`glimway-server` on localhost:8090 and a Caddy static file server (`glimway`) on
+localhost:4173. Its optional HTTPS Caddy virtual host proxies `/api/*` and `/ws`
+to the backend and everything else to the static listener. It preserves paths
+and Host, and Caddy handles WebSocket upgrades. Compression is kept off `/ws`.
+State is mode 0700 under `/var/lib/glimway-server`, owned by `glimway-server`.
+The backend and backups use `ProtectSystem=strict`, private temporary storage,
+and kernel/device restrictions with explicit writable data directories.
 
-## Go backend (phase 2)
+### Options
 
-The backend module is `deploy/nixos/glimway-server.nix`. Import it alongside
-`glimway.nix` and enable `services.glimway-server.enable = true;`. Its
-package builds from the **repository root**, including `content/`, and needs
-Go 1.26 or later in nixpkgs. `services.glimway-server.package` can select an
-alternate package if the server's pinned nixpkgs needs a newer Go builder.
-This work does not install or activate anything on the home server.
+Every option below is under `services.glimway`. The source and descriptions are
+in [deploy/nixos/glimway.nix](../deploy/nixos/glimway.nix).
 
-Caddy's site block should route the API and presence socket before the existing
-static listener:
+| Option | Default / purpose |
+|---|---|
+| `enable` | `false`; enable the backend and configured companion services |
+| `package`, `webPackage` | Go server/admin CLI and built static site |
+| `listenAddress`, `port` | `127.0.0.1`, `8090`; IPv6 addresses without brackets |
+| `publicOrigin` | `https://glimway.example.org`; HTTP(S) hostname origin, optional port, no path |
+| `stateDirectory` | `glimway-server`; relative systemd directory under `/var/lib` |
+| `database` | `/var/lib/<stateDirectory>/glimway.sqlite`; absolute path |
+| `user`, `group`, `createUser` | `glimway-server`, `glimway-server`, `true`; set `createUser=false` for an existing account |
+| `cookieSecure` | `true`; disable only for local HTTP |
+| `habitica.url` | `https://habitica.com`; upstream identity-check URL |
+| `habitica.creatorId`, `habitica.appName` | Built-in public creator ID, `glimway`; configure your public application identity |
+| `habitica.xClient` | `<creatorId>-<appName>`; full backend header override |
+| `partyAdmission` | `true`; members of an existing open party world may join without a code |
+| `login.concurrency`, `login.rate`, `login.globalRate` | `4`, `10`, `60`; concurrent proofs, eligible attempts/IP/minute, actual upstream calls/minute |
+| `trustedProxies` | `[ "127.0.0.1" "::1" ]`; IPs allowed to supply the last X-Forwarded-For hop; `[]` trusts none |
+| `sprite.assetsUrl` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/`; sprite proxy upstream |
+| `sprite.cacheDirectory` | `habitica-sprites/` beside the database; absolute path |
+| `backups.enable`, `backups.schedule` | `true`, `*-*-* 03:15:00`; systemd calendar |
+| `backups.randomizedDelaySec` | `10m`; timer jitter |
+| `backups.retentionDays`, `backups.directory` | `30`, `/var/lib/<stateDirectory>/backups` |
+| `extraEnvironment`, `extraFlags` | `{}`, `[]`; override generated env, append CLI flags; never place secrets in the Nix store |
+| `web.enable` | `true`; static listener |
+| `web.root` | `null` uses `webPackage`; override with an existing absolute `dist/` path |
+| `web.user`, `web.group` | Backend account/group; may select a different existing static-listener account |
+| `web.listenAddress`, `web.port` | `127.0.0.1`, `4173` |
+| `reverseProxy.enable` | `false`; add the Caddy virtual host for `publicOrigin`; requires `web.enable` |
+| `openFirewall` | `false`; managed Caddy opens TCP 80/443, otherwise opens the backend port only for a non-loopback listener |
+
+The module creates the database parent, sprite cache, and enabled backup
+directory with service ownership. For custom paths on other mounts, make sure
+the mount is present before the services start (for example with
+`systemd.services.glimway-server.unitConfig.RequiresMountsFor`). The static
+listener reads an existing `web.root` but never changes its ownership.
+
+### Existing state and old modules
+
+Remove imports of both old wrappers before importing the flake module. The
+`deploy/nixos/glimway-server.nix` path now imports the unified module;
+`services.glimway-server.*` options have been replaced by `services.glimway.*`.
+Importing the module alone no longer enables the static service.
+
+For an existing instance, set its actual paths explicitly:
+
+```nix
+services.glimway = {
+  enable = true;
+  stateDirectory = "legacy-game";
+  database = "/var/lib/legacy-game/game.sqlite";
+};
+```
+
+The units remain `glimway` and `glimway-server`, with
+`glimway-server-backup.service` and its timer. Keep the old database path;
+changing only its name would create a new empty instance. systemd owns the
+state directory as the configured service user. Migration details, including
+the earlier name change, are in [the deploy note](deploy-notes/glimway-rename.md).
+
+### Your own reverse proxy
+
+Leave `reverseProxy.enable=false` if you already manage Caddy. Add this site
+block to that configuration (adjust ports to match the module):
 
 ```caddyfile
-fsnap.example.invalid {
+glimway.example.org {
     handle /api/* {
         reverse_proxy 127.0.0.1:8090
     }
@@ -207,630 +162,263 @@ fsnap.example.invalid {
 }
 ```
 
-Use `handle`, not `handle_path`: the Go router needs the `/api` prefix.
-The service listens only on localhost, uses Secure cookies, and keeps its
-SQLite database in `/var/lib/glimway-server/glimway.sqlite` by default
-(`/var/lib/fingersnap-server/fingersnap.sqlite` on the main instance; WAL mode).
-No token file or credential environment variable is needed. The only server
-Habitica request is the login proof; later syncs come from the browser.
+Use `handle`, not `handle_path`. Keep the browser Host including any port.
+With nginx, use `proxy_set_header Host $http_host` and WebSocket upgrade headers;
+serve `webPackage` as the document root, or proxy the static listener. Open
+80/443 in the host firewall yourself when using an independently managed proxy.
 
-Build and local development (no deployment):
+### Updating and local checks
 
 ```sh
-go build -o /tmp/glimway-server ./server/cmd/glimway-server
-npm run server   # localhost:8090, local .data/ database, HTTP dev cookies
-npm run dev      # Vite proxies /api and WebSocket /ws to localhost:8090
+cd /etc/nixos
+nix flake update glimway
+sudo nixos-rebuild build --flake .#example
+sudo nixos-rebuild switch --flake .#example
 ```
 
-Configuration is available as flags or environment variables: `-listen` /
-`GLIMWAY_LISTEN`, `-db` / `GLIMWAY_DB`, `-habitica-url` /
-`GLIMWAY_HABITICA_URL`, `-x-client` / `GLIMWAY_X_CLIENT`,
-`-habitica-assets-url` / `GLIMWAY_HABITICA_ASSETS_URL` and `-sprite-cache` /
-`GLIMWAY_SPRITE_CACHE` (Habitica outfit art fetched for players, kept in
-`habitica-sprites/` beside the database by default: the service's state
-directory, already writable), and `-cookie-secure` / `GLIMWAY_COOKIE_SECURE`
-(default true; false only for local HTTP). Flags precede CLI subcommands.
+Back up before switching. Review migrations before upgrading an existing
+database: migration 010 deliberately resets early homestead data. A database
+with real players that has not applied it needs a preserving migration before
+this version is used. Rolling back NixOS switches binaries, not the database;
+restore a compatible backup if the old binary cannot read the upgraded schema.
 
-**Deprecated: `FINGERSNAP_*`.** The server still reads each variable under its
-old name, `FINGERSNAP_<NAME>`, when `GLIMWAY_<NAME>` is unset (empty counts as
-unset, except for `TRUSTED_PROXIES`, where an empty `GLIMWAY_TRUSTED_PROXIES`
-trusts none). The NixOS module sets the `GLIMWAY_*` names. Move any of your
-own settings to the new names; the fallback will be removed in a later
-release. Likewise, `npm run server` with no `-db` opens `.data/glimway.sqlite`,
-or `.data/fingersnap.sqlite` if only that one exists.
-
-Examples on the server (`DB` is the `database` option's value):
+For contributors, from a source checkout:
 
 ```sh
-DB=/var/lib/fingersnap-server/fingersnap.sqlite   # the main instance
+nix develop
+npm ci
+npm run verify
+go test ./...
+nix flake check
+nix build .#glimway-server .#glimway-web
+```
+
+If art is moved into Git LFS, run `git lfs pull` before local builds. For the
+`github:` input, enable inclusion of LFS objects in the repository's GitHub
+source archives. Alternatively use a recent Nix with Git LFS fetching:
+`inputs.glimway.url = "git+https://github.com/Solidsilver/glimway?lfs=1";`.
+An input supplies both source and art, so no rsync is needed. The web build
+rejects unresolved LFS pointers.
+
+The flake supports x86_64/aarch64 Linux and Darwin. `default` is the server.
+The dev shell provides Go, Node, SQLite, `cwebp`/`dwebp` and Git LFS. The web
+package uses a fixed npm dependency cache and offline `npm ci` plus
+`npm run build`; committed runtime art is used without an atlas build.
+Linux module checks evaluate defaults, preserved paths, overrides, disabled
+backups, timers and proxy settings even when run on Darwin.
+
+Detailed party/world behavior and earlier migration notes are preserved in
+[server-behavior.md](server-behavior.md).
+
+## Admission and backups
+
+Run the CLI as the service user and always select the live database:
+
+```sh
+DB=/var/lib/glimway-server/glimway.sqlite
 sudo -u glimway-server glimway-server -db "$DB" allowlist add HABITICA_USER_ID
 sudo -u glimway-server glimway-server -db "$DB" allowlist list
-sudo -u glimway-server glimway-server -db "$DB" allowlist remove HABITICA_USER_ID
-sudo -u glimway-server glimway-server -db "$DB" invite [WORLD_ID]
-sudo -u glimway-server glimway-server -db "$DB" invites [HABITICA_USER_ID]
-sudo -u glimway-server glimway-server -db "$DB" invite revoke HASH
-sudo -u glimway-server glimway-server -db "$DB" flag clear HABITICA_USER_ID
-sudo -u glimway-server glimway-server -db "$DB" flagged
-sudo -u glimway-server glimway-server -db "$DB" notes
-sudo -u glimway-server glimway-server -db "$DB" backup "$(dirname "$DB")/backups/manual.sqlite"
+sudo -u glimway-server glimway-server -db "$DB" invite
+sudo -u glimway-server glimway-server -db "$DB" backup /var/lib/glimway-server/backups/manual.sqlite
 ```
 
-Invoke the installed service package's binary path (from its `ExecStart`) if it
-is not on PATH. `invite [WORLD_ID]` prints a random single-use code; its hash is stored.
-Without a world ID it creates a solo world for the recipient; with an existing
-world ID it admits a new player to that world. Allowlist removal records a removal marker and revokes
-all existing sessions and unused invites made by that player. Only CLI
-`allowlist add` or redemption of a CLI-created invite can re-admit that ID. Existing players keep their world on later logins.
-
-The nightly timer runs `VACUUM INTO` at 03:15, retains 30 days by default, and
-writes consistent standalone `.sqlite` snapshots under the state's `backups/`
-directory. A manual backup refuses to overwrite an existing destination.
-Backups contain session hashes and gameplay records, never Habitica tokens.
-
-Restore procedure (owner operation, while the service is stopped):
-
-1. Stop `glimway-server` and retain a separate copy of the current database
-   **and** its `-wal`/`-shm` sidecars for recovery.
-2. Move those three files out of the live directory. Copy the chosen standalone
-   backup to the database's file name (`glimway.sqlite`, or `fingersnap.sqlite`
-   on the main instance); do not leave old WAL/SHM files beside it.
-3. Set owner/group to `glimway-server` and mode to `0600`, then start the
-   service. Embedded migrations run automatically and safely on reopen.
-4. Check `/api/state` for a known account's `rev`, ember balances and outcomes;
-   compare ledger sums **per currency** with balances before allowing play.
-   Ember totals use `currency='embers'`; materials use `material:timber`,
-   `material:stone`, `material:fiber`, and `material:amber`. Decoration and
-   trinket ledger currencies count owned units rather than embers.
-
-An automated test backs up a live database, reopens the backup as a fresh
-store, and checks state, revision, total ledger deltas and earned deltas.
-When Go dependencies change, regenerate the module's fixed-output vendor hash
-using `go mod vendor -o /tmp/glimway-vendor` and
-`nix hash path /tmp/glimway-vendor` (start with an absent destination).
-
-### Login limits and player invites
-
-The backend pre-checks allowlist membership or an eligible unused/unexpired
-invite before creating a limiter bucket or calling Habitica, then rechecks
-access in the transaction. A sign-in with neither passes the pre-check only
-when the client names the Habitica party it expects (`party` in
-`POST /api/session`, read from the profile the browser already fetched), that
-party has an open world here, and the CLI hasn't removed the account; the
-verified party must then match the claim (see "Party worlds and world moves").
-Those party-only attempts spend their own upstream budget, a quarter of the
-global one (at least one a minute), so strangers can't use up the calls that
-allowlisted and invited players need. Default limits are four concurrent identity proofs,
-ten eligible attempts per IPv4 address or IPv6 /64 per minute, and sixty actual
-upstream calls globally per minute (including the single permitted 429 retry).
-Flags are `-login-concurrency`, `-login-rate`, and `-login-global-rate`.
-The bounded IP map evicts its oldest bucket when full. Client IP is RemoteAddr
-unless its peer is a configured trusted proxy; only then is the last
-X-Forwarded-For hop used. Caddy's localhost peer is trusted by default. Configure
-`-trusted-proxies`, `GLIMWAY_TRUSTED_PROXIES`, or the Nix `trustedProxies` option;
-an empty value trusts no proxy.
-
-Authenticated, unflagged world members can create an invite with
-`POST /api/invites`, sending `Content-Type: application/json` and the body `{}`
-(an empty body is rejected). No play lease is needed. `GET /api/invites` lists
-hash-only metadata for active unused codes and used history (`used: true`);
-`DELETE /api/invites/:id` revokes an unused code. Three outstanding codes and
-five total lifetime creations per player are allowed. Expiry, use and revocation
-do not restore the lifetime budget. Codes expire after 30 days. Raw codes are
-returned only at creation. Admin CLI invites also expire after 30 days, and are
-under the owner's control rather than the player budget. Invites admit new
-players to the inviter's world and preserve existing players' world membership.
-
-### Party worlds and world moves
-
-A Habitica party's world belongs to the party, not to a person: its
-`worlds.owner_id` is empty and `habitica_party_id` names the party. A party has
-at most one (a unique index, migration 023). It is **for that party only**: no
-invite code leads into it. The party id comes only from the identity check at
-sign-in (`players.habitica_party_id`); the token is used once and never
-stored, and the party is never read in between.
-
-- **Who opens one.** When an account the operator let in (an `allowlist add`
-  entry, or an invite code: `allowlist.added_by` other than `party`) signs in
-  and its party has no world here, the server makes it in the same
-  transaction (`worlds.opened_by`, migration 024). Two members signing in at
-  once still make one. An account let in *through* a party never opens
-  another party's world, by signing in or by asking, so party admission can't
-  chain from one party to the next. `allowlist add` on such an account makes
-  it the operator's (`added_by` becomes `cli`). A member whose session
-  predates the world can ask: `POST /api/world/party {}` (session only, no
-  lease; `no-party`, `party-closed`, or `party-open-denied` for an account
-  let in through a party). `GET /api/world` says `partyCanOpen`. Making a
-  world moves no one.
-- **Members come in without a code.** A player whose verified party has an
-  open world here may sign in with no invite and no allowlist entry, when the
-  client named that same party; they are asked where to live (below), are
-  added to the allowlist (`added_by` = `party`) and stay on it. Everyone else still
-  needs an invite code or the allowlist. An account removed with
-  `allowlist remove` is not let back in by its party (only `allowlist add` or
-  a CLI code does that). An account let in through a party makes **no invite
-  codes anywhere**, not even from a world of its own (`POST /api/invites` →
-  403 `party-admitted-invites`; `GET /api/invites` says `partyAdmitted: true`,
-  and the Menu says codes come from the operator or an invited friend).
-  Otherwise its invitee would count as operator-admitted and open their own
-  party's world, and admission would chain. `allowlist add` lifts it.
-- **No codes into a party's world.** A resident can't make invites
-  (`POST /api/invites` → `party-world-invites`; `GET /api/invites` says
-  `partyWorld: true`, and the Menu says why), `invite WORLD-ID` refuses one,
-  and an older code naming one admits no one (refused at the pre-check and at
-  redemption, and left unused). Friends outside the party are invited from a
-  world of your own. A move into a party's world leaves your waiting codes
-  naming the world you left.
-- **First sign-in:** a code that names a world decides (also for an already
-  allowlisted newcomer, whose code is then used up), with no question.
-  Otherwise a newcomer (no player row yet) whose verified party has a world
-  here, or who may open one (the operator-admitted rule above), is **asked**:
-  join the party's world (the question carries its `members`), or start a
-  world of their own. Everyone else gets a solo world of their own (theirs
-  alone; it never becomes a party's).
-  - The token is still sent once and never stored, so the question doesn't
-    cost a second sign-in. `POST /api/session` sets the session cookie and
-    answers `{"worldChoice": {habiticaId, displayName, partyWorld,
-    partyCanOpen}}` instead of a snapshot. The sign-in is held in
-    `pending_sessions` (migration 025: the verified profile and party, the
-    same lifetimes as a session, no player row); only the world waits.
-  - Until it is answered every other call (state, origin, play, world reads,
-    invites, …) refuses with 409 `world-choice-required`, and presence admits
-    no socket. `GET /api/world/choice` asks again (a reload, or a tab closed
-    mid-choice: the cookie still holds it; it slides like a session). Its
-  `partyAdmitted` says the newcomer came in through the party (the gate then
-  says invite codes come from elsewhere). When nothing is left to ask (the
-  party's world can't be had any more), it makes them a world of their own,
-  as sign-in would have, and answers 409 `world-chosen` (read the state).
-  - `POST /api/world/choose {"choice":"party"|"own"}` answers it once: the
-    player is made in the party's world (opening it now, with `opened_by`, if
-    it has none and they may: `party-closed` / `party-open-denied` /
-    `no-party` otherwise, the question still standing; an account let in
-    through the party gets `party-closed` once the party is closed or party
-    admission is off, even though its world exists) or in a new world of
-    their own, and the held sign-in becomes a session with the same cookie,
-    answered with the snapshot. Any other device's held sign-in for the same
-    account becomes a session in that world too. Asked again afterwards:
-    409 `world-chosen`. Logout and `allowlist remove` end a held sign-in.
-  - Choosing their own world records the party's offer as shown (no prompt
-    straight after), and the Menu keeps it. It is reversible through the move
-    below. The choice itself isn't a move: the first move after it is open
-    at once, and the day's cooldown counts from that move.
-  - A newcomer still choosing doesn't open the party's world by signing in;
-    only choosing it does.
-- **Settled players** see `GET /api/world` report their party's world
-  (`partyWorld`, `party: true`, no owner) when they live elsewhere, with
-  `prompt: true` until `POST /api/world/prompt {"worldId"}` records that the
-  join prompt was shown (once per player and party world; table
-  `party_prompts`). `partyHome` says they live in it. The offer stays in the
-  Menu.
-- **Leaving the Habitica party.** At sign-in, a resident of a party's world
-  whose verified party is no longer that one is warned: `party_left_at`
-  records the first such sign-in, and `GET /api/world` carries `leaver`
-  (`moveOutAt`, `moveOutIn`, `hasOwn`). They keep playing for `PartyGrace`,
-  three days. Rejoining and signing in again clears it. **Leave now**
-  (`POST /api/world/leave {lease, baseRev, key, progress}`, keyed) moves them
-  at once to the oldest world they own, or a new one made for them, with no
-  move cooldown (from the village or the Commons, parcels home first;
-  `still-in-party` if they haven't left). At the first sign-in after the
-  grace period the server moves them out the same way, wherever they stand
-  (off the village and the Commons they arrive in the village; parcels they
-  sent stay on the road for their recipients): pack and personal chest come
-  along, homestead membership, placed things and shared chests stay, the
-  ledger records the move and a live presence socket follows.
-  `movedOutAt` stays set until `POST /api/world/notice {}`, so the next screen
-  says what happened.
-- **Older person-owned links** (migration 022 let an owner link their world
-  to a party). Migration 023 keeps the party id on those worlds only as a
-  record: they never count as the party's world, and their residents aren't
-  prompted to leave for the party's world. They keep working: the owner and
-  everyone living there stay, the owner can always move back, and invite
-  codes still lead into them. To fold such a group into its party's world,
-  the operator runs `party adopt WORLD-ID` (below); until then a resident who
-  isn't its owner and leaves can't come back, and the move screen says so.
-- **Moving:** `POST /api/world/move {worldId, lease, baseRev, key, progress}`
-  is one keyed, idempotent transaction under the usual lease and current-
-  revision rules.
-  - Allowed targets: your party's world, or a world you own (moving back).
-  - **At most one move per 24 hours** (`move-cooldown`), counted from the
-    last `world-move` ledger row. `GET /api/world` (and the move's answer)
-    carries `moveOpensAt` (server clock) and `moveOpensIn` (seconds left); the
-    move screen counts down from `moveOpensIn` on the device's own clock, and
-    a `move-cooldown` refusal always shows the line.
-  - Only from the village or the Commons, and only with no goods parcels you
-    sent still in transit (`mail-in-flight`: recall them first; a move never
-    takes back a gift on its own). A recalled or returned warden-set tool goes
-    to the sender's personal chest when they already carry one, so it travels
-    with them.
-  - Your character, story, embers, pack and personal chest come along (they
-    belong to the player, not the world). Your homestead membership ends as a
-    "leave" does (the last member out starts desolation); placed furniture,
-    the shared chest (`GET /api/world` counts warden-set tools left in it, for
-    a warning), gate shelf stock, Wilds claims and project contributions stay.
-    `leaving.deedCost` says what a deed costs in the next world (the first
-    deed is free; later ones aren't).
-  - Parcels waiting for you go back to their senders (`recipient-removed`).
-    Thank-you notes stay readable on both sides, in any world.
-  - Your unused, unexpired invite codes are retargeted to the new world,
-    unless it's a party's.
-  - The ledger records a zero-delta `world-move` row (`ref` = `from>to`).
-  - A live presence socket is moved to the new world's rooms (the old room
-    sees `leave`; a full room sends the mover an empty roster).
-  - A replay with the same key returns the first answer and moves nothing,
-    during the cooldown too.
-
-### Witnessing
-
-When a player's progress lands with one of the story's shared beats in it,
-the players standing near them see it and keep a journal line, "you were
-there":
-
-- the Warden's naming (the quest reaching `guardian-defeated`), the last
-  lantern (`lantern-lit`), and settling an Echo (a new `echo:<member>` flag);
-- relayed only from the server's own record of the beat: the doer's upload
-  (`PUT /api/progress`, a sync, a spend, or a keyed mutation's progress)
-  whose merge adds it, after the commit. Merges only ever add a beat once, so
-  each witness hears it once per beat and doer. A stale upload (another
-  device catching up) relays nothing;
-- through the presence hub, to every peer connected in the doer's world and
-  room who last stood within `WitnessTiles` (10 tiles, 160 px) of where the
-  doer last stood, as `{"type":"witness","beat","habiticaId","name"}`. The doer
-  must be standing in that room right now, in the beat's place (Ashwatch
-  Ruin for the Warden and the lantern, a Wilds chunk for an Echo, as both
-  their saved area and their presence room say): an offline journey caught
-  up later is no one's moment. No client can send one (the hub closes a
-  socket that tries, 1008 `invalid-message`).
-
-The witness's story doesn't move. Their client shows the moment, a lantern
-over the doer, and keeps a story flag `witness:<beat>:<doer id>:<name>`
-(`echo:nan` is written `echo-nan`), once per beat and doer: a journal line,
-never an economy flag or a reward (src/content/witness.ts). A witness whose
-own Warden still waits sees it rest a moment; then the stone remembers its
-pose and keeps waiting for their own naming. Echo lines never name whose
-Echo it was. No migration, no new route.
-
-**Operator controls** (run as the service user, like `allowlist`):
-
-- `-party-admission=false` (env `GLIMWAY_PARTY_ADMISSION`, Nix
-  `partyAdmission`): no one signs in through a party and no party world is
-  made, so an upgrade can be deployed without opening anything. Party worlds
-  already made keep working for the people in them.
-- `parties` prints one JSON record per party world (and per closed party):
-  party id, world, members, who opened it (`openedBy`, `openedByName`), how
-  many accounts came in through the party (`admitted`), how many of those
-  signed in but are still choosing a world (`held`: closing the party keeps
-  them out of its world), and `closedAt`.
-- `party close PARTY-ID` stops admitting that party (no codeless sign-ins
-  through it, and no world is made for it); `party open PARTY-ID` resumes.
-  Its world, and everyone already in, stay. Table `party_closures`.
-- `party adopt WORLD-ID` makes a person's world that an older link tied to a
-  party (022) that party's world: `owner_id` becomes empty, the party id
-  stays, and the former owner is recorded as `opened_by`. Everyone living
-  there stays. If the party already has a world no one lives in (one made at
-  a sign-in after the upgrade), it is set aside first (it keeps its rows but
-  belongs to no party); a lived-in one is never replaced. Residents who
-  aren't in the party are then warned at their next sign-in, as leavers.
-  Take a `backup` first.
-
-`invites [player]` prints one JSON metadata record per code, optionally filtered
-by creator, including creator, recipient, world, expiry and revocation timestamps.
-`invite revoke HASH` revokes any unused code; the CLI can inspect player-made
-codes as well as its own. `notes` lists rebirth and large sync-loss audit events.
-`flag clear ID` clears a flag, advances the snapshot revision once and records an
-audit entry. Access removal and flags are separate owner controls.
-
-Unverified credit starts at 200 embers above the login checkpoint, grows by
-100 per full day, and caps at 3000. Pending lots are confirmed only by a verified
-login reaching their original reported XP and expire after 90 days. Both syncs
-and logins advance the separate loss reference. Several deaths can be synced
-at once; large losses are audited. A checkpoint compares verified XP with the highest report that earned or held
-credit since the preceding checkpoint, even if later reports step down. It
-allows three death windows plus the configured XP tolerance, and one extra
-window per full day since that highest report. A ledger cursor distinguishes
-reports and checkpoints in the same second. Flags preserve paid/pending credit;
-pending still expires or settles under the existing rules. Rebirth requires earlier verified history above level 1. Sessions
-expire after seven idle days. Successful authenticated requests slide that
-seven-day deadline, bounded by thirty days from login. Daily activity cannot
-extend the absolute limit; the server sees a token only during
-`POST /api/session`, so active players sign in at least monthly.
-
-### Backend upgrade notes
-
-Schema upgrades use immediate transaction locking. Migration 002 carries old
-aggregate pending credit into a lot at its original XP mark and adds party IDs.
-It also **backfills every existing invite's expiry as created_at + 30 days**,
-including old CLI codes already handed out: codes older than 30 days become
-expired on upgrade. Inspect with `invites` and create replacement CLI codes when
-needed.
-
-Migration 003 adds independent loss references and verified-level history,
-records legacy players lacking allowlist access as removed, revokes their unused
-invites, and bounds existing session expiry by created_at + 30 days. Loss
-references are initialized from the newest available legacy baseline/checkpoint
-metadata; old databases did not retain a distinct sync-only timestamp. New
-accepted syncs and verified checkpoints record their reference explicitly.
-Existing pending lots retain their original creation date for 90-day expiry.
-The service upgrades existing databases in place; use the backup procedure above
-before an owner deployment.
-
-Migration 025 adds `pending_sessions`, first sign-ins held for the world
-choice (see "Party worlds and world moves"). It changes no existing rows.
-
-
-### Homesteads and the compact Wilds (phases 3–4)
-
-Migration 004 adds lazy homestead allocation, decoration instances and placement,
-material balances, permanent region epochs, shared entity cycles, personal claims,
-discoveries, fallen-hero lanterns, UTC relight reward counts, and durable claim
-limits. It preserves existing progress, balances, sessions, and revisions. A free
-campsite is granted at first homestead/Commons access and recorded in the ledger;
-reads allocate only the caller's plot without changing any revision. Unallocated
-neighbors remain visible as virtual tier-0 homes with null plot indices and bounds.
-Accepted Commons progress also grants the campsite in the same progress transaction.
-
-The current inner region is `inner-1`, with a permanent season `"0"` epoch using
-generator version 1. Future generator deployments must retain the implementation
-**and its generation data** for every version referenced by a stored epoch.
-Unsupported versions fail with `generator-unavailable` rather than silently
-regenerating land. No scheduled reset runs in this phase.
-
-Shared `content/homestead.json` contains the five tier identities and fourteen
-items. The free Campsite, 15-ember Cottage, and Workshop ship now. The Workshop
-costs 30 embers, 20 timber, 10 stone and 8 fiber; Garden and Hall remain unavailable. Decoration placement requires the Cottage; buying tier-0
-items is allowed. Its `commons` block is the one source of plot geometry, in the
-client's 16-pixel tiles: plot `i` sits in column `i % columns.length` and row
-`i / columns.length`, at the listed `rows`, then every `rowPitch` tiles down the
-lane. Plot bounds and the home-rest check use it, and the client draws the same
-plots from it. `outdoorReserved`/`indoorReserved` are the camp/cottage tiles and
-the inside doorway; placements covering them fail with `placement-overlap`. `rest`/`revive` require the village hearth; `home-rest` requires
-the caller's own Commons plot. Sync remains allowed in both safe areas.
-`content/economy.json` contains the one-ember home rest, twenty
-successful claims per minute, two fallen lantern creations per owner per UTC day,
-three rewarded relights per UTC day, and one-amber
-relight reward. These are starting values for playtesting. Camps respawn after
-600 seconds and nodes regrow after 300 seconds, from `content/wilds.json`. A
-relight after the reward cap still lights the lantern but grants no material.
-Migration 006 persists creation counts and backfills them from the defeat ledger;
-replacements count, while idempotent replays do not. The third creation returns
-429 `lantern-creation-limited`, with Retry-After to UTC midnight.
-
-Claims and relights require Wilds progress within a three-tile Euclidean radius.
-Wilds tiles are 16 pixels (the game TILE), entity tx/ty are chunk-local, and
-lantern x/y are region tiles. Defeat positions use the same 16-pixel conversion.
-Home bounds use the separately configured Commons tile size. Normalized inventory
-rows are the only authority for loot; legacy progress copies are filtered on load.
-
-All gameplay POSTs require the play lease, current `baseRev`, and an idempotency
-key, with optional current `progress`. New response payloads are additive to the
-existing top-level snapshot. Exact request/response fields and coordinate
-conventions are recorded in `.agent/REPORT.md`, under "Phase 3/4 server".
-Homestead layouts are visible only to the owner's world; mutations always affect
-the caller's owned instances. Wilds epoch IDs are checked against the caller's
-world before any state or loot is returned.
-
-Restore validation now also populates and checks the new tables, verifies material
-and decoration ledger sums, and checks the original player's full snapshot and
-revision after reopening the backup. The same manual backup procedure applies.
-
-
-### Round-3 login and frontend contract
-
-Every reverse proxy must preserve the browser's original **Host header**,
-including its port. The server compares the request Origin host against Host.
-Caddy's existing HTTP reverse proxy does this by default; Vite uses
-`changeOrigin: false`. Rewriting Host to the upstream address makes legitimate
-browser POSTs fail with `cross-origin`. Trusted-proxy configuration controls
-forwarded client IPs; it does not bypass this Origin check.
-
-The existing IP, concurrency, and global upstream limits now also reserve
-failed-proof capacity per claimed user ID: five rejected upstream identity
-proofs per fifteen-minute fixed window. Inflight reservations prevent a
-parallel burst from overshooting that limit. A rejected proof is an upstream
-401/403 mapped to `habitica-auth`; successes, upstream outages, global-rate
-rejections and busy slots do not consume failed-proof capacity. At the cap,
-login returns 429 `login-user-rate-limited`, with Retry-After for the remaining
-window. A full inflight-only reservation set asks for a one-second retry. The
-map is bounded to 4096 IDs and evicts the oldest non-inflight bucket when full.
-This in-memory protection resets on process restart, like the existing login
-limiters. Valid credentials cannot be distinguished before proof, so a targeted
-user must wait for the window after five rejected proofs. Other users retain
-their independent failed-proof capacity.
-
-CLI and player invites are now six words from the fixed 256-word catalog in
-`content/invite-words.json`, followed by four digits (including leading zeros),
-separated by hyphens. Independent uniform cryptographic draws give
-`6*log2(256)+log2(10000) = 61.2877` bits of entropy. Words can repeat. Redemption
-is case-insensitive and accepts hyphens or whitespace, including mixed/repeated
-separators. Old 64-hex invitations still use the same hash and remain valid
-until used, revoked or expired. New and old codes stay single-use, expire after
-thirty days, and are stored only as SHA-256 hashes. Raw codes are shown only
-once at creation. Admin revocation still takes the 64-hex **hash ID**.
-
-New additive response fields:
-
-- Every state-bearing snapshot has `displayName`, including login before origin
-  selection. Imported profile names are not needed to label the verified hero.
-- `GET /api/state` returns `leaseActive`, true only when a nonempty
-  `X-Play-Lease` matches the player's current stored lease. Mismatches still
-  return 200 and never heartbeat the winning lease. Without the header it is
-  false. Poll with the tab's lease to detect takeover while idle.
-- `GET /api/invites` returns `remaining` (lifetime creations left, including
-  used/revoked/expired codes in the spent budget) and `outstandingLimit`.
-
-For a locked imported hero (stored HP 0 and imported baseline HP 0), sync and
-spend must carry the **pre-sync local progress with `hp: 0`**. Supply new Habitica
-healing only in sync's `profile`; apply the server's returned snapshot after
-it accepts the operation. Pre-applying healing to `progress.hp` fails with
-400 `invalid-progress`. A zero-HP revive/rest needs XP-earned embers, with
-zero-HP progress still carried. The same rule applies to home rest.
-
-Migration 005 adds the private checkpoint ledger cursor and a partial index
-for credit-report lookup. It preserves ambiguous legacy same-second reports
-for the first new checkpoint. Existing session deadlines are clamped to the
-minimum of their old expiry, the thirty-day absolute deadline, and seven days
-after the best available legacy activity timestamp (`max(session.created_at,
-player.last_seen_at)`). Older code did not record each session's last
-successful read, so active read-only legacy sessions may need to sign in again
-on upgrade. Retained historical idempotency responses with snapshots gain a
-missing `displayName` from the player row; existing historical names and all
-request hashes remain unchanged. No economic grants or balances are rewritten.
-
-
-### Phase 5: workshop, mail, projects and the Turning
-
-Migration 008 preserves existing decoration ownership/placement and adds instance
-locations, count-based home storage, world-scoped mail in transit, project
-contributions/progress and durable completion paper records. Back up before
-upgrading using the procedure above. Restore tests cover all new tables.
-
-The shared calendar epoch is 2026-01-05 00:00:00 UTC (Thaw day 1). A wick is seven
-real days, controlled by content/calendar.json; twelve wicks form a year. Calendar
-clients use Unix seconds and the same pure function/vectors as Go. Closure Night
-is Quiet day 7. GET /api/calendar is public and includes a notice during the last
-24 hours of each wick. Outer-1 turns at each wick boundary: new season keys are
-`t:<starts_at>:<ends_at>`, starts_at/ends_at are fixed UTC boundaries, and an epoch is
-created lazily. Old claims fail with epoch-ended even before anyone reads the new
-region. Inner-1 stays permanent. Generator v1 and its generation data are unchanged.
-
-Storage/crafting require tier 2. Decorations move as original unplaced instances;
-placed instances must first be removed. Mail transfers only server-owned gathered
-materials, Wilds trinkets, crafted utilities and unplaced decorations, never
-embers, quest items or paid quest entitlements. Assets are debited immediately on
-send and remain unusable in transit until the named recipient claims them or the
-sender recalls them. Unclaimed mail returns after 30 days, on recipient
-removal, or when the recipient moves to another world.
-
-Six projects cover the three written village works plus the Wheel & Wick
-guildhouse, Orrin's hinges and the Cooley Window Fund. Completion world flags
-are separate from client story flags. All contributing members can read their
-paper eligibility from GET /api/projects after completion and call grantPaper;
-no other player's revision is changed. Crafting recipes and project costs are
-shared JSON and are starting values for playtesting.
-
-The exact additive API contract and ledger currency conventions are recorded in
-.agent/REPORT.md under “Phase 5 server”. All new gameplay POSTs use the existing
-lease/revision/idempotency transaction boundary. An authenticated request can
-settle due mail and bump the sender's revision before loading its snapshot.
-
-### Round 5: calendar tuning, mail safety and project tuning
-
-Changing `wickDays` or `epoch` in `content/calendar.json` starts a new calendar
-numbering. Outer epoch identity uses both absolute interval boundaries, so it
-cannot collide with an old ended wick number or a differently sized interval
-with the same start. Existing epochs keep their frozen season/generator inputs
-and deadlines; an existing numeric-season epoch is reused when its exact
-interval matches. Clients should treat `epoch.season` as an opaque string.
-
-Migration 009 adds mail return metadata and indexes without changing existing
-claims, goods, decoration IDs or player revisions. Senders can use keyed
-`POST /api/mail/:id/recall` to recover unclaimed goods. CLI `allowlist remove`
-returns that recipient's pending mail atomically with removal. The executable
-sweeps expired or unavailable recipients' mail at startup and every 60 seconds;
-authenticated HTTP transactions also settle the caller's due mail. Maintenance
-uses batches of 100 rows and a 10-second sweep deadline; large backlogs resume on
-the next interval. Expiry is exactly 30×24 hours after send. Both paths credit
-the original goods, settle transit ledger entries, and bump the sender's revision
-without touching their progress or last-seen time. Only explicit recalls use the
-normal gameplay mutation's progress/Persist flow.
-
-`content/mail.json` shares and validates these defaults with TypeScript: 50
-outstanding sent and 50 outstanding received messages per player, 10 sends per
-rolling 60 seconds (claimed/returned messages still count), and 50 completed
-history entries per page. Capacity errors are 409 `mail-sender-limit` or
-`mail-recipient-limit`; send-rate errors are 429 `mail-rate-limited` with
-`Retry-After`. Removed/unadmitted recipients reject with 403
-`recipient-unavailable`. Every response keeps pending mail plus a bounded history
-slice; `GET /api/mail?cursor=...` follows `nextCursor`. A separate
-`pendingCursor`/`nextPendingCursor` covers legacy pending backlogs exceeding the
-current combined caps, so even those responses remain bounded. Cursor values
-are opaque and remain scoped to the authenticated world/player.
-
-Project totals at or above a tuned requirement satisfy that material. Additional
-amounts of a satisfied material are rejected; other required materials can still
-complete the project. GET /api/projects also reconciles already-satisfied costs,
-recording completion/papers once without changing any player's revision. Existing
-completed projects stay complete when costs rise. The precise new contracts and
-failing-first regressions are in REPORT.md under “Fix round 5”.
-
-### Phase 6 presence WebSockets
-
-The `/ws` route above needs no extra Caddy upgrade headers: `reverse_proxy`
-handles WebSocket upgrades by default. Preserve the browser Host (including its
-port) as described above. Production clients use `wss://` on the same site as the
-HTTP API; Vite's `/ws` proxy has `ws: true` and preserves Host for local development.
-No additional public port, service, environment variable, database migration, or
-NixOS firewall rule is needed. The Go dependency and Nix vendor hash are updated.
-
-Presence requires both the HttpOnly session cookie and the current play lease.
-Send the lease in the first JSON message, never in the URL: all `/ws` query strings
-are rejected, and request logs record only the fixed `/ws` label. A browser Origin
-is required and must match Host. The wire protocol and client integration details
-are in `.agent/REPORT.md`, under **Phase 6 server**; shared emotes and limits live
-in `content/presence.json`, with TypeScript wire types in `src/lib/presence.ts`.
-
-Presence is a bounded, in-process service (128 live sockets, 32 players per room).
-Use one server instance; separate processes do not share rooms. Restarting clears
-all presence and explicitly closes upgraded sockets, including clients waiting
-for authentication. There is no persisted room or position state. The server
-pings every 20 seconds, requires pong within 5 seconds, and expires application
-inactivity after 60 seconds; stationary clients send a JSON heartbeat about every
-20 seconds. Presence does not refresh sessions or the play lease: keep the normal
-HTTP state/progress/play heartbeat running. Play takeover and logout revoke
-sockets immediately; database-side revocations are detected within 10 seconds.
-
-### Round 6 presence admission and database isolation
-
-Physical presence sockets now also have shared limits of **2 per session** and
-**4 per player**, including pending-auth and closing connections. Rejected
-upgrades use 429 `presence-session-limit` / `presence-player-limit` with
-`Retry-After: 5`; the global cap still uses 503 `presence-full`. Send first-message
-auth promptly. The auth-message deadline remains five seconds. Session/player
-reservation and generation maps are removed when their last socket releases.
-
-A reader-owned token bucket limits aggregate application messages before JSON
-parsing or the hub mutex: 30/s with a burst of 60. Brief excess is dropped;
-sustained excess for five seconds closes 1008 `rate-limited`. These limits are
-above normal eight-Hz positions, joins, emotes, and stationary heartbeats.
-
-Presence DB checks run outside the hub mutex. Per-player generations prevent
-stale auth/notification results from registering or removing the wrong peer.
-Periodic checks run in a separate cancellable goroutine per socket, so even that
-socket's writer, ping/pong and idle checks continue during DB contention. A
-confirmed revoked session, lease or world still closes promptly; an unknown DB
-result retries, with 1011 `auth-unavailable` only after three consecutive unknown
-results. A successful validation clears that counter. Shared policy values are
-in `content/presence.json`; REPORT.md under “Fix round 6” contains the client
-handoff and regression evidence. No new NixOS service, public port or dependency.
-
-### Homesteads v2: a lane of gates (migrations 010–011)
-
-> **Warning: migration 010 resets all homestead data and must not run
-> against a database with real players.** No deployment exists yet, so the
-> homestead model was reset rather than migrated. If a database with players
-> on it ever exists before this ships, write a preserving migration first
-> (pack decorations back to their owners, chest goods into personal chests,
-> decoration mail back to senders) and do not run 010 as written.
-
-On first start, migration 010:
-
-- deletes every decoration parcel in the mail;
-- drops `homesteads`, `homestead_items` and `home_storage` (phase-3/5
-  homes, every bought or crafted decoration, and every shared-chest material,
-  trinket and decoration);
-- creates the v2 tables (`homesteads` by world and gate,
-  `homestead_members` with one homestead per player, `player_deeds`,
-  `lost_gates`, `homestead_invites`, `homestead_cleared`, a rebuilt
-  `homestead_items`, `home_storage` by homestead, `personal_storage`).
-
-The old goods' ledger rows stay behind, so on an existing database the
-per-currency sums for `decoration:*` and `storage:*` would no longer match
-holdings after 010. Take a backup before upgrading any database you care
-about.
-
-Migration 011 adds `homestead_departures`. When the last member of a
-homestead leaves, they can take their deed back free until the deed is lost.
-A lost deed writes its goods off on the last member's ledger (reason
-`deed-lost`): offsetting `storage:*` rows for the home chest, a zero row per
-placed piece (`decoration:<id>`, ref `<home>:gate:<g>:<instance>`), and a
-zero `homestead` row for the deed. Per-currency sums therefore still balance
-after a loss. The contract is in `.agent/HOMES2-CONTRACT.md`; the review
-fixes are in `.agent/REPORT-HOMES2.md`.
+An invite without a world ID creates a solo world for its recipient; supply an
+existing world ID to invite a new player there. Codes are single-use and expire
+after 30 days. `allowlist remove ID` revokes access; `party close PARTY-ID`
+closes party admission. Use `glimway-server -h` for configuration flags.
+
+The Nix timer makes consistent standalone SQLite snapshots using `VACUUM INTO`,
+then removes `.sqlite` backups older than the retention setting. Backups include
+session hashes and gameplay records. Copy snapshots to a separate machine or
+storage service; keeping them on the same disk does not protect against disk
+failure. The backup command refuses to overwrite an existing file.
+
+To restore, stop both the backend and backup timer, retain the current database
+and its `-wal`/`-shm` sidecars separately, and move them out of the live directory.
+Copy the chosen standalone snapshot to the configured database filename with
+owner/group matching the service and mode 0600. Do not leave old WAL/SHM files
+beside a restored snapshot. Start the backend, check a known account's state and
+ledger balances, then re-enable the timer. Use a server version compatible with
+the snapshot's schema.
+
+## Manual deployment (without Nix)
+
+Install Go 1.26+, Node 24+ and Caddy. Clone the source and build:
+
+```sh
+git clone https://github.com/Solidsilver/glimway.git
+cd glimway
+git lfs pull                 # needed if the checkout uses Git LFS
+npm ci
+npm run verify
+go test ./...
+CGO_ENABLED=0 go build -trimpath -o glimway-server ./server/cmd/glimway-server
+sudo install -Dm755 glimway-server /usr/local/bin/glimway-server
+sudo mkdir -p /srv/glimway
+sudo cp -a dist /srv/glimway/
+sudo useradd --system --home-dir /var/lib/glimway-server --shell /usr/sbin/nologin glimway-server
+sudo install -d -o glimway-server -g glimway-server -m700 /var/lib/glimway-server
+```
+
+SQLite uses the pure-Go `modernc.org/sqlite` driver; no CGO or external SQLite
+library is required for the binary. Runtime sprite requests need CA certificates.
+Set `VITE_HABITICA_CREATOR_ID` and `VITE_HABITICA_APP_NAME` when building if you
+use a different public Habitica identity.
+
+Install `/etc/systemd/system/glimway-server.service`:
+
+```ini
+[Unit]
+Description=Glimway backend
+After=network.target
+
+[Service]
+User=glimway-server
+Group=glimway-server
+StateDirectory=glimway-server
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/glimway-server
+Environment=GLIMWAY_LISTEN=127.0.0.1:8090
+Environment=GLIMWAY_DB=/var/lib/glimway-server/glimway.sqlite
+Environment=GLIMWAY_COOKIE_SECURE=true
+Environment=GLIMWAY_TRUSTED_PROXIES=127.0.0.1,::1
+ExecStart=/usr/local/bin/glimway-server -login-concurrency 4 -login-rate 10 -login-global-rate 60
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable it with `sudo systemctl daemon-reload` and
+`sudo systemctl enable --now glimway-server`. Caddy can directly serve the
+static bundle with a site block using the same two API/socket handlers above
+and a final `handle { root * /srv/glimway/dist; file_server }`. Keep static
+files readable by the Caddy account. Arrange a cron/systemd timer for the CLI
+backup command and retention; the manual route does not install one for you.
+To update, build a new binary and `dist/`, take a backup, install both, restart
+the backend, and check `/api/calendar` and the page.
+
+## Docker Compose
+
+The image `ghcr.io/solidsilver/glimway` serves both the static app and backend
+from one non-root process (UID/GID 10001). Releases publish `X.Y.Z`, `X.Y`,
+`latest`, and `sha-<commit>` tags for `linux/amd64` and `linux/arm64`. The
+`/data` named volume contains SQLite, its WAL/SHM files, sprite cache and any
+manual backups. The final Alpine image includes CA certificates and a health
+check against `/api/health`, which checks database availability. Use one
+replica. Habitica artwork retains its separate **non-commercial** terms even
+when delivered in an AGPL image; see the licence notes above.
+
+After the repository and first release are published, a local HTTP quickstart:
+
+```sh
+git clone https://github.com/Solidsilver/glimway.git
+cd glimway
+cp .env.example .env
+docker compose pull glimway
+docker compose up -d --no-build --wait
+curl -fsS http://127.0.0.1:8090/api/health
+curl -I http://127.0.0.1:8090/
+```
+
+The default published port is bound to loopback. The Compose defaults disable
+Secure cookies for this HTTP quickstart. For a public service, point DNS at the
+host, set these in `.env`, open TCP 80/443 (optionally UDP 443), and start HTTPS:
+
+```dotenv
+GLIMWAY_PUBLIC_ORIGIN=https://glimway.example.org
+GLIMWAY_COOKIE_SECURE=true
+```
+
+```sh
+docker compose --profile https up -d --no-build --wait
+curl -fsS https://glimway.example.org/api/health
+```
+
+The optional Caddy profile preserves Host, handles WebSocket upgrades and
+proxies every path to the combined server. It has a fixed internal IP so only
+that proxy's forwarded client IPs are trusted. `GLIMWAY_PROXY_SUBNET` must be
+an unused Docker subnet; if changing `GLIMWAY_PROXY_IP`, also change
+`GLIMWAY_TRUSTED_PROXIES` to that IP. An empty trusted-proxy value trusts none.
+For a host-managed proxy, leave the profile off, proxy to localhost:8090, and
+trust only its actual Docker gateway peer when forwarded client IPs are needed.
+
+Every backend flag has an environment equivalent in [compose.yaml](../compose.yaml)
+and [.env.example](../.env.example): `GLIMWAY_LISTEN`, `GLIMWAY_DB`,
+`GLIMWAY_STATIC_DIR`, `GLIMWAY_HABITICA_URL`, `GLIMWAY_X_CLIENT`,
+`GLIMWAY_COOKIE_SECURE`, `GLIMWAY_PARTY_ADMISSION`, `GLIMWAY_TRUSTED_PROXIES`,
+`GLIMWAY_LOGIN_CONCURRENCY`, `GLIMWAY_LOGIN_RATE`, `GLIMWAY_LOGIN_GLOBAL_RATE`,
+`GLIMWAY_HABITICA_ASSETS_URL`, and `GLIMWAY_SPRITE_CACHE`. CLI flags override
+these. Keep database/cache paths under `/data` so they persist. If changing the
+container's listening port, update `GLIMWAY_CONTAINER_PORT` and
+`GLIMWAY_HEALTHCHECK_URL` too. The host port is independently configured with
+`GLIMWAY_HTTP_PORT`. `.env` changes apply after `docker compose up -d` recreates
+the container; restart alone does not update its environment.
+
+`GLIMWAY_X_CLIENT` is the public **creator-id-appname**, never a player's token.
+The published web bundle uses the project's built-in creator ID and `glimway`
+app name. To change browser identity too, build locally with
+`VITE_HABITICA_CREATOR_ID` and `VITE_HABITICA_APP_NAME` in `.env`, matching the
+backend's header:
+
+```sh
+git lfs pull                # real art bytes, not pointers, in the build context
+docker compose build glimway
+docker compose up -d --pull never --wait
+# Or explicitly build both architectures with Buildx:
+docker buildx build --platform linux/amd64,linux/arm64 -t YOUR_REGISTRY/glimway:VERSION --push .
+```
+
+The build checks for LFS pointers, uses committed art, and never rebuilds the
+atlases. Static serving is opt-in through `-static-dir` / `GLIMWAY_STATIC_DIR`
+and remains disabled by default outside the image. HTML uses `no-store`;
+content-hashed Vite assets are immutable; stable-name art revalidates using
+content ETags. Missing assets are 404, while navigation paths fall back to
+`index.html`. `/api/*` and `/ws` always retain their backend behavior.
+
+### Docker updates and backups
+
+Before changing `GLIMWAY_IMAGE_TAG`, take a backup. For example:
+
+```sh
+docker compose exec -T glimway mkdir -p /data/backups
+docker compose exec -T glimway glimway-server -db /data/glimway.sqlite backup /data/backups/before-update.sqlite
+mkdir -p backups
+docker compose cp glimway:/data/backups/before-update.sqlite ./backups/
+# Review migrations, then select a release tag in .env and update.
+docker compose pull glimway
+docker compose up -d --no-build --wait
+```
+
+The CLI runs as the same non-root user as the service. The backup filename must
+be new each time. Schedule those commands using your host's cron or systemd,
+use timestamped names, enforce your retention policy, and copy snapshots off the
+host. Compose does not install the NixOS backup timer. Avoid archiving the live
+volume while writes are occurring: use the consistent CLI snapshot, or stop the
+service first. `docker compose down` preserves volumes; `down --volumes` deletes
+them and must not be used for a production update.
+
+Admission uses the same CLI:
+
+```sh
+docker compose exec -T glimway glimway-server -db /data/glimway.sqlite allowlist add HABITICA_USER_ID
+docker compose exec -T glimway glimway-server -db /data/glimway.sqlite invite
+```
+
+For restore, stop the backend and any external backup scheduler. Copy the live
+database and WAL/SHM sidecars to a separate recovery location, remove them from
+the volume, then use a one-off container with the same named volume to install
+the standalone snapshot as `/data/glimway.sqlite`, owned by 10001:10001 and mode
+0600. Start the matching image version and verify player state before reopening
+access. Switching an image tag back does not undo database migrations.
+
+The release workflow uses only `GITHUB_TOKEN` with `packages:write`; it runs on
+stable tags such as `v1.2.3`. After the first publish, the repository owner must
+make the GHCR package public for unauthenticated pulls. No image is published by
+local work on this checkout. CI checks out LFS content, runs the npm/Go checks,
+builds a local image, and smoke-tests Compose with a disposable project volume.

@@ -30,7 +30,7 @@ There are 25 Markdown docs within the first two levels of `docs/`, plus a 1,056-
 
 ### 6. Make static analysis reproducible in the documented environment (S, low risk)
 
-Requested command `staticcheck ./...` did not reach analysis: it failed to create `/path/to/glimway`; retrying with `XDG_CACHE_HOME=/tmp` still used that default path. Since the report cannot distinguish code findings from an environment failure, run it in CI or document a supported cache override in the tooling setup. The Go tests remain separate from `npm run verify`; consider a single CI aggregate that runs both without forcing local web work to pay the Go race-test cost. Verify with `staticcheck ./...` in CI and `go test ./...`.
+Requested command `staticcheck ./...` did not reach analysis: it failed to create the user cache directory (`Library/Caches/staticcheck` on macOS); retrying with `XDG_CACHE_HOME=/tmp` still used that default path. Since the report cannot distinguish code findings from an environment failure, run it in CI or document a supported cache override in the tooling setup. The Go tests remain separate from `npm run verify`; consider a single CI aggregate that runs both without forcing local web work to pay the Go race-test cost. Verify with `staticcheck ./...` in CI and `go test ./...`.
 
 ## Tool results
 

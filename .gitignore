@@ -22,6 +22,15 @@ dist
 # Connected playtests: throwaway server database and binary
 /.e2e-server/
 
+# Agent metadata, private deployment notes and generated drafts
+.agent*/
+.agents/
+.codex/
+/assets/generated/**/drafts/
+deploy/local/
+result
+result-*
+
 # Publication hygiene
 /public/assets/fingersnap/**/drafts/
 .idea/
@@ -34,7 +43,3 @@ dist
 *.db
 *.db-shm
 *.db-wal
-.agent*/
-.agents/
-.codex/
-/assets/generated/**/drafts/

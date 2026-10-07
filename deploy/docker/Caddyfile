@@ -1,0 +1,9 @@
+{$GLIMWAY_PUBLIC_ORIGIN} {
+	handle /ws {
+		reverse_proxy {$GLIMWAY_UPSTREAM}
+	}
+	handle {
+		encode zstd gzip
+		reverse_proxy {$GLIMWAY_UPSTREAM}
+	}
+}
