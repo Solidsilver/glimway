@@ -1,6 +1,8 @@
 /**
- * World builder for the three demo areas. Maps are generated deterministically
- * from code (seeded) — part of the original, code-native asset set.
+ * World builder: the first areas (village, woodland, ruin), generated
+ * deterministically from code (seeded), and the area-kind registry every
+ * area resolves through (those three, the Commons, the cottage, homestead
+ * land by `home:<gate>`, and the Wilds chunks registered at runtime).
  */
 import type { AreaId } from '../lib/state.ts'
 import { ITEM_RULES, sellerFor } from '../lib/items.ts'
@@ -784,7 +786,7 @@ export function hasAreaKind(id: string): boolean {
   return resolveKind(id) !== null
 }
 
-/** Register an area kind — how the Commons and the Wilds will arrive. */
+/** Register an area kind at runtime (an epoch's Wilds chunks: src/game/wilds/areas.ts). */
 export function registerAreaKind(id: string, kind: AreaKind): void {
   AREA_KINDS[id] = kind
 }

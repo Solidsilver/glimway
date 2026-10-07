@@ -26,7 +26,7 @@
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import { chunkEntities, rollLoot } from '../../lib/wilds/index.ts';
 import { epochEnded, guestOuterEpoch } from '../../lib/wilds/outer.ts';
-import type { Epoch, LootDrop, WildsEntityKind } from '../../lib/wilds/types.ts';
+import type { Epoch, LootDrop } from '../../lib/wilds/types.ts';
 import type { WildsEntityView, WildsLanternView, WildsMaterials } from '../../lib/api/types.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import { EV, bus } from '../events';
@@ -199,9 +199,7 @@ export function entityAvailable(e: WildsEntityView, nowSec: number): boolean {
 
 // ------------------------------------------------------------ guest mode
 
-/** Pack entries that carry a guest's material balance (parser in src/lib/inventory.ts). */
-export { MATERIAL_ITEM_PREFIX } from '../../lib/inventory.ts';
-export { materialsFromPack as materialsFromInventory } from '../../lib/inventory.ts';
+// Pack entries that carry a guest's material balance (parser in src/lib/inventory.ts).
 import { MATERIAL_ITEM_PREFIX, materialsFromPack as materialsFromInventory } from '../../lib/inventory.ts';
 
 function inventoryWithMaterials(inventory: readonly string[], materials: Record<string, number>): string[] {
@@ -464,8 +462,3 @@ export function lootText(drop: LootDrop): string {
   return parts.join(', ');
 }
 
-/** The generated entity kind of an id, or null. */
-export function entityKindOf(id: string): WildsEntityKind | null {
-  const kind = id.split(':')[0];
-  return kind === 'camp' || kind === 'node' || kind === 'chest' || kind === 'poi' ? kind : null;
-}

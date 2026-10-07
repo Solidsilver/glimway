@@ -704,3 +704,30 @@ test('bugs #4: a replayed answer never takes the link back a revision (or its st
   assert.equal((await link.homeAction({ op: 'upgrade', tier: 1 })).ok, true);
   assert.equal(server.sent('POST /api/homestead/upgrade')[0].body.baseRev, 7);
 });
+
+// ---------------------------------------------------------------- cleanup phase 0: keyed write paths
+
+test('a Wilds write retried after a stale revision keeps its idempotency key', async () => {
+  const server = fakeServer();
+  const { link } = makeLink(server, { rev: 5 });
+  server.on('POST /api/wilds/defeat', { status: 409, body: { error: { code: 'stale-revision' } } }, { body: { ...snap(base(), 8), result: lanternResult } });
+  server.on('GET /api/state', { body: { ...snap(base(), 7), leaseActive: true } });
+  assert.ok((await link.wildsDefeat({ epoch: 'e1', x: 3, y: 4 })).ok);
+  const [first, retry] = server.sent('POST /api/wilds/defeat');
+  assert.equal(retry.body.key, first.body.key, 'the retry is the same write, under the same key');
+  assert.equal(retry.body.baseRev, 7, 'on the revision just read');
+  assert.equal(link.rev, 8);
+});
+
+test('playing elsewhere ends the lease on a sync and a Wilds write, as on any other write', async () => {
+  const elsewhere = { status: 409, body: { error: { code: 'playing-elsewhere' } } };
+  for (const write of ['sync', 'wilds'] as const) {
+    const server = fakeServer();
+    const { link } = makeLink(server, { rev: 5 });
+    server.on('POST /api/sync', elsewhere);
+    server.on('POST /api/wilds/lantern', elsewhere);
+    const res = write === 'sync' ? await link.sync({ id: 'hero' } as HabiticaProfile) : await link.wildsRelight({ epoch: 'e1', ownerId: 'bob', lanternId: 'l1' });
+    assert.deepEqual(res, { ok: false, code: 'superseded' }, write);
+    assert.equal(link.status, 'superseded', write);
+  }
+});

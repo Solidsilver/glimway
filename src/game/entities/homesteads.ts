@@ -68,6 +68,9 @@ import {
 } from '../homestead'
 import type { Effects } from './fx'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import { expose } from '../dev-hooks'
+import { onSceneEnd } from '../scene-end'
+import { DialogueHold } from '../dialogue-hold'
 
 export interface HomesteadDeps {
   world: WorldData
@@ -161,8 +164,12 @@ export class HomesteadLayer implements InteractionProvider {
     bus.on(VILLAGE_EV.changed, onVillage)
     bus.on(HOME_EV.command, onCommand)
     bus.on('game:home-arrange', onArrange)
-    scene.events.once('shutdown', () => {
+    // A destroyed game never shuts its scene down: either way, async work stops.
+    onSceneEnd(scene, () => {
       this.gone = true
+      this.silasHold.release()
+    })
+    scene.events.once('shutdown', () => {
       bus.off(HOME_EV.changed, onChange)
       bus.off(VILLAGE_EV.changed, onVillage)
       bus.off(HOME_EV.command, onCommand)
@@ -172,7 +179,7 @@ export class HomesteadLayer implements InteractionProvider {
       this.emitArrange({ available: false, scene: null, tier: 0 })
     })
     // Read-only view of homesteads for playtests.
-    ;(window as unknown as { __fsHomes?: () => unknown }).__fsHomes = () => ({
+    expose('__fsHomes', () => ({
       status: this.homes.status,
       claimed: this.homes.claimed,
       myGate: this.homes.myGate,
@@ -193,14 +200,12 @@ export class HomesteadLayer implements InteractionProvider {
         tweens: this.scene.tweens.getTweens().length,
         deadTweens: this.scene.tweens.getTweens().filter((t) => t.targets.some((o) => !(o as Phaser.GameObjects.GameObject).active)).length
       }
-    })
-    if (import.meta.env.DEV) {
-      // Playtests: a tap on a land/room grid tile while arranging (as a pointer would).
-      ;(window as unknown as { __fsDevTapTile?: (x: number, y: number) => void }).__fsDevTapTile = (x: number, y: number) => {
-        const p = this.placement
-        if (p) this.onPointer({ worldX: p.ox + (x + 0.5) * TILE, worldY: p.oy + (y + 0.5) * TILE } as Phaser.Input.Pointer)
-      }
-    }
+    }), scene)
+    // Playtests: a tap on a land/room grid tile while arranging (as a pointer would).
+    expose('__fsDevTapTile', (x, y) => {
+      const p = this.placement
+      if (p) this.onPointer({ worldX: p.ox + (x + 0.5) * TILE, worldY: p.oy + (y + 0.5) * TILE } as Phaser.Input.Pointer)
+    }, scene)
     this.redraw()
     if (this.commons) void this.homes.load()
     if (this.gate !== null) void this.loadHere()
@@ -211,8 +216,10 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   private announcePending = false
-  /** The scene shut down (async work that outlives it stops). */
+  /** The scene ended (async work that outlives it stops). */
   private gone = false
+  /** The world held still while Silas reads his plot book. */
+  private readonly silasHold = new DialogueHold(uiState)
 
   /** Placement mode owns input: the hero waits. */
   get placing(): boolean {
@@ -1180,9 +1187,11 @@ export class HomesteadLayer implements InteractionProvider {
   /** Silas checks his plot book first (who holds what, who wants a joint deed), then talks. */
   private talkToSilas(): void {
     if (this.homes.connected && this.homes.status === 'ready') {
-      uiState.dialogueOpen = true
+      // The world holds still while he reads (the scene's end lets go, never this late answer).
+      this.silasHold.take()
       void this.homes.load().finally(() => {
         if (this.gone) return
+        this.silasHold.settle()
         this.talkToSilasNow()
       })
       return

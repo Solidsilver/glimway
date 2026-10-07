@@ -67,7 +67,7 @@ export interface InteractableDeps {
   reducedMotion: boolean
   /** Found-text pickups and the library door (they handle their own interactions). */
   papers?: PaperPickups
-  /** Runtime interaction points owned by features (homesteads, village life). */
+  /** Runtime interaction points owned by features (village life, touches, item pickups, repairs, homesteads). */
   extras?: InteractionProvider[]
   village?: Village
 }
@@ -123,7 +123,13 @@ export class Interactables {
         label: spot.id === 'hearth' ? 'Sit by the lantern' : spot.id === 'chest' ? 'Look at the chest' : 'Look at the lantern'
       })
     }
-    if (deps.papers) this.list.push(...deps.papers.interactions())
+    if (deps.papers) {
+      this.list.push(...deps.papers.interactions())
+      deps.papers.onGone((id) => {
+        const it = this.list.find((i) => i.id === id)
+        if (it) this.remove(it)
+      })
+    }
   }
 
   /** Attach the runtime provider (it is built after this, since it pushes points here). */

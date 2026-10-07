@@ -25,6 +25,7 @@ import type { DecorKind } from '../lib/wilds/types.ts'
 import { HOMESTEAD_DATA } from '../lib/homestead.ts'
 import type { CommonsPassFrame } from './commons-pass.ts'
 import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'
+import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
@@ -154,6 +155,43 @@ export type PersonId = (typeof PEOPLE)[number]
 export const HELD_WORLD = 10
 export const HELD_TEXELS = HELD_WORLD * ART_DENSITY
 export const HELD_SOURCE = 32
+
+/**
+ * The playtest-1 frames the build samples, by name: the ground tiles and the
+ * pond's bed, the buildings, the residents' and the held tools'.
+ */
+export function playtest1Used(names: string[]): string[] {
+  return names.filter((n) => (GROUND_TILES as readonly string[]).includes(n) || n === POND_SOURCE || (BUILDINGS as readonly string[]).includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
+}
+
+/** The packed manifest's `inputs` key for playtest1Records' hash. */
+export const PLAYTEST1_RECORDS = `${PLAYTEST1_DIR}/{atlas,animations}.json: frames in use`
+
+/**
+ * What the build reads from the shared playtest-1 manifests (atlas.json,
+ * animations.json): the records of the frames in use, their source sheets'
+ * entries, and the animations made only of baked resident frames. The
+ * staleness check hashes this, not the whole files, so an art drop that adds
+ * frames the game doesn't use leaves the packs current. Keys are sorted, so
+ * the hash doesn't depend on the files' order.
+ */
+export function playtest1Records(
+  atlas: { frames: Record<string, { source: string }>; sources: Record<string, unknown> },
+  anims: { animations: { frames: string[] }[] },
+): string {
+  const used = playtest1Used(Object.keys(atlas.frames)).sort()
+  const residents = used.filter((n) => n.startsWith('resident-'))
+  const sources = [...new Set(used.map((n) => atlas.frames[n].source))].sort()
+  const sorted = (v: unknown): unknown =>
+    Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted((v as Record<string, unknown>)[k])])) : v
+  return JSON.stringify(
+    sorted({
+      frames: Object.fromEntries(used.map((n) => [n, atlas.frames[n]])),
+      sources: Object.fromEntries(sources.map((k) => [k, atlas.sources[k]])),
+      animations: anims.animations.filter((a) => a.frames.every((f) => residents.includes(f))),
+    }),
+  )
+}
 
 /** Key for a baked off-native sample of a frame. */
 export function blitKey(frame: string, w: number, h: number, flipX: boolean): string {

@@ -91,17 +91,17 @@ export interface QuestPayload {
   short?: string
 }
 
-/**
- * Which way the current goal lies from the hero, in screen terms (radians,
- * 0 = right, clockwise; null when there is no place to point at). `here`:
- * the goal is in this area (else the angle points at the way out toward it).
- */
 /** What the HUD's goal line says: the story's short goal, or a pinned guide's step. */
 export interface GoalLinePayload {
   /** null: the story leads (the HUD shows the quest's own words). */
   guide: { id: string; title: string; step: string; index: number; count: number } | null
 }
 
+/**
+ * Which way the current goal lies from the hero, in screen terms (radians,
+ * 0 = right, clockwise; null when there is no place to point at). `here`:
+ * the goal is in this area (else the angle points at the way out toward it).
+ */
 export interface GoalDirPayload {
   angle: number | null
   here: boolean

@@ -16,6 +16,7 @@ import { playInsets } from '../viewport'
 import type { QuestStage } from '../../lib/state'
 import type { WorldData } from '../worlds'
 import type { GuideWhere } from '../../content/guides'
+import { expose } from '../dev-hooks'
 
 /**
  * The places and the ways between them. Homesteads are by whose they are:
@@ -105,9 +106,7 @@ export class GoalGuide {
     this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setDepth(5600).setAlpha(0.8).setVisible(false)
     this.chevron = scene.add.image(0, 0, 'mark-chevron').setScrollFactor(0).setDepth(5601).setVisible(false)
     // Read-only, for playtests: what the guide points at, and whether the edge glint shows.
-    if (import.meta.env.DEV) {
-      ;(window as unknown as { __fsGoal?: () => unknown }).__fsGoal = () => ({ target: this.target(), dir: this.last, glint: this.glow.visible })
-    }
+    expose('__fsGoal', () => ({ target: this.target(), dir: this.last, glint: this.glow.visible }), scene)
     scene.events.once('shutdown', () => {
       this.glow.destroy()
       this.chevron.destroy()

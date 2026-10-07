@@ -14,7 +14,7 @@
  * The outer Wilds also drift with pale motes of the white quiet.
  */
 import type Phaser from 'phaser'
-import { ECHOES, ECHO_SETTLED_LINE, SITE_TEXT, echoCampSpeaker, echoFlag, echoSoftenedFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
+import { SITE_TEXT, echoCampSpeaker, echoFlag, echoSoftenedFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
 import { paperFlag } from '../../content/papers.ts'
 import { HEIRLOOMS, HEIRLOOM_GUEST_LINES } from '../../content/heirlooms.ts'
 import { itemsFor } from '../items'
@@ -552,5 +552,3 @@ export class WildsSites {
     })
   }
 }
-
-export { ECHOES, ECHO_SETTLED_LINE }

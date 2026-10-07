@@ -4,8 +4,9 @@
  *   node scripts/build-atlases.ts        (npm run atlases)
  *
  * Reads the source sheets and manifests under assets/generated/ (never
- * modified) and writes public/assets/fingersnap/packed/: see
- * src/game/atlas-plan.ts for what each atlas holds and why.
+ * modified) and writes public/assets/fingersnap/packed/, swapping the whole
+ * folder in only once the bake has succeeded: see src/game/atlas-plan.ts for
+ * what each atlas holds and why.
  *
  * The baking runs in headless Chromium (Playwright's, already a dev
  * dependency). The canvas packs (the Commons, runtime and items passes, the
@@ -48,6 +49,8 @@ import {
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
+  PLAYTEST1_RECORDS,
+  playtest1Records,
   type PackedManifest,
   type PackedPeople,
   type PackedRect,
@@ -56,9 +59,15 @@ import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from '../src/ga
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
+import { installDirs, installStaged } from './atlas-install.ts'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const OUT = join(ROOT, 'public/assets/fingersnap/packed')
+const PACKED = join(ROOT, 'public/assets/fingersnap/packed')
+// Everything is written to a staging folder beside PACKED and swapped in whole
+// once the bake has succeeded (./atlas-install.ts), so a failed run leaves the
+// committed atlases as they were.
+const DIRS = installDirs(PACKED)
+const OUT = DIRS.staged
 const ORIGIN = 'http://bake.local/'
 
 const inputs: Record<string, string> = {}
@@ -176,8 +185,10 @@ async function main(): Promise<void> {
   // The playtest-1 pass: its measured frames (atlas.json; manifest.json only
   // counts them) and animations. Only the frames named there are sampled.
   type P1Frame = { source: string; x: number; y: number; w: number; h: number; destinationRect: { x: number; y: number; w: number; h: number }; handAnchor?: { x: number; y: number } }
-  const p1 = readJson<{ frames: Record<string, P1Frame>; sources: Record<string, { file: string }> }>(`${PLAYTEST1_DIR}/atlas.json`)
-  const p1Anims = readJson<{ animations: PackedPeople['animations'] }>(`${PLAYTEST1_DIR}/animations.json`)
+  // Shared manifests: only the records of the frames in use count as inputs.
+  const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as { frames: Record<string, P1Frame>; sources: Record<string, { file: string }> }
+  const p1Anims = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'animations.json'), 'utf8')) as { animations: PackedPeople['animations'] }
+  inputs[PLAYTEST1_RECORDS] = createHash('sha256').update(playtest1Records(p1, p1Anims)).digest('hex')
   const p1Src = (key: string) => {
     const file = p1.sources[key]?.file
     if (!file) throw new Error(`playtest1-pass: atlas.json lists no source sheet ${key}`)
@@ -665,7 +676,12 @@ async function main(): Promise<void> {
     backdrops,
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
+  installStaged(PACKED, DIRS)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
 }
 
-await main()
+try {
+  await main()
+} finally {
+  rmSync(OUT, { recursive: true, force: true })
+}

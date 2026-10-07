@@ -30,6 +30,7 @@ import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
 import { grantPaper } from '../papers'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import { expose } from '../dev-hooks'
 
 export interface VillageDeps {
   world: WorldData
@@ -61,23 +62,21 @@ export class VillageLayer implements InteractionProvider {
     scene.events.once('shutdown', () => bus.off(VILLAGE_EV.changed, onChange))
     scene.events.once('destroy', () => bus.off(VILLAGE_EV.changed, onChange))
     this.syncInteractions()
-    if (import.meta.env.DEV) {
-      ;(window as unknown as Record<string, unknown>).__fsDevCalendar = (unix: number | null) => this.village.setDevNow(unix)
-      // Pretend the world has finished something (a project's flag): the village redraws.
-      ;(window as unknown as Record<string, unknown>).__fsDevWorldFlag = (flag: string) => {
-        if (!this.village.worldFlags.includes(flag)) this.village.worldFlags = [...this.village.worldFlags, flag]
-        bus.emit(VILLAGE_EV.changed, { what: 'projects' })
-      }
-    }
+    expose('__fsDevCalendar', (unix) => this.village.setDevNow(unix), scene)
+    // Pretend the world has finished something (a project's flag): the village redraws.
+    expose('__fsDevWorldFlag', (flag) => {
+      if (!this.village.worldFlags.includes(flag)) this.village.worldFlags = [...this.village.worldFlags, flag]
+      bus.emit(VILLAGE_EV.changed, { what: 'projects' })
+    }, scene)
     // Read-only: the mill wheel (playtests).
-    ;(window as unknown as { __fsMill?: () => unknown }).__fsMill = () => this.millView && { ...this.millView }
-    ;(window as unknown as { __fsVillage?: () => unknown }).__fsVillage = () => ({
+    expose('__fsMill', () => this.millView && { ...this.millView }, scene)
+    expose('__fsVillage', () => ({
       calendar: this.village.calendar,
       source: this.village.calendarSource,
       worldFlags: this.village.worldFlags,
       projectsStatus: this.village.projectsStatus,
       loadProjects: () => this.village.loadProjects()
-    })
+    }), scene)
     this.village.ensureCalendar()
     if (deps.session.link && Date.now() - projectsReadAt > 60_000) {
       projectsReadAt = Date.now()
@@ -398,5 +397,3 @@ export function openBoard(): void {
   sfx('open')
   bus.emit(VILLAGE_EV.open, { panel: 'board' })
 }
-
-export type { Interactable }

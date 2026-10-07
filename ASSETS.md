@@ -89,9 +89,11 @@ for history and move the replacement into Register A or C.
 ## Register D — expansion art pack (delivered)
 
 Delivered 2026-10-02 (second drop, same day) by the external asset agent to
-`assets/generated/expansion/`; runtime-loaded copies live at
-`public/assets/fingersnap/expansion/` (same bytes; generated copy is the
-archive of record).
+`assets/generated/expansion/` (the archive of record).
+`public/assets/fingersnap/expansion/` ships only `manifest.json` and
+`animations.json`: the terrain cells ship baked into `packed/terrain.webp`,
+and the foreground, demo-walk and enemy sheets as GPU-scaled atlases in
+`packed/` (`scripts/build-atlases.ts`).
 
 Provenance: original artwork generated 2026-10-02 with the built-in
 image-generation tool ("built-in image_gen"). Exact source prompts:
@@ -100,8 +102,9 @@ image-generation tool ("built-in image_gen"). Exact source prompts:
 adventurer NOT a Habitica asset"). Generation metadata:
 `assets/generated/expansion/manifest.json`; animation defs:
 `animations.json`; atlas builder that measured frames:
-`build_atlases.py`; integration reference `integration.js` (ported to
-`src/game/expansion.ts`, runtime-owned call sites).
+`build_atlases.py`. The pack's integration reference was ported to
+`src/game/expansion.ts` (runtime-owned call sites) and the archived copy
+removed (2026-10-07).
 
 | File | Key(s) | Source size | Role | Prompt key |
 |---|---|---|---|---|
@@ -122,8 +125,9 @@ stone-arch, fern-cluster`; walk `walk-{down,left,right,up}-0..3`; enemies
 
 Recorded limits/quirks: terrain source cells are **uneven** (1254 px sheet is
 not an even 4×4 of 256 px; hand-measured atlas rects ~314 px are
-authoritative) — runtime normalizes them into a uniform 32 px tileset
-(`fingersnap-terrain-runtime`) via `createFingersnapTerrain`; the demo walker
+authoritative) — the atlas build box-filters each cell into a uniform 4×4
+tileset at ART_DENSITY (`packed/terrain.webp`, loaded as
+`fingersnap-terrain-runtime`); the demo walker
 is an original stand-in, not a Habitica avatar; enemy windup/hurt frames are
 available but no full combat anim set; trimmed frames carry
 `spriteSourceSize` offsets (handled by Phaser atlas loader); no collision or
@@ -132,8 +136,8 @@ walkability metadata (runtime authors it).
 Provenance attributes: **Author** — Fingersnap project (external asset agent
 via built-in image_gen). **Source** — original generation, prompts in-repo.
 **Modifications** — none to source PNGs; atlas rects measured by
-`build_atlases.py`; runtime tileset is a derived canvas at load time (not a
-file). **License** — pending (same decision as Register A).
+`build_atlases.py`; the shipped tileset and atlases are resampled by
+`scripts/build-atlases.ts`. **License** — pending (same decision as Register A).
 **Attribution text** — TBD with license choice.
 
 ## Register E — runtime art pass (NPCs, guardian, class effects)
@@ -154,9 +158,10 @@ rectangles: `manifest.json` — 27 frames with `sourceRect`/`destinationRect`,
 7 animation defs, 7 compatibility aliases (rects measured by
 `build_manifest.py`). Handoff notes and the validation record:
 `assets/generated/runtime-pass/README.md`. Browser preview `preview.html`
-(validation only, not game art). Integration reference `integration.js`
+(validation only, not game art). The pack's integration reference was
 ported to `src/game/runtime-art.ts` (content agent's module; runtime-owned
-call sites); manifest contract covered by `tests/runtime-art.test.ts`.
+call sites) and the archived copy removed (2026-10-07); manifest contract
+covered by `tests/runtime-art.test.ts`.
 
 | File | Key(s) | Source size | Role | Prompt key |
 |---|---|---|---|---|
@@ -164,7 +169,7 @@ call sites); manifest contract covered by `tests/runtime-art.test.ts`.
 | `fingersnap-guardian.png` | `fingersnap-guardian` (source sheet) | 1536×1024 | Stone guardian idle/windup/lunge/hurt/defeat (5 measured frames → 24×24 native) | `guardian` |
 | `fingersnap-class-effects.png` | `fingersnap-class-effects` (source sheet) | 1254×1254 | Cleave, magic bolt, dash trail, healing pulse, 4 stages each (16 measured frames) | `effects` |
 | `manifest.json` | `fingersnap-runtime-art` | — | 27 measured frame rects, 7 animation defs, 7 compat aliases | — |
-| `integration.js`, `build_manifest.py`, `preview.html`, `README.md`, `prompts.json` | — | — | Provenance/helper metadata (not game art) | — |
+| `build_manifest.py`, `preview.html`, `README.md`, `prompts.json` | — | — | Provenance/helper metadata (not game art) | — |
 
 Frame keys: `mara-idle-0/1`, `pip-idle-0/1`, `orrin-idle-0/1`,
 `guardian-idle|windup|lunge|hurt|defeat`, `cleave-0..3`, `magic-bolt-0..3`,
@@ -205,7 +210,7 @@ Habitica's artwork license). **Attribution text** — TBD with license choice.
 Delivered 2026-10-05 to `assets/generated/commons-pass/` (archive of
 record: 21 sheets, per-sheet atlases, `manifest.json`, `jobs.json` and
 `portrait-job.json` prompts, `drafts/`, `preview.html`, `validation.json`,
-`frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
+`frame-inspection.json`, `build_manifest.py`, README and
 COVERAGE). `public/assets/fingersnap/commons-pass/` ships only
 `manifest.json`; the frames ship baked into the packed atlas (see the
 2026-10-05 changelog entry on packed atlases).
@@ -232,7 +237,7 @@ runtime from the measured crops (source bytes untouched).
 Delivered 2026-10-05 to `assets/generated/items-pass/` (archive of
 record: 12 sheets, per-sheet atlases, `manifest.json`, `jobs.json`,
 `request-index.json`, `drafts/`, `preview.html`, `validation.json`,
-`frame-inspection.json`, `build_manifest.py`, `integration.js`, README and
+`frame-inspection.json`, `build_manifest.py`, README and
 COVERAGE). `public/assets/fingersnap/items-pass/` ships only `manifest.json`;
 the frames ship baked into the packed atlas (`items.webp`, 1.1 MB).
 
@@ -251,6 +256,53 @@ Recorded limits/quirks: sources are irregular high-resolution sheets
 (never a grid); native canvases are tiny (16×16 for item icons); tool
 conditions and variants are discrete states (never auto-looping); the Tolley
 Mill waterwheel and froth are the three authored looping animations.
+
+## Register H — playtest-1 pass (ground, residents, buildings, held tools)
+
+Committed 2026-10-06 (round 1: ground, transitions, walking residents, held
+tools, a player-body prototype) and 2026-10-07 (rounds 2–3: flagstone and
+water-bed variants, three village houses, the Brackenwood footbridge, a
+seamless pond bed) to `assets/generated/playtest1-pass/` (the archive of
+record, ~39 MB: 23 source sheets, `atlas.json` with 427 measured frames and
+the source catalog, `manifest.json`, `animations.json` with 82 sequences,
+`prompts.json`, `validation.json`, `preview.html`, README and COVERAGE).
+Nothing from the pass ships as its own file: `scripts/build-atlases.ts`
+samples only the frames in use into `packed/ground.webp` (the ground tiles,
+seam-healed after baking, and the pond bed, seamless as delivered and cut
+into 4×4 tiles unhealed), `packed/people.webp` (the eight
+residents and the held tools) and `packed/buildings.webp` (the houses and
+the bridge).
+
+Provenance: original artwork generated with Codex built-in image generation
+(`prompts.json` records the date, 2026-10-06, the generator, the shared
+style and one request per sheet, rounds 2–3 included). Integration:
+`src/game/atlas-plan.ts` (`PLAYTEST1_DIR`, `GROUND_TILES`, `PEOPLE`,
+`BUILDINGS`, `HELD_*`), `src/game/ground-tiles.ts`, `src/game/people.ts`,
+`src/game/buildings.ts`; staleness and contract checks in
+`tests/atlases.test.ts`.
+
+| Source | Frames used | Ships in | Role |
+|---|---|---|---|
+| `ground/fingersnap-ground-base.png`, `ground/fingersnap-ground-flagstone-variants.png` | the ground tiles named in `GROUND_TILES` | `ground.webp` | Village and Commons ground |
+| `water/fingersnap-pond-bed-seamless.png` | `pond-bed-seamless` (4×4 tiles) | `ground.webp` | Pond floor |
+| `residents/fingersnap-resident-{mara,pip,orrin,silas,elara,finn,hazel,ada}.png` | `resident-<id>-*` (25 poses each) | `people.webp` | Walking, idle and sitting residents |
+| `hand-items/fingersnap-held-tools.png` | `held-*` (8 tools × 4 directions) | `people.webp` | Tools in the hand |
+| `houses/fingersnap-house-{west,middle,ada}.png`, `bridge/fingersnap-brackenwood-bridge.png` | `BUILDINGS` | `buildings.webp` | Village houses, the footbridge (worn, mended) |
+| `ground/fingersnap-ground-transition-*.png`, `ground/fingersnap-ground-waterbed-variants.png`, `player-body/…` | none | — | Delivered, not used yet (the player body is a prototype) |
+
+Recorded limits/quirks: sources are irregular high-resolution sheets with
+measured rects (never a grid); the base ground tiles are not bit-seamless
+(the build heals the seams; README "Art notes"); resident sheets carry stray
+pixels in unreferenced cells, which are never sampled; the player body is a
+prototype without clean recolour layers.
+
+Provenance attributes: **Author** — Fingersnap project (Codex built-in image
+generation). **Source** — original generation, prompts in-repo.
+**Modifications** — none to source PNGs; the shipped packs are box-filtered
+to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
+`scripts/build-atlases.ts`.
+**License** — pending (same decision as Register A). **Attribution text** —
+TBD with license choice.
 
 ## Register C — pending delivered art (not yet in repo)
 
@@ -405,3 +457,11 @@ record here):
   Tolley mill with its running waterwheel and mended wheel animations.
   Frames ship packed into `items.png` (144 KB); `public/assets` remains
   ~4.1 MB (~17 MB source copy removed from public). License still pending.
+- 2026-10-07 — Register H added for the playtest-1 pass
+  (`assets/generated/playtest1-pass/`, rounds 1–3): ground, pond bed,
+  walking residents, held tools, village houses and the Brackenwood bridge,
+  shipping only as baked frames in `ground.webp`, `people.webp` and
+  `buildings.webp`. Register D updated: the expansion art ships packed, not
+  as copies, and the terrain tileset is baked by the atlas build. The four
+  archived `integration.js` references (expansion, runtime, Commons, items)
+  removed; their ports in `src/game/` remain. License still pending.

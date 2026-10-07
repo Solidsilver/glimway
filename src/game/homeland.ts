@@ -78,7 +78,7 @@ export interface LandWorld extends WorldData {
 }
 
 /** Where you arrive on the Commons coming back out of gate g (the lane side of it). */
-export function commonsEntryFor(gate: number): { tx: number; ty: number } {
+function commonsEntryFor(gate: number): { tx: number; ty: number } {
   const t = gateTile(gate)
   return { tx: t.side === 'west' ? t.tx + 1 : t.tx - 1, ty: t.ty }
 }
@@ -92,11 +92,6 @@ export function landEntry(): { tx: number; ty: number } {
 /** The seed of a gate's land in this world: the server's when read, else from the world id. */
 export function seedFor(gate: number): number {
   return source.seed?.(gate) ?? landSeed(source.worldId(), gate)
-}
-
-/** The land tiles of a gate in this world (no cleared tiles applied). */
-export function landFor(gate: number): Land {
-  return generateLand(seedFor(gate))
 }
 
 function h32(x: number, y: number, s: number): number {

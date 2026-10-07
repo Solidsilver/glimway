@@ -1,13 +1,6 @@
 import Phaser from 'phaser'
 
-export const FINGERSNAP_EXPANSION_BASE = '/assets/fingersnap/expansion/'
-
-export const FINGERSNAP_EXPANSION_ATLASES = [
-  'fingersnap-terrain',
-  'fingersnap-foreground',
-  'fingersnap-demo-walk',
-  'fingersnap-enemies',
-] as const
+const FINGERSNAP_EXPANSION_BASE = '/assets/fingersnap/expansion/'
 
 export interface FingersnapAnimationDefinition {
   key: string

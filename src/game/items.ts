@@ -10,7 +10,7 @@
  */
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
 import type { ApiErrorCode } from '../lib/api/errors'
-import { effectLine, giftPhrase, ITEM_RULES, itemDef, menderNear, pickupById, pocketHelps } from '../lib/items'
+import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items'
 import { GATHERING_DATA } from '../lib/gathering'
 import { bus, EV } from './events'
 import type { MutationOp } from './link'
@@ -328,10 +328,6 @@ export class Items {
     bus.emit(ITEMS_EV.changed, { what })
   }
 }
-
-/** One help in words, for lists. */
-export const helpLine = effectLine
-export const defOf = itemDef
 
 function fail(code: string): { ok: false; code: string; text: string } {
   return { ok: false, code, text: itemErrorText(code) }

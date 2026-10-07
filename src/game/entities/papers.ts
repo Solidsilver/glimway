@@ -171,6 +171,8 @@ export class PaperPickups {
   private pickups = new Map<string, Pickup>()
   /** Paper an NPC is handing over in the open conversation (granted on close). */
   private pendingHandover: string | null = null
+  /** Told when a pickup leaves without being activated here (picked up on another device). */
+  private gone: ((id: InteractId) => void) | null = null
 
   constructor(private scene: Phaser.Scene, private deps: PaperDeps) {
     ensureTextures(scene)
@@ -210,6 +212,11 @@ export class PaperPickups {
       out.push({ id: `paper:${p.id}`, x: p.source.tx * TILE + 8, y: p.source.ty * TILE + TILE - 2, label: LOOK_LABEL[p.source.look] })
     }
     return out
+  }
+
+  /** Interactables drops a pickup's point when it goes from under the prompt. */
+  onGone(fn: (id: InteractId) => void): void {
+    this.gone = fn
   }
 
   owns(id: string): boolean {
@@ -306,7 +313,11 @@ export class PaperPickups {
   /** Connected: another device may have picked something up. */
   private onWorldRefresh(): void {
     const still = new Set(placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).map((p) => p.id))
-    for (const id of [...this.pickups.keys()]) if (!still.has(id)) this.removePickup(id)
+    for (const id of [...this.pickups.keys()]) {
+      if (still.has(id)) continue
+      this.removePickup(id)
+      this.gone?.(`${PAPER_PREFIX}${id}`)
+    }
     emitPapers(this.deps.session)
   }
 

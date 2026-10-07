@@ -6,9 +6,9 @@
  * `deps.avatar()` (the container is the visible body when present).
  *
  * Lifetime note: attack/cast/dodge cooldowns, the shadowstep dash window,
- * i-frames and facing deliberately outlive an area change (the pre-split
- * scene kept them on its instance across scene.restart). The carried store
- * below reproduces that; the scene writes it back on shutdown.
+ * i-frames and facing deliberately outlive an area change (scene.restart
+ * builds a new Hero). The carried store below keeps them; the scene writes
+ * it back on shutdown.
  */
 import Phaser from 'phaser'
 import { getCombatKit, type CombatKit } from '../../lib/combat'

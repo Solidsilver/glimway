@@ -61,6 +61,3 @@ export function registerWildsAreas(epoch: Epoch): void {
 function register(areaId: AreaId, epoch: Epoch, cx: number, cy: number): void {
   registerAreaKind(areaId, wildsKind(epoch, cx, cy));
 }
-
-/** Guard so tests can assert the region id this module is built for. */
-export const wildsAreaRegionId = WILDS_REGION_ID;
