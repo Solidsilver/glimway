@@ -214,6 +214,13 @@ class Grid {
   }
 }
 
+/** The village's three homes (4 tiles deep), and the building art each is drawn with (src/game/buildings.ts). */
+export const VILLAGE_HOUSES = [
+  { tx: 5, ty: 4, w: 6, frame: 'house-west' },
+  { tx: 17, ty: 3, w: 7, frame: 'house-middle' },
+  { tx: 31, ty: 4, w: 6, frame: 'house-ada' }
+] as const
+
 function isGrassLike(tile: number): boolean {
   return tile === TERRAIN.grass_a || tile === TERRAIN.grass_b || tile === TERRAIN.grass_c
 }
@@ -264,10 +271,11 @@ function buildVillage(): WorldData {
   g.row(33, 18, 6, TERRAIN.sand)
   g.col(32, 19, 4, TERRAIN.sand)
 
-  // Houses
-  g.house(5, 4, 6)
-  g.house(17, 3, 7)
-  g.house(31, 4, 6)
+  // Houses: tile houses, each drawn by its delivered building when that art
+  // loaded (scenery below, `groundUnder`): the footprint stays solid, the
+  // door on its bottom row, the window above (Ada's is the east one,
+  // village-life.ts ADA_HOUSE_WINDOW).
+  for (const h of VILLAGE_HOUSES) g.house(h.tx, h.ty, h.w)
 
   // Paths
   g.row(3, 10, W - 3, TERRAIN.path_a)
@@ -279,13 +287,23 @@ function buildVillage(): WorldData {
   g.col(39, 11, 5, TERRAIN.path_a)
   g.row(39, 15, 3, TERRAIN.path_a)
 
-  // Garden fence with a gap
-  g.row(24, 13, 7, TERRAIN.fence, true)
-  g.row(24, 18, 7, TERRAIN.fence, true)
-  g.col(24, 13, 6, TERRAIN.fence, true)
-  g.col(30, 13, 6, TERRAIN.fence, true)
-  g.set(27, 18, TERRAIN.grass_a)
-  g.solid[18][27] = false
+  // Garden fence with a gap: solid tiles on grass, drawn as fence runs from
+  // the Commons pass's pieces (as round Silas's yard), not plank tiles.
+  const gardenFence: ScenerySpot[] = []
+  const fenceH = (x0: number, x1: number, y: number) => {
+    for (let x = x0; x <= x1; x++) g.set(x, y, TERRAIN.grass_a, true)
+    gardenFence.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: (y + 1) * TILE, originX: 0 })
+  }
+  const fenceV = (x: number, y0: number, y1: number) => {
+    for (let y = y0; y <= y1; y++) g.set(x, y, TERRAIN.grass_a, true)
+    gardenFence.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: (y1 + 1) * TILE, originX: 0 })
+  }
+  fenceH(24, 30, 13)
+  fenceV(24, 14, 17)
+  fenceV(30, 14, 17)
+  // The gap at 27,18 (a rail fallen out of it: content/repairs.json fence-rail).
+  fenceH(24, 26, 18)
+  fenceH(28, 30, 18)
 
   // Unbroken border trees, with one gap on the east edge to the woodland
   // (the journey reads left to right: village → woodland → ruin).
@@ -428,6 +446,13 @@ function buildVillage(): WorldData {
     mill,
     scenery: [
       ...seasonalScenery,
+      ...gardenFence,
+      ...VILLAGE_HOUSES.map((h) => ({
+        key: `p1:${h.frame}`,
+        x: (h.tx + h.w / 2) * TILE,
+        y: (h.ty + 4) * TILE,
+        groundUnder: { tx: h.tx, ty: h.ty, tw: h.w, th: 4, tile: TERRAIN.grass_a }
+      })),
       { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
       { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
       { key: 'mill-hopper', x: millHopper.tx * TILE + 8, y: (millHopper.ty + 1) * TILE },

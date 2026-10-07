@@ -17,6 +17,7 @@
  */
 import Phaser from 'phaser'
 import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim } from '../people'
+import { solidBox } from '../area/collision'
 import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, homeItem, parseHomeArea, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Light } from '../../lib/homestead-land'
 import { checkSpend } from '../../lib/embers'
@@ -399,8 +400,7 @@ export class HomesteadLayer implements InteractionProvider {
   }
 
   private addBody(d: Drawn, cx: number, cy: number, w: number, h: number): void {
-    const img = this.scene.physics.add.staticImage(cx, cy, 'px').setDisplaySize(w, h).refreshBody()
-    img.setVisible(false)
+    const img = solidBox(this.scene, cx, cy, w, h)
     this.deps.solidGroup.add(img)
     d.bodies.push(img)
   }
