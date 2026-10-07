@@ -43,8 +43,7 @@ are shown unmodified, with credit, and are not AI-generated.
 
 ## Play
 
-- **Online:** the main instance is at <https://fsnap.example.invalid>. Anyone
-  can play there as a guest; its worlds are invite-only.
+- **Self-hosted:** follow [the self-hosting guide](docs/home-server.md). Guests can play locally; connected worlds require admission.
 - **On your own machine** (Node 24+):
 
   ```sh
@@ -55,6 +54,14 @@ are shown unmodified, with credit, and are not AI-generated.
   ```
 
   For connected play, run a local server too: see [Run it locally](#run-it-locally).
+
+## Deployment methods
+
+| Method | What you run |
+|---|---|
+| [Nix flake](docs/home-server.md#nixos-flake) | NixOS service module, packaged web app, Caddy and scheduled backups |
+| [Docker Compose](docs/home-server.md#docker-compose) | One GHCR image for the app/API, persistent data volume, optional HTTPS Caddy |
+| [Manual](docs/home-server.md#manual-deployment-without-nix) | Build Go and Vite, install a systemd unit and reverse proxy |
 
 ## How your Habitica token is handled
 

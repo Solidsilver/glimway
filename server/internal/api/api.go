@@ -135,7 +135,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/health", "/ws", "/api/session", "/api/origin", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -185,6 +185,16 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	switch r.Method + " " + r.URL.Path {
+	case "GET /api/health", "HEAD /api/health":
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		if a.Store.DB.PingContext(ctx) != nil {
+			err = fail(503, "internal")
+		} else if r.Method == "HEAD" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			write(w, 200, map[string]string{"status": "ok"})
+		}
 	case "GET /ws":
 		err = a.presenceSocket(w, r)
 	case "POST /api/invites":

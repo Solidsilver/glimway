@@ -258,7 +258,7 @@ boot-time swap onto placeholder keys). Contract: `tests/commons-pass.test.ts`.
 ## Items pass (delivered October 5, 2026)
 
 `assets/generated/items-pass/` (archive of record: 12 sheets, per-sheet
-atlases, `manifest.json`, `jobs.json`, `request-index.json`, `drafts/`,
+atlases, `manifest.json`, `jobs.json`, `request-index.json`,
 `preview.html`, `validation.json`, `frame-inspection.json`, `build_manifest.py`,
 `integration.js`, README and COVERAGE). `public/assets/fingersnap/items-pass/`
 ships only `manifest.json`; the frames ship baked into the packed atlas

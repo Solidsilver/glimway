@@ -1,0 +1,80 @@
+services:
+  glimway:
+    image: ghcr.io/solidsilver/glimway:${GLIMWAY_IMAGE_TAG:-latest}
+    # docker compose build uses these; up/pull can use the published image.
+    build:
+      context: .
+      args:
+        VITE_HABITICA_CREATOR_ID: ${VITE_HABITICA_CREATOR_ID:-5abfd539-22eb-457f-8e2a-9fb3d66731f1}
+        VITE_HABITICA_APP_NAME: ${VITE_HABITICA_APP_NAME:-glimway}
+    restart: unless-stopped
+    init: true
+    ports:
+      # Local HTTP by default; the optional Caddy profile publishes HTTPS.
+      - "${GLIMWAY_BIND_ADDRESS:-127.0.0.1}:${GLIMWAY_HTTP_PORT:-8090}:${GLIMWAY_CONTAINER_PORT:-8090}"
+    volumes:
+      - glimway-data:/data
+    environment:
+      # All backend flags have matching GLIMWAY_* variables. CLI flags win.
+      GLIMWAY_LISTEN: ${GLIMWAY_LISTEN:-0.0.0.0:8090}
+      GLIMWAY_DB: ${GLIMWAY_DB:-/data/glimway.sqlite}
+      GLIMWAY_STATIC_DIR: ${GLIMWAY_STATIC_DIR-/web}
+      GLIMWAY_HABITICA_URL: ${GLIMWAY_HABITICA_URL:-https://habitica.com}
+      # Public creator-id-appname, never a player's Habitica credential.
+      GLIMWAY_X_CLIENT: ${GLIMWAY_X_CLIENT:-5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway}
+      GLIMWAY_COOKIE_SECURE: ${GLIMWAY_COOKIE_SECURE:-false}
+      GLIMWAY_PARTY_ADMISSION: ${GLIMWAY_PARTY_ADMISSION:-true}
+      GLIMWAY_LOGIN_CONCURRENCY: ${GLIMWAY_LOGIN_CONCURRENCY:-4}
+      GLIMWAY_LOGIN_RATE: ${GLIMWAY_LOGIN_RATE:-10}
+      GLIMWAY_LOGIN_GLOBAL_RATE: ${GLIMWAY_LOGIN_GLOBAL_RATE:-60}
+      # Trust the fixed optional Caddy IP, not the entire Docker subnet.
+      GLIMWAY_TRUSTED_PROXIES: ${GLIMWAY_TRUSTED_PROXIES-127.0.0.1,::1,172.30.83.2}
+      GLIMWAY_HABITICA_ASSETS_URL: ${GLIMWAY_HABITICA_ASSETS_URL:-https://habitica-assets.s3.amazonaws.com/mobileApp/images/}
+      GLIMWAY_SPRITE_CACHE: ${GLIMWAY_SPRITE_CACHE:-/data/habitica-sprites}
+      GLIMWAY_HEALTHCHECK_URL: ${GLIMWAY_HEALTHCHECK_URL:-http://127.0.0.1:8090/api/health}
+    # Explicit for engines that omit image healthchecks in OCI image format.
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null "$${GLIMWAY_HEALTHCHECK_URL}" || exit 1']
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [glimway]
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    depends_on:
+      glimway:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      GLIMWAY_PUBLIC_ORIGIN: ${GLIMWAY_PUBLIC_ORIGIN:-https://glimway.example.org}
+      GLIMWAY_UPSTREAM: glimway:${GLIMWAY_CONTAINER_PORT:-8090}
+    volumes:
+      - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      glimway:
+        ipv4_address: ${GLIMWAY_PROXY_IP:-172.30.83.2}
+
+volumes:
+  glimway-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  glimway:
+    ipam:
+      config:
+        - subnet: ${GLIMWAY_PROXY_SUBNET:-172.30.83.0/24}

@@ -44,10 +44,12 @@ const connectionSession: ConnectionSession = { credentials: null, client: null }
 
 export function connectSession(userId: string, apiToken: string): HabiticaCredentials {
   const creator = creatorId()
+  const env = (import.meta as unknown as { env?: Record<string, string> }).env
+  const appName = env?.VITE_HABITICA_APP_NAME?.trim() || 'glimway'
   const credentials: HabiticaCredentials = {
     userId,
     apiToken,
-    clientTag: `${creator ?? 'unknown-creator'}-glimway`
+    clientTag: `${creator ?? 'unknown-creator'}-${appName}`
   }
   connectionSession.credentials = credentials
   // No gearStats passed: the shared client applies its own default, the

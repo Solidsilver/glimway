@@ -22,7 +22,7 @@ collections, a Journal tab) and the **Hearthwick Library** (a local shelf for
 guests, one shared shelf per world); the canon text pass.
 
 Also shipped: **party worlds and world moves** (owner decisions
-below; server details in [home-server.md](home-server.md#party-worlds-and-world-moves)).
+below; server details in [server-behavior.md](server-behavior.md#party-worlds-and-world-moves)).
 
 Still to come: the outer Wilds in the client, Garden and Hall tiers,
 Habitica-driven decoration, the party boss mirror, co-op combat and

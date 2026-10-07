@@ -50,8 +50,17 @@ func defaultDB() string {
 	return path
 }
 
+func envInt(name string, fallback int) (int, error) {
+	v, err := strconv.Atoi(env(name, strconv.Itoa(fallback)))
+	if err != nil || v < 1 {
+		return 0, fmt.Errorf("invalid GLIMWAY_%s", name)
+	}
+	return v, nil
+}
+
 func run(args []string) error {
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
+	staticDir := f.String("static-dir", env("STATIC_DIR", ""), "Optional built web directory (empty disables static serving)")
 	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
 	path := f.String("db", env("DB", defaultDB()), "SQLite database path")
 	base := f.String("habitica-url", env("HABITICA_URL", "https://habitica.com"), "Habitica base URL")
@@ -63,9 +72,21 @@ func run(args []string) error {
 		trustedDefault = v
 	}
 	trusted := f.String("trusted-proxies", trustedDefault, "Comma-separated trusted proxy IPs (empty disables forwarded headers)")
-	concurrency := f.Int("login-concurrency", 4, "Maximum simultaneous upstream login proofs")
-	rate := f.Int("login-rate", 10, "Login attempts per IP or IPv6 /64 per minute")
-	globalRate := f.Int("login-global-rate", 60, "Maximum upstream login calls per minute, including retries")
+	concurrencyDefault, err := envInt("LOGIN_CONCURRENCY", 4)
+	if err != nil {
+		return err
+	}
+	rateDefault, err := envInt("LOGIN_RATE", 10)
+	if err != nil {
+		return err
+	}
+	globalRateDefault, err := envInt("LOGIN_GLOBAL_RATE", 60)
+	if err != nil {
+		return err
+	}
+	concurrency := f.Int("login-concurrency", concurrencyDefault, "Maximum simultaneous upstream login proofs")
+	rate := f.Int("login-rate", rateDefault, "Login attempts per IP or IPv6 /64 per minute")
+	globalRate := f.Int("login-global-rate", globalRateDefault, "Maximum upstream login calls per minute, including retries")
 	secureDefault, err := strconv.ParseBool(env("COOKIE_SECURE", "true"))
 	if err != nil {
 		return fmt.Errorf("invalid GLIMWAY_COOKIE_SECURE")
@@ -253,7 +274,12 @@ func run(args []string) error {
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
 	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission})
 	defer handler.ClosePresence()
-	server := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
+	httpHandler, closeStatic, err := withStatic(handler, *staticDir)
+	if err != nil {
+		return err
+	}
+	defer closeStatic()
+	server := &http.Server{Addr: *addr, Handler: httpHandler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 95 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 16 << 10}
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer done()
 	go handler.RunMailMaintenance(stop)

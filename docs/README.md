@@ -21,7 +21,8 @@ its architecture. This folder holds two kinds of document:
 | Doc | What it covers |
 |---|---|
 | [testing.md](testing.md) | The test workflow: tiers, prerequisites, generated data, writing and debugging playtests |
-| [home-server.md](home-server.md) | Deploying and running the Go server, and the server's behaviour by phase (sections are dated as they landed) |
+| [server-behavior.md](server-behavior.md) | Server behavior and migration notes, preserved by implementation phase |
+| [home-server.md](home-server.md) | Self-hosting with the NixOS flake, Docker Compose or manual builds |
 | [runtime-contract.md](runtime-contract.md) | The lantern road: game state, the quest machine and its ids, the warden, defeat |
 | [import-contract.md](import-contract.md) | The read-only Habitica import, saves (format 2), imported health and mana |
 | [habitica-assets.md](habitica-assets.md) | The gear catalog and the avatar and companion art |
@@ -48,7 +49,7 @@ its architecture. This folder holds two kinds of document:
 | [habitica-policy.md](habitica-policy.md) | Habitica's rules for third-party tools, and the plan for telling staff |
 | [habitica-gold.md](habitica-gold.md) | Research and design for the gold purse |
 | [licensing-and-funding.md](licensing-and-funding.md) | Licence decisions, the Habitica art terms, funding research, the name |
-| [deploy-notes/](deploy-notes/glimway-rename.md) | One-off steps for the owner's server: [the Glimway rename](deploy-notes/glimway-rename.md) |
+| [deploy-notes/](deploy-notes/glimway-rename.md) | Generic migration steps: [the Glimway rename](deploy-notes/glimway-rename.md) |
 
 Outside this folder: [ASSETS.md](../ASSETS.md) is the art and licence
 register, and `assets/generated/README.md` the art direction.

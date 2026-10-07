@@ -63,7 +63,7 @@ func TestServerSourcesAreNotGitIgnored(t *testing.T) {
 	}
 }
 func TestNixUsesEnvCGO(t *testing.T) {
-	b, err := os.ReadFile("../../../deploy/nixos/glimway-server.nix")
+	b, err := os.ReadFile("../../../nix/server.nix")
 	if err != nil {
 		t.Fatal(err)
 	}
