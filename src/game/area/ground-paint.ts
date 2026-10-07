@@ -10,7 +10,7 @@
  * main-thread work on the Commons. Here it's array copies, and the canvas
  * takes the whole tileset in one `putImageData`.
  */
-import { EDGE_TEXTURE, WATER_FRAMES, paintEdge, parseEdgeKey, type GroundClass } from './ground-field.ts'
+import { EDGE_TEXTURE, WATER_FRAME_COUNT, paintEdge, parseEdgeKey, waterAt, type GroundClass } from './ground-field.ts'
 
 /** An RGBA buffer `w` texels wide. */
 export interface Texels {
@@ -43,9 +43,14 @@ export function putCell(t: Texels, x: number, y: number, cell: number, rgba: Uin
   extrude(t, x, y, cell)
 }
 
-/** The textures the overlays are painted from, by name (EDGE_TEXTURE's and the water frames). */
-export function edgeRefNames(): string[] {
-  return [...new Set([...Object.values(EDGE_TEXTURE), ...WATER_FRAMES])]
+/** The textures some overlay jobs are painted from, by name (EDGE_TEXTURE's, and the pond frames where they show water). */
+export function edgeRefNames(jobs: readonly EdgeJob[] = []): string[] {
+  const names = new Set<string>(Object.values(EDGE_TEXTURE))
+  for (const j of jobs) {
+    const { n, tx, ty } = parseEdgeKey(j.key)
+    if (n.includes('water')) names.add(waterAt(tx, ty, j.f))
+  }
+  return [...names]
 }
 
 /** One overlay cell to paint: an edge key (./ground-field.ts edgeKey) at water frame `f`. */
@@ -59,13 +64,13 @@ export interface EdgeJob {
 /** Paint overlay cells from reference textures (`cell`² RGBA each, by name). */
 export function paintEdgeJobs(jobs: EdgeJob[], refs: Record<string, Uint8ClampedArray>, k: number): { i: number; rgba: Uint8ClampedArray }[] {
   const cell = 16 * k
-  const tex = (c: GroundClass, f: number, x: number, y: number): [number, number, number] => {
-    const t = refs[c === 'water' ? WATER_FRAMES[f % WATER_FRAMES.length] : EDGE_TEXTURE[c]]
-    const o = (y * cell + x) * 4
-    return [t[o], t[o + 1], t[o + 2]]
-  }
   return jobs.map((j) => {
     const { n, tx, ty } = parseEdgeKey(j.key)
+    const tex = (c: GroundClass, f: number, x: number, y: number): [number, number, number] => {
+      const t = refs[c === 'water' ? waterAt(tx, ty, f % WATER_FRAME_COUNT) : EDGE_TEXTURE[c]]
+      const o = (y * cell + x) * 4
+      return [t[o], t[o + 1], t[o + 2]]
+    }
     return { i: j.i, rgba: paintEdge(n, tx, ty, k, j.f, tex) }
   })
 }

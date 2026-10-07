@@ -5,6 +5,21 @@
  */
 
 /**
+ * The pond: one seamless 256×256-texel bed (`pond-bed-seamless`) cut into
+ * 4×4 tiles, `ground-pond-<x>-<y>`. A water tile shows the bed tile its
+ * position picks (x mod 4, y mod 4), so the stones run on across tile
+ * borders with no grid. The bed is delivered still; at boot each tile gets
+ * five frames (`<tile>@<f>`): the tile plus that gentle-water frame's
+ * departure from the frames' mean (the moving light, its own stones
+ * cancelled), so all the water ripples in step.
+ */
+export const POND_SOURCE = 'pond-bed-seamless'
+export const POND_SIZE = 4
+export const pondTile = (x: number, y: number) => `ground-pond-${((x % POND_SIZE) + POND_SIZE) % POND_SIZE}-${((y % POND_SIZE) + POND_SIZE) % POND_SIZE}`
+export const POND_TILES = Array.from({ length: POND_SIZE * POND_SIZE }, (_, i) => pondTile(i % POND_SIZE, Math.floor(i / POND_SIZE)))
+export const pondFrame = (tile: string, f: number) => `${tile}@${f}`
+
+/**
  * The playtest-1 ground tiles by family, each family's tiles healed against
  * its first: every tile of a family then shares its border texels
  * (./ground-heal.ts). Flowered grass and moss heal against the grass, so the
@@ -12,7 +27,7 @@
  * `flatten` evens out a family's broad shading first (dirt and sand are
  * painted with light and dark patches that line up into stripes).
  */
-export const GROUND_FAMILIES: { name: string; tiles: string[]; flatten?: number }[] = [
+export const GROUND_FAMILIES: { name: string; tiles: string[]; flatten?: number; heal?: boolean }[] = [
   {
     name: 'grass',
     tiles: [
@@ -31,25 +46,12 @@ export const GROUND_FAMILIES: { name: string; tiles: string[]; flatten?: number 
   { name: 'water-2', tiles: ['ground-water-gentle-2'] },
   { name: 'water-3', tiles: ['ground-water-gentle-3'] },
   { name: 'water-4', tiles: ['ground-water-gentle-4'] },
-  { name: 'water-beds', tiles: ['ground-water-bed-variant-01', 'ground-water-bed-variant-02', 'ground-water-bed-variant-03'], flatten: 0.9 },
+  // The pond bed is seamless as delivered: its 16 tiles are cut, never healed.
+  { name: 'pond', tiles: POND_TILES, heal: false },
 ]
 /** The gentle water's animation frames (3 fps). */
 export const GROUND_WATER_FRAMES = ['ground-water-gentle-0', 'ground-water-gentle-1', 'ground-water-gentle-2', 'ground-water-gentle-3', 'ground-water-gentle-4']
-/**
- * The water beds are delivered still. The build animates them: each frame
- * is the bed plus that gentle-water frame's departure from the frames' mean
- * (the moving light, its stones cancelled), named `<bed>@<frame>`. So every
- * water tile ripples in step and the stones vary from tile to tile.
- */
-export const GROUND_WATER_BEDS = ['ground-water-bed-variant-01', 'ground-water-bed-variant-02', 'ground-water-bed-variant-03']
-export const bedFrame = (bed: string, f: number) => `${bed}@${f}`
-/** Every ground tile, in pack order (the animated beds after the delivered tiles). */
-export const GROUND_TILES = [
-  ...GROUND_FAMILIES.flatMap((f) => f.tiles),
-  ...GROUND_WATER_BEDS.flatMap((b) => GROUND_WATER_FRAMES.map((_, f) => bedFrame(b, f))),
-]
-/** The delivered tiles the build samples (the rest are made from them). */
-export const GROUND_DELIVERED = GROUND_FAMILIES.flatMap((f) => f.tiles)
+/** Every ground tile the pack holds, in pack order (the pond's frames are made at boot). */
+export const GROUND_TILES = GROUND_FAMILIES.flatMap((f) => f.tiles)
 /** Ground pack grid width (cells). */
 export const GROUND_COLS = 6
-

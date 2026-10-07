@@ -245,10 +245,13 @@ test('tileset assembly: a cell is copied in and ringed by its own edge texels, c
 test('tileset assembly: jobs paint the same overlays as paintEdge, in any batching', async () => {
   const { paintEdgeJobs, edgeRefNames } = await import('../src/game/area/ground-paint.ts')
   const k = 1
-  const refs = Object.fromEntries(edgeRefNames().map((n, j) => [n, new Uint8ClampedArray(16 * 16 * 4).map((_, i) => (i * 7 + j * 31) & 255)]))
   const n: GroundClass[] = ['grass', 'grass', 'grass', 'water', 'water', 'grass', 'water', 'water', 'water']
   const key = edgeKey(n, 3, 4)!
   const jobs = [0, 1, 2].map((f) => ({ key, f, i: 10 + f }))
+  // The bank's water is the pond tile at its own position, one per frame.
+  const names = edgeRefNames(jobs)
+  assert.ok(['ground-pond-3-0@0', 'ground-pond-3-0@1', 'ground-pond-3-0@2'].every((p) => names.includes(p)))
+  const refs = Object.fromEntries(names.map((n, j) => [n, new Uint8ClampedArray(16 * 16 * 4).map((_, i) => (i * 7 + j * 31) & 255)]))
   const all = paintEdgeJobs(jobs, refs, k)
   const split = [...paintEdgeJobs(jobs.slice(0, 1), refs, k), ...paintEdgeJobs(jobs.slice(1), refs, k)]
   assert.deepEqual(all.map((c) => c.i), [10, 11, 12])

@@ -119,6 +119,50 @@ test.describe('after: the hero holding the axe', () => {
   })
 })
 
+/** Round 3: the village houses, the hero behind a roof, the footbridge worn and mended, the pond. */
+async function round3Screens(page: Page, device: string): Promise<void> {
+  await warp(page, 'village', 20, 10)
+  await snap(page, 'r3-village-houses', device)
+  // Behind the middle house's roof, which rises two tiles over its footprint
+  // (at its east eave, so half the hero shows).
+  await warp(page, 'village', 22, 2)
+  await closeUp(page, 'r3-behind-roof', device, 22 * 16 + 8, 3 * 16, 70, 2500)
+  // Ada's house, with her window's lamp lit (the window-fund project) where the window is.
+  await page.evaluate(() => (window as unknown as { __fsDevWorldFlag: (f: string) => void }).__fsDevWorldFlag('project:cooley-window-fund:complete'))
+  await warp(page, 'village', 34, 10)
+  await closeUp(page, 'r3-ada-house', device, 34 * 16, 6 * 16, 90, 2500)
+  // The pond.
+  await warp(page, 'village', 36, 17)
+  await closeUp(page, 'r3-pond', device, 36 * 16, 20 * 16, 110, 2500)
+  // The Brackenwood footbridge: worn, then mended once the village repairs it.
+  await warp(page, 'woodland', 17, 20)
+  await closeUp(page, 'r3-bridge-worn', device, 21 * 16, 20 * 16 + 8, 90, 2500)
+  await page.evaluate(() => (window as unknown as { __fsDevWorldFlag: (f: string) => void }).__fsDevWorldFlag('project:north-bridge:complete'))
+  await closeUp(page, 'r3-bridge-mended', device, 21 * 16, 20 * 16 + 8, 90, 800)
+}
+
+test.describe('after: round 3', () => {
+  test.skip(TAG !== 'after', 'the round-3 art only')
+  test('desktop', async ({ page }) => {
+    test.setTimeout(150_000)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await beginNewJourney(page)
+    await round3Screens(page, 'desktop')
+  })
+})
+
+test.describe('after: round 3, phone', () => {
+  test.skip(TAG !== 'after', 'the round-3 art only')
+  test.use(PHONE)
+  test('phone', async ({ page }) => {
+    test.setTimeout(150_000)
+    await page.goto('/')
+    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+    await round3Screens(page, 'phone')
+  })
+})
+
 test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
   test('village, Commons, road edge, water, Mara', async ({ page }) => {

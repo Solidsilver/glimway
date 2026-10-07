@@ -214,6 +214,13 @@ class Grid {
   }
 }
 
+/** The village's three homes (4 tiles deep), and the building art each is drawn with (src/game/buildings.ts). */
+export const VILLAGE_HOUSES = [
+  { tx: 5, ty: 4, w: 6, frame: 'house-west' },
+  { tx: 17, ty: 3, w: 7, frame: 'house-middle' },
+  { tx: 31, ty: 4, w: 6, frame: 'house-ada' }
+] as const
+
 function isGrassLike(tile: number): boolean {
   return tile === TERRAIN.grass_a || tile === TERRAIN.grass_b || tile === TERRAIN.grass_c
 }
@@ -264,10 +271,11 @@ function buildVillage(): WorldData {
   g.row(33, 18, 6, TERRAIN.sand)
   g.col(32, 19, 4, TERRAIN.sand)
 
-  // Houses
-  g.house(5, 4, 6)
-  g.house(17, 3, 7)
-  g.house(31, 4, 6)
+  // Houses: tile houses, each drawn by its delivered building when that art
+  // loaded (scenery below, `groundUnder`): the footprint stays solid, the
+  // door on its bottom row, the window above (Ada's is the east one,
+  // village-life.ts ADA_HOUSE_WINDOW).
+  for (const h of VILLAGE_HOUSES) g.house(h.tx, h.ty, h.w)
 
   // Paths
   g.row(3, 10, W - 3, TERRAIN.path_a)
@@ -439,6 +447,12 @@ function buildVillage(): WorldData {
     scenery: [
       ...seasonalScenery,
       ...gardenFence,
+      ...VILLAGE_HOUSES.map((h) => ({
+        key: `p1:${h.frame}`,
+        x: (h.tx + h.w / 2) * TILE,
+        y: (h.ty + 4) * TILE,
+        groundUnder: { tx: h.tx, ty: h.ty, tw: h.w, th: 4, tile: TERRAIN.grass_a }
+      })),
       { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
       { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
       { key: 'mill-hopper', x: millHopper.tx * TILE + 8, y: (millHopper.ty + 1) * TILE },

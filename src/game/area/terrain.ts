@@ -12,10 +12,11 @@ import { TERRAIN, TILE } from '../textures.ts'
 import type { WorldData } from '../worlds.ts'
 import { buildTangleGround } from '../wilds/tangle-art.ts'
 import { TIE_BIAS, addArtCanvas, artDensity, artSource, resampleFor } from '../density.ts'
-import { GROUND_TILES, PACKED_MANIFEST_KEY, type PackedManifest } from '../atlas-plan.ts'
+import { GROUND_TILES, GROUND_WATER_FRAMES, PACKED_MANIFEST_KEY, POND_TILES, pondFrame, type PackedManifest } from '../atlas-plan.ts'
 import { prefersReducedMotion } from '../sfx.ts'
-import { EDGE_TEXTURE, WATER_FPS, WATER_FRAMES, WATER_SETS, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, parseEdgeKey } from './ground-field.ts'
-import { edgeRefNames, extrude, paintEdgeJobs, putCell, type EdgeJob, type Texels } from './ground-paint.ts'
+import { EDGE_TEXTURE, WATER_FPS, WATER_FRAME_COUNT, WATER_SETS, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, parseEdgeKey } from './ground-field.ts'
+import { edgeRefNames, putCell, type EdgeJob, type Texels } from './ground-paint.ts'
+import { PaintPool, refreshWhenPainted, startWorkers } from './ground-pool.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -241,10 +242,25 @@ export interface GroundView {
   area: string
   complete: boolean
 }
-let lastView: GroundView | null = null
+let lastView: (GroundView & { canvas: HTMLCanvasElement }) | null = null
 export function groundView(): GroundView | null {
-  return lastView
+  if (!lastView) return null
+  const { canvas: _canvas, ...view } = lastView
+  return view
 }
+
+
+/**
+ * The ground art's content identity: the hashes of the packed images the
+ * paint reads (the build writes them into the packed manifest). Both paint
+ * caches key on it, so art deployed while the page is open (and loaded by
+ * a new game) never mixes old ground with new.
+ */
+export function artIdentity(m: Pick<PackedManifest, 'ground' | 'terrain' | 'outputs'> | undefined): string {
+  if (!m) return 'no-manifest'
+  return `${m.outputs?.[m.ground.image] ?? m.ground.image}|${m.outputs?.[m.terrain.image] ?? m.terrain.image}`
+}
+const sceneArt = (scene: Phaser.Scene) => artIdentity(scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)
 
 /**
  * The village, the Commons and the other tiled areas on the playtest-1
@@ -275,19 +291,19 @@ interface PaintedTileset {
 /** Recent tilesets, keyed by the paint's inputs (a player visits a few areas). */
 const paintedTilesets = new Map<string, PaintedTileset>()
 const PAINTED_TILESETS = 4
-/** The signature of the canvas the `GROUND_TILESET_KEY` texture holds now. */
-let textureSig: string | null = null
 
 /**
  * Everything the painted tileset depends on, as one string: the density,
- * the art (the ground pack's tiles and image, the old terrain sheet and
- * its cell names, the tile lists this build draws), and the map's ground
+ * the art (the content hashes of the ground pack and the old terrain sheet,
+ * the pack's tile layout, the old cell names, the tile lists this build
+ * draws), and the map's ground
  * with any building's ground under it. The paint itself is a pure function
  * of these (ground-field.ts); a stale cache would show old ground.
  */
-function tilesetSignature(world: WorldData, under: Map<string, number>, k: number, oldNames: string[], sheet: HTMLImageElement | HTMLCanvasElement | null, packed: PackedManifest['ground']): string {
+export function tilesetSignature(world: WorldData, under: Map<string, number>, k: number, oldNames: string[], sheet: HTMLImageElement | HTMLCanvasElement | null, packed: PackedManifest['ground'], art: string): string {
   const parts: string[] = [
     String(k),
+    art,
     sheet ? `${sheet.width}x${sheet.height}` : 'no-sheet',
     oldNames.join(','),
     JSON.stringify(packed),
@@ -308,6 +324,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   const idAt = (x: number, y: number) => under.get(`${x},${y}`) ?? world.ground[y][x]
   const ground = world.ground.map((row, y) => row.map((_, x) => idAt(x, y)))
   const grid = classGrid(ground)
+  const footbridge = scene.textures.exists('p1:brackenwood-bridge-worn') && scene.textures.exists('p1:brackenwood-bridge-mended')
 
   // Every tile's stack, by cell name; and the overlays this map needs.
   const edges = new Map<string, boolean>()
@@ -321,7 +338,8 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
         edges.set(key, edgeHasWater(parseEdgeKey(key).n))
         out.push(`edge:${key}`)
       }
-      if (id === TERRAIN.bridge) out.push(`old:${old}`)
+      // A bridge's planks: the footbridge art stands there instead when it loaded (village-life.ts).
+      if (id === TERRAIN.bridge && !footbridge) out.push(`old:${old}`)
       return out
     }),
   )
@@ -330,7 +348,8 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
   const oldNames = Array.from({ length: 16 }, (_, i) => manifest?.terrain.tiles[i] ?? `cell-${i}`)
   const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
-  const sig = tilesetSignature(world, under, k, oldNames, sheet, packed)
+  const art = sceneArt(scene)
+  const sig = tilesetSignature(world, under, k, oldNames, sheet, packed, art)
   let painted = paintedTilesets.get(sig)
   if (painted) {
     // Refresh the recency order.
@@ -339,23 +358,24 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   } else {
     const eldest = paintedTilesets.keys().next()
     if (paintedTilesets.size >= PAINTED_TILESETS && !eldest.done) paintedTilesets.delete(eldest.value)
-    painted = paintTileset(scene, packed, sheet, oldNames, edges, cell, k)
+    const water = grid.some((row) => row.includes('water'))
+    painted = paintTileset(scene, packed, sheet, oldNames, edges, cell, k, art, water)
     paintedTilesets.set(sig, painted)
-    // The transitions arrive from the painters: show them if this tileset is still the one in use.
-    const mine = painted
-    void mine.done.then(() => {
-      if (textureSig !== sig || !scene.sys?.game || !scene.textures.exists(GROUND_TILESET_KEY)) return
-      ;(scene.textures.get(GROUND_TILESET_KEY) as Phaser.Textures.CanvasTexture).refresh?.()
-      if (lastView && lastView.area === world.areaId) lastView = { ...lastView, complete: true }
-    })
   }
   const { canvas, names, index, animated, edgeCount } = painted
 
-  // A texture is the game's own (scenes come and go): (re)add the painted
-  // canvas unless the texture under the key already shows it.
-  if (!scene.textures.exists(GROUND_TILESET_KEY) || textureSig !== sig) {
-    addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
-    textureSig = sig
+  // A texture is the game's own (scenes and games come and go): (re)add the
+  // painted canvas unless the texture under the key already shows it.
+  const existing = scene.textures.exists(GROUND_TILESET_KEY) ? scene.textures.get(GROUND_TILESET_KEY) : null
+  if (!existing || existing.getSourceImage() !== canvas) addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
+  const texture = scene.textures.get(GROUND_TILESET_KEY) as Phaser.Textures.CanvasTexture
+  // Every build that shows a pending paint uploads it again when the
+  // transitions land: this texture, if it still shows this canvas (a newer
+  // area, or a new game, has its own).
+  if (!painted.complete) {
+    refreshWhenPainted(painted.done, texture, canvas, () => {
+      if (lastView?.canvas === canvas) lastView = { ...lastView, complete: true }
+    })
   }
 
   const depth = Math.max(...stacks.flat().map((s) => s.length))
@@ -373,7 +393,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
     layer.putTilesAt(stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))), 0, 0, false)
     layer.setScale(1 / k).setDepth(-10)
   }
-  lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k, area: world.areaId, complete: painted.complete }
+  lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k, area: world.areaId, complete: painted.complete, canvas }
   // Read-only, for playtests.
   ;(window as unknown as { __fsGround?: () => GroundView | null }).__fsGround = groundView
   const pending = painted.complete ? null : painted.done
@@ -392,19 +412,30 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   return pending
 }
 
+/** The pond's animated frames, made at boot (src/game/ground-tiles.ts). */
+const POND_FRAMES = POND_TILES.flatMap((t) => GROUND_WATER_FRAMES.map((_, f) => pondFrame(t, f)))
+/** Every base cell, in tileset order: the packed tiles, the 16 old cells, the pond's frames. */
+const baseNames = (oldNames: string[]) => [...GROUND_TILES, ...oldNames.map((n) => `old:${n}`), ...POND_FRAMES]
+
 /**
- * The base and old cells at density `k`, each extruded into a `cell + 2`
- * block: drawn once per page and density (the same for every area), then
- * copied into each area's tileset.
+ * The base cells at density `k`, each extruded into a `cell + 2` block, in
+ * `baseNames` order: drawn once per page, density and art (the same for
+ * every area), then copied into each area's tileset. The pond's frames are
+ * made here: each pond tile plus a gentle-water frame's departure from the
+ * frames' mean (its moving light; its own stones cancel out).
  */
 let baseCache: { sig: string; blocks: Uint8ClampedArray[] } | null = null
-function baseBlocks(pack: HTMLImageElement | HTMLCanvasElement, packed: PackedManifest['ground'], sheet: HTMLImageElement | HTMLCanvasElement | null, cell: number): Uint8ClampedArray[] {
-  const sig = `${cell}|${JSON.stringify(packed)}|${sheet ? `${sheet.width}x${sheet.height}` : '-'}`
+/** What the base blocks depend on: the cell size, the art's content, the pack's layout, the old sheet's size. */
+export function baseBlocksKey(cell: number, art: string, packed: PackedManifest['ground'], sheet: { width: number; height: number } | null): string {
+  return `${cell}|${art}|${JSON.stringify(packed)}|${sheet ? `${sheet.width}x${sheet.height}` : '-'}`
+}
+function baseBlocks(pack: HTMLImageElement | HTMLCanvasElement, packed: PackedManifest['ground'], sheet: HTMLImageElement | HTMLCanvasElement | null, cell: number, art: string): Uint8ClampedArray[] {
+  const sig = baseBlocksKey(cell, art, packed, sheet)
   if (baseCache?.sig === sig) return baseCache.blocks
-  const count = GROUND_TILES.length + 16
+  const drawn = GROUND_TILES.length + 16
   const step = cell + 2
   const canvas = document.createElement('canvas')
-  canvas.width = count * step
+  canvas.width = drawn * step
   canvas.height = step
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!
   ctx.imageSmoothingEnabled = false
@@ -422,82 +453,41 @@ function baseBlocks(pack: HTMLImageElement | HTMLCanvasElement, packed: PackedMa
     for (let i = 0; i < 16; i++) draw(GROUND_TILES.length + i, sheet, (i % 4) * sc, Math.floor(i / 4) * sc, sc, sc)
   }
   const strip: Texels = { w: canvas.width, data: ctx.getImageData(0, 0, canvas.width, canvas.height).data }
-  const blocks: Uint8ClampedArray[] = []
-  for (let i = 0; i < count; i++) {
-    extrude(strip, i * step + 1, 1, cell)
-    const block = new Uint8ClampedArray(step * step * 4)
-    for (let r = 0; r < step; r++) block.set(strip.data.subarray((r * strip.w + i * step) * 4, (r * strip.w + (i + 1) * step) * 4), r * step * 4)
-    blocks.push(block)
+  // A drawn cell's inside (before extrusion), cell² RGBA.
+  const inside = (i: number) => {
+    const t = new Uint8ClampedArray(cell * cell * 4)
+    for (let r = 0; r < cell; r++) t.set(strip.data.subarray(((r + 1) * strip.w + i * step + 1) * 4, ((r + 1) * strip.w + i * step + 1 + cell) * 4), r * cell * 4)
+    return t
   }
+  const gentle = GROUND_WATER_FRAMES.map((n) => inside(GROUND_TILES.indexOf(n)))
+  const mean = new Float32Array(cell * cell * 4)
+  for (const g of gentle) for (let i = 0; i < mean.length; i++) mean[i] += g[i] / gentle.length
+  const ponds = POND_TILES.flatMap((t) => {
+    const bed = inside(GROUND_TILES.indexOf(t))
+    return gentle.map((g) => {
+      const out = new Uint8ClampedArray(cell * cell * 4)
+      for (let i = 0; i < out.length; i++) out[i] = (i & 3) === 3 ? 255 : Math.round(bed[i] + g[i] - mean[i])
+      return out
+    })
+  })
+  const blocks: Uint8ClampedArray[] = []
+  const block = (rgba: Uint8ClampedArray) => {
+    const b: Texels = { w: step, data: new Uint8ClampedArray(step * step * 4) }
+    putCell(b, 1, 1, cell, rgba)
+    blocks.push(b.data)
+  }
+  for (let i = 0; i < drawn; i++) block(inside(i))
+  for (const p of ponds) block(p)
   baseCache = { sig, blocks }
   return blocks
 }
 
-/** Ground-painting workers (made on first use; none where workers don't run). */
-let workers: Worker[] | null = null
-let nextJob = 0
-function painters(): Worker[] {
-  if (workers) return workers
-  workers = []
-  try {
-    const n = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1))
-    for (let i = 0; i < n; i++) workers.push(new Worker(new URL('./ground-worker.ts', import.meta.url), { type: 'module' }))
-  } catch {
-    workers = []
-  }
-  return workers
-}
-
-/** Paint overlay jobs in the workers, or (no workers) in slices on the main thread. */
-function paintJobs(jobs: EdgeJob[], refs: Record<string, Uint8ClampedArray>, k: number, onCells: (cells: { i: number; rgba: Uint8ClampedArray }[]) => void): Promise<void> {
-  const pool = forceMainThread ? [] : painters()
-  if (pool.length === 0) {
-    // Slices of about a frame's worth, so the page keeps drawing.
-    return new Promise((resolve) => {
-      let at = 0
-      const slice = () => {
-        const t0 = performance.now()
-        while (at < jobs.length && performance.now() - t0 < 12) onCells(paintEdgeJobs([jobs[at++]], refs, k))
-        if (at < jobs.length) setTimeout(slice, 0)
-        else resolve()
-      }
-      slice()
-    })
-  }
-  // Round-robin batches, so each worker gets a share of every kind of edge.
-  const batches: EdgeJob[][] = pool.map(() => [])
-  jobs.forEach((j, n) => batches[n % pool.length].push(j))
-  return Promise.all(
-    pool.map(
-      (w, n) =>
-        new Promise<void>((resolve, reject) => {
-          const id = ++nextJob
-          const onMessage = (e: MessageEvent<{ id: number; cells: { i: number; rgba: Uint8ClampedArray }[] }>) => {
-            if (e.data.id !== id) return
-            w.removeEventListener('message', onMessage)
-            w.removeEventListener('error', onError)
-            onCells(e.data.cells)
-            resolve()
-          }
-          const onError = (e: ErrorEvent) => {
-            w.removeEventListener('message', onMessage)
-            w.removeEventListener('error', onError)
-            reject(e.error ?? new Error(e.message))
-          }
-          w.addEventListener('message', onMessage)
-          w.addEventListener('error', onError)
-          w.postMessage({ id, jobs: batches[n], refs, k })
-        }),
-    ),
-  ).then(
-    () => undefined,
-    () => {
-      // A worker failed: paint everything here instead.
-      workers = []
-      return paintJobs(jobs, refs, k, onCells)
-    },
-  )
-}
+/** The ground painters: workers made on first use (./ground-pool.ts). */
+const pool = new PaintPool(() => {
+  if (typeof Worker === 'undefined') return []
+  const n = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1))
+  return startWorkers(n, () => new Worker(new URL('./ground-worker.ts', import.meta.url), { type: 'module' }))
+})
 
 /** Dev only: paint on the main thread (the playtests compare it with the workers' paint). */
 let forceMainThread = false
@@ -516,18 +506,21 @@ function paintTileset(
   edges: Map<string, boolean>,
   cell: number,
   k: number,
+  art: string,
+  water: boolean,
 ): PaintedTileset {
-  const names: string[] = [...GROUND_TILES, ...oldNames.map((n) => `old:${n}`)]
+  // The pond's 80 frames only where the map has water (the Commons has none).
+  const names: string[] = water ? baseNames(oldNames) : baseNames(oldNames).slice(0, GROUND_TILES.length + 16)
   const animated: { index: number; frames: number }[] = []
   const edgeStart = new Map<string, number>()
   for (const [key, water] of edges) {
     edgeStart.set(key, names.length)
-    if (water) animated.push({ index: names.length, frames: WATER_FRAMES.length })
-    for (let f = 0; f < (water ? WATER_FRAMES.length : 1); f++) names.push(`edge:${key}${water ? `@${f}` : ''}`)
+    if (water) animated.push({ index: names.length, frames: WATER_FRAME_COUNT })
+    for (let f = 0; f < (water ? WATER_FRAME_COUNT : 1); f++) names.push(`edge:${key}${water ? `@${f}` : ''}`)
   }
   const index = new Map(names.map((n, i) => [n, i]))
   for (const [key, start] of edgeStart) index.set(`edge:${key}`, start)
-  for (const set of WATER_SETS) animated.push({ index: index.get(set[0])!, frames: set.length })
+  if (water) for (const set of WATER_SETS) animated.push({ index: index.get(set[0])!, frames: set.length })
 
   const cols = Math.ceil(Math.sqrt(names.length))
   const rows = Math.ceil(names.length / cols)
@@ -540,8 +533,8 @@ function paintTileset(
   const tileset: Texels = { w: canvas.width, data: new Uint8ClampedArray(canvas.width * canvas.height * 4) }
 
   const pack = scene.textures.get(GROUND_PACKED_KEY).getSourceImage() as HTMLImageElement | HTMLCanvasElement
-  const blocks = baseBlocks(pack, packed, sheet, cell)
-  const baseCount = sheet ? blocks.length : GROUND_TILES.length
+  const blocks = baseBlocks(pack, packed, sheet, cell, art)
+  const baseCount = water ? blocks.length : GROUND_TILES.length + 16
   for (let i = 0; i < baseCount; i++) {
     const [x, y] = origin(i)
     for (let r = 0; r < step; r++) tileset.data.set(blocks[i].subarray(r * step * 4, (r + 1) * step * 4), ((y - 1 + r) * tileset.w + x - 1) * 4)
@@ -551,25 +544,25 @@ function paintTileset(
 
   const painted: PaintedTileset = { canvas, names, index, animated, edgeCount: edges.size, complete: false, done: Promise.resolve() }
   const jobs: EdgeJob[] = []
-  for (const [key, water] of edges) for (let f = 0; f < (water ? WATER_FRAMES.length : 1); f++) jobs.push({ key, f, i: edgeStart.get(key)! + f })
+  for (const [key, water] of edges) for (let f = 0; f < (water ? WATER_FRAME_COUNT : 1); f++) jobs.push({ key, f, i: edgeStart.get(key)! + f })
   if (jobs.length === 0) {
     painted.complete = true
     return painted
   }
   // The overlays' reference textures: the base cells' insides.
   const refs: Record<string, Uint8ClampedArray> = {}
-  for (const name of edgeRefNames()) {
-    const block = blocks[GROUND_TILES.indexOf(name)]
+  for (const name of edgeRefNames(jobs)) {
+    const block = blocks[names.indexOf(name)]
     const t = new Uint8ClampedArray(cell * cell * 4)
     for (let r = 0; r < cell; r++) t.set(block.subarray(((r + 1) * step + 1) * 4, ((r + 1) * step + 1 + cell) * 4), r * cell * 4)
     refs[name] = t
   }
-  painted.done = paintJobs(jobs, refs, k, (cells) => {
+  painted.done = pool.paint(jobs, refs, k, (cells) => {
     for (const c of cells) {
       const [x, y] = origin(c.i)
       putCell(tileset, x, y, cell, c.rgba)
     }
-  }).then(() => {
+  }, forceMainThread).then(() => {
     // Only the overlays' rows changed.
     const top = origin(jobs[0].i)[1] - 1
     ctx.putImageData(image, 0, 0, 0, top, canvas.width, canvas.height - top)
@@ -598,7 +591,7 @@ export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: World
   const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
   forceMainThread = true
   try {
-    const p = paintTileset(scene, packed, sheet, oldNames, edges, TILE * k, k)
+    const p = paintTileset(scene, packed, sheet, oldNames, edges, TILE * k, k, sceneArt(scene), grid.some((row) => row.includes('water')))
     await p.done
     const c = p.canvas
     const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data

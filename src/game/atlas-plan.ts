@@ -112,6 +112,8 @@ export interface PackedManifest {
   generator: string
   /** Every input the build read, with its sha256 (the staleness test re-hashes them). */
   inputs: Record<string, string>
+  /** Every image the build wrote, with its sha256: the art's content identity (the ground's paint caches key on it). */
+  outputs?: Record<string, string>
   commons: PackedCanvasPack
   runtime: PackedCanvasPack
   items: PackedCanvasPack
@@ -119,6 +121,8 @@ export interface PackedManifest {
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround
   people: PackedPeople
+  /** The playtest-1 buildings (village houses, the Brackenwood footbridge): whole canvases at ART_DENSITY. */
+  buildings: PackedCanvasPack
   /** Phaser atlases (image + JSON hash), loaded under their old texture keys. */
   atlases: Record<string, { image: string; json: string }>
   backdrops: Record<string, string>
@@ -129,6 +133,13 @@ export const PLAYTEST1_DIR = 'assets/generated/playtest1-pass'
 
 // The playtest-1 ground tiles (also read by the ground-painting worker).
 export * from './ground-tiles.ts'
+
+/**
+ * The playtest-1 buildings, by frame name (the pass's atlas.json): drawn as
+ * dense scenery textures `p1:<name>` (src/game/buildings.ts).
+ */
+export const BUILDINGS = ['house-west', 'house-middle', 'house-ada', 'brackenwood-bridge-worn', 'brackenwood-bridge-mended'] as const
+export type BuildingFrame = (typeof BUILDINGS)[number]
 
 /** The residents with walking art (the frame prefix is `resident-<id>-`). */
 export const PEOPLE = ['mara', 'pip', 'orrin', 'silas', 'elara', 'finn', 'hazel', 'ada'] as const
