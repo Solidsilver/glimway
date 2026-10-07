@@ -165,6 +165,8 @@ changes an existing rule (mainly the security invariants and ember rules in
 
 ## Principles
 
+- **Habitica is who you are; Fingersnap is what you do in the world.** The
+  rules and audit are in [habitica-boundary.md](habitica-boundary.md).
 - **Habitica stays the source of progression.** Embers (XP turned currency)
   remain the main way real-life work enters the game. Homesteads and shared
   projects are new things to spend embers on, not new XP sources.
