@@ -3,6 +3,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -50,6 +51,10 @@ type Config struct {
 	// (empty: DefaultSpriteBaseURL; the playtests point it at a fake).
 	SpriteCacheDir string
 	SpriteBaseURL  string
+	// The server build (-ldflags -X in main), reported by GET /api/health.
+	// Empty reads as "dev"; Build is left out when unknown.
+	Version string
+	Build   string
 }
 type Server struct {
 	Store       *store.Store
@@ -193,7 +198,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else if r.Method == "HEAD" {
 			w.WriteHeader(http.StatusOK)
 		} else {
-			write(w, 200, map[string]string{"status": "ok"})
+			health := map[string]string{"status": "ok", "version": cmp.Or(a.Config.Version, "dev")}
+			if a.Config.Build != "" {
+				health["build"] = a.Config.Build
+			}
+			write(w, 200, health)
 		}
 	case "GET /ws":
 		err = a.presenceSocket(w, r)

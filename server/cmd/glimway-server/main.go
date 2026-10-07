@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -17,6 +18,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+)
+
+// The release version and build id, set at link time by the Dockerfile and
+// nix/server.nix (-ldflags "-X main.version=… -X main.build=…").
+var (
+	version = "dev"
+	build   = ""
 )
 
 // env reads GLIMWAY_<name>, then the deprecated FINGERSNAP_<name> (the
@@ -272,7 +280,7 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
 	defer handler.ClosePresence()
 	httpHandler, closeStatic, err := withStatic(handler, *staticDir)
 	if err != nil {
@@ -290,7 +298,7 @@ func run(args []string) error {
 		handler.ClosePresence()
 		_ = server.Shutdown(shutdown)
 	}()
-	logger.Printf("listening addr=%s", *addr)
+	logger.Printf("listening addr=%s version=%s build=%s", *addr, version, cmp.Or(build, "unknown"))
 	err = server.ListenAndServe()
 	if err == http.ErrServerClosed {
 		return nil

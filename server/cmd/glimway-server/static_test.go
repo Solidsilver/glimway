@@ -15,6 +15,7 @@ func TestStaticServing(t *testing.T) {
 		"index.html":                     "<html>Glimway</html>",
 		"assets/index-aB123456.js":       "console.log('game')",
 		"assets/fingersnap/terrain.webp": "runtime art",
+		"version.json":                   `{"version":"0.1.0","build":"abc1234"}`,
 	} {
 		file := filepath.Join(dir, name)
 		if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
@@ -50,6 +51,8 @@ func TestStaticServing(t *testing.T) {
 		{"GET", "/world/friends", 200, "<html>Glimway</html>", "no-store"},
 		{"GET", "/assets/index-aB123456.js", 200, "console.log('game')", "public, max-age=31536000, immutable"},
 		{"GET", "/assets/fingersnap/terrain.webp", 200, "runtime art", "public, max-age=0, must-revalidate"},
+		{"GET", "/version.json", 200, `{"version":"0.1.0","build":"abc1234"}`, "no-store"},
+		{"HEAD", "/version.json", 200, "", "no-store"},
 		{"GET", "/assets/missing.js", 404, "", "no-store"},
 		{"GET", "/assets/missing", 404, "", "no-store"},
 		{"GET", "/assets/", 404, "", "no-store"},

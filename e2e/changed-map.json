@@ -264,6 +264,10 @@
       "specs": ["talk.spec.ts"]
     },
     {
+      "paths": ["src/lib/version.ts", "src/ui/update.svelte.ts", "src/ui/UpdateNotice.svelte", "src/content/update.ts", "src/ui/MenuPanel.svelte", "src/App.svelte", "src/game/session.ts", "src/game/link.ts", "scripts/build-version.mjs"],
+      "specs": ["version.spec.ts"]
+    },
+    {
       "paths": ["src/game/heirloom-beats.ts", "src/game/seats.ts", "src/game/hero-motion.ts", "src/lib/habitica/sprite-cache.ts", "server/internal/api/sprites.go"],
       "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
     }

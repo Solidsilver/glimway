@@ -12,8 +12,11 @@ const api = env.GLIMWAY_API || env.FINGERSNAP_API || 'http://127.0.0.1:8090'
 
 export default defineConfig(async () => {
   const routing = e2e ? [((await import(/* @vite-ignore */ new URL('./e2e/server/vite-routing.mjs', import.meta.url).href)) as { default: () => Plugin }).default()] : []
+  // package.json's version and the build id: __GLIMWAY_VERSION__,
+  // __GLIMWAY_BUILD__ and dist/version.json (scripts/build-version.mjs).
+  const version = ((await import(/* @vite-ignore */ new URL('./scripts/build-version.mjs', import.meta.url).href)) as { default: () => Plugin }).default()
   return {
-    plugins: [svelte(), ...routing],
+    plugins: [svelte(), version, ...routing],
     // /api goes to the Glimway server (`npm run server`, port 8090 by
     // default). GLIMWAY_API (or the old FINGERSNAP_API) points it elsewhere.
     // With no server running, the client sees the proxy error and plays as

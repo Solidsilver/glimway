@@ -271,6 +271,16 @@ export class Link {
     return !!this.session && docKey(this.session.state) !== this.acked
   }
 
+  /**
+   * Nothing is waiting to reach the server: no unsent changes and no
+   * mutation whose answer was lost. A superseded tab counts: its story went
+   * to the orphan slot for the tab that holds the lease.
+   */
+  get settled(): boolean {
+    if (this.status === 'superseded') return true
+    return this.status === 'online' && !this.dirty && !this.unresolved
+  }
+
   // ------------------------------------------------------------ persistence
 
   /**

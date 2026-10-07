@@ -351,15 +351,15 @@ export class Session {
    * the session's current intent is re-persisted so stale imported state
    * never lingers.
    */
-  async save(): Promise<void> {
-    if (this.destroyed) return
+  async save(): Promise<boolean> {
+    if (this.destroyed) return false
     if (this.link) {
       await this.link.persist()
-      return
+      return true
     }
     if (this.syncInFlight) {
       this.pendingSave = true
-      return
+      return false
     }
     try {
       await saveGame(this.state, {
@@ -368,13 +368,39 @@ export class Session {
         // (demo rollback). undefined would preserve it.
         importedProfile: this.importedProfile
       })
+      return true
     } catch (err) {
       console.warn('[glimway] save failed', err)
       bus.emit(EV.toast, {
         text: 'Couldn\u2019t save just now — your latest steps may not stick.',
         kind: 'error'
       })
+      return false
     }
+  }
+
+  /**
+   * Save now and wait until it has landed (before a reload for a new
+   * version). Guests: the browser write. Connected: the cache, then the
+   * server queue, which every upload, Wilds and homestead call shares, for
+   * up to `timeoutMs`. 'saved' only when nothing is left unwritten.
+   */
+  async settle(timeoutMs = 8000): Promise<'saved' | 'offline' | 'unsaved'> {
+    if (this.destroyed) return 'unsaved'
+    if (this.saveTimer !== null) {
+      window.clearTimeout(this.saveTimer)
+      this.saveTimer = null
+    }
+    const link = this.link
+    if (!link) return (await this.save()) ? 'saved' : 'unsaved'
+    const landed = (async () => {
+      await link.persist()
+      await link.flush()
+      return link.settled
+    })()
+    const timeout = new Promise<false>((r) => window.setTimeout(() => r(false), timeoutMs))
+    if (await Promise.race([landed, timeout])) return 'saved'
+    return link.status === 'offline' ? 'offline' : 'unsaved'
   }
 
   /**

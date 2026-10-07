@@ -9,9 +9,14 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in {
       packages = forAllSystems (system:
-        let pkgs = import nixpkgs { inherit system; }; in rec {
-          glimway-server = pkgs.callPackage ./nix/server.nix { };
-          glimway-web = pkgs.callPackage ./nix/web.nix { };
+        let
+          pkgs = import nixpkgs { inherit system; };
+          # A clean checkout's short commit; a dirty tree has none (the web
+          # build then hashes its sources, the server reports no build).
+          build = self.shortRev or null;
+        in rec {
+          glimway-server = pkgs.callPackage ./nix/server.nix { inherit build; };
+          glimway-web = pkgs.callPackage ./nix/web.nix { inherit build; };
           default = glimway-server;
         });
 
