@@ -19,6 +19,7 @@
  *    overlay cell (a few hundred in the Commons).
  */
 import { TERRAIN } from '../textures.ts'
+import { GROUND_WATER_BEDS, GROUND_WATER_FRAMES, bedFrame } from '../atlas-plan.ts'
 
 export type GroundClass = 'grass' | 'dirt' | 'road' | 'flag' | 'sand' | 'water'
 /** Ground drawn with the old expansion cells (walls, roofs, fences, bridge planks, the ruin's stone). */
@@ -81,13 +82,20 @@ export const BASE_TILES: Readonly<Record<GroundClass | 'flowers' | 'moss', reado
   moss: ['ground-forest-moss-01', 'ground-forest-moss-02'],
   dirt: ['ground-packed-dirt-01', 'ground-packed-dirt-02', 'ground-packed-dirt-03'],
   road: ['ground-old-cobbled-road-01', 'ground-old-cobbled-road-02', 'ground-old-cobbled-road-03'],
-  flag: ['ground-village-flagstones-01'],
-  // See GROUND_FAMILIES: the second delivered "flagstones" cell is sand.
-  sand: ['ground-sand-by-water-01', 'ground-village-flagstones-02'],
-  water: ['ground-water-gentle-0'],
+  flag: ['ground-village-flagstones-01', 'ground-village-flagstones-03', 'ground-village-flagstones-04'],
+  sand: ['ground-sand-by-water-01', 'ground-sand-by-water-03'],
+  // Each water tile is the first frame of one of WATER_SETS.
+  water: GROUND_WATER_BEDS.map((b) => bedFrame(b, 0)),
 }
-/** Water's animation frames (the tile above is frame 0), at WATER_FPS. */
-export const WATER_FRAMES = ['ground-water-gentle-0', 'ground-water-gentle-1', 'ground-water-gentle-2', 'ground-water-gentle-3']
+/**
+ * Every water tile's frames: the three water beds, animated in step with
+ * the gentle water's light (src/game/atlas-plan.ts GROUND_WATER_BEDS). The
+ * gentle water itself isn't drawn: it is darker than the beds and read as a
+ * checkerboard among them.
+ */
+export const WATER_SETS: readonly (readonly string[])[] = GROUND_WATER_BEDS.map((b) => GROUND_WATER_FRAMES.map((_, f) => bedFrame(b, f)))
+/** The frames the banks' water is painted from (the first bed's), at WATER_FPS. */
+export const WATER_FRAMES = WATER_SETS[0]
 export const WATER_FPS = 3
 
 /** The texture each ground's transitions are painted from (its family's reference tile). */
@@ -97,7 +105,7 @@ export const EDGE_TEXTURE: Readonly<Record<GroundClass, string>> = {
   road: 'ground-old-cobbled-road-01',
   flag: 'ground-village-flagstones-01',
   sand: 'ground-sand-by-water-01',
-  water: 'ground-water-gentle-0',
+  water: 'ground-water-bed-variant-01@0',
 }
 
 /** Deterministic 0..1 for integer inputs. */

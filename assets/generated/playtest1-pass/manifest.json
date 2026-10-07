@@ -226,9 +226,35 @@
       ],
       "sha256": "de324fb7fc3c6c2b044c987497cbd55b78569aaf69a2c50f39f41d5363deb675",
       "notes": "Generated prototype palette atlas. Distinct material color families are visible, but pixels are shaded/anti-aliased and are not exact index colors or separated PNG layers."
+    },
+    {
+      "key": "ground-flagstone-variants",
+      "file": "ground/fingersnap-ground-flagstone-variants.png",
+      "width": 1774,
+      "height": 887,
+      "columns": 2,
+      "rows": 1,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "alphaExtrema": null,
+      "sha256": "4eb5916b4923290c0bc246ccda5976b2e403ae2f2998ccfe574ffd4cd2892f80",
+      "notes": "Two alternate honey-limestone plaza tiles; middle separator excluded from frame crops."
+    },
+    {
+      "key": "ground-waterbed-variants",
+      "file": "ground/fingersnap-ground-waterbed-variants.png",
+      "width": 2172,
+      "height": 724,
+      "columns": 3,
+      "rows": 1,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "alphaExtrema": null,
+      "sha256": "7cc260268b6e24b5837d92d242d4e373f4a36f6646a85b90831e4f44d90c9e6b",
+      "notes": "Three alternate shallow-water tiles with varied submerged stones and calm matching-edge borders."
     }
   ],
-  "frames": 416,
+  "frames": 421,
   "animations": [
     {
       "key": "water-gentle",
@@ -236,7 +262,8 @@
         "ground-water-gentle-0",
         "ground-water-gentle-1",
         "ground-water-gentle-2",
-        "ground-water-gentle-3"
+        "ground-water-gentle-3",
+        "ground-water-gentle-4"
       ],
       "frameRate": 3,
       "repeat": -1
@@ -1042,10 +1069,11 @@
     }
   ],
   "notes": [
-    "Ground/base atlas contains 24 requested tile images; generated seamlessness is requested but not all edge metrics pass exact pixel equality\u2014verify tiling in game.",
+    "The original 24-cell ground atlas is retained. Correct labels: its former flagstones-02 is sand, and former sand-02 is gentle-water frame 4. Two new flagstone tiles and three alternate underwater-stone tiles are in separate source sheets.",
     "Transition sheets contain 24 cropped square variants each. The first 16 have intended N/E/S/W mask metadata; visual mask fidelity remains a runtime art review item.",
     "Each resident has 4 directions \u00d72 idle +4 walk frames and one sit-down pose, all on a 64\u00d7128 frame with a common character scale and fixed foot point.",
     "No NPC dialogue or gameplay wiring was changed.",
-    "Eight held tools have down/up/left/right variants; handAnchor is measured in the 32\u00d732 destination canvas and may be adjusted when the player arm layer is wired."
+    "Eight held tools have down/up/left/right variants; handAnchor is measured in the 32\u00d732 destination canvas and may be adjusted when the player arm layer is wired.",
+    "The three water-bed variants use distinct submerged-stone layouts and low-difference edges after 64x64 reduction; use them as alternate water ground tiles, not animation frames."
   ]
 }

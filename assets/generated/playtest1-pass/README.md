@@ -4,12 +4,12 @@ This pack starts the playtest-1 art request at the priorities that improve the f
 
 ## Pack contents
 
-- 24 ground tiles at 64×64 texels (four grass, two flowered grass, two moss, three packed dirt, three old cobbled road, two farmland, two square flagstone, two sand, and four gentle-water animation frames).
+- 24 original ground cells plus 5 new variants at 64×64 destination texels. Corrected original counts: four grass, two flowered grass, two moss, three packed dirt, three old cobbled road, two farmland, one flagstone, two sand, and five gentle-water frames. Two additional flagstone tiles bring the plaza set to three; three separate water-bed variants add distinct submerged-stone layouts.
 - One held-tool atlas with 8 tools in four facing directions (32 frames), each with a `handAnchor` in its 32×32 destination.
 - One player-body prototype atlas with 4 directions × (2 idle + 4 walk + 2 swing), 4 sitting poses, and 4 hair references (40 frames).
 - Five grass-transition atlases (dirt, cobbled road, flagstones, sand, water), 24 square variants apiece. Cells 0–15 carry the standard N/E/S/W mask fields; cells 16–23 are alternate edge/corner shapes.
 - Eight resident atlases, each with 4 directions × (2 idle breathing + 4 walking frames), plus a down-facing sit pose: Mara, Pip, Orrin, Silas, Elara Quill, Finn Tolley, Hazel Penhallow, and Ada Cooley.
-- Total: 16 source sheets, 416 measured frames, 82 animation groups.
+- Total: 18 source sheets, 421 measured frames, 82 animation groups.
 
 ## Runtime contract
 
@@ -21,7 +21,7 @@ The existing build packs inputs under `assets/generated/**` with the other deliv
 
 ## Art notes
 
-The ground base is a coherent 6×4 atlas. The generated transition atlases include a dark separator line at some cell boundaries, so their source rectangles inset 2 px on every side to exclude it. Each transition atlas contains 24 cells rather than exactly 16; the first 16 are indexed by the N/E/S/W mask in `manifest.json`, with eight alternatives following them.
+The original ground base is a 6×4 atlas. The former `ground-village-flagstones-02` cell is correctly named `ground-sand-by-water-03`; the former `ground-sand-by-water-02` cell is correctly named `ground-water-gentle-4` and is the fifth frame of the water loop. The two additional plaza tiles and three alternate submerged-stone tiles live in separate source sheets. Water-bed borders average at most 3.4 RGB levels of opposite-edge difference after reduction to 64×64; review in-game for remaining visible seams. The generated transition atlases include a dark separator line at some cell boundaries, so their source rectangles inset 2 px on every side to exclude it. Each transition atlas contains 24 cells rather than exactly 16; the first 16 are indexed by the N/E/S/W mask in `manifest.json`, with eight alternatives following them.
 
 **Tiling needs a visual in-game review.** The art prompt requested seamless base tiles, but edge-pixel checks show the generated base textures are not bit-identical at opposite borders. The assets are useful for the playtest atlas now, but verify repetition at normal camera zoom before relying on them as seamless ground. The PNG source itself is preserved for a future seam-correction pass.
 

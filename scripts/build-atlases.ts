@@ -39,8 +39,12 @@ import {
   commonsBlitPlan,
   GROUND_COLS,
   GROUND_FAMILIES,
+  GROUND_DELIVERED,
   GROUND_TILES,
+  GROUND_WATER_BEDS,
+  GROUND_WATER_FRAMES,
   HELD_SOURCE,
+  bedFrame,
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
@@ -174,14 +178,21 @@ async function main(): Promise<void> {
   type P1Frame = { source: string; x: number; y: number; w: number; h: number; destinationRect: { x: number; y: number; w: number; h: number }; handAnchor?: { x: number; y: number } }
   const p1 = readJson<{ frames: Record<string, P1Frame>; sources: Record<string, { file: string }> }>(`${PLAYTEST1_DIR}/atlas.json`)
   const p1Anims = readJson<{ animations: PackedPeople['animations'] }>(`${PLAYTEST1_DIR}/animations.json`)
-  const p1Src = (key: string) => `${PLAYTEST1_DIR}/${p1.sources[key].file}`
+  // Sources by key: atlas.json's list, then manifest.json's (atlas.json
+  // doesn't list the later variant sheets).
+  const p1Manifest = readJson<{ sources: { key: string; file: string }[] }>(`${PLAYTEST1_DIR}/manifest.json`)
+  const p1Src = (key: string) => {
+    const file = p1.sources[key]?.file ?? p1Manifest.sources.find((s) => s.key === key)?.file
+    if (!file) throw new Error(`playtest1-pass: no source sheet ${key}`)
+    return `${PLAYTEST1_DIR}/${file}`
+  }
   const p1Frame = (name: string) => {
     const f = p1.frames[name]
     if (!f) throw new Error(`playtest1-pass: no frame ${name}`)
     return f
   }
   // Ground: each tile box-filtered to one world tile at ART_DENSITY, healed after baking.
-  const groundJobs: Job[] = GROUND_TILES.map((name) => {
+  const groundJobs: Job[] = GROUND_DELIVERED.map((name) => {
     const f = p1Frame(name)
     read(p1Src(f.source))
     return dense(name, p1Src(f.source), [f.x, f.y, f.w, f.h], 16, 16, [0, 0, 16, 16])
@@ -479,7 +490,7 @@ async function main(): Promise<void> {
   // in Node, then encoded from those texels. ATLAS_NO_HEAL=1 skips the
   // healing (a comparison build; never commit one).
   const heal = process.env.ATLAS_NO_HEAL !== '1'
-  const gRows = Math.ceil(groundJobs.length / GROUND_COLS)
+  const gRows = Math.ceil(GROUND_TILES.length / GROUND_COLS)
   const gSize: [number, number] = [GROUND_COLS * TILE, gRows * TILE]
   const gAt = new Map(groundJobs.map((j, i) => [j.id, [(i % GROUND_COLS) * TILE, Math.floor(i / GROUND_COLS) * TILE] as [number, number]]))
   const gRaw = Buffer.from((await bake(groundJobs, gAt, gSize, true)).raw!, 'base64')
@@ -490,6 +501,18 @@ async function main(): Promise<void> {
       const healed = healFamily(flattenFamily(idx.map((i) => cellOf(gAtlas, i, TILE, GROUND_COLS)), fam.flatten ?? 0))
       idx.forEach((i, n) => setCell(gAtlas, i, TILE, GROUND_COLS, healed[n]))
     }
+  }
+  // The still water beds, animated with the gentle water's moving light.
+  const water = GROUND_WATER_FRAMES.map((t) => cellOf(gAtlas, GROUND_TILES.indexOf(t), TILE, GROUND_COLS))
+  const meanWater = new Float32Array(TILE * TILE * 4)
+  for (const w of water) for (let i = 0; i < meanWater.length; i++) meanWater[i] += w.data[i] / water.length
+  for (const bed of GROUND_WATER_BEDS) {
+    const b = cellOf(gAtlas, GROUND_TILES.indexOf(bed), TILE, GROUND_COLS)
+    water.forEach((w, f) => {
+      const out: Rgba = { w: TILE, h: TILE, data: new Uint8Array(TILE * TILE * 4) }
+      for (let i = 0; i < out.data.length; i++) out.data[i] = (i & 3) === 3 ? 255 : Math.max(0, Math.min(255, Math.round(b.data[i] + w.data[i] - meanWater[i])))
+      setCell(gAtlas, GROUND_TILES.indexOf(bedFrame(bed, f)), TILE, GROUND_COLS, out)
+    })
   }
   // Spare cells past the last tile: opaque black (the pack is opaque).
   for (let i = GROUND_TILES.length; i < gRows * GROUND_COLS; i++) setCell(gAtlas, i, TILE, GROUND_COLS, { w: TILE, h: TILE, data: new Uint8Array(TILE * TILE * 4).map((_, j) => (j % 4 === 3 ? 255 : 0)) })

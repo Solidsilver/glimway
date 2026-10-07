@@ -42,6 +42,9 @@ const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/ma
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
+const p1Manifest = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'manifest.json'), 'utf8')) as { sources: { key: string; file: string }[] }
+/** A frame's source sheet (atlas.json's list, then manifest.json's, as the build reads them). */
+const p1File = (n: string) => p1.sources[p1.frames[n].source]?.file ?? p1Manifest.sources.find((s) => s.key === p1.frames[n].source)!.file
 /** The playtest-1 frames the build samples: the ground tiles, the residents' and the held tools'. */
 const p1Used = Object.keys(p1.frames).filter((n) => GROUND_TILES.includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
 
@@ -89,7 +92,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...BACKDROPS.map((b) => b.source),
     `${PLAYTEST1_DIR}/atlas.json`,
     `${PLAYTEST1_DIR}/animations.json`,
-    ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1.sources[p1.frames[n].source].file}`)),
+    `${PLAYTEST1_DIR}/manifest.json`,
+    ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1File(n)}`)),
   ].sort()
   assert.deepEqual(Object.keys(built.inputs).sort(), expected, RERUN)
   for (const [path, hash] of Object.entries(built.inputs)) assert.equal(sha(path), hash, `${path} changed — ${RERUN}`)

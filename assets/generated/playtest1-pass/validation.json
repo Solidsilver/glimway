@@ -144,10 +144,29 @@
       ],
       "mode": "RGBA",
       "sha256": "de324fb7fc3c6c2b044c987497cbd55b78569aaf69a2c50f39f41d5363deb675"
+    },
+    {
+      "file": "ground/fingersnap-ground-flagstone-variants.png",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "mode": "RGB",
+      "sha256": "4eb5916b4923290c0bc246ccda5976b2e403ae2f2998ccfe574ffd4cd2892f80"
+    },
+    {
+      "file": "ground/fingersnap-ground-waterbed-variants.png",
+      "dimensions": [
+        2172,
+        724
+      ],
+      "mode": "RGB",
+      "sha256": "7cc260268b6e24b5837d92d242d4e373f4a36f6646a85b90831e4f44d90c9e6b"
     }
   ],
-  "frames": 416,
-  "groundTiles": 24,
+  "frames": 421,
+  "groundTiles": 29,
+  "originalGroundCells": 24,
   "transitionTiles": 120,
   "residentFrames": 200,
   "heldToolFrames": 32,
@@ -158,15 +177,28 @@
     "source crop bounds",
     "source dimensions and SHA-256",
     "animation frame references",
-    "transparent PNG source channels",
-    "player/held-item anchors in 64x128 or 32x32 canvases"
+    "corrected sand/water labels",
+    "transparent PNG channels",
+    "water variant edge similarity at 64x64"
   ],
   "inGameScenesTested": false,
-  "seamCheck": {
+  "waterVariantEdgeCheck": {
+    "status": "close-match",
+    "size": [
+      64,
+      64
+    ],
+    "crossVariantHorizontalMeanRgbDelta": 2.56,
+    "crossVariantHorizontalMaxRgbDelta": 2.94,
+    "crossVariantVerticalMeanRgbDelta": 3.52,
+    "crossVariantVerticalMaxRgbDelta": 4.02,
+    "measurement": "mean absolute RGB difference between the right/left or bottom/top edge pixels across all 3x3 pairings after area-filter reduction"
+  },
+  "baseGroundSeamCheck": {
     "status": "needs-art-review",
     "meanRgbEdgeDifferenceAfter64pxBoxFilter": 23.77,
     "maxRgbEdgeDifference": 40.69,
-    "measurement": "mean absolute RGB difference between opposite one-pixel borders of each 64x64 tile"
+    "measurement": "mean absolute RGB difference between opposite one-pixel borders of each original 64x64 tile"
   },
   "errors": []
 }

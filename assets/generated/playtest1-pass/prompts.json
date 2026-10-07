@@ -84,6 +84,16 @@
       "source": "player-body/fingersnap-player-body-index-atlas.png",
       "request": "8x5 player prototype: four directions with idle/walk/swing, four sitting directions, and four hairstyle design references. Separate material color families requested for recoloring.",
       "note": "Prototype color-family sheet only; not true indexed color or physically separated PNG layers. Four hair references delivered; fifth style outstanding."
+    },
+    {
+      "key": "ground-flagstone-variants",
+      "source": "ground/fingersnap-ground-flagstone-variants.png",
+      "request": "Two additional warm limestone flagstone plaza variants in the established Fingersnap terrain style."
+    },
+    {
+      "key": "ground-waterbed-variants",
+      "source": "ground/fingersnap-ground-waterbed-variants.png",
+      "request": "Three shallow-water tiles with distinct submerged stone beds and calm matching-edge borders; stationary variants, separate from the gentle water animation."
     }
   ],
   "layout": {

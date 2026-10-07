@@ -14,7 +14,7 @@ import { buildTangleGround } from '../wilds/tangle-art.ts'
 import { TIE_BIAS, addArtCanvas, artDensity, artSource, resampleFor } from '../density.ts'
 import { GROUND_TILES, PACKED_MANIFEST_KEY, type PackedManifest } from '../atlas-plan.ts'
 import { prefersReducedMotion } from '../sfx.ts'
-import { EDGE_TEXTURE, WATER_FPS, WATER_FRAMES, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, paintEdge, parseEdgeKey, type GroundClass } from './ground-field.ts'
+import { EDGE_TEXTURE, WATER_FPS, WATER_FRAMES, WATER_SETS, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, paintEdge, parseEdgeKey, type GroundClass } from './ground-field.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -281,7 +281,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
   }
   const index = new Map(names.map((n, i) => [n, i]))
   for (const [key, start] of edgeStart) index.set(`edge:${key}`, start)
-  animated.push({ index: index.get(WATER_FRAMES[0])!, frames: WATER_FRAMES.length })
+  for (const set of WATER_SETS) animated.push({ index: index.get(set[0])!, frames: set.length })
 
   const cols = Math.ceil(Math.sqrt(names.length))
   const rows = Math.ceil(names.length / cols)

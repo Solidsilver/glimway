@@ -221,35 +221,9 @@
         "h": 64
       }
     },
-    "ground-village-flagstones-02": {
-      "source": "ground-base",
-      "x": 1280,
-      "y": 512,
-      "w": 256,
-      "h": 256,
-      "destinationRect": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      }
-    },
     "ground-sand-by-water-01": {
       "source": "ground-base",
       "x": 0,
-      "y": 768,
-      "w": 256,
-      "h": 256,
-      "destinationRect": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      }
-    },
-    "ground-sand-by-water-02": {
-      "source": "ground-base",
-      "x": 256,
       "y": 768,
       "w": 256,
       "h": 256,
@@ -7215,6 +7189,100 @@
         "x": 0.5,
         "y": 1
       }
+    },
+    "ground-sand-by-water-03": {
+      "source": "ground-base",
+      "x": 1280,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-gentle-4": {
+      "source": "ground-base",
+      "x": 256,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-village-flagstones-03": {
+      "source": "ground-flagstone-variants",
+      "x": 0,
+      "y": 0,
+      "w": 886,
+      "h": 887,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-village-flagstones-04": {
+      "source": "ground-flagstone-variants",
+      "x": 888,
+      "y": 0,
+      "w": 886,
+      "h": 887,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ground-water-bed-variant-01": {
+      "source": "ground-waterbed-variants",
+      "x": 0,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "edgeMatch": "low-difference perimeter; test mean RGB edge delta at 64px <= 3.4"
+    },
+    "ground-water-bed-variant-02": {
+      "source": "ground-waterbed-variants",
+      "x": 724,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "edgeMatch": "low-difference perimeter; test mean RGB edge delta at 64px <= 3.4"
+    },
+    "ground-water-bed-variant-03": {
+      "source": "ground-waterbed-variants",
+      "x": 1448,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "edgeMatch": "low-difference perimeter; test mean RGB edge delta at 64px <= 3.4"
     }
   },
   "sources": {
