@@ -94,6 +94,31 @@
       "key": "ground-waterbed-variants",
       "source": "ground/fingersnap-ground-waterbed-variants.png",
       "request": "Three shallow-water tiles with distinct submerged stone beds and calm matching-edge borders; stationary variants, separate from the gentle water animation."
+    },
+    {
+      "key": "house-west",
+      "source": "houses/fingersnap-house-west.png",
+      "request": "Standalone 6x6 canvas; lower 6x4 footprint; door column 2 and window column 4; slate-roof carter cottage."
+    },
+    {
+      "key": "house-middle",
+      "source": "houses/fingersnap-house-middle.png",
+      "request": "Standalone 7x6 canvas; lower 7x4 footprint; door column 2 and window column 4; largest russet-roof house."
+    },
+    {
+      "key": "house-ada",
+      "source": "houses/fingersnap-house-ada.png",
+      "request": "Standalone 6x6 canvas; lower 6x4 footprint; door column 2 and window column 4; Ada's vine-covered gardener cottage with window box."
+    },
+    {
+      "key": "brackenwood-bridge",
+      "source": "bridge/fingersnap-brackenwood-bridge.png",
+      "request": "Two frames, 128x128 destination each, two-tile E/W deck over N/S stream; worn and mended states with 64px deck centered."
+    },
+    {
+      "key": "pond-bed-seamless",
+      "source": "water/fingersnap-pond-bed-seamless.png",
+      "request": "One still 256x256 pond-floor texture (4x4 64px tiles), no vignette; cyclic offset at runtime texel size makes prior generated texture content wrap without visible joins."
     }
   ],
   "layout": {
@@ -133,6 +158,46 @@
       "left",
       "right",
       "sit-down/up/left/right in columns 0-3; hair references in columns 4-7"
-    ]
+    ],
+    "villageHouseContract": {
+      "footprintTiles": "6x4 west and Ada; 7x4 middle",
+      "footprintY": 128,
+      "footprintHeight": 256,
+      "doorColumn": 2,
+      "windowColumn": 4,
+      "footPoint": "bottom centre of footprint"
+    },
+    "brackenwoodBridge": {
+      "frames": [
+        "worn",
+        "mended"
+      ],
+      "canvas": [
+        128,
+        128
+      ],
+      "deckRect": {
+        "x": 0,
+        "y": 32,
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      }
+    },
+    "pondTexture": {
+      "canvas": [
+        256,
+        256
+      ],
+      "tileTexels": 64,
+      "tiles": [
+        4,
+        4
+      ],
+      "wrapMethod": "cyclic half-texture offset after box filtering"
+    }
   }
 }

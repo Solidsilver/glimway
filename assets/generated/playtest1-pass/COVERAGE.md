@@ -11,3 +11,11 @@
 | Resident down/up/left/right, idle (2), walk (4), sit-down | `resident-{name}-*` | 8 people × 25 frames = 200 frames, fixed foot anchor |
 | Directional hand-held tools | `held-{tool}-{direction}` | 8 items ×4 directions =32 frames; hand anchors included |
 | Player base poses and color-family atlas | `player-body/fingersnap-player-body-index-atlas.png` | 4 directions × idle/walk/swing, 4 sitting poses, 4 hair references. Prototype only: 4 hair styles, and color families are not exact index layers; fifth style and clean separated recolor layers remain outstanding. |
+
+
+## Playtest 2 additions
+
+| Three village houses | `house-west`, `house-middle`, `house-ada` | Transparent sprites; 6×4 / 7×4 tile footprints, door column 2, window column 4, foot point at bottom-centre |
+| Brackenwood footbridge | `brackenwood-bridge-worn`, `brackenwood-bridge-mended` | Two states in 128×128 canvases; deck rectangle 128×64 centered vertically |
+| Seamless pond floor | `pond-bed-seamless` | One still 256×256 texture for 4×4 tiles; generated water-bed art is cyclically offset so its joins run across natural texture content |
+| Production layered player body | Not included in this pass | Optional request remains open; round-1 body is still a prototype |

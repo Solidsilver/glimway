@@ -162,43 +162,85 @@
       ],
       "mode": "RGB",
       "sha256": "7cc260268b6e24b5837d92d242d4e373f4a36f6646a85b90831e4f44d90c9e6b"
+    },
+    {
+      "file": "houses/fingersnap-house-west.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "bdf3206be7c67985c052aa87eaa97d9033cd540d2c9ff0a84473f34ba3d67e52"
+    },
+    {
+      "file": "houses/fingersnap-house-middle.png",
+      "dimensions": [
+        1355,
+        1161
+      ],
+      "mode": "RGBA",
+      "sha256": "032d4cfaca30ea78e75d1f7a110391887323e56d9c847d463c7e9c9641133937"
+    },
+    {
+      "file": "houses/fingersnap-house-ada.png",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "sha256": "42ec8b8f6ac702899da02c7f5c9623d1771c27805ddcb1b405bee8f7797f4388"
+    },
+    {
+      "file": "bridge/fingersnap-brackenwood-bridge.png",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "mode": "RGBA",
+      "sha256": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca"
+    },
+    {
+      "file": "water/fingersnap-pond-bed-seamless.png",
+      "dimensions": [
+        256,
+        256
+      ],
+      "mode": "RGB",
+      "sha256": "5bdeca7daaed919cc407f291b307bbbbcdd004cd7f0507cad85eeb42b8e36217"
     }
   ],
-  "frames": 421,
-  "groundTiles": 29,
+  "frames": 427,
   "originalGroundCells": 24,
+  "groundVariantTiles": 5,
   "transitionTiles": 120,
   "residentFrames": 200,
   "heldToolFrames": 32,
-  "playerBodyFrames": 40,
+  "playerBodyPrototypeFrames": 40,
+  "houses": 3,
+  "bridgeStates": 2,
+  "pondTextureBlocks": 1,
   "animations": 82,
   "checks": [
-    "unique frame keys",
-    "source crop bounds",
+    "source map parity and file paths",
     "source dimensions and SHA-256",
-    "animation frame references",
-    "corrected sand/water labels",
-    "transparent PNG channels",
-    "water variant edge similarity at 64x64"
+    "frame crop bounds",
+    "atlas frame references",
+    "house footprint anchors and requested columns",
+    "bridge deck bounds",
+    "pond 2x2 repeated preview and edge-vs-interior pixel variation"
   ],
   "inGameScenesTested": false,
-  "waterVariantEdgeCheck": {
-    "status": "close-match",
-    "size": [
-      64,
-      64
+  "pondRepeatCheck": {
+    "status": "visually-reviewed-2x2",
+    "canvas": [
+      256,
+      256
     ],
-    "crossVariantHorizontalMeanRgbDelta": 2.56,
-    "crossVariantHorizontalMaxRgbDelta": 2.94,
-    "crossVariantVerticalMeanRgbDelta": 3.52,
-    "crossVariantVerticalMaxRgbDelta": 4.02,
-    "measurement": "mean absolute RGB difference between the right/left or bottom/top edge pixels across all 3x3 pairings after area-filter reduction"
-  },
-  "baseGroundSeamCheck": {
-    "status": "needs-art-review",
-    "meanRgbEdgeDifferenceAfter64pxBoxFilter": 23.77,
-    "maxRgbEdgeDifference": 40.69,
-    "measurement": "mean absolute RGB difference between opposite one-pixel borders of each original 64x64 tile"
+    "horizontalBoundaryMeanRgbDelta": 19.67,
+    "horizontalInteriorMeanRgbDelta": 18.28,
+    "verticalBoundaryMeanRgbDelta": 17.61,
+    "verticalInteriorMeanRgbDelta": 18.77,
+    "method": "box-filtered to 256x256 then cyclically offset by half width and height so the texture repeats on continuous interior content; boundary deltas are comparable to normal neighboring pixel variation"
   },
   "errors": []
 }

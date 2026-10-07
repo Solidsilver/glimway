@@ -7283,83 +7283,372 @@
         "h": 64
       },
       "edgeMatch": "low-difference perimeter; test mean RGB edge delta at 64px <= 3.4"
+    },
+    "house-west": {
+      "source": "house-west",
+      "x": 0,
+      "y": 0,
+      "w": 1536,
+      "h": 1024,
+      "destinationRect": {
+        "x": 0,
+        "y": 128,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 384,
+        "h": 384
+      },
+      "footprintRect": {
+        "x": 0,
+        "y": 128,
+        "w": 384,
+        "h": 256
+      },
+      "footPoint": {
+        "x": 192,
+        "y": 384
+      },
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      },
+      "doorColumn": 2,
+      "windowColumn": 4
+    },
+    "house-middle": {
+      "source": "house-middle",
+      "x": 0,
+      "y": 0,
+      "w": 1355,
+      "h": 1161,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 448,
+        "h": 384
+      },
+      "canvasSize": {
+        "w": 448,
+        "h": 384
+      },
+      "footprintRect": {
+        "x": 0,
+        "y": 128,
+        "w": 448,
+        "h": 256
+      },
+      "footPoint": {
+        "x": 224,
+        "y": 384
+      },
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      },
+      "doorColumn": 2,
+      "windowColumn": 4
+    },
+    "house-ada": {
+      "source": "house-ada",
+      "x": 0,
+      "y": 0,
+      "w": 1254,
+      "h": 1254,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 384,
+        "h": 384
+      },
+      "canvasSize": {
+        "w": 384,
+        "h": 384
+      },
+      "footprintRect": {
+        "x": 0,
+        "y": 128,
+        "w": 384,
+        "h": 256
+      },
+      "footPoint": {
+        "x": 192,
+        "y": 384
+      },
+      "origin": {
+        "x": 0.5,
+        "y": 1
+      },
+      "doorColumn": 2,
+      "windowColumn": 4
+    },
+    "brackenwood-bridge-worn": {
+      "source": "brackenwood-bridge",
+      "x": 0,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "deckRect": {
+        "x": 0,
+        "y": 32,
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "state": "worn"
+    },
+    "brackenwood-bridge-mended": {
+      "source": "brackenwood-bridge",
+      "x": 887,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "deckRect": {
+        "x": 0,
+        "y": 32,
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "state": "mended"
+    },
+    "pond-bed-seamless": {
+      "source": "pond-bed-seamless",
+      "x": 0,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "tileSizeTexels": 64,
+      "tilesWide": 4,
+      "tilesHigh": 4,
+      "repeatable": true
     }
   },
   "sources": {
     "ground-base": {
       "file": "ground/fingersnap-ground-base.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-tile-atlas",
+      "mode": "RGB",
+      "sha256": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec"
     },
     "transition-dirt": {
       "file": "ground/fingersnap-ground-transition-dirt.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-transition-atlas",
+      "mode": "RGB",
+      "sha256": "15c855ebb50e8f9512cb9f547c4b0d071a13d7ebd9d4ccc4bb9007d1ab8118d7"
     },
     "transition-road": {
       "file": "ground/fingersnap-ground-transition-road.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-transition-atlas",
+      "mode": "RGB",
+      "sha256": "26e5e3caa98a7e1a7120bfb15bf7f4c25e826439042ae1e1068956040f1f93eb"
     },
     "transition-flagstones": {
       "file": "ground/fingersnap-ground-transition-flagstones.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-transition-atlas",
+      "mode": "RGB",
+      "sha256": "c96121680dcf8ac8ffb73d7c2a0e2f1a6119c5b84c5459937741cdd492bfff3a"
     },
     "transition-sand": {
       "file": "ground/fingersnap-ground-transition-sand.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-transition-atlas",
+      "mode": "RGB",
+      "sha256": "72ee23a8d721a934eb159194bb04b950b6621f40d72bedd5c313665c98548dd5"
     },
     "transition-water": {
       "file": "ground/fingersnap-ground-transition-water.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "opaque-transition-atlas",
+      "mode": "RGB",
+      "sha256": "8c5fd14645591aefb30113185bae5c001dc4ab5cca9b55ebc08e0d9601c10f99"
     },
     "resident-mara": {
       "file": "residents/fingersnap-resident-mara.png",
       "width": 1374,
-      "height": 1145
+      "height": 1145,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "06f24b740efdd8968d0d08eebe5ae034f8cff2f09eb185592b2bf078f337208e"
     },
     "resident-pip": {
       "file": "residents/fingersnap-resident-pip.png",
       "width": 1374,
-      "height": 1145
+      "height": 1145,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "727717f6a6c10ea43561a6d51eb1c784bb3dcacbedc9d90cdae7144636c59a28"
     },
     "resident-orrin": {
       "file": "residents/fingersnap-resident-orrin.png",
       "width": 1374,
-      "height": 1145
+      "height": 1145,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "7fc351ee010e2b405a3fc10a7e6f47c060ddaa7c8d53914561477bd28afd9b2b"
     },
     "resident-silas": {
       "file": "residents/fingersnap-resident-silas.png",
       "width": 1374,
-      "height": 1145
+      "height": 1145,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "4579c07b25e47fb3d1d2159810de91c9d19dd5e29f165ff60dbeaf2203ddde69"
     },
     "resident-elara": {
       "file": "residents/fingersnap-resident-elara.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "1b37d7cb07b0a8c5375c32f0e7741c8e1c9e40daf41a902f299dcec7f67bfec8"
     },
     "resident-finn": {
       "file": "residents/fingersnap-resident-finn.png",
       "width": 1374,
-      "height": 1145
+      "height": 1145,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "095c8c0c512a607516fe1b24f12999a49e21d07b197b210bcc4abce1a9a8a791"
     },
     "resident-hazel": {
       "file": "residents/fingersnap-resident-hazel.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "2de98f05fb5e84c5286f35acdbca09d050fe76114b01d6d17c5bc45ea581612b"
     },
     "resident-ada": {
       "file": "residents/fingersnap-resident-ada.png",
       "width": 1536,
-      "height": 1024
+      "height": 1024,
+      "kind": "transparent-pose-atlas",
+      "mode": "RGBA",
+      "sha256": "398654b673a0c6736787c4696469d64d04c8c44d690a28e11a23602e118d8146"
     },
     "held-tools": {
       "file": "hand-items/fingersnap-held-tools.png",
       "width": 1774,
-      "height": 887
+      "height": 887,
+      "kind": "transparent-hand-item-atlas",
+      "mode": "RGBA",
+      "sha256": "44c9be76ef290b26aa458634a6c0e99e7430326369734dceefeb6a67635f224a"
+    },
+    "player-body": {
+      "file": "player-body/fingersnap-player-body-index-atlas.png",
+      "width": 1586,
+      "height": 992,
+      "kind": "transparent-player-pose-and-style-atlas",
+      "mode": "RGBA",
+      "sha256": "de324fb7fc3c6c2b044c987497cbd55b78569aaf69a2c50f39f41d5363deb675"
+    },
+    "ground-flagstone-variants": {
+      "file": "ground/fingersnap-ground-flagstone-variants.png",
+      "width": 1774,
+      "height": 887,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "sha256": "4eb5916b4923290c0bc246ccda5976b2e403ae2f2998ccfe574ffd4cd2892f80"
+    },
+    "ground-waterbed-variants": {
+      "file": "ground/fingersnap-ground-waterbed-variants.png",
+      "width": 2172,
+      "height": 724,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "sha256": "7cc260268b6e24b5837d92d242d4e373f4a36f6646a85b90831e4f44d90c9e6b"
+    },
+    "house-west": {
+      "file": "houses/fingersnap-house-west.png",
+      "width": 1536,
+      "height": 1024,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "sha256": "bdf3206be7c67985c052aa87eaa97d9033cd540d2c9ff0a84473f34ba3d67e52"
+    },
+    "house-middle": {
+      "file": "houses/fingersnap-house-middle.png",
+      "width": 1355,
+      "height": 1161,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "sha256": "032d4cfaca30ea78e75d1f7a110391887323e56d9c847d463c7e9c9641133937"
+    },
+    "house-ada": {
+      "file": "houses/fingersnap-house-ada.png",
+      "width": 1254,
+      "height": 1254,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "sha256": "42ec8b8f6ac702899da02c7f5c9623d1771c27805ddcb1b405bee8f7797f4388"
+    },
+    "brackenwood-bridge": {
+      "file": "bridge/fingersnap-brackenwood-bridge.png",
+      "width": 1774,
+      "height": 887,
+      "kind": "transparent-state-atlas",
+      "mode": "RGBA",
+      "sha256": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca"
+    },
+    "pond-bed-seamless": {
+      "file": "water/fingersnap-pond-bed-seamless.png",
+      "width": 256,
+      "height": 256,
+      "kind": "opaque-seamless-pond-texture",
+      "mode": "RGB",
+      "sha256": "5bdeca7daaed919cc407f291b307bbbbcdd004cd7f0507cad85eeb42b8e36217"
     }
   }
 }

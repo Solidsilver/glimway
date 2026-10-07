@@ -9,7 +9,7 @@ This pack starts the playtest-1 art request at the priorities that improve the f
 - One player-body prototype atlas with 4 directions × (2 idle + 4 walk + 2 swing), 4 sitting poses, and 4 hair references (40 frames).
 - Five grass-transition atlases (dirt, cobbled road, flagstones, sand, water), 24 square variants apiece. Cells 0–15 carry the standard N/E/S/W mask fields; cells 16–23 are alternate edge/corner shapes.
 - Eight resident atlases, each with 4 directions × (2 idle breathing + 4 walking frames), plus a down-facing sit pose: Mara, Pip, Orrin, Silas, Elara Quill, Finn Tolley, Hazel Penhallow, and Ada Cooley.
-- Total: 18 source sheets, 421 measured frames, 82 animation groups.
+- Total: 23 source sheets, 427 measured frames, 82 animation groups.
 
 ## Runtime contract
 
@@ -32,3 +32,9 @@ See `COVERAGE.md`, `prompts.json`, `validation.json`, and `preview.html` for the
 ## Player-body prototype
 
 The player sheet uses a 64×128 texel destination and a bottom-center foot anchor at (32,128). Rows are down/up/left/right, with idle, walk, and two swing cells; the last row has four directional sitting poses followed by four hairstyle references. The distinct skin, hair, tunic, trouser, and boot colors are useful recoloring targets, but generated shading and edge pixels mean this is not an exact indexed-color atlas and the layers are not split into separate PNGs. It includes four hair references; the requested fifth style and production-ready recolor layers still need a focused pass.
+
+## Playtest 2 additions
+
+Three house sprites expose exact `footprintRect`, `footPoint`, and canvas placement in `atlas.json`: West and Ada use 384×384 canvases with 384×256 footprints at y=128; the larger middle home uses 448×384 with a 448×256 footprint at y=128. Each specifies door column 2 and window column 4. The bridge atlas has two 128×128 frames and a 128×64 deck centered at y=32. The pond texture is a still 256×256 block of 4×4 game tiles; it is downsampled and cyclically offset so the repeated edge follows continuous in-texture detail.
+
+`atlas.json` now includes the complete source catalog as well as frame mappings, and the catalog is checked against `manifest.json`. The optional production player layers are not part of this pass.
