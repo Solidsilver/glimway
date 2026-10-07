@@ -1,6 +1,7 @@
 /**
  * Request/response shapes of the Fingersnap server, mirroring the Go
- * handlers in server/internal/api (answers are checked by ./parse.ts).
+ * handlers in server/internal/api and the snapshot in server/internal/store
+ * (answers are checked by ./parse.ts).
  */
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';

@@ -74,6 +74,25 @@ func New(s *store.Store, h *habitica.Client, c Config) *Server {
 	return newServer(s, h, c)
 }
 
+func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
+	if c.LoginConcurrency <= 0 {
+		c.LoginConcurrency = 4
+	}
+	if c.LoginRate <= 0 {
+		c.LoginRate = 10
+	}
+	if c.LoginGlobalRate <= 0 {
+		c.LoginGlobalRate = 60
+	}
+	if c.LoginWindow <= 0 {
+		c.LoginWindow = time.Minute
+	}
+	if c.LoginPartyRate <= 0 {
+		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
+	}
+	return &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+}
+
 type failure struct {
 	status int
 	code   string
@@ -441,9 +460,10 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	// An invite code decides a new player's world (the one it names, else
-	// their party's world, else a solo world). An allowlisted newcomer's
-	// valid code still counts. A code naming a party's world admits no one.
+	// A named invite decides a new player's world. An unnamed invite admits
+	// them to the world-choice flow below, or a solo world if no choice is
+	// offered. An allowlisted newcomer's valid code still counts. A code
+	// naming a party's world admits no one.
 	world := ""
 	via := "invite"
 	if allowed == 0 || existing == 0 && req.Invite != "" {

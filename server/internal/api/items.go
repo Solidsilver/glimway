@@ -1638,7 +1638,10 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 		return err
 	}
 	for _, sl := range slotList {
-		d, _ := content.ItemFor(sl.def)
+		d, ok := content.ItemFor(sl.def)
+		if !ok {
+			return fmt.Errorf("gathering slot names unknown item %q", sl.def)
+		}
 		for _, e := range d.Pocket {
 			if e.Type == "gather-more" {
 				more[e.Target] = true
@@ -1658,7 +1661,10 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 		if more[y.Item] {
 			qty++
 		}
-		def, _ := content.ItemFor(y.Item)
+		def, ok := content.ItemFor(y.Item)
+		if !ok {
+			return fmt.Errorf("gathering yield names unknown item %q", y.Item)
+		}
 		if def.Instanced() {
 			for range qty {
 				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", -1, now)

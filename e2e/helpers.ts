@@ -675,9 +675,13 @@ export async function savedRecordText(page: Page): Promise<string> {
 /**
  * The guest save on disk has caught up with the game: no debounced save is
  * waiting, and its area and position are the ones the game holds. Wait for it
- * before editing the save by hand or reloading to test persistence.
+ * before editing the save by hand or reloading to test persistence. A save is
+ * asked for first: the game notes where the hero stands once a second without
+ * saving, so a test that arrives after that sample would otherwise wait for a
+ * save that only the next change brings.
  */
 export async function savedToDisk(page: Page): Promise<void> {
+  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon?: () => void }).__fsDevSaveSoon?.())
   await expect
     .poll(
       () =>

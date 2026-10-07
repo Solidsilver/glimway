@@ -11,6 +11,40 @@ import (
 	"fingersnap/server/internal/rules"
 )
 
+func TestGatheringUnknownDefinitionsRollBack(t *testing.T) {
+	for _, source := range []string{"slot", "yield"} {
+		t.Run(source, func(t *testing.T) {
+			x := newRig(t)
+			c, s := x.ready("alice")
+			axe := x.instance(s.HabiticaID, "bench-axe", -1, "")
+			if source == "slot" {
+				if _, err := x.db.DB.Exec("INSERT INTO item_slots(habitica_id,slot,item_def) VALUES(?,'pocket-1','missing-item')", s.HabiticaID); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				original := content.GatheringRules.Targets["tree"]
+				broken := original
+				broken.Yields = []content.GatheringYield{{Item: "missing-item", Min: 1, Max: 1}}
+				content.GatheringRules.Targets["tree"] = broken
+				t.Cleanup(func() { content.GatheringRules.Targets["tree"] = original })
+			}
+			x.refresh(c, &s)
+			before := s.Snapshot
+			condition := count(t, x.db, "SELECT condition FROM item_instances WHERE id=?", axe)
+			ledger := count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id=?", s.HabiticaID)
+			v := x.op(c, &s, "gather", gatherIn(s, "woodland", [2]int{20, 20}, axe, "chop", "tree", "v1"), 500)
+			if v.Error.Code != "internal" {
+				t.Fatalf("unknown %s definition: %q", source, v.Error.Code)
+			}
+			x.refresh(c, &s)
+			unchanged(t, before, s.Snapshot)
+			if count(t, x.db, "SELECT condition FROM item_instances WHERE id=?", axe) != condition || count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id=?", s.HabiticaID) != ledger || count(t, x.db, "SELECT count(*) FROM gathering_caps WHERE habitica_id=?", s.HabiticaID) != 0 {
+				t.Fatal("failed gathering changed wear, ledger or caps")
+			}
+		})
+	}
+}
+
 // Gathering (docs/items/crafting-and-repair.md, "Gathering"): tool wear,
 // yields, the caps per area visit and per day, the drift on home land
 // (a stump stays inside lamplight, the unlit edge regrows), and planting.

@@ -5,6 +5,14 @@ import { serializeHomesteadVectors } from '../scripts/homestead-vectors.ts';
 import { HOMESTEAD_DATA, checkPlacement, checkRemoval, cleanPostName, gateTile, parseHomeArea, type HomeInstance } from '../src/lib/homestead.ts';
 import { LAND, generateLand, landAt, landSeed, postCost } from '../src/lib/homestead-land.ts';
 
+test('shared post name vectors reject every Unicode control before tidying', () => {
+  const vectors: { label: string; raw: string; clean: string | null }[] = JSON.parse(
+    readFileSync(new URL('../content/vectors/post-names.json', import.meta.url), 'utf8'),
+  );
+  assert.ok(vectors.length > 0);
+  for (const v of vectors) assert.equal(cleanPostName(v.raw), v.clean, v.label);
+});
+
 test('committed homestead land vectors match the TypeScript generator', () => {
   assert.equal(
     readFileSync(new URL('../content/vectors/homestead.json', import.meta.url), 'utf8'),

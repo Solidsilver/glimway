@@ -3,6 +3,7 @@ package content
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
@@ -89,44 +90,92 @@ func LoadGathering() (Gathering, error) {
 	if err = json.Unmarshal(b, &g); err != nil {
 		return g, err
 	}
-	if g.Caps.Visit.Chop <= 0 || g.Caps.Day.Chop <= 0 || len(g.Targets) == 0 {
-		return g, fmt.Errorf("invalid gathering caps or targets")
+	return g, ValidateGathering(g)
+}
+
+// ValidateGathering checks every definition used by gathering before gameplay
+// can roll yields or consume a tool use. Zero chancePermille means guaranteed,
+// as does an omitted chance; positive values are probabilities out of 1000.
+func ValidateGathering(g Gathering) error {
+	actions := []string{"chop", "break", "dig"}
+	for _, c := range []GatheringActionCaps{g.Caps.Visit, g.Caps.Day} {
+		if c.Chop <= 0 || c.Break <= 0 || c.Dig <= 0 {
+			return fmt.Errorf("gathering caps must be positive for every action")
+		}
 	}
-	for id, t := range g.Targets {
-		if t.Action == "" || t.ToolAction == "" || len(t.Yields) == 0 {
-			return g, fmt.Errorf("gathering target %s has empty action or yields", id)
+	for _, action := range actions {
+		if g.Swings[action] <= 0 {
+			return fmt.Errorf("gathering swings for %s must be positive", action)
+		}
+	}
+	for action := range g.Swings {
+		if !slices.Contains(actions, action) {
+			return fmt.Errorf("gathering swings names unknown action %s", action)
 		}
 	}
 	if g.PlantsPerHome <= 0 {
-		return g, fmt.Errorf("plantsPerHome must be positive")
+		return fmt.Errorf("plantsPerHome must be positive")
+	}
+	if len(g.Targets) == 0 {
+		return fmt.Errorf("gathering targets must not be empty")
 	}
 	cal, err := LoadCalendar()
 	if err != nil {
-		return g, fmt.Errorf("calendar: %v", err)
+		return fmt.Errorf("calendar: %v", err)
 	}
 	for _, area := range []string{"wilds", "woodland", "home"} {
 		if len(g.Areas[area]) == 0 {
-			return g, fmt.Errorf("gathering area %s offers nothing", area)
+			return fmt.Errorf("gathering area %s offers nothing", area)
 		}
 	}
 	for area, targets := range g.Areas {
+		if !slices.Contains([]string{"wilds", "woodland", "home", "village", "commons"}, area) {
+			return fmt.Errorf("unknown gathering area %s", area)
+		}
+		seen := map[string]bool{}
 		for _, t := range targets {
-			if _, ok := g.Targets[t]; !ok {
-				return g, fmt.Errorf("gathering area %s names unknown target %s", area, t)
+			if _, ok := g.Targets[t]; !ok || seen[t] {
+				return fmt.Errorf("gathering area %s names unknown or duplicate target %s", area, t)
 			}
+			seen[t] = true
 		}
 	}
 	for id, t := range g.Targets {
+		if !ValidContentID(id) || t.Name == "" || !slices.Contains(actions, t.Action) || !slices.Contains(actions, t.ToolAction) || len(t.Yields) == 0 {
+			return fmt.Errorf("gathering target %s has an invalid ID, name, action or yields", id)
+		}
 		if len(t.Verb) > 30 || t.Mark != "" && !slices.Contains(cal.Marks, t.Mark) || t.Wick != "" && !slices.Contains(cal.Wicks, t.Wick) {
-			return g, fmt.Errorf("gathering target %s has an invalid verb or season", id)
+			return fmt.Errorf("gathering target %s has an invalid verb or season", id)
 		}
 		for _, y := range t.Yields {
+			if _, ok := ItemFor(y.Item); !ok {
+				return fmt.Errorf("gathering target %s yields unknown item %s", id, y.Item)
+			}
+			// Bound quantities to a portable signed integer; the roller uses
+			// a uint32 modulus and gathering may add one extra item.
+			if y.Min <= 0 || y.Max < y.Min || y.Max >= math.MaxInt32 {
+				return fmt.Errorf("gathering target %s yield %s has an invalid range", id, y.Item)
+			}
+			if y.ChancePermille < 0 || y.ChancePermille > 1000 {
+				return fmt.Errorf("gathering target %s yield %s has an invalid chance", id, y.Item)
+			}
 			if y.Mark != "" && !slices.Contains(cal.Marks, y.Mark) {
-				return g, fmt.Errorf("gathering target %s yield %s has an invalid mark", id, y.Item)
+				return fmt.Errorf("gathering target %s yield %s has an invalid mark", id, y.Item)
 			}
 		}
 	}
-	return g, nil
+	if len(g.Seeds) == 0 {
+		return fmt.Errorf("gathering seeds must not be empty")
+	}
+	seeds := map[string]bool{}
+	for _, id := range g.Seeds {
+		d, ok := ItemFor(id)
+		if !ok || d.Kind != "seed" || seeds[id] {
+			return fmt.Errorf("gathering seed %s is unknown, not a seed or duplicated", id)
+		}
+		seeds[id] = true
+	}
+	return nil
 }
 
 func GatheringTargetFor(targetID string) (GatheringTarget, bool) {

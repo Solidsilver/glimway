@@ -70,7 +70,7 @@ func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string,
 }
 
 // hearthCraft makes consumables, remedies, oils and wax seals at the
-// cottage hearth (tier 1+ or placed stone hearth).
+// cottage hearth (membership in a tier 1+ homestead).
 func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation

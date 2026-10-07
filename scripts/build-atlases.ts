@@ -24,7 +24,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -33,6 +33,7 @@ import {
   ART_DENSITY,
   ATLAS_GENERATOR_VERSION,
   BACKDROPS,
+  BUILDINGS,
   MAX_SCREEN_SCALE,
   SCALED_ATLASES,
   blitKey,
@@ -41,6 +42,9 @@ import {
   GROUND_FAMILIES,
   GROUND_TILES,
   HELD_SOURCE,
+  POND_SIZE,
+  POND_SOURCE,
+  POND_TILES,
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
@@ -174,14 +178,26 @@ async function main(): Promise<void> {
   type P1Frame = { source: string; x: number; y: number; w: number; h: number; destinationRect: { x: number; y: number; w: number; h: number }; handAnchor?: { x: number; y: number } }
   const p1 = readJson<{ frames: Record<string, P1Frame>; sources: Record<string, { file: string }> }>(`${PLAYTEST1_DIR}/atlas.json`)
   const p1Anims = readJson<{ animations: PackedPeople['animations'] }>(`${PLAYTEST1_DIR}/animations.json`)
-  const p1Src = (key: string) => `${PLAYTEST1_DIR}/${p1.sources[key].file}`
+  const p1Src = (key: string) => {
+    const file = p1.sources[key]?.file
+    if (!file) throw new Error(`playtest1-pass: atlas.json lists no source sheet ${key}`)
+    return `${PLAYTEST1_DIR}/${file}`
+  }
   const p1Frame = (name: string) => {
     const f = p1.frames[name]
     if (!f) throw new Error(`playtest1-pass: no frame ${name}`)
     return f
   }
   // Ground: each tile box-filtered to one world tile at ART_DENSITY, healed after baking.
+  const pond = p1Frame(POND_SOURCE)
   const groundJobs: Job[] = GROUND_TILES.map((name) => {
+    // The pond's tiles: one 64-texel quarter of the seamless bed each.
+    const at = POND_TILES.indexOf(name)
+    if (at >= 0) {
+      read(p1Src(pond.source))
+      const t = pond.w / POND_SIZE
+      return dense(name, p1Src(pond.source), [pond.x + (at % POND_SIZE) * t, pond.y + Math.floor(at / POND_SIZE) * t, t, t], 16, 16, [0, 0, 16, 16])
+    }
     const f = p1Frame(name)
     read(p1Src(f.source))
     return dense(name, p1Src(f.source), [f.x, f.y, f.w, f.h], 16, 16, [0, 0, 16, 16])
@@ -210,6 +226,16 @@ async function main(): Promise<void> {
       return { id: name, src: p1Src(f.source), s: [f.x, f.y, f.w, f.h] as [number, number, number, number], w: HELD_TEXELS, h: HELD_TEXELS, d, box: true, hand }
     }),
   ]
+  // Buildings: each frame's whole canvas (texels at the pass's density),
+  // its measured source box-filtered into its destination rect.
+  type P1Building = P1Frame & { canvasSize: { w: number; h: number } }
+  const buildingJobs: Job[] = BUILDINGS.map((name) => {
+    const f = p1Frame(name) as P1Building
+    read(p1Src(f.source))
+    const r = f.destinationRect
+    // The pass draws 4 texels a world px: world px = texels / 4.
+    return dense(name, p1Src(f.source), [f.x, f.y, f.w, f.h], f.canvasSize.w / 4, f.canvasSize.h / 4, [r.x / 4, r.y / 4, r.w / 4, r.h / 4])
+  })
   const animations = p1Anims.animations.filter((a) => a.frames.every((f) => residentFrames.includes(f)))
 
   // GPU-scaled atlases: each group at its largest on-screen size (never above source).
@@ -472,6 +498,8 @@ async function main(): Promise<void> {
   const runtimeImage = await bakeDenseWebp('runtime', runtimeJobs, rPack.at, rPack.size)
   const iPack = pack(itemsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const itemsImage = await bakeDenseWebp('items', itemsJobs, iPack.at, iPack.size)
+  const bPack = pack(buildingJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  const buildingsImage = await bakeDenseWebp('buildings', buildingJobs, bPack.at, bPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
   const terrainImage = await bakeDenseWebp('terrain', terrainJobs, tAt, [TILE * 4, TILE * 4])
 
@@ -479,13 +507,14 @@ async function main(): Promise<void> {
   // in Node, then encoded from those texels. ATLAS_NO_HEAL=1 skips the
   // healing (a comparison build; never commit one).
   const heal = process.env.ATLAS_NO_HEAL !== '1'
-  const gRows = Math.ceil(groundJobs.length / GROUND_COLS)
+  const gRows = Math.ceil(GROUND_TILES.length / GROUND_COLS)
   const gSize: [number, number] = [GROUND_COLS * TILE, gRows * TILE]
   const gAt = new Map(groundJobs.map((j, i) => [j.id, [(i % GROUND_COLS) * TILE, Math.floor(i / GROUND_COLS) * TILE] as [number, number]]))
   const gRaw = Buffer.from((await bake(groundJobs, gAt, gSize, true)).raw!, 'base64')
   const gAtlas: Rgba = { w: gSize[0], h: gSize[1], data: gRaw }
   if (heal) {
     for (const fam of GROUND_FAMILIES) {
+      if (fam.heal === false) continue
       const idx = fam.tiles.map((t) => GROUND_TILES.indexOf(t))
       const healed = healFamily(flattenFamily(idx.map((i) => cellOf(gAtlas, i, TILE, GROUND_COLS)), fam.flatten ?? 0))
       idx.forEach((i, n) => setCell(gAtlas, i, TILE, GROUND_COLS, healed[n]))
@@ -610,6 +639,13 @@ async function main(): Promise<void> {
     generator: 'scripts/build-atlases.ts',
     generatorVersion: ATLAS_GENERATOR_VERSION,
     inputs: Object.fromEntries(Object.entries(inputs).sort(([a], [b]) => a.localeCompare(b))),
+    // The images written, by content: the game's ground paint caches key on these.
+    outputs: Object.fromEntries(
+      readdirSync(OUT)
+        .filter((f) => /\.(webp|png)$/.test(f))
+        .sort()
+        .map((f) => [f, createHash('sha256').update(readFileSync(join(OUT, f))).digest('hex')]),
+    ),
     // What the plan asked for (the staleness test re-derives it).
     plan: {
       density: ART_DENSITY,
@@ -624,11 +660,12 @@ async function main(): Promise<void> {
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
     people,
+    buildings: { image: buildingsImage, size: bPack.size, density: ART_DENSITY, frames: rects(buildingJobs, bPack.at) },
     atlases,
     backdrops,
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${OUT}`)
 }
 
 await main()

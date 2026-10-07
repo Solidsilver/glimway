@@ -319,9 +319,12 @@ export function checkRemoval(home: { items: readonly HomeInstance[] }, instance:
   return everythingLit(home.items.filter((i) => i.id !== instance.id), data) ? null : 'post-holds-land';
 }
 
-/** A lantern post's name, tidied (null: not a usable name). */
+/** A lantern post's name, tidied; all Unicode controls are rejected before normalization. */
 export function cleanPostName(raw: string, data: HomesteadData = HOMESTEAD_DATA): string | null {
-  const name = raw.replace(/\s+/g, ' ').trim();
-  if (!name || [...name].length > data.lanternPosts.nameMax || /[\u0000-\u001f\u007f]/.test(name)) return null;
+  if (/\p{Cc}/u.test(raw)) return null;
+  // Match strings.Fields / unicode.IsSpace in Go; JavaScript's \s and trim
+  // also remove U+FEFF, which Go preserves as part of the name.
+  const name = raw.split(/[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/u).filter(Boolean).join(' ');
+  if (!name || [...name].length > data.lanternPosts.nameMax) return null;
   return name;
 }
