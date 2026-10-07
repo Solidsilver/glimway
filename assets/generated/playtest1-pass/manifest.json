@@ -147,7 +147,7 @@
       "mode": "RGBA",
       "alphaExtrema": [
         0,
-        254
+        255
       ],
       "sha256": "1b37d7cb07b0a8c5375c32f0e7741c8e1c9e40daf41a902f299dcec7f67bfec8"
     },
@@ -177,7 +177,7 @@
       "mode": "RGBA",
       "alphaExtrema": [
         0,
-        254
+        255
       ],
       "sha256": "2de98f05fb5e84c5286f35acdbca09d050fe76114b01d6d17c5bc45ea581612b"
     },
@@ -192,7 +192,7 @@
       "mode": "RGBA",
       "alphaExtrema": [
         0,
-        254
+        255
       ],
       "sha256": "398654b673a0c6736787c4696469d64d04c8c44d690a28e11a23602e118d8146"
     },
@@ -226,9 +226,112 @@
       ],
       "sha256": "de324fb7fc3c6c2b044c987497cbd55b78569aaf69a2c50f39f41d5363deb675",
       "notes": "Generated prototype palette atlas. Distinct material color families are visible, but pixels are shaded/anti-aliased and are not exact index colors or separated PNG layers."
+    },
+    {
+      "key": "ground-flagstone-variants",
+      "file": "ground/fingersnap-ground-flagstone-variants.png",
+      "width": 1774,
+      "height": 887,
+      "columns": 2,
+      "rows": 1,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "alphaExtrema": null,
+      "sha256": "4eb5916b4923290c0bc246ccda5976b2e403ae2f2998ccfe574ffd4cd2892f80",
+      "notes": "Two alternate honey-limestone plaza tiles; middle separator excluded from frame crops."
+    },
+    {
+      "key": "ground-waterbed-variants",
+      "file": "ground/fingersnap-ground-waterbed-variants.png",
+      "width": 2172,
+      "height": 724,
+      "columns": 3,
+      "rows": 1,
+      "kind": "opaque-ground-variant-atlas",
+      "mode": "RGB",
+      "alphaExtrema": null,
+      "sha256": "7cc260268b6e24b5837d92d242d4e373f4a36f6646a85b90831e4f44d90c9e6b",
+      "notes": "Three alternate shallow-water tiles with varied submerged stones and calm matching-edge borders."
+    },
+    {
+      "key": "house-west",
+      "file": "houses/fingersnap-house-west.png",
+      "width": 1536,
+      "height": 1024,
+      "columns": 1,
+      "rows": 1,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "bdf3206be7c67985c052aa87eaa97d9033cd540d2c9ff0a84473f34ba3d67e52",
+      "notes": "West village house: slate roof, carter fox lintel."
+    },
+    {
+      "key": "house-middle",
+      "file": "houses/fingersnap-house-middle.png",
+      "width": 1355,
+      "height": 1161,
+      "columns": 1,
+      "rows": 1,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "032d4cfaca30ea78e75d1f7a110391887323e56d9c847d463c7e9c9641133937",
+      "notes": "Middle village house: largest home with russet roof."
+    },
+    {
+      "key": "house-ada",
+      "file": "houses/fingersnap-house-ada.png",
+      "width": 1254,
+      "height": 1254,
+      "columns": 1,
+      "rows": 1,
+      "kind": "transparent-footprint-building",
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "42ec8b8f6ac702899da02c7f5c9623d1771c27805ddcb1b405bee8f7797f4388",
+      "notes": "Ada Cooley's gardener house with climbing plants and a window box."
+    },
+    {
+      "key": "brackenwood-bridge",
+      "file": "bridge/fingersnap-brackenwood-bridge.png",
+      "width": 1774,
+      "height": 887,
+      "columns": 2,
+      "rows": 1,
+      "kind": "transparent-state-atlas",
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "sha256": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
+      "notes": "Worn and mended footbridge states."
+    },
+    {
+      "key": "pond-bed-seamless",
+      "file": "water/fingersnap-pond-bed-seamless.png",
+      "width": 256,
+      "height": 256,
+      "columns": 1,
+      "rows": 1,
+      "kind": "opaque-seamless-pond-texture",
+      "mode": "RGB",
+      "alphaExtrema": null,
+      "sha256": "5bdeca7daaed919cc407f291b307bbbbcdd004cd7f0507cad85eeb42b8e36217",
+      "notes": "One 256x256 still pond bed; 4x4 64-texel tiles, cyclically offset for wrap continuity."
     }
   ],
-  "frames": 416,
+  "frames": 427,
   "animations": [
     {
       "key": "water-gentle",
@@ -236,7 +339,8 @@
         "ground-water-gentle-0",
         "ground-water-gentle-1",
         "ground-water-gentle-2",
-        "ground-water-gentle-3"
+        "ground-water-gentle-3",
+        "ground-water-gentle-4"
       ],
       "frameRate": 3,
       "repeat": -1
@@ -1042,10 +1146,12 @@
     }
   ],
   "notes": [
-    "Ground/base atlas contains 24 requested tile images; generated seamlessness is requested but not all edge metrics pass exact pixel equality\u2014verify tiling in game.",
+    "The original 24-cell ground atlas is retained. Correct labels: its former flagstones-02 is sand, and former sand-02 is gentle-water frame 4. Two new flagstone tiles and three alternate underwater-stone tiles are in separate source sheets.",
     "Transition sheets contain 24 cropped square variants each. The first 16 have intended N/E/S/W mask metadata; visual mask fidelity remains a runtime art review item.",
     "Each resident has 4 directions \u00d72 idle +4 walk frames and one sit-down pose, all on a 64\u00d7128 frame with a common character scale and fixed foot point.",
     "No NPC dialogue or gameplay wiring was changed.",
-    "Eight held tools have down/up/left/right variants; handAnchor is measured in the 32\u00d732 destination canvas and may be adjusted when the player arm layer is wired."
+    "Eight held tools have down/up/left/right variants; handAnchor is measured in the 32\u00d732 destination canvas and may be adjusted when the player arm layer is wired.",
+    "The three water-bed variants use distinct submerged-stone layouts and low-difference edges after 64x64 reduction; use them as alternate water ground tiles, not animation frames.",
+    "Playtest-2 adds three footprint-anchored houses, the Brackenwood bridge in worn/mended states, and one still 256x256 pond bed for 4x4 ground tiles. The pond source is area-filtered then cyclically offset; seam edge differences are comparable to neighboring interior pixels."
   ]
 }
