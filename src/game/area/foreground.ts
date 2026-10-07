@@ -8,6 +8,7 @@ import { placeFingersnapOccluder } from '../expansion'
 import { TILE } from '../textures'
 import { areaKind, type WorldData } from '../worlds'
 import { ensureSceneryArt } from './props'
+import { addAll } from './bulk'
 
 /** Foreground occluder: canopy/arch image, its bounds, and its ground foot. */
 export interface Occluder {
@@ -24,11 +25,15 @@ export interface Occluder {
 export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder[] {
   const spots = areaKind(world.areaId).foreground(world)
   const occluders: Occluder[] = []
+  // Canopies over the Commons' thousand-odd trees: added in one go (./bulk.ts).
+  const images: Phaser.GameObjects.Image[] = []
   for (const s of spots) {
     const footY = s.ty * TILE + TILE
-    const image = placeFingersnapOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w)
+    const image = placeFingersnapOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w, false)
+    images.push(image)
     occluders.push({ image, bounds: image.getBounds(), footY })
   }
+  addAll(scene, images)
   // Code-drawn canopies over a walkable tile (the Tangle's path-side trees).
   for (const s of world.scenery ?? []) {
     if (!s.fade || !ensureSceneryArt(scene, s.key)) continue

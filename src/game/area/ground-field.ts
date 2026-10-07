@@ -19,7 +19,7 @@
  *    overlay cell (a few hundred in the Commons).
  */
 import { TERRAIN } from '../textures.ts'
-import { GROUND_WATER_BEDS, GROUND_WATER_FRAMES, bedFrame } from '../atlas-plan.ts'
+import { GROUND_WATER_BEDS, GROUND_WATER_FRAMES, bedFrame } from '../ground-tiles.ts'
 
 export type GroundClass = 'grass' | 'dirt' | 'road' | 'flag' | 'sand' | 'water'
 /** Ground drawn with the old expansion cells (walls, roofs, fences, bridge planks, the ruin's stone). */

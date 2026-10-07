@@ -9,6 +9,8 @@ import { TILE } from '../textures'
 import type { WorldData } from '../worlds'
 import type { LightProp } from './lanterns'
 import { ensureSceneryTexture } from '../commons-art'
+import { solidBox } from './collision'
+import { addAll, looseImage } from './bulk'
 import { ensureTangleAtlas } from '../wilds/tangle-art'
 import { ensureMillTexture } from '../mill-art'
 
@@ -40,9 +42,13 @@ export function buildProps(
     list.push(img)
     sprites.set(key, list)
   }
-  for (const t of world.trees) {
-    keep(t.tx, t.ty, scene.add.image(t.tx * TILE + 8, t.ty * TILE + TILE, 'tree').setOrigin(0.5, 1))
-  }
+  // Trees by the thousand in the Commons: added in one go (./bulk.ts).
+  const trees = world.trees.map((t) => {
+    const img = looseImage(scene, t.tx * TILE + 8, t.ty * TILE + TILE, 'tree').setOrigin(0.5, 1)
+    keep(t.tx, t.ty, img)
+    return img
+  })
+  addAll(scene, trees)
   for (const b of world.bushes) {
     scene.add.image(b.tx * TILE + 8, b.ty * TILE + TILE, 'bush').setOrigin(0.5, 1).setDepth(b.ty * TILE + TILE)
   }
@@ -79,11 +85,7 @@ export function buildProps(
       .setOrigin(0.5, 1)
       .setScale(scale)
       .setDepth(y)
-    const body = scene.physics.add.staticImage(x, y - p.body[1] / 2, 'px')
-      .setDisplaySize(p.body[0], p.body[1])
-      .refreshBody()
-    body.setVisible(false)
-    solidGroup.add(body)
+    solidGroup.add(solidBox(scene, x, y - p.body[1] / 2, p.body[0], p.body[1]))
     // Light-capable props get a glow anchor near their lamp
     if (p.light) {
       lightProps.push({ id: p.light, sprite: img, gx: x, gy: y - p.h * 0.72, glow: null })
