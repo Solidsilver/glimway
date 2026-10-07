@@ -720,7 +720,25 @@ export class WorldScene extends Phaser.Scene {
 
   // ------------------------------------------------------------- update loop
 
+  /** The scene is stopped for a reload's final save (see update). */
+  private reloadHeld = false
+
   update(time: number, delta: number): void {
+    // Saving for a reload (Session.settle): everything stops, physics, timers
+    // and tweens included, so no hit, loot or step lands after the final save.
+    if (this.session.reloading !== this.reloadHeld) {
+      this.reloadHeld = this.session.reloading
+      if (this.reloadHeld) {
+        this.hero.halt()
+        this.physics.world.pause()
+        this.tweens.pauseAll()
+      } else {
+        this.physics.world.resume()
+        this.tweens.resumeAll()
+      }
+      this.time.paused = this.reloadHeld
+    }
+    if (this.reloadHeld) return
     const dt = Math.min(delta / 1000, 0.05)
     this.keepFramed()
     // The hero's spot on the canvas, every frame (panels and transitions too):

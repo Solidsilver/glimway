@@ -16,7 +16,7 @@ import { advanceQuest, questObjective, questShortGoal } from '../lib/state'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
 import { resolveDefeatRecovery } from '../lib/habitica/sync'
 import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
-import { saveGame } from '../lib/save'
+import { saveCurrent, saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
 import type { Link } from './link'
 import { displayArea } from '../content/world'
@@ -68,11 +68,20 @@ export class Session {
     return this.generation
   }
 
-  /** True while a sync persistence owns the save file. The world freezes its
-   * resource/combat mutations for the (brief) write so a mid-flight enemy hit
-   * or regen tick cannot be reverted by the committed snapshot. */
+  /** True while a sync persistence owns the save file, or a reload is
+   * saving. The world freezes its resource/combat mutations for the (brief)
+   * write so a mid-flight enemy hit or regen tick cannot be reverted by the
+   * committed snapshot. */
   get persistenceInFlight(): boolean {
-    return this.syncInFlight || this.remoteBusy
+    return this.syncInFlight || this.remoteBusy || this.frozen
+  }
+
+  /** A reload is saving (settle): the world holds still, as for a sync. */
+  private frozen = false
+
+  /** Saving for a reload: the scene stops outright (physics, timers, the play clock). */
+  get reloading(): boolean {
+    return this.frozen
   }
 
   /** True when the given generation is still the live one. */
@@ -380,27 +389,39 @@ export class Session {
   }
 
   /**
-   * Save now and wait until it has landed (before a reload for a new
-   * version). Guests: the browser write. Connected: the cache, then the
-   * server queue, which every upload, Wilds and homestead call shares, for
-   * up to `timeoutMs`. 'saved' only when nothing is left unwritten.
+   * Before a reload for a new version: hold the world still, then save
+   * until the stored copy is the live game. Guests: the browser write,
+   * repeated if the game changed during it. Connected: the link writes and
+   * drains everything in flight (Link.settle). Bounded by `timeoutMs`. On
+   * 'saved' the world stays frozen for the reload; otherwise play resumes.
    */
   async settle(timeoutMs = 8000): Promise<'saved' | 'offline' | 'unsaved'> {
     if (this.destroyed) return 'unsaved'
+    this.frozen = true
     if (this.saveTimer !== null) {
       window.clearTimeout(this.saveTimer)
       this.saveTimer = null
     }
     const link = this.link
-    if (!link) return (await this.save()) ? 'saved' : 'unsaved'
-    const landed = (async () => {
-      await link.persist()
-      await link.flush()
-      return link.settled
-    })()
-    const timeout = new Promise<false>((r) => window.setTimeout(() => r(false), timeoutMs))
-    if (await Promise.race([landed, timeout])) return 'saved'
-    return link.status === 'offline' ? 'offline' : 'unsaved'
+    let timer = 0
+    const timeout = new Promise<'unsaved'>((r) => (timer = window.setTimeout(() => r('unsaved'), timeoutMs)))
+    const work = link ? link.settle() : this.settleGuest()
+    let result = await Promise.race([work.catch(() => 'unsaved' as const), timeout])
+    window.clearTimeout(timer)
+    if (result === 'saved') return result
+    if (link) {
+      link.cancelSettle()
+      if (link.status === 'offline') result = 'offline'
+    }
+    this.frozen = false
+    return result
+  }
+
+  private async settleGuest(): Promise<'saved' | 'unsaved'> {
+    // A sync owns the save file: its own write lands first. Try again in a moment.
+    if (this.syncInFlight) return 'unsaved'
+    const live = () => ({ state: this.state, vitalsSource: this.vitalsSource, importedProfile: this.importedProfile })
+    return (await saveCurrent(live)) ? 'saved' : 'unsaved'
   }
 
   /**

@@ -1031,6 +1031,8 @@
   const inventoryNew = $derived(unseen(inventoryEntries({ pack: inventory.pack, materials: ui.materials }), inventory.seenSet).length)
 
   function toggle(p: Exclude<Panel, null>): void {
+    // Saving for a reload: nothing opens (a panel could start a write).
+    if (update.reloading) return
     if (session) inventory.syncPack(session.state.inventory)
     const next = panel === p ? null : p
     sfx(next ? 'open' : 'close')
@@ -1044,7 +1046,7 @@
    * fields (credentials, import codes) are ignored so typing never toggles.
    */
   function onKeyGlobal(e: KeyboardEvent): void {
-    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving) return
+    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving || update.reloading) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always

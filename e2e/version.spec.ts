@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, waitForWorld } from './connected'
 import { beginNewJourney, player } from './helpers'
@@ -58,6 +59,62 @@ test('a new build shows a calm notice, waits for an open panel, and stays away o
   await expect(notice(page)).toBeVisible()
 })
 
+/**
+ * Slows the guest save's writes by `window.__slowSaves` ms: opening its
+ * database answers late, so the write itself happens late (holding back
+ * only the put's answer would leave the data already on disk).
+ */
+const SLOW_SAVES = () => {
+  const open = IDBFactory.prototype.open
+  IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<IDBFactory['open']>) {
+    const req = open.apply(this, args)
+    const ms = (window as unknown as { __slowSaves?: number }).__slowSaves
+    if (!ms || args[0] !== 'fingersnap') return req
+    let handler: ((e: Event) => void) | null = null
+    Object.defineProperty(req, 'onsuccess', { configurable: true, get: () => handler, set: (fn) => (handler = fn) })
+    req.addEventListener('success', (e) => setTimeout(() => handler?.call(req, e), ms))
+    return req
+  }
+}
+
+/** HP in the guest save on disk. */
+const savedHp = (page: Page) =>
+  page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('fingersnap')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+    try {
+      return await new Promise<number | undefined>((resolve) => {
+        const req = db.transaction('saves').objectStore('saves').get('current')
+        req.onsuccess = () => resolve((req.result as { state?: { hp?: number } } | undefined)?.state?.hp)
+        req.onerror = () => resolve(undefined)
+      })
+    } finally {
+      db.close()
+    }
+  })
+
+test('guest Reload: the world holds still, and a hit during the slow final write is saved too', async ({ page }) => {
+  await page.addInitScript(SLOW_SAVES)
+  await beginNewJourney(page)
+  await serveBuild(page, 'next-build')
+  await checkNow(page)
+  await expect(notice(page)).toBeVisible()
+  const hp = Number(await page.locator('[aria-label="Health"]').first().getAttribute('aria-valuenow'))
+  await page.evaluate(() => ((window as unknown as { __slowSaves: number }).__slowSaves = 700))
+  const reloaded = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame() })
+  await notice(page).getByRole('button', { name: 'Reload' }).click()
+  // Frozen while it saves: no input, no enemies, no physics.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsFrame: () => { live: boolean } }).__fsFrame().live)).toBe(false)
+  await expect(notice(page).getByRole('button', { name: 'Saving…' })).toBeDisabled()
+  // A hit that was already on its way lands while the write is out.
+  await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(3))
+  await reloaded
+  await expect.poll(() => savedHp(page)).toBe(hp - 3)
+})
+
 test('odd answers to the check never bother the player', async ({ page }) => {
   await beginNewJourney(page)
   for (const answer of [
@@ -76,19 +133,46 @@ test('odd answers to the check never bother the player', async ({ page }) => {
   await expect(page.locator('.toast.error')).toHaveCount(0)
 })
 
+/** Sign in from the title as a new allowlisted player and start fresh. */
+async function freshPlayer(page: Page): Promise<string> {
+  const id = newUser()
+  allow(id)
+  await routeHabitica(page.context())
+  await openTitleGuide(page)
+  await pasteAndConnect(page, id)
+  await waitForWorld(page)
+  return id
+}
+
+test.describe('phone, short landscape', () => {
+  const { defaultBrowserType: _browser, ...phone } = devices['iPhone SE']
+  test.use({ ...phone, viewport: { width: 568, height: 320 }, server: true })
+
+  test('568×320: the whole notice, both buttons and the failure copy stay on screen', async ({ page }) => {
+    await freshPlayer(page)
+    await serveBuild(page, 'next-build')
+    await checkNow(page)
+    await expect(notice(page)).toBeVisible()
+    await page.route('**/api/progress', (route) => route.abort('internetdisconnected'))
+    await stepAside(page)
+    await notice(page).getByRole('button', { name: 'Reload' }).click()
+    await expect(page.getByTestId('update-held')).toContainText('only on this device')
+    await page.waitForTimeout(400) // the slide-in
+    const inside = async (sel: ReturnType<Page['locator']>) => {
+      const b = (await sel.boundingBox())!
+      return b.x >= 0 && b.y >= 0 && b.x + b.width <= 568 && b.y + b.height <= 320
+    }
+    expect(await inside(notice(page))).toBe(true)
+    expect(await inside(notice(page).getByRole('button', { name: 'Reload' }))).toBe(true)
+    expect(await inside(notice(page).getByRole('button', { name: 'Later' }))).toBe(true)
+    expect(await inside(page.getByTestId('update-held'))).toBe(true)
+    // Nothing inside it is cut off either.
+    expect(await notice(page).evaluate((el) => el.scrollHeight <= el.clientHeight + 1)).toBe(true)
+  })
+})
+
 test.describe('connected', () => {
   test.use({ server: true })
-
-  /** Sign in from the title as a new allowlisted player and start fresh. */
-  async function freshPlayer(page: Page): Promise<string> {
-    const id = newUser()
-    allow(id)
-    await routeHabitica(page.context())
-    await openTitleGuide(page)
-    await pasteAndConnect(page, id)
-    await waitForWorld(page)
-    return id
-  }
 
   test('Reload uploads the pending save first, then reloads', async ({ page }) => {
     await freshPlayer(page)
@@ -125,5 +209,7 @@ test.describe('connected', () => {
     await expect(page.getByTestId('update-held')).toContainText('only on this device')
     await expect(notice(page).getByRole('button', { name: 'Reload' })).toBeEnabled()
     expect(await page.evaluate(() => (window as unknown as { __stayed?: boolean }).__stayed)).toBe(true)
+    // Play goes on: the freeze is lifted.
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __fsFrame: () => { live: boolean } }).__fsFrame().live)).toBe(true)
   })
 })

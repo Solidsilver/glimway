@@ -209,6 +209,44 @@ export function loadSaveRecord(): Promise<LoadedSave | null> {
  * already stored is preserved — ordinary gameplay saves cannot silently
  * downgrade an imported save back to demo.
  */
+/** What a guest save carries (Session's state and provenance). */
+export interface LiveSave {
+  state: GameState;
+  vitalsSource: VitalsSource;
+  importedProfile: HabiticaProfile | null;
+}
+
+/**
+ * Save until the stored copy is the live game (before a reload for a new
+ * version). Each pass writes a snapshot; if the game changed while it was
+ * being written, it writes again. False when a write fails or the game
+ * won't hold still (the caller freezes play, so that is a bug, not a race).
+ */
+export async function saveCurrent(
+  read: () => LiveSave,
+  write: (state: GameState, options: SaveGameOptions) => Promise<void> = saveGame,
+  tries = 3,
+): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    const snapshot = structuredClone(read());
+    const key = liveKey(snapshot);
+    try {
+      // null clears a stored imported profile, as Session.save does.
+      await write(snapshot.state, { vitalsSource: snapshot.vitalsSource, importedProfile: snapshot.importedProfile });
+    } catch {
+      return false;
+    }
+    if (liveKey(read()) === key) return true;
+  }
+  return false;
+}
+
+/** The play clock ticks every frame and is no progress to keep: left out, as in docKey. */
+function liveKey({ state, vitalsSource, importedProfile }: LiveSave): string {
+  const { playSeconds: _clock, ...rest } = state;
+  return JSON.stringify([rest, vitalsSource, importedProfile]);
+}
+
 export function saveGame(state: GameState, options: SaveGameOptions = {}): Promise<void> {
   return enqueue(async () => {
     const clean = validateSave(state);

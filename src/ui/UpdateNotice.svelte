@@ -98,6 +98,31 @@
       flex: 1;
     }
   }
+  /* Short landscape phones (568×320): the thumbs leave no room low down, so
+     it sits under the HUD, compact, and never past the screen or its safe areas. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .notice.touch {
+      --top: max(var(--hud-bottom, 64px), env(safe-area-inset-top));
+      top: calc(var(--top) + 6px);
+      bottom: auto;
+      width: min(520px, calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+      max-height: calc(100% - var(--top) - 12px - env(safe-area-inset-bottom));
+      overflow-y: auto;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 8px 12px;
+    }
+    .notice.touch .badge {
+      display: none;
+    }
+    .notice.touch strong {
+      font-size: 15px;
+    }
+    .notice.touch p {
+      font-size: 12.5px;
+      line-height: 1.35;
+    }
+  }
   @keyframes notice-in {
     from {
       opacity: 0;

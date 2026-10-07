@@ -31,7 +31,11 @@ the game can show the first part as "What's new":
 - The client gets both at build time (`__GLIMWAY_VERSION__`,
   `__GLIMWAY_BUILD__`), and `vite build` writes `dist/version.json`. Open tabs
   check it when they come back into view and every ten minutes; a different
-  build id brings up the reload notice.
+  build id brings up the reload notice. Its Reload stops the world (input,
+  enemies, physics, timers), saves until the stored copy is the live game,
+  waits for every server write in flight (including ones queued behind the
+  upload, and a superseded tab's orphan copy), and only then reloads; if
+  anything can't be saved, play resumes and the notice says why.
 - The server is built with its version and build id (`-ldflags -X`, `dev`
   otherwise), reports them in `GET /api/health` and logs them at start-up.
 - `version.json` is served with `Cache-Control: no-store`.
