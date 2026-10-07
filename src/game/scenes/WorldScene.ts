@@ -275,6 +275,7 @@ export class WorldScene extends Phaser.Scene {
     this.offHand = new OffHandVisual(this, this.session, () => this.hero)
     ;(window as unknown as { __fsOffHand?: () => string | null }).__fsOffHand = () => this.offHand?.showing ?? null
     this.npcs = new Npcs(this, this.world)
+    this.interactables.setAway((id) => this.npcs.away(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
     this.enemies = new EnemySystem(
       this,
@@ -715,6 +716,8 @@ export class WorldScene extends Phaser.Scene {
       avatar: !!this.avatar.container,
       /** What the layered avatar is drawn holding ('' = its own weapon). */
       holding: this.avatar.holding,
+      /** The directional held frame drawn ('' = none, or the item's icon). */
+      holdingFrame: this.avatar.holdingFrame,
       pet: !!this.avatar.pet,
       riding: this.avatar.riding,
       playerAlpha: this.hero.sprite.alpha,
@@ -1025,6 +1028,7 @@ export class WorldScene extends Phaser.Scene {
     this.homesteads?.update(dt)
     // Others keep walking while a panel or dialogue holds the screen.
     this.remotePlayers.update(dt)
+    this.npcs.update(dt, this.hero.sprite, uiBlocked() || this.transitioning || this.cinematic)
     this.samplePresence()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()

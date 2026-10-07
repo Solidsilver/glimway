@@ -7,6 +7,7 @@ import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
 import { installCommonsPass } from '../commons-pass-install'
 import { createItemsPass, installItemsPass, preloadItemsPass } from '../items-pass'
 import { preloadPacked } from '../packed'
+import { createPeople } from '../people'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -61,6 +62,9 @@ export class BootScene extends Phaser.Scene {
     // Native items-pass textures, mill animations, and mill art replacement
     createItemsPass(this)
     installItemsPass(this)
+
+    // The playtest-1 people: the residents' walking art and the held tools.
+    createPeople(this)
 
     this.scene.start('World')
   }

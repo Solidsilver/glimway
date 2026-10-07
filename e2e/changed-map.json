@@ -100,7 +100,7 @@
       "specs": ["combat.spec.ts", "quest.spec.ts", "naming-screens.spec.ts"]
     },
     {
-      "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/npcs.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
+      "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
       "specs": ["quest.spec.ts", "embers.spec.ts", "combat.spec.ts", "touches.spec.ts"]
     },
     {
@@ -215,8 +215,8 @@
       "specs": ["touch.spec.ts", "touches.spec.ts"]
     },
     {
-      "paths": ["src/game/atlas-plan.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts"],
-      "specs": ["atlases.spec.ts", "art-screens.spec.ts", "density-screens.spec.ts"]
+      "paths": ["src/game/atlas-plan.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts", "src/game/ground-heal.ts", "src/game/people.ts"],
+      "specs": ["atlases.spec.ts", "art-screens.spec.ts", "density-screens.spec.ts", "art1-screens.spec.ts", "held.spec.ts"]
     },
     {
       "paths": [

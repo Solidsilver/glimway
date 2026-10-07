@@ -12,6 +12,11 @@ import {
   SCALED_ATLASES,
   blitKey,
   commonsBlitPlan,
+  GROUND_COLS,
+  GROUND_TILES,
+  HELD_TEXELS,
+  PEOPLE,
+  PLAYTEST1_DIR,
   type PackedManifest,
 } from '../src/game/atlas-plan.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
@@ -34,6 +39,11 @@ const built = JSON.parse(readFileSync(join(PACKED, 'atlases.json'), 'utf8')) as 
 const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pass/manifest.json'), 'utf8')) as CommonsPassManifest
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
 const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
+
+type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
+const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
+/** The playtest-1 frames the build samples: the ground tiles, the residents' and the held tools'. */
+const p1Used = Object.keys(p1.frames).filter((n) => GROUND_TILES.includes(n) || PEOPLE.some((id) => n.startsWith(`resident-${id}-`)) || n.startsWith('held-'))
 
 const sha = (path: string) => createHash('sha256').update(readFileSync(join(ROOT, path))).digest('hex')
 
@@ -77,6 +87,9 @@ test('every input the atlases were baked from is unchanged', () => {
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
     ...SCALED_ATLASES.flatMap((a) => [a.source, a.json]),
     ...BACKDROPS.map((b) => b.source),
+    `${PLAYTEST1_DIR}/atlas.json`,
+    `${PLAYTEST1_DIR}/animations.json`,
+    ...new Set(p1Used.map((n) => `${PLAYTEST1_DIR}/${p1.sources[p1.frames[n].source].file}`)),
   ].sort()
   assert.deepEqual(Object.keys(built.inputs).sort(), expected, RERUN)
   for (const [path, hash] of Object.entries(built.inputs)) assert.equal(sha(path), hash, `${path} changed — ${RERUN}`)
@@ -127,13 +140,42 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
     }
   }
   // Every atlas fits a phone GPU's texture limit.
-  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, ...Object.values(built.atlases).map((a) => a.image)]) {
+  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, built.ground.image, built.people.image, ...Object.values(built.atlases).map((a) => a.image)]) {
     const [w, h] = imageSize(join(PACKED, image))
     assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
   }
   const cell = 16 * ART_DENSITY
   assert.deepEqual([built.terrain.cell, built.terrain.density], [cell, ART_DENSITY])
   assert.deepEqual(imageSize(join(PACKED, built.terrain.image)), [cell * 4, cell * 4], `terrain is the 4×4 tileset of ${cell}-texel cells`)
+})
+
+test('the playtest-1 ground: every tile, one world tile each, healed', () => {
+  const cell = 16 * ART_DENSITY
+  assert.deepEqual([built.ground.cell, built.ground.density, built.ground.cols], [cell, ART_DENSITY, GROUND_COLS])
+  assert.equal(built.ground.healed, true, 'a comparison bake (ATLAS_NO_HEAL) must not be committed')
+  assert.deepEqual(Object.keys(built.ground.tiles), GROUND_TILES)
+  assert.deepEqual(webpSize(join(PACKED, built.ground.image)), [GROUND_COLS * cell, Math.ceil(GROUND_TILES.length / GROUND_COLS) * cell])
+})
+
+test('the playtest-1 people: every resident and held frame, trimmed to 4-texel steps inside its canvas', () => {
+  const [w, h] = webpSize(join(PACKED, built.people.image))
+  assert.deepEqual([w, h], built.people.size)
+  assert.equal(built.people.density, ART_DENSITY)
+  assert.deepEqual(Object.keys(built.people.frames).sort(), p1Used.filter((n) => !GROUND_TILES.includes(n)).sort())
+  for (const [name, f] of Object.entries(built.people.frames)) {
+    const held = name.startsWith('held-')
+    assert.deepEqual(f.source, held ? [HELD_TEXELS, HELD_TEXELS] : [16 * ART_DENSITY, 32 * ART_DENSITY], `${name} canvas`)
+    for (const v of [...f.frame, ...f.at]) assert.equal(v % 4, 0, `${name}: ${v} is not a multiple of 4`)
+    assert.ok(f.at[0] + f.frame[2] <= f.source[0] && f.at[1] + f.frame[3] <= f.source[1], `${name} trim inside its canvas`)
+    assert.ok(f.frame[0] + f.frame[2] <= w && f.frame[1] + f.frame[3] <= h, `${name} inside the atlas`)
+    assert.equal(!!f.hand, held, `${name} hand anchor`)
+  }
+  for (const id of PEOPLE) {
+    for (const dir of ['down', 'up', 'left', 'right']) {
+      for (const a of ['breathing', 'walking']) assert.ok(built.people.animations.some((x) => x.key === `resident-${id}-${dir}-${a}`), `${id} ${dir} ${a}`)
+    }
+    assert.ok(built.people.frames[`resident-${id}-sit-down`], `${id} sits`)
+  }
 })
 
 test('scaled atlases keep every frame name, at their baked size', () => {
@@ -171,6 +213,8 @@ test('public/assets/fingersnap ships manifests and packed art only — no full-r
     `packed/${built.runtime.image}`,
     `packed/${built.items.image}`,
     `packed/${built.terrain.image}`,
+    `packed/${built.ground.image}`,
+    `packed/${built.people.image}`,
     ...Object.values(built.atlases).flatMap((a) => [`packed/${a.image}`, `packed/${a.json}`]),
     ...Object.values(built.backdrops).map((f) => `packed/${f}`),
   ].sort()

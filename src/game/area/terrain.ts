@@ -12,6 +12,9 @@ import { TERRAIN, TILE } from '../textures.ts'
 import type { WorldData } from '../worlds.ts'
 import { buildTangleGround } from '../wilds/tangle-art.ts'
 import { TIE_BIAS, addArtCanvas, artDensity, artSource, resampleFor } from '../density.ts'
+import { GROUND_TILES, PACKED_MANIFEST_KEY, type PackedManifest } from '../atlas-plan.ts'
+import { prefersReducedMotion } from '../sfx.ts'
+import { EDGE_TEXTURE, WATER_FPS, WATER_FRAMES, baseTile, classGrid, edgeHasWater, edgeKey, neighbourhood, paintEdge, parseEdgeKey, type GroundClass } from './ground-field.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -138,17 +141,23 @@ export function groundStack(world: WorldData, x: number, y: number, under: Reado
   return out
 }
 
-export function buildGround(scene: Phaser.Scene, world: WorldData): void {
-  // The Wilds paint their woods floor per pixel (ragged path edges, shade).
-  if (world.groundStyle) return buildTangleGround(scene, world)
-  const ts = groundTileset(scene)
-  // Tiles a delivered building stands in for (only when its art loaded).
+/** Tiles a delivered building stands in for (only when its art loaded). */
+function groundUnder(scene: Phaser.Scene, world: WorldData): Map<string, number> {
   const under = new Map<string, number>()
   for (const s of world.scenery ?? []) {
     const g = s.groundUnder
     if (!g || !scene.textures.exists(s.key)) continue
     for (let y = g.ty; y < g.ty + g.th; y++) for (let x = g.tx; x < g.tx + g.tw; x++) under.set(`${x},${y}`, g.tile)
   }
+  return under
+}
+
+export function buildGround(scene: Phaser.Scene, world: WorldData): void {
+  // The Wilds paint their woods floor per pixel (ragged path edges, shade).
+  if (world.groundStyle) return buildTangleGround(scene, world)
+  if (scene.textures.exists(GROUND_PACKED_KEY) && (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.ground) return buildTiledGround(scene, world)
+  const ts = groundTileset(scene)
+  const under = groundUnder(scene, world)
   const edges = world.areaId === 'commons'
   const stacks = world.ground.map((row, y) => row.map((_, x) => groundStack(world, x, y, under, edges).map((n) => ts.index.get(n) ?? -1).filter((i) => i >= 0)))
   const depth = Math.max(1, ...stacks.flat().map((s) => s.length))
@@ -204,4 +213,166 @@ export function pathEdgeOverlays(world: Pick<WorldData, 'ground' | 'width' | 'he
     if (!s && !w && at(x - 1, y + 1) === m) out.push(`path-${m}-corner-sw`)
   }
   return out
+}
+
+// ---------------------------------------------------------------- the playtest-1 ground
+
+/** Texture key of the packed playtest-1 ground tiles (../packed.ts loads it). */
+export const GROUND_PACKED_KEY = 'packed-ground'
+
+/** What a built ground holds, for playtests (`__fsGround`). */
+export interface GroundView {
+  cells: number
+  edges: number
+  animated: number
+  tileset: [number, number]
+  density: number
+}
+let lastView: GroundView | null = null
+export function groundView(): GroundView | null {
+  return lastView
+}
+
+/**
+ * The village, the Commons and the other tiled areas on the playtest-1
+ * ground (./ground-field.ts): a tileset built for this area at the art's
+ * density — the 23 base tiles, the 16 old expansion cells (walls, roofs,
+ * fences, planks), and the transition overlays this map's neighbourhoods
+ * need, painted here — laid out as a tilemap: base, overlay, then the
+ * planks of a bridge. Water and the overlays that show it animate by
+ * swapping their cells' texture coordinates (no texture upload).
+ */
+function buildTiledGround(scene: Phaser.Scene, world: WorldData): void {
+  const k = artDensity(scene)
+  const cell = TILE * k
+  const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest).ground
+  const under = groundUnder(scene, world)
+  const idAt = (x: number, y: number) => under.get(`${x},${y}`) ?? world.ground[y][x]
+  const ground = world.ground.map((row, y) => row.map((_, x) => idAt(x, y)))
+  const grid = classGrid(ground)
+
+  // Every tile's stack, by cell name; and the overlays this map needs.
+  const edges = new Map<string, boolean>()
+  const stacks: string[][][] = ground.map((row, y) =>
+    row.map((id, x) => {
+      const base = baseTile(id, grid[y][x], x, y)
+      const old = TERRAIN_TO_EXPANSION[id] ?? 'grass'
+      const out = [base ?? `old:${old}`]
+      const key = edgeKey(neighbourhood(grid, x, y), x, y)
+      if (key) {
+        edges.set(key, edgeHasWater(parseEdgeKey(key).n))
+        out.push(`edge:${key}`)
+      }
+      if (id === TERRAIN.bridge) out.push(`old:${old}`)
+      return out
+    }),
+  )
+
+  // The tileset's cells: the base tiles, the old cells, then each overlay (×4 when it shows water).
+  const manifest = scene.cache.json.get('fingersnap-expansion-manifest') as { terrain: { tiles: Record<string, string> } } | null
+  const oldNames = Array.from({ length: 16 }, (_, i) => manifest?.terrain.tiles[i] ?? `cell-${i}`)
+  const names: string[] = [...GROUND_TILES, ...oldNames.map((n) => `old:${n}`)]
+  const animated: { index: number; frames: number }[] = []
+  const edgeStart = new Map<string, number>()
+  for (const [key, water] of edges) {
+    edgeStart.set(key, names.length)
+    if (water) animated.push({ index: names.length, frames: WATER_FRAMES.length })
+    for (let f = 0; f < (water ? WATER_FRAMES.length : 1); f++) names.push(`edge:${key}${water ? `@${f}` : ''}`)
+  }
+  const index = new Map(names.map((n, i) => [n, i]))
+  for (const [key, start] of edgeStart) index.set(`edge:${key}`, start)
+  animated.push({ index: index.get(WATER_FRAMES[0])!, frames: WATER_FRAMES.length })
+
+  const cols = Math.ceil(Math.sqrt(names.length))
+  const rows = Math.ceil(names.length / cols)
+  const step = cell + 2
+  const canvas = document.createElement('canvas')
+  canvas.width = cols * step
+  canvas.height = rows * step
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  ctx.imageSmoothingEnabled = false
+  const origin = (i: number): [number, number] => [(i % cols) * step + 1, Math.floor(i / cols) * step + 1]
+  const extrude = (i: number) => {
+    const [x, y] = origin(i)
+    ctx.drawImage(canvas, x, y, cell, 1, x, y - 1, cell, 1)
+    ctx.drawImage(canvas, x, y + cell - 1, cell, 1, x, y + cell, cell, 1)
+    ctx.drawImage(canvas, x, y - 1, 1, cell + 2, x - 1, y - 1, 1, cell + 2)
+    ctx.drawImage(canvas, x + cell - 1, y - 1, 1, cell + 2, x + cell, y - 1, 1, cell + 2)
+  }
+  const draw = (i: number, src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number) => {
+    const [x, y] = origin(i)
+    resampleFor(ctx, sw, cell)
+    ctx.drawImage(src, sx, sy, sw, sh, x, y, cell, cell)
+    ctx.imageSmoothingEnabled = false
+    extrude(i)
+  }
+  const pack = scene.textures.get(GROUND_PACKED_KEY).getSourceImage() as HTMLImageElement | HTMLCanvasElement
+  GROUND_TILES.forEach((name, i) => {
+    const at = packed.tiles[name]
+    draw(i, pack, (at % packed.cols) * packed.cell, Math.floor(at / packed.cols) * packed.cell, packed.cell, packed.cell)
+  })
+  const sheet = scene.textures.exists('fingersnap-terrain-runtime') ? (scene.textures.get('fingersnap-terrain-runtime').getSourceImage() as HTMLImageElement | HTMLCanvasElement) : null
+  if (sheet) {
+    const sc = sheet.width / 4
+    for (let i = 0; i < 16; i++) draw(GROUND_TILES.length + i, sheet, (i % 4) * sc, Math.floor(i / 4) * sc, sc, sc)
+  }
+
+  // The overlays, painted from each ground's reference texture at this density.
+  const texels = new Map<string, Uint8ClampedArray>()
+  const texelsOf = (name: string) => {
+    let t = texels.get(name)
+    if (!t) {
+      const [x, y] = origin(index.get(name)!)
+      t = ctx.getImageData(x, y, cell, cell).data
+      texels.set(name, t)
+    }
+    return t
+  }
+  const tex = (c: GroundClass, f: number, x: number, y: number): [number, number, number] => {
+    const t = texelsOf(c === 'water' ? WATER_FRAMES[f % WATER_FRAMES.length] : EDGE_TEXTURE[c])
+    const o = (y * cell + x) * 4
+    return [t[o], t[o + 1], t[o + 2]]
+  }
+  for (const [key, water] of edges) {
+    const { n, tx, ty } = parseEdgeKey(key)
+    for (let f = 0; f < (water ? WATER_FRAMES.length : 1); f++) {
+      const i = edgeStart.get(key)! + f
+      const [x, y] = origin(i)
+      ctx.putImageData(new ImageData(paintEdge(n, tx, ty, k, f, tex), cell, cell), x, y)
+      extrude(i)
+    }
+  }
+  if (scene.textures.exists(GROUND_TILESET_KEY)) scene.textures.remove(GROUND_TILESET_KEY)
+  addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
+
+  const depth = Math.max(...stacks.flat().map((s) => s.length))
+  const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: cell, tileHeight: cell })
+  const tiles = map.addTilesetImage(GROUND_TILESET_KEY, GROUND_TILESET_KEY, cell, cell, 1, 2)
+  if (!tiles) return
+  const coords = tiles.texCoordinates as { x: number; y: number }[]
+  if (k > 1) for (const c of coords) {
+    c.x += TIE_BIAS
+    c.y += TIE_BIAS
+  }
+  for (let l = 0; l < depth; l++) {
+    const layer = map.createBlankLayer(`ground-${l}`, tiles)
+    if (!layer) continue
+    layer.putTilesAt(stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))), 0, 0, false)
+    layer.setScale(1 / k).setDepth(-10)
+  }
+  lastView = { cells: names.length, edges: edges.size, animated: animated.length, tileset: [canvas.width, canvas.height], density: k }
+  // Read-only, for playtests.
+  ;(window as unknown as { __fsGround?: () => GroundView | null }).__fsGround = groundView
+  // Water: each animated cell shows its frame f's texture coordinates.
+  if (prefersReducedMotion()) return
+  const frames = animated.map((a) => Array.from({ length: a.frames }, (_, f) => coords[a.index + f]))
+  let f = 0
+  scene.time.addEvent({
+    delay: 1000 / WATER_FPS,
+    loop: true,
+    callback: () => {
+      f++
+      animated.forEach((a, i) => (coords[a.index] = frames[i][f % a.frames]))
+    },
+  })
 }
