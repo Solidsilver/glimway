@@ -731,3 +731,132 @@ test('playing elsewhere ends the lease on a sync and a Wilds write, as on any ot
     assert.equal(link.status, 'superseded', write);
   }
 });
+
+// ---------------------------------------------------------------- settling for a reload (versioning review)
+
+const epoch = { worldSeed: 's', regionId: 'inner-1', generatorVersion: 1, season: 'mudrise', id: 'e1', startsAt: 0, endsAt: null };
+const node = { id: 'n1', kind: 'node', tx: 3, ty: 4, material: 'timber', tier: 1, cycle: 2, state: 'available', available_at: 0, by: null, at: null };
+const superseded = { status: 409, body: { error: { code: 'superseded' } } };
+
+/** A store whose orphan writes wait for `release` and answer `ok`. */
+function slowOrphans(ok = true) {
+  const store = memoryStore();
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let started = 0;
+  store.saveOrphan = async (o) => {
+    started += 1;
+    await gate;
+    if (ok) store.orphans.set(o.clientId, structuredClone(o));
+    return ok;
+  };
+  return { store, release: () => release(), started: () => started };
+}
+
+/** Resolves to whether `p` is still pending after `ms`. */
+async function pendingAfter(p: Promise<unknown>, ms = 40): Promise<boolean> {
+  let done = false;
+  void p.then(() => (done = true));
+  await new Promise((r) => setTimeout(r, ms));
+  return !done;
+}
+
+test('reload settle: a takeover during the upload waits for the orphan write of the current story (review 1)', async () => {
+  const server = fakeServer();
+  const slow = slowOrphans();
+  const { link, session } = makeLink(server, { rev: 5, store: slow.store });
+  session.state = base({ quest: 'accepted', hp: 31 });
+  server.on('PUT /api/progress', superseded);
+  const settling = link.settle();
+  assert.equal(await pendingAfter(settling), true, 'not saved while the orphan is unwritten');
+  assert.equal(link.status, 'superseded');
+  assert.equal(slow.started(), 1, 'the takeover started the orphan write');
+  assert.equal(link.settled, false);
+  slow.release();
+  assert.equal(await settling, 'saved');
+  const orphan = slow.store.orphans.get('tab-a');
+  assert.equal(orphan?.state.quest, 'accepted');
+  assert.equal(orphan?.state.hp, 31, 'the orphan holds the live story');
+});
+
+test('reload settle: a failed orphan write is unsaved, never saved (review 1)', async () => {
+  const server = fakeServer();
+  const slow = slowOrphans(false);
+  const { link, session } = makeLink(server, { rev: 5, store: slow.store });
+  session.state = base({ quest: 'accepted' });
+  server.on('PUT /api/progress', superseded);
+  slow.release();
+  assert.equal(await link.settle(), 'unsaved');
+  assert.equal(link.settled, false);
+  // A superseded tab with nothing unsent has nothing to keep.
+  const clean = fakeServer();
+  const { link: idle } = makeLink(clean, { rev: 5 });
+  clean.on('GET /api/state', { body: { ...snap(base(), 5), leaseActive: false } });
+  await idle.beat(true);
+  assert.equal(idle.status, 'superseded');
+  assert.equal(await idle.settle(), 'saved');
+});
+
+test('reload settle: a harvest whose claim queues behind the upload is waited for (review 2)', async () => {
+  const server = fakeServer();
+  const { link, session } = makeLink(server, { rev: 5 });
+  let rev = 5;
+  server.on('GET /api/wilds/region/inner-1', () => ({ body: { ...snap(session.state, rev), epoch, entities: [node], personalClaims: [], discoveries: [], lanterns: [], materials: {} } }));
+  server.on('PUT /api/progress', (c) => ({ body: { ...snap({ ...base(), ...c.body.doc }, ++rev), status: 'current' } }));
+  server.on('POST /api/wilds/claim', () => ({ body: { ...snap(session.state, ++rev), result: { epoch: 'e1', entity: { ...node, state: 'harvested' }, loot: { materials: [{ id: 'timber', qty: 3 }], trinket: null }, materials: { timber: 3 } } } }));
+  // The harvest: a fresh read first, then the claim (WildsEntities.claimConnected).
+  const releaseRead = server.hold('GET /api/wilds/region/inner-1');
+  const releaseClaim = server.hold('POST /api/wilds/claim');
+  let claimed = false;
+  const harvest = (async () => {
+    await link.wildsRegion('inner-1');
+    const r = await link.wildsClaim({ epoch: 'e1', entityId: 'n1', cycle: 2 });
+    claimed = r.ok;
+  })();
+  // Reload, with a step not yet uploaded: its upload queues behind the read.
+  session.state = { ...session.state, position: { x: 140, y: 90 } };
+  const settling = link.settle();
+  releaseRead();
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(server.sent('POST /api/wilds/claim').length, 1, 'the claim was appended behind the upload');
+  assert.equal(await pendingAfter(settling), true, 'not saved while the claim is out');
+  releaseClaim();
+  assert.equal(await settling, 'saved');
+  assert.equal(claimed, true, 'the claim landed before the reload');
+  await harvest;
+  const order = server.calls.map((c) => `${c.method} ${c.path}`);
+  assert.ok(order.indexOf('PUT /api/progress') < order.indexOf('POST /api/wilds/claim'));
+});
+
+test('reload settle: a homestead purchase that starts during the upload is waited for; once saved, new writes are refused (review 2)', async () => {
+  const server = fakeServer();
+  const { link, session } = makeLink(server, { rev: 5 });
+  let rev = 5;
+  server.on('PUT /api/progress', (c) => ({ body: { ...snap({ ...base(), ...c.body.doc }, ++rev), status: 'current' } }));
+  server.on('POST /api/homestead/buy', () => ({ body: { ...snap(base({ embers: 8 }), ++rev), result: { home: homeView([stool]), materials: {}, itemId: 's1' } } }));
+  const releaseUpload = server.hold('PUT /api/progress');
+  const releaseBuy = server.hold('POST /api/homestead/buy');
+  session.state = { ...session.state, position: { x: 140, y: 90 } };
+  const settling = link.settle();
+  await new Promise((r) => setTimeout(r, 5));
+  const buy = link.homeAction({ op: 'buy', itemDef: 'wooden-stool' });
+  releaseUpload();
+  assert.equal(await pendingAfter(settling), true, 'not saved while the purchase is out');
+  releaseBuy();
+  assert.equal(await settling, 'saved');
+  assert.equal((await buy).ok, true);
+  // Sealed until the page goes: nothing new can slip in after the last check.
+  assert.deepEqual(await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' }), { ok: false, code: 'busy' });
+  assert.equal(server.sent('POST /api/homestead/buy').length, 1);
+  link.cancelSettle();
+  assert.equal((await link.homeAction({ op: 'buy', itemDef: 'wooden-stool' })).ok, true, 'a called-off reload lets writes start again');
+});
+
+test('reload settle: offline is reported as offline, with the story kept in the cache', async () => {
+  const server = fakeServer();
+  const { link, session, store } = makeLink(server, { rev: 5 });
+  session.state = { ...session.state, position: { x: 140, y: 90 } };
+  server.on('PUT /api/progress', 'network');
+  assert.equal(await link.settle(), 'offline');
+  assert.equal(store.saved.at(-1)?.dirty, true);
+});

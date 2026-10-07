@@ -229,6 +229,14 @@ export class Link {
   private stopped = false
   private reconnecting: Promise<void> | null = null
   private loggedOut = false
+  /** Orphan writes not yet finished (a takeover starts one without waiting). */
+  private orphanWrites = 0
+  private orphanDone: Promise<void> = Promise.resolve()
+  /** docKey of the story the orphan slot durably holds ('' = none yet). */
+  private orphaned = ''
+  /** A reload has everything saved: no new keyed write starts (see `settle`). */
+  private sealed = false
+  private settleRun = 0
   private readonly store: LinkStore
   private readonly emitter: (event: string, payload?: unknown) => void
   private readonly onOnline = () => {
@@ -271,6 +279,54 @@ export class Link {
     return !!this.session && docKey(this.session.state) !== this.acked
   }
 
+  /**
+   * Nothing is waiting to be written: no unsent changes and no mutation
+   * whose answer was lost. A superseded tab counts once its current story
+   * is durably in the orphan slot, for the tab that holds the lease.
+   */
+  get settled(): boolean {
+    if (!this.session || this.orphanWrites > 0) return false
+    if (this.status === 'superseded') return !this.dirty || this.orphaned === docKey(this.session.state)
+    return this.status === 'online' && !this.dirty && !this.unresolved
+  }
+
+  /** Nothing in flight: the queue is empty and no logical write, upload, reconnect or orphan write is under way. */
+  private get quiet(): boolean {
+    return this.api.queue.size === 0 && !this.busy && !this.uploadQueued && !this.reconnecting && this.orphanWrites === 0
+  }
+
+  /**
+   * Before a reload for a new version (the caller freezes play first and
+   * bounds the wait): save, then drain until quiet. The queue's tail only
+   * covers what was queued when it was read, so this waits again until it
+   * stays empty, letting the continuations of what just finished queue
+   * their writes first (a Wilds harvest's claim after its refresh). 'saved'
+   * seals the link: no new keyed write starts until the page goes, or until
+   * `cancelSettle`.
+   */
+  async settle(): Promise<'saved' | 'offline' | 'unsaved'> {
+    const run = ++this.settleRun
+    await this.persist()
+    for (;;) {
+      this.scheduleUpload()
+      await this.api.queue.idle()
+      await this.orphanDone
+      if (this.reconnecting) await this.reconnecting.catch(() => undefined)
+      await new Promise((r) => setTimeout(r, 10))
+      if (run !== this.settleRun) return 'unsaved'
+      if (this.quiet) break
+    }
+    if (!this.settled) return this.status === 'offline' ? 'offline' : 'unsaved'
+    this.sealed = true
+    return 'saved'
+  }
+
+  /** The reload was called off (it failed or timed out): writes may start again. */
+  cancelSettle(): void {
+    this.settleRun += 1
+    this.sealed = false
+  }
+
   // ------------------------------------------------------------ persistence
 
   /**
@@ -285,15 +341,36 @@ export class Link {
   async persist(opts: { urgent?: boolean; leaving?: boolean } = {}): Promise<void> {
     if (this.stopped || !this.session) return
     if (this.status === 'superseded') {
-      // Another tab holds the lease: our unsent story goes to the orphan
-      // slot (never over its cache record), for the next holder to merge.
-      if (this.dirty) await this.store.saveOrphan({ habiticaId: this.habiticaId, clientId: this.clientId, state: this.session.state, rev: this.rev, savedAt: Date.now() })
+      if (this.dirty) await this.writeOrphan()
       return
     }
     if (this.status === 'offline' && this.dirty) this.offlineProgress = true
     if (opts.urgent || opts.leaving) this.scheduleUpload(opts.leaving === true)
     await this.saveLocal()
     this.scheduleUpload()
+  }
+
+  /**
+   * Another tab holds the lease: our unsent story goes to the orphan slot
+   * (never over its cache record), for the next holder to merge. Tracked, so
+   * `settle` can wait for it and know whether it landed.
+   */
+  private writeOrphan(): Promise<void> {
+    const s = this.session!
+    const key = docKey(s.state)
+    this.orphanWrites += 1
+    const write = this.store
+      .saveOrphan({ habiticaId: this.habiticaId, clientId: this.clientId, state: s.state, rev: this.rev, savedAt: Date.now() })
+      .catch(() => false)
+      .then((ok) => {
+        // A failed write leaves nothing durable: the slot may hold an older story or none.
+        this.orphaned = ok ? key : ''
+      })
+      .finally(() => {
+        this.orphanWrites -= 1
+      })
+    this.orphanDone = this.orphanDone.then(() => write)
+    return write
   }
 
   private async saveLocal(): Promise<void> {
@@ -414,7 +491,7 @@ export class Link {
   async spend(spend: EmberSpend): Promise<RemoteSpendResult> {
     const s = this.session
     if (!s || this.stopped) return 'error'
-    if (this.busy) return 'busy'
+    if (this.busy || this.sealed) return 'busy'
     if (this.status !== 'online' || !this.lease) return this.status === 'superseded' ? 'superseded' : 'offline'
     const key = newKey()
     const build = (): SpendRequest => ({
@@ -448,7 +525,7 @@ export class Link {
   async sync(profile: HabiticaProfile): Promise<RemoteSyncResult> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
-    if (this.busy) return { ok: false, code: 'busy' }
+    if (this.busy || this.sealed) return { ok: false, code: 'busy' }
     if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
     this.setBusy(true)
     try {
@@ -532,7 +609,7 @@ export class Link {
   async mutate<R extends Snapshot>(op: MutationOp): Promise<MutateResult<R>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
-    if (this.busy) return { ok: false, code: 'busy' }
+    if (this.busy || this.sealed) return { ok: false, code: 'busy' }
     if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
     if (this.unresolved) {
       // Settle the earlier request first. If it had landed, stop: the player
@@ -772,7 +849,7 @@ export class Link {
   ): Promise<WildsOutcome<T>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
-    if (this.busy) return { ok: false, code: 'busy' }
+    if (this.busy || this.sealed) return { ok: false, code: 'busy' }
     if (this.status !== 'online' || !this.lease) return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'offline' }
     if (!epoch) return { ok: false, code: 'epoch-not-found' }
     // Captured now: the request must describe the moment it was made.

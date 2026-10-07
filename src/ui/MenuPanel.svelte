@@ -15,6 +15,8 @@
   import type { Snapshot, WorldChoice, WorldRef, WorldView } from '../lib/api/types'
   import { accountCopy, offlineCopy } from '../content/connected'
   import { CONTROLS, TOUCH_CONTROLS } from '../content/controls'
+  import { updateCopy } from '../content/update'
+  import { CHANGELOG_URL, RUNNING } from '../lib/version'
   import { isTouchFirst } from './device'
   import { settings, type StickMode } from './settings.svelte'
 
@@ -283,6 +285,11 @@
         </div>
       {/if}
     </section>
+
+    <p class="tiny version" data-testid="version-line">
+      <a href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" title={updateCopy.menuTitle}>{updateCopy.menuLine(RUNNING.version)}</a>
+      <span class="build">{updateCopy.menuBuild(RUNNING.build)}</span>
+    </p>
   </div>
 </div>
 
@@ -419,6 +426,19 @@
   }
   .tiny a {
     color: inherit;
+  }
+  .version {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 2px 8px;
+    margin: 14px 0 0;
+    text-align: center;
+  }
+  .version .build {
+    font-size: 11px;
+    opacity: 0.8;
   }
   .row {
     display: flex;

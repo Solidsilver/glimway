@@ -16,7 +16,7 @@ import { advanceQuest, questObjective, questShortGoal } from '../lib/state'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
 import { resolveDefeatRecovery } from '../lib/habitica/sync'
 import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
-import { saveGame } from '../lib/save'
+import { saveCurrent, saveGame } from '../lib/save'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events'
 import type { Link } from './link'
 import { displayArea } from '../content/world'
@@ -68,11 +68,20 @@ export class Session {
     return this.generation
   }
 
-  /** True while a sync persistence owns the save file. The world freezes its
-   * resource/combat mutations for the (brief) write so a mid-flight enemy hit
-   * or regen tick cannot be reverted by the committed snapshot. */
+  /** True while a sync persistence owns the save file, or a reload is
+   * saving. The world freezes its resource/combat mutations for the (brief)
+   * write so a mid-flight enemy hit or regen tick cannot be reverted by the
+   * committed snapshot. */
   get persistenceInFlight(): boolean {
-    return this.syncInFlight || this.remoteBusy
+    return this.syncInFlight || this.remoteBusy || this.frozen
+  }
+
+  /** A reload is saving (settle): the world holds still, as for a sync. */
+  private frozen = false
+
+  /** Saving for a reload: the scene stops outright (physics, timers, the play clock). */
+  get reloading(): boolean {
+    return this.frozen
   }
 
   /** True when the given generation is still the live one. */
@@ -351,15 +360,15 @@ export class Session {
    * the session's current intent is re-persisted so stale imported state
    * never lingers.
    */
-  async save(): Promise<void> {
-    if (this.destroyed) return
+  async save(): Promise<boolean> {
+    if (this.destroyed) return false
     if (this.link) {
       await this.link.persist()
-      return
+      return true
     }
     if (this.syncInFlight) {
       this.pendingSave = true
-      return
+      return false
     }
     try {
       await saveGame(this.state, {
@@ -368,13 +377,51 @@ export class Session {
         // (demo rollback). undefined would preserve it.
         importedProfile: this.importedProfile
       })
+      return true
     } catch (err) {
       console.warn('[glimway] save failed', err)
       bus.emit(EV.toast, {
         text: 'Couldn\u2019t save just now — your latest steps may not stick.',
         kind: 'error'
       })
+      return false
     }
+  }
+
+  /**
+   * Before a reload for a new version: hold the world still, then save
+   * until the stored copy is the live game. Guests: the browser write,
+   * repeated if the game changed during it. Connected: the link writes and
+   * drains everything in flight (Link.settle). Bounded by `timeoutMs`. On
+   * 'saved' the world stays frozen for the reload; otherwise play resumes.
+   */
+  async settle(timeoutMs = 8000): Promise<'saved' | 'offline' | 'unsaved'> {
+    if (this.destroyed) return 'unsaved'
+    this.frozen = true
+    if (this.saveTimer !== null) {
+      window.clearTimeout(this.saveTimer)
+      this.saveTimer = null
+    }
+    const link = this.link
+    let timer = 0
+    const timeout = new Promise<'unsaved'>((r) => (timer = window.setTimeout(() => r('unsaved'), timeoutMs)))
+    const work = link ? link.settle() : this.settleGuest()
+    let result = await Promise.race([work.catch(() => 'unsaved' as const), timeout])
+    window.clearTimeout(timer)
+    if (result === 'saved') return result
+    if (link) {
+      link.cancelSettle()
+      if (link.status === 'offline') result = 'offline'
+    }
+    this.frozen = false
+    return result
+  }
+
+  private async settleGuest(): Promise<'saved' | 'unsaved'> {
+    // A sync owns the save file: its own write lands first. Try again in a moment.
+    if (this.syncInFlight) return 'unsaved'
+    const live = () => ({ state: this.state, vitalsSource: this.vitalsSource, importedProfile: this.importedProfile })
+    return (await saveCurrent(live)) ? 'saved' : 'unsaved'
   }
 
   /**

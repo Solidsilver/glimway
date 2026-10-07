@@ -1,16 +1,19 @@
 { lib, buildNpmPackage, nodejs_24
 , habiticaCreatorId ? "5abfd539-22eb-457f-8e2a-9fb3d66731f1"
 , habiticaAppName ? "glimway"
+# The build id (the flake passes its clean short revision). Null: a hash of
+# the sources (scripts/build-version.mjs), as the sandbox has no .git.
+, build ? null
 }:
 buildNpmPackage {
   pname = "glimway-web";
-  version = "0.1.0";
+  version = (lib.importJSON ../package.json).version;
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
       ../package.json ../package-lock.json ../index.html
       ../vite.config.ts ../svelte.config.js ../tsconfig.json
-      ../src ../public ../content
+      ../scripts/build-version.mjs ../src ../public ../content
     ];
   };
   nodejs = nodejs_24;
@@ -21,7 +24,7 @@ buildNpmPackage {
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
     VITE_HABITICA_CREATOR_ID = habiticaCreatorId;
     VITE_HABITICA_APP_NAME = habiticaAppName;
-  };
+  } // lib.optionalAttrs (build != null) { GLIMWAY_BUILD = build; };
   preBuild = ''
     if grep -rl '^version https://git-lfs.github.com/spec/v1$' public; then
       echo "Runtime art contains Git LFS pointers; fetch the real objects before building." >&2

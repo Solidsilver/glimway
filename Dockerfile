@@ -6,6 +6,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY index.html vite.config.ts svelte.config.js tsconfig.json ./
+COPY scripts/build-version.mjs ./scripts/
 COPY src ./src
 COPY public ./public
 COPY content ./content
@@ -17,6 +18,9 @@ ARG VITE_HABITICA_CREATOR_ID=5abfd539-22eb-457f-8e2a-9fb3d66731f1
 ARG VITE_HABITICA_APP_NAME=glimway
 ENV VITE_HABITICA_CREATOR_ID=$VITE_HABITICA_CREATOR_ID \
     VITE_HABITICA_APP_NAME=$VITE_HABITICA_APP_NAME
+# The build id (the release workflow passes the commit). Empty: the build
+# hashes its sources, since the context has no .git (scripts/build-version.mjs).
+ARG GLIMWAY_BUILD=
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c AS server
@@ -25,11 +29,18 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY server ./server
 COPY content ./content
+COPY package.json ./
 ARG TARGETOS=linux
 ARG TARGETARCH
+ARG GLIMWAY_BUILD=
 # modernc.org/sqlite is pure Go; both supported architectures need no CGO.
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags='-s -w' -o /out/glimway-server ./server/cmd/glimway-server
+# The version is package.json's; a full commit hash is shortened to seven.
+RUN version=$(sed -n 's/^  "version": "\([0-9]*\.[0-9]*\.[0-9]*\)",$/\1/p' package.json) \
+    && test -n "$version" \
+    && build=$GLIMWAY_BUILD \
+    && if echo "$build" | grep -Eq '^[0-9a-f]{40}$'; then build=$(printf %.7s "$build"); fi \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w -X main.version=$version -X main.build=$build" -o /out/glimway-server ./server/cmd/glimway-server
 
 FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
 RUN apk add --no-cache ca-certificates \

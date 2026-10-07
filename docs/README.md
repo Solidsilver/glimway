@@ -23,6 +23,7 @@ its architecture. This folder holds two kinds of document:
 | [testing.md](testing.md) | The test workflow: tiers, prerequisites, generated data, writing and debugging playtests |
 | [server-behavior.md](server-behavior.md) | Server behavior and migration notes, preserved by implementation phase |
 | [home-server.md](home-server.md) | Self-hosting with the NixOS flake, Docker Compose or manual builds |
+| [releasing.md](releasing.md) | Cutting a release: the changelog, the version bump, the tag that publishes the image |
 | [runtime-contract.md](runtime-contract.md) | The lantern road: game state, the quest machine and its ids, the warden, defeat |
 | [import-contract.md](import-contract.md) | The read-only Habitica import, saves (format 2), imported health and mana |
 | [habitica-assets.md](habitica-assets.md) | The gear catalog and the avatar and companion art |
