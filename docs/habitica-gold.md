@@ -1,5 +1,7 @@
 # Habitica gold and the purse
 
+See also [habitica-policy.md](habitica-policy.md): Habitica's rules for third-party tools and our plan for telling them.
+
 Status: research for the owner, 2026-10-07. Nothing here is built. The
 boundary rules this must follow are in [habitica-boundary.md](habitica-boundary.md).
 

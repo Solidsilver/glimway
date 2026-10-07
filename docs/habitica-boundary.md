@@ -1,5 +1,7 @@
 # The Habitica boundary
 
+See also [habitica-policy.md](habitica-policy.md): Habitica's rules for third-party tools and our plan for telling them.
+
 Status: agreed with the owner 2026-10-07. Use this doc to check every feature
 that touches Habitica data, or that adds an item, slot or currency.
 
