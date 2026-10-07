@@ -294,7 +294,18 @@ Recorded limits/quirks: sources are irregular high-resolution sheets with
 measured rects (never a grid); the base ground tiles are not bit-seamless
 (the build heals the seams; README "Art notes"); resident sheets carry stray
 pixels in unreferenced cells, which are never sampled; the player body is a
-prototype without clean recolour layers.
+prototype without clean recolour layers. The residents' and held tools'
+measured crops in `atlas.json` are not trusted: some cut a figure in half or
+span two cells, and each resident frame was fitted to its own box (breathing
+jumped, playtest 2026-10-07). The build finds each figure on the sheet itself
+(`src/game/figures.ts`, by the sheet's row layout), samples only that
+figure's pixels, draws a person's frames at one scale per facing
+(`PERSON_HEIGHT` over that facing's median figure height) with every foot
+point on the canvas's, and measures the held tools' grips on the baked art,
+mirroring any that lean right so all lean out from the hand. The Tolley mill
+wheel's frames (items pass) are fitted the same way to one wall height and
+pivot, mirrored to put the wall against the mill. `e2e/sprite-anchors.spec.ts`
+checks the shipped texels.
 
 Provenance attributes: **Author** — Fingersnap project (Codex built-in image
 generation). **Source** — original generation, prompts in-repo.

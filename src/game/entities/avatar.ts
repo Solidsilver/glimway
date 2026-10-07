@@ -41,8 +41,23 @@ import { PEOPLE_KEY, facingOf, heldFrame, heldOrigin, peopleDensity, type Facing
 /** Habitica sprite grid (source px) and its on-screen height in the 16px world. */
 const AVATAR_CANVAS = 90
 const AVATAR_DISPLAY = 22
-/** Where a held tool sits on the Habitica figure (container px, unmirrored: the weapon hand, art-left), and its size. */
-const HAND = { x: -6, y: -9, size: 11 }
+/**
+ * The Habitica figure's fists, on the skin layer: the weapon hand (the
+ * figure's right, art-left) canvas px 42–44 across, the off hand (art-right)
+ * 69–71, both rows 66–68. Every pose and facing is this one figure, mirrored
+ * facing right. The fists sit below the breath's upper crop (BREATH_SPLIT
+ * plus one art px), so what they hold stays put while the chest rises.
+ */
+const HAND_ART = { x: 43.5, y: 67.5 }
+const OFF_HAND_ART = { x: 70.5, y: 67.5 }
+/** Container px of a point on the Habitica canvas (unmirrored). */
+const onFigure = (p: { x: number; y: number }) => ({
+  x: (p.x - AVATAR_CANVAS / 2) * (AVATAR_DISPLAY / AVATAR_CANVAS),
+  y: -AVATAR_DISPLAY / 2 + (p.y - AVATAR_CANVAS / 2) * (AVATAR_DISPLAY / AVATAR_CANVAS),
+})
+/** Where a held tool is gripped (container px, unmirrored), and an item icon's size there. */
+const HAND = { ...onFigure(HAND_ART), size: 11 }
+const OFF_HAND = onFigure(OFF_HAND_ART)
 
 /** State carried across area changes and defeat recovery (per tab). */
 const carried = { riding: false, fallbackNotified: false, partialNotified: false }
@@ -74,8 +89,10 @@ export class AvatarVisual {
   private handTool: Phaser.GameObjects.Image | null = null
   /** The held item drawn now ('' = none built yet). */
   private handShown = ''
-  /** The facing (and mirroring) the held art was last set for. */
+  /** The facing the held art was last set for. */
   private handFacing: string | null = null
+  /** The way the hero faces, as last drawn. */
+  private facing: Facing = 'down'
   /** What the playtests read: the pose as last drawn. */
   pose = { breath: 0, step: 0, seated: false, mirrored: false }
   /** Stale-async guard: a token invalidates older rebuild completions. */
@@ -234,7 +251,8 @@ export class AvatarVisual {
         this.container.depth = hero.sprite.y + 1
       }
       this.pose = { ...motion, seated: !!seat, mirrored: right }
-      this.drawHand(!!seat, motion.breath * scale, facingOf(hero.facing.x, hero.facing.y, right ? 'right' : 'left'), right)
+      this.facing = facingOf(hero.facing.x, hero.facing.y, right ? 'right' : 'left')
+      this.drawHand(!!seat, this.facing)
     }
     if (this.pet) {
       // The pet trails behind, on the side away from where you face.
@@ -256,11 +274,13 @@ export class AvatarVisual {
   /**
    * What's in hand, on the hero: the Habitica weapon while the weapon is
    * held; otherwise the tool's held art (../people.ts) facing with the hero,
-   * gripped at the weapon hand — behind the body walking away, the side
-   * view turned the right way round inside the mirrored container — or its
-   * item icon when it has no held art. Tucked away seated.
+   * gripped at the weapon hand — behind the body walking away — or its item
+   * icon when it has no held art. Tucked away seated. Every held frame is
+   * baked leaning out from the hand, art-left (HELD_LEAN in
+   * ../atlas-plan.ts), so the container's mirroring alone turns it round:
+   * the blade is always out, in the right hand, whichever way the hero faces.
    */
-  private drawHand(seated: boolean, breath: number, facing: Facing, mirrored: boolean): void {
+  private drawHand(seated: boolean, facing: Facing): void {
     const slot = heldNow()
     const want = slot.kind === 'weapon' || !slot.itemDef ? '' : slot.itemDef
     if (want !== this.handShown) {
@@ -292,22 +312,32 @@ export class AvatarVisual {
     }
     const tool = this.handTool
     if (!tool) return
-    if (tool.texture.key === PEOPLE_KEY && this.handFacing !== `${facing}:${mirrored}`) {
-      this.handFacing = `${facing}:${mirrored}`
+    if (tool.texture.key === PEOPLE_KEY && this.handFacing !== facing) {
+      this.handFacing = facing
       const frame = heldFrame(this.scene, want, facing)
       if (frame) {
         tool.setFrame(frame)
         const [ox, oy] = heldOrigin(this.scene, frame)
         tool.setOrigin(ox, oy)
-        // The side views are drawn facing their way: undo the container's mirror.
-        tool.setFlipX((facing === 'left' || facing === 'right') && mirrored)
         // Walking away, the tool is held out in front: from here, behind the body.
         if (facing === 'up') this.container?.sendToBack(tool)
         else this.container?.bringToTop(tool)
       }
     }
     tool.setVisible(!seated)
-    tool.y = HAND.y + breath
+  }
+
+  /**
+   * The off hand in the world (../entities/off-hand.ts draws what it holds
+   * there): its grip, which side of the figure it's on (`right`: the hand
+   * is on the hero's screen-right), the way the hero faces, and the body's
+   * depth. Null without the Habitica figure.
+   */
+  offHand(): { x: number; y: number; right: boolean; facing: Facing; depth: number } | null {
+    const c = this.container
+    if (!c) return null
+    const mirrored = c.scaleX < 0
+    return { x: c.x + (mirrored ? -OFF_HAND.x : OFF_HAND.x), y: c.y + OFF_HAND.y, right: !mirrored, facing: this.facing, depth: c.depth }
   }
 
   /** Read-only, for playtests: which held frame is drawn ('' none or an icon). */

@@ -215,8 +215,8 @@
       "specs": ["touch.spec.ts", "touches.spec.ts"]
     },
     {
-      "paths": ["src/game/atlas-plan.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts", "src/game/ground-heal.ts", "src/game/people.ts", "src/game/ground-tiles.ts", "src/game/area/ground-paint.ts", "src/game/area/ground-worker.ts", "src/game/buildings.ts"],
-      "specs": ["atlases.spec.ts", "art-screens.spec.ts", "density-screens.spec.ts", "art1-screens.spec.ts", "held.spec.ts", "first-paint.spec.ts"]
+      "paths": ["src/game/atlas-plan.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts", "src/game/ground-heal.ts", "src/game/people.ts", "src/game/ground-tiles.ts", "src/game/area/ground-paint.ts", "src/game/area/ground-worker.ts", "src/game/buildings.ts", "src/game/figures.ts", "scripts/png-decode.ts"],
+      "specs": ["atlases.spec.ts", "sprite-anchors.spec.ts", "art-screens.spec.ts", "density-screens.spec.ts", "art1-screens.spec.ts", "held.spec.ts", "first-paint.spec.ts"]
     },
     {
       "paths": [

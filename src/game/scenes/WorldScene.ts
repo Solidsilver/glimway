@@ -281,7 +281,7 @@ export class WorldScene extends Phaser.Scene {
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
-    this.offHand = new OffHandVisual(this, this.session, () => this.hero)
+    this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
