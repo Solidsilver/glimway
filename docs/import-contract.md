@@ -232,7 +232,8 @@ docs/m3-implementation.md):
 - **Rejected syncs** (non-village, account id switch) return the entire save
   unchanged — baseline changes are not consumed. Switching accounts requires
   a new journey.
-- **Defeat recovery**: demo = M2 full restore; imported =
+- **Defeat recovery**: demo = full restore (`recoverFromDefeat` in
+  `src/lib/state.ts`); imported =
   `min(last imported HP, 25% maxHp)` / `min(last imported MP, 50% maxMana)`,
   zero stays zero, baseline preserved. Provisional caps (`IMPORTED_RECOVERY`)
   pending final HP policy.

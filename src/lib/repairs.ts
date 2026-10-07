@@ -1,17 +1,17 @@
 import repairsRaw from '../../content/repairs.json' with { type: 'json' };
 
-export interface RepairPos {
+interface RepairPos {
   tx: number;
   ty: number;
 }
 
-export interface RepairGift {
+interface RepairGift {
   kind: string;
   id: string;
   qty: number;
 }
 
-export interface RepairOpenFrom {
+interface RepairOpenFrom {
   wick: string;
   day: number;
 }
@@ -36,7 +36,7 @@ export interface RepairDef {
   weather?: boolean;
 }
 
-export interface RepairsRulesConfig {
+interface RepairsRulesConfig {
   maxOpen: number;
   /** One new weather breakage every `perWick` wicks. */
   perWick: number;
@@ -48,7 +48,7 @@ export interface RepairsData {
   repairs: RepairDef[];
 }
 
-export function validateRepairs(data: RepairsData): RepairsData {
+function validateRepairs(data: RepairsData): RepairsData {
   if (!data.rules || data.rules.maxOpen <= 0 || data.rules.perWick <= 0 || !Array.isArray(data.rules.scripted) || data.rules.scripted.length === 0) {
     throw new Error('invalid repairs: rules');
   }

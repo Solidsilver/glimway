@@ -6,26 +6,14 @@
  */
 import { bus } from '../game/events'
 import { PAPER_EV, type PaperFoundPayload, type PapersSyncPayload } from '../game/papers'
+import { readJson, stringList, writeJson } from '../lib/local-json'
 
 const SEEN_KEY = 'fingersnap:papers-seen'
 
-function loadSeen(): string[] {
-  try {
-    const raw = localStorage.getItem(SEEN_KEY)
-    const list = raw ? (JSON.parse(raw) as unknown) : []
-    return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
-  } catch {
-    return []
-  }
-}
+const loadSeen = (): string[] => readJson(SEEN_KEY, stringList, [])
 
-function saveSeen(list: string[]): void {
-  try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify(list))
-  } catch {
-    /* storage blocked: the dot just comes back next visit */
-  }
-}
+/** Storage blocked: the dot just comes back next visit. */
+const saveSeen = (list: string[]): void => void writeJson(SEEN_KEY, list)
 
 class PapersStore {
   /** Paper ids this save has found, oldest first. */

@@ -1,5 +1,5 @@
 /**
- * Habitica gear catalog — Fingersnap M3 (owner: snap_assets).
+ * Habitica gear catalog.
  *
  * NUMERIC item data bundled in `content/habitica-gear.json`, snapshotted
  * from Habitica's public content endpoint (see provenance below and
@@ -39,7 +39,7 @@ export interface GearCatalogItem {
   gearSet?: string;
 }
 
-export interface GearCatalogProvenance {
+interface GearCatalogProvenance {
   name: string;
   sourceEndpoint: string;
   sourceProject: string;
@@ -108,10 +108,6 @@ export function gearStatsFor(key: string): GearItemStats | undefined {
 /** Full catalog entry for an item key, or undefined when unknown. */
 export function gearItemFor(key: string): GearCatalogItem | undefined {
   return CATALOG.gear[key];
-}
-
-export function isKnownGearKey(key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(CATALOG.gear, key);
 }
 
 /** Upstream rule: two-handed weapons suppress the shield layer. */

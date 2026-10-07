@@ -7,7 +7,7 @@
   import ArtIcon from './ArtIcon.svelte'
 
   /**
-   * The emote row (phase 6): five small gestures from shared content. Opens
+   * The emote row: five small gestures from shared content. Opens
    * with G (or the HUD's speech button), picks with 1–5 or a tap, and shows
    * the cooldown so a too-soon tap is never silently dropped.
    */

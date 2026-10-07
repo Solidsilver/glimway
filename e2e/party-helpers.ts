@@ -9,7 +9,7 @@ import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabit
  * one this account may open): answer it, then wait for the world. Settled
  * players and newcomers with no party go straight in.
  */
-export async function answerWorldChoice(page: Page, choice: 'party' | 'own' = 'party'): Promise<void> {
+async function answerWorldChoice(page: Page, choice: 'party' | 'own' = 'party'): Promise<void> {
   const gate = page.getByTestId('world-choice')
   await expect.poll(async () => (await gate.isVisible()) || (await linkStatus(page)) === 'online', { timeout: 20_000 }).toBe(true)
   if (await gate.isVisible()) await gate.getByTestId(choice === 'party' ? 'world-choice-party' : 'world-choice-own').click()

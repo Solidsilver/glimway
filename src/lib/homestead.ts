@@ -8,17 +8,17 @@ const MATERIAL_ITEMS = new Set(
   ((itemsRaw as { items: { id: string; kind: string }[] }).items ?? []).filter((i) => i.kind === 'material').map((i) => i.id)
 );
 
-export interface HomeGrid { width: number; height: number }
-export interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
+interface HomeGrid { width: number; height: number }
+interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
 export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor' | 'gate')[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
-export interface HomeRect { x: number; y: number; w: number; h: number }
+interface HomeRect { x: number; y: number; w: number; h: number }
 /**
  * Every homestead's wild land (generated per gate: src/lib/homestead-land.ts,
  * server/internal/land): its size, the home site (camp/cottage), the gate
  * mouth in the south edge, the home's own light, and how wild it is.
  */
-export interface HomeLand {
+interface HomeLand {
   generator: number;
   width: number;
   height: number;
@@ -37,7 +37,7 @@ export interface HomeLand {
  * rows, then one more every `rowPitch` tiles. Silas's table (px) is where
  * a joint deed is signed: both partners within `radius`.
  */
-export interface CommonsLane {
+interface CommonsLane {
   tileSize: number;
   fenceX: [number, number];
   gateRows: number[];
@@ -45,7 +45,7 @@ export interface CommonsLane {
   spareGates: number;
   silasTable: { x: number; y: number; radius: number };
 }
-export interface LanternPosts { item: string; radius: number; nameMax: number; costs: Record<string, number>[]; growth: Record<string, number> }
+interface LanternPosts { item: string; radius: number; nameMax: number; costs: Record<string, number>[]; growth: Record<string, number> }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -117,7 +117,7 @@ export const HOMESTEAD_DATA = validateHomesteadData(raw);
 // ------------------------------------------------------------ geometry
 
 /** The land as a placement grid. */
-export function landGrid(data: HomesteadData = HOMESTEAD_DATA): HomeGrid {
+function landGrid(data: HomesteadData = HOMESTEAD_DATA): HomeGrid {
   return { width: data.land.width, height: data.land.height };
 }
 
@@ -215,7 +215,7 @@ function rectLit(lights: readonly Light[], r: HomeRect): boolean {
  * (a post too) must be lit by the home's light or another post: a post
  * cannot hold up itself, so land never floats on a chain back to nothing.
  */
-export function everythingLit(items: readonly HomeInstance[], data: HomesteadData = HOMESTEAD_DATA): boolean {
+function everythingLit(items: readonly HomeInstance[], data: HomesteadData = HOMESTEAD_DATA): boolean {
   for (const it of items) {
     if (it.scene !== 'outdoor') continue;
     const r = footprintRect(it, data);

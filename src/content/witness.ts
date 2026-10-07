@@ -29,7 +29,7 @@ export function witnessName(name: unknown): string {
 }
 
 /** The server takes no story flag over 128 UTF-8 bytes (rules.DecodeProgress): one would stop every save. */
-export const WITNESS_FLAG_BYTES = 128;
+const WITNESS_FLAG_BYTES = 128;
 /** Witness lines kept per beat (the Warden, the lantern, each Echo): the first few travelers seen. */
 export const WITNESS_KEEP_PER_BEAT = 5;
 
@@ -55,7 +55,7 @@ const kind = (beat: WitnessBeat): 'warden' | 'lantern' | 'echo' => (beat === 'wa
 const beatKey = (beat: WitnessBeat): string => beat.replace(':', '-');
 
 /** Every witness flag for this beat and traveler starts so (the name follows). */
-export function witnessFlagPrefix(beat: WitnessBeat, doerId: string): string {
+function witnessFlagPrefix(beat: WitnessBeat, doerId: string): string {
   return `witness:${beatKey(beat)}:${doerId}:`;
 }
 

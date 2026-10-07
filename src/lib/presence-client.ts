@@ -1,7 +1,8 @@
 /**
- * Presence protocol client (phase 6): one WebSocket to `/ws` for a connected
- * session that holds the play lease. Wire protocol: `.agent/BACKEND-REPORT.md`
- * "Phase 6 server"; shared types and limits: `src/lib/presence.ts`.
+ * Presence protocol client: one WebSocket to `/ws` for a connected session
+ * that holds the play lease. Wire protocol: server/internal/api/presence.go
+ * (deployment notes in docs/home-server.md, "Phase 6 presence WebSockets");
+ * shared types and limits: `src/lib/presence.ts`.
  *
  * - Auth goes in the first text message (never the URL); nothing else is sent
  *   until `ready`.
@@ -17,7 +18,7 @@
  * Pure: the socket and timers are injected, so this runs under node --test.
  * It never sees credentials beyond the lease, and never logs messages.
  */
-import { PRESENCE, PRESENCE_CLOSE, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
+import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 /** The WebSocket surface the client uses (the browser's WebSocket fits). */
 export interface SocketLike {
@@ -454,12 +455,12 @@ export class PresenceClient {
     }, Math.max(1_000, due));
   }
 
-  private send(m: object): void {
+  private send(m: PresenceClientMessage): void {
     if (!this.ready) return;
     this.raw(m);
   }
 
-  private raw(m: object): void {
+  private raw(m: PresenceClientMessage): void {
     const s = this.socket;
     if (!s || s.readyState !== OPEN) return;
     try {

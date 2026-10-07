@@ -57,7 +57,7 @@ export async function expectToast(page: Page, text: RegExp | string, opts: { tim
 }
 
 /** The area title cards shown so far, in order (dev hook; a card lasts ~2.6 s of wall time). */
-export async function areaCards(page: Page): Promise<string[]> {
+async function areaCards(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     (window as unknown as { __fsBanners: () => { shown: { kind: string; title: string }[] } }).__fsBanners().shown.filter((b) => b.kind === 'area').map((b) => b.title)
   )
@@ -78,7 +78,7 @@ export async function expectAreaCard(page: Page, title: string): Promise<void> {
 }
 
 /** window.__fsToasts(): every toast shown since the page loaded (dev builds). */
-export type ToastsView = { count: number; seen: { n: number; text: string; kind: string }[] }
+type ToastsView = { count: number; seen: { n: number; text: string; kind: string }[] }
 
 /** How many toasts have been shown so far (a mark for toastAfter). */
 export async function toastCount(page: Page): Promise<number> {
@@ -104,7 +104,7 @@ export async function toastAfter(page: Page, since: number, text?: RegExp | stri
 }
 
 /** window.__fsFrame(): how settled the current area is (dev builds). */
-export type FrameView = {
+type FrameView = {
   areaId: AreaId
   /** Frames drawn since this area's scene was built. */
   frames: number
@@ -218,7 +218,7 @@ export async function waitForWilds(page: Page, region = 'inner-1'): Promise<stri
 }
 
 /** The frame state now (null before the world is up). */
-export async function frame(page: Page): Promise<FrameView | null> {
+async function frame(page: Page): Promise<FrameView | null> {
   return page.evaluate(() => (window as unknown as Hooks).__fsFrame?.() ?? null)
 }
 
@@ -305,6 +305,21 @@ export async function frames(page: Page, n: number): Promise<void> {
     const tick = () => (--left <= 0 ? resolve() : requestAnimationFrame(tick))
     requestAnimationFrame(tick)
   }), n)
+}
+
+/**
+ * Every running, finite DOM animation (Svelte transitions, CSS fades) has
+ * finished, then two frames are drawn: for a screenshot, instead of a fixed
+ * pause. Endless animations (pulses, spinners) are left alone. DOM only:
+ * Phaser tweens on the canvas aren't Web Animations, so wait for those
+ * through the game's hooks (e.g. `bubbleAlpha` in `__fsRemote()`).
+ */
+export async function animationsDone(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document.getAnimations().filter((a) => a.playState === 'running' && Number.isFinite(Number(a.effect?.getComputedTiming().endTime)))
+    await Promise.all(finite.map((a) => a.finished.catch(() => undefined)))
+  })
+  await frames(page, 2)
 }
 
 /** The read-only Wilds dump (null outside the Wilds). */

@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld } from './connected'
 import { partyOwner, signInPage } from './party-helpers'
-import { expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
+import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
 
 /**
  * Playing together (docs/home-server.md "Party worlds and world moves" and
@@ -18,6 +18,9 @@ const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __f
 /** The warden, with whether it is resting for someone else's naming (WardenView.witnessRest). */
 const wardenNow = async (page: Page) => (await warden(page)) as Awaited<ReturnType<typeof warden>> & { witnessRest: boolean }
 const shot = (page: Page, name: string) => page.screenshot({ path: `.agent/screens/coop-${name}.png` })
+/** No banner on screen or waiting (an area card lasts ~2.6 s after arriving). */
+const noBanner = (page: Page) =>
+  expect.poll(() => page.evaluate(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current), { timeout: 10_000 }).toBeNull()
 
 const PHONE = { width: 390, height: 844 }
 
@@ -57,7 +60,7 @@ test('a newcomer in a party is asked where to live, is asked again after closing
   // Rue came in through the party: codes aren't hers to give, and the gate says so.
   await expect(gate.getByTestId('world-choice-own')).toContainText('Invite codes come from whoever keeps this server')
   await expect(gate).toContainText('the first move is open at once, then travelers rest a day between worlds.')
-  await other.waitForTimeout(300)
+  await animationsDone(other)
   await shot(other, '01-choice-desktop')
   // Signed in once, the token not kept: the server holds the sign-in, and
   // nothing else goes on until the world is chosen.
@@ -92,7 +95,7 @@ test('a newcomer on a phone starts a world of their own, and the party’s world
   await expect(gate.getByTestId('world-choice-party')).toBeVisible()
   await fits(other, gate.getByTestId('world-choice-party'))
   await gate.getByRole('heading').scrollIntoViewIfNeeded()
-  await other.waitForTimeout(300)
+  await animationsDone(other)
   await shot(other, '02-choice-phone')
   await fits(other, gate.getByTestId('world-choice-own'))
   await shot(other, '03-choice-phone-scrolled')
@@ -135,7 +138,7 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
   await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 15_000 }).toEqual(['Hal'])
 
   // (Let the place's title card clear first, for the screenshot.)
-  await other.waitForTimeout(3000)
+  await noBanner(other)
   await settleWarden(page)
   await expectToast(other, 'Olive speaks the naming. The warden’s arms come down, its heart-lamp guttering low. You were there.')
   await expect.poll(async () => (await wardenNow(other)).witnessRest).toBe(true)
@@ -157,7 +160,7 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
   const journal = other.getByRole('dialog', { name: 'Journal' })
   await expect(journal).toContainText('You Were There')
   await expect(journal).toContainText('I stood on the shrine path while Olive spoke the naming.')
-  await other.waitForTimeout(500)
+  await animationsDone(other)
   await shot(other, '06-witness-journal')
   await ctx.close()
 })

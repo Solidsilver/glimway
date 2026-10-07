@@ -7,7 +7,7 @@
  * signatures ("- Dad", "— S.", "Love,\nJoss").
  */
 
-export interface Inline {
+interface Inline {
   text: string;
   b?: true;
   i?: true;
@@ -23,7 +23,7 @@ export type Line = Inline[];
  * hand: words written onto the document by someone afterwards.
  * sign: a signature or valediction.
  */
-export type Tone = 'plain' | 'intro' | 'aside' | 'hand' | 'sign';
+type Tone = 'plain' | 'intro' | 'aside' | 'hand' | 'sign';
 
 export type Block =
   | { kind: 'para'; tone: Tone; lines: Line[] }

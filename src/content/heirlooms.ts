@@ -139,7 +139,7 @@ export function allHeirloomJournal(): JournalEntry[] {
  * back, Hollis's Echo settled, or a paper in Silas's hand or the Ashwatch
  * ledger that names him. The server checks the same list.
  */
-export const HOLLIS_NAME_FLAGS = [
+const HOLLIS_NAME_FLAGS = [
   'returned:whittled-fox',
   'echo:hollis',
   'paper:ashwatch-ledger-excerpts',
@@ -225,7 +225,7 @@ function within(c: Pick<HeirloomContext, 'area' | 'x' | 'y'>, area: string, tx: 
  * name known; the north bridge mended; three flasks of window oil; Nan's
  * echo settled.
  */
-export function heirloomConditionMet(id: HeirloomId, c: Pick<HeirloomContext, 'flags' | 'worldFlags'>): boolean {
+function heirloomConditionMet(id: HeirloomId, c: Pick<HeirloomContext, 'flags' | 'worldFlags'>): boolean {
   switch (id) {
     case 'brack-felling-axe':
       return knowsHollisName(c.flags);
@@ -239,7 +239,7 @@ export function heirloomConditionMet(id: HeirloomId, c: Pick<HeirloomContext, 'f
 }
 
 /** The server's reach check for each heirloom: the same rows, the same radius. */
-export function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' | 'y'>): boolean {
+function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' | 'y'>): boolean {
   switch (id) {
     case 'brack-felling-axe':
     case 'orrins-mason-pick': {

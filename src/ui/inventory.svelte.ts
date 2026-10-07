@@ -5,48 +5,27 @@
  * convenience in localStorage; it only drives the "new" dots, so losing it
  * is harmless.
  */
+import { readJson, stringList, writeJson } from '../lib/local-json'
+
 const SEEN_KEY = 'fingersnap:inventory-seen'
 /** When each key was seen: one stamp per look at the bag (a batch), newest highest. */
 const SEEN_AT_KEY = 'fingersnap:inventory-seen-at'
 
-function loadSeen(): string[] {
-  try {
-    const raw = localStorage.getItem(SEEN_KEY)
-    const list = raw ? (JSON.parse(raw) as unknown) : []
-    return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
-  } catch {
-    return []
-  }
-}
+const loadSeen = (): string[] => readJson(SEEN_KEY, stringList, [])
 
-function saveSeen(list: string[]): void {
-  try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify(list))
-  } catch {
-    /* storage blocked: the dots just come back next visit */
-  }
-}
+/** Storage blocked: the dots just come back next visit. */
+const saveSeen = (list: string[]): void => void writeJson(SEEN_KEY, list)
 
 /** Stamps by key; a key seen before stamps were kept gets its place in the old list. */
 function loadSeenAt(list: readonly string[]): Map<string, number> {
   const at = new Map(list.map((k, i) => [k, i - list.length] as [string, number]))
-  try {
-    const raw = localStorage.getItem(SEEN_AT_KEY)
-    const obj = raw ? (JSON.parse(raw) as unknown) : null
-    if (obj && typeof obj === 'object') for (const [k, v] of Object.entries(obj as Record<string, unknown>)) if (typeof v === 'number' && at.has(k)) at.set(k, v)
-  } catch {
-    /* the old order stands */
-  }
+  const obj = readJson(SEEN_AT_KEY, (v) => v, null)
+  if (obj && typeof obj === 'object') for (const [k, v] of Object.entries(obj as Record<string, unknown>)) if (typeof v === 'number' && at.has(k)) at.set(k, v)
   return at
 }
 
-function saveSeenAt(at: ReadonlyMap<string, number>): void {
-  try {
-    localStorage.setItem(SEEN_AT_KEY, JSON.stringify(Object.fromEntries(at)))
-  } catch {
-    /* the order is a convenience */
-  }
-}
+/** The order is a convenience: nothing lost if storage refuses it. */
+const saveSeenAt = (at: ReadonlyMap<string, number>): void => void writeJson(SEEN_AT_KEY, Object.fromEntries(at))
 
 class InventoryStore {
   /** GameState.inventory, as last read (App keeps it current). */

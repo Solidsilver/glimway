@@ -7,7 +7,7 @@ import type {
   HabiticaProfile,
 } from './types.ts';
 
-export const HABITICA_BASE_URL = 'https://habitica.com';
+const HABITICA_BASE_URL = 'https://habitica.com';
 
 /**
  * Minimal field projection for the character mapping (docs/habitica-foundations.md:

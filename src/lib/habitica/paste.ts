@@ -12,7 +12,7 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const UUID_RE = new RegExp(UUID, 'gi')
 const UUID_EXACT = new RegExp(`^${UUID}$`, 'i')
 
-export function isUuid(s: string): boolean {
+function isUuid(s: string): boolean {
   return UUID_EXACT.test(s.trim())
 }
 

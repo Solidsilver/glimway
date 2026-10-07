@@ -7,7 +7,7 @@
  */
 import { GUIDES, type GuideDef, type GuideWhere } from '../content/guides.ts';
 
-export type { GuideDef, GuideWhere };
+export type { GuideDef };
 export { GUIDES };
 
 /** What the guides can see of the player. Everything a world knows; a guest has `connected: false`. */

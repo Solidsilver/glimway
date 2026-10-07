@@ -7,16 +7,20 @@
  *   server has no library yet) keep theirs in the save as story flags
  *   `donated:<paperId>@<YYYY-MM-DD>`. Connected players share one shelf per
  *   world through the server (contract below), with a local fallback when
- *   the endpoint answers 404.
+ *   the server has no library.
  *
- * Server contract (not built yet — see .agent/REPORT.md):
+ * Server contract (server/internal/api/library.go):
  *   GET  /api/library        → 200 { shelves: [{ paperId, donatedBy, donatedAt }] }
  *   POST /api/library/donate   { paperId, key }
  *                            → 200 { entry: { paperId, donatedBy, donatedAt } }
  *                            → 409 { error: { code: 'already-shelved' }, entry }
+ *                                  (no entry for a starting-shelf paper)
  *                            → 403 { error: { code: 'not-held' } }
  *                            → 422 { error: { code: 'unknown-paper' } }
- *   A 404 means "no library on this server": the client falls back to local.
+ *   Other refusals keep their own codes (a 409 can also be
+ *   `idempotency-mismatch` or `world-choice-required`); they count as errors.
+ *   A 404/405/501, or an answer that is not JSON, means "no library on this
+ *   server": the client falls back to local.
  */
 import { PAPERS, paperById } from '../../content/papers.ts';
 
@@ -28,14 +32,14 @@ export interface ShelfEntry {
   donatedAt: string | null;
 }
 
-export const DONATED_PREFIX = 'donated:';
+const DONATED_PREFIX = 'donated:';
 
 /** Papers that are on the shelves before anyone donates anything. */
 export function startingShelf(): ShelfEntry[] {
   return PAPERS.filter((p) => p.source.kind === 'library-start').map((p) => ({ paperId: p.id, donatedBy: null, donatedAt: null }));
 }
 
-export function isoDay(d: Date): string {
+function isoDay(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -84,7 +88,7 @@ export function parseShelves(data: unknown): ShelfEntry[] | null {
   return out;
 }
 
-export function parseEntry(row: unknown): ShelfEntry | null {
+function parseEntry(row: unknown): ShelfEntry | null {
   if (!row || typeof row !== 'object') return null;
   const r = row as Record<string, unknown>;
   if (typeof r.paperId !== 'string' || !paperById(r.paperId)) return null;
@@ -95,9 +99,9 @@ export function parseEntry(row: unknown): ShelfEntry | null {
 
 // ------------------------------------------------------------ remote adapter
 
-export type RemoteLoad = { ok: true; shelves: ShelfEntry[] } | { ok: false; reason: 'unsupported' | 'offline' | 'error' };
+type RemoteLoad = { ok: true; shelves: ShelfEntry[] } | { ok: false; reason: 'unsupported' | 'offline' | 'error' };
 
-export type DonateOutcome =
+type DonateOutcome =
   | { ok: true; entry: ShelfEntry }
   | { ok: false; reason: 'already-shelved'; entry: ShelfEntry | null }
   | { ok: false; reason: 'unsupported' | 'offline' | 'not-held' | 'unknown-paper' | 'signed-out' | 'error' };
@@ -173,7 +177,7 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
         return entry ? { ok: true, entry } : { ok: false, reason: 'error' };
       }
       const c = code(r.json);
-      if (r.status === 409 || c === 'already-shelved') {
+      if (c === 'already-shelved') {
         return { ok: false, reason: 'already-shelved', entry: parseEntry((r.json as { entry?: unknown } | undefined)?.entry) };
       }
       if (r.status === 401) return { ok: false, reason: 'signed-out' };

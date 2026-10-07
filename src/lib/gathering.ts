@@ -5,18 +5,18 @@
 import raw from '../../content/gathering.json' with { type: 'json' };
 import { giftPhrase, itemDef, itemName } from './items.ts';
 
-export interface GatheringActionCaps {
+interface GatheringActionCaps {
   chop: number;
   break: number;
   dig: number;
 }
 
-export interface GatheringCaps {
+interface GatheringCaps {
   visit: GatheringActionCaps;
   day: GatheringActionCaps;
 }
 
-export interface GatheringYield {
+interface GatheringYield {
   item: string;
   min: number;
   max: number;
@@ -198,7 +198,7 @@ export function visitWork(visitId: string): VisitWork {
  * What the wood gave, in words: materials are counted like stuff ("4
  * timber", "a little beeswax" for one), everything else like things.
  */
-export function yieldPhrase(itemId: string, qty: number): string {
+function yieldPhrase(itemId: string, qty: number): string {
   if (itemDef(itemId)?.kind !== 'material') return giftPhrase(itemId, qty);
   const name = itemName(itemId).toLowerCase();
   return qty === 1 ? `a little ${name}` : `${qty} ${name}`;

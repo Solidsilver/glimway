@@ -1,5 +1,5 @@
 /**
- * Habitica avatar/companion asset helpers — Fingersnap M3 (owner: snap_assets).
+ * Habitica avatar/companion asset helpers.
  *
  * Layer composition follows the official Habitica avatar component
  * (website/client/src/components/avatar.vue, HabitRPG/habitica develop
@@ -31,11 +31,11 @@ import {
 } from './gear.ts';
 
 /**
- * Optional profile fields owned by snap_state (to be added to HabiticaProfile
- * in src/lib/habitica/types.ts). Declared structurally here so avatar.ts works
- * before and after that change; HabiticaProfile is assignable to AvatarProfile.
+ * Optional profile fields (HabiticaProfile in src/lib/habitica/types.ts
+ * declares them too). Declared structurally here so any profile that has
+ * them is accepted; HabiticaProfile is assignable to AvatarProfile.
  */
-export interface AvatarProfileExtras {
+interface AvatarProfileExtras {
   /** Costume gear map (items.gear.costume); visuals only, never combat stats. */
   costume?: Record<string, string | null> | null;
   /** True when the costume map should drive visuals (preferences.costume). */
@@ -46,15 +46,14 @@ export interface AvatarProfileExtras {
   selectedMount?: string | null;
 }
 
-export type AvatarProfile = HabiticaProfile & AvatarProfileExtras;
+type AvatarProfile = HabiticaProfile & AvatarProfileExtras;
 
 /**
- * Optional per-slot hair appearance beyond HabiticaProfile's base slot.
- * When snap_state adds these to HabiticaAppearance (mapping from
- * preferences.hair.*), they flow through automatically; until then the
- * layers are skipped and reported (appearance is PARTIAL: base hair only).
+ * Optional per-slot hair appearance beyond the base slot (HabiticaAppearance
+ * maps them from preferences.hair.*). A missing slot's layer is skipped and
+ * reported (appearance is PARTIAL: base hair only).
  */
-export interface HairSlotExtras {
+interface HairSlotExtras {
   hairBangs?: number;
   hairMustache?: number;
   hairBeard?: number;
@@ -62,7 +61,7 @@ export interface HairSlotExtras {
   hairFlower?: number;
 }
 
-export type AvatarAppearance = HabiticaProfile['appearance'] & HairSlotExtras;
+type AvatarAppearance = HabiticaProfile['appearance'] & HairSlotExtras;
 export type AvatarProfileFull = Omit<AvatarProfile, 'appearance'> & {
   appearance: AvatarAppearance;
 };
@@ -93,7 +92,7 @@ export function upstreamSpriteUrl(name: string): string {
 }
 
 /** Our server's sprite proxy (same origin, WebGL-safe; it fetches from upstream once). */
-export const PROXY_SPRITE_BASE = '/api/sprites/';
+const PROXY_SPRITE_BASE = '/api/sprites/';
 
 /** Same-origin proxy URL for an upstream sprite, with its upstream extension (no validation). */
 export function proxiedSpriteUrl(name: string): string {

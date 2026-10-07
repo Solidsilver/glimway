@@ -183,8 +183,6 @@ export const POIS: POI[] = [
   { id: 'mossy-arch', name: 'Mossy Arch', discoveryText: 'Two great stones leaning together over a path the woods took back. A lamp hook still hangs at the top. Someone trimmed a wick here every night, once.' }
 ];
 
-export const CHARTED_BY_FORMAT = 'Charted by {name}';
-
 /** Objects the Wilds give back at a turning. Ids match content/wilds.json (the generator drops these). */
 export const TRINKETS: Trinket[] = [
   { id: 'whittled-fox', name: 'Whittled Fox', blurb: 'A carter\'s door-fox in soft pine, one ear carved longer than the other. Meant for a lintel somewhere.' },
@@ -236,7 +234,7 @@ export const FALLEN_HERO_LANTERNS: FallenHeroLanterns = {
 /** The Turning: the outer Wilds reshuffle on a schedule the Keeper posts a day ahead. */
 export const SEASON_SHIFT_NOTICE = 'Posted on the notice board: the outer Wilds have turned. Cairn-walkers, clear your stones. Charts start fresh today.';
 
-/** The notice posted the day before a turning; {wick} is the month (e.g. "Amber"). */
+/** The notice posted the day before a turning; {wick} is the month (e.g. "Amber"). content/calendar.go writes the same text (vectors guard it). */
 export const TURNING_NOTICE_FORMAT = 'Dark of {wick}-wick — the outer Wilds will turn.';
 
 /** Carting Day (Cart-wick the 6th): a market now, and a hame on the gate. */

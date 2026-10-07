@@ -95,7 +95,7 @@ export const ITEM_INFO: Record<string, ItemInfo> = {
 };
 
 /** Display names for discovery ids. */
-export const DISCOVERY_INFO: Record<string, ItemInfo> = {
+const DISCOVERY_INFO: Record<string, ItemInfo> = {
   'route-marker': {
     name: 'The Faded Route Marker',
     icon: 'stone',
@@ -174,8 +174,8 @@ export function areaInfo(areaId: AreaId): LocationInfo {
 type DialogueRule = Dialogue & { forStages: QuestStage[] };
 
 /**
- * NPC and interaction ids used by the runtime. This list is the agreement
- * point with docs/runtime-contract.md: mara, pip, orrin, clue, lantern.
+ * NPC and interaction ids used by the runtime (docs/runtime-contract.md):
+ * mara, pip, orrin, clue, lantern.
  * The quest event 'defeat-guardian' is fired by runtime encounter logic (the
  * warden settling), not by dialogue.
  *
