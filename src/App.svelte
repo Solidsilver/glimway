@@ -77,6 +77,8 @@
   import WorldChoiceGate from './ui/WorldChoiceGate.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
+  import UpdateNotice from './ui/UpdateNotice.svelte'
+  import { update, watchForUpdates } from './ui/update.svelte'
   import PartyPrompt from './ui/PartyPrompt.svelte'
   import LeaverNotice from './ui/LeaverNotice.svelte'
   import WorldMove from './ui/WorldMove.svelte'
@@ -412,6 +414,7 @@
 
   onMount(() => {
     const cleanupBus = wireBus()
+    const stopUpdates = watchForUpdates()
 
     // Hidden: save now, in queue order. Leaving (pagehide): the last upload
     // may skip a busy queue, since the page won't wait for it.
@@ -455,6 +458,7 @@
       // Presence first: its socket, link poll and bus listener go with the App.
       stopPresence()
       cleanupBus()
+      stopUpdates()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onHide)
       session?.destroy()
@@ -925,6 +929,24 @@
     window.location.reload()
   }
 
+  /**
+   * The new-version notice's Reload: everything saved first (the browser,
+   * then the server), and only then the reload. If something won't save,
+   * the notice says so and the page stays.
+   */
+  async function reloadForUpdate(): Promise<void> {
+    if (update.reloading) return
+    update.reloading = true
+    update.held = null
+    const result = session ? await session.settle() : 'saved'
+    if (result === 'saved') {
+      window.location.reload()
+      return
+    }
+    update.reloading = false
+    update.held = result
+  }
+
   function requestNew(): void {
     if (hasSave) confirm = 'new'
     else showChoice()
@@ -1009,6 +1031,8 @@
   const inventoryNew = $derived(unseen(inventoryEntries({ pack: inventory.pack, materials: ui.materials }), inventory.seenSet).length)
 
   function toggle(p: Exclude<Panel, null>): void {
+    // Saving for a reload: nothing opens (a panel could start a write).
+    if (update.reloading) return
     if (session) inventory.syncPack(session.state.inventory)
     const next = panel === p ? null : p
     sfx(next ? 'open' : 'close')
@@ -1022,7 +1046,7 @@
    * fields (credentials, import codes) are ignored so typing never toggles.
    */
   function onKeyGlobal(e: KeyboardEvent): void {
-    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving) return
+    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving || update.reloading) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
@@ -1283,6 +1307,8 @@
     {:else if leaverNotice && promptClear}
       {@const lv = leaverNotice}
       <LeaverNotice view={lv} onLeave={() => openLeave(lv)} onClose={closeLeaverNotice} />
+    {:else if update.ready && (promptClear || update.reloading)}
+      <UpdateNotice onReload={reloadForUpdate} />
     {/if}
     {#if moving}
       <WorldMove {session} target={moving.target} home={moving.home} leave={moving.leave ?? false} view={moving.view} arriving={moving.arriving} {onMoved} {onHere} onCancel={() => (moving = null)} />

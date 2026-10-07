@@ -79,7 +79,9 @@ func withStatic(backend http.Handler, directory string) (http.Handler, func(), e
 			http.NotFound(w, r)
 			return
 		}
-		if name != "index.html" && !strings.HasSuffix(name, ".html") {
+		// Pages and version.json (the client's "new version" check) are never
+		// cached: either one stale would hide a release.
+		if !strings.HasSuffix(name, ".html") && name != "version.json" {
 			w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 			if hashedAsset.MatchString("/" + name) {
 				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

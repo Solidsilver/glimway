@@ -252,7 +252,10 @@ git lfs pull                 # needed if the checkout uses Git LFS
 npm ci
 npm run verify
 go test ./...
-CGO_ENABLED=0 go build -trimpath -o glimway-server ./server/cmd/glimway-server
+# The version and commit show in /api/health and the start-up log ("dev" without them).
+version=$(node -p 'require("./package.json").version')
+CGO_ENABLED=0 go build -trimpath -ldflags "-X main.version=$version -X main.build=$(git rev-parse --short HEAD)" \
+  -o glimway-server ./server/cmd/glimway-server
 sudo install -Dm755 glimway-server /usr/local/bin/glimway-server
 sudo mkdir -p /srv/glimway
 sudo cp -a dist /srv/glimway/
@@ -310,9 +313,10 @@ from one non-root process (UID/GID 10001). Releases publish `X.Y.Z`, `X.Y`,
 `latest`, and `sha-<commit>` tags for `linux/amd64` and `linux/arm64`. The
 `/data` named volume contains SQLite, its WAL/SHM files, sprite cache and any
 manual backups. The final Alpine image includes CA certificates and a health
-check against `/api/health`, which checks database availability. Use one
-replica. Habitica artwork retains its separate **non-commercial** terms even
-when delivered in an AGPL image; see the licence notes above.
+check against `/api/health`, which checks database availability and names the
+server's version and build. Use one replica. Habitica artwork retains its
+separate **non-commercial** terms even when delivered in an AGPL image; see the
+licence notes above.
 
 After the repository and first release are published, a local HTTP quickstart:
 
