@@ -165,7 +165,7 @@ export interface RawApi {
   storage(): Promise<StorageResponse>;
   storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId }): Promise<StorageMoveResponse>;
   craft(req: Envelope & { recipeId: string; qty: number }): Promise<CraftResponse>;
-  /** Make food, remedies and oils at the cottage hearth (tier 1+ or a placed stone hearth). */
+  /** Make food, remedies and oils at the cottage hearth (membership in a tier 1+ homestead). */
   hearthCraft(req: Envelope & { recipeId: string; qty: number }): Promise<HearthCraftResponse>;
   /** Copy a recipe page you hold at a placed writing desk (1 fiber a copy). */
   deskCopy(req: Envelope & { pageId: string; qty: number }): Promise<DeskCopyResponse>;

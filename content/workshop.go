@@ -177,12 +177,6 @@ var CraftingRules = func() Crafting {
 	return c
 }()
 
-// KnownAdventureItem: a carried stack that isn't a material (keepsakes,
-// parts, consumables, seeds).
-func KnownAdventureItem(id string) bool {
-	d, ok := ItemFor(id)
-	return ok && d.AssetKind() == "item"
-}
 func RecipeFor(id string) (Recipe, bool) {
 	for _, r := range CraftingRules.Recipes {
 		if r.ID == id {

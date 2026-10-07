@@ -678,16 +678,18 @@ type homeRequest struct {
 	HomeID   string          `json:"homeId,omitempty"`
 }
 
-// cleanPostName tidies a lantern post's name (src/lib/homestead.ts cleanPostName).
+// cleanPostName rejects Unicode controls before tidying whitespace, so tabs,
+// newlines and NEL cannot disappear during normalization. Shared vectors live
+// in content/vectors/post-names.json (src/lib/homestead.ts cleanPostName).
 func cleanPostName(raw string) (string, bool) {
-	name := strings.Join(strings.Fields(raw), " ")
-	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > content.HomeRules.LanternPosts.NameMax {
-		return "", false
-	}
-	for _, c := range name {
+	for _, c := range raw {
 		if unicode.IsControl(c) {
 			return "", false
 		}
+	}
+	name := strings.Join(strings.Fields(raw), " ")
+	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > content.HomeRules.LanternPosts.NameMax {
+		return "", false
 	}
 	return name, true
 }

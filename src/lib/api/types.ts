@@ -1,6 +1,6 @@
 /**
- * Request/response shapes of the Fingersnap server, mirroring the backend
- * contract (.agent/BACKEND-REPORT.md, "API contract for the frontend").
+ * Request/response shapes of the Fingersnap server, mirroring the handlers
+ * in server/internal/api and the snapshot in server/internal/store.
  */
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
