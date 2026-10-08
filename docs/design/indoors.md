@@ -948,7 +948,9 @@ pin. Keep the opening's spec on a seeded fresh account so it doesn't run the who
 
 ## 9. Open questions, with defaults
 
-These go ahead as written unless the owner says otherwise.
+These go ahead as written unless the owner says otherwise. **Confirmed by the owner on
+2026-10-08:** 1 (the 60-minute hour), 8 (small rewards), 9 (rooms bigger inside) and 10 (light
+pools, no day/night).
 
 1. **The cycle's length and shape.** *Default: a 60-minute hour; Hazel 40 in / 20 out, Finn 25
    at the stones, 10 in the loft, 25 at his door, offset 20.* layers.md suggested 40/20; one hour
