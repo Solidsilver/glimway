@@ -23,7 +23,7 @@ func oldAccount026(t *testing.T, path string, nullOrigin bool, consistent bool) 
 	}
 	state := rules.NewState()
 	state.Area = "woodland"
-	state.Flags = []string{"future:unknown", "client-mark"}
+	state.Flags = []string{"seen:retained", "seen:client-mark"}
 	state.Inventory = append(state.Inventory, "beeswax-candle")
 	origin := any("fresh")
 	if nullOrigin {
@@ -87,10 +87,10 @@ func TestAccounts026NoSessionAndStateBridge027(t *testing.T) {
 				t.Fatal("identity or balances changed")
 			}
 			if nullOrigin {
-				if snap.State.Area != "village" || snap.State.HP != 32 || snap.Version != 8 || snap.State.EmberXP != rules.LifetimeXP(2, 5) {
+				if snap.State.Area != "village" || snap.State.HP != 32 || snap.Version != 9 || snap.State.EmberXP != rules.LifetimeXP(2, 5) {
 					t.Fatal("fresh checkpoint baseline", JSON(snap))
 				}
-			} else if snap.State.Area != "woodland" || !strings.Contains(JSON(snap.State.Flags), "future:unknown") || snap.Version != 7 {
+			} else if snap.State.Area != "woodland" || !strings.Contains(JSON(snap.State.Flags), "seen:retained") || snap.Version != 8 {
 				t.Fatal("chosen owner data changed", JSON(snap))
 			}
 			for _, q := range []string{"SELECT count(*) FROM region_epochs", "SELECT count(*) FROM entity_state", "SELECT count(*) FROM personal_claims", "SELECT count(*) FROM lanterns", "SELECT count(*) FROM lantern_rewards"} {
@@ -132,7 +132,7 @@ func TestAccounts026InconsistentCheckpointFallsBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.State.EmberXP != rules.LifetimeXP(2, 5)+1 || snap.State.HP != 32 || snap.Version != 8 {
+	if snap.State.EmberXP != rules.LifetimeXP(2, 5)+1 || snap.State.HP != 32 || snap.Version != 9 {
 		t.Fatal("fallback lost verified mark/profile", JSON(snap))
 	}
 	if err = foreignKeysClean(tx); err != nil {
@@ -191,7 +191,7 @@ func TestAccounts026FallbacksNeverRequirePerfectEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if snap.State.Embers != 9 || snap.State.XPEmbers != 3 || snap.Version != 8 {
+			if snap.State.Embers != 9 || snap.State.XPEmbers != 3 || snap.Version != 9 {
 				t.Fatal("fallback lost existing entitlements")
 			}
 			if kind == "missing-baseline" || kind == "invalid-both" {

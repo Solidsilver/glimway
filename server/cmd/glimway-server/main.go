@@ -68,6 +68,7 @@ func envInt(name string, fallback int) (int, error) {
 
 func run(args []string) error {
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
+	startClock := devClock(f)
 	staticDir := f.String("static-dir", env("STATIC_DIR", ""), "Optional built web directory (empty disables static serving)")
 	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
 	path := f.String("db", env("DB", defaultDB()), "SQLite database path")
@@ -106,6 +107,10 @@ func run(args []string) error {
 	}
 	partyAdmission := f.Bool("party-admission", partyDefault, "Let members of a party with a world here sign in without a code, and make party worlds")
 	if err = f.Parse(args); err != nil {
+		return err
+	}
+	clockNow, err := startClock()
+	if err != nil {
 		return err
 	}
 	proxies := []string{}
@@ -290,7 +295,7 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clockNow, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
 	defer handler.ClosePresence()
 	httpHandler, closeStatic, err := withStatic(handler, *staticDir)
 	if err != nil {

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -497,9 +496,7 @@ type moveResult struct {
 func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		WorldID  string          `json:"worldId"`
+		WorldID string `json:"worldId"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
@@ -508,7 +505,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "invalid-request")
 	}
 	mover := ""
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if !rules.SafeAreas[s.State.Area] {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
@@ -568,14 +565,12 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
 	mover := ""
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		here, err := loadWorldRef(ctx, tx, s.WorldID)
 		if err != nil {
 			return nil, err

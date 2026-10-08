@@ -21,6 +21,7 @@ import type { EnemyType, WorldData } from '../worlds'
 import type { Effects } from './fx'
 
 import { WARDEN, WardenEncounter } from './warden'
+import { curatedToRestore } from '../rollback'
 import { Creatures } from './creatures'
 
 export interface Enemy {
@@ -125,6 +126,17 @@ export class EnemySystem {
 
   get enemies(): Enemy[] {
     return this._enemies
+  }
+
+  /**
+   * Connected: the state the game shows changed. A curated defeat the world
+   * refused brings its enemy back to its spot, and a refused settling stands
+   * the warden up again; enemies still fighting are left alone.
+   */
+  reconcile(state: GameState): void {
+    const standing = new Set(this._enemies.filter((e) => !e.dead).map((e) => e.id))
+    for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
+    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(state.quest)
   }
 
   /** Take an enemy off the list (killed, or the warden settled). */

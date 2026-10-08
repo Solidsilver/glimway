@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -74,15 +73,13 @@ func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string,
 func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		RecipeID string          `json:"recipeId"`
-		Qty      int             `json:"qty"`
+		RecipeID string `json:"recipeId"`
+		Qty      int    `json:"qty"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -147,15 +144,13 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		PageID   string          `json:"pageId"`
-		Qty      int             `json:"qty"`
+		PageID string `json:"pageId"`
+		Qty    int    `json:"qty"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -280,25 +275,22 @@ func (a *Server) woodpileRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Woodpile woodpileView `json:"woodpile"`
-	}{s, wv})
+	}{wv})
 }
 
 func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		Action   string          `json:"action"` // "stack" or "collect"
-		Qty      int             `json:"qty,omitempty"`
-		StackID  string          `json:"stackId,omitempty"`
+		Action  string `json:"action"` // "stack" or "collect"
+		Qty     int    `json:"qty,omitempty"`
+		StackID string `json:"stackId,omitempty"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}

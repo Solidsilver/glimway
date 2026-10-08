@@ -141,7 +141,7 @@ func LoadWilds() (Wilds, error) {
 	if err = json.Unmarshal(b, &w); err != nil {
 		return w, err
 	}
-	if w.GeneratorVersion != 1 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || w.DeepTangleManhattanDistance < 1 || len(w.Regions) == 0 {
+	if w.GeneratorVersion != 2 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || w.DeepTangleManhattanDistance < 1 || len(w.Regions) == 0 {
 		return w, fmt.Errorf("invalid wilds: version/chunk/regions")
 	}
 	for _, r := range w.Regions {
@@ -222,9 +222,10 @@ var WildsRules = func() Wilds {
 // design layer the client plays with (npm run papers). Typed loaders on
 // both sides: this one for Go, src/content/papers.ts for TypeScript.
 type Paper struct {
-	ID         string `json:"id"`
-	Collection string `json:"collection"`
-	Source     string `json:"source"`
+	ID         string    `json:"id"`
+	Collection string    `json:"collection"`
+	Source     string    `json:"source"`
+	Rule       PaperRule `json:"rule"`
 }
 
 var paperSources = map[string]bool{
@@ -252,6 +253,10 @@ func LoadPapers() ([]Paper, error) {
 		// A find is the story flag "paper:<id>"; story flags cap at 128 characters.
 		if p.ID == "" || len(p.ID) > 128-len("paper:") || p.Collection == "" || !paperSources[p.Source] || seen[p.ID] {
 			return nil, fmt.Errorf("invalid papers: row %+v", p)
+		}
+		q := p.Rule
+		if q.Kind != p.Source || p.Source == "placed" && (q.Area == "" || q.TX < 0 || q.TY < 0) || (p.Source == "quest" || p.Source == "gift") && q.Stage == "" || p.Source == "village-project" && q.Project == "" || p.Source == "commons" && q.Fact == "" || p.Source == "wilds-poi" && q.POI == "" && q.Site == "" || p.Source == "wilds-chest" && q.Tier != 3 || p.Source == "echo" && q.Member == "" || p.Source == "turning" && !q.Unbuilt && q.Fact == "" && q.Site == "" {
+			return nil, fmt.Errorf("invalid paper find rule %s", p.ID)
 		}
 		seen[p.ID] = true
 	}

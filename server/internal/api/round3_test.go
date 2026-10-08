@@ -32,7 +32,7 @@ func TestRound3HighestCreditDetectsHiddenForgery(t *testing.T) {
 			x.set(profile("alice", 20, 0, 20))
 			c, s := x.ready("alice")
 			advanceActive(x, c, 10*86400)
-			high := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 60, 0, 20), s.State), c, 200)
+			high := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 60, 0, 20), s.State), c, 200)
 			high.Lease = s.Lease
 			if high.State.XPEmbers != 1200 || high.Pending == 0 {
 				t.Fatal("review reproduction missing paid/held forgery")
@@ -46,7 +46,7 @@ func TestRound3HighestCreditDetectsHiddenForgery(t *testing.T) {
 				}
 			}
 			for _, level := range levels {
-				next := x.expect("POST", "/api/sync", syncBody(s, profile("alice", level, 0, 20), s.State), c, 200)
+				next := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", level, 0, 20), s.State), c, 200)
 				next.Lease = s.Lease
 				s = next
 			}
@@ -70,7 +70,7 @@ func TestRound3CheckpointCursorExcludesReviewedSameSecondCredit(t *testing.T) {
 	x := newRig(t)
 	x.set(profile("alice", 20, 0, 20))
 	c, s := x.ready("alice")
-	high := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 30, 0, 20), s.State), c, 200)
+	high := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 30, 0, 20), s.State), c, 200)
 	x.set(profile("alice", 30, 0, 20))
 	c = x.login("alice", "")
 	verified := x.expect("GET", "/api/state", nil, c, 200)
@@ -143,7 +143,7 @@ func TestRound3SessionIdleSlidingAbsoluteAndRollback(t *testing.T) {
 		x.now.Add(86400)
 		doc := s.State
 		doc.HP = 9999
-		x.expect("PUT", "/api/progress", mutation(s, doc), c, 400)
+		x.expect("PUT", "/api/progress", mutation(s, doc), c, 404)
 		if count(t, x.db, "SELECT expires_at FROM sessions WHERE id_hash=?", store.Hash(c.Value)) != expiry {
 			t.Fatal("failed transaction renewed session")
 		}

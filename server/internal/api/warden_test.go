@@ -2,10 +2,8 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"glimway/content"
-	"glimway/server/internal/store"
-	"glimway/server/internal/wilds"
+	"glimway/server/internal/rules"
 	"testing"
 	"time"
 )
@@ -285,9 +283,13 @@ func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 	c, s := x.ready("alice")
 
 	doc := s.State
-	for _, stage := range []string{"guardian-defeated", "complete"} {
+	for _, stage := range rules.Stages[1:] {
 		doc.Quest = stage
-		res := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
+		doc.Area = "ruin"
+		if stage == "accepted" || stage == "complete" {
+			doc.Area = "village"
+		}
+		res := x.expect("POST", "/api/quest/step", body(s, stage, map[string]any{"quest": "lantern-road", "to": stage, "where": testWhere(doc)}), c, 200)
 		s.Snapshot = res.Snapshot
 		items := x.items("GET", "/api/items", nil, c, 200)
 		for _, inst := range items.Items.Instances {
@@ -302,7 +304,7 @@ func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency=?", content.StackCurrency("warden-sliver")) != 0 {
 		t.Fatal("a sliver ledger row was written")
 	}
-	if count(t, x.db, "SELECT count(*) FROM outcomes WHERE account_id='"+x.account("alice")+"' AND outcome_id='quest-gift:defeat-guardian'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM outcomes WHERE account_id='"+x.account("alice")+"' AND outcome_id='quest-gift:lantern-road:guardian-defeated'") != 1 {
 		t.Fatal("the quest's ember gift should still land")
 	}
 
@@ -344,78 +346,6 @@ func TestUnmooredConsumables(t *testing.T) {
 	}
 
 	x.conserved(x.account("alice"))
-}
-
-func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
-	x := newRig(t)
-	seedCookie, seed := x.ready("probe")
-	v := x.region(seedCookie)
-	entryX, entryY := 1, 1
-	for _, region := range content.WildsRules.Regions {
-		if region.ID == "inner-1" {
-			entryX, entryY = region.EntryX, region.EntryY
-		}
-	}
-	deep := []entityView{}
-	for _, entity := range v.Entities {
-		var cx, cy int
-		fmt.Sscanf(entity.ID, entity.Kind+":%d:%d:", &cx, &cy)
-		if (entity.Kind == "node" || entity.Kind == "chest") && intAbs(cx-entryX)+intAbs(cy-entryY) >= content.WildsRules.DeepTangleManhattanDistance {
-			deep = append(deep, entity)
-		}
-	}
-	if len(deep) < 2 {
-		t.Fatal("expected at least two entities in deep Tangle")
-	}
-	player := "sliver-hunter"
-	c, s := x.member(player, seed.WorldID)
-	account := x.account(player)
-	week := int(x.now.Load() / (7 * 86400))
-	first := entityView{}
-	for n := 0; n < 10000 && first.ID == ""; n++ {
-		for _, entity := range deep {
-			var cx, cy int
-			fmt.Sscanf(entity.ID, entity.Kind+":%d:%d:", &cx, &cy)
-			if wilds.Hash(account, entity.ID, week, "warden-sliver", cx, cy)%1000 < 2 {
-				first = entity
-				break
-			}
-		}
-		if first.ID == "" {
-			week++
-		}
-	}
-	if first.ID == "" {
-		t.Fatal("no deterministic rare roll for actual random account")
-	}
-	x.now.Store(int64(week)*7*86400 + 3600)
-	c, s = x.again(player)
-	v = x.region(c)
-	var second entityView
-	for _, e := range deep {
-		if e.ID != first.ID {
-			second = e
-			break
-		}
-	}
-	request := body(s, "rare-find", map[string]any{"epoch": v.Epoch.ID, "entityId": first.ID, "progress": nearEntity(s, first), "cycle": 0})
-	grant := x.exp("POST", "/api/wilds/claim", request, c, 200)
-	if !grant.Result.WardenSliverFound {
-		t.Fatal("expected claim response to report the warden sliver")
-	}
-	replay := x.exp("POST", "/api/wilds/claim", request, c, 200)
-	if store.JSON(replay) != store.JSON(grant) {
-		t.Fatal("claim replay changed the response")
-	}
-	update(&s, grant)
-	blocked := x.exp("POST", "/api/wilds/claim", body(s, "weekly-cap", map[string]any{"epoch": v.Epoch.ID, "entityId": second.ID, "progress": nearEntity(s, second), "cycle": 0}), c, 200)
-	if blocked.Result.WardenSliverFound || count(t, x.db, "SELECT count(*) FROM warden_finds WHERE account_id=?", account) != 1 {
-		t.Fatal("weekly cap granted a second sliver")
-	}
-	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE location='pack' AND owner=? AND item_def='warden-sliver'", account) != 1 {
-		t.Fatal("expected exactly one sliver instance")
-	}
-	x.conserved(account)
 }
 
 func instanceFromList(list []instanceView, id string) *instanceView {

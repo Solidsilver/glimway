@@ -43,7 +43,7 @@ func (x *rig) home(c *http.Cookie) homeView {
 func (x *rig) homeOpRefreshing(c *http.Cookie, s *response, op string, fields map[string]any, status int) expansionResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	v := x.exp("POST", "/api/homestead/"+op, body(*s, fmt.Sprintf("%s-%d-%d", op, s.Version, x.now.Load()), fields), c, status)
+	v := x.exp("POST", "/api/homestead/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Version, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		update(s, v)
 	}

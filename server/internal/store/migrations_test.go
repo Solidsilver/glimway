@@ -43,6 +43,7 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"025_world_choice.sql", "6604e5831add696cbd7353d7aa42e69d71bc7fb2bb609bf1d387c98962ad78e9"},
 	{"026_accounts.sql", "3e7f7e5dd78e4874b54988f435ca64073bca6a3e489c2c7e47822c5b518c8055"},
 	{"027_server_state.sql", "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d"},
+	{"028_story_move.sql", "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17"},
 }
 
 func checkDeployedHistory(history []migrationRecord) error {
@@ -75,6 +76,9 @@ func checkMigrationIntegrity(source fs.FS) error {
 			return fmt.Errorf("migration history checksum mismatch: %s", path)
 		}
 		return nil
+	}
+	if err := checkDeployedHistory(history); err != nil {
+		return err
 	}
 	usedBackfills := map[string]bool{}
 	for _, m := range history {
@@ -143,7 +147,7 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 		{"changed SQL", func(f fstest.MapFS, _ *[]migrationRecord) {
 			f["migrations/001_core.sql"].Data = append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 		}, "checksum mismatch: migrations/001_core.sql"},
-		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "checksum mismatch: migrations/001_core.sql"},
+		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "deployed migration history changed"},
 		{"coordinated SQL and hash edit", func(f fstest.MapFS, h *[]migrationRecord) {
 			raw := append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 			f["migrations/001_core.sql"].Data = raw

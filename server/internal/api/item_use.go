@@ -31,21 +31,24 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 		return fail(409, "not-usable-yet")
 	}
 	// A hero at 0 HP is too far gone to eat or drink. Only a sync, a rest or
-	// a revive (as the rules define them) lifts the zero-HP lock.
+	// a fall lifts the zero-HP lock.
 	if s.State.HP <= 0 {
 		return fail(409, "too-weak")
 	}
+
 	helps := false
 	for _, e := range def.Use {
 		switch e.Type {
 		case "restore-hp":
 			if s.State.HP < s.State.MaxHP {
 				helps = true
+				s.VitalsWritten = true
 				s.State.HP = math.Min(s.State.MaxHP, s.State.HP+float64(e.Amount))
 			}
 		case "restore-mana":
 			if s.State.Mana < s.State.MaxMana {
 				helps = true
+				s.VitalsWritten = true
 				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.Amount))
 			}
 		case "clear-unmoored", "ease-unmoored":

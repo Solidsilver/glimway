@@ -4,9 +4,7 @@
  * can never reach the running game (and unknown fields are dropped).
  */
 import { decodePlayerState } from './state-contract.ts';
-import { toJson } from '@bufbuild/protobuf';
-import { HabiticaProfileSchema } from '../gen/glimway/v1/profile_pb.js';
-import { createNewGame } from '../state.ts';
+import { gameStateOf, profileOf } from './predict.ts';
 import { validateSave } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
@@ -98,13 +96,12 @@ function num(v: unknown): number {
 // TODO(C2): remove the retained domain document projection with the old Link.
 export function parseSnapshot(raw: unknown): Snapshot {
   const o = obj(raw);
-  // TODO(C2): replace this local GameState projection when the predictor lands.
-  // The v3 server state stays typed on the operations facade.
+  // The typed server state: the link adopts it, the game reads its projection.
   if (typeof o.state === 'object' && o.state !== null && 'account' in o.state) {
     try {
       const p = decodePlayerState(o.state);
-      const state = validateSave({ ...createNewGame(), area: p.place!.area, position: { x: p.place!.x, y: p.place!.y }, quest: p.story!.quests['lantern-road'] ?? 'new', hp: p.vitals!.hp, maxHp: p.vitals!.maxHp, mana: p.vitals!.mana, maxMana: p.vitals!.maxMana, flags: p.story!.marks, inventory: p.story!.questItems, discoveries: p.story!.discoveries, defeatedEnemies: p.story!.defeated, playSeconds: p.story!.playSeconds, embers: p.embers!.balance, xpEmbers: p.embers!.xpEarned, emberXp: p.embers!.xpMark });
-      return { state, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: p.account!.profileSource === 'habitica' ? 'imported' : 'demo', saveOrigin: 'fresh', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(p.profile ? { importedProfile: validateHabiticaProfile(toJson(HabiticaProfileSchema, p.profile, { alwaysEmitImplicit: true })) } : {}) };
+      const importedProfile = profileOf(p);
+      return { state: gameStateOf(p), player: p, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: importedProfile ? 'imported' : 'demo', saveOrigin: 'fresh', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(importedProfile ? { importedProfile } : {}) };
     } catch { throw new ApiError('bad-response'); }
   }
   let state;

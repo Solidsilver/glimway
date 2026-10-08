@@ -7,6 +7,7 @@ import (
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"slices"
 )
 
 // StateComposition is the handoff to B's normalized state loader and saver.
@@ -30,17 +31,29 @@ func (DefaultStateComposition) PlayerState(ctx context.Context, tx *sql.Tx, s Sn
 	return PlayerState(ctx, tx, s)
 }
 
-// PlayerState projects the retained document while B builds migration 028 and
-// state.go. There is already only one authoritative version: players.version.
+// PlayerState projects normalized state in the caller’s transaction.
 func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerState, error) {
 	out := &contract.PlayerState{
 		Version: float64(s.Version),
 		Account: &contract.Account{AccountId: s.AccountID, DisplayName: s.DisplayName, ProfileSource: s.ProfileSource, WorldId: s.WorldID, Flagged: s.Flagged},
 		Vitals:  &contract.Vitals{Hp: s.State.HP, Mana: s.State.Mana, MaxHp: s.State.MaxHP, MaxMana: s.State.MaxMana},
 		Place:   &contract.Place{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y},
-		Story:   &contract.Story{Quests: map[string]string{}, Marks: s.State.Flags, Discoveries: s.State.Discoveries, Defeated: s.State.DefeatedEnemies, QuestItems: questInventory(s.State.Inventory), PlaySeconds: s.State.PlaySeconds},
+		Story:   &contract.Story{Quests: map[string]string{}, Marks: slices.Clone(s.State.Flags), Discoveries: slices.Clone(s.State.Discoveries), Defeated: slices.Clone(s.State.DefeatedEnemies), QuestItems: questInventory(s.State.Inventory), PlaySeconds: s.State.PlaySeconds},
 		Embers:  &contract.Embers{Balance: float64(s.State.Embers), XpEarned: float64(s.State.XPEmbers), Pending: float64(s.Pending), XpMark: s.State.EmberXP, VerifiedXp: s.VerifiedXP},
 	}
+	// Marks are the client's story source of truth. Compatibility lists are
+	// projections of those same found/defeated rows. Sort every set so the same
+	// version has identical wire arrays before and after a database reload.
+	for _, id := range out.Story.Discoveries {
+		out.Story.Marks = rules.AddUnique(out.Story.Marks, "found:"+id)
+	}
+	for _, id := range out.Story.Defeated {
+		out.Story.Marks = rules.AddUnique(out.Story.Marks, "defeated:"+id)
+	}
+	slices.Sort(out.Story.Marks)
+	slices.Sort(out.Story.Discoveries)
+	slices.Sort(out.Story.Defeated)
+	slices.Sort(out.Story.QuestItems)
 	if s.HabiticaPartyID != nil {
 		out.Account.PartyId = wrapperspb.String(*s.HabiticaPartyID)
 	}
@@ -50,7 +63,7 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 	if s.ImportedProfile != nil {
 		out.Profile = projectProfile(*s.ImportedProfile)
 	}
-	// Reports do not use the old document. Its seq is available before B lands.
+	// Report acknowledgments and independent causal watermarks.
 	err := tx.QueryRowContext(ctx, "SELECT report_seq,report_client,report_generation,vitals_set_version,vitals_at,cast_ready_at FROM player_vitals WHERE account_id=?", s.AccountID).Scan(&out.Vitals.ReportSeq, &out.Vitals.ReportClient, &out.Vitals.ReportGeneration, &out.Vitals.VitalsSetVersion, &out.Vitals.VitalsAt, &out.Vitals.CastReadyAt)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err

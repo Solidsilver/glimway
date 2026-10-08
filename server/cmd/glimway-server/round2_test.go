@@ -15,7 +15,7 @@ func TestRound2ACLIFlagClear(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Seed a complete player through the minimum foreign-key graph.
-	_, err = s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES('w','alice','seed',NULL,1); INSERT INTO players(account_id,display_name,world_id,flagged_at,created_at,last_seen_at) VALUES('alice','Hero','w',1,1,1); INSERT INTO progress VALUES('alice',1,0,'{}',1)")
+	_, err = s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES('w','alice','seed',NULL,1); INSERT INTO players(account_id,display_name,world_id,flagged_at,created_at,last_seen_at) VALUES('alice','Hero','w',1,1,1)")
 	s.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestOperatorCommandsResolveRandomAccountsFromHabiticaSubjects(t *testing.T)
 	if _, err = s.DB.Exec(`INSERT INTO players(account_id,display_name,world_id,flagged_at,created_at,last_seen_at) VALUES(?,'Hero','w',1,1,1)`, account); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.DB.Exec(`INSERT INTO progress VALUES(?,1,0,'{}',1)`, account); err != nil {
+	if _, err = s.DB.Exec(`SELECT ?`, account); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = s.DB.Exec(`INSERT INTO sign_ins VALUES(?,'habitica','known-subject',NULL,1)`, account); err != nil {

@@ -13,7 +13,7 @@ import (
 // older binary to create an existing database. Applied rows still retain names.
 // Freeze recorded SQL/backfills; change behavior through a forward migration.
 //
-//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go
+//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go migration_028_backfill.go
 var migrations embed.FS
 
 type migrationRecord struct {
@@ -26,6 +26,7 @@ type migrationRecord struct {
 var migrationBackfills = map[string]func(*sql.Tx) error{
 	"migration_003_backfill.go": initializeLossReferences,
 	"migration_026_backfill.go": finishOrigins026,
+	"migration_028_backfill.go": moveStory028,
 }
 
 func migrationHistory() ([]migrationRecord, error) {

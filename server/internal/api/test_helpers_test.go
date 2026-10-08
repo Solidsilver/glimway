@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -48,12 +49,44 @@ func profile(id string, level, exp, hp float64) rules.Profile {
 	return rules.SanitizeProfile(p)
 }
 
+// API fixtures share only the bytes of an empty, fully migrated database.
+// Each test opens an independent copy; upgrade tests build their old schemas
+// explicitly. This avoids repeating expensive migration instrumentation under race.
+var fixtureSchema struct {
+	once sync.Once
+	raw  []byte
+	err  error
+}
+
+func fixtureDatabase(t *testing.T, path string) (*store.Store, error) {
+	t.Helper()
+	fixtureSchema.once.Do(func() {
+		template := filepath.Join(t.TempDir(), "empty.sqlite")
+		var db *store.Store
+		db, fixtureSchema.err = store.Open(template)
+		if fixtureSchema.err != nil {
+			return
+		}
+		fixtureSchema.err = db.Close()
+		if fixtureSchema.err == nil {
+			fixtureSchema.raw, fixtureSchema.err = os.ReadFile(template)
+		}
+	})
+	if fixtureSchema.err != nil {
+		return nil, fixtureSchema.err
+	}
+	if err := os.WriteFile(path, fixtureSchema.raw, 0600); err != nil {
+		return nil, err
+	}
+	return store.Open(path)
+}
+
 func newRig(t *testing.T) *rig {
 	t.Helper()
 	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
 	x.now.Store(time.Now().Unix())
 	var err error
-	x.db, err = store.Open(filepath.Join(x.dir, "game.sqlite"))
+	x.db, err = fixtureDatabase(t, filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +119,7 @@ func (x *rig) set(p rules.Profile) { x.mu.Lock(); defer x.mu.Unlock(); x.profile
 func (x *rig) request(method, path string, body any, cookie *http.Cookie) (int, response, string, *http.Cookie) {
 	x.t.Helper()
 	w := x.rawHTTP(method, path, body, cookie)
-	v := decodeHTTP[response](x.t, w)
+	v := decodeDomainHTTP[response](x, w)
 	// Domain assertions include pack items; PlayerState intentionally does not.
 	if w.Code == 200 && v.AccountID != "" && (path == "/api/state" || path == "/api/play" || path == "/api/session" || path == "/api/world/choose") {
 		tx, err := x.db.DB.Begin()
@@ -153,12 +186,8 @@ func mutation(s response, doc rules.State) map[string]any {
 	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "doc": doc}
 }
 
-func syncBody(s response, p rules.Profile, doc rules.State) map[string]any {
-	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "profile": p, "progress": doc}
-}
-
 func spendBody(s response, kind, target, key string, doc rules.State) map[string]any {
-	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "kind": kind, "target": target, "key": key, "progress": doc}
+	return body(s, key, map[string]any{"kind": kind, "target": target, "where": testWhere(doc)})
 }
 
 func count(t *testing.T, s *store.Store, q string, args ...any) int {
@@ -178,8 +207,18 @@ func unchanged(t *testing.T, a, b store.Snapshot) {
 }
 
 func body(s response, key string, fields map[string]any) map[string]any {
-	out := map[string]any{"lease": s.Lease, "baseRev": s.Version, "key": key}
+	out := map[string]any{"op": map[string]any{"lease": s.Lease, "key": key}, "where": testWhere(s.State)}
 	for k, v := range fields {
+		if k == "progress" {
+			if doc, ok := v.(rules.State); ok {
+				out["where"] = testWhere(doc)
+			}
+			continue
+		}
+		if k == "op" {
+			out["action"] = v
+			continue
+		}
 		out[k] = v
 	}
 	return out
@@ -255,6 +294,21 @@ func (x *rig) refresh(c *http.Cookie, s *response) {
 // rawHTTP keeps response bytes available for replay and malformed-input assertions.
 func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httptest.ResponseRecorder {
 	x.t.Helper()
+	if fields, ok := body.(map[string]any); ok {
+		if _, ok := fields["op"].(map[string]any); ok {
+			if doc, ok := fields["progress"].(rules.State); ok {
+				fields["where"] = testWhere(doc)
+				delete(fields, "progress")
+			}
+		}
+	}
+	if fields, ok := body.(map[string]any); ok && cookie != nil {
+		if op, ok := fields["op"].(map[string]any); ok {
+			if path == "/api/spend" && (fields["kind"] == "rest" || fields["kind"] == "home-rest") || path == "/api/items/use" && fields["instance"] == nil {
+				x.flushFixtureReport(cookie, op)
+			}
+		}
+	}
 	var b []byte
 	if body != nil {
 		var err error
@@ -290,7 +344,7 @@ func httpResponse[T any](x *rig, method, path string, body any, c *http.Cookie, 
 	if w.Code != status {
 		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
 	}
-	return decodeHTTP[T](x.t, w), w
+	return decodeDomainHTTP[T](x, w), w
 }
 
 // account explicitly resolves a test sign-in subject to its gameplay identity.
@@ -319,4 +373,43 @@ func (x *rig) cacheAccounts() {
 	if err = rows.Err(); err != nil {
 		x.t.Fatal(err)
 	}
+}
+
+func testWhere(s rules.State) map[string]any {
+	area := s.Area
+	if area == "wilds" {
+		area = "wilds:inner-1"
+	}
+	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
+}
+
+func decodeDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
+	x.t.Helper()
+	raw := testSnapshotJSON(w.Body.Bytes())
+	var fields map[string]json.RawMessage
+	json.Unmarshal(raw, &fields)
+	var snap store.Snapshot
+	json.Unmarshal(raw, &snap)
+	if snap.AccountID != "" {
+		tx, err := x.db.DB.Begin()
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		items, err := store.PackItems(context.Background(), tx, snap.AccountID)
+		tx.Rollback()
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		var state rules.State
+		if json.Unmarshal(fields["state"], &state) == nil {
+			state.Inventory = rules.AddUnique(state.Inventory, items...)
+			fields["state"] = json.RawMessage(store.JSON(state))
+			raw, _ = json.Marshal(fields)
+		}
+	}
+	var out T
+	if err := json.Unmarshal(raw, &out); err != nil {
+		x.t.Fatal(err)
+	}
+	return out
 }

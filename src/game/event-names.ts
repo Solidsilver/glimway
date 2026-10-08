@@ -270,8 +270,16 @@ export interface LinkPayload {
   busy: boolean
   /** Local changes the server hasn't accepted yet. */
   dirty: boolean
-  /** Offline because the server is failing (500s), not the network. */
+  /** Answers keep failing on the server's side (5xx, 429), not the network. */
   trouble: boolean
+  /** No answer for over a minute: "Reaching the world…". */
+  reaching: boolean
+  /**
+   * Sending stopped: a newer build is needed (`reload`), the world couldn't
+   * read a queued request (`client-bug`), or a queued key committed a
+   * different request (`mismatch`).
+   */
+  paused: null | 'reload' | 'client-bug' | 'mismatch'
 }
 
 export interface WildsPayload {

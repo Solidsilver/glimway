@@ -11,7 +11,8 @@ tags wait for the owner's playtest.
 
 | Tag | Branch | What it adds |
 |---|---|---|
-| `v0.3.0-alpha.1` | `expansion` | Sound (Kenney CC0) with a Menu toggle and volume; phones and high-DPI screens at full resolution; the desolation flake fixed; pre-release version support |
+| `v0.3.0-alpha.2` | `expansion` | Three flaky playtests fixed at their cause (the gate shelf and bench panels apply only their newest read and retry a failed one; homestead placement takes keys from the DOM); Playwright actions time out after a minute instead of never; the release workflow accepts pre-release tags |
+| `v0.3.0-alpha.1` | `expansion` | (Git tag only: the release workflow still refused pre-release tags, so no image. Fixed for the next alpha.) Sound (Kenney CC0) with a Menu toggle and volume; phones and high-DPI screens at full resolution; the desolation flake fixed; pre-release version support |
 
 ## Decisions
 

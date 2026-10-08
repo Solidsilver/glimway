@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"glimway/content"
 	"glimway/server/internal/land"
-	"glimway/server/internal/store"
 	"net/http"
 	"slices"
 	"strconv"
@@ -186,11 +185,10 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Gate      int            `json:"gate"`
 		LandSeed  uint32         `json:"landSeed"`
 		Home      *homeView      `json:"home"`
 		Materials map[string]int `json:"materials"`
-	}{s, gate, land.Seed(s.WorldID, gate, content.HomeRules.Land), home, m})
+	}{gate, land.Seed(s.WorldID, gate, content.HomeRules.Land), home, m})
 }

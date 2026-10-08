@@ -14,8 +14,10 @@ import (
 )
 
 type storedResult struct {
-	Type  string          `json:"type,omitempty"`
-	Value json.RawMessage `json:"value"`
+	Refused string          `json:"refused,omitempty"`
+	Status  int             `json:"status,omitempty"`
+	Type    string          `json:"type,omitempty"`
+	Value   json.RawMessage `json:"value"`
 }
 
 func requestBytes(request any) ([]byte, error) {
@@ -28,6 +30,8 @@ func opIdem(ctx context.Context, tx *sql.Tx, id, route, key string, request any,
 	if key == "" || len(key) > 128 {
 		return "", nil, fail(400, "key-required")
 	}
+	// Wilds stump proofs use successful chop payloads for the same visit.
+	// Keep that seven-day visit window in mind when changing this retry retention.
 	if _, err := tx.ExecContext(ctx, "DELETE FROM idempotency WHERE created_at<=?", now-7*86400); err != nil {
 		return "", nil, err
 	}
@@ -110,4 +114,21 @@ func replayResult(stored *storedResult, _ any) (any, error) {
 		return nil, err
 	}
 	return message, nil
+}
+
+// Terminal gameplay failures must never become successes when their predicates change.
+func terminalRefusal(f *failure) bool {
+	if f.status != 409 && f.status != 422 && f.status != 403 && f.status != 404 {
+		return false
+	}
+	switch f.code {
+	case "not-found", "report-required", "idempotency-mismatch", "invalid-position", "invalid-revision", "superseded", "reload-needed", "playing-elsewhere", "access-denied", "world-access-denied", "player-flagged":
+		return false
+	}
+	return true
+}
+func saveRefusedOp(ctx context.Context, tx *sql.Tx, id, route, key, hash string, f *failure, version, now int64) error {
+	result := storedResult{Refused: errorCodeWire(errorCodeProto(f.code)), Status: f.status, Value: json.RawMessage("null")}
+	_, err := tx.ExecContext(ctx, "INSERT INTO idempotency(account_id,op,key,request_hash,result_json,created_at,committed_version) VALUES(?,?,?,?,?,?,?)", id, route, key, hash, store.JSON(result), now, version)
+	return err
 }

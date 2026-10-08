@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -119,10 +118,9 @@ func (a *Server) projectsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		projectsView
-	}{s, v})
+	}{v})
 }
 func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error {
 	id, err := pathActionID(r.URL.Path, "/api/projects/", "/contribute")
@@ -131,14 +129,12 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 	}
 	var req struct {
 		Mutation
-		Key       string          `json:"key"`
-		Progress  json.RawMessage `json:"progress,omitempty"`
-		Materials map[string]int  `json:"materials"`
+		Materials map[string]int `json:"materials"`
 	}
 	if err = decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		def, ok := content.ProjectFor(id)
 		if !ok {
 			return nil, fail(404, "project-not-found")

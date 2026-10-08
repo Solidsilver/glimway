@@ -1,7 +1,7 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { loadWilds } from './wilds/data.ts';
-import { LAND, buildableKind, clearedSet, effectiveKind, generateLand, homeLights, isLit, type Land, type Light } from './homestead-land.ts';
+import { LAND, buildableKind, clearedSet, effectiveKind, homeLights, isLit, servedLand, type Land, type Light } from './homestead-land.ts';
 import { tileAt, tileMid } from './tile.ts';
 
 /** Material ids a purchase bill may name: the Wilds materials, plus any material in the catalogue (seasoned timber). */
@@ -272,9 +272,9 @@ export function checkPlacement(
   return null;
 }
 
-/** What planting needs to know of a home's land. */
+/** What planting needs to know of a home's land (its gate names the served land). */
 export interface PlantLand {
-  landSeed: number;
+  gate: number;
   cleared: readonly [number, number][];
   items: readonly HomeInstance[];
   plants?: readonly { x: number; y: number }[];
@@ -286,7 +286,9 @@ export interface PlantLand {
  * of other plants. Stumps kept in lamplight stand on tree tiles, so they
  * never count as grass.
  */
-export function plantable(home: PlantLand, tx: number, ty: number, data: HomesteadData = HOMESTEAD_DATA, land: Land = generateLand(home.landSeed, data.land)): boolean {
+export function plantable(home: PlantLand, tx: number, ty: number, data: HomesteadData = HOMESTEAD_DATA, land: Land | null = servedLand(home.gate)): boolean {
+  // Until the server's land has been read, nothing is plantable.
+  if (!land) return false;
   if (effectiveKind(land, clearedSet(home.cleared), tx, ty) !== LAND.GRASS) return false;
   const here = { x: tx, y: ty, w: 1, h: 1 };
   if (data.outdoorReserved.some((r) => overlaps(here, r))) return false;
@@ -300,7 +302,8 @@ export function plantable(home: PlantLand, tx: number, ty: number, data: Homeste
 
 /** The plantable tile nearest a spot on the land (px), within a step of it; null when there's none. */
 export function plantTileNear(home: PlantLand, at: { x: number; y: number }, data: HomesteadData = HOMESTEAD_DATA): [number, number] | null {
-  const land = generateLand(home.landSeed, data.land);
+  const land = servedLand(home.gate);
+  if (!land) return null;
   const cx = tileAt(at.x);
   const cy = tileAt(at.y);
   let best: { d: number; tile: [number, number] } | null = null;

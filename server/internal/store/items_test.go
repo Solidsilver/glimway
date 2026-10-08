@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"glimway/server/internal/rules"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,6 +25,12 @@ func TestItemsMigrationMovesGoodsAndParcels(t *testing.T) {
  INSERT INTO personal_storage VALUES('alice','item','beeswax-candle',1);
  INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,sent_at) VALUES('m1','w','alice','bob','material','amber',3,50);`); err != nil {
 		t.Fatal(err)
+	}
+	for _, id := range []string{"alice", "bob"} {
+		p := rules.Profile{ID: id, Name: "Keeper", Level: 1, HP: 20, MaxHP: 50, MP: 10, MaxMP: 30}
+		if _, err = old.Exec("INSERT INTO sync_baselines(habitica_id,profile_json,checkpoint_json,verified_xp,checkpoint_at,updated_at) VALUES(?,?,?,0,1,1)", id, JSON(p), JSON(p)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {

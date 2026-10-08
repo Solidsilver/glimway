@@ -9,7 +9,7 @@ import { PAPERS } from '../src/content/papers.ts';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
 
 test('calendar parity vectors are current, with complete UTC boundary and festival coverage', () => {
-  assert.equal(readFileSync(new URL('../content/vectors/calendar.json', import.meta.url), 'utf8'), serializeCalendarVectors());
+  assert.equal(JSON.stringify(JSON.parse(readFileSync(new URL('../content/vectors/clock.json', import.meta.url), 'utf8')).calendar) + '\n', serializeCalendarVectors());
   const epoch = Date.parse(CALENDAR.epoch) / 1000;
   for (const [i, wick] of CALENDAR.wicks.entries()) { const d = calendarAt(epoch + i * 7 * 86400); assert.equal(d.wick, wick); assert.equal(d.day, 1); assert.equal(d.wickNumber, i+1); }
   for (const f of CALENDAR.festivals) assert.equal(calendarAt(epoch + (CALENDAR.wicks.indexOf(f.wick) * 7 + f.day - 1) * 86400).festival, f.name);

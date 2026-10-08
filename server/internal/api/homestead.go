@@ -8,7 +8,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -75,19 +74,17 @@ type homeView struct {
 
 type homeRequest struct {
 	Mutation
-	Key      string          `json:"key"`
-	Progress json.RawMessage `json:"progress,omitempty"`
-	ItemDef  string          `json:"itemDef,omitempty"`
-	ItemID   string          `json:"itemId,omitempty"`
-	Tier     *int            `json:"tier,omitempty"`
-	Scene    string          `json:"scene,omitempty"`
-	X        *int            `json:"x,omitempty"`
-	Y        *int            `json:"y,omitempty"`
-	Rotation *int            `json:"rotation,omitempty"`
-	Name     *string         `json:"name,omitempty"`
-	Gate     *int            `json:"gate,omitempty"`
-	To       string          `json:"to,omitempty"`
-	HomeID   string          `json:"homeId,omitempty"`
+	ItemDef  string  `json:"itemDef,omitempty"`
+	ItemID   string  `json:"itemId,omitempty"`
+	Tier     *int    `json:"tier,omitempty"`
+	Scene    string  `json:"scene,omitempty"`
+	X        *int    `json:"x,omitempty"`
+	Y        *int    `json:"y,omitempty"`
+	Rotation *int    `json:"rotation,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	Gate     *int    `json:"gate,omitempty"`
+	To       string  `json:"to,omitempty"`
+	HomeID   string  `json:"homeId,omitempty"`
 }
 
 // cleanPostName rejects Unicode controls before tidying whitespace, so tabs,
@@ -111,7 +108,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}

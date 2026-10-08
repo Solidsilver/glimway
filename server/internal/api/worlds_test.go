@@ -442,11 +442,11 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	// The lease and revision rules hold.
 	stale := moveBody(h, "stale", o.WorldID, "village")
 	stale["baseRev"] = h.Version - 1
-	if e := x.worldReq("POST", "/api/world/move", stale, hc, 409).Error.Code; e != "stale-revision" {
+	if e := x.worldReq("POST", "/api/world/move", stale, hc, 400).Error.Code; e != "invalid-json" {
 		t.Fatal(e)
 	}
 	old := moveBody(h, "lease", o.WorldID, "village")
-	old["lease"] = "old"
+	old["op"].(map[string]any)["lease"] = "old"
 	if e := x.worldReq("POST", "/api/world/move", old, hc, 409).Error.Code; e != "superseded" {
 		t.Fatal(e)
 	}

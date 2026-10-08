@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld, serverState, sql } from './connected'
 import { beginNewJourney, hold, holdUntil, warp, waitForWilds, wilds, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
-import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds/regions.ts'
+import { chunkAreaId, wildsArrivalPosition } from '../src/game/wilds/regions.ts'
 
 /**
  * The Tangle (the generated Wilds, region inner-1): chunk-to-chunk walking,
@@ -104,7 +104,8 @@ test('connected: the Commons arch leads into the Tangle (handoff tiles)', async 
   await waitForWilds(page)
   const dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 1 })
-  const arrival = wildsArrivalPosition(guestEpoch())
+  // The Tangle's arrival: just inside the Commons gap (the same in every epoch).
+  const arrival = wildsArrivalPosition({ id: '', worldSeed: '', regionId: 'inner-1', generatorVersion: 2, season: '0', endsAt: null })
   expect(dump.position.x).toBe(arrival.x)
   expect(dump.position.y).toBe(arrival.y)
 })

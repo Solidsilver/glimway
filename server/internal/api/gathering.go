@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/land"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
+	"math"
 	"slices"
+	"strings"
 )
 
 // ------------------------------------------------------------ gathering & planting
@@ -90,11 +93,8 @@ func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
 	return dx*dx+dy*dy <= gatherReach*gatherReach
 }
 
-// gather: one chop, break or dig (docs/items/crafting-and-repair.md,
-// "Gathering"). Trees are client scenery: the server checks the tool, the
-// area, the caps and rolls the yields, not the individual tree, except on
-// home land, where the land is the server's own and a change inside
-// lamplight is kept (the drift: a stump stays, open ground stays open).
+// gather checks stored Wilds decor or home land before charging wear and caps.
+// Curated scenery retains its area rules.
 func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
 	if req.Tool == "" {
 		return fail(400, "invalid-tool")
@@ -117,21 +117,69 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	if len(req.VisitID) > 64 {
 		return fail(400, "invalid-visit")
 	}
-	// Where the player is, from the progress this mutation carried, and
+	// Where the player is, from this operation's where, and
 	// whether that place has such a piece at all.
 	area := s.State.Area
-	if !content.GatheringOffered(area, req.Target) {
+	offeredArea := area
+	if strings.HasPrefix(area, "wilds:") {
+		offeredArea = "wilds"
+	}
+	if !content.GatheringOffered(offeredArea, req.Target) {
 		return fail(409, "cannot-gather-here")
 	}
 	// The Wilds: the request names its region (the progress area is
 	// "wilds" for both). The Tangle's own trees, and their Amberfall sap,
 	// stand in the Tangle only ("on trees in the Tangle"); the outer
 	// drift's trees are plain trees.
-	if area == "wilds" {
+	if strings.HasPrefix(area, "wilds:") {
+		req.Region = strings.TrimPrefix(area, "wilds:")
 		if _, ok := regionDefinition(req.Region); !ok {
 			return fail(400, "invalid-region")
 		}
 		if req.Target == "tangle-tree" && req.Region != tangleRegion {
+			return fail(409, "cannot-gather-here")
+		}
+	}
+	if strings.HasPrefix(area, "wilds:") {
+		if a.Config.Epochs == nil {
+			return fail(503, "generator-unavailable")
+		}
+		epoch, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, req.Region, now)
+		if err != nil {
+			return chunkError(err)
+		}
+		if req.Tile == nil {
+			return fail(400, "tile-required")
+		}
+		size := content.WildsRules.ChunkSize
+		cx, cy := int(math.Floor(float64(req.Tile[0])/float64(size))), int(math.Floor(float64(req.Tile[1])/float64(size)))
+		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
+		if err != nil {
+			return chunkError(err)
+		}
+		if !nearPiece(s, area, req.Tile[0], req.Tile[1]) {
+			return fail(409, "too-far-away")
+		}
+		matched, tree := false, false
+		for _, i := range chunks.DecorAt(chunk, uint32(req.Tile[0]-cx*size), uint32(req.Tile[1]-cy*size)) {
+			kind := chunk.Decor.Kinds[chunk.Decor.Kind[i]]
+			if slices.Contains([]string{"oak", "pine", "birch", "iron-oak", "snag"}, kind) {
+				tree = true
+			}
+			if gatherDecor(req.Target, kind) {
+				matched = true
+			}
+		}
+		// Felling changes this player's local piece into a stump for the visit.
+		// The prior committed chop proves that transition without changing shared
+		// chunk geometry or trusting a client-supplied stump on a standing tree.
+		if !matched && tree && req.Target == "stump" {
+			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM idempotency WHERE account_id=? AND op='/api/items/gather' AND json_extract(result_json,'$.refused') IS NULL AND created_at>=? AND json_extract(payload_json,'$.action')='chop' AND json_extract(payload_json,'$.where.area')=? AND COALESCE(json_extract(payload_json,'$.visitId'),'')=? AND json_extract(payload_json,'$.tile[0]')=? AND json_extract(payload_json,'$.tile[1]')=?)`, s.AccountID, epoch.StartsAt, area, req.VisitID, req.Tile[0], req.Tile[1]).Scan(&matched)
+			if err != nil {
+				return err
+			}
+		}
+		if !matched {
 			return fail(409, "cannot-gather-here")
 		}
 	}
@@ -141,7 +189,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	if rules.HomeGate(area) >= 0 {
 		var err error
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
-			return err
+			return chunkError(err)
 		}
 		if req.Tile == nil {
 			return fail(400, "tile-required")
@@ -271,4 +319,30 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 	}
 	out.Land = &change
 	return err
+}
+
+// Species and seasonal patches must exist in the stored decor.
+func gatherDecor(target, kind string) bool {
+	switch target {
+	case "tree", "tangle-tree":
+		return slices.Contains([]string{"oak", "pine", "birch"}, kind)
+	case "willow":
+		return kind == "snag"
+	case "iron-oak":
+		return kind == "iron-oak"
+	case "boulder":
+		return kind == "boulder"
+	case "lamp-stone":
+		return kind == "cairn"
+	case "stump":
+		return slices.Contains([]string{"stump", "ring-stump", "turncaps"}, kind)
+	case "herbs", "bloom-patch":
+		return kind == "flowers"
+	case "sapling":
+		return kind == "fern"
+	case "hollow-tree":
+		return kind == "log"
+	default:
+		return false
+	}
 }

@@ -27,12 +27,18 @@ func (a *Server) requireLease(ctx context.Context, tx *sql.Tx, s store.Snapshot,
 // rolls back place, rewards and all callback writes, then carries current state.
 // apply returns a typed proto result or an existing domain's JSON result.
 func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.OpHeader, where *contract.Where, request any, apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error), afterCommit ...func()) error {
+	return a.keyedOpFinalized(w, r, op, where, request, apply, nil, afterCommit...)
+}
+
+// finalize is supplied by operations whose result includes final causal state.
+func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *contract.OpHeader, where *contract.Where, request any, apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error), finalize func(*contract.PlayerState, any), afterCommit ...func()) error {
 	tx, s, _, err := a.begin(r)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	ctx, now := r.Context(), a.Config.Now().Unix()
+	clock := a.Config.Now()
+	ctx, now := r.Context(), clock.Unix()
 	if op == nil {
 		return fail(400, "invalid-json")
 	}
@@ -63,6 +69,13 @@ func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.Op
 		if e != nil {
 			return e
 		}
+		if prior.Refused != "" {
+			if e = tx.Commit(); e != nil {
+				return e
+			}
+			writeRefusal(w, prior.Status, prior.Refused, state)
+			return nil
+		}
 		result, e := replayResult(prior, request)
 		if e != nil {
 			return e
@@ -80,7 +93,7 @@ func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.Op
 		}
 	}
 	if where == nil || !validArea(where.Area) || !finiteWhere(where) {
-		return refuse(fail(400, "invalid-position"))
+		return refuse(fail(409, "invalid-position"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {
 		return err
@@ -99,20 +112,29 @@ func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.Op
 		err = settleSlots(ctx, tx, &s)
 	}
 	if err == nil {
+		s.VitalsAt = float64(clock.UnixNano()) / 1e9
 		err = a.Config.State.Persist(ctx, tx, &s, now)
 	}
 	if err != nil {
 		if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
 			return e
 		}
-		s, e := a.Config.State.Load(ctx, tx, s.AccountID)
-		if e != nil {
-			return e
+		s, errLoad := a.Config.State.Load(ctx, tx, s.AccountID)
+		if errLoad != nil {
+			return errLoad
 		}
 		// The closure uses the restored snapshot, never the callback's partial state.
 		var f *failure
 		if !errors.As(err, &f) || f.status < 400 || f.status >= 500 {
 			return err
+		}
+		if terminalRefusal(f) {
+			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, s.Version, now); e != nil {
+				return e
+			}
+			if e := savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); e != nil {
+				return e
+			}
 		}
 		state, e := a.Config.State.PlayerState(ctx, tx, s)
 		if e != nil {
@@ -124,11 +146,17 @@ func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.Op
 		writeRefusal(w, f.status, f.code, state)
 		return nil
 	}
+	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	if err != nil {
+		return err
+	}
+	if finalize != nil {
+		finalize(state, result)
+	}
 	if err = saveOpIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, result, s.Version, now); err != nil {
 		return err
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
-	if err != nil {
+	if err = savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); err != nil {
 		return err
 	}
 	// Validate response before committing; invalid output must not commit a reward.

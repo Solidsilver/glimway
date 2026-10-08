@@ -256,8 +256,7 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Items itemsView `json:"items"`
-	}{s, v})
+	}{v})
 }

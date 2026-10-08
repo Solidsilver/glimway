@@ -1,0 +1,70 @@
+{
+  "quests": [
+    {
+      "id": "lantern-road",
+      "steps": [
+        {
+          "id": "accepted",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": ""
+        },
+        {
+          "id": "clue-found",
+          "at": "ruin",
+          "items": [
+            "lantern-route-rubbing"
+          ],
+          "marks": [
+            "found:old-route-marker"
+          ],
+          "papers": [],
+          "embers": 0,
+          "witness": ""
+        },
+        {
+          "id": "guardian-defeated",
+          "at": "ruin",
+          "items": [
+            "warden-seal"
+          ],
+          "marks": [
+            "defeated:stone-warden"
+          ],
+          "papers": [
+            "eleven-days"
+          ],
+          "embers": 2,
+          "witness": "warden"
+        },
+        {
+          "id": "lantern-lit",
+          "at": "ruin",
+          "items": [],
+          "marks": [
+            "found:hilltop-lantern"
+          ],
+          "papers": [
+            "principia-memoria-excerpt"
+          ],
+          "embers": 0,
+          "witness": "lantern"
+        },
+        {
+          "id": "complete",
+          "at": "village",
+          "items": [],
+          "marks": [
+            "found:lantern-road-restored"
+          ],
+          "papers": [],
+          "embers": 3,
+          "witness": ""
+        }
+      ]
+    }
+  ]
+}

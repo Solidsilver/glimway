@@ -267,7 +267,7 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	// Sage leaves p1, and is warned; she wanders off into the woods.
 	x.hero("sage", "Sage", "")
 	x.login("sage", "")
-	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.area','woodland') WHERE account_id='" + x.account("sage") + "'"); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE player_place SET area='woodland' WHERE account_id='" + x.account("sage") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	x.now.Add(PartyGrace - 1)

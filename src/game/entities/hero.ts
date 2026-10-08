@@ -331,6 +331,8 @@ export class Hero {
     this.castCooldown = kit.signatureCooldown
     bus.emit(EV.ability, { status: 'cast', cooldown: this.castCooldown } satisfies AbilityPayload)
     this.deps.session.setVitals(this.deps.session.state.hp, this.deps.session.state.mana - kit.manaCost)
+    // The server's cast budget counts it (cooldown, mana, a healer's mend).
+    this.deps.session.noteCast()
     const dir = this.facing.clone().normalize()
     switch (kit.signature) {
       case 'bolt': {

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"glimway/content"
-	"glimway/server/internal/profile"
 	"glimway/server/internal/rules"
 	"modernc.org/sqlite"
 	"net/url"
@@ -195,6 +194,7 @@ func (s *Store) Invite(ctx context.Context, world string) (string, error) {
 type Snapshot struct {
 	// Explicit server writes, including refills whose numeric value is unchanged.
 	VitalsWritten      bool                `json:"-"`
+	VitalsAt           float64             `json:"-"` // Fractional Unix seconds captured by a server operation; zero uses Persist now.
 	PlaceWritten       bool                `json:"-"`
 	State              rules.State         `json:"state"`
 	Version            int64               `json:"version"`
@@ -217,65 +217,6 @@ type Snapshot struct {
 	LeaseID            sql.NullString      `json:"-"`
 	LeaseClient        sql.NullString      `json:"-"`
 	LeaseSeen          sql.NullInt64       `json:"-"`
-}
-
-func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
-	var s Snapshot
-	var doc string
-	var flagged sql.NullInt64
-	var checkpoint string
-	err := tx.QueryRowContext(ctx, `SELECT p.account_id,p.display_name,p.world_id,p.habitica_party_id,p.version,p.profile_source,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,g.doc_json,b.embers,b.xp_embers,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json,x.checkpoint_at,x.loss_level,x.loss_xp,x.loss_at,x.verified_high_level,x.checkpoint_ledger_id FROM players p JOIN progress g USING(account_id) JOIN balances b USING(account_id) JOIN sync_baselines x USING(account_id) WHERE p.account_id=?`, id).Scan(&s.AccountID, &s.DisplayName, &s.WorldID, &s.HabiticaPartyID, &s.Version, &s.ProfileSource, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &doc, &s.State.Embers, &s.State.XPEmbers, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint, &s.CheckpointAt, &s.LossReference.Level, &s.LossReference.XP, &s.LossAt, &s.VerifiedHighLevel, &s.CheckpointLedgerID)
-	if err != nil {
-		return s, err
-	}
-	embers, xp, mark := s.State.Embers, s.State.XPEmbers, s.State.EmberXP
-	if err = json.Unmarshal([]byte(doc), &s.State); err != nil {
-		return s, err
-	}
-	s.State.Inventory = questInventory(s.State.Inventory)
-	s.State.Embers = embers
-	s.State.XPEmbers = xp
-	s.State.EmberXP = mark
-	s.Flagged = flagged.Valid
-	if err = json.Unmarshal([]byte(checkpoint), &s.Checkpoint); err != nil {
-		return s, err
-	}
-	s.ImportedProfile, err = profile.For(ctx, tx, profile.Account{ID: id, Source: s.ProfileSource})
-	if err != nil {
-		return s, err
-	}
-	s.VitalsSource = "demo"
-	if s.ImportedProfile != nil {
-		s.VitalsSource = "imported"
-	}
-	if p := s.ImportedProfile; p != nil {
-		s.State.MaxHP = p.MaxHP
-		s.State.MaxMana = p.MaxMP
-	}
-	rows, err := tx.QueryContext(ctx, "SELECT outcome_id FROM outcomes WHERE account_id=? ORDER BY at,outcome_id", id)
-	if err != nil {
-		return s, err
-	}
-	for rows.Next() {
-		var v string
-		if err = rows.Scan(&v); err != nil {
-			rows.Close()
-			return s, err
-		}
-		if rules.EconomyFlag(v) {
-			s.State.Flags = rules.AddUnique(s.State.Flags, v)
-		}
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return s, err
-	}
-	items, err := PackItems(ctx, tx, id)
-	for _, v := range items {
-		s.State.Inventory = rules.AddUnique(s.State.Inventory, v)
-	}
-	return s, err
 }
 
 // PackItems: the carried items that join the save's inventory list, every
@@ -311,75 +252,6 @@ func Credit(ctx context.Context, tx *sql.Tx, s *Snapshot, n, earned int, reason,
 	s.State.XPEmbers += earned
 	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,reported_xp,created_at) VALUES(?,'embers',?,?,?,?,?,?)", s.AccountID, n, earned, reason, ref, xp, now)
 	return err
-}
-func Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
-	// The bridge detects legacy numeric changes; B sets VitalsWritten for every
-	// server refill/write and uses its report path for client damage/casts.
-	var hp, mana float64
-	err := tx.QueryRowContext(ctx, "SELECT hp,mana FROM player_vitals WHERE account_id=?", s.AccountID).Scan(&hp, &mana)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-	writeVitals := s.VitalsWritten || err == sql.ErrNoRows || hp != s.State.HP || mana != s.State.Mana
-	if err := BumpVersion(ctx, tx, s); err != nil {
-		return err
-	}
-	// Store only writable progress; server authority stays in normalized tables.
-	doc := s.State
-	doc.Embers = 0
-	doc.XPEmbers = 0
-	doc.EmberXP = 0
-	doc.Flags = []string{}
-	for _, v := range s.State.Flags {
-		if !rules.EconomyFlag(v) {
-			doc.Flags = append(doc.Flags, v)
-		}
-	}
-	doc.Inventory = questInventory(s.State.Inventory)
-	var p any
-	if s.ImportedProfile != nil {
-		p = JSON(s.ImportedProfile)
-	}
-	for _, q := range []struct {
-		sql  string
-		args []any
-	}{
-		{"UPDATE players SET last_seen_at=? WHERE account_id=?", []any{now, s.AccountID}},
-		{"UPDATE progress SET rev=?,doc_json=?,updated_at=? WHERE account_id=?", []any{s.Version, JSON(doc), now, s.AccountID}},
-		{"UPDATE balances SET embers=?,xp_embers=? WHERE account_id=?", []any{s.State.Embers, s.State.XPEmbers, s.AccountID}},
-		{"UPDATE sync_baselines SET profile_json=?,xp_mark=?,pending=?,updated_at=? WHERE account_id=?", []any{p, s.State.EmberXP, s.Pending, now, s.AccountID}},
-	} {
-		if _, err := tx.ExecContext(ctx, q.sql, q.args...); err != nil {
-			return err
-		}
-	}
-	// Only server vitals writes advance the combat watermark and budget.
-	if writeVitals {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version,cast_ready_at) VALUES(?,?,?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET hp=excluded.hp,mana=excluded.mana,vitals_at=excluded.vitals_at,vitals_set_version=excluded.vitals_set_version,cast_ready_at=MAX(player_vitals.cast_ready_at,excluded.cast_ready_at)`, s.AccountID, s.State.HP, s.State.Mana, now, s.Version, now); err != nil {
-			return err
-		}
-	}
-	placeVersion := int64(0)
-	if s.PlaceWritten {
-		placeVersion = s.Version
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO player_place(account_id,area,x,y,place_set_version) VALUES(?,?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET area=excluded.area,x=excluded.x,y=excluded.y,place_set_version=MAX(player_place.place_set_version,excluded.place_set_version)`, s.AccountID, s.State.Area, s.State.Position.X, s.State.Position.Y, placeVersion); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, "UPDATE players SET play_seconds=? WHERE account_id=?", s.State.PlaySeconds, s.AccountID); err != nil {
-		return err
-	}
-	if s.State.Quest != "new" {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO quest_progress VALUES(?,'lantern-road',?) ON CONFLICT(account_id,quest) DO UPDATE SET step=excluded.step`, s.AccountID, s.State.Quest); err != nil {
-			return err
-		}
-	}
-	for _, mark := range s.State.Flags {
-		if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO story_marks VALUES(?,?,'server',?)`, s.AccountID, mark, now); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Legacy documents may contain loot copied before inventory was normalized.

@@ -1,6 +1,7 @@
 /**
  * Typed loader for content/wilds.json — the canonical shared generator data.
- * The JSON is the single copy: Go reads the same file via content/embed.go.
+ * The JSON is the single copy: Go reads the same file via content/embed.go
+ * (the server's generator); the client reads region sizes, timers and catalogs.
  */
 import wildsJson from '../../../content/wilds.json' with { type: 'json' };
 import type {
@@ -84,7 +85,7 @@ export function validateWildsData(raw: unknown): WildsData {
     'trinketChancePermille', 'trinkets',
   ].sort();
   if (keys.join(',') !== want.join(',')) throw new Error(`wilds: unexpected keys ${keys.join(',')}`);
-  if (!isInt(d.generatorVersion) || d.generatorVersion !== 1) throw new Error('wilds: generatorVersion must be 1');
+  if (!isInt(d.generatorVersion) || d.generatorVersion !== 2) throw new Error('wilds: generatorVersion must be 2');
   if (!isInt(d.chunkSize) || d.chunkSize < 12 || d.chunkSize % 2 !== 0) throw new Error('wilds: chunkSize must be an even integer >= 12');
   if (!isInt(d.deepTangleManhattanDistance) || d.deepTangleManhattanDistance < 1) throw new Error('wilds: deepTangleManhattanDistance must be positive');
   if (!Array.isArray(d.regions) || d.regions.length === 0 || !d.regions.every(isRegion)) throw new Error('wilds: bad regions');

@@ -1,0 +1,154 @@
+{
+  "namespaces": [
+    {
+      "prefix": "seen:",
+      "writer": "client"
+    },
+    {
+      "prefix": "met:",
+      "writer": "client"
+    },
+    {
+      "prefix": "heard:",
+      "writer": "client"
+    },
+    {
+      "prefix": "guide:",
+      "writer": "client"
+    },
+    {
+      "prefix": "nudge:",
+      "writer": "client"
+    },
+    {
+      "prefix": "unmoored:",
+      "writer": "client"
+    },
+    {
+      "prefix": "home:met-silas",
+      "writer": "client"
+    },
+    {
+      "prefix": "home:arrived",
+      "writer": "client"
+    },
+    {
+      "prefix": "found:",
+      "writer": "client"
+    },
+    {
+      "prefix": "defeated:",
+      "writer": "client"
+    },
+    {
+      "prefix": "returned:",
+      "writer": "server"
+    },
+    {
+      "prefix": "heirloom:",
+      "writer": "server"
+    },
+    {
+      "prefix": "ada-oil-gifts:",
+      "writer": "server"
+    },
+    {
+      "prefix": "echo:",
+      "writer": "server"
+    },
+    {
+      "prefix": "embers:welcome",
+      "writer": "server"
+    },
+    {
+      "prefix": "lit:",
+      "writer": "server"
+    },
+    {
+      "prefix": "opened:",
+      "writer": "server"
+    },
+    {
+      "prefix": "paper:",
+      "writer": "server"
+    },
+    {
+      "prefix": "wilds:turned",
+      "writer": "server"
+    },
+    {
+      "prefix": "warden-sliver:found",
+      "writer": "server"
+    },
+    {
+      "prefix": "witness:",
+      "writer": "server"
+    },
+    {
+      "prefix": "donated:",
+      "writer": "server"
+    }
+  ],
+  "ids": {
+    "found:": {
+      "old-route-marker": "ruin",
+      "hilltop-lantern": "ruin",
+      "lantern-road-restored": "village",
+      "route-marker": "woodland"
+    },
+    "defeated:": {
+      "stone-warden": "ruin",
+      "wisp-a": "woodland",
+      "wisp-b": "woodland",
+      "wisp-c": "woodland",
+      "beetle-a": "woodland",
+      "beetle-b": "woodland"
+    }
+  },
+  "areas": {
+    "home:met-silas": "commons",
+    "home:arrived": "home"
+  },
+  "echoes": [
+    {
+      "member": "hollis",
+      "late": false,
+      "east": false
+    },
+    {
+      "member": "tam",
+      "late": true,
+      "east": true
+    },
+    {
+      "member": "bett",
+      "late": true,
+      "east": false
+    },
+    {
+      "member": "dorrit",
+      "late": false,
+      "east": false
+    },
+    {
+      "member": "joss",
+      "late": false,
+      "east": false
+    },
+    {
+      "member": "nan",
+      "late": false,
+      "east": false
+    }
+  ],
+  "boards": {
+    "village": {
+      "tx": 15,
+      "ty": 9
+    },
+    "commons": {
+      "tx": 26,
+      "ty": 17
+    }
+  }
+}

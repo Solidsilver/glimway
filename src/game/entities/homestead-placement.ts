@@ -123,7 +123,12 @@ export class HomesteadArranging {
     const h = this.deps.hero()
     const c = scene === 'indoor' ? this.frame(ox + (cols * TILE) / 2, oy + (rows * TILE) / 2) : this.frame(h.x, h.y)
     cam.pan(c.x, c.y, this.deps.reducedMotion ? 0 : 400, 'Sine.easeInOut')
-    this.scene.input.keyboard?.on('keydown', this.onKey, this)
+    // Keys come from the DOM, not Phaser's keyboard queue: that queue is
+    // wiped every POST_STEP (a press arriving while the scene can't take
+    // input is lost) and a keydown whose key is still down is filtered as a
+    // repeat, so one lost keyup turned every later press of that arrow into
+    // a silent no-op. An OS auto-repeat is still one nudge per press.
+    window.addEventListener('keydown', this.onKey)
     this.scene.input.on('pointerdown', this.onPointer, this)
     this.scene.scale.on('resize', this.reframe, this)
     sfx('open')
@@ -169,7 +174,7 @@ export class HomesteadArranging {
     p.overlay.destroy()
     p.ghost?.destroy()
     this.placement = null
-    this.scene.input.keyboard?.off('keydown', this.onKey, this)
+    window.removeEventListener('keydown', this.onKey)
     this.scene.input.off('pointerdown', this.onPointer, this)
     this.scene.scale.off('resize', this.reframe, this)
     bus.emit(EV.homePlacement, null)
@@ -183,12 +188,13 @@ export class HomesteadArranging {
     this.arrangeTimer = 0
   }
 
-  private onKey(e: KeyboardEvent): void {
+  /** The placement's own keys (bound once, so add/removeEventListener match). */
+  private readonly onKey = (e: KeyboardEvent): void => {
     const p = this.placement
     if (!p) return
     // A modal, dialogue or lease gate owns input: placement waits. A key the
     // interface already handled (Escape closing a panel) is not ours too.
-    if (uiBlocked() || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
+    if (e.repeat || uiBlocked() || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
     const k = e.code

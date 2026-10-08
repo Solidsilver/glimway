@@ -6,6 +6,7 @@ import (
 	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -25,18 +26,18 @@ func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) lib
 	return v
 }
 
-func donateBody(paperID, key string) map[string]any {
-	return map[string]any{"paperId": paperID, "key": key}
+func donateBody(s response, paperID, key string) map[string]any {
+	return body(s, key, map[string]any{"paperId": paperID})
 }
 
-// hold gives the player's stored progress a find, the way a connected
-// client uploads it before asking to donate.
+// hold seeds a server-granted find for the donation fixtures.
 func (x *rig) hold(c *http.Cookie, s response, id string) response {
 	x.t.Helper()
-	doc := s.State
-	doc.Flags = append(doc.Flags, "paper:"+id)
-	out := x.expect("PUT", "/api/progress", mutation(s, doc), c, 200)
-	out.Lease = s.Lease // a progress answer has no lease of its own
+	if _, err := x.db.DB.Exec("INSERT OR IGNORE INTO story_marks VALUES(?,?,'server',?)", s.AccountID, "paper:"+id, x.now.Load()); err != nil {
+		x.t.Fatal(err)
+	}
+	out := x.expect("GET", "/api/state", nil, c, 200)
+	out.Lease = s.Lease
 	return out
 }
 
@@ -59,27 +60,29 @@ func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 	s = x.hold(c, s, "will-of-elias-fenn")
 	before := x.expect("GET", "/api/state", nil, c, 200)
 
-	donated := x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "d1"), c, 200)
+	donated := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d1"), c, 200)
 	if donated.Entry == nil || donated.Entry.PaperID != "will-of-elias-fenn" || donated.Entry.DonatedBy != "Alice" {
 		t.Fatalf("donation: %s", store.JSON(donated))
 	}
 	if _, err := time.Parse(time.RFC3339, donated.Entry.DonatedAt); err != nil {
 		t.Fatalf("donatedAt %q is not ISO-8601", donated.Entry.DonatedAt)
 	}
-	// Donating is not a play mutation: no revision, no ledger row.
+	// Donation advances the player version and adds its mark without a ledger payment.
 	after := x.expect("GET", "/api/state", nil, c, 200)
-	unchanged(t, before.Snapshot, after.Snapshot)
+	if after.Version != before.Version+1 || !slices.Contains(after.State.Flags, "donated:will-of-elias-fenn@"+time.Unix(x.now.Load(), 0).UTC().Format("2006-01-02")) {
+		t.Fatal("donation was not recorded")
+	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='library-donate'") != 0 || count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {
 		t.Fatal("donation mutated play state")
 	}
 
 	// The same key replays the first answer; a new key loses to the first donor.
-	replay := x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "d1"), c, 200)
+	replay := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d1"), c, 200)
 	if replay.Entry == nil || *replay.Entry != *donated.Entry || count(t, x.db, "SELECT count(*) FROM idempotency WHERE op='/api/library/donate'") != 1 {
 		t.Fatal("replay was not idempotent")
 	}
-	lost := x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "d2"), c, 409)
-	if lost.Error.Code != "already-shelved" || lost.Entry == nil || *lost.Entry != *donated.Entry {
+	lost := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d2"), c, 409)
+	if lost.Error.Code != "already-shelved" || lost.Entry != nil {
 		t.Fatalf("second donor: %s", store.JSON(lost))
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {
@@ -89,7 +92,7 @@ func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 	// A second paper joins the shelf, oldest first.
 	x.now.Add(10)
 	s = x.hold(c, s, "pip-copybook-warden-corrections")
-	x.lib("POST", "/api/library/donate", donateBody("pip-copybook-warden-corrections", "d3"), c, 200)
+	x.lib("POST", "/api/library/donate", donateBody(s, "pip-copybook-warden-corrections", "d3"), c, 200)
 	shelves := x.lib("GET", "/api/library", nil, c, 200).Shelves
 	if len(shelves) != 2 || shelves[0].PaperID != "will-of-elias-fenn" || shelves[1].PaperID != "pip-copybook-warden-corrections" {
 		t.Fatalf("shelf order: %s", store.JSON(shelves))
@@ -112,26 +115,27 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 	answers := make([]answer, 2)
 	racers := []struct {
 		c   *http.Cookie
+		s   response
 		key string
-	}{{c, "alice-key"}, {bc, "bob-key"}}
+	}{{c, s, "alice-key"}, {bc, b, "bob-key"}}
 	var wg sync.WaitGroup
 	for i, d := range racers {
 		wg.Add(1)
-		go func(i int, c *http.Cookie, key string) {
+		go func(i int, c *http.Cookie, s response, key string) {
 			defer wg.Done()
-			r := httptest.NewRequest("POST", "/api/library/donate", bytes.NewBufferString(store.JSON(donateBody("will-of-elias-fenn", key))))
+			r := httptest.NewRequest("POST", "/api/library/donate", bytes.NewBufferString(store.JSON(donateBody(s, "will-of-elias-fenn", key))))
 			r.Header.Set("X-Glimway-Contract", "3")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(c)
 			w := httptest.NewRecorder()
 			x.api.ServeHTTP(w, r)
 			var v libraryResponse
-			if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
+			if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
 				t.Error(err)
 				return
 			}
 			answers[i] = answer{w.Code, v}
-		}(i, d.c, d.key)
+		}(i, d.c, d.s, d.key)
 	}
 	wg.Wait()
 	if answers[0].status+answers[1].status != 200+409 {
@@ -141,11 +145,8 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 	if winner.status != 200 {
 		winner, loser = loser, winner
 	}
-	if winner.v.Entry == nil || loser.v.Entry == nil {
-		t.Fatalf("race answers must carry the winning entry: %s %s", store.JSON(winner.v), store.JSON(loser.v))
-	}
-	if *winner.v.Entry != *loser.v.Entry {
-		t.Fatalf("loser was not told who won: %s vs %s", store.JSON(winner.v), store.JSON(loser.v))
+	if winner.v.Entry == nil || loser.v.Error.Code != "already-shelved" {
+		t.Fatal("race did not identify winner and refusal")
 	}
 	if winner.v.Entry.DonatedBy != "Alice" && winner.v.Entry.DonatedBy != "Bob" {
 		t.Fatalf("winner credit: %s", store.JSON(winner.v))
@@ -164,16 +165,16 @@ func TestLibraryGuardsLeaveNoTrace(t *testing.T) {
 	s = x.hold(c, s, "oak-hall-edict-on-the-stealing-of-shade")
 	before := x.expect("GET", "/api/state", nil, c, 200)
 
-	if code := x.lib("POST", "/api/library/donate", donateBody("not-a-paper", "k1"), c, 422).Error.Code; code != "unknown-paper" {
+	if code := x.lib("POST", "/api/library/donate", donateBody(s, "not-a-paper", "k1"), c, 422).Error.Code; code != "unknown-paper" {
 		t.Fatalf("unknown paper: %s", code)
 	}
-	if code := x.lib("POST", "/api/library/donate", donateBody("pip-copybook-warden-corrections", "k2"), c, 403).Error.Code; code != "not-held" {
+	if code := x.lib("POST", "/api/library/donate", donateBody(s, "pip-copybook-warden-corrections", "k2"), c, 403).Error.Code; code != "not-held" {
 		t.Fatalf("not held: %s", code)
 	}
-	if code := x.lib("POST", "/api/library/donate", donateBody("oak-hall-edict-on-the-stealing-of-shade", "k3"), c, 409).Error.Code; code != "already-shelved" {
+	if code := x.lib("POST", "/api/library/donate", donateBody(s, "oak-hall-edict-on-the-stealing-of-shade", "k3"), c, 409).Error.Code; code != "already-shelved" {
 		t.Fatalf("library-start: %s", code)
 	}
-	if code := x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", ""), c, 400).Error.Code; code != "key-required" {
+	if code := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", ""), c, 400).Error.Code; code != "key-required" {
 		t.Fatalf("missing key: %s", code)
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
@@ -191,9 +192,9 @@ func TestLibraryWorldsAreIsolated(t *testing.T) {
 	bc, b := x.ready("bob")
 	a = x.hold(ac, a, "will-of-elias-fenn")
 	b = x.hold(bc, b, "will-of-elias-fenn")
-	x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "a"), ac, 200)
+	x.lib("POST", "/api/library/donate", donateBody(a, "will-of-elias-fenn", "a"), ac, 200)
 	// The same paper is free in another world.
-	x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "b"), bc, 200)
+	x.lib("POST", "/api/library/donate", donateBody(b, "will-of-elias-fenn", "b"), bc, 200)
 	asa := x.lib("GET", "/api/library", nil, ac, 200).Shelves
 	bsa := x.lib("GET", "/api/library", nil, bc, 200).Shelves
 	if len(asa) != 1 || asa[0].DonatedBy != "Alice" || len(bsa) != 1 || bsa[0].DonatedBy != "Bob" {
@@ -213,7 +214,7 @@ func TestLibraryWorldsAreIsolated(t *testing.T) {
 func TestLibraryNeedsSession(t *testing.T) {
 	x := newRig(t)
 	x.lib("GET", "/api/library", nil, nil, 401)
-	x.lib("POST", "/api/library/donate", donateBody("will-of-elias-fenn", "k"), nil, 401)
+	x.lib("POST", "/api/library/donate", donateBody(response{}, "will-of-elias-fenn", "k"), nil, 401)
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
 		t.Fatal("unauthenticated donation stored")
 	}

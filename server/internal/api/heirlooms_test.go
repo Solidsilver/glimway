@@ -58,6 +58,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	// 3. Meet condition by reading ashwatch ledger excerpts
 	conditionMetDoc := atSilasDoc
 	conditionMetDoc.Flags = append(slices.Clone(atSilasDoc.Flags), "paper:ashwatch-ledger-excerpts")
+	x.db.DB.Exec("INSERT OR IGNORE INTO story_marks VALUES(?,'paper:ashwatch-ledger-excerpts','server',?)", s.AccountID, x.now.Load())
 
 	// Proximity check: condition met, but player is far away in Village
 	farDoc := conditionMetDoc
@@ -401,6 +402,7 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 	// 2. Meet condition: Nan's echo settled
 	conditionDoc := wildsDoc
 	conditionDoc.Flags = append(slices.Clone(wildsDoc.Flags), "echo:nan")
+	x.db.DB.Exec("INSERT OR IGNORE INTO story_marks VALUES(?,'echo:nan','server',?)", s.AccountID, x.now.Load())
 
 	// Proximity check: condition met, but player is in village
 	villageDoc := conditionDoc

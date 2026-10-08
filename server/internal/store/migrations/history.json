@@ -106,5 +106,11 @@
   {
     "name": "027_server_state.sql",
     "sha256": "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d"
+  },
+  {
+    "name": "028_story_move.sql",
+    "sha256": "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17",
+    "backfill": "migration_028_backfill.go",
+    "backfillSha256": "dc5a19f0d8bab0bafc52401e8f1f9444456c213c51286804033b471981850520"
   }
 ]

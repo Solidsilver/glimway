@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"glimway/server/internal/store"
 	"net/http"
 )
 
@@ -126,13 +125,12 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Gates     []gateView   `json:"gates"`
 		GateCount int          `json:"gateCount"`
 		Mine      any          `json:"mine"`
 		Invites   []inviteView `json:"invites"`
-	}{s, gates, n, mine, invites})
+	}{gates, n, mine, invites})
 }
 
 // invitesFor lists unexpired invites to the caller or from their homestead.

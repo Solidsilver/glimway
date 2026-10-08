@@ -1,7 +1,7 @@
 /**
  * A homestead's land, the map behind a Commons gate (area `home:<gate>`):
- * wild ground generated per gate (src/lib/homestead-land.ts, the same land
- * the server validates against), drawn with the Tangle's look — woods
+ * wild ground the server generates per gate and serves (GET /api/homestead/
+ * land/<gate>; the same land it validates against), drawn with the Tangle's look — woods
  * floor, its trees, stumps and stones — with the home site near the top,
  * a path down to the gate mouth in the south edge, and the way back to the
  * Commons through it.
@@ -10,12 +10,16 @@
  * light, cleared tiles, desolation) comes from the homestead state through
  * `setLandSource`; the scene layer (src/game/entities/homesteads.ts) draws
  * the buildings and pieces on top.
+ *
+ * The land is fetched once per gate and world (prepareHomeLand, before a
+ * scene enters a home). A map built before it arrives shows plain ground
+ * with the home site and path, marked `served: false`, and rebuilds when the
+ * land comes (EV.homeChanged, reason `land`).
  */
 import { HOMESTEAD_DATA, gateTile, homeArea, parseHomeArea } from '../lib/homestead.ts'
-import { LAND, generateLand, landSeed, type Land } from '../lib/homestead-land.ts'
-import { TANGLE_GROUND } from '../lib/wilds/tangle.ts'
-import type { DecorKind } from '../lib/wilds/types.ts'
-import { DECOR_ART } from '../lib/wilds/tangle.ts'
+import { LAND, landFromCells, rememberLand, servedLand, type Land } from '../lib/homestead-land.ts'
+import { EV, bus } from './events.ts'
+import { DECOR_ART, TANGLE_GROUND, type DecorKind } from './wilds/decor.ts'
 import { TILE, tileBottom, tileKey, tileMid } from '../lib/tile.ts'
 import { tangleFrame } from './wilds/tangle-key.ts'
 import { lookAtlasKey } from './wilds/wilds-looks.ts'
@@ -52,8 +56,8 @@ export interface LandSource {
     plants?: readonly { id: string; itemDef: string; x: number; y: number }[]
     desolate: boolean
   } | null
-  /** The server's seed for a gate, once read (it wins over the local one). */
-  seed?(gate: number): number | null
+  /** Fetch a gate's land from the server (null: no server to ask). */
+  fetchLand?(gate: number): Promise<{ width: number; height: number; cells: readonly string[] }> | null
 }
 
 let source: LandSource = { worldId: () => 'guest', state: () => null }
@@ -65,8 +69,8 @@ export function setLandSource(s: LandSource): void {
 export interface LandWorld extends WorldData {
   gate: number
   land: Land
-  /** The seed the land was generated from. */
-  seed: number
+  /** False while the server's land for this gate hasn't arrived (plain ground stands in). */
+  served: boolean
   /** The home site (camp, then cottage): the reserved rect, in tiles. */
   site: { x: number; y: number; w: number; h: number }
   /** Cottage door tile (left of two) and where you stand coming out. */
@@ -90,17 +94,56 @@ export function landEntry(): { tx: number; ty: number } {
   return { tx: L.gate.x, ty: L.height - 2 }
 }
 
-/** The seed of a gate's land in this world: the server's when read, else from the world id. */
-export function seedFor(gate: number): number {
-  return source.seed?.(gate) ?? landSeed(source.worldId(), gate)
+const loading = new Map<string, Promise<void>>()
+
+/** Fetch a gate's served land (once per world and gate); the map rebuilds when it lands. */
+function loadLand(gate: number): Promise<void> {
+  const world = source.worldId()
+  if (servedLand(gate, world)) return Promise.resolve()
+  const key = `${world}:${gate}`
+  let pending = loading.get(key)
+  if (!pending) {
+    const fetch = source.fetchLand?.(gate)
+    if (!fetch) return Promise.resolve()
+    pending = fetch
+      .then((served) => {
+        rememberLand(world, gate, landFromCells(served))
+        bus.emit(EV.homeChanged, { reason: 'land', gate })
+      })
+      .catch(() => undefined)
+      .finally(() => loading.delete(key))
+    loading.set(key, pending)
+  }
+  return pending
+}
+
+/** Before a scene enters `home:<gate>`: its land, fetched while the screen is dark. */
+export function prepareHomeLand(area: string): Promise<void> | null {
+  const gate = parseHomeArea(area)
+  return gate === null ? null : loadLand(gate)
+}
+
+/** Plain ground while the served land is on its way: edge, grass, the gate path. */
+function provisionalLand(): Land {
+  const L = HOMESTEAD_DATA.land
+  const tiles = new Uint8Array(L.width * L.height)
+  for (let y = 0; y < L.height; y++) {
+    for (let x = 0; x < L.width; x++) {
+      const path = x >= L.gate.x && x < L.gate.x + L.gate.w && y >= L.site.y + L.site.h
+      const edge = x === 0 || y === 0 || x === L.width - 1 || y === L.height - 1
+      tiles[y * L.width + x] = path ? LAND.PATH : edge ? LAND.EDGE : LAND.GRASS
+    }
+  }
+  return { width: L.width, height: L.height, tiles }
 }
 
 const TREES: DecorKind[] = ['oak', 'oak', 'pine', 'birch', 'pine', 'oak']
 
 export function buildLand(gate: number): LandWorld {
   const L = HOMESTEAD_DATA.land
-  const seed = seedFor(gate)
-  const land = generateLand(seed)
+  const known = servedLand(gate, source.worldId())
+  if (!known) void loadLand(gate)
+  const land = known ?? provisionalLand()
   const st = source.state(gate)
   const cleared = new Set((st?.cleared ?? []).map(([x, y]) => tileKey(x, y)))
   const stumps = new Set((st?.stumps ?? []).map(([x, y]) => tileKey(x, y)))
@@ -233,7 +276,7 @@ export function buildLand(gate: number): LandWorld {
     spawn: landEntry(),
     gate,
     land,
-    seed,
+    served: known !== null,
     site: { ...s },
     door,
     doorstep: { tx: door.tx, ty: door.ty + 1 },

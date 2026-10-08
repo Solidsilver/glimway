@@ -14,11 +14,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
-      - name: Require a stable semantic version tag
+      - name: Require a semantic version tag (a release, or a pre-release such as v0.3.0-alpha.1)
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]
       - name: Require the tag to match package.json
         env:
           RELEASE_TAG: ${{ github.ref_name }}

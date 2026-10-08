@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -67,10 +66,9 @@ func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		workshopView
-	}{s, v})
+	}{v})
 }
 
 // chestUnits is everything in a chest, counted in units (the personal cap).
@@ -86,16 +84,14 @@ func chestUnits(c assetCounts) int {
 func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key       string          `json:"key"`
-		Progress  json.RawMessage `json:"progress,omitempty"`
-		Direction string          `json:"direction"`
-		Chest     string          `json:"chest,omitempty"`
-		Asset     content.Asset   `json:"asset"`
+		Direction string        `json:"direction"`
+		Chest     string        `json:"chest,omitempty"`
+		Asset     content.Asset `json:"asset"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -144,14 +140,14 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 					return nil, fail(409, "chest-full")
 				}
 			}
-			got, err := takeAsset(ctx, tx, s, v, chest, "storage-deposit", req.Key, now)
+			got, err := takeAsset(ctx, tx, s, v, chest, "storage-deposit", req.Op.Key, now)
 			if err != nil {
 				return nil, err
 			}
 			if err = putStack(ctx, tx, chest.stackPlace(), v.ID, got.Makers); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Op.Key, now); err != nil {
 				return nil, err
 			}
 		case "withdraw":
@@ -172,10 +168,10 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			if err = giveAsset(ctx, tx, s, v, got, chest, "storage-withdraw", req.Key, now); err != nil {
+			if err = giveAsset(ctx, tx, s, v, got, chest, "storage-withdraw", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Op.Key, now); err != nil {
 				return nil, err
 			}
 		default:
@@ -190,15 +186,13 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		RecipeID string          `json:"recipeId"`
-		Qty      int             `json:"qty"`
+		RecipeID string `json:"recipeId"`
+		Qty      int    `json:"qty"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}

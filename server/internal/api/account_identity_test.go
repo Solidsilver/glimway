@@ -35,7 +35,7 @@ func TestNewRandomIdentityMailAndRemoval(t *testing.T) {
 	if _, err = x.db.DB.Exec("INSERT INTO item_stacks(location,owner,item_def,qty,maker_id) VALUES('pack',?,'timber',2,'')", first.AccountID); err != nil {
 		t.Fatal(err)
 	}
-	send := x.rawHTTP("POST", "/api/mail", map[string]any{"lease": play.Lease, "baseRev": play.Version, "key": "mail", "toId": second.AccountID, "asset": map[string]any{"kind": "material", "id": "timber", "qty": 1}}, sender)
+	send := x.rawHTTP("POST", "/api/mail", body(play, "mail", map[string]any{"toId": second.AccountID, "asset": map[string]any{"kind": "material", "id": "timber", "qty": 1}}), sender)
 	if send.Code != 200 {
 		t.Fatal(send.Code, send.Body.String())
 	}
@@ -83,10 +83,10 @@ func TestRandomIdentityGivingMakerRevocationAndSyncSubject(t *testing.T) {
 	}
 	x.refresh(c, &s)
 	p := profile("player-subject", 1, 0, 20)
-	x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 	x.refresh(c, &s)
 	p.ID = s.AccountID
-	status, _, code, _ := x.request("POST", "/api/sync", syncBody(s, p, s.State), c)
+	status, _, code, _ := x.request("POST", "/api/profile", x.profileBody(s, p, s.State), c)
 	if status != 409 || code != "account-switch" {
 		t.Fatal("sync compared account with Habitica subject", status, code)
 	}

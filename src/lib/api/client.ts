@@ -4,14 +4,14 @@
  * (queue.ts) that every call goes through.
  *
  * `run(raw => …)` queues a task that builds its request when it actually
- * starts, so a progress upload behind a spend reads the revision and lease
- * the spend returned, not the ones current when it was queued.
+ * starts, so a request behind another reads the lease that one left.
  *
  * The Habitica token passes through `login` only, and is never stored here.
  */
 import contract from '../../../content/contract.json' with { type: 'json' };
-import { createOperationsApi, type OperationsApi } from './operations.ts';
-import { ApiError, errorFromResponse } from './errors.ts';
+import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
+import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
+import { ApiError, errorFromResponse, isServerErrorCode, type ServerErrorCode } from './errors.ts';
 import {
   parseCalendar,
   parseContribute,
@@ -37,20 +37,15 @@ import {
   parseCreatedInvite,
   parseInviteList,
   parsePlay,
-  parseProgress,
   parseSnapshot,
   parseState,
-  parseSpend,
-  parseSync,
-  parseWildsClaim,
-  parseWildsDefeat,
-  parseWildsLantern,
   parseWildsRegion,
   parseWorld,
   parseWorldChoice,
   parseWorldMove,
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
+import { parseEntry, type ShelfEntry } from '../papers/library.ts';
 import type {
   Asset,
   CalendarResponse,
@@ -84,20 +79,8 @@ import type {
   LoginRequest,
   OriginRequest,
   PlayResponse,
-  ProgressRequest,
-  ProgressResponse,
   Snapshot,
   StateResponse,
-  SpendRequest,
-  SpendResponse,
-  SyncRequest,
-  SyncResponse,
-  WildsClaimRequest,
-  WildsClaimResponse,
-  WildsDefeatRequest,
-  WildsDefeatResponse,
-  WildsLanternRequest,
-  WildsLanternResponse,
   WildsRegionResponse,
   WorldChoice,
   WorldMoveResponse,
@@ -124,9 +107,6 @@ export interface RawApi {
   state(lease?: string | null): Promise<StateResponse>;
   origin(req: OriginRequest): Promise<Snapshot>;
   play(req: { clientId: string; takeOver?: boolean }): Promise<PlayResponse>;
-  progress(req: ProgressRequest, opts?: { keepalive?: boolean }): Promise<ProgressResponse>;
-  sync(req: SyncRequest): Promise<SyncResponse>;
-  spend(req: SpendRequest): Promise<SpendResponse>;
   createInvite(): Promise<CreatedInvite>;
   listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
@@ -147,9 +127,6 @@ export interface RawApi {
   /** Answer it, once: the party's world, or one of your own. The same sign-in carries on. */
   worldChoose(choice: 'party' | 'own'): Promise<Snapshot>;
   wildsRegion(regionId: string): Promise<WildsRegionResponse>;
-  wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
-  wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
-  wildsLantern(req: WildsLanternRequest): Promise<WildsLanternResponse>;
 
   /** The homestead behind a Commons gate (null home: unclaimed land; read-only for visitors). */
   home(gate: number): Promise<HomeResponse>;
@@ -189,14 +166,40 @@ export interface RawApi {
   repairs(): Promise<RepairsResponse>;
   /** Mend a village repair. */
   repairMend(id: string, req: Envelope): Promise<MendResponse>;
+  /** Donate a paper you hold (the server checks its `paper:` mark) to the world's library. */
+  libraryDonate(req: Envelope & { paperId: string }): Promise<LibraryDonateResponse>;
+  /**
+   * What a key committed on a route (lane B's reconciliation read): the
+   * operation's payload (its `op` header removed) and stored result, or null
+   * when the world has no row for it (never, or past the seven-day retention).
+   */
+  operationResult(route: string, key: string): Promise<{ state: PlayerState; operation: CommittedOperation | null }>;
 }
 
-/** The common keyed-mutation fields (Link.mutate fills them). */
-export interface Envelope {
-  lease: string;
-  baseRev: number;
+export interface CommittedOperation {
+  /** A stored terminal gameplay refusal, with no successful result. */
+  refused?: ServerErrorCode;
+  route: string;
   key: string;
-  progress?: unknown;
+  payload: Record<string, unknown>;
+  version: number;
+  result: unknown;
+  /** The Envelope result case (`mark`, `questStep`…), or `result` for a domain route. */
+  resultCase: string;
+}
+
+export interface LibraryDonateResponse extends Snapshot {
+  result: { entry: ShelfEntry };
+}
+
+/**
+ * The common keyed-mutation fields (Link.mutate fills them): the operation
+ * header and where the hero stands (design server-first 2.1). No `baseRev`,
+ * no `progress`.
+ */
+export interface Envelope {
+  op: { lease: string; key: string; report?: { client: string; generation: string; seq: number } };
+  where: { area: string; x: number; y: number };
 }
 
 export interface ApiClient extends RawApi {
@@ -283,15 +286,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async play(req) {
       return parsePlay(await request('POST', '/api/play', { clientId: req.clientId, takeOver: req.takeOver === true }));
     },
-    async progress(req, opts) {
-      return parseProgress(await request('PUT', '/api/progress', req, { keepalive: opts?.keepalive }));
-    },
-    async sync(req) {
-      return parseSync(await request('POST', '/api/sync', req));
-    },
-    async spend(req) {
-      return parseSpend(await request('POST', '/api/spend', req));
-    },
     async createInvite() {
       return parseCreatedInvite(await request('POST', '/api/invites', {}));
     },
@@ -330,23 +324,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async wildsRegion(regionId) {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
     },
-    async wildsClaim(req) {
-      return parseWildsClaim(await request('POST', '/api/wilds/claim', req));
-    },
-    async wildsDefeat(req) {
-      return parseWildsDefeat(await request('POST', '/api/wilds/defeat', req));
-    },
-    async wildsLantern(req) {
-      return parseWildsLantern(await request('POST', '/api/wilds/lantern', req));
-    },
     async home(gate) {
-      return parseHome(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`));
+      return parseHome(mixedRead(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`)));
     },
     async commons() {
-      return parseCommons(await request('GET', '/api/commons'));
+      return parseCommons(mixedRead(await request('GET', '/api/commons')));
     },
     async shelf(gate) {
-      return parseShelf(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`));
+      return parseShelf(mixedRead(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`)));
     },
     async shelfAction(req) {
       return parseShelfAction(await request('POST', '/api/homestead/shelf', req));
@@ -358,7 +343,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseCalendar(await request('GET', '/api/calendar'));
     },
     async storage() {
-      return parseStorage(await request('GET', '/api/storage'));
+      return parseStorage(mixedRead(await request('GET', '/api/storage')));
     },
     async storageMove(req) {
       return parseStorageMove(await request('POST', '/api/storage', req));
@@ -373,7 +358,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseDeskCopy(await request('POST', '/api/desk/copy', req));
     },
     async woodpile() {
-      return parseWoodpileRead(await request('GET', '/api/homestead/woodpile'));
+      return parseWoodpileRead(mixedRead(await request('GET', '/api/homestead/woodpile')));
     },
     async woodpileAction(req) {
       return parseWoodpileAction(await request('POST', '/api/homestead/woodpile', req));
@@ -383,7 +368,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       if (page?.cursor) q.set('cursor', page.cursor);
       if (page?.pendingCursor) q.set('pendingCursor', page.pendingCursor);
       const qs = q.toString();
-      return parseMail(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`));
+      return parseMail(mixedRead(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`)));
     },
     async mailSend(req) {
       return parseMailAction(await request('POST', '/api/mail', req));
@@ -395,22 +380,32 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
     },
     async projects() {
-      return parseProjects(await request('GET', '/api/projects'));
+      return parseProjects(mixedRead(await request('GET', '/api/projects')));
     },
     async contribute(id, req) {
       return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, req));
     },
     async items() {
-      return parseItems(await request('GET', '/api/items'));
+      return parseItems(mixedRead(await request('GET', '/api/items')));
     },
     async itemAction(op, req) {
       return parseItemsAction(await request('POST', `/api/items/${op}`, req));
     },
     async repairs() {
-      return parseRepairs(await request('GET', '/api/repairs'));
+      return parseRepairs(mixedRead(await request('GET', '/api/repairs')));
     },
     async repairMend(id, req) {
       return parseMend(await request('POST', `/api/repairs/${encodeURIComponent(id)}/mend`, req));
+    },
+    async operationResult(route, key) {
+      const raw = await request('GET', `/api/operations/result?route=${encodeURIComponent(route)}&key=${encodeURIComponent(key)}`);
+      return parseOperationResult(raw);
+    },
+    async libraryDonate(req) {
+      const res = await request('POST', '/api/library/donate', req);
+      const entry = parseEntry((res as { result?: { entry?: unknown } } | null)?.result?.entry);
+      if (!entry) throw new ApiError('bad-response', { status: 200 });
+      return { ...parseSnapshot(res), result: { entry } };
     },
   };
 
@@ -426,9 +421,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     state: (lease) => run((r) => r.state(lease)),
     origin: (req) => run((r) => r.origin(req)),
     play: (req) => run((r) => r.play(req)),
-    progress: (req, opts) => run((r) => r.progress(req, opts)),
-    sync: (req) => run((r) => r.sync(req)),
-    spend: (req) => run((r) => r.spend(req)),
     createInvite: () => run((r) => r.createInvite()),
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
@@ -441,9 +433,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     worldChoice: () => run((r) => r.worldChoice()),
     worldChoose: (choice) => run((r) => r.worldChoose(choice)),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
-    wildsClaim: (req) => run((r) => r.wildsClaim(req)),
-    wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),
-    wildsLantern: (req) => run((r) => r.wildsLantern(req)),
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
     shelf: (gate: number) => run((r) => r.shelf(gate)),
@@ -467,7 +456,35 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     itemAction: (op, req) => run((r) => r.itemAction(op, req)),
     repairs: () => run((r) => r.repairs()),
     repairMend: (id, req) => run((r) => r.repairMend(id, req)),
+    libraryDonate: (req) => run((r) => r.libraryDonate(req)),
+    operationResult: (route, key) => run((r) => r.operationResult(route, key)),
   };
+}
+
+/**
+ * Domain reads answer `{ state, result }` (design server-first 6, the mixed
+ * envelope): their extras sit under `result`. The existing parsers read them
+ * at the top beside `state`, so the two are put side by side again.
+ */
+export function mixedRead(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || !('state' in raw) || !('result' in raw)) return raw;
+  const { state, result } = raw as { state: unknown; result: unknown };
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return raw;
+  return { ...(result as Record<string, unknown>), state };
+}
+
+/** The reconciliation read, validated: a current state, and the committed operation or null. */
+export function parseOperationResult(raw: unknown): { state: PlayerState; operation: CommittedOperation | null } {
+  const { state, result } = decodeMixed(raw, (r) => r);
+  const op = (result as { operation?: unknown } | null)?.operation;
+  if (op === null || op === undefined) return { state, operation: null };
+  const o = op as Record<string, unknown>;
+  if (typeof o.route !== 'string' || typeof o.key !== 'string' || !o.payload || typeof o.payload !== 'object' || Array.isArray(o.payload) || typeof o.resultCase !== 'string' || typeof o.version !== 'number') {
+    throw new ApiError('bad-response', { status: 200 });
+  }
+  const refused = o.refused;
+  if (refused !== undefined && (typeof refused !== 'string' || !isServerErrorCode(refused))) throw new ApiError('bad-response', { status: 200 });
+  return { state, operation: { route: o.route, key: o.key, payload: o.payload as Record<string, unknown>, version: o.version, result: o.result, resultCase: o.resultCase, ...(refused ? { refused } : {}) } };
 }
 
 /**

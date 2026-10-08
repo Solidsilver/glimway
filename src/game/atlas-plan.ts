@@ -20,8 +20,7 @@
  *    (never above its source), and call sites keep scaling from frame sizes
  *    as before.
  */
-import { DECOR_ART } from '../lib/wilds/tangle.ts'
-import type { DecorKind } from '../lib/wilds/types.ts'
+import { DECOR_ART, type DecorKind } from './wilds/decor.ts'
 import { HOMESTEAD_DATA } from '../lib/homestead.ts'
 import type { CommonsPassFrame } from './commons-pass.ts'
 import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'

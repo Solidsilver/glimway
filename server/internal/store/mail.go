@@ -132,9 +132,6 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		if err = BumpVersion(ctx, tx, &Snapshot{AccountID: sender}); err != nil {
 			return false, err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE progress SET rev=(SELECT version FROM players WHERE account_id=?),updated_at=? WHERE account_id=?", sender, now, sender); err != nil {
-			return false, err
-		}
 	}
 	return true, nil
 }

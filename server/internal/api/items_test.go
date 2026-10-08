@@ -53,6 +53,9 @@ func (x *rig) items(method, path string, b any, c *http.Cookie, status int) item
 func (x *rig) opRefreshing(c *http.Cookie, s *response, op string, fields map[string]any, status int) itemsResponse {
 	x.t.Helper()
 	x.refresh(c, s)
+	if op == "gather" {
+		x.gatherFixture(*s, fields)
+	}
 	v := x.items("POST", "/api/items/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Version, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		s.Snapshot = v.Snapshot
@@ -400,7 +403,7 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "comfrey-salve", "unmoored": true}, 200)
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "timber"}, 400)
 	// At full health a twist would be wasted.
-	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.hp',50) WHERE account_id='" + x.account("alice") + "'"); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE player_vitals SET hp=50 WHERE account_id='" + x.account("alice") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	if x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists"}, 409).Error.Code != "not-needed" {
@@ -609,7 +612,7 @@ func TestItemsOffHandOpensWithAClass(t *testing.T) {
 	x.set(p)
 	x.refresh(c, &s)
 	// The class arrives with the next Habitica sync.
-	s.Snapshot = x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200).Snapshot
 	v := x.opRefreshing(c, &s, "offhand", map[string]any{"instance": lantern}, 200)
 	if !v.Result.Items.OffHand.Open || *v.Result.Items.OffHand.Class != "warrior" || *v.Result.Items.OffHand.Instance != lantern || *v.Result.Items.OffHand.ItemDef != "carters-lantern" {
 		t.Fatal("lantern in hand", v.Result.Items.OffHand)
@@ -630,7 +633,7 @@ func TestItemsOffHandOpensWithAClass(t *testing.T) {
 	p.Class = nil
 	x.set(p)
 	x.refresh(c, &s)
-	s.Snapshot = x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200).Snapshot
 	if v = x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1}, 200); v.Result.Items.OffHand.Open || count(t, x.db, "SELECT count(*) FROM item_slots WHERE slot='off-hand'") != 0 {
 		t.Fatal("off hand closed with the class")
 	}
@@ -739,7 +742,7 @@ func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
 	down := profile("alice", 1, 0, 0)
 	x.set(down)
 	x.refresh(c, &s)
-	s.Snapshot = x.expect("POST", "/api/sync", syncBody(s, down, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, down, s.State), c, 200).Snapshot
 	if s.State.HP != 0 {
 		t.Fatal("the hero should be down", s.State.HP)
 	}
@@ -753,5 +756,5 @@ func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
 	// The lock still holds: a healed upload is refused.
 	healed := s.State
 	healed.HP = 50
-	x.expect("PUT", "/api/progress", mutation(s, healed), c, 400)
+	x.expect("PUT", "/api/progress", mutation(s, healed), c, 404)
 }

@@ -1,0 +1,6 @@
+{
+  "regenCap": 16,
+  "fallHpFraction": 0.25,
+  "fallManaFraction": 0.5,
+  "reportGapCap": 30
+}

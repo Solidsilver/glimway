@@ -6,6 +6,7 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
+	"strings"
 )
 
 // Domain tests keep their convenient Snapshot assertions while login/play/state
@@ -42,7 +43,12 @@ func testSnapshotJSON(raw []byte) []byte {
 	if step := p.Story.Quests["lantern-road"]; step != "" {
 		s.State.Quest = step
 	}
-	s.State.Flags = append([]string{}, p.Story.Marks...)
+	s.State.Flags = []string{}
+	for _, m := range p.Story.Marks {
+		if !strings.HasPrefix(m, "found:") && !strings.HasPrefix(m, "defeated:") {
+			s.State.Flags = append(s.State.Flags, m)
+		}
+	}
 	s.State.Discoveries = append([]string{}, p.Story.Discoveries...)
 	s.State.DefeatedEnemies = append([]string{}, p.Story.Defeated...)
 	s.State.Inventory = append([]string{}, p.Story.QuestItems...)
@@ -54,6 +60,28 @@ func testSnapshotJSON(raw []byte) []byte {
 	_ = json.Unmarshal([]byte(store.JSON(s)), &projected)
 	for k, v := range projected {
 		fields[k] = v
+	}
+	var extras map[string]json.RawMessage
+	if json.Unmarshal(fields["result"], &extras) == nil {
+		for k, v := range extras {
+			if k == "mended" && len(v) > 0 && v[0] == '"' {
+				continue
+			}
+			fields[k] = v
+		}
+		if extras["open"] != nil {
+			delete(fields, "result")
+		}
+	}
+	for _, kind := range []string{"profileResult", "profile", "spend"} {
+		var result map[string]json.RawMessage
+		if json.Unmarshal(fields[kind], &result) == nil {
+			for _, k := range []string{"status", "outcome", "vitalsCredit"} {
+				if result[k] != nil {
+					fields[k] = result[k]
+				}
+			}
+		}
 	}
 	out, _ := json.Marshal(fields)
 	return out

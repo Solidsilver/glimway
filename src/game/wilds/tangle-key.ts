@@ -3,7 +3,7 @@
  * texture, so the woods draw in a single batch). Kept apart from the art so
  * the generator's WorldData adapter can name frames without canvas code.
  */
-import type { DecorKind } from '../../lib/wilds/types.ts'
+import type { DecorKind } from './decor.ts'
 
 /** Variants drawn per decor kind. */
 export const TANGLE_VARIANTS = 4

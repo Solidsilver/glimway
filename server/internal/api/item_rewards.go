@@ -8,6 +8,7 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
+	"strings"
 )
 
 func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
@@ -50,7 +51,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":
-		if s.State.Area != "wilds" {
+		if !strings.HasPrefix(s.State.Area, "wilds:") {
 			return fail(409, "too-far-away")
 		}
 	default:
@@ -116,7 +117,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 			return fail(409, "too-far-away")
 		}
 	case "nans-lamplighter-pole":
-		if s.State.Area != "wilds" {
+		if !strings.HasPrefix(s.State.Area, "wilds:") {
 			return fail(409, "too-far-away")
 		}
 	default:

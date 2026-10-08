@@ -45,7 +45,7 @@ func TestClientErrorCodesCoverServer(t *testing.T) {
 		"settleChoice:why":          true,
 		"mailSendLimits:check.code": true,
 		"login:h.Code":              true,
-		"spend:err.Error()":         true,
+		"spendOp:e.Error()":         true,
 	}
 	for _, dir := range []string{".", "../habitica", "../rules"} {
 		paths, err := filepath.Glob(filepath.Join(dir, "*.go"))

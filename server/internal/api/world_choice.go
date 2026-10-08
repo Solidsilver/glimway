@@ -123,9 +123,7 @@ func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, w
 	state := rules.NewState()
 	state.HP = min(p.HP, p.MaxHP)
 	state.Mana = min(p.MP, p.MaxMP)
-	if _, err := tx.ExecContext(ctx, "INSERT INTO progress VALUES(?,1,0,?,?)", id, store.JSON(state), now); err != nil {
-		return err
-	}
+
 	if _, err := tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", id); err != nil {
 		return err
 	}
@@ -136,6 +134,11 @@ func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, w
 	// suitable for reports and the new state loader.
 	if _, err := tx.ExecContext(ctx, "INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version) VALUES(?,?,?,?,0)", id, state.HP, state.Mana, now); err != nil {
 		return err
+	}
+	for _, item := range state.Inventory {
+		if _, err := tx.ExecContext(ctx, "INSERT INTO story_marks VALUES(?,?,'quest-item',?)", id, item, now); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO player_place(account_id,area,x,y) VALUES(?,?,?,?)", id, state.Area, state.Position.X, state.Position.Y); err != nil {
 		return err

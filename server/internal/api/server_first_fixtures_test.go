@@ -163,20 +163,19 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		if w.Code != 200 {
 			t.Fatal(route, w.Code, w.Body.String())
 		}
-		var result map[string]json.RawMessage
-		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		var read struct {
+			Result map[string]json.RawMessage `json:"result"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &read); err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range snapshotFields {
-			delete(result, key)
-		}
-		raw, err := mixedBytes(state.State, result)
+		raw, err := mixedBytes(state.State, read.Result)
 		if err != nil {
 			t.Fatal(err)
 		}
 		fixtures = append(fixtures, wireFixture{"mixed", route, raw, ""})
 	}
-	chunk := &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:2", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
+	chunk := &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:1", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
 	chunkJSON, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(chunk)
 	if err != nil {
 		t.Fatal(err)

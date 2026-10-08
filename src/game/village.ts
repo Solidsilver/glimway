@@ -5,7 +5,7 @@
  * the scene (src/game/entities/festivals.ts, village changes) and the panels
  * read it and hear about changes on the bus.
  *
- * Guests get the calendar computed locally from content/calendar.json (the
+ * Guests get the calendar computed locally from content/clock.json (the
  * same function the server uses); everything else needs a world.
  */
 import { calendarAt, type CalendarDay } from '../lib/calendar.ts'

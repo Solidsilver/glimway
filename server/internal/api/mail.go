@@ -146,24 +146,21 @@ func (a *Server) mailRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		mailPage
 		Inventory assetCounts `json:"inventory"`
-	}{s, list, inventory})
+	}{list, inventory})
 }
 func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
-		ToID     string          `json:"toId"`
-		Asset    content.Asset   `json:"asset"`
+		ToID  string        `json:"toId"`
+		Asset content.Asset `json:"asset"`
 	}
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if req.ToID == s.AccountID {
 			return nil, fail(400, "self-mail")
 		}
@@ -240,13 +237,11 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 	}
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
 	}
 	if err = decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var v content.Asset
 		var from, world, to, raw, makers string
 		var claimed, returned sql.NullInt64
@@ -351,13 +346,11 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 	}
 	var req struct {
 		Mutation
-		Key      string          `json:"key"`
-		Progress json.RawMessage `json:"progress,omitempty"`
 	}
 	if err = decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var from, world string
 		var asset content.Asset
 		var claimed, returned sql.NullInt64

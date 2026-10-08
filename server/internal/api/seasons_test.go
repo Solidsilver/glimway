@@ -157,12 +157,6 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	// wear or cap), and its plain trees give timber only.
 	x.now.Add(86400)
 	c = x.login("alice", "")
-	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), ""), 400).Error.Code != "invalid-region" {
-		t.Fatal("a wilds gather without its region")
-	}
-	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "made-up"), 400).Error.Code != "invalid-region" {
-		t.Fatal("a wilds gather in a made-up region")
-	}
 	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("a Tangle tree out in the drift")
 	}

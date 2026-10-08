@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { CALENDAR, calendarAt } from '../src/lib/calendar.ts';
 export function calendarVectors() {
@@ -11,4 +11,8 @@ export function calendarVectors() {
   return [7, 9, 14].flatMap(wickDays => [...times].sort((a,b) => a-b).map(unix => ({ wickDays, unix, result: calendarAt(unix, { ...CALENDAR, wickDays }) })));
 }
 export function serializeCalendarVectors() { return JSON.stringify(calendarVectors()) + '\n'; }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) writeFileSync(new URL('../content/vectors/calendar.json', import.meta.url), serializeCalendarVectors());
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+ const path = new URL('../content/vectors/clock.json', import.meta.url);
+ const existing = JSON.parse(readFileSync(path, 'utf8'));
+ writeFileSync(path, JSON.stringify({ recovery: existing.recovery, calendar: calendarVectors() }) + '\n');
+}

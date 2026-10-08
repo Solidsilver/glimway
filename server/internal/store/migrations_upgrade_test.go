@@ -64,7 +64,7 @@ INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,re
 			for _, query := range checks {
 				query = currentSchemaSQL(query)
 				if tt.migration == "025" {
-					query = strings.ReplaceAll(query, "version=7", "version=8")
+					query = strings.ReplaceAll(query, "version=7", "version=9")
 				}
 				var got int
 				if err := upgraded.DB.QueryRow(query).Scan(&got); err != nil || got != 1 {

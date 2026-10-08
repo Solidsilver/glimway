@@ -46,7 +46,7 @@ func TestKeyedOpCurrentReplayAndAtomicRefusal(t *testing.T) {
 	x := newRig(t)
 	cookie, s := x.ready("alice")
 	calls := 0
-	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "key"}, Mark: "client-mark", Where: &contract.Where{Area: "village", X: 2, Y: 3}}
+	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "key"}, Mark: "seen:client-mark", Where: &contract.Where{Area: "village", X: 2, Y: 3}}
 	run := func(apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error)) *httptest.ResponseRecorder {
 		r := httptest.NewRequest("POST", "https://game.test/api/story/mark", nil)
 		r.AddCookie(cookie)
@@ -176,13 +176,7 @@ func TestPlayGenerationsAndReportBarrier(t *testing.T) {
 
 func TestOperationStubsAndNumericWire(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
-	for _, route := range []string{"/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/wilds/echo", "/api/fall", "/api/spend", "/api/wilds/claim", "/api/wilds/lantern"} {
-		w := x.rawHTTP("POST", route, map[string]any{"op": map[string]any{"lease": s.Lease, "key": strings.ReplaceAll(route, "/", "-")}, "where": map[string]any{"area": "village", "x": 1, "y": 2}}, c)
-		if w.Code != 409 || !strings.Contains(w.Body.String(), "not-implemented") || !strings.Contains(w.Body.String(), `"state"`) {
-			t.Fatal(route, w.Code, w.Body.String())
-		}
-	}
+	c, _ := x.ready("alice")
 	for _, raw := range []string{`{"lease":"x","seq":"1"}`, `{"lease":"x","basis":"NaN"}`, `{"lease":"x","report_generation":"alias"}`, `{"lease":"x","progress":{}}`} {
 		r := httptest.NewRequest("POST", "/api/report", strings.NewReader(raw))
 		w := httptest.NewRecorder()
@@ -220,7 +214,6 @@ func TestOperationStubsAndNumericWire(t *testing.T) {
 }
 
 func TestRetiredTrustRoutesB5(t *testing.T) {
-	t.Skip("B5/D integration: enable after upload handlers and migration dispatch retire")
 	x := newRig(t)
 	c, s := x.ready("retirement-hero")
 	for _, route := range []struct{ method, path string }{{"PUT", "/api/progress"}, {"POST", "/api/sync"}, {"POST", "/api/spend"}, {"POST", "/api/wilds/claim"}, {"POST", "/api/wilds/lantern"}, {"POST", "/api/wilds/defeat"}, {"POST", "/api/origin"}} {
@@ -294,7 +287,7 @@ func TestSharedBoundsAndStatefulPlacementRefusals(t *testing.T) {
 	c, s := x.ready("bounded-subject")
 	for _, area := range []string{"invented", "wilds:unknown"} {
 		w := x.rawHTTP("POST", "/api/story/mark", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "unknown-area"}, "where": map[string]any{"area": area}, "mark": "seen:fixture"}, c)
-		if w.Code != 400 || !strings.Contains(w.Body.String(), "invalid-position") || !strings.Contains(w.Body.String(), `"state"`) {
+		if w.Code != 409 || !strings.Contains(w.Body.String(), "invalid-position") || !strings.Contains(w.Body.String(), `"state"`) {
 			t.Fatal(w.Code, w.Body.String())
 		}
 	}

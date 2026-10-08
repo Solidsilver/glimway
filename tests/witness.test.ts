@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { fitBytes, hasWitnessed, isWitnessBeat, keepsWitness, WITNESS_KEEP_PER_BEAT, witnessCopy, witnessFlag, witnessJournalEntries, witnessMoment, witnessName } from '../src/content/witness.ts';
 import { journalEntries } from '../src/content/world.ts';
@@ -85,4 +86,15 @@ test('only the first few travelers of each beat are kept, and nothing else is to
   assert.ok(keepsWitness(flags, 'lantern'));
   assert.ok(keepsWitness(flags, 'echo:nan'));
   assert.deepEqual(flags.slice(0, 2), ['met:mara@new', 'echo:nan']);
+});
+
+// Same vectors as the Go writer: a server-written flag must parse in the journal.
+test('server witness vectors match the client builder and journal parser', () => {
+  const vectors = JSON.parse(readFileSync(new URL('../content/vectors/witness.json', import.meta.url), 'utf8'));
+  for (const v of vectors) {
+    assert.equal(witnessFlag(v.beat, v.doer, v.name), v.mark);
+    assert.ok(hasWitnessed([v.mark], v.beat, v.doer));
+    assert.equal(witnessJournalEntries([v.mark]).length, 1);
+    assert.ok(Buffer.byteLength(v.mark, 'utf8') <= 256);
+  }
 });

@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"glimway/content"
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"math"
@@ -33,7 +34,7 @@ func validatePayload(m protoreflect.Message) error {
 			err = validatePayload(v.Message())
 			return err == nil
 		}
-		if f.Kind() == protoreflect.StringKind && slices.Contains([]string{"quest", "to", "mark", "paper", "epoch", "site", "member", "kind", "target", "entity_id", "owner_id", "lantern_id", "client", "generation", "key"}, string(f.Name())) && v.String() != "" && !validPayloadID(v.String()) && !(f.Name() == "mark" && validWitnessMark(v.String())) {
+		if f.Kind() == protoreflect.StringKind && slices.Contains([]string{"quest", "to", "mark", "paper", "epoch", "site", "member", "kind", "target", "entity_id", "owner_id", "lantern_id", "client", "generation", "key"}, string(f.Name())) && v.String() != "" && !((f.Name() == "mark" && validStoryMark(v.String())) || (f.Name() != "mark" && validPayloadID(v.String()))) {
 			err = fmt.Errorf("invalid payload id")
 		}
 		if f.Kind() == protoreflect.StringKind && f.Name() == "client" && v.String() != "" && !validClientID(v.String()) {
@@ -71,4 +72,18 @@ func validWitnessMark(mark string) bool {
 	}
 	parts := strings.SplitN(mark, ":", 4)
 	return len(parts) == 4 && validPayloadID(parts[1]) && validClientID(parts[2]) && parts[3] != ""
+}
+
+// Conversation builders use @ between two individually bounded payload ids.
+func validStoryMark(mark string) bool {
+	for _, prefix := range []string{"met:", "heard:"} {
+		if strings.HasPrefix(mark, prefix) {
+			parts := strings.Split(strings.TrimPrefix(mark, prefix), "@")
+			if len(parts) != 2 || !validPayloadID(parts[0]) || !validPayloadID(parts[1]) {
+				return false
+			}
+			return prefix == "heard:" || parts[1] == "new" || content.QuestIndex(parts[1]) >= 0
+		}
+	}
+	return validPayloadID(mark) || validWitnessMark(mark)
 }
