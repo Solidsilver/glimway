@@ -94,8 +94,9 @@ async function start(): Promise<Backend> {
     // busy worker never trips them.
     const child = spawn(
       BIN,
-      // -dev-clock starts at the real time; a test can move it forward (moveServerClock).
-      ['-listen', `127.0.0.1:${apiPort}`, '-db', db, '-cookie-secure=false', '-habitica-url', habitica, '-login-rate', '10000', '-login-global-rate', '100000', '-login-concurrency', '64', `-dev-clock=${Math.floor(Date.now() / 1000)}`],
+      // -dev-clock=now: the real time to the instant (a stamp taken here would
+      // leave the server behind by its start-up), movable by a test (moveServerClock).
+      ['-listen', `127.0.0.1:${apiPort}`, '-db', db, '-cookie-secure=false', '-habitica-url', habitica, '-login-rate', '10000', '-login-global-rate', '100000', '-login-concurrency', '64', '-dev-clock=now'],
       { stdio: ['ignore', out, out] }
     )
     const kill = () => child.kill('SIGKILL')

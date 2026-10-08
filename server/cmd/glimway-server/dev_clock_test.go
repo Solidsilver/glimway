@@ -106,6 +106,21 @@ func TestDevClockRouteMovesTheClockForwardOnly(t *testing.T) {
 	}
 }
 
+// "now" is the real clock to the instant (a stamp in whole seconds, read before
+// the server started, would leave it behind real time), and still movable.
+func TestDevClockNowKeepsRealTimeAndMoves(t *testing.T) {
+	c := devSetup(t, "-dev-clock=now")
+	if d := time.Since(c.now()); d < 0 || d > 50*time.Millisecond {
+		t.Fatal("behind or ahead of real time by", d)
+	}
+	if w := post(c.mount(inner), `{"advance_seconds": 86400}`, "127.0.0.1:5000"); w.Code != http.StatusOK {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	if d := time.Until(c.now()); d < 86399*time.Second {
+		t.Fatal("not moved a day:", d)
+	}
+}
+
 func TestDevBuildWithoutDevClockHasNoRoute(t *testing.T) {
 	c := devSetup(t)
 	if w := post(c.mount(inner), `{"advance_seconds": 60}`, "127.0.0.1:5000"); w.Code != http.StatusTeapot {

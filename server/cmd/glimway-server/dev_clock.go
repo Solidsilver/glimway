@@ -19,16 +19,21 @@ import (
 const devClockPath = "/api/dev/clock"
 
 func devClock(f *flag.FlagSet) func() (clockSetup, error) {
-	stamp := f.String("dev-clock", "", "Start clock at Unix seconds, advancing normally, and serve POST "+devClockPath+" to move it forward (dev builds only)")
+	stamp := f.String("dev-clock", "", "Start clock at Unix seconds (or \"now\": the real time, to the instant), advancing normally, and serve POST "+devClockPath+" to move it forward (dev builds only)")
 	return func() (clockSetup, error) {
 		if *stamp == "" {
 			return realClock(), nil
 		}
-		n, err := strconv.ParseInt(*stamp, 10, 64)
-		if err != nil {
-			return clockSetup{}, fmt.Errorf("invalid dev-clock: %w", err)
+		boot := time.Now()
+		at := boot
+		if *stamp != "now" {
+			n, err := strconv.ParseInt(*stamp, 10, 64)
+			if err != nil {
+				return clockSetup{}, fmt.Errorf("invalid dev-clock: %w", err)
+			}
+			at = time.Unix(n, 0)
 		}
-		c := &movableClock{at: time.Unix(n, 0), since: time.Now()}
+		c := &movableClock{at: at, since: boot}
 		return clockSetup{now: c.now, mount: func(h http.Handler) http.Handler { return devClockRoute(c, h) }}, nil
 	}
 }
