@@ -123,7 +123,7 @@ export function validateRooms(value: unknown): Rooms {
 }
 /** The floor a free-standing furnishing may stand on: planks, flagstones, the arrival tile. */
 const FLOOR = '.:@';
-/** The back wall, where wall pieces hang. */
+/** The back wall, where wall pieces hang (also in front of a piece standing against it, on its row: a shelf's sign). */
 const BACK_WALL = '=w';
 
 /**
@@ -154,7 +154,8 @@ function validRoomFurnishings(r: Room): boolean {
     for (let y = f.ty; y < f.ty + th; y++) for (let x = f.tx; x < f.tx + tw; x++) {
       if (!roomContainsTile(r, x, y)) return false;
       const c = r.map[y]![x]!;
-      if (piece.mount === 'wall' ? !BACK_WALL.includes(c) : !FLOOR.includes(c)) return false;
+      const onBackWall = BACK_WALL.includes(c) || y === 1 && r.props.some(p => p.char === c);
+      if (piece.mount === 'wall' ? !onBackWall : !FLOOR.includes(c)) return false;
       tiles.add(`${x},${y}`);
     }
     const onRug = piece.mount !== 'wall' && placed.some(p => p.piece.layer === 'under' && [...tiles].every(t => p.tiles.has(t)));

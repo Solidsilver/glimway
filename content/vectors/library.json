@@ -6,10 +6,10 @@
     "map": [
       "##############",
       "#SS=SS=SS=SS=#",
-      "l............L",
+      "#............#",
       "l.RRRR.......L",
-      "l.RRRR...EE..L",
-      "l............L",
+      "#.RRRR...EE..#",
+      "k............K",
       "#.........NNN#",
       "#.........NNN#",
       "#.....@......#",
@@ -42,6 +42,18 @@
       {
         "art": "library-side-shelves",
         "char": "L",
+        "solid": true,
+        "facing": "left"
+      },
+      {
+        "art": "library-side-shelf-short",
+        "char": "k",
+        "solid": true,
+        "facing": "right"
+      },
+      {
+        "art": "library-side-shelf-short",
+        "char": "K",
         "solid": true,
         "facing": "left"
       },

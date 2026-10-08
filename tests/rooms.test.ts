@@ -352,14 +352,18 @@ test('drawing furnishings: a piece on another stands on its surface, in its slot
   // A state picks its frames; with none asked, the default state's.
   const oven = furnishingFor('kitchen-hearth')!;
   assert.equal(defaultState(oven), 'lit');
-  assert.equal(pieceFrame(oven, 'front', 'banked').frame, 'oven-hearth-fire-0');
+  assert.equal(pieceFrame(oven, 'front', 'banked').frame, 'kitchen-oven-front-fire');
+  // A side-on piece's states draw in its facing (the gear wheel turns on the east wall).
+  const gears = furnishingFor('mill-gears')!;
+  assert.equal(pieceFrame(gears, 'left', 'turning').frame, 'mill-gear-wheel-left-turn-0');
+  assert.deepEqual(pieceFrame(gears, 'right', 'still'), { frame: 'mill-gear-wheel-left-turn-0', flipX: true });
   assert.equal(defaultState(furnishingFor('crate')!), null, 'a piece with no states is still');
 });
 
 test('the library as revised: shelves on the back and both side walls (side-on), a section each, the nook a seat, no donation shelf', () => {
   const lib = buildArea('in:village:library');
   const sides = lib.room!.props.filter((p) => p.art === 'library-side-shelves');
-  assert.deepEqual(sides.map((f) => wallFacing(lib, f)).sort(), ['left', 'right'], 'each faces into the room');
+  assert.deepEqual(sides.map((f) => f.facing ?? wallFacing(lib, f)).sort(), ['left', 'right'], 'each faces into the room');
   assert.equal(lib.room!.props.filter((p) => p.art === 'library-shelves').length, 4, 'four back-wall units, one per section');
   assert.ok(!lib.room!.props.some((p) => p.art === 'donation-shelf' || p.art === 'window-seat'));
   const spots = Object.keys(lib.room!.def.spots);

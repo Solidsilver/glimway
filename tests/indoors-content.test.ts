@@ -30,8 +30,9 @@ test('shared room parent, root and known-id vectors', () => {
   for (const v of roomVectors.parents) { assert.equal(roomParent(v.area),v.parent,v.area); assert.equal(rootArea(v.area),v.root,v.area); assert.equal(knownRoom(v.area),v.known,v.area); }
 });
 test('prop footprints preserve separate rectangular sack piles', () => {
-  const loft = roomFor('in:village:mill:2')!;
-  assert.deepEqual(roomFootprints(loft,'f'), [{ char:'f',tx:2,ty:2,tw:2,th:2 },{ char:'f',tx:6,ty:2,tw:2,th:2 }]);
+  // A fixture: the loft's sacks are dressing since the round-2 art.
+  const piles = { ...roomFor('in:village:mill:2')!, map: ['##########', '#.ff..ff.#', '#.ff..ff.#', '##########'] };
+  assert.deepEqual(roomFootprints(piles,'f'), [{ char:'f',tx:2,ty:1,tw:2,th:2 },{ char:'f',tx:6,ty:1,tw:2,th:2 }]);
   assert.equal(ROOMS.rooms.length,4);
 });
 test('shared resident cycle phase and grace vectors', () => {

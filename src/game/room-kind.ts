@@ -118,7 +118,8 @@ export function buildRoomArea(def: Room): WorldData {
     solid.push(s)
   }
   const props: Footprint[] = def.props.flatMap((p) => groupsOf(def, p.char).map((g) => ({ art: p.art, char: p.char, solid: p.solid, ...(p.facing ? { facing: p.facing } : {}), ...g })))
-  const stairs: Footprint[] = ['^', 'v'].flatMap((c) => groupsOf(def, c).map((g) => ({ art: c === '^' ? 'stairs-up' : 'stairs-down', char: c, solid: false, ...g })))
+  // The stairs climb along their wall at 45°; the floor above has a railed opening over them (7.0 rule 5).
+  const stairs: Footprint[] = ['^', 'v'].flatMap((c) => groupsOf(def, c).map((g) => ({ art: c === '^' ? 'mill-stairs-diag-default' : 'loft-stair-opening-front-default', char: c, solid: false, ...g })))
   const [door] = groupsOf(def, 'D')
   const room: RoomScene = { def, props, stairs, doorway: door ? { art: 'doorway', char: 'D', solid: false, ...door } : null, arrive }
   return {
