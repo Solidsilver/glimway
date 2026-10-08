@@ -15,6 +15,23 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Step inside. Hazel's kitchen, Finn's mill with its sack loft up the
+  stairs, the library's reading room and your own cottage are rooms you
+  walk into, furnished and lived-in.
+- Hazel and Finn keep their hours: Hazel bakes for forty minutes of each
+  hour and steps out for twenty; Finn works the stones, the loft and his
+  door. Knock when nobody's home and you'll hear where they've gone. You
+  buy from them wherever they are.
+- Elara keeps the library half of each hour. Talk to her to read or to
+  give a paper; the shelves are sorted into Stories, Histories, Recipes
+  and Field notes, and there's a reading nook by the window.
+- A Quests page in the journal lists every quest you've found, with its
+  notes. Pin one and its goal leads the top bar.
+- A new beginning with Orrin and Mara, and three small quests in the
+  rooms: Set to Rise with Hazel, The Stuck Hoist in Finn's loft, and A
+  Seat by the Lamp in the library.
+- People say their own piece first; a quest's request follows.
+- Closing the tab right after a fight keeps what happened in it.
 - When someone speaks the warden's naming, the warden you're watching rests
   for its few seconds and no longer, even on a slow or background screen.
 - Coming back online after playing offline sends your health and place to
@@ -44,6 +61,19 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- 0.4 Indoors (`docs/design/indoors.md`), contract 4: rooms are places
+  (`content/rooms.json`, `in:<parent>[:floor]` ids, per-room presence),
+  residents on an hourly cycle (`content/residents.json`, `residentAt`,
+  the server's clock via `X-Glimway-Now`), quests by id on the server
+  (triggers, gates in order, `reached_at`/`gate_at`, migration 029).
+- Furnishings: one catalogue (`content/furnishings.json`, 76 pieces,
+  the home goods moved in) and one placement rule (`canPlace`, Go and
+  TS, shared vectors); rooms place pieces by id with a facing and a
+  parent; collision is each piece's base.
+- The indoors art pass, round 2 (176 frames) and a shared interior kit,
+  under design 7.0's interior style rules.
+- Reports: closing the tab sends the newest steps under the next
+  sequence instead of resending the report in flight.
 - Dev mode for local playtesting (dev builds only, which `npm run server`
   now makes): `POST /api/dev/grant` gives the signed-in account embers,
   items or home goods through the real store paths, never anything from
