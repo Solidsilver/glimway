@@ -29,12 +29,30 @@
   onMount(() => {
     tab = mode
     chest = initialChest
-    void village.loadStorage().then((r) => {
-      loaded = r.ok ? 'ready' : r.text
-      // No shared chest here (no home, or no Workshop yet): your own chest still opens.
-      if (r.ok && village.shared !== 'open') chest = 'personal'
-    })
+    void load()
+    return () => {
+      open = false
+    }
   })
+
+  /** False once the panel is gone: a failing read stops retrying. */
+  let open = true
+
+  /** Read the chests and the pack. A failed read is tried again: the bench
+   * shows nothing without it, and a dead panel has no way back. */
+  async function load(): Promise<void> {
+    const r = await village.loadStorage()
+    if (!open) return
+    if (r.ok) {
+      loaded = 'ready'
+      // No shared chest here (no home, or no Workshop yet): your own chest still opens.
+      if (village.shared !== 'open') chest = 'personal'
+      return
+    }
+    loaded = r.text
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    if (open) void load()
+  }
 
   /** The shared chest and the bench need a Workshop home; your own chest never does. */
   const sharedOpen = $derived.by(() => {

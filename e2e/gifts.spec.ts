@@ -67,6 +67,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
 
   // Stock slot 0
   const stockBtn = shelfModal.locator('button', { hasText: '+ Put a gift' }).first()
+  await expect(stockBtn).toBeVisible()
   await stockBtn.click()
 
   // Select Comfrey salve from available pack items
@@ -78,12 +79,19 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(shelfModal.locator('.item-info .name', { hasText: /Comfrey salve/ })).toBeVisible()
 
   // Leave a second gift so the daily limit remains visible after slot 0 is taken.
-  await shelfModal.locator('button', { hasText: '+ Put a gift' }).first().click()
-  await shelfModal.locator('.stock-btn', { hasText: /Comfrey salve/ }).first().click()
+  const stockNext = shelfModal.locator('button', { hasText: '+ Put a gift' }).first()
+  await expect(stockNext).toBeVisible()
+  await stockNext.click()
+  const salveAgain = shelfModal.locator('.stock-btn', { hasText: /Comfrey salve/ }).first()
+  await expect(salveAgain).toBeVisible()
+  await salveAgain.click()
 
   // Materials use their own wire kind and can be stocked too.
-  await shelfModal.locator('button', { hasText: '+ Put a gift' }).first().click()
-  await shelfModal.locator('.stock-btn', { hasText: 'Timber' }).first().click()
+  await expect(stockNext).toBeVisible()
+  await stockNext.click()
+  const timberOption = shelfModal.locator('.stock-btn', { hasText: 'Timber' }).first()
+  await expect(timberOption).toBeVisible()
+  await timberOption.click()
   await expect(shelfModal.locator('.item-info .name', { hasText: 'Timber' })).toBeVisible()
 
   // Close the shelf panel
@@ -144,7 +152,9 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await pageIra.keyboard.press('e')
   const iraShelf = pageIra.getByRole('dialog', { name: /Gift Shelf/ })
   await expect(iraShelf).toBeVisible()
-  await iraShelf.getByTestId('take-slot-2').click()
+  const iraTake = iraShelf.getByTestId('take-slot-2')
+  await expect(iraTake).toBeEnabled()
+  await iraTake.click()
   await expectToast(pageIra, /You took a timber from Wren’s shelf/)
   expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${idIra}' AND item_def='timber';`)).toContain('timber|1')
   await ctxIra.close()
@@ -167,10 +177,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
     await traveller.keyboard.press('e')
     await expect(traveller.getByRole('dialog', { name: /Gift Shelf/ })).toBeVisible()
   }
-  await Promise.all([
-    pageOne.getByTestId('take-slot-1').click(),
-    pageTwo.getByTestId('take-slot-1').click()
-  ])
+  // Both panels have read the slot before either takes it: a click on a
+  // button that is not there (or is disabled) would wait out the whole test.
+  const takes = [pageOne, pageTwo].map((p) => p.getByTestId('take-slot-1'))
+  for (const take of takes) await expect(take).toBeEnabled()
+  await Promise.all(takes.map((take) => take.click()))
   await expect.poll(async () => {
     const lines = await Promise.all([pageOne, pageTwo].map(async (p) => p.locator('.msg.error').allTextContents()))
     return lines.flat().some((line) => line.includes('That slot is empty.'))
@@ -180,10 +191,14 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
 
   // Wren can put the now-empty shelf away from its panel.
   await place(page, shelfPx, shelfPy)
+  await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
+  await waitForLive(page)
   await page.keyboard.press('e')
   const ownerShelf = page.getByRole('dialog', { name: /Gift Shelf/ })
   await expect(ownerShelf).toBeVisible()
-  await ownerShelf.getByRole('button', { name: 'Take down shelf' }).click()
+  const takeDown = ownerShelf.getByRole('button', { name: 'Take down shelf' })
+  await expect(takeDown).toBeVisible()
+  await takeDown.click()
   await expect(ownerShelf).toBeHidden()
   await expect.poll(async () => (await homes(page)).mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')).toBe(false)
 })

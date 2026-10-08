@@ -26,15 +26,30 @@
   let pickingSlot = $state<number | null>(null)
   /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
   const changed = busVersion(bus, EV.itemsChanged, EV.homeChanged)
+  /**
+   * Which read is the newest: a take (or stock) fires several reads at once
+   * (the answer's own view, then the pack's and the lane's change events), and
+   * a slower, older one landing last must not put a taken gift back on the
+   * shelf or un-say "taken today". Only the newest answer is shown.
+   */
+  let readSeq = 0
+  /** False once the panel is gone: a failing read stops retrying. */
+  let open = true
 
   async function reread(): Promise<void> {
+    const mine = ++readSeq
     const r = await village.loadShelf(gate)
+    if (mine !== readSeq) return
     if (r.ok) {
       view = r.value
       homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       loaded = 'ready'
     } else {
       if (loaded === 'loading') loaded = r.code
+      // A read that failed (a link still coming online, a busy server) is
+      // tried again rather than leaving the panel without its buttons.
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      if (open && mine === readSeq) void reread()
     }
   }
 
@@ -46,6 +61,7 @@
     void reread()
     if (session.link) void items.load()
     return () => {
+      open = false
       bus.off(EV.villageChanged, reread)
       bus.off(EV.itemsChanged, reread)
     }
