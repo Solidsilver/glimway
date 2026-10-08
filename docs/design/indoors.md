@@ -85,7 +85,7 @@ each list area ids by name. 0.4 teaches them one family:
 |---|---|
 | `where` validity (`validArea`, `finiteWhere`) | A known room id, and `x, y` inside its pixel bounds |
 | Safe area (profile sync, rest) | `rootArea` is safe. The village rooms are safe; `in:home:<gate>` is your own home's |
-| Home rest by the hearth | `where.area` is `in:home:<gate>` for a gate on your deed (was: the doorstep on `home:<gate>`) |
+| Home rest by the hearth | `where.area` is `in:home:<gate>` for a gate on your deed (was: the doorstep on `home:<gate>`). Before the cottage stands (tier 0), the bedroll on `home:<gate>` rests at home instead (found at the gate, 2026-10-08) |
 | World move, leave | As `rootArea` |
 | Gathering | Refused indoors (no gathering target lists a room) |
 | Sellers and menders | Seller rows that follow a resident (2.5) check against the resident's spot now |
