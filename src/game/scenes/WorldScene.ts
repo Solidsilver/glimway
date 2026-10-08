@@ -52,6 +52,7 @@ import { ROOM_ENTRY } from '../cottage'
 import { homeArea, parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
+import { prepareHomeLand } from '../homeland'
 import { isSafeArea } from '../../lib/habitica/sync'
 import {
   OUTER_REGION_ID,
@@ -819,7 +820,8 @@ export class WorldScene extends Phaser.Scene {
       const tile = wildsReturnTile()
       entry = { tx: tile.tx, ty: tile.ty }
     }
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry })
+    // A homestead's land is the server's: fetched while the screen is dark.
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry }, { inDark: () => prepareHomeLand(String(area)) })
   }
 
   /**

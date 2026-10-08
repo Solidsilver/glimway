@@ -463,7 +463,7 @@ export function homesteadsFor(session: Session): Homesteads {
         const h = homes.homes.get(gate)
         return h ? { cleared: h.cleared, stumps: h.stumps ?? [], plants: h.plants ?? [], desolate: h.desolate } : null
       },
-      seed: (gate) => homes.seeds.get(gate) ?? null
+      fetchLand: (gate) => session.link?.api.operations.homeLand(gate) ?? null
     })
   }
   return current.homes

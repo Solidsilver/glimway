@@ -1,18 +1,15 @@
 /**
- * Story rules of the outer Wilds — pure, so they can be tested: which Echo
- * waits at each Echo camp this epoch, which found text a story site gives
- * back, and the calendar-driven finds (the notice board, the hame, the
- * Turning itself). Client-only: none of this touches the server's economy;
- * finds are `paper:<id>` story flags, settled Echoes `echo:<member>` flags.
+ * Story finds of the outer Wilds — pure, so they can be tested: which found
+ * text a story site gives back, and the calendar-driven finds (the notice
+ * board, the hame, the Turning itself). The client uses them to predict what
+ * a place offers; the server's story rules decide (server-first.md 2.2).
+ * Finds are `paper:<id>` marks, settled Echoes `echo:<member>` marks.
  *
  * Reveal order (src/content/papers.ts): "late" finds wait for the road to be
  * lit (quest complete), the same gate the late project papers use.
  */
-import { ECHOES, echoFlag, type EchoDef, type EchoMember } from '../../content/echoes.ts';
-import { hash } from '../hash.ts';
-import { loadWilds } from './data.ts';
-import type { Epoch } from './types.ts';
-import type { SiteKind, StorySite } from './outer.ts';
+import { echoFlag, type EchoMember } from '../../content/echoes.ts';
+import type { SiteKind } from './outer.ts';
 
 /** One-way story flag: this player has seen the outer Wilds turn. */
 export const TURNED_FLAG = 'wilds:turned';
@@ -29,28 +26,7 @@ export interface StoryContext {
 
 // ------------------------------------------------------------ Echoes
 
-/**
- * Who waits at each Echo camp this epoch: deterministic from the epoch and
- * the reveal gate only (never from what you have settled, so a camp doesn't
- * change hands while you stand in it). A member already settled shows as a
- * calm camp. Tam only waits in the far east (toward Sallow Ford); the twins
- * only once the road is lit. Each member at most once per epoch.
- */
-export function echoAssignments(epoch: Epoch, sites: readonly Pick<StorySite, 'id' | 'kind' | 'cx'>[], late: boolean): Map<string, EchoDef> {
-  const out = new Map<string, EchoDef>();
-  const east = Math.max(...loadWilds().regions.filter((r) => r.id === epoch.regionId).map((r) => r.gridWidth)) - 1;
-  const echoSites = sites.filter((s) => s.kind === 'echo').sort((a, b) => a.id.localeCompare(b.id));
-  const used = new Set<EchoMember>();
-  for (const site of echoSites) {
-    const eligible = ECHOES.filter((e) => !used.has(e.member) && (late || !e.late) && (!e.east || site.cx === east));
-    if (eligible.length === 0) continue;
-    const pick = eligible[hash([epoch.worldSeed, epoch.regionId, epoch.season, 'echo', site.id]) % eligible.length];
-    used.add(pick.member);
-    out.set(site.id, pick);
-  }
-  return out;
-}
-
+/** Who waits at each Echo camp is the server's (the region read's `echoes`). */
 export function echoSettled(flags: readonly string[], member: EchoMember): boolean {
   return flags.includes(echoFlag(member));
 }

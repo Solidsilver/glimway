@@ -4,8 +4,8 @@ import { GATHERING_DATA, gatherArea, gatheringOffered, gatheringTarget, inSeason
 import { itemDef, sellerFor, ITEMS } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { CALENDAR, calendarAt } from '../src/lib/calendar.ts';
-import { chunkTerrain } from '../src/lib/wilds/index.ts';
-import { toWorldData } from '../src/lib/wilds/world-data.ts';
+import { toWorldData } from '../src/game/wilds/terrain.ts';
+import { fixtureTerrain } from './wilds-fixture.ts';
 import { modelEntries } from '../src/lib/inventory.ts';
 
 // The seasonal materials and the last material sources
@@ -132,15 +132,13 @@ test('the seasons’ words are cozy, in-world, and fit the box', () => {
   }
 });
 
-// The Wilds' gather pieces by the calendar day (src/lib/wilds/world-data.ts).
-const tangle = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' } as const;
-const outer = { ...tangle, regionId: 'outer-1' } as const;
-const CHUNKS = [[0, 0], [1, 1], [2, 0], [1, 0], [0, 1]] as const;
-function targets(epoch: typeof tangle | typeof outer, day: { wick: string } | null): Map<string, number> {
+// The Wilds' gather pieces by the calendar day (src/game/wilds/terrain.ts),
+// on a served chunk of each region.
+const tangle = 'inner-1';
+const outer = 'outer-1';
+function targets(region: typeof tangle | typeof outer, day: { wick: string } | null): Map<string, number> {
   const n = new Map<string, number>();
-  for (const [cx, cy] of CHUNKS) {
-    for (const g of toWorldData(chunkTerrain(epoch, cx, cy), 'wilds', day).gathering ?? []) n.set(g.target, (n.get(g.target) ?? 0) + 1);
-  }
+  for (const g of toWorldData(fixtureTerrain(region), 'wilds', day).gathering ?? []) n.set(g.target, (n.get(g.target) ?? 0) + 1);
   return n;
 }
 

@@ -1,36 +1,35 @@
 /**
- * The Wilds client runtime: pure rules for the generated regions' area ids
- * and the one position convention (brief item 2).
+ * The Wilds client runtime: pure rules for the regions' area ids and the one
+ * position convention.
  *
  * Regions: the Tangle (`inner-1`, permanent) and the outer Wilds
  * (`outer-1`, which turns every wick). They meet at the crossing on the
- * Tangle's far side (src/lib/wilds/outer.ts).
+ * Tangle's far side. The server generates both; their chunks arrive through
+ * game/wilds/chunks.ts.
  *
  * Position convention — the single source of truth:
- * - Saved/progress positions in the Wilds are always `area: 'wilds'` with
- *   REGION-WIDE pixel coordinates: chunk offset × CHUNK_TILES tiles × 16 px,
- *   plus the chunk-local pixel. The server stores exactly this (contract:
- *   claims and defeat reports check `floor(position / 16)` against region
- *   tiles — the region named by the epoch in the request), and guests keep
- *   the same convention in their local saves.
- * - Which region a saved position is in is the client-only save marker
- *   `wildsRegion` (absent: the Tangle). The server keeps `area: 'wilds'` for
- *   both, so it never needs to know.
+ * - Positions in the Wilds are REGION-WIDE pixel coordinates: chunk offset ×
+ *   CHUNK_TILES tiles × 16 px, plus the chunk-local pixel. The server reads
+ *   exactly this from an operation's `where` (`wilds:<region>`, x, y), as
+ *   `floor(position / 16)` region tiles.
+ * - The save keeps `area: 'wilds'` with the client-only marker `wildsRegion`
+ *   (absent: the Tangle); `where.area` names the region instead.
  * - A chunk scene's coordinates are chunk-local pixels (the scene is one
  *   24×24-tile chunk). Every conversion between the two goes through this
- *   module, so saves, reloads, claims and defeat reports all agree.
+ *   module, so saves, reloads and operations all agree.
  *
  * Area ids: the Wilds as a whole are `wilds` (what saves store; what the
  * Commons' exit targets; it resolves to the Tangle's entry chunk). Each chunk
- * is registered as `chunk:<regionId>:<cx>:<cy>` — exactly the generator
- * library's exit targets.
+ * is registered as `chunk:<regionId>:<cx>:<cy>` — exactly the served exits'
+ * targets.
  */
 import { TILE, tileAt } from '../../lib/tile.ts';
 import { COMMONS_FROM_WILDS } from '../commons.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
-import { chunkTerrain } from '../../lib/wilds/index.ts';
-import { GUEST_WORLD_SEED, INNER_REGION_ID, OUTER_REGION_ID } from '../../lib/wilds/outer.ts';
-import type { Epoch, WildsRegion } from '../../lib/wilds/types.ts';
+import { INNER_REGION_ID, OUTER_REGION_ID } from '../../lib/wilds/outer.ts';
+import type { WildsRegion } from '../../lib/wilds/types.ts';
+import { cachedTerrain } from './chunks.ts';
+import type { WildsEpoch } from './store.ts';
 import type { AreaId } from '../../lib/state.ts';
 import { tileMid } from '../../lib/tile.ts'
 
@@ -115,27 +114,23 @@ export function inRegion(x: number, y: number, regionId: string = WILDS_REGION_I
   );
 }
 
-/**
- * Guests generate the Tangle from a fixed local epoch (no server, no shared
- * world seed). Deterministic, so a guest's Tangle is the same every visit.
- * (Their outer Wilds turn with the calendar: lib/wilds/outer.ts guestOuterEpoch.)
- */
-export function guestEpoch(): Epoch {
-  return { worldSeed: GUEST_WORLD_SEED, regionId: WILDS_REGION_ID, generatorVersion: 1, season: '0' };
-}
 
 /**
  * The progress position a player entering a region arrives at: its entry
  * chunk's way-home gap (the Commons gap in the Tangle; the crossing's gap in
  * the outer Wilds). Exported for whoever transitions into `wilds` (the
  * Commons' exit, the dev warp) and for the Turning, which brings players back
- * to the outer region's entrance.
+ * to the outer region's entrance. The served chunk's spawn when it is loaded;
+ * before that, the generator's fixed spot just inside the way home.
  */
-export function wildsArrivalPosition(epoch: Epoch): { x: number; y: number } {
+export function wildsArrivalPosition(epoch: WildsEpoch): { x: number; y: number } {
   const region = wildsRegion(epoch.regionId);
-  const chunk = chunkTerrain(epoch, region.entryX, region.entryY);
-  return toRegionPosition(region.entryX, region.entryY, tileMid(chunk.spawn.tx), tileMid(chunk.spawn.ty));
+  const spawn = cachedTerrain(epoch.id, region.entryX, region.entryY)?.spawn ?? { tx: HOME_GAP_TX + 1, ty: CHUNK_TILES - 2 };
+  return toRegionPosition(region.entryX, region.entryY, tileMid(spawn.tx), tileMid(spawn.ty));
 }
+
+/** The way home on a region's entry chunk: its south edge at tx = 1 (server/internal/wilds/gen_v2.go). */
+const HOME_GAP_TX = 1;
 
 /**
  * The Commons tile a player leaving the Wilds arrives at (just inside the
@@ -153,7 +148,7 @@ export function wildsReturnTile(): { tx: number; ty: number } {
  */
 export function wildsSceneEntry(
   state: { area: string; position: { x: number; y: number } },
-  epoch: Epoch
+  epoch: WildsEpoch
 ): { areaId: AreaId; tile: { tx: number; ty: number } } | null {
   if (!isWildsArea(state.area)) return null;
   if (inRegion(state.position.x, state.position.y, epoch.regionId)) {
@@ -169,23 +164,20 @@ export function wildsSceneEntry(
   };
 }
 
-/** The walkable chunk tile a region-wide position lands on, or null. */
-function wildsTileOf(position: { x: number; y: number }, epoch: Epoch): { areaId: AreaId; tile: { tx: number; ty: number } } | null {
+/**
+ * The walkable chunk tile a region-wide position lands on, or null. With the
+ * chunk not loaded yet, the tile stands as saved (the scene loads it first).
+ */
+function wildsTileOf(position: { x: number; y: number }, epoch: WildsEpoch): { areaId: AreaId; tile: { tx: number; ty: number } } | null {
   const r = fromRegionPosition(position.x, position.y);
   const region = wildsRegion(epoch.regionId);
   if (r.cx < 0 || r.cy < 0 || r.cx >= region.gridWidth || r.cy >= region.gridHeight) return null;
   const tx = tileAt(r.x);
   const ty = tileAt(r.y);
-  const chunk = chunkTerrain(epoch, r.cx, r.cy);
-  const clear =
-    tx >= 0 &&
-    ty >= 0 &&
-    tx < chunk.width &&
-    ty < chunk.height &&
-    !chunk.solid[ty][tx] &&
-    ![...chunk.trees, ...chunk.bushes, ...chunk.rocks].some((p) => p.tx === tx && p.ty === ty);
+  const chunk = cachedTerrain(epoch.id, r.cx, r.cy);
+  const clear = !chunk || (tx >= 0 && ty >= 0 && tx < chunk.width && ty < chunk.height && !chunk.solid[ty]![tx]);
   return {
     areaId: chunkAreaId(r.cx, r.cy, epoch.regionId),
-    tile: clear ? { tx, ty } : chunk.spawn,
+    tile: clear || !chunk ? { tx, ty } : chunk.spawn,
   };
 }

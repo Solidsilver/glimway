@@ -141,7 +141,7 @@ func LoadWilds() (Wilds, error) {
 	if err = json.Unmarshal(b, &w); err != nil {
 		return w, err
 	}
-	if w.GeneratorVersion != 1 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || w.DeepTangleManhattanDistance < 1 || len(w.Regions) == 0 {
+	if w.GeneratorVersion != 2 || w.ChunkSize < 16 || w.ChunkSize%2 != 0 || w.DeepTangleManhattanDistance < 1 || len(w.Regions) == 0 {
 		return w, fmt.Errorf("invalid wilds: version/chunk/regions")
 	}
 	for _, r := range w.Regions {

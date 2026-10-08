@@ -177,7 +177,8 @@ func TestPlayGenerationsAndReportBarrier(t *testing.T) {
 func TestOperationStubsAndNumericWire(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	for _, route := range []string{"/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/wilds/echo", "/api/fall", "/api/spend", "/api/wilds/claim", "/api/wilds/lantern"} {
+	// The Wilds operations are implemented (wilds_test.go).
+	for _, route := range []string{"/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/spend"} {
 		w := x.rawHTTP("POST", route, map[string]any{"op": map[string]any{"lease": s.Lease, "key": strings.ReplaceAll(route, "/", "-")}, "where": map[string]any{"area": "village", "x": 1, "y": 2}}, c)
 		if w.Code != 409 || !strings.Contains(w.Body.String(), "not-implemented") || !strings.Contains(w.Body.String(), `"state"`) {
 			t.Fatal(route, w.Code, w.Body.String())
