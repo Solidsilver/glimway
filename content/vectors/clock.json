@@ -35045,6 +35045,736 @@
       "near": [
         "square"
       ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": -1,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 509.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 510,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 599.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 690,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 690.25,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 1200,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2309.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2310,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2399.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2400,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2490,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2490.25,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 3600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 4110,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 4200,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 4200,
+        "until": 6000
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
     }
   ]
 }

@@ -71,7 +71,7 @@ export function validateRooms(value: unknown): Rooms {
       for (let x = 0; x < row.length; x++) {
         const c = row[x]!; if (c === '@') arrive++;
         if (!LEGEND[c] && !props.has(c)) return bad(`unclaimed character ${r.id}`);
-        if ((x === 0 || y === 0 || x === row.length - 1 || y === r.map.length - 1) && c !== '#' && c !== 'D') return bad(`open boundary ${r.id}`);
+        if ((x === 0 || y === 0 || x === row.length - 1 || y === r.map.length - 1) && c !== '#' && c !== 'D' && !r.props.some(p => p.char === c && p.solid)) return bad(`open boundary ${r.id}`);
       }
     }
     for (const c of props) { const groups = roomFootprints(r, c); if (!groups.length || groups.some(f => !f.tw)) return bad(`prop footprint ${r.id}`); }
