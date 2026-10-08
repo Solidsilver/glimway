@@ -5,7 +5,11 @@ import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { buildLand, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
-import { LAND } from '../src/lib/homestead-land.ts';
+import { LAND, servedLand } from '../src/lib/homestead-land.ts';
+import { FIXTURE_LAND, serveFixtureLand } from './land-fixture.ts';
+
+// Homestead land is the server's: these tests stand on its served fixture.
+serveFixtureLand('guest');
 import { TILE } from '../src/lib/tile.ts';
 
 type Tile = { tx: number; ty: number };

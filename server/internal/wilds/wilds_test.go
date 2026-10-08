@@ -1,9 +1,6 @@
 package wilds
 
-import (
-	"strconv"
-	"testing"
-)
+import "testing"
 
 // Golden values must match tests/wilds.test.ts — together they lock the
 // hash/PRNG spec for any future re-implementation.
@@ -50,106 +47,5 @@ func TestHashGolden(t *testing.T) {
 	r3 := NewRng(123456789)
 	if a, b, c, d := r3.Next(), r3.Next(), r3.NextInt(10), r3.NextInt(24); a != 1107202814 || b != 4169434471 || c != 8 || d != 16 {
 		t.Fatalf("rng(123456789) = %d %d %d %d", a, b, c, d)
-	}
-}
-
-func TestChunkEntitiesDeterministic(t *testing.T) {
-	e := Epoch{WorldSeed: "oak-7", RegionID: "inner-1", GeneratorVersion: 1, Season: "spring"}
-	a, err := ChunkEntities(e, 1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := ChunkEntities(e, 1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	same(t, "entities", a, b)
-	if len(a) == 0 {
-		t.Fatal("no entities")
-	}
-	seen := map[string]bool{}
-	perKind := map[string]int{}
-	for _, ent := range a {
-		if seen[ent.ID] {
-			t.Fatalf("duplicate id %s", ent.ID)
-		}
-		seen[ent.ID] = true
-		want := ent.Kind + ":1:1:" + strconv.Itoa(perKind[ent.Kind])
-		perKind[ent.Kind]++
-		if ent.ID != want {
-			t.Fatalf("id %s want %s", ent.ID, want)
-		}
-	}
-	other, err := ChunkEntities(Epoch{WorldSeed: "oak-7", RegionID: "inner-1", GeneratorVersion: 1, Season: "summer"}, 1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ja, _ := jsonMarshal(a)
-	jb, _ := jsonMarshal(other)
-	if string(ja) == string(jb) {
-		t.Fatal("season did not change entities")
-	}
-	v7, err := ChunkEntities(Epoch{WorldSeed: "oak-7", RegionID: "inner-1", GeneratorVersion: 7, Season: "spring"}, 1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	jc, _ := jsonMarshal(v7)
-	if string(ja) == string(jc) {
-		t.Fatal("generator version did not change entities")
-	}
-	if _, err := ChunkEntities(Epoch{WorldSeed: "oak-7", RegionID: "nope", GeneratorVersion: 1, Season: "spring"}, 1, 1); err == nil {
-		t.Fatal("unknown region accepted")
-	}
-}
-
-func TestRollLootDeterministic(t *testing.T) {
-	e := Epoch{WorldSeed: "灰烬之路", RegionID: "inner-1", GeneratorVersion: 1, Season: "autumn"}
-	entities, err := ChunkEntities(e, 1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	changed := false
-	for _, ent := range entities {
-		a, err := RollLoot(e, ent.ID, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		b, err := RollLoot(e, ent.ID, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		same(t, "loot", a, b)
-		c, err := RollLoot(e, ent.ID, 1)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ja, _ := jsonMarshal(a)
-		jc, _ := jsonMarshal(c)
-		if string(ja) != string(jc) {
-			changed = true
-		}
-		if a.Trinket != nil {
-			found := false
-			for _, tr := range []string{"whittled-fox", "beeswax-candle", "river-glass-bead", "spare-bootlace", "tin-whistle"} {
-				if *a.Trinket == tr {
-					found = true
-				}
-			}
-			if !found {
-				t.Fatalf("unknown trinket %s", *a.Trinket)
-			}
-		}
-	}
-	if !changed {
-		t.Fatal("no loot roll changed across cycles")
-	}
-	if _, err := RollLoot(e, "camp:1:1:9", 0); err == nil {
-		t.Fatal("unknown entity accepted")
-	}
-	if _, err := RollLoot(e, "nope:1:1:0", 0); err == nil {
-		t.Fatal("bad entity id accepted")
-	}
-	if _, err := RollLoot(e, "camp:1:1:0", -1); err == nil {
-		t.Fatal("negative cycle accepted")
 	}
 }

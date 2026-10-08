@@ -17,7 +17,7 @@
  */
 import Phaser from 'phaser'
 import { HOMESTEAD_DATA, parseHomeArea } from '../../lib/homestead'
-import { clearable } from '../../lib/homestead-land'
+import { clearable, servedLand } from '../../lib/homestead-land'
 import type { HomeView } from '../../lib/api/types'
 import { type SeatPose } from '../seats'
 import { bus, EV } from '../events'
@@ -56,7 +56,7 @@ export interface HomesteadDeps {
   rebuild: () => void
 }
 
-/** Land rebuilds in a row (cleared tiles, desolation or the seed changed under us). */
+/** Land rebuilds in a row (cleared tiles, desolation or the served land changed under us). */
 let rebuilds = 0
 
 export class HomesteadLayer {
@@ -196,8 +196,9 @@ export class HomesteadLayer {
         const k = this.land.land.tiles[y * this.land.width + x]
         if (clearable(k) && !this.land.solid[y][x]) built.push(tileKey(x, y))
       }
-    const seed = this.homes.seeds.get(this.land.gate)
-    const stale = want !== built.sort().join(';') || (h?.desolate ?? false) !== this.land.desolate || (seed !== undefined && seed !== this.land.seed)
+    // Built on plain ground before the server's land arrived: rebuild on it.
+    const landArrived = !this.land.served && servedLand(this.land.gate) !== null
+    const stale = want !== built.sort().join(';') || (h?.desolate ?? false) !== this.land.desolate || landArrived
     // Never a rebuild loop: at most a few in a row for one map.
     if (stale && rebuilds < 3) {
       rebuilds++

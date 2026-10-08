@@ -1,6 +1,7 @@
 /**
- * Story sites in a Wilds chunk scene (src/lib/wilds/outer.ts places them;
- * src/lib/wilds/stories.ts decides what they hold):
+ * Story sites in a Wilds chunk scene (the served chunk places them; the
+ * region read says which Echo waits where for this player; src/lib/wilds/
+ * stories.ts predicts which find a site holds):
  *
  *  - Echo camps: the woods replaying a waiting moment of one of the Six — a
  *    kettle that won't boil, a tune cut off. Phantom until settled: light
@@ -10,19 +11,19 @@
  *    in a dead iron-oak, a reed backwater of the Wend, and a plank where the
  *    bridge tore. Each gives its found text back when its moment is due.
  *
- * Everything here is client-side story state: nothing reaches the economy.
+ * Settling an Echo is the `settle-echo` operation (./remote.ts): predicted
+ * here, refused and rolled back if the server's assignment disagrees.
  * The outer Wilds also drift with pale motes of the white quiet.
  */
 import type Phaser from 'phaser'
-import { SITE_TEXT, echoCampSpeaker, echoFlag, echoSoftenedFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
+import { ECHOES, SITE_TEXT, echoCampSpeaker, echoFlag, echoSoftenedFlag, type EchoDef, type EchoProp } from '../../content/echoes.ts'
 import { paperFlag } from '../../content/papers.ts'
 import { HEIRLOOMS, HEIRLOOM_GUEST_LINES } from '../../content/heirlooms.ts'
 import { itemsFor } from '../items'
 import { heirloomBeat } from '../heirloom-beats'
 import { echoKeepsakeOffer, type EchoKeepsakeOffer } from '../keepsakes'
-import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
-import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
-import type { Epoch } from '../../lib/wilds/types.ts'
+import { echoSettled, siteFind, type StoryContext } from '../../lib/wilds/stories.ts'
+import { seasonMark, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
 import { bus, EV } from '../events'
 import { grantPaper } from '../papers'
 import { sfx } from '../sfx'
@@ -33,7 +34,9 @@ import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { Interactable, Interactables } from '../entities/interactables'
 import { openDialogue } from '../dialogue.ts'
-import { wildsView } from './store.ts'
+import { applyEchoSettled, wildsLive, wildsView, type WildsEpoch } from './store.ts'
+import { settleEcho } from './remote.ts'
+import { toRegionPosition } from './regions.ts'
 
 type C = CanvasRenderingContext2D
 
@@ -250,7 +253,7 @@ export class WildsSites {
   constructor(
     private scene: Phaser.Scene,
     private deps: SitesDeps,
-    private epoch: Epoch,
+    private epoch: WildsEpoch,
     cx: number,
     cy: number,
     sites: readonly { id: string; kind: string; tx: number; ty: number }[]
@@ -264,8 +267,8 @@ export class WildsSites {
     this.render()
     deps.interactables.register(
       this,
-      // Quiet until the region's read lands, like the claims around them.
-      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsView() ? this.offerAt(s) : null)))
+      // Quiet until a fresh region read lands (and while stale), like the claims around them.
+      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsLive(this.deps.session, this.epoch.regionId) ? this.offerAt(s) : null)))
     )
   }
 
@@ -299,9 +302,12 @@ export class WildsSites {
     this.images = []
     const c = this.ctx()
     this.renderedKey = `${c.late}|${c.flags.filter((f) => f.startsWith('echo:') || f.startsWith('paper:')).length}`
-    // Echo assignments are region-wide facts (each member waits in one camp):
-    // assign over the whole epoch's sites, of which this chunk holds a few.
-    this.echoes = echoAssignments(this.epoch, siteChunks(this.epoch), c.late)
+    // Who waits at each camp is this player's assignment, from the region read.
+    this.echoes = new Map()
+    for (const [site, a] of wildsView(this.epoch.regionId)?.echoes ?? []) {
+      const def = ECHOES.find((e) => e.member === a.member)
+      if (def) this.echoes.set(site, def)
+    }
     for (const s of this.sites) {
       if (s.kind === 'echo') this.renderEcho(s)
       else this.renderLook(s, c)
@@ -439,7 +445,9 @@ export class WildsSites {
   private settle(s: StorySite, def: EchoDef): void {
     const session = this.deps.session
     if (echoSettled(session.state.flags, def.member)) return
+    // Predicted: the moment plays now; the server's answer confirms it.
     session.addFlag(echoFlag(def.member))
+    this.sendSettle(s, def)
     const at = this.sitePx(s)
     sfx('lantern')
     this.deps.fx.sparkBurst(at.x + 16, at.y - 18, 12)
@@ -450,8 +458,27 @@ export class WildsSites {
     this.render()
   }
 
+  private sendSettle(s: StorySite, def: EchoDef): void {
+    const session = this.deps.session
+    if (!session.link) return
+    const hero = this.deps.hero()
+    const where = { region: this.epoch.regionId, ...toRegionPosition(s.cx, s.cy, hero.x, hero.y) }
+    void settleEcho(session, { epoch: this.epoch.id, site: s.id, member: def.member, where }).then((res) => {
+      if (res.ok) {
+        applyEchoSettled(s.id)
+        if (res.result.paper && !session.state.flags.includes(paperFlag(res.result.paper))) grantPaper(session, res.result.paper)
+        return
+      }
+      if (res.code !== 'echo-not-here') return
+      // The server's assignment disagrees: the Echo still waits.
+      session.state = { ...session.state, flags: session.state.flags.filter((f) => f !== echoFlag(def.member)) }
+      this.render()
+    })
+  }
+
   /** A settle picked in a camp conversation (the keepsake's offer keeps the lamp open). */
   settleEcho(siteId: string): boolean {
+    if (!wildsLive(this.deps.session, this.epoch.regionId)) return false
     const s = this.sites.find((x) => x.id === siteId && x.kind === 'echo')
     const def = s ? this.echoes.get(s.id) : undefined
     if (!s || !def) return false

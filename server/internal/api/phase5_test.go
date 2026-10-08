@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/store"
@@ -99,55 +98,6 @@ func (x *rig) openWorkshop(c *http.Cookie, s response) response {
 		update(&s, v)
 	}
 	return s
-}
-func TestPhase5CalendarAndOuterTurning(t *testing.T) {
-	x := newRig(t)
-	c, s := x.ready("alice")
-	r := httptest.NewRequest("GET", "/api/calendar", nil)
-	r.Header.Set("X-Glimway-Contract", "3")
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	var day content.CalendarDay
-	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &day) != nil || day.WickNumber == 0 {
-		t.Fatal(w.Body.String())
-	}
-	inner := x.region(c)
-	outer := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if outer.Epoch.Season != fmt.Sprintf("t:%d:%d", day.StartsAt, day.NextTurning) || outer.Epoch.StartsAt != day.StartsAt || outer.Epoch.EndsAt == nil || *outer.Epoch.EndsAt != day.NextTurning {
-		t.Fatal("outer schedule")
-	}
-	node := entityKind(t, outer, "node")
-	req := body(s, "outer-node", map[string]any{"epoch": outer.Epoch.ID, "entityId": node.ID, "cycle": 0, "progress": nearEntity(s, node)})
-	update(&s, x.exp("POST", "/api/wilds/claim", req, c, 200))
-	x.now.Store(day.NextTurning - 86400)
-	current := content.CalendarAt(content.CalendarRules, x.now.Load())
-	if current.Notice == nil {
-		t.Fatal("missing notice")
-	}
-	retained := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if retained.Epoch.ID != outer.Epoch.ID {
-		t.Fatal("early Turning")
-	}
-	x.api.Config.WildsGeneratorVersion = 2
-	if x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200).Epoch.GeneratorVersion != 1 {
-		t.Fatal("pinning")
-	}
-	x.now.Store(day.NextTurning)
-	if x.exp("POST", "/api/wilds/claim", body(s, "ended", map[string]any{"epoch": outer.Epoch.ID, "entityId": node.ID, "cycle": 1, "progress": nearEntity(s, node)}), c, 409).Error.Code != "epoch-ended" {
-		t.Fatal("old epoch accepted")
-	}
-	x.exp("GET", "/api/wilds/region/outer-1", nil, c, 503)
-	x.api.Config.WildsGeneratorVersion = 1
-	next := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if next.Epoch.ID == outer.Epoch.ID || next.Epoch.Season == outer.Epoch.Season || next.Epoch.EndsAt == nil {
-		t.Fatal("no new epoch")
-	}
-	if x.region(c).Epoch.ID != inner.Epoch.ID {
-		t.Fatal("inner turned")
-	}
-	if count(t, x.db, "SELECT count(*) FROM region_epochs WHERE region_id='outer-1'") != 2 {
-		t.Fatal("outer epoch count")
-	}
 }
 func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	x := newRig(t)

@@ -86,7 +86,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			write(w, 200, health)
 		}
-	case "POST /api/report", "POST /api/quest/step", "POST /api/story/mark", "POST /api/papers/take", "POST /api/wilds/echo", "POST /api/fall", "POST /api/profile":
+	case "POST /api/report", "POST /api/quest/step", "POST /api/story/mark", "POST /api/papers/take", "POST /api/fall", "POST /api/profile":
 		err = a.operationStub(w, r)
 	case "GET /ws":
 		err = a.presenceSocket(w, r)
@@ -154,8 +154,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.libraryRead(w, r)
 	case "POST /api/library/donate":
 		err = a.libraryDonate(w, r)
-	case "POST /api/wilds/claim", "POST /api/wilds/lantern", "POST /api/wilds/defeat":
-		err = a.migratingOperation(w, r, a.wildsMutation)
+	case "POST /api/wilds/claim":
+		err = a.wildsClaim(w, r)
+	case "POST /api/wilds/lantern":
+		err = a.wildsRelight(w, r)
+	case "POST /api/wilds/echo":
+		err = a.settleEcho(w, r)
 	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade",
 		"POST /api/homestead/claim", "POST /api/homestead/clear", "POST /api/homestead/invite", "POST /api/homestead/joint", "POST /api/homestead/leave":
 		err = a.homeMutation(w, r)
@@ -184,11 +188,11 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
 			err = a.revokeInvite(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/land/") {
-			err = a.chunkStub(w, r)
+			err = a.landRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/") {
 			err = a.homeRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/chunk/") {
-			err = a.chunkStub(w, r)
+			err = a.chunkRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/region/") {
 			err = a.regionRead(w, r)
 		} else if (r.Method == "GET" || r.Method == "HEAD") && strings.HasPrefix(r.URL.Path, "/api/sprites/") {

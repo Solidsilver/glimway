@@ -39,7 +39,7 @@ func notImplemented(context.Context, *sql.Tx, *store.Snapshot, int64) (any, erro
 	return nil, fail(409, "not-implemented")
 }
 
-// Lane B replaces the six non-Wilds callbacks; D owns settle-echo and chunks.
+// Lane B replaces the six non-Wilds callbacks (D has replaced its own).
 func (a *Server) operationStub(w http.ResponseWriter, r *http.Request) error {
 	var request proto.Message
 	var op *contract.OpHeader
@@ -47,18 +47,6 @@ func (a *Server) operationStub(w http.ResponseWriter, r *http.Request) error {
 	switch r.URL.Path {
 	case "/api/spend":
 		m := &contract.SpendRequest{}
-		if err := decodeOp(w, r, m); err != nil {
-			return err
-		}
-		request, op, where = m, m.Op, m.Where
-	case "/api/wilds/claim":
-		m := &contract.WildsClaimRequest{}
-		if err := decodeOp(w, r, m); err != nil {
-			return err
-		}
-		request, op, where = m, m.Op, m.Where
-	case "/api/wilds/lantern":
-		m := &contract.WildsLanternRequest{}
 		if err := decodeOp(w, r, m); err != nil {
 			return err
 		}
@@ -81,14 +69,6 @@ func (a *Server) operationStub(w http.ResponseWriter, r *http.Request) error {
 		where = m.Where
 	case "/api/papers/take":
 		m := &contract.TakePaperRequest{}
-		if err := decodeOp(w, r, m); err != nil {
-			return err
-		}
-		request = m
-		op = m.Op
-		where = m.Where
-	case "/api/wilds/echo":
-		m := &contract.SettleEchoRequest{}
 		if err := decodeOp(w, r, m); err != nil {
 			return err
 		}
@@ -137,22 +117,6 @@ func (a *Server) operationStub(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	return a.keyedOp(w, r, op, where, request, notImplemented)
-}
-func (a *Server) chunkStub(w http.ResponseWriter, r *http.Request) error {
-	tx, s, _, err := a.begin(r)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
-	if err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	writeRefusal(w, 409, "not-implemented", state)
-	return nil
 }
 
 // The intermediate lane still compiles/runs existing domain handlers until B/D

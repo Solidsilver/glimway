@@ -4,12 +4,78 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"google.golang.org/protobuf/proto"
 	"regexp"
 )
 
-var destination = regexp.MustCompile(`^chunk:(inner-1|outer-1):[0-2]:[0-2]$`)
+var destination = regexp.MustCompile(`^chunk:(inner-1|outer-1):([0-2]):([0-2])$`)
+
+// The one crossing between regions (server/internal/wilds/gen_v2.go): the
+// Tangle's north-middle chunk's north gap leads to the Whitequiet's entry
+// chunk, whose south gap leads back.
+const (
+	innerRegion = "inner-1"
+	outerRegion = "outer-1"
+)
+
+var crossingChunk = [2]int32{1, 0}
+
+// onEdge: the doorway is a one-tile-deep gap on the edge its dir names.
+func onEdge(size uint32, e *contract.Exit) bool {
+	switch e.Dir {
+	case contract.Dir_DIR_NORTH:
+		return e.Ty == 0 && e.Th == 1
+	case contract.Dir_DIR_SOUTH:
+		return e.Ty == size-1 && e.Th == 1
+	case contract.Dir_DIR_WEST:
+		return e.Tx == 0 && e.Tw == 1
+	case contract.Dir_DIR_EAST:
+		return e.Tx == size-1 && e.Tw == 1
+	}
+	return false
+}
+
+func entryOf(region string) ([2]int32, bool) {
+	for _, r := range content.WildsRules.Regions {
+		if r.ID == region {
+			return [2]int32{int32(r.EntryX), int32(r.EntryY)}, true
+		}
+	}
+	return [2]int32{}, false
+}
+
+// exitLeads: a doorway leads to the neighbouring chunk its dir names in the
+// same region, or is the crossing, or is the Tangle's way home to the Commons.
+func exitLeads(c *contract.WildsChunk, e *contract.Exit) error {
+	here := [2]int32{c.Cx, c.Cy}
+	if e.To == "commons" {
+		if entry, ok := entryOf(innerRegion); !ok || c.Region != innerRegion || here != entry || e.Dir != contract.Dir_DIR_SOUTH {
+			return fmt.Errorf("way home off the Tangle's entry")
+		}
+		return nil
+	}
+	m := destination.FindStringSubmatch(e.To)
+	if m == nil {
+		return fmt.Errorf("unknown destination")
+	}
+	to := [2]int32{int32(m[2][0] - '0'), int32(m[3][0] - '0')}
+	if m[1] == c.Region {
+		step := map[contract.Dir][2]int32{contract.Dir_DIR_NORTH: {0, -1}, contract.Dir_DIR_SOUTH: {0, 1}, contract.Dir_DIR_WEST: {-1, 0}, contract.Dir_DIR_EAST: {1, 0}}[e.Dir]
+		if to != [2]int32{here[0] + step[0], here[1] + step[1]} {
+			return fmt.Errorf("exit to a chunk not beside it")
+		}
+		return nil
+	}
+	outerEntry, _ := entryOf(outerRegion)
+	there := c.Region == innerRegion && here == crossingChunk && e.Dir == contract.Dir_DIR_NORTH && m[1] == outerRegion && to == outerEntry
+	back := c.Region == outerRegion && here == outerEntry && e.Dir == contract.Dir_DIR_SOUTH && m[1] == innerRegion && to == crossingChunk
+	if !there && !back {
+		return fmt.Errorf("stray crossing")
+	}
+	return nil
+}
 
 // Validate checks immutable geometry, before storage and after binary decode.
 // World ownership and lifetime remain the transactional source's responsibility.
@@ -86,11 +152,15 @@ func Validate(c *contract.WildsChunk) error {
 		if e == nil || !tile(e.Tx, e.Ty) || e.Tw == 0 || e.Th == 0 || e.Tw > 24-e.Tx || e.Th > 24-e.Ty || e.Entry == nil || e.Dir < contract.Dir_DIR_NORTH || e.Dir > contract.Dir_DIR_WEST {
 			return fmt.Errorf("invalid exit")
 		}
+		if !onEdge(c.Size, e) {
+			return fmt.Errorf("exit off its edge")
+		}
 		w, h := uint32(24), uint32(24)
 		if e.To == "commons" {
 			w, h = 62, 42
-		} else if !destination.MatchString(e.To) {
-			return fmt.Errorf("unknown destination")
+		}
+		if err := exitLeads(c, e); err != nil {
+			return err
 		}
 		if e.Entry.Tx >= w || e.Entry.Ty >= h {
 			return fmt.Errorf("invalid destination entry")

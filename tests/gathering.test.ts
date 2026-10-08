@@ -2,14 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, keepsWork, swingPlan, SWING_MS, visitIdFor, visitKey, visitWork, yieldLine, leftBehind, wearLine, gatheringOffered, EMPTY_YIELD_LINE, PLANTS_FULL_LINE } from '../src/lib/gathering.ts';
 import { itemDef } from '../src/lib/items.ts';
-import { chunkTerrain } from '../src/lib/wilds/index.ts';
-import { toWorldData, GATHER_OF } from '../src/lib/wilds/world-data.ts';
+import { toWorldData, GATHER_OF } from '../src/game/wilds/terrain.ts';
+import { fixtureTerrain } from './wilds-fixture.ts';
 import { buildArea } from '../src/game/worlds.ts';
 import { plantScenery, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, checkPlacement, plantable, plantTileNear } from '../src/lib/homestead.ts';
-import { LAND, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts';
+import { LAND, homeLights, isLit } from '../src/lib/homestead-land.ts';
+import { FIXTURE_LAND, serveFixtureLand } from './land-fixture.ts';
 
-const epoch = { worldSeed: 'oak-7', regionId: 'inner-1', generatorVersion: 1, season: 'spring' } as const;
+// Homestead land is the server's: these tests stand on its served fixture.
+serveFixtureLand('guest');
+serveFixtureLand('test-world');
+serveFixtureLand('w');
+
 
 test('gathering rules match specification', () => {
   assert.equal(GATHERING_DATA.caps.visit.chop, 8);
@@ -72,9 +77,9 @@ test('a visit is one stay: the same while you rebuild, new when you leave and re
 });
 
 test('the Tangle offers work: trees and boulders stand on solid ground, patches you can dig', () => {
-  for (const [cx, cy] of [[0, 0], [1, 1], [2, 0]] as const) {
-    const w = toWorldData(chunkTerrain(epoch, cx, cy), 'wilds');
-    assert.ok((w.gathering?.length ?? 0) > 10, `chunk ${cx},${cy} has workable pieces`);
+  for (const region of ['inner-1', 'outer-1'] as const) {
+    const w = toWorldData(fixtureTerrain(region), 'wilds');
+    assert.ok((w.gathering?.length ?? 0) > 10, `a served ${region} chunk has workable pieces`);
     for (const spot of w.gathering ?? []) {
       const t = gatheringTarget(spot.target);
       assert.ok(t, `spot target ${spot.target} is in content/gathering.json`);
@@ -107,7 +112,7 @@ test('homestead land: work stands on solid ground, clear of the home site, and s
     assert.ok(!onSite, 'no work inside the home site');
   }
   assert.ok((w.gathering?.length ?? 0) > 10, 'the land has woods to work');
-  // The drift: what you leave comes back the same (the land builds from its seed).
+  // The drift: what you leave comes back the same (the land is the served land).
   const again = buildArea('home:0');
   assert.deepEqual(again.gathering, w.gathering, 'regrowth rebuilds the same land');
 });
@@ -165,7 +170,7 @@ test('the woods by the village offer trees and boulders; the ruin and the villag
 });
 
 test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand again, open ground stays open', () => {
-  const land = generateLand(1234);
+  const land = FIXTURE_LAND;
   const lights = homeLights([]);
   const lit = { x: -1, y: -1 };
   const dark = { x: -1, y: -1 };
@@ -176,9 +181,9 @@ test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand 
       if (!isLit(lights, x, y) && dark.x < 0) Object.assign(dark, { x, y });
     }
   }
-  assert.ok(lit.x >= 0 && dark.x >= 0, 'seed 1234 has lit and dark trees');
+  assert.ok(lit.x >= 0 && dark.x >= 0, 'the fixture land has lit and dark trees');
   // What the server keeps: only the lit stump (the dark chop is never stored).
-  setLandSource({ worldId: () => 'w', seed: () => 1234, state: () => ({ cleared: [], stumps: [[lit.x, lit.y]], plants: [], desolate: false }) });
+  setLandSource({ worldId: () => 'w', state: () => ({ cleared: [], stumps: [[lit.x, lit.y]], plants: [], desolate: false }) });
   try {
     const w = buildArea('home:0');
     const at = (x: number, y: number) => (w.gathering ?? []).find((s) => s.tx === x && s.ty === y)?.target;
@@ -188,7 +193,7 @@ test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand 
   } finally {
     setLandSource({ worldId: () => 'guest', state: () => null });
   }
-  setLandSource({ worldId: () => 'w', seed: () => 1234, state: () => ({ cleared: [[lit.x, lit.y]], stumps: [], plants: [], desolate: false }) });
+  setLandSource({ worldId: () => 'w', state: () => ({ cleared: [[lit.x, lit.y]], stumps: [], plants: [], desolate: false }) });
   try {
     const w = buildArea('home:0');
     assert.ok(!(w.gathering ?? []).some((s) => s.tx === lit.x && s.ty === lit.y), 'a dug stump leaves nothing to work');
@@ -199,8 +204,9 @@ test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand 
 });
 
 test('planting goes into open grass only, near your feet', () => {
-  const home = { landSeed: 1234, cleared: [] as [number, number][], items: [], plants: [] as { x: number; y: number }[] };
-  const land = generateLand(1234);
+  serveFixtureLand('guest');
+  const home = { gate: 0, cleared: [] as [number, number][], items: [], plants: [] as { x: number; y: number }[] };
+  const land = FIXTURE_LAND;
   const site = HOMESTEAD_DATA.land.site;
   let tree: [number, number] | null = null;
   let grass: [number, number] | null = null;
@@ -276,8 +282,8 @@ test('wear is told in a line: giving out, going blunt, a fitting wearing away', 
 });
 
 test('each place offers only the pieces the server allows there', () => {
-  for (const [cx, cy] of [[0, 0], [1, 1], [2, 0]] as const) {
-    for (const s of toWorldData(chunkTerrain(epoch, cx, cy), 'wilds').gathering ?? []) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
+  for (const region of ['inner-1', 'outer-1'] as const) {
+    for (const s of toWorldData(fixtureTerrain(region), 'wilds').gathering ?? []) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
   }
   for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("wilds", s!.target), `wilds kind: ${s!.target}`);
   for (const s of buildArea('woodland').gathering ?? []) assert.ok(gatheringOffered('woodland', s.target), `woodland: ${s.target}`);

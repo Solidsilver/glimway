@@ -12,42 +12,6 @@ import (
 	"time"
 )
 
-func TestFix5CalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
-	for _, change := range []string{"wick-days", "epoch", "same-start-new-end"} {
-		t.Run(change, func(t *testing.T) {
-			saved := content.CalendarRules
-			defer func() { content.CalendarRules = saved }()
-			epoch, _ := time.Parse(time.RFC3339, saved.Epoch)
-			x := newRig(t)
-			firstDay, nextDay := int64(70), int64(140)
-			if change == "same-start-new-end" {
-				firstDay = 0
-				nextDay = 10
-			}
-			x.now.Store(epoch.Unix() + firstDay*86400)
-			c, s := x.ready("alice")
-			old := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-			if change == "epoch" {
-				content.CalendarRules.Epoch = epoch.Add(70 * 24 * time.Hour).Format(time.RFC3339)
-			} else {
-				content.CalendarRules.WickDays = 14
-			}
-			x.now.Store(epoch.Unix() + nextDay*86400)
-			c = x.login("alice", "")
-			s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
-			current := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-			day := content.CalendarAt(content.CalendarRules, x.now.Load())
-			if current.Epoch.ID == old.Epoch.ID || current.Epoch.StartsAt != day.StartsAt || current.Epoch.EndsAt == nil || *current.Epoch.EndsAt != day.NextTurning {
-				t.Fatal("retuned calendar reused old interval", current.Epoch)
-			}
-			node := entityKind(t, old, "node")
-			if x.exp("POST", "/api/wilds/claim", body(s, "ended", map[string]any{"epoch": old.Epoch.ID, "entityId": node.ID, "cycle": 0, "progress": nearEntity(s, node)}), c, 409).Error.Code != "epoch-ended" {
-				t.Fatal("old epoch reopened")
-			}
-		})
-	}
-}
-
 func TestFix5MailRecallConservesAndReplays(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -230,19 +194,6 @@ func TestFix5ProjectCostsCanBeLowered(t *testing.T) {
 				t.Fatal("retuning lost contribution or rewards")
 			}
 		})
-	}
-}
-
-func TestFix5LegacyEpochIntervalKeepsFrozenIdentity(t *testing.T) {
-	x := newRig(t)
-	c, _ := x.ready("alice")
-	outer := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if _, err := x.db.DB.Exec("UPDATE region_epochs SET season='legacy-number' WHERE id=?", outer.Epoch.ID); err != nil {
-		t.Fatal(err)
-	}
-	next := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if next.Epoch.ID != outer.Epoch.ID || next.Epoch.Season != "legacy-number" || count(t, x.db, "SELECT COUNT(*) FROM region_epochs WHERE region_id='outer-1'") != 1 {
-		t.Fatal("legacy epoch regenerated")
 	}
 }
 

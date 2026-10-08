@@ -1,8 +1,8 @@
-// Package land generates a homestead's wild land: the Go port of
-// src/lib/homestead-land.ts (the spec is at the top of that file). Both
-// sides must produce the same tiles for the same seed, so the server can
-// validate placement against the very trees and rocks the player sees
-// (content/vectors/homestead.json holds the parity vectors).
+// Package land generates a homestead's wild land. The server is its only
+// generator: it validates placement and gathering against this land and
+// serves it to the client (GET /api/homestead/land/<gate>, named by
+// CellNames). testdata/lands.json pins the output, so no existing home's
+// land ever moves.
 package land
 
 import (
@@ -23,8 +23,11 @@ const (
 	Path
 )
 
-// Chars is one character per kind, for parity vectors and debugging.
+// Chars is one character per kind, for goldens and debugging.
 const Chars = ".TSBw~/#="
+
+// CellNames name the kinds on the wire (the client's LAND vocabulary), by kind value.
+var CellNames = [...]string{"grass", "tree", "stump", "boulder", "water", "ford", "slope", "edge", "path"}
 
 type Land struct {
 	Width, Height int
