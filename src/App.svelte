@@ -87,8 +87,9 @@
   import { EMOTES } from './content/presence'
   import { accountCopy, leaseCopy } from './content/connected'
   import { watchPlayInsets, type Docks } from './ui/play-insets'
-  import { goalTarget, pinned, pinnedOpenQuest, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
+  import { goalTarget, pinned, pinnedOpenQuest, spotQuests, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
+  import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
   type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'dev' | VillagePanel | null
@@ -117,6 +118,8 @@
   let game: Phaser.Game | null = null
   let session = $state<Session | null>(null)
   const touch = isTouchFirst()
+  // Quests come first at a room's spots (the sponge bowl, the hoist, the reading lamp).
+  setSpotQuests(spotQuests)
 
   /** A journey's line on a title-screen Continue card: where, what next, how long played. */
   function journeyLine(s: GameState): { place: string; goal: string; time: string } {

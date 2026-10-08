@@ -137,6 +137,16 @@ export function roadQuest(record: QuestRecord): QuestDef | null {
   return road.find((q) => !isDone(q, record) && afterHolds(q, record)) ?? null;
 }
 
+/**
+ * Whether the signpost's east finger still lies in the bracken past the
+ * east gate (the scene draws it): from the start of the opening until the
+ * finger-wisp is shooed off it and the finger is picked up (`fetch-finger`).
+ */
+export function fingerInBracken(record: QuestRecord): boolean {
+  const q = BY_ID.get(SIGNPOST);
+  return !!q && reachedIndex(q, record) < q.steps.findIndex((s) => s.id === 'fetch-finger');
+}
+
 /** The step each of the lantern road's scene events reaches (step ids are the old stage names). */
 export const ROAD_EVENT_STEP: Record<QuestEvent, string> = {
   accept: 'accepted',

@@ -24,7 +24,7 @@ import { bus, EV, type StatsPayload } from './events.ts'
 import type { Link, QuestStepOutcome } from './link.ts'
 import { DEFEATED, FOUND, isClientMark, placeArea } from '../lib/api/predict.ts'
 import { itemsFor } from './items.ts'
-import { gameNow } from './clock.ts'
+import { serverNow } from './clock.ts'
 import { displayArea } from '../content/world.ts'
 import { foundPapers, paperFlag } from '../content/papers.ts'
 import { announcePaper } from './papers.ts'
@@ -179,8 +179,8 @@ export class Session {
   /** What a gate on `quest` can see now (the server checks the same again). */
   gateContext(quest: string): GateContext {
     return {
-      // TODO(B): serverNow() from game/clock.ts once the server-time offset lands.
-      now: gameNow(),
+      // The world's clock (and the dev clock): the cycle and the waits are the server's.
+      now: serverNow(),
       area: placeArea(this.state),
       embers: this.state.embers,
       carrying: (def) => this.carrying(def),
@@ -219,7 +219,7 @@ export class Session {
   async reachStep(quest: string, to: string): Promise<ReachOutcome> {
     if (this.destroyed) return 'error'
     const q = questById(quest)
-    const next = q && reachStep(this.state, quest, to, gameNow())
+    const next = q && reachStep(this.state, quest, to, serverNow())
     if (!q || !next) return 'not-next' // not the next step: repeated, or out of order
     const step = q.steps.find((s) => s.id === to)!
     const gate = checkGate(step, this.gateContext(quest))

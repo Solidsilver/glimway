@@ -17,7 +17,8 @@ import { villageFor } from './village.ts'
 import { itemDef } from '../lib/items.ts'
 import { HEARTH_RECIPES } from '../lib/workshop.ts'
 import { nextStep, questById, questStatus, roadQuest, type QuestWhere } from '../lib/quests.ts'
-import type { QuestTalkContext } from '../content/quests/index.ts'
+import { questMarker, questSpotLabel, questSpotTalk, type QuestTalkContext } from '../content/quests/index.ts'
+import type { SpotQuests } from './room-spots.ts'
 import type { GuideWhere } from '../content/guides.ts'
 
 /** One pin per player and world on this device (src/game/held.ts deviceKey). */
@@ -130,6 +131,20 @@ export function questContext(session: Session): QuestTalkContext {
     pinned: pinned.slot,
     connected: session.needs.habitica
   }
+}
+
+/**
+ * What the quests say about a room's spots (src/game/room-spots.ts): a step
+ * that wants the spot gives its talk, label and "!"; otherwise the spot does
+ * what it does. App hands this to `setSpotQuests` once.
+ */
+export const spotQuests: SpotQuests = {
+  talk: (spot, session) => {
+    const d = questSpotTalk(spot, questContext(session))
+    return d ? { speaker: d.speaker, lines: d.lines, ...(d.event ? { event: d.event } : {}), ...(d.choices ? { choices: d.choices } : {}) } : null
+  },
+  label: (spot, session) => questSpotLabel(spot, questContext(session)),
+  marker: (spot, session) => questMarker(spot, questContext(session))
 }
 
 /** The pinned quest, while it's open (a done or locked pin falls back to the road). */

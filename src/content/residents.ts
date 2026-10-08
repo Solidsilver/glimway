@@ -366,6 +366,21 @@ export function millHopperLines(flags: readonly string[]): string[] {
 
 const MET_PREFIX = 'met:';
 
+/**
+ * What a resident calls out when you knock and they're elsewhere
+ * (docs/design/indoors.md 2.6): one line per spot away from home, keyed by
+ * the cycle's spot (`content/residents.json`), with where they call from.
+ * Doors never latch: after the line you go in to an empty room.
+ */
+export const KNOCK_LINES: Readonly<Record<string, Readonly<Record<string, { from: string; line: string }>>>> = {
+  hazel: {
+    square: { from: 'from the square', line: 'Out with the basket. Shop’s open, mind the oven.' },
+  },
+  finn: {
+    door: { from: 'round the front', line: 'Wheel’s turning, I’m round the front.' },
+  },
+};
+
 /** The story flag recording that you met a resident, and at which quest stage. */
 export function metFlag(id: ResidentId, stage: QuestStage): string {
   return `${MET_PREFIX}${id}@${stage}`;
@@ -478,6 +493,7 @@ export function allResidentLines(): string[] {
     const d = RESIDENTS[id];
     out.push(...d.intro, ...Object.values(d.stages).flat(), ...(d.papers ?? []).flatMap((p) => p.lines), ...topicalLines(d));
     if (id === 'finn') out.push(...millHopperLines([]), ...millHopperLines(['paper:forty-one-and-holding']));
+    out.push(...Object.values(KNOCK_LINES[id] ?? {}).map((k) => k.line));
   }
   return out;
 }
