@@ -1127,8 +1127,11 @@
     position: absolute;
     inset: 0;
   }
+  /* The canvas holds the stage's size times the device pixel ratio (src/game/main.ts), shown at the stage's size. */
   .stage :global(canvas) {
     display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .prompt {

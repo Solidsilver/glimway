@@ -13,6 +13,21 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Phones and high-resolution screens draw the world at their full
+  resolution: the art is sharper, and you see the same stretch of it as
+  before.
+
+### Technical
+
+- The canvas renders at the device pixel ratio, capped at 3 (Phaser's NONE
+  scale mode, sized by `src/game/main.ts`); the camera zooms in canvas px
+  (`canvasZoomFor`) and everything the interface reads or writes (insets,
+  the hero's spot, the dev hooks) stays in CSS px through `canvasRatio`.
+  Phones above a ratio of 1 keep the whole 4× art: about 44 MB of textures
+  instead of 16 MB.
+
 ## [0.2.0] - 2026-10-08
 
 ### For players

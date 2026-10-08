@@ -1,30 +1,15 @@
 /**
- * The world camera's zoom and framing: how many world pixels a screen
- * pixel shows, and the bounds and follow offset that keep the hero clear of
- * the interface (src/game/viewport.ts), with a soft fade where the map ends.
+ * The world camera's zoom and framing: how many canvas pixels a world
+ * pixel takes (src/game/viewport.ts canvasZoomFor), and the bounds and
+ * follow offset that keep the hero clear of the interface, with a soft
+ * fade where the map ends.
  */
 import Phaser from 'phaser'
-import { MAX_SCREEN_SCALE } from '../atlas-plan'
-import { playInsets } from '../viewport'
-import { TILE } from '../../lib/tile'
+import { canvasRatio, canvasZoomFor, playInsets } from '../viewport'
 import type { WorldData } from '../worlds'
 
-/**
- * World pixels to screen pixels. Phones show about 12 tiles across the
- * short side (390×844 and 844×390 both get 2×: one phone, one game,
- * whichever way it's held); from a 600 px short side up, the old rule
- * (the height over 280, in half steps) holds, and the tile count ramps
- * between the two so no size jumps.
- */
-export function zoomFor(w: number, h: number): number {
-  const short = Math.min(w, h)
-  if (short >= 600) return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
-  const tiles = 12 + (Phaser.Math.Clamp(short, 440, 600) - 440) * (5.5 / 160)
-  return Phaser.Math.Clamp(Math.round((short / (tiles * TILE)) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
-}
-
 export class WorldCamera {
-  /** What the camera was last framed for (playInsets.rev, zoom, size). */
+  /** What the camera was last framed for (playInsets.rev, the canvas ratio, zoom, size). */
   private framedFor = ''
   private followOffset = { x: 0, y: 0 }
   private edgeFade: Phaser.GameObjects.Image[] = []
@@ -40,7 +25,7 @@ export class WorldCamera {
   }
 
   private apply(w: number, h: number): void {
-    this.scene.cameras.main.setZoom(zoomFor(w, h))
+    this.scene.cameras.main.setZoom(canvasZoomFor(w, h))
     this.frameCamera()
   }
 
@@ -57,15 +42,17 @@ export class WorldCamera {
     const z = cam.zoom
     const W = cam.width
     const H = cam.height
-    this.framedFor = `${playInsets.rev}:${z}:${W}x${H}`
+    // The insets are CSS px; the camera works in canvas px.
+    const r = canvasRatio()
+    this.framedFor = `${playInsets.rev}:${r}:${z}:${W}x${H}`
     // Leave at least 40% of the view open on each axis: past that, both
     // insets on the axis shrink in proportion.
     const fit = (a: number, b: number, view: number): [number, number] => {
       const k = Math.min(1, (view * 0.6) / Math.max(1, a + b))
       return [a * k, b * k]
     }
-    const [left, right] = fit(playInsets.left, playInsets.right, W)
-    const [top, bottom] = fit(playInsets.top, playInsets.bottom, H)
+    const [left, right] = fit(playInsets.left * r, playInsets.right * r, W)
+    const [top, bottom] = fit(playInsets.top * r, playInsets.bottom * r, H)
     const axis = (size: number, view: number, a: number, b: number): [number, number] => {
       const open = (view - a - b) / z
       if (size >= open) return [-a / z, size + (a + b) / z]
@@ -79,10 +66,10 @@ export class WorldCamera {
     this.layEdgeFade(left || right || top || bottom ? 1 : 0)
   }
 
-  /** Re-frame when the insets, the zoom or the size changed (cheap: one string compare a frame). */
+  /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */
   keepFramed(): void {
     const cam = this.scene.cameras.main
-    if (this.framedFor !== `${playInsets.rev}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
+    if (this.framedFor !== `${playInsets.rev}:${canvasRatio()}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
     // startFollow elsewhere (placement, the lantern beat) resets the offset.
     else if (cam.followOffset.x !== this.followOffset.x || cam.followOffset.y !== this.followOffset.y) cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
   }

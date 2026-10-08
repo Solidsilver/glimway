@@ -444,6 +444,9 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   const embers = (await serverState(page)).body.state.embers
   await silasSays(page, new RegExp(`Take back Lot ${gate + 1}`))
   await expect.poll(async () => (await lane(page)).mine?.gate).toBe(gate)
+  // Silas answers once the server has it back: read it (it would hold the
+  // screen, and the next talk would find no prompt).
+  await readOn(page, /Your name’s back on/)
   expect((await myHome(page)).tier).toBe(1)
   expect((await serverState(page)).body.state.embers).toBe(embers)
   await leaveNow()

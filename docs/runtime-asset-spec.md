@@ -45,10 +45,17 @@ small JSON manifests (`commons-pass/manifest.json`,
   that reads pixels gets them through `artSource` / `drawArt` /
   `artCanvas` (a composite canvas whose context is scaled to world px).
   Sampling ties are biased by `TIE_BIAS` (1/64 texel) so the ground and
-  sprites don't shimmer as the camera moves. Phones (screen short side
-  under 600 CSS px, always framed at 2 canvas px per world px) keep
-  `PHONE_ART_DENSITY` (2), box-filtered from the packs at boot; the Canvas
-  renderer gets density 1. The packed atlases are staging: their GPU
+  sprites don't shimmer as the camera moves. The canvas renders at the
+  device pixel ratio, capped at `MAX_CANVAS_RATIO` (3; `src/game/main.ts`,
+  `canvasRatio` in `src/game/viewport.ts`), so phones (screen short side
+  under 600 CSS px, framed at 2 CSS px per world px) draw 2 × the ratio
+  canvas px per world px. A phone above 1× keeps `PHONE_ART_DENSITY` (4,
+  the whole art); a 1× phone keeps half of `ART_DENSITY`, box-filtered from
+  the packs at boot. The density is decided once per game, at boot: a later
+  ratio change refits the canvas and the camera but keeps the textures. For
+  an older phone that struggles, lower `MAX_CANVAS_RATIO` to 2 first, then
+  `PHONE_ART_DENSITY` to 2 if memory is the trouble. The Canvas
+  renderer renders at a ratio of 1 and gets density 1. The packed atlases are staging: their GPU
   copies are released once the frame textures exist.
 - **Ground.** The village, Commons, cottage and Woodland ground is a Phaser
   tilemap (`src/game/area/terrain.ts`) over a boot-built tileset of the 16

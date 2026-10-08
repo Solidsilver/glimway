@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { ART_DENSITY, PHONE_ART_DENSITY } from './atlas-plan.ts'
+import { canvasRatio } from './viewport.ts'
 
 /**
  * Dense textures: art that keeps more texture pixels (texels) than world
@@ -16,30 +17,61 @@ import { ART_DENSITY, PHONE_ART_DENSITY } from './atlas-plan.ts'
  * image with its density, `artCanvas` a composite canvas whose context is
  * scaled to world px.
  *
- * Phones keep PHONE_ART_DENSITY (box-filtered from the packs at boot):
- * see `artDensity`. The Canvas renderer draws a frame's cut rect (world px)
- * straight from the source, so without WebGL everything is built at
- * density 1.
+ * Phones keep what their canvas shows at boot: see `densityFor`. The
+ * Canvas renderer draws a frame's cut rect (world px) straight from the
+ * source, so without WebGL everything is built at density 1.
  */
 
 /** Phaser.WEBGL (not imported: these modules also load in node tests). */
 const WEBGL = 2
 
-/**
- * A phone: a screen under 600 CSS px on its short side. WorldScene.zoomFor
- * frames every such screen at 2 canvas px per world px (the canvas is CSS
- * px), so texels past 2 a world px would only be skipped by nearest
- * sampling — grain, and twice the texture memory for nothing.
- */
+/** CSS px per world px on a phone (zoomFor, ./viewport.ts, gives 1.5–2 under a 600-px short side). */
+export const PHONE_SCREEN_SCALE = 2
+
+/** A phone: a screen under 600 CSS px on its short side. */
 function phoneScreen(): boolean {
   const s = typeof screen === 'undefined' ? null : screen
   return !!s && Math.min(s.width, s.height) < 600
 }
 
-/** Texels per world px for art built in this game (1 without WebGL, PHONE_ART_DENSITY on a phone). */
+/**
+ * Texels per world px worth building: 1 without WebGL; ART_DENSITY on a
+ * large screen; on a phone, enough for the canvas px a world px takes
+ * (PHONE_SCREEN_SCALE × the canvas ratio, ./viewport.ts). Texels past that
+ * would only be skipped by nearest sampling (grain, and texture memory for
+ * nothing): a phone whose canvas renders at a ratio of 1 keeps half of
+ * ART_DENSITY (the packs box-filtered 2:1), one above 1 (nearly every phone:
+ * 2–3) PHONE_ART_DENSITY.
+ */
+export function densityFor(webgl: boolean, phone: boolean, ratio: number): number {
+  if (!webgl) return 1
+  if (!phone) return ART_DENSITY
+  const half = ART_DENSITY / 2
+  return Math.min(ART_DENSITY, PHONE_SCREEN_SCALE * ratio > half ? PHONE_ART_DENSITY : half)
+}
+
+/** Each game's density, decided once (`artDensity`). */
+const decided = new WeakMap<Phaser.Game, number>()
+
+/**
+ * Texels per world px for art built in this game: `densityFor` this screen,
+ * decided the first time a scene asks (at boot, at the ratio the canvas
+ * starts with) and kept for the game's life. A later change of the device
+ * pixel ratio (a window dragged to another screen, browser zoom) resizes
+ * the canvas and re-zooms the camera (./main.ts) but keeps the textures
+ * built at boot: never a mix of densities, and never a rebuild mid-game. A
+ * phone that starts at 1× and moves to 3× shows its 2× art upscaled
+ * (crisp, as before this ratio existed); one that starts at 3× and moves to
+ * 1× keeps its 4× textures until the next start.
+ */
 export function artDensity(scene: Phaser.Scene): number {
-  if (scene.sys.game.renderer.type !== WEBGL) return 1
-  return phoneScreen() ? Math.min(PHONE_ART_DENSITY, ART_DENSITY) : ART_DENSITY
+  const game = scene.sys.game
+  let k = decided.get(game)
+  if (k === undefined) {
+    k = densityFor(game.renderer.type === WEBGL, phoneScreen(), canvasRatio())
+    decided.set(game, k)
+  }
+  return k
 }
 
 /**
@@ -60,8 +92,8 @@ export function contextDensity(ctx: CanvasRenderingContext2D): number {
 
 /**
  * A dense texture is sampled with screen pixel centres falling exactly on
- * texel edges at common zooms (4 texels over 3 px at zoom 3, 2 over 1 on a
- * phone): nearest sampling then picks either side by float noise, which
+ * texel edges at common zooms (4 texels over 3 px at zoom 3, over 6 on a
+ * phone at a device pixel ratio of 3): nearest sampling then picks either side by float noise, which
  * changes as the camera moves (shimmer). Shifting the samples this many
  * texels decides every tie the same way; nothing else moves visibly.
  */

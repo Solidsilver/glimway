@@ -2,8 +2,8 @@
  * The playtest-1 people: the residents' walking, breathing and sitting
  * frames and the held tools, packed by scripts/build-atlases.ts into one
  * dense atlas (src/game/atlas-plan.ts PackedPeople). At boot it becomes the
- * `people` texture at the art's density (./density.ts artDensity: phones
- * get it box-filtered 2:1, the Canvas renderer 4:1; every rect is a
+ * `people` texture at the art's density (./density.ts artDensity: 1×
+ * phones get it box-filtered 2:1, the Canvas renderer 4:1; every rect is a
  * multiple of 4 texels, so the copies stay exact) with the resident
  * animations as `people:<key>`.
  *
