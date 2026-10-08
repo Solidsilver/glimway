@@ -30,6 +30,19 @@ export interface SeatPose {
   facing: SeatFacing
 }
 
+/** Extra mana a second while seated (a bench in the square, a lit lantern's rest), or standing warm at a hearth. */
+export const SEATED_MANA_BONUS = 5
+
+/**
+ * Mana a second (local regen; the server bounds what a report may claim):
+ * everyone's 5, the seated bonus while seated or standing still at a warm
+ * hearth (a room's `kitchen-hearth`: warmth, no seat), and a lit lantern's
+ * rest. HP is never this: it's the lantern rest's rule (src/game/entities/hero.ts).
+ */
+export function manaRegenRate(o: { seated: boolean; warm: boolean; rest: number }): number {
+  return 5 + (o.seated || o.warm ? SEATED_MANA_BONUS : 0) + 6 * o.rest
+}
+
 /** The village and Commons bench ('patched-bench', 18 px tall, facing the square). */
 export const BENCH = {
   /** Seat front edge above the bench's base (the art's seat lip, row 62 of 90). */

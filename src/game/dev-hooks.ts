@@ -140,6 +140,10 @@ export interface FsHooks {
     props: { art: string; frame: string; tx: number; ty: number; tw: number; th: number }[]
     spots: string[]
     lights: { kind: string; visible: boolean }[]
+    /** The room's dressing (the shared kit): each piece, its draw depth and foot. */
+    dressing: { piece: string; depth: number; x: number; y: number }[]
+    /** Collision boxes (px) of its pieces' bases. */
+    bodies: { x: number; y: number; w: number; h: number }[]
     houses: { room: string; window: boolean; smoke: boolean }[]
   }
   /** Check the residents' cycle now (a moved dev clock shows at once, not within a second). */
