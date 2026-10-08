@@ -128,6 +128,12 @@
       "file": "fingersnap-portraits.png",
       "width": 1536,
       "height": 1024
+    },
+    {
+      "key": "commons-portraits-residents",
+      "file": "fingersnap-portraits-residents.png",
+      "width": 1536,
+      "height": 512
     }
   ],
   "frames": [
@@ -4239,6 +4245,78 @@
         "x": 3,
         "y": 0,
         "w": 57,
+        "h": 64
+      }
+    },
+    {
+      "key": "portrait-mara",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits-residents",
+      "sourceRect": {
+        "x": 54,
+        "y": 42,
+        "w": 409,
+        "h": 466
+      },
+      "sheet": "portraits-residents",
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 64
+      }
+    },
+    {
+      "key": "portrait-orrin",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits-residents",
+      "sourceRect": {
+        "x": 532,
+        "y": 62,
+        "w": 469,
+        "h": 445
+      },
+      "sheet": "portraits-residents",
+      "destinationRect": {
+        "x": 0,
+        "y": 3,
+        "w": 64,
+        "h": 61
+      }
+    },
+    {
+      "key": "portrait-pip",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "commons-portraits-residents",
+      "sourceRect": {
+        "x": 1101,
+        "y": 78,
+        "w": 351,
+        "h": 415
+      },
+      "sheet": "portraits-residents",
+      "destinationRect": {
+        "x": 5,
+        "y": 0,
+        "w": 54,
         "h": 64
       }
     }

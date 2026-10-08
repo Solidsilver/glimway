@@ -57,8 +57,8 @@ test('commons-pass exposes its loader and load keys', () => {
   assert.deepEqual(manifest.pendingSheets, [])
 })
 
-test('the manifest’s 21 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 21)
+test('the manifest’s 22 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 22)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
     assert.deepEqual([h.width, h.height], [s.width, s.height], s.file)
@@ -67,7 +67,7 @@ test('the manifest’s 21 source sheets are delivered as transparent RGBA PNGs o
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 173)
+  assert.equal(manifest.frames.length, 176)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -95,6 +95,10 @@ test('standing art is foot-anchored at native sizes; portraits, icons and tiles 
     }
     const p = frameByKey.get(`portrait-${id}`)!
     assert.deepEqual([p.width, p.height, p.role], [64, 64, 'portrait'])
+  }
+  for (const id of ['mara', 'orrin', 'pip']) {
+    const p = frameByKey.get(`portrait-${id}`)!
+    assert.deepEqual([p.width, p.height, p.role, ...p.origin], [64, 64, 'portrait', 0.5, 1])
   }
   const settled = frameByKey.get('guardian-settled')!
   assert.deepEqual([settled.width, settled.height, ...settled.origin], [24, 24, 0.5, 1], 'the resting warden matches the runtime guardian slot')
@@ -138,6 +142,16 @@ test('every placeholder the scenes draw has a delivered frame of a sane size', (
   for (const m of ['hollis', 'tam', 'bett', 'dorrit', 'joss', 'nan']) for (const v of ['solid', 'faint']) assert.ok(frameByKey.has(`echo-${m}-${v}`))
   for (const r of ['timber', 'stone', 'fiber', 'amber']) for (const v of ['available', 'depleted']) assert.ok(frameByKey.has(`resource-${r}-${v}`))
   for (const frame of Object.values(COMMONS_RESIDENT_PORTRAITS)) assert.ok(frameByKey.has(frame), frame)
+  assert.deepEqual(COMMONS_RESIDENT_PORTRAITS, {
+    Silas: 'portrait-silas',
+    Elara: 'portrait-elara',
+    Finn: 'portrait-finn',
+    Hazel: 'portrait-hazel',
+    Ada: 'portrait-ada',
+    Mara: 'portrait-mara',
+    Orrin: 'portrait-orrin',
+    Pip: 'portrait-pip',
+  })
 })
 
 test('decorations fill their footprints: two-tile pieces are refitted, never squeezed into one tile', () => {

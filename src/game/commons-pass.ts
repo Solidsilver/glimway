@@ -172,14 +172,18 @@ export function commonsDataUrl(scene: Phaser.Scene, frame: string, scale = 1): s
 
 /**
  * The residents' delivered dialogue busts (src/content/residents.ts): the
- * dialogue box finds portraits by speaker name, and they speak by first
- * name like Mara and Pip. Silas's comes from the homestead layer.
+ * dialogue box finds portraits by speaker name. The homestead layer also
+ * uses Silas's frame directly.
  */
 export const COMMONS_RESIDENT_PORTRAITS: Readonly<Record<string, string>> = {
+  Silas: 'portrait-silas',
   Elara: 'portrait-elara',
   Finn: 'portrait-finn',
   Hazel: 'portrait-hazel',
   Ada: 'portrait-ada',
+  Mara: 'portrait-mara',
+  Orrin: 'portrait-orrin',
+  Pip: 'portrait-pip',
 }
 
 /** Every delivered 16-px UI icon (`icon-*` frames) as a data URL. */
