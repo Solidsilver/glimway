@@ -1,7 +1,7 @@
 {
  "version": 1,
  "generator": "scripts/build-atlases.ts",
- "generatorVersion": 5,
+ "generatorVersion": 6,
  "inputs": {
   "assets/generated/commons-pass/fingersnap-boundaries.png": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
   "assets/generated/commons-pass/fingersnap-camp-home.png": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
@@ -39,6 +39,17 @@
   "assets/generated/fingersnap-props.png": "ad450ddc744b78fc9fcd74136b015974e106158a6f252436ffc89c4638f48bd2",
   "assets/generated/fingersnap-shrine.png": "66410699ea96728c271e35edd907389757b027cda7ee8cf87fa63fb6b9d29292",
   "assets/generated/fingersnap-village.png": "b14b4f2cfd9fa6b25712aea709e868d6a2a980f7d8923869043f19d408f46c8c",
+  "assets/generated/indoors-pass/manifest.json": "141b176eea1ca0e6b88ada76cf9bf5b689bc4d3f9eed577294896a215bb939a7",
+  "assets/generated/indoors-pass/sheets/exterior-icons.png": "06c20c8b697d54dfe010a91e1e195812a231bc790d14a4ab8dfd4ab85ea7e1ff",
+  "assets/generated/indoors-pass/sheets/floors-seamless.png": "5b07364b7514e334b8a1ddec7f96b836adccfa85e507446420cfc3e9e9fdbb3a",
+  "assets/generated/indoors-pass/sheets/interior-detail.png": "4d6f9a8aaf611a938f1c8b3b5427d154e5f50fe85c303c7bc4e1032f90e46722",
+  "assets/generated/indoors-pass/sheets/interior-kit.png": "c4df12430acc6d09caa5d08e631e4d2df402681f426a807a6db29aec25381544",
+  "assets/generated/indoors-pass/sheets/kitchen-furniture.png": "0a1b4ec03fd302fd846120bcdc4f26367310e91d368ae74a070cc3184efd7343",
+  "assets/generated/indoors-pass/sheets/kitchen-shelf-detail.png": "298c150890132ba7060647c0f4e6b56c7f7c72038667492df2af1d32a38f322f",
+  "assets/generated/indoors-pass/sheets/library-furniture.png": "4c316ff108ce107ff3fda3516dc8865244f17fe65a6c6950bfa01e5d4b65705d",
+  "assets/generated/indoors-pass/sheets/mill-hoist-beams.png": "f35c37b630a770dc5d859255500bc355f5d97df179ffb853ae84ca2194975f7f",
+  "assets/generated/indoors-pass/sheets/mill-machinery.png": "44e5d040aa76fb9c30c643f20578a419a6df78b165d71b6a165c549b8f226116",
+  "assets/generated/indoors-pass/sheets/oven-hearth-frames.png": "0296b0aacc4e76cddcb2ad6cbeddbf35e17b6f34b219658aad06e433b857157f",
   "assets/generated/items-pass/fingersnap-home-goods-1.png": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129",
   "assets/generated/items-pass/fingersnap-keepsakes-1.png": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f",
   "assets/generated/items-pass/fingersnap-papers-1.png": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad",
@@ -84,6 +95,7 @@
   "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
+  "indoors.webp": "e828b45d3d85e692ab7ae488d36d3ba80a815d53d424c679392884ff95397600",
   "items.webp": "61c6a5e4eda99cb9e5094888a68a616ccf1b93f926de0970686a09f5b63984ff",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -2570,6 +2582,622 @@
     384,
     64,
     80
+   ]
+  }
+ },
+ "indoors": {
+  "image": "indoors.webp",
+  "size": [
+   1360,
+   1152
+  ],
+  "density": 64,
+  "frames": {
+   "plank-floor-0": [
+    192,
+    1088,
+    64,
+    64
+   ],
+   "plank-floor-1": [
+    256,
+    1088,
+    64,
+    64
+   ],
+   "plank-floor-2": [
+    320,
+    1088,
+    64,
+    64
+   ],
+   "plank-floor-3": [
+    384,
+    1088,
+    64,
+    64
+   ],
+   "flagstone-floor-0": [
+    1216,
+    960,
+    64,
+    64
+   ],
+   "flagstone-floor-1": [
+    1280,
+    960,
+    64,
+    64
+   ],
+   "flagstone-floor-2": [
+    0,
+    1024,
+    64,
+    64
+   ],
+   "flagstone-floor-3": [
+    64,
+    1024,
+    64,
+    64
+   ],
+   "back-wall-0": [
+    1152,
+    704,
+    64,
+    128
+   ],
+   "back-wall-1": [
+    1216,
+    704,
+    64,
+    128
+   ],
+   "back-wall-2": [
+    1280,
+    704,
+    64,
+    128
+   ],
+   "back-wall-window": [
+    0,
+    832,
+    64,
+    128
+   ],
+   "interior-wall-0": [
+    576,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-1": [
+    640,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-2": [
+    704,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-3": [
+    768,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-4": [
+    832,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-5": [
+    896,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-6": [
+    960,
+    1024,
+    64,
+    64
+   ],
+   "interior-wall-7": [
+    1024,
+    1024,
+    64,
+    64
+   ],
+   "doorway": [
+    768,
+    960,
+    128,
+    64
+   ],
+   "stairs-up": [
+    512,
+    704,
+    128,
+    128
+   ],
+   "stairs-down": [
+    384,
+    704,
+    128,
+    128
+   ],
+   "cellar-ladder": [
+    128,
+    832,
+    64,
+    128
+   ],
+   "trapdoor-shut": [
+    1024,
+    1088,
+    64,
+    64
+   ],
+   "trapdoor-open": [
+    960,
+    1088,
+    64,
+    64
+   ],
+   "rug-rag": [
+    192,
+    576,
+    192,
+    128
+   ],
+   "rug-braided": [
+    0,
+    576,
+    192,
+    128
+   ],
+   "counter": [
+    1152,
+    384,
+    192,
+    128
+   ],
+   "room-surround": [
+    640,
+    1088,
+    64,
+    64
+   ],
+   "worktable": [
+    896,
+    384,
+    256,
+    128
+   ],
+   "counting-stool-window": [
+    1152,
+    960,
+    64,
+    64
+   ],
+   "crock-shelves": [
+    896,
+    576,
+    128,
+    128
+   ],
+   "tallow-pot-steam-0": [
+    640,
+    704,
+    128,
+    128
+   ],
+   "tallow-pot-steam-1": [
+    768,
+    704,
+    128,
+    128
+   ],
+   "tallow-pot-steam-2": [
+    896,
+    704,
+    128,
+    128
+   ],
+   "sponge-bowl-flat": [
+    576,
+    832,
+    64,
+    128
+   ],
+   "sponge-bowl-risen": [
+    640,
+    832,
+    64,
+    128
+   ],
+   "bread-rack": [
+    64,
+    832,
+    64,
+    128
+   ],
+   "hearth-fire-0": [
+    320,
+    1024,
+    64,
+    64
+   ],
+   "hearth-fire-1": [
+    384,
+    1024,
+    64,
+    64
+   ],
+   "hearth-fire-2": [
+    448,
+    1024,
+    64,
+    64
+   ],
+   "hearth-fire-3": [
+    512,
+    1024,
+    64,
+    64
+   ],
+   "millstones-0": [
+    576,
+    192,
+    128,
+    192
+   ],
+   "millstones-1": [
+    704,
+    192,
+    128,
+    192
+   ],
+   "millstones-2": [
+    832,
+    192,
+    128,
+    192
+   ],
+   "millstones-3": [
+    960,
+    192,
+    128,
+    192
+   ],
+   "gear-train-0": [
+    0,
+    0,
+    192,
+    192
+   ],
+   "gear-train-1": [
+    192,
+    0,
+    192,
+    192
+   ],
+   "gear-train-2": [
+    384,
+    0,
+    192,
+    192
+   ],
+   "gear-train-3": [
+    576,
+    0,
+    192,
+    192
+   ],
+   "chute-meal-bin-0": [
+    384,
+    576,
+    128,
+    128
+   ],
+   "chute-meal-bin-1": [
+    512,
+    576,
+    128,
+    128
+   ],
+   "chute-meal-bin-2": [
+    640,
+    576,
+    128,
+    128
+   ],
+   "chute-meal-bin-3": [
+    768,
+    576,
+    128,
+    128
+   ],
+   "flour-sacks-0": [
+    128,
+    704,
+    128,
+    128
+   ],
+   "flour-sacks-1": [
+    256,
+    704,
+    128,
+    128
+   ],
+   "sack-hoist-seized": [
+    1088,
+    192,
+    128,
+    192
+   ],
+   "sack-hoist-working": [
+    256,
+    384,
+    128,
+    192
+   ],
+   "sack-hoist-swing-0": [
+    1216,
+    192,
+    128,
+    192
+   ],
+   "sack-hoist-swing-1": [
+    0,
+    384,
+    128,
+    192
+   ],
+   "sack-hoist-swing-2": [
+    128,
+    384,
+    128,
+    192
+   ],
+   "loft-roof-beams": [
+    0,
+    960,
+    768,
+    64
+   ],
+   "library-shelf-0": [
+    192,
+    192,
+    128,
+    192
+   ],
+   "library-shelf-1": [
+    320,
+    192,
+    128,
+    192
+   ],
+   "library-shelf-2": [
+    448,
+    192,
+    128,
+    192
+   ],
+   "reading-table-unlit": [
+    640,
+    384,
+    256,
+    160
+   ],
+   "reading-table-lit": [
+    384,
+    384,
+    256,
+    160
+   ],
+   "reading-lamp-flame-0": [
+    448,
+    1088,
+    64,
+    64
+   ],
+   "reading-lamp-flame-1": [
+    512,
+    1088,
+    64,
+    64
+   ],
+   "reading-lamp-flame-2": [
+    576,
+    1088,
+    64,
+    64
+   ],
+   "donation-shelf-0": [
+    1024,
+    576,
+    128,
+    128
+   ],
+   "donation-shelf-1": [
+    1152,
+    576,
+    128,
+    128
+   ],
+   "donation-shelf-2": [
+    0,
+    704,
+    128,
+    128
+   ],
+   "window-seat": [
+    1024,
+    704,
+    128,
+    128
+   ],
+   "chimney-smoke-0": [
+    192,
+    832,
+    64,
+    128
+   ],
+   "chimney-smoke-1": [
+    256,
+    832,
+    64,
+    128
+   ],
+   "chimney-smoke-2": [
+    320,
+    832,
+    64,
+    128
+   ],
+   "chimney-smoke-3": [
+    384,
+    832,
+    64,
+    128
+   ],
+   "chimney-smoke-4": [
+    448,
+    832,
+    64,
+    128
+   ],
+   "chimney-smoke-5": [
+    512,
+    832,
+    64,
+    128
+   ],
+   "lit-window-bakery": [
+    1216,
+    1024,
+    64,
+    64
+   ],
+   "lit-window-mill": [
+    0,
+    1088,
+    64,
+    64
+   ],
+   "lit-window-library": [
+    1280,
+    1024,
+    64,
+    64
+   ],
+   "shelf-icon-road": [
+    768,
+    1088,
+    64,
+    64
+   ],
+   "shelf-icon-village": [
+    832,
+    1088,
+    64,
+    64
+   ],
+   "shelf-icon-craft": [
+    704,
+    1088,
+    64,
+    64
+   ],
+   "pin-unpinned": [
+    128,
+    1088,
+    64,
+    64
+   ],
+   "pin-pinned": [
+    64,
+    1088,
+    64,
+    64
+   ],
+   "gate-waiting": [
+    256,
+    1024,
+    64,
+    64
+   ],
+   "gate-needs-embers": [
+    192,
+    1024,
+    64,
+    64
+   ],
+   "gate-locked": [
+    128,
+    1024,
+    64,
+    64
+   ],
+   "signpost-plumb-missing-east": [
+    896,
+    1088,
+    64,
+    64
+   ],
+   "east-finger-bracken": [
+    896,
+    960,
+    128,
+    64
+   ],
+   "east-finger-painted": [
+    1024,
+    960,
+    128,
+    64
+   ],
+   "keepsake-east-finger": [
+    1088,
+    1024,
+    64,
+    64
+   ],
+   "keepsake-tally-token": [
+    1152,
+    1024,
+    64,
+    64
+   ],
+   "oven-hearth-fire-0": [
+    768,
+    0,
+    192,
+    192
+   ],
+   "oven-hearth-fire-1": [
+    960,
+    0,
+    192,
+    192
+   ],
+   "oven-hearth-fire-2": [
+    1152,
+    0,
+    192,
+    192
+   ],
+   "oven-hearth-fire-3": [
+    0,
+    192,
+    192,
+    192
    ]
   }
  },

@@ -28,7 +28,7 @@ import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 5
+export const ATLAS_GENERATOR_VERSION = 6
 export const PACKED_MANIFEST_KEY = 'glimway-packed'
 
 /**
@@ -61,7 +61,7 @@ export type PackedRect = [number, number, number, number]
 export interface PackedCanvasPack {
   image: string
   size: [number, number]
-  /** Texels per world px (ART_DENSITY); rects below are in texels. */
+  /** Texels per world px; usually ART_DENSITY, or 64 for the indoors pass. */
   density: number
   /** Native frame canvases, whole (transparent margins included). */
   frames: Record<string, PackedRect>
@@ -129,6 +129,8 @@ export interface PackedManifest {
   commons: PackedCanvasPack
   runtime: PackedCanvasPack
   items: PackedCanvasPack
+  /** The 0.4 indoors source pass, preserved at 64 texels per world tile. */
+  indoors: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround
