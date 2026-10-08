@@ -29,6 +29,17 @@ type Hooks = {
   __fsToasts?: () => ToastsView
 }
 
+/**
+ * How long a test waits for something that follows a server answer (a toast
+ * after an operation, a claim showing in the homes view, the link online).
+ * On GitHub's software-rendered smoke runner the first answers of a session
+ * take 3–5 s (a sync: ~1 s to open the Menu, ~1.3 s for the outbox's opening
+ * mark and report, ~0.5 s for the report barrier, ~0.6 s for the request,
+ * ~1 s to show the toast), right at Playwright's 5 s default. Only positive
+ * waits use it, so it costs time only when a test fails.
+ */
+export const SERVER_ANSWER_MS = 15_000
+
 /** Per page and per text: the newest toast an expectToast already matched. */
 const toastsMatched = new WeakMap<Page, Map<string, number>>()
 
@@ -51,7 +62,7 @@ export async function expectToast(page: Page, text: RegExp | string, opts: { tim
         hit = t.seen.find((x) => x.n > (seen.get(key) ?? 0) && (typeof text === 'string' ? x.text.includes(text) : text.test(x.text)))
         return !!hit
       },
-      { message: `a toast saying ${text}`, timeout: opts.timeout }
+      { message: `a toast saying ${text}`, timeout: opts.timeout ?? SERVER_ANSWER_MS }
     )
     .toBe(true)
   seen.set(key, hit!.n)
@@ -100,7 +111,7 @@ export async function toastAfter(page: Page, since: number, text?: RegExp | stri
       const hit = t.seen.find((x) => x.n > since && (text === undefined || (typeof text === 'string' ? x.text.includes(text) : text.test(x.text))))
       found = hit?.text ?? ''
       return !!hit
-    }, { message: `a toast${text ? ` saying ${text}` : ''} after #${since}`, timeout })
+    }, { message: `a toast${text ? ` saying ${text}` : ''} after #${since}`, timeout: timeout ?? SERVER_ANSWER_MS })
     .toBe(true)
   return found
 }
