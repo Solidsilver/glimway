@@ -15,18 +15,20 @@ const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf
 const latest = /^## \[(\d+\.\d+\.\d+)\][^\n]*\n[\s\S]*?### For players\s+- ([^\n]+)/m.exec(changelog)!
 const VERSION = latest[1]
 const FIRST_LINE = latest[2].replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '').slice(0, 30)
+/** The release before it: a device that saw it has exactly one release to catch up on. */
+const PREVIOUS = [...changelog.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)][1]?.[1] ?? '0.0.1'
 
 const KEY = 'glimway:whats-new'
 const card = (page: Page) => page.getByTestId('whats-new')
 
-/** This device last caught up on an older build. */
-async function seenBefore(page: Page): Promise<void> {
-  await page.addInitScript((key) => {
+/** This device last caught up on an older build: by default the previous release's. */
+async function seenBefore(page: Page, version = PREVIOUS): Promise<void> {
+  await page.addInitScript(([key, version]) => {
     if (!sessionStorage.getItem('whats-new-seeded')) {
       sessionStorage.setItem('whats-new-seeded', '1')
-      localStorage.setItem(key, JSON.stringify({ version: '0.0.1', build: 'older' }))
+      localStorage.setItem(key, JSON.stringify({ version, build: 'older' }))
     }
-  }, KEY)
+  }, [KEY, version] as const)
 }
 
 const stored = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), KEY)
@@ -76,7 +78,8 @@ for (const [name, size] of [
     test.use({ ...phone, viewport: size })
 
     test(`${size.width}×${size.height}: the card and its button stay on screen and clear of the thumbs`, async ({ page }) => {
-      await seenBefore(page)
+      // Every release unseen: the longest card.
+      await seenBefore(page, '0.0.1')
       await page.goto('/')
       await page.getByRole('button', { name: /Wander as a guest/ }).tap()
       await expect(card(page)).toBeVisible({ timeout: 20_000 })
