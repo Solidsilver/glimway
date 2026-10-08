@@ -17,7 +17,7 @@ import { passiveRegenAllowed } from '../../lib/habitica/sync'
 import { bus, EV, type AbilityPayload } from '../events'
 import { uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
-import { TILE } from '../textures'
+import { tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
 import { KNOCK } from './enemies'
@@ -477,19 +477,19 @@ export class Hero {
     let px: number
     let py: number
     if (entry) {
-      px = (entry.tx + 0.5) * TILE
-      py = (entry.ty + 0.5) * TILE
+      px = tileMid(entry.tx)
+      py = tileMid(entry.ty)
     } else {
       const saved = state.position
       px = saved.x
       py = saved.y
       // Fall back to spawn if the saved spot is out of bounds or solid.
-      const tx = Math.floor(px / TILE)
-      const ty = Math.floor(py / TILE)
+      const tx = tileAt(px)
+      const ty = tileAt(py)
       const inBounds = tx >= 0 && ty >= 0 && tx < this.deps.world.width && ty < this.deps.world.height
       if (!inBounds || this.deps.world.solid[ty][tx]) {
-        px = (this.deps.world.spawn.tx + 0.5) * TILE
-        py = (this.deps.world.spawn.ty + 0.5) * TILE
+        px = tileMid(this.deps.world.spawn.tx)
+        py = tileMid(this.deps.world.spawn.ty)
       }
     }
     this.shadow = this.scene.add.image(px, py - 1, 'shadow').setDepth(-1)

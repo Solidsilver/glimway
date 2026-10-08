@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { batchesAffordable, costPhrase, effectiveBatches, recipeCost } from '../lib/village'
   import { HEARTH_RECIPES } from '../lib/workshop'
   import type { Asset } from '../lib/api/types'
@@ -17,7 +17,7 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
-  const changed = busVersion(bus, VILLAGE_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged)
   const action = actionRunner()
   let batches = $state<Record<string, number>>({})
 

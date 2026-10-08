@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { homesteadsFor } from '../game/homestead'
+  import { bus, EV } from '../game/events'
   import { assetKey, assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
   import { giftPhrase } from '../lib/items'
   import { MAIL } from '../lib/mail'
@@ -21,7 +21,7 @@
   const village = $derived(villageFor(session))
   const homes = $derived(homesteadsFor(session))
   let tab = $state<'box' | 'send'>('box')
-  const changed = busVersion(bus, VILLAGE_EV.changed, HOME_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged, EV.homeChanged)
   const action = actionRunner()
   let recipient = $state('')
   let pick = $state('')

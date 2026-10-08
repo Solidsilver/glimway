@@ -12,66 +12,49 @@
  */
 import Phaser from 'phaser'
 import type { AreaId, QuestEvent } from '../../lib/state'
-import { itemInfo } from '../../content/world'
 import { buildGround } from '../area/terrain'
-import { buildSolids, solidBox, type SolidRun } from '../area/collision'
+import { buildSolids, clearSolidTile, type Solids } from '../area/collision'
 import { buildProps } from '../area/props'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
 import { buildExitSigns } from '../area/exits'
-import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
-import { bus, EV, type DialogueClosedPayload, type RelocatePayload } from '../events'
+import { lanternRestRate, refreshLanternVisuals, type LightProp } from '../area/lanterns'
+import { bus, EV, listen, type DialogueClosedPayload, type RelocatePayload } from '../events'
 import { prefersReducedMotion, sfx } from '../sfx'
-import { heroScreen, touchVec, uiBlocked, uiState } from '../input'
-import { TILE } from '../textures'
+import { heroScreen, uiBlocked, uiState } from '../input'
+import { TILE, tileAt, tileCenter, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
-import { buildArea, hasAreaKind, type WorldData } from '../worlds'
-import { CHARM_ITEM, ROAD_LANTERNS, isLit, type EmberSpend, type RoadLanternId } from '../../lib/embers'
-import { yieldLine } from '../../lib/gathering'
-import { sellerFor } from '../../lib/items'
+import { hasAreaKind, type WorldData } from '../worlds'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
 import { Hero } from '../entities/hero'
 import { EnemySystem } from '../entities/enemies'
 import { Projectiles } from '../entities/projectiles'
 import { Interactables } from '../entities/interactables'
+import { WorldTalk } from '../entities/world-talk'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
 import { Gathering } from '../entities/gathering'
 import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
-import { itemsFor } from '../items'
-import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
-import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
-import { echoSettled } from '../../lib/wilds/stories'
-import { foundToast, paperById } from '../../content/papers'
 import { Effects } from '../entities/fx'
-import { HEIRLOOMS, HEIRLOOM_IDS, type HeirloomId, ADA_OIL_REPLIES, countAdaOilGifts } from '../../content/heirlooms'
-import { heirloomBeat, sayHeirloomRefusal } from '../heirloom-beats'
-import { NPC_NAMES, Npcs } from '../entities/npcs'
-import { createRemotePlayers, showEmoteBubble, type RemotePlayers } from '../entities/remote-players'
+import { Npcs } from '../entities/npcs'
+import { createRemotePlayers, type RemotePlayers } from '../entities/remote-players'
 import { Thoughts } from '../entities/thoughts'
 import { presence } from '../presence'
 import { presenceAreaFor } from '../../lib/presence-client'
-import type { EmotePayload } from '../events'
-import { hasWitnessed, isWitnessBeat, keepsWitness, witnessCopy, witnessFlag, witnessMoment } from '../../content/witness'
 import { HomesteadLayer } from '../entities/homesteads'
-import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from '../commons-pass'
-import { ITEM_ART_FALLBACK, itemIcon, itemIconUrls } from '../items-pass'
 import { emitResidents } from '../residents'
 import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
-import { buildRoom, ROOM_ENTRY } from '../cottage'
+import { ROOM_ENTRY } from '../cottage'
 import { homeArea, parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { isSafeArea } from '../../lib/habitica/sync'
-import { ui } from '../../ui/store.svelte'
-import { COMMONS_FROM_WILDS } from '../commons'
 import {
   OUTER_REGION_ID,
   WILDS_AREA,
-  WILDS_REGION_ID,
   fromRegionPosition,
   inRegion,
   isWildsArea,
@@ -80,30 +63,25 @@ import {
   toRegionPosition,
   wildsArrivalPosition,
   wildsReturnTile,
-  wildsSceneEntry,
 } from '../wilds/regions'
-import { ensureWildsAreaKinds, outerTurned, prepareWilds, resetWildsRegion, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
-import { SEASON_SHIFT_NOTICE } from '../../content/expansion-writing'
-import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
-import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
-import { seasonMark } from '../../lib/wilds/outer'
-import { loadWilds } from '../../lib/wilds/data'
-import { playInsets } from '../viewport'
+import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
 import { GoalGuide } from '../entities/goal-guide'
-import { held, heldNow, setHeld, trackBelt, type HeldPayload } from '../held'
-import { kindForKey, stepKind } from '../../lib/belt'
+import { heldNow } from '../held'
 import { pinnedProgress } from '../guide-pin'
 import type { GuideWhere } from '../../content/guides'
-import { MAX_SCREEN_SCALE } from '../atlas-plan'
-import { densityOf } from '../density'
-import { grantPaper } from '../papers'
-import { WildsEntities, type WildsAction } from '../wilds/entities'
+import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
-
-/** How long a waiting warden rests for someone else's naming before it remembers its pose. */
-const WITNESS_REST_MS = 4200
+import { Unmoored } from '../entities/unmoored'
+import { WorldActions } from './world-actions'
+import { emitPortraits } from '../portraits'
+import { WorldCamera } from './world-camera'
+import { Turning } from './world-turning'
+import { playLanternBeat } from '../entities/lantern-beat'
+import { WorldControls } from './world-controls'
+import { presenceMoments } from '../entities/presence-moments'
+import { arrive } from './world-arrival'
 
 interface SceneData {
   entry?: { tx: number; ty: number }
@@ -139,11 +117,8 @@ export class WorldScene extends Phaser.Scene {
   private remotePlayers!: RemotePlayers
   /** Wilds entities for a generated chunk scene (null in curated areas). */
   private wilds: WildsEntities | null = null
-  /** Collisions for terrain tiles and prop footprints (area/collision). */
-  private solidGroup!: Phaser.Physics.Arcade.StaticGroup
-  /** The solid tiles' merged runs and per-tile prop bodies (a cleared tile opens). */
-  private solidRuns: SolidRun[] = []
-  private solidProps = new Map<string, Phaser.Physics.Arcade.Image[]>()
+  /** Collisions for terrain tiles and prop footprints (area/collision; a cleared tile opens). */
+  private solids!: Solids
   /** Tile-anchored sprites (a felled tree removes its own). */
   private scenerySprites = new Map<string, Phaser.GameObjects.Image[]>()
   /** Gathering: the workable pieces of this area (null where there are none). */
@@ -161,9 +136,8 @@ export class WorldScene extends Phaser.Scene {
   private projectiles!: Projectiles
   private avatar!: AvatarVisual
   private offHand: OffHandVisual | null = null
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
-  private wasd!: Record<string, Phaser.Input.Keyboard.Key>
-  private actionKeys!: Record<string, Phaser.Input.Keyboard.Key>
+  /** Keys, the belt and the mouse (./world-controls.ts). */
+  private controls!: WorldControls
   private transitioning = false
   /** Dark while the ground's transitions are painted (a first visit; see create). */
   private holdingFade = false
@@ -197,72 +171,49 @@ export class WorldScene extends Phaser.Scene {
 
   /** The scene was rebuilt by a live Turning (show what happened). */
   private pendingTurned = false
-  /** Seconds until the next "has the outer Wilds turned?" check. */
-  private turningCheck = 0
+  /** The outer Wilds shifting under you (./world-turning.ts). */
+  private turning!: Turning
 
   private pendingEntry: { tx: number; ty: number } | null = null
   private pendingDefeatToast = false
-  private deepTangleTimer = 0
-  private lamplightTimer = 0
-  private easingTimer = 0
-  private unmooredVeil: Phaser.GameObjects.Rectangle | null = null
-  private unmooredEdges: Phaser.GameObjects.Rectangle[] = []
+  /** Zoom and framing (./world-camera.ts). */
+  private camera!: WorldCamera
+  /** The drift's sway (entities/unmoored.ts). */
+  private unmoored!: Unmoored
+  /** What a conversation's chosen action does (./world-actions.ts). */
+  private actions!: WorldActions
 
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    // A cottage is a view on its homestead: the save keeps saying `home:<gate>`.
-    if (this.room && state.area !== homeArea(this.room.gate)) this.room = null
-    // Wilds: the save's region (the Tangle, or past the crossing) is the one
-    // this scene plays in; resolve the region-wide position into its chunk
-    // area and a chunk-local arrival tile (see src/game/wilds/regions.ts).
-    if (isWildsArea(state.area)) setActiveWildsRegion(regionOfState(state))
-    // Back in the outer Wilds after they turned: the place you left is gone,
-    // so you arrive at the region's entrance in the new epoch.
-    let turnedAway = false
-    if (isWildsArea(state.area) && regionOfState(state) === OUTER_REGION_ID) {
-      const season = wildsEpoch().season
-      if (state.outerSeason && state.outerSeason !== season) {
-        turnedAway = !this.pendingTurned
-        state.position = wildsArrivalPosition(wildsEpoch())
-      }
-      state.outerSeason = season
-    }
-    // Homestead lands read the session's homestead state (world, cleared tiles, desolation).
-    homesteadsFor(this.session)
-    const wildsEntry = wildsSceneEntry(state, wildsEpoch())
+    const arrival = arrive(this.session, { room: this.room ?? null, entry: this.pendingEntry, turned: this.pendingTurned })
+    this.room = arrival.room
+    this.pendingEntry = arrival.entry
+    this.world = arrival.world
+    const wildsEntry = arrival.wildsEntry
+    const turnedAway = arrival.turnedAway
     this.wilds = null
-    if (wildsEntry) ensureWildsAreaKinds(wildsEpoch())
-    // A save (or a server relocation) in an area this build can't draw comes
-    // back in at the Commons arch.
-    if (!wildsEntry && !hasAreaKind(state.area)) {
-      const back = hasAreaKind('commons') ? { area: 'commons', at: COMMONS_FROM_WILDS } : { area: 'village', at: { tx: 7, ty: 11 } }
-      state.area = back.area
-      state.position = { x: (back.at.tx + 0.5) * TILE, y: (back.at.ty + 0.5) * TILE }
-      this.pendingEntry = { ...back.at }
-      this.session.saveSoon()
-    }
-    this.world = this.room ? buildRoom(this.room.gate, this.room.doorstep) : wildsEntry ? buildArea(wildsEntry.areaId) : buildArea(state.area)
     this.occluders = []
     this.cinematic = false
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
     this.fx = new Effects(this, this.reducedMotion)
+    this.unmoored = new Unmoored(this, { session: this.session, world: this.world, reducedMotion: this.reducedMotion })
 
     // Area construction from WorldData (a new area kind is data + a small
     // builder — see the registry in src/game/worlds.ts).
     const groundPainting = buildGround(this, this.world)
     const solids = buildSolids(this, this.world)
-    this.solidGroup = solids.group
-    this.solidRuns = solids.runs
-    this.solidProps = solids.props
-    const props = buildProps(this, this.world, this.solidGroup)
+    this.solids = solids
+    const props = buildProps(this, this.world, solids.group)
     this.lightProps = props.lights
     this.scenerySprites = props.sprites
 
     // Entities
-    const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion })
-    this.interactables = new Interactables(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, papers, village: villageFor(this.session) })
+    // Everything the action button can be used on registers here (entities/interactables).
+    this.interactables = new Interactables(this, { reducedMotion: this.reducedMotion })
+    const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    new WorldTalk({ world: this.world, session: this.session, village: villageFor(this.session), interactables: this.interactables, papers })
     this.hero = new Hero(
       this,
       {
@@ -273,7 +224,7 @@ export class WorldScene extends Phaser.Scene {
         enemies: () => this.enemies,
         projectiles: () => this.projectiles,
         avatar: () => this.avatar,
-        restRate: () => this.lanternRestRate(),
+        restRate: () => lanternRestRate(this.lightProps, this.session.state, this.hero.sprite, this.enemies.enemies),
         transitioning: () => this.transitioning,
         cinematic: () => this.cinematic,
         onDefeat: () => this.defeatRecovery()
@@ -299,18 +250,18 @@ export class WorldScene extends Phaser.Scene {
         session: this.session,
         fx: this.fx,
         reducedMotion: this.reducedMotion,
-        solidGroup: this.solidGroup,
+        solidGroup: this.solids.group,
         hero: () => this.hero
       },
       state
     )
+    this.interactables.register(this.enemies, [this.enemies.warden.speakPoint()])
     // Village life (calendar, festivals, notice boards, project changes) everywhere.
-    this.interactables.setExtra(new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables }))
+    new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables })
     // Small world touches: smell the flowers, sit on a bench, read the signs.
-    this.interactables.setExtra(new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx }))
+    new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx })
     // Things lying about to pick up (a world's; the server keeps who took what).
     const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
-    this.interactables.setExtra(pickups)
     // The workable pieces (trees, boulders, stumps, patches) — wilds chunks,
     // the woods, and homestead land; nowhere else (there's nothing to work).
     this.gathering = new Gathering(this, {
@@ -319,17 +270,17 @@ export class WorldScene extends Phaser.Scene {
       fx: this.fx,
       reducedMotion: this.reducedMotion,
       hero: () => this.hero,
+      interactables: this.interactables,
       notePosition: () => this.notePosition(),
-      clearSolid: (tx, ty) => this.clearSolidTile(tx, ty),
-      spritesAt: (tx, ty) => this.scenerySprites.get(`${tx},${ty}`) ?? [],
+      clearSolid: (tx, ty) => clearSolidTile(this, this.world, this.solids, tx, ty),
+      spritesAt: (tx, ty) => this.scenerySprites.get(tileKey(tx, ty)) ?? [],
       fell: (tx, ty) => {
-        for (const img of this.scenerySprites.get(`${tx},${ty}`) ?? []) img.destroy()
-        this.scenerySprites.delete(`${tx},${ty}`)
+        for (const img of this.scenerySprites.get(tileKey(tx, ty)) ?? []) img.destroy()
+        this.scenerySprites.delete(tileKey(tx, ty))
       }
     })
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
-    this.interactables.setExtra(repairs)
     this.homesteads = null
     if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
       this.homesteads = new HomesteadLayer(this, {
@@ -337,7 +288,7 @@ export class WorldScene extends Phaser.Scene {
         session: this.session,
         fx: this.fx,
         reducedMotion: this.reducedMotion,
-        solidGroup: this.solidGroup,
+        solidGroup: this.solids.group,
         interactables: this.interactables,
         hero: () => this.hero.sprite,
         sitter: () => this.hero,
@@ -345,11 +296,25 @@ export class WorldScene extends Phaser.Scene {
         enterRoom: (gate, doorstep) => this.enterRoom(gate, doorstep),
         rebuild: () => this.rebuildArea()
       })
-      this.interactables.setExtra(this.homesteads)
     }
+    this.actions = new WorldActions({
+      scene: this,
+      session: this.session,
+      world: this.world,
+      fx: this.fx,
+      hero: () => this.hero,
+      lightProps: () => this.lightProps,
+      homesteads: () => this.homesteads,
+      wilds: () => this.wilds,
+      notePosition: () => this.notePosition(),
+      refresh: () => {
+        this.refreshMarkers()
+        this.interactables.invalidatePrompt()
+      }
+    })
     this.occluders = buildForeground(this, this.world)
     buildExitSigns(this, this.world, this.reducedMotion)
-    this.physics.add.collider(this.hero.sprite, this.solidGroup)
+    this.physics.add.collider(this.hero.sprite, this.solids.group)
 
     // The Wilds layer: camps, nodes, chests, POIs and lanterns (null in the
     // curated areas). The region read refreshes in the background; entities
@@ -360,7 +325,9 @@ export class WorldScene extends Phaser.Scene {
         session: this.session,
         fx: this.fx,
         enemies: this.enemies,
-        reducedMotion: this.reducedMotion
+        reducedMotion: this.reducedMotion,
+        interactables: this.interactables,
+        hero: () => this.hero.sprite
       })
       void prepareWilds(this.session, 60_000)
     }
@@ -369,12 +336,7 @@ export class WorldScene extends Phaser.Scene {
     // small maps — without this the hero can walk off the map edge.
     this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
-    // A restarted scene keeps its fields: last area's fade images are gone.
-    this.edgeFade = []
-    this.applyZoom(this.scale.width, this.scale.height)
-    const onResize = (size: Phaser.Structs.Size) => this.applyZoom(size.width, size.height)
-    this.scale.on('resize', onResize)
-    this.events.once('shutdown', () => this.scale.off('resize', onResize))
+    this.camera = new WorldCamera(this, this.world)
     // A first visit paints the ground's transitions off the main thread
     // (src/game/area/terrain.ts): stay dark until they're in (a second at
     // most), so the area never shows without its edges.
@@ -396,44 +358,17 @@ export class WorldScene extends Phaser.Scene {
     } else this.cameras.main.fadeIn(280, 12, 12, 20)
 
     // Input
-    const kb = this.input.keyboard!
-    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,M,SHIFT')
-    this.cursors = kb.createCursorKeys()
-    this.wasd = kb.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
-    this.actionKeys = kb.addKeys('E,SPACE,F,M,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>
-    // Event-driven, not polled: Key.onUp clears _justDown, so polling
-    // JustDown once per frame silently drops taps shorter than a frame
-    // (common on slower devices). DOWN fires once per press, never on repeat.
-    this.actionKeys.E.on('down', this.onActionKey, this)
-    this.actionKeys.SPACE.on('down', this.onActionKey, this)
-    this.actionKeys.F.on('down', this.onCastKey, this)
-    this.actionKeys.M.on('down', this.onRideKey, this)
-    this.actionKeys.SHIFT.on('down', this.onDodgeKey, this)
-    // What's in hand (src/game/held.ts): number keys and the wheel pick from
-    // the belt; the mouse uses it where you point.
-    const stopBelt = trackBelt(this.session)
-    kb.on('keydown', this.onBeltKey, this)
-    this.input.on('wheel', this.onBeltWheel, this)
-    this.input.on('pointerdown', this.onWorldPointer, this)
-    this.input.mouse?.disableContextMenu()
-    bus.on(EV.held, this.onHeldChanged, this)
-    this.events.once('shutdown', () => {
-      stopBelt()
-      kb.off('keydown', this.onBeltKey, this)
-      this.input.off('wheel', this.onBeltWheel, this)
-      this.input.off('pointerdown', this.onWorldPointer, this)
-      bus.off(EV.held, this.onHeldChanged, this)
+    this.controls = new WorldControls(this, {
+      session: this.session,
+      hero: () => this.hero,
+      avatar: () => this.avatar,
+      interactables: this.interactables,
+      gathering: () => this.gathering,
+      reducedMotion: this.reducedMotion,
+      live: () => this.worldLive(),
+      act: () => this.handleAction()
     })
-    bus.on(EV.action, this.handleAction, this)
-    bus.on(EV.cast, this.onCastKey, this)
-    bus.on(EV.dodge, this.onDodgeKey, this)
-    bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     this.events.once('shutdown', () => {
-      for (const key of Object.values(this.actionKeys)) key.removeAllListeners('down')
-      bus.off(EV.action, this.handleAction, this)
-      bus.off(EV.cast, this.onCastKey, this)
-      bus.off(EV.dodge, this.onDodgeKey, this)
-      bus.off(EV.dialogueClosed, this.onDialogueClosed, this)
       // A restart mid-beat must never leave the HUD hidden and input blocked.
       if (this.cinematic) {
         this.cinematic = false
@@ -449,18 +384,17 @@ export class WorldScene extends Phaser.Scene {
     this.session.startAutosave()
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.interactables.buildMarkers()
-    this.emitPortraits()
-    bus.on(EV.quest, this.refreshMarkers, this)
-    this.events.once('shutdown', () => bus.off(EV.quest, this.refreshMarkers, this))
-    bus.on(EV.profileChanged, this.onProfileChanged, this)
-    bus.on(EV.worldRefresh, this.onWorldRefresh, this)
-    bus.on(EV.relocate, this.onRelocate, this)
-    bus.on(EV.notePosition, this.notePosition, this)
+    emitPortraits(this)
+    const unlisten = listen({
+      [EV.quest]: () => this.refreshMarkers(),
+      [EV.profileChanged]: () => this.onProfileChanged(),
+      [EV.worldRefresh]: () => this.onWorldRefresh(),
+      [EV.relocate]: (p) => this.onRelocate(p),
+      [EV.notePosition]: () => this.notePosition(),
+      [EV.dialogueClosed]: (p) => this.onDialogueClosed(p)
+    })
     this.events.once('shutdown', () => {
-      bus.off(EV.profileChanged, this.onProfileChanged, this)
-      bus.off(EV.worldRefresh, this.onWorldRefresh, this)
-      bus.off(EV.relocate, this.onRelocate, this)
-      bus.off(EV.notePosition, this.notePosition, this)
+      unlisten()
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -474,13 +408,8 @@ export class WorldScene extends Phaser.Scene {
     this.presenceArea = presenceAreaFor(this.room ? homeArea(this.room.gate) : this.world.areaId)
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, !!this.room)
-    bus.on(EV.emote, this.onOwnEmote, this)
-    bus.on(EV.witness, this.onWitness, this)
-    this.events.once('shutdown', () => {
-      this.remotePlayers.clear()
-      bus.off(EV.emote, this.onOwnEmote, this)
-      bus.off(EV.witness, this.onWitness, this)
-    })
+    this.events.once('shutdown', () => this.remotePlayers.clear())
+    presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
       stage: () => this.session.questStage,
@@ -493,7 +422,7 @@ export class WorldScene extends Phaser.Scene {
         return it ? { x: it.x, y: it.y - 8 } : null
       },
       wardenAt: () => {
-        const w = this.enemies.wardenView()
+        const w = this.enemies.warden.wardenView()
         return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
       },
       placeKind: () => this.homesteads?.placeKind ?? (this.room ? 'cottage' : null),
@@ -527,195 +456,22 @@ export class WorldScene extends Phaser.Scene {
 
     // The Turning: an ended epoch (a claim refused, or the clock passing the
     // wick's end while we stand here) shifts the outer Wilds under us.
-    bus.on(EV.turning, this.onTurning, this)
-    bus.on(EV.clock, this.onClock, this)
-    const onClearUnmoored = (p: { instant: boolean }) => this.onClearUnmoored(p)
-    bus.on('game:clear-unmoored', onClearUnmoored)
-    const offAll = () => {
-      bus.off(EV.turning, this.onTurning, this)
-      bus.off(EV.clock, this.onClock, this)
-      bus.off('game:clear-unmoored', onClearUnmoored)
-      this.clearUnmooredVisuals()
-    }
-    this.events.once('shutdown', offAll)
-    this.events.once('destroy', offAll)
-
+    this.turning = new Turning(this, {
+      session: this.session,
+      world: this.world,
+      reducedMotion: this.reducedMotion,
+      hero: () => this.hero,
+      unmoored: this.unmoored,
+      moving: () => this.transitioning,
+      hold: () => {
+        this.transitioning = true
+      }
+    })
     if (this.pendingTurned || turnedAway) {
       const live = this.pendingTurned
       this.pendingTurned = false
-      this.time.delayedCall(600, () => this.noteTurning(live))
+      this.time.delayedCall(600, () => this.turning.note(live))
     }
-  }
-
-  // ------------------------------------------------------------- the Turning
-
-  private inOuterWilds(): boolean {
-    return parseChunkArea(this.world.areaId)?.region === OUTER_REGION_ID
-  }
-
-  private onTurning(): void {
-    this.triggerUnmoored()
-    if (this.inOuterWilds()) this.playTurning()
-  }
-
-  private onClock(): void {
-    this.turningCheck = 0
-  }
-
-  /** Once a second in the outer Wilds: has its epoch ended? */
-  private checkTurning(dt: number): void {
-    if (!this.inOuterWilds()) return
-    this.turningCheck -= dt
-    if (this.turningCheck > 0) return
-    this.turningCheck = 1
-    if (outerTurned(this.session)) this.playTurning()
-  }
-
-  /**
-   * "The Wilds shift": the screen pales and shakes, the canon notice is
-   * posted, and the player comes to at the outer region's entrance in the
-   * new epoch (guests: the calendar's next wick; connected: the server's).
-   */
-  private playTurning(): void {
-    if (this.transitioning) return
-    this.transitioning = true
-    this.hero.halt()
-    const cam = this.cameras.main
-    const cx = cam.width / 2
-    const cy = cam.height / 2
-    const veil = this.add.rectangle(cx, cy, cam.width * 2, cam.height * 2, 0xdfe8ec, 0).setScrollFactor(0).setDepth(9000)
-    const title = this.add
-      .text(cx, cy - 6, TURNING_TITLE, { fontFamily: '"Pixelify Sans", monospace', fontSize: '12px', color: '#2b2238', resolution: 8 })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(9001)
-      .setAlpha(0)
-    const notice = this.add
-      .text(cx, cy + 10, SEASON_SHIFT_NOTICE, { fontFamily: 'Nunito, sans-serif', fontSize: '6px', color: '#4a4058', resolution: 8, align: 'center', wordWrap: { width: Math.min(220, cam.width / cam.zoom - 24) } })
-      .setOrigin(0.5, 0)
-      .setScrollFactor(0)
-      .setDepth(9001)
-      .setAlpha(0)
-    if (!this.reducedMotion) cam.shake(900, 0.006)
-    sfx('settle')
-    this.tweens.add({ targets: veil, fillAlpha: 0.92, duration: this.reducedMotion ? 200 : 900 })
-    this.tweens.add({ targets: [title, notice], alpha: 1, duration: 500, delay: 300 })
-    this.time.delayedCall(this.reducedMotion ? 1200 : 1900, () => {
-      resetWildsRegion(OUTER_REGION_ID)
-      const state = this.session.state
-      state.area = WILDS_AREA
-      state.wildsRegion = OUTER_REGION_ID
-      void prepareWilds(this.session, 0).finally(() => {
-        // The entrance of the region as it is now.
-        state.position = wildsArrivalPosition(wildsEpoch(OUTER_REGION_ID))
-        state.outerSeason = wildsEpoch(OUTER_REGION_ID).season
-        this.session.saveSoon()
-        this.scene.restart({ turned: true })
-      })
-    })
-  }
-
-  /** You saw the outer Wilds turn: the canon notice, and what a Turning gives. */
-  private noteTurning(live: boolean): void {
-    const s = this.session
-    s.addFlag(TURNED_FLAG)
-    bus.emit(EV.toast, { text: live ? SEASON_SHIFT_NOTICE : `${TURNED_SINCE_LINE} ${SEASON_SHIFT_NOTICE}`, icon: 'map' })
-    const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
-    const paper = calendarFind('turning', ctx)
-    if (paper) this.time.delayedCall(1400, () => grantPaper(s, paper))
-    this.triggerUnmoored()
-  }
-
-  triggerUnmoored(): void {
-    ui.unmoored = true
-    if (!ui.unmooredEasing) this.lamplightTimer = 0
-    if (!this.session.state.flags.includes('unmoored:felt')) {
-      this.session.addFlag('unmoored:felt')
-      emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: The Drift’s Sway', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'The Drift’s Sway' } })
-    }
-  }
-
-  onClearUnmoored(p: { instant: boolean }): void {
-    if (!ui.unmoored) return
-    if (p.instant) {
-      this.clearUnmoored()
-    } else {
-      ui.unmooredEasing = true
-      this.easingTimer = 45
-    }
-  }
-
-  clearUnmoored(): void {
-    if (!ui.unmoored && !ui.unmooredEasing) return
-    ui.unmoored = false
-    ui.unmooredEasing = false
-    this.lamplightTimer = 0
-    this.deepTangleTimer = 0
-    this.easingTimer = 0
-    this.clearUnmooredVisuals()
-    if (!this.session.state.flags.includes('unmoored:cleared')) {
-      this.session.addFlag('unmoored:cleared')
-      emitResidents(this.session)
-      bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'Finding the Anchor' } })
-    }
-  }
-
-  private updateUnmooredVisuals(time: number, _dt: number): void {
-    const cam = this.cameras.main
-    if (!cam) return
-    const factor = ui.unmooredEasing ? Math.max(0, this.easingTimer / 45) : 1.0
-
-    if (this.reducedMotion) {
-      if (!this.unmooredVeil) {
-        this.unmooredVeil = this.add.rectangle(cam.centerX, cam.centerY, cam.width * 2, cam.height * 2, 0xa8b4c0, 0.18 * factor).setScrollFactor(0).setDepth(8500)
-      } else {
-        this.unmooredVeil.setPosition(cam.centerX, cam.centerY).setSize(cam.width * 2, cam.height * 2).setAlpha(0.18 * factor)
-      }
-      cam.setRotation(0)
-      return
-    }
-
-    if (!this.unmooredVeil) {
-      this.unmooredVeil = this.add.rectangle(cam.centerX, cam.centerY, cam.width * 2, cam.height * 2, 0xd0dbe6, 0.12 * factor).setScrollFactor(0).setDepth(8500)
-    } else {
-      this.unmooredVeil.setPosition(cam.centerX, cam.centerY).setSize(cam.width * 2, cam.height * 2).setAlpha((0.12 + Math.sin(time * 0.0015) * 0.04) * factor)
-    }
-
-    if (this.unmooredEdges.length === 0) {
-      const ex = (cam.width / 2) * (1 - 1 / cam.zoom)
-      const ey = (cam.height / 2) * (1 - 1 / cam.zoom)
-      const top = this.add.rectangle(cam.centerX, ey + 14 / cam.zoom, cam.width * 2, 28 / cam.zoom, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const bottom = this.add.rectangle(cam.centerX, cam.height - ey - 14 / cam.zoom, cam.width * 2, 28 / cam.zoom, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const left = this.add.rectangle(ex + 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      const right = this.add.rectangle(cam.width - ex - 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
-      this.unmooredEdges = [top, bottom, left, right]
-    } else {
-      const edgeAlpha = (0.2 + Math.sin(time * 0.0022) * 0.08) * factor
-      const ex = (cam.width / 2) * (1 - 1 / cam.zoom)
-      const ey = (cam.height / 2) * (1 - 1 / cam.zoom)
-      this.unmooredEdges[0].setPosition(cam.centerX, ey + 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(edgeAlpha)
-      this.unmooredEdges[1].setPosition(cam.centerX, cam.height - ey - 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(edgeAlpha)
-      this.unmooredEdges[2].setPosition(ex + 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(edgeAlpha)
-      this.unmooredEdges[3].setPosition(cam.width - ex - 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(edgeAlpha)
-    }
-
-    const sway = Math.sin(time * 0.0018) * 0.007 * factor
-    cam.setRotation(sway)
-  }
-
-  private clearUnmooredVisuals(): void {
-    if (this.cameras?.main) {
-      this.cameras.main.setRotation(0)
-    }
-    if (this.unmooredVeil) {
-      this.unmooredVeil.destroy()
-      this.unmooredVeil = null
-    }
-    for (const r of this.unmooredEdges) {
-      r.destroy()
-    }
-    this.unmooredEdges = []
   }
 
   // ------------------------------------------------------------- update loop
@@ -740,7 +496,7 @@ export class WorldScene extends Phaser.Scene {
     }
     if (this.reloadHeld) return
     const dt = Math.min(delta / 1000, 0.05)
-    this.keepFramed()
+    this.camera.keepFramed()
     // The hero's spot on the canvas, every frame (panels and transitions too):
     // "hold to walk" steers by it, and title cards keep clear of it.
     const view = this.cameras.main.worldView
@@ -758,42 +514,7 @@ export class WorldScene extends Phaser.Scene {
     this.hero.tick(dt)
     this.session.tickPlaySeconds(dt)
 
-    const chunk = parseChunkArea(this.world.areaId)
-    const tangleEntry = loadWilds().regions.find((region) => region.id === WILDS_REGION_ID)
-    const inDeepTangle = !!(
-      chunk && tangleEntry && chunk.region === WILDS_REGION_ID &&
-      Math.abs(chunk.cx - tangleEntry.entryX) + Math.abs(chunk.cy - tangleEntry.entryY) >= loadWilds().deepTangleManhattanDistance
-    )
-    if (inDeepTangle) {
-      this.deepTangleTimer += dt
-      if (this.deepTangleTimer >= 240) {
-        this.triggerUnmoored()
-        this.deepTangleTimer = 0
-      }
-    } else {
-      this.deepTangleTimer = 0
-    }
-
-    if (ui.unmoored) {
-      if (isSafeArea(this.world.areaId)) {
-        this.lamplightTimer += dt
-        if (this.lamplightTimer >= 120) {
-          this.clearUnmoored()
-        }
-      } else {
-        this.lamplightTimer = 0
-      }
-
-      if (ui.unmooredEasing) {
-        this.easingTimer -= dt
-        if (this.easingTimer <= 0) {
-          this.clearUnmoored()
-        }
-      }
-      this.updateUnmooredVisuals(time, dt)
-    } else {
-      this.clearUnmooredVisuals()
-    }
+    this.unmoored.update(time, dt)
 
     // While a sync persistence owns the save file the world freezes its
     // resource/combat mutations: the committed snapshot must never revert a
@@ -816,25 +537,19 @@ export class WorldScene extends Phaser.Scene {
       return
     }
 
-    this.hero.move(dt, this.inputVector())
+    this.hero.move(dt, this.controls.vector())
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
     this.wilds?.update()
-    this.checkTurning(dt)
+    this.turning.update(dt)
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line
-    const speak = this.enemies.speakTarget()
-    const wildsAction: WildsAction | null = this.wilds?.promptAction(this.hero.sprite) ?? null
-    // Gathering proposes only when its piece is nearer than the nearest
-    // interactable (a pickup or a person right there outranks the woods).
-    const gatherAction = this.gathering?.promptAction(this.hero.sprite, this.interactables.nearest(this.hero.sprite)) ?? null
-    const action = wildsAction ?? gatherAction ?? (speak ? { label: 'Speak the naming', verb: 'Speak', ...speak } : null)
-    this.interactables.updatePrompt(this.hero.sprite, this.time.now, action)
-    // Where the prompt's thing stands (a click on it does what E would).
-    const it = this.interactables.currentTarget
-    this.promptAt = action ? { x: action.x, y: action.y } : it ? { x: it.x, y: it.y - 8 } : null
+    // One target for the action button: the highest rank in reach (the
+    // Wilds' claims, the warden's naming), then the nearest.
+    this.interactables.update(this.hero.sprite, this.time.now)
+    this.controls.update()
     // The wrong tool in hand by something workable: a faint hint after a moment.
     const hx = this.hero.sprite.x
     const hy = this.hero.sprite.y
@@ -885,38 +600,6 @@ export class WorldScene extends Phaser.Scene {
     feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving })
   }
 
-  /** Our own emote: a bubble over the hero (the server doesn't echo it back). */
-  /**
-   * Someone standing near reached a story beat (the server relayed it from
-   * its record of their progress): the moment on screen, a lantern over
-   * them, and a journal line, once per beat and traveler. Your story doesn't
-   * move. Your own waiting warden rests a moment, then remembers its pose.
-   */
-  private onWitness(p: { beat: string; habiticaId: string; name: string }): void {
-    const s = this.session
-    if (!s.link || !p || !isWitnessBeat(p.beat) || !p.habiticaId) return
-    if (hasWitnessed(s.state.flags, p.beat, p.habiticaId)) return
-    // The line is kept for the first few travelers of each beat; the moment shows every time.
-    const flag = witnessFlag(p.beat, p.habiticaId, p.name)
-    if (flag && keepsWitness(s.state.flags, p.beat)) {
-      s.addFlag(flag)
-      emitResidents(s)
-    }
-    bus.emit(EV.toast, { text: witnessMoment(p.beat, p.name), icon: 'lantern' })
-    bus.emit(EV.emote, { habiticaId: p.habiticaId, id: 'lantern' } satisfies EmotePayload)
-    if (p.beat === 'warden' && this.world.areaId === 'ruin') {
-      this.enemies.witnessRest(WITNESS_REST_MS, () => bus.emit(EV.toast, { text: witnessCopy.wardenRises, icon: 'lantern' }))
-    }
-  }
-
-  private onOwnEmote(p: EmotePayload): void {
-    if (p.habiticaId !== null) return
-    this.ownBubble?.destroy()
-    this.ownBubble = showEmoteBubble(this, this.hero.sprite, p.id, -32)
-  }
-
-  private ownBubble: Phaser.GameObjects.Container | null = null
-
   /** Is the scene playing a Wilds chunk right now (also true mid-transition). */
   private wildsEntryNow(): boolean {
     return isWildsArea(this.session.state.area) || parseChunkArea(this.world.areaId) !== null
@@ -946,129 +629,13 @@ export class WorldScene extends Phaser.Scene {
       !this.homesteads?.placing && performance.now() >= uiState.blockedUntil
   }
 
-  private onActionKey(): void {
-    if (this.worldLive()) this.handleAction()
-  }
-
-  private onCastKey(): void {
-    if (this.worldLive()) this.hero.handleCast()
-  }
-
-  private onRideKey(): void {
-    if (this.worldLive()) void this.avatar.toggleRide()
-  }
-
-  private onDodgeKey(): void {
-    if (this.worldLive()) this.hero.tryDodge(this.inputVector())
-  }
-
-  /** Current movement input (keys + joystick), not normalized. */
-  private inputVector(): Phaser.Math.Vector2 {
-    let dx = touchVec.x
-    let dy = touchVec.y
-    if (this.cursors.left.isDown || this.wasd.A.isDown) dx -= 1
-    if (this.cursors.right.isDown || this.wasd.D.isDown) dx += 1
-    if (this.cursors.up.isDown || this.wasd.W.isDown) dy -= 1
-    if (this.cursors.down.isDown || this.wasd.S.isDown) dy += 1
-    return new Phaser.Math.Vector2(dx, dy)
-  }
-
   private handleAction(): void {
     if (uiBlocked() || this.cinematic || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
-    // The warden standing open after a lunge, within reach: speak it the naming.
-    if (this.enemies.speakNaming()) return
-    // Wilds claims (harvest, camp, chest, POI, lantern) outrank talking.
-    if (this.wilds?.handleAction()) return
-    // Gathering (chop, break, dig) outranks talking: the woods come first.
-    if (this.gathering?.handleAction()) return
-    if (this.interactables.currentTarget) {
-      // Free village activities stay available at zero HP: talking is fine.
-      this.interactables.open(this.interactables.currentTarget)
-      return
-    }
+    // Whatever the prompt is on (free activities stay available at zero HP).
+    if (this.interactables.activate()) return
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival
     // A tool in hand swings too, weakly (you're never helpless).
     this.hero.tryAttack({ tool: heldNow().kind !== 'weapon' })
-  }
-
-  // ------------------------------------------------------------- the hand
-
-  /** Where the current prompt's thing stands (null: no prompt). */
-  private promptAt: { x: number; y: number } | null = null
-  private wheelAcc = 0
-  private wheelAt = 0
-
-  /** Keys 1…9 take the belt's slot in hand (not while the emote picker, a panel or a talk has the keys). */
-  private onBeltKey(e: KeyboardEvent): void {
-    const m = /^Digit([1-9])$/.exec(e.code)
-    // A digit the UI already used (an emote picked from the picker) isn't for the belt.
-    if (!m || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
-    const t = e.target as HTMLElement | null
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-    if (ui.emoteOpen || !this.worldLive()) return
-    const kind = kindForKey(held.belt, Number(m[1]))
-    if (kind) setHeld(kind)
-  }
-
-  /** The wheel steps along the belt (one step per notch; a trackpad's flick counts once). */
-  private onBeltWheel(_p: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number): void {
-    if (!this.worldLive() || held.belt.length < 2) return
-    const now = performance.now()
-    if (now - this.wheelAt > 300) this.wheelAcc = 0
-    this.wheelAcc += dy
-    if (Math.abs(this.wheelAcc) < 40 || now - this.wheelAt < 120) return
-    this.wheelAt = now
-    setHeld(stepKind(held.belt, heldNow().kind, this.wheelAcc > 0 ? 1 : -1))
-    this.wheelAcc = 0
-  }
-
-  /**
-   * The mouse on the world (desktop; touches go to the touch controls). Left:
-   * what the prompt's thing would do when you click it, or the held tool on
-   * the piece under the cursor, or talk to the person or sign there, or a
-   * swing toward the cursor. Right: talk to or use what's under the cursor.
-   */
-  private onWorldPointer(p: Phaser.Input.Pointer): void {
-    const ev = p.event as PointerEvent | MouseEvent | TouchEvent
-    if ('pointerType' in ev && ev.pointerType && ev.pointerType !== 'mouse') return
-    if (typeof TouchEvent !== 'undefined' && ev instanceof TouchEvent) return
-    if (!this.worldLive()) return
-    const at = { x: p.worldX, y: p.worldY }
-    const hero = this.hero.sprite
-    const onPrompt = !!this.promptAt && Math.hypot(at.x - this.promptAt.x, at.y - this.promptAt.y) <= 18
-    // A person, sign or pickup under the cursor and within reach.
-    const thing = this.interactables.list.find(
-      (it) => Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 && Math.hypot(hero.x - it.x, hero.y - 8 - (it.y - 8)) <= 40
-    )
-    if (p.button === 2) {
-      if (onPrompt) this.handleAction()
-      else if (thing) this.interactables.open(thing)
-      return
-    }
-    if (p.button !== 0) return
-    if (onPrompt) return this.handleAction()
-    if (this.gathering?.workAt(at, hero)) return
-    if (thing) return this.interactables.open(thing)
-    if (this.session.zeroHpLocked) return
-    this.hero.tryAttack({ tool: heldNow().kind !== 'weapon', toward: at })
-  }
-
-  /** Something else in hand: the prompt follows at once, and the tool shows over the hero for a moment. */
-  private lastHeld = heldNow().kind
-  private onHeldChanged(p: HeldPayload): void {
-    this.interactables.invalidatePrompt()
-    if (p.kind === this.lastHeld) return
-    this.lastHeld = p.kind
-    if (!this.sys.isActive()) return
-    sfx('click')
-    const slot = p.belt.find((s) => s.kind === p.kind)
-    if (!slot?.itemDef) return
-    let key = itemIcon(slot.itemDef)
-    if (!this.textures.exists(key)) key = ITEM_ART_FALLBACK
-    if (!this.textures.exists(key)) return
-    const img = this.add.image(this.hero.sprite.x, this.hero.sprite.y - 30, key).setOrigin(0.5, 1).setDepth(5000)
-    if (img.height > 12) img.setScale(12 / img.height)
-    this.tweens.add({ targets: img, y: img.y - (this.reducedMotion ? 0 : 6), alpha: 0, delay: 350, duration: 450, onComplete: () => img.destroy() })
   }
 
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
@@ -1118,14 +685,7 @@ export class WorldScene extends Phaser.Scene {
       }
       // A different chunk (or a position outside the region): rebuild, and
       // the wilds entry resolver places the hero (spawn as a fallback).
-      if (!r) {
-        this.session.state.position = wildsArrivalPosition(wildsEpoch())
-      }
-      this.transitioning = true
-      this.cameras.main.fade(240, 12, 12, 20, true)
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        void prepareWilds(this.session, 60_000).finally(() => this.scene.restart({}))
-      })
+      this.moveTo({ position: r ? undefined : wildsArrivalPosition(wildsEpoch()), save: false }, {}, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
     if (p.area === this.world.areaId) {
@@ -1133,11 +693,7 @@ export class WorldScene extends Phaser.Scene {
       this.hero.sprite.setVelocity(0, 0)
       return
     }
-    this.transitioning = true
-    this.cameras.main.fade(240, 12, 12, 20, true)
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({})
-    })
+    this.moveTo({ save: false }, {})
   }
 
   /** Canopies and arches fade so nothing (hero or enemy) hides beneath them. */
@@ -1153,379 +709,34 @@ export class WorldScene extends Phaser.Scene {
     this.npcs.updateDepth()
   }
 
-  /**
-   * Small native portraits for the dialogue box and character sheet. Each is
-   * trimmed to its visible pixels (textures carry transparent padding) and,
-   * for people, cropped to head and shoulders, then centered on a square.
-   */
-  private emitPortraits(): void {
-    const out: Record<string, string> = {}
-    const add = (name: string, key: string, frame: string | undefined, bust: boolean) => {
-      try {
-        if (!this.textures.exists(key)) return
-        const tex = this.textures.get(key)
-        if (frame && !tex.has(frame)) return
-        const f = frame ? tex.get(frame) : tex.get()
-        const src = f.source.image as CanvasImageSource
-        // Dense textures (../density.ts): read their texels, `k` a world px.
-        const k = frame ? 1 : densityOf(tex)
-        const w = f.cutWidth * k
-        const h = f.cutHeight * k
-        const c = document.createElement('canvas')
-        c.width = w
-        c.height = h
-        const ctx = c.getContext('2d', { willReadFrequently: true })!
-        ctx.drawImage(src, f.cutX * k, f.cutY * k, w, h, 0, 0, w, h)
-        const data = ctx.getImageData(0, 0, w, h).data
-        let minX = w, minY = h, maxX = -1, maxY = -1
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            if (data[(y * w + x) * 4 + 3] > 16) {
-              if (x < minX) minX = x
-              if (x > maxX) maxX = x
-              if (y < minY) minY = y
-              if (y > maxY) maxY = y
-            }
-          }
-        }
-        if (maxX < 0) return
-        const bw = maxX - minX + 1
-        const bh = maxY - minY + 1
-        const cropH = bust ? Math.max(1, Math.ceil(bh * 0.58)) : bh
-        // The portrait stays world-px sized (the UI sizes it by its natural size).
-        const size = Math.ceil(Math.max(bw, cropH) / k) + 2
-        const o = document.createElement('canvas')
-        o.width = size
-        o.height = size
-        const octx = o.getContext('2d')!
-        octx.imageSmoothingEnabled = k > 1
-        octx.imageSmoothingQuality = 'high'
-        const dx = Math.floor((size - bw / k) / 2)
-        const dy = bust ? size - cropH / k : Math.floor((size - bh / k) / 2)
-        octx.drawImage(c, minX, minY, bw, cropH, dx, dy, bw / k, cropH / k)
-        out[name] = o.toDataURL()
-      } catch {
-        /* portrait is optional decoration */
-      }
-    }
-    for (const id of ['mara', 'pip', 'orrin']) {
-      add(NPC_NAMES[id], this.textures.exists(`${id}-idle-0`) ? `${id}-idle-0` : id, undefined, true)
-    }
-    if (this.textures.get('fingersnap-props').has('stone-milestone')) add('Route Marker', 'fingersnap-props', 'stone-milestone', false)
-    else add('Route Marker', 'mural', undefined, false)
-    add('Hilltop Lantern', 'fingersnap-props', 'lantern-shrine', false)
-    add('Hearth Lantern', 'fingersnap-props', 'lantern-post', false)
-    add('Road Lantern', 'fingersnap-props', 'lantern-post', false)
-    add('Ashwatch Chest', 'fingersnap-props', 'treasure-chest', false)
-    add('You', 'fingersnap-demo-walk', 'walk-down-0', true)
-    // Commons pass: the residents' delivered busts (64 px), and the UI icons.
-    for (const [name, frame] of Object.entries(COMMONS_RESIDENT_PORTRAITS)) {
-      const url = commonsDataUrl(this, frame)
-      if (url) out[name] = url
-    }
-    bus.emit(EV.portraits, out)
-    bus.emit(EV.artIcons, { ...commonsIconUrls(this), ...itemIconUrls(this) })
-  }
-
   // ------------------------------------------------------------- interaction
 
-  private onDialogueClosed = (payload: DialogueClosedPayload): void => {
+  private onDialogueClosed(payload: DialogueClosedPayload): void {
     uiState.dialogueOpen = false
     uiState.blockedUntil = performance.now() + 220
-    if (payload?.action) this.applyEmberAction(payload.action)
+    if (payload?.action) this.actions.apply(payload.action)
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
     // The clue is journaled under the shared content id (advanceQuest also
     // carries it; addUnique keeps it single-entry).
     if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'The Closure Mark')
     if (event === 'light-lantern' || event === 'return-village') {
-      this.playLanternBeat(event)
+      playLanternBeat(this, {
+        event,
+        session: this.session,
+        lightProps: this.lightProps,
+        fx: this.fx,
+        hero: this.hero.sprite,
+        reducedMotion: this.reducedMotion,
+        setCinematic: (on) => {
+          this.cinematic = on
+        }
+      })
       return
     }
     this.session.applyQuestEvent(event)
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
-    if (event === 'find-clue' && this.world.areaId === 'ruin') this.enemies.spawnGuardian(true)
-  }
-
-  /** A spend picked in an ember-spot conversation; the payoff is visible. */
-  private applyEmberAction(action: string): void {
-    if (action.startsWith('home:')) {
-      void this.homesteads?.onAction(action)
-      return
-    }
-    if (action.startsWith('keep:return:')) {
-      const parsed = parseKeepsakeAction(action)
-      if (parsed) this.returnKeepsake(parsed.def, parsed.target)
-      return
-    }
-    if (action.startsWith('echo:settle:')) {
-      // A settle picked in an Echo camp conversation (the keep's offer keeps the lamp open).
-      this.wilds?.settleEcho(action.slice('echo:settle:'.length))
-      return
-    }
-    if (action.startsWith('heirloom:grant:')) {
-      const id = action.slice('heirloom:grant:'.length)
-      this.grantHeirloom(id)
-      return
-    }
-    if (action === 'ada:oil') {
-      this.giveAdaOil()
-      return
-    }
-    if (action.startsWith('buy:')) {
-      const [, seller, good] = action.split(':')
-      if (seller && good) this.marketBuy(seller, good)
-      return
-    }
-    const spend: EmberSpend | null =
-      action === 'rest' ? { kind: 'rest' }
-        : action === 'home-rest' ? { kind: 'home-rest' }
-        : action === 'chest' ? { kind: 'chest' }
-          : action.startsWith('light:') && (ROAD_LANTERNS as readonly string[]).includes(action.slice(6))
-            ? { kind: 'road-lantern', id: action.slice(6) as RoadLanternId }
-            : null
-    if (!spend) return
-    if (this.session.link) {
-      void this.applyRemoteSpend(spend)
-      return
-    }
-    const refused = this.session.spend(spend)
-    if (refused) {
-      const text =
-        refused === 'short' ? 'The flame gutters — not enough embers after all.'
-          : refused === 'full' ? 'You’re already rested. Keep your embers.'
-            : refused === 'done' ? 'That’s already done.'
-                : refused === 'needs-earned' ? 'Only embers earned on Habitica can get you back on your feet.'
-              : 'Hold on — your hero is still syncing. Try again in a moment.'
-      bus.emit(EV.toast, { text, kind: 'error' })
-      return
-    }
-    this.spendPayoff(spend)
-  }
-
-  /**
-   * A keepsake given back at the end of a conversation (docs/items/
-   * overview.md, "Returning keepsakes"): the thanks wait for the server's
-   * yes — the return is a keyed mutation, and a refusal leaves the keepsake
-   * with you and says so. On a yes the resident speaks their thanks and the
-   * paper's own toast marks the find.
-   */
-  private returnKeepsake(def: string, target: string): void {
-    const items = itemsFor(this.session)
-    void items.returnKeepsake(def, target).then((r) => {
-      if (!this.sys.isActive()) return
-      if (!r.ok) {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
-        return
-      }
-      const returned = r.value.returned ?? def
-      const thanks = keepsakeThanks(returned)
-      if (thanks.length) {
-        bus.emit(EV.dialogue, { id: 'keep-return', speaker: keepsakeSpeaker(target), lines: thanks })
-      } else {
-        // A keep with no living owner, left at its Echo camp: the echo
-        // answers in its own register (the camp's voice once settled).
-        const left = echoForKeepsake(returned)
-        if (left) {
-          bus.emit(EV.dialogue, {
-            id: 'echo-keepsake-left',
-            speaker: echoCampSpeaker(left.echo.member, echoSettled(this.session.state.flags, left.echo.member)),
-            lines: [...left.keep.leave]
-          })
-          emitResidents(this.session)
-        }
-      }
-      if (r.value.paper) {
-        const paper = paperById(r.value.paper)
-        if (paper) bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
-      }
-    })
-  }
-
-  private grantHeirloom(id: string): void {
-    const items = itemsFor(this.session)
-    if (!this.session.link || !(HEIRLOOM_IDS as readonly string[]).includes(id)) return
-    // The server measures reach from where you stand: that rides along now,
-    // not the spot noted before the conversation opened.
-    this.notePosition()
-    void items.grantHeirloom(id).then((r) => {
-      if (!this.sys.isActive()) return
-      if (!r.ok) {
-        // The giver says why, in the conversation.
-        sayHeirloomRefusal(id as HeirloomId, r.code)
-        return
-      }
-      const h = HEIRLOOMS[id as HeirloomId]
-      if (h) bus.emit(EV.toast, { text: h.toast, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: h.id, qty: 1 } })
-      emitResidents(this.session)
-    })
-  }
-
-  /** Buying from a seller (a resident's kitchen door, or the day's market stall). */
-  private marketBuy(seller: string, good: string): void {
-    const items = itemsFor(this.session)
-    if (!this.session.link) return
-    // The server checks you stand by the seller: where you stand now rides along.
-    this.notePosition()
-    void items.buy(seller, good).then((r) => {
-      if (!this.sys.isActive()) return
-      if (!r.ok) {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
-        return
-      }
-      // The seller's own words for what changed hands.
-      const bought = r.value.bought
-      const line = bought ? sellerFor(bought.seller)?.goods.find((g) => g.item === bought.itemDef)?.line : undefined
-      if (bought) bus.emit(EV.toast, { text: line ?? `Bought: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'bag', art: `icon-${bought.itemDef}` })
-    })
-  }
-
-  private giveAdaOil(): void {
-    const items = itemsFor(this.session)
-    if (!this.session.link) return
-    // Ada checks you stand by her window: where you stand now rides along.
-    this.notePosition()
-    void items.giveAdaOil().then((r) => {
-      if (!this.sys.isActive()) return
-      if (!r.ok) {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
-        return
-      }
-      const count = r.value.adaOilCount ?? countAdaOilGifts(this.session.state.flags)
-      if (count >= 3) {
-        // The third flask: the spade, offered only if it can be handed over now.
-        const beat = heirloomBeat(this.session, 'ada-garden-spade', 'Take Ada’s garden spade')
-        if (beat) {
-          bus.emit(EV.dialogue, {
-            id: 'ada-spade-grant',
-            speaker: HEIRLOOMS['ada-garden-spade'].speaker,
-            lines: beat.lines,
-            choices: beat.choices.length ? [...beat.choices, { text: 'Not yet' }] : undefined
-          })
-        }
-      } else {
-        const reply = ADA_OIL_REPLIES[count] ?? ['Good oil for the window. Thank you.']
-        bus.emit(EV.dialogue, {
-          id: 'ada-oil-thanks',
-          speaker: 'Ada',
-          lines: [...reply]
-        })
-      }
-    })
-  }
-
-  /**
-   * Connected play: the server decides. The world waits (persistenceInFlight)
-   * and the HUD shows a short pending state; the payoff plays only after a
-   * yes, and nothing changes on a no.
-   */
-  private async applyRemoteSpend(spend: EmberSpend): Promise<void> {
-    const link = this.session.link!
-    const result = await link.spend(spend)
-    if (!this.sys.isActive()) return
-    if (result === null) {
-      this.spendPayoff(spend)
-      return
-    }
-    const text =
-      result === 'offline' ? 'Needs a connection. Your embers are safe — try again when you’re back online.'
-        : result === 'superseded' ? 'Another device took over this journey.'
-          : result === 'short' ? 'The flame gutters — not enough embers after all.'
-            : result === 'full' ? 'You’re already rested. Keep your embers.'
-              : result === 'done' ? 'That’s already done.'
-                : result === 'needs-earned' ? 'Only embers earned on Habitica can get you back on your feet.'
-                  : result === 'unsafe' ? 'Resting only works in Hearthwick.'
-                    : result === 'not-home' ? 'You can only rest at your own place.'
-                    : result === 'busy' ? 'Hold on — the last one is still on its way.'
-                      : 'The lantern didn’t answer. Nothing was spent — try again in a moment.'
-    bus.emit(EV.toast, { text, kind: 'error' })
-  }
-
-  /** The visible reward for a spend that went through. */
-  private spendPayoff(spend: EmberSpend): void {
-    sfx('lantern')
-    if (spend.kind === 'rest' || spend.kind === 'home-rest') {
-      this.hero.sprite.setTint(0xffe2a8)
-      this.time.delayedCall(260, () => this.hero.sprite.clearTint())
-      this.fx.sparkBurst(this.hero.sprite.x, this.hero.sprite.y - 10, 10)
-      this.fx.floatText(this.hero.sprite.x, this.hero.sprite.y - 24, 'Rested', '#ffd27a', false)
-      bus.emit(EV.toast, {
-        text: spend.kind === 'home-rest' ? 'Home, and rested. Health and mana restored.' : 'Warm and rested. Health and mana restored.',
-        icon: 'ember'
-      })
-    } else if (spend.kind === 'road-lantern') {
-      const lp = this.lightProps.find((l) => l.id === spend.id)
-      refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
-      if (lp) {
-        const bloom = this.add.image(lp.gx, lp.gy, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(4002).setScale(0.2)
-        this.tweens.add({ targets: bloom, scale: 2.4, alpha: 0, duration: 900, ease: 'Quad.easeOut', onComplete: () => bloom.destroy() })
-        this.fx.sparkBurst(lp.gx, lp.gy, 10)
-      }
-      bus.emit(EV.toast, { text: 'The road lantern is lit. Rest in its light to recover.', icon: 'lantern' })
-    } else {
-      const spot = this.world.emberSpots.find((e) => e.id === 'chest')
-      if (spot) this.fx.sparkBurst(spot.tx * TILE + 8, spot.ty * TILE + 6, 14)
-      bus.emit(EV.toast, { text: `Found: ${itemInfo(CHARM_ITEM).name}. Your strikes find the gaps more often.`, icon: 'ember' })
-    }
-    this.refreshMarkers()
-    this.interactables.invalidatePrompt()
-  }
-
-  /** Standing in a lit road lantern's light (and out of a fight) mends you. */
-  private lanternRestRate(): number {
-    for (const lp of this.lightProps) {
-      if (!(ROAD_LANTERNS as readonly string[]).includes(lp.id) || !isLit(this.session.state, lp.id as RoadLanternId)) continue
-      if (Math.hypot(this.hero.sprite.x - lp.gx, this.hero.sprite.y - (lp.gy + 18)) > 44) continue
-      const threatened = this.enemies.enemies.some((e) => !e.dead && Math.hypot(e.sprite.x - this.hero.sprite.x, e.sprite.y - this.hero.sprite.y) < 90)
-      return threatened ? 0 : 1
-    }
-    return 0
-  }
-
-  /**
-   * The big moment: the HUD steps aside, the camera eases to the lantern,
-   * and the flame catches with a bloom of light and a chime. The quest event
-   * is applied at the peak so the UI's quest banner lands right after.
-   */
-  private playLanternBeat(event: QuestEvent): void {
-    const target = this.lightProps.find((lp) => lp.id === (event === 'light-lantern' ? 'shrine' : 'village'))
-    const finish = () => {
-      this.session.applyQuestEvent(event)
-      refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
-    }
-    if (!target) {
-      finish()
-      return
-    }
-    this.cinematic = true
-    bus.emit(EV.cinematic, { active: true })
-    const cam = this.cameras.main
-    const baseZoom = cam.zoom
-    cam.stopFollow()
-    const panMs = this.reducedMotion ? 0 : 900
-    cam.pan(target.gx, target.gy + 10, panMs, 'Sine.easeInOut')
-    if (!this.reducedMotion) cam.zoomTo(baseZoom * 1.3, panMs, 'Sine.easeInOut')
-    this.time.delayedCall(panMs + 150, () => {
-      sfx('lantern')
-      if (!this.reducedMotion) cam.flash(500, 255, 220, 150)
-      const bloom = this.add.image(target.gx, target.gy, 'glow')
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(4002)
-        .setScale(0.2)
-      this.tweens.add({ targets: bloom, scale: 4, alpha: 0, duration: 1400, ease: 'Quad.easeOut', onComplete: () => bloom.destroy() })
-      this.fx.sparkBurst(target.gx, target.gy, 16)
-      finish()
-    })
-    this.time.delayedCall(panMs + 2300, () => {
-      cam.pan(this.hero.sprite.x, this.hero.sprite.y, panMs, 'Sine.easeInOut')
-      // Return to the zoom for the CURRENT viewport (it may have resized).
-      if (!this.reducedMotion) cam.zoomTo(this.zoomFor(this.scale.width, this.scale.height), panMs, 'Sine.easeInOut')
-      this.time.delayedCall(panMs + 50, () => {
-        cam.startFollow(this.hero.sprite, true, 0.12, 0.12)
-        this.cinematic = false
-        bus.emit(EV.cinematic, { active: false })
-      })
-    })
+    if (event === 'find-clue' && this.world.areaId === 'ruin') this.enemies.warden.spawnGuardian(true)
   }
 
   // ------------------------------------------------------------- transitions
@@ -1536,8 +747,8 @@ export class WorldScene extends Phaser.Scene {
     // found outside may travel home freely (nothing heals en route).
     // The Commons counts as home: a hurt hero may walk there to rest.
     const locked = this.session.zeroHpLocked && (safeArea(this.world.areaId) || !!this.room)
-    const tx = Math.floor(this.hero.sprite.x / TILE)
-    const ty = Math.floor(this.hero.sprite.y / TILE)
+    const tx = tileAt(this.hero.sprite.x)
+    const ty = tileAt(this.hero.sprite.y)
     for (const exit of this.world.exits) {
       if (locked && !safeArea(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
@@ -1573,7 +784,6 @@ export class WorldScene extends Phaser.Scene {
 
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
     if (!canEnter(area)) return
-    this.transitioning = true
     const state = this.session.state
     const leavingWilds = isWildsArea(state.area)
     const targetChunk = area === WILDS_AREA ? null : parseChunkArea(String(area))
@@ -1594,18 +804,11 @@ export class WorldScene extends Phaser.Scene {
         ? entry
         : (() => {
             const r = fromRegionPosition(wildsArrivalPosition(epoch).x, wildsArrivalPosition(epoch).y)
-            return { tx: Math.floor(r.x / TILE), ty: Math.floor(r.y / TILE) }
+            return { tx: tileAt(r.x), ty: tileAt(r.y) }
           })()
-      state.area = WILDS_AREA
-      state.position = targetChunk
-        ? toRegionPosition(dest.cx, dest.cy, (entry.tx + 0.5) * TILE, (entry.ty + 0.5) * TILE)
-        : wildsArrivalPosition(epoch)
-      this.session.saveSoon()
-      this.cameras.main.fade(240, 12, 12, 20, true)
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        // The region must be loaded before the chunk builds (shared epoch).
-        void prepareWilds(this.session, 60_000).finally(() => this.scene.restart({ entry: arrivalTile }))
-      })
+      const position = targetChunk ? toRegionPosition(dest.cx, dest.cy, tileMid(entry.tx), tileMid(entry.ty)) : wildsArrivalPosition(epoch)
+      // The region must be loaded before the chunk builds (shared epoch).
+      this.moveTo({ area: WILDS_AREA, position }, { entry: arrivalTile }, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
     if (leavingWilds) delete state.wildsRegion
@@ -1614,13 +817,7 @@ export class WorldScene extends Phaser.Scene {
       const tile = wildsReturnTile()
       entry = { tx: tile.tx, ty: tile.ty }
     }
-    state.area = area
-    state.position = { x: (entry.tx + 0.5) * TILE, y: (entry.ty + 0.5) * TILE }
-    this.session.saveSoon()
-    this.cameras.main.fade(240, 12, 12, 20, true)
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({ entry })
-    })
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry })
   }
 
   /**
@@ -1629,55 +826,14 @@ export class WorldScene extends Phaser.Scene {
    */
   private enterRoom(gate: number, doorstep: { tx: number; ty: number }): void {
     if (this.transitioning) return
-    this.transitioning = true
-    const state = this.session.state
-    state.area = homeArea(gate)
-    state.position = { x: (doorstep.tx + 0.5) * TILE, y: (doorstep.ty + 0.5) * TILE }
-    this.session.saveSoon()
-    this.cameras.main.fade(240, 12, 12, 20, true)
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({ entry: ROOM_ENTRY, room: { gate, doorstep } })
-    })
+    this.moveTo({ area: homeArea(gate), position: tileCenter(doorstep.tx, doorstep.ty) }, { entry: ROOM_ENTRY, room: { gate, doorstep } })
   }
 
   /** The map changed under us (the lane grew, land was cleared): rebuild it where we stand. */
   private rebuildArea(): void {
     if (this.transitioning || this.room) return
-    this.transitioning = true
-    this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
-    const entry = { tx: Math.floor(this.hero.sprite.x / TILE), ty: Math.floor(this.hero.sprite.y / TILE) }
-    this.time.delayedCall(0, () => this.scene.restart({ entry }))
-  }
-
-  /**
-   * A worked piece leaves open ground (a broken boulder, a dug stump): the
-   * tile opens in the solid grid, its run body is split or dropped, and any
-   * prop body there goes with it. Scenery-only: regrows on the next visit.
-   */
-  private clearSolidTile(tx: number, ty: number): void {
-    // A prop's own body first (the woods' rocks are props on open ground).
-    for (const body of this.solidProps.get(`${tx},${ty}`) ?? []) {
-      this.solidGroup.remove(body)
-      body.destroy()
-    }
-    this.solidProps.delete(`${tx},${ty}`)
-    if (!this.world.solid[ty]?.[tx]) return
-    this.world.solid[ty][tx] = false
-    const i = this.solidRuns.findIndex((r) => r.y === ty && tx >= r.x0 && tx <= r.x1)
-    if (i >= 0) {
-      const run = this.solidRuns.splice(i, 1)[0]
-      this.solidGroup.remove(run.body)
-      run.body.destroy()
-      for (const [x0, x1] of [
-        [run.x0, tx - 1],
-        [tx + 1, run.x1]
-      ] as const) {
-        if (x1 < x0) continue
-        const body = solidBox(this, (x0 + (x1 - x0 + 1) / 2) * TILE, ty * TILE + TILE / 2, (x1 - x0 + 1) * TILE, TILE)
-        this.solidGroup.add(body)
-        this.solidRuns.push({ x0, x1, y: ty, body })
-      }
-    }
+    const entry = { tx: tileAt(this.hero.sprite.x), ty: tileAt(this.hero.sprite.y) }
+    this.moveTo({ position: { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }, save: false }, { entry }, { fadeMs: null })
   }
 
   /**
@@ -1686,7 +842,6 @@ export class WorldScene extends Phaser.Scene {
    * recovery touches vitals.
    */
   private defeatRecovery(): void {
-    this.transitioning = true
     // Tell the UI first: it holds the bars while the hero collapses, then
     // shows the recovered vitals once the screen is dark.
     bus.emit(EV.defeat, { phase: 'falling' })
@@ -1696,122 +851,49 @@ export class WorldScene extends Phaser.Scene {
     this.hero.sprite.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
+    // The report is queued ahead of everything else this tab sends; the
+    // recovery never waits on it, but it must not be dropped either.
+    this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => void wildsReport?.catch(() => undefined) })
+  }
+
+  /**
+   * Leave this build of the scene: the save says where to (and is saved
+   * soon, unless `save` is false), the screen fades, and the scene restarts
+   * with `data`. `inDark` runs once the screen is dark (loading the Wilds
+   * region); a promise holds the restart until it settles. `fadeMs: null`
+   * restarts on the next tick without a fade (a rebuild in place).
+   */
+  private moveTo(
+    to: { area?: AreaId; position?: { x: number; y: number }; save?: boolean },
+    data: SceneData,
+    opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
+  ): void {
+    this.transitioning = true
+    const state = this.session.state
+    if (to.area !== undefined) state.area = to.area
+    if (to.position) state.position = to.position
+    if (to.save ?? true) this.session.saveSoon()
+    const go = () => {
+      const pending = opts.inDark?.()
+      if (pending instanceof Promise) void pending.finally(() => this.scene.restart(data))
+      else this.scene.restart(data)
+    }
+    const fadeMs = opts.fadeMs === undefined ? 240 : opts.fadeMs
+    if (fadeMs === null) {
+      this.time.delayedCall(0, go)
+      return
+    }
     // force: a fade-in still running (scene just started) must not swallow
     // this fade, or 'camerafadeoutcomplete' never fires and we soft-lock.
-    this.cameras.main.fade(1100, 12, 12, 20, true)
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      // The report is queued ahead of everything else this tab sends; the
-      // recovery never waits on it, but it must not be dropped either.
-      void wildsReport?.catch(() => undefined)
-      this.scene.restart({ fromDefeat: true })
-    })
-  }
-
-  // ------------------------------------------------------------- zoom
-
-  /**
-   * World pixels to screen pixels. Phones show about 12 tiles across the
-   * short side (390×844 and 844×390 both get 2×: one phone, one game,
-   * whichever way it's held); from a 600 px short side up, the old rule
-   * (the height over 280, in half steps) holds, and the tile count ramps
-   * between the two so no size jumps.
-   */
-  private zoomFor(w: number, h: number): number {
-    const short = Math.min(w, h)
-    if (short >= 600) return Phaser.Math.Clamp(Math.round((h / 280) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
-    const tiles = 12 + (Phaser.Math.Clamp(short, 440, 600) - 440) * (5.5 / 160)
-    return Phaser.Math.Clamp(Math.round((short / (tiles * TILE)) * 2) / 2, 1.5, MAX_SCREEN_SCALE)
-  }
-
-  private applyZoom(w: number, h: number): void {
-    this.cameras.main.setZoom(this.zoomFor(w, h))
-    this.frameCamera()
-  }
-
-  /** What the camera was last framed for (playInsets.rev, zoom, size). */
-  private framedFor = ''
-  private followOffset = { x: 0, y: 0 }
-  private edgeFade: Phaser.GameObjects.Image[] = []
-
-  /**
-   * Fit the camera to the map and to the screen the interface leaves open
-   * (src/game/viewport.ts): the bounds reach past each map edge by the
-   * inset there, and the follow offset centres the hero in the open
-   * rectangle. Near an edge the map scrolls a little into the backdrop and
-   * the hero stays clear of the HUD and the thumbs. A map smaller than the
-   * open rectangle (a cottage room) sits centred in it.
-   */
-  private frameCamera(): void {
-    const cam = this.cameras.main
-    const z = cam.zoom
-    const W = cam.width
-    const H = cam.height
-    this.framedFor = `${playInsets.rev}:${z}:${W}x${H}`
-    // Leave at least 40% of the view open on each axis: past that, both
-    // insets on the axis shrink in proportion.
-    const fit = (a: number, b: number, view: number): [number, number] => {
-      const k = Math.min(1, (view * 0.6) / Math.max(1, a + b))
-      return [a * k, b * k]
-    }
-    const [left, right] = fit(playInsets.left, playInsets.right, W)
-    const [top, bottom] = fit(playInsets.top, playInsets.bottom, H)
-    const axis = (size: number, view: number, a: number, b: number): [number, number] => {
-      const open = (view - a - b) / z
-      if (size >= open) return [-a / z, size + (a + b) / z]
-      return [-a / z - (open - size) / 2, view / z]
-    }
-    const [bx, bw] = axis(this.world.widthPx, W, left, right)
-    const [by, bh] = axis(this.world.heightPx, H, top, bottom)
-    cam.setBounds(bx, by, bw, bh)
-    this.followOffset = { x: (left - right) / (2 * z), y: (top - bottom) / (2 * z) }
-    cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
-    this.layEdgeFade(left || right || top || bottom ? 1 : 0)
-  }
-
-  /** Re-frame when the insets, the zoom or the size changed (cheap: one string compare a frame). */
-  private keepFramed(): void {
-    const cam = this.cameras.main
-    if (this.framedFor !== `${playInsets.rev}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
-    // startFollow elsewhere (placement, the lantern beat) resets the offset.
-    else if (cam.followOffset.x !== this.followOffset.x || cam.followOffset.y !== this.followOffset.y) cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
-  }
-
-  /**
-   * A soft shadow just inside the map's edges, so where the camera shows the
-   * backdrop past an edge the map ends in a fade, not a hard line.
-   */
-  private layEdgeFade(alpha: number): void {
-    if (!this.textures.exists('edge-fade')) {
-      const t = this.textures.createCanvas('edge-fade', 1, 16)!
-      const ctx = t.getContext()
-      const g = ctx.createLinearGradient(0, 0, 0, 16)
-      g.addColorStop(0, 'rgba(36,31,49,0.6)')
-      g.addColorStop(1, 'rgba(36,31,49,0)')
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, 1, 16)
-      t.refresh()
-    }
-    if (this.edgeFade.length === 0) {
-      const mw = this.world.widthPx
-      const mh = this.world.heightPx
-      const D = 10
-      const mk = (x: number, y: number, w: number, angle: number) =>
-        this.add.image(x, y, 'edge-fade').setOrigin(0.5, 0).setDisplaySize(w, D).setAngle(angle).setDepth(6000)
-      this.edgeFade = [
-        mk(mw / 2, 0, mw, 0), // top: dark at the edge, fading down
-        mk(mw / 2, mh, mw, 180),
-        mk(0, mh / 2, mh, -90),
-        mk(mw, mh / 2, mh, 90)
-      ]
-    }
-    for (const img of this.edgeFade) img.setAlpha(alpha)
+    this.cameras.main.fade(fadeMs, 12, 12, 20, true)
+    this.cameras.main.once('camerafadeoutcomplete', go)
   }
 
   // ------------------------------------------------------------- world upkeep
 
   private updateDiscoveries(): void {
     for (const spot of this.world.discoverySpots) {
-      const d = Math.hypot(this.hero.sprite.x - (spot.tx * TILE + 8), this.hero.sprite.y - 8 - (spot.ty * TILE + 8))
+      const d = Math.hypot(this.hero.sprite.x - tileMid(spot.tx), this.hero.sprite.y - 8 - tileMid(spot.ty))
       if (d < 24) this.session.recordDiscovery(spot.id, spot.label)
     }
   }

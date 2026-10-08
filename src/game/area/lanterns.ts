@@ -58,3 +58,19 @@ export function refreshLanternVisuals(
     }
   }
 }
+
+/** Standing in a lit road lantern's light (and out of a fight) mends you: the rest rate, 0 or 1. */
+export function lanternRestRate(
+  lights: readonly LightProp[],
+  state: GameState,
+  hero: { x: number; y: number },
+  enemies: readonly { dead: boolean; sprite: { x: number; y: number } }[]
+): number {
+  for (const lp of lights) {
+    if (!(ROAD_LANTERNS as readonly string[]).includes(lp.id) || !isLit(state, lp.id as RoadLanternId)) continue
+    if (Math.hypot(hero.x - lp.gx, hero.y - (lp.gy + 18)) > 44) continue
+    const threatened = enemies.some((e) => !e.dead && Math.hypot(e.sprite.x - hero.x, e.sprite.y - hero.y) < 90)
+    return threatened ? 0 : 1
+  }
+  return 0
+}

@@ -29,7 +29,7 @@
     },
     {
       "paths": [
-        "src/game/entities/homesteads.ts",
+        "src/game/entities/homestead*.ts",
         "src/game/homestead.ts",
         "src/game/homeland.ts",
         "src/game/cottage.ts",
@@ -109,11 +109,11 @@
       "specs": ["gathering.spec.ts"]
     },
     {
-      "paths": ["src/game/entities/enemies.ts", "src/game/entities/hero.ts", "src/game/entities/projectiles.ts", "src/game/entities/fx.ts", "src/lib/combat.ts"],
+      "paths": ["src/game/entities/enemies.ts", "src/game/entities/warden.ts", "src/game/entities/creatures.ts", "src/game/entities/hero.ts", "src/game/entities/projectiles.ts", "src/game/entities/fx.ts", "src/lib/combat.ts"],
       "specs": ["combat.spec.ts", "quest.spec.ts", "naming-screens.spec.ts"]
     },
     {
-      "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
+      "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
       "specs": ["quest.spec.ts", "embers.spec.ts", "combat.spec.ts", "touches.spec.ts"]
     },
     {
@@ -172,7 +172,7 @@
       "specs": ["party-worlds.spec.ts", "party-worlds-screens.spec.ts", "presence.spec.ts", "coop.spec.ts"]
     },
     {
-      "paths": ["src/content/witness.ts", "server/internal/api/witness.go", "src/game/presence*.ts", "src/lib/presence*.ts", "src/game/entities/enemies.ts"],
+      "paths": ["src/content/witness.ts", "server/internal/api/witness.go", "src/game/presence*.ts", "src/lib/presence*.ts", "src/game/entities/enemies.ts", "src/game/entities/warden.ts", "src/game/entities/creatures.ts"],
       "specs": ["coop.spec.ts"]
     },
     {
@@ -180,7 +180,7 @@
       "specs": ["embers.spec.ts", "connected.spec.ts"]
     },
     {
-      "paths": ["src/game/presence*.ts", "src/lib/presence*.ts", "src/content/presence.ts", "src/ui/EmotePicker.svelte", "src/game/entities/remote-players.ts"],
+      "paths": ["src/game/presence*.ts", "src/lib/presence*.ts", "src/content/presence.ts", "src/game/entities/presence-moments.ts", "src/ui/EmotePicker.svelte", "src/game/entities/remote-players.ts"],
       "specs": ["presence.spec.ts"]
     },
     {
@@ -232,7 +232,7 @@
       "specs": ["touch.spec.ts", "touches.spec.ts"]
     },
     {
-      "paths": ["src/game/atlas-plan.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts", "src/game/ground-heal.ts", "src/game/people.ts", "src/game/ground-tiles.ts", "src/game/area/ground-paint.ts", "src/game/area/ground-worker.ts", "src/game/buildings.ts", "src/game/figures.ts", "scripts/png-decode.ts"],
+      "paths": ["src/game/atlas-plan.ts", "src/game/art-pass.ts", "src/game/density.ts", "src/game/commons-pass.ts", "src/game/commons-pass-install.ts", "src/game/items-pass.ts", "src/game/area/terrain.ts", "src/game/packed.ts", "src/game/textures.ts", "src/game/runtime-art.ts", "src/game/avatar-render.ts", "src/game/entities/avatar.ts", "public/**", "assets/**", "scripts/build-atlases.ts", "src/game/ground-heal.ts", "src/game/people.ts", "src/game/ground-tiles.ts", "src/game/area/ground-paint.ts", "src/game/area/ground-worker.ts", "src/game/buildings.ts", "src/game/figures.ts", "scripts/png-decode.ts"],
       "specs": ["atlases.spec.ts", "sprite-anchors.spec.ts", "art-screens.spec.ts", "density-screens.spec.ts", "art1-screens.spec.ts", "held.spec.ts", "first-paint.spec.ts"]
     },
     {
@@ -277,7 +277,7 @@
       "specs": ["held.spec.ts", "gathering.spec.ts", "seasons.spec.ts"]
     },
     {
-      "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/content/residents.ts", "src/game/entities/homesteads.ts"],
+      "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/content/residents.ts", "src/game/entities/homestead*.ts"],
       "specs": ["talk.spec.ts"]
     },
     {
@@ -289,8 +289,26 @@
       "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
     },
     {
+      "paths": ["src/game/entities/unmoored.ts"],
+      "specs": ["warden.spec.ts"]
+    },
+    {
+      "paths": ["src/game/entities/lantern-beat.ts", "src/game/portraits.ts"],
+      "specs": ["quest.spec.ts", "art-screens.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/tile.ts", "src/lib/hash.ts"],
+      "specs": ["atlases.spec.ts", "art-screens.spec.ts", "art1-screens.spec.ts", "gathering.spec.ts", "wilds.spec.ts", "homestead.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["src/game/events.ts", "src/game/event-names.ts", "src/game/dev-hooks.ts"],
+      "specs": ["quest.spec.ts", "homestead.spec.ts", "village.spec.ts", "items.spec.ts", "papers.spec.ts"],
+      "smoke": true
+    },
+    {
       "paths": ["src/ui/Panel.svelte", "src/ui/panel-state.svelte.ts", "src/content/errors.ts"],
-      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "homestead.spec.ts", "papers.spec.ts"]
+      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "homestead.spec.ts", "papers.spec.ts", "embers.spec.ts", "items.spec.ts", "wilds.spec.ts"]
     },
     {
       "paths": ["src/ui/NoticeCard.svelte"],

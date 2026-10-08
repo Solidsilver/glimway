@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
+  import { villageFor } from '../game/village'
   import { villageErrorText } from '../content/errors'
-  import { itemsFor, ITEMS_EV } from '../game/items'
-  import { homesteadsFor, HOME_EV } from '../game/homestead'
+  import { itemsFor } from '../game/items'
+  import { homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
   import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
@@ -25,7 +25,7 @@
   let view = $state<ShelfView | null>(null)
   let pickingSlot = $state<number | null>(null)
   /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
-  const changed = busVersion(bus, ITEMS_EV.changed, HOME_EV.changed)
+  const changed = busVersion(bus, EV.itemsChanged, EV.homeChanged)
 
   async function reread(): Promise<void> {
     const r = await village.loadShelf(gate)
@@ -41,13 +41,13 @@
   onMount(() => {
     // The pack arriving (the read above, or another answer carrying it)
     // re-reads the shelf as well as re-opening the choice list.
-    bus.on(VILLAGE_EV.changed, reread)
-    bus.on(ITEMS_EV.changed, reread)
+    bus.on(EV.villageChanged, reread)
+    bus.on(EV.itemsChanged, reread)
     void reread()
     if (session.link) void items.load()
     return () => {
-      bus.off(VILLAGE_EV.changed, reread)
-      bus.off(ITEMS_EV.changed, reread)
+      bus.off(EV.villageChanged, reread)
+      bus.off(EV.itemsChanged, reread)
     }
   })
 
@@ -129,8 +129,8 @@
     view = r.value.shelf
     homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
     bus.emit(EV.toast, { text: r.value.line ?? 'You took a gift from the shelf.', icon: 'gift' })
-    bus.emit(VILLAGE_EV.changed)
-    bus.emit(ITEMS_EV.changed)
+    bus.emit(EV.villageChanged)
+    bus.emit(EV.itemsChanged)
   }
 
   async function stock(slot: number, asset: Asset): Promise<void> {
@@ -140,8 +140,8 @@
     if (!r.ok) return
     view = r.value.shelf
     homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
-    bus.emit(VILLAGE_EV.changed)
-    bus.emit(ITEMS_EV.changed)
+    bus.emit(EV.villageChanged)
+    bus.emit(EV.itemsChanged)
   }
 
   const shelfItem = $derived(homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate'))

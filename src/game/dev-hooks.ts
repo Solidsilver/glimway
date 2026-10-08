@@ -11,7 +11,7 @@
 import type { AreaId } from '../lib/state'
 import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
-import type { WardenView } from './entities/enemies'
+import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
 import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
@@ -149,7 +149,8 @@ export interface FsHooks {
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
-  if (import.meta.env.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
+  if (import.meta.env?.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

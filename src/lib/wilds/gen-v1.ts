@@ -23,10 +23,10 @@
  * inside the commons gap on the entry chunk, else just inside the south,
  * north, west or east gap (first that exists).
  */
-import { TILE } from '../../game/textures.ts';
+import { TILE } from '../tile.ts';
 import { DECOR_ART, TANGLE_GROUND, tangleTerrain } from './tangle.ts';
 import { chunkSites, crossingExit, routeHome, seasonMark } from './outer.ts';
-import { Rng, chunkSeed, lootSeed, type SeedEpoch } from './hash.ts';
+import { Rng, chunkSeed, lootSeed, type SeedEpoch } from '../hash.ts';
 import { loadWilds } from './data.ts';
 import type {
   ChunkCoord,

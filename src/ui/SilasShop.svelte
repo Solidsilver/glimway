@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Session } from '../game/session'
-  import { HOME_EV, SILAS, homesteadsFor } from '../game/homestead'
-  import { bus } from '../game/events'
+  import { SILAS, homesteadsFor } from '../game/homestead'
+  import { bus, EV } from '../game/events'
   import { HOMESTEAD_DATA, type HomeItem } from '../lib/homestead'
   import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
   import { MATERIALS } from '../content/expansion-writing'
@@ -11,7 +11,7 @@
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import { home } from './home.svelte'
-  import { workshopShort } from '../game/entities/homesteads'
+  import { workshopShort } from '../lib/village'
   import { costPhrase } from '../lib/village'
 
   // Silas's yard: the cottage, and the pieces he has finished. Prices come
@@ -19,7 +19,7 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const homes = $derived(homesteadsFor(session))
-  const changed = busVersion(bus, HOME_EV.changed)
+  const changed = busVersion(bus, EV.homeChanged)
   const action = actionRunner()
   /** Silas's own word for being short of embers. */
   const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text)

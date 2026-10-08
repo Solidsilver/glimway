@@ -2,10 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { HEAL_BAND, flattenFamily, healFamily, seam, seamStep, type Rgba } from '../src/game/ground-heal.ts'
 import { BASE_TILES, baseTile, classGrid, edgeKey, groundField, neighbourhood, parseEdgeKey, paintEdge, type GroundClass } from '../src/game/area/ground-field.ts'
-import { APPROACH, ROUTINES, atHome, newWalker, tickWalker, tileFeet, type Step } from '../src/game/npc-routines.ts'
+import { APPROACH, ROUTINES, atHome, newWalker, tickWalker, type Step } from '../src/game/npc-routines.ts'
+import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
-import { TERRAIN } from '../src/game/textures.ts'
+import { TERRAIN } from '../src/lib/tile.ts'
 
 /** A noisy 64-texel tile: stripes and speckle, different per seed, never seamless. */
 function noiseTile(seed: number, n = 64): Rgba {

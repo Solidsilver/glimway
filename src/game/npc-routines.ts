@@ -12,6 +12,7 @@
  * Elara) keep their posts and have no routine. Every route is drawn on open
  * tiles, one axis at a time (tests/npc-routines.test.ts checks the maps).
  */
+import { tileBottom, tileFeet, tileMid } from '../lib/tile.ts'
 import type { Facing } from './people.ts'
 
 export type Step =
@@ -63,8 +64,6 @@ export interface Walker {
   /** Where they sat (bench seat, px), while seated. */
   seat: { x: number; y: number } | null
 }
-
-export const tileFeet = (tx: number, ty: number) => ({ x: tx * 16 + 8, y: ty * 16 + 16 })
 
 export function newWalker(home: { x: number; y: number }): Walker {
   return { x: home.x, y: home.y, facing: 'down', mode: 'stand', step: 0, t: 0, trail: [], returning: false, seat: null }
@@ -176,7 +175,7 @@ export function tickWalker(w: Walker, routine: readonly Step[] | undefined, home
     if (w.mode !== 'sit') {
       w.mode = 'sit'
       w.facing = 'down'
-      w.seat = { x: step.tx * 16 + 8, y: (step.ty + 1) * 16 + SIT_DROP }
+      w.seat = { x: tileMid(step.tx), y: tileBottom(step.ty) + SIT_DROP }
       w.x = w.seat.x
       w.y = w.seat.y
     }

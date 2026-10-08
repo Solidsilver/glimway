@@ -11,11 +11,12 @@ import type Phaser from 'phaser'
 import { beatsDue, handoverFor, LOOK_LABEL, paperById, placedPapersIn, type PickupLook } from '../../content/papers'
 import { bus, EV, type DialogueClosedPayload, type QuestPayload } from '../events'
 import type { Session } from '../session'
-import { TILE } from '../textures'
+import { tileBottom, tileMid } from '../../lib/tile'
 import { commonsAnim } from '../commons-pass'
-import type { InteractId, WorldData } from '../worlds'
+import type { WorldData } from '../worlds'
 import type { Effects } from './fx'
-import { emitPapers, grantPaper, PAPER_EV } from '../papers'
+import type { Interactable, Interactables } from './interactables'
+import { emitPapers, grantPaper } from '../papers'
 import { itemsFor } from '../items'
 import type { QuestStage } from '../../lib/state'
 
@@ -24,13 +25,7 @@ export interface PaperDeps {
   session: Session
   fx: Effects
   reducedMotion: boolean
-}
-
-export interface PaperInteraction {
-  id: InteractId
-  x: number
-  y: number
-  label: string
+  interactables: Interactables
 }
 
 interface Pickup {
@@ -42,118 +37,9 @@ interface Pickup {
 
 const PAPER_PREFIX = 'paper:'
 
-export function isPaperInteract(id: string): boolean {
-  return id.startsWith(PAPER_PREFIX)
-}
+// ------------------------------------------------------------ art
 
-// ------------------------------------------------------------ pixel art
-
-type Art = { rows: string[]; pal: Record<string, string> }
-
-const PAL: Record<string, string> = {
-  o: '#3a2a28', // outline, as everywhere in the game
-  w: '#fffbef',
-  p: '#f4e4c1',
-  s: '#d8c79c',
-  k: '#8a7458', // faded ink
-  r: '#b25a3c', // ribbon
-  R: '#e07a52',
-  f: '#8a5a34', // frame wood
-  F: '#b07a48',
-  g: '#4c5560', // slate
-  G: '#6b7684',
-  c: '#e8e4d8', // chalk
-  b: '#4a6f9c', // book cloth
-  B: '#6c93bd',
-  y: '#ffd24a'
-}
-
-const ART: Record<string, Art> = {
-  'paper-folded': {
-    rows: [
-      '....oooooooo',
-      '...owwwwwwpo',
-      '..owwkkkkwpo',
-      '.owwwwwwwpso',
-      'owkkkkkwwpso',
-      'owwwwwkkppso',
-      'oppppppppsso',
-      '.oosssssssoo',
-      '...oooooooo.'
-    ],
-    pal: PAL
-  },
-  'paper-scroll': {
-    rows: [
-      '.oo.......oo.',
-      'oFfoooooooFfo',
-      'ofwwwwrwwwwfo',
-      'ofppppRrpppfo',
-      'ofpppprRpppfo',
-      'ofsssssrsssfo',
-      'oFfoooooooFfo',
-      '.oo...rr..oo.',
-      '.....r..r....'
-    ],
-    pal: PAL
-  },
-  'paper-slate': {
-    rows: [
-      'oooooooooooo',
-      'oFFFFFFFFFFo',
-      'oFggggggggfo',
-      'oFgcgGgcggfo',
-      'oFggcgcgGgfo',
-      'oFgcgGgcggfo',
-      'oFggggggggfo',
-      'offfffffffo.',
-      '.oooooooooo.'
-    ],
-    pal: PAL
-  },
-  // Hangs over the library door: an open book on a board.
-  'library-sign': {
-    rows: [
-      '...o............o...',
-      '...o............o...',
-      'oooooooooooooooooooo',
-      'oFFFFFFFFFFFFFFFFFFo',
-      'oFFoooooFFFFoooooFFo',
-      'oFowwwwwooooowwwwoFo',
-      'oFowkkkwwwowwkkkwoFo',
-      'oFowwwwwwwowwwwwwoFo',
-      'oFowkkkkwwowkkkkwoFo',
-      'oFowwwwwwwowwwwwwoFo',
-      'oFoobbbbbooobbbbboFo',
-      'oFFFoooooFFFoooooFFo',
-      'offfffffffffffffffo.',
-      'oooooooooooooooooooo'
-    ],
-    pal: PAL
-  }
-}
-
-function ensureTextures(scene: Phaser.Scene): void {
-  for (const [key, art] of Object.entries(ART)) {
-    if (scene.textures.exists(key)) continue
-    const w = Math.max(...art.rows.map((r) => r.length))
-    const h = art.rows.length
-    const canvas = document.createElement('canvas')
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext('2d')!
-    art.rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) {
-        const c = art.pal[row[x]]
-        if (!c) continue
-        ctx.fillStyle = c
-        ctx.fillRect(x, y, 1, 1)
-      }
-    })
-    scene.textures.addCanvas(key, canvas)
-  }
-}
-
+/** The Commons pass draws the pickups and the library's sign (src/game/commons-pass-install.ts). */
 const LOOK_TEXTURE: Record<PickupLook, string> = {
   folded: 'paper-folded',
   scroll: 'paper-scroll',
@@ -171,22 +57,15 @@ export class PaperPickups {
   private pickups = new Map<string, Pickup>()
   /** Paper an NPC is handing over in the open conversation (granted on close). */
   private pendingHandover: string | null = null
-  /** Told when a pickup leaves without being activated here (picked up on another device). */
-  private gone: ((id: InteractId) => void) | null = null
 
   constructor(private scene: Phaser.Scene, private deps: PaperDeps) {
-    ensureTextures(scene)
     this.build()
     if (deps.world.library) {
+      // The building carries its open book over the door: the hanging sign
+      // stands out front, beside the step.
       const d = deps.world.library
-      if (scene.textures.exists('commons-art:hearthwick-library')) {
-        // The delivered building carries its open book over the door: the
-        // hanging sign stands out front, beside the step.
-        const y = (d.ty + 1) * TILE + 9
-        scene.add.image(d.tx * TILE + 8 + 22, y, 'library-sign').setOrigin(0.5, 1).setDepth(y)
-      } else {
-        scene.add.image(d.tx * TILE + 8, d.ty * TILE - 1, 'library-sign').setOrigin(0.5, 1).setDepth(d.ty * TILE + TILE + 1)
-      }
+      const y = tileBottom(d.ty) + 9
+      scene.add.image(tileMid(d.tx) + 22, y, 'library-sign').setOrigin(0.5, 1).setDepth(y)
     }
     bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     bus.on(EV.quest, this.onQuest, this)
@@ -198,38 +77,29 @@ export class PaperPickups {
       for (const p of this.pickups.values()) p.timer?.remove()
       this.pickups.clear()
     })
+    this.publish()
     emitPapers(deps.session)
     // Quest beats owed to a save that is already past them (older saves).
     this.grantBeats(deps.session.questStage, 0)
   }
 
-  /** Interaction points: the library door and every pickup lying here. */
-  interactions(): PaperInteraction[] {
-    const out: PaperInteraction[] = []
+  /**
+   * Interaction points: the library door and every pickup lying here (they
+   * sparkle instead of carrying a marker). A pickup is used up when taken.
+   */
+  private publish(): void {
+    const points: Interactable[] = []
     const lib = this.deps.world.library
-    if (lib) out.push({ id: 'library', x: lib.tx * TILE + 8, y: lib.ty * TILE + TILE, label: 'Enter the Hearthwick Library' })
+    if (lib) points.push({ id: 'library', x: tileMid(lib.tx), y: tileBottom(lib.ty), label: 'Enter the Hearthwick Library', markerOffset: 44, activate: () => void bus.emit(EV.libraryOpen) })
     for (const p of placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags)) {
-      out.push({ id: `paper:${p.id}`, x: p.source.tx * TILE + 8, y: p.source.ty * TILE + TILE - 2, label: LOOK_LABEL[p.source.look] })
+      if (!this.pickups.has(p.id)) continue
+      points.push({ id: `${PAPER_PREFIX}${p.id}`, x: tileMid(p.source.tx), y: tileBottom(p.source.ty) - 2, label: LOOK_LABEL[p.source.look], markerOffset: 12, activate: () => this.take(p.id) })
     }
-    return out
+    this.deps.interactables.register(this, points)
   }
 
-  /** Interactables drops a pickup's point when it goes from under the prompt. */
-  onGone(fn: (id: InteractId) => void): void {
-    this.gone = fn
-  }
-
-  owns(id: string): boolean {
-    return id === 'library' || isPaperInteract(id)
-  }
-
-  /** Act on an owned interaction. True when the interaction point is used up. */
-  activate(id: string): boolean {
-    if (id === 'library') {
-      bus.emit(PAPER_EV.openLibrary)
-      return false
-    }
-    const paperId = id.slice(PAPER_PREFIX.length)
+  /** Pick up a paper lying here (true: its point is used up). */
+  private take(paperId: string): boolean {
     const pickup = this.pickups.get(paperId)
     if (!grantPaper(this.deps.session, paperId)) {
       this.removePickup(paperId)
@@ -250,8 +120,8 @@ export class PaperPickups {
   private build(): void {
     const { world, session, reducedMotion } = this.deps
     for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) {
-      const x = p.source.tx * TILE + 8
-      const y = p.source.ty * TILE + TILE - 3
+      const x = tileMid(p.source.tx)
+      const y = tileBottom(p.source.ty) - 3
       const image = this.scene.add.sprite(x, y, LOOK_TEXTURE[p.source.look]).setOrigin(0.5, 1).setDepth(y - 6)
       // The delivered pickups glint on their own (Commons pass), out of step.
       const glinting = commonsAnim(this.scene, `${LOOK_TEXTURE[p.source.look]}-animation`)
@@ -313,11 +183,13 @@ export class PaperPickups {
   /** Connected: another device may have picked something up. */
   private onWorldRefresh(): void {
     const still = new Set(placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).map((p) => p.id))
+    let gone = false
     for (const id of [...this.pickups.keys()]) {
       if (still.has(id)) continue
       this.removePickup(id)
-      this.gone?.(`${PAPER_PREFIX}${id}`)
+      gone = true
     }
+    if (gone) this.publish()
     emitPapers(this.deps.session)
   }
 

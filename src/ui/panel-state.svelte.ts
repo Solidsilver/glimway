@@ -8,6 +8,9 @@
  *   it re-runs on each event. Call it while a component initialises; it
  *   listens until the component goes.
  */
+import type { Bus } from '../game/events'
+import type { EventMap, EventName } from '../game/event-names'
+
 export type PanelMessage = { text: string; kind: 'ok' | 'error' }
 
 /** How an action ends: done, or refused with words for the player (a `Result`, an `ActResult`…). */
@@ -62,13 +65,10 @@ export function actionRunner(): ActionRunner {
   return new ActionRunner()
 }
 
-/** The bus as a counter needs it (src/game/events.ts `bus`). */
-export interface BusLike {
-  on(event: string, fn: () => void): unknown
-  off(event: string, fn: () => void): unknown
-}
+/** The bus as a counter needs it: the game's typed bus (src/game/events.ts `bus`). */
+export type BusLike = Pick<Bus<EventMap>, 'on' | 'off'>
 
-export function busVersion(bus: BusLike, ...events: string[]): { readonly value: number } {
+export function busVersion(bus: BusLike, ...events: EventName[]): { readonly value: number } {
   let value = $state(0)
   $effect(() => {
     const bump = () => {

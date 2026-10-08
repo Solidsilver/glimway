@@ -32,12 +32,12 @@ import { parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { sfx } from '../sfx'
-import { TILE } from '../textures'
+import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { GatherSpot, WorldData } from '../worlds'
 import type { Effects } from './fx'
 import type { Hero } from './hero'
-import type { PromptAction } from './interactables'
+import type { Interactable, Interactables } from './interactables'
 import type { HomePlantView, ItemsActionResponse } from '../../lib/api/types'
 
 /** A piece's work: chop, break or dig (content/gathering.json). */
@@ -48,17 +48,13 @@ function actionOf(spot: GatherSpot): string {
 /** The everyday tool for each kind of work (the ghost hint's picture when none is carried). */
 const BENCH_TOOL: Record<string, string> = { chop: 'bench-axe', break: 'bench-pick', dig: 'bench-spade' }
 
-export interface GatherAction extends PromptAction {
-  spot: GatherSpot
-  work: () => void
-}
-
 export interface GatheringDeps {
   world: WorldData
   session: Session
   fx: Effects
   reducedMotion: boolean
   hero: () => Hero
+  interactables: Interactables
   /** Write the hero's spot into the save now (the server measures reach from it). */
   notePosition: () => void
   /** A broken or dug piece leaves open ground: the scene opens the tile. */
@@ -80,7 +76,8 @@ export class Gathering {
   private static live: Gathering | null = null
   private spots: GatherSpot[]
   private busy = false
-  private current: GatherAction | null = null
+  /** The registered point for each piece (./interactables). */
+  private points = new Map<Interactable, GatherSpot>()
   /** Stumps and pebbles this visit's work has drawn, by tile. */
   private drawn = new Map<string, Phaser.GameObjects.Image[]>()
   /** The last gather's outcome, as words for the playtest hooks. */
@@ -102,6 +99,7 @@ export class Gathering {
       if (was) this.change(spot, was)
     }
     this.spots = this.spots.filter((s) => !this.done.enough.has(gatheringTarget(s.target)?.action ?? 'chop'))
+    this.publish()
     // What's carried, for the tool (a world; guests carry no tools).
     const items = itemsFor(deps.session)
     if (deps.session.link && !items.view) void items.load()
@@ -113,7 +111,7 @@ export class Gathering {
       if (Gathering.live === this) Gathering.live = null
       bus.off(EV.planted, this.onPlanted, this)
       this.spots = []
-      this.current = null
+      this.points.clear()
       this.drawn.clear()
     })
   }
@@ -129,40 +127,35 @@ export class Gathering {
   }
 
   /**
-   * The nearest workable piece within reach, for the scene's prompt. A piece
-   * closer than `closerThan` (the nearest thing you could otherwise press E
-   * at — a fallen bucket, someone to talk to) outranks it; one further away
-   * keeps quiet.
+   * Each piece as an interaction point. A piece answers only to the tool in
+   * hand (the blade out: the woods keep quiet), and only while work is open
+   * here; something nearer (a fallen bucket, someone to talk to) wins.
    */
-  promptAction(hero: { x: number; y: number }, closerThan = Infinity): GatherAction | null {
-    this.current = null
-    if (this.busy || !this.live()) return null
-    // Only what the held tool works answers (the blade out: the woods keep quiet).
-    const kind = heldNow().kind
-    let best: { d: number; spot: GatherSpot } | null = null
-    for (const spot of this.spots) {
-      if (actionOf(spot) !== kind) continue
-      const d = this.distance(hero, spot)
-      if (d <= REACH && d < closerThan && (!best || d < best.d)) best = { d, spot }
-    }
-    if (!best) return null
-    const spot = best.spot
-    this.current = {
-      spot,
-      label: spot.label,
-      verb: gatheringVerb(gatheringTarget(spot.target)?.action ?? 'chop', gatheringTarget(spot.target)?.verb),
-      x: spot.tx * TILE + 8,
-      y: (spot.ty + 1) * TILE - 6,
-      work: () => void this.work(spot)
-    }
-    return this.current
+  private publish(): void {
+    this.points.clear()
+    const points = this.spots.map((spot): Interactable => {
+      const target = gatheringTarget(spot.target)
+      const point: Interactable = {
+        id: `gather:${tileKey(spot.tx, spot.ty)}`,
+        x: tileMid(spot.tx),
+        y: tileBottom(spot.ty) + 8,
+        reach: REACH,
+        markerOffset: 14,
+        label: spot.label,
+        verb: gatheringVerb(target?.action ?? 'chop', target?.verb),
+        available: () => !this.busy && actionOf(spot) === heldNow().kind && this.live(),
+        activate: () => void this.work(spot)
+      }
+      this.points.set(point, spot)
+      return point
+    })
+    this.deps.interactables.register(this, points)
   }
 
-  /** The action key while a gather prompt is up. True when it was used. */
-  handleAction(): boolean {
-    if (!this.current) return false
-    this.current.work()
-    return true
+  /** The piece the prompt is on right now. */
+  private current(): GatherSpot | null {
+    const t = this.deps.interactables.currentTarget
+    return t ? this.points.get(t) ?? null : null
   }
 
   /** Read-only: what can be worked this visit (playtests). */
@@ -172,8 +165,8 @@ export class Gathering {
 
   /** The spot the prompt is on right now (null: no prompt). */
   prompted(): { target: string; tx: number; ty: number; label: string } | null {
-    if (!this.current) return null
-    return { target: this.current.spot.target, tx: this.current.spot.tx, ty: this.current.spot.ty, label: this.current.label }
+    const spot = this.current()
+    return spot ? { target: spot.target, tx: spot.tx, ty: spot.ty, label: spot.label } : null
   }
 
   /** Read-only: what this build has drawn where pieces were worked (playtests). */
@@ -192,7 +185,7 @@ export class Gathering {
   // ------------------------------------------------------------ the work
 
   private distance(hero: { x: number; y: number }, spot: GatherSpot): number {
-    return Math.hypot(hero.x - (spot.tx * TILE + 8), hero.y - 8 - (spot.ty + 1) * TILE)
+    return Math.hypot(hero.x - tileMid(spot.tx), hero.y - 8 - tileBottom(spot.ty))
   }
 
   private async work(spot: GatherSpot): Promise<void> {
@@ -256,7 +249,7 @@ export class Gathering {
       this.paid(r.value)
       if (!live) return
       live.last = 'landed'
-      live.deps.fx.sparkBurst(spot.tx * TILE + 8, (spot.ty + 1) * TILE - 8, (r.value.gathered ?? []).length > 0 ? 10 : 4)
+      live.deps.fx.sparkBurst(tileMid(spot.tx), tileBottom(spot.ty) - 8, (r.value.gathered ?? []).length > 0 ? 10 : 4)
       const there = live.spots.find((s) => s.tx === spot.tx && s.ty === spot.ty)
       if (there) live.change(there, now)
     } finally {
@@ -295,7 +288,7 @@ export class Gathering {
     const moved = Math.hypot(hero.x - this.lastHero.x, hero.y - this.lastHero.y) > 0.5
     this.lastHero = { x: hero.x, y: hero.y }
     this.still = moved ? 0 : this.still + dt
-    const spot = live && !creatureNear && !this.busy && this.current === null && this.still >= 0.8 && this.live() ? this.wrongToolSpot(hero) : null
+    const spot = live && !creatureNear && !this.busy && this.current() === null && this.still >= 0.8 && this.live() ? this.wrongToolSpot(hero) : null
     if (!spot) {
       if (this.ghost) this.ghost.setVisible(false)
       this.ghostFor = null
@@ -317,7 +310,7 @@ export class Gathering {
       if (this.ghost.height > 12) this.ghost.setScale(12 / this.ghost.height)
       this.scene.tweens.add({ targets: this.ghost, alpha: 0.5, duration: this.deps.reducedMotion ? 0 : 300 })
     }
-    this.ghost?.setPosition(spot.tx * TILE + 8, spot.ty * TILE - 2).setVisible(true)
+    this.ghost?.setPosition(tileMid(spot.tx), spot.ty * TILE - 2).setVisible(true)
   }
 
   /** Read-only: the piece the ghost hint shows over (playtests). */
@@ -351,8 +344,8 @@ export class Gathering {
     const kind = heldNow().kind
     const spot = this.spots.find((s) => {
       if (actionOf(s) !== kind) return false
-      const dx = point.x - (s.tx * TILE + 8)
-      const dy = point.y - (s.ty + 1) * TILE
+      const dx = point.x - tileMid(s.tx)
+      const dy = point.y - tileBottom(s.ty)
       return Math.abs(dx) <= 12 && dy >= -28 && dy <= 6 && this.distance(hero, s) <= REACH
     })
     if (!spot) return false
@@ -365,8 +358,8 @@ export class Gathering {
     const hero = this.deps.hero()
     const hx = hero.sprite.x
     const hy = hero.sprite.y
-    const x = spot.tx * TILE + 8
-    const y = (spot.ty + 1) * TILE
+    const x = tileMid(spot.tx)
+    const y = tileBottom(spot.ty)
     hero.facing.set(x - hx, y - 8 - hy).normalize()
     sfx('swing')
     const slash = this.scene.add.image(hx + (x - hx) * 0.4, hy - 8 + (y - hy) * 0.3, 'slash')
@@ -381,7 +374,7 @@ export class Gathering {
 
   /** Everything drawn for a spot: the map's own sprites, plus drawn leavings. */
   private spritesFor(spot: GatherSpot): Phaser.GameObjects.Image[] {
-    return [...this.deps.spritesAt(spot.tx, spot.ty), ...(this.drawn.get(`${spot.tx},${spot.ty}`) ?? [])]
+    return [...this.deps.spritesAt(spot.tx, spot.ty), ...(this.drawn.get(tileKey(spot.tx, spot.ty)) ?? [])]
   }
 
   /** What the wood gave, said and shown; a change kept at home is read again. */
@@ -413,10 +406,10 @@ export class Gathering {
   private change(spot: GatherSpot, now: 'stump' | 'open'): void {
     if (spot.target === 'stump' && now === 'stump') return // the map already has it
     if (keepsStanding(spot.target)) return // the freshet shore, the bloom patches, the pond ice
-    const x = spot.tx * TILE + 8
-    const y = (spot.ty + 1) * TILE
-    for (const img of this.drawn.get(`${spot.tx},${spot.ty}`) ?? []) img.destroy()
-    this.drawn.delete(`${spot.tx},${spot.ty}`)
+    const x = tileMid(spot.tx)
+    const y = tileBottom(spot.ty)
+    for (const img of this.drawn.get(tileKey(spot.tx, spot.ty)) ?? []) img.destroy()
+    this.drawn.delete(tileKey(spot.tx, spot.ty))
     this.deps.fell(spot.tx, spot.ty)
     const atlas = spot.art?.key ?? lookAtlasKey('tangle', null)
     const action = gatheringTarget(spot.target)?.action ?? 'chop'
@@ -425,15 +418,17 @@ export class Gathering {
     if (leftFrame && ensureSceneryArt(this.scene, atlas) && this.scene.textures.get(atlas).has(leftFrame)) {
       const flat = left === 'pebbles'
       const img = this.scene.add.image(x, y, atlas, leftFrame).setOrigin(0.5, 1).setDepth(flat ? -5 : y)
-      this.drawn.set(`${spot.tx},${spot.ty}`, [img])
+      this.drawn.set(tileKey(spot.tx, spot.ty), [img])
     }
     const i = this.spots.indexOf(spot)
     if (now === 'stump') {
       this.spots.splice(i, 1, { target: 'stump', label: 'Dig the stump', tx: spot.tx, ty: spot.ty, art: spot.art })
+      this.publish()
       return
     }
     this.deps.clearSolid(spot.tx, spot.ty)
     if (i >= 0) this.spots.splice(i, 1)
+    this.publish()
   }
 
   /** The soft line, and the pieces nearby shuffling out of reach. */
@@ -448,7 +443,7 @@ export class Gathering {
     if (!this.deps.reducedMotion) {
       for (const s of this.spots) {
         if (!same(s) || this.distance(hero, s) > SHUFFLE_RADIUS) continue
-        const away = Math.sign(s.tx * TILE + 8 - hero.x) || 1
+        const away = Math.sign(tileMid(s.tx) - hero.x) || 1
         for (const p of this.spritesFor(s)) {
           this.scene.tweens.add({ targets: p, x: p.x + away * 2, duration: 400, delay: Math.random() * 300, ease: 'Sine.easeOut' })
         }
@@ -457,6 +452,7 @@ export class Gathering {
     // Nothing of that kind answers the prompt again this visit.
     this.done.enough.add(action)
     this.spots = this.spots.filter((s) => !same(s))
+    this.publish()
   }
 
   /** Something planted on this land: draw it where it went in. */

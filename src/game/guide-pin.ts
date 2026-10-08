@@ -4,15 +4,15 @@
  * needle and the edge glow follow its current step instead of the story.
  * Also builds the GuideContext from what this session knows.
  */
-import { bus, EV } from './events'
-import type { Session } from './session'
-import { guideById, guideProgress, newlyMet, type GuideContext, type GuideProgress } from '../lib/guides'
-import { deviceKey } from './held'
-import { homesteadsFor } from './homestead'
-import { itemsFor } from './items'
-import { villageFor } from './village'
-import { itemDef } from '../lib/items'
-import { HEARTH_RECIPES } from '../lib/workshop'
+import { bus, EV } from './events.ts'
+import type { Session } from './session.ts'
+import { guideById, guideProgress, newlyMet, type GuideContext, type GuideProgress } from '../lib/guides.ts'
+import { deviceKey } from './held.ts'
+import { homesteadsFor } from './homestead.ts'
+import { itemsFor } from './items.ts'
+import { villageFor } from './village.ts'
+import { itemDef } from '../lib/items.ts'
+import { HEARTH_RECIPES } from '../lib/workshop.ts'
 
 /** One pin per player and world on this device (src/game/held.ts deviceKey). */
 // `fingersnap:` is the game's old name, kept so saved pins load.

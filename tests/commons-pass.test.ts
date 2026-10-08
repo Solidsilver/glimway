@@ -17,7 +17,7 @@ import { COMMONS_PLACEHOLDER_FRAMES, PROP_DECORATIONS, decorationLayout, floorTi
 import { COMMONS_DECORATION_IDS } from '../src/game/atlas-plan.ts'
 import { pathEdgeOverlays } from '../src/game/area/terrain.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
-import { TERRAIN } from '../src/game/textures.ts'
+import { TERRAIN } from '../src/lib/tile.ts'
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/assets/fingersnap/commons-pass/', import.meta.url))
 const SOURCE_DIR = fileURLToPath(new URL('../assets/generated/commons-pass/', import.meta.url))

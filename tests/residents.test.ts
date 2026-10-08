@@ -18,7 +18,7 @@ import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { TERRAIN, TILE } from '../src/game/textures.ts';
+import { TERRAIN, TILE } from '../src/lib/tile.ts';
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000;
 const DAY = 86400;

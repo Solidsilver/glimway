@@ -5,16 +5,11 @@
  * telling the interface who you have met. The words are in
  * src/content/residents.ts.
  */
-import { metAt, metFlag, RESIDENT_IDS, type ResidentContext, type ResidentId } from '../content/residents'
-import { bus } from './events'
-import { homesteadsFor } from './homestead'
-import type { Session } from './session'
-import { villageFor } from './village'
-
-export const RESIDENT_EV = {
-  /** Flags used to assemble journal entries, including first meetings. */
-  met: 'ui:residents-met'
-} as const
+import { metAt, metFlag, RESIDENT_IDS, type ResidentContext, type ResidentId } from '../content/residents.ts'
+import { bus, EV } from './events.ts'
+import { homesteadsFor } from './homestead.ts'
+import type { Session } from './session.ts'
+import { villageFor } from './village.ts'
 
 export interface ResidentsMetPayload {
   journalFlags: string[]
@@ -46,5 +41,5 @@ export function meetResident(session: Session, id: ResidentId): void {
 export function emitResidents(session: Session): void {
   const journalFlags = session.state.flags.filter((f) => RESIDENT_IDS.some((id) => f.startsWith(`met:${id}@`)) || f.startsWith('heirloom:') || f.startsWith('unmoored:') || f.startsWith('returned:') || f.startsWith('witness:') || f === 'warden-sliver:found')
   const payload: ResidentsMetPayload = { journalFlags }
-  bus.emit(RESIDENT_EV.met, payload)
+  bus.emit(EV.residentsMet, payload)
 }

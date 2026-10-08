@@ -2,6 +2,7 @@ import raw from '../../content/homestead.json' with { type: 'json' };
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { loadWilds } from './wilds/data.ts';
 import { LAND, buildableKind, clearedSet, effectiveKind, generateLand, homeLights, isLit, type Land, type Light } from './homestead-land.ts';
+import { tileAt, tileMid } from './tile.ts';
 
 /** Material ids a purchase bill may name: the Wilds materials, plus any material in the catalogue (seasoned timber). */
 const MATERIAL_ITEMS = new Set(
@@ -300,12 +301,12 @@ export function plantable(home: PlantLand, tx: number, ty: number, data: Homeste
 /** The plantable tile nearest a spot on the land (px), within a step of it; null when there's none. */
 export function plantTileNear(home: PlantLand, at: { x: number; y: number }, data: HomesteadData = HOMESTEAD_DATA): [number, number] | null {
   const land = generateLand(home.landSeed, data.land);
-  const cx = Math.floor(at.x / 16);
-  const cy = Math.floor(at.y / 16);
+  const cx = tileAt(at.x);
+  const cy = tileAt(at.y);
   let best: { d: number; tile: [number, number] } | null = null;
   for (let ty = cy - 1; ty <= cy + 1; ty++) {
     for (let tx = cx - 1; tx <= cx + 1; tx++) {
-      const d = Math.hypot(at.x - (tx * 16 + 8), at.y - (ty * 16 + 8));
+      const d = Math.hypot(at.x - tileMid(tx), at.y - tileMid(ty));
       if (d > 24 || !plantable(home, tx, ty, data, land)) continue;
       if (!best || d < best.d) best = { d, tile: [tx, ty] };
     }

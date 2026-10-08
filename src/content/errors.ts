@@ -170,6 +170,22 @@ export const HOME_ERRORS: Table = {
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
 }
 
+/**
+ * An ember spend that didn't happen, so nothing was spent: a lantern, the
+ * chest, a rest (src/game/scenes/world-actions.ts). `syncing` is a guest's
+ * spend while a Habitica sync owns the save.
+ */
+export const SPEND_ERRORS: Table = {
+  short: 'The flame gutters — not enough embers after all.',
+  full: 'You’re already rested. Keep your embers.',
+  done: 'That’s already done.',
+  'needs-earned': 'Only embers earned on Habitica can get you back on your feet.',
+  unsafe: 'Resting only works in Hearthwick.',
+  'not-home': 'You can only rest at your own place.',
+  syncing: 'Hold on — your hero is still syncing. Try again in a moment.',
+  offline: 'Needs a connection. Your embers are safe — try again when you’re back online.'
+}
+
 /** The words for `code` from a domain's table, then the shared transport lines, then `fallback`. */
 export function errorText(table: Table, code: string, fallback = FALLBACK): string {
   return (Object.hasOwn(table, code) ? table[code] : undefined) ?? (Object.hasOwn(TRANSPORT_ERRORS, code) ? TRANSPORT_ERRORS[code] : undefined) ?? fallback
@@ -178,3 +194,4 @@ export function errorText(table: Table, code: string, fallback = FALLBACK): stri
 export const itemErrorText = (code: string): string => errorText(ITEM_ERRORS, code)
 export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRORS, code)
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
+export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')

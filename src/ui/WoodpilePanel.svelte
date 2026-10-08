@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { countOf } from '../lib/village'
   import type { WoodpileView } from '../lib/api/types'
   import { actionRunner, busVersion } from './panel-state.svelte'
@@ -15,7 +15,7 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
-  const changed = busVersion(bus, VILLAGE_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged)
   const action = actionRunner()
   let loaded = $state<'loading' | 'ready' | string>('loading')
   let view = $state<WoodpileView | null>(null)

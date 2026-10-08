@@ -11,7 +11,7 @@
  */
 import Phaser from 'phaser'
 import { bus, EV, type GoalDirPayload } from '../events'
-import { TILE } from '../textures'
+import { TILE } from '../../lib/tile'
 import { playInsets } from '../viewport'
 import type { QuestStage } from '../../lib/state'
 import type { WorldData } from '../worlds'

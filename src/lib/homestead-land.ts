@@ -1,7 +1,7 @@
 /**
  * A homestead's wild land, generated the same way on the client and the
  * server (server/internal/land): integer-only, from the Wilds hash and PRNG
- * (./wilds/hash.ts), so the server can validate placement against the very
+ * (./hash.ts), so the server can validate placement against the very
  * trees and rocks the player sees.
  *
  * Spec (generator 1; re-implementable from this description):
@@ -27,7 +27,7 @@
  *     GRASS and not protected → that kind (a failed attempt is not retried).
  */
 import { HOMESTEAD_DATA, type HomesteadData } from './homestead.ts';
-import { Rng, hash } from './wilds/hash.ts';
+import { Rng, hash } from './hash.ts';
 
 export const LAND = {
   GRASS: 0,

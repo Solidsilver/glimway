@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
@@ -19,7 +19,7 @@
 
   const village = $derived(villageFor(session))
   let tab = $state<'chest' | 'bench'>('chest')
-  const changed = busVersion(bus, VILLAGE_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged)
   const action = actionRunner()
   let loaded = $state<'loading' | 'ready' | string>('loading')
   let batches = $state<Record<string, number>>({})

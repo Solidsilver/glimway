@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { ITEMS_EV, giftPhrase, itemsFor } from '../game/items'
+  import { villageFor } from '../game/village'
+  import { homesteadsFor } from '../game/homestead'
+  import { giftPhrase, itemsFor } from '../game/items'
   import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
@@ -67,7 +67,7 @@
   const connected = $derived(!!session.link)
   type Filter = 'all' | InventoryTab
   let tab = $state<Filter>('all')
-  const changed = busVersion(bus, VILLAGE_EV.changed, HOME_EV.changed, ITEMS_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged, EV.homeChanged, EV.itemsChanged)
   const action = actionRunner()
   /** The card's hand-over / mend / fit chooser that is open: `${action}:${key}`. */
   let open = $state<string | null>(null)

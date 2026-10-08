@@ -8,23 +8,18 @@
  * Guests carry only the save's pack (src/lib/inventory.ts); everything here
  * needs a world.
  */
-import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
-import type { Refusal, Result } from '../lib/api/errors'
-import { itemErrorText } from '../content/errors'
-import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items'
-import { bus, EV } from './events'
-import type { MutationOp } from './link'
-import type { Session } from './session'
-import { presence } from './presence'
-
-export const ITEMS_EV = {
-  /** The carried items changed: { what?: string }. */
-  changed: 'items:changed'
-} as const
+import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types.ts'
+import type { Refusal, Result } from '../lib/api/errors.ts'
+import { itemErrorText } from '../content/errors.ts'
+import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items.ts'
+import { TILE } from '../lib/tile.ts'
+import { bus, EV } from './events.ts'
+import type { Session } from './session.ts'
+import { presence } from './presence.ts'
 
 export type ItemsStatus = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
 
-export { giftPhrase } from '../lib/items'
+export { giftPhrase } from '../lib/items.ts'
 
 export class Items {
   view: ItemsView | null = null
@@ -32,15 +27,18 @@ export class Items {
   private inFlightGrants = new Set<string>()
   private inFlightAdaOil = false
 
-  constructor(private session: Session) {
+  private readonly session: Session
+
+  constructor(session: Session) {
+    this.session = session
     this.status = session.link ? 'idle' : 'guest'
-    bus.on(EV.mutationResolved, (p: { op: MutationOp; outcome: 'landed' | 'refused' }) => {
+    bus.on(EV.mutationResolved, (p) => {
       if (current?.items !== this || p.op.kind !== 'items') return
       void this.load().then(() => {
         bus.emit(EV.toast, { text: p.outcome === 'landed' ? 'Your last change to your pack went through after all.' : 'Your last change to your pack didn’t go through. Nothing changed.', icon: 'bag' })
       })
     })
-    bus.on(EV.gift, (g: { fromName: string; kind: string; itemDef: string; qty: number }) => {
+    bus.on(EV.gift, (g) => {
       if (current?.items !== this) return
       bus.emit(EV.toast, { text: `${g.fromName} gave you ${giftPhrase(g.itemDef, g.qty)}.`, icon: 'heart' })
       void this.load()
@@ -118,9 +116,9 @@ export class Items {
     const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) })
     if (r.ok) {
       if (itemDef === 'comfrey-salve') {
-        bus.emit('game:clear-unmoored', { instant: true })
+        bus.emit(EV.clearUnmoored, { instant: true })
       } else if (itemDef === 'willow-bark-tea') {
-        bus.emit('game:clear-unmoored', { instant: false })
+        bus.emit(EV.clearUnmoored, { instant: false })
       }
       if (maker && maker !== this.session.link?.habiticaId) this.thankNearby(maker)
     }
@@ -130,7 +128,7 @@ export class Items {
   private thankNearby(makerId: string): void {
     const feed = presence()
     if (!feed) return
-    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * 16)) {
+    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * TILE)) {
       bus.emit(EV.emote, { habiticaId: makerId, id: 'heart' })
     }
   }
@@ -215,7 +213,7 @@ export class Items {
   }
 
   private emit(what: string): void {
-    bus.emit(ITEMS_EV.changed, { what })
+    bus.emit(EV.itemsChanged, { what })
   }
 }
 

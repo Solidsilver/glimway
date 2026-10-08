@@ -29,12 +29,12 @@ import { epochEnded, guestOuterEpoch } from '../../lib/wilds/outer.ts';
 import type { Epoch, LootDrop } from '../../lib/wilds/types.ts';
 import type { WildsEntityView, WildsLanternView, WildsMaterials } from '../../lib/api/types.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
-import { EV, bus } from '../events';
-import { gameNow } from '../clock';
-import type { Session } from '../session';
+import { EV, bus } from '../events.ts';
+import { gameNow } from '../clock.ts';
+import type { Session } from '../session.ts';
 import { OUTER_REGION_ID, WILDS_REGION_ID, guestEpoch, isWildsArea, regionOfState, wildsRegion } from './regions.ts';
 import { registerWildsAreas } from './areas.ts';
-import { HOME_EV, currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
+import { currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
 
 /**
  * One server-owned material balance everywhere: when the shop (homestead
@@ -44,7 +44,7 @@ let homesteadWatch = false;
 function watchHomesteadMaterials(): void {
   if (homesteadWatch) return;
   homesteadWatch = true;
-  bus.on(HOME_EV.changed, () => {
+  bus.on(EV.homeChanged, () => {
     const m = currentHomesteadMaterials();
     if (m && anyConnectedView()) {
       setMaterials(m);

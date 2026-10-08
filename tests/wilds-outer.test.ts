@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { chunkEntities, chunkTerrain, type ChunkExit, type ChunkTerrain, type Epoch, type Tile } from '../src/lib/wilds/index.ts';
 import {
   CROSSING_CHUNK,
@@ -27,6 +26,7 @@ import { TANGLE_GROUND } from '../src/lib/wilds/tangle.ts';
 import { ECHOES } from '../src/content/echoes.ts';
 import { PAPERS } from '../src/content/papers.ts';
 import { WILDS_PAPER_PLACEMENTS } from '../src/game/wilds/placements.ts';
+import { PAPERS as COMMONS_PAPERS } from '../src/game/homestead.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { mergeServerState, toProgress } from '../src/lib/api/progress.ts';
@@ -233,10 +233,8 @@ test('every findable paper has a way into the game (or is reported as needing a 
   for (const r of Object.values(CALENDAR_PAPERS)) hooked.add(r.paper);
   for (const e of ECHOES) if (e.paper) hooked.add(e.paper);
   for (const p of (projects as { projects: { papers: string[] }[] }).projects) for (const id of p.papers) hooked.add(id);
-  // The Commons' finds (src/game/homestead.ts PAPERS: a Phaser module, read as text).
-  const homestead = readFileSync(new URL('../src/game/homestead.ts', import.meta.url), 'utf8');
-  const block = /export const PAPERS = \{([\s\S]*?)\}/.exec(homestead)![1];
-  for (const m of block.matchAll(/'([a-z0-9-]+)'/g)) hooked.add(m[1]);
+  // The Commons' finds.
+  for (const id of Object.values(COMMONS_PAPERS)) hooked.add(id);
   const missing: string[] = [];
   for (const p of PAPERS) {
     const k = p.source.kind;

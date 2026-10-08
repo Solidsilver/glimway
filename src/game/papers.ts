@@ -3,26 +3,14 @@
  * (one story flag, a toast, a UI event) and the library's shelf for this
  * session — local for guests, the world's shared shelf for connected
  * players (falling back to local while the server has no library).
- *
- * Events live here rather than in events.ts so this feature stays one
- * module the UI subscribes to.
  */
-import { DEMO_CHARACTER } from '../content/world'
-import { foundPapers, foundToast, paperById, paperFlag } from '../content/papers'
-import { createRemoteLibrary, donationFlag, localDonations, mergeShelf, type RemoteLibrary, type ShelfEntry } from '../lib/papers/library'
-import { newKey } from '../lib/api/client'
-import { bus, EV } from './events'
-import { sfx } from './sfx'
-import type { Session } from './session'
-
-export const PAPER_EV = {
-  /** A paper was found just now: { id }. */
-  found: 'ui:paper-found',
-  /** The full found list for this save: { found: string[] }. */
-  sync: 'ui:papers-sync',
-  /** The player stepped up to the library door. */
-  openLibrary: 'ui:library-open'
-} as const
+import { DEMO_CHARACTER } from '../content/world.ts'
+import { foundPapers, foundToast, paperById, paperFlag } from '../content/papers.ts'
+import { createRemoteLibrary, donationFlag, localDonations, mergeShelf, type RemoteLibrary, type ShelfEntry } from '../lib/papers/library.ts'
+import { newKey } from '../lib/api/client.ts'
+import { bus, EV } from './events.ts'
+import { sfx } from './sfx.ts'
+import type { Session } from './session.ts'
 
 export interface PaperFoundPayload {
   id: string
@@ -35,7 +23,7 @@ export interface PapersSyncPayload {
 /** Tell the UI which papers this save holds (load, server merge, new game). */
 export function emitPapers(session: Session): void {
   const payload: PapersSyncPayload = { found: foundPapers(session.state.flags) }
-  bus.emit(PAPER_EV.sync, payload)
+  bus.emit(EV.papersSync, payload)
 }
 
 /** Record a find once: flag, chime, toast. Returns false if already held. */
@@ -49,7 +37,7 @@ export function grantPaper(session: Session, id: string, opts: { quiet?: boolean
     bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
   }
   const payload: PaperFoundPayload = { id }
-  bus.emit(PAPER_EV.found, payload)
+  bus.emit(EV.paperFound, payload)
   emitPapers(session)
   return true
 }
@@ -80,7 +68,10 @@ export function playerName(session: Session): string {
 export class Library {
   private remote: RemoteLibrary
 
-  constructor(private session: Session, remote?: RemoteLibrary) {
+  private readonly session: Session
+
+  constructor(session: Session, remote?: RemoteLibrary) {
+    this.session = session
     this.remote = remote ?? createRemoteLibrary()
   }
 

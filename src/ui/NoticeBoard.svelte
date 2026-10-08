@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { calendarLine, contributionLimits, FESTIVAL_NOTES, nextFestival, projectProgress, turningNotice } from '../lib/village'
   import { ELARA_SIGNATURE, PROJECTS_NEED_WORLD, PROJECTS_OFFLINE, projectNotice } from '../content/village-notices'
   import { MATERIALS } from '../content/expansion-writing'
@@ -18,7 +18,7 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
-  const changed = busVersion(bus, VILLAGE_EV.changed)
+  const changed = busVersion(bus, EV.villageChanged)
   let give = $state<Record<string, Record<string, number>>>({})
   let busy = $state<string | null>(null)
   let messages = $state<Record<string, { text: string; kind: 'ok' | 'error' }>>({})

@@ -12,11 +12,10 @@ import Phaser from 'phaser'
 import type { AreaId } from '../../lib/state'
 import { devMainThreadTilesetHash } from '../area/terrain'
 import { bus } from '../events'
-import { TILE } from '../textures'
+import { TILE, tileBottom } from '../../lib/tile'
 import type { EnemyType } from '../worlds'
 import { itemsFor } from '../items'
 import { isLit as isLandLit } from '../../lib/homestead-land'
-import { ui } from '../../ui/store.svelte'
 import { playInsets, setPlayInsets } from '../viewport'
 import { densityOf } from '../density'
 import { syncSafety } from '../sync-safety'
@@ -25,6 +24,8 @@ import type { PaperPickups } from '../entities/papers'
 import type { ItemPickups } from '../entities/item-pickups'
 import type { RepairsLayer } from '../entities/repairs'
 import type { WorldScene } from './WorldScene'
+import { fnv1a32Bytes } from '../../lib/hash'
+import { setUnmoored, unmooredNow } from '../entities/unmoored'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -67,7 +68,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       }
     })
   )
-  on('__fsWarden', () => s['enemies'].wardenView())
+  on('__fsWarden', () => s['enemies'].warden.wardenView())
   on('__fsWorld', () => {
     const b = s.physics.world.bounds
     const world = s['world']
@@ -122,9 +123,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const ctx = c.getContext('2d', { willReadFrequently: true })!
     ctx.drawImage(src, 0, 0)
     const d = ctx.getImageData(0, 0, c.width, c.height).data
-    let h = 2166136261
-    for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619)
-    return `${c.width}x${c.height}:${(h >>> 0).toString(16)}`
+    return `${c.width}x${c.height}:${fnv1a32Bytes(d).toString(16)}`
   })
   on('__fsDevTextureSize', (key) => {
     if (!s.textures.exists(key)) return null
@@ -157,7 +156,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     for (const e of [...s['enemies'].enemies]) if (!e.dead && (!type || e.type === type)) s['enemies'].damageEnemy(e, n, s['hero'].sprite.x)
   })
   // Without `force`, the real rules apply.
-  on('__fsDevSpeakNaming', (force = false) => s['enemies'].speakNaming(force))
+  on('__fsDevSpeakNaming', (force = false) => s['enemies'].warden.speakNaming(force))
   // A playtest can step up to the warden inside its opening. The save's
   // position follows, in the save's own convention (the Wilds keep
   // region-wide pixels), so an upload's merge never snaps the hero back.
@@ -221,9 +220,9 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   })
   // A broken rock leaves no invisible wall.
   on('__fsSolidAt', (tx, ty) =>
-    s['solidGroup'].getChildren().some((c) => {
+    s['solids'].group.getChildren().some((c) => {
       const b = (c as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.StaticBody | null
-      return !!b && b.x < (tx + 1) * TILE && b.right > tx * TILE && b.y < (ty + 1) * TILE && b.bottom > ty * TILE
+      return !!b && b.x < (tx + 1) * TILE && b.right > tx * TILE && b.y < tileBottom(ty) && b.bottom > ty * TILE
     })
   )
   on('__fsSafety', syncSafety)
@@ -252,8 +251,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const hero = s['hero']
     const avatar = s['avatar']
     const projectiles = s['projectiles']
-    const keys = s['actionKeys']
-    const cursors = s['cursors']
+    const keys = s['controls'].keys
+    const cursors = s['controls'].cursors
     return {
       avatar: !!avatar.container,
       /** What the layered avatar is drawn holding ('' = its own weapon). */
@@ -288,19 +287,17 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
         const b = hero.sprite.body as Phaser.Physics.Arcade.Body
         return { vx: b.velocity.x, vy: b.velocity.y, moves: b.moves, enable: b.enable, physicsPaused: s.physics.world.isPaused }
       })(),
-      unmoored: ui.unmoored
+      unmoored: unmooredNow().active
     }
   })
-  on('__fsEmit', (event, ...args) => bus.emit(event, ...args))
+  // Untyped on purpose: specs send any event by its wire name.
+  on('__fsEmit', (event, ...args) => (bus.emit as (name: string, ...a: unknown[]) => boolean)(event, ...args))
   on('__fsUnmoored', (val) => {
-    if (typeof val === 'boolean') {
-      ui.unmoored = val
-      if (!val) ui.unmooredEasing = false
-    }
-    return ui.unmoored
+    if (typeof val === 'boolean') setUnmoored(val)
+    return unmooredNow().active
   })
   on('fsUnmoored', {
-    trigger: () => s.triggerUnmoored(),
-    clear: () => s.clearUnmoored()
+    trigger: () => s['unmoored'].trigger(),
+    clear: () => s['unmoored'].clear()
   })
 }

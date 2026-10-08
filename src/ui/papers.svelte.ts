@@ -1,11 +1,11 @@
 /**
  * Reactive found-papers state for the interface: which papers this save
- * holds (from the game's PAPER_EV events) and which of those the player has
+ * holds (from the game's paper events) and which of those the player has
  * opened (a per-device convenience in localStorage — it only drives the
  * "new" dot, so losing it is harmless).
  */
-import { bus } from '../game/events'
-import { PAPER_EV, type PaperFoundPayload, type PapersSyncPayload } from '../game/papers'
+import { bus, EV } from '../game/events'
+import { type PaperFoundPayload, type PapersSyncPayload } from '../game/papers'
 import { readJson, stringList, writeJson } from '../lib/local-json'
 
 // `fingersnap:` is the game's old name, kept so saved settings load.
@@ -39,9 +39,9 @@ class PapersStore {
 
 export const papers = new PapersStore()
 
-bus.on(PAPER_EV.sync, (p: PapersSyncPayload) => {
+bus.on(EV.papersSync, (p: PapersSyncPayload) => {
   papers.found = [...p.found]
 })
-bus.on(PAPER_EV.found, (p: PaperFoundPayload) => {
+bus.on(EV.paperFound, (p: PaperFoundPayload) => {
   if (!papers.found.includes(p.id)) papers.found = [...papers.found, p.id]
 })

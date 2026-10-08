@@ -8,23 +8,23 @@
  * who notices answers in a toast. The two scripted mends keep their change
  * visible (the new rope on the well, the pegged rail in the fence).
  *
- * A feature-scoped InteractionProvider owning `repair:*` ids. Worlds only:
+ * It registers `repair:*` points (./interactables). Worlds only:
  * the chores list is server state, and guests have no world to mend.
  */
 import type Phaser from 'phaser'
 import { itemDef } from '../../lib/items'
 import { repairFor, repairsForArea, type RepairDef } from '../../lib/repairs'
 import { bus, EV } from '../events'
-import { ITEMS_EV, itemsFor } from '../items'
+import { itemsFor } from '../items'
 import { ensureRepairTexture } from '../repairs-art'
 import type { Session } from '../session'
 import { sfx } from '../sfx'
-import { TILE } from '../textures'
-import { VILLAGE_EV, villageFor } from '../village'
-import type { InteractId, WorldData } from '../worlds'
+import { tileBottom, tileMid } from '../../lib/tile'
+import { villageFor } from '../village'
+import type { WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import type { Effects } from './fx'
-import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import type { Interactable, Interactables } from './interactables'
 
 export interface RepairsDeps {
   world: WorldData
@@ -54,7 +54,7 @@ interface Standing {
   image: Phaser.GameObjects.Image
 }
 
-export class RepairsLayer implements InteractionProvider {
+export class RepairsLayer {
   private standing = new Map<string, Standing>()
   private kept = new Map<string, Standing>()
   private busy = false
@@ -64,43 +64,18 @@ export class RepairsLayer implements InteractionProvider {
     const sync = () => {
       if (scene.sys?.isActive()) this.sync()
     }
-    bus.on(VILLAGE_EV.changed, sync)
-    bus.on(ITEMS_EV.changed, sync)
+    bus.on(EV.villageChanged, sync)
+    bus.on(EV.itemsChanged, sync)
     scene.events.once('shutdown', () => {
-      bus.off(VILLAGE_EV.changed, sync)
-      bus.off(ITEMS_EV.changed, sync)
+      bus.off(EV.villageChanged, sync)
+      bus.off(EV.itemsChanged, sync)
     })
     if (deps.session.link && village.repairsStatus !== 'ready') void village.loadRepairs()
     else this.sync()
   }
 
-  owns(id: InteractId): boolean {
-    return id.startsWith(PREFIX)
-  }
-
-  /** Open chores stand out: the board points here. */
-  marker(): 'quest' | 'talk' | null {
-    return 'quest'
-  }
-
-  markerOffset(): number {
-    return 30
-  }
-
-  verb(): string {
-    return 'Mend'
-  }
-
-  label(id: InteractId): string | null {
-    const def = repairFor(id.slice(PREFIX.length))
-    if (!def) return null
-    // "The well's rotten rope" → "Mend the well's rotten rope".
-    const n = def.name
-    return `Mend ${n.charAt(0).toLowerCase()}${n.slice(1)}`
-  }
-
-  activate(id: InteractId): void {
-    const key = id.slice(PREFIX.length)
+  /** Mend it with the part from your pack (the village's shared chore). */
+  private mend(key: string): void {
     const def = repairFor(key)
     if (!def || this.busy) return
     const items = itemsFor(this.deps.session)
@@ -162,19 +137,25 @@ export class RepairsLayer implements InteractionProvider {
   }
 
   private publish(want: RepairDef[]): void {
+    // Open chores stand out ("!"): the board points here.
     const points: Interactable[] = want.map((d) => ({
       id: `${PREFIX}${d.id}`,
       x: this.at(d).x,
-      y: (d.pos.ty + 1) * TILE + 2,
-      label: this.label(`${PREFIX}${d.id}` as InteractId) ?? d.name
+      y: tileBottom(d.pos.ty) + 2,
+      // "The well's rotten rope" → "Mend the well's rotten rope".
+      label: `Mend ${d.name.charAt(0).toLowerCase()}${d.name.slice(1)}`,
+      verb: 'Mend',
+      marker: () => 'quest',
+      markerOffset: 30,
+      activate: () => this.mend(d.id)
     }))
-    this.deps.interactables.setDynamic(points, this)
+    this.deps.interactables.register(this, points)
   }
 
   private at(d: RepairDef): { x: number; y: number; depth: number } {
     const a = AT[d.target] ?? { ax: 0, ay: 0 }
-    const base = (d.pos.ty + 1) * TILE
-    return { x: d.pos.tx * TILE + 8 + a.ax, y: base + a.ay, depth: base + (d.target === 'hame' ? 3 : 1) }
+    const base = tileBottom(d.pos.ty)
+    return { x: tileMid(d.pos.tx) + a.ax, y: base + a.ay, depth: base + (d.target === 'hame' ? 3 : 1) }
   }
 
   private place(def: RepairDef, mended: boolean): Standing {

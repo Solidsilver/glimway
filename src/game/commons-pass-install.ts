@@ -5,22 +5,24 @@ import { addArtCanvas, artCanvas, artDensity, artSource, drawArt, resampleFor } 
 
 export { decorationLayout }
 import { ROOM_H, ROOM_W } from './commons-art.ts'
+import { TILE } from '../lib/tile.ts'
 
 /**
- * Boot-time swap: copy the delivered Commons-pass frames onto the
- * placeholder texture keys the scenes already draw with, and build the few
- * composites a single frame can't fill (bunting runs, the cottage room, the
- * decoration views, the flag-down mailbox). Call once in BootScene after the
- * placeholders exist and before any world sprite or animation that names
- * these keys is created. Keys whose frame didn't load keep their
- * placeholder. Everything here is built at the delivered art's density
+ * Boot-time install: copy the delivered Commons-pass frames under the
+ * texture keys the scenes draw with, and build the few composites a single
+ * frame can't fill (bunting runs, the cottage room over its code-drawn
+ * walls, the decoration views, the flag-down mailbox). Call once in
+ * BootScene before any world sprite or animation that names these keys is
+ * created. The packed art always ships, so nothing here falls back to a
+ * code-drawn texture (the decorations the pass has no frame for keep
+ * theirs: ./commons-art.ts). Everything here is built at the delivered art's density
  * (./density.ts): drawing code works in world px on a scaled context, and
  * the few pixel passes (the mailbox flag, the plot sign's board) work in
  * texels, `k` to a world px. Collision bodies, interaction spots and depths are the
  * scenes' and don't change here.
  */
 
-/** Placeholder key → delivered frame, at the frame's native size. */
+/** Scene texture key → delivered frame, at the frame's native size. */
 export const COMMONS_PLACEHOLDER_FRAMES: Readonly<Record<string, string>> = {
   silas: 'silas-idle-0',
   'silas-idle-0': 'silas-idle-0',
@@ -216,7 +218,7 @@ function installRoom(scene: Phaser.Scene): void {
     for (const [tx, ty] of cells) {
       const { flipX, flipY } = floorTileOrientation(tx, ty)
       ctx.save()
-      ctx.translate(tx * 16 + (flipX ? 16 : 0), ty * 16 + (flipY ? 16 : 0))
+      ctx.translate(tx * TILE + (flipX ? TILE : 0), ty * TILE + (flipY ? TILE : 0))
       ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
       drawArt(ctx, tile, 0, 0)
       ctx.restore()
