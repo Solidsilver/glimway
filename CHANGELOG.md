@@ -15,6 +15,15 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Your world lives on the server now. Everything you do is checked and kept
+  there, so a second device picks up exactly where the first left off.
+- Glimway plays with a Habitica account only: playing without signing in
+  is gone.
+- Lost your connection? Keep playing nearby. What you do waits on this
+  device and goes up as soon as you're back; spending embers and anything
+  in the Wilds waits for the connection.
+- The Tangle and the outer Wilds are drawn fresh by the server, so the
+  Tangle you know looks different.
 - Glimway has sound: footsteps that change with the ground (grass, path,
   stone, wooden floors), the thunk of an axe, a pick on stone, a spade in
   the earth, doors, coins, and the knocks and swishes of a fight. The Menu
@@ -25,6 +34,30 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- Server-first (`docs/design/server-first.md`): the server owns all state
+  and rules. `PUT /api/progress` and the uploaded progress document are
+  gone; the client sends operations (`proto/glimway/v1/op.proto`,
+  `operations.proto`), predicts their answers and rolls back a refusal.
+  Every operation is idempotent on its key, replays the current state, and
+  runs in a savepoint. Contract 3, sent as `X-Glimway-Contract`; an older
+  client gets a reload notice.
+- Accounts: random account ids, looked up from Habitica sign-ins
+  (`sign_ins`). Migrations 026 (accounts), 027 (normalized state,
+  `wilds_chunks`, the Wilds reset) and 028 (moves the old progress
+  documents into the new tables).
+- The Wilds generator is in Go (integer-only, v2) and pre-generates nine
+  chunks per epoch; the client generator is gone and reads served chunks.
+- The client keeps an outbox in IndexedDB per account and device, behind a
+  Web Lock, so offline play queues operations and replays them with the
+  same keys. Reports carry generations and sequence numbers; places and
+  vitals have their own version watermarks.
+- Local (guest) play is removed, and with it the client-side progress
+  save.
+- Dev builds only (`-tags dev`, and only with `-dev-clock`):
+  `POST /api/dev/clock` moves a test server's clock forward, so e2e can
+  cross a season end. Production binaries don't contain the route.
+- CI: the full suite uploads screenshots and error context only on
+  failure; `go test -tags dev` covers the dev clock.
 - Sound effects from Kenney's CC0 packs (`public/assets/audio/kenney/`,
   43 MP3s, about 121 KB, in Git LFS; register in `ASSETS.md`). One sound
   module (`src/game/sound.ts`) plays them from the event bus; new bus events
