@@ -1,7 +1,8 @@
 # 0.4 Indoors
 
 Status: **design, ready for lanes**, 2026-10-08. Written from the code at `a0cd842` (0.3 lane A
-merged; B, C1, C2 and D still building). The owner's earlier decisions are in
+merged). Rechecked the same day against `exp/server-first` at `a7bbff0`, with all of 0.3's lanes
+merged: the quest model (5.1), protos, contract and migration numbers (6). The owner's earlier decisions are in
 [plan.md](plan.md), [layers.md](layers.md) ("Chosen so far", "Interiors and floors") and
 [quests.md](quests.md). Defaults for anything still open are in section 9.
 
@@ -429,10 +430,11 @@ that wrap the hour, the grace window on both sides, and a single-phase resident 
 - The **server** uses `cycleSpotsNear` for every check that involves a resident: seller
   nearness, the `talk` trigger and the `with` gate (section 5). A player who clicked buy at
   :39:58 and arrived at :40:03 isn't refused.
-- The **client** uses `cycleAt` with the server's clock. If 0.3's client doesn't already keep a
-  server-time offset (from the `Date` header or `vitals_at`), lane B adds it to `game/clock.ts`;
-  the 90-second grace covers whatever skew is left. The dev clock (`setGameNow`) and the server's
-  test `-dev-clock` flag move both sides together for tests.
+- The **client** uses `cycleAt` with the server's clock. 0.3's client keeps no server-time offset
+  (checked), so lane B adds one to `game/clock.ts`, from the `Date` header or `vitals_at`; the
+  90-second grace covers whatever skew is left. The dev clock (`setGameNow`) and the server's
+  `-dev-clock` flag (shipped in 0.3, `server/cmd/glimway-server/dev_clock.go`) move both sides
+  together for tests.
 - **Walking at the change.** The client checks the cycle every second while a resident is on
   screen. At a change it walks them to the door (a straight two-leg path to the door tile) and
   fades them through it; in the room, they fade in at the doorway and walk to their spot. If you
@@ -444,50 +446,90 @@ that wrap the hour, the grace window on both sides, and a single-phase resident 
 
 ## 5. The quest tree
 
-### 5.1 What 0.3 lands, and what 0.4 adds
+### 5.1 What 0.3 shipped, and what 0.4 adds
 
-0.3 (lane B) lands `content/quests.json` with the lantern road only, its step ids equal to
-today's stage names, the `quest_progress` table, and `quest-step {op, quest, to, where}`
-checking that `to` follows the current step and that `where.area` matches the step's area,
-then paying the step's items, marks, papers and embers once. Every step is already an
-operation; there are no client-merged steps left (server-first.md, superseding quests.md 2).
+Checked against `exp/server-first` at `a7bbff0`, with all of 0.3's lanes merged.
 
-0.4 grows the same file and the same operation. **The file format is quests.md section 1** (its
-quest and step fields, triggers, gates and grants tables), with these changes for server-first:
+**What 0.3 shipped.**
+
+- `content/quests.json` holds one quest, `lantern-road`, with five steps: `accepted`,
+  `clue-found`, `guardian-defeated`, `lantern-lit`, `complete`. A step has only `id`, `at` (an
+  area), `items`, `marks`, `papers`, `embers` and `witness`. None of quests.md's `goal`,
+  `objective`, `where`, `do` or `note` fields exist yet; the words and the needle still come from
+  TypeScript (`QUEST_STEPS`, the goal guide's `GOALS`, `advanceQuest` in `src/lib/state.ts`).
+- **A step is the state you reach.** quests.md's model is different. `quest-step {quest, to}`
+  (`server/internal/api/story_ops.go`) checks that `to` is the step after the one in your record,
+  or the first step if you have no row. It checks that `where.area` equals `to.at` exactly. Then
+  it writes `to` as your record and pays **`to`'s** items, marks, papers and embers once (outcome
+  `quest-gift:<quest>:<to>`). So the record says how far you've got, not what to do next. A quest
+  is done when the record holds its last step. There's no `done` value; "no row" means not
+  started.
+- **Everything assumes one quest.**
+  - The handler refuses any quest but `lantern-road` and reads `QuestRules[0]`.
+  - `content.QuestIndex` searches only that quest.
+  - The snapshot holds one `State.Quest` string, which `store/state.go` loads and saves as the
+    single `lantern-road` row.
+  - Both loaders (`content/story.go`, `src/lib/story-tables.ts`) only accept `at` values from the
+    four outdoor areas.
+  - The client's `link.questStep(event)` sends `quest: LANTERN_ROAD` with a stage from its
+    `QUEST_STEP` table.
+- `content/papers.json` find rules name lantern-road steps by id (`"stage": "clue-found"`,
+  `"complete"`, and others).
+
+**0.4 keeps 0.3's model.** It doesn't switch to quests.md's "current step" record. A step entry
+is **what you do to get there**:
+
+- quests.md's `goal`, `objective`, `where` and `do` on an entry describe the way *to* it. They
+  show on the HUD and the Quests page while the step before it is your record.
+- `at`, the grants and the new `gate` are checked and paid on arrival.
+- Starting a quest is reaching its first step.
+
+This is the smallest change to working code, and the existing step ids already read well this
+way ("guardian-defeated" is where you've got to).
 
 | quests.md said | 0.4 does |
 |---|---|
+| The record holds the current step, or `done` | The record holds the last step **reached**, as 0.3 does. Done is "the record is the last step" |
+| `start` (a trigger) puts the quest in your record | The first step's `do` *is* the start: reaching it starts the quest. `start: { "new": true }` stays, meaning the quest is listed with its first step's goal before you have a row (the opening) |
+| Gates, triggers and grants belong to the step being left | They belong to the step being **reached** (`to`) |
+| `grants: { embers, items, papers, give, unlock }` | 0.3's flat fields stay (`items`, `marks`, `papers`, `embers`). 0.4 adds a flat **`give`** for server items. Unlocks are server marks in `marks` (no separate `unlock`) |
 | Plain steps are client-written, gated steps are "server steps" | Every step is a `quest-step`. A `gate` adds checks to that same operation |
 | `gate.at: "orrin"` | Renamed **`gate.with`**, because 0.3's step already has an area `at`. "You're with Orrin now": your `where.area` is one of his spots near now (section 4) |
+| A step always has a place | `at` stays an exact area or room, **or is empty** when the person moves (`with` does the check) or the trigger can happen anywhere (`carry`, `open`, `sync`, `flag`) |
 | `needs: "world"` | Dropped. Everyone plays on a server since 0.3 |
 | `world`, `project` gates | Deferred to their first user (section 1) |
-| `give` and `unlock` on server steps only | Allowed on any step |
-| Ember grants at most 5 on plain steps | At most 5 on any step: a loader check that keeps quests from becoming an ember tap |
+| Ember grants at most 5 on plain steps | At most 5 on any step, as a loader check, so quests don't become an ember tap |
 
-If lane B lands field names that differ from quests.md's, 0.4 keeps B's names; the meaning
-here is what matters.
+**What has to generalise from one quest to many** (lane A2 on the server, lane C on the client):
 
-**Gates and triggers belong to the step being left.** The record holds the step you're on;
-`quest-step {quest, to}` says "I did this step's `do`, move me to `to`". The server checks the
-current step's trigger and gate, then moves the record and pays that step's grants. `to` is the
-next step id or `done`. Starting a quest is `quest-step {quest, to: <first step>}` with no row
-yet: the server checks `after` and `needs`.
+- `State.Quest` becomes a map, and the store loads and saves every `quest_progress` row.
+- The handler and `QuestIndex` look up the quest by id.
+- The loaders accept rooms and an empty `at`.
+- `link.questStep` takes `(quest, to)`.
+- `QuestStage`/`advanceQuest` give way to a table-driven predictor in `src/lib/quests.ts`.
+- `forStages` becomes `when: ["lantern-road:clue-found"]`.
+
+**No step renames.** The lantern road keeps `accepted` … `complete`. The renames in quests.md 4
+came from its "current step" model, where `accepted` meant "now copy the stone". In 0.3's model
+the old names already say where you've got to. Renaming would also touch `papers.json` find
+rules, the gift outcomes 028 just wrote and about 130 references in `src/`, for no gain. New
+quests name their steps for what you did (`set-sponge`, `grease-hoist`).
 
 ### 5.2 What the server checks per trigger
 
-The client still decides when a trigger fired (it saw the talk end). The server checks what it
-can know:
+The client still decides when a trigger fired (it saw the talk end) and sends `quest-step` to
+the step whose `do` it was. 0.3 checks only `at`; 0.4 adds what the server can know:
 
 | Trigger | Server check |
 |---|---|
-| `talk: <npc>` | `where.area` is where that person is: a quest NPC's fixed area, or a resident's spots near now |
+| `talk: <npc>` | `where.area` is where that person is: a quest NPC's fixed area (the step's `at`), or a resident's spots near now (an empty `at` and a `with` gate) |
 | `use: <spot>` | `where.area` is the spot's area (rooms and curated spots share one id space) |
 | `reach: <area>` | `where.area` is that area |
 | `defeat: <enemy>` | The `defeated:<enemy>` mark exists |
 | `carry: <item>` | The item is held: a server item row, or a `quest-item` mark |
 | `flag: <mark>` | The mark exists (a server mark like `lit:road-1`, or a client one) |
 | `open: journal` | Nothing to check |
-| `sync: embers` | A ledger credit with reason `sync` exists after the current step's `since` |
+| `sync: embers` | A ledger credit with reason `sync` exists after the record's `reached_at` (when the previous step was reached) |
 
 Refusals use 0.3's codes (`not-next-step`, `wrong-area`) plus the new ones in section 6.
 
@@ -498,12 +540,12 @@ All keys must hold; the operation checks them in one transaction, in this order,
 | Gate | Holds when | Spends | Refusal |
 |---|---|---|---|
 | `with: "<resident or npc>"` | `where.area` is one of their spots near now | No | `not-here` |
-| `wait: { "hours": n }` or `{ "turnings": n }` | That long since the previous gate passed on this quest (or the quest's start if none) | No | `not-yet` |
+| `wait: { "hours": n }` or `{ "turnings": n }` | That long since this quest last reached a gated step (or its first step, if none was gated) | No | `not-yet` |
 | `item: { "def", "qty", "keep" }` | You hold them; `keep: false` takes them through the items code | Optional | `short` |
 | `embers: n` | Your balance covers it; debited with reason `quest`, ref `<quest>:<step>` | Yes | `short` / `needs-earned` as spends today |
 
-- **Waits count from the previous gate**, or from the quest's start when no step before it had a
-  gate, so every wait has a moment to count from (`gate_at`, section 6). `turnings` counts wicks
+- **Waits count from the last gated step reached**, or from the quest's first step when none
+  before it had a gate, so every wait has a moment to count from (`gate_at`, section 6). `turnings` counts wicks
   with `content.CalendarAt`, as quests.md 2 describes.
 - **The client predicts the wait** from the quest's last gate time in `PlayerState.story`
   (section 6), so the dialogue can say "Come back in about two hours" or "after the turning"
@@ -544,12 +586,12 @@ do I…?" and Papers stay as they are.
 - **Shelves** by `line`: the Road (by `chapter`), the Village, Crafts (empty in 0.4, hidden until
   it has something). A quest shows only once it's in your record, or locked if its `needs`
   fails and its `after` holds.
-- **A quest card**: title, blurb on first open, the current step's `goal` and `objective`, done
-  steps ticked, future steps as `· · ·` (no spoilers). A wait shows when it opens. Done quests
+- **A quest card**: title, blurb on first open, the `goal` and `objective` of the next step (the
+  one you're heading for), steps reached ticked, future steps as `· · ·` (no spoilers). A wait shows when it opens. Done quests
   fold to one line at the bottom of their shelf.
 - **Notes**: the step `note`s you've written, newest first, opening in the existing note view.
-- **Pin** on every open quest card. Opening the journal while the opening's `note-lean` step is
-  current lands on this page with that quest at the top (quests.md 3).
+- **Pin** on every open quest card. Opening the journal while the opening's next step is
+  `note-lean` lands on this page with that quest at the top (quests.md 3).
 - Keyboard: J opens the journal on Quests; the tab keys work as today.
 
 ### 5.5 Pinning
@@ -557,7 +599,7 @@ do I…?" and Papers stay as they are.
 - **One pin slot** per account and device in localStorage (0.3's C1 keys `guide-pin.ts` by
   account). It holds `quest:<id>` or `guide:<id>`. Pinning one unpins the other.
 - **The HUD** (`Hud.svelte`): the goal line, the needle and the edge glint follow the pinned
-  quest's current step `where`. With nothing pinned, they follow the road's current quest, as they
+  quest's next step `where`. With nothing pinned, they follow the road's current quest, as they
   follow the story today. A done or locked pin falls back the same way.
 - **The goal guide** (`entities/goal-guide.ts`) swaps its `GOALS` table for `where`. Its `ROAD`
   graph gains every room as a child of `roomParent`, built from `rooms.json`, so "the mill loft"
@@ -571,16 +613,18 @@ proving a gate on something cozy.
 
 | Quest | Line | Starts | Proves | Source |
 |---|---|---|---|---|
-| **The Lantern Road** | road, ch. 1 | after the opening, talking to Mara | (existing) | 0.3, step ids renamed |
+| **The Lantern Road** | road, ch. 1 | after the opening, talking to Mara | (existing) | 0.3, ids unchanged; gains `goal`, `objective`, `where`, `do`, `note`, `moment` from TypeScript |
 | **Three Fingers off Plumb** | road, ch. 0 | every new save | the opening, `open: journal`, the finger-wisp | quests.md 3, unchanged |
 | **Your Own Day** | village | after `signpost:see-mara`, talking to Mara | `sync`, `needs: habitica` | quests.md 3, unchanged |
 | **Set to Rise** | village | after the opening, talking to Hazel | `item`, `with`, `wait` | new |
 | **The Stuck Hoist** | village | after the opening, talking to Finn | stairs, `use` in a loft, `item` | new |
 | **A Seat by the Lamp** | village | after the opening, walking into the library | `embers` | new |
 
-**Lantern road renames.** 0.4 renames the road's steps to what you do (quests.md 4's table:
-`hear-mara`, `copy-stone`, `settle-warden`, `light-shrine`, `tell-mara`), so dialogue `when`
-refs read as steps. Migration 030 maps the rows and gift outcomes (section 6).
+**The quests.md examples move to 0.3's model** by shifting each step's `goal`/`where`/`do` onto
+the step it leads to. For the opening that's mechanical: its step ids already name what you did
+(`meet-orrin`, `fetch-finger`, … `light-first-lamp`), and `meet-orrin` (talking to Orrin) is
+both its first step and its start. *Your Own Day* becomes `do-something` (`sync`) then
+`show-mara`, its first step being Mara's talk that opens it (`hear-mara`).
 
 **Set to Rise** (Hazel's kitchen). Hazel's sponge wants flour and a couple of hours.
 
@@ -588,20 +632,25 @@ refs read as steps. Migration 030 maps the rows and gift outcomes (section 6).
 {
   "id": "set-to-rise", "title": "Set to Rise", "line": "village",
   "blurb": "Hazel's starter wants feeding, and Finn has the flour.",
-  "after": ["signpost"], "start": { "talk": "hazel" },
+  "after": ["signpost"],
   "steps": [
+    { "id": "hear-hazel", "at": "", "do": { "talk": "hazel" }, "gate": { "with": "hazel" },
+      "items": [], "marks": [], "papers": [], "embers": 0, "witness": "" },
     { "id": "fetch-flour", "goal": "Bring Hazel a sack of flour",
       "objective": "Hazel's out of the fine sift. Finn sells it at the mill, a sack an ember.",
-      "where": { "npc": "finn" }, "do": { "carry": "flour" } },
+      "where": { "npc": "finn" }, "at": "", "do": { "carry": "flour" },
+      "items": [], "marks": [], "papers": [], "embers": 0, "witness": "" },
     { "id": "set-sponge", "goal": "Help Hazel set the sponge",
       "objective": "Take the flour to Hazel in her kitchen and set the sponge with her.",
-      "where": { "npc": "hazel" }, "do": { "talk": "hazel" },
-      "gate": { "with": "hazel", "item": { "def": "flour", "qty": 1, "keep": false } } },
+      "where": { "npc": "hazel" }, "at": "", "do": { "talk": "hazel" },
+      "gate": { "with": "hazel", "item": { "def": "flour", "qty": 1, "keep": false } },
+      "items": [], "marks": [], "papers": [], "embers": 0, "witness": "" },
     { "id": "let-it-rise", "goal": "Come back when it has risen",
       "objective": "A sponge won't be hurried. Come back to Hazel's kitchen in a couple of hours.",
-      "where": { "area": "in:village:bakery", "spot": "sponge-bowl" }, "do": { "talk": "hazel" },
+      "where": { "area": "in:village:bakery", "spot": "sponge-bowl" }, "at": "", "do": { "talk": "hazel" },
       "gate": { "with": "hazel", "wait": { "hours": 2 } },
-      "grants": { "give": [{ "def": "keepers-twists", "qty": 2 }], "embers": 2 },
+      "items": [], "marks": [], "papers": [], "embers": 2, "witness": "",
+      "give": [{ "def": "keepers-twists", "qty": 2 }],
       "note": { "title": "Set to Rise",
         "body": "Hazel says you can't hurry a sponge, only leave it somewhere warm and trust it. Two twists for my trouble, still hot. She burnt the ends of one on purpose." } }
   ]
@@ -613,15 +662,22 @@ house. Finn's got it. Finn always has it, he just has to stop counting long enou
 Coming back too early, she says the predicted time in her own words: *"Not yet. Look at it. It's
 thinking. Give it another hour."*
 
+The wait on `let-it-rise` counts from reaching `set-sponge`, the last gated step. `at` is empty
+throughout because Hazel moves; the `with` gate checks she's where you are.
+
+In the two tables below, each row is a step you reach, by doing its **Do**. The first row
+starts the quest.
+
 **The Stuck Hoist** (the mill and the loft). Finn can't get sacks down; the hoist in the loft
 has seized.
 
-| Step | Do | Where | Gate | Grants |
+| Step | Do | `at` | Gate | Grants |
 |---|---|---|---|---|
-| `look-hoist` | `use: mill-hoist` | the loft | | |
-| `get-tallow` | `carry: tallow` | Hazel (she sells it) | | |
-| `grease-hoist` | `use: mill-hoist` | the loft | `item: tallow ×1, keep: false` | embers 3 |
-| `tell-finn` | `talk: finn` | Finn | | `give: oatcakes ×1`, note *"Forty turns and a squeak"* |
+| `hear-finn` | `talk: finn` | — | `with: finn` | |
+| `look-hoist` | `use: mill-hoist` | `in:village:mill:2` | | |
+| `get-tallow` | `carry: tallow` (Hazel sells it) | — | | |
+| `grease-hoist` | `use: mill-hoist` | `in:village:mill:2` | `item: tallow ×1, keep: false` | embers 3 |
+| `tell-finn` | `talk: finn` | — | `with: finn` | `give: oatcakes ×1`, note *"Forty turns and a squeak"* |
 
 Finn, starting it: *"The hoist's seized. I've sacks up there and none down here, and Hazel needs
 flour, and Mara needs flour, and I'm counting the wrong thing again. Would you look? Stairs are
@@ -631,12 +687,12 @@ the two rooms, without saying so.
 **A Seat by the Lamp** (the library). The reading lamp's oil comes from the village stores, so
 Mara wants an ember for it. A note on the lamp in her hand: *"One ember the oil. Ledger. — M.H."*
 
-| Step | Do | Where | Gate | Grants |
+| Step | Do | `at` | Gate | Grants |
 |---|---|---|---|---|
-| (start) | `reach: in:village:library` | | | |
-| `browse-shelf` | `use: library-shelf` | the tall shelves | | |
-| `oil-lamp` | `use: reading-lamp` | the reading table | `embers: 1` | mark `library:lamp` |
-| `read-awhile` | `use: reading-table` | the reading table | | embers 2, note *"A Seat by the Lamp"* |
+| `find-library` | `reach: in:village:library` | `in:village:library` | | |
+| `browse-shelf` | `use: library-shelf` | `in:village:library` | | |
+| `oil-lamp` | `use: reading-lamp` | `in:village:library` | `embers: 1` | mark `library:lamp` |
+| `read-awhile` | `use: reading-table` | `in:village:library` | | embers 2, note *"A Seat by the Lamp"* |
 
 `library:lamp` is a server mark (a new `server` namespace in `content/story.json`). With it,
 the lamp on the reading table is lit whenever you're in the room, and Sit and read works; before
@@ -652,17 +708,17 @@ The opening (*Three Fingers off Plumb*) is the tutorial, as quests.md 3 writes i
 talking, the basic attack on the finger-wisp, picking up, the journal, embers, lighting a lamp.
 0.4 builds it:
 
-- **New accounts start with it.** Player creation writes `quest_progress('signpost',
-  'meet-orrin')`. Existing accounts get it as done (migration 030), so the owner isn't sent back
-  to Orrin.
+- **New accounts start with it.** `start: { "new": true }` lists it, with `meet-orrin`'s goal on
+  the HUD, before the account has a row. Player creation writes nothing. Existing accounts get it
+  as done (migration 029), so the owner isn't sent back to Orrin.
 - **The finger-wisp**: a curated `EnemySpot` near Brackenwood's west entry, low health,
   telegraphed hops, Slash alone enough (Fingersnap leaves classless heroes in 0.5).
-- **The journal glow**: the HUD's book button gets the edge glint's glow while a step's `where`
-  is `{ "ui": "journal" }`.
-- **Pip's walk-on** after `set-post`. 0.3 deletes `nudges.ts` with local play, so the walk-on is
+- **The journal glow**: the HUD's book button gets the edge glint's glow while the next step's
+  `where` is `{ "ui": "journal" }`.
+- **Pip's walk-on** on reaching `set-post`. 0.3 deletes `nudges.ts` with local play, so the walk-on is
   a small scripted beat of its own in the village scene.
 - **Mara's top-up**: a hero who reaches the first lamp with fewer than 3 embers gets topped back
-  up once, as a grant on `see-mara` computed by the server (`embers: 5`, plus up to 3 more while
+  up once, as a grant on reaching `see-mara`, computed by the server (`embers: 5`, plus up to 3 more while
   the balance is short, at most once, outcome `quest-gift:signpost:topup`).
 - **The rooms quests are its second half**, never required: doors (Hazel), stairs (Finn), the
   library and spending an ember in the world (the lamp), and coming back later (the sponge).
@@ -692,8 +748,8 @@ All in `proto/glimway/v1`, one change on the integration branch (lane A1):
 // state.proto: Story grows two maps, keyed by quest id (Unix seconds).
 message Story {
   // … 0.3's fields …
-  map<string, double> step_since = 7;   // when the current step began (the record's `since`)
-  map<string, double> gate_at = 8;      // when this quest last passed a gated step (or began)
+  map<string, double> reached_at = 7;   // when the record's step was reached
+  map<string, double> gate_at = 8;      // when this quest last reached a gated step (or its first)
 }
 
 // operations.proto: QuestStepResult says what the gates took and the grants gave.
@@ -702,18 +758,23 @@ message QuestStepResult {
   // … 0.3's fields 1–6 …
   double embers_spent = 7;
   repeated ItemQty taken = 8;
-  repeated ItemQty given = 9;
-  repeated string unlocked = 10;     // server marks from `unlock` grants
+  repeated ItemQty given = 9;       // `give`; unlocks come back in 0.3's `marks`
 }
 ```
 
-(Field numbers follow whatever 0.3 finally assigns; these are the next free ones.)
+**Checked against 0.3's final protos** (`exp/server-first` at `a7bbff0`). `proto/` hasn't changed
+since lane A:
 
-- **New error codes**, appended: `not-yet` (a `wait` gate), `not-here` (a `with` gate, or a
+- `Story` ends at `play_seconds = 6`, so 7 and 8 are free.
+- `QuestStepResult` ends at `embers = 6`, so 7–9 are free.
+- No message is called `ItemQty` yet.
+- The last error code is `ERROR_CODE_REPORT_REQUIRED = 207`.
+
+- **New error codes**, appended as 208–210: `not-yet` (a `wait` gate), `not-here` (a `with` gate, or a
   resident elsewhere), `needs-habitica` (a `needs` the profile source fails). Embers and items
   reuse `short` and `needs-earned`.
-- **The contract number** goes from 3 to 4 (`content/contract.json`), so 0.3 tabs get the reload
-  notice.
+- **The contract number** goes from 3 to 4 (`content/contract.json` is `3` on `exp/server-first`),
+  so 0.3 tabs get the reload notice.
 - **Presence:** no message change. Room ids are areas.
 - **Rooms and residents** aren't served: both sides embed the same `content/` files.
 
@@ -724,25 +785,41 @@ message QuestStepResult {
 | `content/rooms.json` (+ `rooms.go`, `src/lib/rooms.ts`) | New | A (schema), B (room data) |
 | `content/residents.json` (+ loaders) | New; takes `items.json`'s `rules.residents` | A |
 | `content/items.json` | Seller rows gain `with`; `rules.residents` removed | A |
-| `content/quests.json` | The six quests; gate and grant fields | A (schema, validators), C (quest data) |
-| `content/story.json` | `library:` and `unlock:` server namespaces | A |
+| `content/quests.json` | The six quests; the new fields (`title`, `blurb`, `line`, `chapter`, `after`, `start`, `needs`; per step `goal`, `objective`, `where`, `do`, `gate`, `give`, `note`, `moment`) beside 0.3's | A (schema, both loaders, validators), C (quest data) |
+| `content/story.json` | A `library:` server namespace | A |
 | `content/clock.*`, `src/lib/clock.ts`, `content/vectors/clock.json` | `cycleAt`, `cycleSpotsNear`, vectors | A |
 | `content/vectors/quests.json`, `rooms.json` | Loader vectors both sides run | A |
 
-The quest loader adds to quests.md's checks: `with` names a quest NPC or resident; `wait` order
-(5.3); no `world`/`project` gate yet; ember grants at most 5; `give` items exist in `items.json`;
-`where.spot` and `use` name a known spot; `where.area` is a known area or room.
+The quest loaders (`content/story.go`, `src/lib/story-tables.ts`) keep 0.3's checks and add
+quests.md's:
+
+- `at` is a known area or room, or empty only with a `with` gate or an anywhere trigger;
+- `with` names a quest NPC or resident;
+- no `world`/`project` gate yet;
+- ember grants are at most 5;
+- `give` items exist in `items.json`;
+- `where.spot` and `use` name a known spot;
+- `after` refs exist and nothing cycles.
 
 ### 6.3 Migrations (after 0.3's 028)
 
+0.3 used 026–028 (`exp/server-first` has `028_story_move.sql` and its Go backfill), so 0.4 starts
+at **029**. It needs only one:
+
 | # | Name | Lane | What |
 |---|---|---|---|
-| **029** | `quest_times` | A | `quest_progress` gains `since INTEGER NOT NULL DEFAULT 0` (when the current step began) and `gate_at INTEGER` (the last gated step passed, or the quest's start). Existing rows get `since = gate_at = ` the migration time. No history table: a wait only ever counts from the last gate |
-| **030** | `quest_ids` | A | Renames the lantern road's step ids in `quest_progress` (`accepted` → `copy-stone`, `clue-found` → `settle-warden`, `guardian-defeated` → `light-shrine`, `lantern-lit` → `tell-mara`, `complete` → `done`) and its gift outcomes (`quest-gift:lantern-road:guardian-defeated` → `quest-gift:lantern-road:settle-warden`, `…:complete` → `…:tell-mara`). Inserts `signpost = done` for every account with a lantern-road row. Accounts with none get `signpost = meet-orrin` |
+| **029** | `quest_tree` | A | `quest_progress` gains `reached_at INTEGER NOT NULL DEFAULT 0` (when the record's step was reached) and `gate_at INTEGER NOT NULL DEFAULT 0` (when this quest last reached a gated step, or its first step). Existing rows get both set to the migration time. For every account with a `lantern-road` row, insert `('signpost', 'light-first-lamp')`, so the opening counts as done. Accounts with no row get nothing: they see the opening from its `start: new` |
 
-If 0.3's B lands the lantern road already holding a step before `accepted` (Mara's first talk),
-030 maps it to `hear-mara`. Upgrade tests use the existing fixture pattern: the owner's story at
-each stage, gifts paid, a home rest after the cottage move, ledger sums unchanged.
+No history table: a wait only ever counts from the last gate. No step or gift-outcome renames
+(5.1): 028's `quest-gift:lantern-road:guardian-defeated` and `…:complete` stay as they are. The
+opening's 5-ember gift isn't paid to accounts that get it as done.
+
+Upgrade tests use 0.3's fixture pattern (`story_upgrade_test.go`):
+
+- the owner's story at each lantern-road stage;
+- an account with no row;
+- a home rest after the cottage move;
+- ledger sums unchanged.
 
 No place migration: 0.3 never saved `cottage`, and the new rooms have no saved places yet.
 
@@ -843,9 +920,9 @@ only its own changed e2e specs at the end, and the full suite runs once at the i
 
 | Lane | What | Owns (files) | Depends on | Size | Model |
 |---|---|---|---|---|---|
-| **A. Contracts and the server** | **A1** (merges first, S–M): the proto changes and error codes, contract 4; `rooms.json`, `residents.json` schemas, both loaders and validators, the three rooms from section 3; the quests schema growth and validators; the clock's cycle helpers with vectors; `story.json` namespaces. **A2** (M–L): the room family in `validArea`, safe areas, home rest, presence rooms, gathering; sellers that follow residents; `quest-step` triggers, gates and grants; `step_since`/`gate_at` in `PlayerState`; player creation starting the opening; migrations 029 and 030 with upgrade tests | `proto/**` and generated code, `content/{rooms,residents,story,clock,contract}.*`, the schema and loaders of `content/quests.*`, `content/items.json` seller and resident rows, `content/vectors/{clock,quests,rooms}.json`, `src/lib/{rooms,residents,clock}.ts`, `server/internal/**`, `migrations/029_*`, `030_*` | 0.3 merged | **L** | Codex |
-| **B. Rooms in the game** | The room area kind and builder; doors, doorways and stairs on the interactions path, `ExitDef.side/kind`; the cottage as `in:home:<gate>`; camera and lighting; residents on the cycle (placement, the walk at a change, knock lines, indoor routines); smoke and lit windows; the library door into the room, shelves and table opening the panel; the finger-wisp spot; Pip's walk-on; the server-time offset; wiring the indoors art pack (`atlas-plan.ts`) | `src/game/**` except `entities/goal-guide.ts` and `guide-pin.ts`; `src/lib/presence-client.ts`; room data in `content/rooms.json` after A1 | A1 (fixtures before it merges) | **L** | Opus |
-| **C. Quests and the Quests page** | The predictor in `src/lib/quests.ts` (gates, wait times, `needs`); the Quests page, the pin slot, the HUD's goal line from `where`; the goal guide's room graph (from B's `roomParent`); the six quests' data and lines, `when` refs, the lantern road renames in dialogue; the journal glow; rumours; "Needs a connection" and "not yet" lines | `src/ui/**`, `src/App.svelte`, `src/content/**`, `src/lib/quests.ts`, `src/game/entities/goal-guide.ts`, `src/game/guide-pin.ts`, quest data in `content/quests.json` after A1 | A1 | **M–L** | Opus |
+| **A. Contracts and the server** | **A1** (merges first, S–M): the proto changes and error codes, contract 4; `rooms.json`, `residents.json` schemas, both loaders and validators, the three rooms from section 3; the quests schema growth and validators; the clock's cycle helpers with vectors; `story.json` namespaces. **A2** (M–L): the room family in `validArea`, safe areas, home rest, presence rooms, gathering; sellers that follow residents; `quest-step` triggers, gates and grants; `reached_at`/`gate_at` in `PlayerState`; quests by id instead of the one `State.Quest` (snapshot, store, handler, `QuestIndex`); migration 029 with upgrade tests | `proto/**` and generated code, `content/{rooms,residents,story,clock,contract}.*`, the schema and loaders of `content/quests.*`, `content/items.json` seller and resident rows, `content/vectors/{clock,quests,rooms}.json`, `src/lib/{rooms,residents,clock}.ts`, `server/internal/**`, `migrations/029_*` | 0.3 merged | **L** | Codex |
+| **B. Rooms in the game** | The room area kind and builder; doors, doorways and stairs on the interactions path, `ExitDef.side/kind`; the cottage as `in:home:<gate>`; camera and lighting; residents on the cycle (placement, the walk at a change, knock lines, indoor routines); smoke and lit windows; the library door into the room, shelves and table opening the panel; the finger-wisp spot; Pip's walk-on; the server-time offset; wiring the indoors art pack (`atlas-plan.ts`) | `src/game/**` except `entities/goal-guide.ts`, `guide-pin.ts` and the quest calls in `link.ts`/`session.ts`; `src/lib/presence-client.ts`; room data in `content/rooms.json` after A1 | A1 (fixtures before it merges) | **L** | Opus |
+| **C. Quests and the Quests page** | The predictor in `src/lib/quests.ts` (gates, wait times, `needs`); the Quests page, the pin slot, the HUD's goal line from `where`; the goal guide's room graph (from B's `roomParent`); the six quests' data and lines; `when: ["quest:step"]` refs replacing `forStages` and `QuestStage`; `link.questStep(quest, to)` and offline only for steps with no gate; the journal glow; rumours; "Needs a connection" and "not yet" lines | `src/ui/**`, `src/App.svelte`, `src/content/**`, `src/lib/quests.ts`, `src/game/entities/goal-guide.ts`, `src/game/guide-pin.ts`, the quest calls in `src/game/{link,session}.ts`, quest data in `content/quests.json` after A1 | A1 | **L** | Opus |
 | **D. Art** | Section 7 as one request; delivered, checked against footprints, with prompts and notes | `assets/generated/indoors-pass/**`, `docs/art-request-indoors.md` | nothing | **M** | Luna |
 
 **Order:**
@@ -884,8 +961,10 @@ These go ahead as written unless the owner says otherwise.
    lamp carries the village's voice. A librarian can come with a later resident.
 4. **The `world` and `project` gates.** *Default: deferred to Aldo's kiln and chapter 2.*
    They're cheap but have no 0.4 user, and building a gate with its first quest keeps it right.
-5. **Renaming the lantern road's step ids.** *Default: yes, in 030.* The dialogue `when` refs read
-   as steps (quests.md 4); nobody but the owner plays, so a clean rename beats a mapping layer.
+5. **Renaming the lantern road's step ids.** *Default: no* (changed 2026-10-08, after checking
+   0.3). In 0.3's shipped model a step id is where you've got to, and `guardian-defeated` already
+   reads that way. A rename would touch `papers.json`, 028's gift outcomes and about 130
+   references in `src/` for nothing. New quests name steps for what you did.
 6. **Mara's 3-ember top-up in the opening.** *Default: a server-computed grant on `see-mara`,
    once.* Guests are gone, but a connected hero can still spend down to nothing before the lamp,
    and the opening must not strand anyone (quests.md 3).
