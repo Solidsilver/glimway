@@ -18,6 +18,10 @@ type HomeTier struct {
 	Embers      int            `json:"embers"`
 	Materials   map[string]int `json:"materials,omitempty"`
 }
+
+// HomeItem is one home good. The row only refers to the furnishings
+// catalogue (content/furnishings.json) by id for its name and footprint;
+// LoadHomestead fills those in, so nothing is copied in two places.
 type HomeItem struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
@@ -201,6 +205,28 @@ var catalogueMaterials = func() map[string]bool {
 	return out
 }()
 
+// resolveHomeGoods fills each row's name and footprint from the furnishings
+// catalogue; the homestead file keeps only the homestead-specific fields. A
+// row that spells them out must match the catalogue, never disagree with it.
+func resolveHomeGoods(h *Homestead) error {
+	for i := range h.Items {
+		f, ok := FurnishingFor(h.Items[i].ID)
+		if !ok {
+			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", h.Items[i].ID)
+		}
+		v := &h.Items[i]
+		if v.Name != "" && v.Name != f.Name {
+			return fmt.Errorf("invalid homestead: item %s names itself %q", v.ID, v.Name)
+		}
+		if len(v.Footprint) != 0 && (len(v.Footprint) != 2 || v.Footprint[0] != f.Footprint[0] || v.Footprint[1] != f.Footprint[1]) {
+			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue's footprint", v.ID)
+		}
+		v.Name = f.Name
+		v.Footprint = []int{f.Footprint[0], f.Footprint[1]}
+	}
+	return nil
+}
+
 func ValidateHomestead(h Homestead) error {
 	bad := fmt.Errorf("invalid homestead")
 	if len(h.Tiers) != 5 || h.Indoor.Width != 12 || h.Indoor.Height != 10 || !validLand(h.Land) || !validLane(h.Lane) || !validReserved(h.OutdoorReserved, h.Outdoor()) || !validReserved(h.IndoorReserved, h.Indoor) || !validPosts(h.LanternPosts) || len(h.Items) == 0 {
@@ -237,6 +263,12 @@ func ValidateHomestead(h Homestead) error {
 				return bad
 			}
 		}
+		// The row must agree with the furnishing it names: its name and
+		// footprint are the catalogue's, never a second copy.
+		f, ok := FurnishingFor(v.ID)
+		if !ok || v.Name != f.Name || len(v.Footprint) != 2 || v.Footprint[0] != f.Footprint[0] || v.Footprint[1] != f.Footprint[1] {
+			return bad
+		}
 	}
 	if !seen[h.LanternPosts.Item] {
 		return bad
@@ -248,6 +280,9 @@ func LoadHomestead() (Homestead, error) {
 	b, err := FS.ReadFile("homestead.json")
 	if err == nil {
 		err = json.Unmarshal(b, &h)
+	}
+	if err == nil {
+		err = resolveHomeGoods(&h)
 	}
 	if err == nil {
 		err = ValidateHomestead(h)

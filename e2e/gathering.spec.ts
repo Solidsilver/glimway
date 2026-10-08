@@ -259,10 +259,11 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   await parkCreatures(page)
   let tree: Spot | null = null
   for (const c of await candidatesNear(page, ['tangle-tree', 'ash'], undefined, true)) {
-    if ((await artAt(page, c.spot)).some((a) => a.fades)) {
-      tree = c.spot
-      break
-    }
+    if (!(await artAt(page, c.spot)).some((a) => a.fades)) continue
+    // Its standing spot must prompt the chop: a sign or a find nearer it takes the press.
+    if (!(await settle(page, c.hero)) || !(await promptOn(page, c.spot, /Chop the (tree|ash)/))) continue
+    tree = c.spot
+    break
   }
   expect(tree, 'a path-side tree to fell').not.toBeNull()
   const standing = await artAt(page, tree!)

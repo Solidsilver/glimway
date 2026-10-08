@@ -190,6 +190,19 @@ export class ReportBook {
   }
 
   /**
+   * The report a closing page sends (keepalive, no answer awaited): the
+   * newest it has. News since the captured report (in flight, or lost) goes
+   * under the next sequence, which supersedes it: the world keeps the
+   * highest, and the captured one's casts go with it, as for any lost
+   * sequence. Without news, the captured report again, or nothing.
+   */
+  leaving(): CapturedReport | null {
+    const n = this.next;
+    if (this.captured && n.changed && n.place && n.boundary === null) this.captured = null;
+    return this.capture();
+  }
+
+  /**
    * The answer to a captured report. Returns it when it matches (retired),
    * or null for an answer to some other report. Duplicates and stale-basis
    * answers retire it too: nothing ignored is ever sent again.

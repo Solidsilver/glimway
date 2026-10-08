@@ -106,3 +106,26 @@ test('no report before the lease names a generation', () => {
   book.note(village, 1, 1);
   assert.equal(book.capture(true), null);
 });
+
+test('a closing page sends the newest report, past one still in flight', () => {
+  const book = bound();
+  book.note(village, 41, 30);
+  const inFlight = book.capture()!;
+  // Hurt, then the tab closes before the first report's answer.
+  book.note(village, 35, 30);
+  const last = book.leaving()!;
+  assert.equal(last.seq, inFlight.seq + 1, 'the next sequence: the world keeps the highest');
+  assert.equal(last.hp, 35);
+  assert.equal(book.leaving(), last, 'nothing newer: the same report again');
+  // Nothing new since the captured one: it goes again as it is.
+  const quiet = bound();
+  quiet.note(village, 41, 30);
+  const c = quiet.capture()!;
+  assert.equal(quiet.leaving(), c);
+  // A fall's boundary still holds the next report back.
+  const fallen = bound();
+  fallen.note(village, 41, 30);
+  const before = fallen.capture()!;
+  fallen.fall(7, village, { hp: 20, mana: 10 });
+  assert.equal(fallen.leaving(), before);
+});
