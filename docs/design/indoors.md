@@ -814,6 +814,27 @@ As quests.md 1 says: dialogue rules swap `forStages` for `when: ["quest:step"]`;
 gets `src/content/quests/<id>.ts` with its lines, knock lines and "not yet" variants; resident
 lines key by the road's step. The server never needs the words.
 
+### 5.9 Who speaks first
+
+Added after the integration gate (2026-10-08). Talking to someone can match more than one thing:
+their own lines (a resident's story and their line about the day; Mara's, Pip's and Orrin's
+lantern-road lines) and a step of another quest that finishes by talking to them. Quests never
+stop people being themselves, so:
+
+1. **The main story takes the talk.** A step of a road quest (the opening, the lantern road) is
+   the conversation, as it always was. A lantern-road line that moves the road on (Mara's
+   "Would you go on?") also goes alone; another quest's talk waits for the next conversation.
+2. **Otherwise their own lines come first,** and another quest's talk follows them in the same
+   conversation: its asking and offer (*Set to Rise*'s start, Your Own Day's), its reminder with
+   the offer shown disabled and why ("Still no flour?… Needs 1 flour"), or its "not yet".
+3. **Unless you're mid-way through that step there:** the quest has started and its step can be
+   taken now (its gate holds: the flour is in your pack, the sponge has risen, you've done
+   something in your own day). Then the step is the conversation, because that's what you came
+   for.
+
+Their own choices (a rumour, "Hear it again") stay, after the quest's offer, with one "Not yet" at
+the end. The rule is `takesTheTalk` and `afterTheirTalk` in `src/content/quests/index.ts`.
+
 ---
 
 ## 6. Operations and migrations
