@@ -21,10 +21,27 @@ type RoomDoor struct {
 	Outside *RoomTile `json:"outside,omitempty"`
 	Entry   RoomTile  `json:"entry"`
 }
+
+// A signature piece drawn on its map letter: Art names a furnishings piece
+// (design 2.8), shown in Facing (one it has; empty: its default).
 type RoomProp struct {
-	Art   string `json:"art"`
-	Char  string `json:"char"`
-	Solid bool   `json:"solid"`
+	Art    string `json:"art"`
+	Char   string `json:"char"`
+	Solid  bool   `json:"solid"`
+	Facing string `json:"facing,omitempty"`
+}
+
+// A furnishing placed by catalogue id (2.8): on the floor (or a rug) by its
+// footprint's top-left tile, on the back wall, or on an earlier piece's
+// surface (Parent, its Offer and Slot). The room's dressing; never blocks.
+type RoomFurnishing struct {
+	Piece  string `json:"piece"`
+	TX     *int   `json:"tx,omitempty"`
+	TY     *int   `json:"ty,omitempty"`
+	Facing string `json:"facing,omitempty"`
+	Parent *int   `json:"parent,omitempty"`
+	Offer  string `json:"offer,omitempty"`
+	Slot   *int   `json:"slot,omitempty"`
 }
 type RoomSpot struct {
 	TX    int    `json:"tx"`
@@ -46,15 +63,16 @@ type RoomOutside struct {
 	} `json:"chimney,omitempty"`
 }
 type Room struct {
-	ID      string              `json:"id"`
-	Name    string              `json:"name"`
-	Parent  string              `json:"parent"`
-	Map     []string            `json:"map"`
-	Doors   []RoomDoor          `json:"doors"`
-	Props   []RoomProp          `json:"props"`
-	Spots   map[string]RoomSpot `json:"spots"`
-	Lights  []RoomLight         `json:"lights"`
-	Outside *RoomOutside        `json:"outside,omitempty"`
+	ID          string              `json:"id"`
+	Name        string              `json:"name"`
+	Parent      string              `json:"parent"`
+	Map         []string            `json:"map"`
+	Doors       []RoomDoor          `json:"doors"`
+	Props       []RoomProp          `json:"props"`
+	Spots       map[string]RoomSpot `json:"spots"`
+	Lights      []RoomLight         `json:"lights"`
+	Outside     *RoomOutside        `json:"outside,omitempty"`
+	Furnishings []RoomFurnishing    `json:"furnishings,omitempty"`
 }
 type Rooms struct {
 	Legend map[string]string `json:"legend"`
@@ -195,6 +213,11 @@ func ValidateRooms(doc Rooms) error {
 			if len(p.Char) != 1 || p.Char[0] < 'A' || p.Char[0] > 'z' || p.Char[0] > 'Z' && p.Char[0] < 'a' || props[p.Char] || doc.Legend[p.Char] != "" || !ValidContentID(p.Art) {
 				return bad("prop " + r.ID)
 			}
+			// Every prop is a catalogue piece, in a facing it has.
+			piece, ok := FurnishingFor(p.Art)
+			if _, has := piece.Facings[p.Facing]; !ok || p.Facing != "" && !has {
+				return bad("prop piece " + r.ID + " " + p.Art)
+			}
 			props[p.Char] = true
 			solidProps[p.Char] = p.Solid
 		}
@@ -216,14 +239,15 @@ func ValidateRooms(doc Rooms) error {
 				}
 			}
 		}
-		for c := range props {
-			groups := RoomFootprints(r, c)
+		for _, p := range r.Props {
+			groups := RoomFootprints(r, p.Char)
 			if len(groups) == 0 {
 				return bad("unused prop " + r.ID)
 			}
+			piece, _ := FurnishingFor(p.Art)
 			for _, f := range groups {
-				if f.TW == 0 {
-					return bad("nonrectangular prop " + r.ID)
+				if f.TW == 0 || f.TW != piece.Footprint[0] || f.TH != piece.Footprint[1] {
+					return bad("prop footprint " + r.ID)
 				}
 			}
 		}
@@ -282,6 +306,9 @@ func ValidateRooms(doc Rooms) error {
 				return bad("outside " + r.ID)
 			}
 		}
+		if !validRoomFurnishings(r) {
+			return bad("furnishings " + r.ID)
+		}
 	}
 	for _, r := range doc.Rooms {
 		if RoomParent(r.ID) != r.Parent {
@@ -300,6 +327,94 @@ func ValidateRooms(doc Rooms) error {
 	}
 	return nil
 }
+
+// The floor a free-standing furnishing may stand on, and the back wall where wall pieces hang.
+const roomFloor = ".:@"
+const roomBackWall = "=w"
+
+// validRoomFurnishings: every piece known, in a facing it has, placed where
+// CanPlace lets it go: on a piece listed before it (its offer and slot), on
+// the back wall, or on open floor (a rug under it counts as the floor), inside
+// the room and off the props. The same rule as src/lib/rooms.ts.
+func validRoomFurnishings(r Room) bool {
+	type placedPiece struct {
+		piece Furnishing
+		tiles map[RoomTile]bool
+	}
+	var placed []placedPiece
+	for i, f := range r.Furnishings {
+		piece, ok := FurnishingFor(f.Piece)
+		if !ok {
+			return false
+		}
+		if _, has := piece.Facings[f.Facing]; f.Facing != "" && !has {
+			return false
+		}
+		if f.Parent != nil {
+			if *f.Parent < 0 || *f.Parent >= i || f.TX != nil || f.TY != nil {
+				return false
+			}
+			offer, slot := f.Offer, 0
+			if offer == "" {
+				offer = "top"
+			}
+			if f.Slot != nil {
+				slot = *f.Slot
+			}
+			host := placed[*f.Parent].piece
+			if offer != "top" && offer != "shelves" || slot < 0 || !CanPlace(&piece, PlaceOn{Kind: "surface", Host: &host, Offer: offer}, slot) {
+				return false
+			}
+			placed = append(placed, placedPiece{piece, map[RoomTile]bool{}})
+			continue
+		}
+		if f.Offer != "" || f.Slot != nil || f.TX == nil || f.TY == nil || *f.TX < 0 || *f.TY < 0 {
+			return false
+		}
+		tiles := map[RoomTile]bool{}
+		for y := *f.TY; y < *f.TY+piece.Footprint[1]; y++ {
+			for x := *f.TX; x < *f.TX+piece.Footprint[0]; x++ {
+				if !r.ContainsTile(x, y) {
+					return false
+				}
+				c := string(r.Map[y][x])
+				allowed := roomFloor
+				if piece.Mount == "wall" {
+					allowed = roomBackWall
+				}
+				if !strings.Contains(allowed, c) {
+					return false
+				}
+				tiles[RoomTile{x, y}] = true
+			}
+		}
+		onRug, rugUnder := false, false
+		for _, p := range placed {
+			if p.piece.Layer != "under" {
+				continue
+			}
+			all := true
+			for t := range tiles {
+				all = all && p.tiles[t]
+				rugUnder = rugUnder || p.tiles[t]
+			}
+			onRug = onRug || all
+		}
+		onto := "floor"
+		if piece.Mount == "wall" {
+			onto = "wall"
+		} else if onRug {
+			onto = "rug"
+		}
+		// A rug never lies on another rug.
+		if !CanPlace(&piece, PlaceOn{Kind: onto}, 0) || piece.Layer == "under" && rugUnder {
+			return false
+		}
+		placed = append(placed, placedPiece{piece, tiles})
+	}
+	return true
+}
+
 func LoadRooms() (Rooms, error) {
 	var doc Rooms
 	err := readTable("rooms.json", &doc)

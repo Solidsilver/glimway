@@ -14,15 +14,18 @@ import { roomFootprints, roomFor, type Room, type RoomDoor } from '../lib/rooms.
 import { RESIDENTS } from '../lib/residents.ts'
 import { TERRAIN, TILE } from '../lib/tile.ts'
 import { buildRoom, parseHomeRoom } from './cottage.ts'
-import { furnishing } from '../lib/furnishings-stand-in.ts'
+import { furnishingFor } from '../lib/furnishings.ts'
 import { landDoor } from './homeland.ts'
 import type { AreaKind, ExitDef, NpcId, NpcSpot, WorldData } from './worlds.ts'
 
 /** A prop's footprint on the grid: one connected, rectangular group of its letter. */
 export interface Footprint {
+  /** Its catalogue piece (src/lib/furnishings.ts). */
   art: string
   char: string
   solid: boolean
+  /** The facing the room gives it (none: by the wall it stands against, `wallFacing`). */
+  facing?: 'front' | 'left' | 'right' | 'diag'
   tx: number
   ty: number
   tw: number
@@ -78,7 +81,7 @@ export function facingFor(exit: { side: Side; kind?: 'edge' | 'door' | 'stair' }
 export function residentSpotsIn(area: string): NpcSpot[] {
   const out: NpcSpot[] = []
   for (const r of RESIDENTS.residents)
-    for (const [name, s] of Object.entries(r.spots)) if (s.area === area) out.push({ id: r.id as NpcId, tx: s.tx, ty: s.ty, spot: name })
+    for (const [name, s] of Object.entries(r.spots)) if (s.area === area) out.push({ id: r.id as NpcId, tx: s.tx, ty: s.ty, spot: name, ...(s.seated ? { seated: true } : {}) })
   return out
 }
 
@@ -114,7 +117,7 @@ export function buildRoomArea(def: Room): WorldData {
     ground.push(g)
     solid.push(s)
   }
-  const props: Footprint[] = def.props.flatMap((p) => groupsOf(def, p.char).map((g) => ({ art: p.art, char: p.char, solid: p.solid, ...g })))
+  const props: Footprint[] = def.props.flatMap((p) => groupsOf(def, p.char).map((g) => ({ art: p.art, char: p.char, solid: p.solid, ...(p.facing ? { facing: p.facing } : {}), ...g })))
   const stairs: Footprint[] = ['^', 'v'].flatMap((c) => groupsOf(def, c).map((g) => ({ art: c === '^' ? 'stairs-up' : 'stairs-down', char: c, solid: false, ...g })))
   const [door] = groupsOf(def, 'D')
   const room: RoomScene = { def, props, stairs, doorway: door ? { art: 'doorway', char: 'D', solid: false, ...door } : null, arrive }
@@ -145,16 +148,24 @@ export function buildRoomArea(def: Room): WorldData {
   }
 }
 
+/** How far a piece's collision stays in from its base tiles' sides, and from their back (px). */
+export const BASE_INSET = { side: 2, back: 4 }
+
 /**
- * Where a piece touches the floor (7.0 rule 4): its catalogue base box,
- * centred on the footprint's bottom edge (a piece the catalogue doesn't
- * know: its footprint, a little inset, at most a tile deep). Tall pieces
- * rise above it, and the hero walks behind them by draw order.
+ * Where a piece touches the floor (7.0 rule 4): its catalogue base, the
+ * tiles of its footprint it stands on (src/lib/furnishings.ts), drawn in a
+ * little at the sides and the back so the hero can walk right up to it.
+ * Tall pieces rise above it, and the hero walks behind them by draw order.
+ * (A piece the catalogue doesn't know: its footprint's bottom row.)
  */
 export function baseBox(f: Footprint): { x: number; y: number; w: number; h: number } {
-  const [w, h] = furnishing(f.art)?.base ?? [f.tw * TILE - 4, Math.min(f.th * TILE, TILE) - 4]
-  const bottom = (f.ty + f.th) * TILE
-  return { x: (f.tx + f.tw / 2) * TILE - w / 2, y: bottom - h, w, h }
+  const b = furnishingFor(f.art)?.base ?? { x: 0, y: f.th - 1, w: f.tw, h: 1 }
+  return {
+    x: (f.tx + b.x) * TILE + BASE_INSET.side,
+    y: (f.ty + b.y) * TILE + BASE_INSET.back,
+    w: b.w * TILE - BASE_INSET.side * 2,
+    h: b.h * TILE - BASE_INSET.back
+  }
 }
 
 /** The area kind for an `in:` id (null for any other id, or a room this build doesn't know). */
@@ -200,7 +211,7 @@ export function warmAt(world: WorldData, x: number, y: number): boolean {
  * faces front.
  */
 export function wallFacing(world: Pick<WorldData, 'width'>, f: Footprint): 'front' | 'left' | 'right' {
-  if (f.tw === 1 && f.th > 1 && f.tx === 1) return 'right'
-  if (f.tw === 1 && f.th > 1 && f.tx + f.tw === world.width - 1) return 'left'
+  if (f.tw === 1 && f.th > 1 && f.tx <= 1) return 'right'
+  if (f.tw === 1 && f.th > 1 && f.tx + f.tw >= world.width - 1) return 'left'
   return 'front'
 }

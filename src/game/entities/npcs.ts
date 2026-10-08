@@ -59,6 +59,8 @@ export interface NpcEntity {
   spot: string | null
   /** Here now (a resident whose cycle is elsewhere is hidden, and can't be talked to). */
   present: boolean
+  /** Sits at their spot (Elara at her desk): the sit pose, behind the furniture, no routine. */
+  seated?: boolean
   /** Walking a scripted path (the cycle's walk to a door, or in from it): points left, then what to do. */
   path?: { points: { x: number; y: number }[]; done: () => void; speed: number }
 }
@@ -78,7 +80,7 @@ export class Npcs {
         // The walking art: feet at the canvas's bottom centre, drawn at world size.
         const sprite = scene.add.sprite(x, y, PEOPLE_KEY, `resident-${n.id}-down-idle-0`).setOrigin(0.5, 1).setScale(1 / k).setDepth(y)
         sprite.play(personAnim(n.id, 'down', false))
-        this.npcs.push({ id: n.id, sprite, walker: newWalker({ x, y }), home: { x, y }, spot: n.spot ?? null, present: true })
+        this.npcs.push({ id: n.id, sprite, walker: newWalker({ x, y }), home: { x, y }, spot: n.spot ?? null, present: true, seated: n.seated })
         continue
       }
       // Delivered breathing art: two poses at 1.5 fps on a foot-anchored
@@ -125,7 +127,10 @@ export class Npcs {
       }
       const w = n.walker
       if (!w || !n.home || !n.present) continue
-      tickWalker(w, this.still ? undefined : routines[n.id], n.home, hero, Math.min(dt, 0.1), held)
+      if (n.seated) {
+        // At their furniture: seated, facing you across it.
+        Object.assign(w, { x: n.home.x, y: n.home.y, mode: 'sit', facing: 'down', seat: { ...n.home } })
+      } else tickWalker(w, this.still ? undefined : routines[n.id], n.home, hero, Math.min(dt, 0.1), held)
       const sprite = n.sprite as Phaser.GameObjects.Sprite
       sprite.setPosition(w.x, w.y)
       const id = n.id as PersonId

@@ -5,8 +5,8 @@ import { RESIDENTS, residentById } from '../src/lib/residents.ts';
 import { cycleAt, cycleSpotsNear } from '../src/lib/clock.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { baseBox, facingFor, groupsOf, residentSpotsIn, roomArrival, wallFacing, warmAt } from '../src/game/room-kind.ts';
-import { ROOM_DRESSING, canPlace, furnishing, FURNISHINGS } from '../src/lib/furnishings-stand-in.ts';
-import { pieceFoot, pieceFrame } from '../src/game/area/furnishings-art.ts';
+import { canPlace, furnishingFor } from '../src/lib/furnishings.ts';
+import { defaultState, pieceFoot, pieceFrame, surfaceHeight } from '../src/game/area/furnishings-art.ts';
 import { SEATED_MANA_BONUS, manaRegenRate } from '../src/game/seats.ts';
 import { residentAt } from '../src/lib/residents.ts';
 import { doorFor, residentPlace, residentIn, twoLegs } from '../src/game/resident-cycle.ts';
@@ -311,60 +311,49 @@ test('pieces block by their base, never their picture: their footprints are open
   assert.ok(baseBox(stones).h < stones.th * TILE);
 });
 
-test('the dressing: kit pieces by id, each where 2.8’s rule lets it go, on open ground or the back wall', () => {
+test('the dressing: every room furnished from the shared kit by id, on its rug, its walls and its tables, and none of it blocks', () => {
   for (const def of ROOMS) {
-    const list = ROOM_DRESSING[def.id] ?? [];
-    const propChars = new Set(def.props.map((p) => p.char));
-    list.forEach((p, i) => {
-      const piece = furnishing(p.piece);
-      assert.ok(piece, `${def.id}: ${p.piece} is in the catalogue`);
-      if (p.parent !== undefined) {
-        assert.ok(p.parent < i, `${def.id}: ${p.piece} comes after the piece it stands on`);
-        const parent = furnishing(list[p.parent]!.piece)!;
-        assert.ok(canPlace(piece!, parent), `${def.id}: ${p.piece} may stand on ${parent.id}`);
-        return;
-      }
-      const [tw, th] = piece!.footprint;
-      for (let y = p.ty; y < p.ty + th; y++)
-        for (let x = p.tx; x < p.tx + tw; x++) {
-          const c = def.map[y]![x]!;
-          if (piece!.mount === 'wall') assert.ok(y === 1 && (c === '=' || c === 'w'), `${def.id}: ${p.piece} hangs on the back wall (${x},${y} "${c}")`);
-          else assert.ok('.:@'.includes(c) && !propChars.has(c), `${def.id}: ${p.piece} stands on open floor (${x},${y} "${c}")`);
-        }
-      assert.ok(canPlace(piece!, piece!.mount === 'wall' ? 'wall' : 'floor'));
-    });
+    const list = def.furnishings ?? [];
+    assert.ok(list.length >= 4, `${def.id} is lived in`);
+    for (const p of list) assert.ok(furnishingFor(p.piece), `${def.id}: ${p.piece} is in the catalogue`);
+    assert.ok(list.some((p) => p.parent !== undefined), `${def.id}: something stands on something`);
+    assert.ok(list.some((p) => furnishingFor(p.piece)!.mount === 'wall'), `${def.id}: something hangs on the wall`);
+    // Dressing never blocks: the room's bodies are its signature pieces' bases alone.
+    assert.equal(buildArea(def.id).bodies!.length, def.props.filter((p) => p.solid).reduce((n, p) => n + groupsOf(def, p.char).length, 0));
   }
-  // The rule's table: small on any surface, medium on a big enough top, large only on the floor, rugs and wall pieces in their places.
-  const table = furnishing('small-table')!;
-  assert.ok(canPlace(furnishing('candle')!, table));
-  assert.ok(canPlace(furnishing('lamp')!, table));
-  assert.ok(!canPlace(furnishing('lamp')!, furnishing('crate')!), 'a crate’s top is one slot: too small for a lamp');
-  assert.ok(!canPlace(furnishing('chest')!, table));
-  assert.ok(!canPlace(furnishing('rug-rag')!, table));
-  assert.ok(!canPlace(furnishing('picture')!, 'floor') && canPlace(furnishing('picture')!, 'wall'));
-  // Every catalogue piece's base fits its footprint.
-  for (const piece of FURNISHINGS) assert.ok(piece.base[0] <= piece.footprint[0] * TILE && piece.base[1] <= piece.footprint[1] * TILE, piece.id);
+  // Each room's props are catalogue pieces (the loader checks their footprints and facings).
+  for (const def of ROOMS) for (const p of def.props) assert.ok(furnishingFor(p.art), `${def.id}: ${p.art}`);
+  // The rule the loader applies (A's canPlace; its own vectors cover the table).
+  assert.ok(canPlace(furnishingFor('candle')!, { kind: 'surface', host: furnishingFor('barrel')!, offer: 'top' }));
+  assert.ok(!canPlace(furnishingFor('woven-basket')!, { kind: 'surface', host: furnishingFor('small-table')!, offer: 'top' }), 'a medium needs two slots');
 });
 
 test('drawing furnishings: a piece on another stands on its surface, in its slot, just in front; side-on art mirrors', () => {
-  const table = furnishing('small-table')!;
-  const drawnTable = { piece: table, foot: { x: 104, y: 80 }, depth: 80, facing: 'front' as const, state: null, sprite: null as never };
-  const left = pieceFoot(furnishing('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 0 });
-  const right = pieceFoot(furnishing('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 1 });
-  assert.equal(left.y, 80 - table.offers!.top!.height, 'on the top');
-  assert.ok(left.x < 104 && right.x > 104, 'two slots, left and right of the middle');
+  const table = furnishingFor('oak-table')!;
+  const drawnTable = { piece: table, foot: { x: 104, y: 80 }, depth: 80, height: 20, facing: 'front' as const, state: null, sprite: null as never };
+  const left = pieceFoot(furnishingFor('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 0 });
+  const right = pieceFoot(furnishingFor('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 3 });
+  assert.equal(left.y, 80 - surfaceHeight(drawnTable, 'top'), 'on the top, by the drawn height');
+  assert.ok(left.y < 80 && left.y > 60);
+  assert.ok(left.x < 104 && right.x > 104, 'slots run left to right across the top');
   assert.ok(left.depth > 80 && left.depth < 81, 'just in front of the table');
+  // A medium piece takes two slots, centred on them.
+  const basket = pieceFoot(furnishingFor('woven-basket')!, { tx: 0, ty: 0, parent: drawnTable, slot: 1 });
+  assert.equal(basket.x, 104, 'slots 1 and 2 of 4: the middle');
   // A rug lies under everything; a wall piece hangs on the back wall.
-  assert.ok(pieceFoot(furnishing('rug-rag')!, { tx: 5, ty: 6 }).depth < 0);
-  assert.equal(pieceFoot(furnishing('picture')!, { tx: 3, ty: 1 }).y, 2 * TILE - 3);
-  // Facing: the art for it, the other side mirrored, else the front.
-  const sideOn = { ...table, art: { front: 'f', left: 'l' } };
-  assert.deepEqual(pieceFrame(sideOn, 'left', null, 0), { frame: 'l', flipX: false });
-  assert.deepEqual(pieceFrame(sideOn, 'right', null, 0), { frame: 'l', flipX: true });
-  assert.deepEqual(pieceFrame(sideOn, 'diag', null, 0), { frame: 'f', flipX: false });
+  assert.ok(pieceFoot(furnishingFor('rag-rug')!, { tx: 5, ty: 6 }).depth < 0);
+  assert.equal(pieceFoot(furnishingFor('picture')!, { tx: 3, ty: 1 }).y, 2 * TILE - 3);
+  // Facing: the art for it, the other side mirrored, never the front squeezed sideways.
+  const sideOn = { ...table, facings: { front: 'f', left: 'l' } };
+  assert.deepEqual(pieceFrame(sideOn, 'left', null), { frame: 'l', flipX: false });
+  assert.deepEqual(pieceFrame(sideOn, 'right', null), { frame: 'l', flipX: true });
+  assert.deepEqual(pieceFrame(sideOn, 'diag', null), { frame: null, flipX: false });
+  assert.deepEqual(pieceFrame({ ...table, facings: { front: '' } }, 'front', null), { frame: null, flipX: false }, 'no art yet: a placeholder');
   // A state picks its frames; with none asked, the default state's.
-  const oven = furnishing('kitchen-hearth')!;
-  assert.equal(pieceFrame(oven, 'front', 'banked', 0).frame, 'oven-hearth-fire-0');
+  const oven = furnishingFor('kitchen-hearth')!;
+  assert.equal(defaultState(oven), 'lit');
+  assert.equal(pieceFrame(oven, 'front', 'banked').frame, 'oven-hearth-fire-0');
+  assert.equal(defaultState(furnishingFor('crate')!), null, 'a piece with no states is still');
 });
 
 test('the library as revised: shelves on the back and both side walls (side-on), a section each, the nook a seat, no donation shelf', () => {
@@ -378,7 +367,7 @@ test('the library as revised: shelves on the back and both side walls (side-on),
   // The nook sits in its corner alcove against the east wall.
   const nook = lib.room!.props.find((p) => p.art === 'reading-nook')!;
   assert.equal(nook.tx + nook.tw, lib.width - 1);
-  assert.ok(furnishing('reading-nook')!.tags!.includes('seat'));
+  assert.ok(furnishingFor('reading-nook')!.tags.includes('seat'));
   // Back-wall pieces face front.
   for (const f of lib.room!.props.filter((p) => p.art === 'library-shelves')) assert.equal(wallFacing(lib, f), 'front');
 });

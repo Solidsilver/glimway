@@ -464,6 +464,217 @@
       "offers": { "top": 1 },
       "size": "large",
       "tags": []
+    },
+    {
+      "id": "kitchen-hearth",
+      "name": "Bread Oven and Hearth",
+      "facings": {"front": "oven-hearth-fire-0"},
+      "footprint": [3, 2],
+      "base": {"x": 0, "y": 1, "w": 3, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "states": {
+        "lit": {"frames": ["oven-hearth-fire-0", "oven-hearth-fire-1", "oven-hearth-fire-2", "oven-hearth-fire-3"], "loop": true, "default": true},
+        "banked": {"frames": ["oven-hearth-fire-0"]}
+      },
+      "tags": ["light", "hearth"]
+    },
+    {
+      "id": "kitchen-crocks",
+      "name": "Shelves of Crocks",
+      "facings": {"front": "crock-shelves"},
+      "footprint": [2, 1],
+      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "mount": "floor",
+      "offers": {"shelves": 4},
+      "size": "large",
+      "tags": []
+    },
+    {
+      "id": "kitchen-tallow-pot",
+      "name": "Tallow Pot on its Stand",
+      "facings": {"front": "tallow-pot-steam-0"},
+      "footprint": [2, 1],
+      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "states": {
+        "still": {"frames": ["tallow-pot-steam-0"], "default": true},
+        "steaming": {"frames": ["tallow-pot-steam-0", "tallow-pot-steam-1", "tallow-pot-steam-2"], "loop": true}
+      },
+      "tags": []
+    },
+    {
+      "id": "kitchen-worktable",
+      "name": "Worktable",
+      "facings": {"front": "worktable"},
+      "footprint": [4, 2],
+      "base": {"x": 0, "y": 0, "w": 4, "h": 2},
+      "mount": "floor",
+      "offers": {"top": 4},
+      "size": "large",
+      "tags": []
+    },
+    {
+      "id": "kitchen-sponge-bowl",
+      "name": "Sponge Bowl on a Stool",
+      "facings": {"front": "sponge-bowl-flat"},
+      "footprint": [1, 1],
+      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "mount": "floor",
+      "size": "medium",
+      "states": {
+        "flat": {"frames": ["sponge-bowl-flat"], "default": true},
+        "risen": {"frames": ["sponge-bowl-risen"]}
+      },
+      "tags": []
+    },
+    {
+      "id": "kitchen-bread-rack",
+      "name": "Bread Rack",
+      "facings": {"front": "bread-rack"},
+      "footprint": [1, 1],
+      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "mount": "floor",
+      "offers": {"shelves": 2},
+      "size": "large",
+      "tags": []
+    },
+    {
+      "id": "mill-gears",
+      "name": "Gear Train",
+      "facings": {"front": "gear-train-0"},
+      "footprint": [3, 2],
+      "base": {"x": 0, "y": 1, "w": 3, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "states": {
+        "turning": {"frames": ["gear-train-0", "gear-train-1", "gear-train-2", "gear-train-3"], "loop": true, "default": true},
+        "still": {"frames": ["gear-train-0"]}
+      },
+      "tags": []
+    },
+    {
+      "id": "millstones",
+      "name": "Millstones under the Hopper",
+      "facings": {"front": "millstones-0"},
+      "footprint": [2, 2],
+      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "states": {
+        "turning": {"frames": ["millstones-0", "millstones-1", "millstones-2", "millstones-3"], "loop": true, "default": true},
+        "still": {"frames": ["millstones-0"]}
+      },
+      "tags": []
+    },
+    {
+      "id": "mill-chute",
+      "name": "Chute and Meal Bin",
+      "facings": {"front": "chute-meal-bin-0"},
+      "footprint": [2, 2],
+      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "tags": []
+    },
+    {
+      "id": "flour-sacks",
+      "name": "Flour Sacks",
+      "facings": {"front": "flour-sacks-0"},
+      "footprint": [2, 2],
+      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "tags": []
+    },
+    {
+      "id": "counting-stool",
+      "name": "Counting Stool",
+      "facings": {"front": "counting-stool-window"},
+      "footprint": [1, 1],
+      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "tags": ["seat"]
+    },
+    {
+      "id": "mill-hoist",
+      "name": "Sack Hoist and Hatch",
+      "facings": {"front": "sack-hoist-seized"},
+      "footprint": [2, 2],
+      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "mount": "floor",
+      "size": "large",
+      "states": {
+        "seized": {"frames": ["sack-hoist-seized"], "default": true},
+        "working": {"frames": ["sack-hoist-working"]},
+        "swinging": {"frames": ["sack-hoist-swing-0", "sack-hoist-swing-1", "sack-hoist-swing-2"], "loop": true}
+      },
+      "tags": []
+    },
+    {
+      "id": "library-shelves",
+      "name": "Tall Bookshelf",
+      "facings": {"front": "library-shelf-1"},
+      "footprint": [2, 1],
+      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "mount": "floor",
+      "offers": {"shelves": 6},
+      "size": "large",
+      "states": {
+        "sparse": {"frames": ["library-shelf-0"]},
+        "half": {"frames": ["library-shelf-1"], "default": true},
+        "full": {"frames": ["library-shelf-2"]}
+      },
+      "tags": ["books"]
+    },
+    {
+      "id": "library-side-shelves",
+      "name": "Side Bookshelves",
+      "facings": {"left": "", "right": ""},
+      "footprint": [1, 4],
+      "base": {"x": 0, "y": 0, "w": 1, "h": 4},
+      "mount": "floor",
+      "offers": {"shelves": 8},
+      "size": "large",
+      "tags": ["books"]
+    },
+    {
+      "id": "reading-table",
+      "name": "Reading Table",
+      "facings": {"front": "reading-table-unlit"},
+      "footprint": [4, 2],
+      "base": {"x": 0, "y": 0, "w": 4, "h": 2},
+      "mount": "floor",
+      "offers": {"top": 4},
+      "size": "large",
+      "states": {
+        "unlit": {"frames": ["reading-table-unlit"], "default": true},
+        "lit": {"frames": ["reading-table-lit"]}
+      },
+      "tags": ["seat", "light"]
+    },
+    {
+      "id": "reading-nook",
+      "name": "Reading Nook",
+      "facings": {"front": "window-seat"},
+      "footprint": [3, 2],
+      "base": {"x": 0, "y": 0, "w": 3, "h": 2},
+      "mount": "floor",
+      "size": "large",
+      "tags": ["seat", "light"]
+    },
+    {
+      "id": "elara-desk",
+      "name": "Elara's Desk",
+      "facings": {"front": ""},
+      "footprint": [2, 1],
+      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "mount": "floor",
+      "offers": {"top": 2},
+      "size": "large",
+      "tags": ["books"]
     }
   ]
 }

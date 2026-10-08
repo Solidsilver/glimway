@@ -386,6 +386,270 @@
           "value": false
         }
       ]
+    },
+    {
+      "name": "furnishing-on-a-rug",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            6,
+            "tx"
+          ],
+          "value": 5
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            6,
+            "ty"
+          ],
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "furnishing-unknown-piece",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            0,
+            "piece"
+          ],
+          "value": "not-a-piece"
+        }
+      ]
+    },
+    {
+      "name": "furnishing-facing-it-lacks",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            0,
+            "facing"
+          ],
+          "value": "left"
+        }
+      ]
+    },
+    {
+      "name": "furnishing-wall-piece-on-floor",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            2,
+            "ty"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "furnishing-floor-piece-on-a-prop",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            3,
+            "tx"
+          ],
+          "value": 3
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            3,
+            "ty"
+          ],
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "furnishing-off-the-map",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            5,
+            "tx"
+          ],
+          "value": 20
+        }
+      ]
+    },
+    {
+      "name": "furnishing-rug-on-a-piece",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            4,
+            "piece"
+          ],
+          "value": "rag-rug"
+        }
+      ]
+    },
+    {
+      "name": "furnishing-parent-after-it",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            4,
+            "parent"
+          ],
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "furnishing-slot-overflow",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            4,
+            "slot"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "furnishing-medium-on-a-one-slot-top",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            4,
+            "piece"
+          ],
+          "value": "woven-basket"
+        }
+      ]
+    },
+    {
+      "name": "furnishing-rug-on-a-rug",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            6,
+            "piece"
+          ],
+          "value": "braided-rug"
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            6,
+            "tx"
+          ],
+          "value": 5
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            6,
+            "ty"
+          ],
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "prop-unknown-piece",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            0,
+            "art"
+          ],
+          "value": "not-a-piece"
+        }
+      ]
+    },
+    {
+      "name": "prop-footprint-not-its-piece",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            3,
+            "art"
+          ],
+          "value": "oak-table"
+        }
+      ]
+    },
+    {
+      "name": "prop-facing-it-lacks",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            0,
+            "facing"
+          ],
+          "value": "left"
+        }
+      ]
     }
   ],
   "residents": [
@@ -613,6 +877,16 @@
             "tx"
           ],
           "value": 0
+        },
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "ty"
+          ],
+          "value": 7
         }
       ]
     },
