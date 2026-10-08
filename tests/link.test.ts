@@ -7,6 +7,7 @@ import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
 import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
 import type { Session } from '../src/game/session.ts';
 import { ackReport, BASE, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
+import { roadStep } from '../src/lib/quests.ts';
 
 /**
  * The client on operations (design server-first 2.4) against a scripted
@@ -55,8 +56,8 @@ test('a quest step shows at once, and its answer brings what the server granted'
   const r = await rig(t);
   await online(r);
   r.server.on('POST /api/quest/step', stepOk(S({ version: 2, quest: 'accepted', marks: ['seen:gate'] })));
-  r.link.questStep('accept');
-  assert.equal(r.session.state.quest, 'accepted', 'predicted before the answer');
+  r.link.questStep('lantern-road', 'accepted');
+  assert.equal(roadStep(r.session.state), 'accepted', 'predicted before the answer');
   await r.link.flush();
   const [sent] = r.server.sent('POST /api/quest/step');
   assert.equal(sent.body.to, 'accepted');
@@ -68,20 +69,43 @@ test('a quest step shows at once, and its answer brings what the server granted'
   assert.deepEqual(r.session.state.flags, ['seen:gate']);
 });
 
+test('a gated quest step never queues offline (the talk said "Needs a connection" first)', async (t) => {
+  const r = await rig(t);
+  assert.equal(await r.link.questStep('set-to-rise', 'hear-hazel', { server: true }), 'offline');
+  assert.equal(r.link.outbox.length, 0);
+});
+
+test('a gated quest step waits for the world: nothing predicted before its answer', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  const answered = S({ version: 2 });
+  answered.story.quests = { signpost: 'light-first-lamp', 'set-to-rise': 'hear-hazel' };
+  const release = r.server.hold('POST /api/quest/step');
+  r.server.on('POST /api/quest/step', env(answered, { questStep: { quest: 'set-to-rise', step: 'hear-hazel', items: [], marks: [], papers: [], embers: 0, embersSpent: 0, taken: [], given: [] } }));
+  const done = r.link.questStep('set-to-rise', 'hear-hazel', { server: true });
+  await tick();
+  assert.equal(r.session.state.quests['set-to-rise'], undefined, 'not shown before the answer');
+  release();
+  assert.equal(await done, null);
+  assert.equal(r.session.state.quests['set-to-rise'], 'hear-hazel');
+  const [sent] = r.server.sent('POST /api/quest/step');
+  assert.deepEqual([sent.body.quest, sent.body.to], ['set-to-rise', 'hear-hazel']);
+});
+
 test('a refused step rolls back, takes the steps after it along, and says so once', async (t) => {
   const r = await rig(t);
   await online(r);
   const release = r.server.hold('POST /api/quest/step');
   r.server.on('POST /api/quest/step', refuse('not-next-step', S({ version: 2, balance: 1 })));
   r.server.on('POST /api/story/mark', markOk(S({ version: 3, balance: 1, marks: ['met:mara'] }), 'met:mara'));
-  r.link.questStep('accept');
-  r.link.questStep('find-clue');
+  r.link.questStep('lantern-road', 'accepted');
+  r.link.questStep('lantern-road', 'clue-found');
   r.link.mark('met:mara');
-  assert.equal(r.session.state.quest, 'clue-found');
+  assert.equal(roadStep(r.session.state), 'clue-found');
   assert.deepEqual(r.session.state.flags, ['met:mara']);
   release();
   await r.link.flush();
-  assert.equal(r.session.state.quest, 'new', 'both steps rolled back');
+  assert.equal(roadStep(r.session.state), 'new', 'both steps rolled back');
   assert.equal(r.server.sent('POST /api/quest/step').length, 1, 'the dependent step was never sent');
   assert.equal(r.server.sent('POST /api/story/mark').length, 1, 'an unrelated mark still goes');
   assert.deepEqual(r.session.state.flags, ['met:mara']);
@@ -163,7 +187,7 @@ test('ambiguous answers keep the head: 5xx, 429, not-implemented and unreadable 
 test('a reload replays the outbox: the next page sends what the last one queued', async (t) => {
   const store = memoryOutboxStore();
   const first = await rig(t, { store });
-  first.link.questStep('accept');
+  first.link.questStep('lantern-road', 'accepted');
   first.link.mark('seen:a');
   await first.link.persist();
   first.link.stop();
@@ -171,7 +195,7 @@ test('a reload replays the outbox: the next page sends what the last one queued'
   const record = await store.load('fixture-account', 'dev');
   assert.equal(record?.entries.length, 2);
   const next = await rig(t, { store, record });
-  assert.equal(next.session.state.quest, 'accepted', 'predicted from the outbox at once');
+  assert.equal(roadStep(next.session.state), 'accepted', 'predicted from the outbox at once');
   next.server.on('POST /api/quest/step', stepOk(S({ version: 2, quest: 'accepted' })));
   next.server.on('POST /api/story/mark', markOk(S({ version: 3, quest: 'accepted', marks: ['seen:a'] }), 'seen:a'));
   await online(next);

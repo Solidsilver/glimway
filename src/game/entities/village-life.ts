@@ -31,6 +31,7 @@ import { grantPaper } from '../papers'
 import type { Interactable, Interactables } from './interactables'
 import { expose } from '../dev-hooks'
 import { openDialogue } from '../dialogue'
+import { roadStep } from '../../lib/quests'
 
 export interface VillageDeps {
   world: WorldData
@@ -125,7 +126,7 @@ export class VillageLayer {
       list.push({ id: 'village:hopper', x: tileMid(h.tx), y: tileBottom(h.ty) + 2, label: 'Look at the hopper', verb: 'Look', markerOffset: 24, activate: () => this.lookAtHopper() })
     }
     const c = w as CommonsWorld
-    const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
+    const ctx = { flags: this.deps.session.state.flags, late: roadStep(this.deps.session.state) === 'complete', mark: null }
     if (w.areaId === 'commons' && c.features && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
       const h = c.features.hame
       list.push({ id: 'village:hame', x: tileMid(h.tx), y: tileBottom(h.ty) + 6, label: 'Read the polishers’ roll', verb: 'Read', marker: notice, markerOffset: 32, activate: () => this.readHameRoll() })
@@ -147,7 +148,7 @@ export class VillageLayer {
 
   /** The Hame-Polishers' List: thirty years of names, stitched inside the gate. */
   private readHameRoll(): void {
-    const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
+    const ctx = { flags: this.deps.session.state.flags, late: roadStep(this.deps.session.state) === 'complete', mark: null }
     const paper = calendarFind('hame', ctx)
     if (paper) grantPaper(this.deps.session, paper)
     this.syncInteractions()

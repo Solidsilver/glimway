@@ -8,6 +8,7 @@ import { PlayerStateSchema } from '../src/lib/gen/glimway/v1/state_pb.js';
 import { parseSnapshot } from '../src/lib/api/parse.ts';
 import { createNewGame } from '../src/lib/state.ts';
 import { TxIDB } from './helpers/fake-idb-tx.ts';
+import { roadStep } from '../src/lib/quests.ts';
 
 /** The outbox's storage and the predictor's rules (design server-first 2.4). */
 
@@ -121,7 +122,7 @@ test('the game state is the server state: marks are the single source of discove
   assert.deepEqual(s.flags, ['seen:gate', 'paper:eleven-days']);
   assert.deepEqual(s.discoveries, ['old-route-marker']);
   assert.deepEqual(s.defeatedEnemies, ['stone-warden']);
-  assert.equal(s.quest, 'clue-found');
+  assert.equal(roadStep(s), 'clue-found');
   assert.equal(s.area, 'wilds');
   assert.equal(s.wildsRegion, 'outer-1');
   assert.deepEqual([s.embers, s.xpEmbers, s.emberXp], [9, 4, 300]);
@@ -166,7 +167,7 @@ test('predictions: quest steps from the shared table, marks and papers added onc
   const s = gameStateOf(state());
   const ctx = { profile: null };
   const clue = predict(predict(s, { kind: 'quest-step', quest: 'lantern-road', to: 'accepted' }, ctx), { kind: 'quest-step', quest: 'lantern-road', to: 'clue-found' }, ctx);
-  assert.equal(clue.quest, 'clue-found');
+  assert.equal(roadStep(clue), 'clue-found');
   assert.ok(clue.inventory.includes('lantern-route-rubbing'));
   assert.equal(predict(s, { kind: 'quest-step', quest: 'lantern-road', to: 'complete' }, ctx), s, 'not the next step: the answer decides');
   const marked = predict(predict(s, { kind: 'mark', mark: 'seen:a' }, ctx), { kind: 'mark', mark: 'seen:a' }, ctx);

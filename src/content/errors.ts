@@ -184,6 +184,19 @@ export const SPEND_ERRORS: Table = {
   offline: 'Needs a connection. Your embers are safe — try again when you’re back online.'
 }
 
+/**
+ * A gated quest step the world refused after the talk had offered it (the
+ * client's guess at the gate and the server's disagreed): nothing was taken,
+ * and the state that came back puts the quest where it is (src/game/session.ts).
+ */
+export const QUEST_ERRORS: Table = {
+  'not-yet': 'Not yet, after all. Give it a little longer.',
+  'not-here': 'They’ve stepped away. Find them and try again.',
+  short: 'Something it needs isn’t in your pack after all. Nothing was taken.',
+  'needs-earned': 'That wants embers earned on Habitica.',
+  'needs-habitica': 'This one needs your Habitica hero. Connect it in the Menu.'
+}
+
 /** The words for `code` from a domain's table, then the shared transport lines, then `fallback`. */
 export function errorText(table: Table, code: string, fallback = FALLBACK): string {
   return (Object.hasOwn(table, code) ? table[code] : undefined) ?? (Object.hasOwn(TRANSPORT_ERRORS, code) ? TRANSPORT_ERRORS[code] : undefined) ?? fallback
@@ -193,3 +206,4 @@ export const itemErrorText = (code: string): string => errorText(ITEM_ERRORS, co
 export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRORS, code)
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
 export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')
+export const questErrorText = (code: string): string => errorText(QUEST_ERRORS, code, 'That story step didn’t take. Nothing was lost.')

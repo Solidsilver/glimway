@@ -14,18 +14,8 @@ import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import type { HabiticaProfile } from '../habitica/types.ts';
 import { profileFor } from '../profile.ts';
-import { advanceQuest, createNewGame, validateSave, type GameState, type QuestEvent, type QuestStage } from '../state.ts';
-import { LANTERN_ROAD } from './ports.ts';
-
-/** The step each quest event asks for (step ids are the stage names). */
-export const QUEST_STEP: Record<QuestEvent, QuestStage> = {
-  accept: 'accepted',
-  'find-clue': 'clue-found',
-  'defeat-guardian': 'guardian-defeated',
-  'light-lantern': 'lantern-lit',
-  'return-village': 'complete',
-};
-const STEP_EVENT = Object.fromEntries(Object.entries(QUEST_STEP).map(([e, s]) => [s, e])) as Record<string, QuestEvent>;
+import { reachStep } from '../quests.ts';
+import { createNewGame, validateSave, type GameState } from '../state.ts';
 
 /** Marks that hold discoveries and curated defeats (design 2.2, `content/story.json`). */
 export const FOUND = 'found:';
@@ -91,7 +81,8 @@ export function gameStateOf(p: PlayerState): GameState {
     else if (mark.startsWith(DEFEATED)) defeatedEnemies.push(mark.slice(DEFEATED.length));
     else flags.push(mark);
   }
-  const quest = story.quests[LANTERN_ROAD] ?? 'new';
+  // When each quest last reached a gated step (or its first): waits count from it.
+  const gateAt = story.gateAt;
   // A place this build can't draw never stops the load: the hero wakes at the village spawn.
   let at: { area: string; wildsRegion?: string; position: { x: number; y: number } } = { ...areaOfPlace(place.area), position: { x: place.x, y: place.y } };
   try {
@@ -103,7 +94,8 @@ export function gameStateOf(p: PlayerState): GameState {
   return validateSave({
     ...createNewGame(),
     ...at,
-    quest,
+    quests: { ...story.quests },
+    ...(Object.keys(gateAt).length ? { questGateAt: { ...gateAt } } : {}),
     hp: vitals.hp,
     maxHp: vitals.maxHp,
     mana: vitals.mana,
@@ -136,6 +128,8 @@ export type Prediction =
 
 export interface PredictContext {
   profile: HabiticaProfile | null;
+  /** The clock a predicted gate time is stamped with (Unix seconds; defaults to the device's). */
+  now?: number;
 }
 
 /** `content/vitals.json` fall recovery (B): a quarter of max HP, half of max mana, rounded up. */
@@ -157,16 +151,9 @@ const unique = (list: string[], item: string): string[] => (list.includes(item) 
 /** One predict function per operation. Unknown or unpredictable operations change nothing. */
 export function predict(state: GameState, op: Prediction, ctx: PredictContext): GameState {
   switch (op.kind) {
-    case 'quest-step': {
-      const event = STEP_EVENT[op.to];
-      if (op.quest !== LANTERN_ROAD || !event) return state;
-      try {
-        return advanceQuest(state, event);
-      } catch {
-        // Not the next step from here: the answer decides.
-        return state;
-      }
-    }
+    case 'quest-step':
+      // Not the next step from here: the answer decides.
+      return reachStep(state, op.quest, op.to, ctx.now ?? Math.floor(Date.now() / 1000)) ?? state;
     case 'mark':
       if (op.mark.startsWith(FOUND)) return { ...state, discoveries: unique(state.discoveries, op.mark.slice(FOUND.length)) };
       if (op.mark.startsWith(DEFEATED)) return { ...state, defeatedEnemies: unique(state.defeatedEnemies, op.mark.slice(DEFEATED.length)) };

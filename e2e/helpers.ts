@@ -454,7 +454,7 @@ export async function holdUntil(page: Page, key: string, check: () => Promise<bo
 }
 
 /**
- * The quest stage as the server holds it for this browser's session (the
+ * The lantern road's stage as the server holds it for this browser's session (the
  * journey lives in the world, not on the device). Read the way the client
  * reads it: the contract header, and the parser's projection.
  */
@@ -465,7 +465,8 @@ export async function expectStage(page: Page, stage: string): Promise<void> {
     .poll(async () => {
       const res = await page.request.get('/api/state', CONTRACT)
       if (!res.ok()) return undefined
-      return parseState(await res.json())?.state?.quest
+      const quests = parseState(await res.json())?.state?.quests
+      return quests ? (quests['lantern-road'] ?? 'new') : undefined
     }, { timeout: 10_000, message: `the server's quest stage is ${stage}` })
     .toBe(stage)
 }

@@ -1,8 +1,11 @@
 /**
- * The pinned "How do I…?" guide (src/lib/guides.ts): one per device, in
- * localStorage. While one is pinned (and not done), the goal line, its
- * needle and the edge glow follow its current step instead of the story.
- * Also builds the GuideContext from what this session knows.
+ * The pin (docs/design/indoors.md 5.5): one slot per player and device, in
+ * localStorage, holding `quest:<id>` or `guide:<id>`. Pinning one unpins
+ * the other. While a quest or a "How do I…?" guide (src/lib/guides.ts) is
+ * pinned and open, the goal line, its needle and the edge glow follow its
+ * next step; with nothing pinned (or a done or locked pin) they follow the
+ * road's current quest. Also builds the GuideContext and the quest talks'
+ * context from what this session knows.
  */
 import { bus, EV } from './events.ts'
 import type { Session } from './session.ts'
@@ -13,33 +16,51 @@ import { itemsFor } from './items.ts'
 import { villageFor } from './village.ts'
 import { itemDef } from '../lib/items.ts'
 import { HEARTH_RECIPES } from '../lib/workshop.ts'
+import { nextStep, questById, questStatus, roadQuest, type QuestWhere } from '../lib/quests.ts'
+import type { QuestTalkContext } from '../content/quests/index.ts'
+import type { GuideWhere } from '../content/guides.ts'
 
 /** One pin per player and world on this device (src/game/held.ts deviceKey). */
 // `fingersnap:` is the game's old name, kept so saved pins load.
 let key = 'fingersnap:pinned-guide'
 
+/** A stored slot, or a bare guide id from before quests could be pinned. */
 function load(): string | null {
   try {
     const v = localStorage.getItem(key)
-    return v && guideById(v) ? v : null
+    if (!v) return null
+    if (v.startsWith('quest:')) return questById(v.slice(6)) ? v : null
+    const g = v.startsWith('guide:') ? v.slice(6) : v
+    return guideById(g) ? `guide:${g}` : null
   } catch {
     return null
   }
 }
 
-export const pinned = { id: load() }
+/** The slot: `quest:<id>`, `guide:<id>` or null. */
+export const pinned = { slot: load() }
 
-/** Pin a guide (null unpins). EV.guidePin tells the HUD and the scene. */
-export function setPinned(id: string | null): void {
-  if (pinned.id === id) return
-  pinned.id = id
+/** The pinned guide's id (null: a quest or nothing is pinned). */
+export function pinnedGuide(): string | null {
+  return pinned.slot?.startsWith('guide:') ? pinned.slot.slice(6) : null
+}
+
+/** The pinned quest's id (null: a guide or nothing is pinned). */
+export function pinnedQuest(): string | null {
+  return pinned.slot?.startsWith('quest:') ? pinned.slot.slice(6) : null
+}
+
+/** Pin a quest or a guide by slot (null unpins). EV.guidePin tells the HUD and the scene. */
+export function setPinned(slot: string | null): void {
+  if (pinned.slot === slot) return
+  pinned.slot = slot
   try {
-    if (id) localStorage.setItem(key, id)
+    if (slot) localStorage.setItem(key, slot)
     else localStorage.removeItem(key)
   } catch {
     /* kept for this visit */
   }
-  bus.emit(EV.guidePin, { id })
+  bus.emit(EV.guidePin, { id: slot })
 }
 
 /** Read this player's pin in this world (when a session starts). */
@@ -47,8 +68,8 @@ export function usePinFor(session: Session): void {
   const k = deviceKey('fingersnap:pinned-guide', session)
   if (k === key) return
   key = k
-  pinned.id = load()
-  bus.emit(EV.guidePin, { id: pinned.id })
+  pinned.slot = load()
+  bus.emit(EV.guidePin, { id: pinned.slot })
 }
 
 /**
@@ -95,6 +116,48 @@ export function guideContext(session: Session): GuideContext {
 
 /** The pinned guide's progress now (null: none pinned). */
 export function pinnedProgress(session: Session): GuideProgress | null {
-  const g = pinned.id ? guideById(pinned.id) : null
+  const id = pinnedGuide()
+  const g = id ? guideById(id) : null
   return g ? guideProgress(g, guideContext(session)) : null
+}
+
+/** What the quest talks can see now (src/content/quests/index.ts). */
+export function questContext(session: Session): QuestTalkContext {
+  return {
+    quests: session.quests,
+    needs: session.needs,
+    gate: (quest) => session.gateContext(quest),
+    pinned: pinned.slot,
+    connected: session.needs.habitica
+  }
+}
+
+/** The pinned quest, while it's open (a done or locked pin falls back to the road). */
+export function pinnedOpenQuest(session: Session): string | null {
+  const id = pinnedQuest()
+  const q = id ? questById(id) : undefined
+  return q && questStatus(q, session.quests, session.needs) === 'open' ? q.id : null
+}
+
+/** What the needle follows: a pinned guide's step, else a quest step's `where` (the pin's, or the road's). */
+export type GoalTarget = { kind: 'guide'; where: GuideWhere | null } | { kind: 'quest'; quest: string; where: QuestWhere }
+
+/** The guide's step is re-read twice a second at most (it reads the item and home models). */
+let guideAt = -1
+let guideCache: GoalTarget | null = null
+
+export function goalTarget(session: Session): GoalTarget | null {
+  if (pinnedGuide()) {
+    const now = performance.now()
+    if (guideAt < 0 || now - guideAt >= 500) {
+      guideAt = now
+      const p = pinnedProgress(session)
+      guideCache = p && !p.done && !p.locked && p.current !== null ? { kind: 'guide', where: p.steps[p.current].where } : null
+    }
+    if (guideCache) return guideCache
+  }
+  const id = pinnedOpenQuest(session) ?? roadQuest(session.quests)?.id
+  const q = id ? questById(id) : undefined
+  const where = q ? nextStep(q, session.quests)?.where : undefined
+  return q && where ? { kind: 'quest', quest: q.id, where } : null
 }

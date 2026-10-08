@@ -62,15 +62,24 @@ export function vectors() {
   const mapping = Object.values(FIXTURES_BY_KEY).map(f => ({ payload: { success: true, data: f.user }, result: validateHabiticaProfile(toHabiticaProfile(f.user, gearStatsFor)) }));
   return { xp, sync, spend, welcome, mapping };
 }
+/**
+ * A state in the Go rules' shape: one `quest` (the lantern road's stage) in
+ * place of the quest record. TODO(A2): drop once `rules.State` keeps quests by id.
+ */
+function legacyState(s: Record<string, unknown>): Record<string, unknown> {
+  if (!('quests' in s)) return s;
+  return Object.fromEntries(Object.entries(s).map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
+}
 /** Deduplicate immutable state fields while retaining self-contained JSON. */
 export const serializeVectors = () => {
-  const defaults = createNewGame();
+  const defaults = legacyState(createNewGame() as unknown as Record<string, unknown>);
   function compact(value: unknown): unknown {
     if (Array.isArray(value)) return value.map(compact);
     if (value && typeof value === 'object') {
-      const obj = value as Record<string, unknown>;
+      let obj = value as Record<string, unknown>;
       if (obj.version === 1 && obj.position && Array.isArray(obj.inventory)) {
-        const patch = Object.fromEntries(Object.entries(obj).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(defaults[k as keyof GameState])));
+        obj = legacyState(obj);
+        const patch = Object.fromEntries(Object.entries(obj).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(defaults[k])));
         return { $state: patch };
       }
       return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, compact(v)]));

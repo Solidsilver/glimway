@@ -22,7 +22,9 @@
   } from './game/events'
   import { ui } from './ui/store.svelte'
   import { Session } from './game/session'
-  import { questObjective, type GameState, type QuestStage } from './lib/state'
+  import type { GameState } from './lib/state'
+  import { parseRef, questById, questTitle, nextStep, SIGNPOST, trigger } from './lib/quests'
+  import { questGoal, roadGoal } from './content/quests/index'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
   import { type ResidentsMetPayload } from './game/residents'
@@ -85,7 +87,7 @@
   import { EMOTES } from './content/presence'
   import { accountCopy, leaseCopy } from './content/connected'
   import { watchPlayInsets, type Docks } from './ui/play-insets'
-  import { pinnedProgress, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
+  import { goalTarget, pinned, pinnedOpenQuest, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
 
   type Phase = 'loading' | 'title' | 'playing'
@@ -116,20 +118,12 @@
   let session = $state<Session | null>(null)
   const touch = isTouchFirst()
 
-  /** Quest beats: the ribbon that celebrates each step of the story. */
-  const QUEST_BEATS: Partial<Record<QuestStage, { eyebrow: string; title: string }>> = {
-    accepted: { eyebrow: 'Quest accepted', title: 'The Lantern Road' },
-    'clue-found': { eyebrow: 'Clue found', title: 'The Closure Mark' },
-    'guardian-defeated': { eyebrow: 'Settled', title: 'The Warden Rests' },
-    'lantern-lit': { eyebrow: 'The light returns', title: 'A Flame on the Hill' }
-  }
-
   /** A journey's line on a title-screen Continue card: where, what next, how long played. */
   function journeyLine(s: GameState): { place: string; goal: string; time: string } {
     const mins = Math.floor(s.playSeconds / 60)
     return {
       place: areaInfo(displayArea(s)).name,
-      goal: questObjective(s.quest),
+      goal: roadGoal(s.quests).objective,
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
   }
@@ -162,16 +156,20 @@
     }
     const onQuest = (p: QuestPayload) => {
       // The first snapshot after load is a reading, not a change.
-      const changed = ui.questKnown && ui.quest.stage !== p.stage
+      const known = ui.questKnown
       ui.quest = p
       ui.questKnown = true
-      if (!changed) return
-      if (p.stage === 'complete') {
+      if (!known || !p.quest || !p.step) return
+      if (p.quest === 'lantern-road' && p.step === 'complete') {
         ui.endingOpen = true
         return
       }
-      const beat = QUEST_BEATS[p.stage as QuestStage]
-      if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.short ?? p.objective })
+      // A step's moment (src/lib/quests.ts): the ribbon, with what comes next.
+      const reached = parseRef(`${p.quest}:${p.step}`)
+      const moment = reached?.step.moment
+      if (!moment) return
+      const next = questGoal(reached.quest, session?.quests ?? {})
+      ui.banner({ kind: 'quest', eyebrow: moment.eyebrow, title: moment.title, body: next?.short ?? p.short ?? p.objective })
     }
     const onArea = (p: Pick<AreaPayload, 'areaId'>) => {
       const info = areaInfo(p.areaId)
@@ -643,10 +641,26 @@
 
   /** Nothing else is asking for the player's attention: a notice (the party prompt…) may show. */
   const promptClear = $derived(!blocked(layers, BLOCKS.notices))
-  /** The journal page to open on (the HUD's pinned goal opens "How do I…?"). */
-  let journalTab = $state<'road' | 'papers' | 'guides'>('road')
+  /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
+  let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
+  /** A quest to put at the top of the Quests page (the opening while its note waits). */
+  let journalFocus = $state<string | null>(null)
   $effect(() => {
-    if (panel !== 'journal') journalTab = 'road'
+    if (panel !== 'journal') {
+      journalTab = 'quests'
+      journalFocus = null
+    }
+  })
+  // Opening the journal is a trigger (`open: journal`, the opening's note).
+  $effect(() => {
+    if (panel !== 'journal' || !session) return
+    const s = session
+    const signpost = questById(SIGNPOST)
+    if (signpost && trigger(nextStep(signpost, s.quests)?.do, 'open') === 'journal') {
+      journalTab = 'quests'
+      journalFocus = SIGNPOST
+    }
+    s.questTrigger('open', 'journal')
   })
 
   /**
@@ -659,23 +673,44 @@
     usePinFor(s)
     const read = () => {
       recordGuideSteps(s)
+      s.checkQuests()
       const p = pinnedProgress(s)
       if (p && p.done) {
         ui.toast({ text: `Done: ${p.guide.title}.`, icon: 'check' })
         setPinned(null)
         return
       }
-      const next = p && !p.locked && p.current !== null
+      const guide = p && !p.locked && p.current !== null
         ? { id: p.guide.id, title: p.guide.title, step: p.steps[p.current].text, index: p.current, count: p.steps.length }
         : null
-      if (JSON.stringify(next) !== JSON.stringify(ui.goalLine.guide)) ui.goalLine = { guide: next }
+      // A pinned quest leads while it's open; a done one says so and unpins.
+      const pinnedId = pinnedQuest()
+      const pq = pinnedId ? questById(pinnedId) : undefined
+      if (pq && s.quests[pq.id] !== undefined && !nextStep(pq, s.quests)) {
+        ui.toast({ text: `Done: ${questTitle(pq)}.`, icon: 'check' })
+        setPinned(null)
+        return
+      }
+      const openId = pinnedOpenQuest(s)
+      const oq = openId ? questById(openId) : undefined
+      const goal = oq ? questGoal(oq, s.quests) : null
+      const quest = oq && goal ? { id: oq.id, title: questTitle(oq), step: goal.short, objective: goal.objective } : null
+      const target = goalTarget(s)
+      const next = { guide, quest, journal: target?.kind === 'quest' && target.where.ui === 'journal' }
+      if (JSON.stringify(next) !== JSON.stringify(ui.goalLine)) ui.goalLine = next
     }
     read()
     const t = setInterval(read, 1000)
     bus.on(EV.guidePin, read)
+    bus.on(EV.quest, read)
+    // Playtests (src/game/dev-hooks.ts): the quest record, the pin and what the needle follows, read-only.
+    const w = window as unknown as Record<string, unknown>
+    if (import.meta.env.DEV) w.__fsQuests = () => ({ quests: { ...s.quests }, gateAt: { ...s.state.questGateAt }, pin: pinned.slot, goal: goalTarget(s) })
     return () => {
       clearInterval(t)
       bus.off(EV.guidePin, read)
+      bus.off(EV.quest, read)
+      if (import.meta.env.DEV) delete w.__fsQuests
     }
   })
 
@@ -755,7 +790,7 @@
       <WorldMove {session} target={m.target} home={m.home} leave={m.leave ?? false} view={m.view} arriving={m.arriving} onMoved={(res) => account.onMoved(res)} onHere={() => account.onHere()} onCancel={() => (account.moving = null)} />
     {/if}
     {#if panel === 'journal'}
-      <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} />
+      <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} focus={journalFocus} />
     {:else if panel === 'library'}
       <LibraryPanel {session} onClose={() => toggle('library')} />
     {:else if panel === 'shop'}

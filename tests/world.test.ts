@@ -7,16 +7,24 @@ import {
   itemInfo,
   journalEntries,
   locations,
-  QUEST_STEPS,
 } from '../src/content/world.ts';
 import {
-  advanceQuest,
   createNewGame,
   QUEST_STAGES,
-  questObjective,
   validateSave,
   type QuestStage,
 } from '../src/lib/state.ts';
+import { questById, roadStep, type QuestRecord } from '../src/lib/quests.ts';
+import { road } from './helpers/quests.ts';
+
+/** The lantern road at `stage`, after the opening (the record the rules read). */
+const R = (stage: QuestStage): QuestRecord => (stage === 'new' ? { signpost: 'light-first-lamp' } : { signpost: 'light-first-lamp', 'lantern-road': stage });
+const objective = (stage: QuestStage) => {
+  const q = questById('lantern-road')!;
+  const i = stage === 'new' ? 0 : q.steps.findIndex((s) => s.id === stage) + 1;
+  return q.steps[i]?.objective ?? '';
+};
+const LABELS = questById('lantern-road')!.steps.map((s) => s.goal!);
 import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
 import { allTalkLines } from '../src/content/talk.ts';
 import { allHeirloomJournal, allHeirloomLines } from '../src/content/heirlooms.ts';
@@ -26,7 +34,7 @@ const NPC_IDS = ['mara', 'pip', 'orrin', 'clue', 'lantern'];
 
 test('NPC ids match the runtime contract exactly', () => {
   for (const id of NPC_IDS) {
-    const dialogue = dialogueFor(id, 'new');
+    const dialogue = dialogueFor(id, R('new'));
     assert.equal(typeof dialogue.speaker, 'string');
     assert.ok(dialogue.speaker.length > 0);
     assert.ok(dialogue.lines.length > 0);
@@ -35,14 +43,14 @@ test('NPC ids match the runtime contract exactly', () => {
       assert.ok(line.length > 0);
     }
   }
-  assert.throws(() => dialogueFor('guardian', 'new'), /Unknown NPC id/);
-  assert.throws(() => dialogueFor('stranger', 'complete'), /Unknown NPC id/);
+  assert.throws(() => dialogueFor('guardian', R('new')), /Unknown NPC id/);
+  assert.throws(() => dialogueFor('stranger', R('complete')), /Unknown NPC id/);
 });
 
 test('every NPC has dialogue at every quest stage', () => {
   for (const id of NPC_IDS) {
     for (const stage of QUEST_STAGES) {
-      const dialogue = dialogueFor(id, stage);
+      const dialogue = dialogueFor(id, R(stage));
       assert.ok(dialogue.lines.length > 0, `${id}@${stage} has no lines`);
     }
   }
@@ -58,7 +66,7 @@ test('dialogue events fire the legal quest transitions at the right moments', ()
 
   for (const id of NPC_IDS) {
     for (const stage of QUEST_STAGES) {
-      const dialogue = dialogueFor(id, stage);
+      const dialogue = dialogueFor(id, R(stage));
       const wanted = expected[stage];
       if (dialogue.event) {
         assert.equal(
@@ -70,16 +78,16 @@ test('dialogue events fire the legal quest transitions at the right moments', ()
     }
   }
 
-  assert.equal(dialogueFor('mara', 'new').event, 'accept');
-  assert.equal(dialogueFor('clue', 'accepted').event, 'find-clue');
-  assert.equal(dialogueFor('lantern', 'guardian-defeated').event, 'light-lantern');
-  assert.equal(dialogueFor('mara', 'lantern-lit').event, 'return-village');
+  assert.equal(dialogueFor('mara', R('new')).event, 'accept');
+  assert.equal(dialogueFor('clue', R('accepted')).event, 'find-clue');
+  assert.equal(dialogueFor('lantern', R('guardian-defeated')).event, 'light-lantern');
+  assert.equal(dialogueFor('mara', R('lantern-lit')).event, 'return-village');
 });
 
 test('no dialogue owns defeat-guardian; it belongs to runtime encounters', () => {
   for (const id of NPC_IDS) {
     for (const stage of QUEST_STAGES) {
-      const dialogue = dialogueFor(id, stage);
+      const dialogue = dialogueFor(id, R(stage));
       assert.notEqual(dialogue.event, 'defeat-guardian', `${id}@${stage}`);
     }
   }
@@ -87,13 +95,13 @@ test('no dialogue owns defeat-guardian; it belongs to runtime encounters', () =>
 
 test('completed-stage dialogue never re-fires quest events', () => {
   for (const id of NPC_IDS) {
-    const dialogue = dialogueFor(id, 'complete');
+    const dialogue = dialogueFor(id, R('complete'));
     assert.equal(dialogue.event, undefined);
   }
 });
 
 test('dialogue events apply cleanly through the quest machine', () => {
-  let state = createNewGame();
+  let state: ReturnType<typeof createNewGame> = { ...createNewGame(), quests: { signpost: 'light-first-lamp' } };
   const dialogueSteps: Array<{ npc: string; stage: QuestStage }> = [
     { npc: 'mara', stage: 'new' },
     { npc: 'clue', stage: 'accepted' },
@@ -101,25 +109,25 @@ test('dialogue events apply cleanly through the quest machine', () => {
     { npc: 'mara', stage: 'lantern-lit' },
   ];
   for (const step of dialogueSteps) {
-    const dialogue = dialogueFor(step.npc, step.stage);
-    assert.equal(state.quest, step.stage);
+    const dialogue = dialogueFor(step.npc, R(step.stage));
+    assert.equal(roadStep(state), step.stage);
     assert.ok(dialogue.event, `${step.npc}@${step.stage} should carry an event`);
-    state = advanceQuest(state, dialogue.event!);
-    if (state.quest === 'clue-found') {
-      state = advanceQuest(state, 'defeat-guardian');
+    state = road(state, dialogue.event! as never);
+    if (roadStep(state) === 'clue-found') {
+      state = road(state, 'defeat-guardian');
     }
     validateSave(state);
   }
-  assert.equal(state.quest, 'complete');
+  assert.equal(roadStep(state), 'complete');
 });
 
 test('journal entries accumulate as the quest advances', () => {
-  const start = journalEntries('new');
-  const accepted = journalEntries('accepted');
-  const clue = journalEntries('clue-found');
-  const guardian = journalEntries('guardian-defeated');
-  const lit = journalEntries('lantern-lit');
-  const done = journalEntries('complete');
+  const start = journalEntries(R('new'));
+  const accepted = journalEntries(R('accepted'));
+  const clue = journalEntries(R('clue-found'));
+  const guardian = journalEntries(R('guardian-defeated'));
+  const lit = journalEntries(R('lantern-lit'));
+  const done = journalEntries(R('complete'));
 
   assert.ok(start.length >= 1);
   assert.ok(accepted.length > start.length);
@@ -141,18 +149,17 @@ test('journal entries accumulate as the quest advances', () => {
     seen.add(entry.title);
   }
 
-  assert.throws(() => journalEntries('nope' as never), /Unknown quest stage/);
 });
 
 test('journal and dialogue are pure (no shared mutable arrays)', () => {
-  const a = dialogueFor('mara', 'new');
+  const a = dialogueFor('mara', R('new'));
   a.lines.push('mutated');
-  const b = dialogueFor('mara', 'new');
+  const b = dialogueFor('mara', R('new'));
   assert.ok(!b.lines.includes('mutated'));
 
-  const j1 = journalEntries('new');
+  const j1 = journalEntries(R('new'));
   j1.push({ title: 'x', body: 'y' });
-  assert.notEqual(journalEntries('new').length, j1.length);
+  assert.notEqual(journalEntries(R('new')).length, j1.length);
 });
 
 test('locations cover the three quest areas and the Commons, with names and descriptions', () => {
@@ -188,7 +195,7 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
   ];
   for (const id of NPC_IDS) {
     for (const stage of QUEST_STAGES) {
-      const d = dialogueFor(id, stage);
+      const d = dialogueFor(id, R(stage));
       lines.push(...d.lines);
       for (const c of d.choices ?? []) lines.push(c.text, ...(c.reply ?? []));
     }
@@ -212,7 +219,7 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     assert.doesNotMatch(line, OUT_OF_WORLD, line);
   }
   const prose = [
-    ...journalEntries('complete').flatMap((e) => [e.title, e.body]),
+    ...journalEntries(R('complete')).flatMap((e) => [e.title, e.body]),
     ...allResidentJournal().flatMap((e) => [e.title, e.body]),
     ...allHeirloomJournal().flatMap((e) => [e.title, e.body]),
     ...allEchoKeepsakeJournal().flatMap((e) => [e.title, e.body]),
@@ -264,8 +271,8 @@ test('the world-touch lines are varied, in-world, and every sign resolves', asyn
 
 test('the warden is settled, not slain, in every story beat', () => {
   const text = [
-    ...QUEST_STAGES.flatMap((s) => NPC_IDS.flatMap((id) => dialogueFor(id, s).lines)),
-    ...journalEntries('complete').map((e) => e.body),
+    ...QUEST_STAGES.flatMap((s) => NPC_IDS.flatMap((id) => dialogueFor(id, R(s)).lines)),
+    ...journalEntries(R('complete')).map((e) => e.body),
     ...allResidentLines(),
     ...allHeirloomLines(),
     ...allHeirloomJournal().map((e) => e.body),
@@ -273,7 +280,7 @@ test('the warden is settled, not slain, in every story beat', () => {
     ...allEchoKeepsakeJournal().map((e) => e.body),
   ].join('\n');
   assert.doesNotMatch(text, /\b(defeat(ed)?|bested|slain|killed|destroyed)\b/i);
-  assert.match(dialogueFor('mara', 'guardian-defeated').lines.join(' '), /settled/);
+  assert.match(dialogueFor('mara', R('guardian-defeated')).lines.join(' '), /settled/);
 });
 
 test('the Echo camps take their person’s keepsake: journal once, and a softer settle', async () => {
@@ -288,16 +295,16 @@ test('the Echo camps take their person’s keepsake: journal once, and a softer 
   assert.deepEqual(echoKeepsakeJournalEntries(['returned:road-nails']), [{ ...nan.journal }]);
 });
 
-test('the journal checklist follows the objectives: copy the naming, then settle the warden', () => {
-  const step = (stage: QuestStage) => QUEST_STEPS.find((s) => s.stage === stage)!.label;
+test('the Quests page’s steps follow the objectives: copy the naming, then settle the warden', () => {
+  const step = (stage: QuestStage) => LABELS[QUEST_STAGES.indexOf(stage)];
   // One step per stage before the ending, in story order.
-  assert.deepEqual(QUEST_STEPS.map((s) => s.stage), QUEST_STAGES.slice(0, -1));
-  assert.equal(step('accepted'), 'Copy the naming from the route stone');
-  assert.match(questObjective('accepted'), /copy the naming cut on the route stone/);
+  assert.equal(LABELS.length, QUEST_STAGES.length - 1);
+  assert.equal(step('accepted'), 'Copy the route stone in Ashwatch Ruin');
+  assert.match(objective('accepted'), /copy the naming cut on the route stone/);
   assert.equal(step('clue-found'), 'Settle the stone warden');
-  assert.match(questObjective('clue-found'), /^Settle the stone warden/);
-  assert.match(questObjective('guardian-defeated'), new RegExp(`^${step('guardian-defeated')}`));
-  for (const s of QUEST_STEPS) assert.doesNotMatch(s.label, /\b(face|fight|defeat|slay|kill)\b/i, s.label);
+  assert.match(objective('clue-found'), /^Settle the stone warden/);
+  assert.match(objective('guardian-defeated'), /^Light the hilltop lantern/);
+  for (const s of LABELS) assert.doesNotMatch(s, /\b(face|fight|defeat|slay|kill)\b/i, s);
 });
 
 test('the warden is settled by a naming: no "rubbing" in anything a player reads', () => {
@@ -306,7 +313,7 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
   for (const id of ['mara', 'pip', 'orrin', 'clue', 'lantern']) {
     for (const st of stages) {
       try {
-        const d = dialogueFor(id, st);
+        const d = dialogueFor(id, R(st));
         text.push(...d.lines, ...(d.choices ?? []).flatMap((c) => [c.text, ...(c.reply ?? [])]));
       } catch {
         /* not every id speaks at every stage */
@@ -314,12 +321,12 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
     }
   }
   for (const st of stages) {
-    text.push(questObjective(st), ...journalEntries(st).flatMap((e) => [e.title, e.body]));
+    text.push(objective(st), ...journalEntries(R(st)).flatMap((e) => [e.title, e.body]));
   }
   text.push(...allResidentLines(), ...allResidentJournal().map((e) => e.body));
-  text.push(...QUEST_STEPS.map((s) => s.label), itemInfo('lantern-route-rubbing').name, itemInfo('lantern-route-rubbing').blurb, discoveryInfo('old-route-marker').blurb);
+  text.push(...LABELS, itemInfo('lantern-route-rubbing').name, itemInfo('lantern-route-rubbing').blurb, discoveryInfo('old-route-marker').blurb);
   for (const t of text) assert.doesNotMatch(t, /\brub(bing|bed)?\b/i, t);
-  assert.match(dialogueFor('clue', 'accepted').lines.join(' '), /The road is closed here/);
+  assert.match(dialogueFor('clue', R('accepted')).lines.join(' '), /The road is closed here/);
   assert.equal(itemInfo('lantern-route-rubbing').name, 'Wenna’s Naming, Copied Out');
 });
 

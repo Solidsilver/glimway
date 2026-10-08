@@ -1,4 +1,6 @@
-import type { AreaId, GameState, QuestEvent, QuestStage } from '../lib/state.ts';
+import type { AreaId, GameState, QuestStage } from '../lib/state.ts';
+import { LANTERN_ROAD, QUESTS, reachedIndex, type QuestRecord } from '../lib/quests.ts';
+import { SIGNPOST_BETWEEN } from './quests/signpost.ts';
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER, echoKeepsakeJournalEntries } from './echoes.ts';
@@ -25,9 +27,15 @@ export interface DialogueChoice {
 export interface Dialogue {
   speaker: string;
   lines: string[];
-  event?: QuestEvent;
+  /**
+   * Taken when the talk closes: one of the lantern road's scene events
+   * (`accept`…), or a `quest:step` ref (./quests/index.ts).
+   */
+  event?: string;
   /** Optional replies offered after the last line; every choice keeps the event. */
   choices?: DialogueChoice[];
+  /** Which rule spoke (its `quest:step` ref): "heard it" is remembered per rule (src/game/heard.ts). */
+  key?: string;
 }
 
 export interface ItemInfo {
@@ -172,7 +180,21 @@ export function areaInfo(areaId: AreaId): LocationInfo {
   return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };
 }
 
-type DialogueRule = Dialogue & { forStages: QuestStage[] };
+/**
+ * A rule speaks when any of its `when` refs holds: `quest:step` when that's
+ * the step the quest has reached, `quest:new` before it starts. Rules are
+ * tried in order, so a later, wider rule catches what the earlier ones
+ * don't (the lantern road's `new` after the opening's own).
+ */
+type DialogueRule = Dialogue & { when: string[] };
+
+/** Does `ref` hold for this record (exactly that step reached; `:new` for none)? */
+function whenHolds(ref: string, record: QuestRecord): boolean {
+  const i = ref.indexOf(':');
+  const quest = ref.slice(0, i);
+  const step = ref.slice(i + 1);
+  return step === 'new' ? record[quest] === undefined : record[quest] === step;
+}
 
 /**
  * NPC and interaction ids used by the runtime (docs/runtime-contract.md):
@@ -187,12 +209,56 @@ type DialogueRule = Dialogue & { forStages: QuestStage[] };
 const DIALOGUE: Record<string, DialogueRule[]> = {
   mara: [
     {
-      forStages: ['new'],
+      when: ['lantern-road:accepted'],
       speaker: 'Mara',
       lines: [
-        "You came up the Low Road? Then the carters weren't fibbing. Welcome to Hearthwick. Mind the ladder — Orrin is resetting the signpost again.",
-        "I'm Mara Hale. My grandmother Wenna kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years. Longer than I've been alive.",
-        "I'd walk it myself, but the oil ledger doesn't keep itself. Would you go? East gate, Brackenwood, the ruin, up to the shrine. Tell me what's left of it.",
+        "East gate, then the Brackenwood path. Follow the route stones. The moss on them grows where lamps burned, and Gran swore they still point true.",
+        'If you get turned around, ask Pip. That child knows every shortcut, mostly because they have taken all of them.',
+      ],
+    },
+    {
+      when: ['lantern-road:clue-found'],
+      speaker: 'Mara',
+      lines: [
+        'You copied the words off the Ashwatch stone. Two weaves and a break, and a naming in a Keeper’s hand.',
+        'Gran drew that mark inside the ledger cover and never once said what it meant.',
+        "So the road wasn't abandoned. She closed it. On purpose. ...Noted.",
+        "There's a warden on the shrine path, Orrin says. Be careful up there. Careful, not slow.",
+      ],
+    },
+    {
+      when: ['lantern-road:guardian-defeated'],
+      speaker: 'Mara',
+      lines: [
+        "You settled the warden? Orrin is going to pretend he never doubted you. He did. Loudly. Over breakfast.",
+        "The shrine is past the arch. The flint should be on the ledge where it's always been. Light it. I want to see the hill the way she saw it.",
+      ],
+    },
+    {
+      when: ['lantern-road:lantern-lit'],
+      speaker: 'Mara',
+      lines: [
+        "I can see it from here. A point of gold on the hill, right where her ledger says. Thirty years dark, and one traveler. I'm glad. I am.",
+        "I just need to sit a minute. Then come find me in the square. I want all of it, from the beginning.",
+      ],
+      event: 'return-village',
+    },
+    {
+      when: ['lantern-road:complete'],
+      speaker: 'Mara',
+      lines: [
+        "The square hasn't looked like this in thirty years. Lamp on the post, and half the village pretending they aren't staying out late.",
+        "Gran kept a line in the ledger: 'A road is a promise people keep renewing.' It took someone off the Low Road to renew it. Noted, Gran.",
+        "There's a page at the back of her ledger I still can't read. Keeper's script. Not tonight. But I think I'm nearer to wanting to.",
+      ],
+    },
+    {
+      when: ['signpost:light-first-lamp'],
+      speaker: 'Mara',
+      lines: [
+        "There's a lamp burning past the east gate, and I can see it from my crate. That one's yours. The village noticed. I noticed.",
+        "My grandmother Wenna kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years. Longer than I've been alive.",
+        "I'd walk it myself, but the oil ledger doesn't keep itself. Would you go on? Past your lamp, the ruin, up to the shrine. Tell me what's left of it.",
       ],
       event: 'accept',
       choices: [
@@ -210,53 +276,20 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['accepted'],
+      when: ['signpost:see-mara'],
       speaker: 'Mara',
-      lines: [
-        "East gate, then the Brackenwood path. Follow the route stones. The moss on them grows where lamps burned, and Gran swore they still point true.",
-        'If you get turned around, ask Pip. That child knows every shortcut, mostly because they have taken all of them.',
-      ],
+      lines: [...SIGNPOST_BETWEEN.maraLamp],
     },
     {
-      forStages: ['clue-found'],
+      // The opening, before Orrin has sent you to her (and anything the rules above miss).
+      when: ['lantern-road:new'],
       speaker: 'Mara',
-      lines: [
-        'You copied the words off the Ashwatch stone. Two weaves and a break, and a naming in a Keeper’s hand.',
-        'Gran drew that mark inside the ledger cover and never once said what it meant.',
-        "So the road wasn't abandoned. She closed it. On purpose. ...Noted.",
-        "There's a warden on the shrine path, Orrin says. Be careful up there. Careful, not slow.",
-      ],
-    },
-    {
-      forStages: ['guardian-defeated'],
-      speaker: 'Mara',
-      lines: [
-        "You settled the warden? Orrin is going to pretend he never doubted you. He did. Loudly. Over breakfast.",
-        "The shrine is past the arch. The flint should be on the ledge where it's always been. Light it. I want to see the hill the way she saw it.",
-      ],
-    },
-    {
-      forStages: ['lantern-lit'],
-      speaker: 'Mara',
-      lines: [
-        "I can see it from here. A point of gold on the hill, right where her ledger says. Thirty years dark, and one traveler. I'm glad. I am.",
-        "I just need to sit a minute. Then come find me in the square. I want all of it, from the beginning.",
-      ],
-      event: 'return-village',
-    },
-    {
-      forStages: ['complete'],
-      speaker: 'Mara',
-      lines: [
-        "The square hasn't looked like this in thirty years. Lamp on the post, and half the village pretending they aren't staying out late.",
-        "Gran kept a line in the ledger: 'A road is a promise people keep renewing.' It took someone off the Low Road to renew it. Noted, Gran.",
-        "There's a page at the back of her ledger I still can't read. Keeper's script. Not tonight. But I think I'm nearer to wanting to.",
-      ],
+      lines: [...SIGNPOST_BETWEEN.maraOpening],
     },
   ],
   pip: [
     {
-      forStages: ['new'],
+      when: ['lantern-road:new'],
       speaker: 'Pip',
       lines: [
         "New face! I'm Pip Penhallow, runner. I run messages between the square and the mill, which is the fastest job in the world and also the only one.",
@@ -264,7 +297,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['accepted'],
+      when: ['lantern-road:accepted'],
       speaker: 'Pip',
       lines: [
         "You're walking the old road! Halfway along there's a fallen oak with a notch cut in it. That's the fork. Take the uphill side.",
@@ -273,7 +306,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['clue-found'],
+      when: ['lantern-road:clue-found'],
       speaker: 'Pip',
       lines: [
         "Two weaves and a break! And words! That's the skipping game. 'Warden, Warden, do not frown, say the words and sit down!'",
@@ -282,7 +315,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['guardian-defeated'],
+      when: ['lantern-road:guardian-defeated'],
       speaker: 'Pip',
       lines: [
         "You settled it? It sat down? In the game the Leader has to groan and sit and be a stone. Did it groan? Please say it groaned.",
@@ -290,7 +323,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['lantern-lit'],
+      when: ['lantern-road:lantern-lit'],
       speaker: 'Pip',
       lines: [
         "There's a light on the hill! There is a LIGHT on the HILL! Did it make a sound? Lanterns in stories always make a sound.",
@@ -298,7 +331,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['complete'],
+      when: ['lantern-road:complete'],
       speaker: 'Pip',
       lines: [
         "People keep walking to the east gate to stand in the glow and pretend they're checking the fence. Nine so far. I'm counting for science.",
@@ -308,15 +341,25 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
   ],
   orrin: [
     {
-      forStages: ['new'],
+      when: ['signpost:meet-orrin', 'signpost:fetch-finger'],
+      speaker: 'Orrin',
+      lines: [...SIGNPOST_BETWEEN.orrinFetching],
+    },
+    {
+      when: ['signpost:bring-finger'],
+      speaker: 'Orrin',
+      lines: [...SIGNPOST_BETWEEN.orrinNoting],
+    },
+    {
+      when: ['lantern-road:new'],
       speaker: 'Orrin',
       lines: [
-        'Mind the shavings. And the ladder. The signpost? Three fingers off plumb. Frost heaves it. I reset it every spring. Same lean. Don’t ask.',
+        'Mind the shavings. Post’s holding: three fingers off plumb, east, the way it should be. Frost’ll have another go at it come spring. It always does.',
         "I'm Orrin. Built every bridge within a day of here, and complained about all of them. Here about the lantern road? Hm. Thought someone would come.",
       ],
     },
     {
-      forStages: ['accepted'],
+      when: ['lantern-road:accepted'],
       speaker: 'Orrin',
       lines: [
         "There's a warden on the shrine path. Drift-stone. Not cruel. Dutiful, which is worse. It doesn't care who you are. It cares where it stands.",
@@ -324,7 +367,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['clue-found'],
+      when: ['lantern-road:clue-found'],
       speaker: 'Orrin',
       lines: [
         "Let me see that. Aye. That's the closure mark, not a direction mark. Two weaves and a break. Cut after the Winter of Two Storms. Shut on purpose.",
@@ -334,7 +377,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['guardian-defeated'],
+      when: ['lantern-road:guardian-defeated'],
       speaker: 'Orrin',
       lines: [
         "Settled, is it. Thirty years on that path, and one traveler with a few good words and a stubborn jaw. I'm not impressed. I'm slightly impressed.",
@@ -342,7 +385,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['lantern-lit'],
+      when: ['lantern-road:lantern-lit'],
       speaker: 'Orrin',
       lines: [
         "There's a light on the hill. Don't make a thing of it. I'm not making a thing of it.",
@@ -350,7 +393,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       ],
     },
     {
-      forStages: ['complete'],
+      when: ['lantern-road:complete'],
       speaker: 'Orrin',
       lines: [
         'Bracket held. Lamp post in the square is lit again, the signpost still leans, and the world is in its proper order.',
@@ -360,14 +403,14 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
   ],
   clue: [
     {
-      forStages: ['new', 'clue-found', 'guardian-defeated', 'lantern-lit', 'complete'],
+      when: ['lantern-road:new', 'lantern-road:clue-found', 'lantern-road:guardian-defeated', 'lantern-road:lantern-lit', 'lantern-road:complete'],
       speaker: 'Route Marker',
       lines: [
         "A weathered route stone, its pattern furred with keeper's moss. Without knowing what you're looking for, it's hard to say where carving ends and wear begins.",
       ],
     },
     {
-      forStages: ['accepted'],
+      when: ['lantern-road:accepted'],
       speaker: 'Route Marker',
       lines: [
         "A route stone stands in the alcove, its pattern half under keeper's moss — but the cut lines are still deep enough to copy.",
@@ -380,14 +423,14 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
   ],
   lantern: [
     {
-      forStages: ['new', 'accepted', 'clue-found'],
+      when: ['lantern-road:new', 'lantern-road:accepted', 'lantern-road:clue-found'],
       speaker: 'Hilltop Lantern',
       lines: [
         'The shrine lantern hangs cold in its iron frame, soot-streaked and patient. The stone warden stands across the path to the ledge, arms out.',
       ],
     },
     {
-      forStages: ['guardian-defeated'],
+      when: ['lantern-road:guardian-defeated'],
       speaker: 'Hilltop Lantern',
       lines: [
         'The warden rests now, its chest-lamp guttered to a coal. On the ledge: flint, steel, a dry wick, and words scratched in a small, neat hand.',
@@ -397,7 +440,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       event: 'light-lantern',
     },
     {
-      forStages: ['lantern-lit', 'complete'],
+      when: ['lantern-road:lantern-lit', 'lantern-road:complete'],
       speaker: 'Hilltop Lantern',
       lines: [
         'The lantern burns steady, laying a warm path down the hillside and over the dark weave of Brackenwood.',
@@ -450,18 +493,6 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   ],
 };
 
-/**
- * The Journal's quest checklist: one line per step, worded like the
- * objective for that stage (src/lib/state.ts questObjective).
- */
-export const QUEST_STEPS: { stage: QuestStage; label: string }[] = [
-  { stage: 'new', label: 'Hear Mara out' },
-  { stage: 'accepted', label: 'Copy the naming from the route stone' },
-  { stage: 'clue-found', label: 'Settle the stone warden' },
-  { stage: 'guardian-defeated', label: 'Light the hilltop lantern' },
-  { stage: 'lantern-lit', label: 'Tell Mara the road is lit' }
-];
-
 const STAGE_ORDER: QuestStage[] = [
   'new',
   'accepted',
@@ -472,12 +503,12 @@ const STAGE_ORDER: QuestStage[] = [
 ];
 
 /**
- * Dialogue for one NPC/interaction at the given quest stage. Optional `event`
- * fires when the runtime finishes presenting these lines: only the legal next
- * quest event is ever attached, so dialogue cannot skip or repeat stages.
- * Throws for unknown NPC ids.
+ * Dialogue for one NPC/interaction for the save's quest record: the first
+ * rule whose `when` holds. Optional `event` fires when the runtime finishes
+ * presenting these lines: only the legal next step is ever attached, so
+ * dialogue cannot skip or repeat steps. Throws for unknown NPC ids.
  */
-export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
+export function dialogueFor(npcId: string, record: QuestRecord): Dialogue {
   const rules = DIALOGUE[npcId];
   if (!rules) {
     throw new Error(
@@ -486,15 +517,14 @@ export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
         .join(', ')}`,
     );
   }
-  const rule = rules.find((r) => r.forStages.includes(stage));
+  const rule = rules.find((r) => r.when.some((ref) => whenHolds(ref, record)));
   if (!rule) {
-    throw new Error(
-      `No dialogue defined for NPC ${JSON.stringify(npcId)} at quest stage ${JSON.stringify(stage)}`,
-    );
+    throw new Error(`No dialogue defined for NPC ${JSON.stringify(npcId)} at ${JSON.stringify(record)}`);
   }
   const dialogue: Dialogue = {
     speaker: rule.speaker,
     lines: [...rule.lines],
+    key: rule.when.find((ref) => whenHolds(ref, record)),
   };
   if (rule.event) {
     dialogue.event = rule.event;
@@ -505,26 +535,35 @@ export function dialogueFor(npcId: string, stage: QuestStage): Dialogue {
   return dialogue;
 }
 
+/** Every rule's `when` refs (tests check each names a real quest step). */
+export function dialogueRefs(): string[] {
+  return Object.values(DIALOGUE).flatMap((rules) => rules.flatMap((r) => r.when));
+}
+
 /**
- * Cumulative journal entries unlocked up to and including the given stage.
- * Entries are ordered by unlock stage and never shrink as the quest advances.
+ * Cumulative journal entries for the save's quest record: the lantern
+ * road's pages up to the step reached (the opening's notes after the
+ * first), then the notes of every village quest step reached
+ * (src/lib/quests.ts). Entries never shrink as quests advance.
  * With the save's flags, the residents you have met (./residents.ts) join
- * in after the entries of the stage you met them at.
+ * in after the entries of the road step you met them at.
  */
-export function journalEntries(stage: QuestStage, flags: readonly string[] = []): JournalEntry[] {
-  const stageIndex = STAGE_ORDER.indexOf(stage);
-  if (stageIndex === -1) {
-    throw new Error(
-      `Unknown quest stage ${JSON.stringify(stage)}; expected one of ${STAGE_ORDER.map((s) => JSON.stringify(s)).join(', ')}`,
-    );
-  }
+export function journalEntries(record: QuestRecord, flags: readonly string[] = []): JournalEntry[] {
+  const road = QUESTS.find((q) => q.id === LANTERN_ROAD)!;
+  const stageIndex = reachedIndex(road, record) + 1;
+  const notes = (quest: (typeof QUESTS)[number]): JournalEntry[] =>
+    quest.steps.slice(0, reachedIndex(quest, record) + 1).flatMap((s) => (s.note ? [{ title: s.note.title, body: s.note.body }] : []));
   const entries: JournalEntry[] = [];
   for (let i = 0; i <= stageIndex; i += 1) {
     for (const entry of JOURNAL_BY_STAGE[STAGE_ORDER[i]]) {
       entries.push({ title: entry.title, body: entry.body });
     }
     entries.push(...residentJournal(flags, STAGE_ORDER[i]));
+    // The opening's notes come between arriving and Mara's request.
+    if (i === 0) for (const q of QUESTS) if (q.line === 'road' && q.id !== LANTERN_ROAD) entries.push(...notes(q));
   }
+  // The village's quests (the lantern road keeps its pages above).
+  for (const q of QUESTS) if (q.line !== 'road') entries.push(...notes(q));
   entries.push(...heirloomJournalEntries(flags));
   // The keepsakes with no living owner, left at their Echo camps.
   entries.push(...echoKeepsakeJournalEntries(flags));

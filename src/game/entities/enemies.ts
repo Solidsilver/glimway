@@ -23,6 +23,7 @@ import type { Effects } from './fx'
 import { WARDEN, WardenEncounter } from './warden'
 import { curatedToRestore } from '../rollback'
 import { Creatures } from './creatures'
+import { roadStep } from '../../lib/quests'
 
 export interface Enemy {
   id: string
@@ -118,8 +119,8 @@ export class EnemySystem {
     if (world.areaId === 'ruin' && world.shrine) {
       // The warden is always on its path: standing in its pose before you
       // carry the mark, awake while you do, resting in its pose afterwards.
-      if (state.quest === 'clue-found') this.warden.spawnGuardian(false)
-      else this.warden.placeRestingWarden(state.quest === 'new' || state.quest === 'accepted' ? 'dormant' : 'settled')
+      if (roadStep(state) === 'clue-found') this.warden.spawnGuardian(false)
+      else this.warden.placeRestingWarden(roadStep(state) === 'new' || roadStep(state) === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
   }
@@ -136,7 +137,7 @@ export class EnemySystem {
   reconcile(state: GameState): void {
     const standing = new Set(this._enemies.filter((e) => !e.dead).map((e) => e.id))
     for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
-    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(state.quest)
+    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(roadStep(state))
   }
 
   /** Take an enemy off the list (killed, or the warden settled). */
