@@ -9,7 +9,6 @@ import {
   embersBetween,
   grantWelcome,
   lifetimeXp,
-  questEmbers,
   spendEmbers,
   xpToNextLevel,
 } from '../src/lib/embers.ts';
@@ -102,12 +101,6 @@ test('syncs outside the village credit nothing and keep the baseline', () => {
   assert.equal(away.status, 'rejected');
   assert.equal(away.save.state.embers, 0);
   assert.equal(away.save.importedProfile, before);
-});
-
-test('quest beats grant a few embers so demo players can try spending', () => {
-  assert.equal(questEmbers('accept'), 0);
-  assert.ok(questEmbers('defeat-guardian') > 0);
-  assert.ok(questEmbers('return-village') > 0);
 });
 
 test('grantWelcome is idempotent', () => {

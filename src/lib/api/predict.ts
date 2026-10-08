@@ -96,6 +96,7 @@ export function gameStateOf(p: PlayerState): GameState {
     ...at,
     quests: { ...story.quests },
     ...(Object.keys(gateAt).length ? { questGateAt: { ...gateAt } } : {}),
+    ...(Object.keys(story.reachedAt).length ? { questReachedAt: { ...story.reachedAt } } : {}),
     hp: vitals.hp,
     maxHp: vitals.maxHp,
     mana: vitals.mana,

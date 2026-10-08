@@ -116,11 +116,11 @@ export const VITALS = validateVitals(vitalsRaw);
 
 /** The same find rules the server embeds, including server-only grant sources. */
 export function validatePapers(value: unknown): Map<string, PaperRule> {
-  const doc = value as { papers: { id: string; collection: string; source: string; rule: PaperRule }[] };
+  const doc = value as { papers: { id: string; collection: string; source: string; section: string; rule: PaperRule }[] };
   if (!doc || !Array.isArray(doc.papers) || !doc.papers.length) throw new Error('invalid papers');
   const rules = new Map<string, PaperRule>();
   for (const p of doc.papers) {
-    if (!p || typeof p.id !== 'string' || !p.id || p.id.length > 122 || rules.has(p.id) || !p.collection || !p.rule || p.rule.kind !== p.source || !['library-start','placed','quest','gift','commons','wilds-poi','wilds-chest','village-project','turning','echo'].includes(p.source)) throw new Error('invalid paper');
+    if (!p || typeof p.id !== 'string' || !p.id || p.id.length > 122 || rules.has(p.id) || !p.collection || !['stories','histories','recipes','field-notes'].includes(p.section) || !p.rule || p.rule.kind !== p.source || !['library-start','placed','quest','gift','commons','wilds-poi','wilds-chest','village-project','turning','echo'].includes(p.source)) throw new Error('invalid paper');
     const r = p.rule;
     if (p.source === 'placed' && (!r.area || !Number.isSafeInteger(r.tx) || r.tx! < 0 || !Number.isSafeInteger(r.ty) || r.ty! < 0) || ['quest','gift'].includes(p.source) && !r.stage || p.source === 'village-project' && !r.project || p.source === 'commons' && !r.fact || p.source === 'wilds-poi' && !r.poi && !r.site || p.source === 'wilds-chest' && r.tier !== 3 || p.source === 'echo' && !r.member || p.source === 'turning' && !r.unbuilt && !r.fact && !r.site) throw new Error('invalid paper find rule');
     rules.set(p.id, r);

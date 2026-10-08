@@ -3,7 +3,8 @@
   import { pinned, questContext, setPinned } from '../game/guide-pin'
   import { journalEntries } from '../content/world'
   import { bus, EV } from '../game/events'
-  import { questShelves, type QuestCard } from './quests-page'
+  import { noteAsPaper, questNotes, questShelves, type QuestCard } from './quests-page'
+  import PaperReader from './PaperReader.svelte'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -13,7 +14,8 @@
    * The Quests page (docs/design/indoors.md 5.4): the road, the village and
    * crafts as shelves; each quest you've come across as a card with its next
    * step, the steps reached and the rest kept back. Pin one, and the goal
-   * line and its needle lead to its next step. Then the notes, newest first.
+   * line and its needle lead to its next step. Then the Notes (the steps'
+   * notes, newest first, read like papers) and the journal's other pages.
    */
   let { session, focus = null }: { session: Session; focus?: string | null } = $props()
 
@@ -45,7 +47,25 @@
   const firstOpen = $derived(shelves.flatMap((s) => s.open).find((c) => c.status === 'open')?.id ?? null)
   const isOpen = (c: QuestCard) => (open ?? firstOpen) === c.id
 
-  // Newest first: the latest page is what the player wants to read.
+  // The steps' notes, newest first; one opens in the papers' reader.
+  const notes = $derived.by(() => {
+    void ui.quest
+    return questNotes(session.quests, session.state.questReachedAt)
+  })
+  let reading = $state<string | null>(null)
+  let notesEl = $state<HTMLElement | null>(null)
+  let lastNote: string | null = null
+  const current = $derived(reading ? notes.find((n) => n.id === reading) : undefined)
+  function openNote(id: string): void {
+    lastNote = id
+    reading = id
+  }
+  function back(): void {
+    reading = null
+    // Back to the row the player came from.
+    queueMicrotask(() => notesEl?.querySelector<HTMLElement>(`[data-note="${lastNote}"]`)?.focus())
+  }
+  // The journal's other pages (the road's, the people you've met, keepsakes), newest first.
   const entries = $derived.by(() => {
     void ui.quest
     return [...journalEntries(session.quests, ui.residentsMet)].reverse()
@@ -53,7 +73,7 @@
   const illustration = $derived(
     ui.area.areaId === 'ruin' ? '/assets/fingersnap/packed/fingersnap-shrine.webp' : '/assets/fingersnap/packed/fingersnap-village.webp'
   )
-  const lead = $derived(ui.goalLine.quest ? { eyebrow: ui.goalLine.quest.title, text: ui.goalLine.quest.objective } : { eyebrow: ui.quest.stage === 'complete' && !ui.quest.short ? 'All done' : 'Current goal', text: ui.quest.objective })
+  const lead = $derived(ui.goalLine.quest ? { eyebrow: ui.goalLine.quest.title, text: ui.goalLine.quest.objective } : { eyebrow: ui.quest.stage === 'complete' ? 'All done' : 'Current goal', text: ui.quest.objective })
 
   const SHELF_ICONS: Record<string, { art: string; name: string }> = {
     road: { art: 'shelf-icon-road', name: 'lantern' },
@@ -66,6 +86,9 @@
   }
 </script>
 
+{#if current}
+  <PaperReader paper={noteAsPaper(current)} onBack={back} backLabel="Quests" />
+{:else}
 <div class="quests">
   <div class="hero">
     <img src={illustration} alt="" />
@@ -132,7 +155,25 @@
     </section>
   {/each}
 
-  <h3 class="section-title">Notes</h3>
+  {#if notes.length}
+    <h3 class="section-title">Notes</h3>
+    <ul class="notes" bind:this={notesEl}>
+      {#each notes as n (n.id)}
+        <li>
+          <button type="button" class="row" data-note={n.id} onclick={() => openNote(n.id)}>
+            <span class="ico"><Icon name="scroll" size={16} /></span>
+            <span class="txt">
+              <span class="name">{n.title}</span>
+              <span class="desc">{n.questTitle}</span>
+            </span>
+            <span class="go" aria-hidden="true">›</span>
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
+  <h3 class="section-title">Journal</h3>
   {#each entries as entry, i (entry.title + '\n' + entry.body)}
     <article class="note" class:latest={i === 0}>
       <h4>{entry.title}</h4>
@@ -140,6 +181,7 @@
     </article>
   {/each}
 </div>
+{/if}
 
 <style>
   .quests {
@@ -373,6 +415,51 @@
     margin: 0;
     font-size: 14.5px;
     line-height: 1.55;
+  }
+  /* The Notes: rows like the Papers tab's, each opening the reader. */
+  .notes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .notes .row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    min-height: 44px;
+    text-align: left;
+    font-family: var(--font-body);
+    font-size: 14px;
+    letter-spacing: 0;
+    border-radius: 9px;
+    box-shadow: 0 2px 0 var(--wood-dark);
+  }
+  .notes .ico {
+    flex: none;
+    color: var(--wood);
+  }
+  .notes .txt {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+  }
+  .notes .name {
+    font-weight: 800;
+    color: var(--wood-dark);
+  }
+  .notes .desc {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+  .notes .go {
+    flex: none;
+    font-family: var(--font-display);
+    color: var(--wood);
   }
   .sr {
     position: absolute;

@@ -47,7 +47,12 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect(journal.getByRole('tab', { name: 'Quests' })).toHaveAttribute('aria-selected', 'true')
   await expect(journal.locator('[data-quest]').first()).toHaveAttribute('data-quest', 'signpost')
   await expect.poll(() => step(page, 'signpost')).toBe('note-lean')
-  await expect(journal.locator('article.note').first()).toContainText('Three Fingers off Plumb')
+  // The step's note is the newest of the Notes, the wisp's under it; it reads like a paper.
+  await expect(journal.locator('[data-note]')).toHaveText([/Three Fingers off Plumb/, /A Wisp on the Finger/])
+  await journal.locator('[data-note="note:signpost:note-lean"]').click()
+  await expect(journal.getByRole('article', { name: 'Three Fingers off Plumb' })).toContainText('I don’t think it’s the frost.')
+  await journal.getByRole('button', { name: /Quests/ }).first().click()
+  await expect(journal.locator('[data-note="note:signpost:note-lean"]')).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('journal-button')).not.toHaveClass(/glow/)
 

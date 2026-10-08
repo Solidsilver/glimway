@@ -64,11 +64,12 @@ export function vectors() {
 }
 /**
  * A state in the Go rules' shape: one `quest` (the lantern road's stage) in
- * place of the quest record. TODO(A2): drop once `rules.State` keeps quests by id.
+ * place of the quest record, and no quest gate times (the rules don't keep
+ * them). TODO(A2): drop once `rules.State` keeps quests by id.
  */
 function legacyState(s: Record<string, unknown>): Record<string, unknown> {
   if (!('quests' in s)) return s;
-  return Object.fromEntries(Object.entries(s).map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
+  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'questGateAt').map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
 }
 /** Deduplicate immutable state fields while retaining self-contained JSON. */
 export const serializeVectors = () => {

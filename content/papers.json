@@ -4,6 +4,7 @@
       "id": "ashwatch-ledger-excerpts",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "quest",
+      "section": "histories",
       "rule": {
         "kind": "quest",
         "stage": "clue-found",
@@ -15,6 +16,7 @@
       "id": "to-the-bench-across",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "commons",
+      "section": "field-notes",
       "rule": {
         "kind": "commons",
         "area": "commons",
@@ -25,6 +27,7 @@
       "id": "oak-hall-edict-on-the-stealing-of-shade",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -33,6 +36,7 @@
       "id": "elara-quill-field-notes-turncaps",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "gift",
+      "section": "field-notes",
       "rule": {
         "kind": "gift",
         "stage": "complete",
@@ -44,6 +48,7 @@
       "id": "the-reed-and-roll-mill-chant",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "library-start",
+      "section": "stories",
       "rule": {
         "kind": "library-start"
       }
@@ -52,6 +57,7 @@
       "id": "count-house-tally-book-scrap",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "village-project",
+      "section": "histories",
       "rule": {
         "kind": "village-project",
         "project": "north-bridge"
@@ -61,6 +67,7 @@
       "id": "note-in-the-linseed-box",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "village-project",
+      "section": "histories",
       "rule": {
         "kind": "village-project",
         "project": "mill-wheel"
@@ -70,6 +77,7 @@
       "id": "the-hame-polishers-list",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "commons",
+      "section": "histories",
       "rule": {
         "kind": "commons",
         "area": "commons",
@@ -80,6 +88,7 @@
       "id": "adas-oil-receipts",
       "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
       "source": "village-project",
+      "section": "histories",
       "rule": {
         "kind": "village-project",
         "project": "cooley-window-fund"
@@ -89,6 +98,7 @@
       "id": "keepers-twists-recipe-card",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "gift",
+      "section": "recipes",
       "rule": {
         "kind": "gift",
         "stage": "complete",
@@ -100,6 +110,7 @@
       "id": "joss-penhallow-letter-map-case",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "turning",
+      "section": "histories",
       "rule": {
         "kind": "turning",
         "unbuilt": true
@@ -109,6 +120,7 @@
       "id": "annotated-flora-of-the-eastern-reaches",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "woodland",
@@ -120,6 +132,7 @@
       "id": "tarrow-requisition-reply-hinges",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "village-project",
+      "section": "histories",
       "rule": {
         "kind": "village-project",
         "project": "orrins-hinges"
@@ -129,6 +142,7 @@
       "id": "silas-pine-offcut-scrap",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "commons",
+      "section": "field-notes",
       "rule": {
         "kind": "commons",
         "area": "commons",
@@ -139,6 +153,7 @@
       "id": "pip-copybook-warden-corrections",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "village",
@@ -150,6 +165,7 @@
       "id": "forty-one-and-holding",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "village-project",
+      "section": "field-notes",
       "rule": {
         "kind": "village-project",
         "project": "mill-wheel"
@@ -159,6 +175,7 @@
       "id": "the-boy-who-ran-faster-than-the-wick",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "library-start",
+      "section": "stories",
       "rule": {
         "kind": "library-start"
       }
@@ -167,6 +184,7 @@
       "id": "why-the-tide-fox-has-one-long-ear",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "placed",
+      "section": "stories",
       "rule": {
         "kind": "placed",
         "area": "village",
@@ -178,6 +196,7 @@
       "id": "the-mudrise-fleet-lullaby",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "library-start",
+      "section": "stories",
       "rule": {
         "kind": "library-start"
       }
@@ -186,6 +205,7 @@
       "id": "the-ashwatch-skipping-game",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "placed",
+      "section": "stories",
       "rule": {
         "kind": "placed",
         "area": "ruin",
@@ -197,6 +217,7 @@
       "id": "elaras-note-in-pips-copybook",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "village",
@@ -208,6 +229,7 @@
       "id": "betts-flat-verse",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "echo",
+      "section": "stories",
       "rule": {
         "kind": "echo",
         "member": "bett"
@@ -217,6 +239,7 @@
       "id": "the-twelve-wicks",
       "collection": "Bedtime Stories and Cautionary Tales of the Reaches",
       "source": "library-start",
+      "section": "stories",
       "rule": {
         "kind": "library-start"
       }
@@ -225,6 +248,7 @@
       "id": "failed-grid-of-sector-4",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "wilds-poi",
+      "section": "field-notes",
       "rule": {
         "kind": "wilds-poi",
         "poi": "old-shrine"
@@ -234,6 +258,7 @@
       "id": "joss-penhallow-field-notes-pencil-map",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "wilds-poi",
+      "section": "field-notes",
       "rule": {
         "kind": "wilds-poi",
         "poi": "mossy-arch",
@@ -245,6 +270,7 @@
       "id": "log-of-the-bark-wind-hewn",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -253,6 +279,7 @@
       "id": "guild-of-cartographers-invoice",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -261,6 +288,7 @@
       "id": "a-salting-drift-table",
       "collection": "The Liar's Art: Cartography and Exploration in the Reaches",
       "source": "turning",
+      "section": "field-notes",
       "rule": {
         "kind": "turning",
         "site": "reeds",
@@ -272,6 +300,7 @@
       "id": "wandering-orchard-magistrate-ruling",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -280,6 +309,7 @@
       "id": "orrins-drift-slap-foundation-standard",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "commons",
+      "section": "recipes",
       "rule": {
         "kind": "commons",
         "area": "commons",
@@ -290,6 +320,7 @@
       "id": "will-of-elias-fenn",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "placed",
+      "section": "histories",
       "rule": {
         "kind": "placed",
         "area": "ruin",
@@ -301,6 +332,7 @@
       "id": "deed-of-sale-commons-plot",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "commons",
+      "section": "histories",
       "rule": {
         "kind": "commons",
         "area": "commons",
@@ -311,6 +343,7 @@
       "id": "the-blind-routes-smugglers-ledger",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "wilds-chest",
+      "section": "field-notes",
       "rule": {
         "kind": "wilds-chest",
         "tier": 3
@@ -320,6 +353,7 @@
       "id": "mary-fenns-cairn-slip",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "wilds-poi",
+      "section": "histories",
       "rule": {
         "kind": "wilds-poi",
         "site": "cairn",
@@ -330,6 +364,7 @@
       "id": "notices-from-the-board",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "turning",
+      "section": "histories",
       "rule": {
         "kind": "turning",
         "fact": "board",
@@ -340,6 +375,7 @@
       "id": "the-carters-compact",
       "collection": "Blood, Ink, and Timber: Legal and Architectural Records of the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -348,6 +384,7 @@
       "id": "remedies-of-the-oaker-hills",
       "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
       "source": "library-start",
+      "section": "recipes",
       "rule": {
         "kind": "library-start"
       }
@@ -356,6 +393,7 @@
       "id": "sallow-ford-chirurgeons-field-book",
       "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "ruin",
@@ -367,6 +405,7 @@
       "id": "dangers-of-the-white-quiet-pamphlet",
       "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -375,6 +414,7 @@
       "id": "nan-greer-trail-journal",
       "collection": "Blood, Sap, and Memory: Medical and Survival Texts of the Reaches",
       "source": "turning",
+      "section": "field-notes",
       "rule": {
         "kind": "turning",
         "site": "given",
@@ -386,6 +426,7 @@
       "id": "principia-memoria-excerpt",
       "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
       "source": "quest",
+      "section": "field-notes",
       "rule": {
         "kind": "quest",
         "stage": "lantern-lit"
@@ -395,6 +436,7 @@
       "id": "fauna-of-the-slack-water",
       "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "woodland",
@@ -406,6 +448,7 @@
       "id": "barge-knee-yields-report",
       "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
       "source": "placed",
+      "section": "field-notes",
       "rule": {
         "kind": "placed",
         "area": "woodland",
@@ -417,6 +460,7 @@
       "id": "weir-effect-survey-draft",
       "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
       "source": "turning",
+      "section": "field-notes",
       "rule": {
         "kind": "turning",
         "fact": "turning",
@@ -427,6 +471,7 @@
       "id": "the-jackdaws-display",
       "collection": "Scholarly Texts of the Reaches: Science, Taxonomy, and Misunderstanding",
       "source": "wilds-poi",
+      "section": "field-notes",
       "rule": {
         "kind": "wilds-poi",
         "site": "nest",
@@ -437,6 +482,7 @@
       "id": "brackenwood-cutters-handbook",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "library-start",
+      "section": "recipes",
       "rule": {
         "kind": "library-start"
       }
@@ -445,6 +491,7 @@
       "id": "orrins-workshop-rules",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "gift",
+      "section": "field-notes",
       "rule": {
         "kind": "gift",
         "stage": "complete",
@@ -456,6 +503,7 @@
       "id": "twoford-almanac-silas-copy",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "library-start",
+      "section": "histories",
       "rule": {
         "kind": "library-start"
       }
@@ -464,6 +512,7 @@
       "id": "marens-notes-on-hubs-and-tyres",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "village-project",
+      "section": "recipes",
       "rule": {
         "kind": "village-project",
         "project": "wheel-wick-guildhouse"
@@ -473,6 +522,7 @@
       "id": "dorrits-second-span",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "wilds-poi",
+      "section": "field-notes",
       "rule": {
         "kind": "wilds-poi",
         "site": "plank"
@@ -482,6 +532,7 @@
       "id": "tams-ox-words",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "echo",
+      "section": "field-notes",
       "rule": {
         "kind": "echo",
         "member": "tam"
@@ -491,6 +542,7 @@
       "id": "eleven-days",
       "collection": "The Builders and the Breakers: Tradecraft of the Reaches",
       "source": "quest",
+      "section": "histories",
       "rule": {
         "kind": "quest",
         "stage": "guardian-defeated"

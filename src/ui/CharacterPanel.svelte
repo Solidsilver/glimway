@@ -15,7 +15,7 @@
   // stays on the hero.
   let { session, onClose, onInventory }: { session: Session; onClose: () => void; onInventory: () => void } = $props()
 
-  // Tracks quest/inventory changes: advanceQuest replaces the state object.
+  // Tracks quest/inventory changes: a quest step (session.reachStep) replaces the state object.
   const snapshot = $derived(session.state)
   const profile = $derived(ui.importedProfile)
   const kit = $derived(withCharm(getCombatKit(profile), snapshot.inventory))

@@ -581,28 +581,22 @@ export function dialogueRefs(): string[] {
 
 /**
  * Cumulative journal entries for the save's quest record: the lantern
- * road's pages up to the step reached (the opening's notes after the
- * first), then the notes of every village quest step reached
- * (src/lib/quests.ts). Entries never shrink as quests advance.
- * With the save's flags, the residents you have met (./residents.ts) join
- * in after the entries of the road step you met them at.
+ * road's pages up to the step reached. Entries never shrink as quests
+ * advance. With the save's flags, the residents you have met
+ * (./residents.ts) join in after the entries of the road step you met them
+ * at. The quest steps' own notes are the Quests page's Notes
+ * (src/ui/quests-page.ts), not these.
  */
 export function journalEntries(record: QuestRecord, flags: readonly string[] = []): JournalEntry[] {
   const road = QUESTS.find((q) => q.id === LANTERN_ROAD)!;
   const stageIndex = reachedIndex(road, record) + 1;
-  const notes = (quest: (typeof QUESTS)[number]): JournalEntry[] =>
-    quest.steps.slice(0, reachedIndex(quest, record) + 1).flatMap((s) => (s.note ? [{ title: s.note.title, body: s.note.body }] : []));
   const entries: JournalEntry[] = [];
   for (let i = 0; i <= stageIndex; i += 1) {
     for (const entry of JOURNAL_BY_STAGE[STAGE_ORDER[i]]) {
       entries.push({ title: entry.title, body: entry.body });
     }
     entries.push(...residentJournal(flags, STAGE_ORDER[i]));
-    // The opening's notes come between arriving and Mara's request.
-    if (i === 0) for (const q of QUESTS) if (q.line === 'road' && q.id !== LANTERN_ROAD) entries.push(...notes(q));
   }
-  // The village's quests (the lantern road keeps its pages above).
-  for (const q of QUESTS) if (q.line !== 'road') entries.push(...notes(q));
   entries.push(...heirloomJournalEntries(flags));
   // The keepsakes with no living owner, left at their Echo camps.
   entries.push(...echoKeepsakeJournalEntries(flags));

@@ -81,5 +81,5 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
 
   // Her note in the journal.
   await page.keyboard.press('j')
-  await expect(page.getByRole('dialog', { name: 'Journal' }).locator('article.note').first()).toContainText('Set to Rise')
+  await expect(page.getByRole('dialog', { name: 'Journal' }).locator('[data-note]').first()).toHaveText(/Set to Rise/)
 })
