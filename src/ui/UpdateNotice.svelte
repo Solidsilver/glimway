@@ -11,9 +11,11 @@
   let { onReload }: { onReload: () => void } = $props()
 </script>
 
-<NoticeCard testid="update-notice" icon="sparkle" title={updateCopy.title}>
+<NoticeCard testid="update-notice" icon="sparkle" title={update.cause === 'contract' ? updateCopy.contractTitle : updateCopy.title}>
   {#snippet body()}
-    {#if update.held}
+    {#if update.cause === 'contract'}
+      <p data-testid="update-contract">{updateCopy.contractNote}</p>
+    {:else if update.held}
       <p data-testid="update-held">{update.held === 'offline' ? updateCopy.offline : updateCopy.unsaved}</p>
     {:else}
       <p>{updateCopy.note}</p>

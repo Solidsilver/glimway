@@ -1,13 +1,15 @@
+import contract from '../../../content/contract.json' with { type: 'json' };
 /**
  * The Hearthwick Library: one shared shelf per world.
  *
  * - The starting shelf (papers with source `library-start`) is content: every
- *   player, guest or connected, can read those from day one.
- * - Donations are the players' own. Guests (and connected players whose
- *   server has no library yet) keep theirs in the save as story flags
- *   `donated:<paperId>@<YYYY-MM-DD>`. Connected players share one shelf per
+ *   player can read those from day one.
+ * - Donations are the players' own. Connected players share one shelf per
  *   world through the server (contract below), with a local fallback when
  *   the server has no library.
+ * - The local half (donation flags in the save) is kept only because
+ *   game/papers.ts still calls it: TODO(C2), donations go through the
+ *   operation queue and the local half goes with it.
  *
  * Server contract (server/internal/api/library.go):
  *   GET  /api/library        → 200 { shelves: [{ paperId, donatedBy, donatedAt }] }
@@ -44,12 +46,12 @@ function isoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** The save flag recording a local donation. */
+/** The save flag recording a local donation. TODO(C2): goes with game/papers.ts. */
 export function donationFlag(paperId: string, when: Date): string {
   return `${DONATED_PREFIX}${paperId}@${isoDay(when)}`;
 }
 
-/** Local donations recorded in a save's flags (first per paper wins). */
+/** Local donations recorded in a save's flags (first per paper wins). TODO(C2): goes with game/papers.ts. */
 export function localDonations(flags: readonly string[], donor: string): ShelfEntry[] {
   const out: ShelfEntry[] = [];
   for (const f of flags) {
@@ -88,7 +90,7 @@ export function parseShelves(data: unknown): ShelfEntry[] | null {
   return out;
 }
 
-function parseEntry(row: unknown): ShelfEntry | null {
+export function parseEntry(row: unknown): ShelfEntry | null {
   if (!row || typeof row !== 'object') return null;
   const r = row as Record<string, unknown>;
   if (typeof r.paperId !== 'string' || !paperById(r.paperId)) return null;
@@ -101,14 +103,9 @@ function parseEntry(row: unknown): ShelfEntry | null {
 
 type RemoteLoad = { ok: true; shelves: ShelfEntry[] } | { ok: false; reason: 'unsupported' | 'offline' | 'error' };
 
-type DonateOutcome =
-  | { ok: true; entry: ShelfEntry }
-  | { ok: false; reason: 'already-shelved'; entry: ShelfEntry | null }
-  | { ok: false; reason: 'unsupported' | 'offline' | 'not-held' | 'unknown-paper' | 'signed-out' | 'error' };
-
+/** The shelf read. Donations are keyed operations through the link's outbox (game/papers.ts). */
 export interface RemoteLibrary {
   load(): Promise<RemoteLoad>;
-  donate(paperId: string, key: string): Promise<DonateOutcome>;
 }
 
 export interface RemoteLibraryOptions {
@@ -128,7 +125,7 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
     try {
       const res = await doFetch(`${baseUrl}${path}`, {
         method,
-        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: body === undefined ? { Accept: 'application/json', 'X-Glimway-Contract': String(contract.number) } : { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Glimway-Contract': String(contract.number) },
         body: body === undefined ? undefined : JSON.stringify(body),
         credentials: 'same-origin',
         cache: 'no-store',
@@ -151,11 +148,6 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
     }
   }
 
-  const code = (json: unknown): string => {
-    const e = (json as { error?: { code?: unknown } } | undefined)?.error;
-    return typeof e?.code === 'string' ? e.code : '';
-  };
-
   /** No library here: a 404/405/501, or an answer that is not JSON (an HTML fallback page). */
   const unsupported = (r: { status: number; json: unknown }) => r.status === 404 || r.status === 405 || r.status === 501 || (r.status < 300 && r.json === undefined);
 
@@ -165,26 +157,10 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
       if (r === 'offline') return { ok: false, reason: 'offline' };
       if (unsupported(r)) return { ok: false, reason: 'unsupported' };
       if (r.status >= 300) return { ok: false, reason: r.status >= 500 ? 'offline' : 'error' };
-      const shelves = parseShelves(r.json);
+      // `{ state, result: { shelves } }` from the mixed envelope; the bare shape too.
+      const json = r.json as { result?: unknown } | undefined;
+      const shelves = parseShelves(json && typeof json.result === 'object' && json.result !== null ? json.result : r.json);
       return shelves ? { ok: true, shelves } : { ok: false, reason: 'error' };
-    },
-    async donate(paperId, key) {
-      const r = await call('POST', '/api/library/donate', { paperId, key });
-      if (r === 'offline') return { ok: false, reason: 'offline' };
-      if (unsupported(r)) return { ok: false, reason: 'unsupported' };
-      if (r.status === 200 || r.status === 201) {
-        const entry = parseEntry((r.json as { entry?: unknown } | undefined)?.entry);
-        return entry ? { ok: true, entry } : { ok: false, reason: 'error' };
-      }
-      const c = code(r.json);
-      if (c === 'already-shelved') {
-        return { ok: false, reason: 'already-shelved', entry: parseEntry((r.json as { entry?: unknown } | undefined)?.entry) };
-      }
-      if (r.status === 401) return { ok: false, reason: 'signed-out' };
-      if (c === 'not-held' || r.status === 403) return { ok: false, reason: 'not-held' };
-      if (c === 'unknown-paper' || r.status === 422) return { ok: false, reason: 'unknown-paper' };
-      if (r.status >= 500) return { ok: false, reason: 'offline' };
-      return { ok: false, reason: 'error' };
     },
   };
 }

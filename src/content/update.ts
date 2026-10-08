@@ -8,6 +8,9 @@ export const updateCopy = {
   /** Reload held back: something hasn't saved yet. */
   offline: 'You’re offline, so your latest steps are only on this device. Reload once you’re back online.',
   unsaved: 'Your latest steps haven’t saved yet, so we didn’t reload. Try again in a moment.',
+  /** The world server refused this client's contract (design section 8). */
+  contractTitle: 'This page is older than the world server.',
+  contractNote: 'Reload to keep playing. Nothing can be written until you do.',
   /** The Menu's quiet line, linking to the changelog. */
   menuLine: (version: string) => `Glimway ${version}`,
   menuBuild: (build: string) => `build ${build}`,

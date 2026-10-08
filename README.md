@@ -5,24 +5,15 @@ lantern road, relight it, and let the progress you make on Habitica light the
 way: every 10 XP you earn there becomes an ember to spend in the world.
 "Glim" is an old word for a candle, so a glimway is a road of little lights.
 
-It runs in the browser (Svelte 5, TypeScript, Phaser 3, Vite), with an
-optional Go server for small invite-only worlds shared with friends.
+It runs in the browser (Svelte 5, TypeScript, Phaser 3, Vite) with a Go server
+for small invite-only worlds shared with friends. Every player signs in with
+their Habitica details and plays in a world: your class, gear, look and health
+come along, and the XP you earn on Habitica becomes embers. The server keeps
+the journey; there is no local-only play.
 
 **Glimway is not affiliated with or endorsed by Habitica.** It's a
 third-party tool that uses Habitica's public API and, with credit, Habitica's
 avatar art (see [Licences](#licences)).
-
-You can play three ways:
-
-- **As a guest.** No account, no server, no network requests. Everything
-  saves in your browser.
-- **As your Habitica hero.** Connect Habitica (read-only) and play as your own
-  character: your class, gear, look and health come along, and the XP you earn
-  on Habitica becomes embers.
-- **In a world.** If a Glimway server is running, sign in with the same
-  Habitica details to join an invite-only world with friends: homesteads,
-  shared Wilds, a shared library, village projects, mail, and seeing each
-  other walk around.
 
 ## How it was made
 
@@ -43,17 +34,18 @@ are shown unmodified, with credit, and are not AI-generated.
 
 ## Play
 
-- **Self-hosted:** follow [the self-hosting guide](docs/home-server.md). Guests can play locally; connected worlds require admission.
-- **On your own machine** (Node 24+):
+- **Self-hosted:** follow [the self-hosting guide](docs/home-server.md). Worlds are invite-only; the owner admits people.
+- **On your own machine** (Node 24+, Go 1.26+):
 
   ```sh
   git clone https://github.com/Solidsilver/glimway glimway
   cd glimway
   npm install
-  npm run dev        # http://localhost:5173, guest play
+  npm run server     # the world server on 127.0.0.1:8090
+  npm run dev        # http://localhost:5173
   ```
 
-  For connected play, run a local server too: see [Run it locally](#run-it-locally).
+  See [Run it locally](#run-it-locally). Without a server the title says so: the game plays only in a world.
 
 ## Deployment methods
 
@@ -74,15 +66,16 @@ The `X-Client` header identifies the tool's creator, never you.
 
 **Where your token goes.**
 
-- It stays in the tab's memory, and is never in saves, save codes, the
-  connected cache or logs.
+- It stays in the tab's memory, and is never in your journey, the connected
+  cache or logs.
 - **Remember on this device** is opt-in. If you tick it, the User ID and token
   are kept in this browser in their own IndexedDB database
-  (`fingersnap-credentials`, under the game's old name), apart from your save.
+  (`fingersnap-credentials`, under the game's old name), apart from your
+  journey.
   Script injected into the site could read them, so leave it off if you'd
   rather paste per visit. **Forget** deletes them, and Disconnect offers to.
-- **Signing in to a world** sends the token to the Glimway server once, at
-  login, so the server can make one read-only `GET /user` to prove the account
+- **Signing in to a world** sends the token to the Glimway server **once, at
+  login**, so the server can make one read-only `GET /user` to prove the account
   is yours. The server never stores, logs or returns it. Every later sync
   still goes from your browser to Habitica, and the browser reports the
   result to the server.
@@ -128,12 +121,12 @@ Every 10 XP you earn **on Habitica** becomes an ember the next time you sync.
 Each XP pays once: the game remembers the highest lifetime XP it has paid and
 credits only XP above it, so unchecking and re-checking a task pays nothing
 new. The first import pays a one-off welcome of 3 embers (not your past XP),
-and two story beats leave a few embers so guests can try spending them too.
+and two story beats leave a few embers to spend.
 
 | Where | Cost | What you get |
 |---|---|---|
 | Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana. At 0 HP an imported hero needs embers earned from XP. |
-| Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone, health for demo heroes |
+| Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone |
 | The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
 | Your bedroll or hearth at home (in a world) | 1 | Rest at your own place |
 | Silas in the Commons (in a world) | 15 / 30 + materials | Raise a cottage, then a workshop; furniture from 2 embers |
@@ -146,10 +139,8 @@ Rules: `src/lib/embers.ts` and `content/economy.json` (shared with the server).
 
 Hearthwick's east edge has a second gate, below the Brackenwood road, into
 **Hearthwick Commons**: a safe green with a well, a notice board, a lane of
-plots, and **Silas**, a retired carter who stakes the plots. Guests can walk
-the Commons and meet Silas; plots belong to people with a world.
-
-In a world, each member gets a plot. Talk to Silas to claim yours (a campsite,
+plots, and **Silas**, a retired carter who stakes the plots. Each member of a
+world gets a plot. Talk to Silas to claim yours (a campsite,
 free), then raise it:
 
 | Tier | Cost | What it adds |
@@ -182,9 +173,8 @@ shared between the browser and the server, with parity tests). In it:
 - **Fallen-hero lanterns**: fall in the Wilds and you leave a lantern behind;
   anyone in your world can relight it, and relighting a friend's pays amber.
 
-Guests can walk a fixed local Tangle and gather into their pack; their chest
-and point-of-interest claims last until the page reloads. In a world, claims,
-materials and lanterns are kept by the server and shared as described.
+Claims, materials and lanterns are kept by the server and shared by everyone
+in the world.
 
 ### The calendar and the Turning
 
@@ -211,9 +201,8 @@ them in the Journal's **Papers** tab (J).
 
 The **Hearthwick Library** is the small reading house in the village's
 south-west corner. Anyone can read every paper on its shelves. Donate a paper
-you've found to put it there: a guest's donations fill their own shelf; in a
-world, there is one shared shelf and the first donor's name stays with the
-paper.
+you've found to put it there: the world has one shared shelf, and the first
+donor's name stays with the paper.
 
 ### Village projects and mail (in a world)
 
@@ -238,8 +227,7 @@ and have no effect on play.
 
 ## Your Habitica character
 
-On a new game the title screen asks how you want to play: **Play as your
-Habitica hero** or **Wander as a guest**. The first opens a three-step connect
+The title screen opens a connect card, then the three-step connect
 guide (also in the Menu): where to find your User ID and API Token (website,
 iOS, Android), a paste step, and a card with your hero's name, class and
 level. You can paste both values at once: labeled text (`User ID: … API
@@ -248,7 +236,7 @@ order with a preview and a **Swap** button, and nothing is sent until you
 confirm. Guide copy lives in `src/content/connect-guide.ts`; the parser in
 `src/lib/habitica/paste.ts`.
 
-**Health.** Importing replaces the demo vitals once; later syncs credit
+**Health.** Importing brings your Habitica vitals once; later syncs credit
 genuine external HP/MP changes **exactly once** (damage plus an unchanged
 profile never refills), and only somewhere safe: Hearthwick, or the Commons
 (your cottage included). Imported vitals get no passive healing (lit road lanterns give them mana only). Defeat wakes you at
@@ -264,8 +252,8 @@ member can invite up to three friends at a time (five in all) from the Menu.
 Codes look like `amber-fox-river-lantern-moss-ivy-7392`; case, spaces and
 hyphens don't matter.
 
-- **First sign-in:** bring this device's journey into your world (story and
-  place carry over; embers come along as gifts, up to 30) or start fresh.
+- **First sign-in:** your journey begins in a world made for you (or your
+  party's, with a code).
 - **One place at a time:** if your journey is open in another tab or device,
   you're asked before taking over.
 - **Offline:** play goes on in the curated areas and saves on the device;
@@ -276,9 +264,6 @@ hyphens don't matter.
   you sign in again.
 - **Log out** in the Menu. Progress that hasn't reached the world yet stays on
   the device for your next sign-in.
-
-Guest play is unaffected: with no server (a static build) or without signing
-in, everything stays local exactly as before.
 
 ## Controls
 
@@ -311,8 +296,8 @@ devices; the layout is responsive with safe-area insets for phones.
 - **Panels:** Journal (the road and your papers), Character (vitals, stats,
   abilities, discoveries), Inventory (tabs for Tools, Supplies, Keepsakes, Home
   goods and Papers, with quest things under "For the road" and a "new" dot for
-  items this device hasn't seen), Menu (save codes for guests, your world and
-  invites, the Habitica connection, sound, controls), plus the Library, notice
+  items this device hasn't seen), Menu (your world and invites, the Habitica
+  connection, sound, controls), plus the Library, notice
   board, Silas's yard, workshop and mailbox in the world. Panels trap focus;
   hard choices use in-game confirms.
 - **Sound:** small procedural Web Audio cues (no files, no network). Toggle in
@@ -322,19 +307,12 @@ devices; the layout is responsive with safe-area insets for phones.
 
 ## Run it locally
 
-Requirements: Node 24+ (the unit tests run TypeScript directly) and, for the
-server, Go 1.26+.
-
-**Guest play only** (no server needed):
+Requirements: Node 24+ (the unit tests run TypeScript directly) and Go 1.26+.
+The game plays in a world, so the server runs alongside the dev server, in
+two terminals:
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173
-```
-
-**With a local world server**, in two terminals:
-
-```sh
 npm run server     # Go server on 127.0.0.1:8090, database in .data/, HTTP cookies
 npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
 ```
@@ -342,7 +320,7 @@ npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
 Point Vite at another server with `GLIMWAY_API=http://127.0.0.1:PORT npm run dev`.
 Extra server flags go after `--`, for example
 `npm run server -- -listen 127.0.0.1:8091 -db /tmp/glimway.sqlite`. With no
-server running, the dev proxy fails and the game plays as a guest.
+server running, the title says it can't reach the world.
 
 Server flags and environment variables (flags win; flags come before any
 subcommand):
@@ -392,7 +370,8 @@ A Glimway instance is a static site plus, for worlds, one Go binary with a
 SQLite database, on the same origin:
 
 1. **Build the site:** `npm ci && npm run build`, then serve `dist/` with any
-   static file server. That alone is a working guest-only game.
+   static file server. (The site alone shows the title's "can't reach the
+   world" — the game plays in a world on the server.)
 2. **Build the server:** `go build -o glimway-server ./server/cmd/glimway-server`.
    It embeds `content/` and applies its database migrations on start. Run it
    on localhost behind HTTPS (session cookies are Secure).
@@ -423,7 +402,8 @@ Things to know before you host:
 ## Tests
 
 ```sh
-npm run typecheck   # tsc --noEmit
+npm run typecheck   # tsc --noEmit (the app)
+npm run typecheck:e2e  # tsc --noEmit (the playtests)
 npm run check       # svelte-check
 npm test            # unit tests: node --test tests/*.test.ts
 npm run build       # production bundle in dist/
@@ -438,11 +418,11 @@ npm run verify:all  # verify, then the playtests
 First time running the playtests: `npx playwright install chromium`.
 
 The playtests run in parallel (`E2E_WORKERS`, default half the cores, 2 to
-6). Each worker starts its own Go server, database and fake habitica.com on
-free ports, the first time it runs a connected test; one Vite dev server, with
-the dev-only playtest levers, is shared, and sends each browser's `/api` to its
-worker's server. Guest specs block `/api` in the browser, so they still play as
-if no server existed. Give each git worktree its own Vite port:
+6). Every test runs against a server: each worker starts its own Go server,
+database and fake habitica.com on free ports at its first test; one Vite dev
+server, with the dev-only playtest levers, is shared, and sends each browser's
+`/api` to its worker's server. A fresh player signs in per test (`freshPlayer`).
+Give each git worktree its own Vite port:
 
 ```sh
 E2E_PORT=5203 npm run test:smoke
@@ -498,14 +478,13 @@ deploy/nixos/        NixOS modules for the static site and the server
 - **The browser owns the frame loop.** Movement, combat and animation stay in
   Phaser; the Svelte UI and the game talk over a small event bus of meaningful
   state changes only.
-- **Guests keep everything local.** `GameState` (versioned) is the persisted
-  truth in IndexedDB, with clipboard save codes and no credentials inside.
-- **In a world, the server owns what matters to others.** That means balances,
-  the XP mark, paid outcomes, materials, homes, the Wilds, mail, projects and
-  the library. The browser uploads its story-and-vitals progress document with
-  revisions and a single play lease, and spends go through the server. Writes
-  are idempotent and ledger-backed, and the server checks reported Habitica
-  profiles for plausibility.
+- **The server owns the journey.** Every player signs in and plays in a world:
+  the server keeps the state that matters to others — balances, the XP mark,
+  paid outcomes, materials, homes, the Wilds, mail, projects and the library.
+  The browser sends its story-and-vitals progress document with revisions and
+  a single play lease, and spends go through the server. Writes are idempotent
+  and ledger-backed, and the server checks reported Habitica profiles for
+  plausibility. There is no local-only play.
 - **One copy of shared data.** `content/` is the single source for rules both
   sides need. Logic that must agree exactly (sync and ember rules, the Wilds
   generator, the calendar) has generated **parity vectors** that both the
@@ -553,7 +532,6 @@ Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
 - The outer Wilds run on the server but aren't walkable in the client yet.
   Garden and Hall home tiers, world moves and co-op combat are later work.
 - Sound effects (Kenney's CC0 packs and a few procedural stings), but no music or ambience yet, no gamepad, no installable app.
-- Guest saves are local to one browser; save codes are the manual backup.
 - The game's own art is all AI-generated for now (see
   [How it was made](#how-it-was-made)).
 

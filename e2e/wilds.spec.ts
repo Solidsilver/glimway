@@ -1,8 +1,8 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld, serverState, sql } from './connected'
-import { beginNewJourney, hold, holdUntil, warp, waitForWilds, wilds, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
-import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds/regions.ts'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld, serverState, sql, CONTRACT } from './connected'
+import { exitTo, holdUntil, warp, waitForWilds, wilds, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
+import { chunkAreaId, wildsArrivalPosition } from '../src/game/wilds/regions.ts'
 
 /**
  * The Tangle (the generated Wilds, region inner-1): chunk-to-chunk walking,
@@ -10,7 +10,6 @@ import { chunkAreaId, wildsArrivalPosition, guestEpoch } from '../src/game/wilds
  * and the fallen-hero lantern. Entering is by the dev warp until the Commons
  * exit lands (another worktree builds it).
  */
-test.use({ server: true })
 
 const TILE = 16
 
@@ -46,26 +45,6 @@ async function act(page: Page, prompt: RegExp, toast: RegExp): Promise<void> {
 
 const materialSum = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0)
 
-test('guest: the Tangle is explorable with local claims', { tag: '@smoke' }, async ({ page }) => {
-  await beginNewJourney(page)
-  await warp(page, 'wilds', 2, 22)
-  const chunk = await waitForWilds(page)
-  expect(chunk).toBe(chunkAreaId(1, 1))
-
-  const dump = await wilds(page)
-  expect(dump.guest).toBe(true)
-  expect(dump.entities.length).toBeGreaterThan(0)
-  expect(dump.epochId).toBe('')
-
-  // Harvest the nearest node; materials appear locally.
-  const node = dump.entities.find((e) => e.kind === 'node')
-  await warpToEntity(page, dump, () => node)
-  await act(page, /harvest|chop|cut|gather|pry/i, /harvested/i)
-  const after = await wilds(page)
-  expect(materialSum(after.materials)).toBeGreaterThan(0)
-  expect(after.entities.find((e) => e.id === node!.id)!.state).toBe('harvested')
-})
-
 /**
  * Sign in on a fresh world pinned to the `handoff-tiles` seed (its camps sit
  * far from the entry). This checks handoff coordinates, so keep combat away
@@ -83,7 +62,7 @@ async function handoffWorld(page: Page, context: BrowserContext): Promise<void> 
   const worldId = (await serverState(page)).body.worldId as string
   expect(worldId).toMatch(/^[a-f0-9]+$/)
   sql(`UPDATE worlds SET seed='handoff-tiles' WHERE id='${worldId}' AND id NOT IN (SELECT world_id FROM region_epochs);`)
-  const region = await page.request.get('/api/wilds/region/inner-1')
+  const region = await page.request.get('/api/wilds/region/inner-1', CONTRACT)
   expect(region.ok()).toBe(true)
   expect((await region.json()).epoch.worldSeed).toBe('handoff-tiles')
 }
@@ -104,7 +83,8 @@ test('connected: the Commons arch leads into the Tangle (handoff tiles)', async 
   await waitForWilds(page)
   const dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 1 })
-  const arrival = wildsArrivalPosition(guestEpoch())
+  // The Tangle's arrival: just inside the Commons gap (the same in every epoch).
+  const arrival = wildsArrivalPosition({ id: '', worldSeed: '', regionId: 'inner-1', generatorVersion: 2, season: '0', endsAt: null })
   expect(dump.position.x).toBe(arrival.x)
   expect(dump.position.y).toBe(arrival.y)
 })
@@ -140,25 +120,26 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   // Its first camp, node and POI have open ground beside them.
   const worldId = (await serverState(page)).body.worldId as string
   sql(`UPDATE worlds SET seed='wilds-screens-0' WHERE id='${worldId}' AND id NOT IN (SELECT world_id FROM region_epochs);`)
-  expect((await (await page.request.get('/api/wilds/region/inner-1')).json()).epoch.worldSeed).toBe('wilds-screens-0')
+  expect((await (await page.request.get('/api/wilds/region/inner-1', CONTRACT)).json()).epoch.worldSeed).toBe('wilds-screens-0')
 
   // In by the dev warp (the Commons exit is built in parallel).
   await warp(page, 'wilds', 2, 22)
   const entryChunk = await waitForWilds(page)
   expect(entryChunk).toBe(chunkAreaId(1, 1))
   let dump = await wilds(page)
-  expect(dump.guest).toBe(false)
-  expect(dump.epochId).not.toBe('')
+  expect(dump.epochId, 'the server’s epoch').not.toBe('')
 
-  // Walk chunk to chunk through the real exit gap: south into (1,2), then
-  // east into (2,2). Exits sit 3 tiles wide, centered on each edge.
-  await warp(page, entryChunk, 12, 21)
+  // Walk chunk to chunk through the real exit gaps (where the served chunks
+  // have them): south into (1,2), then east into (2,2).
+  const down = await exitTo(page, chunkAreaId(1, 2))
+  await warp(page, entryChunk, down.tx + Math.floor(down.tw / 2), down.ty - 2)
   await holdUntil(page, 'ArrowDown', async () => (await wilds(page)).chunk.cx === 1 && (await wilds(page)).chunk.cy === 2)
   const south = await waitForWilds(page)
   expect(south).toBe(chunkAreaId(1, 2))
   dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 2 })
-  await warp(page, south, 21, 12)
+  const right = await exitTo(page, chunkAreaId(2, 2))
+  await warp(page, south, right.tx - 2, right.ty + Math.floor(right.th / 2))
   await holdUntil(page, 'ArrowRight', async () => (await wilds(page)).chunk.cx === 2 && (await wilds(page)).chunk.cy === 2)
   const east = await waitForWilds(page)
   expect(east).toBe(chunkAreaId(2, 2))

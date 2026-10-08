@@ -10,6 +10,7 @@
  *   repeated transitions.
  * - Save failures surface to the interface, not only to the console.
  */
+import { profileFor } from '../lib/profile.ts'
 import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { advanceQuest, questObjective, questShortGoal } from '../lib/state.ts'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types.ts'
@@ -18,7 +19,10 @@ import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, typ
 import { saveCurrent, saveGame } from '../lib/save.ts'
 import { bus, EV, type StatsPayload, type ToastPayload } from './events.ts'
 import type { Link } from './link.ts'
+import { DEFEATED, FOUND, isClientMark } from '../lib/api/predict.ts'
 import { displayArea } from '../content/world.ts'
+import { foundPapers, paperFlag } from '../content/papers.ts'
+import { announcePaper } from './papers.ts'
 
 /** advanceQuest is only called when the current stage matches this gate. */
 const QUEST_GATE: Record<QuestEvent, QuestStage> = {
@@ -33,7 +37,11 @@ export class Session {
   state: GameState
   /** Save provenance (format 2): governs defeat recovery and sync rules. */
   vitalsSource: VitalsSource
-  importedProfile: HabiticaProfile | null
+  private profile: HabiticaProfile | null = null
+  get importedProfile(): HabiticaProfile | null {
+    return profileFor({ profileSource: this.profile ? 'habitica' : 'none', profile: this.profile })
+  }
+  set importedProfile(value: HabiticaProfile | null) { this.profile = value }
   private saveTimer: number | null = null
   private autosaveTimer: number | null = null
   private destroyed = false
@@ -50,6 +58,8 @@ export class Session {
   readonly link: Link | null
   /** A server spend or sync is out: the world waits for its answer. */
   remoteBusy = false
+  /** Connected: the last fall, until it is queued and its recovery shown. */
+  falling: Promise<unknown> | null = null
 
   constructor(
     state: GameState,
@@ -156,11 +166,20 @@ export class Session {
     return this.state.quest
   }
 
-  /** Apply a quest event via the shared advanceQuest logic and notify the UI. */
+  /**
+   * Apply a quest event and notify the UI. Connected: a `quest-step`
+   * operation, shown at once as predicted (the server grants the step's
+   * items, marks and gifts, and the answer's state carries them).
+   */
   applyQuestEvent(event: QuestEvent): void {
     if (this.destroyed) return
     const expected = QUEST_GATE[event]
     if (this.state.quest !== expected) return // illegal or repeated transition
+    if (this.link) {
+      this.link.questStep(event)
+      this.emitQuest()
+      return
+    }
     try {
       this.state = advanceQuest(this.state, event)
     } catch (err) {
@@ -170,9 +189,7 @@ export class Session {
       return
     }
     this.emitQuest()
-    // Connected: the server grants quest gifts when the upload lands (once
-    // per player) and the toast follows its answer (Link.giftToast).
-    const reward = this.link ? 0 : questEmbers(event)
+    const reward = questEmbers(event)
     if (reward > 0) this.addEmbers(reward, `+${reward} embers — a little warmth from the road.`)
     this.saveSoon()
   }
@@ -188,9 +205,19 @@ export class Session {
     this.saveSoon()
   }
 
-  /** Record a one-way story flag (once) and save soon. */
+  /**
+   * Record a one-way story flag (once) and save soon. Connected: a `mark`
+   * for the client namespaces, `take-paper` for a paper; every other
+   * namespace is written by the server only (design 2.2) and never here.
+   */
   addFlag(flag: string): void {
     if (this.destroyed || this.state.flags.includes(flag)) return
+    if (this.link) {
+      if (flag.startsWith('paper:')) void this.link.takePaper(flag.slice('paper:'.length))
+      else if (isClientMark(flag)) this.link.mark(flag)
+      else console.warn('[glimway] a server-written mark is not the client\u2019s to add', flag)
+      return
+    }
     this.state = { ...this.state, flags: [...this.state.flags, flag] }
     this.saveSoon()
   }
@@ -213,27 +240,46 @@ export class Session {
   }
 
   /**
-   * Connected play: adopt a state merged from a server answer
-   * (src/lib/api/progress.ts). `relocate` moves the hero when the server's
-   * area or position won (a stale merge).
+   * Connected play: show the link's view (the adopted server state with the
+   * outbox predicted on top). The live place, vitals and play time stay
+   * this page's own unless `relocate` (the server or a fall moved the hero)
+   * or `vitals` (the link's combat overlay moved them). `quiet`: the scene
+   * already moves the hero itself (a fall's walk home). `predicted`: a local
+   * prediction, announced by its own caller.
    */
   applyServer(
-    next: GameState,
+    view: GameState,
     provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null },
-    relocate: boolean
+    opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean; predicted?: boolean } = {}
   ): void {
     if (this.destroyed) return
     const prev = this.state
+    const relocate = opts.relocate === true
     const profileChanged = JSON.stringify(provenance.importedProfile) !== JSON.stringify(this.importedProfile)
+    const next: GameState = {
+      ...view,
+      area: relocate ? view.area : prev.area,
+      position: relocate ? { ...view.position } : prev.position,
+      hp: Math.min(Math.max(opts.vitals?.hp ?? prev.hp, 0), view.maxHp),
+      mana: Math.min(Math.max(opts.vitals?.mana ?? prev.mana, 0), view.maxMana),
+      playSeconds: Math.max(prev.playSeconds, view.playSeconds)
+    }
+    const region = relocate ? view.wildsRegion : prev.wildsRegion
+    if (region) next.wildsRegion = region
+    else delete next.wildsRegion
+    if (prev.outerSeason) next.outerSeason = prev.outerSeason
     this.state = next
     this.vitalsSource = provenance.vitalsSource
     this.importedProfile = provenance.importedProfile
     this.emitStats()
     if (prev.quest !== next.quest) this.emitQuest()
+    // Papers the server granted on its own (a quest step's, a claim's). A
+    // predicted find is announced by whoever found it (game/papers.ts).
+    if (!opts.predicted) for (const id of foundPapers(next.flags)) if (!prev.flags.includes(paperFlag(id))) announcePaper(this, id)
     if (profileChanged) bus.emit(EV.profileChanged, { profile: this.importedProfile })
     // Balances and paid outcomes change what markers and lanterns show.
     bus.emit(EV.worldRefresh)
-    if (relocate && (prev.area !== next.area || Math.hypot(prev.position.x - next.position.x, prev.position.y - next.position.y) > 4)) {
+    if (relocate && !opts.quiet && (prev.area !== next.area || Math.hypot(prev.position.x - next.position.x, prev.position.y - next.position.y) > 4)) {
       bus.emit(EV.relocate, { area: next.area, x: next.position.x, y: next.position.y })
     }
   }
@@ -276,7 +322,16 @@ export class Session {
     if (this.state.hp < prevHp || this.state.mana < prevMana) this.saveSoon()
   }
 
+  /** A cast that the server's cast budget counts (a signature skill). */
+  noteCast(): void {
+    this.link?.noteCast()
+  }
+
   recordDefeat(enemyId: string): void {
+    if (this.link) {
+      if (!this.state.defeatedEnemies.includes(enemyId)) this.link.mark(`${DEFEATED}${enemyId}`)
+      return
+    }
     if (!this.state.defeatedEnemies.includes(enemyId)) {
       this.state.defeatedEnemies.push(enemyId)
       this.saveSoon()
@@ -285,7 +340,8 @@ export class Session {
 
   recordDiscovery(discoveryId: string, label: string): boolean {
     if (this.state.discoveries.includes(discoveryId)) return false
-    this.state.discoveries.push(discoveryId)
+    if (this.link) this.link.mark(`${FOUND}${discoveryId}`)
+    else this.state.discoveries.push(discoveryId)
     bus.emit(EV.discovery, { id: discoveryId, label })
     this.saveSoon()
     return true
@@ -302,6 +358,12 @@ export class Session {
    * touched either way — this label must stay visible to the player.
    */
   defeat(): void {
+    if (this.link) {
+      // The fall is an operation: once it is queued, recovery and the walk
+      // home show at once (the scene waits for `falling` before it wakes).
+      this.falling = this.link.fall().then(() => this.emitStats())
+      return
+    }
     const synced = resolveDefeatRecovery({
       state: this.state,
       vitalsSource: this.vitalsSource,

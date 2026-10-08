@@ -2,7 +2,8 @@ import { writeFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
-import { beginNewJourney, warp } from './helpers'
+import { warp } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * Entering an area must not freeze the page: the ground tileset
@@ -66,7 +67,7 @@ test('entering the Commons blocks the main thread for no long task', async ({ pa
   test.setTimeout(120_000)
   await observe(page)
   await page.setViewportSize({ width: 1280, height: 800 })
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await logWebGLRenderer(page)
   const village = await tilesetHash(page)
   // The workers' tileset is texel for texel the one painted on the main thread.
@@ -90,8 +91,7 @@ test.describe('phone, 4× CPU throttle', () => {
   test('entering the Commons', async ({ page }) => {
     test.setTimeout(300_000)
     await observe(page)
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     const village = await tilesetHash(page)
     const cdp = await page.context().newCDPSession(page)

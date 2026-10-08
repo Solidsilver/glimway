@@ -11,6 +11,8 @@ import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
 import { witnessCopy } from '../../content/witness'
 import { tileBottom, tileMid } from '../../lib/tile'
+import { wardenToRestore } from '../rollback'
+import type { QuestStage } from '../../lib/state'
 import type { Interactable } from './interactables'
 import { ENEMY_TUNING, KNOCK, type Enemy, type EnemyDeps, type EnemySystem } from './enemies'
 
@@ -104,6 +106,18 @@ export class WardenEncounter {
       bus.emit(EV.toast, { text: 'Stone grinds on stone. The warden turns from its post, arms out, the lamp in its chest burning.' })
       if (!this.deps.reducedMotion) this.scene.cameras.main.shake(260, 0.005)
     }
+  }
+
+  /**
+   * The state the game shows changed. If it says the warden still waits
+   * (its settling step was refused) while it rests settled here, it stands
+   * again on its post.
+   */
+  reconcile(quest: QuestStage): void {
+    if (!wardenToRestore(quest, this.restingState, !!this.activeWarden())) return
+    this.clearRestingWarden()
+    this.guardianSpawned = false
+    this.spawnGuardian(false)
   }
 
   /** The warden's post: a short way down the path from the shrine lantern. */
@@ -350,9 +364,12 @@ export class WardenEncounter {
     this.gutterHeart(false)
     this.restingWarden = w.sprite
     this.restingState = 'settled'
-    // Same save effects as ever: the quest event and the defeated-enemy entry.
-    this.deps.session.recordDefeat(w.id)
+    // The quest event, then the defeated-enemy entry. In this order: each
+    // queues a predicted operation, and a refresh that saw the defeat before
+    // the step would read a settled warden at 'clue-found' as a refused
+    // settling and stand it up again (reconcile).
     this.deps.session.applyQuestEvent('defeat-guardian')
+    this.deps.session.recordDefeat(w.id)
   }
 
   /** Read-only snapshot for playtests (window.__fsWarden). */

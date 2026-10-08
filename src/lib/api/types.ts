@@ -6,6 +6,7 @@
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
 import type { HomeInstance } from '../homestead.ts';
+import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 
 /** The client-writable progress document (`doc` / `progress`). */
 export interface Progress {
@@ -22,23 +23,21 @@ export interface Progress {
   playSeconds: number;
 }
 
-export type SaveOrigin = 'fresh' | 'migrated';
-
 /** Fields every state-bearing response carries at the top level. */
 export interface Snapshot {
-  /** The complete merged GameState: replaces the local connected copy. */
+  /** The answer's state projected for the game (src/lib/api/predict.ts `gameStateOf`). */
   state: GameState;
+  /** The server's typed state, when the answer carried one (the link adopts it by version). */
+  player?: PlayerState;
   rev: number;
   vitalsSource: VitalsSource;
   /** Omitted before origin selection. */
   importedProfile?: HabiticaProfile;
-  habiticaId: string;
+  accountId: string;
   /** The verified player's name, present even before the origin choice ('' from older servers). */
   displayName: string;
   habiticaPartyId: string | null;
   worldId: string;
-  /** null until the player picks how to start. */
-  saveOrigin: SaveOrigin | null;
   pending: number;
   verifiedXp: number;
   flagged: boolean;
@@ -80,12 +79,6 @@ export interface LoginRequest {
   invite?: string;
   /** The Habitica party the client read (lets a party member in without a code; the server checks it). */
   party?: string;
-}
-
-export interface OriginRequest {
-  choice: 'fresh' | 'migrate';
-  key: string;
-  save?: { state: GameState; vitalsSource?: VitalsSource };
 }
 
 export interface ProgressRequest {
@@ -443,10 +436,8 @@ export type HomeAction =
   | { op: 'leave' };
 
 export interface HomeActionRequest {
-  lease: string;
-  baseRev: number;
-  key: string;
-  progress?: Progress;
+  op: { lease: string; key: string };
+  where: { area: string; x: number; y: number };
   itemDef?: string;
   itemId?: string;
   scene?: 'indoor' | 'outdoor' | 'gate';
@@ -630,7 +621,7 @@ export interface DeskCopyResponse extends Snapshot {
 interface WoodpileStack {
   id: string;
   homesteadId: string;
-  habiticaId: string;
+  accountId: string;
   qty: number;
   stackedAt: number;
   ready: boolean;
@@ -788,11 +779,10 @@ export interface ShelfResponse extends Snapshot {
 }
 
 export interface ShelfRequest {
-  lease: string;
-  baseRev: number;
-  key: string;
-  progress?: Progress;
-  op: 'stock' | 'take';
+  op: { lease: string; key: string };
+  where: { area: string; x: number; y: number };
+  /** The shelf's own action (it was `op` before the operation header took that name). */
+  action: 'stock' | 'take';
   gate: number;
   slot: number;
   asset?: Asset;
@@ -804,3 +794,10 @@ export interface ShelfActionResponse extends Snapshot {
   taken?: Asset;
   line?: string;
 }
+
+// The v3 facade uses generated contracts directly. The GameState interfaces
+// above remain only for the intermediate domain/Link compilation bridge.
+export type { PlayerState, Envelope as OperationEnvelope, SessionResponse as SessionReply, PlayResponse as PlayReply, StateResponse as StateReply, Refusal as OperationRefusal } from '../gen/glimway/v1/state_pb.js';
+export type { OpHeader, Where, ReportBarrier, Vitals, Place } from '../gen/glimway/v1/op_pb.js';
+export type { ReportRequest, ReportResult, QuestStepRequest, QuestStepResult, MarkRequest, MarkResult, TakePaperRequest, TakePaperResult, SettleEchoRequest, SettleEchoResult, FallRequest, FallResult, ProfileReport, ProfileResult } from '../gen/glimway/v1/operations_pb.js';
+export type { WildsChunk, WildsRegionResult, HomesteadLand, EchoAssignment } from '../gen/glimway/v1/wilds_pb.js';

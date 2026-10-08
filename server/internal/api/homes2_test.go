@@ -43,7 +43,7 @@ func (x *rig) home(c *http.Cookie) homeView {
 func (x *rig) homeOpRefreshing(c *http.Cookie, s *response, op string, fields map[string]any, status int) expansionResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	v := x.exp("POST", "/api/homestead/"+op, body(*s, fmt.Sprintf("%s-%d-%d", op, s.Rev, x.now.Load()), fields), c, status)
+	v := x.exp("POST", "/api/homestead/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Version, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		update(s, v)
 	}
@@ -54,13 +54,13 @@ func (x *rig) homeOpRefreshing(c *http.Cookie, s *response, op string, fields ma
 func (x *rig) share(fc *http.Cookie, f *response, tc *http.Cookie, to *response) {
 	x.t.Helper()
 	h := x.home(fc)
-	x.homeOpRefreshing(fc, f, "invite", map[string]any{"to": to.HabiticaID}, 200)
-	x.atTable(f.HabiticaID, f.WorldID)
-	x.atTable(to.HabiticaID, to.WorldID)
-	if v := x.homeOpRefreshing(fc, f, "joint", map[string]any{"homeId": h.ID, "to": to.HabiticaID}, 200); v.Result.Status != "waiting" {
+	x.homeOpRefreshing(fc, f, "invite", map[string]any{"to": to.AccountID}, 200)
+	x.atTable(f.AccountID, f.WorldID)
+	x.atTable(to.AccountID, to.WorldID)
+	if v := x.homeOpRefreshing(fc, f, "joint", map[string]any{"homeId": h.ID, "to": to.AccountID}, 200); v.Result.Status != "waiting" {
 		x.t.Fatal("first signature", v.Result.Status)
 	}
-	if v := x.homeOpRefreshing(tc, to, "joint", map[string]any{"homeId": h.ID, "to": to.HabiticaID}, 200); v.Result.Status != "joined" || v.Result.Home == nil || v.Result.Home.ID != h.ID {
+	if v := x.homeOpRefreshing(tc, to, "joint", map[string]any{"homeId": h.ID, "to": to.AccountID}, 200); v.Result.Status != "joined" || v.Result.Home == nil || v.Result.Home.ID != h.ID {
 		x.t.Fatal("second signature", v.Result.Status)
 	}
 }
@@ -79,41 +79,41 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
 	h := x.claimGate(ac, &a, 0)
-	joint := map[string]any{"homeId": h.ID, "to": "bob"}
+	joint := map[string]any{"homeId": h.ID, "to": x.account("bob")}
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 404).Error.Code != "invite-not-found" {
 		t.Fatal("joint without invite")
 	}
-	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "alice"}, 400).Error.Code != "self-invite" {
+	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": x.account("alice")}, 400).Error.Code != "self-invite" {
 		t.Fatal("self invite")
 	}
-	if v := x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "bob"}, 200); v.Result.Status != "invited" {
+	if v := x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": x.account("bob")}, 200); v.Result.Status != "invited" {
 		t.Fatal("invite")
 	}
 	lane := x.exp("GET", "/api/commons", nil, bc, 200)
-	if len(lane.Invites) != 1 || lane.Invites[0].From.ID != "alice" || lane.Invites[0].To.ID != "bob" || lane.Invites[0].Gate != 0 {
+	if len(lane.Invites) != 1 || lane.Invites[0].From.ID != x.account("alice") || lane.Invites[0].To.ID != x.account("bob") || lane.Invites[0].Gate != 0 {
 		t.Fatal("invite listing")
 	}
 	// Neither at the table, then only one of them, then one in another room.
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "not-at-table" {
 		t.Fatal("invitee away")
 	}
-	x.atTable("bob", b.WorldID)
+	x.atTable(x.account("bob"), b.WorldID)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner away")
 	}
-	x.stand("alice", a.WorldID, "village", 824, 344)
+	x.stand(x.account("alice"), a.WorldID, "village", 824, 344)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner in another room")
 	}
-	x.stand("alice", a.WorldID, "commons", 100, 100)
+	x.stand(x.account("alice"), a.WorldID, "commons", 100, 100)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner too far from Silas")
 	}
-	x.stand("alice", "another-world", "commons", 824, 344)
+	x.stand(x.account("alice"), "another-world", "commons", 824, 344)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner in another world")
 	}
-	x.atTable("alice", a.WorldID)
+	x.atTable(x.account("alice"), a.WorldID)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 200).Result.Status != "waiting" {
 		t.Fatal("first signature")
 	}
@@ -129,21 +129,21 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 	if v.Result.Status != "joined" || v.Result.Home == nil || len(v.Result.Home.Members) != 2 || !v.Result.Home.Member {
 		t.Fatal("joined", v.Result.Status)
 	}
-	if count(t, x.db, "SELECT count(*) FROM homestead_invites") != 0 || count(t, x.db, "SELECT deeds FROM player_deeds WHERE habitica_id='bob'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_invites") != 0 || count(t, x.db, "SELECT deeds FROM player_deeds WHERE account_id='"+x.account("bob")+"'") != 1 {
 		t.Fatal("deed amended")
 	}
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 404).Error.Code != "invite-not-found" {
 		t.Fatal("invite reused")
 	}
-	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "bob"}, 409).Error.Code != "already-member" {
+	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": x.account("bob")}, 409).Error.Code != "already-member" {
 		t.Fatal("invite a member")
 	}
 	// An invitee who settled elsewhere meanwhile cannot also join.
 	cc, c := x.member("carol", a.WorldID)
-	x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "carol"}, 200)
+	x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": x.account("carol")}, 200)
 	x.claimGate(cc, &c, 1)
-	x.atTable("carol", c.WorldID)
-	carol := map[string]any{"homeId": h.ID, "to": "carol"}
+	x.atTable(x.account("carol"), c.WorldID)
+	carol := map[string]any{"homeId": h.ID, "to": x.account("carol")}
 	x.homeOpRefreshing(cc, &c, "joint", carol, 200)
 	if x.homeOpRefreshing(ac, &a, "joint", carol, 409).Error.Code != "already-homesteaded" {
 		t.Fatal("two homesteads")
@@ -154,8 +154,8 @@ func TestHomes2MembershipInvariantsAndEqualMembers(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
-	x.seedAssets("alice")
-	x.seedAssets("bob")
+	x.seedAssets(x.account("alice"))
+	x.seedAssets(x.account("bob"))
 	h := x.claimGate(ac, &a, 0)
 	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "already-homesteaded" {
 		t.Fatal("second claim")
@@ -170,13 +170,13 @@ func TestHomes2MembershipInvariantsAndEqualMembers(t *testing.T) {
 		t.Fatal("visitor bought into a home")
 	}
 	// The database refuses a second membership even if a handler slipped.
-	if _, err := x.db.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('other',?,5,0)", a.WorldID); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('"+"other"+"',?,5,0)", a.WorldID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := x.db.DB.Exec("INSERT INTO homestead_members VALUES('alice','other',0)"); err == nil {
+	if _, err := x.db.DB.Exec("INSERT INTO homestead_members VALUES('" + x.account("alice") + "','" + "other" + "',0)"); err == nil {
 		t.Fatal("two memberships")
 	}
-	if _, err := x.db.DB.Exec("DELETE FROM homesteads WHERE id='other'"); err != nil {
+	if _, err := x.db.DB.Exec("DELETE FROM homesteads WHERE id='" + "other" + "'"); err != nil {
 		t.Fatal(err)
 	}
 	stool := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "wooden-stool"}, 200).Result.ItemID
@@ -202,7 +202,7 @@ func TestHomes2MembershipInvariantsAndEqualMembers(t *testing.T) {
 	if x.home(ac).Tier != 1 {
 		t.Fatal("partner upgrade")
 	}
-	if count(t, x.db, "SELECT sum(delta) FROM ledger WHERE habitica_id='bob' AND currency='decoration:wooden-stool'") != 0 || count(t, x.db, "SELECT sum(delta) FROM ledger WHERE habitica_id='alice' AND currency='decoration:wooden-stool'") != 0 {
+	if count(t, x.db, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("bob")+"' AND currency='decoration:wooden-stool'") != 0 || count(t, x.db, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='decoration:wooden-stool'") != 0 {
 		t.Fatal("pack ledger follows the pieces")
 	}
 }
@@ -224,7 +224,7 @@ func TestHomes2DeedPrices(t *testing.T) {
 	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "insufficient-embers" {
 		t.Fatal("unpaid deed")
 	}
-	x.fund("alice", price, 0)
+	x.fund(x.account("alice"), price, 0)
 	x.refresh(ac, &a)
 	before := a.State.Embers
 	x.claimGate(ac, &a, 1)
@@ -238,7 +238,7 @@ func TestHomes2LeavingKeepsPackAndPersonalChest(t *testing.T) {
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
 	a = x.openWorkshop(ac, a)
-	x.seedAssets("bob")
+	x.seedAssets(x.account("bob"))
 	x.share(ac, &a, bc, &b)
 	h := x.home(ac)
 	stools := x.p5("POST", "/api/craft", body(a, "stools", map[string]any{"recipeId": "craft-wooden-stool", "qty": 2}), ac, 200)
@@ -269,8 +269,8 @@ func TestHomes2LeavingKeepsPackAndPersonalChest(t *testing.T) {
 	if v := x.homeOpRefreshing(bc, &b, "leave", nil, 200); v.Result.Home != nil {
 		t.Fatal("left home answer")
 	}
-	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND habitica_id='bob' AND location='inventory'", bstool.Result.InstanceIDs[0]) != 1 ||
-		count(t, x.db, "SELECT qty FROM item_stacks WHERE location='personal' AND owner='bob' AND item_def='stone'") != 5 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND account_id='"+x.account("bob")+"' AND location='inventory'", bstool.Result.InstanceIDs[0]) != 1 ||
+		count(t, x.db, "SELECT qty FROM item_stacks WHERE location='personal' AND owner='"+x.account("bob")+"' AND item_def='stone'") != 5 {
 		t.Fatal("leaver lost their pack or personal chest")
 	}
 	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='storage' AND owner=? AND item_def='timber'", h.ID) != 7 || count(t, x.db, "SELECT count(*) FROM homestead_items WHERE homestead_id=? AND location='placed'", h.ID) != 1 {
@@ -370,7 +370,7 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	if x.homeOpRefreshing(dc, &d, "claim", map[string]any{"gate": gate}, 409).Error.Code != "insufficient-embers" {
 		t.Fatal("free lost deed")
 	}
-	x.fund("dora", price, 0)
+	x.fund(x.account("dora"), price, 0)
 	x.refresh(dc, &d)
 	before := d.State.Embers
 	nh := x.claimGate(dc, &d, gate)
@@ -414,7 +414,7 @@ func lanternSpots(t *testing.T, h homeView) (post, beyond [2]int) {
 func TestHomes2LanternLightAndClearing(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	h := x.claimGate(ac, &a, 0)
 	item := content.HomeRules.LanternPosts.Item
 	// Each post costs more than the last, from shared content.
@@ -537,18 +537,18 @@ func TestHomes2CrossWorldIsolation(t *testing.T) {
 	if v := x.exp("GET", "/api/homestead/gate/0", nil, oc, 200); v.Home.ID != oh.ID || v.LandSeed != land.Seed(o.WorldID, 0, content.HomeRules.Land) {
 		t.Fatal("read crossed worlds")
 	}
-	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "outsider"}, 403).Error.Code != "world-access-denied" {
+	if x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": x.account("outsider")}, 403).Error.Code != "world-access-denied" {
 		t.Fatal("cross-world invite")
 	}
 	x.homeOpRefreshing(ac, &a, "invite", map[string]any{"to": "nobody"}, 404)
 	// A stray invite row across worlds is never honoured.
-	if _, err := x.db.DB.Exec("INSERT INTO homestead_invites(homestead_id,to_id,from_id,created_at,expires_at) VALUES(?,?,?,?,?)", h.ID, "outsider", "alice", x.now.Load(), x.now.Load()+3600); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO homestead_invites(homestead_id,to_id,from_id,created_at,expires_at) VALUES(?,?,?,?,?)", h.ID, x.account("outsider"), x.account("alice"), x.now.Load(), x.now.Load()+3600); err != nil {
 		t.Fatal(err)
 	}
-	x.atTable("alice", a.WorldID)
+	x.atTable(x.account("alice"), a.WorldID)
 	x.atTable("outsider", o.WorldID)
 	x.homeOpRefreshing(oc, &o, "leave", nil, 200)
-	if x.homeOpRefreshing(oc, &o, "joint", map[string]any{"homeId": h.ID, "to": "outsider"}, 404).Error.Code != "invite-not-found" {
+	if x.homeOpRefreshing(oc, &o, "joint", map[string]any{"homeId": h.ID, "to": x.account("outsider")}, 404).Error.Code != "invite-not-found" {
 		t.Fatal("cross-world joint")
 	}
 	if len(x.exp("GET", "/api/commons", nil, oc, 200).Invites) != 0 {

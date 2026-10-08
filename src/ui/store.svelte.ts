@@ -78,11 +78,11 @@ class UiStore {
   /** True when the player opted to remember their Habitica details on this device. */
   remembered = $state(false)
 
-  /** Glimway server: unknown until the first probe; unavailable = guest-only build or offline. */
+  /** Glimway server: unknown until the first probe; unavailable = it didn't answer. */
   server = $state<'unknown' | 'available' | 'unavailable'>('unknown')
   /** Signed in to the Glimway server (session cookie), whether or not play has started. */
-  account = $state<{ habiticaId: string; name: string } | null>(null)
-  /** Connected play: the running session's server link (null for guests). */
+  account = $state<{ accountId: string; name: string } | null>(null)
+  /** Connected play: the running session's server link. */
   link = $state<LinkPayload | null>(null)
   /** Connected play: the reconnect notice ("you played somewhere else"). */
   linkNotice = $state<'played-elsewhere' | null>(null)
@@ -90,7 +90,7 @@ class UiStore {
   presence = $state<PresencePayload>({ status: 'off', here: 0 })
   /** The emote picker is open. */
   emoteOpen = $state(false)
-  /** Wilds materials (server balances, or the guest pack). Null until the Wilds load. */
+  /** Wilds materials (server balances, or the latest gather). Null until the Wilds load. */
   materials = $state<Record<string, number> | null>(null)
 
   /** Mirrors of world/UI ownership flags, reactive for the interface. */

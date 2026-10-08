@@ -1,6 +1,6 @@
 # 0.3 Server-first
 
-Status: **design, revised after review round 1**, 2026-10-07. Written from the code at `e6c4958`.
+Status: **design, lane A contracts revised after review round 2**, 2026-10-07. Written from the code at `e6c4958`.
 The owner's decisions are in [plan.md](plan.md) ("Server-first") and [guests.md](guests.md); the
 owner's answers to this doc's first open questions are folded in (section 10).
 
@@ -178,9 +178,10 @@ send. Fix them in this release. The README and `MenuPanel.svelte:269` are right.
   - **The stored row holds only the operation's own result** (and the version it committed at),
     never the state. A replay answers with that stored result plus the **current** state, so a
     replay can never move the client back in time.
-  - **The request hash covers the payload only.** The whole `op` header (lease and key) is left
+  - **The request hash covers the payload only.** The whole `op` header (lease, key and report barrier) is left
     out, so a replay under a new lease isn't an `idempotency-mismatch`. Everything else,
-    including `where`, is frozen: the outbox stores and resends the exact request bytes.
+    including `where`, is frozen: the outbox freezes key and payload bytes. After an authorized takeover it replaces only
+    the transient `op.lease` and report barrier; it never changes payload or `where`.
 - **Response:** the `Envelope` (section 6): the operation's `result` and the current
   `PlayerState`.
 - **Refusals.** A game refusal (`not-next-step`, `short`, …) answers with the code **and the
@@ -189,8 +190,17 @@ send. Fix them in this release. The README and `MenuPanel.svelte:269` are right.
   Unauthenticated and lease failures still answer with a code only.
 - **`Where` is trusted** (friends on invites), as position is today. The server records it as
   the player's place, so every keyed operation also refreshes the place.
-- **Contract gate.** Every `/api` request except `/api/health` and `/api/calendar` carries
-  `X-Glimway-Contract: <n>`. A missing or older number answers `409 reload-needed` (section 8).
+- **Contract gate.** Every `/api` request except `/api/health`, `/api/calendar` and public immutable
+  `/api/sprites/*` assets carries
+  `X-Glimway-Contract: <n>`. Only the exact current decimal integer is accepted. Missing, older, future,
+  signed, padded or malformed numbers answer `409 reload-needed` (section 8).
+
+Known `where.area` ids are the curated areas, a valid `HomeGate`, or `wilds:<region>`
+from the region table. Unknown ids are stateful `invalid-position` refusals. Coordinates are
+trusted within finite pixel bounds. Payload ids match `[A-Za-z0-9:_-]{1,128}`; report
+seq/basis/casts are safe non-negative integers, HP/mana are non-negative. Domain rules require
+positive sequence numbers and required ids. Strict generated request decoding also covers
+login, play and world choose. Missing `op` is stateless `400 invalid-json`.
 
 ### 2.2 The operations
 
@@ -202,46 +212,85 @@ the find rules in `content/papers.json` are new or grown tables (section 5).
 | **report** | `POST /api/report` · `ReportRequest{lease, client, seq, basis, place: Where, hp, mana, casts}` | none; ordered by `(client, seq)` | `area`, `position`, `hp`, `mana`, `playSeconds` in uploads | See "Reports" below. Out-of-bound values are **clamped, not refused**; the answer carries what was kept | Nothing; it reports what the screen shows | The client adopts the clamped vitals |
 | **quest-step** | `POST /api/quest/step` · `QuestStepRequest{op, quest, to, where}` | yes | `quest`, quest items, step-made discoveries and defeats | `to` is the next step after the current one in `content/quests.json`, and `where.area` matches the step's `at`. Grants the step's items, marks, papers and embers once (outcome `quest-gift:<quest>:<step>`). Relays the step's witness beat | `advanceQuest` from the same table | `not-next-step` / `wrong-area`; stage, items and marks roll back |
 | **mark** | `POST /api/story/mark` · `MarkRequest{op, mark, where}` | yes | client-written `flags`, `discoveries`, curated `defeatedEnemies` | The mark's namespace is `client` in `content/story.json`. The id is known where the table lists ids (discoveries, curated enemies). The area matches where the table says so. Caps as today | Adds the mark | `server-mark` / `unknown-mark` / `wrong-area`; the mark disappears |
-| **take-paper** | `POST /api/papers/take` · `TakePaperRequest{op, paper, where}` | yes | `paper:` flags for placed, handed-over, Commons, board and site papers | The paper's find rule holds (see "Papers" below) | Paper in the journal | `paper-not-due`; paper removed |
-| **settle-echo** | `POST /api/wilds/echo` · `SettleEchoRequest{op, epoch, site, where}` | yes | `echo:<member>` flags | The site is an Echo site in this epoch's stored chunks, within reach of `where`, and **this player's assignment** for that site (section 3.4) names a member not yet settled. Writes `echo:<member>`, grants its paper, relays the witness beat | Settled pose and lines | `echo-not-here`; Echo unsettled |
+| **take-paper** | `POST /api/papers/take` · `TakePaperRequest{op, paper, where, epoch, site}` | yes | `paper:` flags for placed, handed-over, Commons, board and site papers | The paper's find rule holds (see "Papers" below) | Paper in the journal | `paper-not-due`; paper removed |
+| **settle-echo** | `POST /api/wilds/echo` · `SettleEchoRequest{op, epoch, site, member, where}` | yes | `echo:<member>` flags | The site is an Echo site in this epoch's stored chunks, within reach of `where`, and **this player's assignment** for that site (section 3.4) names a member not yet settled. Writes `echo:<member>`, grants its paper, relays the witness beat | Settled pose and lines | `echo-not-here`; Echo unsettled |
 | **fall** | `POST /api/fall` · `FallRequest{op, where}` | yes | client defeat recovery, `POST /api/wilds/defeat` | See "Falls" below | Recovery and the walk home | The client adopts the server's vitals and place |
-| **profile** | `POST /api/profile` · `ProfileReport{lease, raw}` | none (credit is against the XP mark, as today) | `POST /api/sync` | `raw` is the `/user` projection (`USER_FIELDS`) as Habitica returned it. The server validates its shape and maps it with `habitica.Map`, then applies today's sync rules without the upload: the profile id must equal the account's **Habitica sign-in subject**, plausibility, capped credit, pending, welcome, and the safe-area check against the server's place | "Syncing…" | Error copy as today |
-| **spend** | `POST /api/spend` · `SpendRequest{op, kind, where}` | yes | `/api/spend` with progress | As today, minus the upload. Kinds: `rest`, `home-rest`, `road-lantern`, `chest`. **`revive` is deleted**: no client sends it, and `rest` already covers 0 HP, still paid from earned embers (`needs-earned`) | `checkSpend` prompt only; vitals change on the answer | — |
+| **profile** | `POST /api/profile` · `ProfileReport{lease, raw, report}` | none (credit is against the XP mark, as today) | `POST /api/sync` | `raw` is the `/user` projection (`USER_FIELDS`) as Habitica returned it. The server validates its shape and maps it with `habitica.Map`, then applies today's sync rules without the upload: the profile id must equal the account's **Habitica sign-in subject**, plausibility, capped credit, pending, welcome, and the safe-area check against the server's place | "Syncing…" | Error copy as today |
+| **spend** | `POST /api/spend` · `SpendRequest{op, kind, target, where}` | yes | `/api/spend` with progress | As today, minus the upload. Kinds: `rest`, `home-rest`, `road-lantern`, `chest`. **`revive` is deleted**: no client sends it, and `rest` already covers 0 HP, still paid from earned embers (`needs-earned`) | `checkSpend` prompt only; vitals change on the answer | — |
 | **every keyed mutation** (items, homestead, mail, crafting, workshop, repairs, projects, Wilds claim and relight, world move and leave, library donate) | unchanged routes | yes | their `progress` and `baseRev` fields | Unchanged rules. Reach checks (`nearTile`, `nearPiece`, `nearWilds`, home rest, safe areas) read `where` instead of the uploaded position. A claim of a paper-bearing POI or chest grants its paper (section 3.4). Wilds gathering checks the target (below). Library donate joins the queue and checks a server-held `paper:` mark | As today | As today |
+
+All wire and port times are Unix seconds, never JavaScript milliseconds;
+`Vitals.castReadyAt` may be fractional. `PlayerState.place.placeSetVersion` and
+`vitals.vitalsSetVersion` expose the independent watermarks. Profile sync's rejected outcomes
+are stateful refusals, not successful `ProfileResult.status` values.
 
 **Reports.** One report goes out about every 10 seconds, on every area change and on page hide
 (keepalive). In order, the server:
 
-1. **Order.** Requires the lease. Each report names its `client` (a random id the device keeps
-   with its outbox) and a `seq` that only grows for that client across reloads. The server stores
-   the last `(client, seq)`. A report with a lower or equal `seq` from the same client is ignored;
-   a different client is accepted once it holds the lease. The answer carries the stored `seq`, so
-   the client knows which reports landed.
-2. **Basis.** `basis` is the newest state version the client had adopted when it made the report.
-   The server keeps `vitals_set_version`, the version at which a server operation last set
-   vitals or place (rest, home rest, consumables, `profile`, `fall`, world moves). If
-   `basis < vitals_set_version`, the report's vitals, place and casts are ignored, so an old
-   in-flight report can't undo a rest or a fall.
-3. **Casts.** `casts` is the number of signature casts since the client's previous report: a
-   non-negative integer, summed when reports are coalesced, and dropped once a report lands. A
-   lost-then-retried report carries the same `seq`, so its casts count once. With
-   `elapsed = now − vitals_at`, allowed casts are at most `1 + floor(elapsed / castCooldown)`, and
-   none while the hero is at 0 HP or under the zero-HP lock.
-4. **HP.** HP may only fall, except a **healer's** casts. Allowed heals =
-   `min(casts, the cooldown bound, affordable)`, where affordable =
-   `floor((stored mana + regenCap × elapsed) / cost)`. The new HP is at most
-   `stored hp + allowed heals × healAmount`. `healAmount` comes from the server's own copy of the
-   heal formula (`content/combat.json`) and the account's mapped stats. It is capped at max HP.
-5. **Mana.** At most `min(max mana, stored mana + regenCap × elapsed)`. This conservative
-   final-value bound ignores what casts cost, so honest play never trips it. `regenCap` (16/s:
-   base 5 plus the lit-lantern and seated bonuses) lives in `content/vitals.json`.
-6. **Place and time.** Records the place. Adds play time from the gap since the last accepted
-   report, capped at 30 seconds a gap. The first report after a lease is taken or a reconnect
-   adds nothing, so offline time isn't counted.
-7. **Store.** Stores `vitals_at = now` and bumps the version.
+1. **Order and generation.** `POST /api/play {clientId, takeOver}` uses a per-tab client id,
+   persisted in sessionStorage across reloads and re-keyed for duplicated live tabs. There is no
+   separate tab id. Client and device ids match `[A-Za-z0-9_-]{1,128}`. Resuming the same tab's
+   lease keeps its report generation, ordering and cast debt; a new lease issues a fresh random
+   `reportGeneration`. A report carries `client`, `generation`, safe-positive integral `seq`,
+   and safe non-negative `basis`. Retired generations answer `superseded`. Within a generation,
+   `seq <= report_seq` is ignored. A new generation resets `report_at` to null; its first accepted
+   report counts no play time. Never rebind captured reports to a replacement generation.
+2. **Basis and acknowledgment.** Server vitals writes (rest, fall, refills, consumables and
+   profile vitals credit) advance `vitals_set_version`. Every keyed `where` advances
+   `player_place.place_set_version`. An ordered report older than the vitals watermark consumes
+   its sequence but ignores vitals, place and casts. A report older only than the place watermark
+   accepts vitals and casts and ignores only place. This preserves in-flight combat through an
+   unrelated crafting or gathering operation.
+   `ReportResult {client, generation, seq, accepted, staleBasis, casts, basis, placeIgnored}`
+   echoes the requested sequence; `accepted` means vitals/casts applied, `staleBasis` means the
+   combat basis was consumed and ignored, and `placeIgnored` means place did not apply.
+   `casts` is the accepted count, zero on ignored reports; `basis` is the accepted input basis
+   (persisted basis on duplicates). No ignored overlay delta is sent again.
+3. **Persistent signature budget.** `cast_ready_at` is a real-valued Unix timestamp, not reset
+   by reporting. Signature cooldown is `content/combat.json.signatureCooldownSeconds` (**1.0 s**).
+   Basic attacks use the separate per-class `basicAttackCooldownSeconds` (healer **2.5 s**).
+   For an accepted, current-basis report, let `ready = max(cast_ready_at, vitals_at)` and
+   `elapsed = max(0, now - vitals_at)`. The cooldown allowance is
+   `max(0, 1 + floor((now - ready) / signatureCooldownSeconds))`. Allowed casts are
+   `min(reported casts, cooldown allowance, floor((stored mana + regenCap * elapsed) / cost))`,
+   or zero at zero HP, under its lock, or without a class. Persist
+   `cast_ready_at = max(now, ready + allowed casts * signatureCooldownSeconds)`.
+   The single initial allowance is consumed persistently, including across same-time reports.
+4. **HP and mana.** HP may only fall except a healer's accepted casts; cap it at
+   `min(maxHp, stored hp + accepted casts * server healAmount)`. Debit the cost of all accepted
+   signature casts: mana is at most
+   `max(0, min(maxMana, stored mana + regenCap * elapsed - accepted casts * cost))`.
+   The max cap is **after** subtraction. Thus repeated same-time sequences cannot reuse mana
+   or cooldown. `combat.json` names the current stat-derived heal constants and rounding.
+5. **Place and time.** Record place through the shared placement hook only when accepted and
+   `placeIgnored` is false. Combat remains accepted when only place is ignored. Add the accepted-report
+   gap capped at 30 seconds, except the first in a generation. Persist `vitals_at = now` and
+   bump the player's version once. A newly consumed stale-basis sequence also bumps once,
+   because the acknowledgment in `PlayerState.vitals` changed; it leaves vitals/place,
+   `report_basis`, `report_at` and cast debt untouched. Duplicates do not bump. Neither
+   duplicate nor stale-basis reports apply casts again.
 
-`rest`, `home-rest`, consumables, `profile` and `fall` set vitals themselves, set `vitals_at` and
-`vitals_set_version`, and so restart the bounds.
+Server refills set `vitals_at` and `vitals_set_version` and preserve cooldown debt:
+`cast_ready_at = max(old cast_ready_at, now)`. They do not give another initial cast.
+The new schema includes `report_client`, `report_generation`, `report_seq`, `report_basis`,
+nullable `report_at`, and `cast_ready_at` in `player_vitals`.
+
+**Report barriers (B implements, C2 sends).** Before rest, home rest, consumables or profile
+reads stored vitals/safe place, C2 freezes and flushes its pending report and waits for its
+acknowledgment. `OpHeader.report` and `ProfileReport.report` carry
+`ReportBarrier {client, generation, seq}`. For a new keyed operation, the helper checks a supplied barrier before placement; B
+requires one for vitals-dependent kinds. Replays need only the current lease, since they
+apply no gameplay. The server requires that generation's stored sequence
+at least that value and its accepted basis at least `vitals_set_version`; otherwise it answers
+`report-required` with state. This is retryable, not a terminal game refusal. Fall does not need
+a barrier to succeed, but is a causal boundary that invalidates earlier captured combat.
+Every keyed placement establishes only the place watermark; the barrier checks only the vitals watermark. A server refill invalidates an earlier accepted combat basis; unrelated operations do not.
+
+**Partition fixtures.** B must verify a healer with 18 mana: first same-time cast consumes 18
+and the initial slot; later same-time sequences permit none, even if they report unchanged mana.
+With enough mana and a 1 s gap, splitting two casts versus coalescing them yields the same cast
+budget and uncapped mana bound. Capping may discard honest surplus regen, never create budget.
+Retries spend no budget; refills restore mana but preserve any future `cast_ready_at` debt.
 
 **Falls.** `fall` always succeeds once the lease and key pass. In order:
 
@@ -275,9 +324,12 @@ start:
 | `wilds-chest` (1) | the claim | A tier-3 chest claimed by this player in this epoch |
 | `echo` (2) | `settle-echo` | The assignment check above |
 
-- **`wilds:turned` becomes server-owned.** The server keeps `player_place.last_outer_epoch`. When
-  the player is placed in a newer outer epoch than that one, the server writes `wilds:turned`,
-  and also `weir-effect-survey-draft` if the road is lit.
+- **`wilds:turned` becomes server-owned.** The server keeps `player_place.last_outer_epoch`. The shared placement hook (B owns it; reports and keyed operations call it when `where.area` is `wilds:outer-1`) looks up the authoritative
+  outer epoch and compares `starts_at`, never opaque ids. An empty watermark initializes
+  `last_outer_epoch` and `last_outer_starts_at` without granting anything. A strictly later
+  observed epoch writes `wilds:turned` and grants `weir-effect-survey-draft` only when the road
+  is already lit at that observation. Repeated, older or first observations grant nothing;
+  an existing turned mark remains. Lighting the road later does not fabricate that observation.
 - **Unbuilt papers carry `unbuilt: true`** in the table, and every grant path refuses them.
 
 **Server-written marks** stay server-written and become trustworthy:
@@ -328,7 +380,7 @@ one held.
 
 **The outbox.** `pending` lives in IndexedDB (the connected cache, reshaped):
 
-- **Ownership.** One outbox per `(account, client)`. `client` is a random id per device. Signing
+- **Ownership.** One outbox per `(account, device)`. `device` is a random id persisted in localStorage, distinct from the per-tab lease/report `clientId`. Signing
   in to a different account on the same device leaves the other account's outbox alone until
   that account signs in again.
 - **Persist first.** An operation is written to the outbox, with its exact request bytes, before
@@ -347,10 +399,16 @@ one held.
 | Outcome | What the client does |
 |---|---|
 | **Transport failure** (no answer, timeout, 5xx) | Keep the head and retry with backoff, same key and bytes. Keep predicting. After a minute, show a "Reaching the world…" chip |
-| **Game refusal** (a 4xx game code with state) | Drop the head, adopt the refusal's state, and re-apply the rest. Any pending operation whose predict function now fails is dropped unsent, since the server would refuse it too. One notice says what didn't happen |
+| **Game refusal** (a 4xx game code with state) | Drop the head, adopt the refusal's state, and re-apply the rest. Unsent operations are dropped only for an explicit dependency failure or a shared authoritative predicate; predictor failure alone is not proof of refusal. One notice says what didn't happen |
 | **Lease lost** (`superseded`, `playing-elsewhere`) | Stop sending and keep everything. Show "Playing on another device" with **Take over**. Never take over on its own. Replay once the player takes over |
 | **Signed out** (`unauthorized`, session expired) | Stop and keep everything. Show sign-in. Replay after signing in to the same account |
-| **`reload-needed`** | Stop, keep the outbox, show the reload notice |
+| **`reload-needed`** | Stop, keep the outbox, show the reload notice (C1 consumes A's typed `isReloadNeeded` for HTTP and presence) |
+
+A stateless `400 invalid-json` on a queued operation is a client bug: C2 pauses the outbox
+and shows a notice; it never retries it indefinitely. `idempotency-mismatch` carries state,
+but is not a settled gameplay refusal: that key may already have committed a different payload.
+C2 reconciles current state and the committed operation before changing prediction or advancing
+the head. A exports `isOutboxClientBug`, `needsReconciliation` and `isSettledRefusal` for this.
 
 **Logout.** Logout first tries to flush the outbox. If it can't, it asks: keep the unsent things on
 this device for the next sign-in, or drop them.
@@ -361,10 +419,32 @@ in memory and offline play is off: every operation shows "Needs a connection" wh
 **Offline** (owner, 2026-10-07: keep it). In the curated areas, the operations the client can
 predict (`quest-step`, `mark`, `take-paper` for placed and handed-over papers, `fall`) queue in
 the outbox, and one report keeps the latest place and vitals. Anything whose result the server
-decides (spends, claims, crafting, mail) shows "Needs a connection", as now. **The Wilds, both
-regions, need the server:** entering asks for a fresh region read, and cached chunks may be drawn
+decides (spends, claims, crafting, mail) shows "Needs a connection", as now. **The owner requires the outer Wilds to have the server. This implementation also requires
+both regions to have it (an implementation interpretation):** entering asks for a fresh region read, and cached chunks may be drawn
 but are never authority for play. If another device moved on meanwhile, replayed steps that no
 longer fit are refused and roll back. No merge rule and no recovery copy are needed.
+
+**Tab and report ownership (C2).** One tab holds a Web Lock named
+`glimway-outbox:<account>:<device>` for the sender and durable sequence allocator. BroadcastChannel
+notifies other tabs of state/outbox changes. Without Web Locks, use a tab-specific sender
+and keep offline sending disabled in passive tabs. The server's lease owner is session plus per-tab `clientId` and never
+silently takes over; same-tab reload resumes the report generation, while a new lease creates one. The immutable in-flight
+report is separate from the next coalesced report: a lost sequence's casts never enter its
+successor. A pending report stores its basis and causal operation boundary. Offline fall/refill
+replay invalidates earlier captured combat; only local changes after that boundary may be
+reported against the new state. Never blindly rebase an old report to the newest version.
+
+**Combat overlay (C2).** Unreported local damage, mana spending and casts live above adopted
+server state. Unrelated snapshots update authoritative state without healing that overlay.
+A matching report ack retires its captured overlay; a server vitals operation/fall deliberately
+starts a new causal boundary. Game snapshots of equal version must be equal; otherwise treat
+the response as uncertain and reconcile with a state read.
+
+**Ambiguous answers.** HTTP 429, 5xx, `not-implemented`, malformed/HTML successes and invalid
+refusal state do not prove that an operation was uncommitted or terminally refused. Keep the
+head and retry/reconcile. Auth/lease/reload failures pause. Only a validated terminal game
+refusal with state removes the sent head. Abandoning an unresolved sent head on logout or expiry
+first reconciles current state; never-sent work can be dropped directly.
 
 ### 2.5 Removed for good
 
@@ -419,7 +499,7 @@ fresh. Nothing has to match the TypeScript generator, and no claims need to surv
 
 ### 3.2 The message
 
-Units: grid positions and sizes are **tiles**; offsets and arrival points are **pixels**. Cells
+Units: grid positions and sizes are **tiles**; decor offsets are **pixels**; `Exit.entry` is a **tile** in the destination. Cells
 are numbered row-major, `i = y × size + x`.
 
 ```proto
@@ -442,6 +522,7 @@ message WildsChunk {
   Tile spawn = 15;
   string look = 16;             // "tangle" | "outer"
   string mark = 17;             // the season's Mark for the outer look; empty when permanent
+  repeated WildsEntity entities = 18; // immutable camp/node/chest/POI bodies, including enemies/material/tier/poi
 }
 
 message Tile { uint32 tx = 1; uint32 ty = 2; }
@@ -453,7 +534,7 @@ message Exit {
   Tile entry = 7;               // where the hero arrives in `to`, in its tiles
 }
 
-// Struct of arrays, so ~400 pieces pack tight. All lists have the same length.
+// Struct of arrays, so ~400 pieces pack tight. Only piece arrays have the same length; kinds is a dictionary and flags packs two bits per piece.
 message DecorList {
   repeated string kinds = 1;    // decor kind names used in this chunk
   repeated uint32 kind = 2;     // index into kinds
@@ -476,10 +557,12 @@ message StorySite { string id = 1; SiteKind kind = 2; uint32 tx = 3; uint32 ty =
   - `palette` holds at most 16 entries;
   - `ground` is exactly `size²/2` bytes and `solid` exactly `size²/8`;
   - every nibble indexes the palette;
-  - every DecorList array has the same length, every `kind` indexes `kinds`, and `flags` covers
-    every piece;
+  - the per-piece DecorList arrays (`kind`, `tx`, `ty`, `ox`, `oy`, `variant`) have equal
+    lengths; `kinds` is a palette, `kind` indexes it, and packed `flags` covers every piece;
   - every tile lies inside the chunk;
-  - every `to` is a known area or a chunk of the same region.
+  - every `to` is a known area or a valid chunk of either known region (including the
+    Tangle/Whitequiet crossing and return); `entry` is inside the destination grid, not the
+    source grid. The chunk and its immutable entity/site tiles must also be in bounds.
 
   A chunk that fails is dropped and fetched again; it is never drawn.
 
@@ -496,15 +579,16 @@ measures both on its golden seeds and reports them before the client work starts
   no race on a first read. (The open map can't pre-generate an unbounded map; it will need the
   rule "keep a generator while an open epoch references it".) An in-memory LRU of about 512
   chunks sits in front.
-- **`GET /api/wilds/chunk/{epochId}/{cx}/{cy}`.**
+- **`GET /api/wilds/chunk/{epochId}/{layer}/{cx}/{cy}`.**
   - Binary protobuf (`application/x-protobuf`). It's a new route, so the "HTTP stays JSON" rule
     in `proto-migration.md` covers only existing routes.
   - The session is enough; no lease.
   - The epoch must belong to the caller's world.
   - Ended epochs answer `epoch-ended`.
   - `Cache-Control: private, max-age=31536000, immutable`.
-- **The client never trusts a cached chunk on its own.** It fetches or draws chunks only for the
-  epoch a fresh region read has just named. So a chunk cached in the HTTP cache or IndexedDB can
+- **The client never trusts a cached chunk on its own.** It starts play or fetches new chunks only for the
+  epoch a fresh region read has just named. A previously validated cached view may remain
+  visible while disconnected, labeled stale and with entry/interactions disabled. So a chunk cached in the HTTP cache or IndexedDB can
   never stand in for an `epoch-ended` answer. The IndexedDB store `glimway-chunks` is keyed
   `<contract>:<generator_version>:<epochId>:<cx>:<cy>`; entries of ended epochs and of older
   contracts are deleted at start and at each turning.
@@ -542,6 +626,15 @@ full entity bodies, which now come in chunks.
   homestead view, and `generateLand`, `landSeed` and the land half of the `homestead.json`
   vectors go. Consumers to move: `game/homeland.ts`, `entities/homestead-art.ts`,
   `homestead-placement.ts`, `homesteads.ts`, `WorldScene`'s home building, `world-dev-hooks`.
+
+The region read creates a missing epoch but never records player placement or turning.
+Area transitions reach the server through reports/keyed `where` only. Stored chunk keys are
+`(epoch_id, layer, cx, cy)`; world/realm are determined by epoch ownership. Layer is 0 now.
+D's lookup must ignore epochs with a non-current generator version, including v1 epochs
+created on an intermediate development branch after the one-time 027 reset.
+Homestead views can fetch supplemental `GET /api/homestead/land/{gate}`: the immutable grid
+has `generatorVersion: 2`, width/height and row-major cells named `grass`, `tree`, `stump`,
+`boulder`, `water`, `ford`, `slope`, `edge`, `path` (the corresponding client LAND vocabulary).
 
 ### 3.5 What the client still needs locally
 
@@ -606,11 +699,11 @@ more mana than honest regen could have given, which is all this release promises
 |---|---|---|
 | **`account_id`** (guests.md step 1) | **Needs it** | Accounts get an opaque `account_id`. Existing players keep their Habitica id as the value; **new accounts get a random id** (`store.Random`). `sign_ins(account_id, method, subject, secret_hash, created_at)` with **unique `(method, subject)`**, backfilled with one `habitica` row per player. Login verifies Habitica, then finds the account through `sign_ins(habitica, <user id>)`; none means a new account with a random id plus its sign-in row. `profile` compares the reported profile id with the account's Habitica subject, never the account id (today `sync.go:38` compares it with the player id). See "Which columns rename" below |
 | **Profile source seam** (step 2) | **Needs it** | `players.profile_source` (`habitica`). One Go function (`profile.For(account)`) and one TS module (`lib/profile.ts`) answer name, look, class, level, stats, companions and ember earning. Every reader of the imported profile goes through them, including presence avatars (`presence_auth.go:26-28`). A Go test checks that nothing else reads `profile_json` |
-| **Server-owned mana** | **Needs it** | The report bounds and refills as operations (sections 2.2 and 4). Stored in `player_vitals(account_id, hp, mana, vitals_at, vitals_set_version, report_client, report_seq)` |
+| **Server-owned mana** | **Needs it** | The report bounds and refills as operations (sections 2.2 and 4). Stored in `player_vitals` with the persistent report/cast fields specified in 2.2 |
 | **The clock module** | **Needs a small part** | `content/clock.go` and `src/lib/clock.ts` grow out of the calendar: `calendarAt`, `nextTurning` and `recovered(stored, rate, cap, since, now)` (the mana bound). Shared vectors in `content/vectors/clock.json`, replacing `calendar.json`. Resident cycles (0.4) add their helper when they arrive. Entity cycles don't use a periodic helper (3.4) |
 | **Rule tables in `content/`** | **Needs these** | `quests.json`: the **lantern road only**, in [quests.md](quests.md)'s format (step 1 of its build order). Step ids are today's stage names, so `accepted` … `complete`. `story.json`: mark namespaces, writer, id lists, areas. `vitals.json`: regen cap, fall recovery. `combat.json`: per-class cast cost, cooldown and the heal formula's constants (`combat.ts` reads them from here). `papers.json`: full find rules. Go and TS both load each file; the loaders validate |
 | **The ability table** | Shouldn't block | `combat.json` is shaped so magic's ability table (0.5) extends it |
-| **World changes with expiry** | **Not in 0.3** (owner, 2026-10-07: deferred to 0.5) | No 0.3 operation writes one. The chunk key (`epoch_id`, realm, layer, cx, cy) and `entity_state` already carry what the table's key needs. It comes with its first writer in 0.5 (fishing depletion or the first working) |
+| **World changes with expiry** | **Not in 0.3** (owner, 2026-10-07: deferred to 0.5) | No 0.3 operation writes one. The chunk key (`epoch_id`, layer, cx, cy; realm from the epoch) and `entity_state` already carry what the table's key needs. It comes with its first writer in 0.5 (fishing depletion or the first working) |
 
 **Which columns rename.** Lane A's first substep lists every table. The rule:
 
@@ -624,6 +717,10 @@ more mana than honest regen could have given, which is all this release promises
 - Party ids stay Habitica party ids.
 
 ---
+
+Only newly created accounts have opaque random ids. Historical accounts retain their Habitica
+subject as account id, visible in presence, world ownership and mail. All auth joins use the
+Habitica sign-in in 0.3; guest step 3 replaces that assumption.
 
 ## 6. The protobuf side
 
@@ -645,15 +742,18 @@ message PlayerState {
   double version = 1;           // the one state version; doubles for counters, per the shape rules
   Account account = 2;          // account_id, display_name, profile_source, party_id, world_id, flagged
   HabiticaProfile profile = 3;  // absent for profile_source "none" later
-  Vitals vitals = 4;            // hp, mana, max_hp, max_mana, report_seq
+  Vitals vitals = 4;            // hp, mana, max_hp, max_mana, report_seq, report_client, report_generation,
+                               // vitals_set_version, vitals_at (seconds), cast_ready_at (fractional seconds)
   Place place = 5;              // area, x, y
   Story story = 6;              // map<string,string> quests; repeated string marks, discoveries,
                                 // defeated, quest_items; double play_seconds
   Embers embers = 7;            // balance, xp_earned, pending, xp_mark, verified_xp
 }
-message OpHeader { string lease = 1; string key = 2; }
+message ReportBarrier { string client = 1; string generation = 2; double seq = 3; }
+message OpHeader { string lease = 1; string key = 2; ReportBarrier report = 3; }
 message Where { string area = 1; double x = 2; double y = 3; }
-message Refusal { string error = 1; PlayerState state = 2; }
+message ErrorDetail { string code = 1; }
+message Refusal { ErrorDetail error = 1; PlayerState state = 2; }
 
 message Envelope {
   PlayerState state = 1;
@@ -666,25 +766,71 @@ message Envelope {
     FallResult fall = 15;       // recovered vitals, place, lantern: placed | none + reason
     ProfileResult profile = 16; // credit, pending, vitals credit
     SpendResult spend = 17;
+    WildsClaimResult wilds_claim = 18;
+    WildsLanternResult wilds_lantern = 19;
   }
 }
 ```
+
+Profile has its own `ProfileAppearance`; presence evolution cannot change the state contract.
+Raw Habitica pet/mount maps use `google.protobuf.Value` to retain null/zero/negative/boolean
+ownership values; only Habitica mapping decides ownership. All timestamp fields are Unix
+seconds (fractional cast readiness), and HTTP numbers are finite JSON numbers.
+After 028, `Story.discoveries`/`defeated` are compatibility projections derived from
+`found:`/`defeated:` marks, never independent counters. C2 uses marks as the single source.
+Witness flags compose a bounded beat/account id and a human name: their mark input allows 256 UTF-8 bytes, including spaces/Unicode in the name. Ordinary payload ids retain the 128-byte character restriction.
+All authenticated unfinished handlers answer `409 not-implemented` with state, including
+chunk and land reads; this remains retryable during lane integration.
+
+**Fields and identity.** `Vitals` includes HP/mana/maxima, report client/generation/seq,
+`vitalsAt`, `vitalsSetVersion`, and `castReadyAt`. `Embers.xpEarned` is the **remaining spendable
+XP-earned balance** (`xpEmbers`), not lifetime earnings. `xpMark` is the paid XP high-water;
+`verifiedXp` the last verified checkpoint's lifetime XP; `pending` the held ember amount.
+`QuestStepResult` returns the committed quest/step plus items, marks, papers and embers
+newly granted by that transition. `MarkResult`/`TakePaperResult.added` indicate a new grant;
+a replay returns the original value. `SettleEchoResult` identifies epoch/site/member and
+its granted paper (empty if that settlement has no paper). `ProfileResult.status` is `synced`
+or `unchanged`; `credit` is the embers added now, `pending` is the resulting total held amount,
+and `vitalsCredit` is signed HP/mana change. `SpendResult.outcome` keeps `lit:<target>`,
+`opened:<chest>` or empty for rest. Claim results include mutable entity state, loot, resulting
+material balances, rare-find booleans and papers newly granted. Lantern results include the
+epoch, whether a reward was given, loot, resulting balances and current lanterns.
+Result quantities/timestamps/counters are JSON numbers, optional identities are wrapper nulls,
+and missing output lists/maps are emitted `[]`/`{}`. `FallResult.lantern` is `placed` or `none`,
+with reason `not-wilds`, `invalid-place`, `epoch-missing` or `daily-cap`; successful placement
+returns its epoch/id. A site paper identifies `epoch` and `site`; settlement includes the
+expected `member`, rejecting a stale assignment. Site kinds are echo/given/cairn/nest/reeds/plank.
+
+`SessionResponse` has one alternative: `state` or `worldChoice` (the latter holds a Habitica
+subject, since no account exists yet). `StateResponse` adds required `leaseActive`;
+`PlayResponse` adds `lease`, `reportClient`, `reportGeneration`. The generated request/reply
+schemas and `api/operations.ts` are C1/C2's facade; current game callers use the documented
+Snapshot projection until C2 rewires them. All errors use `{error:{code}, state?}`; auth/lease
+errors omit state. `ApiError.state` retains only validated `PlayerState`.
 
 **Domains not yet on protobuf** (items, homesteads, mail, crafting, repairs, projects, worlds:
 slices 3–7). Their requests take `op` and `where` in place of `lease`/`baseRev`/`progress`, but
 keep their JSON results. On the wire their answer is `{"state": <PlayerState as ProtoJSON>,
 "result": <today's JSON result>}`. Go writes it with one adapter (`writeMixed`): ProtoJSON for
 `state`, `encoding/json` for `result`. TS decodes `state` with generated code and `result` with
-the existing parser. Each domain moves its `result` into the oneof when its slice migrates.
+the existing result parser. Embedded `Snapshot` fields are removed from each domain's result;
+read extras become `result` (for example items `{items}`, storage
+`{home,inventory,storage,personal,shared}`, mail `{mail,nextCursor,nextPendingCursor,inventory}`);
+keyed mutations keep the current `result` object. No `rev`, `version`, account metadata or
+progress document is nested into the result. `decodeMixed` accepts a domain-specific result
+parser and validates state first. The Go `server-first.json` fixtures freeze both typed and
+mixed empty/populated result shapes. Each domain moves its `result` into the oneof when its slice migrates.
 
 **Also in this release:**
 
-- **Presence v2.** The presence messages carry `habitica_id` (`presence.proto:28-44`). They gain
-  `account_id`; the old field is reserved. The subprotocol becomes `glimway.presence.v2`, so old
+- **Presence v2.** V1 definitions remain in `glimway.v1`, deprecated for generated-source compatibility.
+  New `glimway.v2` presence messages carry `account_id` with the same event vocabulary.
+  Runtime readers/writers use only v2; v1 can be deleted in a later release. The subprotocol becomes `glimway.presence.v2`, so old
   tabs are closed with 4005 (section 8).
 - **New error codes**, appended to the enum: `reload-needed` (HTTP), `not-next-step`,
   `wrong-area`, `unknown-mark`, `server-mark`, `paper-not-due`, `echo-not-here`,
-  `not-implemented` (while the integration branch is being built).
+  `not-implemented` (while the integration branch is being built), and `report-required`
+  (retry after the report barrier).
 - **The contract number** (`X-Glimway-Contract`) lives in `content/contract.json`, read by both
   sides.
 - **Fixtures:** zero, empty and populated cases for every new message and the mixed adapter.
@@ -742,8 +888,10 @@ and 3 server specs carry guest tests (`e2e/fixtures.ts` blocks `/api` unless `se
 | review5-fixes:171-176 | A local clock test | `freshPlayer`; keeps the dev calendar (display only) | — |
 
 Every test now starts a backend in its worker, so the full suite gets heavier. It still runs once,
-at the integration gate (section 9), as [testing.md](../testing.md) asks. CI still runs no
-Playwright.
+at the integration gate (section 9), as [testing.md](../testing.md) asks. CI already runs smoke and full Playwright jobs. Verify/protobuf/unit gates remain required
+between lane merges. Intermediate lane and integration branches are expected to fail e2e until
+the coordinated cutover is complete; the owner reviews those failures, and the full integration
+gate must pass before release. This lane does not run e2e or disable its CI jobs.
 
 ### 7.2 Unit and parity tests that retire
 
@@ -904,7 +1052,7 @@ in one start-up, and each ends with `PRAGMA foreign_key_check`.
      to `quest-gift:lantern-road:guardian-defeated` and `quest-gift:lantern-road:complete`, so no
      gift pays twice.
    - **Marks.**
-     - Flags become `story_marks` under their namespace's writer. Economy flags stay in
+     - 028 clears and rebuilds `story_marks` and `quest_progress` from the document; the 027 bridge's append-only rows and `server` writer labels must not be trusted. Flags become `story_marks` under their namespace's writer. Economy flags stay in
        `outcomes`.
      - Discoveries become `found:` marks and defeated enemies `defeated:` marks.
      - `inventory` is normalized: only the four quest items, deduplicated, as `quest-item` marks.
@@ -912,7 +1060,9 @@ in one start-up, and each ends with `PRAGMA foreign_key_check`.
        is never dropped silently. Run it on a copy of the owner's database first.
    - **Turning.** A player holding `wilds:turned` keeps it as a server mark.
      `last_outer_epoch` stays empty, since no v1 epoch survives.
-   - **Rest.** `players.version` is `progress.rev + 1`; `play_seconds` is copied. Then the
+   - **Rest.** Increment the current `players.version` once through `BumpVersion`; never derive it
+     from `progress.rev`, which can lag after login/play/maintenance in the A bridge.
+     `play_seconds` is copied. Then the
      `progress` table is dropped. Entitlements (outcomes, heirloom flags, paid papers, the
      ledger) are untouched apart from the gift renames.
 
@@ -931,8 +1081,8 @@ After each upgrade: the column renames, the split tables, the gift renames, unch
 
 - Presence moves to `glimway.presence.v2`, so an open 0.2 tab's socket closes with 4005
   (`presence_socket.go:74-80`).
-- Every `/api` call without the new contract header answers `409 reload-needed`, so nothing an old
-  client sends is written.
+- Every stateful `/api` call without the new contract header answers `409 reload-needed`, so nothing an old
+  client sends is written. Health, calendar and immutable sprite routes remain public.
 - The 0.2 client doesn't know that HTTP code, and its 4005 handling stops presence without a
   prompt. So **an old tab shows errors until its periodic build check offers the reload**
   (`version.ts`, dismissible). That's acceptable with one player.
@@ -940,6 +1090,13 @@ After each upgrade: the column renames, the split tables, the gift renames, unch
   contract bumps get a proper prompt.
 
 ---
+
+A handoff checks 026/027 on a copy of the owner's database before release. Unfinished-origin
+profiles use a logged deterministic fallback: valid profile_json, then checkpoint_json, with
+verified_xp retained as the XP mark; otherwise NewState and no imported profile. Incomplete
+old evidence never prevents startup. The connected cache makes a clean break with old
+`habiticaId` IndexedDB entries; C1 shows the "wasn't kept" notice instead of silently implying
+those queued changes survived.
 
 ## 9. Lanes
 
@@ -964,6 +1121,41 @@ After each upgrade: the column renames, the split tables, the gift renames, unch
 B, C1, C2 and D then build against fixed interfaces, using fakes where another lane's work isn't
 in yet.
 
+**Fixed ports and bridge (A2).** Go `store.StateComposition` loads/persists snapshots and
+projects `PlayerState` in the caller's immediate transaction. A's `DefaultStateComposition`
+keeps the old document as the intermediate truth, mirrors vitals/place on persist, and uses
+only `players.version`; B replaces it in `store/state.go` with 028. Migration 027 populates
+these rows from retained documents; new player creation also
+initializes normalized vitals/place. Quest and mark rows are mirrored on persist, without
+removing unknown legacy flags before B classifies them in 028. `BumpVersion` centralizes increments;
+peer/maintenance writers bump each affected account in the same transaction. Replay never bumps.
+
+`chunks.ChunkSource` reads a world's stored chunk in that transaction; helpers read entity and
+decor geometry without generation. `chunks.EpochComposition.Current(ctx, tx, world, region, now)` never creates: absent/current-generator mismatch is `sql.ErrNoRows`, ended is `ErrEpochEnded`. `Create` creates an epoch and all
+nine chunks in one tx. `ports.RegionSource.Region` creates only an absent epoch, otherwise reads.
+`ports.StoryRules.Echoes` takes the snapshot and geometry-only `EchoInput` (epoch/sites); B derives road/mark predicates. It provides per-player Echo assignments, eligibility and atomic paper grants;
+`ports.Lanterns.PlaceFallen(ctx, tx, *Snapshot, epoch, *Where, now)` owns D's fall geometry and capped write, returning `FallLantern` with exactly the fall reasons. `ports.Placement.Record` is the one turning/placement hook; `ports.HomeLandSource.Land` supplies
+served land. These grants/hooks never bump versions themselves. `sql.ErrNoRows` means missing,
+`chunks.ErrEpochEnded` ended, `chunks.ErrUnavailable` transient. Executable fakes use the same
+signatures. Go `chunks.Validate` and TS `decodeChunk` validate binary geometry, including cross-region
+exits and the Commons arrival grid (62×42 initial tiles). TS `api/ports.ts` retains PaperRule/QuestStep types; actual client read/view contracts live in OperationsApi and ChunkSource; `api/operations.ts` supplies generated
+session/operation calls and its fake is usable before C2. Its `chunk` call consumes binary
+protobuf, and all HTTP calls carry contract 3. Report/barrier helpers are contracts and stubs
+until B implements rules; they cannot silently accept an old progress field. Intermediate
+spend/Wilds routes dispatch v3 `op` requests to their stub while old domain handlers remain
+for lane tests; B/D remove that temporary branch when they migrate the handler. `ports.PaperRule`/TS `PaperRule` and
+`QuestStep` fix the initial typed content schema; B owns the actual rule data and validators.
+
+**Ownership corrections.** A owns the mechanical identity/SQL sweep across the repository,
+including every lane's handler, tests, store helpers and CLI; other lanes rebase those edits.
+B owns story/placement implementations and report budgets/barriers. D owns chunk/region/land
+implementations and homestead-land consumers (`homestead-art`, `homestead-placement`,
+`homesteads`); C2's entity scope excludes them. C2 owns `WorldScene`, and D contributes its
+home-land building changes there through C2's facade or a coordinated merge, not concurrent
+whole-file rewrites. C1 may use A's session facade while C2 is unfinished. C2's removal of
+shared save APIs waits for C1's UI consumers. A owns `combat.json`'s initial constants and both
+reader updates; B extends its server rules without changing the fixed timings.
+
 **Migration numbers are fixed:** 026 and 027 belong to A, 028 to B. D needs none. A lane that
 finds it needs one takes the next number at the time it merges.
 
@@ -977,14 +1169,15 @@ finds it needs one takes the next number at the time it merges.
 
 **Handoffs and shared seams:**
 
-- **`routes.go`, `http.go`, the error enum and `types.ts`** belong to A. After A merges, other
-  lanes only append lines.
+- **`routes.go`, `http.go`, the error enum and `types.ts`** belong to A. After A merges,
+  B/D may replace their route stubs and remove old routes/parsers in coordinated changes; proto
+  changes still serialize on the integration branch.
 - **The Echo assignment rule and paper rules** are written in B (`story` package). D's region view,
   claims and `settle-echo` call them.
 - **Wilds gathering** is in B's `gathering.go`, reading chunks through `ChunkSource`. It uses the
   fake until D merges.
-- **`save.ts`** is deleted by C2, which owns its last consumer (`session.ts`). C1 removes the UI
-  around it.
+- **`save.ts`** is deleted by C2 only after C1 has removed its imports from `App.svelte`
+  and `MenuPanel.svelte`; use a coordinated merge or retain the exports until both migrate.
 - **Land and `homeland.ts`** belong to D. C1 doesn't touch them.
 - **Proto changes after A** go one at a time on the branch (section 6).
 
@@ -1066,3 +1259,19 @@ on the integration branch.
 - **Chunk size over budget:** if the measured message is over 6 KB, drop decor offsets for pieces
   with zero offset (a presence bitmask), or move scatter-only decor (litter, pebbles, grass) back
   to client seeding. *Default:* measure first, decide in lane D.
+
+### Round 1 handoff checks
+
+B5 removes `PUT /api/progress`, `POST /api/sync`, and legacy upload bodies for `POST /api/spend`.
+D removes legacy upload bodies for `POST /api/wilds/claim`, `/lantern`, and `/defeat` (B5's
+retirement assertion is enabled once D is merged). `/api/origin` is already removed; C1 removes
+its TODO-marked raw client method and flow. A's skipped `TestRetiredTrustRoutesB5` is the
+checkable exit criterion: each old request must receive 404/405.
+The bridge advances vitals time/budget only on numeric vitals changes or explicit
+`Snapshot.VitalsWritten`; every keyed `where` sets `PlaceWritten`. B's normalized saver
+must keep those independent policies, including server refills whose values do not change.
+
+A's TS ports contain only actual client seams: OperationsApi/FakeOperations and
+ChunkSource/FakeChunks, plus PaperRule/QuestStep types. Server-only transaction seams/fakes
+live in Go. `report` accepts keepalive; chunk and region reads reject mismatched identities as
+bad-response. Turning is observed through reports/keyed outer-1 placements, never region reads.

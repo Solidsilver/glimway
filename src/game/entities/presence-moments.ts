@@ -4,9 +4,8 @@
  * it back), and the story beats others reach near you (src/content/witness.ts).
  */
 import type Phaser from 'phaser'
-import { hasWitnessed, isWitnessBeat, keepsWitness, witnessCopy, witnessFlag, witnessMoment } from '../../content/witness'
+import { hasWitnessed, isWitnessBeat, witnessCopy, witnessMoment } from '../../content/witness'
 import { bus, EV, type EmotePayload, type WitnessPayload } from '../events'
-import { emitResidents } from '../residents'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
 import type { EnemySystem } from './enemies'
@@ -25,7 +24,7 @@ export interface PresenceMomentsDeps {
 export function presenceMoments(scene: Phaser.Scene, deps: PresenceMomentsDeps): void {
   let bubble: Phaser.GameObjects.Container | null = null
   const onEmote = (p: EmotePayload) => {
-    if (p.habiticaId !== null) return
+    if (p.accountId !== null) return
     bubble?.destroy()
     bubble = showEmoteBubble(scene, deps.hero(), p.id, -32)
   }
@@ -46,16 +45,12 @@ export function presenceMoments(scene: Phaser.Scene, deps: PresenceMomentsDeps):
  */
 function witness(deps: PresenceMomentsDeps, p: WitnessPayload): void {
   const s = deps.session
-  if (!s.link || !p || !isWitnessBeat(p.beat) || !p.habiticaId) return
-  if (hasWitnessed(s.state.flags, p.beat, p.habiticaId)) return
-  // The line is kept for the first few travelers of each beat; the moment shows every time.
-  const flag = witnessFlag(p.beat, p.habiticaId, p.name)
-  if (flag && keepsWitness(s.state.flags, p.beat)) {
-    s.addFlag(flag)
-    emitResidents(s)
-  }
+  if (!s.link || !p || !isWitnessBeat(p.beat) || !p.accountId) return
+  if (hasWitnessed(s.state.flags, p.beat, p.accountId)) return
+  // The journal line is the relay's `witness:` mark, written by the server
+  // (design server-first 2.2); it arrives with the next state.
   bus.emit(EV.toast, { text: witnessMoment(p.beat, p.name), icon: 'lantern' })
-  bus.emit(EV.emote, { habiticaId: p.habiticaId, id: 'lantern' } satisfies EmotePayload)
+  bus.emit(EV.emote, { accountId: p.accountId, id: 'lantern' } satisfies EmotePayload)
   if (p.beat === 'warden' && deps.world.areaId === 'ruin') {
     deps.enemies.warden.witnessRest(WITNESS_REST_MS, () => bus.emit(EV.toast, { text: witnessCopy.wardenRises, icon: 'lantern' }))
   }

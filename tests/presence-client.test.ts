@@ -84,7 +84,7 @@ class FakeSocket implements SocketLike {
   }
 }
 
-const player = (id: string, over: Partial<PresencePlayer> = {}): PresencePlayer => ({ habiticaId: id, displayName: id, avatar: null, pos: null, ...over });
+const player = (id: string, over: Partial<PresencePlayer> = {}): PresencePlayer => ({ accountId: id, displayName: id, avatar: null, pos: null, ...over });
 
 function rig() {
   const clock = fakeTimers();
@@ -102,12 +102,12 @@ function rig() {
     random: () => 0.5,
     handlers: {
       status: (s) => statuses.push(s),
-      room: (area, players) => events.push({ room: area, players: players.map((p) => p.habiticaId) }),
-      join: (area, p) => events.push({ join: area, id: p.habiticaId }),
+      room: (area, players) => events.push({ room: area, players: players.map((p) => p.accountId) }),
+      join: (area, p) => events.push({ join: area, id: p.accountId }),
       leave: (id) => events.push({ leave: id }),
       pos: (id, p) => events.push({ pos: id, x: p.x }),
       emote: (id, e) => events.push({ emote: id, id: e }),
-      witness: (w) => events.push({ witness: w.beat, id: w.habiticaId, name: w.name }),
+      witness: (w) => events.push({ witness: w.beat, id: w.accountId, name: w.name }),
     },
   });
   const sock = () => sockets[sockets.length - 1];
@@ -115,7 +115,7 @@ function rig() {
   const live = () => {
     client.start('L'.repeat(64));
     sock().open();
-    sock().push({ type: 'ready', habiticaId: 'me' });
+    sock().push({ type: 'ready', accountId: 'me' });
   };
   const sentTypes = () => sock().sent.map((m) => m.type);
   return { clock, client, sockets, sock, statuses, events, live, sentTypes };
@@ -133,7 +133,7 @@ test('auth goes first, in the message (never the URL); nothing else until ready'
   r.sock().open();
   assert.deepEqual(r.sock().sent, [{ type: 'auth', lease: 'lease-abc' }]);
   assert.equal(r.client.emote('wave'), false, 'no emotes before ready');
-  r.sock().push({ type: 'ready', habiticaId: 'me' });
+  r.sock().push({ type: 'ready', accountId: 'me' });
   assert.deepEqual(r.sentTypes(), ['auth', 'join']);
   assert.equal(r.sock().sent[1].area, 'village');
   assert.equal(r.client.status, 'live');
@@ -303,11 +303,11 @@ test('relayed messages reach the handlers; malformed ones are ignored', () => {
   r.live();
   r.client.setArea('village');
   r.sock().push({ type: 'join', area: 'village', player: player('bob') });
-  r.sock().push({ type: 'pos', habiticaId: 'bob', x: 5, y: 6, facing: { x: 0, y: 1 }, moving: true });
-  r.sock().push({ type: 'pos', habiticaId: 'bob', x: 'nope', y: 6 });
-  r.sock().push({ type: 'emote', habiticaId: 'bob', id: 'wave' });
-  r.sock().push({ type: 'emote', habiticaId: 'bob', id: 'not-an-emote' });
-  r.sock().push({ type: 'leave', habiticaId: 'bob' });
+  r.sock().push({ type: 'pos', accountId: 'bob', x: 5, y: 6, facing: { x: 0, y: 1 }, moving: true });
+  r.sock().push({ type: 'pos', accountId: 'bob', x: 'nope', y: 6 });
+  r.sock().push({ type: 'emote', accountId: 'bob', id: 'wave' });
+  r.sock().push({ type: 'emote', accountId: 'bob', id: 'not-an-emote' });
+  r.sock().push({ type: 'leave', accountId: 'bob' });
   r.sock().onmessage?.({ data: '{nope' });
   assert.deepEqual(r.events, [{ join: 'village', id: 'bob' }, { pos: 'bob', x: 5 }, { emote: 'bob', id: 'wave' }, { leave: 'bob' }]);
 });
@@ -316,10 +316,10 @@ test('a witnessed beat reaches its handler; malformed ones are ignored', () => {
   const r = rig();
   r.live();
   r.client.setArea('ruin');
-  r.sock().push({ type: 'witness', beat: 'warden', habiticaId: 'olive', name: 'Olive' });
-  r.sock().push({ type: 'witness', beat: 'warden', habiticaId: '', name: 'Olive' });
-  r.sock().push({ type: 'witness', beat: 7, habiticaId: 'olive', name: 'Olive' });
-  r.sock().push({ type: 'witness', beat: 'lantern', habiticaId: 'olive' });
+  r.sock().push({ type: 'witness', beat: 'warden', accountId: 'olive', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 'warden', accountId: '', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 7, accountId: 'olive', name: 'Olive' });
+  r.sock().push({ type: 'witness', beat: 'lantern', accountId: 'olive' });
   assert.deepEqual(r.events, [{ witness: 'warden', id: 'olive', name: 'Olive' }]);
 });
 
@@ -335,7 +335,7 @@ test('lost transport reconnects with backoff, re-auths and re-joins', () => {
   r.clock.advance(5);
   assert.equal(r.sockets.length, 2, 'one second later');
   r.sock().open();
-  r.sock().push({ type: 'ready', habiticaId: 'me' });
+  r.sock().push({ type: 'ready', accountId: 'me' });
   assert.deepEqual(r.sentTypes(), ['auth', 'join']);
   assert.equal(r.sock().sent[1].area, 'commons');
   // A failure soon after `ready` still counts: the next wait is ~2 s, not 1 s.
@@ -356,7 +356,7 @@ test('a refused upgrade (seen as 1006) and a flood close keep retrying with boun
   }
   assert.equal(r.sockets.length, 13, 'still trying, at most every ~30 s');
   r.sock().open();
-  r.sock().push({ type: 'ready', habiticaId: 'me' });
+  r.sock().push({ type: 'ready', accountId: 'me' });
   assert.equal(r.client.status, 'live');
   r.sock().onclose?.({ code: 1008, reason: 'rate-limited' });
   assert.equal(r.client.status, 'retrying');
@@ -445,7 +445,7 @@ test('review-6 #2: ready → capacity close cycles keep backing off; a stable st
     }
     gaps.push(waited);
     r.sock().open();
-    r.sock().push({ type: 'ready', habiticaId: 'me' });
+    r.sock().push({ type: 'ready', accountId: 'me' });
   }
   for (let i = 1; i < gaps.length; i++) assert.ok(gaps[i] > gaps[i - 1], `gaps grow: ${gaps.join(', ')}`);
   // Connected for a stable stretch: the next failure starts over at ~1 s.

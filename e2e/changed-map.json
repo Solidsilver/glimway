@@ -24,6 +24,10 @@
       "specs": ["camera.spec.ts"]
     },
     {
+      "paths": ["src/ui/account.ts", "src/ui/update.svelte.ts", "src/ui/UpdateNotice.svelte", "src/content/update.ts"],
+      "specs": ["unreachable.spec.ts", "version.spec.ts", "onboarding.spec.ts"]
+    },
+    {
       "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
       "specs": ["wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts"]
     },
@@ -224,7 +228,7 @@
       "specs": ["repairs.spec.ts"]
     },
     {
-      "paths": ["src/game/nudges.ts", "src/lib/nudges.ts", "src/lib/habitica/**", "src/ui/habitica-local.ts", "src/ui/NamePrompt.svelte"],
+      "paths": ["src/game/nudges.ts", "src/lib/habitica/**", "src/ui/habitica-local.ts", "src/ui/NamePrompt.svelte"],
       "specs": ["onboarding.spec.ts", "onboarding-layout.spec.ts", "connected.spec.ts"]
     },
     {

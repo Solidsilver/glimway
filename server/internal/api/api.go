@@ -4,8 +4,11 @@ package api
 
 import (
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/habitica"
+	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
+	"glimway/server/internal/story"
 	"io"
 	"log"
 	"time"
@@ -18,6 +21,14 @@ const SessionTTL = 30 * 24 * time.Hour
 const SessionIdleTTL = 7 * 24 * time.Hour
 
 type Config struct {
+	Lanterns         ports.Lanterns
+	Story            ports.StoryRules
+	Placement        ports.Placement
+	Regions          ports.RegionSource
+	HomeLand         ports.HomeLandSource
+	State            store.StateComposition
+	Chunks           chunks.ChunkSource
+	Epochs           chunks.EpochComposition
 	SecureCookie     bool
 	Logger           *log.Logger
 	Now              func() time.Time
@@ -61,11 +72,31 @@ type Server struct {
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
+	if c.State == nil {
+		c.State = store.DefaultStateComposition{}
+	}
 	if c.Now == nil {
 		c.Now = time.Now
 	}
+	if c.Chunks == nil || c.Epochs == nil {
+		stored := store.NewChunks(c.Now)
+		stored.GeneratorVersion = c.WildsGeneratorVersion
+		if c.Chunks == nil {
+			c.Chunks = stored
+		}
+		if c.Epochs == nil {
+			c.Epochs = stored
+		}
+	}
 	if c.Logger == nil {
 		c.Logger = log.New(io.Discard, "", 0)
+	}
+	sr := story.Rules{Chunks: c.Chunks, Epochs: c.Epochs, Now: c.Now}
+	if c.Story == nil {
+		c.Story = sr
+	}
+	if c.Placement == nil {
+		c.Placement = sr
 	}
 	return newServer(s, h, c)
 }
@@ -86,5 +117,16 @@ func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
 	if c.LoginPartyRate <= 0 {
 		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
 	}
-	return &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	a := &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	// D's region, lantern and land sources read the other ports at call time.
+	if a.Config.Regions == nil {
+		a.Config.Regions = wildsService{a}
+	}
+	if a.Config.Lanterns == nil {
+		a.Config.Lanterns = wildsService{a}
+	}
+	if a.Config.HomeLand == nil {
+		a.Config.HomeLand = wildsService{a}
+	}
+	return a
 }

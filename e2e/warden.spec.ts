@@ -2,7 +2,6 @@ import { expect, test, type Page } from './fixtures'
 import { freshPlayer, fund, giveInstance, shot } from './home-helpers'
 import { sql } from './connected'
 
-test.use({ server: true })
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Inventory' })
 const tab = (page: Page, name: RegExp) => dialog(page).getByRole('tab', { name })

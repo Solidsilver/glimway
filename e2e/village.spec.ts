@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState } from './connected'
-import { beginNewJourney, waitForLive, expectToast } from './helpers'
+import { serverState, CONTRACT, served } from './connected'
+import { waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, readOn, shot, silasSays } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
 import { dateLine } from '../src/lib/village'
@@ -10,7 +10,6 @@ import { dateLine } from '../src/lib/village'
  * boards and village projects, the workshop (storage chest, crafting
  * bench) and the mailbox. Fresh Habitica ids per test.
  */
-test.use({ server: true })
 
 type VillageView = { calendar: { wick: string; day: number; mark: string; festival: string | null }; source: string; worldFlags: string[]; projectsStatus: string }
 const village = (page: Page) => page.evaluate(() => (window as unknown as { __fsVillage: () => VillageView }).__fsVillage())
@@ -37,13 +36,14 @@ async function claim(page: Page): Promise<void> {
   await claimDeed(page)
 }
 
-test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commons', async ({ page }) => {
-  await beginNewJourney(page)
-  const c = calendarAt(Math.floor(Date.now() / 1000))
+test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commons (the dev clock)', async ({ page }) => {
+  await freshPlayer(page)
+  // Carting Day (Cart-wick, day 6), seen through the dev clock (it takes the
+  // calendar from the server until the clock moves).
+  await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (5 * 7 + 5) * 86400 + 3600)
+  const c = calendarAt(EPOCH + (5 * 7 + 5) * 86400 + 3600)
   await expect(page.getByTestId('calendar-line')).toContainText(`${dateLine(c)} — ${c.mark}`)
   expect((await village(page)).source).toBe('local')
-  // Carting Day (Cart-wick, day 6), seen through the dev clock.
-  await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (5 * 7 + 5) * 86400 + 3600)
   await go(page, 'commons', 9, 21)
   await expect(page.getByTestId('calendar-line')).toContainText('Cart-wick, 6th day — Carting')
   await expect(page.getByTestId('calendar-line')).toContainText('Carting Day')
@@ -62,18 +62,10 @@ test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commo
 test('calendar: connected play reads the server’s calendar', async ({ page }) => {
   await freshPlayer(page)
   await expect.poll(async () => (await village(page)).source).toBe('server')
-  const res = await page.request.get('/api/calendar')
+  const res = await page.request.get('/api/calendar', CONTRACT)
   const cal = await res.json()
   await expect(page.getByTestId('calendar-line')).toContainText(`${cal.wick}-wick`)
   await expect(page.getByTestId('calendar-line')).toContainText(cal.mark)
-})
-
-test('notice board: Elara’s Turning notice, a guest is told to sign in', async ({ page }) => {
-  await beginNewJourney(page)
-  const board = await openBoard(page)
-  await expect(board.getByTestId('turning-notice')).toContainText(/outer Wilds (will turn|turn at the dark)/)
-  await expect(board).toContainText('Village projects are kept by your world')
-  await expect(board.locator('[data-contribute]')).toHaveCount(0)
 })
 
 test('village projects: give materials, finish two, the village changes and a paper arrives', async ({ page }) => {
@@ -81,6 +73,8 @@ test('village projects: give materials, finish two, the village changes and a pa
   fund(id, { materials: { timber: 100, stone: 50, fiber: 30, amber: 30 } })
   let board = await openBoard(page)
   await expect(board.locator('.carried')).toContainText('100 timber')
+  // Elara's Turning notice is on the board too.
+  await expect(board.getByTestId('turning-notice')).toContainText(/outer Wilds (will turn|turn at the dark)/)
   await shot(page, 'notice-board-desktop')
   // A part share first: your contribution shows.
   const canopy = board.locator('[data-project="well-canopy"]')
@@ -138,11 +132,11 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await panel.locator('[data-store="timber:5"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Stored 5 timber')
   await shot(page, 'storage-chest-desktop')
-  let st = await (await page.request.get('/api/storage')).json()
+  let st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.storage.materials.timber).toBe(5)
   await panel.locator('[data-take="timber:1"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Took out 1 timber')
-  st = await (await page.request.get('/api/storage')).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.storage.materials.timber).toBe(4)
   // Your own chest: small, yours alone, and it goes with you if you ever leave the deed.
   await panel.locator('[data-chest="personal"]').click()
@@ -150,7 +144,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await expect(panel.locator('.msg.ok')).toContainText('Stored 5 timber (your own chest)')
   await expect(panel.locator('[data-chest="personal"]')).toContainText('5/')
   await shot(page, 'personal-chest-desktop')
-  st = await (await page.request.get('/api/storage')).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.personal.materials.timber).toBe(5)
   expect(st.storage.materials.timber).toBe(4)
 
@@ -162,7 +156,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await panel.locator('[data-craft="craft-wooden-stool"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Made a Wooden Stool')
   await shot(page, 'crafting-bench-desktop')
-  st = await (await page.request.get('/api/storage')).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.inventory.items['wooden-peg']).toBe(1)
   expect(st.inventory.decorations['wooden-stool']).toBe(1)
   // No amber for an oak table? It says so plainly.
@@ -174,7 +168,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   const a = await freshPlayer(page, 'Tansy')
   await claim(page)
   fund(a, { materials: { timber: 10 }, items: { 'river-glass-bead': 1 } })
-  const created = await page.request.post('/api/invites', { data: {} })
+  const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const code = (await created.json()).code as string
 
   const ctx = await browser.newContext({ baseURL })
@@ -208,7 +202,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   const bead = mail.locator('[data-sent]', { hasText: 'River Glass Bead' })
   await bead.getByRole('button', { name: 'Recall' }).click()
   await expect(mail.locator('.msg.ok')).toContainText('A River Glass Bead came back to you')
-  const back = await (await page.request.get('/api/mail')).json()
+  const back = await served(await page.request.get('/api/mail', CONTRACT))
   expect(back.inventory.items['river-glass-bead']).toBe(1)
   expect(back.mail.find((m: { asset: { id: string } }) => m.asset.id === 'river-glass-bead').returnReason).toBe('recalled')
   await expect(mail.locator('[data-sent]')).toHaveCount(1)
@@ -230,7 +224,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await shot(other, 'mailbox-collect-desktop')
   await parcel.getByRole('button', { name: 'Collect' }).click()
   await expect(box.locator('.msg.ok')).toContainText('You collect 3 timber from Tansy')
-  const got = await (await other.request.get('/api/mail')).json()
+  const got = await served(await other.request.get('/api/mail', CONTRACT))
   expect(got.inventory.materials.timber).toBe(3)
   expect(got.mail.find((m: { asset: { id: string } }) => m.asset.id === 'timber').claimedAt).not.toBeNull()
   void b

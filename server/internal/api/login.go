@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -13,26 +14,18 @@ import (
 )
 
 func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		UserID string `json:"userId"`
-		Token  string `json:"token"`
-		Invite string `json:"invite"`
-		// Party: the party the client expects Habitica to report (from the
-		// profile it read itself). Only lets a party-only sign-in past the
-		// precheck; the verified party must match it.
-		Party string `json:"party"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.LoginRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	if req.UserID == "" || len(req.UserID) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 512 || len(req.Party) > 128 {
+	if req.UserId == "" || len(req.UserId) > 128 || req.Token == "" || len(req.Token) > 512 || len(req.Invite) > 512 || len(req.Party) > 128 {
 		return fail(400, "invalid-credentials")
 	}
 	req.Invite = store.NormalizeInvite(req.Invite)
 	if len(req.Invite) > 128 {
 		return fail(400, "invalid-credentials")
 	}
-	route, err := a.precheck(r.Context(), req.UserID, req.Invite, req.Party)
+	route, err := a.precheck(r.Context(), req.UserId, req.Invite, req.Party)
 	if err != nil {
 		return err
 	}
@@ -49,7 +42,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
 		return fail(429, "login-rate-limited")
 	}
-	finishProof, retry, ok := a.loginProofs.begin(req.UserID, a.Config.Now())
+	finishProof, retry, ok := a.loginProofs.begin(req.UserId, a.Config.Now())
 	if !ok {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retry.Seconds()))))
 		return fail(429, "login-user-rate-limited")
@@ -63,7 +56,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", "1")
 		return fail(429, "login-busy")
 	}
-	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserID, req.Token, func() bool { return budget.allow("global", a.Config.Now()) })
+	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserId, req.Token, func() bool { return budget.allow("global", a.Config.Now()) })
 	req.Token = ""
 	if err != nil {
 		var h *habitica.Error
@@ -87,8 +80,13 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM allowlist WHERE habitica_id=?", p.ID).Scan(&allowed); err != nil {
 		return err
 	}
-	var existing int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM players WHERE habitica_id=?", p.ID).Scan(&existing); err != nil {
+	id, err := store.AccountForSubject(ctx, tx, "habitica", p.ID)
+	existing := 1
+	if err == sql.ErrNoRows {
+		existing = 0
+		id, err = store.Random()
+	}
+	if err != nil {
 		return err
 	}
 	// A party with an open world here counts as an invite: a verified member
@@ -166,7 +164,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if why == "" {
-			if _, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now); err != nil {
+			if _, err = ensurePartyWorld(ctx, tx, p.PartyID, id, now); err != nil {
 				return err
 			}
 		}
@@ -175,28 +173,34 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	movedOut := false
 	if existing == 0 && offer == nil {
 		if world == "" {
-			own, err := ownWorld(ctx, tx, p.ID, now)
+			own, err := ownWorld(ctx, tx, id, now)
 			if err != nil {
 				return err
 			}
 			world = own.ID
 		}
-		if err = createPlayer(ctx, tx, p, world, now, now); err != nil {
+		if err = createPlayer(ctx, tx, id, p, world, now, now); err != nil {
 			return err
 		}
 	} else if existing != 0 {
-		s, err := store.Load(ctx, tx, p.ID)
+		s, err := store.Load(ctx, tx, id)
 		if err != nil {
 			return err
 		}
+		beforeVersion := s.Version
 		if err = checkpoint(ctx, tx, &s, p, now); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE habitica_id=?", p.Name, now, p.PartyID, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE account_id=?", p.Name, now, p.PartyID, id); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE habitica_id=?),0) WHERE habitica_id=?", verified, store.JSON(p), now, p.Level, p.ID, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE account_id=?),0) WHERE account_id=?", verified, store.JSON(p), now, p.Level, id, id); err != nil {
 			return err
+		}
+		if s.Version == beforeVersion {
+			if err = store.BumpVersion(ctx, tx, &s); err != nil {
+				return err
+			}
 		}
 		// Left the party whose world they live in: warned now, moved out
 		// once the grace period has passed.
@@ -222,13 +226,17 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		a.cookie(w, session, expires)
-		write(w, 200, worldChoiceAnswer{*offer})
+		writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_WorldChoice{WorldChoice: worldChoiceProto(*offer)}})
 		return nil
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), p.ID, now, expires.Unix(), store.JSON(p), verified); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), id, now, expires.Unix(), store.JSON(p), verified); err != nil {
 		return err
 	}
-	s, err := store.Load(ctx, tx, p.ID)
+	s, err := store.Load(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	state, err := a.Config.State.PlayerState(ctx, tx, s)
 	if err != nil {
 		return err
 	}
@@ -236,9 +244,9 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if movedOut {
-		a.presenceChanged(p.ID)
+		a.presenceChanged(id)
 	}
 	a.cookie(w, session, expires)
-	write(w, 200, s)
+	writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_State{State: state}})
 	return nil
 }

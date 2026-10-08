@@ -1,3 +1,5 @@
+import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS, CAST_COST, HEAL_FORMULA } from './combat-timing.ts';
+import { profileFor } from './profile.ts';
 import { DEMO_CHARACTER } from '../content/world.ts';
 import type {
   CombatKit,
@@ -37,32 +39,32 @@ const KITS: Record<HabiticaClass, KitTemplate> = {
     basicName: 'Slash',
     signatureName: 'Cleave',
     signature: 'cleave',
-    manaCost: 12,
-    cooldown: 1.2,
+    manaCost: CAST_COST.warrior,
+    cooldown: BASIC_ATTACK_COOLDOWN_SECONDS.warrior,
     damageStat: 'str',
   },
   mage: {
     basicName: 'Bolt',
     signatureName: 'Fingersnap',
     signature: 'bolt',
-    manaCost: 15,
-    cooldown: 0.6,
+    manaCost: CAST_COST.mage,
+    cooldown: BASIC_ATTACK_COOLDOWN_SECONDS.mage,
     damageStat: 'int',
   },
   rogue: {
     basicName: 'Stab',
     signatureName: 'Shadowstep',
     signature: 'dash',
-    manaCost: 10,
-    cooldown: 1.5,
+    manaCost: CAST_COST.rogue,
+    cooldown: BASIC_ATTACK_COOLDOWN_SECONDS.rogue,
     damageStat: 'per',
   },
   healer: {
     basicName: 'Tap',
     signatureName: 'Mend',
     signature: 'heal',
-    manaCost: 18,
-    cooldown: 2.5,
+    manaCost: CAST_COST.healer,
+    cooldown: BASIC_ATTACK_COOLDOWN_SECONDS.healer,
     damageStat: 'int',
   },
 };
@@ -84,6 +86,7 @@ const STARTER: KitTemplate = {
  * live numbers the runtime applies together.
  */
 export function getCombatKit(profile: HabiticaProfile | null): CombatKit {
+  profile = profileFor({ profileSource: profile ? 'habitica' : 'none', profile });
   const template = profile && profile.class ? KITS[profile.class] : STARTER;
   const stats = profile ? profile.stats : DEMO_CHARACTER.stats;
 
@@ -98,9 +101,10 @@ export function getCombatKit(profile: HabiticaProfile | null): CombatKit {
     mitigation: round2(diminishing(stats.con, 0.45, 90)),
     critChance: round2(0.05 + diminishing(stats.per, 0.4, 80)),
     manaCost: template.manaCost,
-    cooldown: template.cooldown,
+    basicAttackCooldown: template.cooldown,
+    signatureCooldown: SIGNATURE_COOLDOWN_SECONDS,
     healAmount: template.signature === 'heal'
-      ? round2(6 + diminishing(stats.int, 20, 60))
+      ? round2(HEAL_FORMULA.base + diminishing(stats.int, HEAL_FORMULA.maximumBonus, HEAL_FORMULA.halfway))
       : 0,
   };
 }

@@ -3,6 +3,8 @@
  * still goes through the same validators as a save, so a malformed answer
  * can never reach the running game (and unknown fields are dropped).
  */
+import { decodePlayerState } from './state-contract.ts';
+import { gameStateOf, profileOf } from './predict.ts';
 import { validateSave } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
@@ -52,7 +54,6 @@ import type {
   DeedInvite,
   PlayResponse,
   ProgressResponse,
-  SaveOrigin,
   Snapshot,
   StateResponse,
   SpendResponse,
@@ -91,8 +92,17 @@ function num(v: unknown): number {
   return v;
 }
 
+// TODO(C2): remove the retained domain document projection with the old Link.
 export function parseSnapshot(raw: unknown): Snapshot {
   const o = obj(raw);
+  // The typed server state: the link adopts it, the game reads its projection.
+  if (typeof o.state === 'object' && o.state !== null && 'account' in o.state) {
+    try {
+      const p = decodePlayerState(o.state);
+      const importedProfile = profileOf(p);
+      return { state: gameStateOf(p), player: p, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: importedProfile ? 'imported' : 'demo', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(importedProfile ? { importedProfile } : {}) };
+    } catch { throw new ApiError('bad-response'); }
+  }
   let state;
   let importedProfile;
   try {
@@ -101,20 +111,17 @@ export function parseSnapshot(raw: unknown): Snapshot {
   } catch {
     throw new ApiError('bad-response');
   }
-  const rev = num(o.rev);
+  const rev = num(o.version);
   if (!Number.isInteger(rev) || rev < 0) throw new ApiError('bad-response');
   const vitalsSource = o.vitalsSource === 'imported' ? 'imported' : 'demo';
-  const origin = o.saveOrigin;
-  if (origin !== null && origin !== undefined && origin !== 'fresh' && origin !== 'migrated') throw new ApiError('bad-response');
   const snapshot: Snapshot = {
     state,
     rev,
     vitalsSource,
-    habiticaId: str(o.habiticaId),
+    accountId: str(o.accountId),
     displayName: typeof o.displayName === 'string' ? o.displayName.slice(0, 128) : '',
     habiticaPartyId: typeof o.habiticaPartyId === 'string' ? o.habiticaPartyId : null,
     worldId: typeof o.worldId === 'string' ? o.worldId : '',
-    saveOrigin: (origin ?? null) as SaveOrigin | null,
     pending: typeof o.pending === 'number' && Number.isFinite(o.pending) ? o.pending : 0,
     verifiedXp: typeof o.verifiedXp === 'number' && Number.isFinite(o.verifiedXp) ? o.verifiedXp : 0,
     flagged: o.flagged === true,
@@ -605,7 +612,11 @@ export function parseItems(raw: unknown): ItemsResponse {
 }
 
 export function parseItemsAction(raw: unknown): ItemsActionResponse {
-  const r = obj(obj(raw).result);
+  return { ...parseSnapshot(raw), result: parseItemsResult(obj(raw).result) };
+}
+/** Shared domain parser for the server-first mixed envelope. */
+export function parseItemsResult(raw: unknown): ItemsActionResponse['result'] {
+  const r = obj(raw);
   const result: ItemsActionResponse['result'] = { items: parseItemsView(r.items) };
   if (r.wear) {
     const w = obj(r.wear);
@@ -661,7 +672,7 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
       cleared: lo.cleared === true,
     };
   }
-  return { ...parseSnapshot(raw), result };
+  return result;
 }
 
 export { parseCalendar } from './calendar.ts';
@@ -730,7 +741,7 @@ function parseWoodpile(v: unknown): WoodpileView {
       return {
         id: str(w.id),
         homesteadId: str(w.homesteadId),
-        habiticaId: str(w.habiticaId),
+        accountId: str(w.accountId),
         qty: int(w.qty, 1),
         stackedAt: num(w.stackedAt),
         ready: w.ready === true || remaining <= 0,

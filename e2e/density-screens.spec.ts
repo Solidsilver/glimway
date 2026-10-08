@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
-import { beginNewJourney, waitForLive, warp } from './helpers'
+import { warp, waitForLive } from './helpers'
 import { claimDeed, earnPlenty, freshPlayer, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
@@ -74,7 +74,7 @@ test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
   test('village square, Commons lane, residents', async ({ page }) => {
     test.setTimeout(120_000)
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await outdoorScreens(page, 'desktop')
   })
 })
@@ -83,7 +83,7 @@ test.describe('desktop 2x', () => {
   test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
   test('village square, Commons lane, residents', async ({ page }) => {
     test.setTimeout(120_000)
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await outdoorScreens(page, 'desktop2x')
   })
 })
@@ -92,15 +92,13 @@ test.describe('phone', () => {
   test.use(PHONE)
   test('village square, Commons lane, residents', async ({ page }) => {
     test.setTimeout(120_000)
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+    await freshPlayer(page)
     await outdoorScreens(page, 'phone')
   })
 })
 
-test.describe('connected', () => {
-  test.use({ server: true, viewport: { width: 1280, height: 800 } })
+test.describe('in a world', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
   test('a cottage interior', async ({ page, browser }) => {
     test.setTimeout(400_000)
     const id = await freshPlayer(page)

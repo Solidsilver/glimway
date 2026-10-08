@@ -36,7 +36,7 @@
     if (homes.gates.length === 0) void homes.load()
   })
 
-  const me = $derived(session.link?.habiticaId ?? '')
+  const me = $derived(session.link?.accountId ?? '')
   const view = $derived.by(() => {
     void changed.value
     const neighbours = homes.neighbours()

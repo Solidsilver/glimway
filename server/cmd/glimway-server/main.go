@@ -68,6 +68,7 @@ func envInt(name string, fallback int) (int, error) {
 
 func run(args []string) error {
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
+	startClock := devClock(f)
 	staticDir := f.String("static-dir", env("STATIC_DIR", ""), "Optional built web directory (empty disables static serving)")
 	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
 	path := f.String("db", env("DB", defaultDB()), "SQLite database path")
@@ -106,6 +107,10 @@ func run(args []string) error {
 	}
 	partyAdmission := f.Bool("party-admission", partyDefault, "Let members of a party with a world here sign in without a code, and make party worlds")
 	if err = f.Parse(args); err != nil {
+		return err
+	}
+	clock, err := startClock()
+	if err != nil {
 		return err
 	}
 	proxies := []string{}
@@ -159,8 +164,14 @@ func run(args []string) error {
 				return fmt.Errorf("usage: invites [player]")
 			}
 			player := ""
-			if len(cmd) == 2 {
-				player = cmd[1]
+			if len(cmd) == 2 && cmd[1] != "cli" {
+				player, err = s.ResolveOperatorAccount(ctx, cmd[1])
+				if err != nil {
+					return err
+				}
+			}
+			if len(cmd) == 2 && cmd[1] == "cli" {
+				player = "cli"
 			}
 			records, err := s.Invites(ctx, player)
 			if err != nil {
@@ -200,12 +211,16 @@ func run(args []string) error {
 			return fmt.Errorf("unknown party command")
 		case "flag":
 			if len(cmd) != 3 || cmd[1] != "clear" {
-				return fmt.Errorf("usage: flag clear ID")
+				return fmt.Errorf("usage: flag clear HABITICA-SUBJECT|ACCOUNT-ID")
 			}
-			return s.ClearFlag(ctx, cmd[2])
+			account, err := s.ResolveOperatorAccount(ctx, cmd[2])
+			if err != nil {
+				return err
+			}
+			return s.ClearFlag(ctx, account)
 		case "allowlist":
 			if len(cmd) < 2 {
-				return fmt.Errorf("usage: allowlist add|remove ID | list")
+				return fmt.Errorf("usage: allowlist add|remove HABITICA-SUBJECT | list")
 			}
 			switch cmd[1] {
 			case "add", "remove":
@@ -237,37 +252,37 @@ func run(args []string) error {
 			if len(cmd) != 1 {
 				return fmt.Errorf("usage: notes")
 			}
-			rows, err := s.DB.Query("SELECT habitica_id,reason,ref,reported_xp,created_at FROM ledger WHERE reason IN ('rebirth','xp-loss') ORDER BY id")
+			rows, err := s.DB.Query("SELECT l.account_id,COALESCE(i.subject,''),l.reason,l.ref,l.reported_xp,l.created_at FROM ledger l LEFT JOIN sign_ins i ON i.account_id=l.account_id AND i.method='habitica' WHERE reason IN ('rebirth','xp-loss') ORDER BY id")
 			if err != nil {
 				return err
 			}
 			defer rows.Close()
 			for rows.Next() {
-				var id, reason, ref string
+				var id, subject, reason, ref string
 				var xp float64
 				var at int64
-				if err = rows.Scan(&id, &reason, &ref, &xp, &at); err != nil {
+				if err = rows.Scan(&id, &subject, &reason, &ref, &xp, &at); err != nil {
 					return err
 				}
-				fmt.Printf("%s\t%s\t%s\t%.2f\t%d\n", id, reason, ref, xp, at)
+				fmt.Printf("%s\t%s\t%s\t%s\t%.2f\t%d\n", id, subject, reason, ref, xp, at)
 			}
 			return rows.Err()
 		case "flagged":
 			if len(cmd) != 1 {
 				return fmt.Errorf("usage: flagged")
 			}
-			rows, err := s.DB.Query("SELECT habitica_id,display_name,flagged_at FROM players WHERE flagged_at IS NOT NULL ORDER BY flagged_at")
+			rows, err := s.DB.Query("SELECT p.account_id,COALESCE(i.subject,''),p.display_name,p.flagged_at FROM players p LEFT JOIN sign_ins i ON i.account_id=p.account_id AND i.method='habitica' WHERE flagged_at IS NOT NULL ORDER BY flagged_at")
 			if err != nil {
 				return err
 			}
 			defer rows.Close()
 			for rows.Next() {
-				var id, name string
+				var id, subject, name string
 				var at int64
-				if err = rows.Scan(&id, &name, &at); err != nil {
+				if err = rows.Scan(&id, &subject, &name, &at); err != nil {
 					return err
 				}
-				fmt.Printf("%s\t%q\t%d\n", id, name, at)
+				fmt.Printf("%s\t%s\t%q\t%d\n", id, subject, name, at)
 			}
 			return rows.Err()
 		case "backup":
@@ -280,9 +295,9 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
 	defer handler.ClosePresence()
-	httpHandler, closeStatic, err := withStatic(handler, *staticDir)
+	httpHandler, closeStatic, err := withStatic(clock.mount(handler), *staticDir)
 	if err != nil {
 		return err
 	}

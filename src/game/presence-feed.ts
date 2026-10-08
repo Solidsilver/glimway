@@ -28,7 +28,7 @@ export const LEAVE_FADE_MS = 400
 export const LINK_CHECK_MS = 2_000
 
 export interface Peer {
-  habiticaId: string
+  accountId: string
   displayName: string
   avatar: PresenceAvatar | null
   area: string
@@ -91,7 +91,7 @@ export class PresenceFeed {
         pos: (id, pos) => this.onPos(id, pos),
         emote: (id, emote) => {
           const p = this.peers.get(id)
-          if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { habiticaId: id, id: emote } satisfies EmotePayload)
+          if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { accountId: id, id: emote } satisfies EmotePayload)
         },
         gift: (g) => this.bus.emit(EV.gift, g),
         witness: (w) => this.bus.emit(EV.witness, w)
@@ -132,7 +132,7 @@ export class PresenceFeed {
   /** Emote if the cooldown allows; the local hero's bubble shows when it is sent. */
   emote(id: string): boolean {
     const sent = this.client.emote(id)
-    if (sent) this.bus.emit(EV.emote, { habiticaId: null, id } satisfies EmotePayload)
+    if (sent) this.bus.emit(EV.emote, { accountId: null, id } satisfies EmotePayload)
     return sent
   }
 
@@ -141,11 +141,11 @@ export class PresenceFeed {
   }
 
   /** Whether a live peer is within the server's pixel radius of our last position. */
-  isWithin(habiticaId: string, radius: number): boolean {
+  isWithin(accountId: string, radius: number): boolean {
     if (!this.area || !this.localPosition) return false
     const t = this.now()
     return Array.from(this.peers.values()).some((p) => {
-      if (p.habiticaId !== habiticaId || p.leftAt !== null || p.area !== this.area) return false
+      if (p.accountId !== accountId || p.leftAt !== null || p.area !== this.area) return false
       const at = p.track.at(t)
       return !!at && Math.hypot(at.x - this.localPosition!.x, at.y - this.localPosition!.y) <= radius
     })
@@ -166,14 +166,14 @@ export class PresenceFeed {
   }
 
   /** Players here now, standing within radius px of (x, y): who you could hand something to. */
-  nearby(x: number, y: number, radius: number): { habiticaId: string; displayName: string }[] {
+  nearby(x: number, y: number, radius: number): { accountId: string; displayName: string }[] {
     if (!this.area) return []
     const t = this.now()
-    const out: { habiticaId: string; displayName: string }[] = []
+    const out: { accountId: string; displayName: string }[] = []
     for (const p of this.peers.values()) {
       if (p.leftAt !== null || p.area !== this.area) continue
       const at = p.track.at(t)
-      if (at && Math.hypot(at.x - x, at.y - y) <= radius) out.push({ habiticaId: p.habiticaId, displayName: p.displayName })
+      if (at && Math.hypot(at.x - x, at.y - y) <= radius) out.push({ accountId: p.accountId, displayName: p.displayName })
     }
     return out
   }
@@ -199,7 +199,7 @@ export class PresenceFeed {
     return {
       status: this.client.status,
       area: this.area,
-      peers: [...this.peers.values()].filter((p) => p.leftAt === null).map((p) => p.habiticaId)
+      peers: [...this.peers.values()].filter((p) => p.leftAt === null).map((p) => p.accountId)
     }
   }
 
@@ -219,7 +219,7 @@ export class PresenceFeed {
   private onRoom(area: string, players: PresencePlayer[]): void {
     const seen = new Set<string>()
     for (const p of players) {
-      seen.add(p.habiticaId)
+      seen.add(p.accountId)
       this.upsert(area, p)
     }
     for (const [id, p] of this.peers) if (!seen.has(id) && p.leftAt === null) this.markLeft(id)
@@ -233,16 +233,16 @@ export class PresenceFeed {
    * track is dropped rather than drawn stale (review-6 #3).
    */
   private upsert(area: string, player: PresencePlayer): void {
-    if (player.habiticaId === this.client.self) return
-    const existing = this.peers.get(player.habiticaId)
+    if (player.accountId === this.client.self) return
+    const existing = this.peers.get(player.accountId)
     const peer: Peer = existing && existing.area === area && existing.leftAt === null
       ? existing
-      : { habiticaId: player.habiticaId, displayName: '', avatar: null, area, track: new PeerTrack(), leftAt: null }
+      : { accountId: player.accountId, displayName: '', avatar: null, area, track: new PeerTrack(), leftAt: null }
     peer.displayName = (player.displayName || 'Traveller').slice(0, 60)
     peer.avatar = player.avatar ?? null
     if (player.pos) peer.track.push(player.pos, this.now())
     else if (!peer.track.empty) peer.track = new PeerTrack()
-    this.peers.set(player.habiticaId, peer)
+    this.peers.set(player.accountId, peer)
     this.publish()
   }
 

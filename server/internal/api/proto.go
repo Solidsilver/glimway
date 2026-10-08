@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	presencecontract "glimway/server/internal/gen/glimway/v2"
 	"log"
 	"math"
 	"net/http"
@@ -60,12 +61,12 @@ func calendarResponse(day content.CalendarDay) *contract.CalendarResponse {
 	return out
 }
 
-const presenceProtocol = "glimway.presence.v1"
+const presenceProtocol = "glimway.presence.v2"
 
 // The envelope's oneof is the only event catalog. A payload is immutable
 // after construction, and its encoded bytes can be shared by recipient queues.
 func encodePresence(v proto.Message) ([]byte, error) {
-	envelope := &contract.PresenceMessage{}
+	envelope := &presencecontract.PresenceMessage{}
 	fields := envelope.ProtoReflect().Descriptor().Fields()
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
@@ -103,8 +104,8 @@ func knownPresence(m protoreflect.Message) bool {
 	})
 	return known
 }
-func decodePresence(b []byte) (*contract.PresenceMessage, error) {
-	var message contract.PresenceMessage
+func decodePresence(b []byte) (*presencecontract.PresenceMessage, error) {
+	var message presencecontract.PresenceMessage
 	if err := proto.Unmarshal(b, &message); err != nil {
 		return nil, err
 	}
@@ -154,9 +155,9 @@ func finiteProto(message protoreflect.Message) error {
 
 // Internal spatial state stays convenient for proximity calculations. The
 // transmitted position is generated, with explicit zero coordinates and stop.
-func presencePositionProto(pos *presencePosition) *contract.PresencePosition {
+func presencePositionProto(pos *presencePosition) *presencecontract.PresencePosition {
 	if pos == nil {
 		return nil
 	}
-	return &contract.PresencePosition{X: proto.Float64(pos.X), Y: proto.Float64(pos.Y), Facing: &contract.PresenceFacing{X: proto.Float64(pos.Facing.X), Y: proto.Float64(pos.Facing.Y)}, Moving: proto.Bool(pos.Moving)}
+	return &presencecontract.PresencePosition{X: proto.Float64(pos.X), Y: proto.Float64(pos.Y), Facing: &presencecontract.PresenceFacing{X: proto.Float64(pos.Facing.X), Y: proto.Float64(pos.Facing.Y)}, Moving: proto.Bool(pos.Moving)}
 }

@@ -1,5 +1,5 @@
-import { expect, test, type Page } from './fixtures'
-import { sql } from './connected'
+import { expect, test } from './fixtures'
+import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, homes, myHome, place, readOn, silasSays, go, atMyMailbox, hurt, type HomesView } from './home-helpers'
 
@@ -12,7 +12,6 @@ import { claimDeed, earnEmbers, freshPlayer, fund, homes, myHome, place, readOn,
  * - When a traveller uses an item made by another player (maker offline/not nearby),
  *   the maker receives a quiet thank-you line in their mail.
  */
-test.use({ server: true })
 
 test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, daily limit enforced', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
@@ -29,10 +28,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
 
   // Fund Wren with 2 comfrey salves and grant an unplaced gate-shelf
   fund(idWren, { items: { 'comfrey-salve': 2 }, materials: { timber: 1 } })
-  sql(`INSERT INTO homestead_items (id, item_def, location, habitica_id, homestead_id)
-       VALUES ('shelf-${idWren}', 'gate-shelf', 'inventory', '${idWren}', NULL);
-       INSERT INTO ledger (habitica_id, currency, delta, earned_delta, reason, ref, created_at)
-       VALUES ('${idWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
+  const aWren = accountOf(idWren)
+  sql(`INSERT INTO homestead_items (id, item_def, location, account_id, homestead_id)
+       VALUES ('shelf-${idWren}', 'gate-shelf', 'inventory', '${aWren}', NULL);
+       INSERT INTO ledger (account_id, currency, delta, earned_delta, reason, ref, created_at)
+       VALUES ('${aWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
 
   // Step out to the Commons lane
   await go(page, 'commons', 25, 10)
@@ -99,7 +99,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(shelfModal).toBeHidden()
 
   // 2. Finn arrives as a traveller on the Commons lane in a fresh browser context
-  const invite = await page.request.post('/api/invites', { data: {} })
+  const invite = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const inviteCode = (await invite.json()).code as string
   const ctxFinn = await browser.newContext({ baseURL })
   const pageFinn = await ctxFinn.newPage()
@@ -132,7 +132,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(shelfModalFinn.getByTestId('take-slot-1')).toBeDisabled()
 
   // Verify Finn carries the item in database
-  const finnInventory = sql(`SELECT item_def, qty FROM item_stacks WHERE owner = '${idFinn}' AND item_def = 'comfrey-salve';`)
+  const finnInventory = sql(`SELECT item_def, qty FROM item_stacks WHERE owner = '${accountOf(idFinn)}' AND item_def = 'comfrey-salve';`)
   expect(finnInventory).toContain('comfrey-salve|1')
 
   // Verify shelf slot 0 is now empty in ledger
@@ -141,7 +141,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await ctxFinn.close()
 
   // Ira takes the stocked material from another slot.
-  const inviteIra = await page.request.post('/api/invites', { data: {} })
+  const inviteIra = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const ctxIra = await browser.newContext({ baseURL })
   const pageIra = await ctxIra.newPage()
   const idIra = await freshPlayer(pageIra, 'Ira', (await inviteIra.json()).code as string)
@@ -156,13 +156,13 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(iraTake).toBeEnabled()
   await iraTake.click()
   await expectToast(pageIra, /You took a timber from Wren’s shelf/)
-  expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${idIra}' AND item_def='timber';`)).toContain('timber|1')
+  expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${accountOf(idIra)}' AND item_def='timber';`)).toContain('timber|1')
   await ctxIra.close()
 
   // Two travellers read the same remaining slot before either takes it.
   // One succeeds; the other sees the server's slot-empty refusal in the panel.
-  const inviteOne = await page.request.post('/api/invites', { data: {} })
-  const inviteTwo = await page.request.post('/api/invites', { data: {} })
+  const inviteOne = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
+  const inviteTwo = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const ctxOne = await browser.newContext({ baseURL })
   const ctxTwo = await browser.newContext({ baseURL })
   const pageOne = await ctxOne.newPage()
@@ -213,10 +213,9 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
-  const homeWren = await myHome(page, idWren)
 
   // 2. Finn joins in a separate context and carries a comfrey salve marked as made by Wren
-  const invite = await page.request.post('/api/invites', { data: {} })
+  const invite = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const inviteCode = (await invite.json()).code as string
   const ctxFinn = await browser.newContext({ baseURL })
   const pageFinn = await ctxFinn.newPage()
@@ -234,8 +233,8 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await pageFinn.keyboard.press('i')
   await expect(inv).toBeVisible()
   await inv.getByRole('tab', { name: /Supplies/ }).click()
-  await inv.locator(`[data-cell="item:keepers-twists@${idWren}"]`).click()
-  const salveRow = inv.locator(`[data-item="item:keepers-twists@${idWren}"]`)
+  await inv.locator(`[data-cell="item:keepers-twists@${accountOf(idWren)}"]`).click()
+  const salveRow = inv.locator(`[data-item="item:keepers-twists@${accountOf(idWren)}"]`)
   await expect(salveRow).toContainText('Made by Wren')
   await salveRow.getByRole('button', { name: 'Use' }).click()
   await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
@@ -245,7 +244,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await ctxFinn.close()
 
   // Verify thank-you mail exists for Wren in database
-  const mailRows = sql(`SELECT kind, item_def FROM mail WHERE to_id = '${idWren}' AND kind = 'thanks';`)
+  const mailRows = sql(`SELECT kind, item_def FROM mail WHERE to_id = '${accountOf(idWren)}' AND kind = 'thanks';`)
   expect(mailRows).toContain('thanks|keepers-twists')
 
   // Wren checks their mailbox

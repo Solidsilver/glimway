@@ -7,14 +7,15 @@
  * lanterns (relightable).
  *
  * Everything renders from the region store (src/game/wilds/store.ts) — the
- * server's cycles and claims when connected, the local rules for guests —
- * and re-renders when the store's version moves. Each claimable thing is
+ * served chunks' bodies with the server's cycles and claims — and re-renders
+ * when the store's version moves. Claims and relights are operations
+ * (./remote.ts). Each claimable thing is
  * an interaction point (../entities/interactables.ts) that outranks the
  * people and props around it; the action key claims it.
  *
  * Papers: two POIs and the tier-3 chests carry found texts (papers.ts
- * sources `wilds-poi` / `wilds-chest`), granted on their claim — see
- * WILDS_PAPER_PLACEMENTS for the deterministic placements.
+ * sources `wilds-poi` / `wilds-chest`). The server grants them with the
+ * claim; WILDS_PAPER_PLACEMENTS predicts which.
  */
 import type Phaser from 'phaser'
 import { TRANSPORT_ERRORS } from '../../content/errors'
@@ -26,20 +27,21 @@ import {
   POIS,
 } from '../../content/expansion-writing.ts'
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts'
-import { CHUNK_TILES, parseChunkArea, regionTile, toRegionPosition, wildsRegion } from './regions.ts'
+import { CHUNK_TILES, parseChunkArea, toRegionPosition, wildsRegion } from './regions.ts'
+import { claimEntity, relightLantern, type WildsWhere } from './remote.ts'
 import {
   applyClaim,
   applyLanterns,
   discoveryFor,
   entityAvailable,
-  guestClaim,
   isClaimed,
   lootName,
   lootText,
   refreshWilds,
-  tickWildsGuest,
   wildsEpoch,
   wildsEpochEndsAt,
+  wildsLive,
+  wildsStale,
   wildsView,
   type WildsView,
 } from './store.ts'
@@ -68,6 +70,7 @@ const CLAIM_ERROR: Record<string, string> = {
   offline: 'Needs a connection. The Wilds keep what you have not claimed.',
   superseded: TRANSPORT_ERRORS.superseded,
   busy: TRANSPORT_ERRORS.busy,
+  pending: TRANSPORT_ERRORS.pending,
   unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
 }
 
@@ -242,6 +245,9 @@ export class WildsEntities {
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
+  /** Shown as last seen (no fresh read, or no connection): the label, and when to try again. */
+  private staleLabel: Phaser.GameObjects.Text | null = null
+  private staleRetryAt = 0
 
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     this.chunk = parseChunkArea(deps.world.areaId) ?? { region: 'inner-1', cx: 0, cy: 0 }
@@ -256,8 +262,28 @@ export class WildsEntities {
     )
     scene.events.once('shutdown', () => {
       this.rendered.clear()
+      this.staleLabel = null
     })
     this.render(wildsView())
+  }
+
+  /** While stale: say so on screen, and try a fresh read now and then. */
+  private showStale(stale: boolean): void {
+    if (stale && !this.staleLabel) {
+      this.staleLabel = this.scene.add
+        .text(this.scene.scale.width / 2, 6, 'Out of reach — the Wilds as you last saw them', { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#ffe9a8', stroke: '#2b1d1a', strokeThickness: 2, resolution: 4 })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(100000)
+    } else if (!stale && this.staleLabel) {
+      this.staleLabel.destroy()
+      this.staleLabel = null
+    }
+    const session = this.deps.session
+    if (stale && session.link?.status === 'online' && Date.now() >= this.staleRetryAt) {
+      this.staleRetryAt = Date.now() + 10_000
+      void refreshWilds(session, 0, this.chunk.region)
+    }
   }
 
   // ------------------------------------------------------------ per frame
@@ -265,7 +291,7 @@ export class WildsEntities {
   update(): void {
     const view = wildsView()
     if (!view) return
-    if (view.guest) tickWildsGuest()
+    this.showStale(wildsStale(this.deps.session, this.chunk.region))
     if (view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.render(view)
@@ -299,7 +325,7 @@ export class WildsEntities {
   }
 
   private relightOffer(l: WildsLanternView): WildsClaim {
-    const own = this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false
+    const own = this.deps.session.link ? l.ownerId === this.deps.session.link.accountId : false
     return {
       label: own ? 'Relight your lantern' : 'Relight the fallen lantern',
       verb: 'Relight',
@@ -333,13 +359,10 @@ export class WildsEntities {
     const view = wildsView()
     const entity = view?.entities.find((e) => e.id === entityId)
     if (!view || !entity) return
+    if (!session.link) return
     this.claiming = true
     try {
-      if (session.link) {
-        await this.claimConnected(entity)
-      } else {
-        this.claimGuest(entity)
-      }
+      await this.claimConnected(entity)
     } finally {
       this.claiming = false
     }
@@ -349,7 +372,7 @@ export class WildsEntities {
     const session = this.deps.session
     // A fresh read advances respawn cycles; the claim needs the current one.
     const ok = await refreshWilds(session)
-    const fresh = wildsView()
+    const fresh = wildsLive(session)
     if (!ok || !fresh) {
       bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
       return
@@ -362,15 +385,13 @@ export class WildsEntities {
       }
       return
     }
-    // The near-the-entity check reads carried progress: write this frame's spot.
-    this.syncProgressPosition()
-    const res = await session.link!.wildsClaim({ epoch: fresh.epochId, entityId: entity.id, cycle: target.cycle })
+    const res = await claimEntity(session, { epoch: fresh.epochId, entityId: entity.id, cycle: target.cycle, where: this.where() })
     if (!res.ok) {
       this.claimError(res.code)
       return
     }
     const drop = applyClaim(res.result)
-    this.lootFeedback(target, drop)
+    this.lootFeedback(target, drop, res.result.papers)
     if (res.result.wardenSliverFound) {
       const session = this.deps.session
       // A story find, kept in the journal ("A Still Stone"): a gain, not a passing thought.
@@ -387,12 +408,6 @@ export class WildsEntities {
     void refreshWilds(session, 0)
   }
 
-  private claimGuest(entity: WildsEntityView): void {
-    const drop = guestClaim(entity.id, this.deps.session)
-    if (!drop) return
-    this.lootFeedback(entity, drop)
-  }
-
   private claimError(code: string): void {
     // The epoch ended under us: the outer Wilds have turned (the scene plays it).
     if (code === 'epoch-ended') {
@@ -405,29 +420,28 @@ export class WildsEntities {
   /** Relight a fallen hero's lantern (own ones too — the warm act, no reward). */
   private async relight(l: WildsLanternView): Promise<void> {
     const session = this.deps.session
-    const view = wildsView()
+    const view = wildsLive(session)
     if (!session.link || !view) return
-    // The near-the-lantern check reads carried progress: write this frame's spot.
-    this.syncProgressPosition()
-    const res = await session.link.wildsRelight({ epoch: view.epochId, ownerId: l.ownerId, lanternId: l.id })
+    const res = await relightLantern(session, { epoch: view.epochId, ownerId: l.ownerId, lanternId: l.id, where: this.where() })
     if (!res.ok) {
       this.claimError(res.code)
       return
     }
     applyLanterns(res.result.lanterns)
+    const loot = { materials: (res.result.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: res.result.loot?.trinket ?? null }
     sfx('lantern')
     const at = this.lanternPx(l)
     this.deps.fx.sparkBurst(at.x, at.y - 20, 10)
-    const own = l.ownerId === session.link.habiticaId
+    const own = l.ownerId === session.link.accountId
     const text = own ? FALLEN_HERO_LANTERNS.yourOwnLantern : FALLEN_HERO_LANTERNS.relitByFriend
     bus.emit(EV.toast, { text, icon: 'lantern' })
-    if (res.result.rewarded && lootText(res.result.loot)) {
-      bus.emit(EV.toast, { text: `For the light: ${lootText(res.result.loot)}.`, icon: 'sparkle', art: lootArt(res.result.loot), kind: 'gain', gain: lootGain(res.result.loot) })
+    if (res.result.rewarded && lootText(loot)) {
+      bus.emit(EV.toast, { text: `For the light: ${lootText(loot)}.`, icon: 'sparkle', art: lootArt(loot), kind: 'gain', gain: lootGain(loot) })
     }
   }
 
-  /** The visible payoff of a claim: chest flavor, loot, papers. */
-  private lootFeedback(entity: WildsEntityView, drop: { materials: { id: string; qty: number }[]; trinket: string | null }): void {
+  /** The visible payoff of a claim: chest flavor, loot, papers (the server's, and the predicted find). */
+  private lootFeedback(entity: WildsEntityView, drop: { materials: { id: string; qty: number }[]; trinket: string | null }, papers: readonly string[]): void {
     const at = this.entityPx(entity)
     if (drop.materials.length > 0 || drop.trinket) this.deps.fx.sparkBurst(at.x, at.y - 8, 12)
     const loot = lootText(drop)
@@ -440,9 +454,13 @@ export class WildsEntities {
     const kind: ToastPayload['kind'] = loot ? 'gain' : entity.kind === 'chest' ? 'thought' : 'info'
     if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop), kind, ...(loot ? { gain: lootGain(drop) } : {}) })
 
-    // Found texts ride their personal claim (see ./placements.ts).
-    const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
-    if (paperId) grantPaper(this.deps.session, paperId)
+    // Found texts ride their personal claim (see ./placements.ts). Connected,
+    // the claim's answer names the ones the server granted (already in the
+    // adopted state); a take of the client's own guess would be refused.
+    const paperId = this.deps.session.link ? null : wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
+    for (const paper of new Set([...papers, ...(paperId ? [paperId] : [])])) {
+      if (!this.deps.session.state.flags.includes(`paper:${paper}`)) grantPaper(this.deps.session, paper)
+    }
 
     if (entity.kind === 'poi') this.poiDiscovery(entity)
   }
@@ -463,32 +481,19 @@ export class WildsEntities {
   // ------------------------------------------------------------ defeat
 
   /**
-   * Report this defeat (a lantern) before recovery — the request captures
-   * the fallen progress (area `wilds`, HP 0) as it is built. Guests keep no
-   * lanterns (there is no shared state to light them from).
+   * A fall in the Wilds leaves its lantern through the `fall` operation: the
+   * server places it where `where` says (server-first.md 2.2, "Falls").
+   * Nothing to send from here; kept so the scene's fall path stays one call.
    */
   reportDefeat(): Promise<void> | null {
-    const session = this.deps.session
-    const view = wildsView()
-    if (!session.link || !view || view.guest || !view.epochId) return null
-    this.syncProgressPosition()
-    const t = regionTile(this.regionPosition().x, this.regionPosition().y)
-    const epochId = view.epochId
-    return session.link.wildsDefeat({ epoch: epochId, x: t.x, y: t.y }).then((res) => {
-      if (res.ok) applyLanterns(res.result.lanterns)
-      else if (res.code === 'epoch-ended') bus.emit(EV.turning, { reason: 'epoch-ended' })
-      else if (res.code === 'lantern-creation-limited') {
-        bus.emit(EV.toast, { text: 'The Wilds are full of your lanterns today. They will keep this spot in mind.', kind: 'error' })
-      }
-      return
-    })
+    return null
   }
 
   // ------------------------------------------------------------ internals
 
-  /** Carried progress in region-wide pixels (the one conversion claims need). */
-  private syncProgressPosition(): void {
-    this.deps.session.state.position = this.regionPosition()
+  /** Where the hero stands, as the server reads it: this region, region-wide pixels. */
+  private where(): WildsWhere {
+    return { region: this.chunk.region, ...this.regionPosition() }
   }
 
   private regionPosition(): { x: number; y: number } {
@@ -545,13 +550,14 @@ export class WildsEntities {
     if (!view) return this.deps.interactables.register(this, [])
     const entities = this.chunkEntities(view).map((e) =>
       wildsPoint(e.id, this.entityPx(e), 20, () => {
-        const now = wildsView()
+        // Nothing is offered from a stale view, or without a connection.
+        const now = wildsLive(this.deps.session)
         return now && this.claimable(e, now, Math.floor(Date.now() / 1000)) ? this.offerFor(e) : null
       })
     )
     const lanterns = this.chunkLanterns(view)
       .filter((l) => !l.litBy)
-      .map((l) => wildsPoint(l.id, this.lanternPx(l), 32, () => (wildsView() ? this.relightOffer(l) : null)))
+      .map((l) => wildsPoint(l.id, this.lanternPx(l), 32, () => (wildsLive(this.deps.session) ? this.relightOffer(l) : null)))
     this.deps.interactables.register(this, [...entities, ...lanterns])
   }
 
@@ -682,8 +688,8 @@ export class WildsEntities {
 
   /** Read-only dump for playtests: what the Wilds look like right now. */
   debug(): {
-    guest: boolean
     epochId: string
+    stale: boolean
     region: string
     season: string
     endsAt: number | null
@@ -716,8 +722,8 @@ export class WildsEntities {
     const nowSec = Math.floor(Date.now() / 1000)
     const p = this.regionPosition()
     return {
-      guest: view.guest,
       epochId: view.epochId,
+      stale: wildsStale(this.deps.session, this.chunk.region),
       region: this.chunk.region,
       season: wildsEpoch(this.chunk.region).season,
       endsAt: wildsEpochEndsAt(this.chunk.region),
@@ -746,7 +752,7 @@ export class WildsEntities {
       lanterns: view.lanterns.map((l) => ({
         id: l.id,
         ownerId: l.ownerId,
-        own: this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false,
+        own: this.deps.session.link ? l.ownerId === this.deps.session.link.accountId : false,
         lit: !!l.litBy,
         x: l.x,
         y: l.y

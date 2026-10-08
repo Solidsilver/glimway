@@ -41,6 +41,9 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"023_party_owned_worlds.sql", "b016f955f1cd28de8a415b342418c803bb3c1dd6eec60ce4ff803d3c1ea36e34"},
 	{"024_party_admission.sql", "73350c4f225764acd62aabad30122d499c519b4686fc39e5a28f10e1e0fa7176"},
 	{"025_world_choice.sql", "6604e5831add696cbd7353d7aa42e69d71bc7fb2bb609bf1d387c98962ad78e9"},
+	{"026_accounts.sql", "3e7f7e5dd78e4874b54988f435ca64073bca6a3e489c2c7e47822c5b518c8055"},
+	{"027_server_state.sql", "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d"},
+	{"028_story_move.sql", "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17"},
 }
 
 func checkDeployedHistory(history []migrationRecord) error {
@@ -73,6 +76,9 @@ func checkMigrationIntegrity(source fs.FS) error {
 			return fmt.Errorf("migration history checksum mismatch: %s", path)
 		}
 		return nil
+	}
+	if err := checkDeployedHistory(history); err != nil {
+		return err
 	}
 	usedBackfills := map[string]bool{}
 	for _, m := range history {
@@ -141,7 +147,7 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 		{"changed SQL", func(f fstest.MapFS, _ *[]migrationRecord) {
 			f["migrations/001_core.sql"].Data = append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 		}, "checksum mismatch: migrations/001_core.sql"},
-		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "checksum mismatch: migrations/001_core.sql"},
+		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "deployed migration history changed"},
 		{"coordinated SQL and hash edit", func(f fstest.MapFS, h *[]migrationRecord) {
 			raw := append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 			f["migrations/001_core.sql"].Data = raw
@@ -231,6 +237,7 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,sent_a
 	if _, err := old.Exec("INSERT INTO idempotency VALUES('alice','spend','reset','hash',?,1)", replay); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	old.Close()
 	upgraded, err := Open(path)
 	if err != nil {
@@ -245,18 +252,18 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,sent_a
 		"SELECT count(*) FROM mail WHERE id='stack'":                                                        1,
 		"SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'":         40,
 		"SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='beeswax-candle'": 3,
-		"SELECT SUM(delta) FROM ledger WHERE habitica_id='alice' AND currency='embers'":                     12,
-		"SELECT rev FROM players WHERE habitica_id='alice'":                                                 7,
-		"SELECT last_seen_at FROM players WHERE habitica_id='alice'":                                        100,
+		"SELECT SUM(delta) FROM ledger WHERE account_id='alice' AND currency='embers'":                      12,
+		"SELECT version FROM players WHERE account_id='alice'":                                              7,
+		"SELECT last_seen_at FROM players WHERE account_id='alice'":                                         100,
 	} {
 		var got int
 		if err = upgraded.DB.QueryRow(query).Scan(&got); err != nil || got != want {
 			t.Fatalf("%s: %d, want %d (%v)", query, got, want, err)
 		}
 	}
-	var gotReplay string
-	if err = upgraded.DB.QueryRow("SELECT response_json FROM idempotency WHERE key='reset'").Scan(&gotReplay); err != nil || gotReplay != replay {
-		t.Fatal("replay changed", gotReplay, err)
+	var replayCount int
+	if err = upgraded.DB.QueryRow("SELECT count(*) FROM idempotency").Scan(&replayCount); err != nil || replayCount != 0 {
+		t.Fatal("old replay survived contract reset", replayCount, err)
 	}
 	rows, err := upgraded.DB.Query("PRAGMA foreign_key_check")
 	if err != nil {

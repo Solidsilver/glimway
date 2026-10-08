@@ -9,7 +9,7 @@ import (
 )
 
 func TestCalendarParity(t *testing.T) {
-	raw, err := os.ReadFile("vectors/calendar.json")
+	raw, err := os.ReadFile("vectors/clock.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,7 +18,13 @@ func TestCalendarParity(t *testing.T) {
 		Unix     int64       `json:"unix"`
 		Result   CalendarDay `json:"result"`
 	}
-	if err = json.Unmarshal(raw, &cases); err != nil {
+	var clock struct {
+		Calendar json.RawMessage `json:"calendar"`
+	}
+	if err = json.Unmarshal(raw, &clock); err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(clock.Calendar, &cases); err != nil {
 		t.Fatal(err)
 	}
 	if len(cases) < 1000 {

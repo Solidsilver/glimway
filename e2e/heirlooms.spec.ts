@@ -9,9 +9,8 @@ import {
   warp
 } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
-import { serverState, sql } from './connected'
+import { serverState, sql, accountOf, seedMarks } from './connected'
 
-test.use({ server: true })
 
 /**
  * Heirloom tools story beats (BRIEF.md & BRIEF-FIXES.md):
@@ -25,7 +24,7 @@ async function packHolds(page: Page, def: string): Promise<void> {
   await expect(page.getByRole('dialog', { name: 'Inventory' })).toBeVisible()
   await expect
     .poll(async () =>
-      page.evaluate((d) => (window as unknown as { __fsItems?: () => { stacks?: { itemDef: string }[] } | null }).__fsItems?.()?.stacks.some((s) => s.itemDef === d), def)
+      page.evaluate((d) => (window as unknown as { __fsItems?: () => { stacks?: { itemDef: string }[] } | null }).__fsItems?.()?.stacks?.some((s) => s.itemDef === d), def)
     )
     .toBe(true)
   await page.keyboard.press('Escape')
@@ -39,7 +38,7 @@ test.describe('heirloom story beats', () => {
     // Complete the north bridge in the authoritative projects table
     sql(`INSERT INTO projects(world_id, project_def, completed_at, world_flag)
          SELECT world_id, 'north-bridge', 123456, 'project:north-bridge:complete'
-         FROM players WHERE habitica_id='${id}'
+         FROM players WHERE account_id='${accountOf(id)}'
          ON CONFLICT(world_id, project_def) DO UPDATE SET completed_at=123456, world_flag='project:north-bridge:complete';`)
 
     // Load projects into the client village model so hasWorldFlag matches
@@ -75,7 +74,7 @@ test.describe('heirloom story beats', () => {
     const id = await freshPlayer(page, 'SilasTester')
 
     // Authoritative ledger / progress paper flag
-    sql(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', 'paper:ashwatch-ledger-excerpts') WHERE habitica_id='${id}';`)
+    seedMarks(id, 'paper:ashwatch-ledger-excerpts')
 
     // Mirror flag to client session
     await page.evaluate(() => {

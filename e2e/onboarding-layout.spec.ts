@@ -1,10 +1,13 @@
 import { expect, test } from './fixtures'
-import { MOCK_TOKEN, MOCK_USER, mockHabitica } from './helpers'
+import { TOKEN, allow, newUser, routeHabitica, setHabitica } from './connected'
 
 for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', { width: 390, height: 844 }]] as const) {
   test(`layout and screenshots (${name}; SCREENS=1 saves images)`, async ({ page }) => {
     await page.setViewportSize(vp)
-    await mockHabitica(page)
+    const id = newUser()
+    allow(id)
+    await setHabitica(id, { name: 'Tansy' })
+    await routeHabitica(page.context())
     const shot = async (n: string) => process.env.SCREENS && page.screenshot({ path: `.agent/screens/${n}-${name}.png` })
     const fits = async () => {
       const r = await page.evaluate(() => {
@@ -35,16 +38,13 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await page.getByRole('tab', { name: 'iOS app' }).click(); await shot('3-guide-ios')
     await page.getByRole('tab', { name: 'Android app' }).click(); await shot('4-guide-android')
     await page.getByRole('button', { name: 'I have them' }).click()
-    await page.getByLabel('Paste both values').fill(`${MOCK_TOKEN}\n${MOCK_USER}`)
+    await page.getByLabel('Paste both values').fill(`${TOKEN}\n${id}`)
     await fits(); await shot('5-swap-preview')
     await reachable(page.getByRole('button', { name: 'Looks right — Connect' }))
     await shot('5b-swap-preview-scrolled')
-    await page.getByRole('button', { name: 'Looks right — Connect' }).click()
     await page.getByRole('button', { name: 'Swap' }).click()
-    await page.getByRole('button', { name: 'Looks right — Connect' }).click()
-    await page.getByTestId('hero-card').waitFor()
+    await fits(); await shot('5c-swap-preview-swapped')
     await page.getByText('Why does it need my token?').click()
-    await reachable(page.getByRole('button', { name: 'Begin your journey' }))
-    await fits(); await shot('6-connected')
+    await fits(); await shot('6-why-token')
   })
 }

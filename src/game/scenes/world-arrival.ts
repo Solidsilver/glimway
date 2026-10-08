@@ -43,8 +43,13 @@ export function arrive(
   // so you arrive at the region's entrance in the new epoch.
   let turnedAway = false
   if (isWildsArea(state.area) && regionOfState(state) === OUTER_REGION_ID) {
-    const season = wildsEpoch().season
-    if (state.outerSeason && state.outerSeason !== season) {
+    const epoch = wildsEpoch()
+    const season = epoch.season
+    // This session's last outer season, or (first arrival after a load) the
+    // epoch the server last recorded this place in.
+    const seenSeason = state.outerSeason ? state.outerSeason !== season : false
+    const recorded = !state.outerSeason && !!state.outerEpoch && !!epoch.id && state.outerEpoch !== epoch.id
+    if (seenSeason || recorded) {
       turnedAway = !asked.turned
       state.position = wildsArrivalPosition(wildsEpoch())
     }

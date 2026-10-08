@@ -1,25 +1,24 @@
 import { expect, test as base, type Browser, type BrowserContext } from '@playwright/test'
-import { ensureBackend, currentBackend, installLegacyDbPath, stopBackend, ROUTE_COOKIE, type Backend } from './server/backend.ts'
+import { ensureBackend, currentBackend, installLegacyDbPath, retireMovedBackend, stopBackend, ROUTE_COOKIE, type Backend } from './server/backend.ts'
 
 installLegacyDbPath()
 
 /**
- * Shared test fixture: every playtest fails on an uncaught page error, so new
- * runtime code can't throw silently behind a passing assertion.
- *
- * Guest playtests also run as if no Glimway server existed (a static
- * deploy): same-origin /api requests fail like a dead network. Connected
- * specs opt in with `test.use({ server: true })` and reach their worker's own
- * Go server (e2e/server/backend.ts) through the shared Vite: every browser
- * context of the worker carries the routing cookie, including contexts a
- * test makes itself with `browser.newContext()`.
+ * Shared test fixture: every playtest fails on an uncaught page error, and
+ * every playtest runs against a server — each worker starts its own Go
+ * server (e2e/server/backend.ts) with its own database and fake Habitica,
+ * and every browser context of the worker reaches it through the shared
+ * Vite, including contexts a test makes itself with `browser.newContext()`.
+ * There is no guest play any more: a fresh player signs in with
+ * `freshPlayer` (e2e/home-helpers.ts) or pastes into the guide directly
+ * (e2e/connected.ts).
  */
 
 async function routeToBackend(context: BrowserContext, backend: Backend, baseURL: string): Promise<void> {
   await context.addCookies([{ name: ROUTE_COOKIE, value: String(backend.apiPort), url: baseURL }])
 }
 
-export const test = base.extend<{ pageErrors: string[]; server: boolean; noServer: void }, { e2eBackend: void }>({
+export const test = base.extend<{ pageErrors: string[]; backend: void }, { e2eBackend: void }>({
   // Worker-scoped: stops this worker's server when the worker exits, and
   // routes contexts made by hand to it (browser.newContext / newPage).
   e2eBackend: [
@@ -41,19 +40,14 @@ export const test = base.extend<{ pageErrors: string[]; server: boolean; noServe
     },
     { scope: 'worker', auto: true }
   ],
-  server: [false, { option: true }],
-  noServer: [
-    async ({ context, server, baseURL }, use) => {
-      if (server) {
-        await routeToBackend(context, await ensureBackend(), baseURL ?? 'http://127.0.0.1')
-      } else {
-        const origin = new URL(baseURL ?? 'http://127.0.0.1').host
-        await context.route(
-          (url) => url.host === origin && url.pathname.startsWith('/api/'),
-          (route) => route.abort('internetdisconnected')
-        )
-      }
+  // Every context of this worker is routed to its backend, which is started
+  // on first use and kept for the worker's remaining tests (unless a test
+  // moved its clock: then the next test gets a fresh one).
+  backend: [
+    async ({ context, baseURL }, use) => {
+      await routeToBackend(context, await ensureBackend(), baseURL ?? 'http://127.0.0.1')
       await use()
+      await retireMovedBackend()
     },
     { auto: true }
   ],

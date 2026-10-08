@@ -43,7 +43,7 @@ func MoveInstance(ctx context.Context, tx *sql.Tx, id, def, fromLocation, fromOw
 
 // ReturnDecoration verifies the definition as well as the parcel's owner.
 func ReturnDecoration(ctx context.Context, tx *sql.Tx, id, owner, def string) error {
-	res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location='inventory' WHERE id=? AND habitica_id=? AND item_def=? AND location='mail' AND scene IS NULL", id, owner, def)
+	res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location='inventory' WHERE id=? AND account_id=? AND item_def=? AND location='mail' AND scene IS NULL", id, owner, def)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func nullable(s string) any {
 }
 func MoveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to DecorationPlace) error {
 	for _, id := range ids {
-		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,habitica_id=?,homestead_id=? WHERE id=? AND location=? AND habitica_id IS ? AND homestead_id IS ? AND scene IS NULL", to.Location, nullable(to.Player), nullable(to.Home), id, from.Location, nullable(from.Player), nullable(from.Home))
+		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,account_id=?,homestead_id=? WHERE id=? AND location=? AND account_id IS ? AND homestead_id IS ? AND scene IS NULL", to.Location, nullable(to.Player), nullable(to.Home), id, from.Location, nullable(from.Player), nullable(from.Home))
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func movedOne(res sql.Result) error {
 func Currency(kind, def string) string                   { return kind + ":" + def }
 func LocationCurrency(location, kind, def string) string { return location + ":" + Currency(kind, def) }
 func RecordCurrency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, reason, ref string, now int64) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", id, currency, delta, reason, ref, now)
+	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", id, currency, delta, reason, ref, now)
 	return err
 }
 
@@ -103,6 +103,6 @@ func WardenDefsSQL() string {
 
 // FittedLedger moves the fitting audit with a tool entering or leaving a pack.
 func FittedLedger(ctx context.Context, tx *sql.Tx, player, tool string, delta int, reason, ref string, now int64) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) SELECT ?,'fitted:'||item_def,?,0,?,?,? FROM item_instances WHERE location='fitted' AND owner=? ORDER BY item_def,id", player, delta, reason, ref, now, tool)
+	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) SELECT ?,'fitted:'||item_def,?,0,?,?,? FROM item_instances WHERE location='fitted' AND owner=? ORDER BY item_def,id", player, delta, reason, ref, now, tool)
 	return err
 }

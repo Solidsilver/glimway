@@ -39,6 +39,7 @@ func write(w http.ResponseWriter, status int, v any) {
 func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 200000)
 	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
 	if err := d.Decode(v); err != nil {
 		return fail(400, "invalid-json")
 	}

@@ -11,7 +11,6 @@ import {
 } from '../src/lib/habitica/remembered.ts'
 import { exportSave, loadGame, saveGame } from '../src/lib/save.ts'
 import { createNewGame } from '../src/lib/state.ts'
-import { pipGateNudgeDue, PIP_GATE_FLAG } from '../src/lib/nudges.ts'
 
 const USER = '11111111-aaaa-4bbb-8ccc-222222222222'
 const TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
@@ -86,15 +85,4 @@ test('a malformed stored record reads as nothing remembered', async () => {
   setRememberedBackend({ read: async () => ({ userId: 5 }), write: async () => {}, remove: async () => {} })
   assert.equal(await loadRemembered(), null)
   setRememberedBackend(null)
-})
-
-test('Pip’s gate nudge: guests near the gate, once per save', () => {
-  const exits = [{ tx: 41, ty: 9, tw: 1, th: 3 }]
-  const base = { vitalsSource: 'demo' as const, connected: false, areaId: 'village', tx: 40, ty: 10, exits }
-  assert.equal(pipGateNudgeDue({ flags: [] }, base), true)
-  assert.equal(pipGateNudgeDue({ flags: [PIP_GATE_FLAG] }, base), false)
-  assert.equal(pipGateNudgeDue({ flags: [] }, { ...base, tx: 10 }), false)
-  assert.equal(pipGateNudgeDue({ flags: [] }, { ...base, connected: true }), false)
-  assert.equal(pipGateNudgeDue({ flags: [] }, { ...base, vitalsSource: 'imported' }), false)
-  assert.equal(pipGateNudgeDue({ flags: [] }, { ...base, areaId: 'woodland' }), false)
 })

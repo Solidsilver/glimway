@@ -28,7 +28,7 @@ import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
-import { parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
+import { CHUNK_TILES, parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
@@ -231,8 +231,13 @@ export class Gathering {
       }
       const home = parseHomeArea(session.state.area) !== null
       this.deps.notePosition()
-      const region = session.state.area === WILDS_AREA ? (parseChunkArea(this.deps.world.areaId)?.region ?? regionOfState(session.state)) : undefined
-      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile: home ? [spot.tx, spot.ty] : undefined, region })
+      const wilds = session.state.area === WILDS_AREA
+      const chunk = wilds ? parseChunkArea(this.deps.world.areaId) : null
+      const region = wilds ? (chunk?.region ?? regionOfState(session.state)) : undefined
+      // The server checks the piece against its own land or chunk: home tiles
+      // as they are, Wilds tiles region-wide (the chunk's offset added).
+      const tile: [number, number] | undefined = home ? [spot.tx, spot.ty] : chunk ? [chunk.cx * CHUNK_TILES + spot.tx, chunk.cy * CHUNK_TILES + spot.ty] : undefined
+      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile, region })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
       const live = Gathering.live?.deps.world.areaId === this.deps.world.areaId ? Gathering.live : null

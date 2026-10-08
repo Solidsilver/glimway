@@ -3,7 +3,8 @@ import type { HabiticaProfile } from '../lib/habitica/types'
 
 /**
  * The hero's name, class and level as the Character panel and the bag's
- * hero row show them: the imported Habitica hero, or the guest's wayfarer.
+ * hero row show them: the imported Habitica hero (the demo fallback goes
+ * with C2's session rewire; TODO(C2) in src/content/world.ts).
  */
 export function heroLine(profile: HabiticaProfile | null): { name: string; className: string; level: number } {
   return {

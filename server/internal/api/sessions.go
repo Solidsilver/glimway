@@ -26,7 +26,7 @@ func (a *Server) auth(ctx context.Context, tx *sql.Tx, r *http.Request) (string,
 	hash := store.Hash(c.Value)
 	var id string
 	now := a.Config.Now().Unix()
-	err = tx.QueryRowContext(ctx, "SELECT s.habitica_id FROM sessions s JOIN allowlist l USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?", hash, now, now-int64(SessionTTL.Seconds())).Scan(&id)
+	err = tx.QueryRowContext(ctx, "SELECT s.account_id FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?", hash, now, now-int64(SessionTTL.Seconds())).Scan(&id)
 	if err == sql.ErrNoRows {
 		// Signed in, but the world isn't chosen yet: everything waits for
 		// POST /api/world/choose (world_choice.go).
@@ -59,7 +59,7 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		defer tx.Rollback()
-		err = tx.QueryRowContext(r.Context(), "SELECT habitica_id FROM sessions WHERE id_hash=?", hash).Scan(&id)
+		err = tx.QueryRowContext(r.Context(), "SELECT account_id FROM sessions WHERE id_hash=?", hash).Scan(&id)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}

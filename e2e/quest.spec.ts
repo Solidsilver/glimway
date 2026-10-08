@@ -1,12 +1,13 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, frames, holdUntil, player, settleWarden, talkThrough, warp, waitForArea, world, expectAreaCard } from './helpers'
+import { expectStage, frames, holdUntil, player, settleWarden, talkThrough, warp, waitForArea, world, expectAreaCard } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 const TILE = 16
 
 const areaNow = (page: Page) => page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)
 
 test('the whole quest can be played from a fresh start to the ending', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
 
   // Mara, just south of her spot by the well.
   await warp(page, 'village', 16, 14)
@@ -35,7 +36,7 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
 })
 
 test('exits connect left-to-right and you come back the way you came', { tag: '@smoke' }, async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
 
   // Village east gate → arrive on Brackenwood's west side.
   await warp(page, 'village', 38, 10)
@@ -51,7 +52,7 @@ test('exits connect left-to-right and you come back the way you came', { tag: '@
 })
 
 test('the hero is confined to each map', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   for (const [area, tx, ty] of [['village', 20, 2], ['woodland', 30, 3], ['ruin', 20, 3]] as const) {
     await warp(page, area, tx, ty)
     const w = await world(page)
@@ -72,7 +73,7 @@ test('the hero is confined to each map', async ({ page }) => {
 })
 
 test('the area title card always names the area you are in', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   // Leave while Hearthwick's card is still up, then again while Brackenwood's is.
   await expectAreaCard(page, 'Hearthwick')
   await warp(page, 'woodland', 15, 20)

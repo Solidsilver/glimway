@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"glimway/server/internal/rules"
+	"fmt"
 	"net/http"
-	"slices"
+	"strings"
 	"testing"
 
 	"github.com/coder/websocket"
@@ -12,36 +12,14 @@ import (
 
 // Legacy JSON client view, independent of the generated payload.
 type witnessMessage struct {
-	Type       string `json:"type"`
-	Beat       string `json:"beat"`
-	HabiticaID string `json:"habiticaId"`
-	Name       string `json:"name"`
-}
-
-func TestStoryBeats(t *testing.T) {
-	st := func(quest string, flags ...string) rules.State {
-		return rules.State{Quest: quest, Flags: flags}
-	}
-	for _, c := range []struct {
-		before, after rules.State
-		want          []string
-	}{
-		{st("clue-found"), st("guardian-defeated"), []string{"warden"}},
-		{st("guardian-defeated"), st("guardian-defeated"), []string{}},
-		{st("guardian-defeated"), st("lantern-lit"), []string{"lantern"}},
-		{st("lantern-lit"), st("complete"), []string{}},
-		{st("clue-found"), st("complete"), []string{"warden", "lantern"}},
-		{st("complete"), st("complete", "echo:nan", "echo:nan:softened", "echo:stranger"), []string{"echo:nan"}},
-		{st("complete", "echo:nan"), st("complete", "echo:nan"), []string{}},
-	} {
-		if got := storyBeats(c.before, c.after); !slices.Equal(got, c.want) {
-			t.Errorf("%v → %v: got %v want %v", c.before, c.after, got, c.want)
-		}
-	}
+	Type      string `json:"type"`
+	Beat      string `json:"beat"`
+	AccountID string `json:"accountId"`
+	Name      string `json:"name"`
 }
 
 type witnessed struct {
-	Type, Beat, HabiticaID, Name string
+	Type, Beat, AccountID, Name string
 }
 
 func (w *wsClient) witness() witnessed {
@@ -54,12 +32,12 @@ func (w *wsClient) witness() witnessed {
 	return m
 }
 
-// upload: the doer's progress lands, standing where doc says.
-func (x *rig) upload(c *http.Cookie, s *response, doc rules.State) {
+func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 	x.t.Helper()
-	r := x.expect("PUT", "/api/progress", mutation(*s, doc), c, 200)
-	s.Rev = r.Rev
-	s.State = r.State
+	doc := s.State
+	doc.Area = area
+	out := x.expect("POST", "/api/quest/step", body(*s, to, map[string]any{"quest": "lantern-road", "to": to, "where": testWhere(doc)}), c, 200)
+	s.Snapshot = out.Snapshot
 }
 
 func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
@@ -109,19 +87,20 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	// Olive speaks the naming in the ruin: Bob was there; Cal stood too far
 	// off, Eve was in the woods, and Dee's ruin is another world's.
 	doc := o.State
+	x.quest(oc, &o, "accepted", "village")
 	doc.Area, doc.Quest = "ruin", "clue-found"
-	x.upload(oc, &o, doc)
+	x.quest(oc, &o, doc.Quest, doc.Area)
 	bob.none()
 	doc.Quest = "guardian-defeated"
-	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "warden" || m.HabiticaID != "olive" || m.Name != "Olive" {
+	x.quest(oc, &o, doc.Quest, doc.Area)
+	if m := bob.witness(); m.Beat != "warden" || m.AccountID != x.account("olive") || m.Name != "Olive" {
 		t.Fatal("witness", m)
 	}
 	for _, w := range []*wsClient{olive, cal, dee, eve} {
 		w.none()
 	}
 	// Only once: the same progress again records nothing new.
-	x.upload(oc, &o, doc)
+	x.quest(oc, &o, doc.Quest, doc.Area)
 	bob.none()
 	// The witness's own story doesn't move.
 	if s := x.expect("GET", "/api/state", nil, bc, 200); s.State.Quest != b.State.Quest {
@@ -129,14 +108,14 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	}
 	// The last lantern, the same way.
 	doc.Quest = "lantern-lit"
-	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "lantern" || m.HabiticaID != "olive" {
+	x.quest(oc, &o, doc.Quest, doc.Area)
+	if m := bob.witness(); m.Beat != "lantern" || m.AccountID != x.account("olive") {
 		t.Fatal("lantern", m)
 	}
 	cal.none()
 
 	// No client can send one: the hub refuses the message outright.
-	bob.send(map[string]any{"type": "witness", "beat": "warden", "habiticaId": "bob", "name": "Bob"})
+	bob.send(map[string]any{"type": "witness", "beat": "warden", "accountId": x.account("bob"), "name": "Bob"})
 	bob.closeStatus(websocket.StatusPolicyViolation)
 	olive.none()
 }
@@ -152,38 +131,50 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	bob.join("wilds:inner-1:0:0")
 	bob.send(positionMessage(100))
 
-	// Olive isn't connected: her settling lands, but it's no one's moment.
-	doc := o.State
-	doc.Quest, doc.Area = "complete", "wilds"
-	doc.Flags = append(doc.Flags, "echo:hollis")
-	x.upload(oc, &o, doc)
+	// No live doer: the after-commit relay records no witness.
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:inner-1", "echo:hollis")
 	bob.none()
-
-	// Connected and standing by Bob: settling an Echo is seen.
 	olive := wsConnect(t, ts, oc, o.Lease)
 	olive.join("wilds:inner-1:0:0")
 	bob.expect("join")
 	olive.send(positionMessage(110))
 	bob.expect("pos")
-	doc.Flags = append(doc.Flags, "echo:nan")
-	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "echo:nan" || m.HabiticaID != "olive" {
-		t.Fatal("echo", m)
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:inner-1", "echo:nan")
+	if m := bob.witness(); m.Beat != "echo:nan" || m.AccountID != o.AccountID {
+		t.Fatal(m)
 	}
-	// A beat whose place doesn't match where she stands (her save says the
-	// ruin, her room is a Wilds chunk) is not relayed.
-	doc.Flags = append(doc.Flags, "echo:tam")
-	doc.Area = "ruin"
-	x.upload(oc, &o, doc)
-	bob.none()
-	// Nor a stale upload (another device's catching up).
-	doc.Area = "wilds"
-	doc.Flags = append(doc.Flags, "echo:joss")
-	stale := o
-	stale.Rev--
-	if r := x.expect("PUT", "/api/progress", mutation(stale, doc), oc, 200); r.Status != "stale" {
-		t.Fatal("not stale", r.Status)
+	recorded := x.expect("GET", "/api/state", nil, bc, 200)
+	if recorded.Version != b.Version+1 || len(recorded.State.Flags) != 1 || !strings.HasPrefix(recorded.State.Flags[0], "witness:echo-nan:") {
+		t.Fatal("witness not durably recorded", recorded)
 	}
+	x.api.presenceWitness(o.WorldID, o.AccountID, "Renamed", "wilds:inner-1", "echo:nan")
 	bob.none()
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:outer-1", "echo:tam")
+	bob.none()
+	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version {
+		t.Fatal("repeat bumped witness")
+	}
+	// A sixth traveler of the same beat gets no row or version bump.
+	for i := 0; i < 4; i++ {
+		mark := fmt.Sprintf("witness:echo-nan:earlier-%d:Earlier", i)
+		if _, err := x.db.DB.Exec("INSERT INTO story_marks VALUES(?,?,'server',?)", x.account("bob"), mark, x.now.Load()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := count(t, x.db, "SELECT count(*) FROM story_marks WHERE account_id=? AND mark LIKE 'witness:echo-nan:%'", x.account("bob")); n != 5 {
+		t.Fatal("seeded cap", n, b.AccountID, x.account("bob"))
+	}
+	x.stand("sixth", o.WorldID, "wilds:inner-1:0:0", 110, 20)
+	defer x.stand("sixth", o.WorldID, "", 0, 0)
+	for i := 0; i < 5; i++ {
+		if _, err := x.db.DB.Exec("INSERT INTO story_marks VALUES(?,?,'server',?)", x.account("olive"), fmt.Sprintf("witness:echo-nan:earlier-%d:Earlier", i), x.now.Load()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	x.api.presenceWitness(o.WorldID, "sixth", "Sixth", "wilds:inner-1", "echo:nan")
+	bob.none()
+	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version || len(got.State.Flags) != 5 {
+		t.Fatal("witness cap", got)
+	}
 	olive.none()
 }

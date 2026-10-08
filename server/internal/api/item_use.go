@@ -31,21 +31,24 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 		return fail(409, "not-usable-yet")
 	}
 	// A hero at 0 HP is too far gone to eat or drink. Only a sync, a rest or
-	// a revive (as the rules define them) lifts the zero-HP lock.
+	// a fall lifts the zero-HP lock.
 	if s.State.HP <= 0 {
 		return fail(409, "too-weak")
 	}
+
 	helps := false
 	for _, e := range def.Use {
 		switch e.Type {
 		case "restore-hp":
 			if s.State.HP < s.State.MaxHP {
 				helps = true
+				s.VitalsWritten = true
 				s.State.HP = math.Min(s.State.MaxHP, s.State.HP+float64(e.Amount))
 			}
 		case "restore-mana":
 			if s.State.Mana < s.State.MaxMana {
 				helps = true
+				s.VitalsWritten = true
 				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.Amount))
 			}
 		case "clear-unmoored", "ease-unmoored":
@@ -57,7 +60,7 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	if !helps {
 		return fail(409, "not-needed")
 	}
-	split, err := packTake(ctx, tx, s.HabiticaID, def.ID, req.Maker, 1, "use", def.ID, now)
+	split, err := packTake(ctx, tx, s.AccountID, def.ID, req.Maker, 1, "use", def.ID, now)
 	if err != nil {
 		return err
 	}
@@ -72,15 +75,15 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 }
 
 func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, makerID, itemDef string, now int64) error {
-	if makerID == "" || makerID == s.HabiticaID {
+	if makerID == "" || makerID == s.AccountID {
 		return nil
 	}
 	radius := float64(content.ItemsRules.Rules.Thanks.NearbyTiles * wildsTileSize)
-	if a.presence != nil && a.presence.together(s.WorldID, s.HabiticaID, makerID, radius) {
+	if a.presence != nil && a.presence.together(s.WorldID, s.AccountID, makerID, radius) {
 		return nil
 	}
 	var makerWorld string
-	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=? AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)", makerID, makerID).Scan(&makerWorld)
+	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=? AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica'))", makerID, makerID).Scan(&makerWorld)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -92,7 +95,7 @@ func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 	todayStart := now - (now % 86400)
 	var already bool
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM mail WHERE kind='thanks' AND from_id=? AND to_id=? AND sent_at>=?)", s.HabiticaID, makerID, todayStart).Scan(&already); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM mail WHERE kind='thanks' AND from_id=? AND to_id=? AND sent_at>=?)", s.AccountID, makerID, todayStart).Scan(&already); err != nil {
 		return err
 	}
 	if already {
@@ -102,6 +105,6 @@ func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,0,'[]','[]',?)", mailID, s.WorldID, s.HabiticaID, makerID, "thanks", itemDef, now)
+	_, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,0,'[]','[]',?)", mailID, s.WorldID, s.AccountID, makerID, "thanks", itemDef, now)
 	return err
 }

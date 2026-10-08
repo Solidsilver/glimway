@@ -1,7 +1,7 @@
 /**
  * Code-drawn pixel art for the Tangle, in the game's own style (1 px dark
  * outlines, lit from the upper left, crisp nearest-neighbour): trees and
- * woods pieces for the generator's decor (src/lib/wilds/tangle.ts), and a
+ * woods pieces for the served chunks' decor (game/wilds/decor.ts), and a
  * per-pixel ground painter so paths, moss and the old road follow the
  * layout with ragged edges instead of square tiles.
  *
@@ -10,8 +10,7 @@
  * Nothing here is a third-party asset.
  */
 import type Phaser from 'phaser'
-import { DECOR_ART, TANGLE_GROUND, valueNoise } from '../../lib/wilds/tangle.ts'
-import type { DecorKind } from '../../lib/wilds/types.ts'
+import { DECOR_ART, TANGLE_GROUND, valueNoise, type DecorKind } from './decor.ts'
 import { TILE, tileBottom, tileMid } from '../../lib/tile.ts'
 import { blitFrame, commonsFrame } from '../commons-pass.ts'
 import { DELIVERED_DECOR, DELIVERED_DECOR_QUIET, decorFlipped, fitRect } from '../atlas-plan.ts'

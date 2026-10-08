@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState } from './connected'
-import { beginNewJourney, talkText, warp, waitForLive } from './helpers'
+import { talkText, warp, waitForLive } from './helpers'
 import { freshPlayer, fund, go, shot } from './home-helpers'
 
 /**
@@ -19,7 +19,7 @@ const readThrough = (page: Page, prompt: RegExp): Promise<string> => talkText(pa
 
 test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper keeps a tally', async ({ page }) => {
   test.setTimeout(90_000)
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 29, 24)
   const first = await mill(page)
   expect(first).not.toBeNull()
@@ -39,8 +39,7 @@ test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper k
   expect(hopper).not.toMatch(/fox|Aldo/)
 })
 
-test.describe('connected', () => {
-  test.use({ server: true })
+test.describe('in a world', () => {
 
   test('finishing the mill-wheel project mends the wheel: new paddles, and it turns smooth', async ({ page }) => {
     test.setTimeout(150_000)

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { linkStatus, serverState } from './connected'
-import { beginNewJourney, waitForLive, expectToast } from './helpers'
+import { linkStatus, serverState, CONTRACT } from './connected'
+import { waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
@@ -8,7 +8,6 @@ import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, 
  * Go server: unreadable answers, stale carried balances, stale homes after
  * mail recovery, the craft batch mismatch, and the calendar across midnight.
  */
-test.use({ server: true })
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000
 
@@ -48,7 +47,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const keys: string[] = []
   page.on('request', (r) => {
-    if (r.method() === 'POST' && r.url().endsWith('/api/homestead/buy')) keys.push(JSON.parse(r.postData() ?? '{}').key)
+    if (r.method() === 'POST' && r.url().endsWith('/api/homestead/buy')) keys.push(JSON.parse(r.postData() ?? '{}').op?.key)
   })
 
   // Once unreadable: the same request is asked again at once and completes.
@@ -104,7 +103,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toBeVisible()
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
-  const code = (await (await page.request.post('/api/invites', { data: {} })).json()).code as string
+  const code = (await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()).code as string
   const ctx = await browser.newContext({ baseURL })
   const other = await ctx.newPage()
   await freshPlayer(other, 'Bram', code)
@@ -168,7 +167,7 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
 })
 
 test('finding 6: the date turns at midnight without leaving the scene', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   // 8 seconds before the end of Bud-wick (the 3rd wick): its last day.
   const t = EPOCH + 3 * 7 * 86400 - 8
   await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), t)

@@ -1,33 +1,11 @@
 /**
- * A homestead's wild land, generated the same way on the client and the
- * server (server/internal/land): integer-only, from the Wilds hash and PRNG
- * (./hash.ts), so the server can validate placement against the very
- * trees and rocks the player sees.
- *
- * Spec (generator 1; re-implementable from this description):
- *
- *   seed = hash(worldId, "homestead-land", generator, gate)  (the world's id: public, known to guests as "guest")
- *   rng  = Rng(seed)
- *   every tile GRASS; the border ring EDGE, except the gate mouth on the
- *   south edge (x in [gate.x, gate.x+gate.w)), which is PATH, as is the
- *   corridor from there up to the home site's bottom row.
- *   protected(x, y): the home site grown by one tile, or the corridor grown
- *   by one tile sideways (rows from the site's bottom down).
- *   stream: if rng.nextInt(1000) < streamPermille:
- *     side = rng.nextInt(2); [lo, hi] = side 0 ? [2, 9] : [W-10, W-3]
- *     x = lo + rng.nextInt(hi-lo+1); ford = 3 + rng.nextInt(H-6)
- *     for y in 1..H-2:
- *       if GRASS and not protected: WATER (FORD on the ford row)
- *       r = rng.nextInt(4); r=0 and x>lo: x-1; r=1 and x<hi: x+1
- *   slope: if rng.nextInt(1000) < slopePermille:
- *     y0 = 2 + rng.nextInt(3); x0 = 2 + rng.nextInt(floor(W/3)); len = 8 + rng.nextInt(10)
- *     rows y0, y0+1, x in [x0, min(x0+len, W-2)): GRASS and not protected → SLOPE
- *   scatter trees, then stumps, then boulders: for each attempt,
- *     x = 1 + rng.nextInt(W-2), y = 1 + rng.nextInt(H-2);
- *     GRASS and not protected → that kind (a failed attempt is not retried).
+ * A homestead's wild land, as the server serves it (GET /api/homestead/land/
+ * <gate>; server/internal/land generates it, and validates placement and
+ * gathering against the same tiles). The client never generates land: it
+ * keeps the served grid per gate (rememberLand, servedLand) and reads it
+ * with the helpers below.
  */
 import { HOMESTEAD_DATA, type HomesteadData } from './homestead.ts';
-import { Rng, hash } from './hash.ts';
 
 export const LAND = {
   GRASS: 0,
@@ -41,8 +19,11 @@ export const LAND = {
   PATH: 8,
 } as const;
 
-/** One character per kind, for parity vectors and debugging. */
+/** One character per kind, for debugging. */
 const LAND_CHARS = '.TSBw~/#=';
+
+/** The served cell names (the LAND vocabulary), by kind value. */
+export const LAND_CELLS = ['grass', 'tree', 'stump', 'boulder', 'water', 'ford', 'slope', 'edge', 'path'] as const;
 
 export type LandConfig = HomesteadData['land'];
 
@@ -51,65 +32,6 @@ export interface Land {
   height: number;
   /** Row-major kinds. */
   tiles: Uint8Array;
-}
-
-/** The land seed for a gate in a world. */
-export function landSeed(worldId: string, gate: number, cfg: LandConfig = HOMESTEAD_DATA.land): number {
-  return hash([worldId, 'homestead-land', cfg.generator, gate]);
-}
-
-export function generateLand(seed: number, cfg: LandConfig = HOMESTEAD_DATA.land): Land {
-  const W = cfg.width;
-  const H = cfg.height;
-  const tiles = new Uint8Array(W * H);
-  const at = (x: number, y: number) => tiles[y * W + x];
-  const put = (x: number, y: number, k: number) => {
-    tiles[y * W + x] = k;
-  };
-  const site = cfg.site;
-  const gate = cfg.gate;
-  const siteBottom = site.y + site.h;
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const border = x === 0 || y === 0 || x === W - 1 || y === H - 1;
-      put(x, y, border ? LAND.EDGE : LAND.GRASS);
-    }
-  for (let y = siteBottom; y < H; y++) for (let x = gate.x; x < gate.x + gate.w; x++) put(x, y, LAND.PATH);
-  const isProtected = (x: number, y: number) =>
-    (x >= site.x - 1 && x <= site.x + site.w && y >= site.y - 1 && y <= siteBottom) ||
-    (x >= gate.x - 1 && x <= gate.x + gate.w && y >= siteBottom);
-
-  const rng = new Rng(seed);
-  if (rng.nextInt(1000) < cfg.streamPermille) {
-    const side = rng.nextInt(2);
-    const [lo, hi] = side === 0 ? [2, 9] : [W - 10, W - 3];
-    let x = lo + rng.nextInt(hi - lo + 1);
-    const ford = 3 + rng.nextInt(H - 6);
-    for (let y = 1; y < H - 1; y++) {
-      if (at(x, y) === LAND.GRASS && !isProtected(x, y)) put(x, y, y === ford ? LAND.FORD : LAND.WATER);
-      const r = rng.nextInt(4);
-      if (r === 0 && x > lo) x -= 1;
-      else if (r === 1 && x < hi) x += 1;
-    }
-  }
-  if (rng.nextInt(1000) < cfg.slopePermille) {
-    const y0 = 2 + rng.nextInt(3);
-    const x0 = 2 + rng.nextInt(Math.floor(W / 3));
-    const len = 8 + rng.nextInt(10);
-    const x1 = Math.min(x0 + len, W - 2);
-    for (let y = y0; y <= y0 + 1; y++) for (let x = x0; x < x1; x++) if (at(x, y) === LAND.GRASS && !isProtected(x, y)) put(x, y, LAND.SLOPE);
-  }
-  const scatter = (n: number, kind: number) => {
-    for (let i = 0; i < n; i++) {
-      const x = 1 + rng.nextInt(W - 2);
-      const y = 1 + rng.nextInt(H - 2);
-      if (at(x, y) === LAND.GRASS && !isProtected(x, y)) put(x, y, kind);
-    }
-  };
-  scatter(cfg.trees, LAND.TREE);
-  scatter(cfg.stumps, LAND.STUMP);
-  scatter(cfg.boulders, LAND.BOULDER);
-  return { width: W, height: H, tiles };
 }
 
 /** The land as text rows (one char per tile, see LAND_CHARS). */
@@ -195,4 +117,33 @@ export function postCost(n: number, data: HomesteadData = HOMESTEAD_DATA): Recor
   const out: Record<string, number> = {};
   for (const [m, v] of Object.entries(last)) out[m] = v + (data.lanternPosts.growth[m] ?? 0) * (n - c.length + 1);
   return out;
+}
+
+// ------------------------------------------------------------ served land
+
+/** A served land grid (HomesteadLand) as kinds. Throws on a name it doesn't know. */
+export function landFromCells(served: { width: number; height: number; cells: readonly string[] }): Land {
+  if (served.cells.length !== served.width * served.height) throw new Error('land: cells do not fill the grid');
+  const tiles = new Uint8Array(served.cells.length);
+  served.cells.forEach((c, i) => {
+    const k = (LAND_CELLS as readonly string[]).indexOf(c);
+    if (k < 0) throw new Error(`land: unknown cell ${c}`);
+    tiles[i] = k;
+  });
+  return { width: served.width, height: served.height, tiles };
+}
+
+/** Served lands, by world and gate; the current world is the one last remembered. */
+const served = new Map<string, Land>();
+let currentWorld = '';
+
+/** Keep a gate's served land. */
+export function rememberLand(worldId: string, gate: number, land: Land): void {
+  served.set(`${worldId}:${gate}`, land);
+  currentWorld = worldId;
+}
+
+/** A gate's served land (in this world, or the current one), or null until it has been read. */
+export function servedLand(gate: number, worldId: string = currentWorld): Land | null {
+  return served.get(`${worldId}:${gate}`) ?? null;
 }

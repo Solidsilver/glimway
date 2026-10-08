@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   CHUNK_PX,
   CHUNK_TILES,
   WILDS_AREA,
   chunkAreaId,
   fromRegionPosition,
-  guestEpoch,
   inRegion,
   isWildsArea,
   parseChunkArea,
@@ -15,19 +15,24 @@ import {
   wildsArrivalPosition,
   wildsSceneEntry,
 } from '../src/game/wilds/regions.ts';
+import { loadChunk } from '../src/game/wilds/chunks.ts';
+import type { WildsEpoch } from '../src/game/wilds/store.ts';
 import { wildsPaperFor, WILDS_PAPER_PLACEMENTS } from '../src/game/wilds/placements.ts';
+import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { PAPERS } from '../src/content/papers.ts';
-import { chunkEntities, chunkTerrain, loadWilds, rollLoot } from '../src/lib/wilds/index.ts';
-import type { Epoch } from '../src/lib/wilds/types.ts';
+import { loadWilds } from '../src/lib/wilds/data.ts';
 
 /**
- * The Wilds position convention (brief item 2): saved Wilds progress is
- * area `wilds` with REGION-WIDE pixels (chunk offset × chunk tiles × 16px);
- * scenes play in chunk-local pixels. One conversion place, exercised here —
- * saves, reloads, claims and defeat reports all go through it.
+ * The Wilds position convention: Wilds positions are REGION-WIDE pixels
+ * (chunk offset × chunk tiles × 16px); scenes play in chunk-local pixels.
+ * One conversion place, exercised here — saves, reloads and operations'
+ * `where` all go through it. The chunk is the server's (tests/fixtures,
+ * written by server/internal/wilds TestClientFixtures).
  */
 
-const epoch: Epoch = guestEpoch();
+const epoch: WildsEpoch = { id: 'fixture-inner', worldSeed: 'fixture', regionId: 'inner-1', generatorVersion: 2, season: '0', endsAt: null };
+const fixture = decodeChunk(new Uint8Array(readFileSync(new URL('./fixtures/wilds-inner-1-1.bin', import.meta.url))));
+const entry = await loadChunk({ chunk: async () => fixture }, epoch.id, 1, 1);
 
 test('wilds area ids: wilds resolves to the entry chunk, chunks round-trip', () => {
   assert.deepEqual(parseChunkArea(WILDS_AREA), { region: 'inner-1', cx: 1, cy: 1 });
@@ -47,7 +52,7 @@ test('wilds area ids: wilds resolves to the entry chunk, chunks round-trip', () 
   assert.equal(isWildsArea('commons'), false);
 });
 
-test('chunk-local pixels ↔ region-wide progress pixels', () => {
+test('chunk-local pixels ↔ region-wide pixels', () => {
   // Chunk (1,1) starts at 1 × 24 tiles × 16 px = 384 on each axis.
   assert.deepEqual(toRegionPosition(1, 1, 40, 360), { x: 424, y: 744 });
   assert.deepEqual(fromRegionPosition(424, 744), { cx: 1, cy: 1, x: 40, y: 360 });
@@ -56,69 +61,49 @@ test('chunk-local pixels ↔ region-wide progress pixels', () => {
   assert.equal(CHUNK_PX, CHUNK_TILES * 16);
 });
 
-test('region tiles for defeat reports: progress (160,160) is tile (10,10)', () => {
-  // The contract's example: a lantern at tile (10,10) for progress (160,160).
+test('region tiles: pixels (160,160) are tile (10,10)', () => {
   assert.deepEqual(regionTile(160, 160), { x: 10, y: 10 });
   const p = toRegionPosition(1, 0, 40, 40);
   assert.deepEqual(regionTile(p.x, p.y), { x: 1 * CHUNK_TILES + 2, y: 0 * CHUNK_TILES + 2 });
 });
 
-test('wildsSceneEntry: a saved region-wide position picks its chunk and local tile', () => {
+test('the arrival is the served entry chunk’s spawn, inside the region and walkable', () => {
   const arrival = wildsArrivalPosition(epoch);
-  const entry = wildsSceneEntry({ area: WILDS_AREA, position: arrival }, epoch);
-  assert.ok(entry);
-  assert.equal(entry.areaId, chunkAreaId(1, 1));
-  // The arrival tile sits just inside the commons gap of the entry chunk.
-  assert.equal(entry.tile.tx, Math.floor((arrival.x - 384) / 16));
-  assert.equal(entry.tile.ty, Math.floor((arrival.y - 384) / 16));
-  // A position in another chunk resolves there (reload keeps the chunk).
-  // (Any walkable tile of that chunk: the woods are dense, so find one.)
-  const woods = chunkTerrain(epoch, 2, 0);
-  const open = woods.ground.flatMap((row, ty) => row.map((_, tx) => ({ tx, ty }))).find((t) => t.tx > 2 && t.ty > 2 && !woods.solid[t.ty][t.tx])!;
-  const far = toRegionPosition(2, 0, open.tx * 16 + 4, open.ty * 16 + 12);
-  const chunk20 = wildsSceneEntry({ area: WILDS_AREA, position: far }, epoch);
-  assert.ok(chunk20);
-  assert.equal(chunk20.areaId, chunkAreaId(2, 0));
-  assert.deepEqual(chunk20.tile, open);
+  assert.equal(inRegion(arrival.x, arrival.y), true);
+  const at = wildsSceneEntry({ area: WILDS_AREA, position: arrival }, epoch)!;
+  assert.equal(at.areaId, chunkAreaId(1, 1));
+  assert.deepEqual(at.tile, entry.spawn);
+  assert.equal(entry.solid[at.tile.ty]![at.tile.tx], false);
+  // Before the region's chunks load, the generator's fixed spot by the way home.
+  const unread: WildsEpoch = { ...epoch, id: '' };
+  assert.deepEqual(wildsArrivalPosition(unread), toRegionPosition(1, 1, 2 * 16 + 8, 22 * 16 + 8));
+  assert.deepEqual(wildsArrivalPosition(unread), arrival, 'the served spawn is that spot');
 });
 
-test('wildsSceneEntry: unconverted positions arrive at the region entry', () => {
-  // A naive writer (or an old save) with a chunk-local or huge position.
-  const entry = wildsSceneEntry({ area: WILDS_AREA, position: { x: 40, y: 36000 } }, epoch);
-  assert.ok(entry);
-  assert.equal(entry.areaId, chunkAreaId(1, 1));
-  const arrival = wildsArrivalPosition(epoch);
-  const local = fromRegionPosition(arrival.x, arrival.y);
-  assert.deepEqual(entry.tile, { tx: Math.floor(local.x / 16), ty: Math.floor(local.y / 16) });
+test('wildsSceneEntry: a saved position keeps its tile when open, else the chunk’s spawn', () => {
+  const open = entry.ground.flatMap((row, ty) => row.map((_, tx) => ({ tx, ty }))).find((t) => t.tx > 4 && t.ty > 4 && !entry.solid[t.ty]![t.tx])!;
+  const here = wildsSceneEntry({ area: WILDS_AREA, position: toRegionPosition(1, 1, open.tx * 16 + 4, open.ty * 16 + 12) }, epoch)!;
+  assert.deepEqual(here.tile, open);
+  const wall = toRegionPosition(1, 1, 4, 4); // the chunk's corner is woods
+  assert.equal(entry.solid[0]![0], true);
+  assert.deepEqual(wildsSceneEntry({ area: WILDS_AREA, position: wall }, epoch)!.tile, entry.spawn);
+  // A chunk not loaded yet: the tile stands as saved (the scene loads first).
+  const far = wildsSceneEntry({ area: WILDS_AREA, position: toRegionPosition(2, 0, 100, 60) }, epoch)!;
+  assert.equal(far.areaId, chunkAreaId(2, 0));
+  assert.deepEqual(far.tile, { tx: 6, ty: 3 });
+});
+
+test('wildsSceneEntry: positions outside the region arrive at the entry; null outside the Wilds', () => {
+  const at = wildsSceneEntry({ area: WILDS_AREA, position: { x: 40, y: 36000 } }, epoch)!;
+  assert.equal(at.areaId, chunkAreaId(1, 1));
+  assert.deepEqual(at.tile, entry.spawn);
   assert.equal(inRegion(40000, 0), false);
-});
-
-test('wildsSceneEntry: null outside the Wilds', () => {
   assert.equal(wildsSceneEntry({ area: 'village', position: { x: 400, y: 300 } }, epoch), null);
 });
 
-test('the arrival tile is inside the region and walkable', () => {
-  const arrival = wildsArrivalPosition(epoch);
-  assert.equal(inRegion(arrival.x, arrival.y), true);
-  const entry = wildsSceneEntry({ area: WILDS_AREA, position: arrival }, epoch)!;
-  const [cx, cy] = [1, 1];
-  const chunk = chunkTerrain(epoch, cx, cy);
-  const blocked = new Set([...chunk.trees, ...chunk.bushes, ...chunk.rocks].map((t) => `${t.tx},${t.ty}`));
-  assert.equal(chunk.solid[entry.tile.ty][entry.tile.tx], false);
-  assert.equal(blocked.has(`${entry.tile.tx},${entry.tile.ty}`), false);
-});
-
-test('guest generation: every entity stands on walkable ground in its chunk', () => {
-  for (let cy = 0; cy < 3; cy++) {
-    for (let cx = 0; cx < 3; cx++) {
-      const chunk = chunkTerrain(epoch, cx, cy);
-      const blocked = new Set([...chunk.trees, ...chunk.bushes, ...chunk.rocks].map((t) => `${t.tx},${t.ty}`));
-      for (const e of chunkEntities(epoch, cx, cy)) {
-        assert.equal(chunk.solid[e.ty][e.tx], false, `${e.id} on solid ground`);
-        assert.equal(blocked.has(`${e.tx},${e.ty}`), false, `${e.id} under scenery`);
-      }
-    }
-  }
+test('served entities stand on walkable ground', () => {
+  assert.ok(entry.entities.length > 0);
+  for (const e of entry.entities) assert.equal(entry.solid[e.ty]![e.tx], false, `${e.id} on solid ground`);
 });
 
 test('wilds paper placements: every id is a real wilds paper, hooks match', () => {
@@ -144,13 +129,4 @@ test('wilds paper placements: the east-only find only pays in the east column', 
   assert.equal(wildsPaperFor({ kind: 'poi', poi: 'old-shrine', tier: 0 }, 0, 3), 'failed-grid-of-sector-4');
   assert.equal(wildsPaperFor({ kind: 'chest', poi: '', tier: 3 }, 0, 3), 'the-blind-routes-smugglers-ledger');
   assert.equal(wildsPaperFor({ kind: 'chest', poi: '', tier: 2 }, 2, 3), null);
-});
-
-test('guest loot rolls match the generator for a real claim cycle', () => {
-  const entities = chunkEntities(epoch, 1, 1);
-  const node = entities.find((e) => e.kind === 'node');
-  assert.ok(node);
-  const drop = rollLoot(epoch, node.id, 0);
-  assert.ok(Array.isArray(drop.materials));
-  for (const m of drop.materials) assert.ok(loadWilds().materials.includes(m.id));
 });

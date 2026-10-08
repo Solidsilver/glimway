@@ -347,7 +347,7 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 	switch sp.Kind {
 	case "home-rest":
 		cost = E.Costs.HomeRest
-	case "rest", "revive":
+	case "rest":
 		cost = E.Costs.Rest
 	case "road-lantern":
 		cost = E.Costs.RoadLantern
@@ -360,11 +360,11 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 	switch {
 	case sp.Kind == "road-lantern" && slices.Contains(s.Flags, "lit:"+sp.ID), sp.Kind == "chest" && slices.Contains(s.Flags, "opened:"+E.ChestID):
 		c.Reason = "done"
-	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
+	case (sp.Kind == "rest" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
 		c.Reason = "full"
 	case s.Embers < cost:
 		c.Reason = "short"
-	case (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPEmbers < cost:
+	case (sp.Kind == "rest" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPEmbers < cost:
 		c.Reason = "needs-earned"
 	default:
 		c.OK = true
@@ -377,13 +377,13 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 		return s, errors.New(c.Reason)
 	}
 	earned := max(0, c.Cost-(s.Embers-s.XPEmbers))
-	if (sp.Kind == "rest" || sp.Kind == "revive" || sp.Kind == "home-rest") && imported && s.HP <= 0 {
+	if (sp.Kind == "rest" || sp.Kind == "home-rest") && imported && s.HP <= 0 {
 		earned = c.Cost
 	}
 	s.Embers -= c.Cost
 	s.XPEmbers -= earned
 	switch sp.Kind {
-	case "rest", "revive", "home-rest":
+	case "rest", "home-rest":
 		s.HP = s.MaxHP
 		s.Mana = s.MaxMana
 	case "road-lantern":
@@ -395,79 +395,8 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 	return s, nil
 }
 
-// DecodeProgress admits only client-writable fields. Required values cannot
-// disappear into zero values; maxima, balances and paid entitlements are ignored.
-func DecodeProgress(b json.RawMessage, maxHP, maxMana float64) (State, error) {
-	var p struct {
-		Version  *int   `json:"version"`
-		Area     string `json:"area"`
-		Position *struct {
-			X *float64 `json:"x"`
-			Y *float64 `json:"y"`
-		} `json:"position"`
-		Quest           string   `json:"quest"`
-		HP              *float64 `json:"hp"`
-		Mana            *float64 `json:"mana"`
-		PlaySeconds     *float64 `json:"playSeconds"`
-		Inventory       []string `json:"inventory"`
-		Discoveries     []string `json:"discoveries"`
-		DefeatedEnemies []string `json:"defeatedEnemies"`
-		Flags           []string `json:"flags"`
-	}
-	bad := errors.New("invalid-progress")
-	if json.Unmarshal(b, &p) != nil || p.Version == nil || *p.Version != 1 || !slices.Contains([]string{"village", "woodland", "ruin", "commons", "wilds"}, p.Area) && HomeGate(p.Area) < 0 || slices.Index(Stages, p.Quest) < 0 || p.Position == nil || p.Position.X == nil || p.Position.Y == nil || p.HP == nil || p.Mana == nil || p.PlaySeconds == nil || p.Inventory == nil || p.Discoveries == nil || p.DefeatedEnemies == nil {
-		return State{}, bad
-	}
-	for _, n := range []float64{*p.Position.X, *p.Position.Y, *p.HP, *p.Mana, *p.PlaySeconds} {
-		if !finite(n) {
-			return State{}, bad
-		}
-	}
-	if *p.HP < 0 || *p.HP > maxHP || *p.Mana < 0 || *p.Mana > maxMana || *p.PlaySeconds < 0 || *p.PlaySeconds > 1e12 || math.Abs(*p.Position.X) > 1e6 || math.Abs(*p.Position.Y) > 1e6 {
-		return State{}, bad
-	}
-	for _, a := range [][]string{p.Inventory, p.Discoveries, p.DefeatedEnemies, p.Flags} {
-		if len(a) > 2048 {
-			return State{}, bad
-		}
-		for _, v := range a {
-			if v == "" || len(v) > 128 {
-				return State{}, bad
-			}
-		}
-	}
-	s := State{Version: 1, Area: p.Area, Position: Position{*p.Position.X, *p.Position.Y}, Quest: p.Quest, HP: *p.HP, Mana: *p.Mana, PlaySeconds: *p.PlaySeconds, Inventory: []string{}, Discoveries: p.Discoveries, DefeatedEnemies: p.DefeatedEnemies, Flags: []string{}}
-	for _, v := range p.Inventory {
-		if slices.Contains(QuestItems, v) {
-			s.Inventory = AddUnique(s.Inventory, v)
-		}
-	}
-	for _, v := range p.Flags {
-		if !EconomyFlag(v) {
-			s.Flags = AddUnique(s.Flags, v)
-		}
-	}
-	return s, nil
-}
 func EconomyFlag(v string) bool {
 	return v == "embers:welcome" || strings.HasPrefix(v, "lit:") || strings.HasPrefix(v, "opened:")
-}
-func Merge(s, p State, stale bool) State {
-	if !stale {
-		s.Area = p.Area
-		s.Position = p.Position
-		s.HP = p.HP
-		s.Mana = p.Mana
-	}
-	if slices.Index(Stages, p.Quest) > slices.Index(Stages, s.Quest) {
-		s.Quest = p.Quest
-	}
-	s.PlaySeconds = math.Max(s.PlaySeconds, p.PlaySeconds)
-	s.Inventory = AddUnique(s.Inventory, p.Inventory...)
-	s.Discoveries = AddUnique(s.Discoveries, p.Discoveries...)
-	s.DefeatedEnemies = AddUnique(s.DefeatedEnemies, p.DefeatedEnemies...)
-	s.Flags = AddUnique(s.Flags, p.Flags...)
-	return s
 }
 
 // LossReference is separate from the vitals baseline and the paid XP mark.
@@ -503,25 +432,6 @@ func CheckpointForgery(p Profile, latest LossReference, verifiedHighLevel float6
 // XP loss is always accepted: the monotone credit mark prevents double payment.
 func Plausible(p Profile) bool {
 	return ValidProfile(p) && p.Exp != nil && p.Level == math.Floor(p.Level) && *p.Exp < XPToNextLevel(p.Level) && p.HP <= p.MaxHP && p.MaxHP == 50 && p.MaxMP == 2*p.Stats.Int+30
-}
-
-// Bound each persisted union as well as each request, so clients cannot grow
-// progress indefinitely by uploading distinct bounded batches.
-const MaxMergedItems = 4096
-
-func ValidMerged(s State) bool {
-	for _, a := range [][]string{s.Inventory, s.Discoveries, s.DefeatedEnemies} {
-		if len(a) > MaxMergedItems {
-			return false
-		}
-	}
-	storyFlags := 0
-	for _, v := range s.Flags {
-		if !EconomyFlag(v) {
-			storyFlags++
-		}
-	}
-	return storyFlags <= MaxMergedItems
 }
 
 // DecodeProfile rejects omitted required numeric fields as well as bad values.

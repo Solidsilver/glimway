@@ -12,7 +12,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { designedSource } from '../src/content/papers.ts';
+import { designedRule } from '../src/content/papers.ts';
 
 export interface PaperMeta {
   label: string;
@@ -168,6 +168,7 @@ export interface PaperCatalogRow {
   id: string;
   collection: string;
   source: string;
+  rule: ReturnType<typeof designedRule>;
 }
 
 export const PAPERS_JSON_FILE = new URL('../content/papers.json', import.meta.url);
@@ -180,9 +181,9 @@ export const PAPERS_JSON_FILE = new URL('../content/papers.json', import.meta.ur
 export function paperCatalog(): PaperCatalogRow[] {
   const { readme, files } = readTexts(TEXTS_DIR);
   return buildRecords(readme, files).map((r) => {
-    const source = designedSource(r.id);
+    const source = designedRule(r.id);
     if (!source) throw new Error(`[papers] no find source for ${r.id} in src/content/papers.ts`);
-    return { id: r.id, collection: r.collection, source: source.kind };
+    return { id: r.id, collection: r.collection, source: source.kind, rule: source };
   });
 }
 

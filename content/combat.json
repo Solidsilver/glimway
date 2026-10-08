@@ -1,0 +1,10 @@
+{
+  "signatureCooldownSeconds": 1,
+  "classes": {
+    "warrior": { "basicAttackCooldownSeconds": 1.2, "castCost": 12 },
+    "mage": { "basicAttackCooldownSeconds": 0.6, "castCost": 15 },
+    "rogue": { "basicAttackCooldownSeconds": 1.5, "castCost": 10 },
+    "healer": { "basicAttackCooldownSeconds": 2.5, "castCost": 18 }
+  },
+  "heal": { "base": 6, "maximumBonus": 20, "halfway": 60, "decimalPlaces": 2 }
+}

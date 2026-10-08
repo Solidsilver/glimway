@@ -1,6 +1,7 @@
-// Package wilds is the Go port of the Wilds generator's server-reproducible
-// parts (entities and loot). The algorithm matches src/lib/wilds/ exactly;
-// parity is enforced by content/vectors/wilds.json in both test suites.
+// Package wilds generates the Wilds on the server (generator v2: gen_v2.go,
+// woods_v2.go) and rolls their loot (loot.go). A region epoch's chunks are
+// generated once, at epoch creation, and stored; claims read the stored
+// chunk and never regenerate.
 //
 // Integer-only hash and PRNG spec (mirrors src/lib/hash.ts):
 //

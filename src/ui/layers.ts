@@ -14,8 +14,6 @@ export type Layer =
   | 'lease'
   /** The world-move screen. */
   | 'move'
-  /** A title-screen confirm (new journey, discard, overwrite). */
-  | 'confirm'
   /** The log-out confirm. */
   | 'logout'
   /** Naming a lamp or a place (src/ui/NamePrompt.svelte). */
@@ -41,7 +39,7 @@ export type Layer =
 
 export type LayerFlags = Record<Layer, boolean>
 
-const ORDER: readonly Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
+const ORDER: readonly Layer[] = ['gate', 'lease', 'move', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
 
 /** The layers that are up, top first. */
 export function layersUp(flags: LayerFlags): Layer[] {
@@ -53,8 +51,7 @@ export const BLOCKS = {
   /**
    * The world's own input (src/game/input.ts uiState.panelOpen): moving,
    * acting, the belt. Conversations and cinematics take input themselves,
-   * and placement mode is input. The title-screen and log-out confirms never
-   * show in play.
+   * and placement mode is input. The log-out confirm never shows in play.
    */
   worldInput: ['panel', 'ending', 'gate', 'lease', 'naming', 'leave-deed', 'move'],
   /**
@@ -62,12 +59,12 @@ export const BLOCKS = {
    * block them: they open, switch and close panels. Placement mode keeps
    * its keys only while no panel is over it (see App.svelte onKeyGlobal).
    */
-  appKeys: ['dialogue', 'cinematic', 'confirm', 'gate', 'lease', 'move', 'reloading', 'ending'],
+  appKeys: ['dialogue', 'cinematic', 'gate', 'lease', 'move', 'reloading', 'ending'],
   /**
    * The one-time notices (the party prompt, "you were moved out", the
    * update notice): only on a clear screen, so they are really seen.
    */
-  notices: ['move', 'link-notice', 'panel', 'cinematic', 'dialogue', 'ending', 'lease', 'gate', 'confirm', 'logout', 'placement', 'naming', 'leave-deed', 'banner'],
+  notices: ['move', 'link-notice', 'panel', 'cinematic', 'dialogue', 'ending', 'lease', 'gate', 'logout', 'placement', 'naming', 'leave-deed', 'banner'],
   /**
    * The "E: Talk" action prompt. Only what covers the world or takes its
    * input hides it; a gate, a lease or a move screen covers it anyway.

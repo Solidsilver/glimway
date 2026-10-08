@@ -1,13 +1,11 @@
 /**
- * Copy for connected play: signing in to a Glimway world, the first-login
- * origin choice, the play lease, offline play, and invites. Plain and short.
+ * Copy for connected play: signing in to a Glimway world, the play lease,
+ * offline play, and invites. Plain and short.
  */
 import economyJson from '../../content/economy.json' with { type: 'json' }
 import type { Economy } from '../lib/economy.ts'
-import { WELCOME_EMBERS } from '../lib/embers.ts'
 
 const economy = economyJson as unknown as Economy
-export const MIGRATION_CAP = economy.migrationGiftCap
 export const INVITE_LIMIT = economy.outstandingInvites
 export const INVITE_LIFETIME = economy.lifetimeInvites
 
@@ -21,37 +19,11 @@ export const signInCopy = {
   inviteOnlyTitle: 'This world is invite-only',
   inviteOnlyBody: 'Your Habitica hero is fine. To come in you need an invite code, or a party that already plays here.',
   inviteJoin: 'Join with this code',
-  playLocal: 'Play on this device instead',
-  playLocalNote: 'Your journey stays in this browser, like a guest save with your Habitica hero.',
   signedIn: (name: string) => `Signed in to your world as ${name}.`,
-  rateLimited: (s: number) => `Too many sign-ins just now. Try again in about ${s} seconds, or play on this device.`,
-  serverTrouble: 'The world server had a problem. You can still play on this device.'
-}
-
-export const originCopy = {
-  eyebrow: 'First time in your world',
-  title: (name: string) => `Welcome, ${name}`,
-  lead: 'This device has a journey on it. Bring it along, or start fresh in your world?',
-  bring: {
-    label: 'Bring this device’s save',
-    keeps: 'Your story, discoveries, and where you are.',
-    embers: (n: number) =>
-      n > 0
-        ? `Your ${n} ember${n === 1 ? '' : 's'} come along as gifts (up to ${MIGRATION_CAP}).`
-        : `Embers you carry come along as gifts (up to ${MIGRATION_CAP}).`,
-    vitals: 'Health and mana come from Habitica. Embers from XP count from today.'
-  },
-  fresh: {
-    label: 'Start fresh',
-    keeps: 'A new journey in your world, with your Habitica health and mana.',
-    local: 'This device’s save stays here as a guest save.',
-    welcome: `Your first sync brings ${WELCOME_EMBERS} welcome embers.`
-  },
-  once: 'You choose once per account.',
-  working: 'Setting up your world…',
-  failed: 'That didn’t go through. Nothing changed — try again.',
-  offline: 'Couldn’t reach the world server. Check your connection and try again.',
-  alreadySet: 'This account already has a journey in its world. This device’s save stays here as a guest save.'
+  rateLimited: (s: number) => `Too many sign-ins just now. Try again in about ${s} seconds.`,
+  serverTrouble: 'The world server had a problem. Try again in a moment.',
+  /** The sign-in couldn't reach the world at all (an unreachable server). */
+  unreachable: 'Can’t reach the world. Check your connection, then try again.'
 }
 
 export const leaseCopy = {
@@ -64,7 +36,7 @@ export const leaseCopy = {
   working: 'Taking over…',
   failed: 'Couldn’t take over just now. Try again in a moment.',
   signedOutTitle: 'You’ve been signed out',
-  signedOutBody: 'Your progress so far is saved in your world. Sign in again from the Menu to keep playing there.'
+  signedOutBody: 'Your progress so far is saved in your world. Sign in again from the title to keep playing there.'
 }
 
 export const offlineCopy = {
@@ -90,7 +62,7 @@ export const accountCopy = {
   savedTrouble: 'The world server is having trouble. Your journey saves on this device and goes up once it recovers.',
   logout: 'Log out',
   logoutTitle: 'Log out of your world?',
-  logoutBody: 'Your journey stays in your world. You’ll play as a guest on this device until you sign in again.',
+  logoutBody: 'Your journey stays in your world. You’ll return to the title screen, and sign in again to keep playing.',
   logoutDirty: 'Some progress hasn’t reached your world yet. If you log out now, this device keeps it until you sign in again.',
   uploadFirst: 'Continue to upload first',
   logoutAnyway: 'Log out anyway',

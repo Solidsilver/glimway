@@ -1,22 +1,24 @@
-/** Glue between WorldScene and the pure nudge rules in lib/nudges.ts. */
-import { pipGateNudge } from '../content/connect-guide'
-import { PIP_GATE_FLAG, pipGateNudgeDue, type ExitRect } from '../lib/nudges'
-import { isConnected } from '../ui/habitica-local'
-import { bus, EV } from './events'
+/**
+ * Glue between WorldScene and the pure nudge rules in lib/nudges.ts.
+ *
+ * The guest nudge is gone: every player signs in, so there is nobody to
+ * nudge. WorldScene still calls this once a frame (TODO(C2): remove the
+ * call there, with the guest branches in the scene layer).
+ */
 import type { Session } from './session'
-import { TILE, tileAt } from '../lib/tile'
 
-/** The one call WorldScene makes each frame: fires Pip's line at most once per save. */
+/** An area's way out (as WorldScene's world reports it). */
+export interface ExitRect {
+  tx: number
+  ty: number
+  tw: number
+  th: number
+}
+
 export function maybeNudgePip(
-  session: Session,
-  world: { areaId: string; exits: ExitRect[] },
-  player: { x: number; y: number }
+  _session: Session,
+  _world: { areaId: string; exits: ExitRect[] },
+  _player: { x: number; y: number }
 ): void {
-  const tx = tileAt(player.x)
-  const ty = Math.floor(player.y / TILE)
-  // Only the ways out into danger: the Commons gate is home ground.
-  const exits = world.exits.filter((e) => (e as { to?: string }).to !== 'commons')
-  if (!pipGateNudgeDue(session.state, { vitalsSource: session.vitalsSource, connected: isConnected(), areaId: world.areaId, tx, ty, exits })) return
-  session.addFlag(PIP_GATE_FLAG)
-  bus.emit(EV.toast, { text: pipGateNudge, icon: 'person' })
+  /* no nudges any more */
 }

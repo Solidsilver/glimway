@@ -21,8 +21,8 @@ export default defineConfig(async () => {
     plugins: [svelte(), version, whatsNew, ...routing],
     // /api goes to the Glimway server (`npm run server`, port 8090 by
     // default). GLIMWAY_API (or the old FINGERSNAP_API) points it elsewhere.
-    // With no server running, the client sees the proxy error and plays as
-    // a guest.
+    // With no server running, the client sees the proxy error and the title
+    // says it can't reach the world.
     // changeOrigin stays off: the server rejects writes whose Origin host
     // differs from Host, exactly as behind Caddy.
     server: {

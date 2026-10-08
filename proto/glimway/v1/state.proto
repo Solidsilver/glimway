@@ -1,0 +1,43 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/profile.proto";
+import "glimway/v1/operations.proto";
+import "glimway/v1/op.proto";
+import "google/protobuf/wrappers.proto";
+
+message Account {
+  string account_id = 1; string display_name = 2; string profile_source = 3;
+  google.protobuf.StringValue party_id = 4; string world_id = 5; bool flagged = 6;
+}
+message Story {
+  map<string,string> quests = 1; repeated string marks = 2;
+  repeated string discoveries = 3; repeated string defeated = 4;
+  repeated string quest_items = 5; double play_seconds = 6;
+}
+message Embers { double balance = 1; double xp_earned = 2; double pending = 3; double xp_mark = 4; double verified_xp = 5; }
+message PlayerState {
+  double version = 1; Account account = 2; HabiticaProfile profile = 3;
+  Vitals vitals = 4; Place place = 5; Story story = 6; Embers embers = 7;
+}
+// A wire error string from ErrorCode's hyphenated vocabulary, never an enum JSON name.
+message ErrorDetail { string code = 1; }
+message Refusal { ErrorDetail error = 1; PlayerState state = 2; }
+message Envelope {
+  PlayerState state = 1;
+  oneof result {
+    ReportResult report = 10; QuestStepResult quest_step = 11; MarkResult mark = 12;
+    TakePaperResult take_paper = 13; SettleEchoResult settle_echo = 14;
+    FallResult fall = 15; ProfileResult profile = 16; SpendResult spend = 17;
+    WildsClaimResult wilds_claim = 18; WildsLanternResult wilds_lantern = 19;
+  }
+}
+message WorldRef { string id = 1; string owner_id = 2; string owner_name = 3; double members = 4; bool owner_here = 5; bool party = 6; }
+// Held identity is a Habitica subject: no account exists until world choice.
+message WorldChoice { string habitica_id = 1; string display_name = 2; WorldRef party_world = 3; bool party_can_open = 4; bool party_admitted = 5; }
+message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }
+message SessionResponse { oneof answer { PlayerState state = 1; WorldChoice world_choice = 2; } }
+message WorldChooseRequest { string choice = 1; }
+message StateResponse { PlayerState state = 1; bool lease_active = 2; }
+message PlayRequest { string client_id = 1; bool take_over = 2; reserved 3; reserved "tab_id"; }
+message PlayResponse { PlayerState state = 1; string lease = 2; string report_generation = 3; string report_client = 4; }

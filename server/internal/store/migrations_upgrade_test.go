@@ -1,7 +1,9 @@
 package store
 
 import (
+	"glimway/server/internal/rules"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -32,6 +34,16 @@ func TestSchemaMigrationsWithExistingData(t *testing.T) {
 INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,rev) VALUES('alice','Alice','w',11,12,7);` + tt.seed); err != nil {
 				t.Fatal(err)
 			}
+			if tt.migration == "025" {
+				p := rules.Profile{ID: "alice", Name: "Alice", Level: 1, HP: 20, MaxHP: 50, MP: 10, MaxMP: 30, Stats: rules.Stats{}}
+				exp := 0.
+				p.Exp = &exp
+				if _, err := old.Exec(`INSERT INTO progress VALUES('alice',1,7,?,12);INSERT INTO balances VALUES('alice',0,0);INSERT INTO sync_baselines(habitica_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice',?,0,?,12,12)`, JSON(rules.NewState()), JSON(p), JSON(p)); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				markFixtureOrigins(t, old)
+			}
 			if err := old.Close(); err != nil {
 				t.Fatal(err)
 			}
@@ -41,7 +53,7 @@ INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,re
 			}
 			defer upgraded.Close()
 			if tt.after != "" {
-				if _, err := upgraded.DB.Exec(tt.after); err != nil {
+				if _, err := upgraded.DB.Exec(currentSchemaSQL(tt.after)); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -50,6 +62,10 @@ INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,re
 				"SELECT count(*) FROM players WHERE habitica_id='alice' AND display_name='Alice' AND world_id='w' AND created_at=11 AND last_seen_at=12 AND rev=7",
 			}, tt.checks...)
 			for _, query := range checks {
+				query = currentSchemaSQL(query)
+				if tt.migration == "025" {
+					query = strings.ReplaceAll(query, "version=7", "version=9")
+				}
 				var got int
 				if err := upgraded.DB.QueryRow(query).Scan(&got); err != nil || got != 1 {
 					t.Fatalf("%s: got %d, %v", query, got, err)

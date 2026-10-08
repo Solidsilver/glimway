@@ -5,7 +5,8 @@
  * same hero.
  *
  * GET  /api/v3/user        → the "Tansy" fixture, with `_id` = X-Api-User and
- *                            any per-user overrides. X-Api-Key "wrong" → 401.
+ *                            any per-user overrides. Any X-Api-Key but the
+ *                            tests' TOKEN (e2e/connected.ts) → 401.
  * POST /__user             → { id, name?, lvl?, exp?, hp?, mp?, party? } sets overrides.
  * GET  /__health           → 200 (readiness check).
  *
@@ -44,6 +45,9 @@ function userFor(users: Map<string, Overrides>, id: string): unknown {
   return { ...base, party: { _id: o.party ?? null } }
 }
 
+/** The one token the fake accepts (e2e/connected.ts TOKEN); a real token reads one account. */
+export const FAKE_TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
+
 /** A fake Habitica with its own users; port 0 picks a free port. */
 export function startFakeHabitica(port = 0): Promise<{ port: number; server: Server; close: () => Promise<void> }> {
   const users = new Map<string, Overrides>()
@@ -71,7 +75,10 @@ export function startFakeHabitica(port = 0): Promise<{ port: number; server: Ser
     if (url.pathname === '/api/v3/user' && req.method === 'GET') {
       const id = String(req.headers['x-api-user'] ?? '')
       const key = String(req.headers['x-api-key'] ?? '')
-      if (!id || !key || key === 'wrong') return send(401, { success: false, error: 'NotAuthorized' })
+      // A real token reads one account; the tests' token is TOKEN in
+      // e2e/connected.ts. Anything else (a swapped paste, a wrong token) is
+      // refused, as Habitica would.
+      if (!id || !key || key !== FAKE_TOKEN) return send(401, { success: false, error: 'NotAuthorized' })
       return send(200, { success: true, data: userFor(users, id) })
     }
     send(404, { success: false })

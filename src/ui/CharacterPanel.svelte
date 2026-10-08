@@ -13,7 +13,7 @@
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
   // stays on the hero.
-  let { session, onClose, onMenu, onInventory }: { session: Session; onClose: () => void; onMenu: () => void; onInventory: () => void } = $props()
+  let { session, onClose, onInventory }: { session: Session; onClose: () => void; onInventory: () => void } = $props()
 
   // Tracks quest/inventory changes: advanceQuest replaces the state object.
   const snapshot = $derived(session.state)
@@ -57,7 +57,7 @@
     <div class="who">
       <h3 class="name">{name}</h3>
       <p class="sub">Level {level} {className}</p>
-      <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+      <span class="badge habitica">Habitica hero</span>
     </div>
   </div>
 
@@ -112,7 +112,7 @@
       <div class="ai"><Icon name="sword" size={22} /></div>
       <div class="ab">
         <div class="ah"><b>{kit.basicName}</b> <span class="kbd">E</span></div>
-        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.cooldown)}s.</p>
+        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.basicAttackCooldown)}s.</p>
       </div>
     </div>
     <div class="ability sig">
@@ -150,11 +150,7 @@
   {/if}
 
   <p class="fine foot">
-    {#if profile}
-      Stats come from your Habitica hero, gear and level included. Nothing here ever changes your account.
-    {:else}
-      Have a Habitica account? <button type="button" class="link" onclick={onMenu}>Play as your own hero</button> from the Menu.
-    {/if}
+    Stats come from your Habitica hero, gear and level included. Nothing here ever changes your account.
   </p>
 </Panel>
 
@@ -433,23 +429,6 @@
   }
   .foot {
     margin: 18px 0 0;
-  }
-  .link {
-    all: unset;
-    cursor: pointer;
-    color: var(--accent);
-    font-weight: 800;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .link:hover:not(:disabled),
-  .link:active:not(:disabled) {
-    background: none;
-    box-shadow: none;
-    transform: none;
-  }
-  .link:focus-visible {
-    outline: 3px solid var(--gold);
   }
   @media (max-width: 560px) {
     .stats {

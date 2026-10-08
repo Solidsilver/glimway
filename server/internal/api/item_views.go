@@ -142,7 +142,7 @@ func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (i
 	if err := dryFlowers(ctx, tx, s, now); err != nil {
 		return v, err
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT item_def,maker_id,qty FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def,maker_id", s.HabiticaID)
+	rows, err := tx.QueryContext(ctx, "SELECT item_def,maker_id,qty FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def,maker_id", s.AccountID)
 	if err != nil {
 		return v, err
 	}
@@ -174,14 +174,14 @@ func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (i
 		}
 		v.Stacks = append(v.Stacks, stackView{r.def, r.qty, m})
 	}
-	if v.Instances, err = instancesAt(ctx, tx, instanceAt{"pack", s.HabiticaID}); err != nil {
+	if v.Instances, err = instancesAt(ctx, tx, instanceAt{"pack", s.AccountID}); err != nil {
 		return v, err
 	}
-	pockets, err := pocketCount(ctx, tx, s.HabiticaID)
+	pockets, err := pocketCount(ctx, tx, s.AccountID)
 	if err != nil {
 		return v, err
 	}
-	held, err := slots(ctx, tx, s.HabiticaID)
+	held, err := slots(ctx, tx, s.AccountID)
 	if err != nil {
 		return v, err
 	}
@@ -207,7 +207,7 @@ func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (i
 	if v.OffHand.Open {
 		v.OffHand.ItemDef, v.OffHand.Instance = at("off-hand")
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT substr(outcome_id,8) FROM outcomes WHERE habitica_id=? AND outcome_id LIKE 'pickup:%' ORDER BY outcome_id", s.HabiticaID)
+	rows, err = tx.QueryContext(ctx, "SELECT substr(outcome_id,8) FROM outcomes WHERE account_id=? AND outcome_id LIKE 'pickup:%' ORDER BY outcome_id", s.AccountID)
 	if err != nil {
 		return v, err
 	}
@@ -224,7 +224,7 @@ func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (i
 	if err != nil {
 		return v, err
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT p.display_name,t.item_def,t.at FROM item_thanks t JOIN players p ON p.habitica_id=t.user_id WHERE t.maker_id=? ORDER BY t.at DESC,t.id DESC LIMIT 10", s.HabiticaID)
+	rows, err = tx.QueryContext(ctx, "SELECT p.display_name,t.item_def,t.at FROM item_thanks t JOIN players p ON p.account_id=t.user_id WHERE t.maker_id=? ORDER BY t.at DESC,t.id DESC LIMIT 10", s.AccountID)
 	if err != nil {
 		return v, err
 	}
@@ -248,19 +248,15 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	now := a.Config.Now().Unix()
-	if err = healWardens(r.Context(), tx, s.HabiticaID, now); err != nil {
+	if err = healWardens(r.Context(), tx, s.AccountID, now); err != nil {
 		return err
 	}
 	v, err := readItems(r.Context(), tx, &s, now)
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Items itemsView `json:"items"`
-	}{s, v})
+	}{v})
 }

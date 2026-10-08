@@ -58,8 +58,9 @@ export interface DemoCharacter {
 }
 
 /**
- * Demo character: a classless wayfarer with a sensible starter kit, standing
- * in for a future Habitica import. No account data is used in the demo.
+ * Demo character: a classless wayfarer with a sensible starter kit. Local
+ * play is gone; this stays only as the fallback look and stats until C2
+ * rewires every reader to the server's profile (TODO(C2)).
  */
 export const DEMO_CHARACTER: DemoCharacter = {
   name: 'Wren',

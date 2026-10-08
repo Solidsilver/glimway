@@ -3,19 +3,29 @@
  * for this tab, the page's play-client id, the server probe, and building a
  * connected Session from a server snapshot or the device's connected cache.
  *
- * Guest play never needs any of this: a build without a server probes once,
- * gets `unavailable`, and everything stays local.
+ * There is no play without the server: a probe that gets no answer leaves
+ * the title at its "can't reach the world" card (a device with a connected
+ * cache can keep playing offline).
  */
-import { claimClientId, createApiClient } from '../lib/api/client'
+import { claimClientId, claimDeviceId, createApiClient, newKey } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
 import type { ConnectedCache } from '../lib/api/cache'
 import type { Snapshot } from '../lib/api/types'
 import type { Probe } from './account-flow.svelte'
-import { Link, type Unresolved } from '../game/link'
+import { fromJson } from '@bufbuild/protobuf'
+import { PlayerStateSchema } from '../lib/gen/glimway/v1/state_pb.js'
+import { profileOf } from '../lib/api/predict'
+import { Link, openOutbox, outboxStore } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
+import { update } from './update.svelte'
 
-export const api = createApiClient()
+/**
+ * The one API client, watching for `reload-needed` (the client's error path
+ * calls back): a server that refuses this client's contract shows the reload
+ * notice (src/ui/update.svelte.ts).
+ */
+export const api = createApiClient({ onReloadNeeded: () => update.reloadNeeded() })
 
 /**
  * This page's play-client id, unique among live pages (a duplicated tab
@@ -60,6 +70,7 @@ export async function probeServer(): Promise<Probe> {
     return { kind: 'signed-in', snapshot: await api.state() }
   } catch (err) {
     const code = errorCode(err)
+    if (code === 'reload-needed') return { kind: 'reload-needed' }
     if (code === 'world-choice-required') {
       try {
         return { kind: 'choose-world', choice: await api.worldChoice() }
@@ -83,44 +94,52 @@ export async function probeServer(): Promise<Probe> {
 
 /** Display name for an account: the server's verified name, else the hero, else the cache. */
 export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | null, fallback = 'Your hero'): string {
-  const cached = cache && (!snapshot || cache.habiticaId === snapshot.habiticaId) ? cache.name : ''
+  const cached = cache && (!snapshot || cache.accountId === snapshot.accountId) ? cache.name : ''
   return snapshot?.displayName || snapshot?.importedProfile?.name || cached || fallback
 }
 
 /**
- * A connected Session, not yet holding the lease. The account's cache wins
- * over the server snapshot when it holds unsent progress (offline play, even
- * from a closed tab or before a logout) or was written by this very page.
+ * A connected Session, not yet holding the lease, built from the account's
+ * outbox on this device (src/lib/api/outbox.ts) and the newest state known:
+ * the server's answer, or the outbox's copy when no server answered. The old
+ * connected cache (`cache`) is no longer read; its records are a clean break.
  * Call `session.link.reconnect()` next.
  */
 export async function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<Session> {
   const { snapshot } = opts
   const clientId = (await claim).id // current, even after a re-claim
-  const habiticaId = snapshot?.habiticaId ?? opts.cache?.habiticaId
-  if (!habiticaId) throw new Error('connectedSession needs a snapshot or a cache')
-  const cache = opts.cache?.habiticaId === habiticaId ? opts.cache : null
-  const useCache = !!cache && (!snapshot || cache.dirty || cache.clientId === clientId)
-  const base = useCache
-    ? { state: cache!.state, rev: cache!.rev, vitalsSource: cache!.vitalsSource, importedProfile: cache!.importedProfile ?? null }
-    : { state: snapshot!.state, rev: snapshot!.rev, vitalsSource: snapshot!.vitalsSource, importedProfile: snapshot!.importedProfile ?? null }
+  const accountId = snapshot?.accountId ?? opts.cache?.accountId
+  if (!accountId) throw new Error('connectedSession needs a snapshot or a cache')
+  const device = deviceId()
+  const store = outboxStore()
+  const record = await openOutbox(store, accountId, device)
+  const state = snapshot?.player ?? (record.server ? fromJson(PlayerStateSchema, record.server, { ignoreUnknownFields: true }) : null)
+  if (!state) throw new Error('connectedSession needs a state')
   const link = new Link({
     api,
     clientId,
-    habiticaId,
-    worldId: snapshot?.worldId || cache?.worldId,
+    accountId,
+    device,
+    worldId: snapshot?.worldId || record.worldId,
     name: opts.name,
-    rev: base.rev,
-    lease: useCache && cache!.clientId === clientId ? cache!.lease : null,
+    state,
+    record,
     status: 'offline',
-    dirty: useCache ? cache!.dirty : false,
-    offlineProgress: useCache ? cache!.offlineProgress : false,
-    sent: useCache ? cache!.sent : undefined,
-    recovery: cache?.recovery,
-    // The same account's lost request is replayed whichever state snapshot wins.
-    unresolved: cache?.unresolved as Unresolved | undefined,
+    store,
     emit: (event, ...args) => bus.emit(event, ...args)
   })
   for (const old of [...links]) if (!old.active) links.delete(old)
   links.add(link)
-  return new Session(base.state, { vitalsSource: base.vitalsSource, importedProfile: base.importedProfile }, link)
+  const profile = profileOf(state)
+  return new Session(link.initialState(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, link)
 }
+
+function deviceId(): string {
+  try {
+    return claimDeviceId()
+  } catch {
+    // No localStorage: one device id for this page.
+    return (pageDevice ??= newKey())
+  }
+}
+let pageDevice: string | null = null

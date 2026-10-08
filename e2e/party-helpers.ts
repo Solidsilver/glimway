@@ -1,6 +1,6 @@
 import { expect, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, TOKEN, waitForWorld } from './connected'
+import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, TOKEN, waitForWorld, CONTRACT } from './connected'
 
 /** Players for the party-world playtests (party-worlds*.spec.ts). */
 
@@ -35,11 +35,13 @@ export async function settledElsewhere(browser: Browser, baseURL: string, name: 
   allow(id)
   await setHabitica(id, { name })
   const ctx = await browser.newContext({ baseURL })
-  const signIn = await ctx.request.post('/api/session', { data: { userId: id, token: TOKEN } })
-  expect(signIn.ok()).toBe(true)
-  const started = await ctx.request.post('/api/origin', { data: { choice: 'fresh', key: 'origin' } })
-  expect(started.ok()).toBe(true)
-  const world = (await started.json()).worldId as string
+  const signIn = await ctx.request.post('/api/session', { data: { userId: id, token: TOKEN }, ...CONTRACT })
+  expect(signIn.ok(), `sign-in: ${signIn.status()} ${await signIn.text()}`).toBe(true)
+  // An allowlisted newcomer's own world is made at sign-in (the origin
+  // choice is gone); the state's snapshot names it.
+  const body = await signIn.json()
+  const world = body.state?.account?.worldId as string | undefined
+  if (!world) throw new Error(`sign-in gave no world for ${id}: ${JSON.stringify(body).slice(0, 600)}`)
   await ctx.close()
   return { id, world }
 }

@@ -5,8 +5,8 @@
  * worker's Go server through Vite with the `fs-e2e-api` cookie (see
  * e2e/server/vite-routing.mjs and the fixtures in e2e/fixtures.ts).
  *
- * Started lazily, the first time a worker runs a `server: true` test, and
- * stopped when the worker exits. Ports are picked free at start, so worktrees
+ * Started lazily by the fixtures' `backend` fixture (the first test in the
+ * worker), and stopped when the worker exits. Ports are picked free at start, so worktrees
  * and workers never collide. Each run has its own directory (two runs in one
  * worktree don't share files): .e2e-server/run-<pid>/, with the Go binary and
  * a w<parallel index>/ folder per worker (database, server.log, server.json).
@@ -42,14 +42,14 @@ const workerDir = (): string => `${runDir()}/w${slot()}`
 let running: (Backend & { stop: () => Promise<void> }) | null = null
 let starting: Promise<Backend> | null = null
 
-/** This worker's backend, or null before its first `server: true` test. */
+/** This worker's backend, or null before its first test. */
 export function currentBackend(): Backend | null {
   return running
 }
 
 /** This worker's backend, for the module-level helpers (allow, fund, …). */
 export function requireBackend(): Backend {
-  if (!running) throw new Error('No e2e server in this worker yet: the test needs test.use({ server: true }).')
+  if (!running) throw new Error('No e2e server in this worker yet: the backend fixture starts it.')
   return running
 }
 
@@ -94,7 +94,9 @@ async function start(): Promise<Backend> {
     // busy worker never trips them.
     const child = spawn(
       BIN,
-      ['-listen', `127.0.0.1:${apiPort}`, '-db', db, '-cookie-secure=false', '-habitica-url', habitica, '-login-rate', '10000', '-login-global-rate', '100000', '-login-concurrency', '64'],
+      // -dev-clock=now: the real time to the instant (a stamp taken here would
+      // leave the server behind by its start-up), movable by a test (moveServerClock).
+      ['-listen', `127.0.0.1:${apiPort}`, '-db', db, '-cookie-secure=false', '-habitica-url', habitica, '-login-rate', '10000', '-login-global-rate', '100000', '-login-concurrency', '64', '-dev-clock=now'],
       { stdio: ['ignore', out, out] }
     )
     const kill = () => child.kill('SIGKILL')
@@ -127,6 +129,28 @@ async function start(): Promise<Backend> {
     }
     return backend
   }
+}
+
+let clockMoved = false
+
+/**
+ * Move this worker's server clock forward (a dev build's POST /api/dev/clock,
+ * straight to the server on loopback). Its world is then ahead of real time
+ * for good, so the backend is replaced before the worker's next test.
+ */
+export async function moveBackendClock(to: { unix: number } | { advance_seconds: number }): Promise<number> {
+  const b = requireBackend()
+  clockMoved = true
+  const res = await fetch(`http://127.0.0.1:${b.apiPort}/api/dev/clock`, { method: 'POST', body: JSON.stringify(to) })
+  if (!res.ok) throw new Error(`moving the server clock failed: ${res.status} ${await res.text()}`)
+  return ((await res.json()) as { unix: number }).unix
+}
+
+/** After a test: a backend whose clock was moved is stopped (the next test starts a fresh one). */
+export async function retireMovedBackend(): Promise<void> {
+  if (!clockMoved) return
+  clockMoved = false
+  await stopBackend()
 }
 
 /** Start this worker's backend if it isn't running yet. */

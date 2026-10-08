@@ -18,6 +18,7 @@ INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation
  ('b-shelf','gate-shelf','placed','home','outdoor',6,7,90);`); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, db)
 	if err = db.Close(); err != nil {
 		t.Fatal(err)
 	}

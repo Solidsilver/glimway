@@ -14,7 +14,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 	if err != nil {
 		return err
 	}
-	if v.Location != "pack" || v.Owner != s.HabiticaID {
+	if v.Location != "pack" || v.Owner != s.AccountID {
 		return fail(404, "item-not-found")
 	}
 	def, _ := content.ItemFor(v.Def)
@@ -39,7 +39,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 		}
 		cost, embers = def.Repair.Mender, def.Repair.MenderEmbers
 	}
-	if err = checkMaterials(ctx, tx, s.HabiticaID, cost); err != nil {
+	if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 		return err
 	}
 	if embers > 0 {
@@ -54,7 +54,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 		return err
 	}
 	out.Mended = v.ID
-	return currency(ctx, tx, s.HabiticaID, "mend:"+v.Def, 0, "mend", req.At, now)
+	return currency(ctx, tx, s.AccountID, "mend:"+v.Def, 0, "mend", req.At, now)
 }
 
 // fitTool puts a fitting on a tool at the bench: from the pack, or moved
@@ -68,7 +68,7 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 	if err != nil {
 		return err
 	}
-	if tool.Location != "pack" || tool.Owner != s.HabiticaID {
+	if tool.Location != "pack" || tool.Owner != s.AccountID {
 		return fail(404, "item-not-found")
 	}
 	f, err := loadInstance(ctx, tx, req.Instance)
@@ -82,10 +82,10 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 	}
 	from := instanceAt{f.Location, f.Owner}
 	switch {
-	case f.Location == "pack" && f.Owner == s.HabiticaID:
+	case f.Location == "pack" && f.Owner == s.AccountID:
 	case f.Location == "fitted":
 		other, err := loadInstance(ctx, tx, f.Owner)
-		if err != nil || other.Location != "pack" || other.Owner != s.HabiticaID {
+		if err != nil || other.Location != "pack" || other.Owner != s.AccountID {
 			return fail(404, "item-not-found")
 		}
 		if other.ID == tool.ID {
@@ -109,7 +109,7 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 		if from.location == "fitted" {
 			exceptTool = from.owner
 		}
-		has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID, exceptTool)
+		has, err := hasWardenSetInPack(ctx, tx, s.AccountID, exceptTool)
 		if err != nil {
 			return err
 		}
@@ -121,10 +121,10 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 		return err
 	}
 	if from.location == "pack" {
-		if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency(f.Def), -1, "fit", tool.ID, now); err != nil {
+		if err = currency(ctx, tx, s.AccountID, content.StackCurrency(f.Def), -1, "fit", tool.ID, now); err != nil {
 			return err
 		}
-		return currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, 1, "fit", tool.ID, now)
+		return currency(ctx, tx, s.AccountID, "fitted:"+f.Def, 1, "fit", tool.ID, now)
 	}
 	return nil
 }
@@ -142,14 +142,14 @@ func unfitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemReque
 		return fail(409, "not-fitted")
 	}
 	tool, err := loadInstance(ctx, tx, f.Owner)
-	if err != nil || tool.Location != "pack" || tool.Owner != s.HabiticaID {
+	if err != nil || tool.Location != "pack" || tool.Owner != s.AccountID {
 		return fail(404, "item-not-found")
 	}
-	if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", tool.ID}, instanceAt{"pack", s.HabiticaID}, now); err != nil {
+	if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", tool.ID}, instanceAt{"pack", s.AccountID}, now); err != nil {
 		return err
 	}
-	if err = currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, -1, "unfit", tool.ID, now); err != nil {
+	if err = currency(ctx, tx, s.AccountID, "fitted:"+f.Def, -1, "unfit", tool.ID, now); err != nil {
 		return err
 	}
-	return currency(ctx, tx, s.HabiticaID, content.StackCurrency(f.Def), 1, "unfit", tool.ID, now)
+	return currency(ctx, tx, s.AccountID, content.StackCurrency(f.Def), 1, "unfit", tool.ID, now)
 }

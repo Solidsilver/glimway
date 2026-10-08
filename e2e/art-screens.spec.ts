@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
-import { beginNewJourney, settleWarden, talkThrough, waitForArea, waitForWilds, warden, warp, waitForLive } from './helpers'
-import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, homes, intoCottage, myHome, onMyLand, place, readOn, shot as snap, silasSays, type Area } from './home-helpers'
+import { settleWarden, talkThrough, waitForWilds, warden, warp, waitForLive } from './helpers'
+import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, homes, intoCottage, myHome, onMyLand, place, readOn, shot as snap, silasSays } from './home-helpers'
 import type { Page } from './fixtures'
 
 /** Screens, then let the scene settle again (the phone resize relays out the game). */
@@ -21,8 +21,7 @@ const go = (page: Page, area: string, tx: number, ty: number) => warp(page, area
  */
 test.skip(!process.env.SCREENS, 'screenshots only (SCREENS=1)')
 
-test.describe('connected', () => {
-  test.use({ server: true })
+test.describe('in a world', () => {
 
   test('homes at every tier, the workshop room, and the icon panels', async ({ page }) => {
     test.setTimeout(400_000)
@@ -111,7 +110,7 @@ test.describe('connected', () => {
 
 test('the settled warden at its post', async ({ page }) => {
   test.setTimeout(150_000)
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)

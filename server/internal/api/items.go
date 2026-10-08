@@ -8,7 +8,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -17,25 +16,22 @@ import (
 
 type itemRequest struct {
 	Mutation
-	Key      string          `json:"key"`
-	Progress json.RawMessage `json:"progress,omitempty"`
-	Instance string          `json:"instance,omitempty"`
-	ItemDef  string          `json:"itemDef,omitempty"`
-	Maker    *string         `json:"maker,omitempty"`
-	Action   string          `json:"action,omitempty"`
-	At       string          `json:"at,omitempty"`
-	Tool     string          `json:"tool,omitempty"`
-	Slot     int             `json:"slot,omitempty"`
-	ToID     string          `json:"toId,omitempty"`
-	Asset    *content.Asset  `json:"asset,omitempty"`
-	Pickup   string          `json:"pickup,omitempty"`
-	Target   string          `json:"target,omitempty"`
+	Instance string         `json:"instance,omitempty"`
+	ItemDef  string         `json:"itemDef,omitempty"`
+	Maker    *string        `json:"maker,omitempty"`
+	Action   string         `json:"action,omitempty"`
+	At       string         `json:"at,omitempty"`
+	Tool     string         `json:"tool,omitempty"`
+	Slot     int            `json:"slot,omitempty"`
+	ToID     string         `json:"toId,omitempty"`
+	Asset    *content.Asset `json:"asset,omitempty"`
+	Pickup   string         `json:"pickup,omitempty"`
+	Target   string         `json:"target,omitempty"`
 	// Unmoored comes from client UI state; remedy consumption remains a keyed server mutation.
 	Unmoored bool    `json:"unmoored,omitempty"`
 	VisitID  string  `json:"visitId,omitempty"`
 	Tile     *[2]int `json:"tile,omitempty"`
-	// Region: which Wilds region a wilds gather is in (the progress area
-	// is "wilds" for both; the client's save marker names the region).
+	// Region is retained in the domain body; the authoritative region is where.area.
 	Region string `json:"region,omitempty"`
 	// Buying from a seller (Hazel's kitchen, Finn's mill door, a market stall).
 	Seller string `json:"seller,omitempty"`
@@ -76,11 +72,16 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var notify []func()
-	err := a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	err := a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		out := itemResult{}
 		var err error
 		switch op {
 		case "use":
+			if req.Instance == "" && consumableVitals(req.ItemDef) {
+				if err = barrier(ctx, tx, s, req.Op); err != nil {
+					return nil, err
+				}
+			}
 			err = a.useItem(ctx, tx, s, req, now, &out)
 		case "repair":
 			err = repairTool(ctx, tx, s, req, now, &out)
@@ -125,7 +126,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		// Every view of the pack shows warden-set tools healed overnight.
-		if err = healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+		if err = healWardens(ctx, tx, s.AccountID, now); err != nil {
 			return nil, err
 		}
 		out.Items, err = readItems(ctx, tx, s, now)
@@ -136,4 +137,17 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		}
 	})
 	return err
+}
+
+func consumableVitals(id string) bool {
+	def, ok := content.ItemFor(id)
+	if !ok {
+		return false
+	}
+	for _, e := range def.Use {
+		if e.Type == "restore-hp" || e.Type == "restore-mana" {
+			return true
+		}
+	}
+	return false
 }

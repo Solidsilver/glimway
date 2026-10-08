@@ -58,6 +58,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	// 3. Meet condition by reading ashwatch ledger excerpts
 	conditionMetDoc := atSilasDoc
 	conditionMetDoc.Flags = append(slices.Clone(atSilasDoc.Flags), "paper:ashwatch-ledger-excerpts")
+	x.db.DB.Exec("INSERT OR IGNORE INTO story_marks VALUES(?,'paper:ashwatch-ledger-excerpts','server',?)", s.AccountID, x.now.Load())
 
 	// Proximity check: condition met, but player is far away in Village
 	farDoc := conditionMetDoc
@@ -101,7 +102,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	}
 
 	// 6. Subsequent request with new key is refused: already granted
-	s.Rev = res.Rev
+	s.Version = res.Version
 	dup := x.items("POST", "/api/items/heirloom", body(s, "axe-grant-key-2", map[string]any{
 		"itemDef":  "brack-felling-axe",
 		"progress": conditionMetDoc,
@@ -111,7 +112,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	}
 
 	// 7. Conservation check (ledger matches held instances)
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestHeirloomOrrinsMasonPick(t *testing.T) {
@@ -194,7 +195,7 @@ func TestHeirloomOrrinsMasonPick(t *testing.T) {
 	}
 
 	// 6. Subsequent request with new key: already-granted
-	s.Rev = res.Rev
+	s.Version = res.Version
 	dup := x.items("POST", "/api/items/heirloom", body(s, "pick-grant-key-2", map[string]any{
 		"itemDef":  "orrins-mason-pick",
 		"progress": atOrrinDoc,
@@ -203,7 +204,7 @@ func TestHeirloomOrrinsMasonPick(t *testing.T) {
 		t.Fatalf("expected already-granted, got %s", dup.Error.Code)
 	}
 
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
@@ -248,8 +249,8 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	}
 
 	// 3. Proximity test for giveAdaOil: player in Commons cannot give oil
-	x.stack("alice", "hearth-oil", "", 3)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "hearth-oil", "", 3)
+	x.conserved(x.account("alice"))
 	farDoc := atAdaDoc
 	farDoc.Area = "commons"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
@@ -285,10 +286,10 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	if !slices.Contains(g1.State.Flags, "ada-oil-gifts:1") {
 		t.Fatalf("expected ada-oil-gifts:1 flag, got %v", g1.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 6. Give oil gift 2 (1 left)
-	s.Rev = g1.Rev
+	s.Version = g1.Version
 	atAdaDoc.Flags = g1.State.Flags
 	g2 := x.items("POST", "/api/items/ada-oil", body(s, "oil-2", map[string]any{
 		"itemDef":  "hearth-oil",
@@ -297,10 +298,10 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	if g2.Result.AdaOilCount != 2 {
 		t.Fatalf("expected AdaOilCount 2, got %d", g2.Result.AdaOilCount)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// Spade still unmet at 2 gifts
-	s.Rev = g2.Rev
+	s.Version = g2.Version
 	atAdaDoc.Flags = g2.State.Flags
 	bad2 := x.items("POST", "/api/items/heirloom", body(s, "spade-unmet-2", map[string]any{
 		"itemDef":  "ada-garden-spade",
@@ -318,10 +319,10 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	if g3.Result.AdaOilCount != 3 {
 		t.Fatalf("expected AdaOilCount 3, got %d", g3.Result.AdaOilCount)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 8. 4th gift refused: not-needed (even though Alice carries 0 oil! Testing count check runs first)
-	s.Rev = g3.Rev
+	s.Version = g3.Version
 	atAdaDoc.Flags = g3.State.Flags
 	noMore := x.items("POST", "/api/items/ada-oil", body(s, "oil-extra", map[string]any{
 		"itemDef":  "hearth-oil",
@@ -370,7 +371,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	}
 
 	// 11. Subsequent request with new key: already-granted
-	s.Rev = res.Rev
+	s.Version = res.Version
 	dup := x.items("POST", "/api/items/heirloom", body(s, "spade-grant-key-2", map[string]any{
 		"itemDef":  "ada-garden-spade",
 		"progress": atAdaDoc,
@@ -379,7 +380,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 		t.Fatalf("expected already-granted, got %s", dup.Error.Code)
 	}
 
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestHeirloomNansLamplighterPole(t *testing.T) {
@@ -401,6 +402,7 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 	// 2. Meet condition: Nan's echo settled
 	conditionDoc := wildsDoc
 	conditionDoc.Flags = append(slices.Clone(wildsDoc.Flags), "echo:nan")
+	x.db.DB.Exec("INSERT OR IGNORE INTO story_marks VALUES(?,'echo:nan','server',?)", s.AccountID, x.now.Load())
 
 	// Proximity check: condition met, but player is in village
 	villageDoc := conditionDoc
@@ -443,7 +445,7 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 	}
 
 	// 5. Subsequent request with new key: already-granted
-	s.Rev = res.Rev
+	s.Version = res.Version
 	dup := x.items("POST", "/api/items/heirloom", body(s, "pole-grant-key-2", map[string]any{
 		"itemDef":  "nans-lamplighter-pole",
 		"progress": conditionDoc,
@@ -452,7 +454,7 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 		t.Fatalf("expected already-granted, got %s", dup.Error.Code)
 	}
 
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestHeirloomsNotGiveable(t *testing.T) {
@@ -471,7 +473,7 @@ func TestHeirloomSharedStorageRefusal(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	s = x.openWorkshop(c, s)
-	axe := x.instance("alice", "brack-felling-axe", 240, "")
+	axe := x.instance(x.account("alice"), "brack-felling-axe", 240, "")
 	x.refresh(c, &s)
 
 	// Depositing non-giveable heirloom into shared storage must be refused with 409 not-giveable

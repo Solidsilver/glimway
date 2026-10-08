@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 )
 
@@ -52,4 +53,24 @@ func newUpgradeFixture(t *testing.T, path, through string, before func(string, *
 		}()
 	}
 	return db
+}
+
+// Only assertions against today's schema use this projection; historical seed
+// SQL and the deployed migrations remain the actual old schema.
+func currentSchemaSQL(q string) string {
+	if !strings.Contains(q, "pending_sessions") && !strings.Contains(q, "allowlist") && !strings.Contains(q, "access_removals") {
+		q = strings.ReplaceAll(q, "habitica_id", "account_id")
+	}
+	q = strings.ReplaceAll(q, "rev=7", "version=7")
+	return q
+}
+
+// Earlier upgrade tests seed partial account rows to isolate their migration.
+// They represent players who had already chosen an origin, not unfinished 026
+// sign-ins (whose complete checkpoint fixtures have their own tests).
+func markFixtureOrigins(t *testing.T, db *sql.DB) {
+	t.Helper()
+	if _, err := db.Exec("UPDATE players SET save_origin='fresh' WHERE save_origin IS NULL"); err != nil {
+		t.Fatal(err)
+	}
 }

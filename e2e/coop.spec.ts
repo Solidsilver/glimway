@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld } from './connected'
+import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, signInPage } from './party-helpers'
 import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
 
@@ -11,7 +11,6 @@ import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } 
  * the naming to the Warden and keeps a journal line for it. Screenshots go to
  * .agent/screens/coop-*.png.
  */
-test.use({ server: true })
 
 type Remote = { id: string; name: string }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
@@ -113,12 +112,12 @@ test('a newcomer on a phone starts a world of their own, and the party’s world
   // Let in through the party, Sam makes no invite codes, even from his own world.
   const invites = other.getByTestId('invite-party-admitted')
   await expect(invites).toContainText('You came in with your party, so codes aren’t yours to give.')
-  expect((await other.request.post('/api/invites', { data: {} })).status()).toBe(403)
+  expect((await other.request.post('/api/invites', { data: {}, ...CONTRACT })).status()).toBe(403)
   await ctx.close()
 })
 
 test('a second player watches the naming, sees the warden rest a moment, and keeps the line', async ({ page, browser, baseURL }) => {
-  const { olive, party, world } = await partyOwner(page)
+  const { party, world } = await partyOwner(page)
   // Hal comes in through Olive's party, and chooses to live with them.
   const hal = newUser()
   await setHabitica(hal, { name: 'Hal', party })
@@ -149,13 +148,14 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
   expect(after.witnessRest).toBe(false)
   expect(after.state).toBe('dormant')
 
-  // The journal line, kept once; Hal's story didn't move.
+  // The journal line, kept once; Hal's story didn't move. (The beat segment
+  // is the server's own id for the warden moment.)
   await expect
     .poll(async () => {
       const s = (await serverState(other)).body
       return { quest: s.state.quest, seen: s.state.flags.filter((f: string) => f.startsWith('witness:')) }
     })
-    .toEqual({ quest: 'new', seen: [`witness:warden:${olive}:Olive`] })
+    .toEqual({ quest: 'new', seen: [expect.stringMatching(/^witness:warden:.+:Olive$/)] })
   await other.keyboard.press('j')
   const journal = other.getByRole('dialog', { name: 'Journal' })
   await expect(journal).toContainText('You Were There')

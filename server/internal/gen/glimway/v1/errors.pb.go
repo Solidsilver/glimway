@@ -225,6 +225,15 @@ const (
 	ErrorCode_ERROR_CODE_PRESENCE_FULL             ErrorCode = 196
 	ErrorCode_ERROR_CODE_PRESENCE_SESSION_LIMIT    ErrorCode = 197
 	ErrorCode_ERROR_CODE_PRESENCE_PLAYER_LIMIT     ErrorCode = 198
+	ErrorCode_ERROR_CODE_RELOAD_NEEDED             ErrorCode = 199
+	ErrorCode_ERROR_CODE_NOT_NEXT_STEP             ErrorCode = 200
+	ErrorCode_ERROR_CODE_WRONG_AREA                ErrorCode = 201
+	ErrorCode_ERROR_CODE_UNKNOWN_MARK              ErrorCode = 202
+	ErrorCode_ERROR_CODE_SERVER_MARK               ErrorCode = 203
+	ErrorCode_ERROR_CODE_PAPER_NOT_DUE             ErrorCode = 204
+	ErrorCode_ERROR_CODE_ECHO_NOT_HERE             ErrorCode = 205
+	ErrorCode_ERROR_CODE_NOT_IMPLEMENTED           ErrorCode = 206
+	ErrorCode_ERROR_CODE_REPORT_REQUIRED           ErrorCode = 207
 )
 
 // Enum value maps for ErrorCode.
@@ -429,6 +438,15 @@ var (
 		196: "ERROR_CODE_PRESENCE_FULL",
 		197: "ERROR_CODE_PRESENCE_SESSION_LIMIT",
 		198: "ERROR_CODE_PRESENCE_PLAYER_LIMIT",
+		199: "ERROR_CODE_RELOAD_NEEDED",
+		200: "ERROR_CODE_NOT_NEXT_STEP",
+		201: "ERROR_CODE_WRONG_AREA",
+		202: "ERROR_CODE_UNKNOWN_MARK",
+		203: "ERROR_CODE_SERVER_MARK",
+		204: "ERROR_CODE_PAPER_NOT_DUE",
+		205: "ERROR_CODE_ECHO_NOT_HERE",
+		206: "ERROR_CODE_NOT_IMPLEMENTED",
+		207: "ERROR_CODE_REPORT_REQUIRED",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -630,6 +648,15 @@ var (
 		"ERROR_CODE_PRESENCE_FULL":             196,
 		"ERROR_CODE_PRESENCE_SESSION_LIMIT":    197,
 		"ERROR_CODE_PRESENCE_PLAYER_LIMIT":     198,
+		"ERROR_CODE_RELOAD_NEEDED":             199,
+		"ERROR_CODE_NOT_NEXT_STEP":             200,
+		"ERROR_CODE_WRONG_AREA":                201,
+		"ERROR_CODE_UNKNOWN_MARK":              202,
+		"ERROR_CODE_SERVER_MARK":               203,
+		"ERROR_CODE_PAPER_NOT_DUE":             204,
+		"ERROR_CODE_ECHO_NOT_HERE":             205,
+		"ERROR_CODE_NOT_IMPLEMENTED":           206,
+		"ERROR_CODE_REPORT_REQUIRED":           207,
 	}
 )
 
@@ -665,7 +692,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xd41\n" +
+	"glimway.v1*\xe93\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -866,7 +893,16 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x13ERROR_CODE_UPSTREAM\x10\xc3\x01\x12\x1d\n" +
 	"\x18ERROR_CODE_PRESENCE_FULL\x10\xc4\x01\x12&\n" +
 	"!ERROR_CODE_PRESENCE_SESSION_LIMIT\x10\xc5\x01\x12%\n" +
-	" ERROR_CODE_PRESENCE_PLAYER_LIMIT\x10\xc6\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	" ERROR_CODE_PRESENCE_PLAYER_LIMIT\x10\xc6\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_RELOAD_NEEDED\x10\xc7\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_NOT_NEXT_STEP\x10\xc8\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_WRONG_AREA\x10\xc9\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_UNKNOWN_MARK\x10\xca\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_SERVER_MARK\x10\xcb\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_PAPER_NOT_DUE\x10\xcc\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_ECHO_NOT_HERE\x10\xcd\x01\x12\x1f\n" +
+	"\x1aERROR_CODE_NOT_IMPLEMENTED\x10\xce\x01\x12\x1f\n" +
+	"\x1aERROR_CODE_REPORT_REQUIRED\x10\xcf\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

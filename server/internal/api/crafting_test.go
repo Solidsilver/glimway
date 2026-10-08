@@ -61,8 +61,7 @@ func (x *rig) craftAndPlace(c *http.Cookie, s *response, piece, key string) {
 		}
 	}
 	update(s, x.exp("POST", "/api/homestead/place", body(*s, "place-"+key, map[string]any{
-		"itemId": id, "scene": scene, "x": px, "y": py, "rotation": 0,
-	}), c, 200))
+		"itemId": id, "scene": scene, "x": px, "y": py, "rotation": 0}), c, 200))
 }
 
 func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
@@ -74,7 +73,7 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	x.craftReq("POST", "/api/hearth/craft", body(s, "hearth-0", map[string]any{"recipeId": "hearth-saltings-tea", "qty": 1}), c, 409)
 
 	// Upgrade to Tier 1 (Cottage)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	up := x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200)
 	update(&s, up)
@@ -89,8 +88,8 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	x.craftReq("POST", "/api/hearth/craft", body(s, "hearth-locked", map[string]any{"recipeId": "hearth-wax-seal", "qty": 1}), c, 409)
 
 	// Fund Alice with ingredients for Saltings tea
-	x.give("alice", "wild-thyme", 10)
-	x.give("alice", "water", 10)
+	x.give(x.account("alice"), "wild-thyme", 10)
+	x.give(x.account("alice"), "water", 10)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 
 	// Craft 2 batches of Saltings tea (output is 2*2 = 4 saltings-tea)
@@ -108,11 +107,11 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	// Check maker mark in database: item_stacks must record maker_id = alice
 	var makerID string
 	var stackQty int
-	err := x.db.DB.QueryRow("SELECT maker_id, qty FROM item_stacks WHERE owner='alice' AND item_def='saltings-tea' AND location='pack'").Scan(&makerID, &stackQty)
+	err := x.db.DB.QueryRow("SELECT maker_id, qty FROM item_stacks WHERE owner='"+x.account("alice")+"' AND item_def='saltings-tea' AND location='pack'").Scan(&makerID, &stackQty)
 	if err != nil {
 		t.Fatalf("failed to query saltings-tea stack: %v", err)
 	}
-	if makerID != "alice" {
+	if makerID != x.account("alice") {
 		t.Fatalf("expected maker_id='alice', got %q", makerID)
 	}
 	if stackQty != 4 {
@@ -126,8 +125,8 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	}
 
 	// With the wax-seal page held, the found recipe opens (and its seals are marked).
-	x.give("alice", "recipe-page-wax-seal", 1)
-	x.give("alice", "beeswax", 2)
+	x.give(x.account("alice"), "recipe-page-wax-seal", 1)
+	x.give(x.account("alice"), "beeswax", 2)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	seals := x.craftReq("POST", "/api/hearth/craft", body(s, "craft-seals", map[string]any{"recipeId": "hearth-wax-seal", "qty": 1}), c, 200)
 	s.Snapshot = seals.Snapshot
@@ -135,10 +134,10 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 		t.Fatalf("unexpected seal output: %+v", seals.Result.Output)
 	}
 	var sealMaker string
-	if err = x.db.DB.QueryRow("SELECT maker_id FROM item_stacks WHERE owner='alice' AND item_def='wax-seal' AND location='pack'").Scan(&sealMaker); err != nil || sealMaker != "alice" {
+	if err = x.db.DB.QueryRow("SELECT maker_id FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='wax-seal' AND location='pack'").Scan(&sealMaker); err != nil || sealMaker != x.account("alice") {
 		t.Fatalf("seal maker mark: %q %v", sealMaker, err)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestWritingDeskCopyingAndGating(t *testing.T) {
@@ -147,7 +146,7 @@ func TestWritingDeskCopyingAndGating(t *testing.T) {
 	x.claimFree(c, &s)
 
 	// Upgrade to cottage
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "tier1", map[string]any{"tier": 1}), c, 200))
 
@@ -155,7 +154,7 @@ func TestWritingDeskCopyingAndGating(t *testing.T) {
 	x.craftReq("POST", "/api/desk/copy", body(s, "copy-early", map[string]any{"pageId": "recipe-page-tea", "qty": 1}), c, 409)
 
 	// Silas doesn't sell the desk (it's made at the bench).
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	if got := x.exp("POST", "/api/homestead/buy", body(s, "buy-desk", map[string]any{"itemDef": "writing-desk"}), c, 409); got.Error.Code != "craft-only" {
 		t.Fatal("buying a craft-only piece:", got.Error.Code)
@@ -169,8 +168,8 @@ func TestWritingDeskCopyingAndGating(t *testing.T) {
 	x.craftReq("POST", "/api/desk/copy", body(s, "copy-unheld", map[string]any{"pageId": "recipe-page-tea", "qty": 1}), c, 409)
 
 	// Give Alice 1 unmarked recipe-page-tea and 5 fiber
-	x.give("alice", "recipe-page-tea", 1)
-	x.give("alice", "fiber", 5)
+	x.give(x.account("alice"), "recipe-page-tea", 1)
+	x.give(x.account("alice"), "fiber", 5)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 
 	// Copy 2 pages
@@ -180,7 +179,7 @@ func TestWritingDeskCopyingAndGating(t *testing.T) {
 
 	// Check Alice now has the original unmarked page (qty 1) + 2 copied pages marked by alice (qty 2)
 	var markedQty int
-	err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='recipe-page-tea' AND maker_id='alice' AND location='pack'").Scan(&markedQty)
+	err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='recipe-page-tea' AND maker_id='" + x.account("alice") + "' AND location='pack'").Scan(&markedQty)
 	if err != nil {
 		t.Fatalf("failed to query marked recipe-page-tea: %v", err)
 	}
@@ -193,7 +192,7 @@ func TestWritingDeskCopyingAndGating(t *testing.T) {
 	if store.JSON(v) != store.JSON(replay) {
 		t.Fatal("desk replay mismatch")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
@@ -205,7 +204,7 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 	x.craftReq("POST", "/api/homestead/woodpile", body(s, "stack-early", map[string]any{"action": "stack", "qty": 5}), c, 409)
 
 	// The woodpile is bench-made: the Workshop, the bench, then place it.
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "tier1-pile", map[string]any{"tier": 1}), c, 200))
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "tier2-pile", map[string]any{"tier": 2}), c, 200))
@@ -220,7 +219,7 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 	// build and the craft; seedAssets funded 1000 of everything).
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	initialTimber := 0
-	if err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='timber' AND location='pack'").Scan(&initialTimber); err != nil {
+	if err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='timber' AND location='pack'").Scan(&initialTimber); err != nil {
 		x.t.Fatal(err)
 	}
 	req := body(s, "stack-10", map[string]any{"action": "stack", "qty": 10})
@@ -229,7 +228,7 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 
 	// Timber in pack should be reduced by 10
 	var currentTimber int
-	err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='timber' AND location='pack'").Scan(&currentTimber)
+	err := x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='timber' AND location='pack'").Scan(&currentTimber)
 	if err != nil {
 		t.Fatalf("failed to query timber: %v", err)
 	}
@@ -240,7 +239,7 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 	if n := pileLedgerSum(x, ""); n != 10 {
 		t.Fatalf("pile currency sum %d, want 10", n)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// Try to collect immediately: should fail with nothing-ready
 	x.craftReq("POST", "/api/homestead/woodpile", body(s, "collect-early", map[string]any{"action": "collect"}), c, 409)
@@ -261,7 +260,7 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 
 	// Alice now has 10 seasoned timber credited to her pack
 	var seasonedTimber int
-	err = x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='seasoned-timber' AND location='pack'").Scan(&seasonedTimber)
+	err = x.db.DB.QueryRow("SELECT qty FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='seasoned-timber' AND location='pack'").Scan(&seasonedTimber)
 	if err != nil {
 		t.Fatalf("failed to query seasoned-timber: %v", err)
 	}
@@ -273,11 +272,11 @@ func TestWoodpileSeasoningRuleAndLedgerConservation(t *testing.T) {
 	if n := pileLedgerSum(x, ""); n != 0 {
 		t.Fatalf("pile currency sum %d, want 0", n)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// A replay with the same key is the same answer, not a second stack.
 	replay := x.craftReq("POST", "/api/homestead/woodpile", req, c, 200)
-	if store.JSON(resStack) != store.JSON(replay) {
+	if store.JSON(resStack.Result) != store.JSON(replay.Result) || replay.Version < resStack.Version {
 		t.Fatal("woodpile replay mismatch")
 	}
 }
@@ -287,7 +286,7 @@ func pileLedgerSum(x *rig, id string) int {
 	x.t.Helper()
 	q := "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE currency='woodpile:material:timber'"
 	if id != "" {
-		q += " AND habitica_id='" + id + "'"
+		q += " AND account_id='" + id + "'"
 	}
 	var n int
 	if err := x.db.DB.QueryRow(q).Scan(&n); err != nil {
@@ -302,7 +301,7 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 	x.claimFree(ca, &sa)
 
 	// The Workshop, the bench, the pile on the land.
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	sa.Snapshot = x.expect("GET", "/api/state", nil, ca, 200).Snapshot
 	update(&sa, x.exp("POST", "/api/homestead/upgrade", body(sa, "tier1-a", map[string]any{"tier": 1}), ca, 200))
 	update(&sa, x.exp("POST", "/api/homestead/upgrade", body(sa, "tier2-a", map[string]any{"tier": 2}), ca, 200))
@@ -314,7 +313,7 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 	// Bob signs onto the deed (in Alice's world); a day later he collects
 	// Alice's stack.
 	cb, sb := x.member("bob", sa.WorldID)
-	x.seedAssets("bob")
+	x.seedAssets(x.account("bob"))
 	x.share(ca, &sa, cb, &sb)
 	x.now.Add(86400)
 	res := x.craftReq("POST", "/api/homestead/woodpile", body(sb, "collect-b", map[string]any{"action": "collect"}), cb, 200)
@@ -327,8 +326,8 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 	if pileLedgerSum(x, "") != 0 {
 		t.Fatal("pile currency not level after a cross-member collect")
 	}
-	x.conserved("alice")
-	x.conserved("bob")
+	x.conserved(x.account("alice"))
+	x.conserved(x.account("bob"))
 
 	// Bob stacks and leaves; then Alice leaves too (the last leaving marks
 	// the deed vacant).
@@ -343,8 +342,8 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 	x.now.Add(int64(content.HomeRules.Desolation.DeedLostAfterDays) * 86400)
 	// The players went away with the deed; the session idled out over the
 	// fortnight: sign in again.
-	x.stand("alice", sa.WorldID, "", 0, 0)
-	x.stand("bob", sa.WorldID, "", 0, 0)
+	x.stand(x.account("alice"), sa.WorldID, "", 0, 0)
+	x.stand(x.account("bob"), sa.WorldID, "", 0, 0)
 	ca = x.login("alice", "")
 	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, ca, 200)
 	x.expect("GET", "/api/commons", nil, ca, 200)
@@ -359,6 +358,6 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 	if err := x.db.DB.QueryRow("SELECT count(*) FROM homesteads").Scan(&home); err != nil || home != 0 {
 		t.Fatalf("homesteads left: %d %v", home, err)
 	}
-	x.conserved("alice")
-	x.conserved("bob")
+	x.conserved(x.account("alice"))
+	x.conserved(x.account("bob"))
 }

@@ -130,7 +130,7 @@ export interface EchoKeepsakeOffer {
   label: string
   /** The camp's lines while you carry it and haven't left it yet. */
   lines: string[]
-  /** The one short line for guests: the leave waits until they're signed in. */
+  /** The one short line for guests: the leave waits until they're signed in. TODO(D): drop with the guest branches in wilds/sites.ts. */
   guest: string
   /** The leave choice's action (the server's `return` item op). */
   action: string
@@ -142,7 +142,8 @@ export interface EchoKeepsakeOffer {
  * the door. Null when nothing is carried, it has been left already
  * (`returned:<def>`), or the camp keeps no keepsake (Dorrit has none).
  * Guests get the offer's words but not the leave itself: the caller answers
- * with `guest` instead of the choices, like the heirloom beats.
+ * with `guest` instead of the choices, like the heirloom beats. (The Wilds
+ * sites are D's; this guest line goes when they read the server only.)
  */
 export function echoKeepsakeOffer(member: EchoMember, flags: readonly string[], carried: readonly string[]): EchoKeepsakeOffer | null {
   const keep = echoKeepsakeOf(member)

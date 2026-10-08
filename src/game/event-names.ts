@@ -60,12 +60,14 @@ export const EV = {
   emote: 'game:emote',
   /** Presence: someone standing by you handed you something: { fromName, kind, itemDef, qty }. */
   gift: 'game:gift',
-  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, habiticaId, name }. */
+  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, accountId, name }. */
   witness: 'game:witness',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
+  /** Connected play: the world answered a fall: { lantern } ('placed': a fallen-hero lantern now waits in the Wilds). */
+  fallSettled: 'game:fall-settled',
   /** The Wilds region changed (loaded, claimed, materials moved): { materials }. */
   wilds: 'ui:wilds',
   /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
@@ -270,8 +272,16 @@ export interface LinkPayload {
   busy: boolean
   /** Local changes the server hasn't accepted yet. */
   dirty: boolean
-  /** Offline because the server is failing (500s), not the network. */
+  /** Answers keep failing on the server's side (5xx, 429), not the network. */
   trouble: boolean
+  /** No answer for over a minute: "Reaching the world…". */
+  reaching: boolean
+  /**
+   * Sending stopped: a newer build is needed (`reload`), the world couldn't
+   * read a queued request (`client-bug`), or a queued key committed a
+   * different request (`mismatch`).
+   */
+  paused: null | 'reload' | 'client-bug' | 'mismatch'
 }
 
 export interface WildsPayload {
@@ -294,7 +304,7 @@ export interface PresencePayload {
 
 export interface EmotePayload {
   /** null for the local hero. */
-  habiticaId: string | null
+  accountId: string | null
   id: string
 }
 
@@ -316,7 +326,7 @@ export interface GiftPayload {
 
 export interface WitnessPayload {
   beat: string
-  habiticaId: string
+  accountId: string
   name: string
 }
 
@@ -366,6 +376,7 @@ export interface EventMap {
   [EV.witness]: WitnessPayload
   [EV.mutationResolved]: MutationResolvedPayload
   [EV.worldRefresh]: void
+  [EV.fallSettled]: { lantern: string }
   [EV.wilds]: WildsPayload
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }

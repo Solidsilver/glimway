@@ -17,6 +17,7 @@ import type { WorldData } from '../worlds'
 import type { Effects } from './fx'
 import type { Interactable, Interactables } from './interactables'
 import { emitPapers, grantPaper } from '../papers'
+import { pickupChanges } from '../rollback'
 import { itemsFor } from '../items'
 import type { QuestStage } from '../../lib/state'
 
@@ -118,32 +119,36 @@ export class PaperPickups {
   }
 
   private build(): void {
-    const { world, session, reducedMotion } = this.deps
-    for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) {
-      const x = tileMid(p.source.tx)
-      const y = tileBottom(p.source.ty) - 3
-      const image = this.scene.add.sprite(x, y, LOOK_TEXTURE[p.source.look]).setOrigin(0.5, 1).setDepth(y - 6)
-      // The delivered pickups glint on their own (Commons pass), out of step.
-      const glinting = commonsAnim(this.scene, `${LOOK_TEXTURE[p.source.look]}-animation`)
-      if (glinting && !reducedMotion) image.play({ key: glinting, startFrame: Math.floor(Math.random() * 3) })
-      const twinkle = this.scene.add.image(x + 3, y - 8, 'spark').setDepth(y + 1).setBlendMode(1 /* ADD */)
-      let timer: Phaser.Time.TimerEvent | null = null
-      if (reducedMotion) {
-        twinkle.setAlpha(0.7)
-      } else {
-        twinkle.setAlpha(0).setScale(0.4)
-        // A gentle glint every few seconds, staggered so pickups never pulse in step.
-        const glint = () => {
-          if (!twinkle.active) return
-          // A keepsake in a pocket (Hollis's fox) makes papers glint brighter.
-          const bright = papersGlintBright(session)
-          twinkle.setPosition(x + Math.round((Math.random() - 0.5) * 8), y - 6 - Math.round(Math.random() * 5))
-          this.scene.tweens.add({ targets: twinkle, alpha: { from: 0, to: 1 }, scale: { from: 0.4, to: bright ? 1.7 : 1.1 }, duration: bright ? 420 : 260, yoyo: true, ease: 'Sine.easeOut' })
-        }
-        timer = this.scene.time.addEvent({ delay: 2200 + Math.floor(Math.random() * 900), loop: true, startAt: Math.floor(Math.random() * 1800), callback: glint })
+    const { world, session } = this.deps
+    for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) this.addPickup(p)
+  }
+
+  /** One paper lying here, drawn with its glint. */
+  private addPickup(p: ReturnType<typeof placedPapersIn>[number]): void {
+    const { session, reducedMotion } = this.deps
+    const x = tileMid(p.source.tx)
+    const y = tileBottom(p.source.ty) - 3
+    const image = this.scene.add.sprite(x, y, LOOK_TEXTURE[p.source.look]).setOrigin(0.5, 1).setDepth(y - 6)
+    // The delivered pickups glint on their own (Commons pass), out of step.
+    const glinting = commonsAnim(this.scene, `${LOOK_TEXTURE[p.source.look]}-animation`)
+    if (glinting && !reducedMotion) image.play({ key: glinting, startFrame: Math.floor(Math.random() * 3) })
+    const twinkle = this.scene.add.image(x + 3, y - 8, 'spark').setDepth(y + 1).setBlendMode(1 /* ADD */)
+    let timer: Phaser.Time.TimerEvent | null = null
+    if (reducedMotion) {
+      twinkle.setAlpha(0.7)
+    } else {
+      twinkle.setAlpha(0).setScale(0.4)
+      // A gentle glint every few seconds, staggered so pickups never pulse in step.
+      const glint = () => {
+        if (!twinkle.active) return
+        // A keepsake in a pocket (Hollis's fox) makes papers glint brighter.
+        const bright = papersGlintBright(session)
+        twinkle.setPosition(x + Math.round((Math.random() - 0.5) * 8), y - 6 - Math.round(Math.random() * 5))
+        this.scene.tweens.add({ targets: twinkle, alpha: { from: 0, to: 1 }, scale: { from: 0.4, to: bright ? 1.7 : 1.1 }, duration: bright ? 420 : 260, yoyo: true, ease: 'Sine.easeOut' })
       }
-      this.pickups.set(p.id, { paperId: p.id, image, twinkle, timer })
+      timer = this.scene.time.addEvent({ delay: 2200 + Math.floor(Math.random() * 900), loop: true, startAt: Math.floor(Math.random() * 1800), callback: glint })
     }
+    this.pickups.set(p.id, { paperId: p.id, image, twinkle, timer })
   }
 
   private removePickup(paperId: string): void {
@@ -171,6 +176,9 @@ export class PaperPickups {
   }
 
   private grantBeats(stage: QuestStage, delayMs: number): void {
+    // Connected, the quest step itself grants its beat papers (content/quests.json):
+    // a take would be refused as not due, and taken again at every scene build.
+    if (this.deps.session.link) return
     const due = beatsDue(stage, this.deps.session.state.flags)
     if (due.length === 0) return
     const grant = () => {
@@ -180,16 +188,16 @@ export class PaperPickups {
     else this.scene.time.delayedCall(delayMs, grant)
   }
 
-  /** Connected: another device may have picked something up. */
+  /**
+   * Connected: another device may have picked something up, or the world
+   * refused a take this one predicted, and the paper lies here again.
+   */
   private onWorldRefresh(): void {
-    const still = new Set(placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).map((p) => p.id))
-    let gone = false
-    for (const id of [...this.pickups.keys()]) {
-      if (still.has(id)) continue
-      this.removePickup(id)
-      gone = true
-    }
-    if (gone) this.publish()
+    const due = placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags)
+    const { add, remove } = pickupChanges(this.pickups.keys(), due.map((p) => p.id))
+    for (const id of remove) this.removePickup(id)
+    for (const p of due) if (add.includes(p.id)) this.addPickup(p)
+    if (add.length || remove.length) this.publish()
     emitPapers(this.deps.session)
   }
 

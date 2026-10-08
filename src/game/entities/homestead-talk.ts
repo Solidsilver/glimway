@@ -413,7 +413,7 @@ export class HomesteadTalk {
     for (const p of feed.peersIn('commons')) {
       if (p.leftAt !== null) continue
       const at = p.track.at(now)
-      if (at && Math.hypot(at.x - t.x, at.y - t.y) <= t.radius) out.push({ id: p.habiticaId, name: p.displayName || 'A neighbour' })
+      if (at && Math.hypot(at.x - t.x, at.y - t.y) <= t.radius) out.push({ id: p.accountId, name: p.displayName || 'A neighbour' })
     }
     return out
   }

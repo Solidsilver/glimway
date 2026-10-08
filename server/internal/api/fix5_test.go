@@ -12,56 +12,20 @@ import (
 	"time"
 )
 
-func TestFix5CalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
-	for _, change := range []string{"wick-days", "epoch", "same-start-new-end"} {
-		t.Run(change, func(t *testing.T) {
-			saved := content.CalendarRules
-			defer func() { content.CalendarRules = saved }()
-			epoch, _ := time.Parse(time.RFC3339, saved.Epoch)
-			x := newRig(t)
-			firstDay, nextDay := int64(70), int64(140)
-			if change == "same-start-new-end" {
-				firstDay = 0
-				nextDay = 10
-			}
-			x.now.Store(epoch.Unix() + firstDay*86400)
-			c, s := x.ready("alice")
-			old := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-			if change == "epoch" {
-				content.CalendarRules.Epoch = epoch.Add(70 * 24 * time.Hour).Format(time.RFC3339)
-			} else {
-				content.CalendarRules.WickDays = 14
-			}
-			x.now.Store(epoch.Unix() + nextDay*86400)
-			c = x.login("alice", "")
-			s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
-			current := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-			day := content.CalendarAt(content.CalendarRules, x.now.Load())
-			if current.Epoch.ID == old.Epoch.ID || current.Epoch.StartsAt != day.StartsAt || current.Epoch.EndsAt == nil || *current.Epoch.EndsAt != day.NextTurning {
-				t.Fatal("retuned calendar reused old interval", current.Epoch)
-			}
-			node := entityKind(t, old, "node")
-			if x.exp("POST", "/api/wilds/claim", body(s, "ended", map[string]any{"epoch": old.Epoch.ID, "entityId": node.ID, "cycle": 0, "progress": nearEntity(s, node)}), c, 409).Error.Code != "epoch-ended" {
-				t.Fatal("old epoch reopened")
-			}
-		})
-	}
-}
-
 func TestFix5MailRecallConservesAndReplays(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
 	s.Snapshot = sent.Snapshot
 	path := "/api/mail/" + sent.Result.MailID + "/recall"
 	x.p5("POST", path, body(b, "not-sender", nil), bc, 403)
 	req := body(s, "recall", nil)
 	returned := x.p5("POST", path, req, c, 200)
 	s.Snapshot = returned.Snapshot
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 {
 		t.Fatal("recall lost assets")
 	}
 	replay := x.p5("POST", path, req, c, 200)
@@ -78,9 +42,9 @@ func TestFix5MailAutoReturns(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
 			x.member("bob", s.WorldID)
-			x.seedAssets("alice")
+			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
 			if reason == "expired" {
 				if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=? WHERE id=?", x.now.Load()-30*86400, sent.Result.MailID); err != nil {
 					t.Fatal(err)
@@ -95,11 +59,11 @@ func TestFix5MailAutoReturns(t *testing.T) {
 				}
 			}
 			read := x.p5("GET", "/api/mail", nil, c, 200)
-			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 || read.Rev <= sent.Rev {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE currency='mail:material:timber'") != 0 || read.Version <= sent.Version {
 				t.Fatal("automatic return did not restore goods/revision")
 			}
 			x.p5("GET", "/api/mail", nil, c, 200)
-			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 {
 				t.Fatal("automatic return paid twice")
 			}
 		})
@@ -110,25 +74,26 @@ func TestFix5MailRemovedRecipientRejected(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	if err := x.db.Allow(context.Background(), "bob", false); err != nil {
 		t.Fatal(err)
 	}
-	rejected := x.p5("POST", "/api/mail", body(s, "removed", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)
+	rejected := x.p5("POST", "/api/mail", body(s, "removed", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)
 	if rejected.Error.Code != "recipient-unavailable" || count(t, x.db, "SELECT count(*) FROM mail") != 0 {
 		t.Fatal("removed recipient accepted")
 	}
 }
 
 func seedFix5Mail(t *testing.T, x *rig, world, from, to string, n int, claimed bool) {
+	from, to = x.account(from), x.account(to)
 	t.Helper()
 	for i := 0; i < n; i++ {
 		var at any
 		if claimed {
 			at = x.now.Load()
 		}
-		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,sent_at,claimed_at) VALUES(?,?,?,?,'material','timber',1,?,?)", fmt.Sprintf("seed-%s-%s-%03d", from, to, i), world, from, to, x.now.Load(), at); err != nil {
+		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,sent_at,claimed_at) VALUES(?,?,?,?,'material','timber',1,?,?)", fmt.Sprintf("seed-%s-%03d", store.Hash(from + to)[:16], i), world, from, to, x.now.Load(), at); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -140,15 +105,15 @@ func TestFix5MailOutstandingCaps(t *testing.T) {
 			c, s := x.ready("alice")
 			x.member("bob", s.WorldID)
 			x.member("carol", s.WorldID)
-			x.seedAssets("alice")
+			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 			if cap == "sender" {
 				seedFix5Mail(t, x, s.WorldID, "alice", "carol", 50, false)
 			} else {
 				seedFix5Mail(t, x, s.WorldID, "carol", "bob", 50, false)
 			}
-			v := x.p5("POST", "/api/mail", body(s, "full", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 409)
-			if v.Error.Code != "mail-"+cap+"-limit" || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM mail") != 50 {
+			v := x.p5("POST", "/api/mail", body(s, "full", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 409)
+			if v.Error.Code != "mail-"+cap+"-limit" || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM mail") != 50 {
 				t.Fatal("mail capacity not enforced")
 			}
 		})
@@ -158,15 +123,15 @@ func TestFix5MailSendRateIsNotResetByClaim(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	for i := 0; i < 10; i++ {
-		sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 200)
+		sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 200)
 		s.Snapshot = sent.Snapshot
 		claimed := x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, fmt.Sprintf("claim-%d", i), nil), bc, 200)
 		b.Snapshot = claimed.Snapshot
 	}
-	req := body(s, "limited", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}})
+	req := body(s, "limited", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}})
 	if x.p5("POST", "/api/mail", req, c, 429).Error.Code != "mail-rate-limited" {
 		t.Fatal("mail rate")
 	}
@@ -198,7 +163,7 @@ func TestFix5ProjectCostsCanBeLowered(t *testing.T) {
 			}
 			x := newRig(t)
 			c, s := x.ready("alice")
-			x.seedAssets("alice")
+			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 			amount := map[string]int{"timber": 180}
 			if finish == "read" {
@@ -220,7 +185,7 @@ func TestFix5ProjectCostsCanBeLowered(t *testing.T) {
 				}
 			} else {
 				v = x.p5("GET", "/api/projects", nil, c, 200)
-				if v.Projects[0].Stage != "complete" || v.Rev != s.Rev {
+				if v.Projects[0].Stage != "complete" || v.Version != s.Version {
 					t.Fatal("read did not reconcile already-satisfied project")
 				}
 			}
@@ -229,19 +194,6 @@ func TestFix5ProjectCostsCanBeLowered(t *testing.T) {
 				t.Fatal("retuning lost contribution or rewards")
 			}
 		})
-	}
-}
-
-func TestFix5LegacyEpochIntervalKeepsFrozenIdentity(t *testing.T) {
-	x := newRig(t)
-	c, _ := x.ready("alice")
-	outer := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if _, err := x.db.DB.Exec("UPDATE region_epochs SET season='legacy-number' WHERE id=?", outer.Epoch.ID); err != nil {
-		t.Fatal(err)
-	}
-	next := x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
-	if next.Epoch.ID != outer.Epoch.ID || next.Epoch.Season != "legacy-number" || count(t, x.db, "SELECT COUNT(*) FROM region_epochs WHERE region_id='outer-1'") != 1 {
-		t.Fatal("legacy epoch regenerated")
 	}
 }
 
@@ -257,7 +209,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 			instance := crafted.Result.InstanceIDs[0]
 			trinket := giftTrinket
 			for i, asset := range []content.Asset{{Kind: "item", ID: trinket, Qty: 5}, {Kind: "decoration", ID: "reading-chair", Qty: 1}} {
-				sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": "bob", "asset": asset}), c, 200)
+				sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 				s.Snapshot = sent.Snapshot
 				if mode == "recall" {
 					s.Snapshot = x.p5("POST", "/api/mail/"+sent.Result.MailID+"/recall", body(s, fmt.Sprintf("recall-%d", i), nil), c, 200).Snapshot
@@ -278,7 +230,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 				}
 			}
 			read := x.p5("GET", "/api/mail", nil, c, 200)
-			if !slices.Contains(read.State.Inventory, trinket) || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def=?", trinket) != 5 || count(t, x.db, "SELECT COUNT(*) FROM homestead_items WHERE id=? AND habitica_id='alice' AND location='inventory'", instance) != 1 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 2 {
+			if !slices.Contains(read.State.Inventory, trinket) || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def=?", trinket) != 5 || count(t, x.db, "SELECT COUNT(*) FROM homestead_items WHERE id=? AND account_id='"+x.account("alice")+"' AND location='inventory'", instance) != 1 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 2 {
 				t.Fatal("return changed instance or inventory identity")
 			}
 			for _, mail := range read.Mail {
@@ -287,7 +239,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 				}
 			}
 			for _, currency := range []string{"mail:item:" + trinket, "mail:decoration:reading-chair"} {
-				if count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE habitica_id='alice' AND currency=?", currency) != 0 {
+				if count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency=?", currency) != 0 {
 					t.Fatal("unsettled transit")
 				}
 			}
@@ -305,9 +257,9 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
 			x.member("bob", s.WorldID)
-			x.seedAssets("alice")
+			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
 			s.Snapshot = sent.Snapshot
 			if _, err := x.db.DB.Exec("CREATE TRIGGER fail_return BEFORE INSERT ON ledger WHEN NEW.reason IN ('mail-recall','mail-return') AND NEW.delta<0 BEGIN SELECT RAISE(FAIL,'return failed'); END"); err != nil {
 				t.Fatal(err)
@@ -324,7 +276,7 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 					t.Fatal("failed removal revoked recipient")
 				}
 			}
-			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 950 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 0 || count(t, x.db, "SELECT COUNT(*) FROM ledger WHERE reason IN ('mail-recall','mail-return')") != 0 || count(t, x.db, "SELECT COUNT(*) FROM idempotency WHERE key='recall'") != 0 {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 950 || count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") != 0 || count(t, x.db, "SELECT COUNT(*) FROM ledger WHERE reason IN ('mail-recall','mail-return')") != 0 || count(t, x.db, "SELECT COUNT(*) FROM idempotency WHERE key='recall'") != 0 {
 				t.Fatal("return partly committed")
 			}
 			unchanged(t, s.Snapshot, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
@@ -346,9 +298,9 @@ func TestFix5MailRecallRacesClaim(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "stone", Qty: 7}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "stone", Qty: 7}}), c, 200)
 	s.Snapshot = sent.Snapshot
 	path := "/api/mail/" + sent.Result.MailID
 	statuses := racePhase5(t, x, []struct {
@@ -424,9 +376,9 @@ func TestFix5MailExpiryBoundaryAndMaintenance(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 7}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 7}}), c, 200)
 	if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=?", x.now.Load()-30*86400+1); err != nil {
 		t.Fatal(err)
 	}
@@ -443,7 +395,7 @@ func TestFix5MailExpiryBoundaryAndMaintenance(t *testing.T) {
 	for count(t, x.db, "SELECT COUNT(*) FROM mail WHERE returned_at IS NOT NULL") == 0 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='fiber'") != 1000 || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'") != int(sent.Rev)+1 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='fiber'") != 1000 || count(t, x.db, "SELECT version FROM players WHERE account_id='"+x.account("alice")+"'") != int(sent.Version)+1 {
 		t.Fatal("unattended maintenance failed")
 	}
 }

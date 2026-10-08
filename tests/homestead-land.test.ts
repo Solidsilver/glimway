@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { serializeHomesteadVectors } from '../scripts/homestead-vectors.ts';
+import { FIXTURE_LAND } from './land-fixture.ts';
 import { HOMESTEAD_DATA, checkPlacement, checkRemoval, cleanPostName, gateTile, parseHomeArea, type HomeInstance } from '../src/lib/homestead.ts';
-import { LAND, generateLand, landAt, landSeed, postCost } from '../src/lib/homestead-land.ts';
+import { LAND, landAt, landFromCells, postCost, rememberLand, servedLand } from '../src/lib/homestead-land.ts';
 
 test('shared post name vectors reject every Unicode control before tidying', () => {
   const vectors: { label: string; raw: string; clean: string | null }[] = JSON.parse(
@@ -13,29 +14,30 @@ test('shared post name vectors reject every Unicode control before tidying', () 
   for (const v of vectors) assert.equal(cleanPostName(v.raw), v.clean, v.label);
 });
 
-test('committed homestead land vectors match the TypeScript generator', () => {
+test('committed post price vectors match the TypeScript prices', () => {
   assert.equal(
     readFileSync(new URL('../content/vectors/homestead.json', import.meta.url), 'utf8'),
     serializeHomesteadVectors(),
-    'Run npm run vectors:homestead after intentional generator changes',
+    'Run npm run vectors:homestead after intentional price changes',
   );
 });
 
-test('every land keeps its home site, path and gate mouth clear', () => {
+test('served land: the LAND vocabulary, its site, path and gate mouth clear', () => {
   const { site, gate } = HOMESTEAD_DATA.land;
-  for (const world of ['guest', 'w1', 'w2']) {
-    for (let g = 0; g < 40; g++) {
-      const land = generateLand(landSeed(world, g));
-      for (let y = site.y; y < site.y + site.h; y++) for (let x = site.x; x < site.x + site.w; x++) assert.equal(landAt(land, x, y), LAND.GRASS);
-      for (let y = site.y + site.h; y < land.height; y++) for (let x = gate.x; x < gate.x + gate.w; x++) assert.equal(landAt(land, x, y), LAND.PATH);
-    }
-  }
+  const land = FIXTURE_LAND;
+  assert.equal(land.tiles.length, land.width * land.height);
+  for (let y = site.y; y < site.y + site.h; y++) for (let x = site.x; x < site.x + site.w; x++) assert.equal(landAt(land, x, y), LAND.GRASS);
+  for (let y = site.y + site.h; y < land.height; y++) for (let x = gate.x; x < gate.x + gate.w; x++) assert.equal(landAt(land, x, y), LAND.PATH);
+  assert.throws(() => landFromCells({ width: 1, height: 1, cells: ['lava'] }));
+  assert.throws(() => landFromCells({ width: 2, height: 1, cells: ['grass'] }));
 });
 
-test('lands differ by gate and by world', () => {
-  const a = generateLand(landSeed('w1', 0)).tiles.join('');
-  assert.notEqual(a, generateLand(landSeed('w1', 1)).tiles.join(''));
-  assert.notEqual(a, generateLand(landSeed('w2', 0)).tiles.join(''));
+test('served land is kept per world and gate', () => {
+  rememberLand('world-a', 3, FIXTURE_LAND);
+  assert.equal(servedLand(3, 'world-a'), FIXTURE_LAND);
+  assert.equal(servedLand(3), FIXTURE_LAND, 'the current world is the last remembered');
+  assert.equal(servedLand(4, 'world-a'), null);
+  assert.equal(servedLand(3, 'world-b'), null);
 });
 
 test('lantern posts cost more each time', () => {
@@ -72,7 +74,7 @@ test('placement outdoors needs lit, open ground and posts hold up the land past 
   assert.equal(checkRemoval({ items: [placed, p1] }, p1), 'post-holds-land');
   assert.equal(checkPlacement({ tier: 0, items: [placed, p1] }, p1, 'outdoor', s.x - 3, s.y + 3, 0), 'post-holds-land');
   // Obstacles block until cleared.
-  const land = generateLand(landSeed('guest', 0));
+  const land = FIXTURE_LAND;
   let tree: [number, number] | null = null;
   for (let y = 0; y < land.height && !tree; y++) for (let x = 0; x < land.width && !tree; x++) if (landAt(land, x, y) === LAND.TREE && (x - s.x) ** 2 + (y - s.y) ** 2 <= s.radius ** 2) tree = [x, y];
   if (tree) {
@@ -94,8 +96,9 @@ test('posts cannot hold each other up away from the home’s light (review findi
   const { width: W, height: H } = HOMESTEAD_DATA.land;
   const d2 = (ax: number, ay: number, bx: number, by: number) => (ax - bx) ** 2 + (ay - by) ** 2;
   const reserved = (x: number, y: number) => HOMESTEAD_DATA.outdoorReserved.some((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);
-  for (let seed = 1; seed < 400; seed++) {
-    const land = generateLand(seed);
+  // The served land, then open ground (the rule doesn't depend on the trees).
+  const openLand = { width: W, height: H, tiles: new Uint8Array(W * H).fill(LAND.GRASS) };
+  for (const land of [FIXTURE_LAND, openLand]) {
     const ground = { land, cleared: new Set<string>() };
     const open = (x: number, y: number) => landAt(land, x, y) === LAND.GRASS && !reserved(x, y);
     for (let ax = 1; ax < W - 1; ax++)

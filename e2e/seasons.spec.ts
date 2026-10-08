@@ -14,7 +14,6 @@ import { sellerFor } from '../src/lib/items.ts'
  * answers with frost-glass when the real calendar is in the Quiet, and with
  * the season's refusal (no wear, nothing gathered) the rest of the year.
  */
-test.use({ server: true })
 
 const stack = (page: Page, def: string) =>
   page.evaluate(

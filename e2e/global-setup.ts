@@ -16,7 +16,8 @@ export default function globalSetup(): void {
   }
   const dir = `.e2e-server/run-${process.pid}`
   mkdirSync(dir, { recursive: true })
-  execFileSync('go', ['build', '-o', `${dir}/glimway-server`, './server/cmd/glimway-server'], { stdio: 'inherit' })
+  // A dev build: -dev-clock and its clock route (moveServerClock in e2e/connected.ts).
+  execFileSync('go', ['build', '-tags', 'dev', '-o', `${dir}/glimway-server`, './server/cmd/glimway-server'], { stdio: 'inherit' })
   rmSync('.e2e-server/latest', { force: true })
   symlinkSync(`run-${process.pid}`, '.e2e-server/latest')
   // Workers inherit the environment the global setup leaves.

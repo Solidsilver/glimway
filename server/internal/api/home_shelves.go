@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/store"
@@ -49,7 +48,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 	}
 	for _, m := range mem {
 		out.Names = append(out.Names, m.DisplayName)
-		if m.ID == s.HabiticaID {
+		if m.ID == s.AccountID {
 			out.CanStock = true
 		}
 	}
@@ -59,7 +58,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 		out.OwnerName = ""
 	}
 	day := utcDay(now)
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND habitica_id=? AND day=?)", homeID, s.HabiticaID, day).Scan(&out.TakenToday); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND account_id=? AND day=?)", homeID, s.AccountID, day).Scan(&out.TakenToday); err != nil {
 		return out, err
 	}
 	if !out.HasShelf {
@@ -86,7 +85,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 				slot.Maker = m
 			} else {
 				var name string
-				if err = tx.QueryRowContext(ctx, "SELECT display_name FROM players WHERE habitica_id=?", makerID).Scan(&name); err == nil {
+				if err = tx.QueryRowContext(ctx, "SELECT display_name FROM players WHERE account_id=?", makerID).Scan(&name); err == nil {
 					mv := &makerView{ID: makerID, Name: name}
 					makers[makerID] = mv
 					slot.Maker = mv
@@ -106,9 +105,6 @@ func (a *Server) shelfRead(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
@@ -146,20 +142,17 @@ func (a *Server) shelfRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		store.Snapshot
+	return a.finishRead(w, r, tx, s, struct {
 		Shelf shelfView `json:"shelf"`
-	}{s, view})
+	}{view})
 }
 
 type shelfRequest struct {
 	Mutation
-	Key      string          `json:"key"`
-	Progress json.RawMessage `json:"progress,omitempty"`
-	Op       string          `json:"op"`
-	Gate     int             `json:"gate"`
-	Slot     int             `json:"slot"`
-	Asset    *content.Asset  `json:"asset,omitempty"`
+	Action string         `json:"action"`
+	Gate   int            `json:"gate"`
+	Slot   int            `json:"slot"`
+	Asset  *content.Asset `json:"asset,omitempty"`
 }
 
 type shelfActionResponse struct {
@@ -174,10 +167,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if s.SaveOrigin == nil {
-			return nil, fail(409, "origin-required")
-		}
+	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -205,10 +195,10 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 		if req.Slot < 0 || req.Slot >= 6 {
 			return nil, fail(400, "invalid-slot")
 		}
-		switch req.Op {
+		switch req.Action {
 		case "stock":
 			var isMember bool
-			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_members WHERE homestead_id=? AND habitica_id=?)", homeID, s.HabiticaID).Scan(&isMember); err != nil {
+			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_members WHERE homestead_id=? AND account_id=?)", homeID, s.AccountID).Scan(&isMember); err != nil {
 				return nil, err
 			}
 			if !isMember {
@@ -236,7 +226,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "slot-occupied")
 			}
 			to := holder{"shelf", "", homeID}
-			got, err := takeAsset(ctx, tx, s, *req.Asset, to, "shelf-stock", req.Key, now)
+			got, err := takeAsset(ctx, tx, s, *req.Asset, to, "shelf-stock", req.Op.Key, now)
 			if err != nil {
 				return nil, err
 			}
@@ -253,17 +243,17 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 					}
 				}
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at) VALUES(?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, makerID, instanceID, s.HabiticaID, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at) VALUES(?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, makerID, instanceID, s.AccountID, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, "shelf:"+req.Asset.Kind+":"+req.Asset.ID, req.Asset.Qty, "shelf-stock", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, "shelf:"+req.Asset.Kind+":"+req.Asset.ID, req.Asset.Qty, "shelf-stock", req.Op.Key, now); err != nil {
 				return nil, err
 			}
 			shelf, err := loadShelfView(ctx, tx, *s, homeID, req.Gate, now)
 			if err != nil {
 				return nil, err
 			}
-			inv, err := packCounts(ctx, tx, s.HabiticaID)
+			inv, err := packCounts(ctx, tx, s.AccountID)
 			if err != nil {
 				return nil, err
 			}
@@ -272,7 +262,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 		case "take":
 			day := utcDay(now)
 			var alreadyTaken bool
-			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND habitica_id=? AND day=?)", homeID, s.HabiticaID, day).Scan(&alreadyTaken); err != nil {
+			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND account_id=? AND day=?)", homeID, s.AccountID, day).Scan(&alreadyTaken); err != nil {
 				return nil, err
 			}
 			if alreadyTaken {
@@ -288,7 +278,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_takes(homestead_id, habitica_id, day) VALUES(?,?,?)", homeID, s.HabiticaID, day); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_takes(homestead_id, account_id, day) VALUES(?,?,?)", homeID, s.AccountID, day); err != nil {
 				return nil, err
 			}
 			if slotQty > 1 {
@@ -310,17 +300,17 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				got.Makers = []makerQty{{Maker: makerID, Qty: takeQty}}
 			}
 			from := holder{"shelf", "", homeID}
-			if err = giveAsset(ctx, tx, s, takenAsset, got, from, "shelf-take", req.Key, now); err != nil {
+			if err = giveAsset(ctx, tx, s, takenAsset, got, from, "shelf-take", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, "shelf:"+slotKind+":"+itemDef, -takeQty, "shelf-take", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, "shelf:"+slotKind+":"+itemDef, -takeQty, "shelf-take", req.Op.Key, now); err != nil {
 				return nil, err
 			}
 			shelf, err := loadShelfView(ctx, tx, *s, homeID, req.Gate, now)
 			if err != nil {
 				return nil, err
 			}
-			inv, err := packCounts(ctx, tx, s.HabiticaID)
+			inv, err := packCounts(ctx, tx, s.AccountID)
 			if err != nil {
 				return nil, err
 			}
