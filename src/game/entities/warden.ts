@@ -15,6 +15,7 @@ import { wardenToRestore } from '../rollback'
 import type { QuestStage } from '../../lib/state'
 import type { Interactable } from './interactables'
 import { ENEMY_TUNING, KNOCK, type Enemy, type EnemyDeps, type EnemySystem } from './enemies'
+import { WitnessRest } from './witness-rest'
 
 /**
  * What the hero says to the heart-lamp, one line per speaking: Wenna cut
@@ -76,6 +77,15 @@ export class WardenEncounter {
   constructor(private readonly sys: EnemySystem) {
     this.scene = sys.scene
     this.deps = sys.deps
+    // The witness rest ends on the scene's real-time clock, checked each frame (./witness-rest.ts).
+    const tick = () => {
+      this.witness.tick(this.scene.time.now)
+    }
+    this.scene.events.on('update', tick)
+    this.scene.events.once('shutdown', () => {
+      this.scene.events.off('update', tick)
+      this.witness.clear()
+    })
   }
 
   private guardianSpawned = false
@@ -86,8 +96,8 @@ export class WardenEncounter {
   private heart: Phaser.GameObjects.Image | null = null
   /** The first clink of a blow off the warden explains itself once. */
   private clinkHinted = false
-  /** Scene time (ms) until which the warden rests for someone else's naming. */
-  private witnessUntil = 0
+  /** The rest for someone else's naming, in real time (./witness-rest.ts). */
+  private readonly witness = new WitnessRest()
 
   /**
    * Spawn the warden. Announces only when triggered by the clue dialogue —
@@ -201,7 +211,7 @@ export class WardenEncounter {
 
   /** The warden resting for someone else's naming right now. */
   witnessResting(): boolean {
-    return this.witnessUntil > this.scene.time.now
+    return this.witness.resting(this.scene.time.now)
   }
 
   /**
@@ -217,7 +227,6 @@ export class WardenEncounter {
     const sprite = active?.sprite ?? (this.restingState === 'dormant' ? this.restingWarden : null)
     if (!sprite?.active) return false
     const already = this.witnessResting()
-    this.witnessUntil = this.scene.time.now + ms
     if (active) {
       ;(active.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0)
       active.opening = false
@@ -227,8 +236,8 @@ export class WardenEncounter {
       this.placeHeart(sprite, true)
       this.gutterHeart(false)
     }
-    this.scene.time.delayedCall(ms, () => {
-      if (this.witnessResting()) return // a later naming nearby kept it resting
+    // A later naming nearby lengthens the rest; only its end rises and is told.
+    this.witness.start(this.scene.time.now, ms, () => {
       this.witnessRise()
       onRise?.()
     })
@@ -237,7 +246,6 @@ export class WardenEncounter {
 
   /** The rest ends: arms up again, the heart-lamp burning, the pose remembered. */
   private witnessRise(): void {
-    this.witnessUntil = 0
     if (this.restingState === 'settled') return
     const active = this.activeWarden()
     const sprite = active?.sprite ?? (this.restingState === 'dormant' ? this.restingWarden : null)
