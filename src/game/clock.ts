@@ -23,7 +23,11 @@ export function setGameNow(unix: number | null): void {
   devOffset = unix === null ? 0 : unix - Math.floor(Date.now() / 1000)
 }
 
-/** The server's "now" in Unix seconds (fractional): this device's clock, the server's skew, and the dev offset. */
+/**
+ * The server's "now" in Unix seconds (fractional): this device's clock and
+ * the server's skew (src/lib/server-time.ts). A moved dev clock is the time
+ * instead: a playtest moves the world's clock to the same moment.
+ */
 export function serverNow(): number {
-  return Date.now() / 1000 + serverSkew() + devOffset
+  return Date.now() / 1000 + (devOffset !== 0 ? devOffset : serverSkew())
 }

@@ -477,6 +477,10 @@ export class WorldScene extends Phaser.Scene {
         const w = this.enemies.warden.wardenView()
         return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
       },
+      enemyAt: (id) => {
+        const e = this.enemies.enemies.find((x) => x.id === id && !x.dead)
+        return e ? { x: e.sprite.x, y: e.sprite.y - 8 } : null
+      },
       placeKind: () => this.homesteads?.placeKind ?? null,
       guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
       reducedMotion: this.reducedMotion
