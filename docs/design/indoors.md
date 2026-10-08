@@ -858,6 +858,37 @@ No place migration: 0.3 never saved `cottage`, and the new rooms have no saved p
 
 ## 7. Art list
 
+### 7.0 Interior style rules (from the owner's first playtest, 2026-10-08)
+
+The owner's verdict on the first pass: the rooms felt out of place and not lived-in, the mill
+most of all. These rules hold for every room and every later interior.
+
+1. **Proper perspective.** Every piece faces one of four ways: straight on (front), side-on
+   (left or right wall), or exactly 45°. No in-between "cockeyed" three-quarter angles. Pieces
+   against the back wall are front-on, pieces against a side wall are side-on, and a free-standing
+   piece is front-on unless it reads better at 45°.
+2. **Scale to the people.** Size each piece against the residents and the hero: a flour sack is
+   knee-to-waist high, a millstone about chest high, a door a head taller than a person. Match
+   the residents' pixel density and shading, not finer: props shouldn't look painted at a
+   different resolution from the people standing next to them.
+3. **Lived-in.** Each room gets a dressing layer of small, non-blocking things: a rug, things on
+   the walls (tools, shelves, pegs, a calendar, a picture), crates and barrels in corners, a
+   plant, a lamp or candles, signs of the owner's trade and life (Finn's cap on a peg, Hazel's
+   flour handprints, Elara's charts). Corners and walls are full; the floor's walking space stays
+   clear.
+4. **Collision is the base, not the box.** A piece blocks only where it touches the floor (its
+   base or feet), never its whole picture rectangle. Tall pieces overlap the player from behind
+   by draw order. Dressing never blocks.
+5. **Stairs belong to a wall.** Stairs run along a wall (up the side or back wall), and the floor
+   above has its opening directly over them, with a railing. A ladder is fine where stairs would
+   crowd a small room.
+6. **No baked backgrounds, no stretching.** True transparency; art is placed at its native
+   aspect, never scaled to a footprint.
+7. **Still by default.** Props don't idle-animate. Only something the current quest or plot points
+   at may move or glow (the quest marker says so already); working machines (the millstone, the
+   oven's fire) may have a slow loop.
+
+
 For the image-generation round, as one request (`docs/art-request-indoors.md` is written from
 this list when the round starts). Same direction as `docs/art-request-playtest2.md`: **64
 texels per 16 px world tile**, 1 px dark outlines at that density, light from the upper left,
