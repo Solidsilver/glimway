@@ -292,7 +292,7 @@
       "specs": ["camera.spec.ts", "touch.spec.ts", "onboarding-layout.spec.ts"]
     },
     {
-      "paths": ["src/ui/WhatsNew.svelte", "src/ui/whats-new.svelte.ts", "src/lib/changelog.ts", "scripts/whats-new.mjs", "src/content/update.ts", "src/ui/MenuPanel.svelte"],
+      "paths": ["src/ui/WhatsNew.svelte", "src/ui/whats-new.svelte.ts", "src/ui/whats-new-store.svelte.ts", "src/lib/changelog.ts", "scripts/whats-new.mjs", "src/content/update.ts", "src/ui/MenuPanel.svelte"],
       "specs": ["whats-new.spec.ts"]
     }
   ]
