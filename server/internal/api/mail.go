@@ -59,7 +59,7 @@ func mailSlice(ctx context.Context, tx *sql.Tx, s store.Snapshot, pending bool, 
 		condition = "claimed_at IS NULL AND returned_at IS NULL"
 	}
 	cursorWhere := ""
-	params := []any{s.WorldID, s.HabiticaID}
+	params := []any{s.WorldID, s.AccountID}
 	if cursor != nil {
 		cursorWhere = " AND (sent_at,id)<(?,?)"
 		params = append(params, cursor.At, cursor.ID)
@@ -69,7 +69,7 @@ func mailSlice(ctx context.Context, tx *sql.Tx, s store.Snapshot, pending bool, 
 	// large legacy history. A player cannot mail themselves, so they are disjoint.
 	// Thank-you notes reach their recipient in any world (they carry no goods,
 	// and a move shouldn't lose them).
-	query := `WITH sent AS (SELECT id FROM mail WHERE world_id=? AND from_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?), received AS (SELECT id FROM mail WHERE (world_id=? OR kind='thanks') AND to_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?) SELECT m.id,m.world_id,m.from_id,m.to_id,f.display_name,t.display_name,m.kind,m.item_def,m.qty,m.sent_at,m.claimed_at,m.returned_at,m.return_reason FROM mail m JOIN (SELECT id FROM sent UNION ALL SELECT id FROM received) chosen ON chosen.id=m.id JOIN players f ON f.habitica_id=m.from_id JOIN players t ON t.habitica_id=m.to_id ORDER BY m.sent_at DESC,m.id DESC LIMIT ?`
+	query := `WITH sent AS (SELECT id FROM mail WHERE world_id=? AND from_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?), received AS (SELECT id FROM mail WHERE (world_id=? OR kind='thanks') AND to_id=? AND ` + condition + cursorWhere + ` ORDER BY sent_at DESC,id DESC LIMIT ?) SELECT m.id,m.world_id,m.from_id,m.to_id,f.display_name,t.display_name,m.kind,m.item_def,m.qty,m.sent_at,m.claimed_at,m.returned_at,m.return_reason FROM mail m JOIN (SELECT id FROM sent UNION ALL SELECT id FROM received) chosen ON chosen.id=m.id JOIN players f ON f.account_id=m.from_id JOIN players t ON t.account_id=m.to_id ORDER BY m.sent_at DESC,m.id DESC LIMIT ?`
 	args := append(slices.Clone(params), params...)
 	args = append(args, limit+1)
 	rows, err := tx.QueryContext(ctx, query, args...)
@@ -142,7 +142,7 @@ func (a *Server) mailRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	// Carried counts, so a sender without a Workshop knows what they can send.
-	inventory, err := packCounts(r.Context(), tx, s.HabiticaID)
+	inventory, err := packCounts(r.Context(), tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -164,11 +164,11 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedMutation(w, r, req.Mutation, req.Key, req, req.Progress, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if req.ToID == s.HabiticaID {
+		if req.ToID == s.AccountID {
 			return nil, fail(400, "self-mail")
 		}
 		var world string
-		err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=?", req.ToID).Scan(&world)
+		err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", req.ToID).Scan(&world)
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "recipient-not-found")
 		}
@@ -179,7 +179,7 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(403, "world-access-denied")
 		}
 		var eligible bool
-		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)", req.ToID, req.ToID).Scan(&eligible); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica')) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica'))", req.ToID, req.ToID).Scan(&eligible); err != nil {
 			return nil, err
 		}
 		if !eligible {
@@ -191,28 +191,28 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if d, ok := content.ItemFor(req.Asset.ID); ok && req.Asset.Kind != "decoration" && !d.Giveable() {
 			return nil, fail(409, "not-giveable")
 		}
-		if err = mailSendLimits(ctx, tx, s.HabiticaID, req.ToID, now, w); err != nil {
+		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToID, now, w); err != nil {
 			return nil, err
 		}
 		id, err := store.Random()
 		if err != nil {
 			return nil, err
 		}
-		got, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.HabiticaID, ""}, "mail-send", id, now)
+		got, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.AccountID, ""}, "mail-send", id, now)
 		if err != nil {
 			return nil, err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.HabiticaID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
-		if err = currency(ctx, tx, s.HabiticaID, itemmove.LocationCurrency("mail", req.Asset.Kind, req.Asset.ID), req.Asset.Qty, "mail-send", id, now); err != nil {
+		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", req.Asset.Kind, req.Asset.ID), req.Asset.Qty, "mail-send", id, now); err != nil {
 			return nil, err
 		}
 		list, err := mailList(ctx, tx, *s, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := packCounts(ctx, tx, s.HabiticaID)
+		inventory, err := packCounts(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +258,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if world != s.WorldID && v.Kind != "thanks" || to != s.HabiticaID {
+		if world != s.WorldID && v.Kind != "thanks" || to != s.AccountID {
 			return nil, fail(403, "mail-access-denied")
 		}
 		if claimed.Valid {
@@ -274,7 +274,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		// waits until their parcels are recalled). A thank-you note has no
 		// goods, so it can still be read after its sender moved on.
 		var senderWorld string
-		if err = tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=?", from).Scan(&senderWorld); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", from).Scan(&senderWorld); err != nil {
 			return nil, err
 		}
 		if senderWorld != world && v.Kind != "thanks" {
@@ -305,7 +305,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := packCounts(ctx, tx, s.HabiticaID)
+		inventory, err := packCounts(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}
@@ -368,7 +368,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if world != s.WorldID || from != s.HabiticaID {
+		if world != s.WorldID || from != s.AccountID {
 			return nil, fail(403, "mail-access-denied")
 		}
 		if asset.Kind == "thanks" {
@@ -390,7 +390,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		inventory, err := packCounts(ctx, tx, s.HabiticaID)
+		inventory, err := packCounts(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}

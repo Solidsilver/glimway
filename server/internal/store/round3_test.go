@@ -19,6 +19,7 @@ func TestRound3UpgradeCursorIdleSessionAndReplayDisplayName(t *testing.T) {
  `); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	old.Close()
 	s, err := Open(path)
 	if err != nil {
@@ -35,14 +36,8 @@ func TestRound3UpgradeCursorIdleSessionAndReplayDisplayName(t *testing.T) {
 			t.Fatal("legacy idle clamp", id, got, err)
 		}
 	}
-	for key, want := range map[string]string{"legacy": "Keeper", "named": "Historical"} {
-		var got string
-		if err = s.DB.QueryRow("SELECT json_extract(response_json,'$.displayName') FROM idempotency WHERE key=?", key).Scan(&got); err != nil || got != want {
-			t.Fatal("snapshot replay migration", key, got, err)
-		}
-	}
-	var raw string
-	if err = s.DB.QueryRow("SELECT request_hash FROM idempotency WHERE key='legacy'").Scan(&raw); err != nil || raw != "request-hash" {
-		t.Fatal("canonical request hash changed")
+	var count int
+	if err = s.DB.QueryRow("SELECT count(*) FROM idempotency").Scan(&count); err != nil || count != 0 {
+		t.Fatal("old replay survived 026", count, err)
 	}
 }

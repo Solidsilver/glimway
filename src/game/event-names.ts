@@ -60,7 +60,7 @@ export const EV = {
   emote: 'game:emote',
   /** Presence: someone standing by you handed you something: { fromName, kind, itemDef, qty }. */
   gift: 'game:gift',
-  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, habiticaId, name }. */
+  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, accountId, name }. */
   witness: 'game:witness',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
@@ -294,7 +294,7 @@ export interface PresencePayload {
 
 export interface EmotePayload {
   /** null for the local hero. */
-  habiticaId: string | null
+  accountId: string | null
   id: string
 }
 
@@ -316,7 +316,7 @@ export interface GiftPayload {
 
 export interface WitnessPayload {
   beat: string
-  habiticaId: string
+  accountId: string
   name: string
 }
 

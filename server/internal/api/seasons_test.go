@@ -60,8 +60,8 @@ func (x *rig) jumpToAs(id, kind, want string) *http.Cookie {
 func TestSeasonalGatherSpots(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	spade := x.instance(s.HabiticaID, "bench-spade", -1, "")
-	pick := x.instance(s.HabiticaID, "bench-pick", -1, "")
+	spade := x.instance(s.AccountID, "bench-spade", -1, "")
+	pick := x.instance(s.AccountID, "bench-pick", -1, "")
 	shore := [2]int{34, 18} // the freshet shore by the village pond
 	ice := [2]int{34, 19}   // the frozen pond itself
 
@@ -115,13 +115,13 @@ func TestSeasonalGatherSpots(t *testing.T) {
 	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", ice, spade, "dig", "pond-ice", "q1"), 409).Error.Code != "wrong-tool" {
 		t.Fatal("dug the ice")
 	}
-	x.conserved(s.HabiticaID)
+	x.conserved(s.AccountID)
 }
 
 func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	axe := x.instance(s.HabiticaID, "brack-felling-axe", -1, "")
+	axe := x.instance(s.AccountID, "brack-felling-axe", -1, "")
 	here := [2]int{20, 20}
 
 	c = x.jumpToAs("alice", "mark", "Amberfall")
@@ -174,7 +174,7 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 			}
 		}
 	}
-	x.conserved(s.HabiticaID)
+	x.conserved(s.AccountID)
 }
 
 func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
@@ -184,7 +184,7 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	// Fresh in the Bloom wick, and through the rest of its season (the
 	// Carting mark: Light-wick, Cart-wick): they "dry after a season".
 	c = x.jumpToAs("alice", "wick", "Bloom")
-	x.stack(s.HabiticaID, "bloom-flowers", "", 5)
+	x.stack(s.AccountID, "bloom-flowers", "", 5)
 	v := x.items("GET", "/api/items", nil, c, 200)
 	if stackQty(v.Items, "bloom-flowers") != 5 || stackQty(v.Items, "dried-flowers") != 0 {
 		t.Fatal("fresh flowers dried in their own wick")
@@ -205,18 +205,18 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 		t.Fatalf("drying %d/%d", stackQty(v.Items, "bloom-flowers"), stackQty(v.Items, "dried-flowers"))
 	}
 	var rows int
-	if err := x.db.DB.QueryRow("SELECT count(*) FROM ledger WHERE habitica_id=? AND reason='dry' AND ref='bloom-season-turned'", s.HabiticaID).Scan(&rows); err != nil || rows != 2 {
+	if err := x.db.DB.QueryRow("SELECT count(*) FROM ledger WHERE account_id=? AND reason='dry' AND ref='bloom-season-turned'", s.AccountID).Scan(&rows); err != nil || rows != 2 {
 		t.Fatalf("drying ledger rows %d (%v)", rows, err)
 	}
 	// A second read finds nothing left to dry.
 	x.items("GET", "/api/items", nil, c, 200)
-	x.conserved(s.HabiticaID)
+	x.conserved(s.AccountID)
 
 	// Dried flowers press as well as fresh: the frame takes either.
 	x.refresh(c, &s)
 	s = x.openWorkshop(c, s)
 	x.refresh(c, &s)
-	x.stack(s.HabiticaID, "seasoned-timber", "", 10)
+	x.stack(s.AccountID, "seasoned-timber", "", 10)
 	r := x.p5("POST", "/api/craft", body(s, "press", map[string]any{"recipeId": "craft-pressed-flowers", "qty": 1}), c, 200)
 	if r.Result.Output.ID != "pressed-flowers" {
 		t.Fatalf("frame %+v", r.Result.Output)
@@ -228,7 +228,7 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	// A mixed bill: the fresh ones go first, then the dried stand in.
 	c = x.jumpToAs("alice", "wick", "Bloom")
 	x.refresh(c, &s)
-	x.stack(s.HabiticaID, "bloom-flowers", "", 1)
+	x.stack(s.AccountID, "bloom-flowers", "", 1)
 	r = x.p5("POST", "/api/craft", body(s, "press-mixed", map[string]any{"recipeId": "craft-pressed-flowers", "qty": 1}), c, 200)
 	if r.Result.Output.ID != "pressed-flowers" {
 		t.Fatalf("frame %+v", r.Result.Output)
@@ -237,7 +237,7 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	if stackQty(v.Items, "bloom-flowers") != 0 || stackQty(v.Items, "dried-flowers") != 0 {
 		t.Fatalf("mixed press left fresh %d dried %d", stackQty(v.Items, "bloom-flowers"), stackQty(v.Items, "dried-flowers"))
 	}
-	x.conserved(s.HabiticaID)
+	x.conserved(s.AccountID)
 }
 
 // fundEmbers credits the caller's ledger with a purse of embers (embers
@@ -278,7 +278,7 @@ func bySeller(s response, seller string) rules.State {
 func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fundEmbers(s.HabiticaID, 10)
+	x.fundEmbers(s.AccountID, 10)
 
 	// Standing by the seller: the rig's own position rides along.
 	buy := func(seller, good string, status int) itemsResponse {
@@ -336,8 +336,8 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen")}, 409); r.Error.Code != "insufficient-embers" {
 		t.Fatal("tallow without embers", r.Error.Code)
 	}
-	x.conserved(s.HabiticaID)
-	x.conserved(ps.HabiticaID)
+	x.conserved(s.AccountID)
+	x.conserved(ps.AccountID)
 }
 
 // stormFind scans the deterministic storm-drop rolls for player `id`
@@ -391,7 +391,7 @@ func TestStormGradeDropIsVeryRareAndSpacedOut(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
-	first, second, ok := stormFind(s.HabiticaID)
+	first, second, ok := stormFind(s.AccountID)
 	if !ok {
 		t.Skip("no storm-drop weeks seeded for alice")
 	}
@@ -441,5 +441,5 @@ func TestStormGradeDropIsVeryRareAndSpacedOut(t *testing.T) {
 	if stackQty(v.Items, "storm-grade-drop") != 2 {
 		t.Fatal("the second week's drop never landed")
 	}
-	x.conserved(s.HabiticaID)
+	x.conserved(s.AccountID)
 }

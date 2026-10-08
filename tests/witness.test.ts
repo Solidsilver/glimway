@@ -16,8 +16,8 @@ test('only the three shared beats are witnessed', () => {
 test('a witness flag is kept once per beat and traveler, and is never an economy flag', () => {
   const f = witnessFlag('echo:nan', 'olive-id', 'Olive')!;
   assert.equal(f, 'witness:echo-nan:olive-id:Olive');
-  assert.ok(f.length <= 128);
-  assert.ok(witnessFlag('warden', '0123456789abcdef0123456789abcdef0123', LONG)!.length <= 128);
+  assert.ok(f.length <= 256);
+  assert.ok(witnessFlag('warden', '0123456789abcdef0123456789abcdef0123', LONG)!.length <= 256);
   assert.doesNotMatch(f, /^(embers:|lit:|opened:)/);
   // Once: a renamed traveler is still the same traveler.
   assert.ok(hasWitnessed([f], 'echo:nan', 'olive-id'));
@@ -50,20 +50,20 @@ test('the journal says "you were there", in voice and short, without naming whos
   }
 });
 
-test('a witness flag always fits the server’s 128 bytes, whatever the name (else every later save would be refused)', () => {
+test('a witness flag always fits the server’s 256 bytes, whatever the name (else every later save would be refused)', () => {
   const id = '0123abcd-0123-4abc-8def-0123456789ab';
   // The server sends names up to 60 runes (capDonor): emoji are 4 bytes each, CJK 3.
   const worst = ['🦊'.repeat(60), '灯'.repeat(60), 'ナ'.repeat(30) + '🏮'.repeat(30), 'é'.repeat(60), '👩‍👩‍👧'.repeat(12)];
   for (const name of worst) {
     for (const beat of ['warden', 'lantern', 'echo:dorrit', 'echo:nan'] as const) {
       const f = witnessFlag(beat, id, name)!;
-      assert.ok(Buffer.byteLength(f, 'utf8') <= 128, `${Buffer.byteLength(f, 'utf8')}: ${f}`);
+      assert.ok(Buffer.byteLength(f, 'utf8') <= 256, `${Buffer.byteLength(f, 'utf8')}: ${f}`);
       // Cut between characters: no broken surrogate, no replacement character.
       assert.doesNotMatch(f, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|\uFFFD/);
       assert.ok(hasWitnessed([f], beat, id));
       // The journal still reads it, with whatever of the name fit.
       const [entry] = witnessJournalEntries([f]);
-      assert.ok(entry && entry.body.length <= 160, entry?.body);
+      assert.ok(entry && entry.body.length <= 320, entry?.body);
     }
   }
   assert.equal(fitBytes('ab🦊c', 5), 'ab');
@@ -71,7 +71,7 @@ test('a witness flag always fits the server’s 128 bytes, whatever the name (el
   // No id, or one that would break the flag's shape: no flag.
   assert.equal(witnessFlag('warden', '', 'Olive'), null);
   assert.equal(witnessFlag('warden', 'a:b', 'Olive'), null);
-  assert.equal(witnessFlag('warden', 'x'.repeat(200), 'Olive'), null);
+  assert.equal(witnessFlag('warden', 'x'.repeat(300), 'Olive'), null);
 });
 
 test('only the first few travelers of each beat are kept, and nothing else is touched', () => {

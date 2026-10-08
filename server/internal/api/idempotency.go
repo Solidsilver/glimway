@@ -21,10 +21,11 @@ func idem(ctx context.Context, tx *sql.Tx, id, op, key string, req any, now int6
 	}
 	if fields, ok := value.(map[string]any); ok {
 		delete(fields, "lease")
+		delete(fields, "op")
 	}
 	hash := store.Hash(store.JSON(value))
 	var prior, response string
-	err := tx.QueryRowContext(ctx, "SELECT request_hash,response_json FROM idempotency WHERE habitica_id=? AND op=? AND key=?", id, op, key).Scan(&prior, &response)
+	err := tx.QueryRowContext(ctx, "SELECT request_hash,result_json FROM idempotency WHERE account_id=? AND op=? AND key=?", id, op, key).Scan(&prior, &response)
 	if err == sql.ErrNoRows {
 		return hash, "", nil
 	}
@@ -34,10 +35,40 @@ func idem(ctx context.Context, tx *sql.Tx, id, op, key string, req any, now int6
 	if hash != prior {
 		return "", "", fail(409, "idempotency-mismatch")
 	}
-	return hash, response, nil
+	// Interim domain handlers also replay current state, never a stored save.
+	current, err := LoadReplay(ctx, tx, id, response)
+	return hash, current, err
 }
 
 func saveIdem(ctx context.Context, tx *sql.Tx, id, op, key, hash string, v any, now int64) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO idempotency VALUES(?,?,?,?,?,?)", id, op, key, hash, store.JSON(v), now)
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(store.JSON(v)), &fields); err != nil {
+		return err
+	}
+	for _, key := range snapshotFields {
+		delete(fields, key)
+	}
+	_, err := tx.ExecContext(ctx, "INSERT INTO idempotency(account_id,op,key,request_hash,result_json,created_at,committed_version) VALUES(?,?,?,?,?,?,(SELECT version FROM players WHERE account_id=?))", id, op, key, hash, store.JSON(fields), now, id)
 	return err
+}
+
+var snapshotFields = []string{"state", "version", "vitalsSource", "importedProfile", "accountId", "displayName", "habiticaPartyId", "worldId", "profileSource", "pending", "verifiedXp", "flagged"}
+
+func LoadReplay(ctx context.Context, tx *sql.Tx, id, result string) (string, error) {
+	s, err := store.Load(ctx, tx, id)
+	if err != nil {
+		return "", err
+	}
+	var fields map[string]json.RawMessage
+	if err = json.Unmarshal([]byte(store.JSON(s)), &fields); err != nil {
+		return "", err
+	}
+	var extra map[string]json.RawMessage
+	if err = json.Unmarshal([]byte(result), &extra); err != nil {
+		return "", err
+	}
+	for k, v := range extra {
+		fields[k] = v
+	}
+	return store.JSON(fields), nil
 }

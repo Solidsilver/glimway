@@ -164,7 +164,7 @@ func packTake(ctx context.Context, tx *sql.Tx, id, def string, maker *string, qt
 	if left, err := stackTotal(ctx, tx, packOf(id), def); err != nil {
 		return nil, err
 	} else if left == 0 {
-		if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE habitica_id=? AND item_def=? AND instance_id IS NULL", id, def); err != nil {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND item_def=? AND instance_id IS NULL", id, def); err != nil {
 			return nil, err
 		}
 	}
@@ -189,7 +189,7 @@ func materialChange(ctx context.Context, tx *sql.Tx, id, material string, delta 
 // itemChange is materialChange for the snapshot's own pack, keeping its
 // carried-item list (GameState.inventory) current.
 func itemChange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id string, delta int, reason, ref string, now int64) error {
-	if err := materialChange(ctx, tx, s.HabiticaID, id, delta, reason, ref, now); err != nil {
+	if err := materialChange(ctx, tx, s.AccountID, id, delta, reason, ref, now); err != nil {
 		return err
 	}
 	return refreshItems(ctx, tx, s)
@@ -212,7 +212,7 @@ func refreshItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 			out = rules.AddUnique(out, id)
 		}
 	}
-	items, err := store.PackItems(ctx, tx, s.HabiticaID)
+	items, err := store.PackItems(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func nullable(s string) any {
 	return s
 }
 func decorationIDs(ctx context.Context, tx *sql.Tx, from holder, def string, n int) ([]string, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE location=? AND habitica_id IS ? AND homestead_id IS ? AND item_def=? AND scene IS NULL ORDER BY id LIMIT ?", from.location, nullable(from.player), nullable(from.home), def, n)
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? AND item_def=? AND scene IS NULL ORDER BY id LIMIT ?", from.location, nullable(from.player), nullable(from.home), def, n)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to hol
 	return err
 }
 func decorationCounts(ctx context.Context, tx *sql.Tx, at holder, out map[string]int) error {
-	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND habitica_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, nullable(at.player), nullable(at.home))
+	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, nullable(at.player), nullable(at.home))
 	if err != nil {
 		return err
 	}
@@ -339,28 +339,28 @@ func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 	}
 	switch v.Kind {
 	case "material", "item":
-		split, err := packTake(ctx, tx, s.HabiticaID, v.ID, v.Maker, v.Qty, reason, ref, now)
+		split, err := packTake(ctx, tx, s.AccountID, v.ID, v.Maker, v.Qty, reason, ref, now)
 		if err != nil {
 			return moved{}, err
 		}
 		return moved{Makers: split, IDs: []string{}}, refreshItems(ctx, tx, s)
 	case "instance":
-		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.HabiticaID}, to.instancePlace(), now); err != nil {
+		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.AccountID}, to.instancePlace(), now); err != nil {
 			return moved{}, err
 		}
-		if err := fittedLedger(ctx, tx, s.HabiticaID, v.Instance, -1, reason, ref, now); err != nil {
+		if err := fittedLedger(ctx, tx, s.AccountID, v.Instance, -1, reason, ref, now); err != nil {
 			return moved{}, err
 		}
-		return moved{Makers: []makerQty{}, IDs: []string{v.Instance}}, currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.ID), -1, reason, ref, now)
+		return moved{Makers: []makerQty{}, IDs: []string{v.Instance}}, currency(ctx, tx, s.AccountID, content.StackCurrency(v.ID), -1, reason, ref, now)
 	default:
-		ids, err := decorationIDs(ctx, tx, pack(s.HabiticaID), v.ID, v.Qty)
+		ids, err := decorationIDs(ctx, tx, pack(s.AccountID), v.ID, v.Qty)
 		if err != nil {
 			return moved{}, err
 		}
-		if err = moveDecorations(ctx, tx, ids, pack(s.HabiticaID), to); err != nil {
+		if err = moveDecorations(ctx, tx, ids, pack(s.AccountID), to); err != nil {
 			return moved{}, err
 		}
-		return moved{Makers: []makerQty{}, IDs: ids}, currency(ctx, tx, s.HabiticaID, "decoration:"+v.ID, -v.Qty, reason, ref, now)
+		return moved{Makers: []makerQty{}, IDs: ids}, currency(ctx, tx, s.AccountID, "decoration:"+v.ID, -v.Qty, reason, ref, now)
 	}
 }
 
@@ -372,7 +372,7 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 		if splitTotal(got.Makers) != v.Qty {
 			return fail(409, "item-not-available")
 		}
-		if err := packPut(ctx, tx, s.HabiticaID, v.ID, got.Makers, reason, ref, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, v.ID, got.Makers, reason, ref, now); err != nil {
 			return err
 		}
 		return refreshItems(ctx, tx, s)
@@ -385,7 +385,7 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 			return err
 		}
 		if warden {
-			has, err := hasWardenSetInPack(ctx, tx, s.HabiticaID, "")
+			has, err := hasWardenSetInPack(ctx, tx, s.AccountID, "")
 			if err != nil {
 				return err
 			}
@@ -393,21 +393,21 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 				return fail(409, "two-wardens-grind")
 			}
 		}
-		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.HabiticaID}, now); err != nil {
+		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.AccountID}, now); err != nil {
 			return err
 		}
-		if err := fittedLedger(ctx, tx, s.HabiticaID, got.IDs[0], 1, reason, ref, now); err != nil {
+		if err := fittedLedger(ctx, tx, s.AccountID, got.IDs[0], 1, reason, ref, now); err != nil {
 			return err
 		}
-		return currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.ID), 1, reason, ref, now)
+		return currency(ctx, tx, s.AccountID, content.StackCurrency(v.ID), 1, reason, ref, now)
 	case "decoration":
 		if len(got.IDs) != v.Qty {
 			return fail(409, "item-not-available")
 		}
-		if err := moveDecorations(ctx, tx, got.IDs, from, pack(s.HabiticaID)); err != nil {
+		if err := moveDecorations(ctx, tx, got.IDs, from, pack(s.AccountID)); err != nil {
 			return err
 		}
-		return currency(ctx, tx, s.HabiticaID, "decoration:"+v.ID, v.Qty, reason, ref, now)
+		return currency(ctx, tx, s.AccountID, "decoration:"+v.ID, v.Qty, reason, ref, now)
 	}
 	return fail(400, "invalid-asset")
 }
@@ -442,7 +442,7 @@ func chestCounts(ctx context.Context, tx *sql.Tx, chest holder) (assetCounts, er
 func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int, qty int, reason, ref string, now int64) error {
 	for _, id := range content.SortedCosts(costs) {
 		if n := costs[id] * qty; n > 0 {
-			if err := materialChange(ctx, tx, s.HabiticaID, id, -n, reason, ref, now); err != nil {
+			if err := materialChange(ctx, tx, s.AccountID, id, -n, reason, ref, now); err != nil {
 				return err
 			}
 		}
@@ -508,13 +508,13 @@ func debitMaterialsAny(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs
 			if left <= 0 {
 				break
 			}
-			n, err := stackTotal(ctx, tx, packOf(s.HabiticaID), d)
+			n, err := stackTotal(ctx, tx, packOf(s.AccountID), d)
 			if err != nil {
 				return err
 			}
 			take := min(n, left)
 			if take > 0 {
-				if err := materialChange(ctx, tx, s.HabiticaID, d, -take, reason, ref, now); err != nil {
+				if err := materialChange(ctx, tx, s.AccountID, d, -take, reason, ref, now); err != nil {
 					return err
 				}
 				left -= take
@@ -541,14 +541,14 @@ func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) e
 	if content.CalendarAt(content.CalendarRules, now).Mark == bloomSeason {
 		return nil
 	}
-	n, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "bloom-flowers")
+	n, err := stackTotal(ctx, tx, packOf(s.AccountID), "bloom-flowers")
 	if err != nil || n <= 0 {
 		return err
 	}
-	if err = materialChange(ctx, tx, s.HabiticaID, "bloom-flowers", -n, "dry", "bloom-season-turned", now); err != nil {
+	if err = materialChange(ctx, tx, s.AccountID, "bloom-flowers", -n, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
-	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{Maker: "", Qty: n}}, "dry", "bloom-season-turned", now); err != nil {
+	if err = packPut(ctx, tx, s.AccountID, "dried-flowers", []makerQty{{Maker: "", Qty: n}}, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
 	return refreshItems(ctx, tx, s)
@@ -557,7 +557,7 @@ func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) e
 // workshop is the caller's homestead when it has a workshop (tier 2+):
 // the shared chest and the bench live there.
 func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	home, ok, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return "", err
 	}

@@ -13,7 +13,7 @@ import (
 )
 
 func members(ctx context.Context, tx *sql.Tx, home string) ([]homeMember, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT p.habitica_id,p.display_name FROM homestead_members m JOIN players p USING(habitica_id) WHERE m.homestead_id=? ORDER BY m.joined_at,p.habitica_id", home)
+	rows, err := tx.QueryContext(ctx, "SELECT p.account_id,p.display_name FROM homestead_members m JOIN players p USING(account_id) WHERE m.homestead_id=? ORDER BY m.joined_at,p.account_id", home)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if !h.Member {
 		return h, nil
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE habitica_id=? AND location='inventory' ORDER BY id", caller)
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE account_id=? AND location='inventory' ORDER BY id", caller)
 	if err != nil {
 		return h, err
 	}
@@ -159,9 +159,6 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
@@ -179,13 +176,13 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err == nil {
-		h, err := loadHome(ctx, tx, id, s.HabiticaID, now)
+		h, err := loadHome(ctx, tx, id, s.AccountID, now)
 		if err != nil {
 			return err
 		}
 		home = &h
 	}
-	m, err := materials(ctx, tx, s.HabiticaID)
+	m, err := materials(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}

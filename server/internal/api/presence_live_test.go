@@ -3,11 +3,12 @@ package api
 import (
 	"encoding/json"
 	"glimway/content"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -16,13 +17,21 @@ import (
 // relays and writer. Compare decoded RAW frames, not test-built messages. Both
 // proto.Equal and the JSON key comparison detect omitted optional zero/false.
 func TestPresenceLiveFixtures(t *testing.T) {
-	b, err := os.ReadFile("testdata/presence-live.json")
+	b, err := os.ReadFile("testdata/presence-live-v2.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	var fixtures map[string]json.RawMessage
 	if err = json.Unmarshal(b, &fixtures); err != nil {
 		t.Fatal(err)
+	}
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, bs := x.member("bob", s.WorldID)
+	for name, raw := range fixtures {
+		text := strings.ReplaceAll(string(raw), `"alice"`, `"`+x.account("alice")+`"`)
+		text = strings.ReplaceAll(text, `"bob"`, `"`+x.account("bob")+`"`)
+		fixtures[name] = json.RawMessage(text)
 	}
 	check := func(name string, event wsEvent) {
 		t.Helper()
@@ -57,9 +66,6 @@ func TestPresenceLiveFixtures(t *testing.T) {
 			t.Errorf("%s keys: got %s want %s", name, decoded, fixtures[name])
 		}
 	}
-	x := newRig(t)
-	c, s := x.ready("alice")
-	bc, bs := x.member("bob", s.WorldID)
 	cfg := presenceTestConfig()
 	ts := startPresence(t, x, cfg)
 	alice := wsAuthenticate(t, ts, c, s.Lease)
@@ -76,9 +82,9 @@ func TestPresenceLiveFixtures(t *testing.T) {
 	alice.expect("pos") // establishes witness proximity through the real reader
 	alice.send(map[string]any{"type": "emote", "id": "wave"})
 	check("emote", bob.expect("emote"))
-	x.api.presenceGift(s.WorldID, "bob", "Hero", content.Asset{Kind: "item", ID: "timber", Qty: 1})
+	x.api.presenceGift(s.WorldID, x.account("bob"), "Hero", content.Asset{Kind: "item", ID: "timber", Qty: 1})
 	check("gift", bob.expect("gift"))
-	x.api.presenceWitness(s.WorldID, "alice", "Hero", "ruin", "warden")
+	x.api.presenceWitness(s.WorldID, x.account("alice"), "Hero", "ruin", "warden")
 	check("witness", bob.expect("witness"))
 	time.Sleep(millis(cfg.JoinCooldownMs))
 	alice.join("woodland")

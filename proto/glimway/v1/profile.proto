@@ -1,0 +1,86 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+
+// Input is only the USER_FIELDS projection, with Habitica's original JSON keys.
+// Optional scalars preserve missing required input for domain validation.
+message HabiticaUser {
+  string id = 1 [json_name = "_id"];
+  HabiticaUserStats stats = 2;
+  HabiticaUserName profile = 3;
+  HabiticaUserFlags flags = 4;
+  HabiticaUserItems items = 5;
+  HabiticaUserPreferences preferences = 6;
+  HabiticaUserParty party = 7;
+}
+message HabiticaUserStats {
+  optional double hp = 1;
+  optional double mp = 2;
+  optional double lvl = 3;
+  optional double exp = 4;
+  optional string class = 5;
+  optional double str = 6;
+  optional double int = 7;
+  optional double con = 8;
+  optional double per = 9;
+  HabiticaBuffs buffs = 10;
+  optional double max_health = 11;
+  optional double max_mp = 12 [json_name = "maxMP"];
+}
+message HabiticaBuffs { double str = 1; double int = 2; double con = 3; double per = 4; }
+message HabiticaUserName { string name = 1; }
+message HabiticaUserFlags { optional bool class_selected = 1; }
+message HabiticaUserParty { google.protobuf.StringValue id = 1 [json_name = "_id"]; }
+message HabiticaUserGear {
+  map<string, google.protobuf.Value> equipped = 1;
+  map<string, google.protobuf.Value> costume = 2;
+}
+message HabiticaUserItems {
+  HabiticaUserGear gear = 1;
+  map<string, google.protobuf.Value> pets = 2;
+  map<string, google.protobuf.Value> mounts = 3;
+  google.protobuf.StringValue current_pet = 4;
+  google.protobuf.StringValue current_mount = 5;
+}
+message HabiticaUserHair {
+  string color = 1; double base = 2; double bangs = 3;
+  double mustache = 4; double beard = 5; double flower = 6;
+}
+message HabiticaUserPreferences {
+  string size = 1; string shirt = 2; string skin = 3; string background = 4;
+  HabiticaUserHair hair = 5;
+  // Habitica historically returns true or 1 for costume.
+  google.protobuf.Value costume = 6;
+}
+message HabiticaStats { double str = 1; double int = 2; double con = 3; double per = 4; }
+message HabiticaProfile {
+  string id = 1;
+  string name = 2;
+  google.protobuf.StringValue class = 3;
+  double level = 4;
+  optional double exp = 5;
+  double hp = 6;
+  double max_hp = 7;
+  double mp = 8;
+  double max_mp = 9;
+  HabiticaStats stats = 10;
+  map<string, google.protobuf.Value> equipped = 11;
+  repeated string pets = 12;
+  repeated string mounts = 13;
+  ProfileAppearance appearance = 14;
+  map<string, google.protobuf.Value> costume = 15;
+  bool use_costume = 16;
+  google.protobuf.StringValue selected_pet = 17;
+  google.protobuf.StringValue selected_mount = 18;
+  google.protobuf.StringValue party_id = 19;
+}
+
+// Profile-owned appearance; presence evolves independently.
+message ProfileAppearance {
+  string size = 1; string shirt = 2; string skin = 3; string hair_color = 4;
+  double hair_style = 5; string background = 6; double hair_bangs = 7;
+  double hair_mustache = 8; double hair_beard = 9; double hair_flower = 10;
+}

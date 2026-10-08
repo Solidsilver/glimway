@@ -109,3 +109,14 @@ func TestRateLimitWaitCancellation(t *testing.T) {
 		t.Fatal("cancelled login succeeded")
 	}
 }
+
+func TestMapNullablePetAndMountOwnership(t *testing.T) {
+	raw := strings.Replace(valid, `"stats":`, `"items":{"pets":{"released":null,"zero":0,"negative":-1,"owned":true},"mounts":{"released":null,"zero":0,"negative":-1,"owned":true}},"stats":`, 1)
+	p, err := Map([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Pets) != 2 || p.Pets[0] != "negative" || p.Pets[1] != "owned" || len(p.Mounts) != 2 || p.Mounts[0] != "negative" || p.Mounts[1] != "owned" {
+		t.Fatal("nullable ownership mapping", p.Pets, p.Mounts)
+	}
+}

@@ -32,14 +32,14 @@ func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, no
 	if gate < 0 {
 		return nil, fail(409, refusal)
 	}
-	id, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	id, ok, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		return nil, fail(409, "not-your-land")
 	}
-	h, err := loadHome(ctx, tx, id, s.HabiticaID, now)
+	h, err := loadHome(ctx, tx, id, s.AccountID, now)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	var capDay int64
 	var dayCount, visitCount int
 	var capArea, capVisit string
-	err := tx.QueryRowContext(ctx, "SELECT day,day_count,area,visit_id,visit_count FROM gathering_caps WHERE habitica_id=? AND action=?", s.HabiticaID, req.Action).Scan(&capDay, &dayCount, &capArea, &capVisit, &visitCount)
+	err := tx.QueryRowContext(ctx, "SELECT day,day_count,area,visit_id,visit_count FROM gathering_caps WHERE account_id=? AND action=?", s.AccountID, req.Action).Scan(&capDay, &dayCount, &capArea, &capVisit, &visitCount)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
@@ -193,9 +193,9 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	}
 	dayCount++
 	visitCount++
-	_, err = tx.ExecContext(ctx, `INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES(?,?,?,?,?,?,?,?)
-ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=excluded.day_count,area=excluded.area,visit_id=excluded.visit_id,visit_count=excluded.visit_count,updated_at=excluded.updated_at`,
-		s.HabiticaID, req.Action, day, dayCount, area, visit, visitCount, now)
+	_, err = tx.ExecContext(ctx, `INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES(?,?,?,?,?,?,?,?)
+ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded.day_count,area=excluded.area,visit_id=excluded.visit_id,visit_count=excluded.visit_count,updated_at=excluded.updated_at`,
+		s.AccountID, req.Action, day, dayCount, area, visit, visitCount, now)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 	// The yields. A pocketed keepsake's gather-more help adds one of what it
 	// names. Seeded per player and gather, so a replay rolls the same.
 	more := map[string]bool{}
-	slotList, err := slots(ctx, tx, s.HabiticaID)
+	slotList, err := slots(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 			}
 		}
 	}
-	rng := wilds.NewRng(wilds.Hash(s.HabiticaID, req.Target, int(now), int(day), dayCount))
+	rng := wilds.NewRng(wilds.Hash(s.AccountID, req.Target, int(now), int(day), dayCount))
 	out.Gathered = []stackView{}
 	for _, y := range target.Yields {
 		if !y.InSeason(calDay) {
@@ -237,16 +237,16 @@ ON CONFLICT(habitica_id,action) DO UPDATE SET day=excluded.day,day_count=exclude
 		}
 		if def.Instanced() {
 			for range qty {
-				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", -1, now)
+				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", -1, now)
 				if err != nil {
 					return err
 				}
-				if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
+				if err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
 					return err
 				}
 				out.Created = append(out.Created, id)
 			}
-		} else if err = packPut(ctx, tx, s.HabiticaID, y.Item, []makerQty{{Maker: "", Qty: qty}}, "gather", req.Target, now); err != nil {
+		} else if err = packPut(ctx, tx, s.AccountID, y.Item, []makerQty{{Maker: "", Qty: qty}}, "gather", req.Target, now); err != nil {
 			return err
 		}
 		out.Gathered = append(out.Gathered, stackView{ItemDef: y.Item, Qty: qty})

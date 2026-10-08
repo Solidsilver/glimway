@@ -58,7 +58,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	}
 
 	ref := target + ":" + itemID
-	if _, err := packTake(ctx, tx, s.HabiticaID, itemID, nil, 1, "return-keepsake", ref, now); err != nil {
+	if _, err := packTake(ctx, tx, s.AccountID, itemID, nil, 1, "return-keepsake", ref, now); err != nil {
 		return err
 	}
 
@@ -130,7 +130,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 		// Authoritative check on server ledger for Silas's returned fox,
 		// plus echo and paper flags from progress.
 		var foxReturned bool
-		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM ledger WHERE habitica_id=? AND reason='return-keepsake' AND ref='silas:whittled-fox')", s.HabiticaID).Scan(&foxReturned)
+		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM ledger WHERE account_id=? AND reason='return-keepsake' AND ref='silas:whittled-fox')", s.AccountID).Scan(&foxReturned)
 		if err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 		// Ada: window oil brought 3 times
 		// Authoritative count on outcomes table only.
 		var oilCount int
-		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&oilCount)
+		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE account_id=? AND reason='ada-oil'", s.AccountID).Scan(&oilCount)
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	}
 
 	// Outcomes table guarantees once per player
-	added, err := store.Outcome(ctx, tx, s.HabiticaID, "heirloom:"+itemID, "heirloom", now)
+	added, err := store.Outcome(ctx, tx, s.AccountID, "heirloom:"+itemID, "heirloom", now)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	if def.Uses > 0 {
 		condition = def.Uses * content.ItemsRules.Rules.Wear.PointsPerUse
 	}
-	instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", condition, now)
+	instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", condition, now)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	out.Heirloom = itemID
 	s.State.Flags = rules.AddUnique(s.State.Flags, "heirloom:"+itemID)
 
-	return currency(ctx, tx, s.HabiticaID, content.StackCurrency(itemID), 1, "heirloom", itemID, now)
+	return currency(ctx, tx, s.AccountID, content.StackCurrency(itemID), 1, "heirloom", itemID, now)
 }
 
 // giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
@@ -214,7 +214,7 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 
 	// Count check runs first before checking pack inventory
 	var currentGifts int
-	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE habitica_id=? AND reason='ada-oil'", s.HabiticaID).Scan(&currentGifts)
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM outcomes WHERE account_id=? AND reason='ada-oil'", s.AccountID).Scan(&currentGifts)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 		return fail(409, "not-needed")
 	}
 
-	haveHearth, err := stackTotal(ctx, tx, packOf(s.HabiticaID), "hearth-oil")
+	haveHearth, err := stackTotal(ctx, tx, packOf(s.AccountID), "hearth-oil")
 	if err != nil {
 		return err
 	}
@@ -230,12 +230,12 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 		return fail(409, "insufficient-items")
 	}
 
-	if _, err := packTake(ctx, tx, s.HabiticaID, "hearth-oil", nil, 1, "ada-oil", "ada", now); err != nil {
+	if _, err := packTake(ctx, tx, s.AccountID, "hearth-oil", nil, 1, "ada-oil", "ada", now); err != nil {
 		return err
 	}
 
 	nextCount := currentGifts + 1
-	if _, err := store.Outcome(ctx, tx, s.HabiticaID, fmt.Sprintf("ada-oil:%d", nextCount), "ada-oil", now); err != nil {
+	if _, err := store.Outcome(ctx, tx, s.AccountID, fmt.Sprintf("ada-oil:%d", nextCount), "ada-oil", now); err != nil {
 		return err
 	}
 

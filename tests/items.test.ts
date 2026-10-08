@@ -299,9 +299,9 @@ test('a fitting goes on a tool with a free slot and no fitting of its kind', () 
 
 const snapshot = {
   state: { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 10, maxHp: 50, mana: 5, maxMana: 30, inventory: [], discoveries: [], defeatedEnemies: [], playSeconds: 0, embers: 0, flags: [], emberXp: 0, xpEmbers: 0 },
-  rev: 3,
+  version: 3,
   vitalsSource: 'demo',
-  habiticaId: 'alice',
+  accountId: 'alice',
   displayName: 'Alice',
   habiticaPartyId: null,
   worldId: 'w',

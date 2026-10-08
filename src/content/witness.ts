@@ -28,8 +28,8 @@ export function witnessName(name: unknown): string {
   return s || 'A fellow traveler';
 }
 
-/** The server takes no story flag over 128 UTF-8 bytes (rules.DecodeProgress): one would stop every save. */
-const WITNESS_FLAG_BYTES = 128;
+/** The server takes no story flag over 256 UTF-8 bytes (rules.DecodeProgress): one would stop every save. */
+const WITNESS_FLAG_BYTES = 256;
 /** Witness lines kept per beat (the Warden, the lantern, each Echo): the first few travelers seen. */
 export const WITNESS_KEEP_PER_BEAT = 5;
 

@@ -45,9 +45,6 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
@@ -55,7 +52,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	mineID, _, err := memberOf(ctx, tx, s.HabiticaID)
+	mineID, _, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -94,7 +91,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 		g := &gates[v.gate]
 		id := v.id
 		g.HomeID, g.Tier, g.Desolate, g.Mine = &id, v.tier, desolate(v.vacantSince, now), v.id == mineID
-		g.Reclaim = v.vacantSince != nil && mineID == "" && departed(ctx, tx, v.id, s.HabiticaID)
+		g.Reclaim = v.vacantSince != nil && mineID == "" && departed(ctx, tx, v.id, s.AccountID)
 		if g.Members, err = members(ctx, tx, v.id); err != nil {
 			return err
 		}
@@ -118,14 +115,14 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	}
 	for g := range gates {
 		if gates[g].HomeID == nil {
-			p, err := deedPrice(ctx, tx, s.HabiticaID, s.WorldID, g)
+			p, err := deedPrice(ctx, tx, s.AccountID, s.WorldID, g)
 			if err != nil {
 				return err
 			}
 			gates[g].Price = &p
 		}
 	}
-	invites, err := invitesFor(ctx, tx, s.WorldID, s.HabiticaID, mineID, now)
+	invites, err := invitesFor(ctx, tx, s.WorldID, s.AccountID, mineID, now)
 	if err != nil {
 		return err
 	}
@@ -141,7 +138,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 // invitesFor lists unexpired invites to the caller or from their homestead.
 func invitesFor(ctx context.Context, tx *sql.Tx, world, caller, home string, now int64) ([]inviteView, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT i.homestead_id,h.gate,i.from_id,f.display_name,i.to_id,t.display_name,i.expires_at,i.from_confirmed_at,i.to_confirmed_at
-FROM homestead_invites i JOIN homesteads h ON h.id=i.homestead_id JOIN players f ON f.habitica_id=i.from_id JOIN players t ON t.habitica_id=i.to_id
+FROM homestead_invites i JOIN homesteads h ON h.id=i.homestead_id JOIN players f ON f.account_id=i.from_id JOIN players t ON t.account_id=i.to_id
 WHERE h.world_id=? AND i.expires_at>? AND (i.to_id=? OR i.homestead_id=?) ORDER BY i.created_at,i.to_id`, world, now, caller, home)
 	if err != nil {
 		return nil, err

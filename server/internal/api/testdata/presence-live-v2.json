@@ -1,0 +1,200 @@
+{
+  "ready": {
+    "type": "ready",
+    "accountId": "alice"
+  },
+  "emptyRoom": {
+    "type": "room",
+    "area": "ruin",
+    "players": []
+  },
+  "populatedRoom": {
+    "type": "room",
+    "area": "ruin",
+    "players": [
+      {
+        "accountId": "alice",
+        "displayName": "Hero",
+        "avatar": {
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "equipped": {
+            "weapon": null,
+            "shield": null,
+            "armor": null,
+            "head": null,
+            "headAccessory": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "weaponSpecial": null
+          },
+          "costume": {
+            "weapon": null,
+            "shield": null,
+            "armor": null,
+            "head": null,
+            "headAccessory": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "weaponSpecial": null
+          },
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null
+        },
+        "pos": null
+      }
+    ]
+  },
+  "join": {
+    "type": "join",
+    "area": "ruin",
+    "player": {
+      "accountId": "bob",
+      "displayName": "Hero",
+      "avatar": {
+        "appearance": {
+          "size": "",
+          "shirt": "",
+          "skin": "",
+          "hairColor": "",
+          "hairStyle": 0,
+          "background": "",
+          "hairBangs": 0,
+          "hairMustache": 0,
+          "hairBeard": 0,
+          "hairFlower": 0
+        },
+        "equipped": {
+          "weapon": null,
+          "shield": null,
+          "armor": null,
+          "head": null,
+          "headAccessory": null,
+          "back": null,
+          "body": null,
+          "eyewear": null,
+          "weaponSpecial": null
+        },
+        "costume": {
+          "weapon": null,
+          "shield": null,
+          "armor": null,
+          "head": null,
+          "headAccessory": null,
+          "back": null,
+          "body": null,
+          "eyewear": null,
+          "weaponSpecial": null
+        },
+        "useCostume": false,
+        "selectedPet": null,
+        "selectedMount": null
+      },
+      "pos": null
+    }
+  },
+  "pos": {
+    "type": "pos",
+    "accountId": "alice",
+    "x": 100.5,
+    "y": 200.25,
+    "facing": {
+      "x": 0,
+      "y": 1
+    },
+    "moving": false
+  },
+  "emote": {
+    "type": "emote",
+    "accountId": "alice",
+    "id": "wave"
+  },
+  "gift": {
+    "type": "gift",
+    "fromName": "Hero",
+    "kind": "item",
+    "itemDef": "timber",
+    "qty": 1
+  },
+  "witness": {
+    "type": "witness",
+    "beat": "warden",
+    "accountId": "alice",
+    "name": "Hero"
+  },
+  "leave": {
+    "type": "leave",
+    "accountId": "alice"
+  },
+  "positionedRoom": {
+    "type": "room",
+    "area": "ruin",
+    "players": [
+      {
+        "accountId": "alice",
+        "displayName": "Hero",
+        "avatar": {
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "equipped": {
+            "weapon": null,
+            "shield": null,
+            "armor": null,
+            "head": null,
+            "headAccessory": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "weaponSpecial": null
+          },
+          "costume": {
+            "weapon": null,
+            "shield": null,
+            "armor": null,
+            "head": null,
+            "headAccessory": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "weaponSpecial": null
+          },
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null
+        },
+        "pos": {
+          "x": 100.5,
+          "y": 200.25,
+          "facing": {
+            "x": 0,
+            "y": 1
+          },
+          "moving": false
+        }
+      }
+    ]
+  }
+}

@@ -54,16 +54,16 @@ export type PresenceStatus =
 
 export interface PresenceHandlers {
   status?(status: PresenceStatus, closeCode?: number): void;
-  ready?(habiticaId: string): void;
+  ready?(accountId: string): void;
   room?(area: string, players: PresencePlayer[]): void;
   join?(area: string, player: PresencePlayer): void;
-  leave?(habiticaId: string): void;
-  pos?(habiticaId: string, pos: PresencePosition): void;
-  emote?(habiticaId: string, id: string): void;
+  leave?(accountId: string): void;
+  pos?(accountId: string, pos: PresencePosition): void;
+  emote?(accountId: string, id: string): void;
   /** Someone standing by you handed you something (the server says who and what). */
   gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
   /** Someone standing near you reached a story beat (the server says who and which). */
-  witness?(w: { beat: string; habiticaId: string; name: string }): void;
+  witness?(w: { beat: string; accountId: string; name: string }): void;
 }
 
 export interface Timers {
@@ -356,7 +356,7 @@ export class PresenceClient {
         // Failures are forgiven only after a stable stretch, not on `ready`:
         // ready → join → 1013/1011 cycles must keep backing off (review-6 #2).
         this.armStable();
-        this.self = typeof m.habiticaId === 'string' ? m.habiticaId : null;
+        this.self = typeof m.accountId === 'string' ? m.accountId : null;
         this.setStatus('live');
         this.handlers.ready?.(this.self ?? '');
         this.armHeartbeat();
@@ -365,20 +365,20 @@ export class PresenceClient {
         break;
       case 'room':
         if (m.area !== this.sentArea || !Array.isArray(m.players)) return;
-        this.handlers.room?.(m.area, m.players.filter((p) => p && typeof p.habiticaId === 'string'));
+        this.handlers.room?.(m.area, m.players.filter((p) => p && typeof p.accountId === 'string'));
         // Peers see us right away, even standing still.
         this.announcePosition();
         break;
       case 'join':
-        if (m.area !== this.sentArea || !m.player || typeof m.player.habiticaId !== 'string') return;
+        if (m.area !== this.sentArea || !m.player || typeof m.player.accountId !== 'string') return;
         this.handlers.join?.(m.area, m.player);
         break;
       case 'leave':
-        if (typeof m.habiticaId === 'string') this.handlers.leave?.(m.habiticaId);
+        if (typeof m.accountId === 'string') this.handlers.leave?.(m.accountId);
         break;
       case 'pos':
-        if (typeof m.habiticaId !== 'string' || !Number.isFinite(m.x) || !Number.isFinite(m.y)) return;
-        this.handlers.pos?.(m.habiticaId, {
+        if (typeof m.accountId !== 'string' || !Number.isFinite(m.x) || !Number.isFinite(m.y)) return;
+        this.handlers.pos?.(m.accountId, {
           x: m.x,
           y: m.y,
           facing: normalFacing(m.facing ?? { x: 0, y: 1 }),
@@ -386,7 +386,7 @@ export class PresenceClient {
         });
         break;
       case 'emote':
-        if (typeof m.habiticaId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.habiticaId, m.id);
+        if (typeof m.accountId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.accountId, m.id);
         break;
       case 'gift':
         if (typeof m.fromName === 'string' && typeof m.itemDef === 'string' && typeof m.kind === 'string' && Number.isInteger(m.qty) && m.qty > 0) {
@@ -394,8 +394,8 @@ export class PresenceClient {
         }
         break;
       case 'witness':
-        if (typeof m.beat === 'string' && typeof m.habiticaId === 'string' && m.habiticaId && typeof m.name === 'string') {
-          this.handlers.witness?.({ beat: m.beat, habiticaId: m.habiticaId, name: m.name.slice(0, 80) });
+        if (typeof m.beat === 'string' && typeof m.accountId === 'string' && m.accountId && typeof m.name === 'string') {
+          this.handlers.witness?.({ beat: m.beat, accountId: m.accountId, name: m.name.slice(0, 80) });
         }
         break;
     }

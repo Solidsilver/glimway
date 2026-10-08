@@ -277,7 +277,7 @@ export class Hero {
       const fy = opts.toward.y - (this.sprite.y - 8)
       if (Math.hypot(fx, fy) > 1) this.facing.set(fx, fy).normalize()
     }
-    this.attackCooldown = kit.cooldown
+    this.attackCooldown = kit.basicAttackCooldown
     const dir = this.facing.clone().normalize()
     const tool = !!opts.tool
     // Mage basic is a ranged bolt (the classless starter keeps its melee
@@ -319,7 +319,7 @@ export class Hero {
     if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return
     if (this.seat) return // no casting from a bench; move to stand up
     if (this.deps.session.zeroHpLocked) return
-    if (this.castCooldown > 0 || this.attackCooldown > kit.cooldown) {
+    if (this.castCooldown > 0 || this.attackCooldown > kit.basicAttackCooldown) {
       bus.emit(EV.ability, { status: 'cooldown' } satisfies AbilityPayload)
       return
     }
@@ -328,7 +328,7 @@ export class Hero {
       bus.emit(EV.ability, { status: 'no-mana' } satisfies AbilityPayload)
       return
     }
-    this.castCooldown = 1.0
+    this.castCooldown = kit.signatureCooldown
     bus.emit(EV.ability, { status: 'cast', cooldown: this.castCooldown } satisfies AbilityPayload)
     this.deps.session.setVitals(this.deps.session.state.hp, this.deps.session.state.mana - kit.manaCost)
     const dir = this.facing.clone().normalize()

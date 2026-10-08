@@ -229,8 +229,10 @@ export interface CombatKit {
   /** Critical hit chance, 0..~0.45. */
   critChance: number;
   manaCost: number;
-  /** Seconds between signature uses. */
-  cooldown: number;
+  /** Seconds between basic attacks. */
+  basicAttackCooldown: number;
+  /** Seconds between signature casts. */
+  signatureCooldown: number;
   healAmount: number;
 }
 

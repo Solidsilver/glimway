@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/coder/websocket"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
@@ -60,7 +60,7 @@ func beatRoom(beat, area, room string) bool {
 func (a *Server) witnessed(s store.Snapshot, beats []string) func() {
 	return func() {
 		for _, b := range beats {
-			a.presenceWitness(s.WorldID, s.HabiticaID, s.DisplayName, s.State.Area, b)
+			a.presenceWitness(s.WorldID, s.AccountID, s.DisplayName, s.State.Area, b)
 		}
 	}
 }
@@ -74,7 +74,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	if h == nil {
 		return
 	}
-	encoded, err := encodePresence(&contract.PresenceWitness{Beat: beat, HabiticaId: doer, Name: capDonor(name)})
+	encoded, err := encodePresence(&contract.PresenceWitness{Beat: beat, AccountId: doer, Name: capDonor(name)})
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	p := h.peers[doer]

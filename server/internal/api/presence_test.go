@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -78,25 +78,25 @@ type presenceAvatar struct {
 	SelectedMount *string            `json:"selectedMount"`
 }
 type presencePlayer struct {
-	HabiticaID  string            `json:"habiticaId"`
+	AccountID   string            `json:"accountId"`
 	DisplayName string            `json:"displayName"`
 	Avatar      *presenceAvatar   `json:"avatar"`
 	Pos         *presencePosition `json:"pos"`
 }
 
 type wsEvent struct {
-	Type       string                 `json:"type"`
-	Area       string                 `json:"area"`
-	HabiticaID string                 `json:"habiticaId"`
-	ID         string                 `json:"id"`
-	Player     presencePlayer         `json:"player"`
-	Players    []presencePlayer       `json:"players"`
-	X          float64                `json:"x"`
-	Y          float64                `json:"y"`
-	Facing     struct{ X, Y float64 } `json:"facing"`
-	Moving     bool                   `json:"moving"`
-	Binary     []byte                 `json:"-"`
-	Raw        string                 `json:"-"`
+	Type      string                 `json:"type"`
+	Area      string                 `json:"area"`
+	AccountID string                 `json:"accountId"`
+	ID        string                 `json:"id"`
+	Player    presencePlayer         `json:"player"`
+	Players   []presencePlayer       `json:"players"`
+	X         float64                `json:"x"`
+	Y         float64                `json:"y"`
+	Facing    struct{ X, Y float64 } `json:"facing"`
+	Moving    bool                   `json:"moving"`
+	Binary    []byte                 `json:"-"`
+	Raw       string                 `json:"-"`
 }
 
 func TestPresenceAvatarIsBoundedVisualData(t *testing.T) {
@@ -301,7 +301,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	// Capture persistence after all HTTP setup; sockets must not even slide sessions.
 	var expiry, seen int64
 	x.db.DB.QueryRow("SELECT expires_at FROM sessions WHERE id_hash=?", store.Hash(c.Value)).Scan(&expiry)
-	x.db.DB.QueryRow("SELECT lease_seen_at FROM players WHERE habitica_id='alice'").Scan(&seen)
+	x.db.DB.QueryRow("SELECT lease_seen_at FROM players WHERE account_id='" + x.account("alice") + "'").Scan(&seen)
 	before := s.Snapshot
 	ledger := count(t, x.db, "SELECT count(*) FROM ledger")
 	a := wsConnect(t, ts, c, s.Lease)
@@ -310,11 +310,11 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	}
 	bob := wsConnect(t, ts, bc, b.Lease)
 	roster := bob.join("village")
-	if len(roster.Players) != 1 || roster.Players[0].HabiticaID != "alice" || roster.Players[0].DisplayName != "Hero" || roster.Players[0].Avatar == nil {
+	if len(roster.Players) != 1 || roster.Players[0].AccountID != x.account("alice") || roster.Players[0].DisplayName != "Hero" || roster.Players[0].Avatar == nil {
 		t.Fatal("roster metadata", roster.Raw)
 	}
 	joined := a.expect("join")
-	if joined.Player.HabiticaID != "bob" || joined.Player.Avatar == nil {
+	if joined.Player.AccountID != x.account("bob") || joined.Player.Avatar == nil {
 		t.Fatal("arrival")
 	}
 	if strings.Contains(joined.Raw, "stats") || strings.Contains(joined.Raw, "maxHp") || strings.Contains(joined.Raw, secret) || strings.Contains(joined.Raw, s.Lease) {
@@ -328,7 +328,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	bob.none()
 	a.send(positionMessage(10))
 	pos := bob.expect("pos")
-	if pos.HabiticaID != "alice" || pos.X != 10 || strings.Contains(pos.Raw, "avatar") || strings.Contains(pos.Raw, "displayName") {
+	if pos.AccountID != x.account("alice") || pos.X != 10 || strings.Contains(pos.Raw, "avatar") || strings.Contains(pos.Raw, "displayName") {
 		t.Fatal("compact position")
 	}
 	outsider.none()
@@ -338,7 +338,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 		t.Fatal("emote")
 	}
 	bob.join("woodland")
-	if a.expect("leave").HabiticaID != "bob" {
+	if a.expect("leave").AccountID != x.account("bob") {
 		t.Fatal("room leave")
 	}
 	a.send(map[string]any{"type": "emote", "id": "nod"})
@@ -352,7 +352,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	a.none()
 	var afterExpiry, afterSeen int64
 	x.db.DB.QueryRow("SELECT expires_at FROM sessions WHERE id_hash=?", store.Hash(c.Value)).Scan(&afterExpiry)
-	x.db.DB.QueryRow("SELECT lease_seen_at FROM players WHERE habitica_id='alice'").Scan(&afterSeen)
+	x.db.DB.QueryRow("SELECT lease_seen_at FROM players WHERE account_id='" + x.account("alice") + "'").Scan(&afterSeen)
 	if afterExpiry != expiry || afterSeen != seen || count(t, x.db, "SELECT count(*) FROM ledger") != ledger {
 		t.Fatal("presence wrote persistence")
 	}
@@ -360,7 +360,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := store.Load(context.Background(), tx, "alice")
+	loaded, err := store.Load(context.Background(), tx, x.account("alice"))
 	tx.Rollback()
 	if err != nil {
 		t.Fatal(err)
@@ -393,7 +393,7 @@ func TestPresenceTakeoverReplacementAndGrace(t *testing.T) {
 	bob.none()
 	taken := x.expect("POST", "/api/play", map[string]any{"clientId": "new-tab", "takeOver": true}, c, 200)
 	resumed.closeStatus(presenceSuperseded)
-	if bob.expect("leave").HabiticaID != "alice" {
+	if bob.expect("leave").AccountID != x.account("alice") {
 		t.Fatal("takeover leave")
 	}
 	stale := wsAuthenticate(t, ts, c, s.Lease)
@@ -404,7 +404,7 @@ func TestPresenceTakeoverReplacementAndGrace(t *testing.T) {
 	}
 	bob.expect("join")
 	next.conn.CloseNow()
-	if bob.expect("leave").HabiticaID != "alice" {
+	if bob.expect("leave").AccountID != x.account("alice") {
 		t.Fatal("disconnect grace leave")
 	}
 }
@@ -477,8 +477,7 @@ func TestPresenceAuthentication(t *testing.T) {
 		{"origin-path", ts.URL + "/path", c, 403},
 		{"origin-query", ts.URL + "?x=1", c, 403},
 		{"missing-cookie", ts.URL, nil, 401},
-		{"unknown-cookie", ts.URL, &http.Cookie{Name: CookieName, Value: strings.Repeat("a", 64)}, 401},
-	} {
+		{"unknown-cookie", ts.URL, &http.Cookie{Name: CookieName, Value: strings.Repeat("a", 64)}, 401}} {
 		t.Run(tc.name, func(t *testing.T) {
 			conn, response, err := dialPresence(t, ts, tc.cookie, tc.origin)
 			if conn != nil {
@@ -501,8 +500,7 @@ func TestPresenceAuthentication(t *testing.T) {
 	})
 	for _, message := range []any{
 		map[string]any{"type": "join", "area": "village"},
-		map[string]any{"type": "auth", "lease": "short"},
-	} {
+		map[string]any{"type": "auth", "lease": "short"}} {
 		conn, _, err := dialPresence(t, ts, c, ts.URL)
 		if err != nil {
 			t.Fatal(err)
@@ -536,8 +534,7 @@ func TestPresenceMessageValidation(t *testing.T) {
 		{"position-without-room", positionMessage(0), false},
 		{"position-bounds", positionMessage(1e7), true},
 		{"bad-facing", map[string]any{"type": "pos", "x": 0, "y": 0, "moving": false, "facing": map[string]any{"x": 0, "y": 0}}, true},
-		{"missing-moving", map[string]any{"type": "pos", "x": 0, "y": 0, "facing": map[string]any{"x": 0, "y": 1}}, true},
-	} {
+		{"missing-moving", map[string]any{"type": "pos", "x": 0, "y": 0, "facing": map[string]any{"x": 0, "y": 1}}, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
@@ -558,8 +555,7 @@ func TestPresenceMessageValidation(t *testing.T) {
 	}{
 		{"oversized", websocket.MessageBinary, make([]byte, 2048), websocket.StatusMessageTooBig},
 		{"text", websocket.MessageText, []byte(`{"type":"heartbeat"}`), websocket.StatusUnsupportedData},
-		{"truncated", websocket.MessageBinary, []byte{0x2a, 0x20}, websocket.StatusPolicyViolation},
-	} {
+		{"truncated", websocket.MessageBinary, []byte{0x2a, 0x20}, websocket.StatusPolicyViolation}} {
 		t.Run(tc.name, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")

@@ -29,7 +29,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 	if err = a.lease(ctx, tx, s, req.Mutation); err != nil {
 		return err
 	}
-	hash, prior, err := idem(ctx, tx, s.HabiticaID, "spend", req.Key, req, now)
+	hash, prior, err := idem(ctx, tx, s.AccountID, "spend", req.Key, req, now)
 	if err != nil {
 		return err
 	}
@@ -74,12 +74,12 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 		outcome = "lit:" + req.Target
 	case "chest":
 		outcome = "opened:" + rules.E.ChestID
-		if err = grantOnce(ctx, tx, s.HabiticaID, rules.E.CharmItem, "chest-charm", now); err != nil {
+		if err = grantOnce(ctx, tx, s.AccountID, rules.E.CharmItem, "chest-charm", now); err != nil {
 			return err
 		}
 	}
 	if outcome != "" {
-		if _, err = store.Outcome(ctx, tx, s.HabiticaID, outcome, "spend", now); err != nil {
+		if _, err = store.Outcome(ctx, tx, s.AccountID, outcome, "spend", now); err != nil {
 			return err
 		}
 	}
@@ -90,7 +90,7 @@ func (a *Server) spend(w http.ResponseWriter, r *http.Request) error {
 		store.Snapshot
 		Outcome string `json:"outcome"`
 	}{s, outcome}
-	if err = saveIdem(ctx, tx, s.HabiticaID, "spend", req.Key, hash, v, now); err != nil {
+	if err = saveIdem(ctx, tx, s.AccountID, "spend", req.Key, hash, v, now); err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v, a.witnessed(s, beats))

@@ -53,7 +53,7 @@ func (x *rig) items(method, path string, b any, c *http.Cookie, status int) item
 func (x *rig) opRefreshing(c *http.Cookie, s *response, op string, fields map[string]any, status int) itemsResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	v := x.items("POST", "/api/items/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Rev, x.now.Load(), keySeq()), fields), c, status)
+	v := x.items("POST", "/api/items/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Version, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		s.Snapshot = v.Snapshot
 	}
@@ -129,7 +129,7 @@ func TestItemsCraftedToolIsAnInstanceWithMakerAndCondition(t *testing.T) {
 	id := crafted.Result.InstanceIDs[0]
 	v := x.items("GET", "/api/items", nil, c, 200)
 	axe := findInstance(v.Items, id)
-	if axe == nil || axe.ItemDef != "bench-axe" || axe.Condition != 90 || axe.MaxCondition != 90 || axe.UsesLeft != 30 || axe.State != "whole" || axe.Maker == nil || axe.Maker.ID != "alice" || axe.Maker.Name != "Hero" || len(axe.Fittings) != 0 {
+	if axe == nil || axe.ItemDef != "bench-axe" || axe.Condition != 90 || axe.MaxCondition != 90 || axe.UsesLeft != 30 || axe.State != "whole" || axe.Maker == nil || axe.Maker.ID != x.account("alice") || axe.Maker.Name != "Hero" || len(axe.Fittings) != 0 {
 		t.Fatalf("crafted axe %+v", axe)
 	}
 	// Made parts carry the maker too; the workshop view lists instances.
@@ -140,20 +140,20 @@ func TestItemsCraftedToolIsAnInstanceWithMakerAndCondition(t *testing.T) {
 	}
 	v = x.items("GET", "/api/items", nil, c, 200)
 	for _, st := range v.Items.Stacks {
-		if st.ItemDef == "lamp-wick" && (st.Maker == nil || st.Maker.ID != "alice" || st.Qty != 2) {
+		if st.ItemDef == "lamp-wick" && (st.Maker == nil || st.Maker.ID != x.account("alice") || st.Qty != 2) {
 			t.Fatal("marked stack", st)
 		}
 	}
 	if v.Items.OffHand.Open || len(v.Items.Pockets) != 1 {
 		t.Fatal("classless, one pocket")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsCheapToolWearsToZeroAndBreaks(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	axe := x.instance("alice", "bench-axe", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, "")
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": axe, "action": "dig"}, 409)
 	// A replayed use is the same use, not a second one.
 	x.refresh(c, &s)
@@ -185,10 +185,10 @@ func TestItemsCheapToolWearsToZeroAndBreaks(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='tool-broke' AND currency='item:bench-axe' AND delta=-1") != 1 {
 		t.Fatal("break ledger")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 	// Someone else's tool is not yours to swing.
 	bc, b := x.member("bob", s.WorldID)
-	other := x.instance("alice", "bench-pick", -1, "")
+	other := x.instance(x.account("alice"), "bench-pick", -1, "")
 	x.opRefreshing(bc, &b, "use", map[string]any{"instance": other}, 404)
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": "missing"}, 404)
 }
@@ -196,7 +196,7 @@ func TestItemsCheapToolWearsToZeroAndBreaks(t *testing.T) {
 func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	brack := x.instance("alice", "brack-felling-axe", 3, "")
+	brack := x.instance(x.account("alice"), "brack-felling-axe", 3, "")
 	v := x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)
 	if v.Result.Wear.Broke || v.Result.Wear.State != "blunt" || v.Result.Wear.Condition != 0 {
 		t.Fatal("blunt", v.Result.Wear)
@@ -208,8 +208,8 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "bench"}, 409).Error.Code != "not-a-member" {
 		t.Fatal("homeless bench")
 	}
-	x.give("alice", "timber", 4)
-	x.give("alice", "wooden-peg", 2)
+	x.give(x.account("alice"), "timber", 4)
+	x.give(x.account("alice"), "wooden-peg", 2)
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas"}, 409).Error.Code != "too-far-away" {
 		t.Fatal("mended from afar")
 	}
@@ -235,26 +235,26 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 		t.Fatal("bench mend")
 	}
 	// Cheap tools can't be mended; nor can the poor afford it.
-	axe := x.instance("alice", "bench-axe", 10, "")
+	axe := x.instance(x.account("alice"), "bench-axe", 10, "")
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": axe, "at": "bench"}, 409).Error.Code != "cannot-mend" {
 		t.Fatal("mended a cheap tool")
 	}
-	pole := x.instance("alice", "nans-lamplighter-pole", 0, "")
+	pole := x.instance(x.account("alice"), "nans-lamplighter-pole", 0, "")
 	if st := findInstance(x.items("GET", "/api/items", nil, c, 200).Items, pole).State; st != "cracked" {
 		t.Fatal("pole state", st)
 	}
-	x.give("alice", "fiber", -count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='fiber'"))
+	x.give(x.account("alice"), "fiber", -count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='"+x.account("alice")+"' AND item_def='fiber'"))
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": pole, "at": "bench"}, 409).Error.Code != "insufficient-materials" {
 		t.Fatal("free mend")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsFittingsHoldWearAndMove(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	axe := x.instance("alice", "bench-axe", -1, "")
-	nail := x.instance("alice", "loose-road-nail", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, "")
+	nail := x.instance(x.account("alice"), "loose-road-nail", -1, "")
 	// Fitting needs the bench.
 	if x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": nail}, 409).Error.Code != "not-a-member" {
 		t.Fatal("fitted without a bench")
@@ -266,7 +266,7 @@ func TestItemsFittingsHoldWearAndMove(t *testing.T) {
 		t.Fatalf("fitted %+v", a)
 	}
 	// One slot on a cheap tool.
-	strip := x.instance("alice", "tarrow-edge-strip", -1, "")
+	strip := x.instance(x.account("alice"), "tarrow-edge-strip", -1, "")
 	if x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": strip}, 409).Error.Code != "no-free-slot" {
 		t.Fatal("two fittings on a cheap tool")
 	}
@@ -287,8 +287,8 @@ func TestItemsFittingsHoldWearAndMove(t *testing.T) {
 	}
 	// An heirloom takes one of each kind, up to three; fittings move between
 	// tools keeping their wear, and come off into the pack.
-	brack := x.instance("alice", "brack-felling-axe", -1, "")
-	pick := x.instance("alice", "bench-pick", -1, "")
+	brack := x.instance(x.account("alice"), "brack-felling-axe", -1, "")
+	pick := x.instance(x.account("alice"), "bench-pick", -1, "")
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": strip}, 200)
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": pick}, 200)
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": brack, "instance": strip}, 200)
@@ -296,7 +296,7 @@ func TestItemsFittingsHoldWearAndMove(t *testing.T) {
 	if b := findInstance(moved, brack); len(b.Fittings) != 1 || b.Fittings[0].Condition != 87 || len(findInstance(moved, pick).Fittings) != 0 {
 		t.Fatal("moved fitting", b.Fittings)
 	}
-	second := x.instance("alice", "tarrow-edge-strip", -1, "")
+	second := x.instance(x.account("alice"), "tarrow-edge-strip", -1, "")
 	if x.opRefreshing(c, &s, "fit", map[string]any{"tool": brack, "instance": second}, 409).Error.Code != "fitting-kind-taken" {
 		t.Fatal("two bites")
 	}
@@ -309,15 +309,15 @@ func TestItemsFittingsHoldWearAndMove(t *testing.T) {
 	}
 	x.opRefreshing(c, &s, "unfit", map[string]any{"instance": strip}, 409)
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": strip, "instance": second}, 400)
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsBreakingDropsFittingsIntoThePack(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	s = x.openWorkshop(c, s)
-	spade := x.instance("alice", "bench-spade", 3, "")
-	bead := x.instance("alice", "amber-bead", -1, "")
+	spade := x.instance(x.account("alice"), "bench-spade", 3, "")
+	bead := x.instance(x.account("alice"), "amber-bead", -1, "")
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": spade, "instance": bead}, 200)
 	v := x.opRefreshing(c, &s, "use", map[string]any{"instance": spade}, 200)
 	if !v.Result.Wear.Broke || len(v.Result.Wear.Returned) != 1 {
@@ -326,15 +326,15 @@ func TestItemsBreakingDropsFittingsIntoThePack(t *testing.T) {
 	if b := findInstance(v.Result.Items, bead); b == nil || b.Condition != 87 {
 		t.Fatal("bead back in the pack")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsWardenSetDullsAndHealsOvernight(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	s = x.openWorkshop(c, s)
-	axe := x.instance("alice", "bench-axe", -1, "")
-	sliver := x.instance("alice", "warden-sliver", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, "")
+	sliver := x.instance(x.account("alice"), "warden-sliver", -1, "")
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
 	var v itemsResponse
 	for i := 0; i < 45; i++ {
@@ -363,16 +363,16 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.stack("alice", "keepers-twists", "bob", 2)
-	x.stack("alice", "keepers-twists", "", 1)
-	x.stack("alice", "comfrey-salve", "", 1)
+	x.stack(x.account("alice"), "keepers-twists", x.account("bob"), 2)
+	x.stack(x.account("alice"), "keepers-twists", "", 1)
+	x.stack(x.account("alice"), "comfrey-salve", "", 1)
 	// Hurt alice (HP 20 of 50 from the imported profile already).
 	x.refresh(c, &s)
 	if s.State.HP >= s.State.MaxHP {
 		t.Fatal("rig hp")
 	}
 	hp := s.State.HP
-	bob := "bob"
+	bob := x.account("bob")
 	v := x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 200)
 	if v.Result.Used != "keepers-twists" || v.State.HP != hp+10 || stackQty(v.Result.Items, "keepers-twists") != 2 {
 		t.Fatal("twist", v.State.HP)
@@ -381,14 +381,14 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	if th := x.items("GET", "/api/items", nil, bc, 200).Items.Thanks; len(th) != 0 {
 		t.Fatal("thank-you should arrive by mail", th)
 	}
-	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='bob' AND kind='thanks'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='"+x.account("bob")+"' AND kind='thanks'") != 1 {
 		t.Fatal("missing maker thank-you mail")
 	}
 	// Together, nothing is sent.
-	x.stand("alice", s.WorldID, "village", 100, 100)
-	x.stand("bob", s.WorldID, "village", 120, 100)
+	x.stand(x.account("alice"), s.WorldID, "village", 100, 100)
+	x.stand(x.account("bob"), s.WorldID, "village", 120, 100)
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 200)
-	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='bob' AND kind='thanks'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='"+x.account("bob")+"' AND kind='thanks'") != 1 {
 		t.Fatal("thanked while together")
 	}
 	if x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 409).Error.Code != "insufficient-items" {
@@ -400,14 +400,14 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "comfrey-salve", "unmoored": true}, 200)
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "timber"}, 400)
 	// At full health a twist would be wasted.
-	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.hp',50) WHERE habitica_id='alice'"); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.hp',50) WHERE account_id='" + x.account("alice") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	if x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists"}, 409).Error.Code != "not-needed" {
 		t.Fatal("wasted twist")
 	}
 	_ = b
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsGiveHandsOverToSomeoneNearby(t *testing.T) {
@@ -415,54 +415,54 @@ func TestItemsGiveHandsOverToSomeoneNearby(t *testing.T) {
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
 	oc, o := x.ready("outsider")
-	x.stack("alice", "lamp-wick", "alice", 3)
-	x.stack("alice", "whittled-fox", "", 1)
-	axe := x.instance("alice", "bench-axe", 50, "alice")
-	gift := map[string]any{"toId": "bob", "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 2}}
+	x.stack(x.account("alice"), "lamp-wick", x.account("alice"), 3)
+	x.stack(x.account("alice"), "whittled-fox", "", 1)
+	axe := x.instance(x.account("alice"), "bench-axe", 50, x.account("alice"))
+	gift := map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 2}}
 	if x.opRefreshing(c, &s, "give", gift, 409).Error.Code != "not-together" {
 		t.Fatal("gave across the map")
 	}
-	x.stand("alice", s.WorldID, "commons", 300, 300)
-	x.stand("bob", s.WorldID, "commons", 330, 310)
+	x.stand(x.account("alice"), s.WorldID, "commons", 300, 300)
+	x.stand(x.account("bob"), s.WorldID, "commons", 330, 310)
 	x.refresh(bc, &b)
-	bobRev := b.Rev
+	bobRev := b.Version
 	v := x.opRefreshing(c, &s, "give", gift, 200)
 	if v.Result.Given == nil || stackQty(v.Result.Items, "lamp-wick") != 1 {
 		t.Fatal("given")
 	}
 	got := x.items("GET", "/api/items", nil, bc, 200)
-	if stackQty(got.Items, "lamp-wick") != 2 || got.Items.Stacks[0].Maker == nil || got.Items.Stacks[0].Maker.ID != "alice" || got.Rev != bobRev {
-		t.Fatal("received with the maker's mark", got.Items.Stacks, got.Rev, bobRev)
+	if stackQty(got.Items, "lamp-wick") != 2 || got.Items.Stacks[0].Maker == nil || got.Items.Stacks[0].Maker.ID != x.account("alice") || got.Version != bobRev {
+		t.Fatal("received with the maker's mark", got.Items.Stacks, got.Version, bobRev)
 	}
 	// A tool goes with its condition and maker.
-	x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}, 200)
-	if a := findInstance(x.items("GET", "/api/items", nil, bc, 200).Items, axe); a == nil || a.Condition != 50 || a.Maker.ID != "alice" {
+	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}, 200)
+	if a := findInstance(x.items("GET", "/api/items", nil, bc, 200).Items, axe); a == nil || a.Condition != 50 || a.Maker.ID != x.account("alice") {
 		t.Fatal("tool handed over")
 	}
 	// Story keepsakes and heirlooms stay; nobody gives to themselves or outside the world.
-	if x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "item", "id": "whittled-fox", "qty": 1}}, 409).Error.Code != "not-giveable" {
+	if x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "whittled-fox", "qty": 1}}, 409).Error.Code != "not-giveable" {
 		t.Fatal("gave a story keepsake")
 	}
-	brack := x.instance("alice", "brack-felling-axe", -1, "")
-	if x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "instance", "id": "brack-felling-axe", "qty": 1, "instance": brack}}, 409).Error.Code != "not-giveable" {
+	brack := x.instance(x.account("alice"), "brack-felling-axe", -1, "")
+	if x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "brack-felling-axe", "qty": 1, "instance": brack}}, 409).Error.Code != "not-giveable" {
 		t.Fatal("gave an heirloom")
 	}
-	x.opRefreshing(c, &s, "give", map[string]any{"toId": "alice", "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 400)
-	x.stand("outsider", o.WorldID, "commons", 300, 300)
-	x.opRefreshing(c, &s, "give", map[string]any{"toId": "outsider", "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 403)
-	x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 5}}, 409)
-	x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}, 409)
+	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("alice"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 400)
+	x.stand(x.account("outsider"), o.WorldID, "commons", 300, 300)
+	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("outsider"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 403)
+	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 5}}, 409)
+	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}, 409)
 	// Exactly once on replay.
 	x.refresh(c, &s)
-	req := body(s, "give-once", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}})
+	req := body(s, "give-once", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}})
 	first := x.items("POST", "/api/items/give", req, c, 200)
 	again := x.items("POST", "/api/items/give", req, c, 200)
-	if store.JSON(first) != store.JSON(again) || count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='bob' AND item_def='lamp-wick'") != 3 {
+	if store.JSON(first) != store.JSON(again) || count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='"+x.account("bob")+"' AND item_def='lamp-wick'") != 3 {
 		t.Fatal("replayed give")
 	}
 	_, _ = oc, o
 	for _, id := range []string{"alice", "bob"} {
-		x.conserved(id)
+		x.conserved(x.account(id))
 	}
 }
 
@@ -475,7 +475,7 @@ func TestItemsGiveRaces(t *testing.T) {
 	cc, cr := x.member("cara", s.WorldID)
 	_, _, _, _ = bc, b, cc, cr
 	for _, id := range []string{"alice", "bob", "cara"} {
-		x.stand(id, s.WorldID, "village", 200, 200)
+		x.stand(x.account(id), s.WorldID, "village", 200, 200)
 	}
 	other, err := store.Open(filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
@@ -494,6 +494,7 @@ func TestItemsGiveRaces(t *testing.T) {
 				defer wg.Done()
 				<-start
 				r := httptest.NewRequest("POST", "/api/items/give", bytes.NewBufferString(store.JSON(b)))
+				r.Header.Set("X-Glimway-Contract", "3")
 				r.Header.Set("Content-Type", "application/json")
 				r.AddCookie(c)
 				w := httptest.NewRecorder()
@@ -523,28 +524,28 @@ func TestItemsGiveRaces(t *testing.T) {
 		}
 		return n
 	}
-	axe := x.instance("alice", "bench-axe", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, "")
 	x.refresh(c, &s)
 	asset := map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}
 	codes := race([]map[string]any{
-		body(s, "race-bob", map[string]any{"toId": "bob", "asset": asset}),
-		body(s, "race-cara", map[string]any{"toId": "cara", "asset": asset}),
+		body(s, "race-bob", map[string]any{"toId": x.account("bob"), "asset": asset}),
+		body(s, "race-cara", map[string]any{"toId": x.account("cara"), "asset": asset}),
 	})
-	if ok(codes) != 1 || count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='pack' AND owner IN ('bob','cara')", axe) != 1 {
+	if ok(codes) != 1 || count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='pack' AND owner IN ('"+x.account("bob")+"','"+x.account("cara")+"')", axe) != 1 {
 		t.Fatal("instance race", codes)
 	}
-	x.stack("alice", "lamp-wick", "", 3)
+	x.stack(x.account("alice"), "lamp-wick", "", 3)
 	x.refresh(c, &s)
 	wick := map[string]any{"kind": "item", "id": "lamp-wick", "qty": 2}
 	codes = race([]map[string]any{
-		body(s, "wick-bob", map[string]any{"toId": "bob", "asset": wick}),
-		body(s, "wick-cara", map[string]any{"toId": "cara", "asset": wick}),
+		body(s, "wick-bob", map[string]any{"toId": x.account("bob"), "asset": wick}),
+		body(s, "wick-cara", map[string]any{"toId": x.account("cara"), "asset": wick}),
 	})
 	if ok(codes) != 1 || count(t, x.db, "SELECT COALESCE(SUM(qty),0) FROM item_stacks WHERE item_def='lamp-wick'") != 3 {
 		t.Fatal("stack race", codes)
 	}
 	for _, id := range []string{"alice", "bob", "cara"} {
-		x.conserved(id)
+		x.conserved(x.account(id))
 	}
 }
 
@@ -552,9 +553,9 @@ func TestItemsPocketsAndCarryGear(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.stack("alice", "whittled-fox", "", 1)
-	x.stack("alice", "work-glove", "", 1)
-	x.stack("alice", "lamp-wick", "", 1)
+	x.stack(x.account("alice"), "whittled-fox", "", 1)
+	x.stack(x.account("alice"), "work-glove", "", 1)
+	x.stack(x.account("alice"), "lamp-wick", "", 1)
 	v := x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1, "itemDef": "whittled-fox"}, 200)
 	if len(v.Result.Items.Pockets) != 1 || *v.Result.Items.Pockets[0].ItemDef != "whittled-fox" {
 		t.Fatal("pocketed")
@@ -565,7 +566,7 @@ func TestItemsPocketsAndCarryGear(t *testing.T) {
 	x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 3, "itemDef": "work-glove"}, 400)
 	x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1, "itemDef": "lamp-wick"}, 400)
 	x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1, "itemDef": "river-glass-bead"}, 409)
-	satchel := x.instance("alice", "forager-satchel", -1, "")
+	satchel := x.instance(x.account("alice"), "forager-satchel", -1, "")
 	v = x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 2, "itemDef": "work-glove"}, 200)
 	if len(v.Result.Items.Pockets) != 2 || *v.Result.Items.Pockets[1].ItemDef != "work-glove" {
 		t.Fatal("two pockets")
@@ -577,14 +578,14 @@ func TestItemsPocketsAndCarryGear(t *testing.T) {
 	}
 	x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1, "itemDef": "work-glove"}, 200)
 	// Handing the satchel over closes the second pocket.
-	x.stand("alice", s.WorldID, "village", 10, 10)
-	x.stand("bob", s.WorldID, "village", 12, 10)
-	v = x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "instance", "id": "forager-satchel", "qty": 1, "instance": satchel}}, 200)
-	if len(v.Result.Items.Pockets) != 1 || count(t, x.db, "SELECT count(*) FROM item_slots WHERE habitica_id='alice'") != 1 {
+	x.stand(x.account("alice"), s.WorldID, "village", 10, 10)
+	x.stand(x.account("bob"), s.WorldID, "village", 12, 10)
+	v = x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "forager-satchel", "qty": 1, "instance": satchel}}, 200)
+	if len(v.Result.Items.Pockets) != 1 || count(t, x.db, "SELECT count(*) FROM item_slots WHERE account_id='"+x.account("alice")+"'") != 1 {
 		t.Fatal("pocket 2 settled")
 	}
 	// Giving the last glove away empties its pocket.
-	v = x.opRefreshing(c, &s, "give", map[string]any{"toId": "bob", "asset": map[string]any{"kind": "item", "id": "work-glove", "qty": 1}}, 200)
+	v = x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "work-glove", "qty": 1}}, 200)
 	if v.Result.Items.Pockets[0].ItemDef != nil {
 		t.Fatal("pocketed a glove you gave away")
 	}
@@ -595,10 +596,10 @@ func TestItemsPocketsAndCarryGear(t *testing.T) {
 func TestItemsOffHandOpensWithAClass(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	lantern := x.instance("alice", "carters-lantern", -1, "")
-	axe := x.instance("alice", "bench-axe", -1, "")
-	x.stack("alice", "tin-whistle", "", 1)
-	x.stack("alice", "work-glove", "", 1)
+	lantern := x.instance(x.account("alice"), "carters-lantern", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, "")
+	x.stack(x.account("alice"), "tin-whistle", "", 1)
+	x.stack(x.account("alice"), "work-glove", "", 1)
 	if x.opRefreshing(c, &s, "offhand", map[string]any{"instance": lantern}, 409).Error.Code != "off-hand-closed" {
 		t.Fatal("classless off hand")
 	}
@@ -663,7 +664,7 @@ func TestItemsPickupsOncePerPlayerStandingThere(t *testing.T) {
 	if stackQty(v.Result.Items, "oatcakes") != cakes.Qty {
 		t.Fatal("oatcakes")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestItemsTravelByParcelAndChest(t *testing.T) {
@@ -671,45 +672,45 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
 	s = x.openWorkshop(c, s)
-	axe := x.instance("alice", "bench-axe", 40, "alice")
-	nail := x.instance("alice", "loose-road-nail", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", 40, x.account("alice"))
+	nail := x.instance(x.account("alice"), "loose-road-nail", -1, "")
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
-	x.stack("alice", "lamp-wick", "alice", 2)
+	x.stack(x.account("alice"), "lamp-wick", x.account("alice"), 2)
 	x.refresh(c, &s)
 	asset := content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}
-	sent := x.p5("POST", "/api/mail", body(s, "post-axe", map[string]any{"toId": "bob", "asset": asset}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "post-axe", map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 	s.Snapshot = sent.Snapshot
-	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='mail' AND owner='alice'", axe) != 1 {
+	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='mail' AND owner='"+x.account("alice")+"'", axe) != 1 {
 		t.Fatal("axe in the post")
 	}
 	x.refresh(bc, &b)
 	x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, "claim-axe", nil), bc, 200)
 	got := findInstance(x.items("GET", "/api/items", nil, bc, 200).Items, axe)
-	if got == nil || got.Condition != 40 || len(got.Fittings) != 1 || got.Maker.ID != "alice" {
+	if got == nil || got.Condition != 40 || len(got.Fittings) != 1 || got.Maker.ID != x.account("alice") {
 		t.Fatal("parcel delivered the axe with its nail", got)
 	}
 	// Bob posts it back and recalls it: the nail's audit follows the axe home.
 	x.refresh(bc, &b)
-	returned := x.p5("POST", "/api/mail", body(b, "post-back", map[string]any{"toId": "alice", "asset": asset}), bc, 200)
+	returned := x.p5("POST", "/api/mail", body(b, "post-back", map[string]any{"toId": x.account("alice"), "asset": asset}), bc, 200)
 	b.Snapshot = returned.Snapshot
 	x.p5("POST", "/api/mail/"+returned.Result.MailID+"/recall", body(b, "recall-axe", nil), bc, 200)
-	if count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='bob' AND currency='fitted:loose-road-nail'") != 1 ||
-		count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='alice' AND currency='fitted:loose-road-nail'") != 0 {
+	if count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id='"+x.account("bob")+"' AND currency='fitted:loose-road-nail'") != 1 ||
+		count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='fitted:loose-road-nail'") != 0 {
 		t.Fatal("the fitting's audit stayed with a former holder")
 	}
-	x.conserved("bob")
+	x.conserved(x.account("bob"))
 	// Marked stacks keep their maker through the post and back.
-	maker := "alice"
+	maker := x.account("alice")
 	wicks := content.Asset{Kind: "item", ID: "lamp-wick", Qty: 2, Maker: &maker}
 	x.refresh(c, &s)
-	sent = x.p5("POST", "/api/mail", body(s, "post-wicks", map[string]any{"toId": "bob", "asset": wicks}), c, 200)
+	sent = x.p5("POST", "/api/mail", body(s, "post-wicks", map[string]any{"toId": x.account("bob"), "asset": wicks}), c, 200)
 	s.Snapshot = sent.Snapshot
 	x.p5("POST", "/api/mail/"+sent.Result.MailID+"/recall", body(s, "recall-wicks", nil), c, 200)
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='lamp-wick' AND maker_id='alice'") != 2 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='lamp-wick' AND maker_id='"+x.account("alice")+"'") != 2 {
 		t.Fatal("recalled wicks lost their mark")
 	}
 	// A tool in the personal chest and back.
-	pick := x.instance("alice", "bench-pick", -1, "")
+	pick := x.instance(x.account("alice"), "bench-pick", -1, "")
 	x.refresh(c, &s)
 	dep := x.p5("POST", "/api/storage", body(s, "chest-pick", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick}}), c, 200)
 	s.Snapshot = dep.Snapshot
@@ -724,7 +725,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	s.Snapshot = back.Snapshot
 	x.p5("POST", "/api/storage", body(s, "bad-asset", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "item", ID: "bench-pick", Qty: 1}}), c, 400)
 	for _, id := range []string{"alice", "bob"} {
-		x.conserved(id)
+		x.conserved(x.account(id))
 	}
 }
 
@@ -733,7 +734,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.stack("alice", "oatcakes", "", 5)
+	x.stack(x.account("alice"), "oatcakes", "", 5)
 	// Habitica says 0 HP: the stored HP and the baseline are both 0.
 	down := profile("alice", 1, 0, 0)
 	x.set(down)
@@ -746,7 +747,7 @@ func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
 		t.Fatal("ate at 0 HP")
 	}
 	x.refresh(c, &s)
-	if s.State.HP != 0 || count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='alice' AND item_def='oatcakes'") != 5 {
+	if s.State.HP != 0 || count(t, x.db, "SELECT qty FROM item_stacks WHERE owner='"+x.account("alice")+"' AND item_def='oatcakes'") != 5 {
 		t.Fatal("the refused use changed something")
 	}
 	// The lock still holds: a healed upload is refused.

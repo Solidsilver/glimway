@@ -18,7 +18,7 @@ installFakeIndexedDB();
 
 const base = (over: Partial<GameState> = {}): GameState => ({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 36, mana: 30, ...over });
 const snap = (state: GameState, rev: number, extra: Record<string, unknown> = {}) => ({
-  state, rev, vitalsSource: 'imported', habiticaId: 'hero', habiticaPartyId: null, worldId: 'w', saveOrigin: 'fresh', pending: 0, verifiedXp: 0, flagged: false, ...extra,
+  state, version: rev, vitalsSource: 'imported', accountId: 'hero', habiticaPartyId: null, worldId: 'w', saveOrigin: 'fresh', pending: 0, verifiedXp: 0, flagged: false, ...extra,
 });
 const home = (items: unknown[] = []) => ({ id: 'h1', gate: 0, worldId: 'w', tier: 0, members: [{ id: 'hero', displayName: 'Tansy' }], member: true, desolate: false, vacantSince: null, landSeed: 7, cleared: [], postsBought: 0, nextPost: {}, indoor: null, items });
 const bought = (rev: number) => ({ body: { ...snap(base({ embers: 8 }), rev), result: { home: home([{ id: 's1', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null }]), materials: {}, itemId: 's1' } } });
@@ -65,7 +65,7 @@ test.afterEach(() => {
 
 function link(s: ReturnType<typeof server>, init: Partial<ConstructorParameters<typeof Link>[0]> = {}) {
   const events: { event: string; payload: any }[] = [];
-  const l = new Link({ api: s.api, clientId: 'tab-a', habiticaId: 'hero', name: 'Tansy', rev: 5, lease: 'L1', status: 'online', emit: (event, payload) => events.push({ event, payload }), store: idbLinkStore, ...init });
+  const l = new Link({ api: s.api, clientId: 'tab-a', accountId: 'hero', name: 'Tansy', rev: 5, lease: 'L1', status: 'online', emit: (event, payload) => events.push({ event, payload }), store: idbLinkStore, ...init });
   live.push(l);
   l.attach(new Session(base({ embers: 10 })));
   return { l, events };
@@ -101,7 +101,7 @@ test('a lost purchase survives a reload through the real cache, and the next pag
 });
 
 test('the cache rejects a malformed unresolved record and keeps a valid one', () => {
-  const rec = { habiticaId: 'hero', clientId: 'c', rev: 1, state: base(), unresolved: { op: { kind: 'craft', fields: { recipeId: 'craft-wooden-peg', qty: 1 } }, body: { key: 'k', baseRev: 1, recipeId: 'craft-wooden-peg', qty: 1 }, at: 5 } };
+  const rec = { accountId: 'hero', clientId: 'c', rev: 1, state: base(), unresolved: { op: { kind: 'craft', fields: { recipeId: 'craft-wooden-peg', qty: 1 } }, body: { key: 'k', baseRev: 1, recipeId: 'craft-wooden-peg', qty: 1 }, at: 5 } };
   assert.deepEqual(normalizeCache(rec)?.unresolved, rec.unresolved);
   assert.equal(normalizeCache({ ...rec, unresolved: { op: { kind: 'rob-a-bank' }, body: { key: 'k', baseRev: 1 }, at: 1 } })?.unresolved, undefined);
   assert.equal(normalizeCache({ ...rec, unresolved: { op: { kind: 'craft', fields: {} }, body: { baseRev: 1 }, at: 1 } })?.unresolved, undefined);

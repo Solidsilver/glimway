@@ -27,7 +27,8 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	s = x.expect("POST", "/api/sync", syncBody(s, p, s.State), c, 200)
 	away := s.State
 	away.Area = "ruin"
-	x.expect("POST", "/api/sync", syncBody(response{Snapshot: s.Snapshot, Lease: x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200).Lease}, p, away), c, 409)
+	s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
+	x.expect("POST", "/api/sync", syncBody(s, p, away), c, 409)
 	backup := filepath.Join(x.dir, "backup.sqlite")
 	if err := x.db.Backup(context.Background(), backup); err != nil {
 		t.Fatal(err)
@@ -57,7 +58,7 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	}
 	defer restore.Close()
 	tx, _ := restore.DB.Begin()
-	restored, err := store.Load(context.Background(), tx, "alice")
+	restored, err := store.Load(context.Background(), tx, x.account("alice"))
 	tx.Rollback()
 	if err != nil {
 		t.Fatal(err)
@@ -66,13 +67,13 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	for _, db := range []*store.Store{x.db, restore} {
 		var sum, earned int
 		var rev int64
-		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(earned_delta),0) FROM ledger WHERE habitica_id='alice'").Scan(&sum, &earned); err != nil {
+		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(earned_delta),0) FROM ledger WHERE account_id='"+x.account("alice")+"'").Scan(&sum, &earned); err != nil {
 			t.Fatal(err)
 		}
-		if err = db.DB.QueryRow("SELECT rev FROM players WHERE habitica_id='alice'").Scan(&rev); err != nil {
+		if err = db.DB.QueryRow("SELECT version FROM players WHERE account_id='" + x.account("alice") + "'").Scan(&rev); err != nil {
 			t.Fatal(err)
 		}
-		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Rev {
+		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Version {
 			t.Fatal("ledger or rev differs on restore")
 		}
 	}
@@ -149,12 +150,12 @@ func TestLeaseTakeoverIdleAndExemptions(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	same := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
-	if same.Lease != s.Lease || same.Rev != s.Rev {
-		t.Fatal("lease renew bumped rev or changed lease")
+	if same.Lease != s.Lease || same.Version != s.Version+1 {
+		t.Fatal("lease renew must advance report generation and state version")
 	}
 	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, c, 409)
 	other := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
-	if other.Rev != s.Rev || other.Lease == s.Lease {
+	if other.Version != same.Version+1 || other.Lease == s.Lease {
 		t.Fatal("takeover")
 	}
 	status, _, code, _ := x.request("PUT", "/api/progress", mutation(s, s.State), c)
@@ -165,14 +166,14 @@ func TestLeaseTakeoverIdleAndExemptions(t *testing.T) {
 	x.expect("POST", "/api/spend", spendBody(s, "rest", "", "x", s.State), c, 409)
 	x.now.Add(120)
 	idle := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-c"}, c, 200)
-	if idle.Lease == other.Lease || idle.Rev != s.Rev {
+	if idle.Lease == other.Lease || idle.Version != other.Version+1 {
 		t.Fatal("idle acquisition")
 	}
 	second := x.login("alice", "")
 	x.expect("GET", "/api/state", nil, second, 200)
 	status, _, code, _ = x.request("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "second-device"}, second)
-	if status != 409 || code != "already-set" {
-		t.Fatal("origin incorrectly required lease")
+	if status != 404 || code != "not-found" {
+		t.Fatal("removed origin route accepted")
 	}
 	x.expect("DELETE", "/api/session", nil, second, 200)
 }
@@ -216,7 +217,7 @@ func TestProgressCurrentStaleAndServerAuthority(t *testing.T) {
 		t.Fatal("quest gift repeated")
 	}
 	future := mutation(s, offline)
-	future["baseRev"] = repeat.Rev + 1
+	future["baseRev"] = repeat.Version + 1
 	x.expect("PUT", "/api/progress", future, c, 409)
 }
 func TestSyncRejectsAtomicallyAndCreditsOnce(t *testing.T) {
@@ -242,7 +243,7 @@ func TestSyncRejectsAtomicallyAndCreditsOnce(t *testing.T) {
 		case "lease":
 			body["lease"] = "old"
 		case "revision":
-			body["baseRev"] = s.Rev - 1
+			body["baseRev"] = s.Version - 1
 		case "hp":
 			bad.HP = 51
 			body["profile"] = bad
@@ -335,7 +336,7 @@ func TestStaleAfterSyncRestRevivePurchaseAndIdempotency(t *testing.T) {
 				body := spendBody(s1, kind, target, "purchase", doc)
 				bought = x.expect("POST", "/api/spend", body, c, 200)
 				duplicate := x.expect("POST", "/api/spend", body, c, 200)
-				if duplicate.Rev != bought.Rev || duplicate.State.Embers != bought.State.Embers {
+				if duplicate.Version != bought.Version || duplicate.State.Embers != bought.State.Embers {
 					t.Fatal("duplicate changed balance")
 				}
 				body["target"] = "other"
@@ -429,7 +430,7 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			if next.State.EmberXP != sync.State.EmberXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {
 				t.Fatal("login consumed gameplay baseline or lowered mark")
 			}
-			if next.Rev != sync.Rev+1 {
+			if next.Version != sync.Version+1 {
 				t.Fatal("checkpoint economy change did not bump rev")
 			}
 		})
@@ -445,92 +446,11 @@ func TestLargeDeathLossIsAcceptedWithoutCredit(t *testing.T) {
 		t.Fatal("loss changed mark or paid credit")
 	}
 }
-func TestMigrationRacesOnceAndPaidOutcomes(t *testing.T) {
-	x := newRig(t)
-	x.set(profile("alice", 3, 10, 20))
-	c := x.login("alice", "")
-	local := rules.NewState()
-	local.HP = 5
-	local.Mana = 3
-	local.Embers = 999
-	local.XPEmbers = 999
-	local.EmberXP = 999999
-	local.Quest = "complete"
-	local.Flags = []string{"embers:welcome", "lit:road-1", "opened:" + rules.E.ChestID}
-	local.Inventory = append(local.Inventory, rules.E.CharmItem, "warden-seal")
-	var wg sync.WaitGroup
-	statuses := make(chan int, 2)
-	for _, key := range []string{"one", "two"} {
-		wg.Add(1)
-		go func(key string) {
-			defer wg.Done()
-			code, _, _, _ := x.request("POST", "/api/origin", map[string]any{"choice": "migrate", "key": key, "save": map[string]any{"state": local, "vitalsSource": "imported"}}, c)
-			statuses <- code
-		}(key)
-	}
-	wg.Wait()
-	close(statuses)
-	ok, denied := 0, 0
-	for code := range statuses {
-		if code == 200 {
-			ok++
-		}
-		if code == 409 {
-			denied++
-		}
-	}
-	if ok != 1 || denied != 1 {
-		t.Fatal("migration race")
-	}
-	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab"}, c, 200)
-	if s.State.HP != 5 || s.State.Mana != 3 || s.State.Embers != 30 || s.State.XPEmbers != 0 || s.State.EmberXP != 85 || s.State.Quest != "complete" || !slices.Contains(s.State.Inventory, rules.E.CharmItem) {
-		t.Fatalf("migration: %s", store.JSON(s))
-	}
-	if count(t, x.db, "SELECT count(*) FROM outcomes") != 6 {
-		t.Fatal("missing migration outcomes")
-	}
-	synced := x.expect("POST", "/api/sync", syncBody(s, profile("alice", 3, 10, 20), s.State), c, 200)
-	if synced.State.Embers != 30 {
-		t.Fatal("migrated gifts paid twice")
-	}
-	second := x.login("alice", "")
-	status, _, code, _ := x.request("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "device-two", "save": map[string]any{"state": local}}, second)
-	if status != 409 || code != "already-set" {
-		t.Fatal("second device migrated")
-	}
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='migration'") != 1 {
-		t.Fatal("migration credited twice")
-	}
-}
-func TestOriginFreshGuardDemoVitalsAndIdempotency(t *testing.T) {
-	x := newRig(t)
-	c := x.login("fresh", "")
-	body := map[string]any{"choice": "fresh", "key": "fresh"}
-	s := x.expect("POST", "/api/origin", body, c, 200)
-	repeat := x.expect("POST", "/api/origin", body, c, 200)
-	if repeat.Rev != s.Rev {
-		t.Fatal("origin replay changed rev")
-	}
-	x.expect("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "second", "save": map[string]any{"state": rules.NewState()}}, c, 409)
-	c = x.login("demo", "")
-	local := rules.NewState()
-	local.HP = 1
-	local.Mana = 1
-	s = x.expect("POST", "/api/origin", map[string]any{"choice": "migrate", "key": "demo", "save": map[string]any{"state": local, "vitalsSource": "demo"}}, c, 200)
-	if s.State.HP != 20 || s.State.Mana != 10 {
-		t.Fatal("demo migration not first import")
-	}
-	play := x.expect("POST", "/api/play", map[string]any{"clientId": "tab"}, c, 200)
-	synced := x.expect("POST", "/api/sync", syncBody(play, profile("demo", 1, 0, 20), play.State), c, 200)
-	if synced.State.Embers != 3 {
-		t.Fatal("unreceived welcome missing")
-	}
-}
 func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	for _, body := range []any{map[string]any{}, map[string]any{"version": 1, "area": "village"}, map[string]any{"version": 1, "area": "village", "position": map[string]any{"x": 0, "y": 0}, "quest": "new", "hp": 0, "mana": 0, "playSeconds": 0, "inventory": []string{}, "discoveries": []string{}, "defeatedEnemies": []string{}, "flags": []string{}}} {
-		m := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "doc": body}
+		m := map[string]any{"lease": s.Lease, "baseRev": s.Version, "doc": body}
 		code, _, _, _ := x.request("PUT", "/api/progress", m, c)
 		if bodyMap := body.(map[string]any); len(bodyMap) > 5 {
 			if code != 200 {
@@ -542,6 +462,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	}
 	for _, raw := range []string{`{`, strings.Repeat("x", 200001), `{} {}`} {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(raw))
+		r.Header.Set("X-Glimway-Contract", "3")
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		x.api.ServeHTTP(w, r)
@@ -550,6 +471,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 		}
 	}
 	r := httptest.NewRequest("POST", "/api/play", strings.NewReader(`{"clientId":"tab"}`))
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Origin", "https://evil.example")
 	r.AddCookie(c)
@@ -567,17 +489,6 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	}
 }
 
-func TestOriginUsesThisSessionsVerifiedRead(t *testing.T) {
-	x := newRig(t)
-	x.set(profile("alice", 3, 15, 30))
-	first := x.login("alice", "")
-	x.set(profile("alice", 3, 25, 10))
-	_ = x.login("alice", "")
-	s := x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "first"}, first, 200)
-	if s.State.HP != 30 || s.State.EmberXP != 90 {
-		t.Fatal("origin imported another login's checkpoint")
-	}
-}
 func TestConcurrentSpendIdempotencyAndDone(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -605,7 +516,7 @@ func TestConcurrentSpendIdempotencyAndDone(t *testing.T) {
 		}
 	}
 	a, b := <-results, <-results
-	if a.Rev != b.Rev || a.State.Embers != b.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
+	if a.Version != b.Version || a.State.Embers != b.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
 		t.Fatal("duplicate purchase paid twice")
 	}
 	a.Lease = s.Lease
@@ -625,6 +536,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	c, s := x.ready("alice")
 	x.now.Add(110)
 	r := httptest.NewRequest("GET", "/api/state", nil)
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.AddCookie(c)
 	r.Header.Set("X-Play-Lease", s.Lease)
 	w := httptest.NewRecorder()
@@ -645,7 +557,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	doc = paid.State
 	doc.HP = 10
 	again := x.expect("POST", "/api/spend", spendBody(paid, "rest", "", "expiring-key", doc), c, 200)
-	if again.Rev != paid.Rev+1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 2 {
+	if again.Version != paid.Version+1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 2 {
 		t.Fatal("expired key did not permit a new operation")
 	}
 }
@@ -676,7 +588,7 @@ func TestOwnedUploadTypesAreIgnoredAndUnknownCredentialsStripped(t *testing.T) {
 	_ = json.Unmarshal([]byte(store.JSON(profile("alice", 2, 15, 20))), &p)
 	p["apiToken"] = secret
 	p["equipped"].(map[string]any)["apiToken"] = secret
-	body := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "profile": p, "progress": doc, "token": secret}
+	body := map[string]any{"lease": s.Lease, "baseRev": s.Version, "profile": p, "progress": doc, "token": secret}
 	result := x.expect("POST", "/api/sync", body, c, 200)
 	if strings.Contains(store.JSON(result), secret) {
 		t.Fatal("credential field returned")
@@ -718,19 +630,19 @@ func TestLogoutReleasesThatSessionsLease(t *testing.T) {
 	x.expect("DELETE", "/api/session", nil, other, 200)
 	again := x.login("alice", "")
 	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, again, 409)
-	if n := count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='alice' AND lease_id=?", s.Lease); n != 1 {
+	if n := count(t, x.db, "SELECT count(*) FROM players WHERE account_id='"+x.account("alice")+"' AND lease_id=?", s.Lease); n != 1 {
 		t.Fatal("foreign logout released the lease")
 	}
 
 	// The holder logs out: the lease goes with its session, rev unchanged.
 	x.expect("DELETE", "/api/session", nil, first, 200)
-	if n := count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='alice' AND lease_id IS NULL AND lease_client IS NULL AND lease_seen_at IS NULL"); n != 1 {
+	if n := count(t, x.db, "SELECT count(*) FROM players WHERE account_id='"+x.account("alice")+"' AND lease_id IS NULL AND lease_client IS NULL AND lease_seen_at IS NULL"); n != 1 {
 		t.Fatal("lease not released on logout")
 	}
 	back := x.login("alice", "")
 	fresh := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, back, 200)
-	if fresh.Lease == s.Lease || fresh.Rev != s.Rev {
-		t.Fatal("re-login should get a new lease without a rev change")
+	if fresh.Lease == s.Lease || fresh.Version <= s.Version {
+		t.Fatal("re-login should get a new lease and advance version")
 	}
 	// The released lease is dead for any writer.
 	status, _, code, _ := x.request("PUT", "/api/progress", mutation(s, s.State), back)

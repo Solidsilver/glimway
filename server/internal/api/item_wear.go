@@ -93,7 +93,7 @@ type wearResult struct {
 // away worn out; a warden-stone sliver never wears.
 func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action string, now int64) (wearResult, error) {
 	out := wearResult{WornOut: []string{}, Returned: []string{}}
-	if err := healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+	if err := healWardens(ctx, tx, s.AccountID, now); err != nil {
 		return out, err
 	}
 	v, err := loadInstance(ctx, tx, id)
@@ -102,7 +102,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 	}
 	out.MakerID = v.Maker
 	def, _ := content.ItemFor(v.Def)
-	if v.Location != "pack" || v.Owner != s.HabiticaID {
+	if v.Location != "pack" || v.Owner != s.AccountID {
 		return out, fail(404, "item-not-found")
 	}
 	if def.Kind != "tool" {
@@ -168,7 +168,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		if _, err = tx.ExecContext(ctx, "DELETE FROM item_instances WHERE id=?", f.ID); err != nil {
 			return out, err
 		}
-		if err = currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, -1, "fitting-worn", v.ID, now); err != nil {
+		if err = currency(ctx, tx, s.AccountID, "fitted:"+f.Def, -1, "fitting-worn", v.ID, now); err != nil {
 			return out, err
 		}
 		out.WornOut = append(out.WornOut, f.Def)
@@ -180,13 +180,13 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 			return out, err
 		}
 		for _, f := range remaining {
-			if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", v.ID}, instanceAt{"pack", s.HabiticaID}, now); err != nil {
+			if err = moveInstance(ctx, tx, f.ID, f.Def, instanceAt{"fitted", v.ID}, instanceAt{"pack", s.AccountID}, now); err != nil {
 				return out, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, "fitted:"+f.Def, -1, "tool-broke", v.ID, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, "fitted:"+f.Def, -1, "tool-broke", v.ID, now); err != nil {
 				return out, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency(f.Def), 1, "tool-broke", v.ID, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, content.StackCurrency(f.Def), 1, "tool-broke", v.ID, now); err != nil {
 				return out, err
 			}
 			out.Returned = append(out.Returned, f.Def)
@@ -199,7 +199,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		}
 		out.Broke = true
 		out.State = "broken"
-		return out, currency(ctx, tx, s.HabiticaID, content.StackCurrency(v.Def), -1, "tool-broke", v.ID, now)
+		return out, currency(ctx, tx, s.AccountID, content.StackCurrency(v.Def), -1, "tool-broke", v.ID, now)
 	}
 	out.WoreOut = conditionBeforeUse > 0 && v.Condition == 0 && !warden
 	view, err := viewInstance(ctx, tx, v, map[string]*makerView{})

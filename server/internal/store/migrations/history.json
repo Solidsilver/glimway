@@ -96,5 +96,15 @@
   {
     "name": "025_world_choice.sql",
     "sha256": "6604e5831add696cbd7353d7aa42e69d71bc7fb2bb609bf1d387c98962ad78e9"
+  },
+  {
+    "name": "026_accounts.sql",
+    "sha256": "3e7f7e5dd78e4874b54988f435ca64073bca6a3e489c2c7e47822c5b518c8055",
+    "backfill": "migration_026_backfill.go",
+    "backfillSha256": "0b0b46e9ff250c5db9f4c5ad014bf7a8a4296689d9d798c313f43a3b37101feb"
+  },
+  {
+    "name": "027_server_state.sql",
+    "sha256": "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d"
   }
 ]

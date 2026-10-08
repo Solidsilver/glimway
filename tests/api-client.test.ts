@@ -13,9 +13,9 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
 function snapshot(over: Partial<Record<string, unknown>> = {}) {
   return {
     state: createNewGame(),
-    rev: 3,
+    version: 3,
     vitalsSource: 'imported',
-    habiticaId: 'hab-1',
+    accountId: 'hab-1',
     habiticaPartyId: null,
     worldId: 'w',
     saveOrigin: 'fresh',
@@ -101,7 +101,7 @@ test('client: run builds each request when it starts, after earlier calls settle
     const body = JSON.parse(String(init?.body));
     seen.push(body.baseRev);
     rev += 1;
-    return json(200, { ...snapshot({ rev }), status: 'current' });
+    return json(200, { ...snapshot({ version: rev }), status: 'current' });
   }) as typeof fetch;
   const api = createApiClient({ fetchImpl });
   let current = 3;
@@ -378,7 +378,7 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
     fetchImpl: (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       const base = snapshot();
-      if (calls.length === 3) return json(200, { ...base, woodpile: { homesteadId: 'h1', placed: true, stacks: [{ id: 's1', homesteadId: 'h1', habiticaId: 'a', qty: 10, stackedAt: 100, ready: true, remaining: 0 }], readyCount: 10, totalTimber: 10 } });
+      if (calls.length === 3) return json(200, { ...base, woodpile: { homesteadId: 'h1', placed: true, stacks: [{ id: 's1', homesteadId: 'h1', accountId: 'a', qty: 10, stackedAt: 100, ready: true, remaining: 0 }], readyCount: 10, totalTimber: 10 } });
       return json(200, { ...base, result: { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2 }, pageId: 'recipe-page-tea', qty: 2, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: undefined } });
     }) as typeof fetch,
   });

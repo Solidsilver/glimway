@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/coder/websocket"
 	"glimway/content"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/proto"
 	"slices"
@@ -199,7 +199,7 @@ func (h *presenceHub) remove(p *presencePeer) {
 	}
 	delete(h.peers, p.identity.ID)
 	if p.area != "" {
-		h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
+		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 	}
 }
 
@@ -255,7 +255,7 @@ func (a *Server) ClosePresence() {
 // the old world's players clear) and wait for their next join.
 func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 	if p.area != "" {
-		h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
+		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 	}
 	p.identity.World = world
 	p.pos = nil
@@ -292,7 +292,7 @@ func (h *presenceHub) near(world, id, room string, x, y, radius float64) bool {
 }
 
 func (p *presencePeer) player() *contract.PresencePlayer {
-	return &contract.PresencePlayer{HabiticaId: p.identity.ID, DisplayName: p.identity.Name, Avatar: p.identity.Avatar, Pos: presencePositionProto(p.pos)}
+	return &contract.PresencePlayer{AccountId: p.identity.ID, DisplayName: p.identity.Name, Avatar: p.identity.Avatar, Pos: presencePositionProto(p.pos)}
 }
 
 func (h *presenceHub) room(p *presencePeer) {
@@ -302,6 +302,6 @@ func (h *presenceHub) room(p *presencePeer) {
 			players = append(players, other.player())
 		}
 	}
-	slices.SortFunc(players, func(a, b *contract.PresencePlayer) int { return strings.Compare(a.HabiticaId, b.HabiticaId) })
+	slices.SortFunc(players, func(a, b *contract.PresencePlayer) int { return strings.Compare(a.AccountId, b.AccountId) })
 	h.send(p, &contract.PresenceRoom{Area: p.area, Players: players})
 }

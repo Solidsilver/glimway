@@ -147,8 +147,8 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "material", "id": "timber", "qty": 3}}), ac, 200).Snapshot
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-stool", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "decoration", "id": "wooden-stool", "qty": 1}}), ac, 200).Snapshot
 	// A tool with a fitting goes in the chest too (the item model).
-	axe := x.instance("alice", "bench-axe", -1, "alice")
-	nail := x.instance("alice", "loose-road-nail", -1, "")
+	axe := x.instance(x.account("alice"), "bench-axe", -1, x.account("alice"))
+	nail := x.instance(x.account("alice"), "loose-road-nail", -1, "")
 	x.opRefreshing(ac, &a, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-axe", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}), ac, 200).Snapshot
 	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
@@ -167,20 +167,20 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 		}
 	}
 	// Every piece that went is named: its instance, on the last member's ledger.
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='deed-lost' AND currency='decoration:wooden-stool' AND ref LIKE ?", "%"+stools.Result.InstanceIDs[0]+"%") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND reason='deed-lost' AND currency='decoration:wooden-stool' AND ref LIKE ?", "%"+stools.Result.InstanceIDs[0]+"%") != 1 {
 		t.Fatal("the placed stool's loss is not in the ledger")
 	}
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='deed-lost' AND currency='homestead'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND reason='deed-lost' AND currency='homestead'") != 1 {
 		t.Fatal("no record of the lost deed itself")
 	}
 	// The chest's tool and the fitting on it are gone, and both are named.
 	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id IN (?,?)", axe, nail) != 0 {
 		t.Fatal("the chest's tool outlived the deed")
 	}
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='alice' AND reason='deed-lost' AND currency='fitted:loose-road-nail' AND ref LIKE ?", "%"+nail) != 1 {
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND reason='deed-lost' AND currency='fitted:loose-road-nail' AND ref LIKE ?", "%"+nail) != 1 {
 		t.Fatal("the fitting's loss is not in the ledger")
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 // Review finding 5: the last one out can take their deed back while the land
@@ -189,7 +189,7 @@ func TestHomes2FormerMemberReclaimsVacantHome(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	h := x.claimGate(ac, &a, 0)
 	x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": content.HomeRules.LanternPosts.Item}, 200)
 	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE id=?", h.ID); err != nil {

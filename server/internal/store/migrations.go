@@ -13,7 +13,7 @@ import (
 // older binary to create an existing database. Applied rows still retain names.
 // Freeze recorded SQL/backfills; change behavior through a forward migration.
 //
-//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go
+//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go
 var migrations embed.FS
 
 type migrationRecord struct {
@@ -25,6 +25,7 @@ type migrationRecord struct {
 
 var migrationBackfills = map[string]func(*sql.Tx) error{
 	"migration_003_backfill.go": initializeLossReferences,
+	"migration_026_backfill.go": finishOrigins026,
 }
 
 func migrationHistory() ([]migrationRecord, error) {
@@ -68,6 +69,11 @@ func applyMigration(tx *sql.Tx, m migrationRecord, now int64) error {
 	if m.Backfill != "" {
 		if err = migrationBackfills[m.Backfill](tx); err != nil {
 			return fmt.Errorf("backfill %s: %w", m.Backfill, err)
+		}
+	}
+	if m.Name >= "026_" {
+		if err = foreignKeysClean(tx); err != nil {
+			return fmt.Errorf("migration %s: %w", m.Name, err)
 		}
 	}
 	_, err = tx.Exec("INSERT INTO schema_migrations VALUES(?,?)", m.Name, now)
@@ -115,4 +121,22 @@ func migrate(db *sql.DB) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func foreignKeysClean(tx *sql.Tx) error {
+	rows, err := tx.Query("PRAGMA foreign_key_check")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var table, parent string
+		var rowid sql.NullInt64
+		var key int
+		if err = rows.Scan(&table, &rowid, &parent, &key); err != nil {
+			return err
+		}
+		return fmt.Errorf("foreign key violation in %s row %v referencing %s (key %d)", table, rowid, parent, key)
+	}
+	return rows.Err()
 }

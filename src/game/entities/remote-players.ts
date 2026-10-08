@@ -109,8 +109,8 @@ class RemotePlayersLayer implements RemotePlayers {
   private views = new Map<string, View>()
   private destroyed = false
   private readonly onEmote = (p: EmotePayload) => {
-    if (!p.habiticaId) return
-    const v = this.views.get(p.habiticaId)
+    if (!p.accountId) return
+    const v = this.views.get(p.accountId)
     if (!v) return
     v.bubble?.destroy()
     // Above the name tag, which stays readable under it.
@@ -132,7 +132,7 @@ class RemotePlayersLayer implements RemotePlayers {
     bus.on(EV.emote, this.onEmote)
     expose('__fsRemote', () =>
       [...this.views.values()].map((v) => ({
-        id: v.peer.habiticaId,
+        id: v.peer.accountId,
         name: v.peer.displayName,
         x: Math.round(v.root.x),
         y: Math.round(v.root.y),
@@ -154,8 +154,8 @@ class RemotePlayersLayer implements RemotePlayers {
     for (const peer of this.feed.peersIn(this.area)) {
       const at = peer.track.at(t)
       if (!at) continue
-      seen.add(peer.habiticaId)
-      let v = this.views.get(peer.habiticaId)
+      seen.add(peer.accountId)
+      let v = this.views.get(peer.accountId)
       if (!v) {
         if (peer.leftAt !== null) continue // never seen, already gone
         v = this.create(peer, at.x, at.y)
@@ -171,7 +171,7 @@ class RemotePlayersLayer implements RemotePlayers {
       const alphaOut = peer.leftAt === null ? 1 : Math.max(0, 1 - (t - peer.leftAt) / LEAVE_FADE_MS)
       v.root.setAlpha(Math.min(alphaIn, alphaOut))
       if (peer.leftAt !== null && alphaOut <= 0) {
-        this.drop(peer.habiticaId)
+        this.drop(peer.accountId)
         continue
       }
       if (v.peer.displayName !== v.tag.text) v.tag.setText(v.peer.displayName)
@@ -209,7 +209,7 @@ class RemotePlayersLayer implements RemotePlayers {
     }).setOrigin(0.5, 1)
     const root = scene.add.container(x, y, [shadow, body, tag]).setAlpha(0).setDepth(y + 0.5)
     const view: View = { peer, root, body, demo, tag, bubble: null, bubbleText: null, bornAt: now(), facingX: 1, moving: false }
-    this.views.set(peer.habiticaId, view)
+    this.views.set(peer.accountId, view)
     if (peer.avatar) void this.loadAvatar(view, peer)
     return view
   }
@@ -217,7 +217,7 @@ class RemotePlayersLayer implements RemotePlayers {
   /** Swap the stand-in for the Habitica layers once they load (if any do). */
   private async loadAvatar(view: View, peer: Peer): Promise<void> {
     const keys = await loadPresenceAvatar(this.scene, peer.avatar!)
-    if (this.destroyed || this.views.get(peer.habiticaId) !== view || keys.length === 0 || !view.root.active) return
+    if (this.destroyed || this.views.get(peer.accountId) !== view || keys.length === 0 || !view.root.active) return
     const scale = AVATAR_DISPLAY / AVATAR_CANVAS
     const images = keys.map((k) => this.scene.add.image(0, -AVATAR_DISPLAY / 2, k).setOrigin(0.5, 0.5).setScale(scale))
     view.demo?.destroy()

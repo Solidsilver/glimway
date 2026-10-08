@@ -169,7 +169,7 @@ export interface LinkSession {
 export interface LinkInit {
   api: ApiClient
   clientId: string
-  habiticaId: string
+  accountId: string
   /** The account's world, when known (snapshot or cache). */
   worldId?: string
   name: string
@@ -195,7 +195,7 @@ export class Link {
   readonly api: ApiClient
   /** This page's play-client id (changes only via `changeClient`). */
   clientId: string
-  readonly habiticaId: string
+  readonly accountId: string
   /** The account's world ('' until a snapshot or the cache says). */
   worldId: string
   name: string
@@ -246,7 +246,7 @@ export class Link {
   constructor(init: LinkInit) {
     this.api = init.api
     this.clientId = init.clientId
-    this.habiticaId = init.habiticaId
+    this.accountId = init.accountId
     this.worldId = init.worldId ?? ''
     this.name = init.name
     this.rev = init.rev
@@ -360,7 +360,7 @@ export class Link {
     const key = docKey(s.state)
     this.orphanWrites += 1
     const write = this.store
-      .saveOrphan({ habiticaId: this.habiticaId, clientId: this.clientId, state: s.state, rev: this.rev, savedAt: Date.now() })
+      .saveOrphan({ accountId: this.accountId, clientId: this.clientId, state: s.state, rev: this.rev, savedAt: Date.now() })
       .catch(() => false)
       .then((ok) => {
         // A failed write leaves nothing durable: the slot may hold an older story or none.
@@ -377,7 +377,7 @@ export class Link {
     const s = this.session
     if (!s || this.status === 'superseded') return
     const ok = await this.store.save({
-      habiticaId: this.habiticaId,
+      accountId: this.accountId,
       name: this.name,
       state: s.state,
       vitalsSource: s.vitalsSource,
@@ -986,7 +986,7 @@ export class Link {
    * the upload above, since this tab's state carries on from it.
    */
   private async adoptOrphans(): Promise<void> {
-    const orphans = await this.store.loadOrphans(this.habiticaId)
+    const orphans = await this.store.loadOrphans(this.accountId)
     for (const o of orphans) {
       if (o.clientId !== this.clientId && this.rev > 0 && this.status === 'online') {
         try {
@@ -1001,7 +1001,7 @@ export class Link {
           return
         }
       }
-      await this.store.deleteOrphan(this.habiticaId, o.clientId)
+      await this.store.deleteOrphan(this.accountId, o.clientId)
     }
   }
 

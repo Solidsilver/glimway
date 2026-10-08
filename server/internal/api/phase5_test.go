@@ -91,7 +91,7 @@ func (x *rig) claimFree(c *http.Cookie, s *response) homeView {
 }
 func (x *rig) openWorkshop(c *http.Cookie, s response) response {
 	x.t.Helper()
-	x.seedAssets(s.HabiticaID)
+	x.seedAssets(s.AccountID)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	x.claimFree(c, &s)
 	for _, tier := range []int{1, 2} {
@@ -104,6 +104,7 @@ func TestPhase5CalendarAndOuterTurning(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	r := httptest.NewRequest("GET", "/api/calendar", nil)
+	r.Header.Set("X-Glimway-Contract", "3")
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)
 	var day content.CalendarDay
@@ -157,7 +158,7 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	if v := x.p5("GET", "/api/storage", nil, c, 200); v.Shared != "not-a-member" || v.Storage != nil {
 		t.Fatal("homeless storage read")
 	}
-	x.fund("alice", 100, 0)
+	x.fund(x.account("alice"), 100, 0)
 	x.claimFree(c, &s)
 	if x.p5("POST", "/api/craft", body(s, "early", map[string]any{"recipeId": "craft-wooden-stool", "qty": 1}), c, 409).Error.Code != "tier-required" {
 		t.Fatal("ungated craft")
@@ -172,7 +173,7 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 		t.Fatal("free materials upgrade")
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	req := body(s, "workshop", map[string]any{"tier": 2})
 	up := x.exp("POST", "/api/homestead/upgrade", req, c, 200)
@@ -190,17 +191,17 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	}
 	x.exp("POST", "/api/homestead/upgrade", req, c, 200)
 	x.exp("POST", "/api/homestead/upgrade", body(s, "garden", map[string]any{"tier": 3}), c, 409)
-	x.give("alice", "beeswax", 50)
-	x.give("alice", "wooden-peg", 50)
-	x.give("alice", "lamp-head", 50)
-	x.give("alice", "hearth-oil", 50)
-	x.give("alice", "bloom-flowers", 50)
-	x.give("alice", "walnut-shells", 50)
-	x.give("alice", "candle-oil", 50)
-	x.give("alice", "madder-scraps", 50)
-	x.give("alice", "amberfall-sap", 50)
-	x.give("alice", "frost-glass", 50)
-	x.give("alice", "lamp-wick", 50)
+	x.give(x.account("alice"), "beeswax", 50)
+	x.give(x.account("alice"), "wooden-peg", 50)
+	x.give(x.account("alice"), "lamp-head", 50)
+	x.give(x.account("alice"), "hearth-oil", 50)
+	x.give(x.account("alice"), "bloom-flowers", 50)
+	x.give(x.account("alice"), "walnut-shells", 50)
+	x.give(x.account("alice"), "candle-oil", 50)
+	x.give(x.account("alice"), "madder-scraps", 50)
+	x.give(x.account("alice"), "amberfall-sap", 50)
+	x.give(x.account("alice"), "frost-glass", 50)
+	x.give(x.account("alice"), "lamp-wick", 50)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	for i, recipe := range content.CraftingRules.Recipes {
 		req = body(s, recipe.ID, map[string]any{"recipeId": recipe.ID, "qty": 2})
@@ -225,7 +226,7 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	x.p5("POST", "/api/craft", body(s, "missing", map[string]any{"recipeId": "missing", "qty": 1}), c, 400)
 	x.p5("POST", "/api/craft", body(s, "bulk", map[string]any{"recipeId": "craft-wooden-stool", "qty": 101}), c, 400)
 	// First ingredient is debited before a missing second ingredient; everything rolls back.
-	if _, err := x.db.DB.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='amber'"); err != nil {
+	if _, err := x.db.DB.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='" + x.account("alice") + "' AND item_def='amber'"); err != nil {
 		t.Fatal(err)
 	}
 	x.p5("POST", "/api/craft", body(s, "poor", map[string]any{"recipeId": "craft-amber-sconce", "qty": 1}), c, 409)
@@ -277,7 +278,7 @@ func TestPhase5StorageConservationAndPlacement(t *testing.T) {
 	x.p5("POST", "/api/storage", body(s, "empty", map[string]any{"direction": "withdraw", "asset": assets[0]}), c, 409)
 	x.p5("POST", "/api/storage", body(s, "quest-item", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "item", ID: "field-journal", Qty: 1}}), c, 400)
 	for _, v := range assets {
-		if count(t, x.db, "SELECT COALESCE(sum(delta),0) FROM ledger WHERE habitica_id='alice' AND currency='storage:"+v.Kind+":"+v.ID+"'") != 0 {
+		if count(t, x.db, "SELECT COALESCE(sum(delta),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='storage:"+v.Kind+":"+v.ID+"'") != 0 {
 			t.Fatal("storage ledger")
 		}
 	}
@@ -295,10 +296,10 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 	// Placed goods are unavailable for shipping.
 	update(&s, x.exp("POST", "/api/homestead/place", body(s, "place-chair", map[string]any{"itemId": chair, "scene": "indoor", "x": 0, "y": 0, "rotation": 0}), c, 200))
 	deco := content.Asset{Kind: "decoration", ID: "reading-chair", Qty: 1}
-	x.p5("POST", "/api/mail", body(s, "placed", map[string]any{"toId": "bob", "asset": deco}), c, 409)
+	x.p5("POST", "/api/mail", body(s, "placed", map[string]any{"toId": x.account("bob"), "asset": deco}), c, 409)
 	update(&s, x.exp("POST", "/api/homestead/remove", body(s, "remove-chair", map[string]any{"itemId": chair}), c, 200))
 	for i, asset := range []content.Asset{{Kind: "material", ID: "timber", Qty: 9}, {Kind: "item", ID: giftTrinket, Qty: 5}, deco} {
-		req := body(s, fmt.Sprintf("send%d", i), map[string]any{"toId": "bob", "asset": asset})
+		req := body(s, fmt.Sprintf("send%d", i), map[string]any{"toId": x.account("bob"), "asset": asset})
 		beforeRecipient := x.expect("GET", "/api/state", nil, bc, 200).Snapshot
 		sent := x.p5("POST", "/api/mail", req, c, 200)
 		s.Snapshot = sent.Snapshot
@@ -327,21 +328,21 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 			t.Fatal("mail claim replay")
 		}
 		x.p5("POST", path, body(b, "claim-again", nil), bc, 409)
-		if count(t, x.db, "SELECT sum(delta) FROM ledger WHERE habitica_id='alice' AND currency='mail:"+asset.Kind+":"+asset.ID+"'") != 0 {
+		if count(t, x.db, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='mail:"+asset.Kind+":"+asset.ID+"'") != 0 {
 			t.Fatal("transit conservation")
 		}
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def='timber'") != 9 || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def='"+giftTrinket+"'") != 5 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def='timber'") != 9 || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def='"+giftTrinket+"'") != 5 {
 		t.Fatal("mail balances")
 	}
-	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND habitica_id='bob' AND location='inventory'", chair) != 1 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND account_id='"+x.account("bob")+"' AND location='inventory'", chair) != 1 {
 		t.Fatal("decoration identity lost")
 	}
-	x.p5("POST", "/api/mail", body(s, "cross-world", map[string]any{"toId": "outsider", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)
-	x.p5("POST", "/api/mail", body(s, "self", map[string]any{"toId": "alice", "asset": deco}), c, 400)
+	x.p5("POST", "/api/mail", body(s, "cross-world", map[string]any{"toId": x.account("outsider"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)
+	x.p5("POST", "/api/mail", body(s, "self", map[string]any{"toId": x.account("alice"), "asset": deco}), c, 400)
 	x.p5("POST", "/api/mail", body(s, "missing", map[string]any{"toId": "missing", "asset": deco}), c, 404)
-	x.p5("POST", "/api/mail", body(s, "forged", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "item", ID: "lamp-wick", Qty: 1}}), c, 409)
-	x.p5("POST", "/api/mail", body(s, "bound", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "item", ID: "ember-charm", Qty: 1}}), c, 409)
+	x.p5("POST", "/api/mail", body(s, "forged", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", ID: "lamp-wick", Qty: 1}}), c, 409)
+	x.p5("POST", "/api/mail", body(s, "bound", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", ID: "ember-charm", Qty: 1}}), c, 409)
 }
 
 // Independent connections exercise the SQLite transaction boundary, not just
@@ -371,6 +372,7 @@ func racePhase5(t *testing.T, x *rig, requests []struct {
 			defer wg.Done()
 			<-start
 			r := httptest.NewRequest("POST", v.path, bytes.NewBufferString(store.JSON(v.body)))
+			r.Header.Set("X-Glimway-Contract", "3")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(v.c)
 			w := httptest.NewRecorder()
@@ -398,9 +400,9 @@ func TestPhase5MailClaimRaces(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
 			bc, b := x.member("bob", s.WorldID)
-			x.seedAssets("alice")
+			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "stone", Qty: 7}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "stone", Qty: 7}}), c, 200)
 			path := "/api/mail/" + sent.Result.MailID + "/claim"
 			key2 := "claim-b"
 			if sameKey {
@@ -418,7 +420,7 @@ func TestPhase5MailClaimRaces(t *testing.T) {
 			if !slices.Equal(statuses, expected) {
 				t.Fatal("mail race", statuses)
 			}
-			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def='stone'") != 7 || count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='bob' AND reason='mail-claim'") != 1 {
+			if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def='stone'") != 7 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("bob")+"' AND reason='mail-claim'") != 1 {
 				t.Fatal("mail paid twice")
 			}
 		})
@@ -430,9 +432,9 @@ func TestPhase5ProjectStagesPapersAndWorlds(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	cc, _ := x.member("carol", s.WorldID)
 	oc, _ := x.ready("outsider")
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	x.seedAssets("bob")
+	x.seedAssets(x.account("bob"))
 	b.Snapshot = x.expect("GET", "/api/state", nil, bc, 200).Snapshot
 	first := x.p5("GET", "/api/projects", nil, c, 200)
 	if len(first.Projects) != 6 || first.Projects[0].Stage != "open" || len(first.WorldFlags) != 0 {
@@ -498,7 +500,7 @@ func TestPhase5ProjectContributionRace(t *testing.T) {
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
 	for _, id := range []string{"alice", "bob"} {
-		x.seedAssets(id)
+		x.seedAssets(x.account(id))
 	}
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	b.Snapshot = x.expect("GET", "/api/state", nil, bc, 200).Snapshot
@@ -526,7 +528,7 @@ func TestPhase5BackupRestore(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	out := x.p5("POST", "/api/storage", body(s, "store", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 3}}), c, 200)
 	s.Snapshot = out.Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "mail", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "item", ID: giftTrinket, Qty: 1}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "mail", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", ID: giftTrinket, Qty: 1}}), c, 200)
 	s.Snapshot = sent.Snapshot
 	claimed := x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, "claim", nil), bc, 200)
 	b.Snapshot = claimed.Snapshot
@@ -552,7 +554,7 @@ func TestPhase5BackupRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	snapshot, err := store.Load(context.Background(), tx, "alice")
+	snapshot, err := store.Load(context.Background(), tx, x.account("alice"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,9 +565,9 @@ func TestPhase5MailClaimDatabaseFailureRollsBack(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "item", ID: giftTrinket, Qty: 2}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", ID: giftTrinket, Qty: 2}}), c, 200)
 	if _, err := x.db.DB.Exec("CREATE TRIGGER fail_mail BEFORE UPDATE ON mail WHEN NEW.claimed_at IS NOT NULL BEGIN SELECT RAISE(FAIL,'claim failed'); END"); err != nil {
 		t.Fatal(err)
 	}
@@ -573,7 +575,7 @@ func TestPhase5MailClaimDatabaseFailureRollsBack(t *testing.T) {
 	req := body(b, "claim", nil)
 	x.p5("POST", path, req, bc, 500)
 	unchanged(t, b.Snapshot, x.expect("GET", "/api/state", nil, bc, 200).Snapshot)
-	if count(t, x.db, "SELECT count(*) FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def NOT IN ('timber','stone','fiber','amber')") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='mail-claim'") != 0 || count(t, x.db, "SELECT count(*) FROM mail WHERE claimed_at IS NOT NULL") != 0 {
+	if count(t, x.db, "SELECT count(*) FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def NOT IN ('timber','stone','fiber','amber')") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='mail-claim'") != 0 || count(t, x.db, "SELECT count(*) FROM mail WHERE claimed_at IS NOT NULL") != 0 {
 		t.Fatal("failed claim committed")
 	}
 	if _, err := x.db.DB.Exec("DROP TRIGGER fail_mail"); err != nil {
@@ -584,9 +586,9 @@ func TestPhase5MailClaimDatabaseFailureRollsBack(t *testing.T) {
 func TestPhase5ContributionFailureAndMutationGuards(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	if _, err := x.db.DB.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='stone'"); err != nil {
+	if _, err := x.db.DB.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='" + x.account("alice") + "' AND item_def='stone'"); err != nil {
 		t.Fatal(err)
 	}
 	path := "/api/projects/north-bridge/contribute"
@@ -596,7 +598,7 @@ func TestPhase5ContributionFailureAndMutationGuards(t *testing.T) {
 	if x.p5("POST", path, req, c, 409).Error.Code != "insufficient-materials" {
 		t.Fatal("contribution didn't check funds")
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM contributions") != 0 || count(t, x.db, "SELECT count(*) FROM projects") != 0 || count(t, x.db, "SELECT count(*) FROM ledger") != ledger {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM contributions") != 0 || count(t, x.db, "SELECT count(*) FROM projects") != 0 || count(t, x.db, "SELECT count(*) FROM ledger") != ledger {
 		t.Fatal("partial contribution committed")
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
@@ -609,9 +611,9 @@ func TestPhase5ContributionFailureAndMutationGuards(t *testing.T) {
 			case "missing-revision":
 				delete(req, "baseRev")
 			case "stale":
-				req["baseRev"] = s.Rev - 1
+				req["baseRev"] = s.Version - 1
 			case "future":
-				req["baseRev"] = s.Rev + 1
+				req["baseRev"] = s.Version + 1
 			}
 			x.p5("POST", path, req, c, 409)
 		}
@@ -624,9 +626,9 @@ func TestPhase5ProjectsShowMyShareAndMailShowsCarriedCounts(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	x.seedAssets("alice")
+	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	x.seedAssets("bob")
+	x.seedAssets(x.account("bob"))
 	b.Snapshot = x.expect("GET", "/api/state", nil, bc, 200).Snapshot
 	path := "/api/projects/well-canopy/contribute"
 	v := x.p5("POST", path, body(s, "a1", map[string]any{"materials": map[string]int{"timber": 7, "fiber": 2}}), c, 200)

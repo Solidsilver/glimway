@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -105,10 +105,10 @@ func TestPresenceBinaryRejectsMalformedFrames(t *testing.T) {
 		{"unknown-nested", websocket.MessageBinary, []byte{0x2a, 2, 0x78, 1}, websocket.StatusPolicyViolation},
 	}
 	for name, payload := range map[string]proto.Message{
-		"server-join-player":  &contract.PresenceJoin{Area: "village", Player: &contract.PresencePlayer{HabiticaId: "bob"}},
-		"server-position-id":  &contract.PresencePosition{HabiticaId: proto.String("bob"), X: proto.Float64(0), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
-		"server-emote-id":     &contract.PresenceEmote{Id: "wave", HabiticaId: proto.String("bob")},
-		"server-ready":        &contract.PresenceReady{HabiticaId: "bob"},
+		"server-join-player":  &contract.PresenceJoin{Area: "village", Player: &contract.PresencePlayer{AccountId: "bob"}},
+		"server-position-id":  &contract.PresencePosition{AccountId: proto.String("bob"), X: proto.Float64(0), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
+		"server-emote-id":     &contract.PresenceEmote{Id: "wave", AccountId: proto.String("bob")},
+		"server-ready":        &contract.PresenceReady{AccountId: "bob"},
 		"non-finite-position": &contract.PresencePosition{X: proto.Float64(math.NaN()), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
 	} {
 		b, err := encodePresence(payload)
@@ -145,7 +145,7 @@ type presenceFixture struct {
 }
 
 func TestPresenceGolden(t *testing.T) {
-	path := "testdata/presence.json"
+	path := "testdata/presence-v2.json"
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -204,7 +204,7 @@ func TestPresenceEncodedQueueLimits(t *testing.T) {
 		h := newPresenceHub(nil)
 		ctx, cancel := context.WithCancel(context.Background())
 		p := &presencePeer{ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
-		m := &contract.PresenceReady{HabiticaId: "alice"}
+		m := &contract.PresenceReady{AccountId: "alice"}
 		h.send(p, m)
 		b := <-p.queue
 		if p.queuedBytes != len(b) {

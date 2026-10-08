@@ -35,7 +35,11 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fail(422, "implausible-profile")
 	}
-	if p.ID != s.HabiticaID {
+	subject, err := store.HabiticaSubject(r.Context(), tx, s.AccountID)
+	if err != nil {
+		return err
+	}
+	if p.ID != subject {
 		return fail(409, "account-switch")
 	}
 	if !rules.Plausible(p) {
@@ -86,14 +90,14 @@ func (a *Server) sync(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if credit > paid {
-		if _, err = tx.ExecContext(ctx, "INSERT INTO pending_credits VALUES(?,?,?,?)", s.HabiticaID, reported, credit-paid, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO pending_credits VALUES(?,?,?,?)", s.AccountID, reported, credit-paid, now); err != nil {
 			return err
 		}
 		if err = store.Credit(ctx, tx, &s, 0, 0, "pending-held", strconv.Itoa(credit-paid), &reported, now); err != nil {
 			return err
 		}
 	}
-	welcomed, err := store.Outcome(ctx, tx, s.HabiticaID, "embers:welcome", "welcome", now)
+	welcomed, err := store.Outcome(ctx, tx, s.AccountID, "embers:welcome", "welcome", now)
 	if err != nil {
 		return err
 	}

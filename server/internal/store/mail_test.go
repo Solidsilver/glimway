@@ -19,6 +19,7 @@ func TestMailReturnMigrationPreservesExistingTransitAndClaims(t *testing.T) {
  ('claimed','w','alice','bob','material','timber',50,'[]',5,7);`); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func TestMailReturnMigrationPreservesExistingTransitAndClaims(t *testing.T) {
 	if err = s.DB.QueryRow("SELECT COUNT(*) FROM homestead_items").Scan(&n); err != nil || n != 0 {
 		t.Fatal("decoration instances survived the homestead reset", n, err)
 	}
-	if err = s.DB.QueryRow("SELECT rev FROM players WHERE habitica_id='alice'").Scan(&n); err != nil || n != 9 {
+	if err = s.DB.QueryRow("SELECT version FROM players WHERE account_id='alice'").Scan(&n); err != nil || n != 9 {
 		t.Fatal("migration changed revision", n, err)
 	}
 	for _, update := range []string{

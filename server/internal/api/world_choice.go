@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
@@ -111,24 +112,36 @@ func (a *Server) loadWorldChoice(ctx context.Context, tx *sql.Tx, id, name strin
 // createPlayer makes a newcomer's rows in the world given, from the profile
 // verified at sign-in (verifiedAt), and turns any held sign-ins of theirs
 // into sessions.
-func createPlayer(ctx context.Context, tx *sql.Tx, p rules.Profile, world string, verifiedAt, now int64) error {
+func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, world string, verifiedAt, now int64) error {
 	verified := rules.LifetimeXP(p.Level, *p.Exp)
-	if _, err := tx.ExecContext(ctx, "INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES(?,?,?,?,?,?)", p.ID, p.Name, world, now, now, p.PartyID); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,habitica_party_id,profile_source) VALUES(?,?,?,?,?,?,'habitica')", id, p.Name, world, now, now, p.PartyID); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO progress VALUES(?,1,0,?,?)", p.ID, store.JSON(rules.NewState()), now); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO sign_ins(account_id,method,subject,created_at) VALUES(?,'habitica',?,?)", id, p.ID, now); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", p.ID); err != nil {
+	state := rules.NewState()
+	state.HP = min(p.HP, p.MaxHP)
+	state.Mana = min(p.MP, p.MaxMP)
+	if _, err := tx.ExecContext(ctx, "INSERT INTO progress VALUES(?,1,0,?,?)", id, store.JSON(state), now); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO sync_baselines(habitica_id,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level) VALUES(?,?,?,?,?,?,?,?,?,?)", p.ID, verified, verified, store.JSON(p), verifiedAt, now, p.Level, verified, verifiedAt, p.Level); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", id); err != nil {
 		return err
 	}
-	// Another device's held sign-in (or this one's) is a session from now on,
-	// with the same cookie, lifetime and checkpoint.
+	if _, err := tx.ExecContext(ctx, "INSERT INTO sync_baselines(account_id,profile_json,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, store.JSON(p), verified, verified, store.JSON(p), verifiedAt, now, p.Level, verified, verifiedAt, p.Level); err != nil {
+		return err
+	}
+	// B replaces the document row above after 028; these initial rows are already
+	// suitable for reports and the new state loader.
+	if _, err := tx.ExecContext(ctx, "INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version) VALUES(?,?,?,?,0)", id, state.HP, state.Mana, now); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "INSERT INTO player_place(account_id,area,x,y) VALUES(?,?,?,?)", id, state.Area, state.Position.X, state.Position.Y); err != nil {
+		return err
+	}
 	expires := now + int64(SessionIdleTTL.Seconds())
-	if _, err := tx.ExecContext(ctx, "INSERT INTO sessions SELECT id_hash,habitica_id,created_at,MIN(?,created_at+?),checkpoint_json,checkpoint_xp FROM pending_sessions WHERE habitica_id=? AND expires_at>? AND created_at>?", expires, int64(SessionTTL.Seconds()), p.ID, now, now-int64(SessionTTL.Seconds())); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO sessions SELECT id_hash,?,created_at,MIN(?,created_at+?),checkpoint_json,checkpoint_xp FROM pending_sessions WHERE habitica_id=? AND expires_at>? AND created_at>?", id, expires, int64(SessionTTL.Seconds()), p.ID, now, now-int64(SessionTTL.Seconds())); err != nil {
 		return err
 	}
 	_, err := tx.ExecContext(ctx, "DELETE FROM pending_sessions WHERE habitica_id=?", p.ID)
@@ -198,17 +211,15 @@ func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	c, _ := r.Cookie(CookieName)
 	a.cookie(w, c.Value, time.Unix(expires, 0))
-	write(w, 200, worldChoiceAnswer{v})
+	writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_WorldChoice{WorldChoice: worldChoiceProto(v)}})
 	return nil
 }
 
 // worldChoose (POST /api/world/choose {"choice":"party"|"own"}) makes the
 // player in the world chosen, once (settleChoice).
 func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Choice string `json:"choice"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldChooseRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
 	if req.Choice != "party" && req.Choice != "own" {
@@ -229,7 +240,11 @@ func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, s)
+	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	if err != nil {
+		return err
+	}
+	return a.finish(w, r, tx, &contract.SessionResponse{Answer: &contract.SessionResponse_State{State: state}})
 }
 
 // settleChoice makes the held newcomer's player: "party" joins the party's
@@ -245,6 +260,10 @@ func (a *Server) settleChoice(ctx context.Context, tx *sql.Tx, held pendingRow, 
 	}
 	if held.Party.Valid {
 		p.PartyID = &held.Party.String
+	}
+	id, err := store.Random()
+	if err != nil {
+		return store.Snapshot{}, err
 	}
 	var world string
 	if choice == "party" {
@@ -267,28 +286,28 @@ func (a *Server) settleChoice(ctx context.Context, tx *sql.Tx, held pendingRow, 
 			case why != "":
 				return store.Snapshot{}, fail(409, why)
 			}
-			if world, err = ensurePartyWorld(ctx, tx, p.PartyID, p.ID, now); err != nil {
+			if world, err = ensurePartyWorld(ctx, tx, p.PartyID, id, now); err != nil {
 				return store.Snapshot{}, err
 			}
 		}
 	} else {
-		own, err := ownWorld(ctx, tx, p.ID, now)
+		own, err := ownWorld(ctx, tx, id, now)
 		if err != nil {
 			return store.Snapshot{}, err
 		}
 		world = own.ID
 	}
-	if err := createPlayer(ctx, tx, p, world, held.CreatedAt, now); err != nil {
+	if err := createPlayer(ctx, tx, id, p, world, held.CreatedAt, now); err != nil {
 		return store.Snapshot{}, err
 	}
 	if choice == "own" {
 		if pw, err := partyWorld(ctx, tx, p.PartyID); err != nil {
 			return store.Snapshot{}, err
 		} else if pw != "" {
-			if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", p.ID, pw, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", id, pw, now); err != nil {
 				return store.Snapshot{}, err
 			}
 		}
 	}
-	return store.Load(ctx, tx, p.ID)
+	return store.Load(ctx, tx, id)
 }

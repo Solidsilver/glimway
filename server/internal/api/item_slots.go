@@ -64,7 +64,7 @@ type slotRow struct {
 }
 
 func slots(ctx context.Context, tx *sql.Tx, player string) ([]slotRow, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT slot,item_def,instance_id FROM item_slots WHERE habitica_id=? ORDER BY slot", player)
+	rows, err := tx.QueryContext(ctx, "SELECT slot,item_def,instance_id FROM item_slots WHERE account_id=? ORDER BY slot", player)
 	if err != nil {
 		return nil, err
 	}
@@ -102,18 +102,18 @@ func slotHolds(ctx context.Context, tx *sql.Tx, player string, v slotRow) (bool,
 // longer carried or allowed: a second pocket without carry gear, an off hand
 // without a class.
 func settleSlots(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
-	list, err := slots(ctx, tx, s.HabiticaID)
+	list, err := slots(ctx, tx, s.AccountID)
 	if err != nil || len(list) == 0 {
 		return err
 	}
-	pockets, err := pocketCount(ctx, tx, s.HabiticaID)
+	pockets, err := pocketCount(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
 	open, _ := offHandOpen(s)
 	pocketed := map[string]bool{}
 	for _, v := range list {
-		keep, err := slotHolds(ctx, tx, s.HabiticaID, v)
+		keep, err := slotHolds(ctx, tx, s.AccountID, v)
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func settleSlots(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 			pocketed[v.def] = true
 		}
 		if !keep {
-			if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE habitica_id=? AND slot=?", s.HabiticaID, v.slot); err != nil {
+			if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot=?", s.AccountID, v.slot); err != nil {
 				return err
 			}
 		}
@@ -137,7 +137,7 @@ func settleSlots(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 
 // pocketItem puts a carried keepsake in pocket 1 or 2 (empty itemDef: empty it).
 func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest) error {
-	n, err := pocketCount(ctx, tx, s.HabiticaID)
+	n, err := pocketCount(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 		return fail(409, "no-such-pocket")
 	}
 	slot := "pocket-" + string(rune('0'+req.Slot))
-	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE habitica_id=? AND slot=?", s.HabiticaID, slot); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot=?", s.AccountID, slot); err != nil {
 		return err
 	}
 	if req.ItemDef == "" {
@@ -158,15 +158,15 @@ func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 	if !ok || def.Kind != "keepsake" {
 		return fail(400, "not-a-keepsake")
 	}
-	if have, err := stackTotal(ctx, tx, packOf(s.HabiticaID), def.ID); err != nil {
+	if have, err := stackTotal(ctx, tx, packOf(s.AccountID), def.ID); err != nil {
 		return err
 	} else if have == 0 {
 		return fail(409, "insufficient-items")
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE habitica_id=? AND slot LIKE 'pocket-%' AND item_def=?", s.HabiticaID, def.ID); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot LIKE 'pocket-%' AND item_def=?", s.AccountID, def.ID); err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(habitica_id,slot,item_def) VALUES(?,?,?)", s.HabiticaID, slot, def.ID)
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(account_id,slot,item_def) VALUES(?,?,?)", s.AccountID, slot, def.ID)
 	return err
 }
 
@@ -176,7 +176,7 @@ func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemReq
 	if open, _ := offHandOpen(s); !open {
 		return fail(409, "off-hand-closed")
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM item_slots WHERE habitica_id=? AND slot='off-hand'", s.HabiticaID); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot='off-hand'", s.AccountID); err != nil {
 		return err
 	}
 	if req.Instance == "" && req.ItemDef == "" {
@@ -191,13 +191,13 @@ func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemReq
 		row.def = v.Def
 		row.instance = sql.NullString{String: v.ID, Valid: true}
 	}
-	ok, err := slotHolds(ctx, tx, s.HabiticaID, row)
+	ok, err := slotHolds(ctx, tx, s.AccountID, row)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return fail(409, "not-for-the-off-hand")
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(habitica_id,slot,item_def,instance_id) VALUES(?,?,?,?)", s.HabiticaID, "off-hand", row.def, row.instance)
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(account_id,slot,item_def,instance_id) VALUES(?,?,?,?)", s.AccountID, "off-hand", row.def, row.instance)
 	return err
 }

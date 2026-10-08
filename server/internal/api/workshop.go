@@ -22,7 +22,7 @@ type workshopView struct {
 }
 
 func readWorkshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (workshopView, error) {
-	if err := healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+	if err := healWardens(ctx, tx, s.AccountID, now); err != nil {
 		return workshopView{}, err
 	}
 	v := workshopView{Shared: "open"}
@@ -33,7 +33,7 @@ func readWorkshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64)
 		return v, err
 	}
 	if err == nil {
-		h, err := loadHome(ctx, tx, home, s.HabiticaID, now)
+		h, err := loadHome(ctx, tx, home, s.AccountID, now)
 		if err != nil {
 			return v, err
 		}
@@ -46,11 +46,11 @@ func readWorkshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64)
 	} else {
 		v.Shared = f.code
 	}
-	v.Inventory, err = packCounts(ctx, tx, s.HabiticaID)
+	v.Inventory, err = packCounts(ctx, tx, s.AccountID)
 	if err != nil {
 		return v, err
 	}
-	v.Personal, err = chestCounts(ctx, tx, holder{"personal", s.HabiticaID, ""})
+	v.Personal, err = chestCounts(ctx, tx, holder{"personal", s.AccountID, ""})
 	return v, err
 }
 func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
@@ -59,9 +59,6 @@ func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	now := a.Config.Now().Unix()
 	if err = settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
 		return err
@@ -115,13 +112,13 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			// Your own chest: take things out from anywhere; put things in
 			// from any home you belong to, at any tier.
 			if req.Direction == "deposit" {
-				if _, ok, err := memberOf(ctx, tx, s.HabiticaID); err != nil {
+				if _, ok, err := memberOf(ctx, tx, s.AccountID); err != nil {
 					return nil, err
 				} else if !ok {
 					return nil, fail(409, "not-a-member")
 				}
 			}
-			chest = holder{"personal", s.HabiticaID, ""}
+			chest = holder{"personal", s.AccountID, ""}
 			ledger = "personal:"
 		default:
 			return nil, fail(400, "invalid-chest")
@@ -154,7 +151,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = putStack(ctx, tx, chest.stackPlace(), v.ID, got.Makers); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, ledger, v.Qty, "storage-deposit", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Key, now); err != nil {
 				return nil, err
 			}
 		case "withdraw":
@@ -178,7 +175,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = giveAsset(ctx, tx, s, v, got, chest, "storage-withdraw", req.Key, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.HabiticaID, ledger, -v.Qty, "storage-withdraw", req.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Key, now); err != nil {
 				return nil, err
 			}
 		default:
@@ -220,7 +217,7 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.HabiticaID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
 			return nil, err
 		}
 		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "craft", recipe.ID, now); err != nil {
@@ -234,9 +231,9 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 			def, _ := content.ItemFor(output.ID)
 			maker := ""
 			if def.Marked {
-				maker = s.HabiticaID
+				maker = s.AccountID
 			}
-			if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "craft", recipe.ID, now); err != nil {
+			if err := packPut(ctx, tx, s.AccountID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "craft", recipe.ID, now); err != nil {
 				return nil, err
 			}
 			if err := refreshItems(ctx, tx, s); err != nil {
@@ -246,16 +243,16 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 			def, _ := content.ItemFor(output.ID)
 			maker := ""
 			if def.Marked {
-				maker = s.HabiticaID
+				maker = s.AccountID
 			}
 			for i := 0; i < output.Qty; i++ {
-				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, maker, -1, now)
+				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, maker, -1, now)
 				if err != nil {
 					return nil, err
 				}
 				ids = append(ids, id)
 			}
-			if err := currency(ctx, tx, s.HabiticaID, content.StackCurrency(output.ID), output.Qty, "craft", recipe.ID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, content.StackCurrency(output.ID), output.Qty, "craft", recipe.ID, now); err != nil {
 				return nil, err
 			}
 		default:
@@ -264,12 +261,12 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 				if err != nil {
 					return nil, err
 				}
-				if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,habitica_id) VALUES(?,?,'inventory',?)", id, output.ID, s.HabiticaID); err != nil {
+				if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, output.ID, s.AccountID); err != nil {
 					return nil, err
 				}
 				ids = append(ids, id)
 			}
-			if err := currency(ctx, tx, s.HabiticaID, "decoration:"+output.ID, output.Qty, "craft", recipe.ID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, "decoration:"+output.ID, output.Qty, "craft", recipe.ID, now); err != nil {
 				return nil, err
 			}
 		}

@@ -3,10 +3,10 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"github.com/coder/websocket"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
+	profiles "glimway/server/internal/profile"
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -18,34 +18,29 @@ import (
 func (a *Server) presenceIdentity(ctx context.Context, session string, withAvatar bool) (presenceIdentity, error) {
 	var v presenceIdentity
 	v.Session = session
-	var profile sql.NullString
-	var origin, lease sql.NullString
+	var source string
+	var lease sql.NullString
 	now := a.Config.Now().Unix()
-	profileColumn := "NULL"
-	if withAvatar {
-		profileColumn = "b.profile_json"
-	}
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.habitica_id,p.world_id,p.display_name,p.save_origin,p.lease_id,`+profileColumn+` FROM sessions s JOIN allowlist l USING(habitica_id) JOIN players p USING(habitica_id) JOIN sync_baselines b USING(habitica_id) WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &origin, &lease, &profile)
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.account_id,p.world_id,p.display_name,p.profile_source,p.lease_id FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject JOIN players p ON p.account_id=s.account_id WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &source, &lease)
 	if err == sql.ErrNoRows {
 		return v, fail(401, "unauthorized")
 	}
 	if err != nil {
 		return v, err
 	}
-	if !origin.Valid {
-		return v, fail(409, "origin-required")
-	}
 	if !lease.Valid {
 		return v, fail(409, "superseded")
 	}
 	v.Lease = lease.String
 	v.Name = capDonor(v.Name)
-	if profile.Valid {
-		var p rules.Profile
-		if err = json.Unmarshal([]byte(profile.String), &p); err != nil {
+	if withAvatar {
+		p, err := profiles.For(ctx, a.Store.DB, profiles.Account{ID: v.ID, Source: source})
+		if err != nil {
 			return v, err
 		}
-		v.Avatar = visualAvatar(p)
+		if p != nil {
+			v.Avatar = visualAvatar(*p)
+		}
 	}
 	return v, nil
 }

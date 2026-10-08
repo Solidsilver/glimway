@@ -9,6 +9,8 @@
  *
  * The Habitica token passes through `login` only, and is never stored here.
  */
+import contract from '../../../content/contract.json' with { type: 'json' };
+import { createOperationsApi, type OperationsApi } from './operations.ts';
 import { ApiError, errorFromResponse } from './errors.ts';
 import {
   parseCalendar,
@@ -198,6 +200,7 @@ export interface Envelope {
 }
 
 export interface ApiClient extends RawApi {
+  readonly operations: OperationsApi;
   /** Queue a task that uses the raw calls; it starts after everything before it settles. */
   run<T>(task: (raw: RawApi) => Promise<T>): Promise<T>;
   readonly queue: SerialQueue;
@@ -216,10 +219,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: unknown,
-    extra: { headers?: Record<string, string>; keepalive?: boolean } = {},
+    extra: { headers?: Record<string, string>; keepalive?: boolean; binary?: boolean } = {},
   ): Promise<unknown> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...extra.headers };
+    const headers: Record<string, string> = { Accept: 'application/json', 'X-Glimway-Contract': String(contract.number), ...extra.headers };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (extra.binary) headers.Accept = 'application/x-protobuf';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
@@ -237,6 +241,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       throw new ApiError('network');
     } finally {
       clearTimeout(timer);
+    }
+    if (response.ok && extra.binary) {
+      if (!response.headers.get('content-type')?.includes('application/x-protobuf')) throw new ApiError('bad-response', { status: response.status });
+      return new Uint8Array(await response.arrayBuffer());
     }
     const type = response.headers.get('content-type') ?? '';
     let parsed: unknown;
@@ -268,6 +276,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async state(lease) {
       return parseState(await request('GET', '/api/state', undefined, lease ? { headers: { 'X-Play-Lease': lease } } : {}));
     },
+    // TODO(C1): remove this retired origin flow and its callers.
     async origin(req) {
       return parseSnapshot(await request('POST', '/api/origin', req));
     },
@@ -409,6 +418,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
   return {
     run,
+    operations: createOperationsApi(request),
     queue,
     raw,
     login: (req) => run((r) => r.login(req)),
@@ -541,7 +551,8 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
       return BC ? new BC(name) : null;
     });
 
-  let id = readStored(storage) ?? newKey();
+  const stored = readStored(storage);
+  let id = stored && /^[A-Za-z0-9_-]{1,128}$/.test(stored) ? stored : newKey();
   const nonce = newKey();
   let held = false;
   let lost = false;
@@ -632,4 +643,12 @@ function safeSessionStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+/** C2 keys its durable outbox/Web Lock by (account, device), never the tab client. */
+export function claimDeviceId(storage: Pick<Storage, 'getItem' | 'setItem'> = localStorage): string {
+  const key = 'glimway-device-id';
+  const saved = storage.getItem(key);
+  if (saved && /^[A-Za-z0-9_-]{1,128}$/.test(saved)) return saved;
+  const id = newKey(); storage.setItem(key, id); return id;
 }

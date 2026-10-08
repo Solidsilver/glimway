@@ -234,9 +234,9 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 			return "", fail(409, "post-holds-land")
 		}
 		// Whoever puts it away carries it.
-		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='inventory',habitica_id=?,homestead_id=NULL,scene=NULL,x=NULL,y=NULL,rotation=NULL,name=NULL WHERE id=?", s.HabiticaID, item.ID)
+		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='inventory',account_id=?,homestead_id=NULL,scene=NULL,x=NULL,y=NULL,rotation=NULL,name=NULL WHERE id=?", s.AccountID, item.ID)
 		if err == nil {
-			err = currency(ctx, tx, s.HabiticaID, "decoration:"+item.ItemDef, 1, "homestead-remove", item.ID, now)
+			err = currency(ctx, tx, s.AccountID, "decoration:"+item.ItemDef, 1, "homestead-remove", item.ID, now)
 		}
 	case "place":
 		var name any
@@ -263,9 +263,9 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		if req.Rotation != nil {
 			rot = *req.Rotation
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='placed',habitica_id=NULL,homestead_id=?,scene=?,x=?,y=?,rotation=?,name=? WHERE id=? AND location='inventory' AND habitica_id=?", h.ID, req.Scene, x, y, rot, name, item.ID, s.HabiticaID)
+		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='placed',account_id=NULL,homestead_id=?,scene=?,x=?,y=?,rotation=?,name=? WHERE id=? AND location='inventory' AND account_id=?", h.ID, req.Scene, x, y, rot, name, item.ID, s.AccountID)
 		if err == nil {
-			err = currency(ctx, tx, s.HabiticaID, "decoration:"+item.ItemDef, -1, "homestead-place", item.ID, now)
+			err = currency(ctx, tx, s.AccountID, "decoration:"+item.ItemDef, -1, "homestead-place", item.ID, now)
 		}
 	case "move":
 		if req.Scene == "gate" {
@@ -276,7 +276,7 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		}
 		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET scene=?,x=?,y=?,rotation=? WHERE id=?", req.Scene, *req.X, *req.Y, *req.Rotation, item.ID)
 		if err == nil {
-			err = currency(ctx, tx, s.HabiticaID, "decoration:"+item.ItemDef, 0, "homestead-move", item.ID, now)
+			err = currency(ctx, tx, s.AccountID, "decoration:"+item.ItemDef, 0, "homestead-move", item.ID, now)
 		}
 	}
 	return item.ID, err

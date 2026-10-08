@@ -1,6 +1,6 @@
 // JSON is only a readable test fixture format, never a presence transport.
 import { fromBinary, fromJson, toBinary, toJson, type JsonValue } from '@bufbuild/protobuf';
-import { PresenceMessageSchema } from '../src/lib/gen/glimway/v1/presence_pb.js';
+import { PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js';
 export function encodeTestPresence(message: object): Uint8Array {
   const { type, ...payload } = message as Record<string, unknown>;
   try {

@@ -18,6 +18,7 @@ func TestPartyOwnedWorldsUpgrade(t *testing.T) {
  INSERT INTO party_prompts VALUES('bob','olive-w',5);`); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {
 		t.Fatal(err)
 	}

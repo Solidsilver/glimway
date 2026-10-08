@@ -33,18 +33,18 @@ func TestFix4ReadOnlyHomeRevisions(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	x.claimGate(bc, &b, 0)
 	v := x.exp("GET", "/api/homestead/gate/0", nil, c, 200)
-	if v.Rev != s.Rev || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='bob'") != int(b.Rev) || count(t, x.db, "SELECT count(*) FROM homestead_members WHERE habitica_id='alice'") != 0 {
+	if v.Version != s.Version || count(t, x.db, "SELECT version FROM players WHERE account_id='"+x.account("bob")+"'") != int(b.Version) || count(t, x.db, "SELECT count(*) FROM homestead_members WHERE account_id='"+x.account("alice")+"'") != 0 {
 		t.Fatal("visitor changed owner")
 	}
 	if v.Home == nil || v.Home.Member || v.Home.Tier != 0 {
 		t.Fatal("visited campsite")
 	}
 	commons := x.exp("GET", "/api/commons", nil, c, 200)
-	if commons.Rev != s.Rev || commons.Gates[0].HomeID == nil {
+	if commons.Version != s.Version || commons.Gates[0].HomeID == nil {
 		t.Fatal("read bumped revision or omitted member")
 	}
 	own := x.exp("GET", "/api/homestead/gate/0", nil, bc, 200)
-	if own.Rev != b.Rev {
+	if own.Version != b.Version {
 		t.Fatal("own read bumped revision")
 	}
 	doc := b.State
@@ -62,7 +62,7 @@ func TestFix4ReadOnlyHomeRevisions(t *testing.T) {
 func TestFix4PlacementNeedsTierForIndoors(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fund("alice", 30, 0)
+	x.fund(x.account("alice"), 30, 0)
 	x.claimGate(c, &s, 0)
 	v := x.exp("POST", "/api/homestead/buy", body(s, "stool", map[string]any{"itemDef": "wooden-stool"}), c, 200)
 	update(&s, v)
@@ -71,7 +71,7 @@ func TestFix4PlacementNeedsTierForIndoors(t *testing.T) {
 		t.Fatal("campsite has no indoors")
 	}
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
-	req["baseRev"] = s.Rev
+	req["baseRev"] = s.Version
 	x.exp("POST", "/api/homestead/place", req, c, 200)
 }
 func TestFix4ClaimLocation(t *testing.T) {
@@ -106,7 +106,7 @@ func TestFix4RelightLocation(t *testing.T) {
 	doc := atLantern(s)
 	doc.HP = 0
 	v := x.exp("POST", "/api/wilds/defeat", body(s, "fall", map[string]any{"epoch": r.Epoch.ID, "x": 10, "y": 10, "progress": doc}), c, 200)
-	req := body(b, "light", map[string]any{"epoch": r.Epoch.ID, "ownerId": "alice", "lanternId": v.Result.LanternID})
+	req := body(b, "light", map[string]any{"epoch": r.Epoch.ID, "ownerId": x.account("alice"), "lanternId": v.Result.LanternID})
 	if x.exp("POST", "/api/wilds/lantern", req, bc, 409).Error.Code != "not-in-wilds" {
 		t.Fatal("village relight")
 	}
@@ -128,19 +128,19 @@ func TestFix4InventoryAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	state, err := store.Load(ctx, tx, s.HabiticaID)
+	state, err := store.Load(ctx, tx, s.AccountID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	state.State.Inventory = append(state.State.Inventory, "beeswax-candle", "ember-charm", "invented")
-	if _, err = tx.Exec("INSERT INTO item_stacks VALUES('pack','alice','beeswax-candle','',1)"); err != nil {
+	if _, err = tx.Exec("INSERT INTO item_stacks VALUES('pack','" + x.account("alice") + "','beeswax-candle','',1)"); err != nil {
 		t.Fatal(err)
 	}
 	if err = store.Persist(ctx, tx, &state, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	var raw string
-	if err = tx.QueryRow("SELECT doc_json FROM progress WHERE habitica_id='alice'").Scan(&raw); err != nil {
+	if err = tx.QueryRow("SELECT doc_json FROM progress WHERE account_id='" + x.account("alice") + "'").Scan(&raw); err != nil {
 		t.Fatal(err)
 	}
 	var doc rules.State
@@ -150,15 +150,15 @@ func TestFix4InventoryAuthority(t *testing.T) {
 			t.Fatal("authoritative inventory copied", id)
 		}
 	}
-	if _, err = tx.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='alice' AND item_def NOT IN ('timber','stone','fiber','amber')"); err != nil {
+	if _, err = tx.Exec("DELETE FROM item_stacks WHERE location='pack' AND owner='" + x.account("alice") + "' AND item_def NOT IN ('timber','stone','fiber','amber')"); err != nil {
 		t.Fatal(err)
 	}
 	// Old documents must also stop reviving revoked items.
 	doc.Inventory = append(doc.Inventory, "beeswax-candle")
-	if _, err = tx.Exec("UPDATE progress SET doc_json=? WHERE habitica_id='alice'", store.JSON(doc)); err != nil {
+	if _, err = tx.Exec("UPDATE progress SET doc_json=? WHERE account_id='"+x.account("alice")+"'", store.JSON(doc)); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := store.Load(ctx, tx, "alice")
+	loaded, err := store.Load(ctx, tx, x.account("alice"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestFix4VillageHearthOnly(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
-			x.fund("alice", 5, 5)
+			x.fund(x.account("alice"), 5, 5)
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 			doc := s.State
 			doc.Area = "commons"
@@ -236,7 +236,7 @@ func TestFix4LanternCreationCap(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='fall2'") != 0 {
 		t.Fatal("rejection cached")
 	}
-	if count(t, x.db, "SELECT sum(qty) FROM lantern_creations WHERE habitica_id='alice'") != 2 {
+	if count(t, x.db, "SELECT sum(qty) FROM lantern_creations WHERE account_id='"+x.account("alice")+"'") != 2 {
 		t.Fatal("creation counter")
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='wilds-defeat'") != 2 {
