@@ -18,8 +18,8 @@ that moves the changelog and bumps that version, tagged.
    ```
 
    The version is part of the Nix web package's npm dependency hash, so update
-   `npmDepsHash` in `nix/web.nix` with every bump: `nix build .#glimway-web`
-   prints the new hash ("got: …") when it's stale.
+   `npmDepsHash` in `nix/web.nix` with every bump. The quick way, without
+   building: `nix run nixpkgs#prefetch-npm-deps -- package-lock.json`.
 
 3. **Check.** `npm run verify`, `go test ./...`, and the playtests that matter
    (`npm run test:smoke` at least).
