@@ -10,7 +10,16 @@
           "marks": [],
           "papers": [],
           "embers": 0,
-          "witness": ""
+          "witness": "",
+          "goal": "Hear Mara out",
+          "objective": "Hear Mara out.",
+          "do": {
+            "talk": "mara"
+          },
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          }
         },
         {
           "id": "clue-found",
@@ -23,7 +32,16 @@
           ],
           "papers": [],
           "embers": 0,
-          "witness": ""
+          "witness": "",
+          "goal": "Copy the route stone",
+          "objective": "Copy the route stone.",
+          "do": {
+            "use": "route-stone"
+          },
+          "where": {
+            "area": "ruin",
+            "spot": "route-stone"
+          }
         },
         {
           "id": "guardian-defeated",
@@ -38,7 +56,16 @@
             "eleven-days"
           ],
           "embers": 2,
-          "witness": "warden"
+          "witness": "warden",
+          "goal": "Settle the stone warden",
+          "objective": "Settle the stone warden.",
+          "do": {
+            "defeat": "stone-warden"
+          },
+          "where": {
+            "area": "ruin",
+            "enemy": "stone-warden"
+          }
         },
         {
           "id": "lantern-lit",
@@ -51,7 +78,16 @@
             "principia-memoria-excerpt"
           ],
           "embers": 0,
-          "witness": "lantern"
+          "witness": "lantern",
+          "goal": "Light the hilltop lantern",
+          "objective": "Light the hilltop lantern.",
+          "do": {
+            "flag": "found:hilltop-lantern"
+          },
+          "where": {
+            "area": "ruin",
+            "spot": "hilltop-lantern"
+          }
         },
         {
           "id": "complete",
@@ -62,9 +98,22 @@
           ],
           "papers": [],
           "embers": 3,
-          "witness": ""
+          "witness": "",
+          "goal": "Return to Mara",
+          "objective": "Return to Mara.",
+          "do": {
+            "talk": "mara"
+          },
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          }
         }
-      ]
+      ],
+      "title": "The Lantern Road",
+      "blurb": "Follow the old lantern road beyond Hearthwick.",
+      "line": "road",
+      "chapter": 1
     }
   ]
 }

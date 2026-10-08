@@ -298,6 +298,58 @@ func (x *QuestStepRequest) GetWhere() *Where {
 	return nil
 }
 
+type ItemQty struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Def           string                 `protobuf:"bytes,1,opt,name=def,proto3" json:"def,omitempty"`
+	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ItemQty) Reset() {
+	*x = ItemQty{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemQty) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemQty) ProtoMessage() {}
+
+func (x *ItemQty) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemQty.ProtoReflect.Descriptor instead.
+func (*ItemQty) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ItemQty) GetDef() string {
+	if x != nil {
+		return x.Def
+	}
+	return ""
+}
+
+func (x *ItemQty) GetQty() float64 {
+	if x != nil {
+		return x.Qty
+	}
+	return 0
+}
+
 type QuestStepResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Quest         string                 `protobuf:"bytes,1,opt,name=quest,proto3" json:"quest,omitempty"`
@@ -306,13 +358,16 @@ type QuestStepResult struct {
 	Marks         []string               `protobuf:"bytes,4,rep,name=marks,proto3" json:"marks,omitempty"`
 	Papers        []string               `protobuf:"bytes,5,rep,name=papers,proto3" json:"papers,omitempty"`
 	Embers        float64                `protobuf:"fixed64,6,opt,name=embers,proto3" json:"embers,omitempty"`
+	EmbersSpent   float64                `protobuf:"fixed64,7,opt,name=embers_spent,json=embersSpent,proto3" json:"embers_spent,omitempty"`
+	Taken         []*ItemQty             `protobuf:"bytes,8,rep,name=taken,proto3" json:"taken,omitempty"`
+	Given         []*ItemQty             `protobuf:"bytes,9,rep,name=given,proto3" json:"given,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *QuestStepResult) Reset() {
 	*x = QuestStepResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[3]
+	mi := &file_glimway_v1_operations_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +379,7 @@ func (x *QuestStepResult) String() string {
 func (*QuestStepResult) ProtoMessage() {}
 
 func (x *QuestStepResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[3]
+	mi := &file_glimway_v1_operations_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +392,7 @@ func (x *QuestStepResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuestStepResult.ProtoReflect.Descriptor instead.
 func (*QuestStepResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{3}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *QuestStepResult) GetQuest() string {
@@ -382,6 +437,27 @@ func (x *QuestStepResult) GetEmbers() float64 {
 	return 0
 }
 
+func (x *QuestStepResult) GetEmbersSpent() float64 {
+	if x != nil {
+		return x.EmbersSpent
+	}
+	return 0
+}
+
+func (x *QuestStepResult) GetTaken() []*ItemQty {
+	if x != nil {
+		return x.Taken
+	}
+	return nil
+}
+
+func (x *QuestStepResult) GetGiven() []*ItemQty {
+	if x != nil {
+		return x.Given
+	}
+	return nil
+}
+
 type MarkRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -393,7 +469,7 @@ type MarkRequest struct {
 
 func (x *MarkRequest) Reset() {
 	*x = MarkRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[4]
+	mi := &file_glimway_v1_operations_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -405,7 +481,7 @@ func (x *MarkRequest) String() string {
 func (*MarkRequest) ProtoMessage() {}
 
 func (x *MarkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[4]
+	mi := &file_glimway_v1_operations_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -418,7 +494,7 @@ func (x *MarkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkRequest.ProtoReflect.Descriptor instead.
 func (*MarkRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{4}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *MarkRequest) GetOp() *OpHeader {
@@ -452,7 +528,7 @@ type MarkResult struct {
 
 func (x *MarkResult) Reset() {
 	*x = MarkResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[5]
+	mi := &file_glimway_v1_operations_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +540,7 @@ func (x *MarkResult) String() string {
 func (*MarkResult) ProtoMessage() {}
 
 func (x *MarkResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[5]
+	mi := &file_glimway_v1_operations_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +553,7 @@ func (x *MarkResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkResult.ProtoReflect.Descriptor instead.
 func (*MarkResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MarkResult) GetMark() string {
@@ -507,7 +583,7 @@ type TakePaperRequest struct {
 
 func (x *TakePaperRequest) Reset() {
 	*x = TakePaperRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[6]
+	mi := &file_glimway_v1_operations_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +595,7 @@ func (x *TakePaperRequest) String() string {
 func (*TakePaperRequest) ProtoMessage() {}
 
 func (x *TakePaperRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[6]
+	mi := &file_glimway_v1_operations_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +608,7 @@ func (x *TakePaperRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TakePaperRequest.ProtoReflect.Descriptor instead.
 func (*TakePaperRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TakePaperRequest) GetOp() *OpHeader {
@@ -580,7 +656,7 @@ type TakePaperResult struct {
 
 func (x *TakePaperResult) Reset() {
 	*x = TakePaperResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[7]
+	mi := &file_glimway_v1_operations_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +668,7 @@ func (x *TakePaperResult) String() string {
 func (*TakePaperResult) ProtoMessage() {}
 
 func (x *TakePaperResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[7]
+	mi := &file_glimway_v1_operations_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +681,7 @@ func (x *TakePaperResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TakePaperResult.ProtoReflect.Descriptor instead.
 func (*TakePaperResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TakePaperResult) GetPaper() string {
@@ -635,7 +711,7 @@ type SettleEchoRequest struct {
 
 func (x *SettleEchoRequest) Reset() {
 	*x = SettleEchoRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[8]
+	mi := &file_glimway_v1_operations_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -647,7 +723,7 @@ func (x *SettleEchoRequest) String() string {
 func (*SettleEchoRequest) ProtoMessage() {}
 
 func (x *SettleEchoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[8]
+	mi := &file_glimway_v1_operations_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -660,7 +736,7 @@ func (x *SettleEchoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleEchoRequest.ProtoReflect.Descriptor instead.
 func (*SettleEchoRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SettleEchoRequest) GetOp() *OpHeader {
@@ -710,7 +786,7 @@ type SettleEchoResult struct {
 
 func (x *SettleEchoResult) Reset() {
 	*x = SettleEchoResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[9]
+	mi := &file_glimway_v1_operations_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +798,7 @@ func (x *SettleEchoResult) String() string {
 func (*SettleEchoResult) ProtoMessage() {}
 
 func (x *SettleEchoResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[9]
+	mi := &file_glimway_v1_operations_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +811,7 @@ func (x *SettleEchoResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleEchoResult.ProtoReflect.Descriptor instead.
 func (*SettleEchoResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SettleEchoResult) GetEpoch() string {
@@ -776,7 +852,7 @@ type FallRequest struct {
 
 func (x *FallRequest) Reset() {
 	*x = FallRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[10]
+	mi := &file_glimway_v1_operations_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -788,7 +864,7 @@ func (x *FallRequest) String() string {
 func (*FallRequest) ProtoMessage() {}
 
 func (x *FallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[10]
+	mi := &file_glimway_v1_operations_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -801,7 +877,7 @@ func (x *FallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FallRequest.ProtoReflect.Descriptor instead.
 func (*FallRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{10}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FallRequest) GetOp() *OpHeader {
@@ -834,7 +910,7 @@ type FallResult struct {
 
 func (x *FallResult) Reset() {
 	*x = FallResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[11]
+	mi := &file_glimway_v1_operations_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -846,7 +922,7 @@ func (x *FallResult) String() string {
 func (*FallResult) ProtoMessage() {}
 
 func (x *FallResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[11]
+	mi := &file_glimway_v1_operations_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +935,7 @@ func (x *FallResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FallResult.ProtoReflect.Descriptor instead.
 func (*FallResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{11}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FallResult) GetVitals() *Vitals {
@@ -915,7 +991,7 @@ type ProfileReport struct {
 
 func (x *ProfileReport) Reset() {
 	*x = ProfileReport{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[12]
+	mi := &file_glimway_v1_operations_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +1003,7 @@ func (x *ProfileReport) String() string {
 func (*ProfileReport) ProtoMessage() {}
 
 func (x *ProfileReport) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[12]
+	mi := &file_glimway_v1_operations_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -940,7 +1016,7 @@ func (x *ProfileReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileReport.ProtoReflect.Descriptor instead.
 func (*ProfileReport) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{12}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ProfileReport) GetLease() string {
@@ -974,7 +1050,7 @@ type VitalsCredit struct {
 
 func (x *VitalsCredit) Reset() {
 	*x = VitalsCredit{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[13]
+	mi := &file_glimway_v1_operations_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -986,7 +1062,7 @@ func (x *VitalsCredit) String() string {
 func (*VitalsCredit) ProtoMessage() {}
 
 func (x *VitalsCredit) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[13]
+	mi := &file_glimway_v1_operations_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -999,7 +1075,7 @@ func (x *VitalsCredit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VitalsCredit.ProtoReflect.Descriptor instead.
 func (*VitalsCredit) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{13}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *VitalsCredit) GetHp() float64 {
@@ -1028,7 +1104,7 @@ type ProfileResult struct {
 
 func (x *ProfileResult) Reset() {
 	*x = ProfileResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[14]
+	mi := &file_glimway_v1_operations_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1040,7 +1116,7 @@ func (x *ProfileResult) String() string {
 func (*ProfileResult) ProtoMessage() {}
 
 func (x *ProfileResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[14]
+	mi := &file_glimway_v1_operations_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1053,7 +1129,7 @@ func (x *ProfileResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileResult.ProtoReflect.Descriptor instead.
 func (*ProfileResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{14}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ProfileResult) GetStatus() string {
@@ -1097,7 +1173,7 @@ type SpendRequest struct {
 
 func (x *SpendRequest) Reset() {
 	*x = SpendRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[15]
+	mi := &file_glimway_v1_operations_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1109,7 +1185,7 @@ func (x *SpendRequest) String() string {
 func (*SpendRequest) ProtoMessage() {}
 
 func (x *SpendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[15]
+	mi := &file_glimway_v1_operations_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1122,7 +1198,7 @@ func (x *SpendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpendRequest.ProtoReflect.Descriptor instead.
 func (*SpendRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SpendRequest) GetOp() *OpHeader {
@@ -1162,7 +1238,7 @@ type SpendResult struct {
 
 func (x *SpendResult) Reset() {
 	*x = SpendResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[16]
+	mi := &file_glimway_v1_operations_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1174,7 +1250,7 @@ func (x *SpendResult) String() string {
 func (*SpendResult) ProtoMessage() {}
 
 func (x *SpendResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[16]
+	mi := &file_glimway_v1_operations_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1187,7 +1263,7 @@ func (x *SpendResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpendResult.ProtoReflect.Descriptor instead.
 func (*SpendResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{16}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SpendResult) GetOutcome() string {
@@ -1210,7 +1286,7 @@ type WildsClaimRequest struct {
 
 func (x *WildsClaimRequest) Reset() {
 	*x = WildsClaimRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[17]
+	mi := &file_glimway_v1_operations_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1222,7 +1298,7 @@ func (x *WildsClaimRequest) String() string {
 func (*WildsClaimRequest) ProtoMessage() {}
 
 func (x *WildsClaimRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[17]
+	mi := &file_glimway_v1_operations_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1235,7 +1311,7 @@ func (x *WildsClaimRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsClaimRequest.ProtoReflect.Descriptor instead.
 func (*WildsClaimRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{17}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *WildsClaimRequest) GetOp() *OpHeader {
@@ -1288,7 +1364,7 @@ type WildsClaimResult struct {
 
 func (x *WildsClaimResult) Reset() {
 	*x = WildsClaimResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[18]
+	mi := &file_glimway_v1_operations_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1300,7 +1376,7 @@ func (x *WildsClaimResult) String() string {
 func (*WildsClaimResult) ProtoMessage() {}
 
 func (x *WildsClaimResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[18]
+	mi := &file_glimway_v1_operations_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1313,7 +1389,7 @@ func (x *WildsClaimResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsClaimResult.ProtoReflect.Descriptor instead.
 func (*WildsClaimResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{18}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *WildsClaimResult) GetEpoch() string {
@@ -1378,7 +1454,7 @@ type WildsLanternRequest struct {
 
 func (x *WildsLanternRequest) Reset() {
 	*x = WildsLanternRequest{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[19]
+	mi := &file_glimway_v1_operations_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1390,7 +1466,7 @@ func (x *WildsLanternRequest) String() string {
 func (*WildsLanternRequest) ProtoMessage() {}
 
 func (x *WildsLanternRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[19]
+	mi := &file_glimway_v1_operations_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1403,7 +1479,7 @@ func (x *WildsLanternRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsLanternRequest.ProtoReflect.Descriptor instead.
 func (*WildsLanternRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{19}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *WildsLanternRequest) GetOp() *OpHeader {
@@ -1454,7 +1530,7 @@ type WildsLanternResult struct {
 
 func (x *WildsLanternResult) Reset() {
 	*x = WildsLanternResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[20]
+	mi := &file_glimway_v1_operations_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1466,7 +1542,7 @@ func (x *WildsLanternResult) String() string {
 func (*WildsLanternResult) ProtoMessage() {}
 
 func (x *WildsLanternResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[20]
+	mi := &file_glimway_v1_operations_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1479,7 +1555,7 @@ func (x *WildsLanternResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsLanternResult.ProtoReflect.Descriptor instead.
 func (*WildsLanternResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{20}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *WildsLanternResult) GetEpoch() string {
@@ -1551,14 +1627,20 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12\x14\n" +
 	"\x05quest\x18\x02 \x01(\tR\x05quest\x12\x0e\n" +
 	"\x02to\x18\x03 \x01(\tR\x02to\x12'\n" +
-	"\x05where\x18\x04 \x01(\v2\x11.glimway.v1.WhereR\x05where\"\x97\x01\n" +
+	"\x05where\x18\x04 \x01(\v2\x11.glimway.v1.WhereR\x05where\"-\n" +
+	"\aItemQty\x12\x10\n" +
+	"\x03def\x18\x01 \x01(\tR\x03def\x12\x10\n" +
+	"\x03qty\x18\x02 \x01(\x01R\x03qty\"\x90\x02\n" +
 	"\x0fQuestStepResult\x12\x14\n" +
 	"\x05quest\x18\x01 \x01(\tR\x05quest\x12\x12\n" +
 	"\x04step\x18\x02 \x01(\tR\x04step\x12\x14\n" +
 	"\x05items\x18\x03 \x03(\tR\x05items\x12\x14\n" +
 	"\x05marks\x18\x04 \x03(\tR\x05marks\x12\x16\n" +
 	"\x06papers\x18\x05 \x03(\tR\x06papers\x12\x16\n" +
-	"\x06embers\x18\x06 \x01(\x01R\x06embers\"p\n" +
+	"\x06embers\x18\x06 \x01(\x01R\x06embers\x12!\n" +
+	"\fembers_spent\x18\a \x01(\x01R\vembersSpent\x12)\n" +
+	"\x05taken\x18\b \x03(\v2\x13.glimway.v1.ItemQtyR\x05taken\x12)\n" +
+	"\x05given\x18\t \x03(\v2\x13.glimway.v1.ItemQtyR\x05given\"p\n" +
 	"\vMarkRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12\x12\n" +
 	"\x04mark\x18\x02 \x01(\tR\x04mark\x12'\n" +
@@ -1664,75 +1746,78 @@ func file_glimway_v1_operations_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_operations_proto_rawDescData
 }
 
-var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_glimway_v1_operations_proto_goTypes = []any{
 	(*ReportRequest)(nil),       // 0: glimway.v1.ReportRequest
 	(*ReportResult)(nil),        // 1: glimway.v1.ReportResult
 	(*QuestStepRequest)(nil),    // 2: glimway.v1.QuestStepRequest
-	(*QuestStepResult)(nil),     // 3: glimway.v1.QuestStepResult
-	(*MarkRequest)(nil),         // 4: glimway.v1.MarkRequest
-	(*MarkResult)(nil),          // 5: glimway.v1.MarkResult
-	(*TakePaperRequest)(nil),    // 6: glimway.v1.TakePaperRequest
-	(*TakePaperResult)(nil),     // 7: glimway.v1.TakePaperResult
-	(*SettleEchoRequest)(nil),   // 8: glimway.v1.SettleEchoRequest
-	(*SettleEchoResult)(nil),    // 9: glimway.v1.SettleEchoResult
-	(*FallRequest)(nil),         // 10: glimway.v1.FallRequest
-	(*FallResult)(nil),          // 11: glimway.v1.FallResult
-	(*ProfileReport)(nil),       // 12: glimway.v1.ProfileReport
-	(*VitalsCredit)(nil),        // 13: glimway.v1.VitalsCredit
-	(*ProfileResult)(nil),       // 14: glimway.v1.ProfileResult
-	(*SpendRequest)(nil),        // 15: glimway.v1.SpendRequest
-	(*SpendResult)(nil),         // 16: glimway.v1.SpendResult
-	(*WildsClaimRequest)(nil),   // 17: glimway.v1.WildsClaimRequest
-	(*WildsClaimResult)(nil),    // 18: glimway.v1.WildsClaimResult
-	(*WildsLanternRequest)(nil), // 19: glimway.v1.WildsLanternRequest
-	(*WildsLanternResult)(nil),  // 20: glimway.v1.WildsLanternResult
-	nil,                         // 21: glimway.v1.WildsClaimResult.MaterialsEntry
-	nil,                         // 22: glimway.v1.WildsLanternResult.MaterialsEntry
-	(*Where)(nil),               // 23: glimway.v1.Where
-	(*OpHeader)(nil),            // 24: glimway.v1.OpHeader
-	(*Vitals)(nil),              // 25: glimway.v1.Vitals
-	(*Place)(nil),               // 26: glimway.v1.Place
-	(*HabiticaUser)(nil),        // 27: glimway.v1.HabiticaUser
-	(*ReportBarrier)(nil),       // 28: glimway.v1.ReportBarrier
-	(*WildsEntityState)(nil),    // 29: glimway.v1.WildsEntityState
-	(*WildsLoot)(nil),           // 30: glimway.v1.WildsLoot
-	(*WildsLantern)(nil),        // 31: glimway.v1.WildsLantern
+	(*ItemQty)(nil),             // 3: glimway.v1.ItemQty
+	(*QuestStepResult)(nil),     // 4: glimway.v1.QuestStepResult
+	(*MarkRequest)(nil),         // 5: glimway.v1.MarkRequest
+	(*MarkResult)(nil),          // 6: glimway.v1.MarkResult
+	(*TakePaperRequest)(nil),    // 7: glimway.v1.TakePaperRequest
+	(*TakePaperResult)(nil),     // 8: glimway.v1.TakePaperResult
+	(*SettleEchoRequest)(nil),   // 9: glimway.v1.SettleEchoRequest
+	(*SettleEchoResult)(nil),    // 10: glimway.v1.SettleEchoResult
+	(*FallRequest)(nil),         // 11: glimway.v1.FallRequest
+	(*FallResult)(nil),          // 12: glimway.v1.FallResult
+	(*ProfileReport)(nil),       // 13: glimway.v1.ProfileReport
+	(*VitalsCredit)(nil),        // 14: glimway.v1.VitalsCredit
+	(*ProfileResult)(nil),       // 15: glimway.v1.ProfileResult
+	(*SpendRequest)(nil),        // 16: glimway.v1.SpendRequest
+	(*SpendResult)(nil),         // 17: glimway.v1.SpendResult
+	(*WildsClaimRequest)(nil),   // 18: glimway.v1.WildsClaimRequest
+	(*WildsClaimResult)(nil),    // 19: glimway.v1.WildsClaimResult
+	(*WildsLanternRequest)(nil), // 20: glimway.v1.WildsLanternRequest
+	(*WildsLanternResult)(nil),  // 21: glimway.v1.WildsLanternResult
+	nil,                         // 22: glimway.v1.WildsClaimResult.MaterialsEntry
+	nil,                         // 23: glimway.v1.WildsLanternResult.MaterialsEntry
+	(*Where)(nil),               // 24: glimway.v1.Where
+	(*OpHeader)(nil),            // 25: glimway.v1.OpHeader
+	(*Vitals)(nil),              // 26: glimway.v1.Vitals
+	(*Place)(nil),               // 27: glimway.v1.Place
+	(*HabiticaUser)(nil),        // 28: glimway.v1.HabiticaUser
+	(*ReportBarrier)(nil),       // 29: glimway.v1.ReportBarrier
+	(*WildsEntityState)(nil),    // 30: glimway.v1.WildsEntityState
+	(*WildsLoot)(nil),           // 31: glimway.v1.WildsLoot
+	(*WildsLantern)(nil),        // 32: glimway.v1.WildsLantern
 }
 var file_glimway_v1_operations_proto_depIdxs = []int32{
-	23, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
-	24, // 1: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 2: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
-	24, // 3: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 4: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
-	24, // 5: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 6: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
-	24, // 7: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 8: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
-	24, // 9: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 10: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
-	25, // 11: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
-	26, // 12: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
-	27, // 13: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
-	28, // 14: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
-	13, // 15: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
-	24, // 16: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 17: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
-	24, // 18: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 19: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
-	29, // 20: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
-	30, // 21: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
-	21, // 22: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
-	24, // 23: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
-	23, // 24: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
-	30, // 25: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
-	22, // 26: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
-	31, // 27: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	24, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
+	25, // 1: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 2: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
+	3,  // 3: glimway.v1.QuestStepResult.taken:type_name -> glimway.v1.ItemQty
+	3,  // 4: glimway.v1.QuestStepResult.given:type_name -> glimway.v1.ItemQty
+	25, // 5: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 6: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
+	25, // 7: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 8: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
+	25, // 9: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 10: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
+	25, // 11: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 12: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
+	26, // 13: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
+	27, // 14: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
+	28, // 15: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
+	29, // 16: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
+	14, // 17: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
+	25, // 18: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 19: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
+	25, // 20: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 21: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
+	30, // 22: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
+	31, // 23: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
+	22, // 24: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
+	25, // 25: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
+	24, // 26: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
+	31, // 27: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
+	23, // 28: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
+	32, // 29: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
+	30, // [30:30] is the sub-list for method output_type
+	30, // [30:30] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_operations_proto_init() }
@@ -1749,7 +1834,7 @@ func file_glimway_v1_operations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_operations_proto_rawDesc), len(file_glimway_v1_operations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

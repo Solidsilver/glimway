@@ -154,6 +154,27 @@ export declare type QuestStepRequest = Message<"glimway.v1.QuestStepRequest"> & 
 export declare const QuestStepRequestSchema: GenMessage<QuestStepRequest>;
 
 /**
+ * @generated from message glimway.v1.ItemQty
+ */
+export declare type ItemQty = Message<"glimway.v1.ItemQty"> & {
+  /**
+   * @generated from field: string def = 1;
+   */
+  def: string;
+
+  /**
+   * @generated from field: double qty = 2;
+   */
+  qty: number;
+};
+
+/**
+ * Describes the message glimway.v1.ItemQty.
+ * Use `create(ItemQtySchema)` to create a new message.
+ */
+export declare const ItemQtySchema: GenMessage<ItemQty>;
+
+/**
  * @generated from message glimway.v1.QuestStepResult
  */
 export declare type QuestStepResult = Message<"glimway.v1.QuestStepResult"> & {
@@ -186,6 +207,21 @@ export declare type QuestStepResult = Message<"glimway.v1.QuestStepResult"> & {
    * @generated from field: double embers = 6;
    */
   embers: number;
+
+  /**
+   * @generated from field: double embers_spent = 7;
+   */
+  embersSpent: number;
+
+  /**
+   * @generated from field: repeated glimway.v1.ItemQty taken = 8;
+   */
+  taken: ItemQty[];
+
+  /**
+   * @generated from field: repeated glimway.v1.ItemQty given = 9;
+   */
+  given: ItemQty[];
 };
 
 /**

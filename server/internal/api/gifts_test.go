@@ -71,7 +71,7 @@ type shelfActionRes struct {
 func (x *rig) getShelf(c *http.Cookie, gate int, status int) shelfViewResponse {
 	x.t.Helper()
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/homestead/shelf?gate=%d", gate), nil)
-	req.Header.Set("X-Glimway-Contract", "3")
+	req.Header.Set("X-Glimway-Contract", "4")
 	if c != nil {
 		req.AddCookie(c)
 	}
@@ -93,7 +93,7 @@ func (x *rig) shelfOp(c *http.Cookie, s *response, fields map[string]any, status
 	key := fmt.Sprintf("shelf-%d-%d-%d", s.Version, x.now.Load(), keySeq())
 	b := body(*s, key, fields)
 	req := httptest.NewRequest("POST", "/api/homestead/shelf", bytes.NewBufferString(store.JSON(b)))
-	req.Header.Set("X-Glimway-Contract", "3")
+	req.Header.Set("X-Glimway-Contract", "4")
 	req.Header.Set("Content-Type", "application/json")
 	if c != nil {
 		req.AddCookie(c)
@@ -388,7 +388,7 @@ func TestGateShelfTakeReplayIsConserved(t *testing.T) {
 	var first, second shelfActionRes
 	for i, dst := range []*shelfActionRes{&first, &second} {
 		req := httptest.NewRequest("POST", "/api/homestead/shelf", bytes.NewBufferString(payload))
-		req.Header.Set("X-Glimway-Contract", "3")
+		req.Header.Set("X-Glimway-Contract", "4")
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(bc)
 		w := httptest.NewRecorder()
@@ -445,7 +445,7 @@ func TestConcurrentGateShelfTakesSerializeOneAvailableSlot(t *testing.T) {
 			fields := map[string]any{"op": "take", "gate": 0, "slot": 0}
 			payload := body(*snapshot, fmt.Sprintf("parallel-take-%s", snapshot.AccountID), fields)
 			req := httptest.NewRequest("POST", "/api/homestead/shelf", bytes.NewBufferString(store.JSON(payload)))
-			req.Header.Set("X-Glimway-Contract", "3")
+			req.Header.Set("X-Glimway-Contract", "4")
 			req.Header.Set("Content-Type", "application/json")
 			req.AddCookie(cookie)
 			w := httptest.NewRecorder()
@@ -551,7 +551,7 @@ func TestMakerThankYouMail(t *testing.T) {
 
 	// Alice checks her mail: should have a 'thanks' mail from Bob
 	req := httptest.NewRequest("GET", "/api/mail", nil)
-	req.Header.Set("X-Glimway-Contract", "3")
+	req.Header.Set("X-Glimway-Contract", "4")
 	req.AddCookie(ac)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)
@@ -590,7 +590,7 @@ func TestMakerThankYouMail(t *testing.T) {
 	// Alice claims the thank-you mail
 	claimB := body(a, "claim-key", nil)
 	claimReq := httptest.NewRequest("POST", fmt.Sprintf("/api/mail/%s/claim", m.ID), bytes.NewBufferString(store.JSON(claimB)))
-	claimReq.Header.Set("X-Glimway-Contract", "3")
+	claimReq.Header.Set("X-Glimway-Contract", "4")
 	claimReq.Header.Set("Content-Type", "application/json")
 	claimReq.AddCookie(ac)
 	claimW := httptest.NewRecorder()
@@ -647,7 +647,7 @@ func TestToolWearOutThankYouMail(t *testing.T) {
 
 	// Alice receives thank-you mail for the tool she made!
 	req := httptest.NewRequest("GET", "/api/mail", nil)
-	req.Header.Set("X-Glimway-Contract", "3")
+	req.Header.Set("X-Glimway-Contract", "4")
 	req.AddCookie(ac)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)

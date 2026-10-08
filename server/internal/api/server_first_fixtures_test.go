@@ -145,6 +145,18 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		t.Fatal(err)
 	}
 	fixtures = append(fixtures, wireFixture{"glimway.v1.PlayerState", "valid", raw, ""})
+	questState := proto.Clone(state.State).(*contract.PlayerState)
+	questState.Story.Quests = map[string]string{"set-to-rise": "let-it-rise"}
+	questState.Story.ReachedAt = map[string]float64{"set-to-rise": 1791400000}
+	questState.Story.GateAt = map[string]float64{"set-to-rise": 1791400000}
+	questRaw, err := opResultBytes(questState, &contract.QuestStepResult{
+		Quest: "set-to-rise", Step: "let-it-rise", Embers: 2, EmbersSpent: 1,
+		Taken: []*contract.ItemQty{{Def: "flour", Qty: 1}}, Given: []*contract.ItemQty{{Def: "keepers-twists", Qty: 2}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtures = append(fixtures, wireFixture{"glimway.v1.Envelope", "quest-gates", questRaw, ""})
 	mixed, err := mixedBytes(state.State, map[string]any{"home": nil, "materials": map[string]int{}, "itemId": ""})
 	if err != nil {
 		t.Fatal(err)

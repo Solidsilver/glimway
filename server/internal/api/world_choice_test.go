@@ -280,7 +280,7 @@ func TestPartyAdmittedMakeNoInvites(t *testing.T) {
 		PartyWorld    bool `json:"partyWorld"`
 	}
 	r := httptest.NewRequest("GET", "/api/invites", nil)
-	r.Header.Set("X-Glimway-Contract", "3")
+	r.Header.Set("X-Glimway-Contract", "4")
 	r.AddCookie(rc)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)

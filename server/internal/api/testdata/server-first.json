@@ -194,7 +194,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -331,7 +333,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -457,7 +461,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -583,7 +589,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -709,7 +717,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -835,7 +845,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -961,7 +973,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -1095,7 +1109,13 @@
           "questItems": [
             "fixture"
           ],
-          "playSeconds": 1
+          "playSeconds": 1,
+          "reachedAt": {
+            "fixture": 1
+          },
+          "gateAt": {
+            "fixture": 1
+          }
         },
         "embers": {
           "balance": 1,
@@ -1114,6 +1134,136 @@
         "generation": "fixture",
         "basis": 1,
         "placeIgnored": true
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "quest-gates",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "outerEpoch": ""
+        },
+        "story": {
+          "quests": {
+            "set-to-rise": "let-it-rise"
+          },
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {
+            "set-to-rise": 1791400000
+          },
+          "gateAt": {
+            "set-to-rise": 1791400000
+          }
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "questStep": {
+        "quest": "set-to-rise",
+        "step": "let-it-rise",
+        "items": [],
+        "marks": [],
+        "papers": [],
+        "embers": 2,
+        "embersSpent": 1,
+        "taken": [
+          {
+            "def": "flour",
+            "qty": 1
+          }
+        ],
+        "given": [
+          {
+            "def": "keepers-twists",
+            "qty": 2
+          }
+        ]
       }
     }
   },
@@ -1206,7 +1356,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -1317,7 +1469,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -1333,7 +1487,10 @@
         "items": [],
         "marks": [],
         "papers": [],
-        "embers": 0
+        "embers": 0,
+        "embersSpent": 0,
+        "taken": [],
+        "given": []
       }
     }
   },
@@ -1873,6 +2030,22 @@
     }
   },
   {
+    "name": "glimway.v1.ItemQty",
+    "case": "empty",
+    "json": {
+      "def": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.ItemQty",
+    "case": "populated",
+    "json": {
+      "def": "fixture",
+      "qty": 1
+    }
+  },
+  {
     "name": "glimway.v1.LoginRequest",
     "case": "empty",
     "json": {
@@ -2102,7 +2275,13 @@
           "questItems": [
             "fixture"
           ],
-          "playSeconds": 1
+          "playSeconds": 1,
+          "reachedAt": {
+            "fixture": 1
+          },
+          "gateAt": {
+            "fixture": 1
+          }
         },
         "embers": {
           "balance": 1,
@@ -2206,7 +2385,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -2327,7 +2508,13 @@
         "questItems": [
           "fixture"
         ],
-        "playSeconds": 1
+        "playSeconds": 1,
+        "reachedAt": {
+          "fixture": 1
+        },
+        "gateAt": {
+          "fixture": 1
+        }
       },
       "embers": {
         "balance": 1,
@@ -2426,7 +2613,9 @@
           "field-journal",
           "hearthwick-map"
         ],
-        "playSeconds": 0
+        "playSeconds": 0,
+        "reachedAt": {},
+        "gateAt": {}
       },
       "embers": {
         "balance": 0,
@@ -2618,7 +2807,10 @@
       "items": [],
       "marks": [],
       "papers": [],
-      "embers": 0
+      "embers": 0,
+      "embersSpent": 0,
+      "taken": [],
+      "given": []
     }
   },
   {
@@ -2636,7 +2828,20 @@
       "papers": [
         "fixture"
       ],
-      "embers": 1
+      "embers": 1,
+      "embersSpent": 1,
+      "taken": [
+        {
+          "def": "fixture",
+          "qty": 1
+        }
+      ],
+      "given": [
+        {
+          "def": "fixture",
+          "qty": 1
+        }
+      ]
     }
   },
   {
@@ -2744,7 +2949,13 @@
           "questItems": [
             "fixture"
           ],
-          "playSeconds": 1
+          "playSeconds": 1,
+          "reachedAt": {
+            "fixture": 1
+          },
+          "gateAt": {
+            "fixture": 1
+          }
         },
         "embers": {
           "balance": 1,
@@ -2848,7 +3059,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -3039,7 +3252,13 @@
           "questItems": [
             "fixture"
           ],
-          "playSeconds": 1
+          "playSeconds": 1,
+          "reachedAt": {
+            "fixture": 1
+          },
+          "gateAt": {
+            "fixture": 1
+          }
         },
         "embers": {
           "balance": 1,
@@ -3273,7 +3492,13 @@
           "questItems": [
             "fixture"
           ],
-          "playSeconds": 1
+          "playSeconds": 1,
+          "reachedAt": {
+            "fixture": 1
+          },
+          "gateAt": {
+            "fixture": 1
+          }
         },
         "embers": {
           "balance": 1,
@@ -3375,7 +3600,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -3397,7 +3624,9 @@
       "discoveries": [],
       "defeated": [],
       "questItems": [],
-      "playSeconds": 0
+      "playSeconds": 0,
+      "reachedAt": {},
+      "gateAt": {}
     }
   },
   {
@@ -3419,7 +3648,13 @@
       "questItems": [
         "fixture"
       ],
-      "playSeconds": 1
+      "playSeconds": 1,
+      "reachedAt": {
+        "fixture": 1
+      },
+      "gateAt": {
+        "fixture": 1
+      }
     }
   },
   {
@@ -4391,7 +4626,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -4525,7 +4762,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -4647,7 +4886,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -4759,7 +5000,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -4995,7 +5238,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -5113,7 +5358,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,
@@ -5219,7 +5466,9 @@
             "field-journal",
             "hearthwick-map"
           ],
-          "playSeconds": 0
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
         },
         "embers": {
           "balance": 0,

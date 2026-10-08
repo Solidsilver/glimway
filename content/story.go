@@ -7,19 +7,6 @@ import (
 	"strings"
 )
 
-type QuestStep struct {
-	ID      string   `json:"id"`
-	At      string   `json:"at"`
-	Items   []string `json:"items"`
-	Marks   []string `json:"marks"`
-	Papers  []string `json:"papers"`
-	Embers  int      `json:"embers"`
-	Witness string   `json:"witness"`
-}
-type Quest struct {
-	ID    string      `json:"id"`
-	Steps []QuestStep `json:"steps"`
-}
 type Namespace struct {
 	Prefix string `json:"prefix"`
 	Writer string `json:"writer"`
@@ -30,6 +17,9 @@ type Echo struct {
 	East   bool   `json:"east"`
 }
 type Story struct {
+	QuestItems []string                     `json:"questItems"`
+	NPCs       map[string]string            `json:"npcs"`
+	Spots      map[string]string            `json:"spots"`
 	Namespaces []Namespace                  `json:"namespaces"`
 	IDs        map[string]map[string]string `json:"ids"`
 	Areas      map[string]string            `json:"areas"`
@@ -47,32 +37,6 @@ func readTable(name string, out any) error {
 	}
 	return json.Unmarshal(b, out)
 }
-func LoadQuests() ([]Quest, error) {
-	var doc struct {
-		Quests []Quest `json:"quests"`
-	}
-	if e := readTable("quests.json", &doc); e != nil {
-		return nil, e
-	}
-	seen := map[string]bool{}
-	for _, q := range doc.Quests {
-		if q.ID == "" || seen[q.ID] || len(q.Steps) == 0 {
-			return nil, fmt.Errorf("invalid quest %s", q.ID)
-		}
-		seen[q.ID] = true
-		ids := map[string]bool{}
-		for _, s := range q.Steps {
-			if s.ID == "" || ids[s.ID] || !slices.Contains([]string{"village", "woodland", "ruin", "commons"}, s.At) || s.Embers < 0 {
-				return nil, fmt.Errorf("invalid quest step %s", s.ID)
-			}
-			ids[s.ID] = true
-		}
-	}
-	if len(doc.Quests) == 0 {
-		return nil, fmt.Errorf("empty quests")
-	}
-	return doc.Quests, nil
-}
 func LoadStory() (Story, error) {
 	var s Story
 	if e := readTable("story.json", &s); e != nil {
@@ -87,6 +51,26 @@ func LoadStory() (Story, error) {
 	}
 	if len(seen) == 0 || len(s.Echoes) != 6 {
 		return s, fmt.Errorf("invalid story")
+	}
+	for _, table := range []map[string]string{s.NPCs, s.Spots} {
+		if len(table) == 0 {
+			return s, fmt.Errorf("empty story targets")
+		}
+		for id, area := range table {
+			if !ValidContentID(id) || !slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) {
+				return s, fmt.Errorf("invalid story target %s", id)
+			}
+		}
+	}
+	items := map[string]bool{}
+	for _, id := range s.QuestItems {
+		if !ValidContentID(id) || items[id] {
+			return s, fmt.Errorf("invalid story quest item %s", id)
+		}
+		items[id] = true
+	}
+	if len(items) == 0 {
+		return s, fmt.Errorf("empty story quest items")
 	}
 	return s, nil
 }

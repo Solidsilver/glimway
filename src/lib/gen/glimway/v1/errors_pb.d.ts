@@ -1055,6 +1055,21 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_REPORT_REQUIRED = 207;
    */
   REPORT_REQUIRED = 207,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_YET = 208;
+   */
+  NOT_YET = 208,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_HERE = 209;
+   */
+  NOT_HERE = 209,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NEEDS_HABITICA = 210;
+   */
+  NEEDS_HABITICA = 210,
 }
 
 /**
