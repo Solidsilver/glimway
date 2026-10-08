@@ -5,9 +5,8 @@
   import { EMBER_COSTS, ROAD_LANTERNS, XP_PER_EMBER, chestOpened, isLit, withCharm } from '../lib/embers'
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
 
@@ -45,125 +44,119 @@
   const touch = isTouchFirst()
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="char-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close character sheet"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="char-title"><Icon name="person" size={20} /> Character</h2>
-    </header>
+<Panel id="char" icon="person" title="Character" closeLabel="Close character sheet" {onClose}>
 
-    <div class="hero">
-      <div class="avatar">
-        {#if !profile && ui.portraits['You']}
-          <img class="pixel" src={ui.portraits['You']} alt="" />
-        {:else}
-          <span class="initial">{name[0]}</span>
-        {/if}
-      </div>
-      <div class="who">
-        <h3 class="name">{name}</h3>
-        <p class="sub">Level {level} {className}</p>
-        <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
-      </div>
-    </div>
-
-    <div class="vitals">
-      <div class="vital">
-        <span class="vi hp"><Icon name="heart" size={16} /></span>
-        <div class="bar hp"><div class="fill" style={`width:${hpPct}%`}></div></div>
-        <span class="num">{ui.stats.hp}/{ui.stats.maxHp}</span>
-      </div>
-      <div class="vital">
-        <span class="vi mana"><Icon name="drop" size={16} /></span>
-        <div class="bar mana"><div class="fill" style={`width:${manaPct}%`}></div></div>
-        <span class="num">{ui.stats.mana}/{ui.stats.maxMana}</span>
-      </div>
-      <p class="fine">Mana trickles back as you walk.{profile ? ' Health comes from your Habitica hero — heal there and sync, or spend embers on a warm rest.' : ' Health mends slowly in Hearthwick.'}</p>
-    </div>
-
-    <h3 class="section-title">Embers</h3>
-    <div class="embers">
-      <div class="purse">
-        <span class="ei"><Icon name="ember" size={26} /></span>
-        <span class="count">{ui.stats.embers}</span>
-        <span class="what">
-          {#if profile}
-            Every {XP_PER_EMBER} XP you earn on Habitica becomes an ember when you sync in Hearthwick or the Commons.
-          {:else}
-            Connect Habitica in the Menu and every {XP_PER_EMBER} XP you earn there becomes an ember.
-          {/if}
-        </span>
-      </div>
-      <ul class="spends">
-        <li><b>Warm rest</b><span>Hearthwick lantern · full health &amp; mana</span><em><Icon name="ember" size={11} />{EMBER_COSTS.rest}</em></li>
-        <li class:done={litCount === ROAD_LANTERNS.length}><b>Road lanterns</b><span>Brackenwood · rest spots · {litCount}/{ROAD_LANTERNS.length} lit</span><em><Icon name="ember" size={11} />{EMBER_COSTS.roadLantern} each</em></li>
-        <li class:done={chestDone}><b>Ashwatch chest</b><span>{chestDone ? 'Opened — the charm is in your pack' : 'Something warm inside'}</span><em>{#if chestDone}<Icon name="check" size={11} />{:else}<Icon name="ember" size={11} />{EMBER_COSTS.chest}{/if}</em></li>
-      </ul>
-    </div>
-
-    <h3 class="section-title">Stats</h3>
-    <div class="stats">
-      {#each STAT_ROWS as s}
-        <div class="stat" title={s.hint}>
-          <span class="val">{stats[s.key]}</span>
-          <span class="lbl">{s.label}</span>
-          <span class="hint">{s.hint}</span>
-        </div>
-      {/each}
-    </div>
-
-    <h3 class="section-title">Abilities</h3>
-    <div class="abilities">
-      <div class="ability">
-        <div class="ai"><Icon name="sword" size={22} /></div>
-        <div class="ab">
-          <div class="ah"><b>{kit.basicName}</b> <span class="kbd">E</span></div>
-          <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.cooldown)}s.</p>
-        </div>
-      </div>
-      <div class="ability sig">
-        <div class="ai"><Icon name="sparkle" size={22} /></div>
-        <div class="ab">
-          <div class="ah"><b>{kit.signatureName}</b> <span class="kbd">F</span> <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span></div>
-          <p>Hits for about <b>{n(kit.signatureDamage)}</b>{#if kit.healAmount > 0} and mends <b>{n(kit.healAmount)}</b> health{/if}.</p>
-        </div>
-      </div>
-    </div>
-    <div class="chips">
-      <span class="chip"><Icon name="star" size={12} /> {pct(kit.critChance)}% critical hits (2×)</span>
-      <span class="chip"><Icon name="heart" size={12} /> Shrugs off {pct(kit.mitigation)}% of damage</span>
-    </div>
-
-    <div class="to-inv">
-      <span class="ii"><Icon name="bag" size={20} /></span>
-      <p>{inventoryCopy.characterPointer}</p>
-      <button type="button" onclick={onInventory} data-testid="open-inventory">{inventoryCopy.open}{#if !touch} <span class="kbd">I</span>{/if}</button>
-    </div>
-
-    <h3 class="section-title">Discoveries</h3>
-    {#if snapshot.discoveries.length === 0}
-      <p class="empty">Nothing noted yet. Keep your eyes open on the road.</p>
-    {:else}
-      <ul class="items">
-        {#each snapshot.discoveries as id}
-          {@const info = discoveryInfo(id)}
-          <li>
-            <span class="ii found"><Icon name={info.icon} size={20} /></span>
-            <span><b>{info.name}</b>{#if info.blurb}<small>{info.blurb}</small>{/if}</span>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-
-    <p class="fine foot">
-      {#if profile}
-        Stats come from your Habitica hero, gear and level included. Nothing here ever changes your account.
+  <div class="hero">
+    <div class="avatar">
+      {#if !profile && ui.portraits['You']}
+        <img class="pixel" src={ui.portraits['You']} alt="" />
       {:else}
-        Have a Habitica account? <button type="button" class="link" onclick={onMenu}>Play as your own hero</button> from the Menu.
+        <span class="initial">{name[0]}</span>
       {/if}
-    </p>
+    </div>
+    <div class="who">
+      <h3 class="name">{name}</h3>
+      <p class="sub">Level {level} {className}</p>
+      <span class="badge" class:habitica={!!profile}>{profile ? 'Habitica hero' : 'Demo hero'}</span>
+    </div>
   </div>
-</div>
+
+  <div class="vitals">
+    <div class="vital">
+      <span class="vi hp"><Icon name="heart" size={16} /></span>
+      <div class="bar hp"><div class="fill" style={`width:${hpPct}%`}></div></div>
+      <span class="num">{ui.stats.hp}/{ui.stats.maxHp}</span>
+    </div>
+    <div class="vital">
+      <span class="vi mana"><Icon name="drop" size={16} /></span>
+      <div class="bar mana"><div class="fill" style={`width:${manaPct}%`}></div></div>
+      <span class="num">{ui.stats.mana}/{ui.stats.maxMana}</span>
+    </div>
+    <p class="fine">Mana trickles back as you walk.{profile ? ' Health comes from your Habitica hero — heal there and sync, or spend embers on a warm rest.' : ' Health mends slowly in Hearthwick.'}</p>
+  </div>
+
+  <h3 class="section-title">Embers</h3>
+  <div class="embers">
+    <div class="purse">
+      <span class="ei"><Icon name="ember" size={26} /></span>
+      <span class="count">{ui.stats.embers}</span>
+      <span class="what">
+        {#if profile}
+          Every {XP_PER_EMBER} XP you earn on Habitica becomes an ember when you sync in Hearthwick or the Commons.
+        {:else}
+          Connect Habitica in the Menu and every {XP_PER_EMBER} XP you earn there becomes an ember.
+        {/if}
+      </span>
+    </div>
+    <ul class="spends">
+      <li><b>Warm rest</b><span>Hearthwick lantern · full health &amp; mana</span><em><Icon name="ember" size={11} />{EMBER_COSTS.rest}</em></li>
+      <li class:done={litCount === ROAD_LANTERNS.length}><b>Road lanterns</b><span>Brackenwood · rest spots · {litCount}/{ROAD_LANTERNS.length} lit</span><em><Icon name="ember" size={11} />{EMBER_COSTS.roadLantern} each</em></li>
+      <li class:done={chestDone}><b>Ashwatch chest</b><span>{chestDone ? 'Opened — the charm is in your pack' : 'Something warm inside'}</span><em>{#if chestDone}<Icon name="check" size={11} />{:else}<Icon name="ember" size={11} />{EMBER_COSTS.chest}{/if}</em></li>
+    </ul>
+  </div>
+
+  <h3 class="section-title">Stats</h3>
+  <div class="stats">
+    {#each STAT_ROWS as s}
+      <div class="stat" title={s.hint}>
+        <span class="val">{stats[s.key]}</span>
+        <span class="lbl">{s.label}</span>
+        <span class="hint">{s.hint}</span>
+      </div>
+    {/each}
+  </div>
+
+  <h3 class="section-title">Abilities</h3>
+  <div class="abilities">
+    <div class="ability">
+      <div class="ai"><Icon name="sword" size={22} /></div>
+      <div class="ab">
+        <div class="ah"><b>{kit.basicName}</b> <span class="kbd">E</span></div>
+        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.cooldown)}s.</p>
+      </div>
+    </div>
+    <div class="ability sig">
+      <div class="ai"><Icon name="sparkle" size={22} /></div>
+      <div class="ab">
+        <div class="ah"><b>{kit.signatureName}</b> <span class="kbd">F</span> <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span></div>
+        <p>Hits for about <b>{n(kit.signatureDamage)}</b>{#if kit.healAmount > 0} and mends <b>{n(kit.healAmount)}</b> health{/if}.</p>
+      </div>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip"><Icon name="star" size={12} /> {pct(kit.critChance)}% critical hits (2×)</span>
+    <span class="chip"><Icon name="heart" size={12} /> Shrugs off {pct(kit.mitigation)}% of damage</span>
+  </div>
+
+  <div class="to-inv">
+    <span class="ii"><Icon name="bag" size={20} /></span>
+    <p>{inventoryCopy.characterPointer}</p>
+    <button type="button" onclick={onInventory} data-testid="open-inventory">{inventoryCopy.open}{#if !touch} <span class="kbd">I</span>{/if}</button>
+  </div>
+
+  <h3 class="section-title">Discoveries</h3>
+  {#if snapshot.discoveries.length === 0}
+    <p class="empty">Nothing noted yet. Keep your eyes open on the road.</p>
+  {:else}
+    <ul class="items">
+      {#each snapshot.discoveries as id}
+        {@const info = discoveryInfo(id)}
+        <li>
+          <span class="ii found"><Icon name={info.icon} size={20} /></span>
+          <span><b>{info.name}</b>{#if info.blurb}<small>{info.blurb}</small>{/if}</span>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
+  <p class="fine foot">
+    {#if profile}
+      Stats come from your Habitica hero, gear and level included. Nothing here ever changes your account.
+    {:else}
+      Have a Habitica account? <button type="button" class="link" onclick={onMenu}>Play as your own hero</button> from the Menu.
+    {/if}
+  </p>
+</Panel>
 
 <style>
   /* Phones: a smaller portrait, so the pinned header leaves room for the sheet. */

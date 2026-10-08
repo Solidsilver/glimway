@@ -5,8 +5,8 @@ WORKDIR /build
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
-COPY index.html vite.config.ts svelte.config.js tsconfig.json ./
-COPY scripts/build-version.mjs ./scripts/
+COPY index.html vite.config.ts svelte.config.js tsconfig.json CHANGELOG.md ./
+COPY scripts/build-version.mjs scripts/whats-new.mjs ./scripts/
 COPY src ./src
 COPY public ./public
 COPY content ./content

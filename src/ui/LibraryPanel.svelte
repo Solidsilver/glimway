@@ -4,11 +4,10 @@
   import { Library, type ShelfView } from '../game/papers'
   import { PAPER_COLLECTIONS, PAPERS, paperById, paperFlag } from '../content/papers'
   import type { ShelfEntry } from '../lib/papers/library'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
+  import { actionRunner } from './panel-state.svelte'
   import { papers } from './papers.svelte'
   import PaperReader, { KIND_LABEL } from './PaperReader.svelte'
-  import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
 
   // The Hearthwick Library's reading room, opened at its door. Anyone can
   // read what is shelved; you can donate papers you found that aren't yet.
@@ -17,8 +16,7 @@
   const library = $derived(new Library(session))
   let view = $state<ShelfView | null>(null)
   let reading = $state<string | null>(null)
-  let busy = $state<string | null>(null)
-  let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
+  const action = actionRunner()
   let listEl = $state<HTMLElement | null>(null)
   let lastOpened: string | null = null
 
@@ -54,7 +52,7 @@
   function open(id: string): void {
     lastOpened = id
     reading = id
-    message = null
+    action.clear()
     if (owned.has(id)) papers.markSeen(id)
   }
 
@@ -64,18 +62,13 @@
   }
 
   async function donate(id: string): Promise<void> {
-    if (busy) return
-    busy = id
-    message = null
-    const r = await library.donate(id)
-    busy = null
+    const r = await action.run(id, () => library.donate(id), `“${paperById(id)?.title}” is on the shelves now. Thank you.`)
+    if (!r) return
     if (r.ok) {
       const next = new Map(shelf)
       next.set(id, r.entry)
       view = { shelf: next, mode: view?.mode ?? 'local', offline: view?.offline ?? false }
-      message = { text: `“${paperById(id)?.title}” is on the shelves now. Thank you.`, kind: 'ok' }
     } else {
-      message = { text: r.text, kind: 'error' }
       // Someone else may have shelved it: show the world's shelf as it is.
       void library.load().then((v) => (view = v))
     }
@@ -84,86 +77,80 @@
   const canDonate = (id: string) => session.state.flags.includes(paperFlag(id)) && !shelf.has(id)
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="library-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the library"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="library-title"><Icon name="book" size={20} /> Hearthwick Library</h2>
-    </header>
+<Panel id="library" icon="book" title="Hearthwick Library" closeLabel="Close the library" {onClose}>
 
-    {#if current}
-      <PaperReader paper={current} onBack={back} backLabel="The shelves">
-        {#snippet credit()}{creditFor(currentEntry)}{/snippet}
-      </PaperReader>
-    {:else}
-      <p class="lede">
-        {#if view?.mode === 'shared'}
-          The Keepers’ old reading room. Everyone in your world fills these shelves together.
-        {:else}
-          The Keepers’ old reading room. Bring what you find; the shelves remember.
-        {/if}
-      </p>
-
-      {#if !view}
-        <p class="fine" aria-live="polite">Lighting the reading lamp…</p>
+  {#if current}
+    <PaperReader paper={current} onBack={back} backLabel="The shelves">
+      {#snippet credit()}{creditFor(currentEntry)}{/snippet}
+    </PaperReader>
+  {:else}
+    <p class="lede">
+      {#if view?.mode === 'shared'}
+        The Keepers’ old reading room. Everyone in your world fills these shelves together.
       {:else}
-        <div class="progress" aria-live="polite">
-          <p><b>{shelf.size} of {PAPERS.length}</b> on the shelves</p>
-          <div class="bar" aria-hidden="true"><span style={`width:${(shelf.size / PAPERS.length) * 100}%`}></span></div>
-          {#if view.offline}<p class="fine warn">Can’t reach your world’s library right now — showing what this device knows.</p>{/if}
-        </div>
+        The Keepers’ old reading room. Bring what you find; the shelves remember.
       {/if}
+    </p>
 
-      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
-
-      {#if view}
-        <div bind:this={listEl}>
-          {#each groups as g (g.name)}
-            <section aria-label={g.name}>
-              <h3 class="section-title"><span>{g.name}</span><span class="count">{g.shelved}/{g.list.length}</span></h3>
-              <ul>
-                {#each g.list as p (p.id)}
-                  {@const entry = shelf.get(p.id)}
-                  <li>
-                    {#if entry}
-                      <button type="button" class="row shelved" data-paper={p.id} onclick={() => open(p.id)}>
-                        <span class="spine" aria-hidden="true"></span>
-                        <span class="txt">
-                          <span class="name">{p.title}</span>
-                          <span class="desc">{creditFor(entry)}</span>
-                        </span>
-                        <span class="go" aria-hidden="true">Read ›</span>
-                      </button>
-                    {:else if canDonate(p.id)}
-                      <div class="row held">
-                        <span class="spine gap" aria-hidden="true"></span>
-                        <span class="txt">
-                          <span class="name">{p.title}</span>
-                          <span class="desc">You found this one. The shelf has a gap its size.</span>
-                        </span>
-                        <button type="button" class="primary small" data-donate={p.id} disabled={busy !== null} onclick={() => donate(p.id)}>
-                          {busy === p.id ? 'Shelving…' : 'Donate'}
-                        </button>
-                      </div>
-                    {:else}
-                      <div class="row missing">
-                        <span class="spine gap" aria-hidden="true"></span>
-                        <span class="txt">
-                          <span class="name">{KIND_LABEL[p.style]}</span>
-                          <span class="desc">Not on the shelves yet.</span>
-                        </span>
-                      </div>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-            </section>
-          {/each}
-        </div>
-      {/if}
+    {#if !view}
+      <p class="fine" aria-live="polite">Lighting the reading lamp…</p>
+    {:else}
+      <div class="progress" aria-live="polite">
+        <p><b>{shelf.size} of {PAPERS.length}</b> on the shelves</p>
+        <div class="bar" aria-hidden="true"><span style={`width:${(shelf.size / PAPERS.length) * 100}%`}></span></div>
+        {#if view.offline}<p class="fine warn">Can’t reach your world’s library right now — showing what this device knows.</p>{/if}
+      </div>
     {/if}
-  </div>
-</div>
+
+    {#if action.message}<p class="msg {action.message.kind}" role="status">{action.message.text}</p>{/if}
+
+    {#if view}
+      <div bind:this={listEl}>
+        {#each groups as g (g.name)}
+          <section aria-label={g.name}>
+            <h3 class="section-title"><span>{g.name}</span><span class="count">{g.shelved}/{g.list.length}</span></h3>
+            <ul>
+              {#each g.list as p (p.id)}
+                {@const entry = shelf.get(p.id)}
+                <li>
+                  {#if entry}
+                    <button type="button" class="row shelved" data-paper={p.id} onclick={() => open(p.id)}>
+                      <span class="spine" aria-hidden="true"></span>
+                      <span class="txt">
+                        <span class="name">{p.title}</span>
+                        <span class="desc">{creditFor(entry)}</span>
+                      </span>
+                      <span class="go" aria-hidden="true">Read ›</span>
+                    </button>
+                  {:else if canDonate(p.id)}
+                    <div class="row held">
+                      <span class="spine gap" aria-hidden="true"></span>
+                      <span class="txt">
+                        <span class="name">{p.title}</span>
+                        <span class="desc">You found this one. The shelf has a gap its size.</span>
+                      </span>
+                      <button type="button" class="primary small" data-donate={p.id} disabled={action.busy !== null} onclick={() => donate(p.id)}>
+                        {action.busy === p.id ? 'Shelving…' : 'Donate'}
+                      </button>
+                    </div>
+                  {:else}
+                    <div class="row missing">
+                      <span class="spine gap" aria-hidden="true"></span>
+                      <span class="txt">
+                        <span class="name">{KIND_LABEL[p.style]}</span>
+                        <span class="desc">Not on the shelves yet.</span>
+                      </span>
+                    </div>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </section>
+        {/each}
+      </div>
+    {/if}
+  {/if}
+</Panel>
 
 <style>
   .lede {
@@ -193,13 +180,7 @@
   .msg {
     margin: 10px 0 0;
     padding: 8px 10px;
-    border-radius: 8px;
     font-size: 14px;
-    border: 2px solid var(--paper-line);
-    background: rgba(255, 255, 255, 0.4);
-  }
-  .msg.error {
-    border-color: rgba(196, 82, 58, 0.6);
   }
   .section-title {
     display: flex;

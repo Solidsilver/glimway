@@ -240,7 +240,7 @@
     font-family: var(--font-display);
     font-size: 15px;
     line-height: 1.2;
-    background: #fffbef;
+    background: var(--cream-hi);
     border: 2px solid var(--wood);
     border-radius: 8px;
     user-select: all;
@@ -363,8 +363,8 @@
     margin: 6px 0;
     padding: 8px 10px;
     font-size: 13.5px;
-    color: #7a2e1e;
-    background: rgba(196, 82, 58, 0.12);
+    color: var(--danger-text);
+    background: var(--danger-wash);
     border-radius: 8px;
   }
 </style>
