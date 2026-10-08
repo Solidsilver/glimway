@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-08",
+  "tool": "built-in image_gen",
+  "styleReference": "assets/generated/commons-pass/fingersnap-furniture.png",
+  "backgroundHandling": "The object sheets had checkerboard pixels; edge-connected neutral checkerboard pixels were converted to transparent alpha. The floor sheet is sampled only inside its eight opaque tile cells. No sprite pixels were repainted.",
+  "jobs": [
+    {
+      "source": "sheets/interior-detail.png",
+      "generationId": "exec-63ac4a4d-fc09-49b8-96db-31c9287873f4.png",
+      "prompt": "Generate a high-resolution 4x4 atlas of interiors at 64 texels per tile: four seamless plank and flagstone variants; three timber plaster wall variants; window wall; modular side and near walls with corners; doorway; stairs up and down; ladder; shut/open trapdoor; rag and braided rugs; raised counter; room surround; brick oven/hearth with pot and four fire states; floury worktable; crock shelves; steaming tallow pots; sponge bowls flat/risen; bread rack. Transparent background, cozy crisp three-quarter top-down RPG pixel art, dark warm outlines, upper-left light, no labels or blur."
+    },
+    {
+      "source": "sheets/interior-kit.png",
+      "generationId": "exec-cc8ad504-799d-44db-9159-3df46ba7a79f.png",
+      "prompt": "Create a clean 4-column by 4-row atlas of interior tiles and modular walls: seamless warm worn east-west plank and golden flagstone tiles; timber-frame plaster walls and a daylight window; seven wall pieces; doorway, stairs up/down, cellar ladder, shut/open trapdoor, rag and round braided rugs, three-tile counter, dark wood surround. Crisp pixel-art, transparent backdrop, warm brown outlines and upper-left light."
+    },
+    {
+      "source": "sheets/kitchen-shelf-detail.png",
+      "generationId": "exec-1f0fe6a8-49f5-4f7f-8762-4da6275e12f4.png",
+      "prompt": "Create a transparent atlas with crock shelves, three steaming tallow pots, flat and risen sponge bowls on stools, and bread rack with loaves and twists. Four isolated groups, warm crisp RPG pixel art, three-quarter top-down, dark brown outline, upper-left light, no text."
+    },
+    {
+      "source": "sheets/kitchen-furniture.png",
+      "generationId": "exec-565222e9-f386-4f54-a29b-8cfbcc667bef.png",
+      "prompt": "Create four isolated sprites in a 2x2 layout: brick bread oven and hearth with hanging iron pot and four fire states; scrubbed long worktable with flour and dough; counting stool by a tally-scratched window; wooden mill gear train. Transparent background, cozy crisp high-resolution RPG pixel art, three-quarter top-down, dark brown outlines and upper-left light."
+    },
+    {
+      "source": "sheets/mill-machinery.png",
+      "generationId": "exec-7cf2569e-c154-46c0-8c87-6f58063ef1c6.png",
+      "prompt": "Create an isolated transparent atlas of mill props: four millstone turning poses beneath a wooden hopper, four wooden pit-wheel/wallower poses, chute emptying into meal bin, and upright/slumped tied flour sacks. Warm crisp pixel art, three-quarter top-down, upper-left light, dark brown outlines, no text."
+    },
+    {
+      "source": "sheets/mill-hoist-beams.png",
+      "generationId": "exec-974d5b08-c430-4ce6-8f29-df6c769e5482.png",
+      "prompt": "Create an isolated transparent mill-loft atlas: sack hoist and hatch in seized (frayed kinked rope) and working states; three subtle rope-swing poses; long 12-tile timber roof-beam overlay. Crisp warm RPG pixel art with three-quarter view and dark outlines."
+    },
+    {
+      "source": "sheets/library-furniture.png",
+      "generationId": "exec-8433c496-a080-49d4-a99f-8cbefb7a0030.png",
+      "prompt": "Create four isolated transparent library room sprite groups: tall shelf in sparse/half/full states; reading table with two chairs and tin-tagged lamp unlit/lit plus three flame poses; donation shelf with three fill states; cushioned window seat with open book. Warm detailed crisp pixel-art RPG, three-quarter view, dark outlines and upper-left light."
+    },
+    {
+      "source": "sheets/exterior-icons.png",
+      "generationId": "exec-06418611-dd9f-404d-8543-bf84c458fbe8.png",
+      "prompt": "Create a transparent 4x4 atlas of six chimney-smoke loop frames, three matching lit-window overlays, shelf icons (lantern post, loaf/cup, mallet/bowl), pinned/unpinned brass map pin, gate icons (hourglass, ember, padlocked ledger ribbon), plumb signpost missing east finger, bracken sign reading exactly ASHWATCH with SALLOW FD below, and keepsake east-finger/tally-token icons. Warm crisp pixel-art, no blur; exact text only on the sign."
+    },
+    {
+      "source": "sheets/oven-hearth-frames.png",
+      "generationId": "exec-eddf224e-6cf1-4d52-80a3-4e7e0953e6b1.png",
+      "prompt": "Create exactly four complete matching poses side by side of the same brick bread oven and adjacent hearth with hanging iron pot on crane. Only flames change subtly; all brick shapes, pot, crane, bread, shadows, camera, scale and baseline remain identical. Footprint 3x2 tiles, 192x192 texel canvas, three-quarter top-down crisp pixel art, dark warm outline, upper-left light, transparent background, no blur, antialiasing, gradients, extra props or labels."
+    },
+    {
+      "source": "sheets/floors-seamless.png",
+      "generationId": "exec-150b5420-9dd6-4612-bc8f-421c6343e395.png",
+      "prompt": "Create a 4x2 sheet of eight square seamless RPG floor tiles: four warm east-west plank variants in row one and four golden flagstone variants in row two, each 64x64 texels at game tile scale. Each tile independently repeats seamlessly in both directions; left and right edges match, top and bottom edges match; no shadows, no vignette, no focal point, flat stepped pixel shading, crisp warm outlined pixels, upper-left light, no blur or labels."
+    }
+  ]
+}

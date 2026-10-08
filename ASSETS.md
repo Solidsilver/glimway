@@ -24,7 +24,7 @@ Decided 2026-10-07 (reasons in `docs/licensing-and-funding.md`). Each
 register below carries its own licence line.
 
 - **Our art: CC0 1.0** (public domain dedication). Every register of our own
-  art (A, B's output, D, E, F, G, H) is AI-generated: made with OpenAI's
+  art (A, B's output, D, E, F, G, H, J) is AI-generated: made with OpenAI's
   image generation through Codex, then measured, cut and packed by scripts,
   not repainted. With no human author there is likely no copyright to
   license, so it is dedicated to the public domain and needs no credit. The
@@ -328,6 +328,45 @@ generation). **Source** — original generation, prompts in-repo.
 to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
 `scripts/build-atlases.ts`.
 **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
+
+## Register J — Indoors pass (0.4 interiors, mill, library, icons)
+
+Delivered 2026-10-08 to `assets/generated/indoors-pass/`; the cleaned source
+sheets and metadata are the archive of record. `public/assets/fingersnap/indoors-pass/`
+ships `manifest.json`; all 101 native canvases are packed into
+`packed/indoors.webp` and indexed by clear frame names at
+`packed/atlases.json` under `indoors.frames`. Room wiring remains with the 0.4
+code lanes.
+
+Provenance: original artwork generated 2026-10-08 with the built-in image
+generation tool; prompts and generation IDs are recorded in
+`assets/generated/indoors-pass/prompts.json`. The tool rendered checkerboard
+pixels, which were converted to alpha by removing edge-connected neutral
+background pixels. Frame crops, target canvases and foot points are recorded
+in `manifest.json` and `atlas.json`; contact sheet:
+`.agent/screens/indoors-pass.png`.
+
+| File | Keys / contents | Role |
+|---|---|---|
+| `sheets/floors-seamless.png` | `plank-floor-0..3`, `flagstone-floor-0..3` | Four variants per seamless floor family |
+| `sheets/interior-detail.png` | wall pieces, doorway, stairs, ladder, trapdoor, rugs, counter, surround, oven/fire source details | Interior kit and kitchen |
+| `sheets/interior-kit.png` | supplementary interior kit pieces | Interior kit |
+| `sheets/kitchen-shelf-detail.png` | crock shelves, tallow pots, sponge bowls, bread rack | Kitchen furniture |
+| `sheets/kitchen-furniture.png` | oven, worktable, counting stool/window, mill gears | Kitchen and mill props |
+| `sheets/oven-hearth-frames.png` | `oven-hearth-fire-0..3` | Animated complete oven/hearth |
+| `sheets/mill-machinery.png` | millstones, gear train, chute/bin, flour sacks | Mill and loft |
+| `sheets/mill-hoist-beams.png` | sack hoist states/swing, loft beams | Mill and loft |
+| `sheets/library-furniture.png` | tall shelf, reading table/lamp, donation shelf, window seat | Library reading room |
+| `sheets/exterior-icons.png` | smoke, window overlays, shelf/gate icons, signpost, east finger, keepsakes | Outside and quest opening |
+| `manifest.json`, `atlas.json`, `prompts.json`, `README.md` | 101 measured frames, 13 state/animation groups, prompts and notes | Provenance and atlas metadata |
+
+Recorded limits: generated window frames were not aligned to the exact
+building window masks; mill turns are approximate; some animation poses are
+static; generated shading and pixel size are finer than the established art;
+optional Hazel kneading was not made because the existing resident sprite is
+the requested source. The background is alpha-cleaned, not hand-redrawn.
+**Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none
+required.
 
 ## Register I — sound (Kenney's CC0 packs, delivered 2026-10-07)
 

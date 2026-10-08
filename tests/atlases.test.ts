@@ -44,6 +44,7 @@ const built = JSON.parse(readFileSync(join(PACKED, 'atlases.json'), 'utf8')) as 
 const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pass/manifest.json'), 'utf8')) as CommonsPassManifest
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
 const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
+const indoors = JSON.parse(readFileSync(join(ROOT, 'assets/generated/indoors-pass/manifest.json'), 'utf8')) as { sources: { file: string }[]; frames: { key: string; canvasSize: { w: number; h: number } }[] }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
@@ -90,6 +91,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...runtime.sources.map((s) => `assets/generated/runtime-pass/${s.file}`),
     'assets/generated/items-pass/manifest.json',
     ...items.sources.map((s) => `assets/generated/items-pass/${s.file}`),
+    'assets/generated/indoors-pass/manifest.json',
+    ...indoors.sources.map((s) => `assets/generated/indoors-pass/sheets/${s.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
@@ -150,7 +153,7 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
     }
   }
   // Every atlas fits a phone GPU's texture limit.
-  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.terrain.image, built.ground.image, built.people.image, built.buildings.image, ...Object.values(built.atlases).map((a) => a.image)]) {
+  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.indoors.image, built.terrain.image, built.ground.image, built.people.image, built.buildings.image, ...Object.values(built.atlases).map((a) => a.image)]) {
     const [w, h] = imageSize(join(PACKED, image))
     assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
   }
@@ -183,6 +186,18 @@ test('the playtest-1 buildings: every house and bridge state, its whole canvas a
     const c = atlas.frames[name].canvasSize
     assert.deepEqual([r[2], r[3]], [(c.w / 4) * ART_DENSITY, (c.h / 4) * ART_DENSITY], `${name} canvas`)
     assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${name} inside the atlas`)
+  }
+})
+
+test('the indoors pass: every named 64-texel canvas is packed whole', () => {
+  const [w, h] = webpSize(join(PACKED, built.indoors.image))
+  assert.deepEqual([w, h], built.indoors.size)
+  assert.equal(built.indoors.density, 64)
+  assert.deepEqual(Object.keys(built.indoors.frames).sort(), indoors.frames.map((f) => f.key).sort())
+  for (const f of indoors.frames) {
+    const r = built.indoors.frames[f.key]
+    assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${f.key} keeps its requested canvas`)
+    assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${f.key} inside the indoors atlas`)
   }
 })
 
@@ -238,10 +253,12 @@ test('public/assets/fingersnap ships its licence, manifests and packed art only 
     'expansion/manifest.json',
     'expansion/animations.json',
     'items-pass/manifest.json',
+    'indoors-pass/manifest.json',
     'packed/atlases.json',
     `packed/${built.commons.image}`,
     `packed/${built.runtime.image}`,
     `packed/${built.items.image}`,
+    `packed/${built.indoors.image}`,
     `packed/${built.terrain.image}`,
     `packed/${built.ground.image}`,
     `packed/${built.people.image}`,
@@ -254,7 +271,7 @@ test('public/assets/fingersnap ships its licence, manifests and packed art only 
     const d = readFileSync(join(PACKED, f))
     assert.equal(d.subarray(0, 4).toString('latin1') + d.subarray(8, 12).toString('latin1'), 'RIFFWEBP', `${f} is WebP`)
   }
-  for (const m of ['expansion/manifest.json', 'expansion/animations.json', 'commons-pass/manifest.json', 'runtime-pass/manifest.json', 'items-pass/manifest.json']) {
+  for (const m of ['expansion/manifest.json', 'expansion/animations.json', 'commons-pass/manifest.json', 'runtime-pass/manifest.json', 'items-pass/manifest.json', 'indoors-pass/manifest.json']) {
     assert.ok(readFileSync(join(dir, m)).equals(readFileSync(join(ROOT, 'assets/generated', m))), `${m} is the delivered one`)
   }
 })
