@@ -26,7 +26,17 @@
  *   acknowledgment adopts the clamped vitals, keeping what happened since it
  *   was captured; a server vitals write (rest, fall, refill) starts over.
  *
- * One tab per device sends for an account, holding the outbox's Web Lock.
+ * - **Ownership.** One tab per device owns an account's outbox: it holds the
+ *   Web Lock and the record's fence (src/lib/api/outbox.ts `claim`). Only the
+ *   owner allocates, predicts durable work or writes the record, offline too.
+ * - **Durability.** A write counts once its transaction commits. Nothing is
+ *   sent before its entry (and its `sent` mark) is stored, and nothing that
+ *   may have been sent is dropped without a state read that says what the
+ *   world holds. An answer that can't be trusted (the wrong result, no state,
+ *   a disagreeing copy at the same version) never advances the head.
+ * - **Callers** waiting on an operation always hear back: paused, signed out,
+ *   taken over or unreachable, the world never freezes waiting on the queue.
+ *
  * No Phaser here: events go out through the injected `emit`, so this runs
  * in tests.
  */
@@ -37,11 +47,11 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction } from '../lib/api/predict.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import { LANTERN_ROAD } from '../lib/api/ports.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
-import { PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
+import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
@@ -183,8 +193,10 @@ export interface LinkSession {
   /**
    * Show a new view. Live place and vitals stay unless `relocate` (the
    * server or a fall moved the hero) or `vitals` (the overlay moved).
+   * `predicted`: a local prediction changed the view, and its own caller
+   * announces it (a found paper).
    */
-  applyServer(next: GameState, provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null }, opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean }): void
+  applyServer(next: GameState, provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null }, opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean; predicted?: boolean }): void
 }
 
 export interface LinkInit {
@@ -217,22 +229,31 @@ interface ChannelLike {
   close(): void
 }
 
-/** How an operation the caller waits for came out. */
+/**
+ * How an operation the caller waits for came out. `pending`: it is kept
+ * (it may have been sent, or the queue is held) and its outcome comes later.
+ */
 type Outcome =
   | { ok: true; state: PlayerState | null; result: unknown }
   | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
 
-/** Typed operations: their request schema and facade call. */
-const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; send: (ops: OperationsApi, req: never) => Promise<import('../lib/gen/glimway/v1/state_pb.js').Envelope> }>> = {
-  'quest-step': { schema: QuestStepRequestSchema, path: '/api/quest/step', send: (ops, req) => ops.questStep(req) },
-  mark: { schema: MarkRequestSchema, path: '/api/story/mark', send: (ops, req) => ops.mark(req) },
-  'take-paper': { schema: TakePaperRequestSchema, path: '/api/papers/take', send: (ops, req) => ops.takePaper(req) },
-  'settle-echo': { schema: SettleEchoRequestSchema, path: '/api/wilds/echo', send: (ops, req) => ops.settleEcho(req) },
-  fall: { schema: FallRequestSchema, path: '/api/fall', send: (ops, req) => ops.fall(req) },
-  spend: { schema: SpendRequestSchema, path: '/api/spend', send: (ops, req) => ops.spend(req) },
-  'wilds-claim': { schema: WildsClaimRequestSchema, path: '/api/wilds/claim', send: (ops, req) => ops.wildsClaim(req) },
-  'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', send: (ops, req) => ops.wildsLantern(req) }
+/** Typed operations: their request schema, facade call, and the envelope result case their answer must carry. */
+const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; result: string; send: (ops: OperationsApi, req: never) => Promise<import('../lib/gen/glimway/v1/state_pb.js').Envelope> }>> = {
+  'quest-step': { schema: QuestStepRequestSchema, path: '/api/quest/step', result: 'questStep', send: (ops, req) => ops.questStep(req) },
+  mark: { schema: MarkRequestSchema, path: '/api/story/mark', result: 'mark', send: (ops, req) => ops.mark(req) },
+  'take-paper': { schema: TakePaperRequestSchema, path: '/api/papers/take', result: 'takePaper', send: (ops, req) => ops.takePaper(req) },
+  'settle-echo': { schema: SettleEchoRequestSchema, path: '/api/wilds/echo', result: 'settleEcho', send: (ops, req) => ops.settleEcho(req) },
+  fall: { schema: FallRequestSchema, path: '/api/fall', result: 'fall', send: (ops, req) => ops.fall(req) },
+  spend: { schema: SpendRequestSchema, path: '/api/spend', result: 'spend', send: (ops, req) => ops.spend(req) },
+  'wilds-claim': { schema: WildsClaimRequestSchema, path: '/api/wilds/claim', result: 'wildsClaim', send: (ops, req) => ops.wildsClaim(req) },
+  'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) }
 }
+
+/** The village spawn a fall wakes at (the server's own place comes with its answer). */
+const VILLAGE_SPAWN = { area: 'village', x: 400, y: 300 }
+
+/** An answer that arrived but proves nothing (the wrong result, no state): retried, not "offline". */
+const untrusted = () => new ApiError('bad-response', { status: 200 })
 
 /** What the game should say when an operation it predicted didn't happen. */
 const UNDONE: Partial<Record<OutboxKind, string>> = {
@@ -291,8 +312,11 @@ export class Link {
   trouble = false
   /** An operation the game waits for is out: the world holds still. */
   busy = false
-  /** Sending stopped until a reload (`reload-needed`) or a fix (`client-bug`). */
-  paused: null | 'reload' | 'client-bug' = null
+  /**
+   * Sending stopped until a reload (`reload`), a fix (`client-bug`), or until
+   * the world can say which payload a key committed (`mismatch`).
+   */
+  paused: null | 'reload' | 'client-bug' | 'mismatch' = null
   /** The newest state adopted. */
   server: PlayerState
   readonly reports: ReportBook
@@ -305,17 +329,26 @@ export class Link {
   private readonly locks: LockLike | null
   private readonly channel: ChannelLike | null
   private lock: HeldLock | null = null
+  /** The record's fence while this tab owns it (null: not the owner, never writes). */
+  private fence: number | null = null
+  private owning: Promise<boolean> | null = null
   /** Callers waiting for their entry's answer. */
   private readonly waiters = new Map<number, (o: Outcome) => void>()
-  /** The predicted recovery each unanswered fall showed (the overlay's point for its answer). */
-  private readonly fallPoints = new Map<number, { hp: number; mana: number }>()
+  /** Entries that may have been sent before this page held them: replayed only after a state read. */
+  private needsRead = false
+  /** A record write didn't land: retried until it does, and nothing claims to be settled meanwhile. */
+  private unsaved = false
+  private savedNotice = false
+  private saveRetry: ReturnType<typeof setTimeout> | null = null
   private pumping: Promise<void> | null = null
   private reportWanted = false
+  /** The periodic report is due: it goes even with nothing new (play time is counted between reports). */
+  private reportForced = false
   private reportTimer: ReturnType<typeof setInterval> | null = null
   private heartbeat: ReturnType<typeof setInterval> | null = null
   private retry: ReturnType<typeof setTimeout> | null = null
   private failures = 0
-  /** When the head (or a report) first went unanswered ('' = answered). */
+  /** When the head (or a report) first went unanswered (null: answered). */
   private unansweredSince: number | null = null
   private lastContact: number
   private stopped = false
@@ -323,8 +356,6 @@ export class Link {
   private settleRun = 0
   private loggedOut = false
   private reconnecting: Promise<void> | null = null
-  /** A version whose two copies differed: reconciled once. */
-  private reconciled = -1
   private readonly onOnline = () => {
     if (this.status === 'offline') void this.reconnect(false)
   }
@@ -347,41 +378,58 @@ export class Link {
     const record = init.record && init.record.account === init.accountId && init.record.device === init.device ? init.record : emptyRecord(init.accountId, init.device)
     const stored = record.server ? safeState(record.server) : null
     this.server = stored && stored.version > init.state.version ? stored : init.state
+    // Read-only until this tab owns the record (`own` loads it again under the lock).
     this.entries = [...record.entries]
     this.nextId = record.nextId
     // The same tab's lease resumes after a reload; another tab's never does.
     this.lease = record.client === init.clientId ? record.lease : null
-    this.reports = new ReportBook(record.reports)
-    if (!record.reports) this.reports.reset(this.server.vitals?.vitalsSetVersion ?? 0)
+    this.reports = new ReportBook(record.client === init.clientId ? record.reports : null)
+    if (record.client !== init.clientId || !record.reports) this.reports.reset(this.server.vitals?.vitalsSetVersion ?? 0)
     if (this.channel) this.channel.onmessage = (ev) => this.onChannel(ev.data)
     if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline)
   }
 
   /**
    * The game's starting state: the view, with the place and vitals the last
-   * page reported or meant to report (a reload never heals or moves the hero).
+   * page reported or meant to report (a reload never heals or moves the
+   * hero). After a fall still in the outbox, that is the recovery and what
+   * happened since, even if the world already holds the fall.
    */
   initialState(): GameState {
     const view = this.view()
     const n = this.reports.next
-    if (n.place && n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0)) {
+    const pendingFall = n.boundary !== null && this.entries.some((e) => e.id === n.boundary && e.kind === 'fall')
+    if (n.place && (pendingFall || n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0))) {
       const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place: { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y } }))
       return { ...view, area: live.area, position: live.position, ...(live.wildsRegion ? { wildsRegion: live.wildsRegion } : {}), hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
     }
     return view
   }
 
-  /** Bind the live session (once, before play starts). */
+  /** Bind the live session (once, before play starts) and take ownership of the outbox. */
   attach(session: LinkSession): void {
     this.session = session
     this.noteLive()
     this.startReports()
-    if (this.status === 'online') {
-      this.startHeartbeat()
-      void this.own(false).then(() => this.pump())
-    } else this.scheduleRetry()
-    void this.expire()
+    void this.own(false).then((ok) => {
+      if (this.stopped) return
+      if (!ok) {
+        // Another tab here owns it (a storage failure retries on its own).
+        if (!this.unsaved) this.setStatus('superseded')
+        return
+      }
+      void this.expire()
+      if (this.status === 'online') {
+        this.startHeartbeat()
+        this.pump()
+      } else this.scheduleRetry()
+    })
     this.emit()
+  }
+
+  /** Resolves once this tab owns the outbox (false: another tab here does). */
+  ready(): Promise<boolean> {
+    return this.own(false)
   }
 
   get online(): boolean {
@@ -393,14 +441,19 @@ export class Link {
     return this.entries.length > 0
   }
 
-  /** Nothing is waiting to be written. */
+  /** Nothing is waiting to be written, and the record says so durably. */
   get settled(): boolean {
-    return this.status === 'online' && !this.paused && this.entries.length === 0 && !this.reports.captured && !this.busy
+    return this.status === 'online' && !this.paused && this.entries.length === 0 && !this.reports.captured && !this.busy && !this.unsaved
   }
 
   /** Unanswered operations, oldest first (read-only). */
   get outbox(): readonly OutboxEntry[] {
     return this.entries
+  }
+
+  /** This tab owns the outbox (the lock and the record's fence). */
+  get owner(): boolean {
+    return this.fence !== null
   }
 
   /** The head was sent and its answer is still unknown (a lost mutation). */
@@ -430,7 +483,7 @@ export class Link {
   }
 
   /** Show the view. `relocate`: the server (or a fall) moved the hero; `vitals`: the overlay moved. */
-  private refresh(opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean } = {}): void {
+  private refresh(opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean; predicted?: boolean } = {}): void {
     const s = this.session
     if (!s) return
     const profile = profileOf(this.server)
@@ -444,65 +497,153 @@ export class Link {
     this.reports.note(whereOf(s.state), Math.max(0, s.state.hp), Math.max(0, s.state.mana))
   }
 
+  /** How a state meets the one held: newer, equal (the same copy), older, or a disagreeing copy at the same version. */
+  private compare(next: PlayerState): 'newer' | 'equal' | 'older' | 'conflict' {
+    const held = this.server
+    if (!adoptable(held, next)) return 'older'
+    if (next.version > held.version) return 'newer'
+    return equals(PlayerStateSchema, next, held) ? 'equal' : 'conflict'
+  }
+
   /**
-   * Adopt a state at an equal or higher version, and move the vitals overlay:
-   * a server vitals write starts over from it (keeping what happened after a
-   * predicted fall), a report's acknowledgment keeps what happened since its
-   * capture, anything else leaves live vitals alone.
+   * Adopt a state at an equal or higher version, and move the vitals overlay.
+   * A server vitals write starts over from it, unless a fall waits in the
+   * outbox: then the write is taken for that fall, and what happened after
+   * its predicted recovery is kept. A report's acknowledgment keeps what
+   * happened since its capture. Anything else leaves live vitals alone.
+   * `read`: a state read, which wins over a disagreeing copy.
    */
-  private adopt(next: PlayerState | null | undefined, ctx: { captured?: CapturedReport | null; ack?: ReportAck; fall?: number; read?: boolean } = {}): boolean {
+  private adopt(next: PlayerState | null | undefined, ctx: { captured?: CapturedReport | null; ack?: ReportAck; read?: boolean; fall?: OutboxEntry } = {}): boolean {
     if (!next) return false
+    const how = this.compare(next)
+    if (how === 'older' || (how === 'conflict' && !ctx.read)) return false
     const prev = this.server
-    if (!adoptable(prev, next)) return false
-    if (next.version === prev.version && !ctx.read && !equals(PlayerStateSchema, next, prev)) {
-      // Two answers at one version disagree: neither is trusted until a read says.
-      if (this.reconciled !== next.version) {
-        this.reconciled = next.version
-        void this.reconcile()
-      }
-      return false
-    }
     this.server = next
     if (next.account?.worldId) this.worldId = next.account.worldId
     if (next.account?.displayName) this.name = next.account.displayName
     const s = this.session
     const v = next.vitals!
-    const before = prev.vitals!
     let vitals: { hp: number; mana: number } | undefined
-    if (s && v.vitalsSetVersion > before.vitalsSetVersion) {
-      const point = ctx.fall !== undefined ? this.fallPoints.get(ctx.fall) : undefined
-      const live = { hp: s.state.hp, mana: s.state.mana }
-      vitals = point ? { hp: v.hp + (live.hp - point.hp), mana: v.mana + (live.mana - point.mana) } : { hp: v.hp, mana: v.mana }
-      if (ctx.fall !== undefined) this.reports.release(ctx.fall, v.vitalsSetVersion)
-      else this.reports.reset(v.vitalsSetVersion)
+    if (s && v.vitalsSetVersion > prev.vitals!.vitalsSetVersion) {
+      const fall = ctx.fall ?? this.entries.find((e) => e.kind === 'fall' && e.fall)
+      if (fall?.fall) {
+        vitals = { hp: v.hp + (s.state.hp - fall.fall.hp), mana: v.mana + (s.state.mana - fall.fall.mana) }
+        // The fall's recovery is the world's now: its own answer applies nothing twice.
+        fall.fall = { hp: v.hp, mana: v.mana }
+      } else {
+        vitals = { hp: v.hp, mana: v.mana }
+        this.reports.reset(v.vitalsSetVersion)
+      }
     } else if (s && ctx.captured && ctx.ack?.accepted && !ctx.ack.staleBasis) {
       const c = ctx.captured
       vitals = { hp: v.hp + (s.state.hp - c.hp), mana: v.mana + (s.state.mana - c.mana) }
     }
     if (vitals) vitals = { hp: clamp(vitals.hp, v.maxHp), mana: clamp(vitals.mana, v.maxMana) }
-    if (ctx.fall !== undefined) this.fallPoints.delete(ctx.fall)
-    // A fall's answer never moves the hero: its walk home was shown when it happened.
     this.refresh({ vitals })
     return true
   }
 
-  /** Read the server's state and adopt it (an uncertain answer, a sent head given up). */
-  private async reconcile(): Promise<void> {
+  /**
+   * Read the server's state and adopt it: what an uncertain answer, an
+   * expired or abandoned head, or a replay from an earlier page needs first.
+   * `ok` only when a valid read came back on our own lease; anything else
+   * already moved the link (paused, signed out, taken over, offline).
+   */
+  private async reconcile(): Promise<'ok' | 'failed'> {
+    if (!this.lease || this.stopped) return 'failed'
     try {
       const res = await this.api.run(() => this.ops.state(this.lease ?? undefined))
       this.contact()
-      if (res.state) this.adoptRead(res.state)
-    } catch {
-      /* the next answer says */
+      if (!res.leaseActive) {
+        this.leaseLost()
+        return 'failed'
+      }
+      if (!res.state) {
+        this.stalled(untrusted())
+        return 'failed'
+      }
+      this.adopt(res.state, { read: true })
+      this.needsRead = false
+      return 'ok'
+    } catch (err) {
+      this.stopFor(err)
+      return 'failed'
     }
   }
 
-  /** A read's state wins over a disagreeing copy at the same version. */
-  private adoptRead(state: PlayerState): void {
-    this.adopt(state, { read: true })
+  // ------------------------------------------------------------ ownership and persistence
+
+  /**
+   * Own the outbox for this device: hold the Web Lock (`steal` only on the
+   * player's Take over), then claim the record, which raises its fence and
+   * hands back the record as stored. False: another tab here owns it.
+   */
+  private own(steal: boolean): Promise<boolean> {
+    if (this.fence !== null) return Promise.resolve(true)
+    if (this.owning) return this.owning
+    this.owning = (async () => {
+      const lock = await holdLock(this.locks, lockName(this.accountId, this.device), steal)
+      if (!lock) return false
+      if (this.stopped) {
+        lock.release()
+        return false
+      }
+      const record = await this.store.claim(this.accountId, this.device)
+      if (!record) {
+        // The record couldn't be claimed (storage failed): try again with the next retry.
+        lock.release()
+        this.storageFailed()
+        return false
+      }
+      this.lock = lock
+      this.fence = record.fence
+      void lock.lost.then(() => {
+        if (this.lock === lock) this.ownershipLost()
+      })
+      this.take(record)
+      return true
+    })().finally(() => {
+      this.owning = null
+    })
+    return this.owning
   }
 
-  // ------------------------------------------------------------ persistence
+  /**
+   * The claimed record replaces what this page read before it owned it.
+   * Work a previous page queued that needs a connection and was never sent
+   * goes: nothing the server decides happens long after its caller left.
+   * Work that may have been sent is replayed only after a state read.
+   */
+  private take(record: OutboxRecord): void {
+    const stale = record.entries.filter((e) => !e.offline && !e.sent && !this.waiters.has(e.id))
+    this.entries = record.entries.filter((e) => !stale.includes(e))
+    this.nextId = Math.max(this.nextId, record.nextId)
+    this.needsRead = this.entries.some((e) => e.sent)
+    if (record.client === this.clientId && record.reports) {
+      const live = this.reports.next
+      Object.assign(this.reports, new ReportBook(record.reports))
+      if (live.place) this.reports.note(live.place, live.hp, live.mana)
+    }
+    const state = record.server ? safeState(record.server) : null
+    if (state && this.compare(state) === 'newer') this.adopt(state)
+    else this.refresh()
+    if (stale.length) void this.saveRecord()
+  }
+
+  /** Another tab owns the outbox now (its Take over, or a newer tab without Web Locks): stop, write nothing. */
+  private ownershipLost(): void {
+    this.fence = null
+    this.lock?.release()
+    this.lock = null
+    if (this.stopped) return
+    this.release('hold')
+    this.setStatus('superseded')
+  }
+
+  /** IndexedDB is there: entries must be stored before they count (false: memory only, offline play off). */
+  private get durable(): boolean {
+    return this.store.durable
+  }
 
   /**
    * Session.save: the next report takes the screen's place and vitals and
@@ -529,36 +670,58 @@ export class Link {
       name: this.name,
       worldId: this.worldId,
       loggedOut: this.loggedOut,
+      fence: this.fence ?? 0,
       savedAt: this.now()
     }
   }
 
-  /** Write the record (only the sender writes it). False when it didn't land. */
-  private async saveRecord(): Promise<boolean> {
-    if (this.status === 'superseded') return false
-    const ok = await this.store.save(this.record())
-    if (ok) this.channel?.postMessage({ type: 'outbox', account: this.accountId, device: this.device })
-    return ok
+  /**
+   * Write the record, as its owner only, counted once committed. A failed
+   * write is retried until one lands; a fenced one means another tab owns it.
+   */
+  private async saveRecord(): Promise<'saved' | 'fenced' | 'failed'> {
+    if (this.fence === null) return 'fenced'
+    const r = await this.store.save(this.record())
+    if (r === 'fenced') {
+      this.ownershipLost()
+      return r
+    }
+    if (r === 'failed') {
+      if (this.durable) this.storageFailed()
+      return r
+    }
+    this.unsaved = false
+    this.channel?.postMessage({ type: 'outbox', account: this.accountId, device: this.device })
+    return r
+  }
+
+  /** IndexedDB refused a write: say so once, and keep trying. */
+  private storageFailed(): void {
+    this.unsaved = true
+    if (!this.savedNotice) {
+      this.savedNotice = true
+      this.emitter(EV.toast, { text: 'This browser isn’t saving your queued changes right now. Keep this tab open; it keeps trying.', kind: 'error' })
+    }
+    if (this.saveRetry !== null || this.stopped) return
+    this.saveRetry = setTimeout(() => {
+      this.saveRetry = null
+      if (this.fence === null) void this.reconnect(false)
+      else void this.saveRecord().then((r) => r === 'saved' && this.pump())
+    }, 2_000)
   }
 
   /** Another tab wrote the outbox: a passive tab picks it up, so its view is current when it takes over. */
   private onChannel(data: unknown): void {
     const m = data as { type?: string; account?: string; device?: string } | null
-    if (!m || m.type !== 'outbox' || m.account !== this.accountId || m.device !== this.device || this.status !== 'superseded') return
-    void this.reloadRecord()
-  }
-
-  private async reloadRecord(): Promise<void> {
-    const r = await this.store.load(this.accountId, this.device)
-    if (!r) return
-    // The store's entries, plus ours it hasn't seen yet (newer than its allocator).
-    // Ours that it knew of and no longer holds were answered by the other tab.
-    const stored = new Set(r.entries.map((e) => e.id))
-    this.entries = [...r.entries, ...this.entries.filter((e) => !stored.has(e.id) && e.id >= r.nextId)].sort((a, b) => a.id - b.id)
-    this.nextId = Math.max(this.nextId, r.nextId)
-    const state = r.server ? safeState(r.server) : null
-    if (state) this.adoptRead(state)
-    else this.refresh()
+    if (!m || m.type !== 'outbox' || m.account !== this.accountId || m.device !== this.device || this.fence !== null) return
+    void this.store.load(this.accountId, this.device).then((r) => {
+      if (!r || this.fence !== null) return
+      this.entries = r.entries
+      this.nextId = Math.max(this.nextId, r.nextId)
+      const state = r.server ? safeState(r.server) : null
+      if (state && this.compare(state) !== 'older') this.adopt(state, { read: true })
+      else this.refresh()
+    })
   }
 
   /** Before a reload for a new version: send everything, then report whether it all landed. 'saved' seals the link. */
@@ -574,7 +737,7 @@ export class Link {
       if (run !== this.settleRun) return 'unsaved'
       if (!this.pumping && (!this.canSend() || (!this.entries.length && !this.reports.captured))) break
     }
-    await this.saveRecord()
+    if (this.unsaved) await this.saveRecord()
     if (!this.settled) return this.status === 'offline' ? 'offline' : 'unsaved'
     this.sealed = true
     return 'saved'
@@ -599,42 +762,62 @@ export class Link {
   /**
    * Add an operation. `offline` operations are predicted and kept without a
    * connection; the rest need one and their caller waits for the answer.
-   * Persist first: an entry that can't be written is never sent offline.
+   * Persist first: nothing is sent, or predicted durably, before its entry
+   * is stored. `prepare` runs with the entry (in the same record write);
+   * `undo` takes it back if the write doesn't land.
    */
-  private async submit(kind: OutboxKind, path: string, key: string, body: Record<string, unknown>, opts: { offline: boolean; barrier?: boolean }): Promise<Outcome> {
-    if (this.stopped || !this.session) return { ok: false, code: 'unknown' }
-    if (this.status === 'superseded' || this.status === 'signed-out') return { ok: false, code: this.status === 'superseded' ? 'superseded' : 'unauthorized' }
+  private async submit(
+    kind: OutboxKind,
+    path: string,
+    key: string,
+    body: Record<string, unknown>,
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; prepare?: (id: number) => void; undo?: () => void }
+  ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
+    const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
+    if (this.stopped || !this.session) return refused('unknown')
+    if (this.status === 'superseded' || this.status === 'signed-out') return refused(this.status === 'superseded' ? 'superseded' : 'unauthorized')
+    if (this.sealed) return refused('busy')
     if (!opts.offline) {
-      if (this.busy || this.sealed) return { ok: false, code: 'busy' }
-      if (this.paused === 'reload') return { ok: false, code: 'reload-needed' }
-      if (!this.canSend()) return { ok: false, code: 'offline' }
-    } else if (this.sealed) return { ok: false, code: 'busy' }
-    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: contract.number, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline }
-    this.entries.push(entry)
-    const saved = await this.saveRecord()
-    if (!saved && opts.offline && !this.canSend()) {
-      // No durable outbox (a private window): offline play is off.
-      this.entries = this.entries.filter((e) => e !== entry)
-      this.refresh()
+      if (this.busy) return refused('busy')
+      if (this.paused === 'reload') return refused('reload-needed')
+      if (!this.canSend()) return refused('offline')
+    } else if (!this.canSend() && !this.durable) {
+      // No outbox that survives the page: offline play is off, before anything shows.
       this.emitter(EV.toast, { text: 'Needs a connection. This browser won’t keep offline changes.', kind: 'error' })
-      return { ok: false, code: 'offline' }
+      return refused('offline')
+    }
+    if (this.fence === null && !(await this.own(false))) return refused('superseded')
+    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: contract.number, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}) }
+    this.entries.push(entry)
+    opts.prepare?.(entry.id)
+    if (opts.offline && kind !== 'fall') this.refresh({ predicted: true })
+    const saved = await this.saveRecord()
+    if (saved !== 'saved' && (this.durable || saved === 'fenced' || !this.canSend())) {
+      // Not stored, so never sent and never kept: everything it showed goes.
+      this.entries = this.entries.filter((e) => e !== entry)
+      opts.undo?.()
+      this.refresh()
+      if (saved === 'fenced') return refused('superseded')
+      if (opts.offline) this.emitter(EV.toast, { text: 'This browser couldn’t keep that change. Nothing was queued.', kind: 'error' })
+      void this.saveRecord()
+      return refused('offline')
     }
     if (opts.offline) {
       this.pump()
-      return { ok: true, state: null, result: null }
+      return { outcome: { ok: true, state: null, result: null }, entry }
     }
     this.setBusy(true)
     try {
       const done = new Promise<Outcome>((r) => this.waiters.set(entry.id, r))
       this.pump()
-      return await done
+      return { outcome: await done, entry }
     } finally {
       this.setBusy(false)
     }
   }
 
   private canSend(): boolean {
-    return !this.stopped && !!this.lock && this.status === 'online' && !!this.lease && !this.paused
+    return !this.stopped && this.fence !== null && this.status === 'online' && !!this.lease && !this.paused
   }
 
   private pump(): void {
@@ -642,20 +825,22 @@ export class Link {
     this.pumping = this.drain().finally(() => {
       this.pumping = null
       // More arrived while draining; a pending retry waits for its timer instead.
-      if (this.retry === null && this.canSend() && (this.entries.length > 0 || (this.reportWanted && this.reports.due))) this.pump()
+      if (this.retry === null && this.canSend() && (this.entries.length > 0 || (this.reportWanted && (this.reportForced || this.reports.due)))) this.pump()
     })
   }
 
   /** Head of line: one operation at a time, in order; a report when the outbox is idle. */
   private async drain(): Promise<void> {
     while (this.canSend()) {
-      await this.expire()
+      if (!(await this.expire())) return
       const head = this.entries[0]
       if (!head) {
         if (!this.reportWanted && !this.reports.captured) return
         this.noteLive()
-        if (!(await this.sendReport(false))) return
+        const forced = this.reportForced
+        if (!(await this.sendReport(forced)).ok) return
         this.reportWanted = false
+        if (forced) this.reportForced = false
         return
       }
       if (!(await this.sendHead(head))) return
@@ -664,6 +849,7 @@ export class Link {
 
   /** Send the head. False: stop draining (paused, offline, waiting to retry). */
   private async sendHead(head: OutboxEntry): Promise<boolean> {
+    if (head.sent && this.needsRead && (await this.reconcile()) !== 'ok') return false
     let barrier: { client: string; generation: string; seq: number } | null = null
     if (head.barrier) {
       barrier = await this.flushBarrier()
@@ -671,161 +857,270 @@ export class Link {
     }
     if (!head.sent) {
       head.sent = true
-      await this.saveRecord()
+      const marked = await this.saveRecord()
+      if (marked !== 'saved' && this.durable) {
+        // Never send what the record doesn't say may have been sent.
+        head.sent = false
+        if (marked === 'failed') return this.stalled(untrusted())
+        return false
+      }
     }
     const body = JSON.parse(head.body) as Record<string, unknown>
     body.op = { ...(body.op as object), lease: this.lease, ...(barrier ? { report: barrier } : {}) }
+    let state: PlayerState | null
+    let result: unknown
+    let trusted: boolean
     try {
-      let state: PlayerState | null
-      let result: unknown
       if (head.kind === 'mutation') {
         const route = routeFromPath(head.path)
-        if (!route) throw new Error('unknown route')
+        if (!route) throw new ApiError('invalid-json', { status: 400 })
         const res = await this.api.run((raw) => dispatchMutation(raw, route, body))
         state = res.player ?? null
         result = res
+        trusted = true
       } else {
         const typed = TYPED[head.kind]!
-        const env = await this.api.run(() => typed.send(this.ops, fromJson(typed.schema, body as JsonValue, { ignoreUnknownFields: false }) as never))
+        let req
+        try {
+          req = fromJson(typed.schema, body as JsonValue, { ignoreUnknownFields: false })
+        } catch {
+          throw new ApiError('invalid-json', { status: 400 })
+        }
+        const env = await this.api.run(() => typed.send(this.ops, req as never))
         state = env.state ?? null
         result = env.result
+        // An answer for another operation proves nothing about this one.
+        trusted = env.result.case === typed.result
       }
-      this.answered()
-      this.entries = this.entries.filter((e) => e !== head)
-      if (state) this.adopt(state, head.kind === 'fall' ? { fall: head.id } : {})
-      else {
-        // An answer without a typed state (a domain route not yet on the new envelope): read it.
-        this.fallPoints.delete(head.id)
-        this.refresh()
-        await this.reconcile()
-      }
-      if (head.kind === 'fall' && !state) this.reports.release(head.id, this.server.vitals?.vitalsSetVersion ?? 0)
-      await this.saveRecord()
-      // A step's gift (paid once, by the server): the toast follows its answer.
-      const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { embers?: number } })?.case === 'questStep' ? (result as { value: { embers: number } }).value.embers : 0
-      if (gift > 0) this.emitter(EV.toast, { text: `+${gift} embers — a little warmth from the road.`, icon: 'ember' })
-      this.settle_(head, { ok: true, state, result })
-      return true
     } catch (err) {
       return this.headFailed(head, err)
     }
+    this.answered()
+    if (!trusted) return this.stalled(untrusted())
+    // No state, or one that disagrees with ours at its version: a read must say first.
+    const how = state ? this.compare(state) : 'conflict'
+    if ((how === 'conflict' || how === 'older') && (await this.reconcile()) !== 'ok') return false
+    this.entries = this.entries.filter((e) => e !== head)
+    if (state && (how === 'newer' || how === 'equal')) this.adopt(state, head.kind === 'fall' ? { fall: head } : {})
+    if (head.kind === 'fall') this.fallSettled(head)
+    else this.refresh()
+    const stored = await this.dispositionSaved()
+    // A step's gift (paid once, by the server): the toast follows its answer.
+    const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { embers?: number } })?.case === 'questStep' ? (result as { value: { embers: number } }).value.embers : 0
+    if (gift > 0) this.emitter(EV.toast, { text: `+${gift} embers — a little warmth from the road.`, icon: 'ember' })
+    this.notify(head, { ok: true, state, result })
+    return stored
+  }
+
+  /**
+   * Store a settled head's removal before anything behind it goes. False:
+   * the write didn't land; it is retried, and the queue resumes once it does.
+   */
+  private async dispositionSaved(): Promise<boolean> {
+    const r = await this.saveRecord()
+    return r === 'saved' || (r === 'failed' && !this.durable)
+  }
+
+  /**
+   * `idempotency-mismatch`: the key already committed a payload, and the
+   * world's reconciliation read says which (lane B,
+   * `GET /api/operations/result`). The same payload is this operation,
+   * landed: its stored result settles it. A different one is a different
+   * action: this one never happened, its prediction goes, and nobody is told
+   * it landed. Until the read succeeds the head stays uncertain; with no row
+   * left to read (past retention) the queue pauses rather than guess.
+   */
+  private async resolveMismatch(head: OutboxEntry, err: ApiError): Promise<boolean> {
+    if (err.state && this.compare(err.state) === 'newer') this.adopt(err.state)
+    let found: Awaited<ReturnType<RawApi['operationResult']>>
+    try {
+      found = await this.api.run((raw) => raw.operationResult(head.path, head.key))
+    } catch (e) {
+      this.stopFor(e)
+      return false
+    }
+    if (this.compare(found.state) !== 'older') this.adopt(found.state, { read: true })
+    const op = found.operation
+    if (!op) {
+      console.warn('[glimway] a queued key committed a request the world no longer remembers', head.kind)
+      this.emitter(EV.toast, { text: 'The world holds a different version of something this device queued. It’s kept here until that’s sorted out.', kind: 'error' })
+      this.pause('mismatch')
+      return false
+    }
+    const same = samePayload(head, op.payload)
+    let result: unknown = null
+    if (same && head.kind !== 'mutation') {
+      try {
+        result = fromJson(EnvelopeSchema, { [op.resultCase]: op.result } as JsonValue, { ignoreUnknownFields: true }).result
+      } catch {
+        result = null
+      }
+      if ((result as { case?: string } | null)?.case !== TYPED[head.kind]!.result) return this.stalled(untrusted())
+    }
+    this.entries = this.entries.filter((e) => e !== head)
+    if (head.kind === 'fall') this.fallSettled(head)
+    else this.refresh()
+    const stored = await this.dispositionSaved()
+    if (!same) {
+      console.warn('[glimway] a queued key committed a different request', head.kind)
+      if (!this.waiters.has(head.id)) this.emitter(EV.toast, { text: UNDONE[head.kind] ?? 'Something this device queued was already used for something else. It didn’t happen.', kind: 'error' })
+      this.notify(head, { ok: false, code: 'idempotency-mismatch' })
+    } else if (head.kind === 'mutation') this.notify(head, { ok: false, code: 'resolved' })
+    else this.notify(head, { ok: true, state: this.server, result })
+    return stored
+  }
+
+  /**
+   * A fall left the outbox (answered, or given up): the next report goes
+   * against the vitals the world now holds, carrying what happened since.
+   * This happens whether or not its answer moved the vitals watermark (a
+   * replay of a fall the world already held).
+   */
+  private fallSettled(fall: OutboxEntry): void {
+    this.reports.release(fall.id, this.server.vitals?.vitalsSetVersion ?? 0)
+    this.refresh()
   }
 
   /** The head wasn't answered with success. */
   private async headFailed(head: OutboxEntry, err: unknown): Promise<boolean> {
     const code = errorCode(err)
-    if (isReloadNeeded(err)) {
-      this.pause('reload')
-      return false
-    }
-    if (isOutboxClientBug(err) || (err instanceof Error && !('code' in err))) {
-      // A request the server can't even decode is a bug here: never retried in a loop.
-      console.warn('[glimway] the server could not read a queued', head.kind, code)
-      this.pause('client-bug')
-      this.emitter(EV.toast, { text: 'Something this device queued couldn’t be read by the world. It’s kept here; reload to try again.', kind: 'error' })
-      return false
-    }
-    if (code === 'superseded' || code === 'playing-elsewhere') {
-      this.leaseLost()
-      return false
-    }
-    if (code === 'unauthorized') {
-      this.setStatus('signed-out')
-      this.abandonUnsent()
+    if (isReloadNeeded(err) || isOutboxClientBug(err) || code === 'superseded' || code === 'playing-elsewhere' || code === 'unauthorized') {
+      if (isOutboxClientBug(err)) {
+        console.warn('[glimway] the server could not read a queued', head.kind, code)
+        this.emitter(EV.toast, { text: 'Something this device queued couldn’t be read by the world. It’s kept here; reload to try again.', kind: 'error' })
+      }
+      this.stopFor(err)
       return false
     }
     if (needsReconciliation(err)) {
-      // The key already committed a payload: it happened, in some form. Read what the world holds.
       this.answered()
-      this.adopt((err as { state?: PlayerState }).state)
-      await this.reconcile()
-      this.drop(head)
-      this.settle_(head, { ok: false, code: 'resolved' })
-      return true
+      return this.resolveMismatch(head, err as ApiError)
     }
     if (isSettledRefusal(err)) {
       this.answered()
-      this.drop(head)
       // A step that didn't happen takes the steps after it along (an explicit dependency).
-      const dependents = head.kind === 'quest-step' ? this.entries.filter((e) => e.kind === 'quest-step' && predictionQuest(e) === predictionQuest(head)) : []
-      for (const d of dependents) this.drop(d)
-      this.adopt(err.state)
+      const dependents = head.kind === 'quest-step' ? this.entries.filter((e) => e !== head && e.kind === 'quest-step' && predictionQuest(e) === predictionQuest(head)) : []
+      for (const e of [head, ...dependents]) this.drop(e)
+      if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
       this.refresh()
-      await this.saveRecord()
+      // A refusal is no idempotency commit: replayed later it could still happen. Stored first.
+      const stored = await this.dispositionSaved()
       console.warn('[glimway] the world refused a', head.kind, code)
       const undone = UNDONE[head.kind]
       if (undone && !this.waiters.has(head.id)) this.emitter(EV.toast, { text: undone, kind: 'error' })
-      this.settle_(head, { ok: false, code })
-      for (const d of dependents) this.settle_(d, { ok: false, code })
-      return true
+      for (const e of [head, ...dependents]) this.notify(e, { ok: false, code })
+      return stored
     }
     // Ambiguous: it may have committed. Keep it, retry with the same key and bytes.
-    if (err instanceof Error && 'state' in err) this.adopt((err as { state?: PlayerState }).state)
+    const state = err instanceof ApiError ? err.state : undefined
+    if (state && this.compare(state) === 'newer') this.adopt(state)
+    return this.stalled(err)
+  }
+
+  /**
+   * The head can't settle now (no answer, an untrustworthy one, a failed
+   * read or write): keep it and retry later. Its caller hears `pending`;
+   * work behind it that needs a connection and was never sent goes, with
+   * `offline`.
+   */
+  private stalled(err: unknown): false {
     this.unanswered()
-    if (head.offline === false) this.settle_(head, { ok: false, code: 'pending' })
-    this.abandonUnsent()
+    this.release('transport')
     this.backoff(err)
     return false
+  }
+
+  /**
+   * Stop for a failure that holds the whole queue (a reload, a client bug,
+   * the lease, the sign-in) or loses the connection. Every waiting caller
+   * hears back; the operations stay as the failure table says.
+   */
+  private stopFor(err: unknown): void {
+    const code = errorCode(err)
+    if (isReloadNeeded(err)) this.pause('reload')
+    else if (isOutboxClientBug(err)) this.pause('client-bug')
+    else if (code === 'superseded' || code === 'playing-elsewhere') this.leaseLost()
+    else if (code === 'unauthorized') this.signedOut()
+    else this.stalled(err)
+  }
+
+  /**
+   * Answer every waiting caller. `transport`: the connection failed, so
+   * never-sent work that needs one goes (`offline`) and sent work stays
+   * (`pending`). `hold` (paused, taken over, signed out): everything stays,
+   * and every caller hears `pending`.
+   */
+  private release(why: 'transport' | 'hold'): void {
+    const gone: OutboxEntry[] = []
+    for (const id of [...this.waiters.keys()]) {
+      const e = this.entries.find((x) => x.id === id)
+      if (e && !e.sent && !e.offline && why === 'transport') {
+        this.drop(e)
+        gone.push(e)
+        this.notify(e, { ok: false, code: 'offline' })
+      } else if (e) this.notify(e, { ok: false, code: 'pending' })
+      else {
+        const w = this.waiters.get(id)
+        this.waiters.delete(id)
+        w?.({ ok: false, code: 'pending' })
+      }
+    }
+    if (gone.length) {
+      this.refresh()
+      void this.saveRecord()
+    }
   }
 
   /** Remove an entry from the outbox (and its prediction). */
   private drop(entry: OutboxEntry): void {
     this.entries = this.entries.filter((e) => e !== entry)
-    if (entry.kind === 'fall') {
-      this.fallPoints.delete(entry.id)
-      this.reports.release(entry.id, this.server.vitals?.vitalsSetVersion ?? 0)
-    }
-  }
-
-  /**
-   * Operations that need a connection and were never sent go when the
-   * connection does: nothing the server decides happens hours later.
-   * Their callers hear `offline`.
-   */
-  private abandonUnsent(): void {
-    const gone = this.entries.filter((e) => !e.offline && !e.sent)
-    if (!gone.length) return
-    for (const e of gone) this.drop(e)
-    for (const e of gone) this.settle_(e, { ok: false, code: 'offline' })
-    void this.saveRecord()
+    if (entry.kind === 'fall') this.reports.release(entry.id, this.server.vitals?.vitalsSetVersion ?? 0)
   }
 
   /** Tell a waiting caller (once), or the features about a replay nobody waited for. */
-  private settle_(entry: OutboxEntry, outcome: Outcome): void {
+  private notify(entry: OutboxEntry, outcome: Outcome): void {
     const waiter = this.waiters.get(entry.id)
     if (waiter) {
       this.waiters.delete(entry.id)
       waiter(outcome)
       return
     }
-    if (entry.kind !== 'mutation' || (outcome.ok === false && outcome.code === 'pending')) return
+    if (entry.kind !== 'mutation' || (outcome.ok === false && (outcome.code === 'pending' || outcome.code === 'offline'))) return
     const route = routeFromPath(entry.path)
     if (!route) return
     const op = { ...route, fields: {} } as MutationOp
     if (outcome.ok) this.emitter(EV.mutationResolved, { op, outcome: 'landed', res: outcome.result })
-    else this.emitter(EV.mutationResolved, { op, outcome: outcome.code === 'resolved' ? 'landed' : 'refused', code: outcome.code })
+    else if (outcome.code === 'resolved') this.emitter(EV.mutationResolved, { op, outcome: 'landed' })
+    else this.emitter(EV.mutationResolved, { op, outcome: 'refused', code: outcome.code })
   }
 
   /**
    * Drop entries past their lifetime or made under another contract (2.4).
-   * One that may have been sent is reconciled first: the state read says
-   * what the world holds before its prediction goes.
+   * Never-sent ones go at once. One that may have been sent is never
+   * replayed: it waits at the head until a state read says what the world
+   * holds, and only then goes. False: that read failed (stop draining).
    */
-  private async expire(): Promise<void> {
-    // One that may have been sent waits until a state read can say what landed.
-    const old = expired(this.entries, this.now(), contract.number).filter((e) => !e.sent || this.canSend())
-    if (!old.length) return
-    if (old.some((e) => e.sent)) await this.reconcile()
-    for (const e of old) this.drop(e)
-    for (const e of old) this.settle_(e, { ok: false, code: 'offline' })
+  private async expire(): Promise<boolean> {
+    const old = expired(this.entries, this.now(), contract.number)
+    if (!old.length) return true
+    const unsent = old.filter((e) => !e.sent)
+    const sent = old.filter((e) => e.sent)
+    let ok = true
+    if (sent.length && (!this.canSend() || (await this.reconcile()) !== 'ok')) ok = false
+    const gone = ok ? old : unsent
+    if (!gone.length) return ok
+    for (const e of gone) this.drop(e)
+    for (const e of gone) this.notify(e, { ok: false, code: 'offline' })
     this.refresh()
     await this.saveRecord()
     this.emitter(EV.toast, { text: 'Something you did offline more than six days ago wasn’t kept.', kind: 'error' })
+    return ok
   }
 
-  private pause(why: 'reload' | 'client-bug'): void {
+  private pause(why: 'reload' | 'client-bug' | 'mismatch'): void {
     this.paused = why
     this.stopTimers()
+    this.release('hold')
     this.emit()
   }
 
@@ -833,18 +1128,37 @@ export class Link {
 
   private startReports(): void {
     if (this.reportTimer !== null || this.stopped) return
-    this.reportTimer = setInterval(() => {
-      this.noteLive()
-      this.reportWanted = true
-      this.pump()
-    }, REPORT_INTERVAL_MS)
+    this.reportTimer = setInterval(() => this.reportDeadline(), REPORT_INTERVAL_MS)
   }
 
-  /** The hero changed area: report it soon (after whatever is in flight). */
+  /**
+   * The periodic report is due (every 10 s): it goes even when nothing
+   * changed, since the world counts play time between reports. It still
+   * waits its turn behind the outbox and any fall's answer.
+   */
+  reportDeadline(): void {
+    this.noteLive()
+    this.reportWanted = true
+    this.reportForced = true
+    this.pump()
+  }
+
+  /** Report soon (after whatever is in flight). */
   reportSoon(): void {
     this.noteLive()
     this.reportWanted = true
     this.pump()
+  }
+
+  /**
+   * The hero arrived in a scene. A place in another area (or another Wilds
+   * region) than the last report named is reported now, from where the
+   * hero really stands after the arrival (a fresh region read included).
+   */
+  arrived(): void {
+    this.noteLive()
+    const area = this.reports.next.place?.area
+    if (area && area !== this.reports.reportedArea) this.reportSoon()
   }
 
   /** A signature cast happened on screen (counted against the server's cast budget). */
@@ -852,36 +1166,35 @@ export class Link {
     this.reports.cast(n)
   }
 
-  /** Send a report. False: stop draining. */
-  private async sendReport(force: boolean): Promise<boolean> {
+  /** Send a report: the captured one, or the next one frozen now. */
+  private async sendReport(force: boolean): Promise<{ ok: boolean; sent?: CapturedReport; ack?: ReportAck | null }> {
     const c = this.reports.capture(force)
-    if (!c) return true
-    await this.saveRecord()
+    if (!c) return { ok: true }
+    if ((await this.saveRecord()) === 'fenced') return { ok: false }
     try {
       const env = await this.api.run(() => this.ops.report(this.reportRequest(c)))
       this.answered()
       const ack = env.result.case === 'report' ? (env.result.value as ReportAck) : null
       const retired = ack ? this.reports.ack(ack) : null
+      if (!retired) {
+        // Not the answer to this report: it stays captured and goes again.
+        this.stalled(untrusted())
+        return { ok: false }
+      }
       this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
       await this.saveRecord()
-      return true
+      return { ok: true, sent: retired, ack }
     } catch (err) {
       const code = errorCode(err)
-      if (isReloadNeeded(err)) this.pause('reload')
-      else if (code === 'superseded' || code === 'playing-elsewhere') {
+      if (code === 'superseded' || code === 'playing-elsewhere') {
         // A retired generation: its captured report never moves to a new one.
         this.reports.drop()
-        this.leaseLost()
-      } else if (code === 'unauthorized') this.setStatus('signed-out')
-      else if (isOutboxClientBug(err)) {
+      } else if (isOutboxClientBug(err)) {
         // Its values can't be read: drop it rather than send it forever.
         this.reports.drop()
-        this.pause('client-bug')
-      } else {
-        this.unanswered()
-        this.backoff(err)
       }
-      return false
+      this.stopFor(err)
+      return { ok: false }
     }
   }
 
@@ -901,27 +1214,34 @@ export class Link {
       (env) => {
         const ack = env.result.case === 'report' ? (env.result.value as ReportAck) : null
         const retired = ack ? this.reports.ack(ack) : null
-        this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
+        if (retired) this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
       },
       () => undefined
     )
   }
 
   /**
-   * The report barrier (2.2): freeze and flush a report and wait for its
-   * acknowledgment, so a rest or a consumable reads the vitals on screen.
-   * Null when it can't be had now (the link then waits or retries).
+   * The report barrier (2.2): a rest, a consumable or a profile reads the
+   * stored vitals, so the server must hold what the screen shows. First the
+   * captured report (immutable) is settled, then the next one, covering the
+   * live state now, is frozen and flushed. Only its accepted acknowledgment
+   * on the current vitals basis is a barrier. Null when it can't be had now:
+   * every waiting caller has heard why.
    */
   private async flushBarrier(): Promise<{ client: string; generation: string; seq: number } | null> {
+    if (this.reports.captured && !(await this.sendReport(false)).ok) return null
     for (let i = 0; i < BARRIER_TRIES; i++) {
       this.noteLive()
-      const c = this.reports.capture(true)
-      if (!c) break
-      if (!(await this.sendReport(true))) return null
-      if (!this.reports.captured && this.reports.barrier()?.seq === c.seq) return this.reports.barrier()
+      const r = await this.sendReport(true)
+      if (!r.ok) return null
+      const ack = r.ack
+      if (!r.sent || !ack) break
+      if (ack.accepted && !ack.staleBasis && ack.basis >= (this.server.vitals?.vitalsSetVersion ?? 0)) return { client: ack.client, generation: ack.generation, seq: ack.seq }
+      // Its basis was older than the server's vitals: report again from the vitals it holds.
+      this.reports.reset(this.server.vitals?.vitalsSetVersion ?? 0)
     }
-    // No fresh acknowledgment to be had (a stale basis each time): try again later.
-    this.backoff(new ApiError('report-required'))
+    // No fresh acknowledgment to be had: try again later.
+    this.stalled(new ApiError('report-required'))
     return null
   }
 
@@ -934,7 +1254,6 @@ export class Link {
     const key = newKey()
     const body = toJson(QuestStepRequestSchema, create(QuestStepRequestSchema, { op: { lease: '', key }, quest: LANTERN_ROAD, to: QUEST_STEP[event], where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     void this.submit('quest-step', TYPED['quest-step']!.path, key, body, { offline: true })
-    this.refresh()
   }
 
   /** A client-namespace mark (seen:, met:, found:, defeated:…; predicted; queues offline). */
@@ -944,41 +1263,44 @@ export class Link {
     const key = newKey()
     const body = toJson(MarkRequestSchema, create(MarkRequestSchema, { op: { lease: '', key }, mark, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     void this.submit('mark', TYPED.mark!.path, key, body, { offline: true })
-    this.refresh()
   }
 
   /**
-   * Take a paper (predicted). Placed and handed-over papers queue offline; a
-   * site paper (`epoch`, `site`) needs the server.
+   * Take a paper (predicted). Placed and handed-over papers queue offline;
+   * a site paper (`epoch`, `site`) needs the server, and its caller hears
+   * whether the world gave it (the site should stay until then).
    */
-  takePaper(paper: string, site?: { epoch: string; site: string }): void {
+  async takePaper(paper: string, site?: { epoch: string; site: string }): Promise<{ ok: true } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }> {
     const s = this.session
-    if (!s) return
+    if (!s) return { ok: false, code: 'unknown' }
     const key = newKey()
     const body = toJson(TakePaperRequestSchema, create(TakePaperRequestSchema, { op: { lease: '', key }, paper, where: whereOf(s.state), epoch: site?.epoch ?? '', site: site?.site ?? '' }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    void this.submit('take-paper', TYPED['take-paper']!.path, key, body, { offline: true })
-    this.refresh()
+    const { outcome } = await this.submit('take-paper', TYPED['take-paper']!.path, key, body, { offline: !site })
+    return outcome.ok ? { ok: true } : outcome
   }
 
   /**
-   * The hero fell where they stand now: the recovery and the walk home are
-   * predicted at once, and the fall queues (offline too). Combat captured
-   * before it is void; the next report waits for its answer.
+   * The hero fell where they stand now (the caller samples the place first).
+   * The fall is written to the outbox with its predicted recovery and its
+   * report boundary in one record write; only then does the hero heal and
+   * wake at the village, so a recovery is never shown that can't be kept.
+   * Combat captured before it is void; the next report waits for its answer.
    */
-  fall(): { hp: number; mana: number } | null {
+  async fall(): Promise<{ hp: number; mana: number } | null> {
     const s = this.session
     if (!s) return null
     const key = newKey()
     const where = whereOf(s.state)
+    const point = fallRecovery(this.view(), profileOf(this.server))
     const body = toJson(FallRequestSchema, create(FallRequestSchema, { op: { lease: '', key }, where }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const id = this.nextId
-    void this.submit('fall', TYPED.fall!.path, key, body, { offline: true })
-    // Refused before it was queued (another tab plays): nothing to predict.
-    if (!this.entries.some((e) => e.id === id)) return null
-    this.reports.fall(id)
-    const view = this.view()
-    const point = { hp: view.hp, mana: view.mana }
-    this.fallPoints.set(id, point)
+    const before = this.reports.stored()
+    const { outcome } = await this.submit('fall', TYPED.fall!.path, key, body, {
+      offline: true,
+      fall: point,
+      prepare: (id) => this.reports.fall(id, VILLAGE_SPAWN, point),
+      undo: () => this.reports.restore(before)
+    })
+    if (!outcome.ok) return null
     this.refresh({ relocate: true, vitals: point, quiet: true })
     this.noteLive()
     return point
@@ -990,7 +1312,7 @@ export class Link {
     if (!s) return { ok: false, code: 'unknown' }
     const key = newKey()
     const body = toJson(SettleEchoRequestSchema, create(SettleEchoRequestSchema, { op: { lease: '', key }, epoch: req.epoch, site: req.site, member: req.member, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const r = await this.submit('settle-echo', TYPED['settle-echo']!.path, key, body, { offline: false })
+    const { outcome: r } = await this.submit('settle-echo', TYPED['settle-echo']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
     const res = r.result as { case?: string; value?: { paper?: string } }
     return { ok: true, result: { paper: res?.case === 'settleEcho' ? res.value?.paper ?? '' : '' } }
@@ -1002,7 +1324,7 @@ export class Link {
     if (!s || this.stopped) return 'error'
     const key = newKey()
     const body = toJson(SpendRequestSchema, create(SpendRequestSchema, { op: { lease: '', key }, kind: spend.kind, where: whereOf(s.state), target: spend.kind === 'road-lantern' ? spend.id : '' }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const r = await this.submit('spend', TYPED.spend!.path, key, body, { offline: false, barrier: spend.kind === 'rest' || spend.kind === 'home-rest' })
+    const { outcome: r } = await this.submit('spend', TYPED.spend!.path, key, body, { offline: false, barrier: spend.kind === 'rest' || spend.kind === 'home-rest' })
     if (r.ok) return null
     const code = r.code
     if (code === 'short' || code === 'done' || code === 'full' || code === 'needs-earned') return code
@@ -1039,23 +1361,24 @@ export class Link {
         while (this.pumping) await this.pumping
         if (this.entries.length) return { ok: false, code: 'offline' }
       }
+      if (!this.canSend()) return { ok: false, code: 'offline' }
       const barrier = await this.flushBarrier()
       if (!barrier) return { ok: false, code: 'offline' }
       const before = s.state
       const env = await this.api.run(() => this.ops.profile(create(ProfileReportSchema, { lease: this.lease ?? '', raw, report: barrier })))
       this.answered()
+      if (env.result.case !== 'profile') return { ok: false, code: 'bad-response' }
       this.adopt(env.state)
       void this.saveRecord()
-      const res = env.result.case === 'profile' ? env.result.value : null
-      const gained = Math.max(0, res?.credit ?? 0)
+      const res = env.result.value
+      const gained = Math.max(0, res.credit)
       const welcome = !before.flags.includes(FLAGS.welcome) && s.state.flags.includes(FLAGS.welcome) ? Math.min(gained, WELCOME_EMBERS) : 0
-      return { ok: true, status: res?.status === 'unchanged' ? 'unchanged' : 'synced', gained, welcome, credit: { hp: res?.vitalsCredit?.hp ?? 0, mana: res?.vitalsCredit?.mana ?? 0 } }
+      return { ok: true, status: res.status === 'unchanged' ? 'unchanged' : 'synced', gained, welcome, credit: { hp: res.vitalsCredit?.hp ?? 0, mana: res.vitalsCredit?.mana ?? 0 } }
     } catch (err) {
       const code = errorCode(err)
-      if (err instanceof Error && 'state' in err) this.adopt((err as { state?: PlayerState }).state)
-      if (isReloadNeeded(err)) this.pause('reload')
-      else if (code === 'superseded' || code === 'playing-elsewhere') this.leaseLost()
-      else if (code === 'unauthorized') this.setStatus('signed-out')
+      const state = err instanceof ApiError ? err.state : undefined
+      if (state && this.compare(state) === 'newer') this.adopt(state)
+      if (isReloadNeeded(err) || code === 'superseded' || code === 'playing-elsewhere' || code === 'unauthorized') this.stopFor(err)
       else if (isUnreachable(err)) {
         this.backoff(err)
         return { ok: false, code: 'offline' }
@@ -1099,7 +1422,7 @@ export class Link {
       const value = await get()
       this.contact()
       const player = (value as { player?: PlayerState } | null)?.player
-      if (player) this.adopt(player)
+      if (player && this.compare(player) === 'newer') this.adopt(player)
       return { ok: true, value }
     } catch (err) {
       const code = errorCode(err)
@@ -1126,11 +1449,11 @@ export class Link {
 
   /**
    * One keyed domain POST (homesteads, storage, crafting, mail, projects,
-   * items, repairs, worlds): its fields plus `op` and the hero's `where`,
-   * written to the outbox and sent; the world waits for the answer. When the
-   * answer is lost the outbox keeps it and replays it with the same key
-   * (`pending`); a refusal changes nothing. Consumables carry a report
-   * barrier, since they read the stored vitals.
+   * items, repairs, worlds, the library): its fields plus `op` and the
+   * hero's `where`, written to the outbox and sent; the world waits for the
+   * answer. When the answer is lost the outbox keeps it and replays it with
+   * the same key (`pending`); a refusal changes nothing. Consumables carry a
+   * report barrier, since they read the stored vitals.
    */
   async mutate<R extends Snapshot>(op: MutationOp): Promise<MutateResult<R>> {
     const s = this.session
@@ -1150,7 +1473,7 @@ export class Link {
     }
     const body: Record<string, unknown> = { ...fields, op: { lease: '', key }, where: whereOf(s.state) }
     const route = routeOf(op)
-    const r = await this.submit('mutation', ROUTE_PATHS[op.kind](route), key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use' })
+    const { outcome: r } = await this.submit('mutation', ROUTE_PATHS[op.kind](route), key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use' })
     if (!r.ok) return { ok: false, code: r.code }
     return { ok: true, res: r.result as R }
   }
@@ -1167,7 +1490,7 @@ export class Link {
       return 'unknown'
     }
     const o = await done
-    return o.ok || o.code === 'resolved' ? 'landed' : 'refused'
+    return o.ok ? 'landed' : o.code === 'pending' || o.code === 'offline' ? 'unknown' : 'refused'
   }
 
   // ------------------------------------------------------------ the Wilds
@@ -1176,7 +1499,7 @@ export class Link {
   async wildsRegion(regionId: string): Promise<WildsRegionResponse> {
     const res = await this.api.run((raw) => raw.wildsRegion(regionId))
     this.contact()
-    if (res.player) this.adopt(res.player)
+    if (res.player && this.compare(res.player) === 'newer') this.adopt(res.player)
     return res
   }
 
@@ -1187,7 +1510,7 @@ export class Link {
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
     const key = newKey()
     const body = toJson(WildsClaimRequestSchema, create(WildsClaimRequestSchema, { op: { lease: '', key }, epoch: req.epoch, entityId: req.entityId, cycle: req.cycle, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const r = await this.submit('wilds-claim', TYPED['wilds-claim']!.path, key, body, { offline: false })
+    const { outcome: r } = await this.submit('wilds-claim', TYPED['wilds-claim']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
     const res = r.result as { case?: string; value?: import('../lib/gen/glimway/v1/operations_pb.js').WildsClaimResult }
     if (res?.case !== 'wildsClaim' || !res.value) return { ok: false, code: 'bad-response' }
@@ -1201,7 +1524,7 @@ export class Link {
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
     const key = newKey()
     const body = toJson(WildsLanternRequestSchema, create(WildsLanternRequestSchema, { op: { lease: '', key }, epoch: req.epoch, ownerId: req.ownerId, lanternId: req.lanternId, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const r = await this.submit('wilds-lantern', TYPED['wilds-lantern']!.path, key, body, { offline: false })
+    const { outcome: r } = await this.submit('wilds-lantern', TYPED['wilds-lantern']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
     const res = r.result as { case?: string; value?: import('../lib/gen/glimway/v1/operations_pb.js').WildsLanternResult }
     if (res?.case !== 'wildsLantern' || !res.value) return { ok: false, code: 'bad-response' }
@@ -1216,31 +1539,7 @@ export class Link {
     return { ok: false, code: 'not-implemented' }
   }
 
-  // ------------------------------------------------------------ lease, ownership, reconnect
-
-  /**
-   * Hold the outbox lock for this device. `steal` only on the player's Take
-   * over. Without it this tab is passive: another tab here is playing.
-   */
-  private async own(steal: boolean): Promise<boolean> {
-    if (this.lock) return true
-    const lock = await holdLock(this.locks, lockName(this.accountId, this.device), steal)
-    if (!lock) return false
-    if (this.stopped) {
-      lock.release()
-      return false
-    }
-    this.lock = lock
-    void lock.lost.then(() => {
-      if (this.lock !== lock) return
-      // Another tab took the outbox: this one stops sending and keeps nothing it can't write.
-      this.lock = null
-      if (!this.stopped) this.leaseLost()
-    })
-    // The previous owner may have written entries meanwhile.
-    await this.reloadRecord()
-    return true
-  }
+  // ------------------------------------------------------------ lease and reconnect
 
   /**
    * Acquire the lease and send what waits (design 2.4). Never takes over
@@ -1258,7 +1557,7 @@ export class Link {
   private async doReconnect(takeOver: boolean): Promise<void> {
     if (!this.session) return
     if (!(await this.own(takeOver))) {
-      this.setStatus('superseded')
+      if (!this.unsaved) this.setStatus('superseded')
       return
     }
     try {
@@ -1267,7 +1566,11 @@ export class Link {
       this.lease = play.lease
       const v = play.state?.vitals
       this.reports.bind(play.reportClient, play.reportGeneration, v?.reportSeq ?? 0, v?.reportGeneration ?? '')
-      if (play.state) this.adoptRead(play.state)
+      // The play answer is a fresh state read: entries from an earlier page may replay now.
+      if (play.state) {
+        this.adopt(play.state, { read: true })
+        this.needsRead = false
+      }
       this.failures = 0
       this.trouble = false
       this.answered()
@@ -1283,12 +1586,8 @@ export class Link {
         this.setStatus('superseded')
         return
       }
-      if (isReloadNeeded(err)) {
-        this.pause('reload')
-        return
-      }
-      if (code === 'unauthorized') {
-        this.setStatus('signed-out')
+      if (isReloadNeeded(err) || code === 'unauthorized') {
+        this.stopFor(err)
         return
       }
       this.backoff(err)
@@ -1313,19 +1612,15 @@ export class Link {
     return this.reconnect(true)
   }
 
-  /** Superseded: stop sending and keep everything. Callers of unsent work hear it. */
+  /** The server lease went elsewhere: stop sending and keep everything (this tab still owns the outbox here). */
   private leaseLost(): void {
-    for (const [id, waiter] of [...this.waiters]) {
-      const e = this.entries.find((x) => x.id === id)
-      if (e && !e.sent) this.entries = this.entries.filter((x) => x !== e)
-      this.waiters.delete(id)
-      waiter({ ok: false, code: 'superseded' })
-    }
+    this.release('hold')
     this.setStatus('superseded')
-    if (this.lock) {
-      this.lock.release()
-      this.lock = null
-    }
+  }
+
+  private signedOut(): void {
+    this.release('hold')
+    this.setStatus('signed-out')
   }
 
   private startHeartbeat(): void {
@@ -1346,19 +1641,7 @@ export class Link {
   async beat(force = false): Promise<void> {
     if (this.status !== 'online' || this.busy || this.pumping || this.api.queue.size > 0) return
     if (!force && this.now() - this.lastContact < HEARTBEAT_MS - 5_000) return
-    try {
-      const res = await this.api.run(() => this.ops.state(this.lease ?? undefined))
-      this.contact()
-      if (!res.leaseActive) {
-        this.leaseLost()
-        return
-      }
-      if (res.state) this.adoptRead(res.state)
-    } catch (err) {
-      if (errorCode(err) === 'unauthorized') this.setStatus('signed-out')
-      else if (isReloadNeeded(err)) this.pause('reload')
-      else this.backoff(err)
-    }
+    await this.reconcile()
   }
 
   /** An answer came: the "Reaching the world…" clock stops. */
@@ -1379,11 +1662,12 @@ export class Link {
   /**
    * Keep what waits and try again later. No answer at all takes the link
    * offline (play goes on locally); an answer that settles nothing (5xx,
-   * 429, an unfinished route) is "trouble" and keeps the status.
+   * 429, an unfinished route, an untrustworthy answer) is "trouble" and keeps
+   * the status.
    */
   private backoff(err: unknown): void {
     this.failures += 1
-    const offline = isUnreachable(err)
+    const offline = isUnreachable(err) && (err as { status?: number }).status === undefined
     const status = (err as { status?: number } | null)?.status
     this.trouble = !offline || (status !== undefined && status >= 500)
     if (offline && this.status === 'online') {
@@ -1443,22 +1727,40 @@ export class Link {
 
   /**
    * Logging out with unsent work the player chose to keep: it stays on this
-   * device for this account's next sign-in, and isn't offered meanwhile.
+   * device for this account's next sign-in, and isn't offered meanwhile. A
+   * tab that doesn't own the outbox leaves the owner's record alone.
    */
   async keepForNextSignIn(): Promise<void> {
+    this.keptForNextSignIn = false
+    if (this.fence === null) return
     this.loggedOut = true
-    await this.store.save(this.record())
+    this.keptForNextSignIn = (await this.saveRecord()) === 'saved'
   }
 
+  /** Whether the last `keepForNextSignIn` landed (false: not the owner, or the write failed and is retried). */
+  keptForNextSignIn = false
+
   /**
-   * Logging out and dropping the unsent work. A head that may have been sent
-   * is reconciled first, so nothing is claimed lost that actually landed.
+   * Logging out and dropping the unsent work. Never-sent work goes at once;
+   * work that may have been sent goes only after a state read says what the
+   * world holds. What can't be settled now stays for the next sign-in.
+   * Returns how many operations stayed.
    */
-  async dropUnsent(): Promise<void> {
-    if (this.entries.some((e) => e.sent) && this.canSend()) await this.reconcile()
-    for (const e of [...this.entries]) this.drop(e)
+  async dropUnsent(): Promise<{ kept: number }> {
+    // Not the owner: the owner's work stays where it is.
+    if (this.fence === null) return { kept: (await this.store.load(this.accountId, this.device))?.entries.length ?? 0 }
+    const sent = this.entries.filter((e) => e.sent)
+    const settledRead = sent.length > 0 && this.canSend() && (await this.reconcile()) === 'ok'
+    for (const e of [...this.entries]) if (!e.sent || settledRead) this.drop(e)
     this.refresh()
-    await this.store.clear(this.accountId, this.device)
+    if (this.entries.length === 0) {
+      const r = await this.store.clear(this.accountId, this.device, this.fence)
+      if (r === 'fenced') this.ownershipLost()
+      return { kept: 0 }
+    }
+    this.loggedOut = true
+    await this.saveRecord()
+    return { kept: this.entries.length }
   }
 
   stop(): void {
@@ -1466,16 +1768,57 @@ export class Link {
     this.stopTimers()
     if (this.reportTimer !== null) clearInterval(this.reportTimer)
     this.reportTimer = null
-    for (const [, waiter] of this.waiters) waiter({ ok: false, code: 'unknown' })
+    if (this.saveRetry !== null) clearTimeout(this.saveRetry)
+    this.saveRetry = null
+    for (const [, waiter] of this.waiters) waiter({ ok: false, code: 'pending' })
     this.waiters.clear()
     this.lock?.release()
     this.lock = null
+    this.fence = null
     if (this.channel) {
       this.channel.onmessage = null
       this.channel.close()
     }
     if (typeof window !== 'undefined') window.removeEventListener('online', this.onOnline)
   }
+}
+
+/**
+ * Whether a committed payload is this entry's own request: the same semantic
+ * fields once the `op` header is set aside (proto defaults decoded alike;
+ * domain JSON with empty values dropped).
+ */
+function samePayload(entry: OutboxEntry, payload: Record<string, unknown>): boolean {
+  const ours = JSON.parse(entry.body) as Record<string, unknown>
+  delete ours.op
+  const theirs = { ...payload }
+  delete theirs.op
+  const typed = TYPED[entry.kind]
+  if (typed) {
+    try {
+      const a = fromJson(typed.schema, ours as JsonValue, { ignoreUnknownFields: true })
+      const b = fromJson(typed.schema, theirs as JsonValue, { ignoreUnknownFields: true })
+      return equals(typed.schema, a, b)
+    } catch {
+      return false
+    }
+  }
+  return JSON.stringify(normalized(ours)) === JSON.stringify(normalized(theirs))
+}
+
+/** Sorted keys, without empty values (`''`, 0, false, null, [], {}). */
+function normalized(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(normalized)
+  if (v && typeof v === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const k of Object.keys(v).sort()) {
+      const x = normalized((v as Record<string, unknown>)[k])
+      const empty = x === '' || x === 0 || x === false || x === null || x === undefined || (Array.isArray(x) && !x.length) || (typeof x === 'object' && x !== null && !Array.isArray(x) && !Object.keys(x).length)
+      if (!empty) out[k] = x
+    }
+    return out
+  }
+  return v
 }
 
 function predictionQuest(e: OutboxEntry): string {

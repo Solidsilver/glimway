@@ -9,7 +9,8 @@
  * The Habitica token passes through `login` only, and is never stored here.
  */
 import contract from '../../../content/contract.json' with { type: 'json' };
-import { createOperationsApi, type OperationsApi } from './operations.ts';
+import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
+import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { ApiError, errorFromResponse } from './errors.ts';
 import {
   parseCalendar,
@@ -167,6 +168,22 @@ export interface RawApi {
   repairMend(id: string, req: Envelope): Promise<MendResponse>;
   /** Donate a paper you hold (the server checks its `paper:` mark) to the world's library. */
   libraryDonate(req: Envelope & { paperId: string }): Promise<LibraryDonateResponse>;
+  /**
+   * What a key committed on a route (lane B's reconciliation read): the
+   * operation's payload (its `op` header removed) and stored result, or null
+   * when the world has no row for it (never, or past the seven-day retention).
+   */
+  operationResult(route: string, key: string): Promise<{ state: PlayerState; operation: CommittedOperation | null }>;
+}
+
+export interface CommittedOperation {
+  route: string;
+  key: string;
+  payload: Record<string, unknown>;
+  version: number;
+  result: unknown;
+  /** The Envelope result case (`mark`, `questStep`…), or `result` for a domain route. */
+  resultCase: string;
 }
 
 export interface LibraryDonateResponse extends Snapshot {
@@ -306,13 +323,13 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
     },
     async home(gate) {
-      return parseHome(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`));
+      return parseHome(mixedRead(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`)));
     },
     async commons() {
-      return parseCommons(await request('GET', '/api/commons'));
+      return parseCommons(mixedRead(await request('GET', '/api/commons')));
     },
     async shelf(gate) {
-      return parseShelf(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`));
+      return parseShelf(mixedRead(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`)));
     },
     async shelfAction(req) {
       return parseShelfAction(await request('POST', '/api/homestead/shelf', req));
@@ -324,7 +341,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseCalendar(await request('GET', '/api/calendar'));
     },
     async storage() {
-      return parseStorage(await request('GET', '/api/storage'));
+      return parseStorage(mixedRead(await request('GET', '/api/storage')));
     },
     async storageMove(req) {
       return parseStorageMove(await request('POST', '/api/storage', req));
@@ -339,7 +356,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseDeskCopy(await request('POST', '/api/desk/copy', req));
     },
     async woodpile() {
-      return parseWoodpileRead(await request('GET', '/api/homestead/woodpile'));
+      return parseWoodpileRead(mixedRead(await request('GET', '/api/homestead/woodpile')));
     },
     async woodpileAction(req) {
       return parseWoodpileAction(await request('POST', '/api/homestead/woodpile', req));
@@ -349,7 +366,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       if (page?.cursor) q.set('cursor', page.cursor);
       if (page?.pendingCursor) q.set('pendingCursor', page.pendingCursor);
       const qs = q.toString();
-      return parseMail(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`));
+      return parseMail(mixedRead(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`)));
     },
     async mailSend(req) {
       return parseMailAction(await request('POST', '/api/mail', req));
@@ -361,22 +378,26 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
     },
     async projects() {
-      return parseProjects(await request('GET', '/api/projects'));
+      return parseProjects(mixedRead(await request('GET', '/api/projects')));
     },
     async contribute(id, req) {
       return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, req));
     },
     async items() {
-      return parseItems(await request('GET', '/api/items'));
+      return parseItems(mixedRead(await request('GET', '/api/items')));
     },
     async itemAction(op, req) {
       return parseItemsAction(await request('POST', `/api/items/${op}`, req));
     },
     async repairs() {
-      return parseRepairs(await request('GET', '/api/repairs'));
+      return parseRepairs(mixedRead(await request('GET', '/api/repairs')));
     },
     async repairMend(id, req) {
       return parseMend(await request('POST', `/api/repairs/${encodeURIComponent(id)}/mend`, req));
+    },
+    async operationResult(route, key) {
+      const raw = await request('GET', `/api/operations/result?route=${encodeURIComponent(route)}&key=${encodeURIComponent(key)}`);
+      return parseOperationResult(raw);
     },
     async libraryDonate(req) {
       const res = await request('POST', '/api/library/donate', req);
@@ -434,7 +455,32 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     repairs: () => run((r) => r.repairs()),
     repairMend: (id, req) => run((r) => r.repairMend(id, req)),
     libraryDonate: (req) => run((r) => r.libraryDonate(req)),
+    operationResult: (route, key) => run((r) => r.operationResult(route, key)),
   };
+}
+
+/**
+ * Domain reads answer `{ state, result }` (design server-first 6, the mixed
+ * envelope): their extras sit under `result`. The existing parsers read them
+ * at the top beside `state`, so the two are put side by side again.
+ */
+export function mixedRead(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || !('state' in raw) || !('result' in raw)) return raw;
+  const { state, result } = raw as { state: unknown; result: unknown };
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return raw;
+  return { ...(result as Record<string, unknown>), state };
+}
+
+/** The reconciliation read, validated: a current state, and the committed operation or null. */
+export function parseOperationResult(raw: unknown): { state: PlayerState; operation: CommittedOperation | null } {
+  const { state, result } = decodeMixed(raw, (r) => r);
+  const op = (result as { operation?: unknown } | null)?.operation;
+  if (op === null || op === undefined) return { state, operation: null };
+  const o = op as Record<string, unknown>;
+  if (typeof o.route !== 'string' || typeof o.key !== 'string' || !o.payload || typeof o.payload !== 'object' || Array.isArray(o.payload) || typeof o.resultCase !== 'string' || typeof o.version !== 'number') {
+    throw new ApiError('bad-response', { status: 200 });
+  }
+  return { state, operation: { route: o.route, key: o.key, payload: o.payload as Record<string, unknown>, version: o.version, result: o.result, resultCase: o.resultCase } };
 }
 
 /**

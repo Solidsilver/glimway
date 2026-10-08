@@ -1,15 +1,9 @@
-import test, { type TestContext } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
-import { Link, type LinkSession } from '../src/game/link.ts';
 import { EV } from '../src/game/event-names.ts';
-import { createApiClient } from '../src/lib/api/client.ts';
-import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS, type LockLike, type OutboxRecord } from '../src/lib/api/outbox.ts';
-import { PlayerStateSchema } from '../src/lib/gen/glimway/v1/state_pb.js';
+import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS, type OutboxRecord } from '../src/lib/api/outbox.ts';
 import contract from '../content/contract.json' with { type: 'json' };
-import type { GameState } from '../src/lib/state.ts';
-import type { HabiticaProfile, VitalsSource } from '../src/lib/habitica/types.ts';
+import { ackReport, BASE, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
 
 /**
  * The client on operations (design server-first 2.4) against a scripted
@@ -17,195 +11,10 @@ import type { HabiticaProfile, VitalsSource } from '../src/lib/habitica/types.ts
  * persistence and replay, ownership, reports and barriers.
  */
 
-const fixtures = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { name: string; case: string; json: JsonValue }[];
-const BASE = fixtures.find((f) => f.name === 'glimway.v1.PlayerState' && f.case === 'valid')!.json as Record<string, any>;
-
-type Over = { version?: number; hp?: number; mana?: number; vitalsSetVersion?: number; reportSeq?: number; reportGeneration?: string; quest?: string; marks?: string[]; area?: string; x?: number; y?: number; balance?: number };
-
-/** A valid PlayerState JSON (the Go fixture) with a few fields changed. */
-function S(over: Over = {}): Record<string, any> {
-  const s = structuredClone(BASE);
-  if (over.version !== undefined) s.version = over.version;
-  s.vitals.hp = over.hp ?? 40;
-  s.vitals.mana = over.mana ?? 20;
-  if (over.vitalsSetVersion !== undefined) s.vitals.vitalsSetVersion = over.vitalsSetVersion;
-  if (over.reportSeq !== undefined) s.vitals.reportSeq = over.reportSeq;
-  if (over.reportGeneration !== undefined) s.vitals.reportGeneration = over.reportGeneration;
-  if (over.quest) s.story.quests = { 'lantern-road': over.quest };
-  if (over.marks) s.story.marks = over.marks;
-  if (over.area) s.place.area = over.area;
-  if (over.x !== undefined) s.place.x = over.x;
-  if (over.y !== undefined) s.place.y = over.y;
-  if (over.balance !== undefined) s.embers.balance = over.balance;
-  // A value set version may not pass the state version.
-  s.version = Math.max(s.version, s.vitals.vitalsSetVersion, s.place.placeSetVersion);
-  return s;
-}
-const player = (json: Record<string, any>) => fromJson(PlayerStateSchema, json as JsonValue);
-/** A held state back on the wire (ProtoJSON leaves out null wrappers; the wire spells them). */
-function wire(p: ReturnType<typeof player>): Record<string, any> {
-  const j = toJson(PlayerStateSchema, p, { alwaysEmitImplicit: true }) as Record<string, any>;
-  j.account.partyId ??= null;
-  for (const k of ['class', 'selectedPet', 'selectedMount', 'partyId']) j.profile[k] ??= null;
-  return j;
-}
-
-type Call = { method: string; path: string; body: any; headers: Headers; keepalive: boolean };
-type Answer = { status?: number; body: unknown } | 'network';
-type Script = Answer | ((c: Call) => Answer);
-
-/** Scripted server: `on('POST /api/x', …)` answers in order (the last one repeats); everything is recorded. */
-function fakeServer() {
-  const calls: Call[] = [];
-  const answers = new Map<string, Script[]>();
-  const holds = new Map<string, Array<Promise<void>>>();
-  const beforeSend: Array<(c: Call) => void> = [];
-  const fetchImpl = (async (url: string, init: RequestInit) => {
-    const method = init.method ?? 'GET';
-    const call: Call = { method, path: url, body: init.body ? JSON.parse(String(init.body)) : undefined, headers: new Headers(init.headers), keepalive: init.keepalive === true };
-    calls.push(call);
-    for (const f of beforeSend) f(call);
-    const gate = holds.get(`${method} ${url}`)?.shift();
-    if (gate) await gate;
-    const list = answers.get(`${method} ${url}`) ?? [];
-    const next = list.length > 1 ? list.shift()! : list[0];
-    if (!next) throw new Error(`unexpected ${method} ${url}`);
-    const a = typeof next === 'function' ? next(call) : next;
-    if (a === 'network') throw new TypeError('Failed to fetch');
-    return new Response(JSON.stringify(a.body), { status: a.status ?? 200, headers: { 'content-type': 'application/json' } });
-  }) as typeof fetch;
-  return {
-    api: createApiClient({ fetchImpl }),
-    calls,
-    beforeSend,
-    on(key: string, ...a: Script[]) {
-      answers.set(key, a);
-    },
-    sent(key: string) {
-      const [method, path] = key.split(' ');
-      return calls.filter((c) => c.method === method && c.path === path);
-    },
-    hold(key: string): () => void {
-      let release!: () => void;
-      const gate = new Promise<void>((r) => (release = r));
-      holds.set(key, [...(holds.get(key) ?? []), gate]);
-      return release;
-    },
-  };
-}
-
-/** Answers. */
-const play = (state: Record<string, any>, lease = 'L1', generation = 'gen-1'): Answer => ({ body: { state, lease, reportGeneration: generation, reportClient: 'rc' } });
-const env = (state: Record<string, any>, result: Record<string, unknown>): Answer => ({ body: { state, ...result } });
-const stepOk = (state: Record<string, any>) => env(state, { questStep: { quest: 'lantern-road', step: state.story.quests['lantern-road'] ?? '', items: [], marks: [], papers: [], embers: 0 } });
-const markOk = (state: Record<string, any>, mark: string) => env(state, { mark: { mark, added: true } });
-const refuse = (code: string, state?: Record<string, any>, status = 409): Answer => ({ status, body: state ? { error: { code }, state } : { error: { code } } });
-/** A report answered as accepted, with the vitals the server kept. */
-const ackReport =
-  (state: (c: Call) => Record<string, any>, over: Partial<{ accepted: boolean; staleBasis: boolean }> = {}) =>
-  (c: Call): Answer =>
-    env(state(c), { report: { seq: c.body.seq, accepted: over.accepted ?? true, staleBasis: over.staleBasis ?? false, casts: over.accepted === false ? 0 : c.body.casts, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false } });
-
-/** The part of a Session the link drives, with Session's merge of live fields. */
-class FakeSession implements LinkSession {
-  state: GameState;
-  vitalsSource: VitalsSource = 'imported';
-  importedProfile: HabiticaProfile | null = null;
-  remoteBusy = false;
-  views = 0;
-  constructor(state: GameState) {
-    this.state = state;
-  }
-  applyServer(view: GameState, provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null }, opts: { relocate?: boolean; vitals?: { hp: number; mana: number } }): void {
-    const prev = this.state;
-    this.views += 1;
-    this.vitalsSource = provenance.vitalsSource;
-    this.importedProfile = provenance.importedProfile;
-    this.state = {
-      ...view,
-      area: opts.relocate ? view.area : prev.area,
-      position: opts.relocate ? view.position : prev.position,
-      hp: Math.min(opts.vitals?.hp ?? prev.hp, view.maxHp),
-      mana: Math.min(opts.vitals?.mana ?? prev.mana, view.maxMana),
-    };
-    const region = opts.relocate ? view.wildsRegion : prev.wildsRegion;
-    if (region) this.state.wildsRegion = region;
-    else delete this.state.wildsRegion;
-  }
-}
-
-/** Web Locks as one browser has them: ifAvailable, steal, and the stolen holder's AbortError. */
-class FakeLocks implements LockLike {
-  private held = new Map<string, (err: Error) => void>();
-  request(name: string, options: { ifAvailable?: boolean; steal?: boolean }, callback: (lock: unknown) => Promise<unknown>): Promise<unknown> {
-    const current = this.held.get(name);
-    if (current && !options.steal) return Promise.resolve(callback(null));
-    if (current) current(new Error('AbortError'));
-    return new Promise((resolve, reject) => {
-      this.held.set(name, reject);
-      void Promise.resolve(callback({ name })).then((v) => {
-        if (this.held.get(name) === reject) this.held.delete(name);
-        resolve(v);
-      });
-    });
-  }
-}
-
-interface Rig {
-  server: ReturnType<typeof fakeServer>;
-  link: Link;
-  session: FakeSession;
-  events: Array<[string, unknown]>;
-  store: ReturnType<typeof memoryOutboxStore>;
-  clock: { now: number };
-}
-
-function rig(t: TestContext, opts: { state?: Record<string, any>; record?: OutboxRecord | null; store?: ReturnType<typeof memoryOutboxStore>; locks?: LockLike | null; server?: ReturnType<typeof fakeServer>; clientId?: string; clock?: { now: number } } = {}): Rig {
-  const server = opts.server ?? fakeServer();
-  const store = opts.store ?? memoryOutboxStore();
-  const events: Array<[string, unknown]> = [];
-  const clock = opts.clock ?? { now: 1_000_000 };
-  const link = new Link({
-    api: server.api,
-    clientId: opts.clientId ?? 'tab',
-    accountId: 'fixture-account',
-    device: 'dev',
-    name: 'Hero',
-    state: player(opts.state ?? S()),
-    record: opts.record,
-    status: 'offline',
-    emit: ((e: string, p: unknown) => events.push([e, p])) as never,
-    store,
-    locks: opts.locks ?? null,
-    channel: null,
-    now: () => clock.now,
-  });
-  const session = new FakeSession(link.initialState());
-  // Reports go out from the first lease on: by default the server keeps what they say.
-  server.on('POST /api/report', (c) => {
-    const kept = wire(link.server);
-    kept.version += 1;
-    kept.vitals.hp = Math.min(c.body.hp, kept.vitals.maxHp);
-    kept.vitals.mana = Math.min(c.body.mana, kept.vitals.maxMana);
-    return ackReport(() => kept)(c);
-  });
-  link.attach(session);
-  t.after(() => link.stop());
-  return { server, link, session, events, store, clock };
-}
-
-async function online(r: Rig, state = S()): Promise<void> {
-  r.server.on('POST /api/play', play(state));
-  await r.link.reconnect(false);
-  assert.equal(r.link.status, 'online');
-}
-
-const toasts = (r: Rig) => r.events.filter(([e]) => e === EV.toast).map(([, p]) => (p as { text: string }).text);
-
 // ---------------------------------------------------------------- adoption
 
 test('a state is adopted only at an equal or higher version', async (t) => {
-  const r = rig(t, { state: S({ version: 5, balance: 3 }) });
+  const r = await rig(t, { state: S({ version: 5, balance: 3 }) });
   r.server.on('POST /api/play', play(S({ version: 4, balance: 9 })));
   await r.link.reconnect(false);
   assert.equal(r.link.rev, 5, 'an older answer never moves the client back in time');
@@ -217,7 +26,7 @@ test('a state is adopted only at an equal or higher version', async (t) => {
 });
 
 test('an unrelated answer never heals the combat overlay', async (t) => {
-  const r = rig(t, { state: S({ version: 2, hp: 40 }) });
+  const r = await rig(t, { state: S({ version: 2, hp: 40 }) });
   await online(r, S({ version: 2, hp: 40 }));
   r.session.state.hp = 22; // hit on screen, not yet reported
   r.server.on('GET /api/state', { body: { state: S({ version: 3, hp: 40, balance: 5 }), leaseActive: true } });
@@ -227,7 +36,7 @@ test('an unrelated answer never heals the combat overlay', async (t) => {
 });
 
 test('a reload after a Wilds claim starts in the Wilds, not offline', async (t) => {
-  const r = rig(t, { state: S({ area: 'wilds:outer-1', x: 424, y: 744 }) });
+  const r = await rig(t, { state: S({ area: 'wilds:outer-1', x: 424, y: 744 }) });
   assert.deepEqual([r.session.state.area, r.session.state.wildsRegion, r.session.state.position], ['wilds', 'outer-1', { x: 424, y: 744 }]);
   await online(r, S({ area: 'wilds:inner-1', x: 50, y: 60 }));
   assert.equal(r.link.status, 'online');
@@ -240,7 +49,7 @@ test('a reload after a Wilds claim starts in the Wilds, not offline', async (t) 
 // ---------------------------------------------------------------- prediction
 
 test('a quest step shows at once, and its answer brings what the server granted', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/quest/step', stepOk(S({ version: 2, quest: 'accepted', marks: ['seen:gate'] })));
   r.link.questStep('accept');
@@ -257,7 +66,7 @@ test('a quest step shows at once, and its answer brings what the server granted'
 });
 
 test('a refused step rolls back, takes the steps after it along, and says so once', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   const release = r.server.hold('POST /api/quest/step');
   r.server.on('POST /api/quest/step', refuse('not-next-step', S({ version: 2, balance: 1 })));
@@ -278,7 +87,7 @@ test('a refused step rolls back, takes the steps after it along, and says so onc
 });
 
 test('only client namespaces are marked: server marks never leave this device', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   for (const m of ['witness:x:y:z', 'paper:eleven-days', 'wilds:turned', 'donated:x@1', 'echo:nan', 'lit:a']) r.link.mark(m);
   assert.equal(r.link.outbox.length, 0);
   r.link.mark('found:old-route-marker');
@@ -290,7 +99,7 @@ test('only client namespaces are marked: server marks never leave this device', 
 // ---------------------------------------------------------------- the outbox
 
 test('persist before send: the entry is in the store before its request leaves', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   let storedAtSend: OutboxRecord | null = null;
   r.server.beforeSend.push((c) => {
@@ -308,7 +117,7 @@ test('persist before send: the entry is in the store before its request leaves',
 });
 
 test('head of line: a transport failure holds everything behind it, and the replay sends the same key and bytes', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/story/mark', 'network');
   r.link.mark('seen:a');
@@ -337,7 +146,7 @@ test('head of line: a transport failure holds everything behind it, and the repl
 
 test('ambiguous answers keep the head: 5xx, 429, not-implemented and unreadable bodies', async (t) => {
   for (const answer of [refuse('internal', undefined, 500), refuse('rate-limited', undefined, 429), refuse('not-implemented', S({ version: 1 })), { body: '<html>' } as Answer]) {
-    const r = rig(t);
+    const r = await rig(t);
     await online(r);
     r.server.on('POST /api/story/mark', answer);
     r.link.mark('seen:a');
@@ -350,7 +159,7 @@ test('ambiguous answers keep the head: 5xx, 429, not-implemented and unreadable 
 
 test('a reload replays the outbox: the next page sends what the last one queued', async (t) => {
   const store = memoryOutboxStore();
-  const first = rig(t, { store });
+  const first = await rig(t, { store });
   first.link.questStep('accept');
   first.link.mark('seen:a');
   await first.link.persist();
@@ -358,7 +167,7 @@ test('a reload replays the outbox: the next page sends what the last one queued'
 
   const record = await store.load('fixture-account', 'dev');
   assert.equal(record?.entries.length, 2);
-  const next = rig(t, { store, record });
+  const next = await rig(t, { store, record });
   assert.equal(next.session.state.quest, 'accepted', 'predicted from the outbox at once');
   next.server.on('POST /api/quest/step', stepOk(S({ version: 2, quest: 'accepted' })));
   next.server.on('POST /api/story/mark', markOk(S({ version: 3, quest: 'accepted', marks: ['seen:a'] }), 'seen:a'));
@@ -378,7 +187,9 @@ test('entries older than six days, or from another contract, are dropped unsent 
     { id: 3, kind: 'mark', path: '/api/story/mark', key: 'k-new', body: body('seen:new'), contract: contract.number, createdAt: clock.now - 1000, sent: false, barrier: false, offline: true },
   ];
   record.nextId = 4;
-  const r = rig(t, { record, clock });
+  const store = memoryOutboxStore();
+  seed(store, record);
+  const r = await rig(t, { record, clock, store });
   r.server.on('POST /api/story/mark', (c) => markOk(S({ version: 2, marks: [c.body.mark] }), c.body.mark));
   await online(r);
   await r.link.flush();
@@ -388,7 +199,7 @@ test('entries older than six days, or from another contract, are dropped unsent 
 });
 
 test('a domain mutation carries op and where, and a lost answer is replayed before anything else', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   const craftAnswer = { body: { state: S({ version: 2 }), result: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } };
   r.server.on('POST /api/craft', 'network', craftAnswer);
@@ -411,7 +222,7 @@ test('a domain mutation carries op and where, and a lost answer is replayed befo
 });
 
 test('things the server decides need a connection; never-sent ones go when it does', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'offline' });
   assert.equal(await r.link.spend({ kind: 'rest' }), 'offline');
   assert.equal(r.link.outbox.length, 0);
@@ -424,21 +235,79 @@ test('things the server decides need a connection; never-sent ones go when it do
   assert.deepEqual(r.link.outbox.map((e) => e.kind), ['mark']);
 });
 
-test('idempotency-mismatch reconciles: the key committed, so the head goes without rollback claims', async (t) => {
-  const r = rig(t);
+const lookup = (operation: unknown, state = S({ version: 2 })): Answer => ({ body: { state, result: { operation } } });
+const lookupPath = (route: string, key: string) => `GET /api/operations/result?route=${encodeURIComponent(route)}&key=${encodeURIComponent(key)}`;
+
+test('idempotency-mismatch, a different payload committed: that action is not this one, its prediction goes, the queue goes on', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2 })), markOk(S({ version: 3, marks: ['seen:b'] }), 'seen:b'));
+  r.link.mark('seen:a');
+  r.link.mark('seen:b');
+  const key = r.link.outbox[0]!.key;
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:other', where: { area: 'village', x: 400, y: 300 } }, payloadHash: 'h', version: 1, result: { mark: 'seen:other', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }));
+  await r.link.flush();
+  assert.deepEqual(r.session.state.flags, ['seen:b'], 'the mismatched mark is not claimed');
+  assert.equal(r.link.outbox.length, 0);
+  assert.equal(r.link.paused, null);
+  assert.equal(r.server.sent('POST /api/story/mark').length, 2);
+});
+
+test('idempotency-mismatch, the same payload after all: its stored result settles it as landed', async (t) => {
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2, marks: ['seen:a'] })));
-  r.server.on('GET /api/state', { body: { state: S({ version: 2, marks: ['seen:a'] }), leaseActive: true } });
   r.link.mark('seen:a');
+  const key = r.link.outbox[0]!.key;
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'village', x: 400, y: 300 } }, payloadHash: 'h', version: 2, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
-  assert.equal(r.server.sent('GET /api/state').length, 1, 'a state read decides');
   assert.deepEqual(r.session.state.flags, ['seen:a']);
   assert.equal(toasts(r).length, 0);
 });
 
+test('idempotency-mismatch with no row to read (past retention): the head and its prediction stay and the queue pauses', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2 })));
+  r.link.mark('seen:a');
+  r.link.mark('seen:b');
+  r.server.on(lookupPath('/api/story/mark', r.link.outbox[0]!.key), lookup(null));
+  await r.link.flush();
+  assert.deepEqual(r.link.outbox.map((e) => JSON.parse(e.body).mark), ['seen:a', 'seen:b'], 'nothing is declared resolved');
+  assert.deepEqual(r.session.state.flags, ['seen:a', 'seen:b']);
+  assert.equal(r.link.paused, 'mismatch');
+  assert.equal(r.server.sent('POST /api/story/mark').length, 1, 'nothing behind it is sent');
+});
+
+test('idempotency-mismatch whose lookup fails: still uncertain, kept, retried later (not paused)', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2 })));
+  r.link.mark('seen:a');
+  r.server.on(lookupPath('/api/story/mark', r.link.outbox[0]!.key), 'network');
+  await r.link.flush();
+  assert.equal(r.link.outbox.length, 1);
+  assert.equal(r.link.paused, null);
+  assert.equal(r.link.status, 'offline');
+});
+
+test('idempotency-mismatch on a domain action the caller awaits: a different action is reported as such, never landed', { timeout: 5000 }, async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/craft', refuse('idempotency-mismatch', S({ version: 2 })));
+  r.server.beforeSend.push((c) => {
+    if (c.path === '/api/craft') r.server.on(lookupPath('/api/craft', c.body.op.key), lookup({ route: '/api/craft', key: c.body.op.key, payload: { recipeId: 'chair', qty: 1, where: { area: 'village', x: 400, y: 300 } }, payloadHash: 'h', version: 1, result: {}, resultCase: 'result', resultType: '' }));
+  });
+  const res = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } });
+  assert.deepEqual(res, { ok: false, code: 'idempotency-mismatch' });
+  assert.equal(r.link.busy, false, 'play never freezes on it');
+  assert.equal(r.events.filter(([e]) => e === EV.mutationResolved).length, 0);
+  assert.equal(r.link.outbox.length, 0);
+});
+
 test('a request the server cannot decode pauses the outbox instead of retrying forever', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/story/mark', refuse('invalid-json', undefined, 400));
   r.link.mark('seen:a');
@@ -450,7 +319,7 @@ test('a request the server cannot decode pauses the outbox instead of retrying f
 });
 
 test('reload-needed stops sending and keeps the outbox', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/story/mark', refuse('reload-needed'));
   r.link.mark('seen:a');
@@ -464,7 +333,7 @@ test('reload-needed stops sending and keeps the outbox', async (t) => {
 // ---------------------------------------------------------------- lease and ownership
 
 test('lease loss keeps the outbox and never takes over on its own', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/story/mark', refuse('superseded'));
   r.link.mark('seen:a');
@@ -489,9 +358,9 @@ test('one sender per device: a second tab is passive until the player takes over
   const locks = new FakeLocks();
   const store = memoryOutboxStore();
   const server = fakeServer();
-  const a = rig(t, { locks, store, server, clientId: 'tab-a' });
+  const a = await rig(t, { locks, store, server, clientId: 'tab-a' });
   await online(a);
-  const b = rig(t, { locks, store, server, clientId: 'tab-b' });
+  const b = await rig(t, { locks, store, server, clientId: 'tab-b' });
   await b.link.reconnect(false);
   assert.equal(b.link.status, 'superseded', 'the outbox lock is held by the other tab');
   a.link.mark('seen:a');
@@ -512,7 +381,7 @@ test('one sender per device: a second tab is passive until the player takes over
 // ---------------------------------------------------------------- reports
 
 test('reports carry place, vitals and summed casts; the clamped answer keeps what happened since', async (t) => {
-  const r = rig(t, { state: S({ hp: 40, mana: 20 }) });
+  const r = await rig(t, { state: S({ hp: 40, mana: 20 }) });
   await online(r);
   r.session.state.hp = 30;
   r.session.state.mana = 8;
@@ -532,7 +401,7 @@ test('reports carry place, vitals and summed casts; the clamped answer keeps wha
 });
 
 test('page hide sends the report with keepalive, out of turn', async (t) => {
-  const r = rig(t);
+  const r = await rig(t);
   await online(r);
   r.server.on('POST /api/report', ackReport(() => S({ version: 2, hp: 33 })));
   r.session.state.hp = 33;
@@ -545,7 +414,7 @@ test('page hide sends the report with keepalive, out of turn', async (t) => {
 
 test('a reload resumes the report sequence and never heals the hero', async (t) => {
   const store = memoryOutboxStore();
-  const first = rig(t, { store });
+  const first = await rig(t, { store });
   await online(first);
   first.server.on('POST /api/report', ackReport(() => S({ version: 2, hp: 30 })));
   first.session.state.hp = 30;
@@ -556,7 +425,7 @@ test('a reload resumes the report sequence and never heals the hero', async (t) 
   first.link.stop();
 
   const record = await store.load('fixture-account', 'dev');
-  const next = rig(t, { store, record, state: S({ version: 2, hp: 30, reportSeq: 1 }) });
+  const next = await rig(t, { store, record, state: S({ version: 2, hp: 30, reportSeq: 1 }) });
   assert.equal(next.session.state.hp, 12, 'the last page’s vitals, not the server’s');
   next.server.on('POST /api/play', play(S({ version: 2, hp: 30, reportSeq: 1, reportGeneration: 'gen-1' })));
   next.server.on('POST /api/report', ackReport(() => S({ version: 3, hp: 12 })));
@@ -568,7 +437,7 @@ test('a reload resumes the report sequence and never heals the hero', async (t) 
 });
 
 test('a rest flushes a report first and carries its acknowledgment as the barrier', async (t) => {
-  const r = rig(t, { state: S({ hp: 10 }) });
+  const r = await rig(t, { state: S({ hp: 10 }) });
   await online(r, S({ hp: 10 }));
   r.session.state.hp = 6;
   r.server.on('POST /api/report', ackReport(() => S({ version: 2, hp: 6 })));
@@ -583,10 +452,10 @@ test('a rest flushes a report first and carries its acknowledgment as the barrie
 });
 
 test('a fall is predicted at once, queues offline, and the next report waits for its answer', async (t) => {
-  const r = rig(t, { state: S({ hp: 40, mana: 20 }) });
+  const r = await rig(t, { state: S({ hp: 40, mana: 20 }) });
   r.session.state.area = 'woodland';
   r.session.state.hp = 0;
-  const point = r.link.fall();
+  const point = await r.link.fall();
   assert.deepEqual(point, { hp: 13, mana: 10 }, 'min(baseline, ceil(max × 0.25 / 0.5))');
   assert.equal(r.session.state.area, 'village');
   assert.equal(r.session.state.hp, 13);
@@ -609,7 +478,7 @@ test('a fall is predicted at once, queues offline, and the next report waits for
 
 test('logout: keep the unsent work for the next sign-in, or drop it', async (t) => {
   const store = memoryOutboxStore();
-  const r = rig(t, { store });
+  const r = await rig(t, { store });
   r.link.mark('seen:a');
   await r.link.flush();
   assert.equal(r.link.dirty, true);
@@ -625,7 +494,7 @@ test('logout: keep the unsent work for the next sign-in, or drop it', async (t) 
 
 test('without durable storage, offline play is off: "Needs a connection"', async (t) => {
   const store = memoryOutboxStore({ durable: false });
-  const r = rig(t, { store });
+  const r = await rig(t, { store });
   r.link.mark('seen:a');
   await new Promise((res) => setTimeout(res, 0));
   assert.equal(r.link.outbox.length, 0);

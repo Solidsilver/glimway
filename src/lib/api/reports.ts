@@ -78,6 +78,8 @@ export class ReportBook {
   captured: CapturedReport | null = null;
   /** The last acknowledged sequence in this generation (a barrier names it). */
   acked = 0;
+  /** The place area the last captured report named ('' before any): an arrival elsewhere is reported. */
+  reportedArea = '';
 
   constructor(stored?: StoredReports | null) {
     if (!stored) return;
@@ -137,20 +139,26 @@ export class ReportBook {
     this.next = { ...blank(basis), place: this.next.place, hp: this.next.hp, mana: this.next.mana };
   }
 
-  /** A fall was queued (outbox `id`): earlier combat is void, and the next report waits for its answer. */
-  fall(id: number): void {
-    this.next = { ...blank(this.next.basis), place: this.next.place, hp: this.next.hp, mana: this.next.mana, boundary: id };
+  /**
+   * A fall was queued (outbox `id`): earlier combat is void, and the next
+   * report waits for its answer. The hero wakes at `place` with `vitals`,
+   * written here together so a reload sees the fall and its recovery at once.
+   */
+  fall(id: number, place: WhereJson, vitals: { hp: number; mana: number }): void {
+    this.next = { ...blank(this.next.basis), place: { ...place }, hp: vitals.hp, mana: vitals.mana, boundary: id };
+  }
+
+  /** Back to a stored book (a fall that never reached the outbox). */
+  restore(stored: StoredReports): void {
+    this.next = { ...stored.next };
+    this.captured = stored.captured ? { ...stored.captured } : null;
+    this.seq = stored.seq;
   }
 
   /** That fall was answered (or dropped): what happened after it reports against `basis`. */
   release(id: number, basis: number): void {
     if (this.next.boundary !== id) return;
     this.next = { ...this.next, boundary: null, basis, changed: true };
-  }
-
-  /** The vitals the next report starts from moved (an adopted state). */
-  rebase(basis: number): void {
-    if (this.next.boundary === null && basis > this.next.basis) this.next = { ...this.next, basis };
   }
 
   /**
@@ -164,6 +172,7 @@ export class ReportBook {
     const n = this.next;
     if (!this.generation || !n.place || n.boundary !== null || (!n.changed && !force)) return null;
     this.seq += 1;
+    this.reportedArea = n.place.area;
     this.captured = { client: this.client, generation: this.generation, seq: this.seq, basis: n.basis, place: { ...n.place }, hp: n.hp, mana: n.mana, casts: n.casts };
     this.next = { ...n, casts: 0, changed: false };
     return this.captured;

@@ -274,8 +274,12 @@ export interface LinkPayload {
   trouble: boolean
   /** No answer for over a minute: "Reaching the world…". */
   reaching: boolean
-  /** Sending stopped: a newer build is needed (`reload`), or the world couldn't read a queued request (`client-bug`). */
-  paused: null | 'reload' | 'client-bug'
+  /**
+   * Sending stopped: a newer build is needed (`reload`), the world couldn't
+   * read a queued request (`client-bug`), or a queued key committed a
+   * different request (`mismatch`).
+   */
+  paused: null | 'reload' | 'client-bug' | 'mismatch'
 }
 
 export interface WildsPayload {

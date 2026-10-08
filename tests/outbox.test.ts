@@ -7,7 +7,7 @@ import { adoptable, areaOfPlace, fallRecovery, gameStateOf, isClientMark, placeA
 import { PlayerStateSchema } from '../src/lib/gen/glimway/v1/state_pb.js';
 import { parseSnapshot } from '../src/lib/api/parse.ts';
 import { createNewGame } from '../src/lib/state.ts';
-import { installFakeIndexedDB, resetFakeIndexedDB } from './helpers/fake-indexeddb.ts';
+import { TxIDB } from './helpers/fake-idb-tx.ts';
 
 /** The outbox's storage and the predictor's rules (design server-first 2.4). */
 
@@ -60,20 +60,21 @@ test('expiry: six days, or another contract', () => {
 });
 
 test('IndexedDB: one record per (account, device); offline start skips records kept after a logout', async () => {
-  installFakeIndexedDB();
-  resetFakeIndexedDB();
-  const store = idbOutboxStore();
+  const store = idbOutboxStore(new TxIDB().factory);
   const server = { version: 1 } as JsonValue;
-  assert.equal(await store.save({ ...emptyRecord('a', 'dev'), server, entries: [entry(1)], nextId: 2 }), true);
+  const fence = async (account: string, device: string) => (await store.claim(account, device))!.fence;
+  assert.equal(await store.save({ ...emptyRecord('a', 'dev'), fence: await fence('a', 'dev'), server, entries: [entry(1)], nextId: 2 }), 'saved');
   await new Promise((r) => setTimeout(r, 5));
-  assert.equal(await store.save({ ...emptyRecord('b', 'dev'), server }), true);
-  assert.equal(await store.save({ ...emptyRecord('a', 'other-device'), server }), true);
+  assert.equal(await store.save({ ...emptyRecord('b', 'dev'), fence: await fence('b', 'dev'), server }), 'saved');
+  assert.equal(await store.save({ ...emptyRecord('a', 'other-device'), fence: await fence('a', 'other-device'), server }), 'saved');
   assert.deepEqual((await store.load('a', 'dev'))?.entries.map((e) => e.key), ['k1']);
   assert.equal((await store.load('a', 'other-device'))?.entries.length, 0, 'another device’s outbox is its own');
   assert.equal((await store.latest('dev'))?.account, 'b');
-  await store.save({ ...(await store.load('b', 'dev'))!, loggedOut: true });
+  assert.equal(await store.markLoggedOut('b', 'dev', true), true);
   assert.equal((await store.latest('dev'))?.account, 'a');
-  await store.clear('a', 'dev');
+  assert.equal(await store.clearIfEmpty('a', 'dev'), false, 'never drops unsent work');
+  assert.equal(await store.clear('a', 'dev', 0), 'fenced', 'only its owner may');
+  assert.equal(await store.clear('a', 'dev', (await store.load('a', 'dev'))!.fence), 'saved');
   assert.equal(await store.load('a', 'dev'), null);
   assert.ok(await store.load('b', 'dev'), 'clearing one account leaves the other alone');
   assert.equal(store.durable, true);

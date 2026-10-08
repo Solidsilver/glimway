@@ -58,6 +58,8 @@ export class Session {
   readonly link: Link | null
   /** A server spend or sync is out: the world waits for its answer. */
   remoteBusy = false
+  /** Connected: the last fall, until it is queued and its recovery shown. */
+  falling: Promise<unknown> | null = null
 
   constructor(
     state: GameState,
@@ -211,7 +213,7 @@ export class Session {
   addFlag(flag: string): void {
     if (this.destroyed || this.state.flags.includes(flag)) return
     if (this.link) {
-      if (flag.startsWith('paper:')) this.link.takePaper(flag.slice('paper:'.length))
+      if (flag.startsWith('paper:')) void this.link.takePaper(flag.slice('paper:'.length))
       else if (isClientMark(flag)) this.link.mark(flag)
       else console.warn('[glimway] a server-written mark is not the client\u2019s to add', flag)
       return
@@ -242,12 +244,13 @@ export class Session {
    * outbox predicted on top). The live place, vitals and play time stay
    * this page's own unless `relocate` (the server or a fall moved the hero)
    * or `vitals` (the link's combat overlay moved them). `quiet`: the scene
-   * already moves the hero itself (a fall's walk home).
+   * already moves the hero itself (a fall's walk home). `predicted`: a local
+   * prediction, announced by its own caller.
    */
   applyServer(
     view: GameState,
     provenance: { vitalsSource: VitalsSource; importedProfile: HabiticaProfile | null },
-    opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean } = {}
+    opts: { relocate?: boolean; vitals?: { hp: number; mana: number }; quiet?: boolean; predicted?: boolean } = {}
   ): void {
     if (this.destroyed) return
     const prev = this.state
@@ -270,8 +273,9 @@ export class Session {
     this.importedProfile = provenance.importedProfile
     this.emitStats()
     if (prev.quest !== next.quest) this.emitQuest()
-    // Papers the server granted on its own (a quest step's, a claim's).
-    for (const id of foundPapers(next.flags)) if (!prev.flags.includes(paperFlag(id))) announcePaper(this, id)
+    // Papers the server granted on its own (a quest step's, a claim's). A
+    // predicted find is announced by whoever found it (game/papers.ts).
+    if (!opts.predicted) for (const id of foundPapers(next.flags)) if (!prev.flags.includes(paperFlag(id))) announcePaper(this, id)
     if (profileChanged) bus.emit(EV.profileChanged, { profile: this.importedProfile })
     // Balances and paid outcomes change what markers and lanterns show.
     bus.emit(EV.worldRefresh)
@@ -355,9 +359,9 @@ export class Session {
    */
   defeat(): void {
     if (this.link) {
-      // The fall is an operation: recovery and the walk home are predicted now.
-      this.link.fall()
-      this.emitStats()
+      // The fall is an operation: once it is queued, recovery and the walk
+      // home show at once (the scene waits for `falling` before it wakes).
+      this.falling = this.link.fall().then(() => this.emitStats())
       return
     }
     const synced = resolveDefeatRecovery({

@@ -156,7 +156,9 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
       if (r === 'offline') return { ok: false, reason: 'offline' };
       if (unsupported(r)) return { ok: false, reason: 'unsupported' };
       if (r.status >= 300) return { ok: false, reason: r.status >= 500 ? 'offline' : 'error' };
-      const shelves = parseShelves(r.json);
+      // `{ state, result: { shelves } }` from the mixed envelope; the bare shape too.
+      const json = r.json as { result?: unknown } | undefined;
+      const shelves = parseShelves(json && typeof json.result === 'object' && json.result !== null ? json.result : r.json);
       return shelves ? { ok: true, shelves } : { ok: false, reason: 'error' };
     },
   };

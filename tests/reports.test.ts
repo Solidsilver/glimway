@@ -80,8 +80,8 @@ test('a fall is a boundary: earlier combat is void and the next report waits for
   const book = bound();
   book.note(village, 10, 5);
   book.cast(3);
-  book.fall(7);
-  book.note({ area: 'village', x: 400, y: 300 }, 13, 15);
+  book.fall(7, { area: 'village', x: 400, y: 300 }, { hp: 13, mana: 15 });
+  assert.deepEqual([book.next.place, book.next.hp, book.next.mana], [{ area: 'village', x: 400, y: 300 }, 13, 15], 'the recovery is written with the boundary');
   assert.equal(book.capture(), null, 'no basis for after the fall yet');
   book.cast();
   book.release(7, 9);

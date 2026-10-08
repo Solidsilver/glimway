@@ -1,9 +1,9 @@
 /**
  * The connected cache, reshaped (design server-first 2.4): what the title
  * screen and the account flow read about this device's play, projected from
- * the account's outbox (src/lib/api/outbox.ts). The outbox is the only
- * thing written; this module only reads it, marks it kept after a logout, or
- * clears it.
+ * the account's outbox (src/lib/api/outbox.ts). Only the outbox's owner (the
+ * link holding it) writes it; this module only reads it, marks it kept after
+ * a logout, or clears a record with nothing unsent in it.
  *
  * Records of the old connected cache (`fingersnap-connected`) are a clean
  * break: they are never read.
@@ -58,15 +58,14 @@ export async function loadLatestCache(): Promise<ConnectedCache | null> {
   return d ? project(await outbox().latest(d)) : null;
 }
 
-/** Only the logout mark is written through here: the outbox owns everything else. */
+/** Only the logout mark is written through here: the outbox's owner writes everything else. */
 export async function saveCache(cache: ConnectedCache): Promise<boolean> {
   const d = device();
-  const record = d ? await outbox().load(cache.accountId, d) : null;
-  if (!record) return false;
-  return outbox().save({ ...record, loggedOut: cache.loggedOut === true });
+  return d ? outbox().markLoggedOut(cache.accountId, d, cache.loggedOut === true) : false;
 }
 
+/** Forget the account on this device, but never unsent work: a record still holding operations stays. */
 export async function clearCache(accountId: string): Promise<boolean> {
   const d = device();
-  return d ? outbox().clear(accountId, d) : false;
+  return d ? outbox().clearIfEmpty(accountId, d) : false;
 }
