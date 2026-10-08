@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -13,6 +14,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"math"
 	"net/http"
+	"strings"
 )
 
 func (a *Server) requireLease(ctx context.Context, tx *sql.Tx, s store.Snapshot, lease string) error {
@@ -173,7 +175,16 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 }
 
 func finiteWhere(where *contract.Where) bool {
-	return !math.IsNaN(where.X) && !math.IsNaN(where.Y) && !math.IsInf(where.X, 0) && !math.IsInf(where.Y, 0) && math.Abs(where.X) <= 1e6 && math.Abs(where.Y) <= 1e6
+	if where == nil || math.IsNaN(where.X) || math.IsNaN(where.Y) || math.IsInf(where.X, 0) || math.IsInf(where.Y, 0) || math.Abs(where.X) > 1e6 || math.Abs(where.Y) > 1e6 {
+		return false
+	}
+	if room, ok := content.RoomFor(where.Area); ok {
+		return where.X >= 0 && where.Y >= 0 && where.X < float64(len(room.Map[0])*16) && where.Y < float64(len(room.Map)*16)
+	}
+	if strings.HasPrefix(where.Area, "in:home:") && content.KnownRoom(where.Area) {
+		return where.X >= 0 && where.Y >= 0 && where.X < float64(content.HomeRules.Indoor.Width*16) && where.Y < float64(content.HomeRules.Indoor.Height*16)
+	}
+	return true
 }
 
 // All typed operation results must appear exactly once in Envelope.result.

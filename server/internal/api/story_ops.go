@@ -26,55 +26,87 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 	}
 	var relay func()
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if req.Quest != "lantern-road" {
+		quest, ok := content.QuestFor(req.Quest)
+		if !ok {
 			return nil, fail(409, "not-next-step")
 		}
-		idx := content.QuestIndex(s.State.Quest) + 1
-		if idx < 0 || idx >= len(content.QuestRules[0].Steps) {
+		idx := content.QuestIndex(req.Quest, s.State.Quests[req.Quest]) + 1
+		if idx < 0 || idx >= len(quest.Steps) || quest.Steps[idx].ID != req.To {
 			return nil, fail(409, "not-next-step")
 		}
-		step := content.QuestRules[0].Steps[idx]
-		if step.ID != req.To {
-			return nil, fail(409, "not-next-step")
+		step := quest.Steps[idx]
+		if err := questPrerequisites(*s, quest); err != nil {
+			return nil, err
 		}
-		if s.State.Area != step.At {
+		if step.At != "" && s.State.Area != step.At {
 			return nil, fail(409, "wrong-area")
 		}
-		s.State.Quest = step.ID
-		s.State.Inventory = rules.AddUnique(s.State.Inventory, step.Items...)
-		for _, m := range step.Marks {
-			switch {
-			case strings.HasPrefix(m, "found:"):
-				s.State.Discoveries = rules.AddUnique(s.State.Discoveries, strings.TrimPrefix(m, "found:"))
-			case strings.HasPrefix(m, "defeated:"):
-				s.State.DefeatedEnemies = rules.AddUnique(s.State.DefeatedEnemies, strings.TrimPrefix(m, "defeated:"))
-			default:
-				s.State.Flags = rules.AddUnique(s.State.Flags, m)
-			}
+		if err := questTrigger(ctx, tx, s, req.Quest, step, now); err != nil {
+			return nil, err
 		}
-		for _, p := range step.Papers {
-			if _, e := a.Config.Story.Grant(ctx, tx, s, p, now); e != nil {
-				return nil, e
-			}
+		if err := checkQuestGate(ctx, tx, s, req.Quest, step, now); err != nil {
+			return nil, err
 		}
-		paid := 0
-		if step.Embers > 0 {
-			outcome := "quest-gift:" + req.Quest + ":" + step.ID
-			added, e := store.Outcome(ctx, tx, s.AccountID, outcome, "quest", now)
-			if e != nil {
-				return nil, e
+		out := &contract.QuestStepResult{Quest: req.Quest, Step: step.ID}
+		outcome := "quest-gift:" + req.Quest + ":" + step.ID
+		added, err := store.Outcome(ctx, tx, s.AccountID, outcome, "quest", now)
+		if err != nil {
+			return nil, err
+		}
+		if added {
+			if err = spendQuestGate(ctx, tx, s, req.Quest, step, now, out); err != nil {
+				return nil, err
 			}
-			if added {
-				paid = step.Embers
-				if e = store.Credit(ctx, tx, s, paid, 0, "quest", outcome, nil, now); e != nil {
-					return nil, e
+			s.State.Inventory = rules.AddUnique(s.State.Inventory, step.Items...)
+			for _, m := range step.Marks {
+				if rules.EconomyFlag(m) {
+					if _, err = store.Outcome(ctx, tx, s.AccountID, m, "quest", now); err != nil {
+						return nil, err
+					}
+				}
+				questMark(s, m)
+			}
+			for _, p := range step.Papers {
+				if _, err = a.Config.Story.Grant(ctx, tx, s, p, now); err != nil {
+					return nil, err
 				}
 			}
+			paid := step.Embers
+			if req.Quest == "signpost" && step.ID == "see-mara" {
+				topup := max(0, 3-s.State.Embers)
+				fresh, e := store.Outcome(ctx, tx, s.AccountID, "quest-gift:signpost:topup", "quest", now)
+				if e != nil {
+					return nil, e
+				}
+				if fresh {
+					paid += topup
+				}
+			}
+			if paid > 0 {
+				if err = store.Credit(ctx, tx, s, paid, 0, "quest", outcome, nil, now); err != nil {
+					return nil, err
+				}
+			}
+			for _, item := range step.Give {
+				if err = questGive(ctx, tx, s, item, outcome, now); err != nil {
+					return nil, err
+				}
+				out.Given = append(out.Given, &contract.ItemQty{Def: item.Def, Qty: float64(item.Qty)})
+			}
+			out.Items = step.Items
+			out.Marks = step.Marks
+			out.Papers = step.Papers
+			out.Embers = float64(paid)
+		}
+		s.State.Quests[req.Quest] = step.ID
+		s.State.ReachedAt[req.Quest] = now
+		if idx == 0 || step.Gate != nil {
+			s.State.GateAt[req.Quest] = now
 		}
 		if step.Witness != "" {
 			relay = a.witnessed(*s, []string{step.Witness})
 		}
-		return &contract.QuestStepResult{Quest: req.Quest, Step: step.ID, Items: step.Items, Marks: step.Marks, Papers: step.Papers, Embers: float64(paid)}, nil
+		return out, nil
 	}, func() {
 		if relay != nil {
 			relay()

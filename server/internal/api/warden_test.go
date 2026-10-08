@@ -289,6 +289,9 @@ func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 		if stage == "accepted" || stage == "complete" {
 			doc.Area = "village"
 		}
+		if stage == "guardian-defeated" {
+			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
+		}
 		res := x.expect("POST", "/api/quest/step", body(s, stage, map[string]any{"quest": "lantern-road", "to": stage, "where": testWhere(doc)}), c, 200)
 		s.Snapshot = res.Snapshot
 		items := x.items("GET", "/api/items", nil, c, 200)

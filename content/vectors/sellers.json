@@ -1,0 +1,128 @@
+[
+  {
+    "name": "resident seller",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "with"
+        ],
+        "value": "hazel"
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "unknown resident",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "with"
+        ],
+        "value": "unknown"
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "empty resident",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "with"
+        ],
+        "value": ""
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "mixed fixed area",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "area"
+        ],
+        "value": "village"
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "mixed zero x",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "tx"
+        ],
+        "value": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "mixed zero y",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          0,
+          "ty"
+        ],
+        "value": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "stall follows resident",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          2,
+          "with"
+        ],
+        "value": "hazel"
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "fixed stall",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          2,
+          "area"
+        ],
+        "value": "commons"
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "unknown fixed area",
+    "edits": [
+      {
+        "path": [
+          "sellers",
+          2,
+          "area"
+        ],
+        "value": "in:village:bakery"
+      }
+    ],
+    "valid": false
+  }
+]

@@ -41,8 +41,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	// camps anywhere in the deep Wilds until camps are placed per person.
 	switch target {
 	case "ada", "hazel":
-		spot, ok := content.ResidentFor(target)
-		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
+		if !nearResident(s, target, now, residentReachTiles) {
 			return fail(409, "too-far-away")
 		}
 	case "silas":
@@ -112,8 +111,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 			return fail(409, "too-far-away")
 		}
 	case "ada-garden-spade":
-		spot, ok := content.ResidentFor("ada")
-		if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
+		if !nearResident(s, "ada", now, residentReachTiles) {
 			return fail(409, "too-far-away")
 		}
 	case "nans-lamplighter-pole":
@@ -204,8 +202,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 
 // giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
 func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
-	spot, ok := content.ResidentFor("ada")
-	if !ok || !nearTile(s, spot.Area, spot.TX, spot.TY, residentReachTiles) {
+	if !nearResident(s, "ada", now, residentReachTiles) {
 		return fail(409, "too-far-away")
 	}
 

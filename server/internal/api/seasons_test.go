@@ -260,9 +260,13 @@ func (x *rig) fundEmbers(id string, n int) {
 }
 
 // bySeller is the progress of a player standing at a seller's spot.
-func bySeller(s response, seller string) rules.State {
+func bySeller(s response, seller string, now int64) rules.State {
 	doc := s.State
 	if spot, ok := content.SellerFor(seller); ok {
+		if spot.With != "" {
+			p, _ := content.ResidentAt(spot.With, float64(now))
+			spot.Area, spot.TX, spot.TY = p.Area, p.TX, p.TY
+		}
 		doc.Area = spot.Area
 		doc.Position = rules.Position{X: float64(spot.TX*16 + 8), Y: float64(spot.TY*16 + 12)}
 	}
@@ -276,7 +280,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 
 	// Standing by the seller: the rig's own position rides along.
 	buy := func(seller, good string, status int) itemsResponse {
-		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": seller, "good": good, "progress": bySeller(s, seller)}, status)
+		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": seller, "good": good, "progress": bySeller(s, seller, x.now.Load())}, status)
 	}
 
 	// Hazel sells tallow at her kitchen door, cheap.
@@ -327,7 +331,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	}
 	// Embers run out where they run out.
 	poor, ps := x.ready("bob")
-	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen")}, 409); r.Error.Code != "insufficient-embers" {
+	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen", x.now.Load())}, 409); r.Error.Code != "insufficient-embers" {
 		t.Fatal("tallow without embers", r.Error.Code)
 	}
 	x.conserved(s.AccountID)

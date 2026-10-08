@@ -100,11 +100,33 @@ func MarkWriter(mark string) string {
 	}
 	return writer
 }
-func QuestIndex(step string) int {
-	if step == "new" {
+
+// QuestFor returns a quest by id; array order never determines its identity.
+func QuestFor(id string) (Quest, bool) {
+	for _, q := range QuestRules {
+		if q.ID == id {
+			return q, true
+		}
+	}
+	return Quest{}, false
+}
+
+// The one-argument form remains for the frozen 028 backfill's lantern road.
+func QuestIndex(quest string, reached ...string) int {
+	step := quest
+	if len(reached) == 0 {
+		quest = "lantern-road"
+	} else {
+		step = reached[0]
+	}
+	q, ok := QuestFor(quest)
+	if !ok {
+		return -2
+	}
+	if step == "" || step == "new" {
 		return -1
 	}
-	for i, s := range QuestRules[0].Steps {
+	for i, s := range q.Steps {
 		if s.ID == step {
 			return i
 		}

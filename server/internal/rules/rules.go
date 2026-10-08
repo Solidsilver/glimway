@@ -33,32 +33,39 @@ func HomeGate(area string) int {
 
 // IsSafeArea: where syncs and rests may happen (the village, the Commons
 // and every homestead map).
-func IsSafeArea(area string) bool { return SafeAreas[area] || HomeGate(area) >= 0 }
+func IsSafeArea(area string) bool {
+	area = content.RootArea(area)
+	return SafeAreas[area] || HomeGate(area) >= 0
+}
 
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
-var QuestItems = []string{"field-journal", "hearthwick-map", "lantern-route-rubbing", "warden-seal"}
+var QuestItems = content.StoryRules.QuestItems
 
 type Position struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 }
 type State struct {
-	Version         int      `json:"version"`
-	Area            string   `json:"area"`
-	Position        Position `json:"position"`
-	Quest           string   `json:"quest"`
-	HP              float64  `json:"hp"`
-	MaxHP           float64  `json:"maxHp"`
-	Mana            float64  `json:"mana"`
-	MaxMana         float64  `json:"maxMana"`
-	Inventory       []string `json:"inventory"`
-	Discoveries     []string `json:"discoveries"`
-	DefeatedEnemies []string `json:"defeatedEnemies"`
-	PlaySeconds     float64  `json:"playSeconds"`
-	Embers          int      `json:"embers"`
-	Flags           []string `json:"flags"`
-	EmberXP         float64  `json:"emberXp"`
-	XPEmbers        int      `json:"xpEmbers"`
+	Version  int      `json:"version"`
+	Area     string   `json:"area"`
+	Position Position `json:"position"`
+	// Quest is retained only for frozen pre-029 document backfills. Live state uses Quests.
+	Quest           string            `json:"quest,omitempty"`
+	Quests          map[string]string `json:"quests,omitempty"`
+	ReachedAt       map[string]int64  `json:"reachedAt,omitempty"`
+	GateAt          map[string]int64  `json:"gateAt,omitempty"`
+	HP              float64           `json:"hp"`
+	MaxHP           float64           `json:"maxHp"`
+	Mana            float64           `json:"mana"`
+	MaxMana         float64           `json:"maxMana"`
+	Inventory       []string          `json:"inventory"`
+	Discoveries     []string          `json:"discoveries"`
+	DefeatedEnemies []string          `json:"defeatedEnemies"`
+	PlaySeconds     float64           `json:"playSeconds"`
+	Embers          int               `json:"embers"`
+	Flags           []string          `json:"flags"`
+	EmberXP         float64           `json:"emberXp"`
+	XPEmbers        int               `json:"xpEmbers"`
 }
 type Stats struct {
 	Str float64 `json:"str"`
@@ -174,7 +181,7 @@ func ValidProfile(p Profile) bool {
 	return true
 }
 func NewState() State {
-	return State{Version: 1, Area: "village", Position: Position{400, 300}, Quest: "new", HP: 40, MaxHP: 40, Mana: 20, MaxMana: 20, Inventory: []string{"field-journal", "hearthwick-map"}, Discoveries: []string{}, DefeatedEnemies: []string{}, Flags: []string{}}
+	return State{Version: 1, Area: "village", Position: Position{400, 300}, Quest: "new", Quests: map[string]string{}, ReachedAt: map[string]int64{}, GateAt: map[string]int64{}, HP: 40, MaxHP: 40, Mana: 20, MaxMana: 20, Inventory: []string{"field-journal", "hearthwick-map"}, Discoveries: []string{}, DefeatedEnemies: []string{}, Flags: []string{}}
 }
 func XPToNextLevel(level float64) float64 {
 	l := math.Max(1, math.Floor(level))

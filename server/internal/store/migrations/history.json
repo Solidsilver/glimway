@@ -112,5 +112,9 @@
     "sha256": "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17",
     "backfill": "migration_028_backfill.go",
     "backfillSha256": "dc5a19f0d8bab0bafc52401e8f1f9444456c213c51286804033b471981850520"
+  },
+  {
+    "name": "029_quest_tree.sql",
+    "sha256": "1ac4d6841116fbad0b9acd83fa204524d9bac1650b84146968e5732f3e5e2b61"
   }
 ]

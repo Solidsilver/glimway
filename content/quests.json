@@ -82,7 +82,7 @@
           "goal": "Light the hilltop lantern",
           "objective": "Light the hilltop lantern.",
           "do": {
-            "flag": "found:hilltop-lantern"
+            "use": "hilltop-lantern"
           },
           "where": {
             "area": "ruin",

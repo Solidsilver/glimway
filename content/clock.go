@@ -8,6 +8,17 @@ import (
 	"time"
 )
 
+// QuestWaitReady counts elapsed hours or calendar wick boundaries, not play time.
+func QuestWaitReady(wait QuestWait, since, now int64) bool {
+	if now < since {
+		return false
+	}
+	if wait.Hours > 0 {
+		return float64(now)-float64(since) >= wait.Hours*3600
+	}
+	return CalendarAt(CalendarRules, now).WickNumber-CalendarAt(CalendarRules, since).WickNumber >= int64(wait.Turnings)
+}
+
 type Festival struct {
 	Name string `json:"name"`
 	Wick string `json:"wick"`

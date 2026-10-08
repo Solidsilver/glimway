@@ -98,15 +98,38 @@ type ItemGood struct {
 // festival day only (the Carting Day market). The spot is shared content,
 // the same rows the client prompts at.
 type ItemSeller struct {
+	With        string     `json:"with,omitempty"`
 	ID          string     `json:"id"`
 	NPC         string     `json:"npc"`
-	Area        string     `json:"area"`
-	TX          int        `json:"tx"`
-	TY          int        `json:"ty"`
+	Area        string     `json:"area,omitempty"`
+	TX          int        `json:"tx,omitempty"`
+	TY          int        `json:"ty,omitempty"`
 	RadiusTiles int        `json:"radiusTiles"`
 	Festival    string     `json:"festival,omitempty"`
 	Goods       []ItemGood `json:"goods"`
 }
+
+func (s *ItemSeller) UnmarshalJSON(raw []byte) error {
+	type seller ItemSeller
+	var decoded seller
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return err
+	}
+	if decoded.With != "" {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			return err
+		}
+		for _, field := range []string{"area", "tx", "ty"} {
+			if _, ok := fields[field]; ok {
+				return fmt.Errorf("seller %s mixes resident and fixed spot", decoded.ID)
+			}
+		}
+	}
+	*s = ItemSeller(decoded)
+	return nil
+}
+
 type ItemRules struct {
 	Grades map[string]ItemGrade `json:"grades"`
 	Wear   struct {
@@ -130,17 +153,8 @@ type ItemRules struct {
 		NearbyTiles int `json:"nearbyTiles"`
 	} `json:"thanks"`
 	Menders []ItemMender `json:"menders"`
-	// Where the named residents stand, shared by the server's proximity
-	// checks (returning a keepsake) and the client's placement.
-	Residents []ItemResident `json:"residents"`
 }
 
-type ItemResident struct {
-	ID   string `json:"id"`
-	Area string `json:"area"`
-	TX   int    `json:"tx"`
-	TY   int    `json:"ty"`
-}
 type Items struct {
 	Rules   ItemRules    `json:"rules"`
 	Items   []ItemDef    `json:"items"`
@@ -299,18 +313,11 @@ func ValidateItems(v Items) error {
 		}
 	}
 	npcs := map[string]bool{}
-	residents := map[string]bool{}
 	for _, m := range r.Menders {
 		if !ValidContentID(m.NPC) || m.Name == "" || npcs[m.NPC] || !slices.Contains(PickupAreas, m.Area) || m.TX < 0 || m.TY < 0 || m.RadiusTiles < 1 {
 			return bad("mender %q", m.NPC)
 		}
 		npcs[m.NPC] = true
-	}
-	for _, res := range r.Residents {
-		if !ValidContentID(res.ID) || residents[res.ID] || !slices.Contains(PickupAreas, res.Area) || res.TX < 0 || res.TY < 0 {
-			return bad("resident %q", res.ID)
-		}
-		residents[res.ID] = true
 	}
 	defs := map[string]ItemDef{}
 	for _, d := range v.Items {
@@ -420,7 +427,7 @@ func ValidateItems(v Items) error {
 	}
 	sellers := map[string]bool{}
 	for _, s := range v.Sellers {
-		if !ValidContentID(s.ID) || sellers[s.ID] || s.NPC == "" || len(s.NPC) > 40 || !slices.Contains(PickupAreas, s.Area) ||
+		if !ValidContentID(s.ID) || sellers[s.ID] || s.NPC == "" || len(s.NPC) > 40 || !validSellerPlace(s) ||
 			s.TX < 0 || s.TY < 0 || s.RadiusTiles < 1 || s.RadiusTiles > 16 || len(s.Goods) == 0 ||
 			s.Festival != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.Festival }) {
 			return bad("seller %q", s.ID)
@@ -487,15 +494,15 @@ func MenderFor(npc string) (ItemMender, bool) {
 	return ItemMender{}, false
 }
 
-// ResidentFor is where a named resident stands (shared content; the client
-// places them from the same rows).
-func ResidentFor(id string) (ItemResident, bool) {
-	for _, r := range ItemsRules.Rules.Residents {
-		if r.ID == id {
-			return r, true
-		}
+func validSellerPlace(s ItemSeller) bool {
+	if s.With == "" {
+		return slices.Contains(PickupAreas, s.Area)
 	}
-	return ItemResident{}, false
+	residents, err := LoadResidents()
+	if err != nil || s.Area != "" || s.TX != 0 || s.TY != 0 {
+		return false
+	}
+	return slices.ContainsFunc(residents.Residents, func(r Resident) bool { return r.ID == s.With })
 }
 
 // SellerFor is a seller by id (shared content; the client prompts at the

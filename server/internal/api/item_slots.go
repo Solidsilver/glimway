@@ -201,3 +201,17 @@ func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemReq
 	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(account_id,slot,item_def,instance_id) VALUES(?,?,?,?)", s.AccountID, "off-hand", row.def, row.instance)
 	return err
 }
+
+func nearResident(s *store.Snapshot, id string, now int64, radius int) bool {
+	resident, ok := content.ResidentByID(id)
+	if !ok {
+		return false
+	}
+	for _, name := range content.CycleSpotsNear(resident, float64(now), content.ResidentRules.GraceSeconds) {
+		spot := resident.Spots[name]
+		if nearTile(s, spot.Area, spot.TX, spot.TY, radius) {
+			return true
+		}
+	}
+	return false
+}

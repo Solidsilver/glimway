@@ -163,6 +163,9 @@ func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
 	}
 	request("/api/quest/step", "skip", map[string]any{"quest": "lantern-road", "to": "complete"}, "village", 409)
 	for _, step := range content.QuestRules[0].Steps {
+		if step.Do.Defeat != "" {
+			request("/api/story/mark", "defeat-mark", map[string]any{"mark": "defeated:" + step.Do.Defeat}, step.At, 200)
+		}
 		out := request("/api/quest/step", step.ID, map[string]any{"quest": "lantern-road", "to": step.ID}, step.At, 200)
 		if out.GetQuestStep().Step != step.ID {
 			t.Fatal(out)

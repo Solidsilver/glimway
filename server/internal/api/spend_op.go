@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -25,7 +26,7 @@ func (a *Server) spendOp(w http.ResponseWriter, r *http.Request) error {
 			}
 			s.VitalsWritten = true
 		}
-		if req.Kind == "rest" && s.State.Area != "village" {
+		if req.Kind == "rest" && content.RootArea(s.State.Area) != "village" {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		if req.Kind == "home-rest" {

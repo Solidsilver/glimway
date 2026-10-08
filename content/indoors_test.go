@@ -151,3 +151,37 @@ func TestRoomFootprints(t *testing.T) {
 		t.Fatal("quest reward namespaces")
 	}
 }
+
+func TestQuestWaitVectors(t *testing.T) {
+	var cases []struct {
+		Name       string
+		Wait       QuestWait
+		Since, Now int64
+		Ready      bool
+	}
+	readVectors(t, "quest-waits", &cases)
+	for _, v := range cases {
+		if QuestWaitReady(v.Wait, v.Since, v.Now) != v.Ready {
+			t.Fatal(v)
+		}
+	}
+}
+
+func TestSellerLoaderVectors(t *testing.T) {
+	var vectors []loaderVector
+	readVectors(t, "sellers", &vectors)
+	raw, err := FS.ReadFile("items.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range vectors {
+		var items Items
+		err = json.Unmarshal(editVector(t, raw, v), &items)
+		if err == nil {
+			err = ValidateItems(items)
+		}
+		if (err == nil) != v.Valid {
+			t.Fatal(v.Name, err)
+		}
+	}
+}

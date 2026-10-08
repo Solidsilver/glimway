@@ -7,6 +7,7 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
+	"strings"
 )
 
 func invite(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) (string, error) {
@@ -124,10 +125,12 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-leave", h.ID, nil, now)
 }
 
-// checkHomeRest: resting at home means standing on your own homestead's map
-// (or in its cottage, which saves as the map).
+// checkHomeRest requires the cottage on a gate named by your deed.
 func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
-	gate := rules.HomeGate(s.State.Area)
+	gate := rules.HomeGate(content.RootArea(s.State.Area))
+	if !strings.HasPrefix(s.State.Area, "in:home:") {
+		return fail(409, "not-at-own-plot")
+	}
 	if gate < 0 {
 		return fail(409, "not-at-own-plot")
 	}

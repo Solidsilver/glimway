@@ -211,7 +211,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
-	spot, ok := content.ResidentFor("ada")
+	spot, ok := content.ResidentAt("ada", float64(x.now.Load()))
 	if !ok {
 		t.Fatal("resident ada not found")
 	}

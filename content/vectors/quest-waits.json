@@ -1,0 +1,101 @@
+[
+  {
+    "name": "hour early",
+    "wait": {
+      "hours": 2
+    },
+    "since": 100,
+    "now": 7299,
+    "ready": false
+  },
+  {
+    "name": "hour edge",
+    "wait": {
+      "hours": 2
+    },
+    "since": 100,
+    "now": 7300,
+    "ready": true
+  },
+  {
+    "name": "hour after",
+    "wait": {
+      "hours": 2
+    },
+    "since": 100,
+    "now": 7301,
+    "ready": true
+  },
+  {
+    "name": "fractional hour",
+    "wait": {
+      "hours": 0.5
+    },
+    "since": 0,
+    "now": 1800,
+    "ready": true
+  },
+  {
+    "name": "backwards",
+    "wait": {
+      "hours": 2
+    },
+    "since": 100,
+    "now": 99,
+    "ready": false
+  },
+  {
+    "name": "same wick",
+    "wait": {
+      "turnings": 1
+    },
+    "since": 1767571200,
+    "now": 1768175999,
+    "ready": false
+  },
+  {
+    "name": "wick edge",
+    "wait": {
+      "turnings": 1
+    },
+    "since": 1768175999,
+    "now": 1768176000,
+    "ready": true
+  },
+  {
+    "name": "two turnings early",
+    "wait": {
+      "turnings": 2
+    },
+    "since": 1768175999,
+    "now": 1768780799,
+    "ready": false
+  },
+  {
+    "name": "two turnings",
+    "wait": {
+      "turnings": 2
+    },
+    "since": 1768175999,
+    "now": 1768780800,
+    "ready": true
+  },
+  {
+    "name": "before epoch",
+    "wait": {
+      "turnings": 1
+    },
+    "since": 1767571199,
+    "now": 1767571200,
+    "ready": true
+  },
+  {
+    "name": "backwards wick",
+    "wait": {
+      "turnings": 1
+    },
+    "since": 1767571200,
+    "now": 1767571199,
+    "ready": false
+  }
+]

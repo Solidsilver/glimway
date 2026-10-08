@@ -30,7 +30,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if good == nil {
 		return fail(400, "invalid-good")
 	}
-	if !nearTile(s, seller.Area, seller.TX, seller.TY, seller.RadiusTiles) {
+	if seller.With != "" && !nearResident(s, seller.With, now, seller.RadiusTiles) || seller.With == "" && !nearTile(s, seller.Area, seller.TX, seller.TY, seller.RadiusTiles) {
 		return fail(409, "too-far-away")
 	}
 	day := content.CalendarAt(content.CalendarRules, now)

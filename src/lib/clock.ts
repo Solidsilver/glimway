@@ -30,6 +30,13 @@ export function calendarAt(unix: number, c: Calendar = CALENDAR): CalendarDay {
 }
 
 export function nextTurning(now: number, c: Calendar = CALENDAR): number { return calendarAt(now, c).nextTurning; }
+
+/** Wait from the last gated step (or first step); Unix seconds, never play time. */
+export function questWaitReady(wait: { hours?: number; turnings?: number }, since: number, now: number): boolean {
+  if (!Number.isSafeInteger(since) || !Number.isSafeInteger(now) || now < since) return false;
+  if (wait.hours !== undefined) return now - since >= wait.hours * 3600;
+  return calendarAt(now).wickNumber - calendarAt(since).wickNumber >= (wait.turnings ?? 0);
+}
 /** Times are Unix seconds, including fractional values. */
 export function recovered(stored: number, rate: number, cap: number, since: number, now: number): number {
  return Math.min(cap, stored + rate * Math.max(0, now - since));

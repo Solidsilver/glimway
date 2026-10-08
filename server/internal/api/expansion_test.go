@@ -243,16 +243,16 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	x.fund(x.account("alice"), 5, 0)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	doc := s.State
-	doc.Area = "home:0"
-	doc.Position = rules.Position{X: 320, Y: 160}
+	doc.Area = "in:home:0"
+	doc.Position = rules.Position{X: 80, Y: 80}
 	doc.HP = 1
 	if x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "homeless", doc), c, 409).Error.Code != "not-at-own-plot" {
 		t.Fatal("rest without a home")
 	}
 	x.claimGate(c, &s, 0)
 	doc = s.State
-	doc.Area = "home:0"
-	doc.Position = rules.Position{X: 320, Y: 160}
+	doc.Area = "in:home:0"
+	doc.Position = rules.Position{X: 80, Y: 80}
 	doc.HP = 0
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	if x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "gifted", doc), c, 409).Error.Code != "needs-earned" {
@@ -266,21 +266,21 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	if s.Version != s0.Version+2 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
 		t.Fatal("home rest")
 	}
-	for name, area := range map[string]string{"other-home": "home:1", "commons": "commons", "village": "village", "padded": "home:00"} {
+	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "village": "village", "padded": "in:home:00"} {
 		doc = s.State
 		doc.HP = 1
 		doc.Area = area
 		want := 409
-		if area == "home:00" {
+		if area == "in:home:00" {
 			want = 409
 		}
 		v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", name, doc), c, want)
-		if area != "home:00" && want == 409 && v.Error.Code != "not-at-own-plot" && v.Error.Code != "not-at-safe-boundary" {
+		if area != "in:home:00" && want == 409 && v.Error.Code != "not-at-own-plot" && v.Error.Code != "not-at-safe-boundary" {
 			t.Fatal(name, v.Error.Code)
 		}
 	}
 	p := profile("alice", 1, 0, 20)
-	for _, area := range []string{"commons", "home:0", "home:7"} {
+	for _, area := range []string{"commons", "home:0", "home:7", "in:village:library", "in:village:mill:2", "in:home:0"} {
 		doc = s.State
 		doc.Area = area
 		s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, doc), c, 200).Snapshot
