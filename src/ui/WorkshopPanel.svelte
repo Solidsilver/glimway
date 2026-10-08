@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
@@ -31,13 +31,13 @@
     tab = mode
     chest = initialChest
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
     void village.loadStorage().then((r) => {
       loaded = r.ok ? 'ready' : r.text
       // No shared chest here (no home, or no Workshop yet): your own chest still opens.
       if (r.ok && village.shared !== 'open') chest = 'personal'
     })
-    return () => bus.off(VILLAGE_EV.changed, bump)
+    return () => bus.off(EV.villageChanged, bump)
   })
 
   /** The shared chest and the bench need a Workshop home; your own chest never does. */

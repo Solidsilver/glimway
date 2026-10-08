@@ -7,7 +7,7 @@
  */
 import type { AreaId } from '../state.ts';
 import type { GatherSpot, WorldData } from '../../game/worlds.ts';
-import { TILE } from '../../game/textures.ts';
+import { tileBottom, tileKey, tileMid } from '../tile.ts';
 import { tangleFrame } from '../../game/wilds/tangle-key.ts';
 import { lookAtlasKey } from '../../game/wilds/wilds-looks.ts';
 import { DECOR_ART } from './tangle.ts';
@@ -64,7 +64,7 @@ function gatherSpots(chunk: ChunkTerrain, atlas: string, day?: { wick: string } 
   const byTile = new Map<string, (typeof chunk.decor)[number]>();
   for (const d of chunk.decor) {
     if (!of(d)) continue;
-    const key = `${d.tx},${d.ty}`;
+    const key = tileKey(d.tx, d.ty);
     const had = byTile.get(key);
     if (!had || (DECOR_ART[d.kind].blocking && !DECOR_ART[had.kind].blocking)) byTile.set(key, d);
   }
@@ -117,8 +117,8 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId, day?: { wick: s
     scenery: chunk.decor.map((d) => ({
       key: atlas,
       frame: tangleFrame(d.kind, d.variant),
-      x: d.tx * TILE + TILE / 2 + d.ox,
-      y: (d.ty + 1) * TILE + d.oy,
+      x: tileMid(d.tx) + d.ox,
+      y: tileBottom(d.ty) + d.oy,
       depth: DECOR_ART[d.kind].flat ? DECAL_DEPTH : 'y',
       flipX: d.flip,
       fade: d.overhang,

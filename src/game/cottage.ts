@@ -9,7 +9,7 @@
  * Reloading puts you outside your door.
  */
 import { HOMESTEAD_DATA, homeArea } from '../lib/homestead.ts'
-import { TERRAIN, TILE } from './textures.ts'
+import { TERRAIN, TILE } from '../lib/tile.ts'
 import type { WorldData } from './worlds.ts'
 
 export const ROOM_COLS = HOMESTEAD_DATA.indoor.width + 2

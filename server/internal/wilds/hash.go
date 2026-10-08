@@ -2,7 +2,7 @@
 // parts (entities and loot). The algorithm matches src/lib/wilds/ exactly;
 // parity is enforced by content/vectors/wilds.json in both test suites.
 //
-// Integer-only hash and PRNG spec (mirrors src/lib/wilds/hash.ts):
+// Integer-only hash and PRNG spec (mirrors src/lib/hash.ts):
 //
 //	fnv1a32(utf8 bytes): h = 0x811C9DC5; h = (h XOR b) * 0x01000193 per byte
 //	mix(h, v): h = h XOR v; h *= 0x01000193; h ^= h >> 15; h *= 0x85EBCA6B; h ^= h >> 13

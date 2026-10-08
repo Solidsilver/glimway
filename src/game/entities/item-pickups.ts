@@ -5,20 +5,20 @@
  * papers (content/items.json `pickups`), drawn with the item's own icon and
  * a slow glint, and granted by the server once per player who stands by it.
  *
- * A feature-scoped InteractionProvider owning `pickup:*` ids. Worlds only:
+ * It registers `pickup:*` points (./interactables). Worlds only:
  * a guest has nowhere to keep a tool, so nothing lies here for them.
  */
 import type Phaser from 'phaser'
 import { pickupsIn, type ItemPickup } from '../../lib/items'
 import { bus, EV } from '../events'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
-import { ITEMS_EV, itemsFor } from '../items'
+import { itemsFor } from '../items'
 import { sfx } from '../sfx'
-import { TILE } from '../textures'
+import { tileBottom, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
-import type { InteractId, WorldData } from '../worlds'
+import type { WorldData } from '../worlds'
 import type { Effects } from './fx'
-import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import type { Interactable, Interactables } from './interactables'
 
 export interface ItemPickupDeps {
   world: WorldData
@@ -37,7 +37,7 @@ interface Lying {
   timer: Phaser.Time.TimerEvent | null
 }
 
-export class ItemPickups implements InteractionProvider {
+export class ItemPickups {
   private lying = new Map<string, Lying>()
   private busy = false
 
@@ -46,9 +46,9 @@ export class ItemPickups implements InteractionProvider {
     const sync = () => {
       if (scene.sys?.isActive()) this.sync()
     }
-    bus.on(ITEMS_EV.changed, sync)
+    bus.on(EV.itemsChanged, sync)
     scene.events.once('shutdown', () => {
-      bus.off(ITEMS_EV.changed, sync)
+      bus.off(EV.itemsChanged, sync)
       for (const l of this.lying.values()) l.timer?.remove()
       this.lying.clear()
     })
@@ -57,25 +57,8 @@ export class ItemPickups implements InteractionProvider {
     else this.sync()
   }
 
-  owns(id: InteractId): boolean {
-    return id.startsWith(PREFIX)
-  }
-
-  /** Pickups sparkle instead of carrying a marker. */
-  marker(): null {
-    return null
-  }
-
-  verb(): string {
-    return 'Take'
-  }
-
-  label(id: InteractId): string | null {
-    return this.lying.get(id.slice(PREFIX.length))?.pickup.label ?? null
-  }
-
-  activate(id: InteractId): void {
-    const key = id.slice(PREFIX.length)
+  /** Take what lies here (the server keeps who took what). */
+  private take(key: string): void {
     const l = this.lying.get(key)
     if (!l || this.busy) return
     this.busy = true
@@ -113,18 +96,21 @@ export class ItemPickups implements InteractionProvider {
   }
 
   private publish(): void {
+    // Pickups sparkle instead of carrying a marker.
     const points: Interactable[] = [...this.lying.values()].map((l) => ({
       id: `${PREFIX}${l.pickup.id}`,
-      x: l.pickup.tx * TILE + 8,
-      y: l.pickup.ty * TILE + TILE - 2,
-      label: l.pickup.label
+      x: tileMid(l.pickup.tx),
+      y: tileBottom(l.pickup.ty) - 2,
+      label: l.pickup.label,
+      verb: 'Take',
+      activate: () => this.take(l.pickup.id)
     }))
-    this.deps.interactables.setDynamic(points, this)
+    this.deps.interactables.register(this, points)
   }
 
   private place(p: ItemPickup): void {
-    const x = p.tx * TILE + 8
-    const y = p.ty * TILE + TILE - 3
+    const x = tileMid(p.tx)
+    const y = tileBottom(p.ty) - 3
     let key = itemIcon(p.item)
     if (!this.scene.textures.exists(key)) key = this.scene.textures.exists(ITEM_ART_FALLBACK) ? ITEM_ART_FALLBACK : 'spark'
     const image = this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y - 6)

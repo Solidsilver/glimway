@@ -18,8 +18,9 @@
  *    borders without a seam and never repeats. Each edge tile gets its own
  *    overlay cell (a few hundred in the Commons).
  */
-import { TERRAIN } from '../textures.ts'
+import { TERRAIN, TILE } from '../../lib/tile.ts'
 import { GROUND_WATER_FRAMES, POND_TILES, pondFrame, pondTile } from '../ground-tiles.ts'
+import { hash01 } from '../../lib/hash.ts'
 
 export type GroundClass = 'grass' | 'dirt' | 'road' | 'flag' | 'sand' | 'water'
 /** Ground drawn with the old expansion cells (walls, roofs, fences, bridge planks, the ruin's stone). */
@@ -110,13 +111,6 @@ export const EDGE_TEXTURE: Readonly<Record<Exclude<GroundClass, 'water'>, string
   road: 'ground-old-cobbled-road-01',
   flag: 'ground-village-flagstones-01',
   sand: 'ground-sand-by-water-01',
-}
-
-/** Deterministic 0..1 for integer inputs. */
-export function hash01(x: number, y: number, s = 0): number {
-  let v = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(s | 0, 83492791)) | 0
-  v = Math.imul(v ^ (v >>> 13), 1274126177)
-  return ((v ^ (v >>> 16)) >>> 0) / 4294967296
 }
 
 /** Smooth value noise on a lattice; `period` (cells) wraps it, so it repeats every period. */
@@ -210,25 +204,25 @@ const fine = Object.fromEntries((Object.keys(SEEDS) as GroundClass[]).map((c) =>
  */
 export function groundField(n: GroundClass[], tx: number, ty: number, k: number, margin: number): { classes: GroundClass[]; size: number; at: Int8Array } {
   const classes = [...new Set(n)]
-  const cell = 16 * k
+  const cell = TILE * k
   const size = cell + 2 * margin
   const at = new Int8Array(size * size)
   // Each square of the neighbourhood, in world px relative to the centre tile.
-  const sq = n.map((_, i) => ({ x0: ((i % 3) - 1) * 16, y0: (Math.floor(i / 3) - 1) * 16 }))
+  const sq = n.map((_, i) => ({ x0: ((i % 3) - 1) * TILE, y0: (Math.floor(i / 3) - 1) * TILE }))
   const dist = new Float64Array(9)
   for (let iy = 0; iy < size; iy++) {
     for (let ix = 0; ix < size; ix++) {
       const px = (ix - margin + 0.5) / k
       const py = (iy - margin + 0.5) / k
       for (let i = 0; i < 9; i++) {
-        const dx = Math.max(sq[i].x0 - px, 0, px - (sq[i].x0 + 16))
-        const dy = Math.max(sq[i].y0 - py, 0, py - (sq[i].y0 + 16))
+        const dx = Math.max(sq[i].x0 - px, 0, px - (sq[i].x0 + TILE))
+        const dy = Math.max(sq[i].y0 - py, 0, py - (sq[i].y0 + TILE))
         dist[i] = Math.hypot(dx, dy)
       }
-      const wx = tx * 16 + px
-      const wy = ty * 16 + py
-      const jx = tx * 16 * k + ix - margin
-      const jy = ty * 16 * k + iy - margin
+      const wx = tx * TILE + px
+      const wy = ty * TILE + py
+      const jx = tx * TILE * k + ix - margin
+      const jy = ty * TILE * k + iy - margin
       let best = 0
       let bestE = Infinity
       for (let c = 0; c < classes.length; c++) {
@@ -267,7 +261,7 @@ const OUTLINE: [number, number, number] = [0x24, 0x1a, 0x1c]
  * right of it; the higher ground's edge facing the light is lit a little.
  */
 export function paintEdge(n: GroundClass[], tx: number, ty: number, k: number, frame: number, tex: TexelSource): Uint8ClampedArray {
-  const cell = 16 * k
+  const cell = TILE * k
   const ow = Math.max(1, Math.round(k / 2))
   const sw = ow * 3
   const margin = sw + 1

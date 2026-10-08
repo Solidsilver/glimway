@@ -11,44 +11,18 @@
  * Commons and wild land behind every gate, with no homes: building needs a
  * world.
  */
-import { HOMESTEAD_DATA, homeItem, type HomeInstance, type HomeScene } from '../lib/homestead'
-import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types'
-import type { CommonsLaneView, MutationOp } from './link'
-import type { ApiErrorCode } from '../lib/api/errors'
-import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing'
-import { setCommonsGateCount } from './worlds'
-import { setLandSource } from './homeland'
-import { villageFor } from './village'
-import { bus, EV } from './events'
-import { grantPaper } from './papers'
-import type { Session } from './session'
-
-export const HOME_EV = {
-  /** The lane or a home changed: { reason, gate? }. */
-  changed: 'home:changed',
-  /** The UI should open Silas's shop. */
-  openShop: 'ui:home-shop',
-  /** Placement-mode state for the tray: PlacementView | null. */
-  placement: 'ui:home-placement',
-  /** Tray → scene: a placement command (PlacementCommand). */
-  command: 'game:home-command',
-  /** Whether the player stands where they may arrange their home: ArrangeView. */
-  arrange: 'ui:home-arrange',
-  /** Decoration art as data URLs: Record<itemId, string>. */
-  thumbs: 'ui:home-thumbs',
-  /** Entered a homestead or a cottage: { title, eyebrow, body }. */
-  room: 'ui:home-room',
-  /** The homestead goal for the journal and HUD: { text } | null. */
-  goal: 'ui:home-goal',
-  /** Ask the player to name a lantern post: NamePrompt; answered on `named`. */
-  namePrompt: 'ui:home-name-prompt',
-  /** The name given (null: cancelled). */
-  named: 'game:home-named',
-  /** Ask the player to confirm leaving the deed. */
-  confirmLeave: 'ui:home-confirm-leave',
-  /** UI → scene: a homestead action decided outside a conversation: { action }. */
-  action: 'game:home-action'
-} as const
+import { HOMESTEAD_DATA, homeItem, type HomeInstance, type HomeScene } from '../lib/homestead.ts'
+import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types.ts'
+import type { CommonsLaneView } from './link.ts'
+import type { ApiErrorCode } from '../lib/api/errors.ts'
+import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing.ts'
+import { setCommonsGateCount } from './worlds.ts'
+import { setLandSource } from './homeland.ts'
+import { villageFor } from './village.ts'
+import { bus, EV, type MutationResolvedPayload } from './events.ts'
+import { grantPaper } from './papers.ts'
+import type { Session } from './session.ts'
+import { linkRefusalText } from '../content/refusals.ts'
 
 export interface NamePrompt {
   title: string
@@ -168,18 +142,12 @@ export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'b
       return 'That offer has lapsed. Ask again.'
     case 'chest-full':
       return 'Your own chest is full.'
-    case 'offline':
-      return 'Needs a connection. Nothing changed — try again when you’re back online.'
-    case 'superseded':
-      return 'Another device took over this journey.'
-    case 'busy':
-      return 'Hold on — the last one is still on its way.'
     case 'resolved':
       return 'Your last order with Silas went through after all. Check what you have before trying again.'
     case 'pending':
       return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
     default:
-      return 'Silas didn’t catch that. Nothing changed — try again in a moment.'
+      return linkRefusalText(code) ?? 'Silas didn’t catch that. Nothing changed — try again in a moment.'
   }
 }
 
@@ -220,9 +188,12 @@ export class Homesteads {
   private loading: Promise<void> | null = null
   private polling = 0
 
-  constructor(private session: Session) {
+  private readonly session: Session
+
+  constructor(session: Session) {
+    this.session = session
     this.status = session.link ? 'loading' : 'guest'
-    bus.on(EV.mutationResolved, (p: Parameters<Homesteads['onResolved']>[0]) => {
+    bus.on(EV.mutationResolved, (p) => {
       if (current?.homes === this) this.onResolved(p)
     })
   }
@@ -379,11 +350,12 @@ export class Homesteads {
   }
 
   /** A homestead mutation whose answer was lost is now known (Link.resolveUnresolved). */
-  private onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused'; res?: HomeActionResponse }): void {
+  private onResolved(p: MutationResolvedPayload): void {
     if (p.op.kind !== 'home') return
-    if (p.outcome === 'landed' && p.res?.result) {
-      this.adoptHome(p.res.result.home)
-      this.materials = p.res.result.materials
+    const res = p.res as HomeActionResponse | undefined
+    if (p.outcome === 'landed' && res?.result) {
+      this.adoptHome(res.result.home)
+      this.materials = res.result.materials
     }
     void this.load()
     bus.emit(EV.toast, {
@@ -522,7 +494,7 @@ export class Homesteads {
   }
 
   emitGoal(): void {
-    bus.emit(HOME_EV.goal, { text: this.goal() })
+    bus.emit(EV.homeGoal, { text: this.goal() })
   }
 
   /** You walked through your own gate: the guidance is done. */
@@ -534,7 +506,7 @@ export class Homesteads {
 
   /** `gate`: only that gate changed (the scene redraws just it). */
   private emit(reason: string, gate?: number): void {
-    bus.emit(HOME_EV.changed, { reason, gate })
+    bus.emit(EV.homeChanged, { reason, gate })
   }
 }
 
@@ -560,7 +532,7 @@ export function homesteadsFor(session: Session): Homesteads {
 /**
  * The Wilds' claims and the shop share one server-owned balance: when the
  * Wilds side moves it, the shop's mirror follows (the reverse rides
- * HOME_EV.changed, which the Wilds store watches).
+ * EV.homeChanged, which the Wilds store watches).
  */
 export function syncWildsMaterials(materials: Record<string, number> | null): void {
   if (current) current.homes.materials = { ...(materials ?? {}) }

@@ -11,6 +11,7 @@
  * takes the whole tileset in one `putImageData`.
  */
 import { EDGE_TEXTURE, WATER_FRAME_COUNT, paintEdge, parseEdgeKey, waterAt, type GroundClass } from './ground-field.ts'
+import { TILE } from '../../lib/tile.ts'
 
 /** An RGBA buffer `w` texels wide. */
 export interface Texels {
@@ -63,7 +64,7 @@ export interface EdgeJob {
 
 /** Paint overlay cells from reference textures (`cell`² RGBA each, by name). */
 export function paintEdgeJobs(jobs: EdgeJob[], refs: Record<string, Uint8ClampedArray>, k: number): { i: number; rgba: Uint8ClampedArray }[] {
-  const cell = 16 * k
+  const cell = TILE * k
   return jobs.map((j) => {
     const { n, tx, ty } = parseEdgeKey(j.key)
     const tex = (c: GroundClass, f: number, x: number, y: number): [number, number, number] => {

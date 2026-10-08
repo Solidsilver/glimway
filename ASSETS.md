@@ -231,9 +231,10 @@ Habitica artwork copied (pack README). 173 measured frames, 11 looping
 animations, 11 aliases; answers `docs/art-requests.md` in full including
 the optional Hazel, Ada and Wilds sets. Integration: `src/game/commons-pass.ts`
 (loader, `commons-art:` native textures) and
-`src/game/commons-pass-install.ts` (boot swap onto placeholder keys);
-contract in `tests/commons-pass.test.ts`; wiring notes in
-`docs/runtime-asset-spec.md`. Register B placeholders stay as the fallback.
+`src/game/commons-pass-install.ts` (installs the frames under the keys the
+scenes draw with); contract in `tests/commons-pass.test.ts`; wiring notes in
+`docs/runtime-asset-spec.md`. The packed art always ships (owner decision,
+2026-10-07): the Register B placeholders it covers were retired.
 **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 Recorded limits/quirks: sources are irregular high-resolution atlases
@@ -260,8 +261,8 @@ aliases); answers `docs/art-requests.md` items pass in full. Integration:
 `src/game/items-pass.ts` (loader, `items-art:` native textures, `itemIcon`
 helper with discrete states and fallbacks, `itemIconUrls`); Tolley mill
 replacement in `installItemsPass`; contract in `tests/items-pass.test.ts`;
-wiring notes in `docs/runtime-asset-spec.md`. Register B placeholders stay
-as the fallback. **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
+wiring notes in `docs/runtime-asset-spec.md`. The code-drawn mill
+(`src/game/mill-art.ts`) it replaced was retired. **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 Recorded limits/quirks: sources are irregular high-resolution sheets
 (never a grid); native canvases are tiny (16×16 for item icons); tool

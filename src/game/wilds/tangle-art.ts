@@ -12,12 +12,13 @@
 import type Phaser from 'phaser'
 import { DECOR_ART, TANGLE_GROUND, valueNoise } from '../../lib/wilds/tangle.ts'
 import type { DecorKind } from '../../lib/wilds/types.ts'
-import { TILE } from '../textures.ts'
+import { TILE, tileBottom, tileMid } from '../../lib/tile.ts'
 import { blitFrame, commonsFrame } from '../commons-pass.ts'
 import { DELIVERED_DECOR, DELIVERED_DECOR_QUIET, decorFlipped, fitRect } from '../atlas-plan.ts'
 import type { WorldData } from '../worlds.ts'
 import { TANGLE_VARIANTS, tangleFrame } from './tangle-key.ts'
 import { lookForAtlas, wildsLook, type DecorPalette, type GroundPalette, type Leaf } from './wilds-looks.ts'
+import { fnv1a32, hash01, rng01 } from '../../lib/hash.ts'
 
 type C = CanvasRenderingContext2D
 
@@ -62,30 +63,6 @@ function oval(c: C, cx: number, cy: number, rx: number, ry: number, col: string)
     for (let x = -Math.ceil(rx); x <= Math.ceil(rx); x++)
       if ((x * x) / (rx * rx + 0.3) + (y * y) / (ry * ry + 0.3) <= 1) px(c, cx + x, cy + y, col)
 }
-
-/** Deterministic 0..1 per pixel, for speckle. */
-function h01(x: number, y: number, s = 0): number {
-  let v = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(s | 0, 83492791)) | 0
-  v = Math.imul(v ^ (v >>> 13), 1274126177)
-  return ((v ^ (v >>> 16)) >>> 0) / 4294967296
-}
-
-function seeded(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-function strHash(s: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193)
-  return h >>> 0
-}
-
 
 /** Outline a drawn silhouette: every clear pixel touching a filled one becomes O. */
 function outline(c: C, w: number, h: number, col = O): void {
@@ -133,7 +110,7 @@ function crown(c: C, rnd: () => number, cx: number, cy: number, rx: number, ry: 
         const X = Math.round(x + dx)
         const Y = Math.round(y + dy)
         const lit = (-dx - dy * 1.3) / r
-        const n = h01(X, Y, salt)
+        const n = hash01(X, Y, salt)
         const low = Y > cy + ry * 0.35
         let col = lit > 0.95 ? (n < 0.5 ? pal.hi : pal.lt) : lit > 0.15 ? (n < 0.4 ? pal.lt : pal.md) : lit < -0.75 ? pal.dk : n < 0.22 ? pal.dk : pal.md
         if (low && col === pal.lt) col = pal.md
@@ -154,7 +131,7 @@ function trunk(c: C, cx: number, top: number, base: number, w: number, bark: Bar
     const x1 = Math.round(cx + w / 2) - 1 + f
     for (let x = x0; x <= x1; x++) {
       const t = (x - x0) / Math.max(1, x1 - x0)
-      const n = h01(x, y, 3)
+      const n = hash01(x, y, 3)
       px(c, x, y, t < 0.25 ? (n < 0.3 ? bark.hi : bark.lt) : t < 0.65 ? (n < 0.25 ? bark.dk : bark.md) : n < 0.3 ? bark.xd : bark.dk)
     }
   }
@@ -209,7 +186,7 @@ const drawPine: Draw = (c, rnd, w, h, v) => {
       const hw = ((y - y0) / Math.max(1, y1 - y0)) * hwMax + 0.5
       for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
         const rel = (x - cx) / Math.max(1, hw)
-        const n = h01(x, y, v + 7)
+        const n = hash01(x, y, v + 7)
         if (y === y1 && n < 0.45) continue
         const col = rel < -0.45 ? (n < 0.4 ? P.pine.hi : P.pine.lt) : rel < 0.25 ? (n < 0.3 ? P.pine.lt : P.pine.md) : rel < 0.7 ? P.pine.dk : P.pine.xd
         px(c, x, y, y >= y1 - 1 && col !== P.pine.xd ? P.pine.dk : col)
@@ -229,9 +206,9 @@ const drawBirch: Draw = (c, rnd, w, h, v) => {
     px(c, cx - 1, y, BIRCH_BARK.hi)
     px(c, cx, y, BIRCH_BARK.lt)
     px(c, cx + 1, y, BIRCH_BARK.dk)
-    if (h01(cx, y, v) < 0.22) {
+    if (hash01(cx, y, v) < 0.22) {
       px(c, cx, y, BIRCH_BARK.mark)
-      if (h01(cx, y, v + 1) < 0.5) px(c, cx - 1, y, BIRCH_BARK.mark)
+      if (hash01(cx, y, v + 1) < 0.5) px(c, cx - 1, y, BIRCH_BARK.mark)
     }
   }
   crown(c, rnd, cx + 0.5, 10, w / 2 - 3, 8, 3, 4.5, 6, P.birch, v + 20)
@@ -250,7 +227,7 @@ const drawSnag: Draw = (c, rnd, w, h, v) => {
     px(c, cx - 1, y, BIRCH_BARK.lt)
     px(c, cx, y, BIRCH_BARK.md)
     px(c, cx + 1, y, BIRCH_BARK.dk)
-    if (h01(cx, y, v + 5) < 0.25) px(c, cx, y, BIRCH_BARK.mark)
+    if (hash01(cx, y, v + 5) < 0.25) px(c, cx, y, BIRCH_BARK.mark)
   }
   // Jagged break at the top.
   px(c, cx - 1, top - 1, BIRCH_BARK.md)
@@ -342,7 +319,7 @@ const drawLog: Draw = (c, _rnd, w, h, v) => {
   px(c, w - 4, y0 + 1, WOOD.ring)
   px(c, w - 4, y0 + 5, WOOD.ring)
   // Moss along the top, a broken branch stub, turncaps on the old wood.
-  for (let x = 4; x < w - 8; x++) if (h01(x, 1, v) < 0.55) px(c, x, y0, h01(x, 2, v) < 0.5 ? P.moss.lt : P.moss.md)
+  for (let x = 4; x < w - 8; x++) if (hash01(x, 1, v) < 0.55) px(c, x, y0, hash01(x, 2, v) < 0.5 ? P.moss.lt : P.moss.md)
   px(c, 9, y0 - 1, BARK.md)
   px(c, 8, y0 - 2, BARK.dk)
   if (v % 2 === 0) {
@@ -368,8 +345,8 @@ const drawBoulder: Draw = (c, _rnd, w, h, v) => {
   // A moss cap.
   for (let x = -5; x <= 4; x++) {
     const top = cy - 5 + Math.round(Math.abs(x) * 0.35)
-    const deep = 1 + (h01(x, 0, v) < 0.5 ? 1 : 0)
-    for (let y = top; y < top + deep; y++) px(c, cx + x, y, h01(x, y, v) < 0.5 ? P.moss.lt : P.moss.md)
+    const deep = 1 + (hash01(x, 0, v) < 0.5 ? 1 : 0)
+    for (let y = top; y < top + deep; y++) px(c, cx + x, y, hash01(x, y, v) < 0.5 ? P.moss.lt : P.moss.md)
     if (x < -1) px(c, cx + x, top, P.moss.hi)
   }
   outline(c, w, h)
@@ -422,7 +399,7 @@ const drawFern: Draw = (c, _rnd, w, h, v) => {
 const drawGrass: Draw = (c, _rnd, _w, h, v) => {
   const blades: [number, number][] = [[1, 5], [3, 7], [5, 6], [7, 8], [9, 5]]
   for (const [x, hgt] of blades) {
-    const lean = h01(x, hgt, v) < 0.5 ? -1 : 1
+    const lean = hash01(x, hgt, v) < 0.5 ? -1 : 1
     for (let i = 0; i < hgt; i++) px(c, x + (i > hgt - 3 ? lean : 0), h - 1 - i, i > hgt - 3 ? P.moss.hi : i < 2 ? P.moss.dk : P.moss.lt)
   }
 }
@@ -467,7 +444,7 @@ const drawRoots: Draw = (c, _rnd, w, h, v) => {
     for (let y = 0; y < h - 2 - s * 2; y++) {
       px(c, x, y, y < 3 ? BARK.md : BARK.dk)
       if (y < 4) px(c, x + 1, y, BARK.xd)
-      if (h01(s, y, v) < 0.35) x += s === 0 ? -1 : s === 2 ? 1 : h01(y, s, v) < 0.5 ? -1 : 1
+      if (hash01(s, y, v) < 0.35) x += s === 0 ? -1 : s === 2 ? 1 : hash01(y, s, v) < 0.5 ? -1 : 1
       x = Math.max(0, Math.min(w - 1, x))
     }
   }
@@ -476,8 +453,8 @@ const drawRoots: Draw = (c, _rnd, w, h, v) => {
 const drawLitter: Draw = (c, _rnd, w, h, v) => {
   const cols = ['#a8642e', '#c48a3c', '#7a4a26', '#d8a050']
   for (let i = 0; i < 9; i++) {
-    const x = Math.floor(h01(i, 1, v) * (w - 2)) + 1
-    const y = Math.floor(h01(i, 2, v) * (h - 2)) + 1
+    const x = Math.floor(hash01(i, 1, v) * (w - 2)) + 1
+    const y = Math.floor(hash01(i, 2, v) * (h - 2)) + 1
     const col = cols[i % cols.length]
     px(c, x, y, col)
     if (i % 3 === 0) px(c, x + 1, y, col)
@@ -488,8 +465,8 @@ const drawLitter: Draw = (c, _rnd, w, h, v) => {
 
 const drawPebbles: Draw = (c, _rnd, w, h, v) => {
   for (let i = 0; i < 4; i++) {
-    const x = 1 + Math.floor(h01(i, 3, v) * (w - 3))
-    const y = 1 + Math.floor(h01(i, 4, v) * (h - 3))
+    const x = 1 + Math.floor(hash01(i, 3, v) * (w - 3))
+    const y = 1 + Math.floor(hash01(i, 4, v) * (h - 3))
     px(c, x, y, STONE.lt)
     px(c, x + 1, y, STONE.md)
     px(c, x, y + 1, STONE.dk)
@@ -500,7 +477,7 @@ const drawReeds: Draw = (c, _rnd, w, h, v) => {
   // Reeds at the water's edge: tall blades, a few bulrush heads.
   const stems: [number, number][] = v % 2 ? [[2, 10], [4, 13], [6, 9], [8, 12], [11, 10]] : [[1, 9], [3, 12], [6, 13], [9, 10], [12, 11]]
   for (const [x, hgt] of stems) {
-    const lean = h01(x, hgt, v) < 0.5 ? -1 : 1
+    const lean = hash01(x, hgt, v) < 0.5 ? -1 : 1
     for (let i = 0; i < hgt; i++) px(c, x + (i > hgt - 4 ? lean : 0), h - 1 - i, i > hgt - 3 ? P.moss.hi : i < 3 ? P.moss.dk : P.moss.md)
     if (hgt >= 12) {
       rect(c, x + lean, h - hgt - 1, 1, 3, P.reedHead)
@@ -577,7 +554,7 @@ export function ensureTangleAtlas(scene: Phaser.Scene, key: string): boolean {
       const c = piece.getContext('2d', { willReadFrequently: true })!
       c.imageSmoothingEnabled = false
       const name = tangleFrame(kind, v)
-      if (!drawDelivered(scene, c, kind, v, w, h, key)) DRAW[kind](c, seeded(strHash(name)), w, h, v)
+      if (!drawDelivered(scene, c, kind, v, w, h, key)) DRAW[kind](c, rng01(fnv1a32(name)), w, h, v)
       const x = pad + v * (w + pad)
       ac.drawImage(piece, x, y)
       frames.push([name, x, y, w, h])
@@ -621,7 +598,7 @@ export function buildTangleGround(scene: Phaser.Scene, world: WorldData): void {
   const oy = MARGIN_Y * S
   const cw = (W + 2 * MARGIN_X) * S
   const chh = (H + 2 * MARGIN_Y) * S
-  const seed = strHash(world.areaId)
+  const seed = fnv1a32(world.areaId)
   const warpA = valueNoise(seed ^ 0x9e3779b9)
   const warpB = valueNoise(seed ^ 0x7f4a7c15)
   const shadeN = valueNoise(seed ^ 0x1b873593)
@@ -681,8 +658,8 @@ export function buildTangleGround(scene: Phaser.Scene, world: WorldData): void {
       const wx = px0 - ox
       const wy = py - oy
       // Ragged edges: look the category up through a wobbly lens.
-      const jx = (warpA(wx / 7, wy / 7) - 0.5) * 7 + (h01(wx, wy, 1) - 0.5) * 1.5
-      const jy = (warpB(wx / 7, wy / 7) - 0.5) * 7 + (h01(wx, wy, 2) - 0.5) * 1.5
+      const jx = (warpA(wx / 7, wy / 7) - 0.5) * 7 + (hash01(wx, wy, 1) - 0.5) * 1.5
+      const jy = (warpB(wx / 7, wy / 7) - 0.5) * 7 + (hash01(wx, wy, 2) - 0.5) * 1.5
       const tx = Math.floor((wx + jx) / S)
       const ty = Math.floor((wy + jy) / S)
       let cat = catAt(tx, ty)
@@ -700,7 +677,7 @@ export function buildTangleGround(scene: Phaser.Scene, world: WorldData): void {
         if (trail > 0.5) cat = 'path'
       }
       const ramp = G[cat]
-      const n = h01(wx, wy, 5)
+      const n = hash01(wx, wy, 5)
       // Base tone: a soft low-frequency wash plus per-pixel grain.
       let level = 1.6 + (shadeN(wx / 18, wy / 18) - 0.5) * 2.2 + (n - 0.5) * (cat === 'woods' ? 0.9 : 0.5)
       if (cat !== 'woods') {
@@ -714,11 +691,11 @@ export function buildTangleGround(scene: Phaser.Scene, world: WorldData): void {
 
       if (cat === 'woods') {
         // Leaf litter lies in drifts, not as even speckle.
-        if (n < 0.35 && litter(wx / 6, wy / 6) > G.litterAmount) col = G.litter[Math.floor(h01(wx, wy, 6) * G.litter.length)]
-        else if (n > 0.95) col = G.mossFleck[Math.floor(h01(wx, wy, 7) * G.mossFleck.length)]
+        if (n < 0.35 && litter(wx / 6, wy / 6) > G.litterAmount) col = G.litter[Math.floor(hash01(wx, wy, 6) * G.litter.length)]
+        else if (n > 0.95) col = G.mossFleck[Math.floor(hash01(wx, wy, 7) * G.mossFleck.length)]
       } else if (cat === 'moss') {
-        if (n > 0.96) col = G.grassFleck[Math.floor(h01(wx, wy, 8) * G.grassFleck.length)]
-        else if (n < 0.2 && litter(wx / 6, wy / 6) > G.litterAmount + 0.1) col = G.litter[Math.floor(h01(wx, wy, 6) * G.litter.length)]
+        if (n > 0.96) col = G.grassFleck[Math.floor(hash01(wx, wy, 8) * G.grassFleck.length)]
+        else if (n < 0.2 && litter(wx / 6, wy / 6) > G.litterAmount + 0.1) col = G.litter[Math.floor(hash01(wx, wy, 6) * G.litter.length)]
       } else if (cat === 'path' || cat === 'trodden') {
         // Moss creeps in at the trail's edge; pebbles and ruts on the tread.
         if (cat === 'path' && trail < 0.57 && n < 0.5) col = G.moss[Math.max(0, Math.min(5, Math.round(level)))]
@@ -733,7 +710,7 @@ export function buildTangleGround(scene: Phaser.Scene, world: WorldData): void {
         const o = openAt(wx, wy)
         const t = Math.round(1.5 + (shadeN(wx / 9, wy / 9) - 0.5) * 2 + o * 1.5 + (bayer(wx, wy) - 0.5) * 0.6)
         col = G.water[Math.max(0, Math.min(G.water.length - 2, t))]
-        if (h01(Math.floor(wx / 4), wy, 21) < 0.08 && wy % 3 === 0) col = G.water[G.water.length - 1]
+        if (hash01(Math.floor(wx / 4), wy, 21) < 0.08 && wy % 3 === 0) col = G.water[G.water.length - 1]
       }
       // The white quiet: pale drifts lying across the outer Wilds.
       if (G.mist && cat !== 'water') {
@@ -769,11 +746,11 @@ function cobble(wx: number, wy: number, level: number, G: GroundPalette): RGB | 
   const col = Math.floor((wx + shift) / 6)
   const cx = (wx + shift) - col * 6
   const cy = wy - row * 5
-  if (h01(col, row, 11) < 0.3) return null
-  if (cx === 0 || cy === 0) return h01(wx, wy, 12) < 0.7 ? G.jointMoss[Math.floor(h01(wx, wy, 13) * 2)] : G.mortar
+  if (hash01(col, row, 11) < 0.3) return null
+  if (cx === 0 || cy === 0) return hash01(wx, wy, 12) < 0.7 ? G.jointMoss[Math.floor(hash01(wx, wy, 13) * 2)] : G.mortar
   // Moss grown over part of a stone.
-  if (h01(col, row, 15) < 0.25 && h01(wx, wy, 16) < 0.6) return G.jointMoss[Math.floor(h01(wx, wy, 17) * 2)]
-  const tone = Math.round(level - 1 + (h01(col, row, 14) - 0.5) * 2 + (cy === 1 ? 1 : cy === 4 ? -1 : 0))
+  if (hash01(col, row, 15) < 0.25 && hash01(wx, wy, 16) < 0.6) return G.jointMoss[Math.floor(hash01(wx, wy, 17) * 2)]
+  const tone = Math.round(level - 1 + (hash01(col, row, 14) - 0.5) * 2 + (cy === 1 ? 1 : cy === 4 ? -1 : 0))
   return G.road[Math.max(0, Math.min(G.road.length - 1, tone))]
 }
 
@@ -799,7 +776,7 @@ const outsideExit = (world: WorldData, tx: number, ty: number): boolean => exitC
 const MARGIN_KINDS: DecorKind[] = ['oak', 'oak', 'oak', 'pine', 'pine', 'iron-oak', 'birch', 'thicket']
 
 function paintMarginTrees(scene: Phaser.Scene, ctx: C, world: WorldData, seed: number, atlasKey: string): void {
-  const rnd = seeded(seed ^ 0x51ed270b)
+  const rnd = rng01(seed ^ 0x51ed270b)
   const W = world.width
   const H = world.height
   const spots: { kind: DecorKind; x: number; y: number; v: number; flip: boolean }[] = []
@@ -809,7 +786,7 @@ function paintMarginTrees(scene: Phaser.Scene, ctx: C, world: WorldData, seed: n
       if (outsideExit(world, tx, ty) || outsideExit(world, tx - 1, ty) || outsideExit(world, tx + 1, ty) || outsideExit(world, tx, ty - 1)) continue
       if (rnd() < 0.12) continue
       const kind = MARGIN_KINDS[Math.floor(rnd() * MARGIN_KINDS.length)]
-      spots.push({ kind, x: tx * TILE + 8 + Math.round((rnd() - 0.5) * 8), y: (ty + 1) * TILE - Math.round(rnd() * 4), v: Math.floor(rnd() * TANGLE_VARIANTS), flip: rnd() < 0.5 })
+      spots.push({ kind, x: tileMid(tx) + Math.round((rnd() - 0.5) * 8), y: tileBottom(ty) - Math.round(rnd() * 4), v: Math.floor(rnd() * TANGLE_VARIANTS), flip: rnd() < 0.5 })
     }
   }
   spots.sort((a, b) => a.y - b.y)

@@ -6,7 +6,7 @@ import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { buildLand, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
-import { TILE } from '../src/game/textures.ts';
+import { TILE } from '../src/lib/tile.ts';
 
 type Tile = { tx: number; ty: number };
 const key = (t: Tile) => `${t.tx},${t.ty}`;

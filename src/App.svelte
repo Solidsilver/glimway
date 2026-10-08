@@ -4,6 +4,7 @@
   import {
     bus,
     EV,
+    listen,
     type AbilityPayload,
     type AreaPayload,
     type CinematicPayload,
@@ -25,7 +26,7 @@
   import { clearSave, loadSaveRecord } from './lib/save'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
-  import { RESIDENT_EV, type ResidentsMetPayload } from './game/residents'
+  import { type ResidentsMetPayload } from './game/residents'
   import { uiState } from './game/input'
   import { sfx, unlockAudio } from './game/sfx'
   import { isTouchFirst } from './ui/device'
@@ -33,8 +34,7 @@
   import DialoguePanel from './ui/DialoguePanel.svelte'
   import JournalPanel from './ui/JournalPanel.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
-  import { PAPER_EV } from './game/papers'
-  import { HOME_EV, homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
+  import { homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
@@ -46,7 +46,7 @@
   import WoodpilePanel from './ui/WoodpilePanel.svelte'
   import GateShelfPanel from './ui/GateShelfPanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
-  import { VILLAGE_EV, villageFor, type VillagePanel } from './game/village'
+  import { villageFor, type VillagePanel } from './game/village'
   import { villageUi } from './ui/village.svelte'
   import HomeBar from './ui/HomeBar.svelte'
   import CharacterPanel from './ui/CharacterPanel.svelte'
@@ -211,7 +211,7 @@
       const beat = QUEST_BEATS[p.stage as QuestStage]
       if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.short ?? p.objective })
     }
-    const onArea = (p: AreaPayload) => {
+    const onArea = (p: Pick<AreaPayload, 'areaId'>) => {
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       // A homestead's land and its cottage announce themselves (whose place, in words).
@@ -293,6 +293,9 @@
         .then((snap) => afterMove(snap, worldCopy.landed))
         .catch(() => ui.toast({ text: worldCopy.landed, icon: 'world' }))
     }
+    const onUnmoored = (p: { active: boolean }) => {
+      ui.unmoored = p.active
+    }
     const onLinkNotice = () => {
       ui.linkNotice = 'played-elsewhere'
     }
@@ -339,42 +342,39 @@
       if (/^home:\d+$/.test(ui.area.areaId) || ui.area.areaId === 'cottage') ui.area = { ...ui.area, name: v.title }
       if (firstVisit(v.key)) ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
     }
-    const pairs: [string, (...args: never[]) => void][] = [
-      [EV.stats, onStats],
-      [EV.quest, onQuest],
-      [EV.area, onArea],
-      [EV.prompt, onPrompt],
-      [EV.goalDir, onGoalDir],
-      [EV.toast, onToast],
-      [EV.defeat, onDefeat],
-      [EV.ability, onAbility],
-      [EV.rolled, onRolled],
-      [EV.cinematic, onCinematic],
-      [EV.portraits, onPortraits],
-      [RESIDENT_EV.met, onResidentsMet],
-      [EV.artIcons, onArtIcons],
-      [EV.discovery, onDiscovery],
-      [EV.link, onLink],
-      [EV.presence, onPresence],
-      [EV.linkNotice, onLinkNotice],
-      [EV.mutationResolved, onResolved],
-      [EV.wilds, onWilds],
-      [PAPER_EV.openLibrary, onOpenLibrary],
-      [HOME_EV.openShop, onOpenShop],
-      [HOME_EV.arrange, onArrange],
-      [HOME_EV.placement, onPlacement],
-      [HOME_EV.thumbs, onThumbs],
-      [HOME_EV.namePrompt, onNamePrompt],
-      [HOME_EV.confirmLeave, onConfirmLeave],
-      [HOME_EV.goal, onHomeGoal],
-      [HOME_EV.room, onRoom],
-      [VILLAGE_EV.open, onVillageOpen],
-      [VILLAGE_EV.changed, onVillageChanged]
-    ]
-    for (const [ev, fn] of pairs) bus.on(ev, fn)
-    return () => {
-      for (const [ev, fn] of pairs) bus.off(ev, fn)
-    }
+    return listen({
+      [EV.stats]: onStats,
+      [EV.quest]: onQuest,
+      [EV.area]: onArea,
+      [EV.prompt]: onPrompt,
+      [EV.goalDir]: onGoalDir,
+      [EV.toast]: onToast,
+      [EV.defeat]: onDefeat,
+      [EV.ability]: onAbility,
+      [EV.rolled]: onRolled,
+      [EV.cinematic]: onCinematic,
+      [EV.portraits]: onPortraits,
+      [EV.residentsMet]: onResidentsMet,
+      [EV.artIcons]: onArtIcons,
+      [EV.discovery]: onDiscovery,
+      [EV.link]: onLink,
+      [EV.presence]: onPresence,
+      [EV.linkNotice]: onLinkNotice,
+      [EV.unmoored]: onUnmoored,
+      [EV.mutationResolved]: onResolved,
+      [EV.wilds]: onWilds,
+      [EV.libraryOpen]: onOpenLibrary,
+      [EV.homeShop]: onOpenShop,
+      [EV.homeArrange]: onArrange,
+      [EV.homePlacement]: onPlacement,
+      [EV.homeThumbs]: onThumbs,
+      [EV.homeNamePrompt]: onNamePrompt,
+      [EV.homeConfirmLeave]: onConfirmLeave,
+      [EV.homeGoal]: onHomeGoal,
+      [EV.homeRoom]: onRoom,
+      [EV.villageOpen]: onVillageOpen,
+      [EV.villageChanged]: onVillageChanged
+    })
   }
   /** The action button's word for a prompt without one: its first word ("Pick up" keeps its particle). */
   function verbOf(label: string): string {
@@ -1535,11 +1535,11 @@
       max={home.namePrompt.max}
       onName={(name) => {
         home.namePrompt = null
-        bus.emit(HOME_EV.named, { name })
+        bus.emit(EV.homeNamed, { name })
       }}
       onCancel={() => {
         home.namePrompt = null
-        bus.emit(HOME_EV.named, { name: null })
+        bus.emit(EV.homeNamed, { name: null })
       }}
     />
   {/if}
@@ -1554,7 +1554,7 @@
       danger
       onConfirm={() => {
         home.leaveAsk = null
-        bus.emit(HOME_EV.action, { action: 'home:leave-confirmed' })
+        bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
       }}
       onCancel={() => (home.leaveAsk = null)}
     />

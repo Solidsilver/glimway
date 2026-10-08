@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { bus } from '../game/events'
-  import { HOME_EV, type PlacementCommand } from '../game/homestead'
+  import { bus, EV } from '../game/events'
+  import { type PlacementCommand } from '../game/homestead'
   import { isTouchFirst } from './device'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
@@ -19,7 +19,7 @@
   } = $props()
 
   const touch = isTouchFirst()
-  const send = (c: PlacementCommand) => bus.emit(HOME_EV.command, c)
+  const send = (c: PlacementCommand) => bus.emit(EV.homeCommand, c)
   const p = $derived(home.placement)
   const selected = $derived(p?.items.find((i) => i.id === p.selected) ?? null)
   const here = $derived(p ? p.items.filter((i) => i.fits) : [])
@@ -135,7 +135,7 @@
     {/if}
   </div>
 {:else if showArrange}
-  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
+  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit(EV.homeArrangeToggle)} data-testid="arrange">
     <Icon name="home" size={16} /> Arrange{#if !touch}<span class="kbd">B</span>{/if}
   </button>
 {/if}
@@ -144,7 +144,7 @@
   onkeydown={(e) => {
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
-    if (e.code === 'KeyB' && !home.placement && home.arrange.available && !hidden) bus.emit('game:home-arrange')
+    if (e.code === 'KeyB' && !home.placement && home.arrange.available && !hidden) bus.emit(EV.homeArrangeToggle)
   }}
 />
 

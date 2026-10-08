@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { ITEMS_EV, giftPhrase, itemErrorText, itemsFor } from '../game/items'
+  import { villageFor } from '../game/village'
+  import { homesteadsFor } from '../game/homestead'
+  import { giftPhrase, itemErrorText, itemsFor } from '../game/items'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
   import { assetOf, costLine, fitTargets, inventoryEntries, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
@@ -84,9 +84,9 @@
 
   onMount(() => {
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
-    bus.on(HOME_EV.changed, bump)
-    bus.on(ITEMS_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
+    bus.on(EV.homeChanged, bump)
+    bus.on(EV.itemsChanged, bump)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces. Offline,
     // what's known shows.
@@ -102,9 +102,9 @@
     if (headEl) ro.observe(headEl)
     return () => {
       ro.disconnect()
-      bus.off(VILLAGE_EV.changed, bump)
-      bus.off(HOME_EV.changed, bump)
-      bus.off(ITEMS_EV.changed, bump)
+      bus.off(EV.villageChanged, bump)
+      bus.off(EV.homeChanged, bump)
+      bus.off(EV.itemsChanged, bump)
       // Everything carried was on screen (the bag opens on All): seen now.
       markTab('all')
     }

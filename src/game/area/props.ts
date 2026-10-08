@@ -5,22 +5,21 @@
  * sprites (the woods' pieces) come back by tile so gathering can fell them.
  */
 import type Phaser from 'phaser'
-import { TILE } from '../textures'
+import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
 import type { LightProp } from './lanterns'
 import { ensureSceneryTexture } from '../commons-art'
 import { solidBox } from './collision'
 import { addAll, looseImage } from './bulk'
 import { ensureTangleAtlas } from '../wilds/tangle-art'
-import { ensureMillTexture } from '../mill-art'
 
 /**
- * Code-drawn scenery textures: the Commons' runs, the Tangle's woods, the
- * Tolley mill; or a texture already loaded (an item's own art, for a
- * planted sapling).
+ * Code-drawn scenery textures: the Commons' runs, the Tangle's woods; or a
+ * texture already loaded (the Tolley mill's, from the items pass; an item's
+ * own art, for a planted sapling).
  */
 export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
-  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || ensureMillTexture(scene, key) || scene.textures.exists(key)
+  return ensureSceneryTexture(scene, key) || ensureTangleAtlas(scene, key) || scene.textures.exists(key)
 }
 
 export interface PropsBuilt {
@@ -37,34 +36,34 @@ export function buildProps(
   const lightProps: LightProp[] = []
   const sprites = new Map<string, Phaser.GameObjects.Image[]>()
   const keep = (tx: number, ty: number, img: Phaser.GameObjects.Image) => {
-    const key = `${tx},${ty}`
+    const key = tileKey(tx, ty)
     const list = sprites.get(key) ?? []
     list.push(img)
     sprites.set(key, list)
   }
   // Trees by the thousand in the Commons: added in one go (./bulk.ts).
   const trees = world.trees.map((t) => {
-    const img = looseImage(scene, t.tx * TILE + 8, t.ty * TILE + TILE, 'tree').setOrigin(0.5, 1)
+    const img = looseImage(scene, tileMid(t.tx), tileBottom(t.ty), 'tree').setOrigin(0.5, 1)
     keep(t.tx, t.ty, img)
     return img
   })
   addAll(scene, trees)
   for (const b of world.bushes) {
-    scene.add.image(b.tx * TILE + 8, b.ty * TILE + TILE, 'bush').setOrigin(0.5, 1).setDepth(b.ty * TILE + TILE)
+    scene.add.image(tileMid(b.tx), tileBottom(b.ty), 'bush').setOrigin(0.5, 1).setDepth(tileBottom(b.ty))
   }
   for (const r of world.rocks) {
-    keep(r.tx, r.ty, scene.add.image(r.tx * TILE + 8, r.ty * TILE + TILE, 'rock').setOrigin(0.5, 1).setDepth(r.ty * TILE + TILE))
+    keep(r.tx, r.ty, scene.add.image(tileMid(r.tx), tileBottom(r.ty), 'rock').setOrigin(0.5, 1).setDepth(tileBottom(r.ty)))
   }
   if (world.well) {
     const w = world.well
-    scene.add.image(w.tx * TILE + 6, w.ty * TILE + TILE, 'well').setOrigin(0.5, 1).setDepth(w.ty * TILE + TILE)
+    scene.add.image(w.tx * TILE + 6, tileBottom(w.ty), 'well').setOrigin(0.5, 1).setDepth(tileBottom(w.ty))
   }
   // The ruin's route marker is the quest's clue: it needs a visible stone
   // (it used to be an invisible interactable on a bare wall).
   if (world.mural) {
     const m = world.mural
-    const x = m.tx * TILE + 8
-    const y = m.ty * TILE + TILE
+    const x = tileMid(m.tx)
+    const y = tileBottom(m.ty)
     const props = scene.textures.get('fingersnap-props')
     if (props.has('stone-milestone')) {
       const f = props.get('stone-milestone')!
@@ -79,8 +78,8 @@ export function buildProps(
     if (!scene.textures.get('fingersnap-props').has(p.frame)) continue
     const frame = scene.textures.get('fingersnap-props').get(p.frame)!
     const scale = p.h / frame.height
-    const x = p.tx * TILE + TILE / 2
-    const y = p.ty * TILE + TILE
+    const x = tileMid(p.tx)
+    const y = tileBottom(p.ty)
     const img = scene.add.image(x, y, 'fingersnap-props', p.frame)
       .setOrigin(0.5, 1)
       .setScale(scale)

@@ -63,48 +63,6 @@ export function createGlimwayAnimations(scene: Phaser.Scene): void {
 }
 
 /**
- * The generator produced a 1254px sheet, not an evenly divisible 4x4 grid.
- * Named atlas rectangles are authoritative. Construct a uniform tileset for
- * Phaser rather than treating the PNG as 32px source cells. The build bakes
- * that tileset (scripts/build-atlases.ts) and it loads under the runtime key,
- * so this returns it; it only builds one from a loaded `fingersnap-terrain`
- * source atlas (none ships). Null when neither is there.
- */
-export function createGlimwayTerrain(
-  scene: Phaser.Scene,
-  tileSize: number = 32,
-): Phaser.Textures.Texture | null {
-  const manifest = scene.cache.json.get(
-    'glimway-expansion-manifest',
-  ) as GlimwayExpansionManifest | undefined
-  const key = manifest?.terrain.runtimeTexture ?? 'fingersnap-terrain-runtime'
-  if (scene.textures.exists(key)) return scene.textures.get(key)
-  if (!manifest || !scene.textures.exists('fingersnap-terrain')) return null
-  const output = scene.textures.createCanvas(key, tileSize * 4, tileSize * 4)
-  if (!output) throw new Error('Could not create Glimway terrain texture')
-  const context = output.context
-  context.imageSmoothingEnabled = false
-  const source = scene.textures.get('fingersnap-terrain')
-  for (let index = 0; index < 16; index++) {
-    const name = manifest.terrain.tiles[index]
-    const frame = source.get(name)
-    context.drawImage(
-      frame.source.image as CanvasImageSource,
-      frame.cutX,
-      frame.cutY,
-      frame.cutWidth,
-      frame.cutHeight,
-      (index % 4) * tileSize,
-      Math.floor(index / 4) * tileSize,
-      tileSize,
-      tileSize,
-    )
-  }
-  output.refresh()
-  return output
-}
-
-/**
  * Occluder texture origins depend on where they attach in the world. Keep
  * canopy depth anchored to its trunk/ground footpoint, not its top-left
  * corner. `addToScene` false leaves it off the display list (the caller

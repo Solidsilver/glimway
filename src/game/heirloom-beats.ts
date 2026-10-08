@@ -11,10 +11,10 @@
  * axe (playtest 1).
  */
 import { bus, EV, type DialogueChoice } from './events'
-import { uiState } from './input'
 import type { Session } from './session'
 import { itemsFor } from './items'
 import { HEIRLOOMS, heirloomReadiness, heirloomRefusalFor, heirloomRefusalLine, type HeirloomContext, type HeirloomId } from '../content/heirlooms'
+import { openDialogue } from './dialogue'
 
 /** What the server will see for a grant now: the save, with where the hero stands written in. */
 export function heirloomContext(session: Session, id: HeirloomId, worldFlags: readonly string[] = []): HeirloomContext {
@@ -52,6 +52,5 @@ export function heirloomBeat(session: Session, id: HeirloomId, take: string, wor
 /** The giver answers a refused grant in the conversation (not a toast). */
 export function sayHeirloomRefusal(id: HeirloomId, code: string): void {
   const { speaker, line } = heirloomRefusalLine(id, heirloomRefusalFor(code))
-  uiState.dialogueOpen = true
-  bus.emit(EV.dialogue, { id: `heirloom-refused:${id}`, speaker, lines: [line] })
+  openDialogue({ id: `heirloom-refused:${id}`, speaker, lines: [line] }, { sound: null })
 }

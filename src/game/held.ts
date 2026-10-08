@@ -5,11 +5,11 @@
  * `heldNow()`, and the UI (the action bar, the phone ring, the bag) follows
  * EV.held { kind, belt }.
  */
-import { bus, EV } from './events'
-import { BELT_ORDER, beltFor, heldSlot, type BeltKind, type BeltSlot } from '../lib/belt'
-import { ITEMS_EV, itemsFor } from './items'
-import type { Session } from './session'
-import { expose } from './dev-hooks'
+import { bus, EV } from './events.ts'
+import { BELT_ORDER, beltFor, heldSlot, type BeltKind, type BeltSlot } from '../lib/belt.ts'
+import { itemsFor } from './items.ts'
+import type { Session } from './session.ts'
+import { expose } from './dev-hooks.ts'
 
 /** One choice per player and world on this device (a guest has its own). */
 // `fingersnap:` is the game's old name, kept so saved choices load.
@@ -78,9 +78,9 @@ export function trackBelt(session: Session): () => void {
     held.kind = load()
   }
   const onChanged = () => refreshBelt(session)
-  bus.on(ITEMS_EV.changed, onChanged)
+  bus.on(EV.itemsChanged, onChanged)
   refreshBelt(session)
-  return () => bus.off(ITEMS_EV.changed, onChanged)
+  return () => bus.off(EV.itemsChanged, onChanged)
 }
 
 // The UI takes something in hand (the phone ring, the action bar).

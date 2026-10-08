@@ -11,8 +11,8 @@
 import type Phaser from 'phaser'
 import { offHandTuck } from '../../lib/items'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
-import { ITEMS_EV, itemsFor } from '../items'
-import { bus } from '../events'
+import { itemsFor } from '../items'
+import { bus, EV } from '../events'
 import type { Session } from '../session'
 import type { Hero } from './hero'
 import type { AvatarVisual } from './avatar'
@@ -25,9 +25,9 @@ export class OffHandVisual {
 
   constructor(private scene: Phaser.Scene, private session: Session, private hero: () => Hero, private avatar: () => AvatarVisual | null = () => null) {
     const refresh = () => this.refresh()
-    bus.on(ITEMS_EV.changed, refresh)
+    bus.on(EV.itemsChanged, refresh)
     scene.events.once('shutdown', () => {
-      bus.off(ITEMS_EV.changed, refresh)
+      bus.off(EV.itemsChanged, refresh)
       this.image?.destroy()
       this.image = null
     })

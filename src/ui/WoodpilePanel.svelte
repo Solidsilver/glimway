@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { countOf } from '../lib/village'
   import type { WoodpileView } from '../lib/api/types'
   import { focusTrap } from './focus'
@@ -26,7 +26,7 @@
 
   onMount(() => {
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
     const reread = async (): Promise<void> => {
       const r = await village.loadWoodpile()
       if (r.ok) {
@@ -38,7 +38,7 @@
     // The seasoning clock ticks in real days; refresh now and then while open.
     timer = setInterval(() => void reread(), 30_000)
     return () => {
-      bus.off(VILLAGE_EV.changed, bump)
+      bus.off(EV.villageChanged, bump)
       if (timer) clearInterval(timer)
     }
   })

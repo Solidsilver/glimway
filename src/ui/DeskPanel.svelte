@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { countOf } from '../lib/village'
   import { itemDef, itemName } from '../lib/items'
   import { focusTrap } from './focus'
@@ -24,11 +24,11 @@
 
   onMount(() => {
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
     void village.loadStorage().then((r) => {
       loaded = r.ok ? 'ready' : 'loading'
     })
-    return () => bus.off(VILLAGE_EV.changed, bump)
+    return () => bus.off(EV.villageChanged, bump)
   })
 
   /** The recipe pages you carry, by item id. */

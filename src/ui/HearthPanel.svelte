@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { batchesAffordable, costPhrase, effectiveBatches, recipeCost } from '../lib/village'
   import { HEARTH_RECIPES } from '../lib/workshop'
   import type { Asset } from '../lib/api/types'
@@ -25,9 +25,9 @@
 
   onMount(() => {
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
     void village.loadStorage()
-    return () => bus.off(VILLAGE_EV.changed, bump)
+    return () => bus.off(EV.villageChanged, bump)
   })
 
   const carried = $derived.by(() => {

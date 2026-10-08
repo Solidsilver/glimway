@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Session } from '../game/session'
-  import { HOME_EV, SILAS, homesteadsFor } from '../game/homestead'
-  import { bus } from '../game/events'
+  import { SILAS, homesteadsFor } from '../game/homestead'
+  import { bus, EV } from '../game/events'
   import { HOMESTEAD_DATA, type HomeItem } from '../lib/homestead'
   import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
   import { MATERIALS } from '../content/expansion-writing'
@@ -11,7 +11,7 @@
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import { home } from './home.svelte'
-  import { workshopShort } from '../game/entities/homesteads'
+  import { workshopShort } from '../lib/village'
   import { costPhrase } from '../lib/village'
 
   // Silas's yard: the cottage, and the pieces he has finished. Prices come
@@ -25,8 +25,8 @@
 
   $effect(() => {
     const bump = () => (version += 1)
-    bus.on(HOME_EV.changed, bump)
-    return () => bus.off(HOME_EV.changed, bump)
+    bus.on(EV.homeChanged, bump)
+    return () => bus.off(EV.homeChanged, bump)
   })
 
   const blurb = (id: string) => [...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''

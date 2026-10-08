@@ -1,6 +1,7 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, resampleFor, setDensity } from './density.ts'
+import { addArtCanvas, artCanvas, artDataUrl, artSource, drawArt } from './density.ts'
+import { explodeFrames, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
 
 /**
  * Typed port and loader module for `assets/generated/items-pass/`:
@@ -13,9 +14,9 @@ import { addArtCanvas, artCanvas, artDataUrl, artDensity, artSource, drawArt, re
  * Each frame becomes one canvas texture under `items-art:<frame>`, copied
  * from the packed atlas at the art density and drawn at its native world
  * size (./density.ts). Tool conditions and item
- * variants are discrete states (never looping animations). Loops are only
- * created for the three authored mill animations: `mill-wheel`,
- * `mill-wheel-mended`, and `mill-froth`.
+ * variants are discrete states (never looping animations). The manifest's
+ * three mill loops aren't registered: the wheel is stepped frame by frame
+ * (../entities/village-life.ts).
  *
  * Reused Commons art (`commons:` aliases) points to existing `commons-art:`
  * runtime textures without duplicating them.
@@ -34,20 +35,6 @@ export const ITEMS_PACKED_KEY = 'packed-items'
 /** Fallback texture key when an item has no art. */
 export const ITEM_ART_FALLBACK = 'items-art:fallback'
 
-export interface ItemsPassRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface ItemsPassSource {
-  key: string
-  file: string
-  width: number
-  height: number
-}
-
 export interface ItemsPassFrame {
   key: string
   width: number
@@ -57,22 +44,15 @@ export interface ItemsPassFrame {
   role?: string
   source: string
   sheet: string
-  sourceRect: ItemsPassRect
+  sourceRect: PassRect
   itemId?: string
   category?: string
   priority?: string
   name?: string
   state?: string
   look?: string
-  destinationRect: ItemsPassRect
+  destinationRect: PassRect
   scaleGroup?: string
-}
-
-export interface ItemsPassAnimation {
-  key: string
-  frames: string[]
-  frameRate: number
-  repeat: number
 }
 
 export interface ItemsPassStateGroup {
@@ -84,9 +64,9 @@ export interface ItemsPassStateGroup {
 export interface ItemsPassManifest {
   version: number
   baseUrl: string
-  sources: ItemsPassSource[]
+  sources: PassSource[]
   frames: ItemsPassFrame[]
-  animations: ItemsPassAnimation[]
+  animations: PassAnimation[]
   stateGroups: ItemsPassStateGroup[]
   aliases: Record<string, string>
   notes: string[]
@@ -146,38 +126,16 @@ export function preloadItemsPass(scene: Phaser.Scene, base: string = ITEMS_PASS_
 }
 
 /**
- * Build native canvas textures and the three looping mill animations, once
- * at boot (existing keys are skipped; the packed atlas texture is released
- * after). Each native texture is copied 1:1 from the packed atlas, dense
- * (./density.ts).
- *
- * State groups are discrete states (never animations). Loops are only created
- * for the three mill animations (mill-wheel, mill-wheel-mended, mill-froth).
+ * Build the native canvas textures once at boot (existing keys are
+ * skipped; the packed atlas texture is released after). Each is copied 1:1
+ * from the packed atlas, dense (./density.ts). State groups are discrete
+ * states, never animations.
  */
 export function createItemsPass(scene: Phaser.Scene): ItemsPassManifest | null {
   const manifest = scene.cache.json.get(ITEMS_PASS_MANIFEST_KEY) as ItemsPassManifest | undefined
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.items
-  if (!manifest || !Array.isArray(manifest.frames) || !packed || !scene.textures.exists(ITEMS_PACKED_KEY)) return null
-  const atlas = scene.textures.get(ITEMS_PACKED_KEY).getSourceImage() as CanvasImageSource
-
+  if (!manifest || !Array.isArray(manifest.frames) || !explodeFrames(scene, ITEMS_PACKED_KEY, packed, manifest.frames, itemsArtKey)) return null
   initItemsManifest(manifest)
-
-  // Dense textures (./density.ts): the packed texels, drawn at native world size.
-  const k = artDensity(scene)
-  for (const item of manifest.frames) {
-    const r = packed.frames[item.key]
-    if (!r) continue
-    const key = itemsArtKey(item.key)
-    if (scene.textures.exists(key)) continue
-    const output = scene.textures.createCanvas(key, item.width * k, item.height * k)
-    if (!output) continue
-    resampleFor(output.context, packed.density ?? 1, k)
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
-    output.refresh()
-    setDensity(output, k)
-  }
-  // The atlas was staging: release its GPU copy.
-  scene.textures.remove(ITEMS_PACKED_KEY)
 
   // Fallback 16×16 texture for items without art
   if (!scene.textures.exists(ITEM_ART_FALLBACK)) {
@@ -197,33 +155,20 @@ export function createItemsPass(scene: Phaser.Scene): ItemsPassManifest | null {
     }
   }
 
-  // The three authored looping mill animations (mill-wheel, mill-wheel-mended, mill-froth)
-  for (const definition of manifest.animations) {
-    const key = itemsArtKey(definition.key)
-    if (!scene.anims.exists(key) && definition.frames.every((f) => frames.has(f))) {
-      scene.anims.create({
-        key,
-        frames: definition.frames.map((f) => ({ key: itemsArtKey(f) })),
-        frameRate: definition.frameRate,
-        repeat: definition.repeat,
-      })
-    }
-    // Also create under the bare animation key if not already defined
-    if (!scene.anims.exists(definition.key) && definition.frames.every((f) => scene.textures.exists(f) || frames.has(f))) {
-      scene.anims.create({
-        key: definition.key,
-        frames: definition.frames.map((f) => ({ key: scene.textures.exists(f) ? f : itemsArtKey(f) })),
-        frameRate: definition.frameRate,
-        repeat: definition.repeat,
-      })
-    }
-  }
-
   return manifest
 }
 
+/** The mill wheel's turn: four frames (one eighth-turn in four steps), 32 px across. */
+export const MILL_WHEEL_FRAMES = 4
+export const MILL_WHEEL_SIZE = 32
+
+/** The texture keys of one wheel's turn, in order (installed by installItemsPass). */
+export function millWheelKeys(mended: boolean): string[] {
+  return Array.from({ length: MILL_WHEEL_FRAMES }, (_, i) => `mill-wheel-${mended ? 'mended-' : ''}${i}`)
+}
+
 /**
- * Install delivered mill textures onto the placeholder keys
+ * Install the delivered mill textures under their own keys
  * (`mill-house`, `mill-hopper`, `mill-wheel-0..3`, `mill-wheel-mended-0..3`, `mill-froth-0..1`).
  */
 export function installItemsPass(scene: Phaser.Scene): void {

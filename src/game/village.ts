@@ -8,26 +8,19 @@
  * Guests get the calendar computed locally from content/calendar.json (the
  * same function the server uses); everything else needs a world.
  */
-import { calendarAt, type CalendarDay } from '../lib/calendar'
-import { blankProjects, emptyCounts, papersDue } from '../lib/village'
-import { MAIL } from '../lib/mail'
-import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types'
-import type { ApiErrorCode } from '../lib/api/errors'
-import { paperFlag } from '../content/papers'
-import { bus, EV } from './events'
-import { clockMoved, gameNow, setGameNow } from './clock'
-import type { MutationOp } from './link'
-import { grantPaper } from './papers'
-import { calendarFind } from '../lib/wilds/stories'
-import { homesteadsFor } from './homestead'
-import type { Session } from './session'
-
-export const VILLAGE_EV = {
-  /** Something here changed: { what: 'calendar' | 'projects' | 'goods' | 'mail' }. */
-  changed: 'village:changed',
-  /** Open a panel: { panel: 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf', to?: string, gate?: number }. */
-  open: 'ui:village-open'
-} as const
+import { calendarAt, type CalendarDay } from '../lib/calendar.ts'
+import { blankProjects, emptyCounts, papersDue } from '../lib/village.ts'
+import { MAIL } from '../lib/mail.ts'
+import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types.ts'
+import type { ApiErrorCode } from '../lib/api/errors.ts'
+import { paperFlag } from '../content/papers.ts'
+import { bus, EV, type MutationResolvedPayload } from './events.ts'
+import { clockMoved, gameNow, setGameNow } from './clock.ts'
+import { grantPaper } from './papers.ts'
+import { calendarFind } from '../lib/wilds/stories.ts'
+import { homesteadsFor } from './homestead.ts'
+import type { Session } from './session.ts'
+import { linkRefusalText } from '../content/refusals.ts'
 
 export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
 
@@ -136,20 +129,10 @@ export function villageErrorText(code: ApiErrorCode | string): string {
       return 'Nothing on the pile has seasoned yet. Green wood takes a real day.'
     case 'invalid-action':
       return 'That’s not something a woodpile does.'
-    case 'offline':
-      return 'Needs a connection. Nothing changed — try again when you’re back online.'
-    case 'superseded':
-      return 'Another device took over this journey.'
-    case 'busy':
-      return 'Hold on — the last one is still on its way.'
-    case 'resolved':
-      return 'Your last request went through after all. Check what you have before trying again.'
-    case 'pending':
-      return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.'
     case 'guest':
       return 'That needs a world. Sign in to your world from the Menu.'
     default:
-      return 'That didn’t go through. Nothing changed — try again in a moment.'
+      return linkRefusalText(code) ?? 'That didn’t go through. Nothing changed — try again in a moment.'
   }
 }
 
@@ -175,13 +158,16 @@ export class Village {
   recallUnsupported = false
   private grantable: string[] = []
 
-  constructor(private session: Session) {
-    bus.on(EV.mutationResolved, (p: { op: MutationOp; outcome: 'landed' | 'refused' }) => {
+  private readonly session: Session
+
+  constructor(session: Session) {
+    this.session = session
+    bus.on(EV.mutationResolved, (p) => {
       if (current?.village === this) void this.onResolved(p)
     })
     // Reading a notice board after you have seen the outer Wilds turn (with
     // the road lit): the old notices, kept on one rusted nail.
-    bus.on(VILLAGE_EV.open, (p: { panel: VillagePanel }) => {
+    bus.on(EV.villageOpen, (p) => {
       if (current?.village !== this || p.panel !== 'board') return
       const s = this.session.state
       const paper = calendarFind('board', { flags: s.flags, late: s.quest === 'complete', mark: null })
@@ -198,7 +184,7 @@ export class Village {
   }
 
   /** One of ours whose answer was lost is now known: re-read and say so. */
-  private async onResolved(p: { op: MutationOp; outcome: 'landed' | 'refused' }): Promise<void> {
+  private async onResolved(p: MutationResolvedPayload): Promise<void> {
     const k = p.op.kind
     if (k === 'home' || k === 'items') return
     // Re-read everything the operation could have changed before saying so.
@@ -309,7 +295,7 @@ export class Village {
   setDevNow(unix: number | null): void {
     setGameNow(unix)
     void this.loadCalendar()
-    bus.emit(EV.clock, {})
+    bus.emit(EV.clock)
   }
 
   // ------------------------------------------------------------ projects
@@ -371,7 +357,7 @@ export class Village {
     this.repairs = v
     this.repairsStatus = 'ready'
     this.emit('repairs')
-    bus.emit(VILLAGE_EV.changed)
+    bus.emit(EV.villageChanged)
   }
 
   async mend(repairId: string): Promise<VillageResult<MendResult>> {
@@ -639,7 +625,7 @@ export class Village {
   }
 
   private emit(what: string): void {
-    bus.emit(VILLAGE_EV.changed, { what })
+    bus.emit(EV.villageChanged, { what })
   }
 }
 

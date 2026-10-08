@@ -4,7 +4,7 @@ import { PIP_GATE_FLAG, pipGateNudgeDue, type ExitRect } from '../lib/nudges'
 import { isConnected } from '../ui/habitica-local'
 import { bus, EV } from './events'
 import type { Session } from './session'
-import { TILE } from './textures'
+import { TILE, tileAt } from '../lib/tile'
 
 /** The one call WorldScene makes each frame: fires Pip's line at most once per save. */
 export function maybeNudgePip(
@@ -12,7 +12,7 @@ export function maybeNudgePip(
   world: { areaId: string; exits: ExitRect[] },
   player: { x: number; y: number }
 ): void {
-  const tx = Math.floor(player.x / TILE)
+  const tx = tileAt(player.x)
   const ty = Math.floor(player.y / TILE)
   // Only the ways out into danger: the Commons gate is home ground.
   const exits = world.exits.filter((e) => (e as { to?: string }).to !== 'commons')

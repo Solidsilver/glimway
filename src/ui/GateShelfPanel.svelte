@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor, villageErrorText } from '../game/village'
-  import { itemsFor, ITEMS_EV } from '../game/items'
-  import { homesteadsFor, HOME_EV } from '../game/homestead'
+  import { villageFor, villageErrorText } from '../game/village'
+  import { itemsFor } from '../game/items'
+  import { homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
   import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
@@ -46,15 +46,15 @@
       bump()
       void reread()
     }
-    bus.on(VILLAGE_EV.changed, reread)
-    bus.on(ITEMS_EV.changed, onItems)
-    bus.on(HOME_EV.changed, bump)
+    bus.on(EV.villageChanged, reread)
+    bus.on(EV.itemsChanged, onItems)
+    bus.on(EV.homeChanged, bump)
     void reread()
     if (session.link) void items.load()
     return () => {
-      bus.off(VILLAGE_EV.changed, reread)
-      bus.off(ITEMS_EV.changed, onItems)
-      bus.off(HOME_EV.changed, bump)
+      bus.off(EV.villageChanged, reread)
+      bus.off(EV.itemsChanged, onItems)
+      bus.off(EV.homeChanged, bump)
     }
   })
 
@@ -142,8 +142,8 @@
       const line = r.value.line ?? 'You took a gift from the shelf.'
       message = { text: line, kind: 'ok' }
       bus.emit(EV.toast, { text: line, icon: 'gift' })
-      bus.emit(VILLAGE_EV.changed)
-      bus.emit(ITEMS_EV.changed)
+      bus.emit(EV.villageChanged)
+      bus.emit(EV.itemsChanged)
     } else {
       message = { text: villageErrorText(r.code), kind: 'error' }
     }
@@ -160,8 +160,8 @@
       view = r.value.shelf
       homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       message = { text: 'Placed on the shelf for travellers to take.', kind: 'ok' }
-      bus.emit(VILLAGE_EV.changed)
-      bus.emit(ITEMS_EV.changed)
+      bus.emit(EV.villageChanged)
+      bus.emit(EV.itemsChanged)
     } else {
       message = { text: villageErrorText(r.code), kind: 'error' }
     }

@@ -25,13 +25,14 @@
  * is registered as `chunk:<regionId>:<cx>:<cy>` — exactly the generator
  * library's exit targets.
  */
-import { TILE } from '../textures.ts';
+import { TILE, tileAt } from '../../lib/tile.ts';
 import { COMMONS_FROM_WILDS } from '../commons.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import { chunkTerrain } from '../../lib/wilds/index.ts';
 import { GUEST_WORLD_SEED, INNER_REGION_ID, OUTER_REGION_ID } from '../../lib/wilds/outer.ts';
 import type { Epoch, WildsRegion } from '../../lib/wilds/types.ts';
 import type { AreaId } from '../../lib/state.ts';
+import { tileMid } from '../../lib/tile.ts'
 
 /** The Tangle: the permanent inner region, just past the Commons. */
 export const WILDS_REGION_ID = INNER_REGION_ID;
@@ -44,10 +45,8 @@ export const WILDS_AREA: AreaId = 'wilds';
 export const WILDS_REGION_IDS: readonly string[] = [INNER_REGION_ID, OUTER_REGION_ID];
 
 export const CHUNK_TILES = loadWilds().chunkSize;
-/** Pixels per progress tile (matches src/game/textures.ts TILE and the server). */
-export const WILDS_TILE_PX = TILE;
 /** One chunk's side length in pixels. */
-export const CHUNK_PX = CHUNK_TILES * WILDS_TILE_PX;
+export const CHUNK_PX = CHUNK_TILES * TILE;
 
 export const wildsRegion = (id: string = WILDS_REGION_ID): WildsRegion => {
   const region = loadWilds().regions.find((r) => r.id === id);
@@ -102,7 +101,7 @@ export function fromRegionPosition(
 
 /** Region-wide progress pixels → region tiles (defeat-report coordinates). */
 export function regionTile(x: number, y: number): { x: number; y: number } {
-  return { x: Math.floor(x / WILDS_TILE_PX), y: Math.floor(y / WILDS_TILE_PX) };
+  return { x: tileAt(x), y: tileAt(y) };
 }
 
 /** True when region-wide pixels are inside the region at all. */
@@ -135,7 +134,7 @@ export function guestEpoch(): Epoch {
 export function wildsArrivalPosition(epoch: Epoch): { x: number; y: number } {
   const region = wildsRegion(epoch.regionId);
   const chunk = chunkTerrain(epoch, region.entryX, region.entryY);
-  return toRegionPosition(region.entryX, region.entryY, (chunk.spawn.tx + 0.5) * WILDS_TILE_PX, (chunk.spawn.ty + 0.5) * WILDS_TILE_PX);
+  return toRegionPosition(region.entryX, region.entryY, tileMid(chunk.spawn.tx), tileMid(chunk.spawn.ty));
 }
 
 /**
@@ -166,7 +165,7 @@ export function wildsSceneEntry(
   const r = fromRegionPosition(arrival.x, arrival.y);
   return {
     areaId: chunkAreaId(r.cx, r.cy, epoch.regionId),
-    tile: { tx: Math.floor(r.x / WILDS_TILE_PX), ty: Math.floor(r.y / WILDS_TILE_PX) },
+    tile: { tx: tileAt(r.x), ty: tileAt(r.y) },
   };
 }
 
@@ -175,8 +174,8 @@ function wildsTileOf(position: { x: number; y: number }, epoch: Epoch): { areaId
   const r = fromRegionPosition(position.x, position.y);
   const region = wildsRegion(epoch.regionId);
   if (r.cx < 0 || r.cy < 0 || r.cx >= region.gridWidth || r.cy >= region.gridHeight) return null;
-  const tx = Math.floor(r.x / WILDS_TILE_PX);
-  const ty = Math.floor(r.y / WILDS_TILE_PX);
+  const tx = tileAt(r.x);
+  const ty = tileAt(r.y);
   const chunk = chunkTerrain(epoch, r.cx, r.cy);
   const clear =
     tx >= 0 &&

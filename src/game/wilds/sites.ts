@@ -24,20 +24,23 @@ import { echoAssignments, echoSettled, siteFind, type StoryContext } from '../..
 import { seasonMark, siteChunks, type SiteKind, type StorySite } from '../../lib/wilds/outer.ts'
 import type { Epoch } from '../../lib/wilds/types.ts'
 import { bus, EV } from '../events'
-import { uiState } from '../input'
 import { grantPaper } from '../papers'
 import { sfx } from '../sfx'
-import { TILE } from '../textures'
+import { TILE, tileFeet } from '../../lib/tile'
 import { commonsArt } from '../commons-pass'
 import type { Session } from '../session'
 import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
-import type { PromptAction } from '../entities/interactables'
+import type { Interactable, Interactables } from '../entities/interactables'
+import { openDialogue } from '../dialogue.ts'
+import { wildsView } from './store.ts'
 
 type C = CanvasRenderingContext2D
 
-export interface SiteAction extends PromptAction {
-  entityId: string
+/** What a site offers now: the prompt, the button's word, and what pressing does. */
+export interface WildsClaim {
+  label: string
+  verb: string
   claim: () => void
 }
 
@@ -45,6 +48,29 @@ interface SitesDeps {
   session: Session
   fx: Effects
   reducedMotion: boolean
+  interactables: Interactables
+  hero: () => { x: number; y: number }
+}
+
+/** The Wilds' claims and story sites outrank anything nearer (a claim is why you came). */
+export const WILDS_RANK = 1
+/** How near you must be to claim, settle or find something in the Wilds. */
+export const WILDS_REACH = 44
+
+/** An interaction point for a Wilds thing whose offer can change while you stand there. */
+export function wildsPoint(id: string, at: { x: number; y: number }, markerOffset: number, offer: () => WildsClaim | null): Interactable {
+  return {
+    id: `wilds:${id}`,
+    x: at.x,
+    y: at.y,
+    reach: WILDS_REACH,
+    rank: WILDS_RANK,
+    markerOffset,
+    available: () => offer() !== null,
+    label: () => offer()?.label ?? null,
+    verb: () => offer()?.verb ?? null,
+    activate: () => offer()?.claim()
+  }
 }
 
 // ------------------------------------------------------------ art
@@ -217,8 +243,6 @@ export class WildsSites {
   private sites: StorySite[]
   private images: Phaser.GameObjects.GameObject[] = []
   private greeted = new Set<string>()
-  private heroPx = { x: 0, y: 0 }
-  private current: SiteAction | null = null
   private echoes = new Map<string, EchoDef>()
   private renderedKey = ''
 
@@ -234,10 +258,14 @@ export class WildsSites {
     this.sites = sites.map((s) => ({ ...s, kind: s.kind as SiteKind, cx, cy }))
     scene.events.once('shutdown', () => {
       this.images = []
-      this.current = null
     })
     if (epoch.regionId !== 'inner-1') this.motes()
     this.render()
+    deps.interactables.register(
+      this,
+      // Quiet until the region's read lands, like the claims around them.
+      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsView() ? this.offerAt(s) : null)))
+    )
   }
 
   private ctx(): StoryContext {
@@ -254,7 +282,7 @@ export class WildsSites {
   }
 
   private sitePx(s: StorySite): { x: number; y: number } {
-    return { x: s.tx * TILE + 8, y: s.ty * TILE + TILE }
+    return tileFeet(s.tx, s.ty)
   }
 
   private add<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -360,7 +388,8 @@ export class WildsSites {
       const def = this.echoes.get(s.id)
       if (!def || echoSettled(this.deps.session.state.flags, def.member)) continue
       const at = this.sitePx(s)
-      if (Math.hypot(this.heroPx.x - at.x, this.heroPx.y - at.y) > 64) continue
+      const hero = this.deps.hero()
+      if (Math.hypot(hero.x - at.x, hero.y - at.y) > 64) continue
       this.greeted.add(s.id)
       bus.emit(EV.toast, { text: def.scene, icon: 'sparkle', kind: 'thought' })
     }
@@ -368,24 +397,9 @@ export class WildsSites {
 
   // ------------------------------------------------------------ prompts
 
-  /** The nearest site action within reach, with its distance. */
-  promptAction(hero: { x: number; y: number }): { action: SiteAction; d: number } | null {
-    this.heroPx = { x: hero.x, y: hero.y }
+  /** What this site offers now (null: nothing, it keeps quiet). */
+  private offerAt(s: StorySite): WildsClaim | null {
     const c = this.ctx()
-    let best: { action: SiteAction; d: number } | null = null
-    for (const s of this.sites) {
-      const at = this.sitePx(s)
-      const d = Math.hypot(hero.x - at.x, hero.y - at.y)
-      if (d > 44) continue
-      const action = this.actionFor(s, at, c)
-      if (action && (!best || d < best.d)) best = { action, d }
-    }
-    this.current = best?.action ?? null
-    return best
-  }
-
-  private actionFor(s: StorySite, at: { x: number; y: number }, c: StoryContext): SiteAction | null {
-    const spot = { x: Math.round(at.x), y: Math.round(at.y - 20) }
     if (s.kind === 'echo') {
       const def = this.echoes.get(s.id)
       if (!def) return null
@@ -394,20 +408,20 @@ export class WildsSites {
       // the conversation, so leaving never takes the settling away.
       const offer = echoKeepsakeOffer(def.member, c.flags, this.carried())
       if (offer) {
-        return { entityId: `site:${s.id}`, label: offer.label, verb: 'Leave', x: spot.x, y: spot.y, claim: () => this.offerKeepsake(s, def, offer) }
+        return { label: offer.label, verb: 'Leave', claim: () => this.offerKeepsake(s, def, offer) }
       }
       if (echoSettled(c.flags, def.member)) {
         if (def.member === 'nan' && !c.flags.includes('heirloom:nans-lamplighter-pole')) {
-          return { entityId: `site:${s.id}`, label: 'Take Nan’s lamplighter pole', verb: 'Take', x: spot.x, y: spot.y, claim: () => this.takeNanPole() }
+          return { label: 'Take Nan’s lamplighter pole', verb: 'Take', claim: () => this.takeNanPole() }
         }
         return null
       }
-      return { entityId: `site:${s.id}`, label: def.verb, verb: 'Settle', x: spot.x, y: spot.y, claim: () => this.settle(s, def) }
+      return { label: def.verb, verb: 'Settle', claim: () => this.settle(s, def) }
     }
     const paper = siteFind(s.kind, c)
     if (!paper) return null
     const text = SITE_TEXT[s.kind as keyof typeof SITE_TEXT]
-    return { entityId: `site:${s.id}`, label: text.verb, verb: 'Look', x: spot.x, y: spot.y, claim: () => this.find(s, paper) }
+    return { label: text.verb, verb: 'Look', claim: () => this.find(s, paper) }
   }
 
   /**
@@ -419,13 +433,6 @@ export class WildsSites {
     return [...s.state.inventory, ...(itemsFor(s).view?.stacks.map((st) => st.itemDef) ?? [])]
   }
 
-  /** The action key while a site prompt is up. */
-  handleAction(): boolean {
-    if (!this.current) return false
-    this.current.claim()
-    return true
-  }
-
   // ------------------------------------------------------------ settling and finding
 
   private settle(s: StorySite, def: EchoDef): void {
@@ -435,10 +442,9 @@ export class WildsSites {
     const at = this.sitePx(s)
     sfx('lantern')
     this.deps.fx.sparkBurst(at.x + 16, at.y - 18, 12)
-    uiState.dialogueOpen = true
     // A keep left here before the settling: the moment finishes a little softer.
     const softened = def.keepsake && session.state.flags.includes(echoSoftenedFlag(def.member)) ? [def.keepsake.softened] : []
-    bus.emit(EV.dialogue, { id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle, ...softened] })
+    openDialogue({ id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle, ...softened] }, { sound: null })
     if (def.paper && !session.state.flags.includes(paperFlag(def.paper))) grantPaper(session, def.paper)
     this.render()
   }
@@ -465,8 +471,7 @@ export class WildsSites {
     const settled = echoSettled(session.state.flags, def.member)
     const lamp: DialogueChoice = { text: def.verb, action: `echo:settle:${s.id}` }
     const notYet: DialogueChoice = { text: 'Not yet' }
-    uiState.dialogueOpen = true
-    bus.emit(EV.dialogue, {
+    openDialogue({
       id: `wilds-keepsake:${def.member}`,
       speaker: echoCampSpeaker(def.member, settled),
       lines: session.link ? [...offer.lines] : [offer.guest],
@@ -475,7 +480,7 @@ export class WildsSites {
         : settled
           ? undefined
           : [lamp, notYet]
-    })
+    }, { sound: null })
   }
 
   private takeNanPole(): void {
@@ -483,24 +488,22 @@ export class WildsSites {
     if (session.state.flags.includes('heirloom:nans-lamplighter-pole')) return
     const h = HEIRLOOMS['nans-lamplighter-pole']
     if (!session.link) {
-      uiState.dialogueOpen = true
-      bus.emit(EV.dialogue, {
+      openDialogue({
         id: 'wilds-heirloom:nans-lamplighter-pole',
         speaker: h.speaker,
         lines: [HEIRLOOM_GUEST_LINES.nan]
-      })
+      }, { sound: null })
       return
     }
     // Offered only when the pole can come away now; otherwise the camp says why.
     const beat = heirloomBeat(session, 'nans-lamplighter-pole', 'Take the lamplighter pole')
     if (!beat) return
-    uiState.dialogueOpen = true
-    bus.emit(EV.dialogue, {
+    openDialogue({
       id: 'wilds-heirloom:nans-lamplighter-pole',
       speaker: h.speaker,
       lines: beat.lines,
       choices: beat.choices.length ? [...beat.choices, { text: 'Not yet' }] : undefined
-    })
+    }, { sound: null })
   }
 
   private find(s: StorySite, paper: string): void {

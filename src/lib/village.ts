@@ -251,3 +251,10 @@ export function settledLine(m: Mail): string {
       return 'recalled'
   }
 }
+
+/** Why the workshop can't be built yet (null: it can). */
+export function workshopShort(embers: number, materials: Record<string, number>): string | null {
+  if (embers < WORKSHOP_TIER.embers) return `Needs ${WORKSHOP_TIER.embers} embers`;
+  for (const [m, n] of Object.entries(WORKSHOP_TIER.materials ?? {})) if ((materials[m] ?? 0) < n) return `Needs ${n} ${m}`;
+  return null;
+}

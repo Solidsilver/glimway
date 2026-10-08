@@ -1,6 +1,7 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { addArtCanvas, artCanvas, artDensity, artSource, drawArt, resampleFor, setDensity } from './density.ts'
+import { addArtCanvas, artCanvas, artSource, drawArt } from './density.ts'
+import { explodeFrames, registerAnims, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
 
 /**
  * Typed port of `assets/generated/runtime-pass/integration.js` (art/content
@@ -26,47 +27,26 @@ export const RUNTIME_ART_SOURCE_KEYS = [
   'fingersnap-class-effects',
 ] as const
 
-export interface RuntimeArtRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface RuntimeArtSource {
-  key: string
-  file: string
-  width: number
-  height: number
-}
-
 export type RuntimeArtRole = 'npc' | 'guardian' | 'effect'
 
 export interface RuntimeArtFrame {
   key: string
   source: string
-  sourceRect: RuntimeArtRect
+  sourceRect: PassRect
   width: number
   height: number
-  destinationRect: RuntimeArtRect
+  destinationRect: PassRect
   origin: [number, number]
   role: RuntimeArtRole
-}
-
-export interface RuntimeArtAnimation {
-  key: string
-  frames: string[]
-  frameRate: number
-  repeat: number
 }
 
 export interface RuntimeArtManifest {
   version: number
   baseUrl: string
   specSource: string
-  sources: RuntimeArtSource[]
+  sources: PassSource[]
   frames: RuntimeArtFrame[]
-  animations: RuntimeArtAnimation[]
+  animations: PassAnimation[]
   aliases: Record<string, string>
   notes: string[]
 }
@@ -102,30 +82,8 @@ export function createRuntimeArt(scene: Phaser.Scene): RuntimeArtManifest | null
     RUNTIME_ART_MANIFEST_KEY,
   ) as RuntimeArtManifest | undefined
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.runtime
-  if (!manifest || !packed || !scene.textures.exists(RUNTIME_PACKED_KEY)) return null
-  const atlas = scene.textures.get(RUNTIME_PACKED_KEY).getSourceImage() as CanvasImageSource
-  const k = artDensity(scene)
-  for (const item of manifest.frames) {
-    const r = packed.frames[item.key]
-    if (!r || scene.textures.exists(item.key)) continue
-    const output = scene.textures.createCanvas(item.key, item.width * k, item.height * k)
-    if (!output) throw new Error(`Cannot create texture ${item.key}`)
-    resampleFor(output.context, packed.density ?? 1, k)
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
-    output.refresh()
-    setDensity(output, k)
-  }
-  // The atlas was staging: release its GPU copy.
-  scene.textures.remove(RUNTIME_PACKED_KEY)
-  for (const definition of manifest.animations) {
-    if (scene.anims.exists(definition.key) || !definition.frames.every((f) => scene.textures.exists(f))) continue
-    scene.anims.create({
-      key: definition.key,
-      frames: definition.frames.map((key) => ({ key })),
-      frameRate: definition.frameRate,
-      repeat: definition.repeat,
-    })
-  }
+  if (!manifest || !explodeFrames(scene, RUNTIME_PACKED_KEY, packed, manifest.frames, (key) => key)) return null
+  registerAnims(scene, manifest.animations, (f) => scene.textures.exists(f))
   return manifest
 }
 

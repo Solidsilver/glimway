@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { homesteadsFor } from '../game/homestead'
+  import { bus, EV } from '../game/events'
   import { assetKey, assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
   import { giftPhrase } from '../lib/items'
   import { MAIL } from '../lib/mail'
@@ -34,13 +34,13 @@
       recipient = to
     }
     const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
-    bus.on(HOME_EV.changed, bump)
+    bus.on(EV.villageChanged, bump)
+    bus.on(EV.homeChanged, bump)
     void village.loadMail()
     if (homes.gates.length === 0) void homes.load()
     return () => {
-      bus.off(VILLAGE_EV.changed, bump)
-      bus.off(HOME_EV.changed, bump)
+      bus.off(EV.villageChanged, bump)
+      bus.off(EV.homeChanged, bump)
     }
   })
 

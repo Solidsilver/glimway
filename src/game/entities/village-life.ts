@@ -19,18 +19,19 @@ import { uiState } from '../input'
 import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
 import { buildingKey } from '../buildings'
-import { ensureMillTexture, millWheelKeys, MILL_WHEEL_SIZE } from '../mill-art'
+import { millWheelKeys, MILL_WHEEL_SIZE } from '../items-pass'
 import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
-import { TERRAIN, TILE } from '../textures'
-import type { InteractId, WorldData } from '../worlds'
+import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
+import type { WorldData } from '../worlds'
 import type { CommonsWorld } from '../commons'
-import { VILLAGE_EV, villageFor, type Village } from '../village'
+import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
 import { grantPaper } from '../papers'
-import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import type { Interactable, Interactables } from './interactables'
 import { expose } from '../dev-hooks'
+import { openDialogue } from '../dialogue'
 
 export interface VillageDeps {
   world: WorldData
@@ -47,7 +48,7 @@ const greeted = new Set<string>()
 /** When projects were last read (re-read at most once a minute on area entry). */
 let projectsReadAt = 0
 
-export class VillageLayer implements InteractionProvider {
+export class VillageLayer {
   private readonly village: Village
   private drawn: Phaser.GameObjects.GameObject[] = []
 
@@ -58,15 +59,15 @@ export class VillageLayer implements InteractionProvider {
     const onChange = () => {
       if (this.scene.sys?.isActive()) this.redraw()
     }
-    bus.on(VILLAGE_EV.changed, onChange)
-    scene.events.once('shutdown', () => bus.off(VILLAGE_EV.changed, onChange))
-    scene.events.once('destroy', () => bus.off(VILLAGE_EV.changed, onChange))
+    bus.on(EV.villageChanged, onChange)
+    scene.events.once('shutdown', () => bus.off(EV.villageChanged, onChange))
+    scene.events.once('destroy', () => bus.off(EV.villageChanged, onChange))
     this.syncInteractions()
     expose('__fsDevCalendar', (unix) => this.village.setDevNow(unix), scene)
     // Pretend the world has finished something (a project's flag): the village redraws.
     expose('__fsDevWorldFlag', (flag) => {
       if (!this.village.worldFlags.includes(flag)) this.village.worldFlags = [...this.village.worldFlags, flag]
-      bus.emit(VILLAGE_EV.changed, { what: 'projects' })
+      bus.emit(EV.villageChanged, { what: 'projects' })
     }, scene)
     // Read-only: the mill wheel (playtests).
     expose('__fsMill', () => this.millView && { ...this.millView }, scene)
@@ -87,40 +88,12 @@ export class VillageLayer implements InteractionProvider {
 
   // ------------------------------------------------------------ interactions
 
-  owns(id: InteractId): boolean {
-    return id.startsWith('village:')
-  }
-
-  markerOffset(id: InteractId): number {
-    return id === 'village:hopper' ? 24 : 32
-  }
-
-  marker(id: InteractId): 'quest' | 'talk' | null {
-    if (id === 'village:hopper') return null
-    return this.village.calendar.notice ? 'talk' : null
-  }
-
-  verb(id: InteractId): string {
-    if (id === 'village:hopper') return 'Look'
-    if (id === 'village:stall') return 'Buy'
-    return 'Read'
-  }
-
-  activate(id: InteractId): void {
-    if (id === 'village:board') openBoard()
-    if (id === 'village:hame') this.readHameRoll()
-    if (id === 'village:hopper') this.lookAtHopper()
-    if (id === 'village:stall') this.visitStall()
-  }
-
   /** The madder stall on Carting Day: what the dyers' scrap baskets hold. */
   private visitStall(): void {
     const stall = sellerFor('madder-stall')
     if (!stall) return
     const connected = !!this.deps.session.link
-    uiState.dialogueOpen = true
-    sfx('open')
-    bus.emit(EV.dialogue, {
+    openDialogue({
       id: 'village:stall',
       speaker: stall.npc,
       lines: stall.goods.map((g) => g.line),
@@ -133,9 +106,7 @@ export class VillageLayer implements InteractionProvider {
   /** The Tolley mill's hopper, with the tally scratched in its side. */
   private lookAtHopper(): void {
     const s = this.deps.session.state
-    uiState.dialogueOpen = true
-    sfx('open')
-    bus.emit(EV.dialogue, { id: 'village', speaker: 'Mill Hopper', lines: millHopperLines(s.flags) })
+    openDialogue({ id: 'village', speaker: 'Mill Hopper', lines: millHopperLines(s.flags) })
   }
 
   /**
@@ -145,30 +116,32 @@ export class VillageLayer implements InteractionProvider {
   private syncInteractions(): void {
     const w = this.deps.world
     const list: Interactable[] = []
+    // The notices: "…" while the calendar has something posted.
+    const notice = () => (this.village.calendar.notice ? 'talk' : null)
     if (w.board && w.areaId === 'village') {
-      list.push({ id: 'village:board', x: w.board.tx * TILE + 8, y: w.board.ty * TILE + TILE + 2, label: 'Read the notice board' })
+      list.push({ id: 'village:board', x: tileMid(w.board.tx), y: tileBottom(w.board.ty) + 2, label: 'Read the notice board', verb: 'Read', marker: notice, markerOffset: 32, activate: openBoard })
     }
     if (w.mill && w.areaId === 'village') {
       const h = w.mill.hopper
-      list.push({ id: 'village:hopper', x: h.tx * TILE + 8, y: h.ty * TILE + TILE + 2, label: 'Look at the hopper' })
+      list.push({ id: 'village:hopper', x: tileMid(h.tx), y: tileBottom(h.ty) + 2, label: 'Look at the hopper', verb: 'Look', markerOffset: 24, activate: () => this.lookAtHopper() })
     }
     const c = w as CommonsWorld
     const ctx = { flags: this.deps.session.state.flags, late: this.deps.session.state.quest === 'complete', mark: null }
     if (w.areaId === 'commons' && c.features && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
       const h = c.features.hame
-      list.push({ id: 'village:hame', x: h.tx * TILE + 8, y: (h.ty + 1) * TILE + 6, label: 'Read the polishers’ roll' })
+      list.push({ id: 'village:hame', x: tileMid(h.tx), y: tileBottom(h.ty) + 6, label: 'Read the polishers’ roll', verb: 'Read', marker: notice, markerOffset: 32, activate: () => this.readHameRoll() })
     }
     // The Carting Day market: the madder stall stands between the gate and
     // the square on the day, and not otherwise.
     if (w.areaId === 'commons' && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
       const stall = sellerFor('madder-stall')!
-      list.push({ id: 'village:stall', x: stall.tx * TILE + 8, y: stall.ty * TILE + TILE + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall' })
+      list.push({ id: 'village:stall', x: tileMid(stall.tx), y: tileBottom(stall.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
     }
     // Only when it changed: replacing the list rebuilds its markers.
     const key = list.map((i) => i.id).join(',')
     if (key === this.interactionKey) return
     this.interactionKey = key
-    this.deps.interactables.setDynamic(list, this)
+    this.deps.interactables.register(this, list)
   }
 
   private interactionKey: string | null = null
@@ -245,11 +218,9 @@ export class VillageLayer implements InteractionProvider {
     const m = this.deps.world.mill
     if (!m) return
     const mended = this.village.hasWorldFlag('project:mill-wheel:complete')
-    const keys = millWheelKeys(this.scene, mended)
+    const keys = millWheelKeys(mended)
     const depth = m.wheel.y + MILL_WHEEL_SIZE / 2
     const wheel = this.add(this.scene.add.image(m.wheel.x, m.wheel.y, keys[0]).setDepth(depth))
-    ensureMillTexture(this.scene, 'mill-froth-0')
-    ensureMillTexture(this.scene, 'mill-froth-1')
     const froth = this.add(this.scene.add.image(m.wheel.x + 6, m.wheel.y + 12, 'mill-froth-0').setDepth(depth + 1).setAlpha(0.85))
     const view = { mended, frame: 0, turns: 0, x: m.wheel.x, y: m.wheel.y }
     this.millView = view
@@ -285,12 +256,12 @@ export class VillageLayer implements InteractionProvider {
     const w = this.deps.world
     if (this.village.hasWorldFlag('project:well-canopy:complete') && w.well) {
       const x = w.well.tx * TILE + 6
-      const y = (w.well.ty + 1) * TILE + 2
+      const y = tileBottom(w.well.ty) + 2
       this.add(this.scene.add.image(x, y, 'well-canopy').setOrigin(0.5, 1).setDepth(y + 1))
     }
     if (this.village.hasWorldFlag('project:cooley-window-fund:complete')) {
       // Ada's lamp, paid in full: warm in her window every night, for good.
-      const x = ADA_HOUSE_WINDOW.tx * TILE + 8
+      const x = tileMid(ADA_HOUSE_WINDOW.tx)
       const y = ADA_HOUSE_WINDOW.ty * TILE + 6
       this.glow(x, y, 0.9, 0.95)
       this.add(this.scene.add.image(x, y + 4, 'spark').setDepth(4002).setTint(0xffd24a))
@@ -314,9 +285,9 @@ export class VillageLayer implements InteractionProvider {
     const key = buildingKey(mended ? 'brackenwood-bridge-mended' : 'brackenwood-bridge-worn')
     if (this.scene.textures.exists(key)) {
       // The deck's foot point (bottom centre) on the bridge row's base.
-      this.add(this.scene.add.image(cx, (y + 1) * TILE, key).setOrigin(0.5, 0.75).setDepth(-2))
+      this.add(this.scene.add.image(cx, tileBottom(y), key).setOrigin(0.5, 0.75).setDepth(-2))
     } else if (mended) {
-      this.add(this.scene.add.image(cx, (y + 1) * TILE + 5, 'mended-bridge').setOrigin(0.5, 1).setDepth(-2))
+      this.add(this.scene.add.image(cx, tileBottom(y) + 5, 'mended-bridge').setOrigin(0.5, 1).setDepth(-2))
     }
     if (mended) this.glow(cx + 20, y * TILE - 2, 0.5)
   }
@@ -331,14 +302,14 @@ export class VillageLayer implements InteractionProvider {
         const madder = sellerFor('madder-stall')
         const stalls: [string, number, number][] = [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]]
         for (const [key, tx, ty] of stalls) {
-          const x = tx * TILE + 8
-          const y = (ty + 1) * TILE
+          const x = tileMid(tx)
+          const y = tileBottom(ty)
           this.add(this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y))
         }
         this.add(this.scene.add.image(23.5 * TILE, 17 * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000))
         if (c.features) {
           const h = c.features.hame
-          this.glow(h.tx * TILE + 8, (h.ty + 1) * TILE - 24, 0.6, 0.9)
+          this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9)
         }
       } else if (w.villageLantern) {
         const l = w.villageLantern
@@ -347,13 +318,13 @@ export class VillageLayer implements InteractionProvider {
     }
     if (name === 'Amberwake' || name === 'Closure Night') {
       // A hearth-grade lamp in every window.
-      for (const t of this.tilesOf(TERRAIN.window)) this.windowGlow(t.tx * TILE + 8, t.ty * TILE + 6)
+      for (const t of this.tilesOf(TERRAIN.window)) this.windowGlow(tileMid(t.tx), t.ty * TILE + 6)
     }
     if (name === 'Closure Night') {
       // Night, and every lantern in the village lit. The road beyond stays dark.
       const shade = this.add(this.scene.add.rectangle(0, 0, w.widthPx, w.heightPx, 0x101428, 0.42).setOrigin(0, 0).setDepth(3990))
       void shade
-      for (const p of w.props) if (p.light) this.glow(p.tx * TILE + 8, p.ty * TILE + TILE - p.h * 0.72, 1.1, 0.9)
+      for (const p of w.props) if (p.light) this.glow(tileMid(p.tx), tileBottom(p.ty) - p.h * 0.72, 1.1, 0.9)
     }
     if (name === 'The Breaking' && w.areaId === 'village') {
       // The pond, not the mill-race under the wheel.
@@ -395,5 +366,5 @@ export class VillageLayer implements InteractionProvider {
 export function openBoard(): void {
   uiState.dialogueOpen = false
   sfx('open')
-  bus.emit(VILLAGE_EV.open, { panel: 'board' })
+  bus.emit(EV.villageOpen, { panel: 'board' })
 }
