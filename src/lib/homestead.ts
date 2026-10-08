@@ -1,10 +1,11 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
 import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { furnishingFor } from './furnishings.ts';
 import { loadWilds } from './wilds/data.ts';
 import { LAND, buildableKind, clearedSet, effectiveKind, homeLights, isLit, servedLand, type Land, type Light } from './homestead-land.ts';
 import { tileAt, tileMid } from './tile.ts';
 
-/** Material ids a purchase bill may name: the Wilds materials, plus any material in the catalogue (seasoned timber). */
+/** Material ids a purchase bill may name: the Wilds materials, plus any material in the items catalogue (seasoned timber). */
 const MATERIAL_ITEMS = new Set(
   ((itemsRaw as { items: { id: string; kind: string }[] }).items ?? []).filter((i) => i.kind === 'material').map((i) => i.id)
 );
@@ -105,7 +106,15 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   }
   const seen = new Set<string>();
   for (const v of h.items) {
-    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || typeof v.name !== 'string' || !v.name || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.footprint) || v.footprint.length !== 2 || !integer(v.footprint[0], 1) || !integer(v.footprint[1], 1) || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor', 'gate'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
+    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor', 'gate'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
+    // The row only refers to the furnishings catalogue by id for its name
+    // and footprint; if a row spells them out they must be the catalogue's,
+    // never a second copy.
+    const f = furnishingFor(v.id);
+    const row = v as unknown as { name?: unknown; footprint?: unknown };
+    if (!f || (row.name !== undefined && row.name !== f.name) || (row.footprint !== undefined && (!Array.isArray(row.footprint) || row.footprint.length !== 2 || row.footprint[0] !== f.footprint[0] || row.footprint[1] !== f.footprint[1]))) return bad();
+    v.name = f.name;
+    v.footprint = [f.footprint[0], f.footprint[1]];
     if (v.craftOnly !== undefined && typeof v.craftOnly !== 'boolean') return bad();
     for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || !integer(qty, 1)) return bad();
     seen.add(v.id);
