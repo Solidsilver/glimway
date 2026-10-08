@@ -284,6 +284,52 @@ the touch controls' action button does doors and stairs.
 
 ---
 
+### 2.8 Furnishings: one system for every piece, everywhere (owner, 2026-10-08)
+
+The owner asked for "a clean, universal system that works well everywhere": the shared interior
+kit (7.0, rule 8) dresses the village's rooms now, and the same pieces furnish players' own
+houses later. Pieces may have animations or states (a pot empty, filled or steaming), and there
+are rules for what can go on what (books on almost anything, rugs only on the floor), but states
+and rules must never make things feel less natural or less free to arrange.
+
+**One catalogue, `content/furnishings.json`.** Every placeable piece is one entry: today's 31
+home goods in `content/homestead.json` (moved, not copied; homestead keeps its tiers, prices and
+`where` by referring to furnishing ids) and the interior kit. An entry has:
+
+- `id`, `name`, and its art per **facing** (`front`, `left`, `right`, and `diag` for the 45° pieces
+  the style rules allow); a piece lists only the facings it has.
+- `footprint` in tiles and a **`base`** box (the part that touches what it stands on; collision
+  uses only this, 7.0 rule 4).
+- **`mount`**: what the piece stands on. One of `floor`, `wall` or `surface`; `floor` pieces may
+  also stand on a rug.
+- **`offers`** (optional): the surfaces it provides for other pieces: `top` (a table, a chest, a
+  counter, a desk) or `shelves` (rows of a shelf unit), each with a size in small-item slots.
+- **`size`**: `small` (a book, a candle, a cup, a plant pot), `medium` (a lamp, a basket, a
+  crate), or `large` (furniture). **The rule is one table:** `small` goes on any `top` or `shelves`
+  slot or the floor; `medium` goes on a `top` that's big enough, or the floor; `large` only on the
+  floor; `wall` pieces only on walls; a rug (`layer: under`) only on the floor, under everything,
+  and never blocks. No per-item exceptions: a piece's `size` and `mount` decide.
+- **`states`** (optional): named states, each with its frames and an optional slow `loop`
+  (`pot`: `empty`, `filled`, `steaming`). One state is the default. A state changes only by
+  something that happens (a quest beat, cooking, a resident's routine, later a player's use),
+  never by idling. A piece with no states is still. A state never changes where the piece can go.
+- `tags` for the game's own uses (`seat`, `light`, `books`, `section:stories`), not for placement
+  rules.
+
+**One validator, both languages.** `validateFurnishings` (TS and Go, shared vectors) checks the
+catalogue, and `canPlace(piece, onto, at)` answers the placement rule above for any piece onto the
+floor, a wall or another piece's surface. Rooms (`content/rooms.json`) place furnishings by id
+with a facing, and optionally a parent (the table a candle stands on); the loader checks every
+placement with `canPlace`. The cottage keeps its current floor placement in 0.4 but reads its
+pieces from the catalogue; standing pieces on other pieces in your own house is the later
+decorating release, and it needs no new rules, only the UI and the server's placement operation
+calling the same `canPlace`.
+
+**Lanes.** A: the catalogue's schema, loaders and validators, `canPlace` with vectors, moving the
+home goods in, and the server reading homestead items through it. B: rendering by facing, state
+and parent (stacked pieces drawn on their parent's surface), base-box collision, rooms placed
+from the catalogue. Luna: the kit's art per facing and state.
+
 ## 3. The places
 
 Maps are tiles (16 px each). Legend for all three: `#` wall, `=` back wall, `w` window, `.`
