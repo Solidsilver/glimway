@@ -112,7 +112,7 @@
       <div class="ai"><Icon name="sword" size={22} /></div>
       <div class="ab">
         <div class="ah"><b>{kit.basicName}</b> <span class="kbd">E</span></div>
-        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.cooldown)}s.</p>
+        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.basicAttackCooldown)}s.</p>
       </div>
     </div>
     <div class="ability sig">

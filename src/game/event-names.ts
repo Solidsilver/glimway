@@ -7,6 +7,7 @@ import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from '.
 import type { MutationOp } from './link'
 import type { PaperFoundPayload, PapersSyncPayload } from './papers'
 import type { ResidentsMetPayload } from './residents'
+import type { SoundCue } from './sound-bank'
 import type { VillagePanel } from './village'
 
 /**
@@ -59,7 +60,7 @@ export const EV = {
   emote: 'game:emote',
   /** Presence: someone standing by you handed you something: { fromName, kind, itemDef, qty }. */
   gift: 'game:gift',
-  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, habiticaId, name }. */
+  /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, accountId, name }. */
   witness: 'game:witness',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
@@ -134,7 +135,15 @@ export const EV = {
 
   // residents (src/game/residents.ts)
   /** Flags used to assemble journal entries, including first meetings. */
-  residentsMet: 'ui:residents-met'
+  residentsMet: 'ui:residents-met',
+
+  // sound (src/game/sound.ts listens; nothing else plays audio)
+  /** A sound cue where no richer event fits: { cue, speaker? } (src/game/sfx.ts). */
+  sfx: 'sound:cue',
+  /** The hero's foot came down: { terrain } (a TERRAIN id, src/lib/tile.ts; the ground decides the step). */
+  footstep: 'sound:footstep',
+  /** A swing of gathering work landed: { action } ('chop', 'break', 'dig'). */
+  work: 'sound:work'
 } as const
 
 export interface StatsPayload {
@@ -285,7 +294,7 @@ export interface PresencePayload {
 
 export interface EmotePayload {
   /** null for the local hero. */
-  habiticaId: string | null
+  accountId: string | null
   id: string
 }
 
@@ -307,7 +316,7 @@ export interface GiftPayload {
 
 export interface WitnessPayload {
   beat: string
-  habiticaId: string
+  accountId: string
   name: string
 }
 
@@ -388,6 +397,9 @@ export interface EventMap {
   [EV.papersSync]: PapersSyncPayload
   [EV.libraryOpen]: void
   [EV.residentsMet]: ResidentsMetPayload
+  [EV.sfx]: { cue: SoundCue; speaker?: string }
+  [EV.footstep]: { terrain: number }
+  [EV.work]: { action: string }
 }
 
 export type EventName = keyof EventMap

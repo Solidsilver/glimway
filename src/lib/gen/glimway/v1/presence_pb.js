@@ -9,11 +9,12 @@ import { file_google_protobuf_struct, file_google_protobuf_wrappers } from "@buf
  * Describes the file glimway/v1/presence.proto.
  */
 export const file_glimway_v1_presence = /*@__PURE__*/
-  fileDesc("ChlnbGltd2F5L3YxL3ByZXNlbmNlLnByb3RvEgpnbGltd2F5LnYxItcDCg9QcmVzZW5jZU1lc3NhZ2USKAoEYXV0aBgBIAEoCzIYLmdsaW13YXkudjEuUHJlc2VuY2VBdXRoSAASKAoEam9pbhgCIAEoCzIYLmdsaW13YXkudjEuUHJlc2VuY2VKb2luSAASKwoDcG9zGAMgASgLMhwuZ2xpbXdheS52MS5QcmVzZW5jZVBvc2l0aW9uSAASKgoFZW1vdGUYBCABKAsyGS5nbGltd2F5LnYxLlByZXNlbmNlRW1vdGVIABIyCgloZWFydGJlYXQYBSABKAsyHS5nbGltd2F5LnYxLlByZXNlbmNlSGVhcnRiZWF0SAASKgoFcmVhZHkYBiABKAsyGS5nbGltd2F5LnYxLlByZXNlbmNlUmVhZHlIABIoCgRyb29tGAcgASgLMhguZ2xpbXdheS52MS5QcmVzZW5jZVJvb21IABIqCgVsZWF2ZRgIIAEoCzIZLmdsaW13YXkudjEuUHJlc2VuY2VMZWF2ZUgAEigKBGdpZnQYCSABKAsyGC5nbGltd2F5LnYxLlByZXNlbmNlR2lmdEgAEi4KB3dpdG5lc3MYCiABKAsyGy5nbGltd2F5LnYxLlByZXNlbmNlV2l0bmVzc0gAQgcKBWV2ZW50Ih0KDFByZXNlbmNlQXV0aBINCgVsZWFzZRgBIAEoCSITChFQcmVzZW5jZUhlYXJ0YmVhdCIkCg1QcmVzZW5jZVJlYWR5EhMKC2hhYml0aWNhX2lkGAEgASgJIkgKDFByZXNlbmNlSm9pbhIMCgRhcmVhGAEgASgJEioKBnBsYXllchgCIAEoCzIaLmdsaW13YXkudjEuUHJlc2VuY2VQbGF5ZXIiSQoMUHJlc2VuY2VSb29tEgwKBGFyZWEYASABKAkSKwoHcGxheWVycxgCIAMoCzIaLmdsaW13YXkudjEuUHJlc2VuY2VQbGF5ZXIiJAoNUHJlc2VuY2VMZWF2ZRITCgtoYWJpdGljYV9pZBgBIAEoCSJFCg1QcmVzZW5jZUVtb3RlEgoKAmlkGAEgASgJEhgKC2hhYml0aWNhX2lkGAIgASgJSACIAQFCDgoMX2hhYml0aWNhX2lkIk4KDFByZXNlbmNlR2lmdBIRCglmcm9tX25hbWUYASABKAkSDAoEa2luZBgCIAEoCRIQCghpdGVtX2RlZhgDIAEoCRILCgNxdHkYBCABKAUiQgoPUHJlc2VuY2VXaXRuZXNzEgwKBGJlYXQYASABKAkSEwoLaGFiaXRpY2FfaWQYAiABKAkSDAoEbmFtZRgDIAEoCSI8Cg5QcmVzZW5jZUZhY2luZxIOCgF4GAEgASgBSACIAQESDgoBeRgCIAEoAUgBiAEBQgQKAl94QgQKAl95IrQBChBQcmVzZW5jZVBvc2l0aW9uEg4KAXgYASABKAFIAIgBARIOCgF5GAIgASgBSAGIAQESKgoGZmFjaW5nGAMgASgLMhouZ2xpbXdheS52MS5QcmVzZW5jZUZhY2luZxITCgZtb3ZpbmcYBCABKAhIAogBARIYCgtoYWJpdGljYV9pZBgFIAEoCUgDiAEBQgQKAl94QgQKAl95QgkKB19tb3ZpbmdCDgoMX2hhYml0aWNhX2lkIpIBCg5QcmVzZW5jZVBsYXllchITCgtoYWJpdGljYV9pZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSKgoGYXZhdGFyGAMgASgLMhouZ2xpbXdheS52MS5QcmVzZW5jZUF2YXRhchIpCgNwb3MYBCABKAsyHC5nbGltd2F5LnYxLlByZXNlbmNlUG9zaXRpb24iygMKDlByZXNlbmNlQXZhdGFyEjIKCmFwcGVhcmFuY2UYASABKAsyHi5nbGltd2F5LnYxLlByZXNlbmNlQXBwZWFyYW5jZRI6CghlcXVpcHBlZBgCIAMoCzIoLmdsaW13YXkudjEuUHJlc2VuY2VBdmF0YXIuRXF1aXBwZWRFbnRyeRI4Cgdjb3N0dW1lGAMgAygLMicuZ2xpbXdheS52MS5QcmVzZW5jZUF2YXRhci5Db3N0dW1lRW50cnkSEwoLdXNlX2Nvc3R1bWUYBCABKAgSMgoMc2VsZWN0ZWRfcGV0GAUgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlEjQKDnNlbGVjdGVkX21vdW50GAYgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlGkcKDUVxdWlwcGVkRW50cnkSCwoDa2V5GAEgASgJEiUKBXZhbHVlGAIgASgLMhYuZ29vZ2xlLnByb3RvYnVmLlZhbHVlOgI4ARpGCgxDb3N0dW1lRW50cnkSCwoDa2V5GAEgASgJEiUKBXZhbHVlGAIgASgLMhYuZ29vZ2xlLnByb3RvYnVmLlZhbHVlOgI4ASLPAQoSUHJlc2VuY2VBcHBlYXJhbmNlEgwKBHNpemUYASABKAkSDQoFc2hpcnQYAiABKAkSDAoEc2tpbhgDIAEoCRISCgpoYWlyX2NvbG9yGAQgASgJEhIKCmhhaXJfc3R5bGUYBSABKAESEgoKYmFja2dyb3VuZBgGIAEoCRISCgpoYWlyX2JhbmdzGAcgASgBEhUKDWhhaXJfbXVzdGFjaGUYCCABKAESEgoKaGFpcl9iZWFyZBgJIAEoARITCgtoYWlyX2Zsb3dlchgKIAEoAUIxWi9nbGltd2F5L3NlcnZlci9pbnRlcm5hbC9nZW4vZ2xpbXdheS92MTtjb250cmFjdGIGcHJvdG8z", [file_google_protobuf_struct, file_google_protobuf_wrappers]);
+  fileDesc("ChlnbGltd2F5L3YxL3ByZXNlbmNlLnByb3RvEgpnbGltd2F5LnYxItsDCg9QcmVzZW5jZU1lc3NhZ2USKAoEYXV0aBgBIAEoCzIYLmdsaW13YXkudjEuUHJlc2VuY2VBdXRoSAASKAoEam9pbhgCIAEoCzIYLmdsaW13YXkudjEuUHJlc2VuY2VKb2luSAASKwoDcG9zGAMgASgLMhwuZ2xpbXdheS52MS5QcmVzZW5jZVBvc2l0aW9uSAASKgoFZW1vdGUYBCABKAsyGS5nbGltd2F5LnYxLlByZXNlbmNlRW1vdGVIABIyCgloZWFydGJlYXQYBSABKAsyHS5nbGltd2F5LnYxLlByZXNlbmNlSGVhcnRiZWF0SAASKgoFcmVhZHkYBiABKAsyGS5nbGltd2F5LnYxLlByZXNlbmNlUmVhZHlIABIoCgRyb29tGAcgASgLMhguZ2xpbXdheS52MS5QcmVzZW5jZVJvb21IABIqCgVsZWF2ZRgIIAEoCzIZLmdsaW13YXkudjEuUHJlc2VuY2VMZWF2ZUgAEigKBGdpZnQYCSABKAsyGC5nbGltd2F5LnYxLlByZXNlbmNlR2lmdEgAEi4KB3dpdG5lc3MYCiABKAsyGy5nbGltd2F5LnYxLlByZXNlbmNlV2l0bmVzc0gAOgIYAUIHCgVldmVudCIhCgxQcmVzZW5jZUF1dGgSDQoFbGVhc2UYASABKAk6AhgBIhcKEVByZXNlbmNlSGVhcnRiZWF0OgIYASIoCg1QcmVzZW5jZVJlYWR5EhMKC2hhYml0aWNhX2lkGAEgASgJOgIYASJMCgxQcmVzZW5jZUpvaW4SDAoEYXJlYRgBIAEoCRIqCgZwbGF5ZXIYAiABKAsyGi5nbGltd2F5LnYxLlByZXNlbmNlUGxheWVyOgIYASJNCgxQcmVzZW5jZVJvb20SDAoEYXJlYRgBIAEoCRIrCgdwbGF5ZXJzGAIgAygLMhouZ2xpbXdheS52MS5QcmVzZW5jZVBsYXllcjoCGAEiKAoNUHJlc2VuY2VMZWF2ZRITCgtoYWJpdGljYV9pZBgBIAEoCToCGAEiSQoNUHJlc2VuY2VFbW90ZRIKCgJpZBgBIAEoCRIYCgtoYWJpdGljYV9pZBgCIAEoCUgAiAEBOgIYAUIOCgxfaGFiaXRpY2FfaWQiUgoMUHJlc2VuY2VHaWZ0EhEKCWZyb21fbmFtZRgBIAEoCRIMCgRraW5kGAIgASgJEhAKCGl0ZW1fZGVmGAMgASgJEgsKA3F0eRgEIAEoBToCGAEiRgoPUHJlc2VuY2VXaXRuZXNzEgwKBGJlYXQYASABKAkSEwoLaGFiaXRpY2FfaWQYAiABKAkSDAoEbmFtZRgDIAEoCToCGAEiQAoOUHJlc2VuY2VGYWNpbmcSDgoBeBgBIAEoAUgAiAEBEg4KAXkYAiABKAFIAYgBAToCGAFCBAoCX3hCBAoCX3kiuAEKEFByZXNlbmNlUG9zaXRpb24SDgoBeBgBIAEoAUgAiAEBEg4KAXkYAiABKAFIAYgBARIqCgZmYWNpbmcYAyABKAsyGi5nbGltd2F5LnYxLlByZXNlbmNlRmFjaW5nEhMKBm1vdmluZxgEIAEoCEgCiAEBEhgKC2hhYml0aWNhX2lkGAUgASgJSAOIAQE6AhgBQgQKAl94QgQKAl95QgkKB19tb3ZpbmdCDgoMX2hhYml0aWNhX2lkIpYBCg5QcmVzZW5jZVBsYXllchITCgtoYWJpdGljYV9pZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSKgoGYXZhdGFyGAMgASgLMhouZ2xpbXdheS52MS5QcmVzZW5jZUF2YXRhchIpCgNwb3MYBCABKAsyHC5nbGltd2F5LnYxLlByZXNlbmNlUG9zaXRpb246AhgBIs4DCg5QcmVzZW5jZUF2YXRhchIyCgphcHBlYXJhbmNlGAEgASgLMh4uZ2xpbXdheS52MS5QcmVzZW5jZUFwcGVhcmFuY2USOgoIZXF1aXBwZWQYAiADKAsyKC5nbGltd2F5LnYxLlByZXNlbmNlQXZhdGFyLkVxdWlwcGVkRW50cnkSOAoHY29zdHVtZRgDIAMoCzInLmdsaW13YXkudjEuUHJlc2VuY2VBdmF0YXIuQ29zdHVtZUVudHJ5EhMKC3VzZV9jb3N0dW1lGAQgASgIEjIKDHNlbGVjdGVkX3BldBgFIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRI0Cg5zZWxlY3RlZF9tb3VudBgGIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRpHCg1FcXVpcHBlZEVudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEaRgoMQ29zdHVtZUVudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAE6AhgBItMBChJQcmVzZW5jZUFwcGVhcmFuY2USDAoEc2l6ZRgBIAEoCRINCgVzaGlydBgCIAEoCRIMCgRza2luGAMgASgJEhIKCmhhaXJfY29sb3IYBCABKAkSEgoKaGFpcl9zdHlsZRgFIAEoARISCgpiYWNrZ3JvdW5kGAYgASgJEhIKCmhhaXJfYmFuZ3MYByABKAESFQoNaGFpcl9tdXN0YWNoZRgIIAEoARISCgpoYWlyX2JlYXJkGAkgASgBEhMKC2hhaXJfZmxvd2VyGAogASgBOgIYAUIxWi9nbGltd2F5L3NlcnZlci9pbnRlcm5hbC9nZW4vZ2xpbXdheS92MTtjb250cmFjdGIGcHJvdG8z", [file_google_protobuf_struct, file_google_protobuf_wrappers]);
 
 /**
  * Describes the message glimway.v1.PresenceMessage.
  * Use `create(PresenceMessageSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceMessageSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 0);
@@ -21,6 +22,7 @@ export const PresenceMessageSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceAuth.
  * Use `create(PresenceAuthSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceAuthSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 1);
@@ -28,6 +30,7 @@ export const PresenceAuthSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceHeartbeat.
  * Use `create(PresenceHeartbeatSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceHeartbeatSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 2);
@@ -35,6 +38,7 @@ export const PresenceHeartbeatSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceReady.
  * Use `create(PresenceReadySchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceReadySchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 3);
@@ -42,6 +46,7 @@ export const PresenceReadySchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceJoin.
  * Use `create(PresenceJoinSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceJoinSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 4);
@@ -49,6 +54,7 @@ export const PresenceJoinSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceRoom.
  * Use `create(PresenceRoomSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceRoomSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 5);
@@ -56,6 +62,7 @@ export const PresenceRoomSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceLeave.
  * Use `create(PresenceLeaveSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceLeaveSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 6);
@@ -63,6 +70,7 @@ export const PresenceLeaveSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceEmote.
  * Use `create(PresenceEmoteSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceEmoteSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 7);
@@ -70,6 +78,7 @@ export const PresenceEmoteSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceGift.
  * Use `create(PresenceGiftSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceGiftSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 8);
@@ -77,6 +86,7 @@ export const PresenceGiftSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceWitness.
  * Use `create(PresenceWitnessSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceWitnessSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 9);
@@ -84,6 +94,7 @@ export const PresenceWitnessSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceFacing.
  * Use `create(PresenceFacingSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceFacingSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 10);
@@ -91,6 +102,7 @@ export const PresenceFacingSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresencePosition.
  * Use `create(PresencePositionSchema)` to create a new message.
+ * @deprecated
  */
 export const PresencePositionSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 11);
@@ -98,6 +110,7 @@ export const PresencePositionSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresencePlayer.
  * Use `create(PresencePlayerSchema)` to create a new message.
+ * @deprecated
  */
 export const PresencePlayerSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 12);
@@ -105,6 +118,7 @@ export const PresencePlayerSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceAvatar.
  * Use `create(PresenceAvatarSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceAvatarSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 13);
@@ -112,6 +126,7 @@ export const PresenceAvatarSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.PresenceAppearance.
  * Use `create(PresenceAppearanceSchema)` to create a new message.
+ * @deprecated
  */
 export const PresenceAppearanceSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_presence, 14);

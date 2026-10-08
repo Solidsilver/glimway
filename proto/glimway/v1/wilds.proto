@@ -1,0 +1,57 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+
+enum Dir { DIR_UNSPECIFIED = 0; DIR_NORTH = 1; DIR_EAST = 2; DIR_SOUTH = 3; DIR_WEST = 4; }
+enum SiteKind { SITE_KIND_UNSPECIFIED = 0; SITE_KIND_ECHO = 1; SITE_KIND_CAIRN = 2; SITE_KIND_NEST = 3; SITE_KIND_PLANK = 4; SITE_KIND_GIVEN = 5; SITE_KIND_REEDS = 6; }
+message Tile { uint32 tx = 1; uint32 ty = 2; }
+message Exit { uint32 tx = 1; uint32 ty = 2; uint32 tw = 3; uint32 th = 4; Dir dir = 5; string to = 6; Tile entry = 7; }
+// All piece arrays have equal length; kind indexes kinds. flags holds two bits
+// per piece, least significant first: flip, overhang.
+message DecorList {
+  repeated string kinds = 1; repeated uint32 kind = 2; repeated uint32 tx = 3; repeated uint32 ty = 4;
+  repeated sint32 ox = 5; repeated sint32 oy = 6; repeated uint32 variant = 7; bytes flags = 8;
+}
+message StorySite { string id = 1; SiteKind kind = 2; uint32 tx = 3; uint32 ty = 4; }
+// Ground: two row-major cells per byte, low nibble first. Solid: eight cells
+// per byte, least significant bit first. Tiles are local; offsets are pixels.
+message WildsChunk {
+  string epoch_id = 1; string region = 2; string realm = 3; sint32 layer = 4;
+  sint32 cx = 5; sint32 cy = 6; uint32 generator_version = 7; uint32 size = 8;
+  repeated string palette = 9; bytes ground = 10; bytes solid = 11; repeated Exit exits = 12;
+  DecorList decor = 13; repeated StorySite sites = 14; Tile spawn = 15; string look = 16; string mark = 17;
+  // Bodies live in immutable chunks; the region read carries only state.
+  repeated WildsEntity entities = 18;
+}
+message WildsEntity {
+  string id = 1; string kind = 2; uint32 tx = 3; uint32 ty = 4;
+  repeated string enemies = 5; string material = 6; uint32 tier = 7; string poi = 8;
+}
+// starts_at and ends_at are Unix seconds.
+message WildsEpoch {
+  string id = 1; string world_seed = 2; string region_id = 3; uint32 generator_version = 4;
+  string season = 5; double starts_at = 6; google.protobuf.DoubleValue ends_at = 7;
+}
+// available_at and at are Unix seconds.
+message WildsEntityState {
+  string id = 1; double cycle = 2; string state = 3; double available_at = 4;
+  google.protobuf.StringValue by = 5; google.protobuf.DoubleValue at = 6; string epoch = 7;
+}
+// All time fields are Unix seconds.
+message WildsPersonalClaim { string entity_id = 1; double at = 2; }
+// All time fields are Unix seconds.
+message WildsDiscovery { string entity_id = 1; string poi_id = 2; string discoverer_id = 3; string display_name = 4; double at = 5; }
+// All time fields are Unix seconds.
+message WildsLantern { string id = 1; string owner_id = 2; string display_name = 3; double x = 4; double y = 5; google.protobuf.StringValue lit_by = 6; double at = 7; google.protobuf.DoubleValue lit_at = 8; }
+message EchoAssignment { string site = 1; string member = 2; bool settled = 3; }
+message WildsRegionResult {
+  WildsEpoch epoch = 1; repeated WildsEntityState entities = 2; repeated WildsPersonalClaim personal_claims = 3;
+  repeated WildsDiscovery discoveries = 4; repeated WildsLantern lanterns = 5;
+  map<string,double> materials = 6; repeated EchoAssignment echoes = 7;
+}
+message WildsMaterial { string id = 1; double qty = 2; }
+message WildsLoot { repeated WildsMaterial materials = 1; google.protobuf.StringValue trinket = 2; }
+// Row-major LAND vocabulary: grass, tree, stump, boulder, water, ford, slope, edge, path.
+// D owns generation; generator_version versions this geometry.
+message HomesteadLand { uint32 width = 1; uint32 height = 2; repeated string cells = 3; uint32 generator_version = 4; }

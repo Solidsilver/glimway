@@ -143,7 +143,7 @@ export class Homesteads {
   }
 
   get myId(): string | null {
-    return this.session.link?.habiticaId ?? null
+    return this.session.link?.accountId ?? null
   }
 
   /** Your gate (null: no deed). */

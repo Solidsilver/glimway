@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,7 +22,7 @@ func BenchmarkPresenceBroadcast(b *testing.B) {
 			peers[i] = p
 			h.peers[p.identity.ID] = p
 		}
-		message := &contract.PresencePosition{HabiticaId: proto.String("5abfd539-22eb-457f-8e2a-9fb3d66731f1"), X: proto.Float64(432.125), Y: proto.Float64(768.5), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)}
+		message := &contract.PresencePosition{AccountId: proto.String("5abfd539-22eb-457f-8e2a-9fb3d66731f1"), X: proto.Float64(432.125), Y: proto.Float64(768.5), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for b.Loop() {

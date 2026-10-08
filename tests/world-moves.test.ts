@@ -144,9 +144,9 @@ test('world views parse, with unknown or broken fields made safe', () => {
 test('a move answer carries the snapshot and the new world', () => {
   const snapshot = {
     state: { version: 1, area: 'commons', position: { x: 1, y: 2 }, quest: 'new', hp: 10, maxHp: 10, mana: 5, maxMana: 5, embers: 3, xpEmbers: 0, emberXp: 0, inventory: [], discoveries: [], defeatedEnemies: [], flags: [], playSeconds: 0 },
-    rev: 7,
+    version: 7,
     vitalsSource: 'demo',
-    habiticaId: 'hal',
+    accountId: 'hal',
     displayName: 'Hal',
     habiticaPartyId: 'p1',
     worldId: 'w2',
@@ -168,7 +168,7 @@ test('the first sign-in’s world question: parsed apart from a snapshot, its co
   assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: null, partyCanOpen: true, partyAdmitted: true } })?.partyAdmitted, true);
   assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'olive', displayName: 'Olive', partyWorld: null, partyCanOpen: true } })?.partyCanOpen, true);
   // A snapshot is not a question.
-  assert.equal(parseWorldChoice({ habiticaId: 'rue', state: {} }), null);
+  assert.equal(parseWorldChoice({ accountId: 'rue', state: {} }), null);
   assert.equal(errorFromResponse(409, { error: { code: 'world-choice-required' } }).code, 'world-choice-required');
   assert.equal(errorFromResponse(409, { error: { code: 'world-chosen' } }).code, 'world-chosen');
   const samples: string[] = [];

@@ -4,7 +4,9 @@ package api
 
 import (
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/habitica"
+	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"io"
 	"log"
@@ -18,6 +20,14 @@ const SessionTTL = 30 * 24 * time.Hour
 const SessionIdleTTL = 7 * 24 * time.Hour
 
 type Config struct {
+	Lanterns         ports.Lanterns
+	Story            ports.StoryRules
+	Placement        ports.Placement
+	Regions          ports.RegionSource
+	HomeLand         ports.HomeLandSource
+	State            store.StateComposition
+	Chunks           chunks.ChunkSource
+	Epochs           chunks.EpochComposition
 	SecureCookie     bool
 	Logger           *log.Logger
 	Now              func() time.Time
@@ -61,6 +71,12 @@ type Server struct {
 }
 
 func New(s *store.Store, h *habitica.Client, c Config) *Server {
+	if c.State == nil {
+		c.State = store.DefaultStateComposition{}
+	}
+	if c.Chunks == nil {
+		c.Chunks = chunks.Unavailable{}
+	}
 	if c.Now == nil {
 		c.Now = time.Now
 	}

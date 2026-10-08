@@ -3,6 +3,7 @@
   import type { Session } from '../game/session'
   import { villageFor } from '../game/village'
   import { bus, EV } from '../game/events'
+  import { sfx } from '../game/sfx'
   import { batchesAffordable, costPhrase, effectiveBatches, recipeCost } from '../lib/village'
   import { HEARTH_RECIPES } from '../lib/workshop'
   import type { Asset } from '../lib/api/types'
@@ -47,7 +48,10 @@
     // Exactly what the row shows: the chosen batch, clamped to what's affordable now.
     const n = effectiveBatches(batches[recipeId], batchesAffordable(recipe, carried))
     const r = await action.run(`craft:${recipeId}`, () => village.hearthCraft(recipeId, n), (done) => `Made ${phrase(done.value)} at the hearth, your mark on it. It’s in your pack.`)
-    if (r?.ok) batches = { ...batches, [recipeId]: 1 }
+    if (r?.ok) {
+      sfx('craft')
+      batches = { ...batches, [recipeId]: 1 }
+    }
   }
 
   function phrase(a: Asset): string {

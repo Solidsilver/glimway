@@ -265,7 +265,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	mendedRows, err := tx.QueryContext(ctx, `
 		SELECT vr.repair_id, vr.mended_by, coalesce(p.display_name, ''), vr.mended_at
 		FROM village_repairs vr
-		LEFT JOIN players p ON p.habitica_id = vr.mended_by
+		LEFT JOIN players p ON p.account_id = vr.mended_by
 		WHERE vr.world_id = ? AND vr.mended_at IS NOT NULL
 		ORDER BY vr.mended_at
 	`, s.WorldID)
@@ -297,7 +297,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	histRows, err := tx.QueryContext(ctx, `
 		SELECT l.id, l.repair_id, l.mended_by, coalesce(p.display_name, ''), l.mended_at
 		FROM village_repair_log l
-		LEFT JOIN players p ON p.habitica_id = l.mended_by
+		LEFT JOIN players p ON p.account_id = l.mended_by
 		WHERE l.world_id = ?
 		ORDER BY l.mended_at DESC
 		LIMIT 5
@@ -385,7 +385,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 
 		// Take the required part from player pack
 		ref := s.WorldID + ":" + id
-		if _, err = packTake(ctx, tx, s.HabiticaID, def.Part, nil, 1, "village-repair", ref, now); err != nil {
+		if _, err = packTake(ctx, tx, s.AccountID, def.Part, nil, 1, "village-repair", ref, now); err != nil {
 			return nil, err
 		}
 
@@ -394,7 +394,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 			UPDATE village_repairs
 			SET mended_by = ?, mended_at = ?
 			WHERE world_id = ? AND repair_id = ? AND mended_at IS NULL
-		`, s.HabiticaID, now, s.WorldID, id); err != nil {
+		`, s.AccountID, now, s.WorldID, id); err != nil {
 			return nil, err
 		}
 
@@ -406,13 +406,13 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, `
 			INSERT INTO village_repair_log(id, world_id, repair_id, mended_by, mended_at)
 			VALUES(?, ?, ?, ?, ?)
-		`, logID, s.WorldID, id, s.HabiticaID, now); err != nil {
+		`, logID, s.WorldID, id, s.AccountID, now); err != nil {
 			return nil, err
 		}
 
 		// Optional reward gift: its ledger row must land with the mend.
 		if def.Gift != nil {
-			if err = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{Maker: "", Qty: def.Gift.Qty}}, "village-reward", ref, now); err != nil {
+			if err = packPut(ctx, tx, s.AccountID, def.Gift.ID, []makerQty{{Maker: "", Qty: def.Gift.Qty}}, "village-reward", ref, now); err != nil {
 				return nil, err
 			}
 		}

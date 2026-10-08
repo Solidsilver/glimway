@@ -18,9 +18,9 @@ const base = (over: Partial<GameState> = {}): GameState => ({ ...createNewGame()
 function snap(state: GameState, rev: number, extra: Record<string, unknown> = {}) {
   return {
     state,
-    rev,
+    version: rev,
     vitalsSource: 'imported',
-    habiticaId: 'hero',
+    accountId: 'hero',
     habiticaPartyId: null,
     worldId: 'w',
     saveOrigin: 'fresh',
@@ -101,7 +101,7 @@ function memoryStore() {
       return true;
     },
     saveOrphan: async (o) => (orphans.set(o.clientId, structuredClone(o)), true),
-    loadOrphans: async (id) => [...orphans.values()].filter((o) => o.habiticaId === id),
+    loadOrphans: async (id) => [...orphans.values()].filter((o) => o.accountId === id),
     deleteOrphan: async (_id, clientId) => orphans.delete(clientId),
   };
   return store;
@@ -119,7 +119,7 @@ function makeLink(server: ReturnType<typeof fakeServer>, opts: { state?: GameSta
   const link = new Link({
     api: server.api,
     clientId: opts.clientId ?? 'tab-a',
-    habiticaId: 'hero',
+    accountId: 'hero',
     name: 'Tansy',
     rev: opts.rev ?? 5,
     lease: 'L1',
@@ -193,7 +193,7 @@ test('heartbeat told leaseActive:false marks this tab superseded, never re-acqui
 test('the next lease holder merges orphans as stale writes and drops them (finding 3)', async () => {
   const server = fakeServer();
   const store = memoryStore();
-  store.orphans.set('tab-old', { habiticaId: 'hero', clientId: 'tab-old', state: base({ quest: 'clue-found', hp: 3 }), rev: 4, savedAt: 0 });
+  store.orphans.set('tab-old', { accountId: 'hero', clientId: 'tab-old', state: base({ quest: 'clue-found', hp: 3 }), rev: 4, savedAt: 0 });
   const { link, session } = makeLink(server, { status: 'offline', rev: 8, store, clientId: 'tab-new', state: base({ hp: 44 }) });
   server.on('POST /api/play', { body: { ...snap(base({ hp: 44 }), 8), lease: 'L9' } });
   server.on('PUT /api/progress', (c) => ({

@@ -35,6 +35,9 @@ register below carries its own licence line.
   with its licence and attribution line. Don't mix it into the CC0 folders.
 - **Code: AGPL-3.0-or-later** (`LICENSE` at the root), including the code
   that draws the Register B placeholders.
+- **Third-party CC0 sound**: Kenney's audio packs (Register I), in
+  `public/assets/audio/kenney/` with its own `LICENSE`. No credit required;
+  credited anyway.
 - **Habitica's material keeps Habitica's terms**, kept apart and labelled:
   the sprites in `public/assets/habitica/` are CC BY-NC-SA 3.0, © HabitRPG,
   Inc. (notice: `public/assets/habitica/LICENSE`); the gear numbers in
@@ -326,6 +329,75 @@ to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
 `scripts/build-atlases.ts`.
 **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
+## Register I — sound (Kenney's CC0 packs, delivered 2026-10-07)
+
+Sound effects cut from three of Kenney's audio packs (kenney.nl), all
+**CC0 1.0** (each pack's `License.txt` says so: "Creative Commons Zero, CC0
+… Credit (Kenney or www.kenney.nl) would be nice but is not mandatory").
+Downloaded from kenney.nl on 2026-10-07:
+
+- **Interface Sounds** (1.0): https://kenney.nl/assets/interface-sounds
+- **RPG Audio**: https://kenney.nl/assets/rpg-audio
+- **Impact Sounds** (1.0): https://kenney.nl/assets/impact-sounds
+
+Files: `public/assets/audio/kenney/` (notice: `public/assets/audio/kenney/LICENSE`),
+43 MP3s, about 121 KB together. The game plays them through the sound module
+(`src/game/sound.ts`; cue table `src/game/sound-bank.ts`).
+
+**Edits, the same for every file:** leading and trailing silence trimmed
+(below -50 dB), folded to mono at 44.1 kHz, levelled so each clip's loudest
+50 ms sits at -14 dBFS RMS with peaks kept under -1 dBFS, a 20 ms fade-out
+(shorter on very short clips), metadata stripped, encoded as MP3 (LAME VBR
+quality 5). MP3 because every target browser decodes it, Safari on iPhone
+included (Safari only began playing Ogg Vorbis in 18.4), so one format serves
+all and no fallback is needed. The mix between cues is set in code (`gain`
+in the cue table), not in the files.
+
+| File | Cue | Pack | Source file |
+|---|---|---|---|
+| `ui-click.mp3` | click | Interface Sounds | `select_002.ogg` |
+| `ui-open.mp3` | open (a panel) | Interface Sounds | `open_002.ogg` |
+| `ui-close.mp3` | close (a panel) | Interface Sounds | `close_002.ogg` |
+| `ui-confirm.mp3` | confirm (a purchase, an upgrade) | Interface Sounds | `confirmation_001.ogg` |
+| `ui-refuse.mp3` | fizzle (refused: no mana, can't place, an error) | Interface Sounds | `error_008.ogg` |
+| `ui-notice.mp3` | notice (a toast) | Interface Sounds | `glass_001.ogg` |
+| `discover.mp3` | discover (journal, a paper found) | Interface Sounds | `glass_004.ogg` |
+| `calm.mp3` | calm (a creature settled) | Interface Sounds | `confirmation_003.ogg` |
+| `coins.mp3` | ember (embers gained) | RPG Audio | `handleCoins2.ogg` |
+| `pickup.mp3` | pickup (into the bag) | RPG Audio | `handleSmallLeather.ogg` |
+| `door-open.mp3` | door-open (into the cottage, the Library) | RPG Audio | `doorOpen_1.ogg` |
+| `door-close.mp3` | door-close (out of the cottage) | RPG Audio | `doorClose_4.ogg` |
+| `swing-1.mp3`, `swing-2.mp3` | swing | RPG Audio | `knifeSlice.ogg`, `knifeSlice2.ogg` |
+| `roll.mp3` | roll (the dodge) | RPG Audio | `cloth2.ogg` |
+| `step-path-1.mp3`, `step-path-2.mp3`, `step-path-3.mp3`, `step-path-4.mp3` | footsteps on path, dirt, sand | RPG Audio | `footstep00.ogg`, `footstep01.ogg`, `footstep03.ogg`, `footstep07.ogg` |
+| `step-grass-1.mp3`, `step-grass-2.mp3`, `step-grass-3.mp3`, `step-grass-4.mp3` | footsteps on grass | Impact Sounds | `footstep_grass_000.ogg`, `_001`, `_002`, `_003` |
+| `step-stone-1.mp3`, `step-stone-2.mp3`, `step-stone-3.mp3`, `step-stone-4.mp3` | footsteps on stone, cobbles | Impact Sounds | `footstep_concrete_000.ogg`, `_001`, `_003`, `_004` |
+| `step-wood-1.mp3`, `step-wood-2.mp3`, `step-wood-3.mp3`, `step-wood-4.mp3` | footsteps on planks, bridges, indoors | Impact Sounds | `footstep_wood_000.ogg`, `_001`, `_002`, `_004` |
+| `chop-1.mp3`, `chop-2.mp3` | chop | Impact Sounds | `impactWood_heavy_000.ogg`, `impactWood_heavy_001.ogg` |
+| `quarry-1.mp3`, `quarry-2.mp3` | quarry (break) | Impact Sounds | `impactMining_000.ogg`, `impactMining_001.ogg` |
+| `clink.mp3` | clink (a blow off the warden's stone) | Impact Sounds | `impactMining_002.ogg` |
+| `dig.mp3` | dig | Impact Sounds | `impactSoft_medium_001.ogg` |
+| `plant.mp3` | plant | Impact Sounds | `impactGeneric_light_000.ogg` |
+| `craft.mp3` | craft (Workshop, Hearth) | Impact Sounds | `impactPlank_medium_000.ogg` |
+| `hit-1.mp3`, `hit-2.mp3` | hit | Impact Sounds | `impactPunch_medium_000.ogg`, `impactPunch_medium_001.ogg` |
+| `crit.mp3` | crit | Impact Sounds | `impactPunch_heavy_000.ogg` |
+| `hurt.mp3` | hurt (the hero takes a blow) | Impact Sounds | `impactSoft_heavy_001.ogg` |
+
+Each path above is under `public/assets/audio/kenney/`; the step and
+multi-variant rows list their files in order.
+
+Still procedural (Web Audio notes, no files): the dialogue voices, the quest
+and lantern stings, the warden's falter and settle, the cast, the windup
+tell, the area chime, the placement pop and the defeat fall.
+
+**Ambience: none yet.** Kenney has no fitting ambience loop. The module has a
+slot for one per area (`AMBIENCE` in `src/game/sound-bank.ts`); CC0 loops
+from Freesound (village day, woods, wind in the Wilds, a hearth indoors)
+would go in their own register here.
+
+**Licence** — CC0 1.0 (Kenney's packs; our edits CC0 too). **Attribution** —
+not required; credited anyway as a courtesy (Menu About card, README).
+
 ## Register C — pending delivered art (not yet in repo)
 
 Expected from the external asset agent; **not present, not licensed, not
@@ -340,7 +412,8 @@ goes in its own folder with its own `LICENSE` and register.
 | Enemy walk/attack move sets (beyond idle/squash/windup/hurt) | Light real-time combat | pending |
 | NPC side-facing frames (left/right) for Mara, Pip, Orrin | Walk/idle beyond the front-facing breathing pair | pending |
 | Weather/occlusion variants, interior/mask layers | Depth over flattened scenes | pending |
-| Audio (ambience, UI, interaction) | Warmth and feedback | pending |
+| ~~Audio (UI, interaction)~~ | Warmth and feedback | **delivered** (Register I: Kenney CC0 packs) |
+| Audio: ambience loops | Warmth between actions | pending (no fitting Kenney loop; CC0 from Freesound later; slot in `src/game/sound-bank.ts`) |
 | Licensed Habitica avatar/equipment/pet/mount composition | "Make it your character" milestone (license-verified) | pending |
 
 ## Next asset priorities (requested 2026-10-02; first three delivered)
@@ -366,7 +439,8 @@ Next in priority order now:
    tile ids if metadata can't be generated).
 4. **Enemy movement/combat frames** — walk/attack for the trio once combat
    prototyping starts (milestone 3).
-5. **Audio** — ambience, UI, interaction (Register C row).
+5. ~~**Audio** — ambience, UI, interaction~~ — UI and interaction
+   **delivered** (Register I, Kenney CC0); ambience still pending (Register C row).
 
 Style bar for all: keep to the Art direction above ("stay close to Habitica
 pixel art"); clean pixel grid; strong silhouettes; Register D palette.
@@ -380,6 +454,7 @@ one row each:
 |---|---|---|---|---|---|---|
 | `content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE (notice: `content/habitica-gear.NOTICE.md`) | "Gear statistics derived from Habitica's content data (GPL-3.0)." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
 | `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG, Inc. (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ (notice: `public/assets/habitica/LICENSE`) | "Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
+| `public/assets/audio/kenney/*.mp3` (43 files, Register I) | https://kenney.nl/assets/interface-sounds, https://kenney.nl/assets/rpg-audio, https://kenney.nl/assets/impact-sounds | Kenney (www.kenney.nl) | CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/ (notice: `public/assets/audio/kenney/LICENSE`) | "Sound effects by Kenney (kenney.nl), CC0." (courtesy, not required) | Trimmed, mono, levelled, MP3 (Register I) | 2026-10-07 |
 | Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
 
 Rules (from the plan): Habitica source code is GPL v3; Habitica original
@@ -413,6 +488,8 @@ Text of record:
 > [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/);
 > gear statistics derived from Habitica's content data (GPL-3.0). Glimway is
 > not affiliated with or endorsed by Habitica.
+>
+> Sound effects by [Kenney](https://kenney.nl) (CC0).
 
 This is the About card in the Menu (`src/ui/MenuPanel.svelte`). Never call
 any instance, the main one included, "official".
@@ -496,3 +573,9 @@ any instance, the main one included, "official".
   sprites get a notice (`public/assets/habitica/LICENSE`) and the gear
   catalog a GPL-3.0 notice. Credits corrected: Habitica's art is by
   HabitRPG, Inc.; "Weirdly Wonderful" was wrong and is gone.
+- 2026-10-07 — Register I added: the game's first sound files, 43 MP3s cut
+  from Kenney's Interface Sounds, RPG Audio and Impact Sounds packs (CC0),
+  trimmed, levelled and encoded by script; per-file sources recorded. Kenney
+  credited in the Menu and the README as a courtesy. Register C's audio row
+  split: UI and interaction delivered, ambience still pending. Audio files
+  go through Git LFS like the art.

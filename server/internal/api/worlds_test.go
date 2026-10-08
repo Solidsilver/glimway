@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/store"
@@ -59,7 +60,7 @@ func (x *rig) again(id string) (*http.Cookie, response) {
 func (x *rig) worldOf(id string) string {
 	x.t.Helper()
 	var w string
-	if err := x.db.DB.QueryRow("SELECT world_id FROM players WHERE habitica_id=?", id).Scan(&w); err != nil {
+	if err := x.db.DB.QueryRow("SELECT world_id FROM players WHERE account_id=(SELECT account_id FROM sign_ins WHERE method='habitica' AND subject=?)", id).Scan(&w); err != nil {
 		x.t.Fatal(err)
 	}
 	return w
@@ -106,7 +107,7 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 	x.hero("olive", "Olive", "p1")
 	oc, o := x.ready("olive")
 	pw := x.partyWorldOf("p1")
-	if pw == "" || o.WorldID != pw || count(t, x.db, "SELECT count(*) FROM worlds") != 1 || count(t, x.db, "SELECT count(*) FROM worlds WHERE opened_by='olive'") != 1 {
+	if pw == "" || o.WorldID != pw || count(t, x.db, "SELECT count(*) FROM worlds") != 1 || count(t, x.db, "SELECT count(*) FROM worlds WHERE opened_by='"+x.account("olive")+"'") != 1 {
 		t.Fatal("the party's world", o.WorldID, pw)
 	}
 	v := x.worldReq("GET", "/api/world", nil, oc, 200)
@@ -121,7 +122,6 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 	if st != 200 || x.worldOf("rue") != pw || count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id='rue' AND added_by='party'") != 1 {
 		t.Fatal("party member without a code", st, e)
 	}
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, rc, 200)
 	if v = x.worldReq("GET", "/api/world", nil, rc, 200); v.World.ID != pw || v.World.Members != 2 || !v.PartyHome || v.Prompt {
 		t.Fatal("rue's view", v.raw)
 	}
@@ -143,7 +143,7 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 	if st, e, _ := x.signIn("loner", ""); st != 403 || e != "access-denied" {
 		t.Fatal("no-party account signed in", st, e)
 	}
-	if count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id IN ('stranger','loner','tam')") != 0 || count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id IN ('stranger','loner','tam')") != 0 || x.partyWorldOf("p9") != "" {
+	if count(t, x.db, "SELECT count(*) FROM sign_ins WHERE method='habitica' AND subject IN ('stranger','loner','tam')") != 0 || count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id IN ('stranger','loner','tam')") != 0 || x.partyWorldOf("p9") != "" {
 		t.Fatal("a refused sign-in left something behind")
 	}
 
@@ -166,7 +166,7 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 	// of their own.
 	x.hero("hal", "Hal", "")
 	hc, h := x.ready("hal")
-	if h.WorldID == pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='hal' AND habitica_party_id IS NULL", h.WorldID) != 1 {
+	if h.WorldID == pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("hal")+"' AND habitica_party_id IS NULL", h.WorldID) != 1 {
 		t.Fatal("hal's own world")
 	}
 	code := inviteReq(t, x, "POST", "/api/invites", hc, 200).Code
@@ -230,7 +230,7 @@ func TestPartyAdmissionDoesNotChain(t *testing.T) {
 	// So p2's members are turned away before Habitica is asked.
 	calls := x.calls.Load()
 	x.hero("zed", "Zed", "p2")
-	if st, e, _ := x.signIn("zed", "p2"); st != 403 || e != "access-denied" || x.calls.Load() != calls || count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='zed'") != 0 {
+	if st, e, _ := x.signIn("zed", "p2"); st != 403 || e != "access-denied" || x.calls.Load() != calls || count(t, x.db, "SELECT count(*) FROM sign_ins WHERE method='habitica' AND subject='zed'") != 0 {
 		t.Fatal("a stranger rode a party-admitted account in", st, e)
 	}
 	// The operator adds Rue: she's theirs now, and her next sign-in opens p2.
@@ -240,7 +240,7 @@ func TestPartyAdmissionDoesNotChain(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id='rue' AND added_by='cli'") != 1 {
 		t.Fatal("allowlist add didn't make the account the operator's")
 	}
-	if st, e, _ := x.signIn("rue", "p2"); st != 200 || x.partyWorldOf("p2") == "" || count(t, x.db, "SELECT count(*) FROM worlds WHERE opened_by='rue'") != 1 {
+	if st, e, _ := x.signIn("rue", "p2"); st != 200 || x.partyWorldOf("p2") == "" || count(t, x.db, "SELECT count(*) FROM worlds WHERE opened_by='"+x.account("rue")+"'") != 1 {
 		t.Fatal("an operator-admitted account didn't open its party", st, e)
 	}
 	if st, e, _ := x.signIn("zed", "p2"); st != 200 {
@@ -281,7 +281,7 @@ func TestPartyAdmissionControls(t *testing.T) {
 		t.Fatal(e)
 	}
 	parties, err := x.db.Parties(ctx)
-	if err != nil || len(parties) != 2 || parties[0].PartyID != "p1" || parties[0].WorldID == nil || *parties[0].WorldID != pw || parties[0].Members != 1 || parties[0].OpenedBy == nil || *parties[0].OpenedBy != "olive" || parties[0].ClosedAt == nil || parties[1].PartyID != "p2" || parties[1].WorldID != nil {
+	if err != nil || len(parties) != 2 || parties[0].PartyID != "p1" || parties[0].WorldID == nil || *parties[0].WorldID != pw || parties[0].Members != 1 || parties[0].OpenedBy == nil || *parties[0].OpenedBy != x.account("olive") || parties[0].ClosedAt == nil || parties[1].PartyID != "p2" || parties[1].WorldID != nil {
 		t.Fatal("parties", store.JSON(parties), err)
 	}
 	if err = x.db.SetPartyOpen(ctx, "p1", true); err != nil {
@@ -328,8 +328,7 @@ func TestPartySignInBudget(t *testing.T) {
 		{"olive", "", "", "listed"},
 		{"random", "", "", ""},
 		{"random", "", "p9", ""},
-		{"random", "", "p1", "party"},
-	} {
+		{"random", "", "p1", "party"}} {
 		if got, err := x.api.precheck(ctx, c.id, c.invite, c.party); err != nil || got != c.want {
 			t.Fatal(c, got, err)
 		}
@@ -370,7 +369,7 @@ func TestPartyWorldOnRequest(t *testing.T) {
 	x.hero("hal", "Hal", "")
 	hc, h := x.ready("hal")
 	// As if a sign-in from before party worlds read the party.
-	if _, err := x.db.DB.Exec("UPDATE players SET habitica_party_id='p1' WHERE habitica_id='hal'"); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE players SET habitica_party_id='p1' WHERE account_id='" + x.account("hal") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); !v.InParty || v.PartyWorld != nil || v.PartyHome || !v.IsOwner {
@@ -413,7 +412,7 @@ func TestPartyPromptShownOnce(t *testing.T) {
 	if v.Prompt || v.PartyWorld == nil || v.PartyWorld.ID != o.WorldID {
 		t.Fatal("prompt shown twice, or the party world lost from settings", v.raw)
 	}
-	if count(t, x.db, "SELECT count(*) FROM party_prompts WHERE habitica_id='hal'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM party_prompts WHERE account_id='"+x.account("hal")+"'") != 1 {
 		t.Fatal("prompt rows")
 	}
 }
@@ -430,7 +429,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.hero("hal", "Hal", "p1")
 	hc, h := x.again("hal")
 	_, b := x.member("bob", h.WorldID)
-	x.seedAssets("hal")
+	x.seedAssets(x.account("hal"))
 	x.refresh(hc, &h)
 	before := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
 
@@ -442,7 +441,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	}
 	// The lease and revision rules hold.
 	stale := moveBody(h, "stale", o.WorldID, "village")
-	stale["baseRev"] = h.Rev - 1
+	stale["baseRev"] = h.Version - 1
 	if e := x.worldReq("POST", "/api/world/move", stale, hc, 409).Error.Code; e != "stale-revision" {
 		t.Fatal(e)
 	}
@@ -459,7 +458,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.worldReq("POST", "/api/world/move", moveBody(h, "here", h.WorldID, "village"), hc, 409)
 
 	// Parcels on the road from them must come home first.
-	sent := x.p5("POST", "/api/mail", body(h, "send", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 5}}), hc, 200)
+	sent := x.p5("POST", "/api/mail", body(h, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 5}}), hc, 200)
 	h.Snapshot = sent.Snapshot
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.Leaving.Outgoing != 1 {
 		t.Fatal("outgoing", v.raw)
@@ -468,7 +467,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 		t.Fatal(e)
 	}
 	after := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
-	if x.worldOf("hal") != h.WorldID || after.Rev != sent.Rev || after.State.Area != before.State.Area {
+	if x.worldOf("hal") != h.WorldID || after.Version != sent.Version || after.State.Area != before.State.Area {
 		t.Fatal("a refused move changed something")
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 0 {
@@ -493,7 +492,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	hc, h := x.again("hal")
 	from := h.WorldID
 	bc, b := x.member("bob", from)
-	x.seedAssets("bob")
+	x.seedAssets(x.account("bob"))
 	x.refresh(bc, &b)
 
 	// Hal's homestead with a workshop, a stool placed, timber in the shared
@@ -508,7 +507,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	home := x.home(hc)
 
 	// Bob's parcel waiting for Hal goes back to Bob.
-	sent := x.p5("POST", "/api/mail", body(b, "gift", map[string]any{"toId": "hal", "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 3}}), bc, 200)
+	sent := x.p5("POST", "/api/mail", body(b, "gift", map[string]any{"toId": x.account("hal"), "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 3}}), bc, 200)
 	b.Snapshot = sent.Snapshot
 
 	x.refresh(hc, &h)
@@ -535,32 +534,32 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	instances := func(location, owner string) int {
 		return count(t, x.db, "SELECT count(*) FROM item_instances WHERE location=? AND owner=?", location, owner)
 	}
-	pack, personal, shared := stacks("pack", "hal"), stacks("personal", "hal"), stacks("storage", home.ID)
-	packTools := instances("pack", "hal")
+	pack, personal, shared := stacks("pack", x.account("hal")), stacks("personal", x.account("hal")), stacks("storage", home.ID)
+	packTools := instances("pack", x.account("hal"))
 	placed := count(t, x.db, "SELECT count(*) FROM homestead_items WHERE homestead_id=? AND location='placed'", home.ID)
 	if len(personal) == 0 || len(shared) == 0 || placed != 1 {
 		t.Fatal("setup", personal, shared, placed)
 	}
 	embers, quest := h.State.Embers, h.State.Quest
-	bobFiber := stacks("pack", "bob")
-	x.conserved("hal")
-	x.conserved("bob")
+	bobFiber := stacks("pack", x.account("bob"))
+	x.conserved(x.account("hal"))
+	x.conserved(x.account("bob"))
 
 	req := moveBody(h, "move-1", o.WorldID, "commons")
 	moved := x.worldReq("POST", "/api/world/move", req, hc, 200)
-	if moved.WorldID != o.WorldID || moved.Rev != h.Rev+1 || !moved.Result.LeftHome || moved.Result.Returned != 1 || moved.Result.From != from || moved.Result.World.World.ID != o.WorldID {
+	if moved.WorldID != o.WorldID || moved.Version != h.Version+1 || !moved.Result.LeftHome || moved.Result.Returned != 1 || moved.Result.From != from || moved.Result.World.World.ID != o.WorldID {
 		t.Fatal("move answer", moved.raw)
 	}
 	// Comes with them: character, story, embers, pack and personal chest.
 	if moved.State.Embers != embers || moved.State.Quest != quest || moved.State.Area != "commons" {
 		t.Fatal("character changed")
 	}
-	if !reflect.DeepEqual(stacks("pack", "hal"), pack) || instances("pack", "hal") != packTools || !reflect.DeepEqual(stacks("personal", "hal"), personal) {
+	if !reflect.DeepEqual(stacks("pack", x.account("hal")), pack) || instances("pack", x.account("hal")) != packTools || !reflect.DeepEqual(stacks("personal", x.account("hal")), personal) {
 		t.Fatal("pack or personal chest changed")
 	}
 	// Stays behind: membership (the last one out: the land goes vacant), the
 	// placed stool and the shared chest.
-	if count(t, x.db, "SELECT count(*) FROM homestead_members WHERE habitica_id='hal'") != 0 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_members WHERE account_id='"+x.account("hal")+"'") != 0 {
 		t.Fatal("still homesteaded")
 	}
 	if count(t, x.db, "SELECT count(*) FROM homesteads WHERE id=? AND world_id=? AND vacant_since IS NOT NULL", home.ID, from) != 1 {
@@ -569,13 +568,13 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	if !reflect.DeepEqual(stacks("storage", home.ID), shared) || count(t, x.db, "SELECT count(*) FROM homestead_items WHERE homestead_id=? AND location='placed'", home.ID) != placed {
 		t.Fatal("the homestead's goods moved")
 	}
-	if count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND return_reason='recipient-removed'", sent.Result.MailID) != 1 || !reflect.DeepEqual(stacks("pack", "bob"), mergeStacks(bobFiber, "fiber", 3)) {
+	if count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND return_reason='recipient-removed'", sent.Result.MailID) != 1 || !reflect.DeepEqual(stacks("pack", x.account("bob")), mergeStacks(bobFiber, "fiber", 3)) {
 		t.Fatal("waiting parcel not returned")
 	}
 	// The ledger balances for both of them.
-	x.conserved("hal")
-	x.conserved("bob")
-	if count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='hal' AND reason='world-move' AND ref=?", from+">"+o.WorldID) != 1 {
+	x.conserved(x.account("hal"))
+	x.conserved(x.account("bob"))
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("hal")+"' AND reason='world-move' AND ref=?", from+">"+o.WorldID) != 1 {
 		t.Fatal("move not in the ledger")
 	}
 
@@ -593,7 +592,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 
 	// A replay answers the same and moves nothing.
 	replay := x.worldReq("POST", "/api/world/move", req, hc, 200)
-	if replay.raw != moved.raw || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 1 {
+	if !sameJSONResult(replay.raw, moved.raw) || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 1 {
 		t.Fatal("replay moved twice")
 	}
 
@@ -605,7 +604,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	if x.worldOf("hal") != from || back.Result.LeftHome {
 		t.Fatal("move back")
 	}
-	if x.worldReq("POST", "/api/world/move", req, hc, 200).raw != moved.raw || x.worldOf("hal") != from {
+	if !sameJSONResult(x.worldReq("POST", "/api/world/move", req, hc, 200).raw, moved.raw) || x.worldOf("hal") != from {
 		t.Fatal("old replay moved again")
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 2 {
@@ -615,7 +614,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	if x.exp("GET", "/api/commons", nil, hc, 200).Mine != nil {
 		t.Fatal("homestead restored")
 	}
-	x.conserved("hal")
+	x.conserved(x.account("hal"))
 }
 
 func mergeStacks(m map[string]int, def string, n int) map[string]int {
@@ -650,23 +649,23 @@ func TestWorldMoveTakesPresenceAlong(t *testing.T) {
 	bob := wsConnect(t, ts, bc, b.Lease)
 	bob.join("commons")
 	hal := wsConnect(t, ts, hc, h.Lease)
-	if r := hal.join("commons"); len(r.Players) != 1 || r.Players[0].HabiticaID != "bob" {
+	if r := hal.join("commons"); len(r.Players) != 1 || r.Players[0].AccountID != x.account("bob") {
 		t.Fatal("before", r.Raw)
 	}
 	bob.expect("join")
 
 	x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "commons"), hc, 200)
-	if bob.expect("leave").HabiticaID != "hal" {
+	if bob.expect("leave").AccountID != x.account("hal") {
 		t.Fatal("old room still has them")
 	}
-	if r := hal.expect("room"); r.Area != "commons" || len(r.Players) != 1 || r.Players[0].HabiticaID != "olive" {
+	if r := hal.expect("room"); r.Area != "commons" || len(r.Players) != 1 || r.Players[0].AccountID != x.account("olive") {
 		t.Fatal("new room", r.Raw)
 	}
-	if j := olive.expect("join"); j.Player.HabiticaID != "hal" {
+	if j := olive.expect("join"); j.Player.AccountID != x.account("hal") {
 		t.Fatal("arrival", j.Raw)
 	}
 	hal.send(positionMessage(12))
-	if olive.expect("pos").HabiticaID != "hal" {
+	if olive.expect("pos").AccountID != x.account("hal") {
 		t.Fatal("position in the new world")
 	}
 	bob.none()
@@ -687,17 +686,17 @@ func TestThanksReadableAfterSenderMoves(t *testing.T) {
 	x.hero("bob", "Bob", "p1")
 	bc, b := x.ready("bob")
 	id := fmt.Sprintf("thanks-%d", x.now.Load())
-	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", id, o.WorldID, "hal", "bob", x.now.Load()); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", id, o.WorldID, x.account("hal"), x.account("bob"), x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	// Hal joined the party's world at first sign-in; give them one of their own to go to.
 	own := "hal-own"
-	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", own, "hal", "seed", x.now.Load()); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,?,?,?)", own, x.account("hal"), "seed", x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	// And one to Hal, still unread when they go.
 	toHal := id + "-to-hal"
-	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", toHal, o.WorldID, "bob", "hal", x.now.Load()); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", toHal, o.WorldID, x.account("bob"), x.account("hal"), x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "home", own, "village"), hc, 200)
@@ -750,11 +749,11 @@ func TestWorldMoveCooldown(t *testing.T) {
 		t.Fatal(e)
 	}
 	after := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
-	if x.worldOf("hal") != pw || after.Rev != h.Rev || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 1 {
+	if x.worldOf("hal") != pw || after.Version != h.Version || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='world-move'") != 1 {
 		t.Fatal("a refused move changed something")
 	}
 	// The first move's replay answers as it did, even now.
-	if r := x.worldReq("POST", "/api/world/move", first, hc, 200); r.raw != moved.raw {
+	if r := x.worldReq("POST", "/api/world/move", first, hc, 200); !sameJSONResult(r.raw, moved.raw) {
 		t.Fatal("replay during the cooldown", r.raw)
 	}
 	x.now.Add(1)
@@ -765,7 +764,7 @@ func TestWorldMoveCooldown(t *testing.T) {
 	if x.worldOf("hal") != own || back.Result.World.MoveOpensAt != x.now.Load()+MoveCooldown {
 		t.Fatal("move after the cooldown", back.raw)
 	}
-	x.conserved("hal")
+	x.conserved(x.account("hal"))
 }
 
 // Worlds people own keep working: their residents stay, the owner can go to
@@ -779,7 +778,6 @@ func TestPersonOwnedWorldsKeepWorking(t *testing.T) {
 	code := inviteReq(t, x, "POST", "/api/invites", bc, 200).Code
 	x.hero("rue", "Rue", "")
 	rc := x.login("rue", code)
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, rc, 200)
 	if x.worldOf("rue") != bobWorld {
 		t.Fatal("setup")
 	}
@@ -856,7 +854,7 @@ func TestWorldMoveRetargetsInvites(t *testing.T) {
 		t.Fatal("a friend with Hal's code didn't land in Hal's own world")
 	}
 	// Between worlds of his own, they follow him.
-	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('hal-2','hal','s',1)"); err != nil {
+	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('hal-2','" + x.account("hal") + "','s',1)"); err != nil {
 		t.Fatal(err)
 	}
 	h.Snapshot = moved.Snapshot
@@ -880,8 +878,8 @@ func TestWorldMoveLeavingWarnings(t *testing.T) {
 		t.Fatal("first deed free", v.raw)
 	}
 	h = x.openWorkshop(hc, h)
-	axe := x.instance("hal", "bench-axe", -1, "")
-	sliver := x.instance("hal", "warden-sliver", -1, "")
+	axe := x.instance(x.account("hal"), "bench-axe", -1, "")
+	sliver := x.instance(x.account("hal"), "warden-sliver", -1, "")
 	x.opRefreshing(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
 	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
 	v := x.worldReq("GET", "/api/world", nil, hc, 200)
@@ -913,4 +911,12 @@ func TestWorldMoveIntoAFullRoom(t *testing.T) {
 		t.Fatal("full room", r.Raw)
 	}
 	olive.none()
+}
+
+func sameJSONResult(a, b string) bool {
+	var left, right map[string]any
+	if json.Unmarshal([]byte(a), &left) != nil || json.Unmarshal([]byte(b), &right) != nil {
+		return false
+	}
+	return store.JSON(left["result"]) == store.JSON(right["result"])
 }

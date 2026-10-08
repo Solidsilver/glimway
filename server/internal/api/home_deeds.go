@@ -18,7 +18,7 @@ func desolate(vacantSince *int64, now int64) bool {
 // memberOf is the caller's homestead, if any.
 func memberOf(ctx context.Context, tx *sql.Tx, id string) (string, bool, error) {
 	var home string
-	err := tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", id).Scan(&home)
+	err := tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE account_id=?", id).Scan(&home)
 	if err == sql.ErrNoRows {
 		return "", false, nil
 	}
@@ -91,7 +91,7 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 // piece set out on the land, and one for the deed itself.
 func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, now int64) error {
 	var last string
-	err := tx.QueryRowContext(ctx, "SELECT habitica_id FROM homestead_departures WHERE homestead_id=? ORDER BY left_at DESC,habitica_id LIMIT 1", home).Scan(&last)
+	err := tx.QueryRowContext(ctx, "SELECT account_id FROM homestead_departures WHERE homestead_id=? ORDER BY left_at DESC,account_id LIMIT 1", home).Scan(&last)
 	if err == sql.ErrNoRows {
 		return nil // nobody ever left it (it can't be vacant then)
 	}
@@ -246,7 +246,7 @@ func gateCount(ctx context.Context, tx *sql.Tx, world string) (int, error) {
 // the first deed is free, unless the land there was lost before.
 func deedPrice(ctx context.Context, tx *sql.Tx, player, world string, gate int) (int, error) {
 	var deeds, lost int
-	if err := tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE habitica_id=?),0),(SELECT count(*) FROM lost_gates WHERE world_id=? AND gate=?)", player, world, gate).Scan(&deeds, &lost); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE account_id=?),0),(SELECT count(*) FROM lost_gates WHERE world_id=? AND gate=?)", player, world, gate).Scan(&deeds, &lost); err != nil {
 		return 0, err
 	}
 	if content.HomeRules.Deeds.FirstFree && deeds == 0 && lost == 0 {
@@ -256,7 +256,7 @@ func deedPrice(ctx context.Context, tx *sql.Tx, player, world string, gate int) 
 }
 
 func addDeed(ctx context.Context, tx *sql.Tx, player string) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO player_deeds VALUES(?,1) ON CONFLICT(habitica_id) DO UPDATE SET deeds=deeds+1", player)
+	_, err := tx.ExecContext(ctx, "INSERT INTO player_deeds VALUES(?,1) ON CONFLICT(account_id) DO UPDATE SET deeds=deeds+1", player)
 	return err
 }
 
@@ -281,12 +281,12 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 	if err == nil {
 		// Still under its deed. The last ones out may take it back, as it
 		// stands, until the deed is lost; anyone else asks a member.
-		if vacant == nil || !departed(ctx, tx, held, s.HabiticaID) {
+		if vacant == nil || !departed(ctx, tx, held, s.AccountID) {
 			return fail(409, "gate-taken")
 		}
 		return reclaim(ctx, tx, s, held, now)
 	}
-	price, err := deedPrice(ctx, tx, s.HabiticaID, s.WorldID, gate)
+	price, err := deedPrice(ctx, tx, s.AccountID, s.WorldID, gate)
 	if err != nil {
 		return err
 	}
@@ -306,19 +306,19 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 	if _, err = tx.ExecContext(ctx, "INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES(?,?,?,?)", id, s.WorldID, gate, now); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_members VALUES(?,?,?)", s.HabiticaID, id, now); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_members VALUES(?,?,?)", s.AccountID, id, now); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM lost_gates WHERE world_id=? AND gate=?", s.WorldID, gate); err != nil {
 		return err
 	}
-	return addDeed(ctx, tx, s.HabiticaID)
+	return addDeed(ctx, tx, s.AccountID)
 }
 
 // departed: the player was on this home's deed and gave up their place.
 func departed(ctx context.Context, tx *sql.Tx, home, player string) bool {
 	var n int
-	return tx.QueryRowContext(ctx, "SELECT count(*) FROM homestead_departures WHERE homestead_id=? AND habitica_id=?", home, player).Scan(&n) == nil && n > 0
+	return tx.QueryRowContext(ctx, "SELECT count(*) FROM homestead_departures WHERE homestead_id=? AND account_id=?", home, player).Scan(&n) == nil && n > 0
 }
 
 // reclaim puts a former member back on their vacant home's deed: the land,
@@ -329,8 +329,8 @@ func reclaim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, home string, no
 		args []any
 	}{
 		{"UPDATE homesteads SET vacant_since=NULL WHERE id=?", []any{home}},
-		{"INSERT INTO homestead_members VALUES(?,?,?)", []any{s.HabiticaID, home, now}},
-		{"DELETE FROM homestead_departures WHERE homestead_id=? AND habitica_id=?", []any{home, s.HabiticaID}},
+		{"INSERT INTO homestead_members VALUES(?,?,?)", []any{s.AccountID, home, now}},
+		{"DELETE FROM homestead_departures WHERE homestead_id=? AND account_id=?", []any{home, s.AccountID}},
 	} {
 		if _, err := tx.ExecContext(ctx, q.sql, q.args...); err != nil {
 			return err
@@ -371,7 +371,7 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if def.ID == content.HomeRules.LanternPosts.Item {
 		// Each post costs more than the last (the homestead's count, not the buyer's).
 		cost := content.HomeRules.PostCost(h.PostsBought)
-		if err = checkMaterials(ctx, tx, s.HabiticaID, cost); err != nil {
+		if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 			return "", err
 		}
 		if err = debitMaterials(ctx, tx, s, cost, 1, "homestead-buy", def.ID, now); err != nil {
@@ -381,7 +381,7 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	} else if def.Embers > 0 {
 		err = debitEmbers(ctx, tx, s, def.Embers, "homestead-buy", def.ID, now)
 	} else {
-		if err = checkMaterials(ctx, tx, s.HabiticaID, def.Materials); err != nil {
+		if err = checkMaterials(ctx, tx, s.AccountID, def.Materials); err != nil {
 			return "", err
 		}
 		err = debitMaterials(ctx, tx, s, def.Materials, 1, "homestead-buy", def.ID, now)
@@ -393,8 +393,8 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if err != nil {
 		return "", err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,habitica_id) VALUES(?,?,'inventory',?)", id, def.ID, s.HabiticaID); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, def.ID, s.AccountID); err != nil {
 		return "", err
 	}
-	return id, currency(ctx, tx, s.HabiticaID, "decoration:"+def.ID, 1, "homestead-buy", id, now)
+	return id, currency(ctx, tx, s.AccountID, "decoration:"+def.ID, 1, "homestead-buy", id, now)
 }

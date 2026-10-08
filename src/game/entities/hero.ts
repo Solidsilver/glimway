@@ -177,7 +177,6 @@ export class Hero {
     this.dashTime = DODGE.time
     this.iframes = Math.max(this.iframes, DODGE.iframes)
     this.dodgeCooldown = DODGE.cooldown
-    sfx('roll')
     bus.emit(EV.rolled, { cooldown: DODGE.cooldown })
     const body = this.deps.avatar().container ?? this.sprite
     if (!this.deps.reducedMotion) {
@@ -278,7 +277,7 @@ export class Hero {
       const fy = opts.toward.y - (this.sprite.y - 8)
       if (Math.hypot(fx, fy) > 1) this.facing.set(fx, fy).normalize()
     }
-    this.attackCooldown = kit.cooldown
+    this.attackCooldown = kit.basicAttackCooldown
     const dir = this.facing.clone().normalize()
     const tool = !!opts.tool
     // Mage basic is a ranged bolt (the classless starter keeps its melee
@@ -320,18 +319,16 @@ export class Hero {
     if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return
     if (this.seat) return // no casting from a bench; move to stand up
     if (this.deps.session.zeroHpLocked) return
-    if (this.castCooldown > 0 || this.attackCooldown > kit.cooldown) {
+    if (this.castCooldown > 0 || this.attackCooldown > kit.basicAttackCooldown) {
       bus.emit(EV.ability, { status: 'cooldown' } satisfies AbilityPayload)
       return
     }
     if (this.deps.session.state.mana < kit.manaCost) {
-      sfx('fizzle')
       this.deps.fx.floatText(this.sprite.x, this.sprite.y - 24, 'no mana', '#9cc4ff', false)
       bus.emit(EV.ability, { status: 'no-mana' } satisfies AbilityPayload)
       return
     }
-    this.castCooldown = 1.0
-    sfx('cast')
+    this.castCooldown = kit.signatureCooldown
     bus.emit(EV.ability, { status: 'cast', cooldown: this.castCooldown } satisfies AbilityPayload)
     this.deps.session.setVitals(this.deps.session.state.hp, this.deps.session.state.mana - kit.manaCost)
     const dir = this.facing.clone().normalize()
@@ -513,5 +510,11 @@ export class Hero {
     // still trigger inside the bounds.
     body.setCollideWorldBounds(true)
     this.sprite.setDepth(py)
+    // A footstep on every other walk frame (two per cycle), on the ground underfoot.
+    this.sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, (_a: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+      if (frame.index % 2 !== 0 || this.dashTime > 0 || body.velocity.lengthSq() < 1) return
+      const terrain = this.deps.world.ground[tileAt(this.sprite.y)]?.[tileAt(this.sprite.x)]
+      if (terrain !== undefined) bus.emit(EV.footstep, { terrain })
+    })
   }
 }

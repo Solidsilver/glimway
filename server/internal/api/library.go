@@ -51,7 +51,7 @@ func scanShelfEntry(rows *sql.Rows) (shelfEntry, error) {
 // worldShelf reads a world's donations, oldest first, credited with the
 // donor's current display name, capped.
 func worldShelf(ctx context.Context, tx *sql.Tx, world string) ([]shelfEntry, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.habitica_id=s.donor_id WHERE s.world_id=? ORDER BY s.donated_at,s.paper_id", world)
+	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.account_id=s.donor_id WHERE s.world_id=? ORDER BY s.donated_at,s.paper_id", world)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func worldShelf(ctx context.Context, tx *sql.Tx, world string) ([]shelfEntry, er
 
 // shelvedEntry reads the one donation of a paper in a world (the winner's).
 func shelvedEntry(ctx context.Context, tx *sql.Tx, world, paperID string) (shelfEntry, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.habitica_id=s.donor_id WHERE s.world_id=? AND s.paper_id=?", world, paperID)
+	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.account_id=s.donor_id WHERE s.world_id=? AND s.paper_id=?", world, paperID)
 	if err != nil {
 		return shelfEntry{}, err
 	}
@@ -111,7 +111,7 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	hash, prior, err := idem(ctx, tx, s.HabiticaID, r.URL.Path, req.Key, req, now)
+	hash, prior, err := idem(ctx, tx, s.AccountID, r.URL.Path, req.Key, req, now)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 	if !slices.Contains(s.State.Flags, "paper:"+req.PaperID) {
 		return fail(403, "not-held")
 	}
-	res, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO library_shelves(world_id,paper_id,donor_id,donated_at) VALUES(?,?,?,?)", s.WorldID, req.PaperID, s.HabiticaID, now)
+	res, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO library_shelves(world_id,paper_id,donor_id,donated_at) VALUES(?,?,?,?)", s.WorldID, req.PaperID, s.AccountID, now)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 	v := struct {
 		Entry shelfEntry `json:"entry"`
 	}{entry}
-	if err = saveIdem(ctx, tx, s.HabiticaID, r.URL.Path, req.Key, hash, v, now); err != nil {
+	if err = saveIdem(ctx, tx, s.AccountID, r.URL.Path, req.Key, hash, v, now); err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v)

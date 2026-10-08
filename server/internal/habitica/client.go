@@ -141,10 +141,10 @@ func Map(b []byte) (rules.Profile, error) {
 					Equipped map[string]*string `json:"equipped"`
 					Costume  map[string]*string `json:"costume"`
 				} `json:"gear"`
-				Pets         map[string]float64 `json:"pets"`
-				Mounts       map[string]bool    `json:"mounts"`
-				CurrentPet   *string            `json:"currentPet"`
-				CurrentMount *string            `json:"currentMount"`
+				Pets         map[string]json.RawMessage `json:"pets"`
+				Mounts       map[string]json.RawMessage `json:"mounts"`
+				CurrentPet   *string                    `json:"currentPet"`
+				CurrentMount *string                    `json:"currentMount"`
 			} `json:"items"`
 			Preferences struct {
 				Size       string          `json:"size"`
@@ -218,12 +218,12 @@ func Map(b []byte) (rules.Profile, error) {
 	p.MaxMP = 2*p.Stats.Int + 30
 
 	for k, v := range u.Items.Pets {
-		if v != 0 {
+		if owned(v) {
 			p.Pets = append(p.Pets, k)
 		}
 	}
 	for k, v := range u.Items.Mounts {
-		if v {
+		if owned(v) {
 			p.Mounts = append(p.Mounts, k)
 		}
 	}
@@ -244,4 +244,20 @@ func Map(b []byte) (rules.Profile, error) {
 		return rules.Profile{}, bad
 	}
 	return p, nil
+}
+
+// Habitica may retain released pets/mounts as null. Match the client truthy
+// ownership projection for booleans and numbers; ignore other input kinds.
+func owned(raw json.RawMessage) bool {
+	var value any
+	if json.Unmarshal(raw, &value) != nil {
+		return false
+	}
+	switch v := value.(type) {
+	case bool:
+		return v
+	case float64:
+		return v != 0
+	}
+	return false
 }

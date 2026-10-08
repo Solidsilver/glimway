@@ -1,8 +1,8 @@
 import { create, fromBinary, toBinary, type Message } from '@bufbuild/protobuf';
-import { PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v1/presence_pb.js';
+import { PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
 import type { PresenceAvatar, PresenceClientMessage, PresencePlayer, PresencePosition, PresenceServerMessage } from './presence.ts';
 
-export const PRESENCE_PROTOCOL = 'glimway.presence.v1';
+export const PRESENCE_PROTOCOL = 'glimway.presence.v2';
 
 export function encodePresence(message: PresenceClientMessage): Uint8Array {
   // create() builds generated messages directly; presence never passes through JSON.
@@ -32,7 +32,7 @@ function avatar(a: WireAvatar | undefined): PresenceAvatar | null {
   return { appearance: fields(a.appearance), equipped: slots(a.equipped), costume: slots(a.costume), useCostume: a.useCostume, selectedPet: a.selectedPet ?? null, selectedMount: a.selectedMount ?? null };
 }
 function player(p: WirePlayer): PresencePlayer {
-  return { habiticaId: p.habiticaId, displayName: p.displayName, avatar: avatar(p.avatar), pos: position(p.pos) };
+  return { accountId: p.accountId, displayName: p.displayName, avatar: avatar(p.avatar), pos: position(p.pos) };
 }
 
 export function decodePresence(data: unknown): PresenceServerMessage | null {
@@ -45,9 +45,9 @@ export function decodePresence(data: unknown): PresenceServerMessage | null {
     case 'join': return event.value.player ? { type: 'join', area: event.value.area, player: player(event.value.player) } : null;
     case 'pos': {
       const p = position(event.value);
-      return p && event.value.habiticaId !== undefined ? { type: 'pos', habiticaId: event.value.habiticaId, ...p } : null;
+      return p && event.value.accountId !== undefined ? { type: 'pos', accountId: event.value.accountId, ...p } : null;
     }
-    case 'emote': return event.value.habiticaId !== undefined ? { type: 'emote', habiticaId: event.value.habiticaId, id: event.value.id } : null;
+    case 'emote': return event.value.accountId !== undefined ? { type: 'emote', accountId: event.value.accountId, id: event.value.id } : null;
     default: return null;
   }
 }

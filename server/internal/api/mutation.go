@@ -26,7 +26,7 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err
 	}
-	s, err := store.Load(r.Context(), tx, id)
+	s, err := a.Config.State.Load(r.Context(), tx, id)
 	if err != nil {
 		tx.Rollback()
 		return nil, s, "", err
@@ -65,18 +65,15 @@ func (a *Server) lease(ctx context.Context, tx *sql.Tx, s store.Snapshot, m Muta
 	if !s.LeaseID.Valid || m.Lease == "" || m.Lease != s.LeaseID.String {
 		return fail(409, "superseded")
 	}
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
-	_, err := tx.ExecContext(ctx, "UPDATE players SET lease_seen_at=? WHERE habitica_id=?", a.Config.Now().Unix(), s.HabiticaID)
+	_, err := tx.ExecContext(ctx, "UPDATE players SET lease_seen_at=? WHERE account_id=?", a.Config.Now().Unix(), s.AccountID)
 	return err
 }
 
 func revision(s store.Snapshot, m Mutation, current bool) error {
-	if m.BaseRev == nil || *m.BaseRev < 0 || *m.BaseRev > s.Rev {
+	if m.BaseRev == nil || *m.BaseRev < 0 || *m.BaseRev > s.Version {
 		return fail(409, "invalid-revision")
 	}
-	if current && *m.BaseRev != s.Rev {
+	if current && *m.BaseRev != s.Version {
 		return fail(409, "stale-revision")
 	}
 	return nil
@@ -115,7 +112,7 @@ func gifts(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error 
 		if slices.Index(rules.Stages, s.State.Quest) < slices.Index(rules.Stages, g.stage) {
 			continue
 		}
-		added, err := store.Outcome(ctx, tx, s.HabiticaID, "quest-gift:"+g.event, "quest", now)
+		added, err := store.Outcome(ctx, tx, s.AccountID, "quest-gift:"+g.event, "quest", now)
 		if err != nil {
 			return err
 		}
@@ -144,7 +141,7 @@ func (a *Server) keyedMutation(w http.ResponseWriter, r *http.Request, m Mutatio
 	if err = a.lease(ctx, tx, s, m); err != nil {
 		return err
 	}
-	hash, prior, err := idem(ctx, tx, s.HabiticaID, op, key, request, now)
+	hash, prior, err := idem(ctx, tx, s.AccountID, op, key, request, now)
 	if err != nil {
 		return err
 	}
@@ -176,7 +173,7 @@ func (a *Server) keyedMutation(w http.ResponseWriter, r *http.Request, m Mutatio
 		store.Snapshot
 		Result any `json:"result"`
 	}{s, extra}
-	if err = saveIdem(ctx, tx, s.HabiticaID, op, key, hash, v, now); err != nil {
+	if err = saveIdem(ctx, tx, s.AccountID, op, key, hash, v, now); err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, v, append(afterCommit, a.witnessed(s, beats))...)

@@ -83,7 +83,7 @@ export async function probeServer(): Promise<Probe> {
 
 /** Display name for an account: the server's verified name, else the hero, else the cache. */
 export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | null, fallback = 'Your hero'): string {
-  const cached = cache && (!snapshot || cache.habiticaId === snapshot.habiticaId) ? cache.name : ''
+  const cached = cache && (!snapshot || cache.accountId === snapshot.accountId) ? cache.name : ''
   return snapshot?.displayName || snapshot?.importedProfile?.name || cached || fallback
 }
 
@@ -96,9 +96,9 @@ export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | n
 export async function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<Session> {
   const { snapshot } = opts
   const clientId = (await claim).id // current, even after a re-claim
-  const habiticaId = snapshot?.habiticaId ?? opts.cache?.habiticaId
-  if (!habiticaId) throw new Error('connectedSession needs a snapshot or a cache')
-  const cache = opts.cache?.habiticaId === habiticaId ? opts.cache : null
+  const accountId = snapshot?.accountId ?? opts.cache?.accountId
+  if (!accountId) throw new Error('connectedSession needs a snapshot or a cache')
+  const cache = opts.cache?.accountId === accountId ? opts.cache : null
   const useCache = !!cache && (!snapshot || cache.dirty || cache.clientId === clientId)
   const base = useCache
     ? { state: cache!.state, rev: cache!.rev, vitalsSource: cache!.vitalsSource, importedProfile: cache!.importedProfile ?? null }
@@ -106,7 +106,7 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
   const link = new Link({
     api,
     clientId,
-    habiticaId,
+    accountId,
     worldId: snapshot?.worldId || cache?.worldId,
     name: opts.name,
     rev: base.rev,

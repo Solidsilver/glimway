@@ -16,7 +16,7 @@ import { TILE, tileBottom } from '../../lib/tile'
 import type { EnemyType } from '../worlds'
 import { itemsFor } from '../items'
 import { isLit as isLandLit } from '../../lib/homestead-land'
-import { playInsets, setPlayInsets } from '../viewport'
+import { canvasRatio, playInsets, setPlayInsets } from '../viewport'
 import { densityOf } from '../density'
 import { syncSafety } from '../sync-safety'
 import { expose, type FsHooks } from '../dev-hooks'
@@ -100,14 +100,23 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     if (v) setPlayInsets(v)
     return { ...playInsets }
   })
+  // CSS px: the camera's zoom is in canvas px (canvasRatio of them a CSS px).
   on('__fsDevHeroScreen', () => {
     const cam = s.cameras.main
+    const z = cam.zoom / canvasRatio()
     const b = s['hero'].sprite.getBounds()
-    return { x: (b.x - cam.worldView.x) * cam.zoom, y: (b.y - cam.worldView.y) * cam.zoom, w: b.width * cam.zoom, h: b.height * cam.zoom, zoom: cam.zoom }
+    return { x: (b.x - cam.worldView.x) * z, y: (b.y - cam.worldView.y) * z, w: b.width * z, h: b.height * z, zoom: z }
   })
   on('__fsDevToScreen', (x, y) => {
     const cam = s.cameras.main
-    return { x: (x - cam.worldView.x) * cam.zoom, y: (y - cam.worldView.y) * cam.zoom }
+    const z = cam.zoom / canvasRatio()
+    return { x: (x - cam.worldView.x) * z, y: (y - cam.worldView.y) * z }
+  })
+  // The world point under the pointer (the pointer is in canvas px).
+  on('__fsDevPointerWorld', () => {
+    const p = s.input.activePointer
+    const at = s.cameras.main.getWorldPoint(p.x, p.y)
+    return { x: at.x, y: at.y }
   })
   on('__fsDevAddFlag', (flag) => s['session'].addFlag(flag))
   // e2e/first-paint.spec.ts compares it with the workers' tileset.
@@ -144,6 +153,40 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       total += bytes
     }
     return { total, largest, textures: out }
+  })
+  // Frame times for `ms` (e2e/density-screens.spec.ts): the frame-to-frame
+  // interval and the game's own step (update and render calls, CPU side).
+  // `finish` waits for the GPU at the end of each step, so the step includes
+  // the drawing itself (and the gaps grow by the stall).
+  on('__fsDevFrameTimes', (ms, finish = false) => {
+    const game = s.sys.game
+    const gl = finish && game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer ? game.renderer.gl : null
+    const gaps: number[] = []
+    const steps: number[] = []
+    let start = 0
+    let last = 0
+    const pre = () => (start = performance.now())
+    const post = () => {
+      gl?.finish()
+      const now = performance.now()
+      steps.push(now - start)
+      if (last) gaps.push(now - last)
+      last = now
+    }
+    game.events.on(Phaser.Core.Events.PRE_STEP, pre)
+    game.events.on(Phaser.Core.Events.POST_RENDER, post)
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        game.events.off(Phaser.Core.Events.PRE_STEP, pre)
+        game.events.off(Phaser.Core.Events.POST_RENDER, post)
+        const pct = (a: number[], q: number) => {
+          const b = [...a].sort((x, y) => x - y)
+          return b.length ? Math.round(b[Math.min(b.length - 1, Math.floor(q * b.length))] * 10) / 10 : 0
+        }
+        const canvas = game.canvas
+        resolve({ frames: gaps.length, gap: { p50: pct(gaps, 0.5), p95: pct(gaps, 0.95) }, step: { p50: pct(steps, 0.5), p95: pct(steps, 0.95) }, canvas: [canvas.width, canvas.height] })
+      }, ms)
+    })
   })
   // Roll from inside the frame loop, so playtests can react to an aim lock without input latency.
   on('__fsDevDodge', (dx, dy) => s['hero'].tryDodge(new Phaser.Math.Vector2(dx, dy)))

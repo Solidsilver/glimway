@@ -19,8 +19,9 @@ import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder 
 import { buildExitSigns } from '../area/exits'
 import { lanternRestRate, refreshLanternVisuals, type LightProp } from '../area/lanterns'
 import { bus, EV, listen, type DialogueClosedPayload, type RelocatePayload } from '../events'
-import { prefersReducedMotion, sfx } from '../sfx'
+import { prefersReducedMotion } from '../sfx'
 import { heroScreen, uiBlocked, uiState } from '../input'
+import { canvasRatio } from '../viewport'
 import { TILE, tileAt, tileCenter, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import { hasAreaKind, type WorldData } from '../worlds'
@@ -497,11 +498,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.reloadHeld) return
     const dt = Math.min(delta / 1000, 0.05)
     this.camera.keepFramed()
-    // The hero's spot on the canvas, every frame (panels and transitions too):
-    // "hold to walk" steers by it, and title cards keep clear of it.
+    // The hero's spot on the canvas in CSS px, every frame (panels and
+    // transitions too): "hold to walk" steers by it, and title cards keep clear of it.
     const view = this.cameras.main.worldView
-    heroScreen.x = (this.hero.sprite.x - view.x) * this.cameras.main.zoom
-    heroScreen.y = (this.hero.sprite.y - 8 - view.y) * this.cameras.main.zoom
+    const toCss = this.cameras.main.zoom / canvasRatio()
+    heroScreen.x = (this.hero.sprite.x - view.x) * toCss
+    heroScreen.y = (this.hero.sprite.y - 8 - view.y) * toCss
     // While a panel/dialogue owns the screen, stop preventDefault-ing Space
     // etc. so focused buttons (replies, confirms) activate natively.
     // A focused placement-tray control gets its keys natively (Space presses it).
@@ -847,7 +849,6 @@ export class WorldScene extends Phaser.Scene {
     bus.emit(EV.defeat, { phase: 'falling' })
     const wildsReport = isWildsArea(this.session.state.area) ? this.wilds?.reportDefeat() ?? null : null
     this.session.defeat()
-    sfx('defeat')
     this.hero.sprite.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)

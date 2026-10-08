@@ -8,7 +8,9 @@ import { claimDeed, earnPlenty, freshPlayer, intoCottage, myHome, place, readOn,
 /**
  * Screens for the art-density review (.agent/screens/<DENSITY_TAG>-*.png):
  * the village square, the Commons lane, residents close up and a cottage
- * interior, on a 1280-wide desktop and a 390×844 touch phone. SCREENS=1 only.
+ * interior, on a 1280-wide desktop, a 1440-wide one at a device pixel ratio
+ * of 2 and a 390×844 touch phone (3×), with the texture memory and frame
+ * times beside them. SCREENS=1 only.
  */
 test.skip(!process.env.SCREENS, 'screenshots only (SCREENS=1)')
 
@@ -31,10 +33,32 @@ async function closeUp(page: Page, name: string, device: string, x: number, y: n
   await page.screenshot({ path: `${OUT}/${TAG}-${name}-${device}.png`, clip: { x: box.x + p.x - half, y: box.y + p.y - half, width: half * 2, height: half * 2 } })
 }
 
+/**
+ * Frame times while the hero walks across the square (the camera pans), the
+ * CPU throttled 4× for a phone's: idle, then walking right for 3 s, then
+ * walking on with each frame waiting for the GPU (`drawn`: the step includes
+ * the drawing, so the canvas size shows).
+ */
+async function frameTimes(page: Page, device: string): Promise<void> {
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  const measure = (finish = false) => page.evaluate((f) => (window as unknown as { __fsDevFrameTimes: (ms: number, finish: boolean) => Promise<unknown> }).__fsDevFrameTimes(3000, f), finish)
+  const idle = await measure()
+  await page.keyboard.down('ArrowRight')
+  const walking = await measure()
+  const drawn = await measure(true)
+  await page.keyboard.up('ArrowRight')
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+  await cdp.detach()
+  writeFileSync(`${OUT}/${TAG}-frames-${device}.json`, JSON.stringify({ cpuThrottle: 4, idle, walking, drawn }, null, 1))
+  await warp(page, 'village', 19, 14)
+}
+
 async function outdoorScreens(page: Page, device: string): Promise<void> {
   // The village square: Mara by the well, the cottages around it.
   await warp(page, 'village', 19, 14)
   await snap(page, 'village-square', device)
+  await frameTimes(page, device)
   await closeUp(page, 'resident-mara', device, 16 * 16 + 8, 13 * 16 + 4, 90)
   // The Commons lane and its square, Elara at her post up the lane.
   await warp(page, 'commons', 23, 19)
@@ -52,6 +76,15 @@ test.describe('desktop', () => {
     test.setTimeout(120_000)
     await beginNewJourney(page)
     await outdoorScreens(page, 'desktop')
+  })
+})
+
+test.describe('desktop 2x', () => {
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
+  test('village square, Commons lane, residents', async ({ page }) => {
+    test.setTimeout(120_000)
+    await beginNewJourney(page)
+    await outdoorScreens(page, 'desktop2x')
   })
 })
 

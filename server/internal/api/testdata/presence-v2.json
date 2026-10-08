@@ -1,0 +1,175 @@
+[
+  {
+    "json": {
+      "type": "auth",
+      "lease": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "binaryHex": "0a420a4061616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"
+  },
+  {
+    "json": {
+      "type": "heartbeat"
+    },
+    "binaryHex": "2a00"
+  },
+  {
+    "json": {
+      "type": "join",
+      "area": "village"
+    },
+    "binaryHex": "12090a0776696c6c616765"
+  },
+  {
+    "json": {
+      "type": "pos",
+      "x": 100.5,
+      "y": 200.25,
+      "facing": {
+        "x": 0,
+        "y": 1
+      },
+      "moving": false
+    },
+    "binaryHex": "1a280900000000002059401100000000000869401a1209000000000000000011000000000000f03f2000"
+  },
+  {
+    "json": {
+      "type": "emote",
+      "id": "wave"
+    },
+    "binaryHex": "22060a0477617665"
+  },
+  {
+    "json": {
+      "type": "ready",
+      "accountId": "alice"
+    },
+    "binaryHex": "32070a05616c696365"
+  },
+  {
+    "json": {
+      "type": "room",
+      "area": "village",
+      "players": []
+    },
+    "binaryHex": "3a090a0776696c6c616765"
+  },
+  {
+    "json": {
+      "type": "room",
+      "area": "village",
+      "players": [
+        {
+          "accountId": "alice",
+          "displayName": "Hero",
+          "avatar": {
+            "appearance": {
+              "size": "slim",
+              "shirt": "",
+              "skin": "",
+              "hairColor": "",
+              "hairStyle": 0,
+              "background": "",
+              "hairBangs": 0,
+              "hairMustache": 0,
+              "hairBeard": 0,
+              "hairFlower": 0
+            },
+            "equipped": {
+              "weapon": null,
+              "head": "head_base_0"
+            },
+            "costume": {},
+            "useCostume": false,
+            "selectedPet": null,
+            "selectedMount": null
+          },
+          "pos": null
+        }
+      ]
+    },
+    "binaryHex": "3a470a0776696c6c616765123c0a05616c69636512044865726f1a2d0a060a04736c696d12150a0468656164120d1a0b686561645f626173655f30120c0a06776561706f6e12020800"
+  },
+  {
+    "json": {
+      "type": "join",
+      "area": "village",
+      "player": {
+        "accountId": "alice",
+        "displayName": "Hero",
+        "avatar": {
+          "appearance": {
+            "size": "slim",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "equipped": {
+            "weapon": null,
+            "head": "head_base_0"
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null
+        },
+        "pos": null
+      }
+    },
+    "binaryHex": "12470a0776696c6c616765123c0a05616c69636512044865726f1a2d0a060a04736c696d12150a0468656164120d1a0b686561645f626173655f30120c0a06776561706f6e12020800"
+  },
+  {
+    "json": {
+      "type": "leave",
+      "accountId": "alice"
+    },
+    "binaryHex": "42070a05616c696365"
+  },
+  {
+    "json": {
+      "type": "pos",
+      "accountId": "alice",
+      "x": 100.5,
+      "y": 200.25,
+      "facing": {
+        "x": 0,
+        "y": 1
+      },
+      "moving": false
+    },
+    "binaryHex": "1a2f0900000000002059401100000000000869401a1209000000000000000011000000000000f03f20002a05616c696365"
+  },
+  {
+    "json": {
+      "type": "emote",
+      "accountId": "alice",
+      "id": "wave"
+    },
+    "binaryHex": "220d0a04776176651205616c696365"
+  },
+  {
+    "json": {
+      "type": "gift",
+      "fromName": "Hero",
+      "kind": "item",
+      "itemDef": "timber",
+      "qty": 1
+    },
+    "binaryHex": "4a160a044865726f12046974656d1a0674696d6265722001"
+  },
+  {
+    "json": {
+      "type": "witness",
+      "beat": "warden",
+      "accountId": "alice",
+      "name": "Hero"
+    },
+    "binaryHex": "52150a0677617264656e1205616c6963651a044865726f"
+  }
+]

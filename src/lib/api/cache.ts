@@ -4,11 +4,11 @@
  * play never touches the device's guest journey.
  *
  * Two kinds of record, both in one store keyed by `id`:
- * - `acct:<habiticaId>`, one per account: the state with the revision it was
+ * - `acct:<accountId>`, one per account: the state with the revision it was
  *   based on, the lease and clientId, unsent-change flags, the recovery copy.
  *   Keyed by account so a second account on this browser can never overwrite
  *   the first one's unsent progress.
- * - `orphan:<habiticaId>:<clientId>`: unsent progress from a tab that lost
+ * - `orphan:<accountId>:<clientId>`: unsent progress from a tab that lost
  *   the lease to another tab. It is never this tab's to upload as current;
  *   the next lease holder uploads it as a stale write (story merges only) and
  *   deletes it, so story made in the takeover window is not lost.
@@ -28,7 +28,7 @@ const STORE = 'records';
 const LEGACY_STORE = 'connected';
 
 export interface ConnectedCache {
-  habiticaId: string;
+  accountId: string;
   name: string;
   state: GameState;
   vitalsSource: VitalsSource;
@@ -57,15 +57,15 @@ export interface ConnectedCache {
 }
 
 export interface OrphanCopy {
-  habiticaId: string;
+  accountId: string;
   clientId: string;
   state: GameState;
   rev: number;
   savedAt: number;
 }
 
-const accountKey = (habiticaId: string) => `acct:${habiticaId}`;
-const orphanKey = (habiticaId: string, clientId: string) => `orphan:${habiticaId}:${clientId}`;
+const accountKey = (accountId: string) => `acct:${accountId}`;
+const orphanKey = (accountId: string, clientId: string) => `orphan:${accountId}:${clientId}`;
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -85,7 +85,7 @@ function open(): Promise<IDBDatabase> {
           const get = tx.objectStore(LEGACY_STORE).get('current');
           get.onsuccess = () => {
             const old = normalizeCache(get.result);
-            if (old) tx.objectStore(STORE).put({ ...old, id: accountKey(old.habiticaId) });
+            if (old) tx.objectStore(STORE).put({ ...old, id: accountKey(old.accountId) });
             db.deleteObjectStore(LEGACY_STORE);
           };
         } catch {
@@ -137,10 +137,10 @@ export function normalizeCache(raw: unknown): ConnectedCache | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const r = raw as Record<string, unknown>;
   try {
-    if (typeof r.habiticaId !== 'string' || typeof r.clientId !== 'string') return null;
+    if (typeof r.accountId !== 'string' || typeof r.clientId !== 'string') return null;
     if (typeof r.rev !== 'number' || !Number.isInteger(r.rev) || r.rev < 0) return null;
     const out: ConnectedCache = {
-      habiticaId: r.habiticaId,
+      accountId: r.accountId,
       name: typeof r.name === 'string' ? r.name : '',
       state: validateSave(r.state),
       vitalsSource: r.vitalsSource === 'imported' ? 'imported' : 'demo',
@@ -199,10 +199,10 @@ function normalizeOrphan(raw: unknown): OrphanCopy | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const r = raw as Record<string, unknown>;
   try {
-    if (typeof r.habiticaId !== 'string' || typeof r.clientId !== 'string') return null;
+    if (typeof r.accountId !== 'string' || typeof r.clientId !== 'string') return null;
     if (typeof r.rev !== 'number' || !Number.isInteger(r.rev) || r.rev < 0) return null;
     return {
-      habiticaId: r.habiticaId,
+      accountId: r.accountId,
       clientId: r.clientId,
       state: validateSave(r.state),
       rev: r.rev,
@@ -214,8 +214,8 @@ function normalizeOrphan(raw: unknown): OrphanCopy | null {
 }
 
 /** The account's record, or null. */
-export function loadCache(habiticaId: string): Promise<ConnectedCache | null> {
-  return withStore('readonly', null, async (store) => normalizeCache(await done(store.get(accountKey(habiticaId)))));
+export function loadCache(accountId: string): Promise<ConnectedCache | null> {
+  return withStore('readonly', null, async (store) => normalizeCache(await done(store.get(accountKey(accountId)))));
 }
 
 /**
@@ -239,14 +239,14 @@ export function saveCache(record: ConnectedCache): Promise<boolean> {
   return withStore('readwrite', false, async (store) => {
     const clean = normalizeCache({ ...record, savedAt: Date.now() });
     if (!clean) return false;
-    await done(store.put({ ...clean, id: accountKey(clean.habiticaId) }));
+    await done(store.put({ ...clean, id: accountKey(clean.accountId) }));
     return true;
   });
 }
 
-export function clearCache(habiticaId: string): Promise<boolean> {
+export function clearCache(accountId: string): Promise<boolean> {
   return withStore('readwrite', false, async (store) => {
-    await done(store.delete(accountKey(habiticaId)));
+    await done(store.delete(accountKey(accountId)));
     return true;
   });
 }
@@ -255,15 +255,15 @@ export function saveOrphan(orphan: OrphanCopy): Promise<boolean> {
   return withStore('readwrite', false, async (store) => {
     const clean = normalizeOrphan({ ...orphan, savedAt: Date.now() });
     if (!clean) return false;
-    await done(store.put({ ...clean, id: orphanKey(clean.habiticaId, clean.clientId) }));
+    await done(store.put({ ...clean, id: orphanKey(clean.accountId, clean.clientId) }));
     return true;
   });
 }
 
-export function loadOrphans(habiticaId: string): Promise<OrphanCopy[]> {
+export function loadOrphans(accountId: string): Promise<OrphanCopy[]> {
   return withStore('readonly', [] as OrphanCopy[], async (store) => {
     const all = (await done(store.getAll())) as Array<Record<string, unknown>>;
-    const prefix = `orphan:${habiticaId}:`;
+    const prefix = `orphan:${accountId}:`;
     return all
       .filter((raw) => typeof raw?.id === 'string' && raw.id.startsWith(prefix))
       .map(normalizeOrphan)
@@ -271,9 +271,9 @@ export function loadOrphans(habiticaId: string): Promise<OrphanCopy[]> {
   });
 }
 
-export function deleteOrphan(habiticaId: string, clientId: string): Promise<boolean> {
+export function deleteOrphan(accountId: string, clientId: string): Promise<boolean> {
   return withStore('readwrite', false, async (store) => {
-    await done(store.delete(orphanKey(habiticaId, clientId)));
+    await done(store.delete(orphanKey(accountId, clientId)));
     return true;
   });
 }
@@ -282,8 +282,8 @@ export function deleteOrphan(habiticaId: string, clientId: string): Promise<bool
 export interface LinkStore {
   save(record: ConnectedCache): Promise<boolean>;
   saveOrphan(orphan: OrphanCopy): Promise<boolean>;
-  loadOrphans(habiticaId: string): Promise<OrphanCopy[]>;
-  deleteOrphan(habiticaId: string, clientId: string): Promise<boolean>;
+  loadOrphans(accountId: string): Promise<OrphanCopy[]>;
+  deleteOrphan(accountId: string, clientId: string): Promise<boolean>;
 }
 
 export const idbLinkStore: LinkStore = { save: saveCache, saveOrphan, loadOrphans, deleteOrphan };

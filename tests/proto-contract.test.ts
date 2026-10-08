@@ -7,7 +7,7 @@ import { parseCreatedInvite, parseInviteList } from '../src/lib/api/invites.ts';
 import { parseCalendar } from '../src/lib/api/calendar.ts';
 import { SERVER_ERROR_CODES, errorFromResponse } from '../src/lib/api/errors.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
-import { PresenceMessageSchema } from '../src/lib/gen/glimway/v1/presence_pb.js';
+import { PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js';
 import { PresenceClient, type SocketLike } from '../src/lib/presence-client.ts';
 import type { PresenceClientMessage } from '../src/lib/presence.ts';
 
@@ -23,24 +23,24 @@ test('generated calendar decoder reads the original Go HTTP fixtures without sha
 });
 
 test('generated error enum preserves every original wire string and unknown-version behavior', () => {
-  const responses = fixture('errors');
+  const responses = fixture('errors-v3');
   assert.deepEqual([...SERVER_ERROR_CODES].sort(), responses.map((r: any) => r.error.code).sort());
   for (const response of responses) assert.equal(errorFromResponse(409, response).code, response.error.code);
   assert.equal(errorFromResponse(409, { error: { code: 'a-future-server-code' } }).code, 'unknown');
 });
 
 test('Go binary fixtures preserve presence fields in the generated decoder', () => {
-  for (const { json, binaryHex } of fixture('presence')) {
+  for (const { json, binaryHex } of fixture('presence-v2')) {
     assert.ok(binaryHex);
     const bytes = Uint8Array.from(Buffer.from(binaryHex, 'hex'));
-    const clientEvent = ['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('habiticaId' in json) && !('player' in json);
+    const clientEvent = ['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('accountId' in json) && !('player' in json);
     if (clientEvent) assert.deepEqual(decodeTestPresence(bytes), json);
     else {
       assert.deepEqual(decodePresence(bytes), json);
       assert.deepEqual(decodePresence(bytes.buffer), json);
     }
     assert.equal(decodePresence(JSON.stringify(json)), null);
-    if (['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('habiticaId' in json) && !('player' in json)) {
+    if (['auth', 'heartbeat', 'pos', 'emote', 'join'].includes(json.type) && !('accountId' in json) && !('player' in json)) {
       assert.deepEqual(Buffer.from(encodePresence(json)).toString('hex'), binaryHex);
     }
   }
@@ -86,10 +86,10 @@ for (const protocol of [PRESENCE_PROTOCOL]) {
       const sent = (): PresenceClientMessage[] => socket.sent.map(data => decodeTestPresence(data) as PresenceClientMessage);
       assert.deepEqual(sent(), [{ type: 'auth', lease: 'a'.repeat(64) }]);
       // Generated binary payloads drive the real client.
-      socket.server({ type: 'ready', habiticaId: 'alice' });
+      socket.server({ type: 'ready', accountId: 'alice' });
       assert.equal(client.status, 'live');
       assert.deepEqual(sent()[1], { type: 'join', area: 'village' });
-      socket.server({ type: 'pos', habiticaId: 'bob', x: 0, y: 2, facing: { x: 0, y: 1 }, moving: false });
+      socket.server({ type: 'pos', accountId: 'bob', x: 0, y: 2, facing: { x: 0, y: 1 }, moving: false });
       assert.deepEqual(events, ['alice', { id: 'bob', pos: { x: 0, y: 2, facing: { x: 0, y: 1 }, moving: false } }]);
       assert.ok(socket.sent.every(data => protocol ? data instanceof Uint8Array : typeof data === 'string'));
     } finally { client.stop(); }

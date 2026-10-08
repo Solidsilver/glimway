@@ -16,19 +16,22 @@ func (s *Store) ClearFlag(ctx context.Context, id string) error {
 	}
 	defer tx.Rollback()
 	var flagged sql.NullInt64
-	if err = tx.QueryRowContext(ctx, "SELECT flagged_at FROM players WHERE habitica_id=?", id).Scan(&flagged); err == sql.ErrNoRows {
+	if err = tx.QueryRowContext(ctx, "SELECT flagged_at FROM players WHERE account_id=?", id).Scan(&flagged); err == sql.ErrNoRows {
 		return fmt.Errorf("player not found")
 	} else if err != nil {
 		return err
 	}
 	if flagged.Valid {
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=NULL,rev=rev+1 WHERE habitica_id=?", id); err != nil {
+		if err = BumpVersion(ctx, tx, &Snapshot{AccountID: id}); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE progress SET rev=(SELECT rev FROM players WHERE habitica_id=?) WHERE habitica_id=?", id, id); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=NULL WHERE account_id=?", id); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'embers',0,0,'flag-cleared','cli',?)", id, time.Now().Unix()); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE progress SET rev=(SELECT version FROM players WHERE account_id=?) WHERE account_id=?", id, id); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'embers',0,0,'flag-cleared','cli',?)", id, time.Now().Unix()); err != nil {
 			return err
 		}
 	}
@@ -61,11 +64,11 @@ func (s *Store) RevokeInvite(ctx context.Context, hash string) error {
 
 type InviteRecord struct {
 	ID        string  `json:"id"`
-	CreatedBy string  `json:"createdBy"`
+	CreatedBy string  `json:"creatorAccountId"`
 	WorldID   *string `json:"worldId"`
 	CreatedAt int64   `json:"createdAt"`
 	ExpiresAt int64   `json:"expiresAt"`
-	UsedBy    *string `json:"usedBy"`
+	UsedBy    *string `json:"usedByHabiticaSubject"`
 	UsedAt    *int64  `json:"usedAt"`
 	RevokedAt *int64  `json:"revokedAt"`
 }
@@ -85,4 +88,15 @@ func (s *Store) Invites(ctx context.Context, player string) ([]InviteRecord, err
 		result = append(result, v)
 	}
 	return result, rows.Err()
+}
+
+// ResolveOperatorAccount lets commands accept the Habitica subject an operator
+// knows, or an explicit account id. Unknown ids always produce an error.
+func (s *Store) ResolveOperatorAccount(ctx context.Context, id string) (string, error) {
+	var account string
+	err := s.DB.QueryRowContext(ctx, `SELECT account_id FROM sign_ins WHERE method='habitica' AND subject=? UNION SELECT account_id FROM players WHERE account_id=?`, id, id).Scan(&account)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("player not found")
+	}
+	return account, err
 }

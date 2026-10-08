@@ -135,13 +135,14 @@ func TestRound2DInviteLifetimeBudgetAndFlagRestriction(t *testing.T) {
 	}
 	inviteReq(t, x, "POST", "/api/invites", c, 409)
 	other := x.login("other", "")
-	if _, err := x.db.DB.Exec("UPDATE players SET flagged_at=? WHERE habitica_id='other'", x.now.Load()); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE players SET flagged_at=? WHERE account_id='"+x.account("other")+"'", x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	inviteReq(t, x, "POST", "/api/invites", other, 403)
 }
 func loginFrom(x *rig, id, remote string) int {
 	r := httptest.NewRequest("POST", "/api/session", strings.NewReader(store.JSON(map[string]any{"userId": id, "token": secret})))
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.Header.Set("Content-Type", "application/json")
 	r.RemoteAddr = remote
 	w := httptest.NewRecorder()
@@ -323,7 +324,7 @@ func TestRound2FStaleAndEarnedRevive(t *testing.T) {
 	doc.HP = 50
 	doc.Discoveries = []string{"safe-story-merge"}
 	body := mutation(s, doc)
-	body["baseRev"] = s.Rev - 1
+	body["baseRev"] = s.Version - 1
 	stale := x.expect("PUT", "/api/progress", body, c, 200)
 	stale.Lease = s.Lease
 	if stale.State.HP != 0 || len(stale.State.Discoveries) != 1 {
@@ -375,6 +376,7 @@ func TestRound2HInviteRequiresJSONBody(t *testing.T) {
 	c := x.login("owner", "")
 	x.expect("POST", "/api/invites", nil, c, 400)
 	r := httptest.NewRequest("POST", "/api/invites", strings.NewReader(`{}`))
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.AddCookie(c)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)

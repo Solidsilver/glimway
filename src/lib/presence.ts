@@ -1,5 +1,5 @@
 import raw from '../../content/presence.json' with { type: 'json' };
-import type { PresenceMessage as GeneratedMessage, PresencePosition as GeneratedPosition, PresencePlayer as GeneratedPlayer, PresenceAvatar as GeneratedAvatar, PresenceAppearance } from './gen/glimway/v1/presence_pb.js';
+import type { PresenceMessage as GeneratedMessage, PresencePosition as GeneratedPosition, PresencePlayer as GeneratedPlayer, PresenceAvatar as GeneratedAvatar, PresenceAppearance } from './gen/glimway/v2/presence_pb.js';
 export interface PresenceRules {
   maxSessionConnections: number; maxPlayerConnections: number; revalidateFailures: number;
   incomingMessagesPerSecond: number; incomingBurst: number; incomingExcessMs: number;
@@ -29,7 +29,7 @@ export type PresenceAvatar = Omit<Fields<GeneratedAvatar>, 'appearance' | 'equip
   selectedPet: string | null;
   selectedMount: string | null;
 };
-export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'habiticaId'>> & {
+export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'accountId'>> & {
   facing: Required<Fields<NonNullable<GeneratedPosition['facing']>>>;
 };
 export type PresencePlayer = Omit<Fields<GeneratedPlayer>, 'avatar' | 'pos'> & {
@@ -41,6 +41,6 @@ export type PresenceClientMessage = Event<'auth'> | Pick<Event<'join'>, 'type' |
 export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
   | (Pick<Event<'room'>, 'type' | 'area'> & { players: PresencePlayer[] })
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
-  | ({ type: 'pos'; habiticaId: string } & PresencePosition)
-  | (Event<'emote'> & { habiticaId: string });
+  | ({ type: 'pos'; accountId: string } & PresencePosition)
+  | (Event<'emote'> & { accountId: string });
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004, reloadNeeded: 4005 } as const;

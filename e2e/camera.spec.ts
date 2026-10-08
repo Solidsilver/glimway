@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { frames, openTalk, readDialogue, settled, warp } from './helpers'
+import { frames, openTalk, player, readDialogue, settled, waitForLive, warp } from './helpers'
 
 /**
  * On a phone the camera keeps the hero clear of the HUD and the touch
@@ -141,3 +141,166 @@ for (const [name, viewport] of phones) {
     await context.close()
   })
 }
+
+/**
+ * The canvas renders at the device pixel ratio (src/game/main.ts): every
+ * screen pixel, the same stretch of world, and input still lands where it
+ * should.
+ */
+test('phone at 3×: the canvas has every device pixel and frames the world as at 1×', async ({ browser, baseURL }) => {
+  const look = async (deviceScaleFactor: number) => {
+    const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
+    const origin = new URL(baseURL!).host
+    await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
+    const page = await context.newPage()
+    await page.goto('/')
+    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await settled(page, { area: 'village' })
+    await warp(page, 'village', 16, 14)
+    await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
+    await frames(page, 60)
+    const canvas = await page.evaluate(() => {
+      const c = document.querySelector<HTMLCanvasElement>('.stage canvas')!
+      const r = c.getBoundingClientRect()
+      return { px: [c.width, c.height], css: [r.width, r.height] }
+    })
+    const zoom = await page.evaluate(() => (window as unknown as { __fsDevHeroScreen: () => { zoom: number } }).__fsDevHeroScreen().zoom)
+    const hero = await heroBox(page)
+    await context.close()
+    return { canvas, zoom, hero }
+  }
+  const one = await look(1)
+  const three = await look(3)
+  expect(one.canvas.px, 'at 1×: CSS px').toEqual(one.canvas.css)
+  expect(three.canvas.css, 'the same box on the page').toEqual(one.canvas.css)
+  expect(three.canvas.px, 'at 3×: every device pixel').toEqual(one.canvas.css.map((n) => Math.round(n * 3)))
+  expect(three.zoom, '2 CSS px a world px either way').toBe(one.zoom)
+  for (const k of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(three.hero[k] - one.hero[k]), `the hero's ${k} on the page`).toBeLessThanOrEqual(2)
+})
+
+test('desktop at 2×: the pointer lands on the world point under it', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 })
+  const origin = new URL(baseURL!).host
+  await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
+  const page = await context.newPage()
+  await page.goto('/')
+  await page.getByRole('button', { name: /Wander as a guest/ }).click()
+  await settled(page, { area: 'village' })
+  const px = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('.stage canvas')!.width)
+  expect(px, 'the canvas at 2×').toBe(2560)
+  const box = (await page.locator('.stage canvas').boundingBox())!
+  for (const [wx, wy] of [[16 * 16 + 8, 14 * 16 + 8], [20 * 16, 12 * 16]] as const) {
+    const at = await page.evaluate(([x, y]) => (window as unknown as { __fsDevToScreen: (x: number, y: number) => { x: number; y: number } }).__fsDevToScreen(x, y), [wx, wy] as const)
+    await page.mouse.move(box.x + at.x, box.y + at.y)
+    await frames(page, 2)
+    const under = await page.evaluate(() => (window as unknown as { __fsDevPointerWorld: () => { x: number; y: number } }).__fsDevPointerWorld())
+    expect(Math.abs(under.x - wx), `x under the pointer at ${wx},${wy}`).toBeLessThanOrEqual(0.5)
+    expect(Math.abs(under.y - wy), `y under the pointer at ${wx},${wy}`).toBeLessThanOrEqual(0.5)
+  }
+  await context.close()
+})
+
+/** A guest on a 390×844 touch phone at `deviceScaleFactor`, standing in the village square, past the title card. */
+async function phoneGuest(browser: import('@playwright/test').Browser, baseURL: string, deviceScaleFactor: number, stick?: string) {
+  const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
+  const origin = new URL(baseURL).host
+  await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
+  const page = await context.newPage()
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  if (stick) await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
+  await page.goto('/')
+  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+  await settled(page, { area: 'village' })
+  await warp(page, 'village', 16, 14)
+  await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
+  await waitForLive(page)
+  await frames(page, 60)
+  return { context, page, errors }
+}
+
+/** The canvas: its size in px and its box on the page (CSS px), and the camera's zoom in CSS px. */
+async function canvasNow(page: Page): Promise<{ px: number[]; css: number[]; zoom: number }> {
+  return page.evaluate(() => {
+    const c = document.querySelector<HTMLCanvasElement>('.stage canvas')!
+    const r = c.getBoundingClientRect()
+    const zoom = (window as unknown as { __fsDevHeroScreen: () => { zoom: number } }).__fsDevHeroScreen().zoom
+    return { px: [c.width, c.height], css: [r.width, r.height], zoom }
+  })
+}
+
+const textureBytes = (page: Page) => page.evaluate(() => (window as unknown as { __fsDevTextureMemory: () => { total: number } }).__fsDevTextureMemory().total)
+const insetsNow = (page: Page) => page.evaluate(() => {
+  const { rev: _rev, ...v } = (window as unknown as { __fsDevInsets: () => { top: number; right: number; bottom: number; left: number; rev: number } }).__fsDevInsets()
+  return v
+})
+
+test('phone: a device pixel ratio change mid-game refits the canvas and keeps the framing and the textures', async ({ browser, baseURL }) => {
+  const { context, page, errors } = await phoneGuest(browser, baseURL!, 2)
+  const before = await canvasNow(page)
+  expect(before.px, 'at 2×').toEqual([780, 1688])
+  const hero = await heroBox(page)
+  const insets = await insetsNow(page)
+  const bytes = await textureBytes(page)
+  // The window moves to a 3× screen (the same CSS size), then to a 1× one.
+  const cdp = await context.newCDPSession(page)
+  for (const dpr of [3, 1]) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: dpr, mobile: true })
+    await expect.poll(async () => (await canvasNow(page)).px, { message: `the canvas at ${dpr}×` }).toEqual([390 * dpr, 844 * dpr])
+    await frames(page, 30)
+    const now = await canvasNow(page)
+    expect(now.css, 'the same box on the page').toEqual(before.css)
+    expect(now.zoom, '2 CSS px a world px').toBe(before.zoom)
+    expect(await insetsNow(page), 'the insets, in CSS px').toEqual(insets)
+    // The hero where they were on the page. Not to the pixel: Phaser floors
+    // the camera's scroll every frame (roundPixels), so a follow easing in
+    // from above or the left stops up to ~8 world px short (0.12 of the gap
+    // under 1 px), and a refit can land it anywhere in that band.
+    const off = async () => {
+      const at = await heroBox(page)
+      return { size: Math.max(Math.abs(at.width - hero.width), Math.abs(at.height - hero.height)), at: Math.max(Math.abs(at.x - hero.x), Math.abs(at.y - hero.y)) }
+    }
+    await expect.poll(async () => (await off()).at, { message: `${dpr}×: the hero near where they were on the page (CSS px off)` }).toBeLessThanOrEqual(8.5 * before.zoom)
+    expect((await off()).size, `${dpr}×: the hero's size on the page`).toBeLessThanOrEqual(1)
+    expect(await textureBytes(page), `${dpr}×: the textures built at boot, no more and no fewer`).toBe(bytes)
+  }
+  expect(errors, 'uncaught page errors').toEqual([])
+  await context.close()
+})
+
+/** Touch input as a phone sends it (Chromium turns it into pointer events). */
+async function fingers(page: Page) {
+  const cdp = await page.context().newCDPSession(page)
+  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] })
+  return { down: (x: number, y: number) => send('touchStart', x, y), up: () => send('touchEnd') }
+}
+
+test('phone at 3×, turned to landscape: the same framing, the hero clear of the interface, and touch still walks', async ({ browser, baseURL }) => {
+  const { context, page, errors } = await phoneGuest(browser, baseURL!, 3, 'hold')
+  const portrait = await canvasNow(page)
+  expect(portrait.px).toEqual([1170, 2532])
+  await page.setViewportSize({ width: 844, height: 390 })
+  await expect.poll(async () => (await canvasNow(page)).px, { message: 'the canvas turned' }).toEqual([2532, 1170])
+  await expect.poll(async () => (await insetsNow(page)).left + (await insetsNow(page)).right, { message: 'the controls measured at the sides' }).toBeGreaterThan(0)
+  await frames(page, 60) // the camera's follow eases in
+  const landscape = await canvasNow(page)
+  expect(landscape.css).toEqual([844, 390])
+  expect(landscape.zoom, '2 CSS px a world px either way up').toBe(portrait.zoom)
+  // On screen, and under no part of the interface.
+  const hero = await heroBox(page)
+  expect(hero.x).toBeGreaterThanOrEqual(0)
+  expect(hero.y).toBeGreaterThanOrEqual(0)
+  expect(hero.x + hero.width).toBeLessThanOrEqual(844)
+  expect(hero.y + hero.height).toBeLessThanOrEqual(390)
+  for (const o of await obstacles(page)) expect(overlap(hero, o.box), `the hero ${JSON.stringify(hero)} is under ${o.name} ${JSON.stringify(o.box)}`).toBe(false)
+  // Hold to walk: a finger right of the hero, and the hero heads for it.
+  const start = await player(page)
+  const f = await fingers(page)
+  await f.down(hero.x + hero.width / 2 + 120, hero.y + hero.height / 2)
+  await expect.poll(async () => (await player(page)).x - start.x, { message: 'the hero walks toward the finger' }).toBeGreaterThan(12)
+  await f.up()
+  expect(Math.abs((await player(page)).y - start.y), 'straight toward it').toBeLessThan(8)
+  expect(errors, 'uncaught page errors').toEqual([])
+  await context.close()
+})

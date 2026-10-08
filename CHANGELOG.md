@@ -13,6 +13,31 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Glimway has sound: footsteps that change with the ground (grass, path,
+  stone, wooden floors), the thunk of an axe, a pick on stone, a spade in
+  the earth, doors, coins, and the knocks and swishes of a fight. The Menu
+  has a sound switch and a volume slider, kept on this device.
+- Phones and high-resolution screens draw the world at their full
+  resolution: the art is sharper, and you see the same stretch of it as
+  before.
+
+### Technical
+
+- Sound effects from Kenney's CC0 packs (`public/assets/audio/kenney/`,
+  43 MP3s, about 121 KB, in Git LFS; register in `ASSETS.md`). One sound
+  module (`src/game/sound.ts`) plays them from the event bus; new bus events
+  `sound:cue`, `sound:footstep` and `sound:work`. It stays silent under
+  automated browsers (`navigator.webdriver`), so e2e runs fetch no audio.
+  The setting moved to `glimway:sound` (`fingersnap:muted` is no longer read).
+- The canvas renders at the device pixel ratio, capped at 3 (Phaser's NONE
+  scale mode, sized by `src/game/main.ts`); the camera zooms in canvas px
+  (`canvasZoomFor`) and everything the interface reads or writes (insets,
+  the hero's spot, the dev hooks) stays in CSS px through `canvasRatio`.
+  Phones above a ratio of 1 keep the whole 4× art: about 44 MB of textures
+  instead of 16 MB.
+
 ## [0.2.0] - 2026-10-08
 
 ### For players

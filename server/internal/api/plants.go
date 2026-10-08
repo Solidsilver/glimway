@@ -125,7 +125,7 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req i
 			return fail(409, "land-blocked")
 		}
 	}
-	if _, err = packTake(ctx, tx, s.HabiticaID, req.ItemDef, nil, 1, "plant", req.ItemDef, now); err != nil {
+	if _, err = packTake(ctx, tx, s.AccountID, req.ItemDef, nil, 1, "plant", req.ItemDef, now); err != nil {
 		return err
 	}
 	id, err := store.Random()

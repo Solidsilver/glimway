@@ -454,7 +454,7 @@ export class Village {
 
   /** Parcels addressed to you, not yet collected. */
   waitingCount(): number {
-    const me = this.session.link?.habiticaId
+    const me = this.session.link?.accountId
     return this.mail.filter((m) => m.toId === me && m.claimedAt === null && !m.returnedAt).length
   }
 

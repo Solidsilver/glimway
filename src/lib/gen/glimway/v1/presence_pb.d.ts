@@ -12,13 +12,16 @@ import type { Value } from "@bufbuild/protobuf/wkt";
 export declare const file_glimway_v1_presence: GenFile;
 
 /**
+ * Deprecated transport: retained for generated-source compatibility only.
  * One event per frame. The websocket subprotocol versions the binary envelope.
  *
  * @generated from message glimway.v1.PresenceMessage
+ * @deprecated
  */
 export declare type PresenceMessage = Message<"glimway.v1.PresenceMessage"> & {
   /**
    * @generated from oneof glimway.v1.PresenceMessage.event
+   * @deprecated
    */
   event: {
     /**
@@ -86,11 +89,13 @@ export declare type PresenceMessage = Message<"glimway.v1.PresenceMessage"> & {
 /**
  * Describes the message glimway.v1.PresenceMessage.
  * Use `create(PresenceMessageSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceMessageSchema: GenMessage<PresenceMessage>;
 
 /**
  * @generated from message glimway.v1.PresenceAuth
+ * @deprecated
  */
 export declare type PresenceAuth = Message<"glimway.v1.PresenceAuth"> & {
   /**
@@ -102,11 +107,13 @@ export declare type PresenceAuth = Message<"glimway.v1.PresenceAuth"> & {
 /**
  * Describes the message glimway.v1.PresenceAuth.
  * Use `create(PresenceAuthSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceAuthSchema: GenMessage<PresenceAuth>;
 
 /**
  * @generated from message glimway.v1.PresenceHeartbeat
+ * @deprecated
  */
 export declare type PresenceHeartbeat = Message<"glimway.v1.PresenceHeartbeat"> & {
 };
@@ -114,11 +121,13 @@ export declare type PresenceHeartbeat = Message<"glimway.v1.PresenceHeartbeat"> 
 /**
  * Describes the message glimway.v1.PresenceHeartbeat.
  * Use `create(PresenceHeartbeatSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceHeartbeatSchema: GenMessage<PresenceHeartbeat>;
 
 /**
  * @generated from message glimway.v1.PresenceReady
+ * @deprecated
  */
 export declare type PresenceReady = Message<"glimway.v1.PresenceReady"> & {
   /**
@@ -130,11 +139,13 @@ export declare type PresenceReady = Message<"glimway.v1.PresenceReady"> & {
 /**
  * Describes the message glimway.v1.PresenceReady.
  * Use `create(PresenceReadySchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceReadySchema: GenMessage<PresenceReady>;
 
 /**
  * @generated from message glimway.v1.PresenceJoin
+ * @deprecated
  */
 export declare type PresenceJoin = Message<"glimway.v1.PresenceJoin"> & {
   /**
@@ -151,11 +162,13 @@ export declare type PresenceJoin = Message<"glimway.v1.PresenceJoin"> & {
 /**
  * Describes the message glimway.v1.PresenceJoin.
  * Use `create(PresenceJoinSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceJoinSchema: GenMessage<PresenceJoin>;
 
 /**
  * @generated from message glimway.v1.PresenceRoom
+ * @deprecated
  */
 export declare type PresenceRoom = Message<"glimway.v1.PresenceRoom"> & {
   /**
@@ -172,11 +185,13 @@ export declare type PresenceRoom = Message<"glimway.v1.PresenceRoom"> & {
 /**
  * Describes the message glimway.v1.PresenceRoom.
  * Use `create(PresenceRoomSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceRoomSchema: GenMessage<PresenceRoom>;
 
 /**
  * @generated from message glimway.v1.PresenceLeave
+ * @deprecated
  */
 export declare type PresenceLeave = Message<"glimway.v1.PresenceLeave"> & {
   /**
@@ -188,11 +203,13 @@ export declare type PresenceLeave = Message<"glimway.v1.PresenceLeave"> & {
 /**
  * Describes the message glimway.v1.PresenceLeave.
  * Use `create(PresenceLeaveSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceLeaveSchema: GenMessage<PresenceLeave>;
 
 /**
  * @generated from message glimway.v1.PresenceEmote
+ * @deprecated
  */
 export declare type PresenceEmote = Message<"glimway.v1.PresenceEmote"> & {
   /**
@@ -209,11 +226,13 @@ export declare type PresenceEmote = Message<"glimway.v1.PresenceEmote"> & {
 /**
  * Describes the message glimway.v1.PresenceEmote.
  * Use `create(PresenceEmoteSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceEmoteSchema: GenMessage<PresenceEmote>;
 
 /**
  * @generated from message glimway.v1.PresenceGift
+ * @deprecated
  */
 export declare type PresenceGift = Message<"glimway.v1.PresenceGift"> & {
   /**
@@ -240,11 +259,13 @@ export declare type PresenceGift = Message<"glimway.v1.PresenceGift"> & {
 /**
  * Describes the message glimway.v1.PresenceGift.
  * Use `create(PresenceGiftSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceGiftSchema: GenMessage<PresenceGift>;
 
 /**
  * @generated from message glimway.v1.PresenceWitness
+ * @deprecated
  */
 export declare type PresenceWitness = Message<"glimway.v1.PresenceWitness"> & {
   /**
@@ -266,6 +287,7 @@ export declare type PresenceWitness = Message<"glimway.v1.PresenceWitness"> & {
 /**
  * Describes the message glimway.v1.PresenceWitness.
  * Use `create(PresenceWitnessSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceWitnessSchema: GenMessage<PresenceWitness>;
 
@@ -273,6 +295,7 @@ export declare const PresenceWitnessSchema: GenMessage<PresenceWitness>;
  * Explicit presence preserves the JSON reader's required-coordinate checks.
  *
  * @generated from message glimway.v1.PresenceFacing
+ * @deprecated
  */
 export declare type PresenceFacing = Message<"glimway.v1.PresenceFacing"> & {
   /**
@@ -289,11 +312,13 @@ export declare type PresenceFacing = Message<"glimway.v1.PresenceFacing"> & {
 /**
  * Describes the message glimway.v1.PresenceFacing.
  * Use `create(PresenceFacingSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceFacingSchema: GenMessage<PresenceFacing>;
 
 /**
  * @generated from message glimway.v1.PresencePosition
+ * @deprecated
  */
 export declare type PresencePosition = Message<"glimway.v1.PresencePosition"> & {
   /**
@@ -325,11 +350,13 @@ export declare type PresencePosition = Message<"glimway.v1.PresencePosition"> & 
 /**
  * Describes the message glimway.v1.PresencePosition.
  * Use `create(PresencePositionSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresencePositionSchema: GenMessage<PresencePosition>;
 
 /**
  * @generated from message glimway.v1.PresencePlayer
+ * @deprecated
  */
 export declare type PresencePlayer = Message<"glimway.v1.PresencePlayer"> & {
   /**
@@ -356,11 +383,13 @@ export declare type PresencePlayer = Message<"glimway.v1.PresencePlayer"> & {
 /**
  * Describes the message glimway.v1.PresencePlayer.
  * Use `create(PresencePlayerSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresencePlayerSchema: GenMessage<PresencePlayer>;
 
 /**
  * @generated from message glimway.v1.PresenceAvatar
+ * @deprecated
  */
 export declare type PresenceAvatar = Message<"glimway.v1.PresenceAvatar"> & {
   /**
@@ -399,11 +428,13 @@ export declare type PresenceAvatar = Message<"glimway.v1.PresenceAvatar"> & {
 /**
  * Describes the message glimway.v1.PresenceAvatar.
  * Use `create(PresenceAvatarSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceAvatarSchema: GenMessage<PresenceAvatar>;
 
 /**
  * @generated from message glimway.v1.PresenceAppearance
+ * @deprecated
  */
 export declare type PresenceAppearance = Message<"glimway.v1.PresenceAppearance"> & {
   /**
@@ -460,6 +491,7 @@ export declare type PresenceAppearance = Message<"glimway.v1.PresenceAppearance"
 /**
  * Describes the message glimway.v1.PresenceAppearance.
  * Use `create(PresenceAppearanceSchema)` to create a new message.
+ * @deprecated
  */
 export declare const PresenceAppearanceSchema: GenMessage<PresenceAppearance>;
 

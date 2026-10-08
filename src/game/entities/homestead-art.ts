@@ -22,6 +22,7 @@ import { artDataUrl, artSource, densityOf, drawArt, opaqueBox } from '../density
 import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { HOME_FLAGS, SILAS, lotName, signText } from '../homestead'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
+import { canvasRatio } from '../viewport'
 
 /** The cottage's height on its land (its collision body follows it). */
 const COTTAGE_H = 92
@@ -260,13 +261,14 @@ export class HomesteadArt {
     const inView = tx > view.x + 8 && tx < view.right - 8 && ty > view.y + 8 && ty < view.bottom - 8
     this.guide.arrow.setVisible(!inView)
     if (inView) return
-    // Screen space: where the line from the view's centre to the gate leaves the screen.
+    // Screen space (canvas px): where the line from the view's centre to the
+    // gate leaves the screen, 28 CSS px in.
     const W = cam.width
     const H = cam.height
     const z = cam.zoom
     const a = Math.atan2(ty - view.centerY, tx - view.centerX)
-    const hw = W / 2 - 28
-    const hh = H / 2 - 28
+    const hw = W / 2 - 28 * canvasRatio()
+    const hh = H / 2 - 28 * canvasRatio()
     const t = Math.min(hw / Math.max(1e-6, Math.abs(Math.cos(a))), hh / Math.max(1e-6, Math.abs(Math.sin(a))))
     const X = W / 2 + Math.cos(a) * t
     const Y = H / 2 + Math.sin(a) * t

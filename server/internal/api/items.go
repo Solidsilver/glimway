@@ -125,7 +125,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		// Every view of the pack shows warden-set tools healed overnight.
-		if err = healWardens(ctx, tx, s.HabiticaID, now); err != nil {
+		if err = healWardens(ctx, tx, s.AccountID, now); err != nil {
 			return nil, err
 		}
 		out.Items, err = readItems(ctx, tx, s, now)

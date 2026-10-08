@@ -103,7 +103,7 @@ function rig() {
   const sock = () => sockets[sockets.length - 1];
   const ready = () => {
     sock().open();
-    sock().push({ type: 'ready', habiticaId: 'me' });
+    sock().push({ type: 'ready', accountId: 'me' });
   };
   return { c, sockets, sock, ready, link, feed, bus, handlers, emitted };
 }
@@ -159,12 +159,12 @@ test('a reconnect roster moves peers who moved while we were away, and clears un
     type: 'room',
     area: 'village',
     players: [
-      { habiticaId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: false } },
-      { habiticaId: 'cy', displayName: 'Cy', avatar: null, pos: { x: 50, y: 50, facing: { x: 0, y: 1 }, moving: false } },
+      { accountId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: false } },
+      { accountId: 'cy', displayName: 'Cy', avatar: null, pos: { x: 50, y: 50, facing: { x: 0, y: 1 }, moving: false } },
     ],
   });
   r.c.advance(1_000);
-  const drawn = (id: string) => r.feed.peersIn('village').find((p) => p.habiticaId === id)?.track.at(r.c.now());
+  const drawn = (id: string) => r.feed.peersIn('village').find((p) => p.accountId === id)?.track.at(r.c.now());
   assert.equal(drawn('bob')?.x, 10);
   // Our transport drops; Bob walks to x=500 and stops meanwhile.
   r.sock().drop(1006);
@@ -175,8 +175,8 @@ test('a reconnect roster moves peers who moved while we were away, and clears un
     type: 'room',
     area: 'village',
     players: [
-      { habiticaId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 500, y: 20, facing: { x: 1, y: 0 }, moving: false } },
-      { habiticaId: 'cy', displayName: 'Cy', avatar: null, pos: null },
+      { accountId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 500, y: 20, facing: { x: 1, y: 0 }, moving: false } },
+      { accountId: 'cy', displayName: 'Cy', avatar: null, pos: null },
     ],
   });
   r.c.advance(RENDER_DELAY_MS + 10);
@@ -192,8 +192,8 @@ test('maker heart range uses the same six tile radius as the server', () => {
   r.feed.position({ x: 0, y: 0, facing: { x: 0, y: 1 }, moving: false });
   r.sock().push({
     type: 'room', area: 'village', players: [
-      { habiticaId: 'near', displayName: 'Near', avatar: null, pos: { x: 96, y: 0, facing: { x: 0, y: 1 }, moving: false } },
-      { habiticaId: 'far', displayName: 'Far', avatar: null, pos: { x: 97, y: 0, facing: { x: 0, y: 1 }, moving: false } },
+      { accountId: 'near', displayName: 'Near', avatar: null, pos: { x: 96, y: 0, facing: { x: 0, y: 1 }, moving: false } },
+      { accountId: 'far', displayName: 'Far', avatar: null, pos: { x: 97, y: 0, facing: { x: 0, y: 1 }, moving: false } },
     ],
   });
   r.c.advance(RENDER_DELAY_MS + 10);

@@ -18,7 +18,7 @@ let key = 'fingersnap:held'
 /** The localStorage key for a session: `fingersnap:held:<player>@<world>`. */
 export function deviceKey(base: string, session: Session | null): string {
   const link = session?.link
-  return link ? `${base}:${link.habiticaId}@${link.worldId || 'home'}` : `${base}:guest`
+  return link ? `${base}:${link.accountId}@${link.worldId || 'home'}` : `${base}:guest`
 }
 
 function load(): BeltKind {

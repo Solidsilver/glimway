@@ -19,10 +19,10 @@ func fixture(t *testing.T) *sql.DB {
 	}
 	t.Cleanup(func() { s.Close() })
 	_, err = s.DB.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',0);
-INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Alice','w',0,0);
+INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Alice','w',0,0);
 INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('home','w',1,0);
 INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,created_at) VALUES('tool','axe','pack','alice',7,10,0),('fit','stone','fitted','tool',1,1,0);
-INSERT INTO homestead_items(id,item_def,location,habitica_id) VALUES('chair','chair','mail','alice');`)
+INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('chair','chair','mail','alice');`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestReturnDecorationGuards(t *testing.T) {
 		{"wrong def", "chair", "alice", "lamp", ""},
 		{"missing id", "missing", "alice", "chair", ""},
 		{"wrong location", "chair", "alice", "chair", "UPDATE homestead_items SET location='inventory'"},
-		{"placed scene", "chair", "alice", "chair", "UPDATE homestead_items SET location='placed',habitica_id=NULL,homestead_id='home',scene='outdoor',x=0,y=0,rotation=0"},
+		{"placed scene", "chair", "alice", "chair", "UPDATE homestead_items SET location='placed',account_id=NULL,homestead_id='home',scene='outdoor',x=0,y=0,rotation=0"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tx := transaction(t, db)
@@ -136,7 +136,7 @@ func TestMoveDecorationsGuardsAndNullOwners(t *testing.T) {
 	}
 	var player sql.NullString
 	var home, location string
-	if err := tx.QueryRow("SELECT habitica_id,homestead_id,location FROM homestead_items WHERE id='chair'").Scan(&player, &home, &location); err != nil || player.Valid || home != "home" || location != "storage" {
+	if err := tx.QueryRow("SELECT account_id,homestead_id,location FROM homestead_items WHERE id='chair'").Scan(&player, &home, &location); err != nil || player.Valid || home != "home" || location != "storage" {
 		t.Fatal(player, home, location, err)
 	}
 	if err := itemmove.MoveDecorations(context.Background(), tx, []string{"chair"}, to, itemmove.DecorationPlace{Location: "personal", Player: "alice"}); err != nil {

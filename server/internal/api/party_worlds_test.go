@@ -23,6 +23,7 @@ func jsonInto(raw string, v any) error { return json.Unmarshal([]byte(raw), v) }
 func (x *rig) rawGet(path string, c *http.Cookie) string {
 	x.t.Helper()
 	r := httptest.NewRequest("GET", path, nil)
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.AddCookie(c)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)
@@ -105,7 +106,6 @@ func TestPartyAdopt(t *testing.T) {
 	code := inviteReq(t, x, "POST", "/api/invites", bc, 200).Code
 	x.hero("rue", "Rue", "")
 	rc := x.login("rue", code)
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, rc, 200)
 	// An older link (022) to p1, kept by 023 as a record.
 	if _, err := x.db.DB.Exec("UPDATE worlds SET habitica_party_id='p1' WHERE id=?", bobWorld); err != nil {
 		t.Fatal(err)
@@ -134,7 +134,7 @@ func TestPartyAdopt(t *testing.T) {
 		t.Fatal("bob after adopt", v.raw)
 	}
 	parties, err := x.db.Parties(ctx)
-	if err != nil || len(parties) != 1 || parties[0].WorldID == nil || *parties[0].WorldID != bobWorld || parties[0].OpenedBy == nil || *parties[0].OpenedBy != "bob" || parties[0].Members != 2 {
+	if err != nil || len(parties) != 1 || parties[0].WorldID == nil || *parties[0].WorldID != bobWorld || parties[0].OpenedBy == nil || *parties[0].OpenedBy != x.account("bob") || parties[0].Members != 2 {
 		t.Fatal("parties", store.JSON(parties), err)
 	}
 	if _, err = x.db.AdoptWorld(ctx, bobWorld); err == nil {
@@ -165,7 +165,6 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	pw := o.WorldID
 	x.hero("rue", "Rue", "p1")
 	rc, r := x.playAs("rue", "p1")
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, rc, 200)
 	x.refresh(rc, &r)
 	// Still in the party: nothing to leave.
 	x.refresh(oc, &o)
@@ -190,7 +189,7 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	// Rejoining clears it.
 	x.hero("rue", "Rue", "p1")
 	rc, r = x.playAs("rue", "p1")
-	if v = x.worldReq("GET", "/api/world", nil, rc, 200); v.Leaver != nil || count(t, x.db, "SELECT count(*) FROM players WHERE habitica_id='rue' AND party_left_at IS NULL") != 1 {
+	if v = x.worldReq("GET", "/api/world", nil, rc, 200); v.Leaver != nil || count(t, x.db, "SELECT count(*) FROM players WHERE account_id='"+x.account("rue")+"' AND party_left_at IS NULL") != 1 {
 		t.Fatal("rejoined, still warned", v.raw)
 	}
 	// Left again: "Leave now" makes her a world of her own and moves her there.
@@ -202,13 +201,13 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 		t.Fatal(e)
 	}
 	doc.Area = "village"
-	x.conserved("rue")
+	x.conserved(x.account("rue"))
 	out := x.worldReq("POST", "/api/world/leave", body(r, "leave", map[string]any{"progress": doc}), rc, 200)
 	own := x.worldOf("rue")
-	if own == pw || out.WorldID != own || out.Result.From != pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='rue'", own) != 1 || out.Result.World.Leaver != nil || !out.Result.World.IsOwner {
+	if own == pw || out.WorldID != own || out.Result.From != pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("rue")+"'", own) != 1 || out.Result.World.Leaver != nil || !out.Result.World.IsOwner {
 		t.Fatal("leave now", out.raw)
 	}
-	x.conserved("rue")
+	x.conserved(x.account("rue"))
 
 	// Hal moved in today (cooldown running), left the party: he may still go.
 	x.hero("hal", "Hal", "")
@@ -241,7 +240,7 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	if s.WorldID != pw {
 		t.Fatal("setup")
 	}
-	x.seedAssets("sage")
+	x.seedAssets(x.account("sage"))
 	x.refresh(sc, &s)
 	s = x.openWorkshop(sc, s)
 	s.Snapshot = x.p5("POST", "/api/storage", body(s, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 3}}), sc, 200).Snapshot
@@ -263,12 +262,12 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 		return out
 	}
 	pack, personal, shared := stacks("pack", "sage"), stacks("personal", "sage"), stacks("storage", home.ID)
-	x.conserved("sage")
+	x.conserved(x.account("sage"))
 
 	// Sage leaves p1, and is warned; she wanders off into the woods.
 	x.hero("sage", "Sage", "")
 	x.login("sage", "")
-	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.area','woodland') WHERE habitica_id='sage'"); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE progress SET doc_json=json_set(doc_json,'$.area','woodland') WHERE account_id='" + x.account("sage") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	x.now.Add(PartyGrace - 1)
@@ -279,17 +278,17 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	x.now.Add(1)
 	st, after, e, sc := x.request("POST", "/api/session", map[string]any{"userId": "sage", "token": secret}, nil)
 	own := x.worldOf("sage")
-	if st != 200 || own == pw || after.WorldID != own || after.State.Area != "village" || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='sage'", own) != 1 {
+	if st != 200 || own == pw || after.WorldID != own || after.State.Area != "village" || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("sage")+"'", own) != 1 {
 		t.Fatal("moved out", st, e, after.WorldID, after.State.Area)
 	}
 	// What comes along and what stays.
 	if !reflect.DeepEqual(stacks("pack", "sage"), pack) || !reflect.DeepEqual(stacks("personal", "sage"), personal) || !reflect.DeepEqual(stacks("storage", home.ID), shared) {
 		t.Fatal("goods moved wrongly")
 	}
-	if count(t, x.db, "SELECT count(*) FROM homestead_members WHERE habitica_id='sage'") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='sage' AND reason='world-move' AND ref=?", pw+">"+own) != 1 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_members WHERE account_id='"+x.account("sage")+"'") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("sage")+"' AND reason='world-move' AND ref=?", pw+">"+own) != 1 {
 		t.Fatal("homestead kept, or the move not in the ledger")
 	}
-	x.conserved("sage")
+	x.conserved(x.account("sage"))
 	// The next screen says what happened, once.
 	v := x.worldReq("GET", "/api/world", nil, sc, 200)
 	if v.MovedOutAt != x.now.Load() || v.Leaver != nil || !v.IsOwner {
@@ -300,7 +299,7 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	}
 	// A later sign-in doesn't move her again.
 	x.login("sage", "")
-	if x.worldOf("sage") != own || count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id='sage' AND reason='world-move'") != 1 {
+	if x.worldOf("sage") != own || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("sage")+"' AND reason='world-move'") != 1 {
 		t.Fatal("moved twice")
 	}
 }

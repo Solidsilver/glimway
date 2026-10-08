@@ -133,7 +133,7 @@ test('helpers: ember gains and "worth bringing" saves', () => {
 
 test('cache: records are validated; anything unreadable counts as no cache, and no foreign fields survive', () => {
   const ok = normalizeCache({
-    habiticaId: 'h',
+    accountId: 'h',
     name: 'Tansy',
     state: base(),
     vitalsSource: 'imported',
@@ -150,8 +150,8 @@ test('cache: records are validated; anything unreadable counts as no cache, and 
   assert.equal(ok.rev, 4);
   assert.equal(ok.recovery?.state.quest, 'accepted');
   assert.equal('token' in ok, false);
-  assert.equal(normalizeCache({ habiticaId: 'h', clientId: 'c', rev: -1, state: base() }), null);
-  assert.equal(normalizeCache({ habiticaId: 'h', clientId: 'c', rev: 1, state: { version: 2 } }), null);
+  assert.equal(normalizeCache({ accountId: 'h', clientId: 'c', rev: -1, state: base() }), null);
+  assert.equal(normalizeCache({ accountId: 'h', clientId: 'c', rev: 1, state: { version: 2 } }), null);
   assert.equal(normalizeCache(null), null);
 });
 
@@ -196,7 +196,7 @@ test('spendLanded: outcomes for lanterns and the chest; for a rest, restored vit
 });
 
 const record = (id: string, over: Partial<ConnectedCache> = {}): ConnectedCache => ({
-  habiticaId: id,
+  accountId: id,
   name: id,
   state: base(),
   vitalsSource: 'imported',
@@ -217,7 +217,7 @@ test('cache: one record per account, so a second account never overwrites the fi
   assert.equal(await saveCache(record('acct-2')), true);
   assert.equal((await loadCache('acct-1'))?.state.quest, 'accepted');
   assert.equal((await loadCache('acct-1'))?.dirty, true);
-  assert.equal((await loadCache('acct-2'))?.habiticaId, 'acct-2');
+  assert.equal((await loadCache('acct-2'))?.accountId, 'acct-2');
   await clearCache('acct-2');
   assert.equal(await loadCache('acct-2'), null);
   assert.equal((await loadCache('acct-1'))?.dirty, true);
@@ -229,15 +229,15 @@ test('cache: offline start picks the latest account, skipping ones kept after a 
   await saveCache(record('older'));
   await new Promise((r) => setTimeout(r, 5));
   await saveCache(record('newer', { loggedOut: true, dirty: true }));
-  assert.equal((await loadLatestCache())?.habiticaId, 'older');
+  assert.equal((await loadLatestCache())?.accountId, 'older');
 });
 
 test('cache: orphan slots are per account and client, and can be dropped', async () => {
   installFakeIndexedDB();
   resetFakeIndexedDB();
-  await saveOrphan({ habiticaId: 'a', clientId: 'tab-1', state: base({ quest: 'clue-found' }), rev: 3, savedAt: 0 });
-  await saveOrphan({ habiticaId: 'a', clientId: 'tab-2', state: base(), rev: 3, savedAt: 0 });
-  await saveOrphan({ habiticaId: 'b', clientId: 'tab-1', state: base(), rev: 1, savedAt: 0 });
+  await saveOrphan({ accountId: 'a', clientId: 'tab-1', state: base({ quest: 'clue-found' }), rev: 3, savedAt: 0 });
+  await saveOrphan({ accountId: 'a', clientId: 'tab-2', state: base(), rev: 3, savedAt: 0 });
+  await saveOrphan({ accountId: 'b', clientId: 'tab-1', state: base(), rev: 1, savedAt: 0 });
   await saveCache(record('a'));
   const orphans = await loadOrphans('a');
   assert.deepEqual(orphans.map((o) => o.clientId).sort(), ['tab-1', 'tab-2']);

@@ -25,6 +25,7 @@ func TestItemsMigrationMovesGoodsAndParcels(t *testing.T) {
  INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,sent_at) VALUES('m1','w','alice','bob','material','amber',3,50);`); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ import (
 func expirePending(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (bool, error) {
 	cutoff := now - int64(rules.E.PendingCreditDays)*86400
 	var expired int
-	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE habitica_id=? AND created_at<=?", s.HabiticaID, cutoff).Scan(&expired); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE account_id=? AND created_at<=?", s.AccountID, cutoff).Scan(&expired); err != nil {
 		return false, err
 	}
 	if expired == 0 {
@@ -22,7 +22,7 @@ func expirePending(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64
 	if err := store.Credit(ctx, tx, s, 0, 0, "pending-expired", strconv.Itoa(expired), nil, now); err != nil {
 		return false, err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM pending_credits WHERE habitica_id=? AND created_at<=?", s.HabiticaID, cutoff); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM pending_credits WHERE account_id=? AND created_at<=?", s.AccountID, cutoff); err != nil {
 		return false, err
 	}
 	s.Pending -= expired
@@ -43,7 +43,7 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 			return err
 		}
 	} else if rules.CheckpointForgery(p, s.LossReference, s.VerifiedHighLevel, rules.CreditReference(high), now-highAt) && !s.Flagged {
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=? WHERE habitica_id=?", now, s.HabiticaID); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=? WHERE account_id=?", now, s.AccountID); err != nil {
 			return err
 		}
 		if err = store.Credit(ctx, tx, s, 0, 0, "checkpoint-flag", "highest-credit", &verified, now); err != nil {
@@ -53,14 +53,14 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 		changed = true
 	}
 	var confirmed int
-	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE habitica_id=? AND reported_xp<=?", s.HabiticaID, verified).Scan(&confirmed); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE account_id=? AND reported_xp<=?", s.AccountID, verified).Scan(&confirmed); err != nil {
 		return err
 	}
 	if confirmed > 0 {
 		if err = store.Credit(ctx, tx, s, confirmed, confirmed, "pending-settled", "checkpoint", &verified, now); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "DELETE FROM pending_credits WHERE habitica_id=? AND reported_xp<=?", s.HabiticaID, verified); err != nil {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM pending_credits WHERE account_id=? AND reported_xp<=?", s.AccountID, verified); err != nil {
 			return err
 		}
 		s.Pending -= confirmed
@@ -82,11 +82,11 @@ func highestCredit(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (float64,
 	var xp float64
 	var at int64
 	err := tx.QueryRowContext(ctx, `SELECT reported_xp,created_at FROM (
- SELECT reported_xp,created_at FROM ledger WHERE habitica_id=? AND id>?
+ SELECT reported_xp,created_at FROM ledger WHERE account_id=? AND id>?
  AND reason IN ('sync','pending-held') AND reported_xp IS NOT NULL
  UNION ALL
- SELECT reported_xp,created_at FROM pending_credits WHERE habitica_id=? AND created_at>?
- ) ORDER BY reported_xp DESC,created_at ASC LIMIT 1`, s.HabiticaID, s.CheckpointLedgerID, s.HabiticaID, s.CheckpointAt).Scan(&xp, &at)
+ SELECT reported_xp,created_at FROM pending_credits WHERE account_id=? AND created_at>?
+ ) ORDER BY reported_xp DESC,created_at ASC LIMIT 1`, s.AccountID, s.CheckpointLedgerID, s.AccountID, s.CheckpointAt).Scan(&xp, &at)
 	if err == sql.ErrNoRows {
 		return 0, 0, nil
 	}

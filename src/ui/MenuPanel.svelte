@@ -2,7 +2,8 @@
   import { clearSave, exportSave, importSaveDocument, saveGame } from '../lib/save'
   import { createNewGame } from '../lib/state'
   import type { Session } from '../game/session'
-  import { setMuted, sfx } from '../game/sfx'
+  import { sfx } from '../game/sfx'
+  import { soundSettings, type SoundPrefs } from '../game/sound-settings'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import Panel from './Panel.svelte'
@@ -75,11 +76,15 @@
     if (e.key !== 'Escape') e.stopPropagation()
   }
 
+  /** Sound on or off and its volume, per device (src/game/sound-settings.ts). */
+  let sound = $state<SoundPrefs>(soundSettings.prefs)
+  function setSound(change: Partial<SoundPrefs>): void {
+    soundSettings.set(change)
+    sound = soundSettings.prefs
+  }
   function toggleSound(): void {
-    const next = !ui.muted
-    setMuted(next)
-    ui.muted = next
-    if (!next) sfx('click')
+    setSound({ on: !sound.on })
+    if (sound.on) sfx('click')
   }
 
   async function copySave(): Promise<void> {
@@ -155,9 +160,23 @@
 
   <div class="quick">
     <button type="button" class="primary" onclick={onClose}>Back to the road</button>
-    <button type="button" onclick={toggleSound} aria-pressed={!ui.muted}>
-      <Icon name={ui.muted ? 'mute' : 'sound'} size={16} /> Sound {ui.muted ? 'off' : 'on'}
+    <button type="button" onclick={toggleSound} aria-pressed={sound.on} data-testid="sound-toggle">
+      <Icon name={sound.on ? 'sound' : 'mute'} size={16} /> Sound {sound.on ? 'on' : 'off'}
     </button>
+    <input
+      type="range"
+      class="volume"
+      min="0"
+      max="100"
+      step="5"
+      value={Math.round(sound.volume * 100)}
+      disabled={!sound.on}
+      aria-label="Sound volume"
+      data-testid="sound-volume"
+      onkeydown={keepKeys}
+      oninput={(e) => setSound({ volume: Number(e.currentTarget.value) / 100 })}
+      onchange={() => sfx('click')}
+    />
   </div>
 
   {#if touch}
@@ -274,7 +293,8 @@
       Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed
       <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>;
       gear statistics derived from Habitica's content data (GPL-3.0). Glimway is not affiliated with or
-      endorsed by Habitica.
+      endorsed by Habitica. Sound effects by
+      <a href="https://kenney.nl" target="_blank" rel="noopener noreferrer">Kenney</a> (CC0).
     </p>
     {#if !connected}
       <div class="row">
@@ -325,6 +345,15 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+  .quick .volume {
+    flex: 1 1 120px;
+    max-width: 200px;
+    min-height: 44px;
+    accent-color: var(--wood);
+  }
+  .quick .volume:disabled {
+    opacity: 0.45;
   }
   .sticks {
     display: grid;

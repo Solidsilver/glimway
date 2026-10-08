@@ -431,7 +431,7 @@ func DecodeProgress(b json.RawMessage, maxHP, maxMana float64) (State, error) {
 			return State{}, bad
 		}
 		for _, v := range a {
-			if v == "" || len(v) > 128 {
+			if v == "" || len(v) > 256 {
 				return State{}, bad
 			}
 		}

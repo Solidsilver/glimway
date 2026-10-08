@@ -159,8 +159,14 @@ func run(args []string) error {
 				return fmt.Errorf("usage: invites [player]")
 			}
 			player := ""
-			if len(cmd) == 2 {
-				player = cmd[1]
+			if len(cmd) == 2 && cmd[1] != "cli" {
+				player, err = s.ResolveOperatorAccount(ctx, cmd[1])
+				if err != nil {
+					return err
+				}
+			}
+			if len(cmd) == 2 && cmd[1] == "cli" {
+				player = "cli"
 			}
 			records, err := s.Invites(ctx, player)
 			if err != nil {
@@ -200,12 +206,16 @@ func run(args []string) error {
 			return fmt.Errorf("unknown party command")
 		case "flag":
 			if len(cmd) != 3 || cmd[1] != "clear" {
-				return fmt.Errorf("usage: flag clear ID")
+				return fmt.Errorf("usage: flag clear HABITICA-SUBJECT|ACCOUNT-ID")
 			}
-			return s.ClearFlag(ctx, cmd[2])
+			account, err := s.ResolveOperatorAccount(ctx, cmd[2])
+			if err != nil {
+				return err
+			}
+			return s.ClearFlag(ctx, account)
 		case "allowlist":
 			if len(cmd) < 2 {
-				return fmt.Errorf("usage: allowlist add|remove ID | list")
+				return fmt.Errorf("usage: allowlist add|remove HABITICA-SUBJECT | list")
 			}
 			switch cmd[1] {
 			case "add", "remove":
@@ -237,37 +247,37 @@ func run(args []string) error {
 			if len(cmd) != 1 {
 				return fmt.Errorf("usage: notes")
 			}
-			rows, err := s.DB.Query("SELECT habitica_id,reason,ref,reported_xp,created_at FROM ledger WHERE reason IN ('rebirth','xp-loss') ORDER BY id")
+			rows, err := s.DB.Query("SELECT l.account_id,COALESCE(i.subject,''),l.reason,l.ref,l.reported_xp,l.created_at FROM ledger l LEFT JOIN sign_ins i ON i.account_id=l.account_id AND i.method='habitica' WHERE reason IN ('rebirth','xp-loss') ORDER BY id")
 			if err != nil {
 				return err
 			}
 			defer rows.Close()
 			for rows.Next() {
-				var id, reason, ref string
+				var id, subject, reason, ref string
 				var xp float64
 				var at int64
-				if err = rows.Scan(&id, &reason, &ref, &xp, &at); err != nil {
+				if err = rows.Scan(&id, &subject, &reason, &ref, &xp, &at); err != nil {
 					return err
 				}
-				fmt.Printf("%s\t%s\t%s\t%.2f\t%d\n", id, reason, ref, xp, at)
+				fmt.Printf("%s\t%s\t%s\t%s\t%.2f\t%d\n", id, subject, reason, ref, xp, at)
 			}
 			return rows.Err()
 		case "flagged":
 			if len(cmd) != 1 {
 				return fmt.Errorf("usage: flagged")
 			}
-			rows, err := s.DB.Query("SELECT habitica_id,display_name,flagged_at FROM players WHERE flagged_at IS NOT NULL ORDER BY flagged_at")
+			rows, err := s.DB.Query("SELECT p.account_id,COALESCE(i.subject,''),p.display_name,p.flagged_at FROM players p LEFT JOIN sign_ins i ON i.account_id=p.account_id AND i.method='habitica' WHERE flagged_at IS NOT NULL ORDER BY flagged_at")
 			if err != nil {
 				return err
 			}
 			defer rows.Close()
 			for rows.Next() {
-				var id, name string
+				var id, subject, name string
 				var at int64
-				if err = rows.Scan(&id, &name, &at); err != nil {
+				if err = rows.Scan(&id, &subject, &name, &at); err != nil {
 					return err
 				}
-				fmt.Printf("%s\t%q\t%d\n", id, name, at)
+				fmt.Printf("%s\t%s\t%q\t%d\n", id, subject, name, at)
 			}
 			return rows.Err()
 		case "backup":

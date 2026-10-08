@@ -1010,6 +1010,51 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_PRESENCE_PLAYER_LIMIT = 198;
    */
   PRESENCE_PLAYER_LIMIT = 198,
+
+  /**
+   * @generated from enum value: ERROR_CODE_RELOAD_NEEDED = 199;
+   */
+  RELOAD_NEEDED = 199,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_NEXT_STEP = 200;
+   */
+  NOT_NEXT_STEP = 200,
+
+  /**
+   * @generated from enum value: ERROR_CODE_WRONG_AREA = 201;
+   */
+  WRONG_AREA = 201,
+
+  /**
+   * @generated from enum value: ERROR_CODE_UNKNOWN_MARK = 202;
+   */
+  UNKNOWN_MARK = 202,
+
+  /**
+   * @generated from enum value: ERROR_CODE_SERVER_MARK = 203;
+   */
+  SERVER_MARK = 203,
+
+  /**
+   * @generated from enum value: ERROR_CODE_PAPER_NOT_DUE = 204;
+   */
+  PAPER_NOT_DUE = 204,
+
+  /**
+   * @generated from enum value: ERROR_CODE_ECHO_NOT_HERE = 205;
+   */
+  ECHO_NOT_HERE = 205,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_IMPLEMENTED = 206;
+   */
+  NOT_IMPLEMENTED = 206,
+
+  /**
+   * @generated from enum value: ERROR_CODE_REPORT_REQUIRED = 207;
+   */
+  REPORT_REQUIRED = 207,
 }
 
 /**

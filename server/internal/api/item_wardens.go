@@ -21,7 +21,7 @@ WHERE (location='pack' OR location='personal') AND owner=? AND worn_day<? AND co
 		return err
 	}
 	var homeID string
-	_ = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE habitica_id=?", player).Scan(&homeID)
+	_ = tx.QueryRowContext(ctx, "SELECT homestead_id FROM homestead_members WHERE account_id=?", player).Scan(&homeID)
 	if homeID != "" {
 		return healWardensHome(ctx, tx, homeID, now)
 	}

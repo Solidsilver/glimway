@@ -93,7 +93,7 @@
   /** The held finger (viewport px), or null. */
   let holdAt = $state<{ x: number; y: number } | null>(null)
   let holdFrame = 0
-  /** The canvas's offset on the page (the scene reports the hero in canvas px). */
+  /** The canvas's offset on the page (the scene reports the hero in CSS px from the canvas's top left). */
   let canvasOrigin = { x: 0, y: 0 }
   /** Close enough to the finger: stop instead of jittering on the spot. */
   const HOLD_STOP = 14
