@@ -1,3 +1,4 @@
+import type { LibrarySection } from '../content/library'
 import type { HomePlantView } from '../lib/api/types'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
@@ -196,9 +197,12 @@ export interface GoalDirPayload {
  */
 export interface LibraryOpenPayload {
   focus?: 'shelf' | 'donate' | 'read'
-  /** A section's shelves (src/content/library.ts `LibrarySection`). */
-  section?: string
+  /** A section's shelves (docs/design/indoors.md 3.3): the panel opens on that section (an empty one: the whole collection). */
+  section?: LibrarySection
 }
+
+/** The reading room's four sections, painted on their shelves' signs. */
+export type { LibrarySection } from '../content/library'
 
 export interface DialoguePayload {
   id: string

@@ -28,6 +28,11 @@ export interface SpotQuests {
 
 let quests: SpotQuests = { talk: () => null, label: () => null, marker: () => null }
 
+/** Does the current quest point at this spot (its "!" marker)? Only then may its piece move or glow (docs/design/indoors.md 7.0). */
+export function spotWanted(spot: string, session: Session): boolean {
+  return quests.marker(spot, session) === 'quest'
+}
+
 /** Lane C's quest predictor answers for the spots (set once). */
 export function setSpotQuests(q: SpotQuests): void {
   quests = q
@@ -112,6 +117,7 @@ export class RoomSpots {
     const seat = (line?: string) => ({ label: () => (seated() ? 'Stand up' : label), verb: 'Sit', activate: () => this.sit(seatAt(this.deps.world, spot), line) })
     switch (id) {
       case 'kitchen-hearth':
+        // Standing here warms you (the seated mana bonus: ./room-kind.ts warmAt); the button says so.
         return { label, verb: 'Warm', activate: () => this.thought('You hold your hands to the oven mouth. The warmth gets into your knuckles and stays.') }
       case 'sponge-bowl':
         return { label, verb: 'Look', activate: () => this.say(id, 'The sponge bowl', ['A cloth over a crock bowl. Under it, something pale and patient that smells of beer.']) }
@@ -123,10 +129,15 @@ export class RoomSpots {
         return seat(this.deps.present('finn') ? 'Finn counts under his breath, in time with the wheel. You lose the count before he does.' : 'You can hear the wheel from here, every paddle in turn.')
       case 'mill-hoist':
         return { label, verb: 'Look', activate: () => this.say(id, 'The sack hoist', ['A pulley on a beam over the hatch. The rope is kinked hard where it runs through the block, and nothing moves.']) }
+      // The sections' shelves (3.3): the panel on that section's papers. (Donating is Elara's now.)
       case 'library-shelf':
-        return { label, verb: 'Browse', activate: () => bus.emit(EV.libraryOpen, { focus: 'shelf' }) }
-      case 'donation-shelf':
-        return { label, verb: 'Donate', activate: () => bus.emit(EV.libraryOpen, { focus: 'donate' }) }
+        return { label, verb: 'Browse', activate: () => bus.emit(EV.libraryOpen, { focus: 'shelf', section: 'stories' }) }
+      case 'shelf-histories':
+        return { label, verb: 'Browse', activate: () => bus.emit(EV.libraryOpen, { focus: 'shelf', section: 'histories' }) }
+      case 'shelf-recipes':
+        return { label, verb: 'Browse', activate: () => bus.emit(EV.libraryOpen, { focus: 'shelf', section: 'recipes' }) }
+      case 'shelf-field-notes':
+        return { label, verb: 'Browse', activate: () => bus.emit(EV.libraryOpen, { focus: 'shelf', section: 'field-notes' }) }
       case 'reading-table':
         return {
           label: () => (seated() ? 'Stand up' : this.lampLit() ? label : 'Look at the table'),
@@ -145,8 +156,9 @@ export class RoomSpots {
           verb: 'Look',
           activate: () => this.say(id, 'The reading lamp', this.lampLit() ? ['Lit, and trimmed low. Somebody paid for the oil.'] : ['A tin tag on the handle: “One ember the oil. Ledger. — M.H.”'])
         }
-      case 'window-seat':
-        return seat('Cushions, and somebody’s book left open on them. The glass is cold.')
+      // The nook: a plain seat, with a bench's seated regen.
+      case 'reading-nook':
+        return seat('Cushions, a lamp, and somebody’s book left open on them. The glass is cold.')
     }
   }
 }

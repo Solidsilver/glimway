@@ -24,7 +24,7 @@ import type { Village } from '../village'
 import { HEIRLOOM_GUEST_LINES, NORTH_BRIDGE_DONE, countAdaOilGifts } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
 import { openDialogue } from '../dialogue'
-import { questMarker, questTalk, rumourChoice } from '../../content/quests/index.ts'
+import { afterTheirTalk, questMarker, questTalk, rumourChoice, takesTheTalk } from '../../content/quests/index.ts'
 import { questContext } from '../guide-pin'
 import { placeArea } from '../../lib/api/predict'
 import { LIBRARY } from '../room-spots'
@@ -157,9 +157,11 @@ export class WorldTalk {
     try {
       const quest = questContext(session)
       const talk = isResident(id) ? residentTalk(id, residentContext(session)) : null
-      // A quest step that talking to them takes (a resident once you've been introduced).
+      // A quest step that talking to them takes (a resident once you've been introduced):
+      // the whole talk only when it takes it (indoors.md 5.9), else after their own lines.
       const step = talk?.first ? null : questTalk(id, quest)
-      if (talk && step) payload = step
+      const takes = !!step && takesTheTalk(step, quest)
+      if (talk && step && takes) payload = step
       else if (talk && isResident(id)) {
         // Residents talk around the quest: their words come from the save,
         // the calendar, the world's projects and your plot. Heard before:
@@ -181,6 +183,8 @@ export class WorldTalk {
         if (rumour) payload = { ...payload, choices: [rumour, ...(payload.choices ?? [])] }
         // Elara keeping the library: the shelves, and donating through her (indoors.md 3.3).
         if (id === 'elara' && placeArea(session.state) === LIBRARY) payload = keeperTalk(payload, talk.first)
+        // Another quest's start or reminder: after they've said their piece.
+        if (step && !takes) payload = afterTheirTalk(payload, step)
       } else payload = isEmberSpot(id)
         ? emberDialogue(id, session.state, {
           connected: session.vitalsSource === 'imported',
@@ -282,11 +286,20 @@ export class WorldTalk {
     })
   }
 
-  /** The story's dialogue rule; when it moves nothing on, a quest step's talk takes its place. */
+  /**
+   * Mara, Pip, Orrin: the story's rule, with a quest's talk by the rule of
+   * who speaks first (indoors.md 5.9). A step that takes the talk (the
+   * opening's, or one you're mid-way through here) is the talk; any other
+   * follows their lines. A story line that moves the road on goes alone:
+   * the other quest waits for the next talk.
+   */
   private storyOrQuestTalk(id: string): Dialogue {
     const { session } = this.deps
+    const ctx = questContext(session)
     const d = dialogueFor(id, session.quests)
-    return (!d.event && questTalk(id, questContext(session))) || this.storyTalk(id, d)
+    const step = questTalk(id, ctx)
+    if (!step || d.event) return this.storyTalk(id, d)
+    return takesTheTalk(step, ctx) ? step : afterTheirTalk(this.storyTalk(id, d), step)
   }
 
   /**

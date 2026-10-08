@@ -19,7 +19,7 @@
         "##############",
         "#==w==OOO==w=#",
         "#ss...OOO..pp#",
-        "#......:.....#",
+        "#.....:::....#",
         "#..TTTT......#",
         "#..TTTT...b..#",
         "#...........c#",
@@ -119,14 +119,14 @@
       "parent": "village",
       "map": [
         "##############",
-        "#==w=====GGG=#",
-        "#.....MM.GGG.#",
-        "#.....MM.....#",
-        "#..kk........#",
-        "#..kk.....^^.#",
-        "#.........^^.#",
-        "#.ff.........#",
-        "#.ff....n....#",
+        "#=w=======GGG#",
+        "#...kkMM..GGG#",
+        "#...kkMM.....#",
+        "#^^..........#",
+        "#^^.........n#",
+        "#............#",
+        "#..........ff#",
+        "#..........ff#",
         "#......@.....#",
         "######DD######"
       ],
@@ -150,11 +150,11 @@
           "id": "loft",
           "kind": "stair",
           "at": "^",
-          "side": "west",
+          "side": "south",
           "to": "in:village:mill:2",
           "entry": {
-            "tx": 4,
-            "ty": 5
+            "tx": 1,
+            "ty": 3
           }
         }
       ],
@@ -187,20 +187,26 @@
       ],
       "spots": {
         "counting-stool": {
-          "tx": 8,
-          "ty": 8,
+          "tx": 12,
+          "ty": 5,
           "label": "Sit"
         },
         "millstones": {
           "tx": 7,
-          "ty": 3,
+          "ty": 4,
           "label": "Look at the millstones"
         }
       },
       "lights": [
         {
-          "tx": 4,
+          "tx": 2,
           "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 12,
+          "ty": 5,
           "kind": "lamp",
           "r": 4
         }
@@ -218,24 +224,24 @@
       "name": "The sack loft",
       "parent": "village",
       "map": [
-        "############",
-        "#=w=====w==#",
-        "#.ff..ff...#",
-        "#.ff..ff...#",
-        "#.vv.....HH#",
-        "#.vv.....HH#",
-        "#..........#",
-        "############"
+        "##############",
+        "#=w=====w==HH#",
+        "#.ff..ff...HH#",
+        "#.ff..ff.....#",
+        "#vv..........#",
+        "#vv..........#",
+        "#............#",
+        "##############"
       ],
       "doors": [
         {
           "id": "floor",
           "kind": "stair",
           "at": "v",
-          "side": "east",
+          "side": "north",
           "to": "in:village:mill",
           "entry": {
-            "tx": 9,
+            "tx": 1,
             "ty": 6
           }
         }
@@ -254,17 +260,23 @@
       ],
       "spots": {
         "mill-hoist": {
-          "tx": 9,
-          "ty": 5,
+          "tx": 11,
+          "ty": 3,
           "label": "Look at the hoist"
         }
       },
       "lights": [
         {
-          "tx": 7,
-          "ty": 1,
+          "tx": 2,
+          "ty": 2,
           "kind": "window",
-          "r": 4
+          "r": 3
+        },
+        {
+          "tx": 8,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
         }
       ]
     },
@@ -274,13 +286,13 @@
       "parent": "village",
       "map": [
         "##############",
-        "#=SS=SS=w=SS=#",
-        "#.......ee...#",
-        "#.RRRR.......#",
-        "#.RRRR.......#",
-        "#..........dd#",
-        "#............#",
-        "#............#",
+        "#SS=SS=SS=SS=#",
+        "#l..........l#",
+        "#l.RRRR.....l#",
+        "#l.RRRR..EE.l#",
+        "#l..........l#",
+        "#.........NNN#",
+        "#.........NNN#",
         "#.....@......#",
         "######DD######"
       ],
@@ -308,54 +320,75 @@
           "solid": true
         },
         {
+          "art": "library-side-shelves",
+          "char": "l",
+          "solid": true
+        },
+        {
           "art": "reading-table",
           "char": "R",
           "solid": true
         },
         {
-          "art": "donation-shelf",
-          "char": "d",
+          "art": "elara-desk",
+          "char": "E",
           "solid": true
         },
         {
-          "art": "window-seat",
-          "char": "e",
+          "art": "reading-nook",
+          "char": "N",
           "solid": true
         }
       ],
       "spots": {
         "library-shelf": {
-          "tx": 3,
-          "ty": 1,
-          "label": "Browse the shelves"
+          "tx": 2,
+          "ty": 2,
+          "label": "Browse the stories"
         },
-        "donation-shelf": {
+        "shelf-histories": {
+          "tx": 5,
+          "ty": 2,
+          "label": "Browse the histories"
+        },
+        "shelf-recipes": {
+          "tx": 8,
+          "ty": 2,
+          "label": "Browse the recipes"
+        },
+        "shelf-field-notes": {
           "tx": 11,
-          "ty": 5,
-          "label": "Donate a paper"
-        },
-        "reading-lamp": {
-          "tx": 4,
-          "ty": 3,
-          "label": "Oil the lamp"
+          "ty": 2,
+          "label": "Browse the field notes"
         },
         "reading-table": {
           "tx": 3,
-          "ty": 4,
+          "ty": 5,
           "label": "Sit and read"
         },
-        "window-seat": {
-          "tx": 8,
-          "ty": 2,
-          "label": "Sit"
+        "reading-lamp": {
+          "tx": 6,
+          "ty": 5,
+          "label": "Oil the lamp"
+        },
+        "reading-nook": {
+          "tx": 11,
+          "ty": 7,
+          "label": "Sit in the nook"
         }
       },
       "lights": [
         {
-          "tx": 4,
+          "tx": 5,
           "ty": 3,
           "kind": "lamp",
           "r": 5
+        },
+        {
+          "tx": 11,
+          "ty": 6,
+          "kind": "lamp",
+          "r": 3
         }
       ],
       "outside": {

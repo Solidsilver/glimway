@@ -14,8 +14,8 @@
  * Phaser in it: tests run it, and the goal guide and the front doors ask it.
  */
 import type Phaser from 'phaser'
-import { roomFor } from '../lib/rooms.ts'
-import { RESIDENTS, residentById, type ResidentSpot } from '../lib/residents.ts'
+import { roomFootprints, roomFor } from '../lib/rooms.ts'
+import { RESIDENTS, residentAt, residentById, type ResidentSpot } from '../lib/residents.ts'
 import { cycleAt } from '../lib/clock.ts'
 import { tileBottom, tileFeet, tileMid } from '../lib/tile.ts'
 import { serverNow } from './clock.ts'
@@ -24,15 +24,15 @@ import type { NpcEntity, Npcs } from './entities/npcs.ts'
 
 /**
  * Where a resident is at `now` (Unix seconds, the server's clock): the
- * spot's name, area and tile, and when they move on; null for no such
- * resident. (src/lib/residents.ts `residentAt` gives the place alone.)
+ * place from the shared loader (src/lib/residents.ts `residentAt`), with
+ * its phase's spot name and when they move on; null for no such resident.
  */
 export function residentPlace(id: string, now: number = serverNow()): (ResidentSpot & { spot: string; until: number }) | null {
   const def = residentById(id)
-  if (!def) return null
-  const c = cycleAt(def, now)
-  const s = def.spots[c.spot]
-  return s ? { ...s, spot: c.spot, until: c.until } : null
+  const at = residentAt(id, now)
+  if (!def || !at) return null
+  const { spot, until } = cycleAt(def, now)
+  return { ...at, spot, until }
 }
 
 /** The resident who lives in a room (its floors included), if any. */
@@ -59,16 +59,15 @@ export function doorFor(id: string, area: string, other: string): { step: { tx: 
   if (room) {
     const door = room.doors.find((d) => d.to === other) ?? room.doors.find((d) => other.startsWith(d.to) || d.to.startsWith(other)) ?? room.doors.find((d) => d.kind === 'door') ?? room.doors[0]
     if (!door) return null
-    for (let y = 0; y < room.map.length; y++) {
-      const x = room.map[y].indexOf(door.at)
-      if (x < 0) continue
-      // A doorway: from the tile inside it, out through the wall. A stair: from the floor below its foot, onto its steps.
-      if (door.kind !== 'stair') return { step: { tx: x, ty: y - 1 }, door: { tx: x, ty: y } }
-      let foot = y
-      while (room.map[foot + 1]?.[x] === door.at) foot++
-      return { step: { tx: x, ty: foot + 1 }, door: { tx: x, ty: foot } }
-    }
-    return null
+    const [g] = roomFootprints(room, door.at)
+    if (!g) return null
+    // A doorway: from the tile inside it, out through the wall.
+    if (door.kind !== 'stair') return { step: { tx: g.tx, ty: g.ty - 1 }, door: { tx: g.tx, ty: g.ty } }
+    // A stair: from the floor on the side you step onto it from (its `side`), onto its nearest step.
+    const x = door.side === 'west' ? g.tx : door.side === 'east' ? g.tx + g.tw - 1 : g.tx
+    const y = door.side === 'north' ? g.ty : door.side === 'south' ? g.ty + g.th - 1 : g.ty + g.th - 1
+    const step = { tx: x + (door.side === 'west' ? -1 : door.side === 'east' ? 1 : 0), ty: y + (door.side === 'north' ? -1 : door.side === 'south' ? 1 : 0) }
+    return { step, door: { tx: x, ty: y } }
   }
   const home = residentById(id)?.home
   const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && d.to === area && d.outside) : null

@@ -16,6 +16,7 @@ import {
   checkGate,
   isDone,
   nextStep,
+  parseRef,
   questById,
   QUESTS,
   questLine,
@@ -160,6 +161,40 @@ function triggerTalk(kind: 'talk' | 'use', id: string, ctx: QuestTalkContext): D
  */
 export function questTalk(npc: string, ctx: QuestTalkContext): Dialogue | null {
   return triggerTalk('talk', npc, ctx);
+}
+
+/**
+ * Who speaks first (docs/design/indoors.md 5.9): whether a quest's talk
+ * takes the whole of a person's talk. The main story's does (the opening,
+ * the lantern road), and so does a step the player is mid-way through
+ * there: its quest started and the step ready to take now (its gate holds).
+ * Anything else, a quest's start, a "not yet", a "still no flour?", follows
+ * the person's own lines (`afterTheirTalk`).
+ */
+export function takesTheTalk(step: Dialogue, ctx: QuestTalkContext): boolean {
+  const p = step.key?.startsWith('quest:') ? parseRef(step.key.slice('quest:'.length)) : null;
+  if (!p) return false;
+  if (questLine(p.quest) === 'road') return true;
+  if (ctx.quests[p.quest.id] === undefined) return false;
+  return checkGate(p.step, ctx.gate(p.quest.id)).ok;
+}
+
+/**
+ * A person's own talk with a quest's talk after it: their words first
+ * (quests never stop people being themselves), then the quest's lines and
+ * its offer. Their choices stay, after the offer, with one "Not yet" at the
+ * end.
+ */
+export function afterTheirTalk(own: Dialogue, step: Dialogue): Dialogue {
+  const offers = (step.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet');
+  const theirs = (own.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet');
+  const choices = [...offers, ...theirs];
+  return {
+    ...own,
+    lines: [...own.lines, ...step.lines],
+    ...(step.event ? { event: step.event } : {}),
+    ...(choices.length ? { choices: [...choices, { text: 'Not yet', dismiss: true }] } : {}),
+  };
 }
 
 /** A room spot's quest talk, or its quest-aware look (the sponge bowl, the lit lamp). Null: the spot's default. */

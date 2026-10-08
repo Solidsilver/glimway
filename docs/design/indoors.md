@@ -85,7 +85,7 @@ each list area ids by name. 0.4 teaches them one family:
 |---|---|
 | `where` validity (`validArea`, `finiteWhere`) | A known room id, and `x, y` inside its pixel bounds |
 | Safe area (profile sync, rest) | `rootArea` is safe. The village rooms are safe; `in:home:<gate>` is your own home's |
-| Home rest by the hearth | `where.area` is `in:home:<gate>` for a gate on your deed (was: the doorstep on `home:<gate>`) |
+| Home rest by the hearth | `where.area` is `in:home:<gate>` for a gate on your deed (was: the doorstep on `home:<gate>`). Before the cottage stands (tier 0), the bedroll on `home:<gate>` rests at home instead (found at the gate, 2026-10-08) |
 | World move, leave | As `rootArea` |
 | Gathering | Refused indoors (no gathering target lists a room) |
 | Sellers and menders | Seller rows that follow a resident (2.5) check against the resident's spot now |
@@ -308,7 +308,10 @@ home goods in `content/homestead.json` (moved, not copied; homestead keeps its t
   crate), or `large` (furniture). **The rule is one table:** `small` goes on any `top` or `shelves`
   slot or the floor; `medium` goes on a `top` that's big enough, or the floor; `large` only on the
   floor; `wall` pieces only on walls; a rug (`layer: under`) only on the floor, under everything,
-  and never blocks. No per-item exceptions: a piece's `size` and `mount` decide.
+  and never blocks. A rug counts as floor for every piece but walls and other rugs. A medium piece
+  fills two slots of a top. Outdoors, fences, the gate and the cottage's outer walls are walls (the
+  bunting across your gate, a door carving). No per-item exceptions: a piece's `size` and `mount`
+  decide.
 - **`states`** (optional): named states, each with its frames and an optional slow `loop`
   (`pot`: `empty`, `filled`, `steaming`). One state is the default. A state changes only by
   something that happens (a quest beat, cooking, a resident's routine, later a player's use),
@@ -810,6 +813,27 @@ talking, the basic attack on the finger-wisp, picking up, the journal, embers, l
 As quests.md 1 says: dialogue rules swap `forStages` for `when: ["quest:step"]`; each new quest
 gets `src/content/quests/<id>.ts` with its lines, knock lines and "not yet" variants; resident
 lines key by the road's step. The server never needs the words.
+
+### 5.9 Who speaks first
+
+Added after the integration gate (2026-10-08). Talking to someone can match more than one thing:
+their own lines (a resident's story and their line about the day; Mara's, Pip's and Orrin's
+lantern-road lines) and a step of another quest that finishes by talking to them. Quests never
+stop people being themselves, so:
+
+1. **The main story takes the talk.** A step of a road quest (the opening, the lantern road) is
+   the conversation, as it always was. A lantern-road line that moves the road on (Mara's
+   "Would you go on?") also goes alone; another quest's talk waits for the next conversation.
+2. **Otherwise their own lines come first,** and another quest's talk follows them in the same
+   conversation: its asking and offer (*Set to Rise*'s start, Your Own Day's), its reminder with
+   the offer shown disabled and why ("Still no flour?… Needs 1 flour"), or its "not yet".
+3. **Unless you're mid-way through that step there:** the quest has started and its step can be
+   taken now (its gate holds: the flour is in your pack, the sponge has risen, you've done
+   something in your own day). Then the step is the conversation, because that's what you came
+   for.
+
+Their own choices (a rumour, "Hear it again") stay, after the quest's offer, with one "Not yet" at
+the end. The rule is `takesTheTalk` and `afterTheirTalk` in `src/content/quests/index.ts`.
 
 ---
 

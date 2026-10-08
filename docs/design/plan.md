@@ -159,6 +159,7 @@ Each release is a minor version with its own art round, written as one request.
 | **0.2 Foundations** (shipped 2026-10-08) | Versioning and proto stage 1, the "What's new" card, the cleanup lanes | Codex for the server, Opus for the client |
 | **0.3 Server-first** | The server owns all state and rules; the client sends intents, predicts and draws (see "Server-first" below). Local guest play is dropped. | Codex-heavy, Opus for the client |
 | **0.4 Indoors** | Rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; the quest tree with a Quests tab, pinning and the tutorial hook, its gates as server operations | Opus (game and UI), Codex (area checks, quest operations) |
+| **0.4 → 0.5: One schema** (after the 0.4 gate) | Everything the server and the client both type or load moves to protobuf, with JSON on the wire and in `content/`: the ~40 hand-typed endpoints (homestead, items, library, mail, storage, crafting, the hearth and desk, commons, projects, repairs, `world/*`), and the content files with loaders on both sides (rooms, residents, furnishings, quests and the rest). Field rules move into the schema with protovalidate (Go and TS); rules across entries stay in code, once. See "One schema" below. | GLM or MiMo (mechanical), reviewed cross-family |
 | **0.5 Crafts** | Pets steps 1–3 (fixes, friends' pets, Companions, yard pets); magic groundwork (ability table, highest-level mark, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
 | **Then, as revisions** | The open map (per-chunk epochs on the server generator), lake country, lamps, shared fights, caves and the next lands, in the order below | — |
 | **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
@@ -188,6 +189,23 @@ The design: [server-first.md](server-first.md).
 Not in 0.3: a live server simulation of enemies and combat. Movement and story fights stay on
 your own screen; that stays the shared-fights revision. The polish lane (sound, the player body,
 phones, UI steps 8 and 9) runs alongside so the release has something to notice.
+
+**One schema (owner, 2026-10-08).** After the 0.4 gate and before 0.5, move everything with
+shared types or loaders to protobuf. 0.3 put the operations, the player state, the profile and
+presence there (`proto/glimway/v1`), checked by `buf breaking`; about 40 endpoints and every
+content file still have hand-written types and validators in both Go and TypeScript, and those
+copies drift (0.4's furnishings review found the Go loader accepting what the TS one refused). The
+step:
+1. **Endpoints.** Every remaining route's request and answer becomes a proto message; Go and TS
+   types are generated; the wire stays JSON (protojson). Behaviour doesn't change; the tests are
+   the check. 0.4 isn't deployed, so this stays in contract 4 if it lands before 0.4 ships, else it
+   bumps the contract.
+2. **Content files.** `content/*.json` schemas (rooms, residents, furnishings, quests, items,
+   homestead, papers, story and the rest) become proto messages; the files stay JSON. Field rules
+   (required, ranges, enums, "at least one slot") move into the schema as protovalidate
+   constraints, enforced the same way in Go and TS. Rules that span entries (references, cycles,
+   `canPlace`) stay in code, in one place each, with shared vectors.
+3. **The hand-written loaders and validators retire** as each file moves.
 
 The later revisions keep their earlier order:
 

@@ -51,10 +51,12 @@ export type RoomSpotId =
   | 'counting-stool'
   | 'mill-hoist'
   | 'library-shelf'
-  | 'donation-shelf'
+  | 'shelf-histories'
+  | 'shelf-recipes'
+  | 'shelf-field-notes'
   | 'reading-table'
   | 'reading-lamp'
-  | 'window-seat'
+  | 'reading-nook'
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -82,7 +84,7 @@ export interface ExitDef {
   th: number
   to: AreaId
   entry: { tx: number; ty: number }
-  /** Sign text (default: the destination's name); null hides the sign (a doorway). */
+  /** Sign text (default: the destination's name); '' shows the chevron alone (a room's doorway); null hides the sign (the cottage's door). */
   label?: string | null
   /** The side you step out of (the chevron, and which way you face arriving). Edge exits infer it. */
   side?: 'north' | 'south' | 'east' | 'west'
@@ -200,6 +202,11 @@ export interface WorldData {
   storySites?: { id: string; kind: string; tx: number; ty: number }[]
   /** A village room: its row, footprints and arrival (./room-kind.ts; drawn by ./area/room-art.ts). */
   room?: RoomScene
+  /**
+   * Collision boxes in px besides the solid grid: a room's pieces block
+   * only where they touch the floor (their base), never their picture.
+   */
+  bodies?: { x: number; y: number; w: number; h: number }[]
 }
 
 // ---------------------------------------------------------------- utilities

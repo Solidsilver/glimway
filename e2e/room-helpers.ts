@@ -54,7 +54,7 @@ export async function openLibraryShelves(page: Page, opts: { touch?: boolean } =
   await goIn(page, 'in:village:library', opts)
   await page.evaluate(() => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('in:village:library', 3, 2))
   await inRoom(page, 'in:village:library')
-  await expect(page.locator('.prompt')).toContainText('Browse the shelves')
+  await expect(page.locator('.prompt')).toContainText(/Browse the stories|Browse the shelves/)
   await waitForLive(page)
   if (opts.touch) await page.locator('.controls .act').tap()
   else await page.keyboard.press('e')

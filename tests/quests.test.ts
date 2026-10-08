@@ -32,7 +32,7 @@ const cycleAt = (id: string, now: number) => cycle(residentById(id)!, now);
 import { calendarAt } from '../src/lib/clock.ts';
 import { createNewGame } from '../src/lib/state.ts';
 import { areaInfo, dialogueFor, dialogueRefs, journalEntries } from '../src/content/world.ts';
-import { questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, type QuestTalkContext } from '../src/content/quests/index.ts';
+import { afterTheirTalk, questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, takesTheTalk, type QuestTalkContext } from '../src/content/quests/index.ts';
 import { noteAsPaper, questNotes, questShelves } from '../src/ui/quests-page.ts';
 
 /** 2026-10-08 10:00 UTC: a whole hour, so the cycles start here. */
@@ -335,6 +335,40 @@ test('Set to Rise: Hazel asks; the offer is disabled with why; "not yet" says th
   assert.equal(risen.choices?.[0].action, 'quest:set-to-rise:let-it-rise');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 2 * 3600 + 60 })), 'quest');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 30 * 60 })), null);
+});
+
+test('who speaks first: the main story, or a step you’re mid-way through there; anything else after their own lines', () => {
+  const kitchen = { area: 'in:village:bakery' };
+  // The opening's step takes Orrin's talk.
+  assert.ok(takesTheTalk(questTalk('orrin', talkCtx({}))!, talkCtx({})));
+  // A quest's start follows the resident's own talk.
+  const start = questTalk('hazel', talkCtx(DONE_OPENING, kitchen))!;
+  assert.ok(!takesTheTalk(start, talkCtx(DONE_OPENING, kitchen)));
+  // Mid-quest, but not ready (no flour; the sponge still thinking): after their own lines.
+  const asked = { ...DONE_OPENING, 'lantern-road': 'complete', 'set-to-rise': 'fetch-flour' };
+  assert.ok(!takesTheTalk(questTalk('hazel', talkCtx(asked, kitchen))!, talkCtx(asked, kitchen)));
+  const set = { ...DONE_OPENING, 'set-to-rise': 'set-sponge' };
+  const thinking = { ...kitchen, gateAt: HOUR, now: HOUR + 30 * 60 };
+  assert.ok(!takesTheTalk(questTalk('hazel', talkCtx(set, thinking))!, talkCtx(set, thinking)));
+  // Mid-way and ready (the flour in the pack, the sponge risen): the step is the talk.
+  const flour = { ...kitchen, carrying: () => 1 };
+  assert.ok(takesTheTalk(questTalk('hazel', talkCtx(asked, flour))!, talkCtx(asked, flour)));
+  const risen = { ...kitchen, gateAt: HOUR, now: HOUR + 2 * 3600 + 60 };
+  assert.ok(takesTheTalk(questTalk('hazel', talkCtx(set, risen))!, talkCtx(set, risen)));
+  // Your Own Day's start follows Mara's road lines.
+  const yod = talkCtx({ ...DONE_OPENING, 'lantern-road': 'accepted' }, {}, { needs: { habitica: true } });
+  assert.ok(!takesTheTalk(questTalk('mara', yod)!, yod));
+
+  const own = { speaker: 'Hazel', lines: ['Joss liked the ends burnt.'], choices: [{ text: 'Hear it again', replay: true }, { text: 'Be on my way', dismiss: true }] };
+  const d = afterTheirTalk(own, start);
+  assert.deepEqual(d.lines, ['Joss liked the ends burnt.', ...start.lines]);
+  assert.deepEqual(d.choices!.map((c) => c.text), ['I’ll fetch you some flour.', 'Hear it again', 'Not yet']);
+  assert.equal(d.choices![0].action, 'quest:set-to-rise:hear-hazel');
+  assert.equal(d.speaker, 'Hazel');
+  // A reminder that can't be taken keeps its disabled offer, after her lines.
+  const reminder = afterTheirTalk(own, questTalk('hazel', talkCtx(asked, kitchen))!);
+  assert.match(reminder.lines.join(' '), /Joss liked the ends burnt\. Still no flour/);
+  assert.deepEqual(reminder.choices![0], { text: 'Set the sponge with her', note: 'Needs 1 flour', disabled: true });
 });
 
 test('the sponge bowl shows the wait; room spots take their steps', () => {
