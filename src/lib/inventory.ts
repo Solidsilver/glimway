@@ -208,13 +208,22 @@ const KIND_OF: Record<string, ItemKind> = {
   keepsake: 'keepsake',
 };
 
+/** An item's picture (its art key, and the icon when the art isn't drawn): the bag's, everywhere it's listed. */
+export function itemArt(d: ItemDef): { art: string; icon: string } {
+  const legacyArt = MATERIAL_ICON[d.id] ? `icon-${d.id}` : ART_ICONS.has(d.id) ? `icon-${d.id}` : null;
+  return {
+    art: legacyArt ?? iconId(d.id),
+    icon: d.kind === 'material' ? (MATERIAL_ICON[d.id] ?? 'stone') : d.kind === 'tool' ? 'sword' : d.kind === 'keepsake' ? 'sparkle' : 'bag',
+  };
+}
+
 function modelEntry(d: ItemDef, base: Partial<InventoryEntry> & { key: string; qty: number }, view: ItemsView): InventoryEntry {
   const pocket = view.pockets.findIndex((p) => p.itemDef === d.id && !base.instance);
   const hand = view.offHand.open && (base.instance ? view.offHand.instance === base.instance.id : !view.offHand.instance && view.offHand.itemDef === d.id);
   const helps = [...(d.pocket ?? []), ...(d.use ?? []), ...(offHandable(d) ? heldEffects(d, view.offHand.class) : [])].map(effectLine);
   // Each class has an affinity item that works a little better in their hands.
   if (d.affinity && view.offHand.class === d.affinity.class) helps.push(`A little better in a ${d.affinity.class}’s hands`);
-  const legacyArt = MATERIAL_ICON[d.id] ? `icon-${d.id}` : ART_ICONS.has(d.id) ? `icon-${d.id}` : null;
+  const pic = itemArt(d);
   return {
     tab: d.tab === 'papers' ? 'supplies' : d.tab,
     section: 'main',
@@ -222,11 +231,11 @@ function modelEntry(d: ItemDef, base: Partial<InventoryEntry> & { key: string; q
     id: d.id,
     name: d.name,
     blurb: d.blurb,
-    art: legacyArt ?? iconId(d.id),
+    art: pic.art,
     // A stack drawn in a state of another item's art (dried flowers: the
     // bloom flowers' dried posy); the panel falls back to `art`.
     stateArt: d.iconState ? `item-${iconId(d.id)}-${d.iconState}` : null,
-    icon: d.kind === 'material' ? (MATERIAL_ICON[d.id] ?? 'stone') : d.kind === 'tool' ? 'sword' : d.kind === 'keepsake' ? 'sparkle' : 'bag',
+    icon: pic.icon,
     maker: null,
     usable: usableNow(d),
     pocketable: d.kind === 'keepsake',

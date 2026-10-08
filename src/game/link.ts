@@ -349,6 +349,10 @@ export class Link {
   private saveRetry: ReturnType<typeof setTimeout> | null = null
   private pumping: Promise<void> | null = null
   private reportWanted = false
+  /** The connection dropped during play: what was played offline is reported as soon as it's back. */
+  private droppedOffline = false
+  /** That report is under way: it follows any report captured before the drop. */
+  private reportAfterOffline = false
   /** Heads already asked again at once after an unreadable answer. */
   private readonly replayed = new Set<number>()
   /** The periodic report is due: it goes even with nothing new (play time is counted between reports). */
@@ -864,6 +868,16 @@ export class Link {
         if (!(await this.sendReport(forced)).ok) return
         this.reportWanted = false
         if (forced) this.reportForced = false
+        // Back from offline play: a report captured before the drop went
+        // first; what was played since goes straight after it.
+        if (this.reportAfterOffline) {
+          this.reportAfterOffline = false
+          this.noteLive()
+          if (this.reports.due) {
+            this.reportWanted = true
+            continue
+          }
+        }
         return
       }
       if (!(await this.sendHead(head))) return
@@ -1641,6 +1655,17 @@ export class Link {
       await this.saveRecord()
       // A report captured before a reload goes again at once; the rest keep their timer.
       if (this.reports.captured) this.reportWanted = true
+      // Back after playing offline: the place and vitals go up now, not at the
+      // next tick, so the world holds them (and a tab closed straight after
+      // loses nothing). Only this case: the cadence is otherwise unchanged.
+      if (this.droppedOffline) {
+        this.droppedOffline = false
+        this.noteLive()
+        if (this.reports.due) {
+          this.reportWanted = true
+          this.reportAfterOffline = true
+        }
+      }
       this.pump()
     } catch (err) {
       const code = errorCode(err)
@@ -1735,6 +1760,7 @@ export class Link {
     if (offline && this.status === 'online') {
       this.stopHeartbeat()
       this.status = 'offline'
+      this.droppedOffline = true
     }
     this.emit()
     void this.saveRecord()
@@ -1772,6 +1798,7 @@ export class Link {
 
   private setStatus(status: LinkStatus): void {
     if (this.status === status) return
+    if (this.status === 'online' && status === 'offline') this.droppedOffline = true
     this.status = status
     if (status !== 'online') this.stopHeartbeat()
     if (status === 'online') this.stopRetry()

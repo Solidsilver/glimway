@@ -66,6 +66,13 @@ func (c *movableClock) move(to func(now time.Time) time.Time) (time.Time, bool) 
 	return t, true
 }
 
+// devLocal: the caller is on this machine (the dev routes answer no one else).
+func devLocal(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	ip := net.ParseIP(host)
+	return err == nil && ip != nil && ip.IsLoopback()
+}
+
 // POST /api/dev/clock {"advance_seconds": n} or {"unix": t}: the clock moves
 // forward and the answer is {"unix": now}.
 func devClockRoute(c *movableClock, next http.Handler) http.Handler {
@@ -74,8 +81,7 @@ func devClockRoute(c *movableClock, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		host, _, err := net.SplitHostPort(r.RemoteAddr)
-		if ip := net.ParseIP(host); err != nil || ip == nil || !ip.IsLoopback() {
+		if !devLocal(r) {
 			http.NotFound(w, r)
 			return
 		}

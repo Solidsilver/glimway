@@ -278,6 +278,7 @@ hyphens don't matter.
 | Journal / Character / Inventory / Menu | J / C / I / Esc | HUD buttons (book, person, bag, menu) |
 | Arrange your home | B, then arrows, R, E, X, Esc | Arrange button and tray |
 | Emotes (in a world) | G, then 1–5 | Speech button |
+| Dev panel ([local dev only](#run-it-locally)) | ` (backquote) | Menu → Dev |
 
 Dialogue pauses movement and combat. Touch controls appear on coarse-pointer
 devices; the layout is responsive with safe-area insets for phones.
@@ -313,9 +314,22 @@ two terminals:
 
 ```sh
 npm install
-npm run server     # Go server on 127.0.0.1:8090, database in .data/, HTTP cookies
+npm run server     # Go server on 127.0.0.1:8090, database in .data/, HTTP cookies (a dev build)
 npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
 ```
+
+**Dev mode.** For playtesting on your own machine: press <kbd>`</kbd> (backquote)
+in a world, or open the Menu's **Dev** row, and the dev panel gives your account
+Glimway's own things: embers, any material, item, tool, recipe page, keepsake or
+home good, with a count, plus quick buttons for +100 embers and a stack of every
+material. It goes through the server like any other change, so what you're given
+is real in your world. It never calls Habitica and never grants Habitica gear,
+gold or gems; the server refuses anything outside Glimway's content tables.
+It exists only in `npm run dev` (Vite dev mode) talking to a dev build of the
+server (`npm run server` builds with `-tags dev`), for callers on the same machine.
+Production builds have none of it: the web bundle (`npm run build`) leaves the
+panel out, and the release server (Dockerfile, Nix) is built without the `dev`
+tag, so its binary has no grant route at all.
 
 Point Vite at another server with `GLIMWAY_API=http://127.0.0.1:PORT npm run dev`.
 Extra server flags go after `--`, for example

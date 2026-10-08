@@ -5,6 +5,7 @@ import contract from '../content/contract.json' with { type: 'json' }
 import story from '../content/story.json' with { type: 'json' }
 import { BIN, moveBackendClock, requireBackend } from './server/backend.ts'
 import { FAKE_TOKEN } from './server/fake-habitica.ts'
+import { SERVER_ANSWER_MS } from './helpers'
 
 /**
  * Helpers for the connected playtests: this worker's own Go server (through
@@ -199,7 +200,7 @@ export async function waitForWorld(page: Page, area: string = 'village'): Promis
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
     return !!s && !s.transitioning && (a === 'wilds' ? s.areaId.startsWith('chunk:') : s.areaId === a)
   }, area)
-  await expect.poll(() => linkStatus(page)).toBe('online')
+  await expect.poll(() => linkStatus(page), { timeout: SERVER_ANSWER_MS }).toBe('online')
 }
 
 /**

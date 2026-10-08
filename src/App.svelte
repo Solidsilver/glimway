@@ -89,7 +89,13 @@
   import { BLOCKS, blocked, layersUp } from './ui/layers'
 
   type Phase = 'loading' | 'title' | 'playing'
-  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
+  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'dev' | VillagePanel | null
+
+  // Dev mode (local playtesting only): the panel exists in Vite dev mode and
+  // nowhere else. A production build replaces import.meta.env.DEV with false,
+  // so this import (and the panel's code and words) never reaches its bundle.
+  let DevPanel = $state<typeof import('./ui/dev/DevPanel.svelte').default | null>(null)
+  if (import.meta.env.DEV) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
 
   let phase = $state<Phase>('loading')
   let panel = $state<Panel>(null)
@@ -583,6 +589,12 @@
     // One owner per key: anything handled here is marked, so the world
     // (placement mode included) doesn't act on the same press.
     if (['KeyJ', 'KeyC', 'KeyI', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+    // Dev mode (Vite dev only): ` opens and closes the dev panel.
+    if (import.meta.env.DEV && e.code === 'Backquote') {
+      ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+      toggle('dev')
+      return
+    }
     // Emotes: G opens the picker; 1–5 pick while it is open.
     if (ui.emoteOpen && !panel && /^Digit[1-9]$/.test(e.code)) {
       // The picker owns this digit: the belt mustn't also take it (src/game/scenes/WorldScene.ts onBeltKey).
@@ -779,6 +791,8 @@
             }
           : undefined}
       />
+    {:else if import.meta.env.DEV && panel === 'dev' && DevPanel}
+      <DevPanel {session} onClose={() => toggle('dev')} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}
@@ -791,6 +805,7 @@
           panel = null
           whatsNew.openLatest()
         }}
+        onDev={import.meta.env.DEV ? () => (panel = 'dev') : undefined}
       />
     {/if}
   {/if}
