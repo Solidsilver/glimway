@@ -380,9 +380,8 @@ export const KNOCK_LINES: Readonly<Record<string, Readonly<Record<string, { from
   finn: {
     door: { from: 'round the front', line: 'Wheel’s turning, I’m round the front.' },
   },
-  // TODO(A): the spot key must match Elara's out-of-library spot in `content/residents.json`.
   elara: {
-    square: { from: 'from the square', line: 'Out taking readings. The shelves are open; donations wait for me.' },
+    camp: { from: 'from her camp on the Commons', line: 'Out at the arch taking readings. The shelves are open; donations wait for me.' },
   },
 };
 
@@ -401,11 +400,11 @@ export const KEEPER = {
     'I keep the room while I take readings. Every page here was written by someone the ground was busy forgetting. Comparative data.',
   ],
   /** After her introduction, the first time you meet her here. */
-  firstLine: 'I keep the library while I read the drift. Half the hour, anyway. The rest I’m out checking my sums against the square.',
+  firstLine: 'I keep the library while I read the drift. Half the hour, anyway. The rest I’m at my camp by the arch, checking my sums against the Wilds.',
   shelves: { text: 'Show me the shelves', reply: ['Help yourself. Put things back where you found them. The drift won’t, so we have to.'] },
   donate: { text: 'I’ve a paper for the shelves', reply: ['Let me see it. If it’s new to the room, it goes in the ledger and on a shelf. If it’s wet, it goes by the stove first.'] },
   /** A donation refused because she'd stepped out (the server's `not-here`). */
-  away: 'A note on Elara’s desk: “Out taking readings on the square. Back on the half hour. Donations wait for me. E. Q.”',
+  away: 'A note on Elara’s desk: “Out at my camp taking readings. Back on the half hour. Donations wait for me. E. Q.”',
 } as const;
 
 /**

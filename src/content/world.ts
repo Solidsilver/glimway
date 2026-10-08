@@ -191,8 +191,8 @@ const ROOM_CARDS: Record<string, Omit<LocationInfo, 'name'>> = {
   },
   'in:village:library': {
     eyebrow: 'On the square’s quiet side',
-    tagline: 'The village keeps its papers here. Nobody keeps the library.',
-    description: 'Tall shelves along the back wall, a donation shelf with a slot box, a window seat, and the reading table with its lamp. It runs on the honour system and Mara’s ledger.',
+    tagline: 'Elara keeps it half of each hour. She calls it fieldwork.',
+    description: 'Shelves on every wall under four painted signs, the reading table with its lamp, a nook in the alcove, and Elara’s desk, where the drift gets measured and the donations get written in.',
   },
 };
 
