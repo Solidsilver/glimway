@@ -15,8 +15,10 @@ export default defineConfig(async () => {
   // package.json's version and the build id: __GLIMWAY_VERSION__,
   // __GLIMWAY_BUILD__ and dist/version.json (scripts/build-version.mjs).
   const version = ((await import(/* @vite-ignore */ new URL('./scripts/build-version.mjs', import.meta.url).href)) as { default: () => Plugin }).default()
+  // CHANGELOG.md's "For players" lines for the "What's new" card (virtual:whats-new).
+  const whatsNew = ((await import(/* @vite-ignore */ new URL('./scripts/whats-new.mjs', import.meta.url).href)) as { default: () => Plugin }).default()
   return {
-    plugins: [svelte(), version, ...routing],
+    plugins: [svelte(), version, whatsNew, ...routing],
     // /api goes to the Glimway server (`npm run server`, port 8090 by
     // default). GLIMWAY_API (or the old FINGERSNAP_API) points it elsewhere.
     // With no server running, the client sees the proxy error and plays as

@@ -45,6 +45,12 @@ the unit tests fail when the committed output has drifted from its inputs:
 | `npm run papers` | `src/content/papers-text.ts` and `content/papers.json` from `docs/lore/texts` |
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
+Unit tests can load rune modules (`*.svelte.ts`, such as
+`src/ui/account-flow.svelte.ts`): import `tests/helpers/svelte-runes.ts`
+first, then the module with `await import(…)`. Keep such modules free of
+Phaser and of imports without a `.ts` extension, and hand them their
+collaborators (an API, a session) so a test can pass fakes.
+
 **Agents:** run `test:smoke` and `test:changed` while you work. The full suite
 runs once per merge batch, not once per agent. `test:changed` itself runs the
 full suite when shared test code changed (see below).

@@ -124,7 +124,7 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if ok && def.Marked {
 			maker = s.HabiticaID
 		}
-		if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{maker, output.Qty}}, "hearth", recipe.ID, now); err != nil {
+		if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "hearth", recipe.ID, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -185,7 +185,7 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Maker's mark carries player's ID
 		maker := s.HabiticaID
-		if err := packPut(ctx, tx, s.HabiticaID, req.PageID, []makerQty{{maker, req.Qty}}, "desk", req.PageID, now); err != nil {
+		if err := packPut(ctx, tx, s.HabiticaID, req.PageID, []makerQty{{Maker: maker, Qty: req.Qty}}, "desk", req.PageID, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -367,7 +367,7 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if err := currency(ctx, tx, s.HabiticaID, woodpileCurrency, -collectedQty, "woodpile:collect", homeID, now); err != nil {
 				return nil, err
 			}
-			if err := packPut(ctx, tx, s.HabiticaID, "seasoned-timber", []makerQty{{"", collectedQty}}, "woodpile:collect", homeID, now); err != nil {
+			if err := packPut(ctx, tx, s.HabiticaID, "seasoned-timber", []makerQty{{Maker: "", Qty: collectedQty}}, "woodpile:collect", homeID, now); err != nil {
 				return nil, err
 			}
 			if err := refreshItems(ctx, tx, s); err != nil {

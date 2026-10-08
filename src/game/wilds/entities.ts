@@ -17,6 +17,7 @@
  * WILDS_PAPER_PLACEMENTS for the deterministic placements.
  */
 import type Phaser from 'phaser'
+import { TRANSPORT_ERRORS } from '../../content/errors'
 import {
   CAMP_WALK_IN_LINES,
   CHEST_OPEN_FLAVOR,
@@ -65,8 +66,8 @@ const CLAIM_ERROR: Record<string, string> = {
   'epoch-ended': 'The Wilds shift. Make your way back to the entrance.',
   'claim-rate-limited': 'That is plenty of gathering for one minute. Take a breath.',
   offline: 'Needs a connection. The Wilds keep what you have not claimed.',
-  superseded: LINK_REFUSAL.superseded,
-  busy: LINK_REFUSAL.busy,
+  superseded: TRANSPORT_ERRORS.superseded,
+  busy: TRANSPORT_ERRORS.busy,
   unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
 }
 
@@ -76,7 +77,6 @@ const CLAIM_ERROR: Record<string, string> = {
  */
 import { wildsPaperFor } from './placements.ts'
 import { openDialogue } from '../dialogue.ts'
-import { LINK_REFUSAL } from '../../content/refusals.ts'
 
 export interface WildsDeps {
   world: WorldData

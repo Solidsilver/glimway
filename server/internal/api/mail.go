@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 	"net/http"
 	"slices"
@@ -204,7 +205,7 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.HabiticaID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
-		if err = currency(ctx, tx, s.HabiticaID, "mail:"+req.Asset.Kind+":"+req.Asset.ID, req.Asset.Qty, "mail-send", id, now); err != nil {
+		if err = currency(ctx, tx, s.HabiticaID, itemmove.LocationCurrency("mail", req.Asset.Kind, req.Asset.ID), req.Asset.Qty, "mail-send", id, now); err != nil {
 			return nil, err
 		}
 		list, err := mailList(ctx, tx, *s, nil, nil)
@@ -293,7 +294,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 			if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, from, "mail:"+v.Kind+":"+v.ID, -v.Qty, "mail-claim", id, now); err != nil {
+			if err = currency(ctx, tx, from, itemmove.LocationCurrency("mail", v.Kind, v.ID), -v.Qty, "mail-claim", id, now); err != nil {
 				return nil, err
 			}
 		}

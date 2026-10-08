@@ -143,15 +143,15 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 	stools := x.p5("POST", "/api/craft", body(a, "stools", map[string]any{"recipeId": "craft-wooden-stool", "qty": 2}), ac, 200)
 	a.Snapshot = stools.Snapshot
 	spot := litSpots(h)[0]
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": stools.Result.InstanceIDs[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": stools.Result.InstanceIDs[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0}, 200)
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "material", "id": "timber", "qty": 3}}), ac, 200).Snapshot
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-stool", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "decoration", "id": "wooden-stool", "qty": 1}}), ac, 200).Snapshot
 	// A tool with a fitting goes in the chest too (the item model).
 	axe := x.instance("alice", "bench-axe", -1, "alice")
 	nail := x.instance("alice", "loose-road-nail", -1, "")
-	x.op(ac, &a, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
+	x.opRefreshing(ac, &a, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
 	a.Snapshot = x.p5("POST", "/api/storage", body(a, "shared-axe", map[string]any{"direction": "deposit", "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}), ac, 200).Snapshot
-	x.homeOp(ac, &a, "leave", nil, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	x.now.Add(int64(content.HomeRules.Desolation.DeedLostAfterDays) * 86400)
 	// The session idled out over the fortnight: sign in again.
 	ac = x.login("alice", "")
@@ -191,11 +191,11 @@ func TestHomes2FormerMemberReclaimsVacantHome(t *testing.T) {
 	bc, b := x.member("bob", a.WorldID)
 	x.seedAssets("alice")
 	h := x.claimGate(ac, &a, 0)
-	x.homeOp(ac, &a, "buy", map[string]any{"itemDef": content.HomeRules.LanternPosts.Item}, 200)
+	x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": content.HomeRules.LanternPosts.Item}, 200)
 	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE id=?", h.ID); err != nil {
 		t.Fatal(err)
 	}
-	x.homeOp(ac, &a, "leave", nil, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	// Lane rows say who could take it back.
 	if lane := x.exp("GET", "/api/commons", nil, ac, 200); !lane.Gates[0].Reclaim {
 		t.Fatal("the former member should be offered the deed back")
@@ -203,7 +203,7 @@ func TestHomes2FormerMemberReclaimsVacantHome(t *testing.T) {
 	if lane := x.exp("GET", "/api/commons", nil, bc, 200); lane.Gates[0].Reclaim {
 		t.Fatal("a stranger can't reclaim")
 	}
-	if x.homeOp(bc, &b, "claim", map[string]any{"gate": 0}, 409).Error.Code != "gate-taken" {
+	if x.homeOpRefreshing(bc, &b, "claim", map[string]any{"gate": 0}, 409).Error.Code != "gate-taken" {
 		t.Fatal("a stranger takes a vacant home")
 	}
 	x.now.Add(int64(content.HomeRules.Desolation.DesolateAfterDays) * 86400)
@@ -218,11 +218,11 @@ func TestHomes2FormerMemberReclaimsVacantHome(t *testing.T) {
 	}
 	// A home with someone still on the deed is not reclaimable: ask them.
 	x.share(ac, &a, bc, &b)
-	x.homeOp(ac, &a, "leave", nil, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	if lane := x.exp("GET", "/api/commons", nil, ac, 200); lane.Gates[0].Reclaim {
 		t.Fatal("reclaim offered while bob holds the deed")
 	}
-	if x.homeOp(ac, &a, "claim", map[string]any{"gate": 0}, 409).Error.Code != "gate-taken" {
+	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 0}, 409).Error.Code != "gate-taken" {
 		t.Fatal("rejoined past a member without a joint deed")
 	}
 }

@@ -24,7 +24,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 /** What the content hash covers: everything `vite build` reads. */
-const INPUTS = ['package.json', 'package-lock.json', 'index.html', 'vite.config.ts', 'svelte.config.js', 'tsconfig.json', 'scripts/build-version.mjs', 'src', 'public', 'content']
+const INPUTS = ['package.json', 'package-lock.json', 'index.html', 'vite.config.ts', 'svelte.config.js', 'tsconfig.json', 'scripts/build-version.mjs', 'scripts/whats-new.mjs', 'CHANGELOG.md', 'src', 'public', 'content']
 
 const BUILD_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 

@@ -27,6 +27,12 @@ export type ClientErrorCode = 'network' | 'unavailable' | 'bad-response' | 'unkn
 
 export type ApiErrorCode = ServerErrorCode | ClientErrorCode;
 
+/** A refusal the player is told about: its code and the words for it (src/content/errors.ts). */
+export type Refusal = { ok: false; code: string; text: string };
+
+/** What a game model's action gives the interface: its value, or a refusal to show. */
+export type Result<T = undefined> = { ok: true; value: T } | Refusal;
+
 const KNOWN = new Set<string>(SERVER_ERROR_CODES);
 
 export function isServerErrorCode(code: string): code is ServerErrorCode {

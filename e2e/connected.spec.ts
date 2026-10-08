@@ -343,7 +343,10 @@ test('invites: create a code (shown once), list it, revoke it, and respect the l
   await freshPlayer(page)
   await page.keyboard.press('Escape')
   const card = page.getByTestId('invites-card')
-  // The quota shows up front.
+  // The quota shows up front, including explicit admission flags and an empty list.
+  const initialInvites = await page.request.get('/api/invites')
+  expect(initialInvites.ok()).toBe(true)
+  expect(await initialInvites.json()).toEqual({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: false, partyAdmitted: false })
   await expect(card.getByTestId('invite-budget')).toContainText('5 of 5 invite codes left')
   await expect(card.getByTestId('invite-budget')).toContainText('Up to 3 can wait at once.')
   await card.getByRole('button', { name: 'Create an invite code' }).click()

@@ -7,7 +7,7 @@
  * answer if the scene has gone meanwhile, and says a refusal in a toast
  * unless the handler says it another way. Ember spends (rest, the chest, a
  * road lantern) are the rest: the server's for connected play, the save's
- * for guests, with one table of refusal words (src/content/refusals.ts).
+ * for guests, with one table of refusal words (src/content/errors.ts).
  *
  * A new kind of action is one row in `routes`.
  */
@@ -16,7 +16,7 @@ import { itemInfo } from '../../content/world'
 import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { foundToast, paperById } from '../../content/papers'
 import { ADA_OIL_REPLIES, HEIRLOOMS, HEIRLOOM_IDS, countAdaOilGifts, type HeirloomId } from '../../content/heirlooms'
-import { spendRefusalText } from '../../content/refusals'
+import { spendErrorText } from '../../content/errors'
 import { CHARM_ITEM, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
@@ -26,7 +26,8 @@ import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
 import { openDialogue } from '../dialogue'
 import { bus, EV } from '../events'
 import { heirloomBeat, sayHeirloomRefusal } from '../heirloom-beats'
-import { itemsFor, type ItemsResult } from '../items'
+import { itemsFor } from '../items'
+import type { Result } from '../../lib/api/errors'
 import { keepsakeSpeaker, keepsakeThanks, parseKeepsakeAction } from '../keepsakes'
 import { emitResidents } from '../residents'
 import { sfx } from '../sfx'
@@ -93,7 +94,7 @@ export class WorldActions {
    * hero's spot rides along, an answer for a scene that has gone is
    * dropped, and a refusal is a toast unless `refused` says it otherwise.
    */
-  private withServer<T>(call: () => Promise<ItemsResult<T>>, ok: (value: T) => void, refused?: (code: string) => void): void {
+  private withServer<T>(call: () => Promise<Result<T>>, ok: (value: T) => void, refused?: (code: string) => void): void {
     if (!this.deps.session.link) return
     this.deps.notePosition()
     void call().then((r) => {
@@ -205,7 +206,7 @@ export class WorldActions {
    */
   private spend(spend: EmberSpend): void {
     const { session, scene } = this.deps
-    const refused = (code: string) => bus.emit(EV.toast, { text: spendRefusalText(code), kind: 'error' })
+    const refused = (code: string) => bus.emit(EV.toast, { text: spendErrorText(code), kind: 'error' })
     if (session.link) {
       void session.link.spend(spend).then((result) => {
         if (!scene.sys.isActive()) return

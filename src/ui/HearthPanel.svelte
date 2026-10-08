@@ -7,9 +7,8 @@
   import { HEARTH_RECIPES } from '../lib/workshop'
   import type { Asset } from '../lib/api/types'
   import { itemName } from '../lib/items'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
-  import Icon from './Icon.svelte'
+  import { actionRunner, busVersion } from './panel-state.svelte'
+  import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
   // The cottage hearth (docs/items/crafting-and-repair.md): food, remedies
@@ -18,20 +17,16 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
-  let version = $state(0)
-  let busy = $state<string | null>(null)
-  let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
+  const changed = busVersion(bus, EV.villageChanged)
+  const action = actionRunner()
   let batches = $state<Record<string, number>>({})
 
   onMount(() => {
-    const bump = () => (version += 1)
-    bus.on(EV.villageChanged, bump)
     void village.loadStorage()
-    return () => bus.off(EV.villageChanged, bump)
   })
 
   const carried = $derived.by(() => {
-    void version
+    void changed.value
     return { ...(village.inventory?.materials ?? {}), ...(village.inventory?.items ?? {}) }
   })
 
@@ -46,17 +41,13 @@
   })
 
   async function craft(recipeId: string): Promise<void> {
-    if (busy) return
+    if (action.busy) return
     const recipe = HEARTH_RECIPES.find((x) => x.id === recipeId)
     if (!recipe) return
     // Exactly what the row shows: the chosen batch, clamped to what's affordable now.
     const n = effectiveBatches(batches[recipeId], batchesAffordable(recipe, carried))
-    busy = `craft:${recipeId}`
-    message = null
-    const r = await village.hearthCraft(recipeId, n)
-    busy = null
-    if (r.ok) batches = { ...batches, [recipeId]: 1 }
-    message = r.ok ? { text: `Made ${phrase(r.value)} at the hearth, your mark on it. It’s in your pack.`, kind: 'ok' } : { text: r.text, kind: 'error' }
+    const r = await action.run(`craft:${recipeId}`, () => village.hearthCraft(recipeId, n), (done) => `Made ${phrase(done.value)} at the hearth, your mark on it. It’s in your pack.`)
+    if (r?.ok) batches = { ...batches, [recipeId]: 1 }
   }
 
   function phrase(a: Asset): string {
@@ -66,85 +57,47 @@
   }
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="hearth-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the hearth"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="hearth-title"><Icon name="ember" size={20} /> The Hearth</h2>
-      {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
-    </header>
-    <p class="lede">The kettle’s on and the griddle’s warm. Each batch takes the materials shown from what you carry, and everything made here carries your maker’s mark.</p>
-    <p class="carried">You carry: {#each hearthMaterials as m (m)}<span><ArtIcon art={`icon-${m}`} name="sparkle" size={16} /> {carried[m] ?? 0} {itemName(m).toLowerCase()}</span>{/each}</p>
-    <ul class="recipes">
-      {#each HEARTH_RECIPES as r (r.id)}
-        {@const can = batchesAffordable(r, carried)}
-        {@const n = effectiveBatches(batches[r.id], can)}
-        {@const learned = known(r.page)}
-        <li class="recipe" class:can={can > 0 && learned} class:locked={!learned} data-recipe={r.id}>
-          <span class="thumb" aria-hidden="true"><ArtIcon art={`icon-${r.output.id}`} name="sparkle" size={32} /></span>
-          <span class="txt">
-            <span class="name">{r.name}</span>
-            {#if learned}
-              <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
-              <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
-            {:else}
-              <span class="can">You never learned this recipe — {r.found}.</span>
+<Panel id="hearth" icon="ember" title="The Hearth" closeLabel="Close the hearth" {onClose} message={action.message}>
+  <p class="lede">The kettle’s on and the griddle’s warm. Each batch takes the materials shown from what you carry, and everything made here carries your maker’s mark.</p>
+  <p class="carried">You carry: {#each hearthMaterials as m (m)}<span><ArtIcon art={`icon-${m}`} name="sparkle" size={16} /> {carried[m] ?? 0} {itemName(m).toLowerCase()}</span>{/each}</p>
+  <ul class="recipes">
+    {#each HEARTH_RECIPES as r (r.id)}
+      {@const can = batchesAffordable(r, carried)}
+      {@const n = effectiveBatches(batches[r.id], can)}
+      {@const learned = known(r.page)}
+      <li class="recipe" class:can={can > 0 && learned} class:locked={!learned} data-recipe={r.id}>
+        <span class="thumb" aria-hidden="true"><ArtIcon art={`icon-${r.output.id}`} name="sparkle" size={32} /></span>
+        <span class="txt">
+          <span class="name">{r.name}</span>
+          {#if learned}
+            <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
+            <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
+          {:else}
+            <span class="can">You never learned this recipe — {r.found}.</span>
+          {/if}
+        </span>
+        <span class="go">
+          {#if learned}
+            {#if can > 1}
+              <span class="batch">
+                <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
+                <span class="bn">{n}</span>
+                <button type="button" class="tiny" aria-label="More" disabled={n >= can} onclick={() => (batches = { ...batches, [r.id]: n + 1 })}>+</button>
+              </span>
             {/if}
-          </span>
-          <span class="go">
-            {#if learned}
-              {#if can > 1}
-                <span class="batch">
-                  <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
-                  <span class="bn">{n}</span>
-                  <button type="button" class="tiny" aria-label="More" disabled={n >= can} onclick={() => (batches = { ...batches, [r.id]: n + 1 })}>+</button>
-                </span>
-              {/if}
-              <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={busy !== null || can <= 0} onclick={() => craft(r.id)}>
-                {busy === `craft:${r.id}` ? 'Making…' : 'Make'}
-              </button>
-            {:else}
-              <span class="locked-tag" data-testid="locked">page not found</span>
-            {/if}
-          </span>
-        </li>
-      {/each}
-    </ul>
-  </div>
-</div>
+            <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={action.busy !== null || can <= 0} onclick={() => craft(r.id)}>
+              {action.busy === `craft:${r.id}` ? 'Making…' : 'Make'}
+            </button>
+          {:else}
+            <span class="locked-tag" data-testid="locked">page not found</span>
+          {/if}
+        </span>
+      </li>
+    {/each}
+  </ul>
+</Panel>
 
 <style>
-  .lede {
-    margin: 0 0 8px;
-    font-size: 13.5px;
-    color: var(--text-soft);
-  }
-  .msg {
-    margin: 8px 0;
-    padding: 7px 10px;
-    border-radius: 8px;
-    font-size: 13.5px;
-    border: 2px solid var(--paper-line);
-    background: rgba(255, 255, 255, 0.4);
-  }
-  .msg.error {
-    border-color: rgba(196, 82, 58, 0.6);
-  }
-  .msg.ok {
-    border-color: rgba(47, 127, 122, 0.55);
-  }
-  .carried {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 10px;
-    margin: 0 0 8px;
-    font-size: 13px;
-    color: var(--text-soft);
-  }
-  .carried span {
-    font-weight: 800;
-    color: var(--wood-dark);
-  }
   .recipes {
     list-style: none;
     margin: 0;
@@ -185,7 +138,7 @@
     display: grid;
     place-items: center;
     border-radius: 8px;
-    background: rgba(107, 76, 46, 0.12);
+    background: var(--wood-wash);
     color: var(--wood);
   }
   .txt {
@@ -212,11 +165,6 @@
     flex-wrap: wrap;
     justify-content: flex-end;
   }
-  .batch {
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-  }
   .bn {
     min-width: 1.6em;
     text-align: center;
@@ -225,11 +173,5 @@
   .small {
     padding: 5px 12px;
     font-size: 14px;
-  }
-  .tiny {
-    min-width: 34px;
-    min-height: 30px;
-    padding: 0 6px;
-    font-size: 13px;
   }
 </style>

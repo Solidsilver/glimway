@@ -1,12 +1,9 @@
 package api
 
 import (
-	"bytes"
-	"encoding/json"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
-	"net/http/httptest"
 	"slices"
 	"testing"
 )
@@ -30,26 +27,7 @@ type craftingResponse struct {
 
 func (x *rig) craftReq(method, path string, b any, c *http.Cookie, status int) craftingResponse {
 	x.t.Helper()
-	var bodyBuf *bytes.Buffer
-	if b != nil {
-		bodyBuf = bytes.NewBufferString(store.JSON(b))
-	} else {
-		bodyBuf = bytes.NewBuffer(nil)
-	}
-	r := httptest.NewRequest(method, path, bodyBuf)
-	if b != nil {
-		r.Header.Set("Content-Type", "application/json")
-	}
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	v := craftingResponse{}
-	_ = json.Unmarshal(w.Body.Bytes(), &v)
-	if w.Code != status {
-		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
+	v, _ := httpResponse[craftingResponse](x, method, path, b, c, status)
 	return v
 }
 

@@ -165,8 +165,8 @@
     margin: 0;
     padding: 8px 10px;
     font-size: 13.5px;
-    color: #7a2e1e;
-    background: rgba(196, 82, 58, 0.12);
+    color: var(--danger-text);
+    background: var(--danger-wash);
     border-radius: 8px;
   }
   @media (max-width: 560px) {

@@ -4,6 +4,11 @@ A canvas for ideas that come up along the way. Nothing here is planned or promis
 becomes real work, it moves into a plan or brief and gets a link here. Add freely and keep each
 entry short.
 
+Designed ideas now live in [design/](design/plan.md): the combined [plan](design/plan.md), the
+open [world](design/world.md), [layers](design/layers.md), [pets](design/pets.md),
+[magic](design/magic.md), [quests](design/quests.md), [fishing](design/fishing.md) and
+[guests on the server](design/guests.md).
+
 Tags: **(agreed)** means the owner wants it and it has a place in the order; **(maybe)** means
 worth thinking about; **(later)** means parked on purpose.
 
@@ -70,6 +75,15 @@ worth thinking about; **(later)** means parked on purpose.
   - both together for multi-storey buildings and floors.
   - Some residents could mostly live indoors, so you go inside to talk to them, which leans
     naturally into shops.
+
+## Standalone version (later)
+Glimway without Habitica, with Habitica as one mode. The owner plays with Habitica, so this waits.
+- **Guest accounts** (agreed, designed): key phrase sign-in, devices, linking. Steps 3–6 of
+  [design/guests.md](design/guests.md).
+- **Embers without Habitica** (needs a design session): today guests earn embers only from story
+  and gifts, so ember gates stop them. A standalone game needs its own source.
+- **Our own look, classes, levels and companions** (agreed, standing goal): the backups listed
+  above, plugged in through the profile source.
 
 ## Social
 - **Party notice board** (maybe).

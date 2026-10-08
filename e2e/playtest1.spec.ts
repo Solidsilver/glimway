@@ -237,11 +237,13 @@ for (const device of ['desktop', 'phone'] as const) {
         const tx = land.doorstep.tx + 3
         const ty = land.doorstep.ty + 1
         const home = `(SELECT homestead_id FROM homestead_members WHERE habitica_id='${id}')`
-        sql(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('pt1-stool','wooden-stool','placed',${home},'outdoor',${tx},${ty},0);`)
+        // Item ids are unique per run: the desktop and phone runs can share a worker's database.
+        const stool = `pt1-${id}-stool`
+        sql(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('${stool}','wooden-stool','placed',${home},'outdoor',${tx},${ty},0);`)
         // Back out and through the gate again: the land is read afresh, stool and all.
         await go(page, 'commons', 23, 19)
         await toMyLand(page)
-        await expect.poll(async () => (await homes(page)).here?.items.some((i) => i.id === 'pt1-stool') ?? false).toBe(true)
+        await expect.poll(async () => (await homes(page)).here?.items.some((i) => i.id === stool) ?? false).toBe(true)
         await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [tx * 16 + 8, (ty + 1) * 16 + 6] as const)
         await expect(page.locator('.prompt')).toContainText('Sit on the stool')
         await act(page, device)
@@ -266,16 +268,18 @@ for (const device of ['desktop', 'phone'] as const) {
         await earnEmbers(page, id)
         await claimDeed(page)
         const home = `(SELECT homestead_id FROM homestead_members WHERE habitica_id='${id}')`
+        // Item ids are unique per run: the desktop and phone runs can share a worker's database.
+        const tag = `pt1-${id}-`
         // A cottage (tier 1), a reading chair facing you at grid (3,4), one side on at (7,5), and the Empty Chair.
         sql(
           `UPDATE homesteads SET tier=1 WHERE id=${home};` +
             `INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES` +
-            `('pt1-chair','reading-chair','placed',${home},'indoor',3,4,0),` +
-            `('pt1-side','reading-chair','placed',${home},'indoor',7,5,90),` +
-            `('pt1-empty','empty-chair','placed',${home},'indoor',10,6,0);`
+            `('${tag}chair','reading-chair','placed',${home},'indoor',3,4,0),` +
+            `('${tag}side','reading-chair','placed',${home},'indoor',7,5,90),` +
+            `('${tag}empty','empty-chair','placed',${home},'indoor',10,6,0);`
         )
         await intoCottage(page)
-        await expect.poll(async () => (await homes(page)).here?.items.filter((i) => i.id.startsWith('pt1-')).length ?? 0).toBe(3)
+        await expect.poll(async () => (await homes(page)).here?.items.filter((i) => i.id.startsWith(tag)).length ?? 0).toBe(3)
         const place = async (x: number, y: number) => {
           await page.evaluate(([px, py]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(px, py), [x, y] as const)
           // The prompt follows the hero on the next frames.

@@ -100,7 +100,7 @@
   }
   .guide.pinned {
     border-color: var(--gold-deep);
-    box-shadow: 0 0 0 2px rgba(255, 210, 74, 0.35);
+    box-shadow: 0 0 0 2px var(--gold-glow);
   }
   .guide.done {
     opacity: 0.75;

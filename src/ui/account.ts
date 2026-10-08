@@ -9,7 +9,8 @@
 import { claimClientId, createApiClient } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
 import type { ConnectedCache } from '../lib/api/cache'
-import type { Snapshot, WorldChoice } from '../lib/api/types'
+import type { Snapshot } from '../lib/api/types'
+import type { Probe } from './account-flow.svelte'
 import { Link, type Unresolved } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
@@ -52,12 +53,6 @@ if (typeof window !== 'undefined') {
   })
 }
 
-export type Probe =
-  | { kind: 'signed-in'; snapshot: Snapshot }
-  /** Signed in, but the first sign-in's world choice is still open (asked again). */
-  | { kind: 'choose-world'; choice: WorldChoice }
-  | { kind: 'signed-out' }
-  | { kind: 'unavailable' }
 
 /** One GET /api/state: a valid cookie means signed in, even with no remembered token. */
 export async function probeServer(): Promise<Probe> {
@@ -84,11 +79,6 @@ export async function probeServer(): Promise<Probe> {
     }
     return code === 'unauthorized' ? { kind: 'signed-out' } : { kind: 'unavailable' }
   }
-}
-
-/** A login's answer was the world question, not a snapshot. */
-export function isWorldChoice(v: Snapshot | WorldChoice): v is WorldChoice {
-  return !('state' in v)
 }
 
 /** Display name for an account: the server's verified name, else the hero, else the cache. */

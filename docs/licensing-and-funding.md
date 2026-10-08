@@ -182,7 +182,7 @@ From the code, 2026-10-07:
 
 | Use | Where | What it is under CC 3.0 | Notes |
 |---|---|---|---|
-| 41 sprites bundled, byte-identical | `public/assets/habitica/` (+ `manifest.json` with sha256s) | Reproduced and distributed (in the repo and every build), and publicly performed by every instance | Body, hair, a few class sets, the wolf pet and mount |
+| 41 sprites bundled, exact copies | `public/assets/habitica/` (+ `manifest.json` with sha256s) | Reproduced and distributed (in the repo and every build), and publicly performed by every instance | Body, hair, a few class sets, the wolf pet and mount |
 | Sprite proxy and disk cache | `server/internal/api/sprites.go`, `GET /api/sprites/{name}` | Reproduced and publicly performed by whoever runs the server | Fetches any catalogued piece from Habitica's S3 the first time it's needed. Needed because S3 sends no CORS headers, so WebGL can't load it directly. |
 | Avatar layering | `src/lib/habitica/avatar.ts`, `src/game/avatar-render.ts` | Most plausibly display of unmodified works, not an Adaptation (interpretation) | Stacks layers in Habitica's own order and scales them. Nothing tinted, recut or saved as a new image. |
 | Other players' avatars | `loadPresenceAvatar` | Same as above | |

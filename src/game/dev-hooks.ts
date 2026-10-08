@@ -13,7 +13,7 @@ import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
 import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
-import type { ItemsResult } from './items'
+import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
@@ -43,7 +43,7 @@ export interface FsHooks {
   /** The server revision this tab's link is based on (null for guests). */
   __fsLinkRev: () => number | null
   /** The item model as last read (null for guests or before a read). */
-  __fsItems: (() => ItemsView | null) & { load: () => Promise<ItemsResult> }
+  __fsItems: (() => ItemsView | null) & { load: () => Promise<Result> }
   __fsVitals: () => { hp: number; maxHp: number; mana: number; maxMana: number }
   /** Connected-play status (null for guests). */
   __fsLink: () => string | null

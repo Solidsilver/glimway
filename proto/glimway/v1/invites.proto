@@ -1,0 +1,26 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+
+// Numeric Unix seconds retain the HTTP shape beyond 2038. The raw code is
+// returned only by creation; neither metadata nor reads expose it.
+message InviteMetadata {
+  string id = 1;
+  double created_at = 2;
+  double expires_at = 3;
+  bool used = 4;
+}
+message CreateInviteResponse {
+  string id = 1;
+  double created_at = 2;
+  double expires_at = 3;
+  bool used = 4;
+  string code = 5;
+}
+message ListInvitesResponse {
+  repeated InviteMetadata invites = 1;
+  int32 remaining = 2;
+  int32 outstanding_limit = 3;
+  bool party_world = 4;
+  bool party_admitted = 5;
+}
