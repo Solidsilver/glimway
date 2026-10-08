@@ -3,7 +3,8 @@
   import type { Session } from '../game/session'
   import { VILLAGE_EV, villageFor } from '../game/village'
   import { HOME_EV, homesteadsFor } from '../game/homestead'
-  import { ITEMS_EV, giftPhrase, itemErrorText, itemsFor } from '../game/items'
+  import { ITEMS_EV, giftPhrase, itemsFor } from '../game/items'
+  import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
   import { assetOf, costLine, fitTargets, inventoryEntries, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
@@ -19,11 +20,11 @@
   import { inventory } from './inventory.svelte'
   import { heldUi } from './held.svelte'
   import { papers } from './papers.svelte'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
+  import { actionRunner, busVersion, type Outcome } from './panel-state.svelte'
   import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
 
@@ -66,9 +67,8 @@
   const connected = $derived(!!session.link)
   type Filter = 'all' | InventoryTab
   let tab = $state<Filter>('all')
-  let version = $state(0)
-  let busy = $state<string | null>(null)
-  let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
+  const changed = busVersion(bus, VILLAGE_EV.changed, HOME_EV.changed, ITEMS_EV.changed)
+  const action = actionRunner()
   /** The card's hand-over / mend / fit chooser that is open: `${action}:${key}`. */
   let open = $state<string | null>(null)
   /** The card picked (an entry's key, or `slot:<name>` for an empty slot or the weapon). */
@@ -83,10 +83,6 @@
   const kit = $derived(getCombatKit(ui.importedProfile))
 
   onMount(() => {
-    const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
-    bus.on(HOME_EV.changed, bump)
-    bus.on(ITEMS_EV.changed, bump)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces. Offline,
     // what's known shows.
@@ -102,21 +98,18 @@
     if (headEl) ro.observe(headEl)
     return () => {
       ro.disconnect()
-      bus.off(VILLAGE_EV.changed, bump)
-      bus.off(HOME_EV.changed, bump)
-      bus.off(ITEMS_EV.changed, bump)
       // Everything carried was on screen (the bag opens on All): seen now.
       markTab('all')
     }
   })
 
   const model = $derived.by(() => {
-    void version
+    void changed.value
     return connected && items.view ? items.view : null
   })
 
   const entries = $derived.by<InventoryEntry[]>(() => {
-    void version
+    void changed.value
     const pack = inventory.pack.length ? inventory.pack : session.state.inventory
     const decorations = homes.mine?.items ?? []
     if (model) return modelEntries(model, { pack, decorations })
@@ -168,7 +161,7 @@
   function pick(key: string, from?: EventTarget | null): void {
     selected = key
     open = null
-    message = null
+    action.clear()
     if (from instanceof HTMLElement) opener = from
   }
   /** Pick a slot: its item's card, or the slot's own (empty, locked, the weapon). */
@@ -215,7 +208,7 @@
     selected = null
     hovered = null
     cursor = 0
-    message = null
+    action.clear()
     // A new filter starts at its top, under the pinned header.
     panelEl?.scrollTo({ top: 0 })
   }
@@ -295,14 +288,9 @@
 
   // ------------------------------------------------------------ actions
 
-  async function act(id: string, run: () => Promise<{ ok: true; value: unknown } | { ok: false; text: string }>, ok: string): Promise<void> {
-    if (busy) return
-    busy = id
-    message = null
-    const r = await run()
-    busy = null
-    open = null
-    message = r.ok ? { text: ok, kind: 'ok' } : { text: r.text, kind: 'error' }
+  /** An action from the card: its chooser closes once it has answered. */
+  async function act(id: string, run: () => Promise<Outcome>, ok: string): Promise<void> {
+    if (await action.run(id, run, ok)) open = null
   }
 
   function useIt(e: InventoryEntry): void {
@@ -340,12 +328,12 @@
     // Where the hero stands now (the server measures reach from the save).
     bus.emit(EV.notePosition)
     if (mine && (mine.plants?.length ?? 0) >= GATHERING_DATA.plantsPerHome) {
-      message = { text: PLANTS_FULL_LINE, kind: 'error' }
+      action.say(PLANTS_FULL_LINE, 'error')
       return
     }
     const tile = mine ? plantTileNear(mine, session.state.position) : null
     if (gate === null || !tile) {
-      message = { text: itemErrorText('land-blocked'), kind: 'error' }
+      action.say(itemErrorText('land-blocked'), 'error')
       return
     }
     void act(
@@ -390,7 +378,7 @@
   const percent = (i: InstanceView) => Math.round(conditionFraction(i) * 100)
   const toggleOpen = (id: string) => {
     open = open === id ? null : id
-    message = null
+    action.clear()
   }
 </script>
 
@@ -493,7 +481,7 @@
         <span class="fit" data-fitting={f.itemDef}>
           <ArtIcon art={f.itemDef} name="sparkle" size={16} />
           {fittingLine(f.fitting)}{#if f.maxCondition > 0}<i> · {inventoryCopy.usesLeft(f.usesLeft)}</i>{/if}
-          {#if full}<button type="button" class="x" aria-label={`${inventoryCopy.actions.takeOff} ${itemName(f.itemDef)}`} disabled={busy !== null} onclick={() => takeOff(f.id, f.itemDef)}><Icon name="close" size={10} /></button>{/if}
+          {#if full}<button type="button" class="x" aria-label={`${inventoryCopy.actions.takeOff} ${itemName(f.itemDef)}`} disabled={action.busy !== null} onclick={() => takeOff(f.id, f.itemDef)}><Icon name="close" size={10} /></button>{/if}
         </span>
       {/each}
     </span>
@@ -511,13 +499,13 @@
     {/if}
     <span class="acts">
       {#if k && k !== hand.kind}<button type="button" class="act primary" data-act="hold" onclick={() => hold(k)}>{inventoryCopy.holdThis}</button>{/if}
-      {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
-      {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
-      {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
-      {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}
-      {#if e.kind === 'fitting' && e.instance}<button type="button" class="act" data-act="fit" aria-expanded={open === `fit:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`fit:${e.key}`)}>{inventoryCopy.actions.fit}…</button>{/if}
-      {#if e.giveable}<button type="button" class="act" data-act="give" aria-expanded={open === `give:${e.key}`} disabled={busy !== null} onclick={() => toggleOpen(`give:${e.key}`)}>{inventoryCopy.actions.give}…</button>{/if}
-      {#if plantable(e)}<button type="button" class="act" data-act="plant" disabled={busy !== null} onclick={() => plantIt(e)}>{inventoryCopy.actions.plant}</button>{/if}
+      {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={action.busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
+      {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={action.busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
+      {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={action.busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
+      {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={action.busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}
+      {#if e.kind === 'fitting' && e.instance}<button type="button" class="act" data-act="fit" aria-expanded={open === `fit:${e.key}`} disabled={action.busy !== null} onclick={() => toggleOpen(`fit:${e.key}`)}>{inventoryCopy.actions.fit}…</button>{/if}
+      {#if e.giveable}<button type="button" class="act" data-act="give" aria-expanded={open === `give:${e.key}`} disabled={action.busy !== null} onclick={() => toggleOpen(`give:${e.key}`)}>{inventoryCopy.actions.give}…</button>{/if}
+      {#if plantable(e)}<button type="button" class="act" data-act="plant" disabled={action.busy !== null} onclick={() => plantIt(e)}>{inventoryCopy.actions.plant}</button>{/if}
     </span>
     {#if open === `give:${e.key}`}
       {@const people = nearby()}
@@ -527,7 +515,7 @@
         {:else}
           <small>{inventoryCopy.giveTo}</small>
           {#each people as p (p.habiticaId)}
-            <button type="button" class="act" data-give-to={p.habiticaId} disabled={busy !== null} onclick={() => giveIt(e, p)}>{p.displayName}</button>
+            <button type="button" class="act" data-give-to={p.habiticaId} disabled={action.busy !== null} onclick={() => giveIt(e, p)}>{p.displayName}</button>
           {/each}
         {/if}
       </span>
@@ -535,9 +523,9 @@
       {@const d = itemDef(e.id)}
       {@const mender = items.menderHere()}
       <span class="chooser" data-testid="mend-at">
-        <button type="button" class="act" data-mend="bench" disabled={busy !== null} onclick={() => mendIt(e, 'bench', '')}>{inventoryCopy.mendAt(inventoryCopy.mendBench, costLine(d?.repair?.bench))}</button>
+        <button type="button" class="act" data-mend="bench" disabled={action.busy !== null} onclick={() => mendIt(e, 'bench', '')}>{inventoryCopy.mendAt(inventoryCopy.mendBench, costLine(d?.repair?.bench))}</button>
         {#if mender}
-          <button type="button" class="act" data-mend={mender.npc} disabled={busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderEmbers ? `, ${d.repair.menderEmbers} embers` : ''))}</button>
+          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderEmbers ? `, ${d.repair.menderEmbers} embers` : ''))}</button>
         {/if}
       </span>
     {:else if open === `fit:${e.key}` && e.instance && model}
@@ -545,7 +533,7 @@
       <span class="chooser" data-testid="fit-to">
         {#if targets.length === 0}<small>No tool here has a free slot for it.</small>{/if}
         {#each targets as t (t.id)}
-          <button type="button" class="act" data-fit-to={t.id} disabled={busy !== null} onclick={() => fitIt(e.instance!, t)}>{itemName(t.itemDef)}</button>
+          <button type="button" class="act" data-fit-to={t.id} disabled={action.busy !== null} onclick={() => fitIt(e.instance!, t)}>{itemName(t.itemDef)}</button>
         {/each}
       </span>
     {/if}
@@ -607,128 +595,133 @@
   </button>
 {/snippet}
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="inv-title">
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="panel inventory" use:focusTrap bind:this={panelEl} onkeydown={onPanelKey} onmouseleave={() => (hovered = null)}>
-    <header class="panel-head" bind:this={headEl}>
-      <button type="button" class="modal-close" onclick={onClose} aria-label={inventoryCopy.close}><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="inv-title"><Icon name="bag" size={20} /> {inventoryCopy.title}</h2>
-      {#if message}<p class="msg {message.kind}" role="status" data-testid="inv-message">{message.text}</p>{/if}
-    </header>
+<Panel
+  id="inv"
+  icon="bag"
+  title={inventoryCopy.title}
+  closeLabel={inventoryCopy.close}
+  {onClose}
+  message={action.message}
+  messageTestId="inv-message"
+  class="inventory"
+  bind:panelEl
+  bind:headEl
+  onkeydown={onPanelKey}
+  onmouseleave={() => (hovered = null)}
+>
 
-    <!-- Equipped: the hero, with the hand, the off hand and the pockets around them. -->
-    <section class="equipped" data-testid="carry-strip" aria-label={inventoryCopy.equipped}>
-      <div class="eq-side">
-        {@render slotButton('hand', inventoryCopy.hand, handEntry, 'hand-slot', 'sword', true, kit.basicName)}
-        {#if model}
-          {#if model.offHand.open}
-            {@render slotButton('off', inventoryCopy.offHand, offEntry, 'off-hand', 'lantern')}
-          {:else}
-            {@render lockedSlot('off-locked', inventoryCopy.offHand, 'off-hand', inventoryCopy.offHandClosed)}
-          {/if}
+  <!-- Equipped: the hero, with the hand, the off hand and the pockets around them. -->
+  <section class="equipped" data-testid="carry-strip" aria-label={inventoryCopy.equipped}>
+    <div class="eq-side">
+      {@render slotButton('hand', inventoryCopy.hand, handEntry, 'hand-slot', 'sword', true, kit.basicName)}
+      {#if model}
+        {#if model.offHand.open}
+          {@render slotButton('off', inventoryCopy.offHand, offEntry, 'off-hand', 'lantern')}
+        {:else}
+          {@render lockedSlot('off-locked', inventoryCopy.offHand, 'off-hand', inventoryCopy.offHandClosed)}
         {/if}
-      </div>
-
-      <svelte:element this={onCharacter ? 'button' : 'div'} type={onCharacter ? 'button' : undefined} class="hero" onclick={onCharacter} data-testid={onCharacter ? 'open-character' : undefined} role={onCharacter ? undefined : 'group'} aria-label={onCharacter ? `${hero.name}, ${hero.line}: ${inventoryCopy.heroEntry}` : undefined}>
-        <span class="hero-face">{#if hero.portrait}<img src={hero.portrait} alt="" />{:else}{hero.name[0]}{/if}</span>
-        <b>{hero.name}</b>
-        <small>{hero.line}{#if onCharacter}&nbsp;›{/if}</small>
-      </svelte:element>
-
-      <div class="eq-side">
-        {#if model}
-          {#each model.pockets as p, i (p.slot)}
-            {@render slotButton(`pocket-${i + 1}`, inventoryCopy.pocket(i + 1), pocketEntry(i + 1), `pocket-${i + 1}`, 'bag')}
-          {/each}
-          {#if model.pockets.length < ITEM_RULES.pockets.withCarryGear}
-            {@render lockedSlot('pocket-locked', inventoryCopy.pocket(model.pockets.length + 1), `pocket-${model.pockets.length + 1}-locked`, inventoryCopy.pocketLocked)}
-          {/if}
-        {/if}
-      </div>
-      {#if model && onOwnChest}
-        <button type="button" class="act chest" data-testid="own-chest" onclick={onOwnChest}><Icon name="key" size={12} /> {inventoryCopy.ownChest}</button>
       {/if}
-    </section>
-    {#if model && model.thanks.length > 0}
-      <details class="thanks" data-testid="thanks">
-        <summary>{inventoryCopy.thanks} ({model.thanks.length})</summary>
-        <ul>
-          {#each model.thanks as t (t.at + t.fromName + t.itemDef)}<li>{inventoryCopy.thanksLine(t.fromName, giftPhrase(t.itemDef, 1))}</li>{/each}
-        </ul>
-      </details>
-    {:else if !model && connected && items.status === 'loading'}
-      <p class="fine">{inventoryCopy.loading}</p>
-    {/if}
-
-    <!-- Carrying: filter chips, then the grid and the picked thing's card. -->
-    <h3 class="section-title carrying">{inventoryCopy.carrying}</h3>
-    <div class="chips" role="tablist" aria-label="Inventory">
-      {#each INVENTORY_FILTERS as t (t.id)}
-        <button
-          type="button"
-          role="tab"
-          id={`inv-tab-${t.id}`}
-          aria-selected={tab === t.id}
-          aria-controls={`inv-page-${t.id}`}
-          tabindex={tab === t.id ? 0 : -1}
-          class:active={tab === t.id}
-          onclick={() => select(t.id)}
-          onkeydown={onTabKey}
-        >
-          <span class="ti"><Icon name={t.icon} size={13} /></span>
-          <span class="tl">{t.label}</span>
-          {#if count(t.id) > 0}<span class="tc">{count(t.id)}</span>{/if}
-          {#if tabHasNew(t.id)}<span class="newdot" aria-hidden="true"></span><span class="sr">, new</span>{/if}
-        </button>
-      {/each}
     </div>
 
-    <div class="page" role="tabpanel" id={`inv-page-${tab}`} aria-labelledby={`inv-tab-${tab}`} data-testid={`inv-page-${tab}`}>
-      {#if tab === 'papers'}
-        <p class="fine">{touch ? inventoryCopy.papersNoteTouch : inventoryCopy.papersNote}</p>
-        <PapersTab />
-      {:else}
-        <div class="body" style={`--card-top:${cardTop}px`}>
-          <div class="grids">
-            {#if mainShown.length === 0}
-              <p class="empty">
-                {tab === 'all' ? inventoryCopy.emptyFilter : tab === 'home' ? (connected ? inventoryCopy.empty.homeWorld : inventoryCopy.empty.homeGuest) : inventoryCopy.empty[tab]}
-              </p>
-            {:else}
-              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-              <ul class="grid" aria-label={inventoryCopy.carrying} onkeydown={onGridKey}>
-                {#each mainShown as e, i (e.key)}{@render cell(e, i)}{/each}
-              </ul>
-            {/if}
-            {#if roadShown.length > 0}
-              <h3 class="section-title">{inventoryCopy.road}</h3>
-              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-              <ul class="grid road" aria-label={inventoryCopy.road} onkeydown={onGridKey}>
-                {#each roadShown as e, i (e.key)}{@render cell(e, mainShown.length + i)}{/each}
-              </ul>
-            {/if}
-          </div>
-          {#if card}
-            <aside class="card" data-item={card.key} data-state={card.instance?.state} aria-label={card.name} aria-live="polite">
-              {#if selected}<button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>{/if}
-              {@render itemCard(card, selected === card.key)}
-            </aside>
-          {:else if slotCard}
-            <aside class="card" data-slot={slotCard} aria-live="polite">
-              <button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>
-              {@render slotView(slotCard)}
-            </aside>
-          {:else if !touch && mainShown.length > 0}
-            <aside class="card hint" aria-hidden="true"><p class="line">{inventoryCopy.pick}</p></aside>
+    <svelte:element this={onCharacter ? 'button' : 'div'} type={onCharacter ? 'button' : undefined} class="hero" onclick={onCharacter} data-testid={onCharacter ? 'open-character' : undefined} role={onCharacter ? undefined : 'group'} aria-label={onCharacter ? `${hero.name}, ${hero.line}: ${inventoryCopy.heroEntry}` : undefined}>
+      <span class="hero-face">{#if hero.portrait}<img src={hero.portrait} alt="" />{:else}{hero.name[0]}{/if}</span>
+      <b>{hero.name}</b>
+      <small>{hero.line}{#if onCharacter}&nbsp;›{/if}</small>
+    </svelte:element>
+
+    <div class="eq-side">
+      {#if model}
+        {#each model.pockets as p, i (p.slot)}
+          {@render slotButton(`pocket-${i + 1}`, inventoryCopy.pocket(i + 1), pocketEntry(i + 1), `pocket-${i + 1}`, 'bag')}
+        {/each}
+        {#if model.pockets.length < ITEM_RULES.pockets.withCarryGear}
+          {@render lockedSlot('pocket-locked', inventoryCopy.pocket(model.pockets.length + 1), `pocket-${model.pockets.length + 1}-locked`, inventoryCopy.pocketLocked)}
+        {/if}
+      {/if}
+    </div>
+    {#if model && onOwnChest}
+      <button type="button" class="act chest" data-testid="own-chest" onclick={onOwnChest}><Icon name="key" size={12} /> {inventoryCopy.ownChest}</button>
+    {/if}
+  </section>
+  {#if model && model.thanks.length > 0}
+    <details class="thanks" data-testid="thanks">
+      <summary>{inventoryCopy.thanks} ({model.thanks.length})</summary>
+      <ul>
+        {#each model.thanks as t (t.at + t.fromName + t.itemDef)}<li>{inventoryCopy.thanksLine(t.fromName, giftPhrase(t.itemDef, 1))}</li>{/each}
+      </ul>
+    </details>
+  {:else if !model && connected && items.status === 'loading'}
+    <p class="fine">{inventoryCopy.loading}</p>
+  {/if}
+
+  <!-- Carrying: filter chips, then the grid and the picked thing's card. -->
+  <h3 class="section-title carrying">{inventoryCopy.carrying}</h3>
+  <div class="chips" role="tablist" aria-label="Inventory">
+    {#each INVENTORY_FILTERS as t (t.id)}
+      <button
+        type="button"
+        role="tab"
+        id={`inv-tab-${t.id}`}
+        aria-selected={tab === t.id}
+        aria-controls={`inv-page-${t.id}`}
+        tabindex={tab === t.id ? 0 : -1}
+        class:active={tab === t.id}
+        onclick={() => select(t.id)}
+        onkeydown={onTabKey}
+      >
+        <span class="ti"><Icon name={t.icon} size={13} /></span>
+        <span class="tl">{t.label}</span>
+        {#if count(t.id) > 0}<span class="tc">{count(t.id)}</span>{/if}
+        {#if tabHasNew(t.id)}<span class="newdot" aria-hidden="true"></span><span class="sr">, new</span>{/if}
+      </button>
+    {/each}
+  </div>
+
+  <div class="page" role="tabpanel" id={`inv-page-${tab}`} aria-labelledby={`inv-tab-${tab}`} data-testid={`inv-page-${tab}`}>
+    {#if tab === 'papers'}
+      <p class="fine">{touch ? inventoryCopy.papersNoteTouch : inventoryCopy.papersNote}</p>
+      <PapersTab />
+    {:else}
+      <div class="body" style={`--card-top:${cardTop}px`}>
+        <div class="grids">
+          {#if mainShown.length === 0}
+            <p class="empty">
+              {tab === 'all' ? inventoryCopy.emptyFilter : tab === 'home' ? (connected ? inventoryCopy.empty.homeWorld : inventoryCopy.empty.homeGuest) : inventoryCopy.empty[tab]}
+            </p>
+          {:else}
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <ul class="grid" aria-label={inventoryCopy.carrying} onkeydown={onGridKey}>
+              {#each mainShown as e, i (e.key)}{@render cell(e, i)}{/each}
+            </ul>
+          {/if}
+          {#if roadShown.length > 0}
+            <h3 class="section-title">{inventoryCopy.road}</h3>
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <ul class="grid road" aria-label={inventoryCopy.road} onkeydown={onGridKey}>
+              {#each roadShown as e, i (e.key)}{@render cell(e, mainShown.length + i)}{/each}
+            </ul>
           {/if}
         </div>
-      {/if}
-    </div>
+        {#if card}
+          <aside class="card" data-item={card.key} data-state={card.instance?.state} aria-label={card.name} aria-live="polite">
+            {#if selected}<button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>{/if}
+            {@render itemCard(card, selected === card.key)}
+          </aside>
+        {:else if slotCard}
+          <aside class="card" data-slot={slotCard} aria-live="polite">
+            <button type="button" class="x card-x" aria-label={inventoryCopy.closeCard} onclick={() => void closeCard()}><Icon name="close" size={12} /></button>
+            {@render slotView(slotCard)}
+          </aside>
+        {:else if !touch && mainShown.length > 0}
+          <aside class="card hint" aria-hidden="true"><p class="line">{inventoryCopy.pick}</p></aside>
+        {/if}
+      </div>
+    {/if}
   </div>
-</div>
+</Panel>
 
 <style>
-  .inventory {
+  :global(.overlay > .panel.inventory) {
     width: min(820px, 100%);
   }
   .sr {
@@ -748,23 +741,16 @@
     color: var(--text-soft);
   }
 
-  /* ---- message (in the pinned header) ---- */
-  .msg {
-    margin: -2px 0 0;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 13.5px;
-    background: rgba(255, 255, 255, 0.4);
-    border: 1.5px solid var(--paper-line);
+  /* ---- message (in the pinned header, src/ui/Panel.svelte): the bag's is tinted ---- */
+  :global(.overlay > .panel.inventory > .panel-head > .msg) {
+    border-width: 1.5px;
   }
-  .msg.ok {
+  :global(.overlay > .panel.inventory > .panel-head > .msg.ok) {
     border-color: #7aa25a;
-    background: rgba(160, 210, 120, 0.2);
     --msg-tint: rgba(160, 210, 120, 0.2);
   }
-  .msg.error {
+  :global(.overlay > .panel.inventory > .panel-head > .msg.error) {
     border-color: #c0603e;
-    background: rgba(224, 122, 82, 0.15);
     --msg-tint: rgba(224, 122, 82, 0.15);
   }
 
@@ -935,7 +921,7 @@
     color: var(--text-soft);
   }
   .chips button.active {
-    background: linear-gradient(180deg, #fff3c2, var(--gold));
+    background: linear-gradient(180deg, var(--cream), var(--gold));
     color: var(--wood-dark);
     border-color: var(--wood-dark);
   }
@@ -1144,7 +1130,7 @@
     overflow-y: auto;
     padding: 10px 12px 12px;
     border-radius: 12px;
-    background: linear-gradient(180deg, #fffaf0 0%, var(--paper-hi) 100%);
+    background: linear-gradient(180deg, var(--paper-glow) 0%, var(--paper-hi) 100%);
     border: 2px solid var(--wood);
     box-shadow: 0 -6px 14px -8px rgba(58, 38, 20, 0.45);
   }
@@ -1211,7 +1197,7 @@
     background: linear-gradient(180deg, #ffe0b0, #ffc27a);
   }
   .tag.held {
-    background: linear-gradient(180deg, #fff3c2, var(--gold));
+    background: linear-gradient(180deg, var(--cream), var(--gold));
   }
   .line {
     margin: 0;

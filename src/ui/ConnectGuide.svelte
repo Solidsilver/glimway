@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { TRANSPORT_ERRORS } from '../content/errors'
   import { onMount } from 'svelte'
   import { isSafeArea, syncProfile, type SyncResult } from '../lib/habitica/sync'
   import { parseFields, parsePaste, swapped, type PasteResult } from '../lib/habitica/paste'
@@ -416,7 +417,7 @@
         : code === 'account-switch' ? 'That’s a different Habitica hero than the one in this world. Log out first to switch heroes.'
           : code === 'not-at-safe-boundary' ? syncCopy.unsafeNothing
             : code === 'implausible-profile' ? 'The world couldn’t accept that profile just now. Nothing changed; try again later.'
-              : code === 'superseded' ? 'Another device took over this journey.'
+              : code === 'superseded' ? TRANSPORT_ERRORS.superseded
                 : code === 'busy' ? 'Hold on — the last request is still on its way.'
                   : 'The sync didn’t go through. Nothing changed — try again.'
     if (signingIn && code === 'account-switch') {
@@ -765,7 +766,7 @@
     line-height: 1.45;
   }
   .tiny.warn {
-    color: #7a2e1e;
+    color: var(--danger-text);
   }
   .row {
     display: flex;
@@ -878,7 +879,7 @@
     padding: 8px 10px;
     border: 2px solid var(--wood);
     border-radius: 8px;
-    background: #fffbef;
+    background: var(--cream-hi);
     color: var(--text);
     user-select: text;
     -webkit-user-select: text;
@@ -944,8 +945,8 @@
     margin: 6px 0;
     padding: 8px 10px;
     font-size: 13.5px;
-    color: #7a2e1e;
-    background: rgba(196, 82, 58, 0.12);
+    color: var(--danger-text);
+    background: var(--danger-wash);
     border-radius: 8px;
   }
   .status {

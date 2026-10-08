@@ -8,8 +8,9 @@ that moves the changelog and bumps that version, tagged.
 1. **Changelog.** In `CHANGELOG.md`, rename `## [Unreleased]` to
    `## [X.Y.Z] - YYYY-MM-DD` and start a fresh, empty `## [Unreleased]` above
    it. Keep both parts, `### For players` first, then `### Technical`; the
-   game reads the player lines for "What's new". Update the compare links at
-   the bottom.
+   game reads the player lines for "What's new" (src/lib/changelog.ts), so
+   write them as plain sentences: links and code marks show as plain words.
+   Update the compare links at the bottom.
 2. **Version.** Bump `package.json` (and `package-lock.json` with it):
 
    ```sh

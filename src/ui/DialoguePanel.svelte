@@ -439,7 +439,7 @@
   }
   .choice:disabled .note {
     color: var(--wood-dark);
-    background: #fbf1da;
+    background: var(--paper-hi);
     border-color: var(--wood);
   }
   .choice:focus-visible {

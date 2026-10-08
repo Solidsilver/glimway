@@ -10,6 +10,15 @@
   --paper-hi: #fbf1da;
   --paper-dark: #e3cf9f;
   --paper-line: #d6bf8c;
+  /* Warm highlights: badges, chips, a lit button's top. */
+  --cream: #fff3c2;
+  /* The lightest papers: a notice pinned up, a chip's top edge. */
+  --cream-hi: #fffbef;
+  --paper-glow: #fffaf0;
+  /* Faint washes behind an icon or a row. */
+  --wood-wash: rgba(107, 76, 46, 0.12);
+  --danger-wash: rgba(196, 82, 58, 0.12);
+  --gold-glow: rgba(255, 210, 74, 0.35);
   --wood: #6b4c2e;
   --wood-dark: #4a3220;
   --text: #3b2a1e;
@@ -22,6 +31,13 @@
   --ember-hi: #ffb35c;
   --ember-deep: #b5481f;
   --danger: #c4523a;
+  /* Words that say something went wrong. */
+  --danger-text: #7a2e1e;
+  /* A status line's border: an error, or something done. */
+  --danger-tint: rgba(196, 82, 58, 0.6);
+  --ok-tint: rgba(47, 127, 122, 0.55);
+  /* The dark edge around words drawn over the world. */
+  --outline: #2b1d1a;
   --hp: #e0563f;
   --hp-hi: #ff8a6a;
   --mana: #4f86d6;
@@ -87,7 +103,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: linear-gradient(180deg, #fffaf0 0%, #f6e5bd 100%);
+  background: linear-gradient(180deg, var(--paper-glow) 0%, #f6e5bd 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 0 var(--wood-dark), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
@@ -212,6 +228,55 @@ img.pixel {
   line-height: 1.5;
 }
 
+/* ---- inside panels: the pieces most of them use ---- */
+
+/* A status line: the action's answer (pinned in the header, see .panel-head), or a loading or empty note. */
+.msg {
+  margin: 8px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  border: 2px solid var(--paper-line);
+  background: rgba(255, 255, 255, 0.4);
+}
+.msg.error {
+  border-color: var(--danger-tint);
+}
+.msg.ok {
+  border-color: var(--ok-tint);
+}
+/* The line under the title that says what this place is for. */
+.lede {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+/* What you carry that this place uses: "12 timber · 3 fiber". */
+.carried {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.carried span {
+  font-weight: 800;
+  color: var(--wood-dark);
+}
+/* A − n + stepper for how many. */
+.batch {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+button.tiny {
+  min-width: 34px;
+  min-height: 30px;
+  padding: 0 6px;
+  font-size: 13px;
+}
+
 .overlay {
   position: absolute;
   inset: 0;
@@ -269,7 +334,7 @@ img.pixel {
 .panel-head > .panel-title,
 .panel-head > .modal-close,
 .overlay > .panel > .panel-head > [role='tablist'] {
-  background: linear-gradient(180deg, #fffaf0 0%, var(--paper-hi) 100%);
+  background: linear-gradient(180deg, var(--paper-glow) 0%, var(--paper-hi) 100%);
   border: 2px solid var(--wood-dark);
   box-shadow: 0 3px 0 rgba(58, 38, 20, 0.55), 0 6px 14px rgba(20, 12, 16, 0.22);
 }
@@ -402,8 +467,8 @@ img.pixel {
   margin: 10px 0 0;
   padding: 8px 10px;
   font-size: 13.5px;
-  color: #7a2e1e;
-  background: rgba(196, 82, 58, 0.12);
+  color: var(--danger-text);
+  background: var(--danger-wash);
   border-radius: 8px;
 }
 

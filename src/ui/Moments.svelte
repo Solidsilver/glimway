@@ -84,7 +84,7 @@
     font-family: var(--font-display);
     font-size: 32px;
     color: #fff6dc;
-    text-shadow: 0 2px 0 #2b1d1a, 0 0 20px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 2px 0 var(--outline), 0 0 20px rgba(0, 0, 0, 0.8);
     animation: sink 1.1s ease-in forwards;
   }
   .woke {

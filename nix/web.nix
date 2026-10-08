@@ -12,8 +12,8 @@ buildNpmPackage {
     root = ../.;
     fileset = lib.fileset.unions [
       ../package.json ../package-lock.json ../index.html
-      ../vite.config.ts ../svelte.config.js ../tsconfig.json
-      ../scripts/build-version.mjs ../src ../public ../content
+      ../vite.config.ts ../svelte.config.js ../tsconfig.json ../CHANGELOG.md
+      ../scripts/build-version.mjs ../scripts/whats-new.mjs ../src ../public ../content
     ];
   };
   nodejs = nodejs_24;

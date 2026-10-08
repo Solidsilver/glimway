@@ -56,7 +56,6 @@ import {
   HOME_FLAGS,
   PAPERS,
   SILAS,
-  homeErrorText,
   homesteadsFor,
   lotName,
   signText,
@@ -66,6 +65,7 @@ import {
   type PlacementCommand,
   type PlacementView
 } from '../homestead'
+import { homeErrorText } from '../../content/errors'
 import type { Effects } from './fx'
 import type { Interactable, InteractionProvider, Interactables } from './interactables'
 import { expose } from '../dev-hooks'

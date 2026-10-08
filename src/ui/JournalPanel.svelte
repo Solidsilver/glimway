@@ -2,9 +2,8 @@
   import { journalEntries, QUEST_STEPS } from '../content/world'
   import type { QuestStage } from '../lib/state'
   import { ui } from './store.svelte'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
   import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
   import PapersTab from './PapersTab.svelte'
   import GuidesTab from './GuidesTab.svelte'
   import type { Session } from '../game/session'
@@ -50,78 +49,73 @@
   )
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="journal-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close journal"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="journal-title"><Icon name="book" size={20} /> Journal</h2>
-
-      <div class="tabs" role="tablist" aria-label="Journal pages">
-        {#each TABS as t (t.id)}
-          <button
-            type="button"
-            role="tab"
-            id={`journal-tab-${t.id}`}
-            aria-selected={tab === t.id}
-            aria-controls={`journal-page-${t.id}`}
-            tabindex={tab === t.id ? 0 : -1}
-            class:active={tab === t.id}
-            onclick={() => (tab = t.id)}
-            onkeydown={onTabKey}
-          >
-            {t.label}
-            {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
-          </button>
-        {/each}
-      </div>
-    </header>
-
-    {#if tab === 'papers'}
-      <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
-        <PapersTab />
-      </div>
-    {:else if tab === 'guides'}
-      <div role="tabpanel" id="journal-page-guides" aria-labelledby="journal-tab-guides">
-        <GuidesTab {session} />
-      </div>
-    {:else}
-    <div role="tabpanel" id="journal-page-road" aria-labelledby="journal-tab-road">
-    <div class="hero">
-      <img src={illustration} alt="" />
-      <div class="goal">
-        <span class="eyebrow">{stage === 'complete' ? 'All done' : 'Current goal'}</span>
-        <span class="text">{ui.quest.objective}</span>
-      </div>
-    </div>
-    {#if home.goal}
-      <div class="home-goal" data-testid="journal-home-goal">
-        <span class="eyebrow"><Icon name="home" size={12} /> Your homestead</span>
-        <span class="text">{home.goal}</span>
-      </div>
-    {/if}
-
-    <h3 class="section-title">The Lantern Road</h3>
-    <ol class="steps">
-      {#each STEPS as step, i}
-        {@const st = i < current ? 'done' : i === current ? 'now' : 'later'}
-        <li class={st}>
-          <span class="dot">{#if st === 'done'}<Icon name="check" size={12} />{:else}{i + 1}{/if}</span>
-          <span class="lbl">{st === 'later' ? '???' : step.label}</span>
-        </li>
+<Panel id="journal" icon="book" title="Journal" closeLabel="Close journal" {onClose}>
+  {#snippet head()}
+    <div class="tabs" role="tablist" aria-label="Journal pages">
+      {#each TABS as t (t.id)}
+        <button
+          type="button"
+          role="tab"
+          id={`journal-tab-${t.id}`}
+          aria-selected={tab === t.id}
+          aria-controls={`journal-page-${t.id}`}
+          tabindex={tab === t.id ? 0 : -1}
+          class:active={tab === t.id}
+          onclick={() => (tab = t.id)}
+          onkeydown={onTabKey}
+        >
+          {t.label}
+          {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
+        </button>
       {/each}
-    </ol>
-
-    <h3 class="section-title">Notes</h3>
-    {#each entries as entry, i (entry.title + '\n' + entry.body)}
-      <article class:latest={i === 0}>
-        <h4>{entry.title}</h4>
-        <p>{entry.body}</p>
-      </article>
-    {/each}
     </div>
-    {/if}
+  {/snippet}
+
+  {#if tab === 'papers'}
+    <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
+      <PapersTab />
+    </div>
+  {:else if tab === 'guides'}
+    <div role="tabpanel" id="journal-page-guides" aria-labelledby="journal-tab-guides">
+      <GuidesTab {session} />
+    </div>
+  {:else}
+  <div role="tabpanel" id="journal-page-road" aria-labelledby="journal-tab-road">
+  <div class="hero">
+    <img src={illustration} alt="" />
+    <div class="goal">
+      <span class="eyebrow">{stage === 'complete' ? 'All done' : 'Current goal'}</span>
+      <span class="text">{ui.quest.objective}</span>
+    </div>
   </div>
-</div>
+  {#if home.goal}
+    <div class="home-goal" data-testid="journal-home-goal">
+      <span class="eyebrow"><Icon name="home" size={12} /> Your homestead</span>
+      <span class="text">{home.goal}</span>
+    </div>
+  {/if}
+
+  <h3 class="section-title">The Lantern Road</h3>
+  <ol class="steps">
+    {#each STEPS as step, i}
+      {@const st = i < current ? 'done' : i === current ? 'now' : 'later'}
+      <li class={st}>
+        <span class="dot">{#if st === 'done'}<Icon name="check" size={12} />{:else}{i + 1}{/if}</span>
+        <span class="lbl">{st === 'later' ? '???' : step.label}</span>
+      </li>
+    {/each}
+  </ol>
+
+  <h3 class="section-title">Notes</h3>
+  {#each entries as entry, i (entry.title + '\n' + entry.body)}
+    <article class:latest={i === 0}>
+      <h4>{entry.title}</h4>
+      <p>{entry.body}</p>
+    </article>
+  {/each}
+  </div>
+  {/if}
+</Panel>
 
 <style>
   .home-goal {
@@ -267,7 +261,7 @@
     background: var(--gold);
     border-color: var(--wood-dark);
     color: var(--wood-dark);
-    box-shadow: 0 0 0 4px rgba(255, 210, 74, 0.35);
+    box-shadow: 0 0 0 4px var(--gold-glow);
   }
   .now .lbl {
     font-weight: 800;

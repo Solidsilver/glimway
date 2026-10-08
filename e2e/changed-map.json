@@ -270,6 +270,30 @@
     {
       "paths": ["src/game/heirloom-beats.ts", "src/game/seats.ts", "src/game/hero-motion.ts", "src/lib/habitica/sprite-cache.ts", "server/internal/api/sprites.go"],
       "specs": ["playtest1.spec.ts", "heirlooms.spec.ts", "touches.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/Panel.svelte", "src/ui/panel-state.svelte.ts", "src/content/errors.ts"],
+      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "homestead.spec.ts", "papers.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/NoticeCard.svelte"],
+      "specs": ["party-worlds.spec.ts", "version.spec.ts", "connected.spec.ts", "whats-new.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/layers.ts"],
+      "specs": ["polish.spec.ts", "onboarding-layout.spec.ts", "homestead.spec.ts", "talk.spec.ts", "party-worlds.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/account-flow.svelte.ts"],
+      "specs": ["connected.spec.ts", "party-worlds.spec.ts", "coop.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/play-insets.ts"],
+      "specs": ["camera.spec.ts", "touch.spec.ts", "onboarding-layout.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/WhatsNew.svelte", "src/ui/whats-new.svelte.ts", "src/lib/changelog.ts", "scripts/whats-new.mjs", "src/content/update.ts", "src/ui/MenuPanel.svelte"],
+      "specs": ["whats-new.spec.ts"]
     }
   ]
 }

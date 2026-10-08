@@ -34,7 +34,7 @@
   const dock = $derived(dockBottom ?? measured)
   const showArrange = $derived(!p && home.arrange.available && !hidden)
   function measureDock(): void {
-    const actions = document.querySelector('.controls .actions')
+    const actions = document.querySelector('[data-inset="cluster"]')
     if (!actions) return
     const top = Math.min(...[...actions.querySelectorAll('button')].map((b) => b.getBoundingClientRect().top).filter((t) => t > 0))
     if (Number.isFinite(top)) measured = Math.round(window.innerHeight - top + 10)
@@ -135,7 +135,7 @@
     {/if}
   </div>
 {:else if showArrange}
-  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange">
+  <button type="button" class="arrange" class:touch style={touch ? `bottom:${dock}px` : undefined} onclick={() => bus.emit('game:home-arrange')} data-testid="arrange" data-inset="arrange">
     <Icon name="home" size={16} /> Arrange{#if !touch}<span class="kbd">B</span>{/if}
   </button>
 {/if}

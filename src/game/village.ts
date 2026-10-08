@@ -10,9 +10,9 @@
  */
 import { calendarAt, type CalendarDay } from '../lib/calendar'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village'
-import { MAIL } from '../lib/mail'
 import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types'
-import type { ApiErrorCode } from '../lib/api/errors'
+import type { Refusal, Result } from '../lib/api/errors'
+import { villageErrorText } from '../content/errors'
 import { paperFlag } from '../content/papers'
 import { bus, EV } from './events'
 import { clockMoved, gameNow, setGameNow } from './clock'
@@ -33,126 +33,6 @@ export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'de
 
 export type Status = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
 
-export type VillageResult<T = undefined> = { ok: true; value: T } | { ok: false; code: string; text: string }
-
-/** Player-facing words for phase-5 refusals. */
-export function villageErrorText(code: ApiErrorCode | string): string {
-  switch (code) {
-    case 'tier-required':
-      return 'That needs the workshop. Silas can build it on.'
-    case 'insufficient-materials':
-      return 'You don’t have enough materials for that.'
-    case 'insufficient-items':
-      return 'You don’t have that many to move. Anything set out has to be put away first.'
-    case 'insufficient-storage':
-      return 'The chest doesn’t hold that many.'
-    case 'chest-full':
-      return 'Your own chest is full. It’s a small one.'
-    case 'not-a-member':
-      return 'That’s for the folk on this deed.'
-    case 'already-taken-today':
-      return 'One gift from this shelf each day. Walk by again tomorrow.'
-    case 'slot-occupied':
-      return 'Something is already in that slot.'
-    case 'slot-empty':
-      return 'That slot is empty.'
-    case 'shelf-not-placed':
-      return 'There is no gift shelf set out at this gate.'
-    case 'shelf-not-empty':
-      return 'Clear the gifts from the shelf before putting it away.'
-    case 'homestead-desolate':
-      return 'The old deed has gone quiet.'
-    case 'homestead-not-found':
-      return 'There is no deed behind that gate.'
-    case 'cannot-recall-thanks':
-      return 'A thank-you cannot be called back.'
-    case 'asset-required':
-      return 'Choose something to leave on the shelf.'
-    case 'gate-required':
-      return 'Choose a gate first.'
-    case 'invalid-slot':
-      return 'That shelf slot is out of reach.'
-    case 'invalid-operation':
-      return 'That is not something the shelf can do.'
-    case 'not-giveable':
-      return 'That one stays with you.'
-    case 'item-not-available':
-      return 'That piece isn’t free to move just now.'
-    case 'two-wardens-grind':
-      return 'Two slivers in one pack pull toward each other’s pose and grind.'
-    case 'invalid-quantity':
-      return 'That’s not an amount Silas would write down.'
-    case 'self-mail':
-      return 'You can’t post something to yourself.'
-    case 'recipient-not-found':
-    case 'world-access-denied':
-      return 'They aren’t in your world any more.'
-    case 'mail-not-found':
-    case 'mail-access-denied':
-      return 'That parcel isn’t yours to open.'
-    case 'already-claimed':
-      return 'That parcel has already been collected.'
-    case 'already-returned':
-      return 'That parcel has already gone back to its sender.'
-    case 'recipient-unavailable':
-      return 'They can’t take parcels just now: they’re not admitted to your world.'
-    case 'mail-sender-limit':
-      return `You have ${MAIL.maxOutstandingSent} parcels waiting to be collected already. Wait for some to be collected, or recall one.`
-    case 'mail-recipient-limit':
-      return 'Their mailbox is full. They need to collect some parcels first.'
-    case 'mail-rate-limited':
-      return 'The post rider needs a moment. Try again in a minute.'
-    case 'project-complete':
-      return 'That project is finished. Thank you!'
-    case 'project-overfilled':
-      return 'That’s more than the project still needs. Give a little less.'
-    case 'invalid-contribution':
-      return 'That project doesn’t take that material.'
-    case 'project-not-found':
-      return 'Mara can’t find that project in the ledger.'
-    case 'repair-not-found':
-      return 'There’s no such chore on the board.'
-    case 'repair-not-open':
-      return 'That chore isn’t open in this world yet.'
-    case 'already-mended':
-      return 'It’s mended already. Someone got there first.'
-    case 'recall-unsupported':
-      return 'Your world’s post office can’t recall parcels yet.'
-    case 'invalid-recipe':
-      return 'That isn’t a recipe anyone keeps here.'
-    case 'recipe-unknown':
-      return 'You never learned that recipe. Its page teaches it, once you find it.'
-    case 'craft-only':
-      return 'Silas doesn’t sell that piece. It’s made at the bench, or given.'
-    case 'desk-required':
-      return 'That needs a writing desk set out at home.'
-    case 'woodpile-required':
-      return 'That needs a woodpile set out at home.'
-    case 'invalid-page':
-      return 'That isn’t a page the desk can copy.'
-    case 'page-not-held':
-      return 'You don’t hold that page. The desk copies pages you carry.'
-    case 'nothing-ready':
-      return 'Nothing on the pile has seasoned yet. Green wood takes a real day.'
-    case 'invalid-action':
-      return 'That’s not something a woodpile does.'
-    case 'offline':
-      return 'Needs a connection. Nothing changed — try again when you’re back online.'
-    case 'superseded':
-      return 'Another device took over this journey.'
-    case 'busy':
-      return 'Hold on — the last one is still on its way.'
-    case 'resolved':
-      return 'Your last request went through after all. Check what you have before trying again.'
-    case 'pending':
-      return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.'
-    case 'guest':
-      return 'That needs a world. Sign in to your world from the Menu.'
-    default:
-      return 'That didn’t go through. Nothing changed — try again in a moment.'
-  }
-}
-
 
 export class Village {
   calendar: CalendarDay
@@ -171,8 +51,6 @@ export class Village {
   shared: string = 'open'
   mail: Mail[] = []
   mailStatus: Status
-  /** The server answered "no recall here" once: stop offering it. */
-  recallUnsupported = false
   private grantable: string[] = []
 
   constructor(private session: Session) {
@@ -374,7 +252,7 @@ export class Village {
     bus.emit(VILLAGE_EV.changed)
   }
 
-  async mend(repairId: string): Promise<VillageResult<MendResult>> {
+  async mend(repairId: string): Promise<Result<MendResult>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<MendResponse>({ kind: 'mend', id: repairId })
@@ -383,7 +261,7 @@ export class Village {
     return { ok: true, value: r.res.result }
   }
 
-  async contribute(projectId: string, materials: Record<string, number>): Promise<VillageResult<{ completed: boolean }>> {
+  async contribute(projectId: string, materials: Record<string, number>): Promise<Result<{ completed: boolean }>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const given = Object.fromEntries(Object.entries(materials).filter(([, n]) => n > 0))
@@ -399,7 +277,7 @@ export class Village {
 
   // ------------------------------------------------------------ storage & crafting
 
-  async loadStorage(): Promise<VillageResult> {
+  async loadStorage(): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.readWith((raw) => raw.storage())
@@ -414,7 +292,7 @@ export class Village {
   }
 
   /** Move goods between your pack and a chest at home (the shared one, or your own). */
-  async move(direction: 'deposit' | 'withdraw', asset: Asset, chest: ChestId = 'shared'): Promise<VillageResult> {
+  async move(direction: 'deposit' | 'withdraw', asset: Asset, chest: ChestId = 'shared'): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<StorageMoveResponse>({ kind: 'storage', fields: { direction, asset, chest } })
@@ -428,7 +306,7 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
-  async craft(recipeId: string, qty: number): Promise<VillageResult<Asset>> {
+  async craft(recipeId: string, qty: number): Promise<Result<Asset>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<CraftResponse>({ kind: 'craft', fields: { recipeId, qty } })
@@ -443,7 +321,7 @@ export class Village {
   }
 
   /** Cook food, remedies and oils at the cottage hearth. Everything made carries your maker's mark. */
-  async hearthCraft(recipeId: string, qty: number): Promise<VillageResult<Asset>> {
+  async hearthCraft(recipeId: string, qty: number): Promise<Result<Asset>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<HearthCraftResponse>({ kind: 'hearth', fields: { recipeId, qty } })
@@ -453,7 +331,7 @@ export class Village {
   }
 
   /** Copy a recipe page you hold at the writing desk, to give away. */
-  async deskCopy(pageId: string, qty: number): Promise<VillageResult<{ pageId: string; qty: number }>> {
+  async deskCopy(pageId: string, qty: number): Promise<Result<{ pageId: string; qty: number }>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<DeskCopyResponse>({ kind: 'desk', fields: { pageId, qty } })
@@ -463,7 +341,7 @@ export class Village {
   }
 
   /** The woodpile's stacks and how far each has seasoned. */
-  async loadWoodpile(): Promise<VillageResult<WoodpileView>> {
+  async loadWoodpile(): Promise<Result<WoodpileView>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.readWith((raw) => raw.woodpile())
@@ -472,7 +350,7 @@ export class Village {
   }
 
   /** Stack green timber on the woodpile, or collect the seasoned timber. */
-  async woodpile(action: 'stack' | 'collect', qty = 1, stackId?: string): Promise<VillageResult<{ woodpile: WoodpileView; collectedQty?: number }>> {
+  async woodpile(action: 'stack' | 'collect', qty = 1, stackId?: string): Promise<Result<{ woodpile: WoodpileView; collectedQty?: number }>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<WoodpileActionResponse>({ kind: 'woodpile', fields: { action, qty, stackId } })
@@ -482,7 +360,7 @@ export class Village {
   }
 
   /** Read the gift shelf at a Commons gate. */
-  async loadShelf(gate: number): Promise<VillageResult<ShelfView>> {
+  async loadShelf(gate: number): Promise<Result<ShelfView>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.readWith((raw) => raw.shelf(gate))
@@ -491,7 +369,7 @@ export class Village {
   }
 
   /** Stock or take from the gift shelf. */
-  async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<VillageResult<ShelfActionResponse>> {
+  async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<Result<ShelfActionResponse>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: req })
@@ -518,7 +396,7 @@ export class Village {
 
   // ------------------------------------------------------------ mail
 
-  async loadMail(): Promise<VillageResult> {
+  async loadMail(): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
     this.mailStatus = 'loading'
@@ -560,7 +438,7 @@ export class Village {
   mailCursor: string | null = null
 
   /** The next page of settled mail (pending mail repeats; upserted by id). */
-  async loadOlderMail(): Promise<VillageResult> {
+  async loadOlderMail(): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
     if (!this.mailCursor) return { ok: true, value: undefined }
@@ -585,7 +463,7 @@ export class Village {
     return this.mail.filter((m) => m.toId === me && m.claimedAt === null && !m.returnedAt).length
   }
 
-  async send(toId: string, asset: Asset): Promise<VillageResult> {
+  async send(toId: string, asset: Asset): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, asset } })
@@ -594,7 +472,7 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
-  async claim(id: string): Promise<VillageResult<Asset | undefined>> {
+  async claim(id: string): Promise<Result<Asset | undefined>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-claim', id })
@@ -603,20 +481,11 @@ export class Village {
     return { ok: true, value: r.res.result.asset }
   }
 
-  async recall(id: string): Promise<VillageResult> {
+  async recall(id: string): Promise<Result> {
     const link = this.session.link
     if (!link) return fail('guest')
-    if (this.recallUnsupported) return fail('recall-unsupported')
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-recall', id })
-    if (!r.ok) {
-      // An older server has no recall route: a 404 that isn't "mail-not-found".
-      if (r.code === 'unavailable' || r.code === 'not-found' || r.code === 'unknown') {
-        this.recallUnsupported = true
-        this.emit('mail')
-        return fail('recall-unsupported')
-      }
-      return fail(r.code)
-    }
+    if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: undefined }
   }
@@ -643,7 +512,7 @@ export class Village {
   }
 }
 
-function fail(code: string): { ok: false; code: string; text: string } {
+function fail(code: string): Refusal {
   return { ok: false, code, text: villageErrorText(code) }
 }
 
