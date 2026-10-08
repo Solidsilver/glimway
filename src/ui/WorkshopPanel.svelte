@@ -3,6 +3,7 @@
   import type { Session } from '../game/session'
   import { villageFor } from '../game/village'
   import { bus, EV } from '../game/events'
+  import { sfx } from '../game/sfx'
   import { assetName, assetPhrase, batchesAffordable, effectiveBatches, costPhrase, countOf, MATERIAL_IDS, movableDecorations, RECIPES, recipeCost } from '../lib/village'
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
@@ -90,7 +91,10 @@
     // Exactly what the row shows: the chosen batch, clamped to what's affordable now.
     const n = effectiveBatches(batches[recipeId], batchesAffordable(recipe, view.carried))
     const r = await action.run(`craft:${recipeId}`, () => village.craft(recipeId, n), ({ value: made }) => `Made ${assetPhrase(made)}. ${made.kind === 'decoration' ? 'Arrange it at your place.' : 'It’s in your pack.'}`)
-    if (r?.ok) batches = { ...batches, [recipeId]: 1 }
+    if (r?.ok) {
+      sfx('craft')
+      batches = { ...batches, [recipeId]: 1 }
+    }
   }
 
   const steps = (n: number) => [...new Set([1, 5, n].filter((v) => v > 0 && v <= n))]

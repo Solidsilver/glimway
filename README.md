@@ -552,7 +552,7 @@ Dev builds add levers that skip long walks and fights: `__fsDevHurt(n)`,
 
 - The outer Wilds run on the server but aren't walkable in the client yet.
   Garden and Hall home tiers, world moves and co-op combat are later work.
-- Procedural sound effects only (no music), no gamepad, no installable app.
+- Sound effects (Kenney's CC0 packs and a few procedural stings), but no music or ambience yet, no gamepad, no installable app.
 - Guest saves are local to one browser; save codes are the manual backup.
 - The game's own art is all AI-generated for now (see
   [How it was made](#how-it-was-made)).
@@ -569,6 +569,7 @@ a pull request, and read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 |---|---|---|
 | Glimway's code | everything not listed below | [AGPL-3.0-or-later](LICENSE) |
 | Glimway's art (AI-generated) | `assets/generated/`, `public/assets/fingersnap/` | [CC0 1.0](assets/generated/LICENSE): public domain, no credit needed |
+| Sound effects (Kenney) | `public/assets/audio/kenney/` | [CC0 1.0](public/assets/audio/kenney/LICENSE): public domain, credited as a courtesy |
 | Habitica's sprites | `public/assets/habitica/` | [CC BY-NC-SA 3.0](public/assets/habitica/LICENSE), © HabitRPG, Inc. |
 | Habitica gear numbers | `content/habitica-gear.json` | [GPL-3.0](content/habitica-gear.NOTICE.md), from Habitica's content data |
 
@@ -580,7 +581,7 @@ recorded in [ASSETS.md](ASSETS.md).
 [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/); gear
 statistics derived from Habitica's content data (GPL-3.0). Glimway is not
 affiliated with or endorsed by Habitica. "Habitica" is a trademark of
-HabitRPG, Inc.
+HabitRPG, Inc. Sound effects by [Kenney](https://kenney.nl) (CC0).
 
 Because Habitica's art is non-commercial, so is any instance that serves it.
 That limit is on the Habitica art only, not on Glimway's own code or art.

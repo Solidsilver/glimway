@@ -31,7 +31,6 @@ import { lookAtlasKey } from '../wilds/wilds-looks'
 import { parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
-import { sfx } from '../sfx'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { GatherSpot, WorldData } from '../worlds'
@@ -362,7 +361,7 @@ export class Gathering {
     const x = tileMid(spot.tx)
     const y = tileBottom(spot.ty)
     hero.facing.set(x - hx, y - 8 - hy).normalize()
-    sfx('swing')
+    bus.emit(EV.work, { action: actionOf(spot) })
     const slash = this.scene.add.image(hx + (x - hx) * 0.4, hy - 8 + (y - hy) * 0.3, 'slash')
       .setDepth(hy + 2)
       .setRotation(Math.atan2(y - hy, x - hx))

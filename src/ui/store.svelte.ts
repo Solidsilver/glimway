@@ -1,6 +1,5 @@
 import type { AreaPayload, GoalDirPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
-import { isMuted } from '../game/sfx'
 import { bus, EV } from '../game/events'
 import { itemName } from '../lib/items'
 import { isTouchFirst } from './device'
@@ -115,7 +114,6 @@ class UiStore {
   defeat = $state<'none' | 'falling' | 'woke'>('none')
   /** The end-of-quest card. */
   endingOpen = $state(false)
-  muted = $state(isMuted())
 
   toast(payload: ToastPayload): void {
     const kind = payload.kind ?? 'info'

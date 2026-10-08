@@ -19,7 +19,7 @@ import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder 
 import { buildExitSigns } from '../area/exits'
 import { lanternRestRate, refreshLanternVisuals, type LightProp } from '../area/lanterns'
 import { bus, EV, listen, type DialogueClosedPayload, type RelocatePayload } from '../events'
-import { prefersReducedMotion, sfx } from '../sfx'
+import { prefersReducedMotion } from '../sfx'
 import { heroScreen, uiBlocked, uiState } from '../input'
 import { TILE, tileAt, tileCenter, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
@@ -847,7 +847,6 @@ export class WorldScene extends Phaser.Scene {
     bus.emit(EV.defeat, { phase: 'falling' })
     const wildsReport = isWildsArea(this.session.state.area) ? this.wilds?.reportDefeat() ?? null : null
     this.session.defeat()
-    sfx('defeat')
     this.hero.sprite.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
