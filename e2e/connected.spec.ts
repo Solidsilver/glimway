@@ -257,9 +257,10 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   await context.setOffline(false)
   await expect.poll(() => linkStatus(page), { timeout: 20_000 }).toBe('online')
   await expect(page.getByTestId('net-offline')).toBeHidden()
-  const s = (await serverState(page)).body
-  expect(s.state.quest).toBe('accepted')
-  expect(Math.ceil(s.state.hp)).toBe(localHp) // nothing changed elsewhere: vitals uploaded as-is
+  // Back online, what was played offline goes up at once (not at the next
+  // 10 s report): the world holds it within moments of reconnecting.
+  await expect.poll(async () => Math.ceil((await serverState(page)).body.state.hp), { timeout: 5_000 }).toBe(localHp) // vitals uploaded as-is
+  expect((await serverState(page)).body.state.quest).toBe('accepted')
   await expect(page.getByTestId('link-notice')).toBeHidden()
 })
 

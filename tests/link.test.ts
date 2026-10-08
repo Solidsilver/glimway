@@ -644,3 +644,38 @@ test('Wilds operations go through the outbox: the lease, a key and where, and th
   const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { region: 'outer-1', x: 1, y: 2 } });
   assert.deepEqual(settled, { ok: false, code: 'echo-not-here' });
 });
+
+test('back online after playing offline, the place and vitals are reported at once (a first connect waits for the tick)', async (t) => {
+  const settle = async (r: { server: { sent: (k: string) => unknown[] } }, want: number) => {
+    for (let i = 0; i < 50 && r.server.sent('POST /api/report').length < want; i++) await tick();
+  };
+  // A first connect: nothing goes before the 10 s tick.
+  const quiet = await rig(t);
+  await online(quiet);
+  for (let i = 0; i < 20; i++) await tick();
+  assert.equal(quiet.server.sent('POST /api/report').length, 0, 'the normal cadence');
+
+  const r = await rig(t);
+  await online(r);
+  // The connection drops on the next report.
+  r.server.on('POST /api/report', 'network');
+  r.link.reportSoon();
+  await r.link.flush();
+  assert.equal(r.link.status, 'offline');
+  const failed = r.server.sent('POST /api/report').length;
+  // Played offline: hurt, and a few steps on.
+  r.session.state.hp = 22;
+  r.session.state.position = { x: 460, y: 300 };
+  // The world keeps what each report says.
+  r.server.on('POST /api/report', ackReport((c) => S({ version: 2 + c.body.seq, hp: c.body.hp, x: c.body.place.x, y: c.body.place.y })));
+  await online(r, S({ version: 2 }));
+  // No flush, no tick: the reconnect itself sends it, right after the
+  // report captured before the drop (which goes again first, as ever).
+  await settle(r, failed + 2);
+  const reports = r.server.sent('POST /api/report').map((c) => c.body as { hp: number; place: unknown; seq: number });
+  assert.equal(reports.length, failed + 2);
+  assert.equal(reports.at(-2)!.seq, reports[failed - 1]!.seq, 'the captured one, again');
+  const sent = reports.at(-1)!;
+  assert.equal(sent.hp, 22);
+  assert.deepEqual(sent.place, { area: 'village', x: 460, y: 300 });
+});
