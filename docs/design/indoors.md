@@ -387,6 +387,37 @@ The shelves show how full the village library is: three art states by the shelf 
 panel already loads (`GET /api/library`). Nothing in the panel changes; it's reached from the
 room. Nobody keeps the library: no resident lives here, as today.
 
+**Revised after the owner's first playtest (2026-10-08).** The owner liked the back shelves and
+asked for a cozier room with a keeper. This replaces the map, the donation shelf's place and
+"nobody keeps the library" above; open question 3 is now answered.
+
+```
+##############
+#SS=SS=SS=SS=#    S  tall shelves along the back wall, straight on, under the wall's top line
+S............S    S  shelves along both side walls too (side-on art): the room is lined with books
+S.RRRR.......S    R  the reading table, chairs either side; the lamp sits on it
+S.RRRR...EE..S    E  Elara's desk (where she sits while she's in)
+S............S
+S.........NNN#    N  the reading nook: the window seat set into an alcove in the wall,
+S.........NNN#       cushions and a lamp, a plain seat with the bench's seated regen
+#.....@......#
+######DD######    out to the village at (4, 18)
+```
+
+- **Sections.** The shelves carry small painted signs for four sections: *Stories*, *Histories*,
+  *Recipes* and *Field notes*. Each section's shelves open `LibraryPanel` filtered to papers of
+  that kind (the panel's existing kinds; a section with none opens the whole collection).
+- **The donation shelf goes;** donating moves to Elara (below). The floating shelf on the right
+  is gone.
+- **Elara keeps the library, part of each hour.** She joins `residents.json`: 30 minutes at her
+  desk in the library, 30 at her usual spot on the square, offset 10 (so the library is kept
+  while Hazel bakes, and someone is in the square most of the hour). Lore: she says she's
+  studying the drift; the library is where she does it. Talking to her while she's in opens the
+  panel on the whole collection, with **Donate** in her conversation (the panel's donate view).
+  While she's out the shelves still work; only donating waits for her, and the door's knock line
+  says where she is.
+- **Later, not 0.4:** an upstairs reading loft.
+
 ### 3.4 The cottage, `in:home:<gate>`
 
 Same room, same furniture, same hearth rest. It becomes a real place: you save inside, presence
@@ -959,7 +990,7 @@ pools, no day/night).
 2. **Doors that latch when nobody's home.** *Default: never latch; knock, hear where they are,
    go in.* Places are places (layers.md), quests never wait on someone being home (quests.md 5),
    and a latched door adds a server rule for nothing.
-3. **Who's in the library.** *Default: nobody.* It's self-serve today and Mara's oil note on the
+3. **Who's in the library.** *Answered 2026-10-08: Elara, part of each hour (section 3.3, revised).* Was: *nobody.* It's self-serve today and Mara's oil note on the
    lamp carries the village's voice. A librarian can come with a later resident.
 4. **The `world` and `project` gates.** *Default: deferred to Aldo's kiln and chapter 2.*
    They're cheap but have no 0.4 user, and building a gate with its first quest keeps it right.
