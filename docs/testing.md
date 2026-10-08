@@ -23,7 +23,7 @@ plus a few programs that aren't npm packages:
 
 | Command | What runs | When |
 |---|---|---|
-| `npm run verify` | typecheck, svelte-check, unit tests, build | every change |
+| `npm run verify` | typecheck (app and e2e), svelte-check, unit tests, build | every change |
 | `npm test` | unit tests | while working |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
@@ -183,6 +183,7 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | `.area .title` on screen | `expectAreaCard(page, title)` |
 | a pause for a banner to clear | poll `__fsBanners().current` until it is `null` (see `coop.spec.ts`) |
 | a pause before a screenshot | `animationsDone(page)` (running transitions and fades finished, then two frames) |
+| a reload that must carry the tab's writes (the old `savedToDisk` wait) | `reenter(page)` (e2e/connected.ts): the server's revision matches the tab's, then reload and Continue |
 
 **Proving something does *not* happen.** Wait for an observable state that
 rules it out, and record what the page does in the meantime:

@@ -108,7 +108,7 @@ export const ADA_OIL_REPLIES: Record<number, string[]> = {
   2: ['For the window. Thank you.'],
 };
 
-/** Canon lines spoken to guests (without a link) when an heirloom beat would otherwise trigger. */
+/** Canon lines spoken to guests (without a link) when an heirloom beat would otherwise trigger. TODO(D): goes with the guest branches in wilds/sites.ts. */
 export const HEIRLOOM_GUEST_LINES = {
   silas: 'Brack’s felling axe will keep on the wall. Sign in to your world and I’ll put it in your hands.',
   orrin: 'The mason pick will keep on the bench. Sign in to your world and come take it.',

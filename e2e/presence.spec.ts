@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
-import { animationsDone, waitForArea, waitForLive, frames, warp, waitFrames, waitGame } from './helpers'
+import { animationsDone, frames, warp, waitFrames, waitGame } from './helpers'
 
 /**
  * Presence against the real Go server: two players in one world
@@ -217,6 +217,9 @@ test('a connection without the binary protocol stops with reload needed', async 
   const { other, ctx } = await twoPlayers(page, browser, baseURL!)
   try {
     await expect.poll(async () => (await presenceState(page))?.status).toBe('reload-needed')
+    // The reload notice shows for a presence refusal too (design section 8).
+    await expect(page.getByTestId('update-notice')).toBeVisible()
+    await expect(page.getByTestId('update-notice')).toContainText('This page is older than the world server.')
     expect(await remotes(page)).toEqual([])
     expect(await remotes(other)).toEqual([])
   } finally { await ctx.close() }

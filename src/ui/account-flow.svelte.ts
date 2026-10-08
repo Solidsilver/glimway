@@ -41,6 +41,8 @@ export type Probe =
   /** Signed in, but the first sign-in's world choice is still open (asked again). */
   | { kind: 'choose-world'; choice: WorldChoice }
   | { kind: 'signed-out' }
+  /** The server refused this client's contract: the title shows the reload notice. */
+  | { kind: 'reload-needed' }
   | { kind: 'unavailable' }
 
 export type AccountApi = Pick<ApiClient, 'state' | 'worldChoice' | 'worldChoose' | 'world' | 'worldNotice' | 'logout'>
@@ -153,7 +155,7 @@ export class AccountFlow<S extends FlowSession> {
    * the title says so — except that a device with a connected cache can keep
    * playing offline.
    */
-  async init(): Promise<void> {
+  async init(): Promise<Probe> {
     const probe = await this.deps.probe()
     if (probe.kind === 'signed-in') {
       const cache = await this.deps.cache.load(probe.snapshot.accountId)
@@ -169,6 +171,8 @@ export class AccountFlow<S extends FlowSession> {
       this.ui.account = null
     } else if (probe.kind === 'signed-out') {
       this.ui.server = 'available'
+    } else if (probe.kind === 'reload-needed') {
+      this.ui.server = 'available'
     } else {
       this.ui.server = 'unavailable'
       // No server can say who is signed in: offer the latest account played here.
@@ -179,6 +183,7 @@ export class AccountFlow<S extends FlowSession> {
         this.ui.account = { accountId: cache.accountId, name: cache.name || 'Your hero' }
       }
     }
+    return probe
   }
 
   /** Title: Continue in your world. */
@@ -219,7 +224,7 @@ export class AccountFlow<S extends FlowSession> {
     this.snapshot = snapshot
     const name = snapshot.displayName || snapshot.importedProfile?.name || profile?.name || this.ui.account?.name || 'Your hero'
     this.ui.account = { accountId: snapshot.accountId, name }
-    // Signed in from the Menu: the next step (origin, lease) takes the screen.
+    // Signed in from the Menu: the next step (the lease question) takes the screen.
     this.host.closePanel()
     this.cache = await this.deps.cache.load(snapshot.accountId)
     await this.startAccount(snapshot, name)

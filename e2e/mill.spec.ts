@@ -39,7 +39,7 @@ test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper k
   expect(hopper).not.toMatch(/fox|Aldo/)
 })
 
-test.describe('connected', () => {
+test.describe('in a world', () => {
 
   test('finishing the mill-wheel project mends the wheel: new paddles, and it turns smooth', async ({ page }) => {
     test.setTimeout(150_000)

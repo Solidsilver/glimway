@@ -23,7 +23,7 @@ function snap(state: GameState, rev: number, extra: Record<string, unknown> = {}
     accountId: 'hero',
     habiticaPartyId: null,
     worldId: 'w',
-    saveOrigin: 'fresh',
+   
     pending: 0,
     verifiedXp: 0,
     flagged: false,

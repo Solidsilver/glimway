@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { serverState, CONTRACT } from './connected'
+import { serverState } from './connected'
 import { expectToast, dialogueState, openTalk, readDialogue, untilLine, waitForLive } from './helpers'
 import { freshPlayer, fund, giveInstance, go, shot } from './home-helpers'
 

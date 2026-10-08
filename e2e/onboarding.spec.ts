@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, routeHabitica, setHabitica, TOKEN, waitForWorld } from './connected'
+import { allow, CONTRACT, newUser, routeHabitica, setHabitica, TOKEN, waitForWorld } from './connected'
 import { waitForLive } from './helpers'
 
 /**
@@ -75,7 +75,7 @@ test('unlabeled paste → preview → wrong order is refused → swap → connec
   await page.getByRole('button', { name: 'Swap' }).click()
   await expect(page.getByTestId('preview-user')).toHaveText(`${id.slice(0, 4)}…${id.slice(-4)}`)
   await page.getByRole('button', { name: 'Looks right — Connect' }).click()
-  await expect(page.getByTestId('hero-card')).toContainText('Tansy')
+  await waitForWorld(page)
 })
 
 test('bad shapes say what was found', async ({ page }) => {
@@ -89,7 +89,7 @@ test('bad shapes say what was found', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('3 IDs')
 })
 
-test('remember → reload → the world is one Continue away → forget', async ({ page }) => {
+test('remember → a new visit signs in without a paste → forget', async ({ page }) => {
   const id = newUser()
   allow(id)
   await setHabitica(id, { name: 'Tansy' })
@@ -101,9 +101,17 @@ test('remember → reload → the world is one Continue away → forget', async 
   await page.getByRole('button', { name: 'Connect' }).click()
   await waitForWorld(page)
 
-  // New visit: Continue, then the Menu knows what was remembered.
+  // A new visit whose sign-in ended (a logout, an expired cookie): the
+  // remembered details sign in without a paste.
+  await page.request.delete('/api/session', CONTRACT)
   await page.reload()
-  await page.getByTestId('continue-world').click()
+  await page.getByTestId('connect-hero').click()
+  const remembered = page.getByTestId('signin-remembered')
+  await expect(remembered).toBeVisible()
+  await remembered.click()
+  await waitForWorld(page)
+
+  // The Menu knows what was remembered.
   await waitForLive(page)
   await page.keyboard.press('Escape')
   await expect(page.getByText('Remembered on this device.')).toBeVisible()
@@ -117,6 +125,11 @@ test('remember → reload → the world is one Continue away → forget', async 
   await page.reload()
   // The world is still there (the cookie holds); the details are not remembered.
   await expect(page.getByTestId('continue-world')).toBeVisible()
+  await page.getByTestId('continue-world').click()
+  await waitForWorld(page)
+  await waitForLive(page)
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('Remembered on this device.')).toBeHidden()
 })
 
 test('Forget clears remembered details without disconnecting', async ({ page }) => {

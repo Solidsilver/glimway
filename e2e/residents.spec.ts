@@ -62,7 +62,7 @@ async function converse(page: Page, name: string, snap?: string, opts: { bust?: 
 
 test('meeting each resident: an introduction, their portrait, and a journal entry', async ({ page }) => {
   test.setTimeout(180_000)
-  const id = await freshPlayer(page)
+  await freshPlayer(page)
   for (const r of RESIDENTS) {
     await warp(page, r.area as Area, r.stand[0], r.stand[1])
     // Let a new area's title card clear before the screen.
@@ -89,7 +89,7 @@ test('meeting each resident: an introduction, their portrait, and a journal entr
 
 test('Elara’s line follows the calendar: the wick, the Mark, and the day before a Turning', async ({ page }) => {
   test.setTimeout(120_000)
-  const id = await freshPlayer(page)
+  await freshPlayer(page)
   // The last day of Amber-wick: she has posted the Turning for tomorrow.
   await setDay(page, 8, 7)
   await warp(page, 'commons', 25, 5)

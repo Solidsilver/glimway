@@ -119,7 +119,7 @@ for (const [device, vp] of sizes) {
 async function fallAndFindLantern(page: Page, device: string): Promise<void> {
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
   // The collapse wakes the hero back in the village; wait for it to settle.
-  await page.waitForFunction(() => window.__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
+  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
   await settled(page, { area: 'village' })
   await warp(page, 'wilds', 2, 22)
   await waitForWilds(page)

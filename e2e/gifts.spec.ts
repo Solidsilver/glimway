@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures'
+import { expect, test } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, homes, myHome, place, readOn, silasSays, go, atMyMailbox, hurt, type HomesView } from './home-helpers'
@@ -28,10 +28,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
 
   // Fund Wren with 2 comfrey salves and grant an unplaced gate-shelf
   fund(idWren, { items: { 'comfrey-salve': 2 }, materials: { timber: 1 } })
+  const aWren = accountOf(idWren)
   sql(`INSERT INTO homestead_items (id, item_def, location, account_id, homestead_id)
-       VALUES ('shelf-${idWren}', 'gate-shelf', 'inventory', '${idWren}', NULL);
+       VALUES ('shelf-${idWren}', 'gate-shelf', 'inventory', '${aWren}', NULL);
        INSERT INTO ledger (account_id, currency, delta, earned_delta, reason, ref, created_at)
-       VALUES ('${idWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
+       VALUES ('${aWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
 
   // Step out to the Commons lane
   await go(page, 'commons', 25, 10)
@@ -123,7 +124,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(shelfModalFinn.getByTestId('take-slot-1')).toBeDisabled()
 
   // Verify Finn carries the item in database
-  const finnInventory = sql(`SELECT item_def, qty FROM item_stacks WHERE owner = '${idFinn}' AND item_def = 'comfrey-salve';`)
+  const finnInventory = sql(`SELECT item_def, qty FROM item_stacks WHERE owner = '${accountOf(idFinn)}' AND item_def = 'comfrey-salve';`)
   expect(finnInventory).toContain('comfrey-salve|1')
 
   // Verify shelf slot 0 is now empty in ledger
@@ -145,7 +146,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await expect(iraShelf).toBeVisible()
   await iraShelf.getByTestId('take-slot-2').click()
   await expectToast(pageIra, /You took a timber from Wren’s shelf/)
-  expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${idIra}' AND item_def='timber';`)).toContain('timber|1')
+  expect(sql(`SELECT item_def,qty FROM item_stacks WHERE owner='${accountOf(idIra)}' AND item_def='timber';`)).toContain('timber|1')
   await ctxIra.close()
 
   // Two travellers read the same remaining slot before either takes it.
@@ -197,7 +198,6 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
-  const homeWren = await myHome(page, idWren)
 
   // 2. Finn joins in a separate context and carries a comfrey salve marked as made by Wren
   const invite = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
@@ -218,8 +218,8 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await pageFinn.keyboard.press('i')
   await expect(inv).toBeVisible()
   await inv.getByRole('tab', { name: /Supplies/ }).click()
-  await inv.locator(`[data-cell="item:keepers-twists@${idWren}"]`).click()
-  const salveRow = inv.locator(`[data-item="item:keepers-twists@${idWren}"]`)
+  await inv.locator(`[data-cell="item:keepers-twists@${accountOf(idWren)}"]`).click()
+  const salveRow = inv.locator(`[data-item="item:keepers-twists@${accountOf(idWren)}"]`)
   await expect(salveRow).toContainText('Made by Wren')
   await salveRow.getByRole('button', { name: 'Use' }).click()
   await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
@@ -229,7 +229,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await ctxFinn.close()
 
   // Verify thank-you mail exists for Wren in database
-  const mailRows = sql(`SELECT kind, item_def FROM mail WHERE to_id = '${idWren}' AND kind = 'thanks';`)
+  const mailRows = sql(`SELECT kind, item_def FROM mail WHERE to_id = '${accountOf(idWren)}' AND kind = 'thanks';`)
   expect(mailRows).toContain('thanks|keepers-twists')
 
   // Wren checks their mailbox

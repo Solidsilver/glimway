@@ -5,8 +5,8 @@ import { serverState } from './connected'
 
 const hud = (page: import('@playwright/test').Page) => page.locator('.hud .embers')
 
-/** The server's embers and vitals for this browser's session (as the client reads them). */
-async function worldEmbers(page: import('@playwright/test').Page): Promise<{ embers: number; hp: number; maxHp: number } | undefined> {
+/** The server's embers, vitals and story marks for this session (as the client reads them). */
+async function worldEmbers(page: import('@playwright/test').Page): Promise<{ embers: number; hp: number; maxHp: number; flags: string[] } | undefined> {
   try {
     return (await serverState(page)).body.state
   } catch {
@@ -18,7 +18,7 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
   // The whole quest's dialogue is read through here; under a loaded run it
   // can outlast the default timeout.
   test.slow()
-  const id = await freshPlayer(page)
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
@@ -51,8 +51,9 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
   await warp(page, 'woodland', 10, 15)
   await talkThrough(page, /Light the lantern/)
   await expect(hud(page)).toHaveText('2')
-  // The world's balance paid the light (the lit lantern itself is the world's outcome).
+  // The world paid the light, and keeps the lit lantern as its mark.
   await expect.poll(async () => (await worldEmbers(page))?.embers, { timeout: 15_000 }).toBe(2)
+  await expect.poll(async () => (await worldEmbers(page))?.flags ?? [], { timeout: 15_000 }).toContain('lit:road-1')
   await page.screenshot({ path: 'test-results/embers-road-lit.png' })
 })
 

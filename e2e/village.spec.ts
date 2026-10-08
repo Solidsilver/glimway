@@ -36,7 +36,7 @@ async function claim(page: Page): Promise<void> {
   await claimDeed(page)
 }
 
-test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commons', async ({ page }) => {
+test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commons (the dev clock)', async ({ page }) => {
   await freshPlayer(page)
   // Carting Day (Cart-wick, day 6), seen through the dev clock (it takes the
   // calendar from the server until the clock moves).
@@ -73,6 +73,8 @@ test('village projects: give materials, finish two, the village changes and a pa
   fund(id, { materials: { timber: 100, stone: 50, fiber: 30, amber: 30 } })
   let board = await openBoard(page)
   await expect(board.locator('.carried')).toContainText('100 timber')
+  // Elara's Turning notice is on the board too.
+  await expect(board.getByTestId('turning-notice')).toContainText(/outer Wilds (will turn|turn at the dark)/)
   await shot(page, 'notice-board-desktop')
   // A part share first: your contribution shows.
   const canopy = board.locator('[data-project="well-canopy"]')

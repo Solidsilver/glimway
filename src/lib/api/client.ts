@@ -11,7 +11,7 @@
  */
 import contract from '../../../content/contract.json' with { type: 'json' };
 import { createOperationsApi, type OperationsApi } from './operations.ts';
-import { ApiError, errorFromResponse } from './errors.ts';
+import { ApiError, errorFromResponse, isReloadNeeded } from './errors.ts';
 import {
   parseCalendar,
   parseContribute,
@@ -82,7 +82,6 @@ import type {
   CreatedInvite,
   InviteList,
   LoginRequest,
-  OriginRequest,
   PlayResponse,
   ProgressRequest,
   ProgressResponse,
@@ -110,6 +109,8 @@ export interface ApiClientOptions {
   /** Defaults to '' (same origin). */
   baseUrl?: string;
   timeoutMs?: number;
+  /** Called when the server refuses this client's contract (`reload-needed`). */
+  onReloadNeeded?: () => void;
 }
 
 /** Unqueued calls. Use them only inside `run`. */
@@ -122,7 +123,6 @@ export interface RawApi {
   login(req: LoginRequest): Promise<Snapshot | WorldChoice>;
   logout(): Promise<void>;
   state(lease?: string | null): Promise<StateResponse>;
-  origin(req: OriginRequest): Promise<Snapshot>;
   play(req: { clientId: string; takeOver?: boolean }): Promise<PlayResponse>;
   progress(req: ProgressRequest, opts?: { keepalive?: boolean }): Promise<ProgressResponse>;
   sync(req: SyncRequest): Promise<SyncResponse>;
@@ -255,7 +255,13 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         parsed = undefined;
       }
     }
-    if (!response.ok) throw errorFromResponse(response.status, parsed, response.headers.get('retry-after'));
+    if (!response.ok) {
+      const err = errorFromResponse(response.status, parsed, response.headers.get('retry-after'));
+      // The one place every server refusal passes: the interface shows the
+      // reload notice on a contract refusal (design section 8).
+      if (isReloadNeeded(err)) options.onReloadNeeded?.();
+      throw err;
+    }
     // A 200 that is not JSON came from something else (an HTML fallback page).
     if (parsed === undefined) throw new ApiError('unavailable', { status: response.status });
     return parsed;
@@ -275,10 +281,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
     async state(lease) {
       return parseState(await request('GET', '/api/state', undefined, lease ? { headers: { 'X-Play-Lease': lease } } : {}));
-    },
-    // TODO(C1): remove this retired origin flow and its callers.
-    async origin(req) {
-      return parseSnapshot(await request('POST', '/api/origin', req));
     },
     async play(req) {
       return parsePlay(await request('POST', '/api/play', { clientId: req.clientId, takeOver: req.takeOver === true }));
@@ -424,8 +426,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     login: (req) => run((r) => r.login(req)),
     logout: () => run((r) => r.logout()),
     state: (lease) => run((r) => r.state(lease)),
-    origin: (req) => run((r) => r.origin(req)),
-    play: (req) => run((r) => r.play(req)),
+      play: (req) => run((r) => r.play(req)),
     progress: (req, opts) => run((r) => r.progress(req, opts)),
     sync: (req) => run((r) => r.sync(req)),
     spend: (req) => run((r) => r.spend(req)),

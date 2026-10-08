@@ -60,7 +60,7 @@
     confirmLogout = true
   }
   /** The world holds the save; offline play waits out a dead connection. */
-  const offline = $derived(session.link?.status === 'offline')
+  const offline = $derived(ui.link?.status === 'offline')
 
   /** Text fields must not leak keys to the game (Phaser captures WASD/E/F). */
   const keepKeys = (e: KeyboardEvent) => {

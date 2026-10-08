@@ -3,6 +3,9 @@ import { reenter, seedStory, serverState, CONTRACT } from './connected'
 import { holdUntil, warp, waitForWilds, wilds, type WildsDump, waitForLive, readDialogue, settled, toastAfter, expectToast } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
+import { siteChunks } from '../src/lib/wilds/outer.ts'
+import { echoAssignments } from '../src/lib/wilds/stories.ts'
+import type { Epoch } from '../src/lib/wilds/index.ts'
 import { SEASON_SHIFT_NOTICE } from '../src/content/expansion-writing.ts'
 
 /**
@@ -80,21 +83,30 @@ test('over the crossing, an Echo settled, the Wilds turn and give a text back', 
   await shot(page, '41-outer-entry-desktop')
 
   // An Echo: walk up to its camp, light the owed lamp, read the moment out.
-  // (The world's assignment: the dump says which member the site keeps.)
-  const echoSite = dump.sites.find((s) => s.kind === 'echo')!
-  await warp(page, chunkAreaId(echoSite.chunk.cx, echoSite.chunk.cy, OUTER), echoSite.tx, echoSite.ty + 1)
+  // The world's assignment comes from the region's epoch (B's rule): read it
+  // the way the server holds it, then find the camp it names.
+  const region = await page.request.get(`/api/wilds/region/${OUTER}`, CONTRACT)
+  expect(region.ok()).toBe(true)
+  const epoch = (await region.json()).epoch as Epoch
+  const sites = siteChunks(epoch)
+  const assigned = echoAssignments(epoch, sites, true)
+  const planned = sites.find((s) => s.kind === 'echo')!
+  const def = assigned.get(planned.id)!
+  const placed = dump.sites.find((s) => s.id === planned.id)!
+  await warp(page, chunkAreaId(planned.cx, planned.cy, OUTER), placed.tx, placed.ty + 1)
   dump = await wilds(page)
-  expect(dump.sites.find((s) => s.id === echoSite.id)).toMatchObject({ kind: 'echo', echo: def.member, settled: false })
+  expect(dump.sites.find((s) => s.id === planned.id)).toMatchObject({ kind: 'echo', echo: def.member, settled: false })
   await expect(page.locator('.prompt')).toContainText(/owed lamp|Strike the light/)
   await shot(page, '42-outer-echo-desktop')
   await page.keyboard.press('e')
   await shot(page, '43-outer-echo-settling-desktop')
   await readThrough(page)
   dump = await wilds(page)
-  const member = dump.sites.find((s) => s.id === echoSite.id)!.echo
+  const member = dump.sites.find((s) => s.id === planned.id)!.echo
   expect(member).not.toBeNull()
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain(`echo:${member}`)
-  expect((await wilds(page)).sites.find((s) => s.id === echoSite.id)!.settled).toBe(true)
+  if (def.paper) await expect.poll(async () => (await serverState(page)).body.state.flags).toContain(`paper:${def.paper}`)
+  expect((await wilds(page)).sites.find((s) => s.id === planned.id)!.settled).toBe(true)
   await shot(page, '44-outer-echo-settled-desktop')
 
   // The Turning: move the calendar to just before the wick's end.
@@ -164,15 +176,10 @@ test('a place in the outer Wilds reloads there, and a turned wick brings you to 
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('wilds:turned')
 })
 
-test.describe('connected', () => {
-  test('the server’s outer region: claims, then a refused claim turns the Wilds', async ({ page, context }) => {
+test.describe('in a world', () => {
+  test('the server’s outer region: claims, then a refused claim turns the Wilds', async ({ page }) => {
     test.setTimeout(150_000)
-    const id = newUser()
-    allow(id)
-    await routeHabitica(context)
-    await openTitleGuide(page)
-    await pasteAndConnect(page, id)
-    await waitForWorld(page)
+    await freshPlayer(page)
 
     await crossOver(page)
     let dump = await wilds(page)

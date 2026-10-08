@@ -343,7 +343,7 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   const lights = homeLights(home.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null) as { x: number; y: number }[])
   const at = await player(page)
   const open: [number, number][] = []
-  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, plants: home.plants ?? [] }, x, y)) open.push([x, y])
+  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y)) open.push([x, y])
   open.sort((a, b) => Math.hypot(a[0] * 16 - at.x, a[1] * 16 - at.y) - Math.hypot(b[0] * 16 - at.x, b[1] * 16 - at.y))
   let tile: [number, number] | null = null
   for (const t of open) {

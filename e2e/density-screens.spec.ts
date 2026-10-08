@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
-import { warp } from './helpers'
+import { warp, waitForLive } from './helpers'
 import { claimDeed, earnPlenty, freshPlayer, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
@@ -93,12 +93,11 @@ test.describe('phone', () => {
   test('village square, Commons lane, residents', async ({ page }) => {
     test.setTimeout(120_000)
     await freshPlayer(page)
-    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await outdoorScreens(page, 'phone')
   })
 })
 
-test.describe('connected', () => {
+test.describe('in a world', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
   test('a cottage interior', async ({ page, browser }) => {
     test.setTimeout(400_000)

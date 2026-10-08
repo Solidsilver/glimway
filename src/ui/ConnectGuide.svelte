@@ -13,7 +13,7 @@
   import { syncSafety } from '../game/sync-safety'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
-  import { connectedClient, connectSession, disconnectSession, friendlyErrorCopy, isConnected } from './habitica-local'
+  import { connectedClient, connectSession, disconnectSession, friendlyErrorCopy, isConnected, memoryCredentials } from './habitica-local'
   import { api } from './account'
   import { errorCode, isUnreachable } from '../lib/api/errors'
   import type { Snapshot, WorldChoice } from '../lib/api/types'
@@ -438,13 +438,32 @@
   }
 
   // Remembered credentials arrive at load, after this guide mounted: catch
-  // the guide up (nobody is signed in yet, and nothing is pasted).
+  // the guide up (nobody is signed in yet, and nothing is pasted). An
+  // explicit Disconnect wipes the memory holder, so it never overrides one.
   $effect(() => {
-    if (ui.remembered && !remote && step < 3 && !parsed) {
+    if (ui.remembered && isConnected() && !remote && step < 3 && !parsed) {
       connection = 'connected'
       step = 3
     }
   })
+
+  /** Sign in to the world with the credentials already in memory (Remember). */
+  async function signInRemembered(): Promise<void> {
+    const creds = memoryCredentials()
+    if (syncBusy || !creds) return
+    syncBusy = true
+    connection = 'syncing'
+    try {
+      const profile = await connectedClient()!.fetchProfile()
+      heroPreview = profile
+      await serverSignIn(creds, profile)
+    } catch (err) {
+      failSignIn(err)
+    } finally {
+      syncBusy = false
+      if (connection === 'syncing') connection = isConnected() ? 'connected' : 'disconnected'
+    }
+  }
 
   const activeTab = $derived(guideTabs.find((t) => t.id === tab) ?? guideTabs[0])
   const classLabel = (c: string) => c.charAt(0).toUpperCase() + c.slice(1)
@@ -499,7 +518,6 @@
         {#if onBack}<button type="button" class="ghost" onclick={onBack}>Back</button>{/if}
         <button type="button" class="primary" onclick={() => (step = 2)}>I have them</button>
       </div>
-      <!-- A sample hero refused here (not somewhere safe) says why, instead of nothing. -->
       {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
     {:else if step === 2}
       <h4 class="step-title">{guideCopy.step2}</h4>
@@ -637,7 +655,10 @@
         </div>
       {:else}
         <div class="row">
-          {#if session}
+          {#if mode === 'title' && canSignIn && isConnected()}
+            <!-- Remembered details: sign in without a paste. -->
+            <button type="button" class="primary" onclick={signInRemembered} disabled={syncBusy} data-testid="signin-remembered">Sign in to your world</button>
+          {:else if session}
             <button type="button" class="primary" onclick={() => syncCharacter()} disabled={syncBusy || linkOffline} title={linkOffline ? offlineCopy.needs : undefined}>Sync character</button>
           {/if}
           <button type="button" onclick={requestDisconnect}>Disconnect</button>

@@ -438,9 +438,10 @@ export async function holdUntil(page: Page, key: string, check: () => Promise<bo
  */
 export async function expectStage(page: Page, stage: string): Promise<void> {
   const { parseState } = await import('../src/lib/api/parse.ts')
+  const { CONTRACT } = await import('./connected.ts')
   await expect
     .poll(async () => {
-      const res = await page.request.get('/api/state', { headers: { 'X-Glimway-Contract': '3' } })
+      const res = await page.request.get('/api/state', CONTRACT)
       if (!res.ok()) return undefined
       return parseState(await res.json())?.state?.quest
     }, { timeout: 10_000, message: `the server's quest stage is ${stage}` })

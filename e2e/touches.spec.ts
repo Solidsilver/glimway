@@ -1,6 +1,6 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, waitFrames, expectLine } from './helpers'
+import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 
@@ -18,10 +18,6 @@ const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSea
 /** The thought above the hero now (src/game/entities/thoughts.ts), or null. */
 const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fsThoughts?: () => { current: string | null } }).__fsThoughts?.().current ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
-/** The Mana meter shows `value` within `seconds` of game time (regen runs on the game clock). */
-const manaShows = (page: Page, value: string, seconds: number) =>
-  waitFrames(page, (v: string) => document.querySelector('.bar.mana[role="meter"]')?.getAttribute('aria-valuenow') === v, value, { seconds, message: `mana ${value}` })
-
 test('the bench seats the hero, mana comes back, movement stands up', async ({ page }) => {
   await freshPlayer(page)
 
@@ -40,7 +36,8 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
   await expect.poll(async () => (await seat(page))?.bonus).toBe(5)
 
   // Seated, mana returns quickly to full (5/s standing would take twice as long).
-  await expect.poll(manaNow, { timeout: 10_000 }).toBeGreaterThan(before - 20)
+  const max = Number((await manaMeter(page).getAttribute('aria-valuemax')) ?? NaN)
+  await expect.poll(manaNow, { timeout: 10_000 }).toBe(max)
 
   // Any movement key stands the hero up, back where they sat from.
   await holdUntil(page, 'ArrowLeft', async () => (await seat(page))?.seated === false)

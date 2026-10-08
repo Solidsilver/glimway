@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { serverState, CONTRACT } from './connected'
+import { serverState } from './connected'
 import { player } from './helpers'
 import { freshPlayer } from './home-helpers'
 
@@ -105,7 +105,7 @@ test.describe('phone, short landscape', () => {
   })
 })
 
-test.describe('connected', () => {
+test.describe('in a world', () => {
   test('Reload uploads the pending save first, then reloads', async ({ page }) => {
     await freshPlayer(page)
     await serveBuild(page, 'next-build')
@@ -145,18 +145,26 @@ test.describe('connected', () => {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __fsFrame: () => { live: boolean } }).__fsFrame().live)).toBe(true)
   })
 
-  test('a reload-needed answer shows the reload notice', async ({ page }) => {
+  test('a reload-needed answer shows the reload notice, and Reload goes', async ({ page }) => {
     await freshPlayer(page)
-    await serveBuild(page, 'next-build')
-    // A server that refuses this client (a contract bump) answers 409
-    // reload-needed; the sync is where it shows first.
-    await page.route('**/api/sync', (route) =>
-      route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'reload-needed' } }) })
-    )
+    // The world server refuses this page's contract: strip the header with
+    // page.route, so A's real gate answers 409 reload-needed.
+    await page.route('**/api/sync', (route) => {
+      const headers = { ...route.request().headers() }
+      delete headers['x-glimway-contract']
+      return route.continue({ headers })
+    })
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Sync character' }).click()
     // The notice waits for an open panel to close.
     await page.getByRole('button', { name: 'Back to the road' }).click()
     await expect(notice(page)).toBeVisible()
+    await expect(notice(page)).toContainText('This page is older than the world server.')
+    // Nothing can be written: Reload goes (no save-first settle to hold it).
+    const reloaded = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame() })
+    await notice(page).getByRole('button', { name: 'Reload' }).click()
+    await reloaded
+    // The page is back at the title (nothing was held for a settle).
+    await expect(page.getByTestId('continue-world')).toBeVisible({ timeout: 15_000 })
   })
 })

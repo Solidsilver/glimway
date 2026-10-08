@@ -93,7 +93,6 @@ test.describe('after: residents, phone', () => {
   test('phone', async ({ page }) => {
     test.setTimeout(150_000)
     await freshPlayer(page)
-    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await residentScreens(page, 'phone')
   })
 })
@@ -156,7 +155,6 @@ test.describe('after: round 3, phone', () => {
   test('phone', async ({ page }) => {
     test.setTimeout(150_000)
     await freshPlayer(page)
-    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await round3Screens(page, 'phone')
   })
 })
@@ -175,7 +173,6 @@ test.describe('phone', () => {
   test('village, Commons, road edge, water, Mara', async ({ page }) => {
     test.setTimeout(120_000)
     await freshPlayer(page)
-    await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await outdoorScreens(page, 'phone')
   })
 })

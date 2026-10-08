@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 /**
- * The client stores (session, papers, residents, the held tool and the
- * guide pin). They are Phaser-free, so they load here; these tests listen
- * on the real bus. (A session without a link is what the title screen holds
- * until a sign-in plays one; C2 removes the branch.)
+ * The client stores (session, items, papers, residents, the held tool and
+ * the guide pin). They are Phaser-free, so they load here; these tests
+ * listen on the real bus. A session without a link is only ever the
+ * title's `null` — the link-less tests below cover the store fallbacks
+ * until C2 makes `link` non-null.
  */
 
 // The session saves through window timers; hold them so nothing writes.
@@ -13,11 +14,15 @@ const timers: (() => void)[] = [];
 (globalThis as unknown as { window: unknown }).window = {
   setTimeout: (fn: () => void) => timers.push(fn),
   clearTimeout: () => {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 
 const { bus, EV } = await import('../src/game/events.ts');
 const { Session } = await import('../src/game/session.ts');
+const { Link } = await import('../src/game/link.ts');
 const { grantPaper } = await import('../src/game/papers.ts');
+const { itemsFor } = await import('../src/game/items.ts');
 const { emitResidents } = await import('../src/game/residents.ts');
 const { setHeld, held } = await import('../src/game/held.ts');
 const { pinned, setPinned } = await import('../src/game/guide-pin.ts');
@@ -42,7 +47,8 @@ async function hear(names: string[], fn: () => unknown): Promise<Heard> {
   return heard;
 }
 
-const guest = () => new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 });
+const freshState = () => ({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 });
+const guest = () => new Session(freshState());
 
 test('setVitals clamps to the maxima, tells the HUD once, and saves on a loss', async () => {
   const s = guest();
@@ -94,6 +100,28 @@ test('the residents journal hears only the flags it writes entries from', async 
   s.state.flags = ['met:hazel@1', 'heirloom:x', 'quest-started', 'warden-sliver:found'];
   const heard = await hear([EV.residentsMet], () => emitResidents(s));
   assert.deepEqual(heard[0].payload, { journalFlags: ['met:hazel@1', 'heirloom:x', 'warden-sliver:found'] });
+});
+
+test('a linked session reads its own world, and stores are separate', async () => {
+  const link = new Link({
+    api: {} as never,
+    clientId: 'c1',
+    accountId: 'a1',
+    name: 'Tansy',
+    rev: 1,
+    lease: null,
+    status: 'offline',
+    emit: () => {}
+  })
+  const s = new Session(freshState(), undefined, link)
+  const items = itemsFor(s)
+  assert.equal(items.status, 'idle')
+  const heard = await hear([EV.toast], () => bus.emit(EV.gift, { fromName: 'Pip', kind: 'item', itemDef: 'timber', qty: 2 }));
+  assert.equal(heard.length, 1, 'only the current store answers');
+  assert.match((heard[0].payload as { text: string }).text, /^Pip gave you /);
+  assert.notEqual(itemsFor(guest()), items, 'a new session gets its own store');
+  s.destroy(true);
+  link.stop();
 });
 
 test('the held tool and the pinned guide tell the HUD when they change', async () => {

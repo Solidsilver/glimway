@@ -61,6 +61,11 @@ export function connectedClient(): HabiticaClient | null {
   return connectionSession.client
 }
 
+/** The credentials in memory (null before a paste or a remembered load). */
+export function memoryCredentials(): HabiticaCredentials | null {
+  return connectionSession.credentials
+}
+
 export function isConnected(): boolean {
   return connectionSession.client !== null
 }

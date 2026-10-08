@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
+import { accountOf, allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance, go, hurt, shot } from './home-helpers'
 import { waitForLive, waitFrames, expectToast } from './helpers'
 
@@ -225,21 +225,21 @@ test('standing together, one player hands another something they made', async ({
   await expect.poll(() => remotes(other), { timeout: 15_000 }).toEqual(['Ash'])
 
   await openInventory(page, /Supplies/)
-  const wick = await pick(page, `item:lamp-wick@${ash}`)
+  const wick = await pick(page, `item:lamp-wick@${accountOf(ash)}`)
   await expect(wick).toContainText('Made by Ash')
   await wick.getByRole('button', { name: 'Give…' }).click()
   await expect(wick.getByTestId('give-to')).toContainText('Rowan')
   await shot(page, 'items-give-chooser-desktop')
-  await wick.locator(`[data-give-to="${rowan}"]`).click()
+  await wick.locator(`[data-give-to="${accountOf(rowan)}"]`).click()
   await expect(dialog(page).getByTestId('inv-message')).toHaveText('You gave Rowan a lamp wick.')
-  await expect(dialog(page).getByTestId(`qty-item:lamp-wick@${ash}`)).toHaveText('1')
+  await expect(dialog(page).getByTestId(`qty-item:lamp-wick@${accountOf(ash)}`)).toHaveText('1')
 
   // Rowan hears it at once, and the wick carries Ash's mark.
   await expectToast(other, 'Ash gave you a lamp wick.')
   await expect.poll(async () => (await items(other))?.stacks.find((s) => s.itemDef === 'lamp-wick')?.maker?.name).toBe('Ash')
   await other.bringToFront()
   await openInventory(other, /Supplies/)
-  await expect(await pick(other, `item:lamp-wick@${ash}`)).toContainText('Made by Ash')
+  await expect(await pick(other, `item:lamp-wick@${accountOf(ash)}`)).toContainText('Made by Ash')
   await shot(other, 'items-gift-received-desktop')
   await closeInventory(other)
 

@@ -52,7 +52,7 @@ class FakeSession implements FlowSession {
 }
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot =>
-  ({ accountId: 'h1', displayName: 'Tansy', importedProfile: null, saveOrigin: 'fresh', state: createNewGame(), rev: 1, vitalsSource: 'demo', worldId: 'w1', ...over }) as unknown as Snapshot
+  ({ accountId: 'h1', displayName: 'Tansy', importedProfile: null, state: createNewGame(), rev: 1, vitalsSource: 'demo', worldId: 'w1', ...over }) as unknown as Snapshot
 
 const choice = (over: Partial<WorldChoice> = {}): WorldChoice => ({ habiticaId: 'h1', displayName: 'Tansy', ...over }) as unknown as WorldChoice
 
@@ -156,7 +156,7 @@ test('Continue with a journey: connect, take the lease, play, then the party pro
 })
 
 test('a first sign-in: the world question, then straight into the world', async () => {
-  const t = setup({ api: { worldChoose: async () => snap(), world: async () => ({}) } })
+  const t = setup({ api: { worldChoose: async () => snap(), world: async () => ({ prompt: true, partyWorld: { id: 'p' } }) } })
   await t.flow.signedIn(choice(), null)
   assert.equal(t.flow.gate?.kind, 'world')
   assert.equal(t.host.panelClosed, 1)
@@ -165,6 +165,8 @@ test('a first sign-in: the world question, then straight into the world', async 
   assert.deepEqual(t.calls, ['worldChoose', 'world'])
   assert.equal(t.flow.gate, null)
   assert.equal(t.played.length, 1)
+  await new Promise((r) => setTimeout(r, 0))
+  assert.deepEqual(t.flow.partyPrompt, { prompt: true, partyWorld: { id: 'p' } })
 })
 
 test('chosen already elsewhere: the world question steps straight into that world', async () => {

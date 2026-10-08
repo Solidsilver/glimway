@@ -24,7 +24,7 @@ async function packHolds(page: Page, def: string): Promise<void> {
   await expect(page.getByRole('dialog', { name: 'Inventory' })).toBeVisible()
   await expect
     .poll(async () =>
-      page.evaluate((d) => (window as unknown as { __fsItems?: () => { stacks?: { itemDef: string }[] } | null }).__fsItems?.()?.stacks.some((s) => s.itemDef === d), def)
+      page.evaluate((d) => (window as unknown as { __fsItems?: () => { stacks?: { itemDef: string }[] } | null }).__fsItems?.()?.stacks?.some((s) => s.itemDef === d), def)
     )
     .toBe(true)
   await page.keyboard.press('Escape')

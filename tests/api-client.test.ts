@@ -18,7 +18,7 @@ function snapshot(over: Partial<Record<string, unknown>> = {}) {
     accountId: 'hab-1',
     habiticaPartyId: null,
     worldId: 'w',
-    saveOrigin: 'fresh',
+   
     pending: 0,
     verifiedXp: 45,
     flagged: false,

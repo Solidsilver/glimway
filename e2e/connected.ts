@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { expect, type BrowserContext, type Page } from '@playwright/test'
+import contract from '../content/contract.json' with { type: 'json' }
 import { BIN, requireBackend } from './server/backend.ts'
-import { warp } from './helpers'
+import { FAKE_TOKEN } from './server/fake-habitica.ts'
 
 /**
  * Helpers for the connected playtests: this worker's own Go server (through
@@ -11,7 +12,7 @@ import { warp } from './helpers'
  * it, so every test can use these.
  */
 
-export const TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
+export const TOKEN = FAKE_TOKEN
 
 /** This worker's fake Habitica (base URL). */
 export const habiticaURL = (): string => requireBackend().habitica
@@ -19,7 +20,7 @@ export const habiticaURL = (): string => requireBackend().habitica
 const dbPath = (): string => requireBackend().db
 
 /** The contract header the /api gate requires on every stateful call. */
-export const CONTRACT = { headers: { 'X-Glimway-Contract': '3' } }
+export const CONTRACT = { headers: { 'X-Glimway-Contract': String(contract.number) } }
 
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()
@@ -50,14 +51,14 @@ export function accountOf(habiticaId: string): string {
 /**
  * Test-only lever: put a story state on an account (replaces the old guest
  * `seedSave`): a quest stage, story marks (flags), quest items and a place.
- * The account must exist (sign in once with `freshPlayer`; `accountId` is
- * the id it returned, the Habitica subject); the change lands on its
- * progress document, so the next read picks it up (TODO(B): write the new
- * story tables instead, once the server loads them).
+ * `habiticaId` is the subject `freshPlayer` returned (sign in once first);
+ * the change lands on the account's progress document, so a page that is
+ * already playing won't see it — follow it with `reenter(page)`
+ * (TODO(B): write the new story tables instead, once the server loads them).
  */
-export function seedStory(accountId: string, o: { quest?: string; marks?: string[]; questItems?: string[]; place?: { area: string; x: number; y: number } }): void {
+export function seedStory(habiticaId: string, o: { quest?: string; marks?: string[]; questItems?: string[]; place?: { area: string; x: number; y: number } }): void {
   const esc = (v: string) => v.replace(/'/g, "''")
-  const account = esc(accountOf(accountId))
+  const account = esc(accountOf(habiticaId))
   const stmts: string[] = []
   for (const mark of o.marks ?? []) stmts.push(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', '${esc(mark)}') WHERE account_id='${account}';`)
   if (o.quest) stmts.push(`UPDATE progress SET doc_json = json_set(doc_json, '$.quest', '${esc(o.quest)}') WHERE account_id='${account}';`)
@@ -126,8 +127,20 @@ export async function waitForWorld(page: Page, area: string = 'village'): Promis
   await expect.poll(() => linkStatus(page)).toBe('online')
 }
 
-/** Reload the page and Continue into the world (a fresh read of the server's state). */
+/**
+ * Reload the page and Continue into the world (a fresh read of the server's
+ * state). First a wait on server state, in the spirit of the old
+ * `savedToDisk`: this tab's revision is the world's, so everything this tab
+ * did has been uploaded.
+ */
 export async function reenter(page: Page, area: string = 'village'): Promise<void> {
+  await expect
+    .poll(async () => {
+      const mine = await linkRev(page)
+      const world = (await serverState(page)).body.rev
+      return mine !== null && mine === world
+    }, { timeout: 15_000, message: "the world has this tab's latest revision" })
+    .toBe(true)
   await page.reload()
   await page.getByTestId('continue-world').click()
   await waitForWorld(page, area)
@@ -149,7 +162,7 @@ export async function linkRev(page: Page): Promise<number | null> {
  * projected into the game's own shape by the client's parser).
  */
 export async function serverState(page: Page): Promise<{ status: number; body: any }> {
-  const res = await page.request.get('/api/state', { headers: { 'X-Glimway-Contract': '3' } })
+  const res = await page.request.get('/api/state', CONTRACT)
   if (!res.ok()) return { status: res.status(), body: await res.json().catch(() => null) }
   const { parseState } = await import('../src/lib/api/parse.ts')
   return { status: res.status(), body: parseState(await res.json()) }

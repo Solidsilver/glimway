@@ -227,7 +227,7 @@ and have no effect on play.
 
 ## Your Habitica character
 
-The title screen opens the three-step connect
+The title screen opens a connect card, then the three-step connect
 guide (also in the Menu): where to find your User ID and API Token (website,
 iOS, Android), a paste step, and a card with your hero's name, class and
 level. You can paste both values at once: labeled text (`User ID: … API
@@ -402,7 +402,8 @@ Things to know before you host:
 ## Tests
 
 ```sh
-npm run typecheck   # tsc --noEmit
+npm run typecheck   # tsc --noEmit (the app)
+npm run typecheck:e2e  # tsc --noEmit (the playtests)
 npm run check       # svelte-check
 npm test            # unit tests: node --test tests/*.test.ts
 npm run build       # production bundle in dist/

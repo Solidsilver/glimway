@@ -166,7 +166,7 @@ test.describe('touch', () => {
   })
 })
 
-test.describe('connected', () => {
+test.describe('in a world', () => {
   test('in a world the inventory shows server counts and your home goods, placed and stored', { tag: '@smoke' }, async ({ page }) => {
     const id = await freshPlayer(page)
     // Homesteads v2: a home is a deed you claim from Silas.

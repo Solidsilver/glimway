@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { sql, CONTRACT } from './connected'
+import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive } from './helpers'
 import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
@@ -105,8 +105,8 @@ test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it'
   expect(st.inventory.items['wild-thyme']).toBe(2)
   expect(st.inventory.items['wax-seal']).toBe(2)
   // The maker's mark went on: the stack in the pack reads its maker.
-  const mark = sql(`SELECT maker_id FROM item_stacks WHERE owner='${id}' AND item_def='saltings-tea' AND location='pack';`)
-  expect(mark).toBe(id)
+  const mark = sql(`SELECT maker_id FROM item_stacks WHERE owner='${accountOf(id)}' AND item_def='saltings-tea' AND location='pack';`)
+  expect(mark).toBe(accountOf(id))
   await shot(page, 'hearth-craft-desktop')
 })
 
@@ -162,7 +162,7 @@ test('the writing desk: craft it at the bench, set it out, sit down, copy a reci
   await expect(panel).toBeHidden()
   const st = await (await page.request.get('/api/storage', CONTRACT)).json()
   expect(st.inventory.items['recipe-page-tea']).toBe(3)
-  const marks = sql(`SELECT maker_id || '|' || qty FROM item_stacks WHERE owner='${id}' AND item_def='recipe-page-tea' AND location='pack' ORDER BY maker_id;`).split('\n').map((s) => s.trim()).filter(Boolean)
-  expect(marks.sort()).toEqual(['|1', `${id}|2`].sort())
+  const marks = sql(`SELECT maker_id || '|' || qty FROM item_stacks WHERE owner='${accountOf(id)}' AND item_def='recipe-page-tea' AND location='pack' ORDER BY maker_id;`).split('\n').map((s) => s.trim()).filter(Boolean)
+  expect(marks.sort()).toEqual(['|1', `${accountOf(id)}|2`].sort())
   await shot(page, 'desk-copy-desktop')
 })

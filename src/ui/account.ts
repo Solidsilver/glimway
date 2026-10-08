@@ -18,24 +18,11 @@ import { bus } from '../game/events'
 import { update } from './update.svelte'
 
 /**
- * The one API client, watching for `reload-needed`: a server that refuses
- * this client's contract shows the reload notice (src/ui/update.svelte.ts).
+ * The one API client, watching for `reload-needed` (the client's error path
+ * calls back): a server that refuses this client's contract shows the reload
+ * notice (src/ui/update.svelte.ts).
  */
-export const api = createApiClient({
-  fetchImpl: async (input, init) => {
-    const res = await globalThis.fetch(input, init)
-    if (res.status === 409) {
-      res
-        .clone()
-        .json()
-        .then((body) => {
-          if ((body as { error?: { code?: string } })?.error?.code === 'reload-needed') update.reloadNeeded()
-        })
-        .catch(() => undefined)
-    }
-    return res
-  }
-})
+export const api = createApiClient({ onReloadNeeded: () => update.reloadNeeded() })
 
 /**
  * This page's play-client id, unique among live pages (a duplicated tab
@@ -80,6 +67,7 @@ export async function probeServer(): Promise<Probe> {
     return { kind: 'signed-in', snapshot: await api.state() }
   } catch (err) {
     const code = errorCode(err)
+    if (code === 'reload-needed') return { kind: 'reload-needed' }
     if (code === 'world-choice-required') {
       try {
         return { kind: 'choose-world', choice: await api.worldChoice() }

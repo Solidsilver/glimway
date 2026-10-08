@@ -12,7 +12,7 @@ import {
   syncFromMenu,
   waitForWorld, CONTRACT
 } from './connected'
-import { expectStage, readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
+import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
 
 /**
  * Connected play against the real Go server (playwright.config.ts starts it
@@ -84,6 +84,8 @@ test('login + fresh start: the guide signs in, the world starts fresh, a sync pa
   const id = await freshPlayer(page)
   const s = await serverState(page)
   expect(s.status).toBe(200)
+  // The account is the sign-in's subject (its id the server's own).
+  expect(s.body.accountId).toBe(accountOf(id))
   // Fresh imports the verified Habitica vitals right away, under the name Habitica reports.
   expect(s.body.displayName).toBe('Tansy')
   expect(s.body.vitalsSource).toBe('imported')
@@ -113,6 +115,7 @@ test('invite-only: denied without a code, then joins with one', async ({ page, c
   await box.getByLabel('Invite code').fill(`  ${code.toUpperCase().replace(/-/g, ' ')} `)
   await box.getByRole('button', { name: 'Join with this code' }).click()
   await waitForWorld(page)
+  expect((await serverState(page)).body.accountId).toBe(accountOf(id))
 })
 
 
@@ -395,7 +398,7 @@ test('a duplicated tab gets its own play id, so it must take over like any other
   expect(await page.evaluate(() => sessionStorage.getItem('fingersnap:client-id'))).toBe(original)
 })
 
-test('closing the tab still sends the last steps (review 6)', async ({ page, context }) => {
+test('closing the tab still sends the last steps (review 6)', async ({ page }) => {
   await freshPlayer(page)
   const before = Math.ceil((await serverState(page)).body.state.hp)
   // Playwright's request interception (the Habitica route) can drop a closing

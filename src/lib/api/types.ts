@@ -22,8 +22,6 @@ export interface Progress {
   playSeconds: number;
 }
 
-export type SaveOrigin = 'fresh' | 'migrated';
-
 /** Fields every state-bearing response carries at the top level. */
 export interface Snapshot {
   /** The complete merged GameState: replaces the local connected copy. */
@@ -37,8 +35,6 @@ export interface Snapshot {
   displayName: string;
   habiticaPartyId: string | null;
   worldId: string;
-  /** null until the player picks how to start. */
-  saveOrigin: SaveOrigin | null;
   pending: number;
   verifiedXp: number;
   flagged: boolean;
@@ -80,12 +76,6 @@ export interface LoginRequest {
   invite?: string;
   /** The Habitica party the client read (lets a party member in without a code; the server checks it). */
   party?: string;
-}
-
-export interface OriginRequest {
-  choice: 'fresh' | 'migrate';
-  key: string;
-  save?: { state: GameState; vitalsSource?: VitalsSource };
 }
 
 export interface ProgressRequest {

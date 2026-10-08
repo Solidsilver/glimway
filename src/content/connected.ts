@@ -36,7 +36,7 @@ export const leaseCopy = {
   working: 'Taking over…',
   failed: 'Couldn’t take over just now. Try again in a moment.',
   signedOutTitle: 'You’ve been signed out',
-  signedOutBody: 'Your progress so far is saved in your world. Sign in again from the Menu to keep playing there.'
+  signedOutBody: 'Your progress so far is saved in your world. Sign in again from the title to keep playing there.'
 }
 
 export const offlineCopy = {

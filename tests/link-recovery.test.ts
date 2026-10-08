@@ -18,7 +18,7 @@ installFakeIndexedDB();
 
 const base = (over: Partial<GameState> = {}): GameState => ({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 36, mana: 30, ...over });
 const snap = (state: GameState, rev: number, extra: Record<string, unknown> = {}) => ({
-  state, version: rev, vitalsSource: 'imported', accountId: 'hero', habiticaPartyId: null, worldId: 'w', saveOrigin: 'fresh', pending: 0, verifiedXp: 0, flagged: false, ...extra,
+  state, version: rev, vitalsSource: 'imported', accountId: 'hero', habiticaPartyId: null, worldId: 'w', pending: 0, verifiedXp: 0, flagged: false, ...extra,
 });
 const home = (items: unknown[] = []) => ({ id: 'h1', gate: 0, worldId: 'w', tier: 0, members: [{ id: 'hero', displayName: 'Tansy' }], member: true, desolate: false, vacantSince: null, landSeed: 7, cleared: [], postsBought: 0, nextPost: {}, indoor: null, items });
 const bought = (rev: number) => ({ body: { ...snap(base({ embers: 8 }), rev), result: { home: home([{ id: 's1', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null }]), materials: {}, itemId: 's1' } } });

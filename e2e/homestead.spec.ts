@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT } from './connected'
-import { dialogueState, talkText, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
+import { dialogueState, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
 import { area, earnEmbers, freshPlayer, fund, go, homeAt, homes, hurt, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts'
@@ -82,6 +82,40 @@ async function claimFirstFree(page: Page): Promise<number> {
   await readOn(page, /in my square hand/)
   return free.gate
 }
+
+test('the Commons gate: walk in from Hearthwick and back, and through an unclaimed gate', async ({ page }) => {
+  await freshPlayer(page)
+  // The village's east gate, below the Lantern Road.
+  await go(page, 'village', 39, 15)
+  await page.keyboard.down('ArrowRight')
+  await waitForArea(page, 'commons')
+  await page.keyboard.up('ArrowRight')
+  expect((await player(page)).x).toBeLessThan(6 * 16)
+  await expectAreaCard(page, 'Hearthwick Commons')
+
+  // The lane shows its spare gates, and the sign at one says what it is.
+  const v = await homes(page)
+  expect(v.gates.filter((g) => g.homeId === null).length).toBeGreaterThanOrEqual(HOMESTEAD_DATA.commons.spareGates)
+  await go(page, 'commons', v.slots[0].entry.tx, v.slots[0].entry.ty)
+  await talk(page, new RegExp(`Read the sign · Lot ${v.slots[0].gate + 1}`))
+
+  // Through a gate: wild land, nobody's, and back out onto the lane.
+  await throughGate(page, 0)
+  await expectAreaCard(page, 'Unclaimed land')
+  await expect(page.getByTestId('arrange')).toHaveCount(0)
+  await page.keyboard.down('ArrowDown')
+  await waitForArea(page, 'commons')
+  await page.keyboard.up('ArrowDown')
+  const p = await player(page)
+  expect(Math.floor(p.x / 16)).toBe(v.slots[0].entry.tx)
+
+  // And back out through the village gate.
+  await go(page, 'commons', 2, 21)
+  await page.keyboard.down('ArrowLeft')
+  await waitForArea(page, 'village')
+  await page.keyboard.up('ArrowLeft')
+  expect((await player(page)).x).toBeGreaterThan(36 * 16)
+})
 
 test('claim and guidance, then expansion: lantern posts, naming, clearing, cottage, rest at home', async ({ page }) => {
   test.setTimeout(240_000)

@@ -226,6 +226,7 @@
     }
     const onPresence = (p: PresencePayload) => {
       ui.presence = p
+      if (p.status === 'reload-needed') update.reloadNeeded()
       if (p.status !== 'live') ui.emoteOpen = false
     }
     const onLink = (p: LinkPayload) => {
@@ -382,9 +383,15 @@
     window.addEventListener('pagehide', onHide)
 
     // No local journey: the title is the server probe (sign in, or continue
-    // from the account's connected cache).
-    phase = 'title'
-    void account.init()
+    // from the account's connected cache). The probe is one request; the
+    // title waits for it, so no state flashes.
+    void account
+      .init()
+      .then((probe) => {
+        if (probe.kind === 'reload-needed') update.reloadNeeded()
+        phase = 'title'
+      })
+      .catch(() => (phase = 'title'))
     // Opt-in remembered credentials: connect without a paste. Storage
     // trouble just means "nothing remembered".
     void loadRemembered().then((creds) => {
@@ -413,8 +420,8 @@
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
     sfx('open')
-    // The Wilds need their region before the first chunk builds: guests get
-    // the local epoch, connected players the world's frozen one.
+    // The Wilds need their region before the first chunk builds: the world's
+    // frozen epoch, read through the link.
     await prepareWilds(session)
     // The Commons builds for the lane as the server holds it: reading the
     // lane here, before the scene builds, saves a rebuild (a second ground
@@ -469,7 +476,7 @@
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
-    if (prev && prev !== next) prev.destroy(true)
+    if (prev && prev !== next) prev.destroy()
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
     if (phase === 'playing') {
@@ -502,6 +509,12 @@
     if (update.reloading) return
     update.reloading = true
     update.held = null
+    // The server refuses this client's contract: nothing can be written, so
+    // skip the save-first settle and just go.
+    if (update.cause === 'contract') {
+      window.location.reload()
+      return
+    }
     const result = session ? await session.settle() : 'saved'
     if (result === 'saved') {
       window.location.reload()
@@ -510,8 +523,6 @@
     update.reloading = false
     update.held = result
   }
-
-
 
   /** What is up over the world, top first; src/ui/layers.ts says what each holds back. */
   const layers = $derived(
@@ -757,7 +768,7 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={closeCharacter} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
+      <CharacterPanel {session} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
       <InventoryPanel
         {session}
@@ -829,6 +840,9 @@
                 <h2 class="guide-title"><Icon name="person" size={18} /> {titleChoice.habitica}</h2>
                 <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} {onSignedIn} />
               </div>
+                {:else if update.ready && update.cause === 'contract'}
+              <!-- The server refused this page's contract: the same quiet notice, here at the title. -->
+              <UpdateNotice onReload={reloadForUpdate} />
             {:else if ui.server === 'unavailable'}
               <!-- The world server didn't answer and there's nothing to play from: say so plainly. -->
               <div class="panel card unreachable" data-testid="unreachable">

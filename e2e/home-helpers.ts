@@ -1,6 +1,6 @@
 import { expect, type Page } from './fixtures'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld } from './connected'
-import { dialogueState, frames, readDialogue, waitForArea, waitForLive, player, expectToast } from './helpers'
+import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectToast } from './helpers'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -29,7 +29,7 @@ export interface HomesView {
   claimed: boolean
   myGate: number | null
   gateCount: number
-  gates: { gate: number; homeId: string | null; names: string[]; tier: number; desolate: boolean; mine: boolean; price: number | null }[]
+  gates: { gate: number; homeId: string | null; names: string[]; tier: number; desolate: boolean; mine: boolean; price: number | null; shelf?: boolean }[]
   invites: { homeId: string; gate: number; from: { id: string; name: string }; to: { id: string; name: string } }[]
   mine: Home | null
   here: Home | null
@@ -210,7 +210,7 @@ export async function throughGate(page: Page, gate: number): Promise<void> {
 export function fund(habiticaId: string, goods: { materials?: Record<string, number>; items?: Record<string, number>; maker?: string; personal?: Record<string, number> }): void {
   const id = accountOf(habiticaId)
   const esc = (v: string) => v.replace(/'/g, "''")
-  const maker = esc(goods.maker ?? '')
+  const maker = goods.maker ? esc(accountOf(goods.maker)) : ''
   const statements: string[] = []
   const put = (location: string, def: string, n: number, by: string) =>
     statements.push(`INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('${location}','${esc(id)}','${esc(def)}','${by}',${n}) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=excluded.qty;`)
@@ -228,7 +228,8 @@ export function fund(habiticaId: string, goods: { materials?: Record<string, num
 export function giveInstance(habiticaId: string, def: string, opts: { uses?: number; max: number; maker?: string }): string {
   const instance = `${def}-${Math.random().toString(36).slice(2, 10)}`
   const condition = opts.uses === undefined ? opts.max : opts.uses * 3
-  sql(`INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${accountOf(habiticaId)}',${condition},${opts.max},'${opts.maker ?? ''}',0);`)
+  const maker = opts.maker ? accountOf(opts.maker) : ''
+  sql(`INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${accountOf(habiticaId)}',${condition},${opts.max},'${maker}',0);`)
   return instance
 }
 

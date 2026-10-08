@@ -8,6 +8,8 @@ const FETCH_TIMEOUT_MS = 8_000
 class UpdateStore {
   /** A newer build is being served (null: none yet, or waved away). */
   ready = $state<VersionInfo | null>(null)
+  /** Why the notice is up: a newer build, or the world server's contract. */
+  cause = $state<'build' | 'contract'>('build')
   /** Reload pressed: saving first. */
   reloading = $state(false)
   /** Why the reload was held back, if it was. */
@@ -23,9 +25,11 @@ class UpdateStore {
   /**
    * The world server answered `reload-needed`: this client is not the
    * version the server speaks. The same quiet notice as a newer build —
-   * reload when it suits you (design section 8).
+   * reload when it suits you (design section 8). Nothing can be written
+   * until the reload, so it skips the save-first settle.
    */
   reloadNeeded(): void {
+    this.cause = 'contract'
     this.ready = { version: RUNNING.version, build: 'world' }
   }
 }
@@ -52,7 +56,14 @@ async function fetchVersion(): Promise<unknown> {
  * check on demand instead (`__fsDevVersionCheck`). Returns the stop function.
  */
 export function watchForUpdates(): () => void {
-  const check = createUpdateCheck({ running: RUNNING.build, fetchInfo: fetchVersion, onNew: (info) => (update.ready = info) })
+  const check = createUpdateCheck({
+    running: RUNNING.build,
+    fetchInfo: fetchVersion,
+    onNew: (info) => {
+      update.cause = 'build'
+      update.ready = info
+    }
+  })
   update.check = check
   if (import.meta.env.DEV) {
     ;(window as unknown as { __fsDevVersionCheck?: () => Promise<void> }).__fsDevVersionCheck = () => check.checkNow()

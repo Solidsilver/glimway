@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { linkRev, linkStatus, serverState, CONTRACT } from './connected'
+import { linkRev, linkStatus, serverState } from './connected'
 import { frames, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
 

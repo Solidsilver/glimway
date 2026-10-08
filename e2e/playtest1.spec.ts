@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
-import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, CONTRACT } from './connected'
+import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf } from './connected'
 import { claimDeed, earnEmbers, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 
@@ -138,8 +138,7 @@ for (const device of ['desktop', 'phone'] as const) {
   test.describe(`playtest 1 (${device})`, () => {
     if (device === 'phone') test.use(PHONE)
 
-    test.describe('connected', () => {
-      
+    test.describe('in a world', () => {
       test('the whole Habitica outfit is drawn: missing pieces fetched once, kept on the device', async ({ page }) => {
         const asked = await standInSprites(page.context())
         await outfittedPlayer(page)
@@ -235,7 +234,7 @@ for (const device of ['desktop', 'phone'] as const) {
         const land = await toMyLand(page)
         const tx = land.doorstep.tx + 3
         const ty = land.doorstep.ty + 1
-        const home = `(SELECT homestead_id FROM homestead_members WHERE habitica_id='${id}')`
+        const home = `(SELECT homestead_id FROM homestead_members WHERE account_id='${accountOf(id)}')`
         // Item ids are unique per run: the desktop and phone runs can share a worker's database.
         const stool = `pt1-${id}-stool`
         sql(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('${stool}','wooden-stool','placed',${home},'outdoor',${tx},${ty},0);`)
@@ -266,7 +265,7 @@ for (const device of ['desktop', 'phone'] as const) {
         const id = await outfittedPlayer(page)
         await earnEmbers(page, id)
         await claimDeed(page)
-        const home = `(SELECT homestead_id FROM homestead_members WHERE habitica_id='${id}')`
+        const home = `(SELECT homestead_id FROM homestead_members WHERE account_id='${accountOf(id)}')`
         // Item ids are unique per run: the desktop and phone runs can share a worker's database.
         const tag = `pt1-${id}-`
         // A cottage (tier 1), a reading chair facing you at grid (3,4), one side on at (7,5), and the Empty Chair.
@@ -411,7 +410,6 @@ for (const device of ['desktop', 'phone'] as const) {
 }
 
 test.describe('reduced motion', () => {
-  
   test('with reduced motion the avatar holds still: no breath', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await standInSprites(page.context())

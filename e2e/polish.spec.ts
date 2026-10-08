@@ -85,7 +85,7 @@ test.describe('touch', () => {
   })
 })
 
-test.describe('connected', () => {
+test.describe('in a world', () => {
   test('a sync from the Commons reaches the world', async ({ page, context }) => {
     const id = newUser()
     allow(id)

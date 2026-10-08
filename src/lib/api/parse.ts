@@ -56,7 +56,6 @@ import type {
   DeedInvite,
   PlayResponse,
   ProgressResponse,
-  SaveOrigin,
   Snapshot,
   StateResponse,
   SpendResponse,
@@ -104,7 +103,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
     try {
       const p = decodePlayerState(o.state);
       const state = validateSave({ ...createNewGame(), area: p.place!.area, position: { x: p.place!.x, y: p.place!.y }, quest: p.story!.quests['lantern-road'] ?? 'new', hp: p.vitals!.hp, maxHp: p.vitals!.maxHp, mana: p.vitals!.mana, maxMana: p.vitals!.maxMana, flags: p.story!.marks, inventory: p.story!.questItems, discoveries: p.story!.discoveries, defeatedEnemies: p.story!.defeated, playSeconds: p.story!.playSeconds, embers: p.embers!.balance, xpEmbers: p.embers!.xpEarned, emberXp: p.embers!.xpMark });
-      return { state, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: p.account!.profileSource === 'habitica' ? 'imported' : 'demo', saveOrigin: 'fresh', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(p.profile ? { importedProfile: validateHabiticaProfile(toJson(HabiticaProfileSchema, p.profile, { alwaysEmitImplicit: true })) } : {}) };
+      return { state, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: p.account!.profileSource === 'habitica' ? 'imported' : 'demo', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(p.profile ? { importedProfile: validateHabiticaProfile(toJson(HabiticaProfileSchema, p.profile, { alwaysEmitImplicit: true })) } : {}) };
     } catch { throw new ApiError('bad-response'); }
   }
   let state;
@@ -118,8 +117,6 @@ export function parseSnapshot(raw: unknown): Snapshot {
   const rev = num(o.version);
   if (!Number.isInteger(rev) || rev < 0) throw new ApiError('bad-response');
   const vitalsSource = o.vitalsSource === 'imported' ? 'imported' : 'demo';
-  const origin = o.saveOrigin;
-  if (origin !== null && origin !== undefined && origin !== 'fresh' && origin !== 'migrated') throw new ApiError('bad-response');
   const snapshot: Snapshot = {
     state,
     rev,
@@ -128,7 +125,6 @@ export function parseSnapshot(raw: unknown): Snapshot {
     displayName: typeof o.displayName === 'string' ? o.displayName.slice(0, 128) : '',
     habiticaPartyId: typeof o.habiticaPartyId === 'string' ? o.habiticaPartyId : null,
     worldId: typeof o.worldId === 'string' ? o.worldId : '',
-    saveOrigin: (origin ?? null) as SaveOrigin | null,
     pending: typeof o.pending === 'number' && Number.isFinite(o.pending) ? o.pending : 0,
     verifiedXp: typeof o.verifiedXp === 'number' && Number.isFinite(o.verifiedXp) ? o.verifiedXp : 0,
     flagged: o.flagged === true,
