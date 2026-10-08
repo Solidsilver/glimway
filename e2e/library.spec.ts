@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { reenter, seedMarks } from './connected'
 import { freshPlayer } from './home-helpers'
-import { dialogueState, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
+import { dialogueState, expectAreaCard, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
 import { goIn, setHour } from './room-helpers'
 
 /**
@@ -46,12 +46,39 @@ test('a section’s shelves open the panel on it; an empty section opens the who
   await expect(panel(page).getByTestId('library-empty-section')).toContainText('Nothing on the Field notes shelves yet')
 })
 
+test('the reading room’s section shelves open the panel on their section (B’s shelves, end to end)', async ({ page }) => {
+  test.setTimeout(90_000)
+  await freshPlayer(page)
+  await goIn(page, 'in:village:library')
+  await expectAreaCard(page, 'The library reading room')
+  // The Histories shelves (5, 2): the panel on that section.
+  await warp(page, 'in:village:library', 5, 2)
+  await expect(page.locator('.prompt')).toContainText('Browse the histories')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(panel(page).locator('[data-section="histories"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel(page).locator('[data-paper="oak-hall-edict-on-the-stealing-of-shade"]')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(panel(page)).toBeHidden()
+  // The Field notes shelves (11, 2), with nothing on them yet: the whole collection, and it says so.
+  await warp(page, 'in:village:library', 11, 2)
+  await expect(page.locator('.prompt')).toContainText('Browse the field notes')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(panel(page).locator('[data-section="all"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel(page).getByTestId('library-empty-section')).toContainText('Nothing on the Field notes shelves yet')
+  // No donating from any shelf: that's Elara's.
+  await expect(panel(page).locator('[data-donate]')).toHaveCount(0)
+})
+
 test('Elara’s desk: the papers you found that the shelves lack, and Donate', async ({ page }) => {
   const id = await freshPlayer(page)
   // Elara keeps the library from :10 to :40 (both clocks, so the world agrees once A's rule is in).
   await setHour(page, { minute: 20, server: true })
   seedMarks(id, 'paper:annotated-flora-of-the-eastern-reaches')
   await reenter(page)
+  // At her desk: the world takes a donation only in the reading room, with her there.
+  await goIn(page, 'in:village:library')
   await openLibrary(page, { focus: 'donate' })
   const desk = panel(page).getByTestId('library-donate')
   await expect(desk).toContainText('Annotated Page from')
@@ -80,4 +107,16 @@ test('Elara keeps the library: talking to her there opens the shelves (needs A�
   expect((await dialogueState(page)).said.join(' ')).toContain('read the drift')
   await readDialogue(page, { pick: /Show me the shelves/ })
   await expect(panel(page).locator('[data-section="all"]')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a donation while Elara is out is refused, in her desk note', async ({ page }) => {
+  const id = await freshPlayer(page)
+  // :45, she's at her camp on the Commons.
+  await setHour(page, { minute: 45, server: true })
+  seedMarks(id, 'paper:annotated-flora-of-the-eastern-reaches')
+  await reenter(page)
+  await goIn(page, 'in:village:library', { prompt: /Knock at/ })
+  await openLibrary(page, { focus: 'donate' })
+  await panel(page).getByTestId('library-donate').locator('[data-donate="annotated-flora-of-the-eastern-reaches"]').click()
+  await expect(panel(page).getByTestId('library-message')).toContainText('A note on Elara’s desk', { timeout: 15_000 })
 })

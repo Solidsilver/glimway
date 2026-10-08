@@ -32,7 +32,7 @@ const cycleAt = (id: string, now: number) => cycle(residentById(id)!, now);
 import { calendarAt } from '../src/lib/clock.ts';
 import { createNewGame } from '../src/lib/state.ts';
 import { areaInfo, dialogueFor, dialogueRefs, journalEntries } from '../src/content/world.ts';
-import { questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, type QuestTalkContext } from '../src/content/quests/index.ts';
+import { afterTheirTalk, questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, startsQuest, type QuestTalkContext } from '../src/content/quests/index.ts';
 import { noteAsPaper, questNotes, questShelves } from '../src/ui/quests-page.ts';
 
 /** 2026-10-08 10:00 UTC: a whole hour, so the cycles start here. */
@@ -335,6 +335,21 @@ test('Set to Rise: Hazel asks; the offer is disabled with why; "not yet" says th
   assert.equal(risen.choices?.[0].action, 'quest:set-to-rise:let-it-rise');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 2 * 3600 + 60 })), 'quest');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 30 * 60 })), null);
+});
+
+test('a quest that starts with a resident comes after their own talk, never instead of it', () => {
+  const kitchen = { area: 'in:village:bakery' };
+  const start = questTalk('hazel', talkCtx(DONE_OPENING, kitchen))!;
+  assert.ok(startsQuest(start, talkCtx(DONE_OPENING, kitchen)), 'hear-hazel starts Set to Rise');
+  // Mid-quest, the step is the talk.
+  const asked = { ...DONE_OPENING, 'set-to-rise': 'fetch-flour' };
+  assert.ok(!startsQuest(questTalk('hazel', talkCtx(asked, { ...kitchen, carrying: () => 1 }))!, talkCtx(asked, kitchen)));
+  const own = { speaker: 'Hazel', lines: ['Joss liked the ends burnt.'], choices: [{ text: 'Hear it again', replay: true }, { text: 'Be on my way', dismiss: true }] };
+  const d = afterTheirTalk(own, start);
+  assert.deepEqual(d.lines, ['Joss liked the ends burnt.', ...start.lines]);
+  assert.deepEqual(d.choices!.map((c) => c.text), ['I’ll fetch you some flour.', 'Hear it again', 'Not yet']);
+  assert.equal(d.choices![0].action, 'quest:set-to-rise:hear-hazel');
+  assert.equal(d.speaker, 'Hazel');
 });
 
 test('the sponge bowl shows the wait; room spots take their steps', () => {
