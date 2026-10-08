@@ -5,18 +5,20 @@
  * take a remedy (EV.clearUnmoored: a turncap jar clears it at once, a salve
  * eases it off over 45 seconds).
  *
- * The state outlives a scene (it's the hero's, not the area's): it lives
- * here and crosses to the HUD as EV.unmoored. The first sway and the first
- * recovery each write a journal entry.
+ * The state is the journey's, not the area's: it is kept per session, so it
+ * carries through every area this journey walks into and starts afresh
+ * for another journey. It crosses to the HUD as EV.unmoored. The first
+ * sway and the first recovery each write a journal entry.
  */
 import type Phaser from 'phaser'
-import { bus, EV } from '../events'
-import { emitResidents } from '../residents'
-import { isSafeArea } from '../../lib/habitica/sync'
-import { loadWilds } from '../../lib/wilds/data'
-import { WILDS_REGION_ID, parseChunkArea } from '../wilds/regions'
-import type { Session } from '../session'
-import type { WorldData } from '../worlds'
+import { bus, EV } from '../events.ts'
+import { emitResidents } from '../residents.ts'
+import { isSafeArea } from '../../lib/habitica/sync.ts'
+import { loadWilds } from '../../lib/wilds/data.ts'
+import { WILDS_REGION_ID, parseChunkArea } from '../wilds/regions.ts'
+import { onSceneEnd } from '../scene-end.ts'
+import type { Session } from '../session.ts'
+import type { WorldData } from '../worlds.ts'
 
 /** Seconds deep in the Tangle before the land lets go of you. */
 const DEEP_TANGLE_S = 240
@@ -25,25 +27,27 @@ const LAMPLIGHT_S = 120
 /** Seconds an easing remedy takes to wear the sway off. */
 const EASING_S = 45
 
-/**
- * The hero's sway and its clocks. They outlive a scene build (as they did
- * on the scene itself, which Phaser reuses across restarts): a remedy keeps
- * easing through a doorway, and the deep Tangle and the lamplight count
- * across chunk edges.
- */
-const state = { active: false, easing: false, deepTimer: 0, lamplightTimer: 0, easingTimer: 0 }
-
-/** Whether the hero is unmoored now (and a remedy is easing it off). */
-export function unmooredNow(): { active: boolean; easing: boolean } {
-  return { active: state.active, easing: state.easing }
+/** The hero's sway and its clocks. */
+interface UnmooredState {
+  active: boolean
+  easing: boolean
+  deepTimer: number
+  lamplightTimer: number
+  easingTimer: number
 }
 
-/** Set the state and tell the HUD. */
-export function setUnmoored(active: boolean, easing = false): void {
-  if (state.active === active && state.easing === easing) return
-  state.active = active
-  state.easing = active && easing
-  bus.emit(EV.unmoored, { active: state.active })
+/**
+ * One state per journey (its session). The clocks outlive a scene build, as
+ * they did on the scene itself, which Phaser reuses across restarts: a
+ * remedy keeps easing through a doorway, and the deep Tangle and the
+ * lamplight count across chunk edges. Another journey gets its own, from zero.
+ */
+const states = new WeakMap<Session, UnmooredState>()
+
+function stateFor(session: Session): UnmooredState {
+  let state = states.get(session)
+  if (!state) states.set(session, (state = { active: false, easing: false, deepTimer: 0, lamplightTimer: 0, easingTimer: 0 }))
+  return state
 }
 
 export interface UnmooredDeps {
@@ -53,15 +57,21 @@ export interface UnmooredDeps {
 }
 
 export class Unmoored {
+  private readonly scene: Phaser.Scene
+  private readonly deps: UnmooredDeps
+  /** This journey's sway and clocks. */
+  private readonly state: UnmooredState
   /** This area counts as deep in the Tangle (far enough from its entrance). */
   private readonly deep: boolean
   private veil: Phaser.GameObjects.Rectangle | null = null
   private edges: Phaser.GameObjects.Rectangle[] = []
 
-  constructor(
-    private scene: Phaser.Scene,
-    private deps: UnmooredDeps
-  ) {
+  constructor(scene: Phaser.Scene, deps: UnmooredDeps) {
+    this.scene = scene
+    this.deps = deps
+    this.state = stateFor(deps.session)
+    // The HUD follows this journey's state (a new journey starts steady).
+    bus.emit(EV.unmoored, { active: this.state.active })
     const chunk = parseChunkArea(deps.world.areaId)
     const wilds = loadWilds()
     const tangle = wilds.regions.find((region) => region.id === WILDS_REGION_ID)
@@ -77,15 +87,27 @@ export class Unmoored {
       bus.off(EV.clearUnmoored, onClear)
       this.clearVisuals()
     }
-    scene.events.once('shutdown', off)
-    scene.events.once('destroy', off)
+    onSceneEnd(scene, off)
+  }
+
+  /** Whether the hero is unmoored now (and a remedy is easing it off). */
+  now(): { active: boolean; easing: boolean } {
+    return { active: this.state.active, easing: this.state.easing }
+  }
+
+  /** Set the sway (and tell the HUD). The playtests' lever, as well as the triggers'. */
+  set(active: boolean, easing = false): void {
+    if (this.state.active === active && this.state.easing === easing) return
+    this.state.active = active
+    this.state.easing = active && easing
+    bus.emit(EV.unmoored, { active: this.state.active })
   }
 
   /** The land lets go: the sway starts (and the journal notes it, once). */
   trigger(): void {
-    const easing = state.easing
-    setUnmoored(true, easing)
-    if (!easing) state.lamplightTimer = 0
+    const easing = this.state.easing
+    this.set(true, easing)
+    if (!easing) this.state.lamplightTimer = 0
     const s = this.deps.session
     if (!s.state.flags.includes('unmoored:felt')) {
       s.addFlag('unmoored:felt')
@@ -96,11 +118,11 @@ export class Unmoored {
 
   /** Steady again (and the journal notes how, once). */
   clear(): void {
-    if (!state.active && !state.easing) return
-    setUnmoored(false)
-    state.lamplightTimer = 0
-    state.deepTimer = 0
-    state.easingTimer = 0
+    if (!this.state.active && !this.state.easing) return
+    this.set(false)
+    this.state.lamplightTimer = 0
+    this.state.deepTimer = 0
+    this.state.easingTimer = 0
     this.clearVisuals()
     const s = this.deps.session
     if (!s.state.flags.includes('unmoored:cleared')) {
@@ -113,39 +135,39 @@ export class Unmoored {
   /** Every frame (panels open or not): the timers, and the sway on screen. */
   update(time: number, dt: number): void {
     if (this.deep) {
-      state.deepTimer += dt
-      if (state.deepTimer >= DEEP_TANGLE_S) {
+      this.state.deepTimer += dt
+      if (this.state.deepTimer >= DEEP_TANGLE_S) {
         this.trigger()
-        state.deepTimer = 0
+        this.state.deepTimer = 0
       }
     } else {
-      state.deepTimer = 0
+      this.state.deepTimer = 0
     }
-    if (!state.active) {
+    if (!this.state.active) {
       this.clearVisuals()
       return
     }
     if (isSafeArea(this.deps.world.areaId)) {
-      state.lamplightTimer += dt
-      if (state.lamplightTimer >= LAMPLIGHT_S) this.clear()
+      this.state.lamplightTimer += dt
+      if (this.state.lamplightTimer >= LAMPLIGHT_S) this.clear()
     } else {
-      state.lamplightTimer = 0
+      this.state.lamplightTimer = 0
     }
-    if (state.easing) {
-      state.easingTimer -= dt
-      if (state.easingTimer <= 0) this.clear()
+    if (this.state.easing) {
+      this.state.easingTimer -= dt
+      if (this.state.easingTimer <= 0) this.clear()
     }
     // A remedy (or the lamplight) above may have cleared it this frame.
-    if (state.active) this.drawSway(time)
+    if (this.state.active) this.drawSway(time)
   }
 
   private onRemedy(p: { instant: boolean }): void {
-    if (!state.active) return
+    if (!this.state.active) return
     if (p.instant) {
       this.clear()
     } else {
-      setUnmoored(true, true)
-      state.easingTimer = EASING_S
+      this.set(true, true)
+      this.state.easingTimer = EASING_S
     }
   }
 
@@ -153,7 +175,7 @@ export class Unmoored {
   private drawSway(time: number): void {
     const cam = this.scene.cameras.main
     if (!cam) return
-    const factor = state.easing ? Math.max(0, state.easingTimer / EASING_S) : 1.0
+    const factor = this.state.easing ? Math.max(0, this.state.easingTimer / EASING_S) : 1.0
 
     if (this.deps.reducedMotion) {
       if (!this.veil) {

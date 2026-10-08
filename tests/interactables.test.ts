@@ -79,3 +79,15 @@ test('a click finds a usable point under the cursor and in reach', () => {
   assert.equal(it.pointAt({ x: 121, y: 101 }, hero)?.id, 'touch:sign');
   assert.equal(it.pointAt({ x: 100, y: 102 }, hero), null);
 });
+
+test('a click uses each point’s click reach: 40 px by default, the working reach where the server measures', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  // A Wilds chest at (88, 96), as the review's case: its claim reaches 44 px.
+  it.register('wilds', [point('wilds:chest', 88, 96, { reach: 44, clickReach: 44, rank: 1 })]);
+  it.register('touches', [point('touch:sign', 200, 96)]);
+  const cursor = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - 8 });
+  assert.equal(it.pointAt(cursor({ x: 88, y: 96 }), { x: 88, y: 140 })?.id, 'wilds:chest', '44 px: in reach');
+  assert.equal(it.pointAt(cursor({ x: 88, y: 96 }), { x: 88, y: 145 }), null, '49 px: the server would refuse it');
+  assert.equal(it.pointAt(cursor({ x: 200, y: 96 }), { x: 200, y: 136 })?.id, 'touch:sign', '40 px for a sign, as before');
+  assert.equal(it.pointAt(cursor({ x: 200, y: 96 }), { x: 200, y: 137 }), null);
+});

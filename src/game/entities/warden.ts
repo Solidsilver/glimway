@@ -269,6 +269,7 @@ export class WardenEncounter {
         return (at()?.y ?? -1e6) + 2
       },
       reach: WARDEN.speakReach,
+      clickReach: WARDEN.speakReach,
       rank: 1,
       markerOffset: 38,
       label: 'Speak the naming',

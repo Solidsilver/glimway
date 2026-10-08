@@ -64,6 +64,7 @@ export function wildsPoint(id: string, at: { x: number; y: number }, markerOffse
     x: at.x,
     y: at.y,
     reach: WILDS_REACH,
+    clickReach: WILDS_REACH,
     rank: WILDS_RANK,
     markerOffset,
     available: () => offer() !== null,

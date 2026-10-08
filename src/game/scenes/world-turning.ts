@@ -5,19 +5,20 @@
  * is posted, and you come to at the region's entrance in the new epoch.
  */
 import type Phaser from 'phaser'
-import { SEASON_SHIFT_NOTICE } from '../../content/expansion-writing'
-import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes'
-import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories'
-import { seasonMark } from '../../lib/wilds/outer'
-import { bus, EV } from '../events'
-import { grantPaper } from '../papers'
-import { sfx } from '../sfx'
-import type { Session } from '../session'
-import type { WorldData } from '../worlds'
-import type { Hero } from '../entities/hero'
-import type { Unmoored } from '../entities/unmoored'
-import { OUTER_REGION_ID, WILDS_AREA, parseChunkArea, wildsArrivalPosition } from '../wilds/regions'
-import { outerTurned, prepareWilds, resetWildsRegion, wildsEpoch } from '../wilds/store'
+import { SEASON_SHIFT_NOTICE } from '../../content/expansion-writing.ts'
+import { TURNED_SINCE_LINE, TURNING_TITLE } from '../../content/echoes.ts'
+import { TURNED_FLAG, calendarFind } from '../../lib/wilds/stories.ts'
+import { seasonMark } from '../../lib/wilds/outer.ts'
+import { bus, EV } from '../events.ts'
+import { grantPaper } from '../papers.ts'
+import { onSceneEnd } from '../scene-end.ts'
+import { sfx } from '../sfx.ts'
+import type { Session } from '../session.ts'
+import type { WorldData } from '../worlds.ts'
+import type { Hero } from '../entities/hero.ts'
+import type { Unmoored } from '../entities/unmoored.ts'
+import { OUTER_REGION_ID, WILDS_AREA, parseChunkArea, wildsArrivalPosition } from '../wilds/regions.ts'
+import { outerTurned, prepareWilds, resetWildsRegion, wildsEpoch } from '../wilds/store.ts'
 
 export interface TurningDeps {
   session: Session
@@ -32,13 +33,14 @@ export interface TurningDeps {
 }
 
 export class Turning {
+  private readonly scene: Phaser.Scene
+  private readonly deps: TurningDeps
   /** Seconds until the next "has the outer Wilds turned?" check. */
   private check = 0
 
-  constructor(
-    private scene: Phaser.Scene,
-    private deps: TurningDeps
-  ) {
+  constructor(scene: Phaser.Scene, deps: TurningDeps) {
+    this.scene = scene
+    this.deps = deps
     const onClock = () => {
       this.check = 0
     }
@@ -49,8 +51,7 @@ export class Turning {
       bus.off(EV.turning, onTurning)
       bus.off(EV.clock, onClock)
     }
-    scene.events.once('shutdown', off)
-    scene.events.once('destroy', off)
+    onSceneEnd(scene, off)
   }
 
   private inOuterWilds(): boolean {

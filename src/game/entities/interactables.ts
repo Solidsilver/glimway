@@ -35,6 +35,13 @@ export interface Interactable {
   markerOffset?: number
   /** How near the hero's feet must be (default 34). */
   reach?: number
+  /**
+   * How near the hero's feet must be for a click on it to use it (default
+   * 40, a little more than `reach`). A point the server measures (a piece to
+   * work, a Wilds claim) uses its working reach, so a click never asks for
+   * what the server would refuse as too far.
+   */
+  clickReach?: number
   /** A higher rank wins over anything of a lower rank in reach, however near (default 0). */
   rank?: number
   /** Whether it can be used right now (default: always). Checked only in reach. */
@@ -44,6 +51,7 @@ export interface Interactable {
 }
 
 export const DEFAULT_REACH = 34
+export const DEFAULT_CLICK_REACH = 40
 const DEFAULT_MARKER_OFFSET = 25
 
 const read = <T>(v: Live<T>): T => (typeof v === 'function' ? (v as () => T)() : v)
@@ -185,7 +193,7 @@ export class Interactables {
       this.list.find(
         (it) =>
           Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 &&
-          distance(hero, it) <= (it.reach ?? DEFAULT_REACH) + 6 &&
+          distance(hero, it) <= (it.clickReach ?? DEFAULT_CLICK_REACH) &&
           (!it.available || it.available())
       ) ?? null
     )

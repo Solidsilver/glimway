@@ -140,6 +140,7 @@ export class Gathering {
         x: tileMid(spot.tx),
         y: tileBottom(spot.ty) + 8,
         reach: REACH,
+        clickReach: REACH,
         markerOffset: 14,
         label: spot.label,
         verb: gatheringVerb(target?.action ?? 'chop', target?.verb),

@@ -25,7 +25,6 @@ import type { ItemPickups } from '../entities/item-pickups'
 import type { RepairsLayer } from '../entities/repairs'
 import type { WorldScene } from './WorldScene'
 import { fnv1a32Bytes } from '../../lib/hash'
-import { setUnmoored, unmooredNow } from '../entities/unmoored'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -287,14 +286,14 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
         const b = hero.sprite.body as Phaser.Physics.Arcade.Body
         return { vx: b.velocity.x, vy: b.velocity.y, moves: b.moves, enable: b.enable, physicsPaused: s.physics.world.isPaused }
       })(),
-      unmoored: unmooredNow().active
+      unmoored: s['unmoored'].now().active
     }
   })
   // Untyped on purpose: specs send any event by its wire name.
   on('__fsEmit', (event, ...args) => (bus.emit as (name: string, ...a: unknown[]) => boolean)(event, ...args))
   on('__fsUnmoored', (val) => {
-    if (typeof val === 'boolean') setUnmoored(val)
-    return unmooredNow().active
+    if (typeof val === 'boolean') s['unmoored'].set(val)
+    return s['unmoored'].now().active
   })
   on('fsUnmoored', {
     trigger: () => s['unmoored'].trigger(),
