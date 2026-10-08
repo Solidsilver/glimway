@@ -23,7 +23,7 @@ export const EV = {
   held: 'ui:held',
   /** Take something in hand (UI -> game): { kind }. */
   hold: 'game:hold',
-  /** A "How do I…?" guide was pinned or unpinned: { id } (src/game/guide-pin.ts). */
+  /** The pin moved: { id }, the slot (`quest:<id>`, `guide:<id>` or null; src/game/guide-pin.ts). */
   guidePin: 'ui:guide-pin',
   /** Which way the quest goal lies: { angle, here } (GoalDirPayload). */
   goalDir: 'ui:goal-dir',
@@ -158,16 +158,25 @@ export interface StatsPayload {
 }
 
 export interface QuestPayload {
+  /** The lantern road's step (`'new'` before it starts). */
   stage: string
+  /** The road's current goal in full (the HUD's open line, the title screen). */
   objective: string
   /** The goal in a few words (HUD line, quest ribbon). */
   short?: string
+  /** The step this news reached (`quest:step`), when it reached one. */
+  quest?: string
+  step?: string
 }
 
-/** What the HUD's goal line says: the story's short goal, or a pinned guide's step. */
+/** What the HUD's goal line says: the road's short goal, or a pinned quest's or guide's step. */
 export interface GoalLinePayload {
-  /** null: the story leads (the HUD shows the quest's own words). */
+  /** null: no guide leads (the HUD shows a pinned quest's words, or the road's). */
   guide: { id: string; title: string; step: string; index: number; count: number } | null
+  /** A pinned, open quest's next step (null: none pinned, or it's done or locked). */
+  quest?: { id: string; title: string; step: string; objective: string } | null
+  /** The next step's `where` is the journal: the book button glows. */
+  journal?: boolean
 }
 
 /**
@@ -178,6 +187,11 @@ export interface GoalLinePayload {
 export interface GoalDirPayload {
   angle: number | null
   here: boolean
+}
+
+/** The library panel, opened from the reading room: on its shelves, the donations, or the reader on the paper you last read. */
+export interface LibraryOpenPayload {
+  focus?: 'shelf' | 'donate' | 'read'
 }
 
 export interface DialoguePayload {
@@ -406,7 +420,7 @@ export interface EventMap {
   [EV.homeAction]: { action: string }
   [EV.paperFound]: PaperFoundPayload
   [EV.papersSync]: PapersSyncPayload
-  [EV.libraryOpen]: void
+  [EV.libraryOpen]: LibraryOpenPayload | void
   [EV.residentsMet]: ResidentsMetPayload
   [EV.sfx]: { cue: SoundCue; speaker?: string }
   [EV.footstep]: { terrain: number }

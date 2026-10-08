@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { openLibraryShelves } from './room-helpers'
 import { adminInvite,
   allow,
   linkStatus,
@@ -181,9 +182,8 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.keyboard.press('e')
   await expectToast(page, 'Found: A Page from Pip’s Copybook')
 
-  await warp(page, 'village', 4, 18)
-  await expect(page.locator('.prompt')).toContainText('Enter the Hearthwick Library')
-  await page.keyboard.press('e')
+  // The shelves, in the reading room (the door is a way in now).
+  await openLibraryShelves(page)
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
   await expect(library).toBeVisible()
   await library.locator('[data-donate="pip-copybook-warden-corrections"]').click()

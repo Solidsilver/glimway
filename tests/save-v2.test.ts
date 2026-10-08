@@ -17,7 +17,8 @@ import {
   loadSaveRecord,
   saveGame,
 } from '../src/lib/save.ts';
-import { advanceQuest, createNewGame, type GameState } from '../src/lib/state.ts';
+import { createNewGame, type GameState } from '../src/lib/state.ts';
+import { road } from './helpers/quests.ts';
 import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
 import { FIXTURES_BY_KEY, gearLookupFor } from '../src/lib/habitica/fixtures.ts';
 import type { HabiticaProfile } from '../src/lib/habitica/types.ts';
@@ -38,7 +39,7 @@ function profileFrom(key: keyof typeof FIXTURES_BY_KEY): HabiticaProfile {
 
 test('save format 2 record round-trips state plus provenance', async () => {
   setup();
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   await saveGame(state);
   const loaded = await loadSaveRecord();
   assert.ok(loaded);
@@ -159,7 +160,7 @@ test('credentials and foreign fields never reach the stored record', async () =>
 });
 
 test('exportSave/importSaveDocument round-trip carries provenance and profile', () => {
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   const profile = profileFrom('variedEquipment');
   const json = exportSave(state, { vitalsSource: 'imported', importedProfile: profile });
   assert.ok(!json.includes('token'));

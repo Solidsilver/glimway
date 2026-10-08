@@ -48,9 +48,9 @@ export interface HomesteadDeps {
   hero: () => Phaser.Physics.Arcade.Sprite
   /** The hero, to sit on a placed seat (and stand back up). */
   sitter: () => { readonly isSeated: boolean; sit(pose: SeatPose): void; standUp(): void }
-  /** In a cottage: which gate's homestead it stands on. */
+  /** In a cottage (`in:home:<gate>`): which gate's homestead it stands on. */
   room: { gate: number } | null
-  /** Walk into a cottage (the scene fades and rebuilds). */
+  /** Walk into a cottage: an area change into `in:home:<gate>`. */
   enterRoom: (gate: number, doorstep: { tx: number; ty: number }) => void
   /** The map no longer matches the data (the lane grew, land was cleared): rebuild it. */
   rebuild: () => void

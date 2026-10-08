@@ -5,6 +5,7 @@ package main
 import (
 	"glimway/server/internal/api"
 	"net/http"
+	"strconv"
 )
 
 // devRoutes mounts dev mode's routes (local playtesting): POST
@@ -17,6 +18,7 @@ func devRoutes(a *api.Server) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
+			w.Header().Set("X-Glimway-Now", strconv.FormatInt(a.Config.Now().Unix(), 10))
 			if !devLocal(r) {
 				http.NotFound(w, r)
 				return

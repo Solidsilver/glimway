@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"glimway/content"
-	"glimway/server/internal/rules"
 	"testing"
 	"time"
 )
@@ -281,14 +280,16 @@ func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
 func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.seedOpeningDone(s.AccountID)
 
 	doc := s.State
-	for _, stage := range rules.Stages[1:] {
-		doc.Quest = stage
-		doc.Area = "ruin"
-		if stage == "accepted" || stage == "complete" {
-			doc.Area = "village"
-		}
+	road, ok := content.QuestFor("lantern-road")
+	if !ok {
+		t.Fatal("missing lantern road")
+	}
+	for _, step := range road.Steps {
+		stage := step.ID
+		doc.Area = step.At
 		if stage == "guardian-defeated" {
 			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
 		}

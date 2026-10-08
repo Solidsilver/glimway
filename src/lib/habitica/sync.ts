@@ -1,3 +1,4 @@
+import { rootArea } from '../rooms.ts';
 import { HOME_AREA_RE, recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
 import { creditXp, grantEmbers, grantWelcome, lifetimeXp } from '../embers.ts';
@@ -65,7 +66,8 @@ export class SyncRejectedError extends Error {
 const SAFE_AREAS: readonly string[] = ['village', 'commons'];
 
 export function isSafeArea(area: string): boolean {
-  return SAFE_AREAS.includes(area) || HOME_AREA_RE.test(area);
+  const root = rootArea(area);
+  return SAFE_AREAS.includes(root) || HOME_AREA_RE.test(root);
 }
 
 export function isSafeBoundary(state: GameState): boolean {

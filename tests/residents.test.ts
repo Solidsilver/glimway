@@ -73,19 +73,19 @@ test('meeting flags carry the stage and round-trip', () => {
 
 test('a resident’s journal entry joins the notes after the stage you met them at', () => {
   const flags = [metFlag('hazel', 'new'), metFlag('elara', 'clue-found'), 'met:nobody@new', 'met:finn@nonsense'];
-  const titles = journalEntries('complete', flags).map((e) => e.title);
+  const titles = journalEntries({ 'lantern-road': 'complete' }, flags).map((e) => e.title);
   const at = (t: string) => titles.indexOf(t);
   assert.ok(at('Hazel Penhallow') > at('Arrival in Hearthwick') && at('Hazel Penhallow') < at("Mara's Request"));
   assert.ok(at('Elara Quill') > at('The Closure Mark') && at('Elara Quill') < at('The Warden Settled'));
   assert.equal(at('Finn Tolley'), -1, 'an unknown stage never shows');
   // Not met yet: nothing about them.
-  assert.ok(!journalEntries('complete').some((e) => e.title === 'Ada Cooley'));
+  assert.ok(!journalEntries({ 'lantern-road': 'complete' }).some((e) => e.title === 'Ada Cooley'));
   // Met at a later stage than the journal has reached: not yet.
-  assert.ok(!journalEntries('new', flags).some((e) => e.title === 'Elara Quill'));
+  assert.ok(!journalEntries({}, flags).some((e) => e.title === 'Elara Quill'));
   // Stable for older callers, and never duplicated.
-  assert.deepEqual(journalEntries('new'), journalEntries('new', []));
+  assert.deepEqual(journalEntries({}), journalEntries({}, []));
   assert.equal(residentJournal([metFlag('ada', 'new'), metFlag('ada', 'new')], 'new').length, 1);
-  const quest = new Set(journalEntries('complete').map((e) => e.title));
+  const quest = new Set(journalEntries({ 'lantern-road': 'complete' }).map((e) => e.title));
   for (const e of allResidentJournal()) {
     assert.ok(!quest.has(e.title), e.title);
     assert.ok(e.body.length > 40 && e.body.length < 320, e.title);
@@ -216,7 +216,7 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
   const mill = village.mill!;
   assert.equal(finn.ty, mill.ty + mill.th, 'Finn stands on the ground in front of the mill');
   assert.ok(Math.abs(finn.tx - mill.door.tx) <= 1, 'beside the door');
-  assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8 });
+  assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8, spot: 'window' });
   const arch = commons.exits.find((e) => e.to === 'wilds')!;
   const elara = spot(commons, 'elara');
   assert.ok(Math.abs(elara.ty - arch.ty) <= 6 && elara.tx >= arch.tx && elara.tx <= arch.tx + arch.tw + 1);

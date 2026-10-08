@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs'
+import { residentsOut } from './room-helpers'
 import { devices } from '@playwright/test'
 import { test } from './fixtures'
 import type { Page } from './fixtures'
@@ -73,6 +74,8 @@ async function residentScreens(page: Page, device: string): Promise<void> {
     await closeUp(page, `mara-walk-${dir}`, device, m.x, m.y - 10, 50, 0)
   }
   await warp(page, 'village', 4, 19)
+  // Hazel's hour in the square (her bench is outside).
+  await residentsOut(page)
   await page.waitForFunction(() => ((window as unknown as { __fsNpcs: () => NpcPose[] }).__fsNpcs() ?? []).some((n) => n.id === 'hazel' && n.mode === 'sit'), undefined, { timeout: 40_000 })
   await closeUp(page, 'hazel-seated', device, 9 * 16 + 8, 13 * 16 + 4, 70, 300)
 }

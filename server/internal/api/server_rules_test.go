@@ -145,6 +145,7 @@ func TestReportPartitionBudget(t *testing.T) {
 func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
 	x := newRig(t)
 	c, p := x.reportSetup()
+	x.seedOpeningDone(p.State.Account.AccountId)
 	request := func(path, key string, fields map[string]any, area string, status int) *contract.Envelope {
 		t.Helper()
 		fields["op"] = map[string]any{"lease": p.Lease, "key": key}
@@ -162,7 +163,11 @@ func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
 		return &out
 	}
 	request("/api/quest/step", "skip", map[string]any{"quest": "lantern-road", "to": "complete"}, "village", 409)
-	for _, step := range content.QuestRules[0].Steps {
+	road, ok := content.QuestFor("lantern-road")
+	if !ok {
+		t.Fatal("missing lantern road")
+	}
+	for _, step := range road.Steps {
 		if step.Do.Defeat != "" {
 			request("/api/story/mark", "defeat-mark", map[string]any{"mark": "defeated:" + step.Do.Defeat}, step.At, 200)
 		}

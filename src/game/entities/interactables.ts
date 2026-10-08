@@ -74,6 +74,8 @@ export class Interactables {
   private markersBuilt = false
   /** Residents away from their spot (their markers wait there, hidden: ./npcs.ts `away`). */
   private awayCheck: ((id: string) => boolean) | null = null
+  /** Residents not here at all (their cycle is elsewhere: ./npcs.ts `gone`): not usable. */
+  private goneCheck: ((id: string) => boolean) | null = null
   private awayNow = ''
 
   private readonly scene: Phaser.Scene
@@ -99,6 +101,11 @@ export class Interactables {
   /** Say who is away from their spot right now (checked every frame). */
   setAway(check: (id: string) => boolean): void {
     this.awayCheck = check
+  }
+
+  /** Say who isn't here at all right now (checked every frame; their points can't be used). */
+  setGone(check: (id: string) => boolean): void {
+    this.goneCheck = check
   }
 
   /** Markers for every point so far (later points get theirs as they come), and the keycap hint. */
@@ -127,7 +134,7 @@ export class Interactables {
       if (!img.active) continue
       const kind = it.marker?.() ?? null
       if (kind) img.setTexture(kind === 'quest' ? 'mark-quest' : 'mark-talk')
-      img.setVisible(kind !== null && this.currentTarget !== it && !this.awayCheck?.(it.id))
+      img.setVisible(kind !== null && this.currentTarget !== it && !this.awayCheck?.(it.id) && !this.goneCheck?.(it.id))
     }
   }
 
@@ -144,12 +151,12 @@ export class Interactables {
       if (d >= (it.reach ?? DEFAULT_REACH)) continue
       const rank = it.rank ?? 0
       if (rank < bestRank || (rank === bestRank && d >= bestDist)) continue
-      if (it.available && !it.available()) continue
+      if (!this.usable(it)) continue
       best = it
       bestRank = rank
       bestDist = d
     }
-    const away = this.awayCheck ? this.list.filter((it) => this.awayCheck!(it.id)).map((it) => it.id).join(',') : ''
+    const away = this.awayCheck || this.goneCheck ? this.list.filter((it) => this.awayCheck?.(it.id) || this.goneCheck?.(it.id)).map((it) => it.id).join(',') : ''
     if (best !== this.currentTarget || away !== this.awayNow) {
       this.currentTarget = best
       this.awayNow = away
@@ -177,7 +184,7 @@ export class Interactables {
   /** Use the current target (the action key). False when there is none. */
   activate(): boolean {
     const it = this.currentTarget
-    if (!it || (it.available && !it.available())) return false
+    if (!it || !this.usable(it)) return false
     this.use(it)
     return true
   }
@@ -194,9 +201,14 @@ export class Interactables {
         (it) =>
           Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 &&
           distance(hero, it) <= (it.clickReach ?? DEFAULT_CLICK_REACH) &&
-          (!it.available || it.available())
+          this.usable(it)
       ) ?? null
     )
+  }
+
+  /** Can it be used now (its own check, and nobody who isn't here). */
+  private usable(it: Interactable): boolean {
+    return (!it.available || it.available()) && !this.goneCheck?.(it.id)
   }
 
   /** Hide the keycap hint while the world is frozen (a panel owns input). */

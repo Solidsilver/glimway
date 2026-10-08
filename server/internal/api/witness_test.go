@@ -48,6 +48,7 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	ts := startPresence(t, x, presenceTestConfig())
 	x.hero("olive", "Olive", "p1")
 	oc, o := x.ready("olive")
+	x.seedOpeningDone(o.AccountID)
 	x.hero("bob", "Bob", "p1")
 	bc, b := x.ready("bob")
 	x.hero("cal", "Cal", "p1")

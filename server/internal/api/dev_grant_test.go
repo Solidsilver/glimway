@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -123,5 +124,20 @@ func TestDevGrantRefusesAnythingElse(t *testing.T) {
 	x.api.DevGrant(w, r)
 	if w.Code != 405 {
 		t.Fatal("GET", w.Code)
+	}
+}
+
+func TestDevGrantAnswersUseMovedClock(t *testing.T) {
+	x := newRig(t)
+	cookie, _ := x.ready("dev-hero")
+	x.now.Add(3600)
+	w := x.devGrant(cookie, `{"grants":[{"id":"embers","qty":1}]}`)
+	if w.Code != 200 || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(x.now.Load(), 10) {
+		t.Fatal(w.Code, w.Header())
+	}
+	x.now.Add(3600)
+	w = x.devGrant(nil, `{"grants":[{"id":"embers","qty":1}]}`)
+	if w.Code != 401 || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(x.now.Load(), 10) {
+		t.Fatal(w.Code, w.Header())
 	}
 }

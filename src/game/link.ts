@@ -47,9 +47,8 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
-import { LANTERN_ROAD } from '../lib/api/ports.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
@@ -57,7 +56,7 @@ import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
-import type { GameState, QuestEvent } from '../lib/state.ts'
+import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
 
 const HEARTBEAT_MS = 30_000
@@ -65,6 +64,9 @@ const HEARTBEAT_MS = 30_000
 const REACHING_MS = 60_000
 /** A barrier asks for a fresh report at most this many times before backing off. */
 const BARRIER_TRIES = 3
+
+/** How a quest step went: null when it landed (or queued), else why not. */
+export type QuestStepOutcome = null | 'not-yet' | 'not-here' | 'short' | 'needs-earned' | 'needs-habitica' | 'offline' | 'superseded' | 'busy' | 'error'
 
 export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 'unsafe' | 'not-home' | 'busy' | 'error'
 
@@ -1300,13 +1302,22 @@ export class Link {
 
   // ------------------------------------------------------------ operations
 
-  /** A quest step (predicted; queues offline). */
-  questStep(event: QuestEvent): void {
+  /**
+   * A quest step: reach `to` on `quest` (indoors.md 5.2). A plain step is
+   * predicted and queues offline; a gated one (`server`) waits for the
+   * world's answer and needs a connection, as spends do.
+   */
+  async questStep(quest: string, to: string, opts: { server?: boolean } = {}): Promise<QuestStepOutcome> {
     const s = this.session
-    if (!s) return
+    if (!s || this.stopped) return 'error'
     const key = newKey()
-    const body = toJson(QuestStepRequestSchema, create(QuestStepRequestSchema, { op: { lease: '', key }, quest: LANTERN_ROAD, to: QUEST_STEP[event], where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    void this.submit('quest-step', TYPED['quest-step']!.path, key, body, { offline: true })
+    const body = toJson(QuestStepRequestSchema, create(QuestStepRequestSchema, { op: { lease: '', key }, quest, to, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('quest-step', TYPED['quest-step']!.path, key, body, { offline: !opts.server })
+    if (r.ok) return null
+    const code = r.code
+    if (code === 'not-yet' || code === 'not-here' || code === 'short' || code === 'needs-earned' || code === 'needs-habitica') return code
+    if (code === 'offline' || code === 'pending' || code === 'superseded' || code === 'busy') return code === 'pending' ? 'offline' : code
+    return 'error'
   }
 
   /** A client-namespace mark (seen:, met:, found:, defeated:…; predicted; queues offline). */

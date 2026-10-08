@@ -12,6 +12,7 @@ import (
 )
 
 func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Glimway-Now", strconv.FormatInt(a.Config.Now().Unix(), 10))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.

@@ -85,13 +85,13 @@ export class PaperPickups {
   }
 
   /**
-   * Interaction points: the library door and every pickup lying here (they
-   * sparkle instead of carrying a marker). A pickup is used up when taken.
+   * Interaction points: every pickup lying here (they sparkle instead of
+   * carrying a marker). A pickup is used up when taken. The library's door
+   * is a front door into its reading room (./doors.ts), where the shelves
+   * open the panel.
    */
   private publish(): void {
     const points: Interactable[] = []
-    const lib = this.deps.world.library
-    if (lib) points.push({ id: 'library', x: tileMid(lib.tx), y: tileBottom(lib.ty), label: 'Enter the Hearthwick Library', markerOffset: 44, activate: () => void bus.emit(EV.libraryOpen) })
     for (const p of placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags)) {
       if (!this.pickups.has(p.id)) continue
       points.push({ id: `${PAPER_PREFIX}${p.id}`, x: tileMid(p.source.tx), y: tileBottom(p.source.ty) - 2, label: LOOK_LABEL[p.source.look], markerOffset: 12, activate: () => this.take(p.id) })

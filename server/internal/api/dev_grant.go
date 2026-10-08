@@ -8,6 +8,7 @@ import (
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
+	"strconv"
 )
 
 // Dev mode (local playtesting only): POST /api/dev/grant gives the
@@ -69,6 +70,7 @@ func devGrantKind(id string) (kind string, max int, err error) {
 // answer is the mixed shape every read has — {state, result} — so the
 // client adopts the new state like any other answer.
 func (a *Server) DevGrant(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Glimway-Now", strconv.FormatInt(a.Config.Now().Unix(), 10))
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

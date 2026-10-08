@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS } from '../src/lib/api/outbox.ts';
 import contract from '../content/contract.json' with { type: 'json' };
 import { ackReport, env, markOk, online, refuse, rig, S, seed, stepOk, tick, type Answer, type Rig } from './helpers/link-rig.ts';
+import { roadStep } from '../src/lib/quests.ts';
 
 /**
  * Review round 1, findings 5, 7 and 8: nothing that may have been sent is
@@ -78,11 +79,11 @@ test('an answer with another operation’s result never settles the head', async
   const r = await rig(t);
   await online(r);
   r.server.on('POST /api/quest/step', markOk(S({ version: 2, quest: 'accepted' }), 'seen:x'), stepOk(S({ version: 2, quest: 'accepted' })));
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   r.link.mark('seen:behind');
   await r.link.flush();
   assert.equal(r.link.outbox.length, 2, 'kept, and nothing behind it went');
-  assert.equal(r.session.state.quest, 'accepted', 'still predicted');
+  assert.equal(roadStep(r.session.state), 'accepted', 'still predicted');
   assert.equal(r.server.sent('POST /api/story/mark').length, 0);
 });
 
@@ -178,7 +179,7 @@ test('a refusal’s removal is stored before anything behind it goes', async (t)
     if (c.path === '/api/quest/step') refused = true;
   });
   store.fail = (op) => op === 'save' && refused;
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   r.link.mark('seen:b');
   await r.link.flush();
   assert.equal(r.server.sent('POST /api/story/mark').length, 0, 'held until the refusal is durable');

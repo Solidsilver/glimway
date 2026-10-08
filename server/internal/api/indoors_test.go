@@ -9,13 +9,22 @@ import (
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
 	"math"
+	"slices"
 	"testing"
 )
 
 func fixtureQuests(t *testing.T, quests ...content.Quest) {
 	t.Helper()
 	old := content.QuestRules
-	content.QuestRules = append(append([]content.Quest{}, old...), quests...)
+	content.QuestRules = append([]content.Quest{}, old...)
+	for _, quest := range quests {
+		i := slices.IndexFunc(content.QuestRules, func(q content.Quest) bool { return q.ID == quest.ID })
+		if i < 0 {
+			content.QuestRules = append(content.QuestRules, quest)
+		} else {
+			content.QuestRules[i] = quest
+		}
+	}
 	t.Cleanup(func() { content.QuestRules = old })
 }
 func plainStep(id string) content.QuestStep {
@@ -417,5 +426,56 @@ func TestWorldMoveAndLeaveFromVillageRooms(t *testing.T) {
 	left := x.worldReq("POST", "/api/world/leave", body(s, "room-leave", map[string]any{"progress": doc}), c, 200)
 	if left.WorldID == party.WorldID {
 		t.Fatal(left.raw)
+	}
+}
+
+// Road-focused tests start after the opening, as migrated 0.3 accounts do.
+// Seed only completion: the tutorial gifts must not affect their ledger checks.
+func (x *rig) seedOpeningDone(account string) {
+	x.t.Helper()
+	opening, ok := content.QuestFor("signpost")
+	if !ok {
+		x.t.Fatal("missing opening")
+	}
+	_, err := x.db.DB.Exec("INSERT INTO quest_progress(account_id,quest,step,reached_at,gate_at) VALUES(?,'signpost',?,?,?)", account, opening.Steps[len(opening.Steps)-1].ID, x.now.Load(), x.now.Load())
+	if err != nil {
+		x.t.Fatal(err)
+	}
+}
+
+func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	refused := x.exp("POST", "/api/quest/step", body(s, "before-opening", map[string]any{"quest": "lantern-road", "to": "accepted"}), c, 409)
+	if refused.Error.Code != "not-next-step" {
+		t.Fatal(refused.Error.Code)
+	}
+	opening, ok := content.QuestFor("signpost")
+	if !ok {
+		t.Fatal("missing opening")
+	}
+	for _, step := range opening.Steps {
+		doc := s.State
+		if step.At != "" {
+			doc.Area = step.At
+		} else if step.Where != nil && step.Where.Area != "" {
+			doc.Area = step.Where.Area
+		}
+		if step.Do.Defeat != "" {
+			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-"+step.ID, map[string]any{"mark": "defeated:" + step.Do.Defeat, "where": testWhere(doc)}), c, 200).Snapshot
+		}
+		if step.Do.Flag == "lit:road-1" {
+			s.Snapshot = x.expect("POST", "/api/spend", body(s, "first-lamp", map[string]any{"kind": "road-lantern", "target": "road-1", "where": testWhere(doc)}), c, 200).Snapshot
+		}
+		s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "opening-"+step.ID, map[string]any{"quest": opening.ID, "to": step.ID, "where": testWhere(doc)}), c, 200).Snapshot
+		if s.State.Quests[opening.ID] != step.ID {
+			t.Fatal(s.State.Quests)
+		}
+	}
+	doc := s.State
+	doc.Area = "village"
+	s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "after-opening", map[string]any{"quest": "lantern-road", "to": "accepted", "where": testWhere(doc)}), c, 200).Snapshot
+	if s.State.Quests["lantern-road"] != "accepted" {
+		t.Fatal(s.State.Quests)
 	}
 }
