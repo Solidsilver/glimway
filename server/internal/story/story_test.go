@@ -67,7 +67,8 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	_, err = db.Exec(`CREATE TABLE project_papers(account_id TEXT,paper_id TEXT);
+	_, err = db.Exec(`CREATE TABLE project_papers(world_id TEXT,project_def TEXT,paper_id TEXT,completed_at INTEGER);
+ CREATE TABLE contributions(id TEXT,world_id TEXT,project_def TEXT,account_id TEXT,material TEXT,qty INTEGER,at INTEGER);
  CREATE TABLE homestead_members(account_id TEXT,homestead_id TEXT);
  CREATE TABLE homesteads(id TEXT,tier INTEGER);
  CREATE TABLE homestead_items(homestead_id TEXT,item_def TEXT,location TEXT);
@@ -102,6 +103,20 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 			t.Fatalf("%s: %v, %v (want %v)", id, got, e, want)
 		}
 	}
+	// A village project's paper: due once the world's project is finished, to those who helped build it.
+	village := &contract.Where{Area: "village", X: 400, Y: 300}
+	eligible("adas-oil-receipts", village, false)
+	if _, err = tx.Exec(`INSERT INTO project_papers VALUES('w','cooley-window-fund','adas-oil-receipts',1)`); err != nil {
+		t.Fatal(err)
+	}
+	eligible("adas-oil-receipts", village, false)
+	if _, err = tx.Exec(`INSERT INTO contributions VALUES('c1','w','cooley-window-fund','a','fiber',5,1)`); err != nil {
+		t.Fatal(err)
+	}
+	eligible("adas-oil-receipts", village, true)
+	s.WorldID = "elsewhere"
+	eligible("adas-oil-receipts", village, false)
+	s.WorldID = "w"
 	// Curated paper reach and stage, and a handed-over paper's stage.
 	p := content.PapersByID["pip-copybook-warden-corrections"].Rule
 	w := &contract.Where{Area: p.Area, X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 8)}

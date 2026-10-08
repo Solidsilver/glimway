@@ -540,3 +540,82 @@ test('a first profile sync reports the welcome even when no XP is credited', asy
   assert.ok(again.ok);
   assert.equal(again.welcome, 0, 'paid once');
 });
+
+test('a settle before a reload reports where the hero is now, after a report already on its way', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/report', ackReport(() => S({ version: 2 })));
+  // A report with the old spot is on its way when the hero moves and the reload settles.
+  r.session.state.position = { x: 420, y: 300 };
+  const release = r.server.hold('POST /api/report');
+  r.link.reportSoon();
+  const first = r.link.flush();
+  await tick();
+  r.session.state.position = { x: 440, y: 300 };
+  const settled = r.link.settle();
+  release();
+  await first;
+  assert.equal(await settled, 'saved');
+  const places = r.server.sent('POST /api/report').map((c) => c.body.place);
+  assert.deepEqual(places.at(-1), { area: 'village', x: 440, y: 300 }, 'the spot the reload leaves from');
+});
+
+test('after a keyed operation moves the place watermark, reports name it so their place applies', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  // The mark's `where` is the place watermark now (version 2); no vitals were written.
+  const marked = S({ version: 2, marks: ['seen:a'] });
+  marked.place.placeSetVersion = 2;
+  r.server.on('POST /api/story/mark', markOk(marked, 'seen:a'));
+  r.link.mark('seen:a');
+  await r.link.flush();
+  r.session.state.position = { x: 440, y: 300 };
+  r.server.on('POST /api/report', ackReport(() => S({ version: 3 })));
+  r.link.reportSoon();
+  await r.link.flush();
+  const rep = r.server.sent('POST /api/report').at(-1)!.body;
+  assert.equal(rep.basis, 2, 'at or past the place watermark');
+  assert.deepEqual(rep.place, { area: 'village', x: 440, y: 300 });
+});
+
+test('back online after someone played elsewhere, with work unsent here: the welcome-back notice, once', async (t) => {
+  const r = await rig(t);
+  r.link.mark('seen:a'); // queued while offline
+  r.server.on('POST /api/story/mark', markOk(S({ version: 6, marks: ['seen:a'] }), 'seen:a'));
+  r.server.on('POST /api/play', play(S({ version: 5 })));
+  await r.link.takeOver();
+  await r.link.flush();
+  assert.equal(r.events.filter(([e]) => e === EV.linkNotice).length, 1);
+
+  const quiet = await rig(t);
+  await online(quiet, S({ version: 5 }));
+  assert.equal(quiet.events.filter(([e]) => e === EV.linkNotice).length, 0, 'nothing unsent: nothing to say');
+
+  // A gap with no take-over is this device's own report landing unanswered.
+  const own = await rig(t);
+  own.link.mark('seen:a');
+  own.server.on('POST /api/story/mark', markOk(S({ version: 6, marks: ['seen:a'] }), 'seen:a'));
+  await online(own, S({ version: 5 }));
+  await own.link.flush();
+  assert.equal(own.events.filter(([e]) => e === EV.linkNotice).length, 0, 'not played elsewhere');
+});
+
+test('asking again for an order whose answer was lost settles that order: resolved, never a second one', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  const craftAnswer = { body: { state: S({ version: 2 }), result: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } };
+  const trouble = { status: 503, body: { error: { code: 'unavailable' } } };
+  r.server.on('POST /api/craft', trouble, craftAnswer, { body: { state: S({ version: 3 }), result: { recipeId: 'nail', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } });
+  assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'pending' });
+  r.server.on('GET /api/state', { body: { state: S(), leaseActive: true } });
+  await new Promise((done) => setTimeout(done, 20)); // the player asks again a moment later
+  // The same order again: the held one is replayed with its key and lands; nothing new is sent.
+  assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'resolved' });
+  const keys = r.server.sent('POST /api/craft').map((c) => c.body.op.key);
+  assert.equal(keys.length, 2);
+  assert.equal(keys[1], keys[0]);
+  // A different order goes as its own.
+  const other = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'nail', qty: 1 } });
+  assert.ok(other.ok);
+  assert.equal(r.server.sent('POST /api/craft').length, 3);
+});

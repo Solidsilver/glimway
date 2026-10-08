@@ -47,7 +47,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const keys: string[] = []
   page.on('request', (r) => {
-    if (r.method() === 'POST' && r.url().endsWith('/api/homestead/buy')) keys.push(JSON.parse(r.postData() ?? '{}').key)
+    if (r.method() === 'POST' && r.url().endsWith('/api/homestead/buy')) keys.push(JSON.parse(r.postData() ?? '{}').op?.key)
   })
 
   // Once unreadable: the same request is asked again at once and completes.

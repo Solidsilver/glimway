@@ -36,6 +36,17 @@ export async function served(res: APIResponse): Promise<any> {
   return { ...result, state: raw.state }
 }
 
+/**
+ * A faked gameplay refusal for `route.fulfill`, shaped like the server's own:
+ * the code and the player's current state. (The client takes only a refusal
+ * that carries state as settled; a bare one may have committed, so it retries.)
+ */
+export async function refusal(page: Page, code: string, status = 409): Promise<{ status: number; contentType: string; body: string }> {
+  const res = await page.request.get('/api/state', CONTRACT)
+  expect(res.ok()).toBe(true)
+  return { status, contentType: 'application/json', body: JSON.stringify({ error: { code }, state: (await res.json()).state }) }
+}
+
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()
 
@@ -164,11 +175,11 @@ export async function openTitleGuide(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'I have them' }).click()
 }
 
-/** Wait for connected play: the world is live and the lease is held. */
+/** Wait for connected play: the world is live and the lease is held (`'wilds'`: any Wilds chunk). */
 export async function waitForWorld(page: Page, area: string = 'village'): Promise<void> {
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
-    return !!s && !s.transitioning && (a === 'wilds' ? s.areaId.startsWith('chunk:inner-1') : s.areaId === a)
+    return !!s && !s.transitioning && (a === 'wilds' ? s.areaId.startsWith('chunk:') : s.areaId === a)
   }, area)
   await expect.poll(() => linkStatus(page)).toBe('online')
 }

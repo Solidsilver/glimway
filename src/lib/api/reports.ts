@@ -155,6 +155,17 @@ export class ReportBook {
     this.seq = stored.seq;
   }
 
+  /**
+   * The screen has taken a newer server watermark that wrote no vitals (a
+   * keyed operation's `where`, a move it adopted): later reports name it, so
+   * their place applies. The captured report keeps its own basis; a pending
+   * fall's boundary sets the basis when it is answered.
+   */
+  rebase(basis: number): void {
+    if (this.next.boundary !== null || basis <= this.next.basis) return;
+    this.next = { ...this.next, basis };
+  }
+
   /** That fall was answered (or dropped): what happened after it reports against `basis`. */
   release(id: number, basis: number): void {
     if (this.next.boundary !== id) return;

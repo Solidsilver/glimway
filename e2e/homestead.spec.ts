@@ -305,8 +305,9 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   await go(other, 'commons', silas.tx, silas.ty + 1)
   await go(page, 'commons', silas.tx, silas.ty + 1)
   const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { peers: string[] } }).__fsPresence().peers)
-  await expect.poll(() => peers(page), { timeout: 20_000 }).toContain(b)
-  await expect.poll(() => peers(other), { timeout: 20_000 }).toContain(a)
+  // Presence names players by their server account ids.
+  await expect.poll(() => peers(page), { timeout: 20_000 }).toContain(accountOf(b))
+  await expect.poll(() => peers(other), { timeout: 20_000 }).toContain(accountOf(a))
 
   // Tansy offers the deed to Bram and signs her side.
   await converse(page, /Talk to Silas/, [/Share the deed/, /Bram/])
@@ -387,7 +388,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   // Each land is its own presence room: Tansy walks home and they see each other there.
   await throughGate(page, gate)
   const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { area: string | null; peers: string[] } }).__fsPresence())
-  await expect.poll(async () => (await peers(other)).peers, { timeout: 20_000 }).toContain(a)
+  await expect.poll(async () => (await peers(other)).peers, { timeout: 20_000 }).toContain(accountOf(a))
   expect((await peers(other)).area).toBe(`home:${gate}`)
   await shot(other, 'visiting-land-desktop')
   const land = (await homes(other)).land!

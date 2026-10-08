@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
-import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, seedMarks } from './connected'
+import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks } from './connected'
 import { claimDeed, earnEmbers, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 
@@ -209,9 +209,7 @@ for (const device of ['desktop', 'phone'] as const) {
         seedMarks(id, 'echo:hollis')
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         // The server says no (as it would to someone it measured too far off).
-        await page.route('**/api/items/heirloom', (route) =>
-          route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'too-far-away' } }) })
-        )
+        await page.route('**/api/items/heirloom', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
         await warp(page, 'commons', 51, 22)
         await openTalk(page, 'Talk to Silas')
         await untilChoices(page)

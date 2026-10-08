@@ -316,7 +316,8 @@ export class Homesteads {
     const link = this.session.link!
     const r = await link.homeAction(action)
     if (!r.ok) {
-      if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found') void this.load()
+      // `resolved`: an earlier order this repeats went through after all; show what it changed.
+      if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found' || r.code === 'resolved') void this.load()
       return { ok: false, code: r.code, text: homeErrorText(r.code) }
     }
     this.materials = r.materials

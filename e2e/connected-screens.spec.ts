@@ -89,15 +89,17 @@ for (const [name, vp] of sizes) {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Never mind' }).click()
     await page.getByRole('button', { name: 'Back to the road' }).click()
 
-    // Server trouble (500s): plays on locally, says so, backs off.
-    await page.route('**/api/progress', (route) =>
+    // Server trouble (500s): plays on locally, says so, backs off. (A hurt
+    // goes up in the vitals report.)
+    await page.route('**/api/report', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'internal' } }) })
     )
     await hurt(page, 2)
-    await expect(page.getByTestId('net-trouble')).toBeVisible()
+    // Reports go about every 10 s (design: Reports), so the trouble shows by the next one.
+    await expect(page.getByTestId('net-trouble')).toBeVisible({ timeout: 15_000 })
     await fits(page, vp)
     await shot(page, '18-hud-server-trouble')
-    await page.unroute('**/api/progress')
+    await page.unroute('**/api/report')
     await expect.poll(() => linkStatus(page), { timeout: 30_000 }).toBe('online')
 
     // Pending: the world waits for the server's answer to a spend.
@@ -124,7 +126,8 @@ for (const [name, vp] of sizes) {
     const ourRev = (await serverState(page)).body.rev as number
     await context.setOffline(true)
     await hurt(page, 3)
-    await expect(page.getByTestId('net-offline')).toBeVisible()
+    // The next report (about every 10 s) finds no connection.
+    await expect(page.getByTestId('net-offline')).toBeVisible({ timeout: 15_000 })
     await fits(page, vp)
     await shot(page, '10-hud-offline')
     await warp(page, 'village', 16, 14)

@@ -176,6 +176,9 @@ export class PaperPickups {
   }
 
   private grantBeats(stage: QuestStage, delayMs: number): void {
+    // Connected, the quest step itself grants its beat papers (content/quests.json):
+    // a take would be refused as not due, and taken again at every scene build.
+    if (this.deps.session.link) return
     const due = beatsDue(stage, this.deps.session.state.flags)
     if (due.length === 0) return
     const grant = () => {

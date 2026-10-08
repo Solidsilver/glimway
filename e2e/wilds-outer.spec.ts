@@ -88,7 +88,7 @@ test('over the crossing, an Echo settled, the Wilds turn and give a text back', 
   expect(entry).toBe(chunkAreaId(1, 1, OUTER))
   let dump = await wilds(page)
   expect(dump.region).toBe(OUTER)
-  expect(dump.guest).toBe(false)
+  expect(dump.epochId, 'the server’s epoch').toBeTruthy()
   expect(dump.season).toMatch(/^t:\d+:\d+$/)
   expect(dump.entities.length).toBeGreaterThan(0)
   await expect(page.locator('.hud')).toContainText('The Whitequiet')
@@ -113,7 +113,8 @@ test('over the crossing, an Echo settled, the Wilds turn and give a text back', 
   expect(member).not.toBeNull()
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain(`echo:${member}`)
   if (def.paper) await expect.poll(async () => (await serverState(page)).body.state.flags).toContain(`paper:${def.paper}`)
-  expect((await wilds(page)).sites.find((s) => s.id === planned.id)!.settled).toBe(true)
+  // The camp shows settled once the client has taken the server's answer.
+  await expect.poll(async () => (await wilds(page)).sites.find((s) => s.id === planned.id)!.settled).toBe(true)
   await shot(page, '44-outer-echo-settled-desktop')
 
   // The Turning: move the calendar to just before the wick's end.
@@ -189,8 +190,7 @@ test.describe('in a world', () => {
     await crossOver(page)
     let dump = await wilds(page)
     expect(dump.region).toBe(OUTER)
-    expect(dump.guest).toBe(false)
-    expect(dump.epochId).not.toBe('')
+    expect(dump.epochId, 'the server’s epoch').not.toBe('')
     expect(dump.endsAt).toBeGreaterThan(Date.now() / 1000)
     expect(dump.season).toMatch(/^t:\d+:\d+$/)
 
@@ -224,6 +224,6 @@ test.describe('in a world', () => {
     expect(await areaNow(page)).toBe(chunkAreaId(1, 1, OUTER))
     await expectToast(page, SEASON_SHIFT_NOTICE)
     await page.unroute('**/api/wilds/claim')
-    expect((await wilds(page)).guest).toBe(false)
+    expect((await wilds(page)).epochId, 'the server’s epoch').toBeTruthy()
   })
 })

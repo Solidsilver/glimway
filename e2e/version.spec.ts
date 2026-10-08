@@ -87,7 +87,7 @@ test.describe('phone, short landscape', () => {
     await serveBuild(page, 'next-build')
     await checkNow(page)
     await expect(notice(page)).toBeVisible()
-    await page.route('**/api/progress', (route) => route.abort('internetdisconnected'))
+    await page.route('**/api/report', (route) => route.abort('internetdisconnected'))
     await stepAside(page)
     await notice(page).getByRole('button', { name: 'Reload' }).click()
     await expect(page.getByTestId('update-held')).toContainText('only on this device')
@@ -115,7 +115,7 @@ test.describe('in a world', () => {
     // What happens, in order: the upload must be answered before the page goes.
     const events: string[] = []
     page.on('requestfinished', (r) => {
-      if (r.url().endsWith('/api/progress')) events.push('progress')
+      if (r.url().endsWith('/api/report')) events.push('report')
     })
     page.on('request', (r) => {
       if (r.isNavigationRequest() && r.frame() === page.mainFrame()) events.push('reload')
@@ -123,7 +123,7 @@ test.describe('in a world', () => {
     const to = await stepAside(page)
     await notice(page).getByRole('button', { name: 'Reload' }).click()
     await expect.poll(() => events.includes('reload')).toBe(true)
-    expect(events.slice(0, events.indexOf('reload'))).toContain('progress')
+    expect(events.slice(0, events.indexOf('reload'))).toContain('report')
     const s = await serverState(page)
     expect(s.body.state.position).toEqual(to)
   })
@@ -135,7 +135,7 @@ test.describe('in a world', () => {
     await expect(notice(page)).toBeVisible()
 
     await page.evaluate(() => ((window as unknown as { __stayed: boolean }).__stayed = true))
-    await page.route('**/api/progress', (route) => route.abort('internetdisconnected'))
+    await page.route('**/api/report', (route) => route.abort('internetdisconnected'))
     await stepAside(page)
     await notice(page).getByRole('button', { name: 'Reload' }).click()
     await expect(page.getByTestId('update-held')).toContainText('only on this device')

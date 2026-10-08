@@ -99,7 +99,8 @@
   const chips = $derived.by((): Chip[] => {
     const out: Chip[] = []
     if (ui.link?.busy) out.push({ id: 'pending', icon: 'clock', text: offlineCopy.pending, why: offlineCopy.pending, tone: 'busy', testid: 'net-pending' })
-    else if (ui.link?.status === 'offline' && ui.link.trouble) out.push({ id: 'trouble', icon: 'cloud', text: offlineCopy.troubleChip, why: offlineCopy.troubleTitle, tone: 'trouble', testid: 'net-trouble' })
+    // Server trouble (a 5xx) keeps the link online now; a lost connection with trouble is offline.
+    else if ((ui.link?.status === 'online' || ui.link?.status === 'offline') && ui.link.trouble) out.push({ id: 'trouble', icon: 'cloud', text: offlineCopy.troubleChip, why: offlineCopy.troubleTitle, tone: 'trouble', testid: 'net-trouble' })
     else if (ui.link?.status === 'offline') out.push({ id: 'offline', icon: 'cloud', text: offlineCopy.chip, why: offlineCopy.chipTitle, tone: 'off', testid: 'net-offline' })
     if (presenceLive && ui.presence.here > 0) out.push({ id: 'here', icon: 'person', text: presenceCopy.here(ui.presence.here), why: presenceCopy.hereTitle, tone: 'here', testid: 'presence-here' })
     if (resting) out.push({ id: 'resting', icon: 'heart', text: 'Resting', why: `Resting in Hearthwick: heal on Habitica and sync, or rest by the lantern with ${EMBER_COSTS.rest} embers earned on Habitica.`, tone: 'trouble' })

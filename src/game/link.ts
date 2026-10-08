@@ -249,6 +249,13 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) }
 }
 
+/** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
+function sameRequest(entry: OutboxEntry, path: string, body: Record<string, unknown>): boolean {
+  if (entry.kind !== 'mutation' || entry.path !== path) return false
+  const strip = ({ op: _op, where: _where, ...rest }: Record<string, unknown>) => JSON.stringify(rest)
+  return strip(JSON.parse(entry.body) as Record<string, unknown>) === strip(body)
+}
+
 /** The village spawn a fall wakes at (the server's own place comes with its answer). */
 const VILLAGE_SPAWN = { area: 'village', x: 400, y: 300 }
 
@@ -342,6 +349,8 @@ export class Link {
   private saveRetry: ReturnType<typeof setTimeout> | null = null
   private pumping: Promise<void> | null = null
   private reportWanted = false
+  /** Heads already asked again at once after an unreadable answer. */
+  private readonly replayed = new Set<number>()
   /** The periodic report is due: it goes even with nothing new (play time is counted between reports). */
   private reportForced = false
   private reportTimer: ReturnType<typeof setInterval> | null = null
@@ -384,7 +393,7 @@ export class Link {
     // The same tab's lease resumes after a reload; another tab's never does.
     this.lease = record.client === init.clientId ? record.lease : null
     this.reports = new ReportBook(record.client === init.clientId ? record.reports : null)
-    if (record.client !== init.clientId || !record.reports) this.reports.reset(this.server.vitals?.vitalsSetVersion ?? 0)
+    if (record.client !== init.clientId || !record.reports) this.reports.reset(this.basis())
     if (this.channel) this.channel.onmessage = (ev) => this.onChannel(ev.data)
     if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline)
   }
@@ -491,6 +500,15 @@ export class Link {
   }
 
   /** The screen's place and vitals, into the next report. */
+  /**
+   * The basis a report names: the newest server vitals or place write this
+   * link has taken. The server ignores a report's place below the place
+   * watermark and its vitals below the vitals one (design: Reports, 2).
+   */
+  private basis(): number {
+    return Math.max(this.server.vitals?.vitalsSetVersion ?? 0, this.server.place?.placeSetVersion ?? 0)
+  }
+
   private noteLive(): void {
     const s = this.session
     if (!s) return
@@ -532,13 +550,15 @@ export class Link {
         fall.fall = { hp: v.hp, mana: v.mana }
       } else {
         vitals = { hp: v.hp, mana: v.mana }
-        this.reports.reset(v.vitalsSetVersion)
+        this.reports.reset(this.basis())
       }
     } else if (s && ctx.captured && ctx.ack?.accepted && !ctx.ack.staleBasis) {
       const c = ctx.captured
       vitals = { hp: v.hp + (s.state.hp - c.hp), mana: v.mana + (s.state.mana - c.mana) }
     }
     if (vitals) vitals = { hp: clamp(vitals.hp, v.maxHp), mana: clamp(vitals.mana, v.maxMana) }
+    // A place watermark the screen now follows (no vitals written): name it.
+    this.reports.rebase(this.basis())
     this.refresh({ vitals })
     return true
   }
@@ -728,17 +748,20 @@ export class Link {
   async settle(): Promise<'saved' | 'offline' | 'unsaved'> {
     const run = ++this.settleRun
     await this.persist()
-    this.reportWanted = true
     for (let i = 0; i < 50; i++) {
+      // Until what the hero is doing now has gone up: a report already on its
+      // way may carry an older spot, and the newer one must follow it.
+      this.noteLive()
+      if (this.reports.due) this.reportWanted = true
       this.pump()
       if (this.pumping) await this.pumping
       if (this.reconnecting) await this.reconnecting.catch(() => undefined)
       await new Promise((r) => setTimeout(r, 10))
       if (run !== this.settleRun) return 'unsaved'
-      if (!this.pumping && (!this.canSend() || (!this.entries.length && !this.reports.captured))) break
+      if (!this.pumping && (!this.canSend() || (!this.entries.length && !this.reports.due))) break
     }
     if (this.unsaved) await this.saveRecord()
-    if (!this.settled) return this.status === 'offline' ? 'offline' : 'unsaved'
+    if (!this.settled || this.reports.due) return this.status === 'offline' ? 'offline' : 'unsaved'
     this.sealed = true
     return 'saved'
   }
@@ -978,7 +1001,7 @@ export class Link {
    * replay of a fall the world already held).
    */
   private fallSettled(fall: OutboxEntry, result: unknown): void {
-    this.reports.release(fall.id, this.server.vitals?.vitalsSetVersion ?? 0)
+    this.reports.release(fall.id, this.basis())
     this.refresh()
     // The answer says whether a fallen-hero lantern now waits in the Wilds.
     const r = result as { case?: string; value?: { lantern?: string } } | null
@@ -1014,6 +1037,13 @@ export class Link {
       if (undone && !this.waiters.has(head.id)) this.emitter(EV.toast, { text: undone, kind: 'error' })
       for (const e of [head, ...dependents]) this.notify(e, { ok: false, code })
       return stored
+    }
+    // An answer that arrived but couldn't be read (a truncated 200): ask again
+    // at once with the same key and bytes, once (review 5, finding 2). The
+    // server's idempotency answers the replay without doing it twice.
+    if (err instanceof ApiError && err.status === 200 && !this.replayed.has(head.id)) {
+      this.replayed.add(head.id)
+      return this.sendHead(head)
     }
     // Ambiguous: it may have committed. Keep it, retry with the same key and bytes.
     const state = err instanceof ApiError ? err.state : undefined
@@ -1078,7 +1108,7 @@ export class Link {
   /** Remove an entry from the outbox (and its prediction). */
   private drop(entry: OutboxEntry): void {
     this.entries = this.entries.filter((e) => e !== entry)
-    if (entry.kind === 'fall') this.reports.release(entry.id, this.server.vitals?.vitalsSetVersion ?? 0)
+    if (entry.kind === 'fall') this.reports.release(entry.id, this.basis())
   }
 
   /** Tell a waiting caller (once), or the features about a replay nobody waited for. */
@@ -1089,6 +1119,11 @@ export class Link {
       waiter(outcome)
       return
     }
+    this.announce(entry, outcome)
+  }
+
+  /** Tell the features about a mutation's outcome nobody waited for (a replay, a lost answer). */
+  private announce(entry: OutboxEntry, outcome: Outcome): void {
     if (entry.kind !== 'mutation' || (outcome.ok === false && (outcome.code === 'pending' || outcome.code === 'offline'))) return
     const route = routeFromPath(entry.path)
     if (!route) return
@@ -1242,7 +1277,7 @@ export class Link {
       if (!r.sent || !ack) break
       if (ack.accepted && !ack.staleBasis && ack.basis >= (this.server.vitals?.vitalsSetVersion ?? 0)) return { client: ack.client, generation: ack.generation, seq: ack.seq }
       // Its basis was older than the server's vitals: report again from the vitals it holds.
-      this.reports.reset(this.server.vitals?.vitalsSetVersion ?? 0)
+      this.reports.reset(this.basis())
     }
     // No fresh acknowledgment to be had: try again later.
     this.stalled(new ApiError('report-required'))
@@ -1463,12 +1498,6 @@ export class Link {
   async mutate<R extends Snapshot>(op: MutationOp): Promise<MutateResult<R>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
-    if (this.pendingOperation) {
-      // An earlier answer is still unknown: settle it first.
-      this.pump()
-      while (this.pumping) await this.pumping
-      if (this.pendingOperation) return { ok: false, code: 'pending' }
-    }
     const key = newKey()
     const fields = { ...(op.fields ?? {}) }
     // The domain's own `op` field moves aside for the operation header.
@@ -1478,7 +1507,28 @@ export class Link {
     }
     const body: Record<string, unknown> = { ...fields, op: { lease: '', key }, where: whereOf(s.state) }
     const route = routeOf(op)
-    const { outcome: r } = await this.submit('mutation', ROUTE_PATHS[op.kind](route), key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use' })
+    const path = ROUTE_PATHS[op.kind](route)
+    const earlier = this.pendingOperation
+    if (earlier) {
+      // An earlier answer is still unknown: settle it first. Asking again for
+      // the same thing, once it landed, is that thing, not a second one
+      // (review 5, finding 2): the caller hears `resolved`.
+      const held = !this.waiters.has(earlier.id)
+      const settled = held ? new Promise<Outcome>((r) => this.waiters.set(earlier.id, r)) : null
+      this.pump()
+      while (this.pumping) await this.pumping
+      if (this.pendingOperation) {
+        if (held) this.waiters.delete(earlier.id)
+        return { ok: false, code: 'pending' }
+      }
+      if (settled) {
+        const outcome = await settled
+        const landed = outcome.ok || outcome.code === 'resolved'
+        if (landed && sameRequest(earlier, path, body)) return { ok: false, code: 'resolved' }
+        this.announce(earlier, outcome)
+      }
+    }
+    const { outcome: r } = await this.submit('mutation', path, key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use' })
     if (!r.ok) return { ok: false, code: r.code }
     return { ok: true, res: r.result as R }
   }
@@ -1571,11 +1621,16 @@ export class Link {
       this.lease = play.lease
       const v = play.state?.vitals
       this.reports.bind(play.reportClient, play.reportGeneration, v?.reportSeq ?? 0, v?.reportGeneration ?? '')
+      // Someone played elsewhere while this device held unsent work: say so
+      // once. Taking the lease back is the proof (a version gap alone can be
+      // this device's own report, landed with its answer lost).
+      const elsewhere = takeOver && !!play.state && play.state.version > this.server.version && this.entries.length > 0
       // The play answer is a fresh state read: entries from an earlier page may replay now.
       if (play.state) {
         this.adopt(play.state, { read: true })
         this.needsRead = false
       }
+      if (elsewhere) this.emitter(EV.linkNotice, { kind: 'played-elsewhere' })
       this.failures = 0
       this.trouble = false
       this.answered()

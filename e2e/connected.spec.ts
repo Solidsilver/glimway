@@ -138,7 +138,8 @@ test('a rest is paid on the server, and the world waits for its answer', async (
   await freshPlayer(page)
   await sync(page, /embers into your hand/)
   await hurt(page, 6)
-  await expect.poll(async () => (await serverState(page)).body.state.hp).toBeLessThan(41)
+  // The hurt goes up with the next report (about every 10 s).
+  await expect.poll(async () => (await serverState(page)).body.state.hp, { timeout: 15_000 }).toBeLessThan(41)
   await warp(page, 'village', 11, 13)
   await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
@@ -169,9 +170,9 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await freshPlayer(page)
   // Find a paper and donate it straight away: the donation must wait for the
   // upload that carries the find, so there's no wait for the server here.
-  // Hold progress uploads for a while so the donation is sure to race the
-  // upload that carries the find (review: donate must flush first).
-  await page.route('**/api/progress', async (route) => {
+  // Hold the pickup (its own operation now) for a while so the donation is
+  // sure to race it (review: donate must flush first; the outbox keeps order).
+  await page.route('**/api/papers/take', async (route) => {
     await new Promise((r) => setTimeout(r, 4000))
     await route.continue()
   })
@@ -189,7 +190,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   // The donation waits for the held upload carrying the find.
   await expect(library.getByText('14 of 52')).toBeVisible({ timeout: 20_000 })
   await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
-  await page.unroute('**/api/progress')
+  await page.unroute('**/api/papers/take')
 
   // The world's shelf on the server: one donation, credited by the server.
   const shelf = await page.request.get('/api/library', CONTRACT)
@@ -238,7 +239,8 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   await sync(page, /embers into your hand/)
   await context.setOffline(true)
   await hurt(page, 5)
-  await expect(page.getByTestId('net-offline')).toBeVisible()
+  // The next report (about every 10 s) finds no connection.
+  await expect(page.getByTestId('net-offline')).toBeVisible({ timeout: 15_000 })
   // Story still moves offline.
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
@@ -328,17 +330,18 @@ test('a returning player is signed in by the cookie alone', async ({ page, conte
 
 test('logout with unsent progress keeps it on the device, and the next sign-in uploads it (review 1)', async ({ page }) => {
   const id = await freshPlayer(page)
-  // The server refuses uploads for a while: the story step stays unsent.
-  let refused = 0
-  await page.route('**/api/progress', (route) => {
-    refused += 1
-    return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-progress' } }) })
+  // The world can't take the quest step for a while: it stays in the outbox.
+  // (A refusal would be final; an unreachable server keeps the step queued.)
+  let held = 0
+  await page.route('**/api/quest/step', (route) => {
+    held += 1
+    return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unavailable' } }) })
   })
+  const queuedStep = (rec: Record<string, any> | null) => (rec?.entries ?? []).some((e: { path: string }) => e.path === '/api/quest/step')
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
-  // (The "didn’t accept" toast may have come and gone on a slow machine.)
-  await expect.poll(() => refused).toBeGreaterThan(0)
-  await expect.poll(async () => (await cacheRecord(page, accountOf(id)))?.state.quest).toBe('accepted')
+  await expect.poll(() => held).toBeGreaterThan(0)
+  await expect.poll(async () => queuedStep(await cacheRecord(page, accountOf(id)))).toBe(true)
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   const dialog = page.getByRole('alertdialog')
@@ -346,13 +349,13 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   await dialog.getByRole('button', { name: 'Log out' }).click()
   await expect(page.getByTestId('connect-hero')).toBeVisible()
   expect((await serverState(page)).status).toBe(401)
+  // The outbox keeps the unsent step for the next sign-in on this device.
   const kept = await cacheRecord(page, accountOf(id))
-  expect(kept?.dirty).toBe(true)
   expect(kept?.loggedOut).toBe(true)
-  expect(kept?.state.quest).toBe('accepted')
+  expect(queuedStep(kept)).toBe(true)
 
   // The server is fine again; signing in brings the step up.
-  await page.unroute('**/api/progress')
+  await page.unroute('**/api/quest/step')
   await page.getByTestId('connect-hero').click()
   await page.getByRole('button', { name: 'I have them' }).click()
   await pasteAndConnect(page, id)

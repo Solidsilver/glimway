@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { serverState } from './connected'
+import { refusal, serverState } from './connected'
 import { expectToast, dialogueState, openTalk, readDialogue, untilLine, waitForLive } from './helpers'
 import { freshPlayer, fund, giveInstance, go, shot } from './home-helpers'
 
@@ -151,9 +151,7 @@ test('a refused return never plays the thanks: the world answers first', async (
 
   // The world refuses this one: the return is answered 409 (the hero has
   // wandered, say), the way a real refusal arrives.
-  await page.route('**/api/items/return', (route) =>
-    route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'too-far-away' } }) })
-  )
+  await page.route('**/api/items/return', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
 
   fund(id, { items: { 'knotted-halter': 1 } })
   await packHolds(page, 'knotted-halter')

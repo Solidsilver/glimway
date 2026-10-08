@@ -28,6 +28,7 @@ import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
 import type { WildsLantern } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { EV, bus } from '../events.ts';
+import { gameNow } from '../clock.ts';
 import type { Session } from '../session.ts';
 import { OUTER_REGION_ID, WILDS_REGION_ID, isWildsArea, regionOfState, wildsRegion } from './regions.ts';
 import { registerWildsAreas } from './areas.ts';
@@ -183,7 +184,8 @@ export function wildsEpochEndsAt(region: string = active): number | null {
 export function outerTurned(_session: Session): boolean {
   const r = regions.get(OUTER_REGION_ID);
   if (!r?.view || r.epoch.endsAt === null) return false;
-  return Math.floor(Date.now() / 1000) >= r.epoch.endsAt;
+  // The game's clock (the dev/playtest clock when it has been moved).
+  return gameNow() >= r.epoch.endsAt;
 }
 
 /** Forget a region's state (the Turning): the next read names the new epoch. */

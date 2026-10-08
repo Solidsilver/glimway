@@ -132,10 +132,15 @@ export class Village {
     const link = this.session.link
     if (link && !clockMoved()) {
       try {
-        this.calendar = await this.link.api.calendar()
-        this.calendarSource = 'server'
-        this.emit('calendar')
-        return this.calendar
+        const served = await this.link.api.calendar()
+        // The dev clock moved while the read was out: the server's today is
+        // not the moved one, so the local calendar answers instead.
+        if (!clockMoved()) {
+          this.calendar = served
+          this.calendarSource = 'server'
+          this.emit('calendar')
+          return this.calendar
+        }
       } catch {
         /* fall back to the local calendar */
       }

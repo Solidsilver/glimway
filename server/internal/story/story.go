@@ -96,7 +96,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return q.From != "" && w.Area == q.Area && content.QuestIndex(s.State.Quest) >= content.QuestIndex(q.Stage), nil
 	case "village-project":
 		var due bool
-		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM project_papers WHERE account_id=? AND paper_id=?)", s.AccountID, in.Paper).Scan(&due)
+		// A finished project in this world holds the paper, and this player helped build it
+		// (the same rule as the projects read's grantablePapers).
+		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM project_papers p WHERE p.world_id=? AND p.paper_id=? AND EXISTS(SELECT 1 FROM contributions c WHERE c.world_id=p.world_id AND c.project_def=p.project_def AND c.account_id=?))", s.WorldID, in.Paper, s.AccountID).Scan(&due)
 		return due, err
 	case "commons":
 		if w.Area != "commons" {

@@ -364,9 +364,12 @@ export class WardenEncounter {
     this.gutterHeart(false)
     this.restingWarden = w.sprite
     this.restingState = 'settled'
-    // Same save effects as ever: the quest event and the defeated-enemy entry.
-    this.deps.session.recordDefeat(w.id)
+    // The quest event, then the defeated-enemy entry. In this order: each
+    // queues a predicted operation, and a refresh that saw the defeat before
+    // the step would read a settled warden at 'clue-found' as a refused
+    // settling and stand it up again (reconcile).
     this.deps.session.applyQuestEvent('defeat-guardian')
+    this.deps.session.recordDefeat(w.id)
   }
 
   /** Read-only snapshot for playtests (window.__fsWarden). */

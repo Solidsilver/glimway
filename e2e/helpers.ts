@@ -140,7 +140,6 @@ export type DialogueView = {
 
 /** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug). */
 export type WildsDump = {
-  guest: boolean
   epochId: string
   /** `inner-1` (the Tangle) or `outer-1` (the Whitequiet). */
   region: string

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld, serverState, sql, CONTRACT } from './connected'
-import { holdUntil, warp, waitForWilds, wilds, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
+import { exitTo, holdUntil, warp, waitForWilds, wilds, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
 import { chunkAreaId, wildsArrivalPosition } from '../src/game/wilds/regions.ts'
 
 /**
@@ -127,18 +127,19 @@ test('connected: walk chunk to chunk, harvest, clear a camp, chest, POI, reload'
   const entryChunk = await waitForWilds(page)
   expect(entryChunk).toBe(chunkAreaId(1, 1))
   let dump = await wilds(page)
-  expect(dump.guest).toBe(false)
-  expect(dump.epochId).not.toBe('')
+  expect(dump.epochId, 'the server’s epoch').not.toBe('')
 
-  // Walk chunk to chunk through the real exit gap: south into (1,2), then
-  // east into (2,2). Exits sit 3 tiles wide, centered on each edge.
-  await warp(page, entryChunk, 12, 21)
+  // Walk chunk to chunk through the real exit gaps (where the served chunks
+  // have them): south into (1,2), then east into (2,2).
+  const down = await exitTo(page, chunkAreaId(1, 2))
+  await warp(page, entryChunk, down.tx + Math.floor(down.tw / 2), down.ty - 2)
   await holdUntil(page, 'ArrowDown', async () => (await wilds(page)).chunk.cx === 1 && (await wilds(page)).chunk.cy === 2)
   const south = await waitForWilds(page)
   expect(south).toBe(chunkAreaId(1, 2))
   dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 1, cy: 2 })
-  await warp(page, south, 21, 12)
+  const right = await exitTo(page, chunkAreaId(2, 2))
+  await warp(page, south, right.tx - 2, right.ty + Math.floor(right.th / 2))
   await holdUntil(page, 'ArrowRight', async () => (await wilds(page)).chunk.cx === 2 && (await wilds(page)).chunk.cy === 2)
   const east = await waitForWilds(page)
   expect(east).toBe(chunkAreaId(2, 2))
