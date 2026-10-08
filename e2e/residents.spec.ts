@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { residentsOut } from './room-helpers'
-import { dialogueState, readDialogue, warp, waitForLive, expectToast } from './helpers'
-import { freshPlayer, shot } from './home-helpers'
+import { dialogueState, openTalk, readDialogue, untilChoices, warp, waitForLive, expectToast } from './helpers'
+import { freshPlayer, fund, shot } from './home-helpers'
 import { reenter, seedStory, serverState } from './connected'
 
 /**
@@ -114,8 +114,7 @@ test('Elara’s line follows the calendar: the wick, the Mark, and the day befor
 test('once the road is lit, Hazel hands over her own recipe card', async ({ page }) => {
   test.setTimeout(120_000)
   const id = await freshPlayer(page)
-  // Set to Rise done too: while its ask is open, Hazel's talk is the ask, not her road lines.
-  await seedStory(id, { quest: 'complete', quests: { 'set-to-rise': 'let-it-rise' }, marks: ['met:hazel@new'] })
+  await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
   await reenter(page)
   await residentsOut(page)
   await warp(page, 'village', 11, 15)
@@ -127,4 +126,36 @@ test('once the road is lit, Hazel hands over her own recipe card', async ({ page
   await warp(page, 'village', 28, 16)
   const pip = await converse(page, 'Pip')
   expect(pip.join(' ')).not.toMatch(/card off the bakery wall/)
+})
+
+test('who speaks first: Hazel’s own lines, then Set to Rise’s reminder; with the flour, the step is the talk', async ({ page }) => {
+  test.setTimeout(120_000)
+  const id = await freshPlayer(page)
+  // The road done, her card already taken, and Set to Rise asked for: the flour still to fetch.
+  await seedStory(id, { quest: 'complete', quests: { 'set-to-rise': 'fetch-flour' }, marks: ['met:hazel@new', 'paper:keepers-twists-recipe-card'] })
+  await reenter(page)
+  await residentsOut(page, { server: true })
+  await warp(page, 'village', 11, 15)
+
+  // No flour yet: her own late lines first (the card's, now that it's read), then the reminder,
+  // its offer shown disabled.
+  await waitForLive(page)
+  await openTalk(page, 'Talk to Hazel')
+  const choices = await untilChoices(page)
+  const first = (await dialogueState(page)).said.join(' ')
+  expect(first).toMatch(/You’ve read the back of my card[\s\S]*Still no flour/)
+  expect(choices[0]).toMatchObject({ text: 'Set the sponge with her', disabled: true })
+  await readDialogue(page, { pick: /Not yet/ })
+
+  // With the flour in the pack she's the step: setting the sponge is the talk.
+  fund(id, { items: { flour: 1 } })
+  await page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
+  await waitForLive(page)
+  await openTalk(page, 'Talk to Hazel')
+  const ready = await untilChoices(page)
+  expect(ready[0]).toMatchObject({ text: 'Set the sponge with her' })
+  expect(ready[0].disabled).toBeFalsy()
+  expect((await dialogueState(page)).said.join(' ')).not.toMatch(/back of my card/)
+  await readDialogue(page, { pick: /Set the sponge/ })
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsQuests: () => { quests: Record<string, string> } }).__fsQuests().quests['set-to-rise']), { timeout: 15_000 }).toBe('set-sponge')
 })
