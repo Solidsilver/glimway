@@ -14,6 +14,8 @@ const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf
 /** The newest released version and its first players' line (as plain words). */
 const latest = /^## \[(\d+\.\d+\.\d+)\][^\n]*\n[\s\S]*?### For players\s+- ([^\n]+)/m.exec(changelog)!
 const VERSION = latest[1]
+/** The build's own version (package.json): what a device records once it has caught up. */
+const RUNNING = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
 const FIRST_LINE = latest[2].replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '').slice(0, 30)
 /** The release before it: a device that saw it has exactly one release to catch up on. */
 const PREVIOUS = [...changelog.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)][1]?.[1] ?? '0.0.1'
@@ -45,7 +47,7 @@ test('after an update the card says what’s new, once', async ({ page }) => {
   expect(await page.evaluate(() => !!document.activeElement?.closest('[data-testid="whats-new"]'))).toBe(false)
   await card(page).getByTestId('whats-new-ok').click()
   await expect(card(page)).toBeHidden()
-  expect(await stored(page)).toEqual({ version: VERSION, build: 'dev' })
+  expect(await stored(page)).toEqual({ version: RUNNING, build: 'dev' })
 
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).first().click()
@@ -57,7 +59,7 @@ test('a first visit catches up quietly, and the Menu shows the newest lines any 
   await beginNewJourney(page)
   await page.waitForTimeout(2500)
   await expect(card(page)).toBeHidden()
-  expect(await stored(page)).toEqual({ version: VERSION, build: 'dev' })
+  expect(await stored(page)).toEqual({ version: RUNNING, build: 'dev' })
 
   await page.keyboard.press('Escape')
   await page.getByTestId('menu-whats-new').click()
