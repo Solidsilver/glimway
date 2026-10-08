@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	"glimway/server/internal/itemmove"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
-	"strings"
 )
 
 // Carried goods (docs/items/overview.md): stacks by count, kept per maker,
@@ -71,19 +71,9 @@ type stackAt struct{ location, owner string }
 
 func packOf(id string) stackAt { return stackAt{"pack", id} }
 
-// makerQty is one maker's share of a moved stack (” is unmarked).
-type makerQty struct {
-	Maker string `json:"maker"`
-	Qty   int    `json:"qty"`
-}
+type makerQty = itemmove.MakerQty
 
-func splitTotal(split []makerQty) int {
-	n := 0
-	for _, m := range split {
-		n += m.Qty
-	}
-	return n
-}
+func splitTotal(split []makerQty) int { return itemmove.SplitTotal(split) }
 
 func shortfall(def string) error {
 	if d, ok := content.ItemFor(def); ok && d.Kind == "material" {
@@ -145,7 +135,7 @@ func takeStack(ctx context.Context, tx *sql.Tx, at stackAt, def string, maker *s
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, makerQty{h.Maker, n})
+		out = append(out, makerQty{Maker: h.Maker, Qty: n})
 		left -= n
 	}
 	return out, nil
@@ -155,7 +145,7 @@ func putStack(ctx context.Context, tx *sql.Tx, at stackAt, def string, split []m
 		if m.Qty <= 0 {
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, "INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES(?,?,?,?,?) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=qty+excluded.qty", at.location, at.owner, def, m.Maker, m.Qty); err != nil {
+		if err := itemmove.RestoreShare(ctx, tx, at.location, at.owner, def, m); err != nil {
 			return err
 		}
 	}
@@ -191,7 +181,7 @@ func materialChange(ctx context.Context, tx *sql.Tx, id, material string, delta 
 		_, err := packTake(ctx, tx, id, material, nil, -delta, reason, ref, now)
 		return err
 	}
-	return packPut(ctx, tx, id, material, []makerQty{{"", delta}}, reason, ref, now)
+	return packPut(ctx, tx, id, material, []makerQty{{Maker: "", Qty: delta}}, reason, ref, now)
 }
 
 // itemChange is materialChange for the snapshot's own pack, keeping its
@@ -307,20 +297,11 @@ func decorationIDs(ctx context.Context, tx *sql.Tx, from holder, def string, n i
 	return out, nil
 }
 func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to holder) error {
-	for _, id := range ids {
-		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,habitica_id=?,homestead_id=? WHERE id=? AND location=? AND habitica_id IS ? AND homestead_id IS ? AND scene IS NULL", to.location, nullable(to.player), nullable(to.home), id, from.location, nullable(from.player), nullable(from.home))
-		if err != nil {
-			return err
-		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if n != 1 {
-			return fail(409, "item-not-available")
-		}
+	err := itemmove.MoveDecorations(ctx, tx, ids, itemmove.DecorationPlace{Location: from.location, Player: from.player, Home: from.home}, itemmove.DecorationPlace{Location: to.location, Player: to.player, Home: to.home})
+	if err == itemmove.ErrUnavailable {
+		return fail(409, "item-not-available")
 	}
-	return nil
+	return err
 }
 func decorationCounts(ctx context.Context, tx *sql.Tx, at holder, out map[string]int) error {
 	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND habitica_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, nullable(at.player), nullable(at.home))
@@ -565,7 +546,7 @@ func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) e
 	if err = materialChange(ctx, tx, s.HabiticaID, "bloom-flowers", -n, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
-	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{"", n}}, "dry", "bloom-season-turned", now); err != nil {
+	if err = packPut(ctx, tx, s.HabiticaID, "dried-flowers", []makerQty{{Maker: "", Qty: n}}, "dry", "bloom-season-turned", now); err != nil {
 		return err
 	}
 	return refreshItems(ctx, tx, s)
@@ -591,8 +572,7 @@ func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error
 	return home, nil
 }
 
-// ledgerKind is an asset's chest/mail ledger kind ("storage:<kind>:<id>").
-func ledgerKind(v content.Asset) string { return strings.Join([]string{v.Kind, v.ID}, ":") }
+func ledgerKind(v content.Asset) string { return itemmove.Currency(v.Kind, v.ID) }
 
 // grantOnce gives one unmarked item unless the pack already holds one (the
 // Ember Charm: opened chests and migrated saves never stack it).
@@ -601,5 +581,5 @@ func grantOnce(ctx context.Context, tx *sql.Tx, id, def, reason string, now int6
 	if err != nil || n > 0 {
 		return err
 	}
-	return packPut(ctx, tx, id, def, []makerQty{{"", 1}}, reason, def, now)
+	return packPut(ctx, tx, id, def, []makerQty{{Maker: "", Qty: 1}}, reason, def, now)
 }

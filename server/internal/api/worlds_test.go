@@ -1,15 +1,12 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -37,21 +34,8 @@ type worldResponse struct {
 
 func (x *rig) worldReq(method, path string, b any, c *http.Cookie, status int) worldResponse {
 	x.t.Helper()
-	r := httptest.NewRequest(method, path, bytes.NewBufferString(store.JSON(b)))
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	var v worldResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		x.t.Fatal(err)
-	}
+	v, w := httpResponse[worldResponse](x, method, path, b, c, status)
 	v.raw = w.Body.String()
-	if w.Code != status {
-		x.t.Fatalf("%s %s: got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
 	return v
 }
 
@@ -898,7 +882,7 @@ func TestWorldMoveLeavingWarnings(t *testing.T) {
 	h = x.openWorkshop(hc, h)
 	axe := x.instance("hal", "bench-axe", -1, "")
 	sliver := x.instance("hal", "warden-sliver", -1, "")
-	x.op(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
+	x.opRefreshing(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
 	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
 	v := x.worldReq("GET", "/api/world", nil, hc, 200)
 	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != content.HomeRules.Deeds.Embers || v.Leaving.DeedCost == 0 {

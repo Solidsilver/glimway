@@ -46,9 +46,33 @@ func TestWALMigrationsBackupAndAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	var n int
-	if err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n); err != nil || n != 24 {
-		t.Fatal("migration rerun")
+	history, err := migrationHistory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.DB.Query("SELECT name FROM schema_migrations ORDER BY name")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var applied []string
+	for rows.Next() {
+		var name string
+		if err = rows.Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		applied = append(applied, name)
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	rows.Close()
+	if len(applied) != len(history) {
+		t.Fatal("migration rerun", applied)
+	}
+	for i, m := range history {
+		if applied[i] != m.Name {
+			t.Fatal("migration history", applied)
+		}
 	}
 	if err = s.Allow(context.Background(), "alice", false); err != nil {
 		t.Fatal(err)

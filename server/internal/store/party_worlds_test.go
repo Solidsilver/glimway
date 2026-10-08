@@ -1,7 +1,6 @@
 package store
 
 import (
-	"database/sql"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,45 +11,8 @@ import (
 // adopt`) but never make it the party's world, and a party has at most one.
 func TestPartyOwnedWorldsUpgrade(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "party.sqlite")
-	old, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer old.Close()
-	if _, err = old.Exec("CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)"); err != nil {
-		t.Fatal(err)
-	}
-	files, err := migrations.ReadDir("migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, f := range files {
-		if f.Name() >= "023" {
-			break
-		}
-		schema, err := migrations.ReadFile("migrations/" + f.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec(string(schema)); err != nil {
-			t.Fatal(f.Name(), err)
-		}
-		if f.Name() == "003_loss_and_admission.sql" {
-			tx, err := old.Begin()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = initializeLossReferences(tx); err != nil {
-				t.Fatal(err)
-			}
-			if err = tx.Commit(); err != nil {
-				t.Fatal(err)
-			}
-		}
-		if _, err = old.Exec("INSERT INTO schema_migrations VALUES(?,0)", f.Name()); err != nil {
-			t.Fatal(err)
-		}
-	}
+	old := newUpgradeFixture(t, path, "022_party_worlds.sql", nil)
+	var err error
 	if _, err = old.Exec(`INSERT INTO worlds(id,owner_id,seed,habitica_party_id,created_at) VALUES('olive-w','olive','s','p1',1),('bob-w','bob','s','p1',2),('solo','sam','s',NULL,3);
  INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,habitica_party_id) VALUES('olive','Olive','olive-w',1,1,'p1'),('rue','Rue','olive-w',1,1,'p1'),('bob','Bob','bob-w',2,2,'p1');
  INSERT INTO party_prompts VALUES('bob','olive-w',5);`); err != nil {

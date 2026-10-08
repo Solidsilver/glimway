@@ -155,7 +155,7 @@ test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', () => 
 });
 
 test('the resident reach is the server\'s, and every server refusal has a giver\'s reply', () => {
-  const go = readFileSync(new URL('../server/internal/api/items.go', import.meta.url), 'utf8');
+  const go = readFileSync(new URL('../server/internal/api/item_slots.go', import.meta.url), 'utf8');
   assert.equal(Number(/const residentReachTiles = (\d+)/.exec(go)?.[1]), RESIDENT_REACH_TILES);
   // grantHeirloom's codes, as the giver hears them.
   assert.equal(heirloomRefusalFor('too-far-away'), 'too-far');

@@ -41,20 +41,7 @@ type phase5Response struct {
 
 func (x *rig) p5(method, path string, b any, c *http.Cookie, status int) phase5Response {
 	x.t.Helper()
-	r := httptest.NewRequest(method, path, bytes.NewBufferString(store.JSON(b)))
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	v := phase5Response{}
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		x.t.Fatal(err)
-	}
-	if w.Code != status {
-		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
+	v, _ := httpResponse[phase5Response](x, method, path, b, c, status)
 	return v
 }
 func (x *rig) seedAssets(id string) {
