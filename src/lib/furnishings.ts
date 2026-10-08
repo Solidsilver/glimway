@@ -20,7 +20,8 @@ export interface Furnishing {
   base: FurnishBase;
   mount: 'floor' | 'wall' | 'surface';
   offers?: FurnishOffers;
-  size: 'small' | 'medium' | 'large';
+  /** A rug (layer "under") may omit it. */
+  size?: 'small' | 'medium' | 'large';
   /** Rugs lie on the floor, under everything, and never block. */
   layer?: 'under';
   states?: Record<string, FurnishState>;
@@ -38,7 +39,8 @@ const keys = (v: Record<string, unknown>, allowed: string[]) => Object.keys(v).e
 /** A tag is a game-internal label, never a placement rule. */
 const tag = (v: unknown): v is string => typeof v === 'string' && v.split(':').every(part => id(part));
 function validateStates(states: Record<string, FurnishState> | undefined): boolean {
-  if (!states) return true;
+  if (states === undefined) return true; // absent means none; an explicit null is refused
+  if (!obj(states)) return false;
   const names = Object.keys(states);
   if (!names.length) return false;
   return names.every(name => id(name) && obj(states[name]) && keys(states[name]!, ['frames', 'loop', 'default'])
@@ -54,14 +56,18 @@ export function validateFurnishings(value: unknown): Furnishings {
   const doc = value as unknown as Furnishings, seen = new Set<string>();
   for (const p of doc.pieces) {
     if (!obj(p) || !keys(p, ['id', 'name', 'facings', 'footprint', 'base', 'mount', 'offers', 'size', 'layer', 'states', 'tags'])
-      || !id(p.id) || seen.has(p.id) || typeof p.name !== 'string' || !p.name
-      || !Array.isArray(p.footprint) || p.footprint.length !== 2 || !int(p.footprint[0], 1) || p.footprint[0] > 12 || !int(p.footprint[1], 1) || p.footprint[1] > 10
-      || !obj(p.base) || !keys(p.base, ['x', 'y', 'w', 'h']) || !int(p.base.x) || !int(p.base.y) || !int(p.base.w, 1) || !int(p.base.h, 1)
-      || p.base.x + p.base.w > p.footprint[0] || p.base.y + p.base.h > p.footprint[1]
-      || !MOUNTS.includes(p.mount) || !SIZES.includes(p.size) || !Array.isArray(p.tags)
-      || (p.layer !== undefined && p.layer !== 'under')) return bad(p.id);
+      || !id(p.id) || seen.has(p.id)) return bad(`id ${p.id}`);
     seen.add(p.id);
+    if (typeof p.name !== 'string' || !p.name) return bad(`${p.id} name`);
+    if (!Array.isArray(p.footprint) || p.footprint.length !== 2 || !int(p.footprint[0], 1) || p.footprint[0] > 12 || !int(p.footprint[1], 1) || p.footprint[1] > 10) return bad(`${p.id} footprint`);
+    if (!MOUNTS.includes(p.mount)) return bad(`${p.id} mount`);
+    // A rug (layer "under") may omit its size; nothing else may.
+    if (!(SIZES as unknown[]).includes(p.size) && !(p.layer === 'under' && p.size === undefined)) return bad(`${p.id} size`);
+    if (p.layer !== undefined && p.layer !== 'under') return bad(`${p.id} layer`);
+    if (!Array.isArray(p.tags)) return bad(`${p.id} tags`);
     if (!obj(p.facings) || !Object.keys(p.facings).length || !Object.entries(p.facings).every(([f, art]) => FACINGS.includes(f) && typeof art === 'string' && (art === '' || id(art)))) return bad(`${p.id} facings`);
+    if (!obj(p.base) || !keys(p.base, ['x', 'y', 'w', 'h']) || !int(p.base.x) || !int(p.base.y) || !int(p.base.w, 1) || !int(p.base.h, 1)
+      || p.base.x + p.base.w > p.footprint[0] || p.base.y + p.base.h > p.footprint[1]) return bad(`${p.id} base`);
     const offers = p.offers as unknown as Record<string, unknown> | undefined;
     const offerSlots = (v: unknown): v is number => int(v, 1) && (v as number) <= 12;
     if (offers !== undefined && (!obj(offers) || !keys(offers, ['top', 'shelves'])
@@ -85,7 +91,7 @@ export function furnishingFor(id: string): Furnishing | null { return FURNISHING
  */
 export type PlaceOn = { kind: 'floor' | 'wall' | 'rug' } | { kind: 'surface'; host: Furnishing; offer: 'top' | 'shelves' };
 /** How many small-item slots a piece fills on a surface, or 0 when it can never fit one (large pieces are floor-only). */
-function slotsFor(size: Furnishing['size']): number { return size === 'small' ? 1 : size === 'medium' ? 2 : 0; }
+function slotsFor(size: Furnishing['size'] | undefined): number { return size === 'small' ? 1 : size === 'medium' ? 2 : 0; }
 /**
  * Design 2.8's one placement table, for any piece onto the floor, a wall, a
  * rug or another piece's surface. `at` is the 0-based slot on a surface
@@ -96,7 +102,7 @@ export function canPlace(piece: Furnishing, onto: PlaceOn, at = 0): boolean {
   if (piece.layer === 'under') return onto.kind === 'floor'; // a rug: only on the floor, under everything
   if (piece.mount === 'wall') return onto.kind === 'wall'; // wall pieces only on walls
   if (onto.kind === 'floor') return true;
-  if (onto.kind === 'rug') return piece.mount === 'floor'; // floor pieces may also stand on a rug
+  if (onto.kind === 'rug') return true; // a rug counts as the floor for every piece but walls and other rugs
   if (onto.kind !== 'surface') return false;
   const slots = onto.offer === 'top' ? onto.host.offers?.top ?? 0 : onto.offer === 'shelves' ? onto.host.offers?.shelves ?? 0 : 0;
   const needed = slotsFor(piece.size);

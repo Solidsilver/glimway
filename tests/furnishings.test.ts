@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import vectors from '../content/vectors/furnishings.json' with { type: 'json' };
 import furnishingRaw from '../content/furnishings.json' with { type: 'json' };
 import { FURNISHINGS, validateFurnishings, furnishingFor, canPlace, type Furnishing, type PlaceOn } from '../src/lib/furnishings.ts';
-import { HOMESTEAD_DATA, validateHomesteadData } from '../src/lib/homestead.ts';
-import { homeItem } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, validateHomesteadData, homeItem } from '../src/lib/homestead.ts';
 
 interface Edit { path: (string | number)[]; value: unknown }
 function edited(base: unknown, edits: Edit[]): unknown {
@@ -19,11 +18,12 @@ for (const v of vectors.loader) test(`shared furnishings loader: ${v.name}`, () 
 });
 
 test('the shipped catalogue keeps every home good and the interior kit', () => {
-  assert.equal(FURNISHINGS.pieces.length, 44);
+  assert.equal(FURNISHINGS.pieces.length, 45);
   for (const good of HOMESTEAD_DATA.items) assert.ok(furnishingFor(good.id), `${good.id} left the catalogue`);
-  for (const kit of ['rag-rug', 'wall-shelves', 'wall-peg', 'wall-tools', 'crate', 'barrel', 'sack', 'candle', 'picture', 'calendar', 'curtains', 'small-table', 'chest']) assert.ok(furnishingFor(kit), `interior kit lost ${kit}`);
-  // Art frame names may be empty until the art lands.
+  for (const kit of ['rag-rug', 'wall-shelves', 'wall-peg', 'wall-tools', 'crate', 'barrel', 'sack', 'candle', 'picture', 'calendar', 'curtains', 'counter', 'small-table', 'chest']) assert.ok(furnishingFor(kit), `interior kit lost ${kit}`);
+  // Art frame names may be empty until the art lands; a rug may omit its size.
   assert.equal(furnishingFor('candle')!.facings.front, '');
+  assert.equal(furnishingFor('rag-rug')!.size, undefined);
 });
 
 for (const v of vectors.placements) test(`shared canPlace: ${v.name}`, () => {
@@ -43,7 +43,13 @@ test('homestead reads its items through the catalogue', () => {
   for (const good of HOMESTEAD_DATA.items) assert.ok(furnishingFor(good.id), `${good.id} unresolved`);
   const broken: unknown = { ...structuredClone(HOMESTEAD_DATA), items: [{ ...structuredClone(HOMESTEAD_DATA.items[0]), id: 'no-such-piece' }] };
   assert.throws(() => validateHomesteadData(broken));
+  const renamed = structuredClone(HOMESTEAD_DATA);
+  (renamed.items[0] as { name: string }).name = 'Wrong Name';
+  assert.throws(() => validateHomesteadData(renamed));
   const stale = structuredClone(HOMESTEAD_DATA);
-  stale.items[0]!.footprint = [1, 1, 1] as unknown as [number, number];
+  (stale.items[0] as { footprint: number[] }).footprint = [9, 9];
   assert.throws(() => validateHomesteadData(stale));
+  const malformed = structuredClone(HOMESTEAD_DATA);
+  malformed.items[0]!.footprint = [1, 1, 1] as unknown as [number, number];
+  assert.throws(() => validateHomesteadData(malformed));
 });

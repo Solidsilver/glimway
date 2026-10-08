@@ -28,7 +28,6 @@
       "base": { "x": 0, "y": 0, "w": 2, "h": 2 },
       "mount": "floor",
       "layer": "under",
-      "size": "large",
       "tags": []
     },
     {
@@ -328,7 +327,6 @@
       "base": { "x": 0, "y": 0, "w": 3, "h": 2 },
       "mount": "floor",
       "layer": "under",
-      "size": "large",
       "tags": []
     },
     {
@@ -432,6 +430,17 @@
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "wall",
       "size": "small",
+      "tags": []
+    },
+    {
+      "id": "counter",
+      "name": "Counter",
+      "facings": { "front": "" },
+      "footprint": [3, 1],
+      "base": { "x": 0, "y": 0, "w": 3, "h": 1 },
+      "mount": "floor",
+      "offers": { "top": 4 },
+      "size": "large",
       "tags": []
     },
     {

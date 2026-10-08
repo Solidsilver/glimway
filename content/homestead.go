@@ -18,6 +18,7 @@ type HomeTier struct {
 	Embers      int            `json:"embers"`
 	Materials   map[string]int `json:"materials,omitempty"`
 }
+
 // HomeItem is one home good. The row only refers to the furnishings
 // catalogue (content/furnishings.json) by id for its name and footprint;
 // LoadHomestead fills those in, so nothing is copied in two places.
@@ -205,15 +206,23 @@ var catalogueMaterials = func() map[string]bool {
 }()
 
 // resolveHomeGoods fills each row's name and footprint from the furnishings
-// catalogue; the homestead file keeps only the homestead-specific fields.
+// catalogue; the homestead file keeps only the homestead-specific fields. A
+// row that spells them out must match the catalogue, never disagree with it.
 func resolveHomeGoods(h *Homestead) error {
 	for i := range h.Items {
 		f, ok := FurnishingFor(h.Items[i].ID)
 		if !ok {
 			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", h.Items[i].ID)
 		}
-		h.Items[i].Name = f.Name
-		h.Items[i].Footprint = []int{f.Footprint[0], f.Footprint[1]}
+		v := &h.Items[i]
+		if v.Name != "" && v.Name != f.Name {
+			return fmt.Errorf("invalid homestead: item %s names itself %q", v.ID, v.Name)
+		}
+		if len(v.Footprint) != 0 && (len(v.Footprint) != 2 || v.Footprint[0] != f.Footprint[0] || v.Footprint[1] != f.Footprint[1]) {
+			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue's footprint", v.ID)
+		}
+		v.Name = f.Name
+		v.Footprint = []int{f.Footprint[0], f.Footprint[1]}
 	}
 	return nil
 }

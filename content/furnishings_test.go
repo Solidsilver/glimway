@@ -92,8 +92,17 @@ func TestHomesteadReadsItemsThroughTheCatalogue(t *testing.T) {
 		t.Fatal("accepted an unknown furnishing reference")
 	}
 	broken.Items[0].ID = h.Items[0].ID
+	broken.Items[0].Name = "Wrong Name"
+	if err := resolveHomeGoods(&broken); err == nil {
+		t.Fatal("accepted a row naming itself differently from the catalogue")
+	}
+	broken.Items[0].Name = h.Items[0].Name
+	broken.Items[0].Footprint = []int{9, 9}
+	if err := resolveHomeGoods(&broken); err == nil {
+		t.Fatal("accepted a footprint disagreeing with the catalogue")
+	}
 	broken.Items[0].Footprint = []int{1, 1, 1}
 	if err := ValidateHomestead(broken); err == nil {
-		t.Fatal("accepted a footprint disagreeing with the catalogue")
+		t.Fatal("accepted a malformed footprint")
 	}
 }

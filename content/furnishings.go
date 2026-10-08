@@ -18,6 +18,11 @@ type FurnishBase struct {
 	H int `json:"h"`
 }
 
+func (v *FurnishBase) UnmarshalJSON(raw []byte) error {
+	type plain FurnishBase
+	return decodeContent(raw, (*plain)(v), "x", "y", "w", "h")
+}
+
 // FurnishState: one named state of a piece that changes only by something
 // that happens (a quest beat, cooking, a resident's routine), never by
 // idling. Exactly one state is the default; Loop marks a slow working loop.
@@ -27,11 +32,44 @@ type FurnishState struct {
 	Default bool     `json:"default,omitempty"`
 }
 
+func (v *FurnishState) UnmarshalJSON(raw []byte) error {
+	type plain FurnishState
+	return decodeContent(raw, (*plain)(v), "frames")
+}
+
 // FurnishOffers: the surfaces a piece provides for other pieces, each sized
 // in small-item slots (a small piece takes one, a medium two).
 type FurnishOffers struct {
 	Top     int `json:"top,omitempty"`
 	Shelves int `json:"shelves,omitempty"`
+}
+
+// Each present key must carry a real slot count, and at least one key must
+// be present; explicit nulls are refused like any other content field.
+func (v *FurnishOffers) UnmarshalJSON(raw []byte) error {
+	type slots struct {
+		Top     *int `json:"top"`
+		Shelves *int `json:"shelves"`
+	}
+	var s slots
+	if err := decodeContent(raw, &s); err != nil {
+		return err
+	}
+	if s.Top == nil && s.Shelves == nil {
+		return fmt.Errorf("offers need top or shelves")
+	}
+	for _, n := range []*int{s.Top, s.Shelves} {
+		if n != nil && (*n < 1 || *n > 12) {
+			return fmt.Errorf("offers slots out of range")
+		}
+	}
+	if s.Top != nil {
+		v.Top = *s.Top
+	}
+	if s.Shelves != nil {
+		v.Shelves = *s.Shelves
+	}
+	return nil
 }
 
 type Furnishing struct {
@@ -42,11 +80,19 @@ type Furnishing struct {
 	Base      FurnishBase             `json:"base"`
 	Mount     string                  `json:"mount"`
 	Offers    *FurnishOffers          `json:"offers,omitempty"`
-	Size      string                  `json:"size"`
+	Size      string                  `json:"size,omitempty"`
 	Layer     string                  `json:"layer,omitempty"`
 	States    map[string]FurnishState `json:"states,omitempty"`
 	Tags      []string                `json:"tags"`
 }
+
+// Required except size, which a rug (layer "under") may omit; offers, layer
+// and states are absent-means-none, and an explicit null is refused.
+func (v *Furnishing) UnmarshalJSON(raw []byte) error {
+	type plain Furnishing
+	return decodeContent(raw, (*plain)(v), "id", "name", "facings", "footprint", "base", "mount", "tags")
+}
+
 type Furnishings struct {
 	Pieces []Furnishing `json:"pieces"`
 }
@@ -97,24 +143,37 @@ func ValidateFurnishings(doc Furnishings) error {
 	}
 	seen := map[string]bool{}
 	for _, p := range doc.Pieces {
-		if !ValidContentID(p.ID) || p.Name == "" || seen[p.ID] || len(p.Footprint) != 2 ||
-			p.Footprint[0] < 1 || p.Footprint[0] > 12 || p.Footprint[1] < 1 || p.Footprint[1] > 10 ||
-			!slices.Contains(furnishMounts, p.Mount) || !slices.Contains(furnishSizes, p.Size) ||
-			p.Layer != "" && p.Layer != "under" || p.Tags == nil {
-			return bad(p.ID)
+		if !ValidContentID(p.ID) || seen[p.ID] {
+			return bad("id " + p.ID)
 		}
 		seen[p.ID] = true
+		if p.Name == "" {
+			return bad(p.ID + " name")
+		}
+		if len(p.Footprint) != 2 || p.Footprint[0] < 1 || p.Footprint[0] > 12 || p.Footprint[1] < 1 || p.Footprint[1] > 10 {
+			return bad(p.ID + " footprint")
+		}
+		if !slices.Contains(furnishMounts, p.Mount) {
+			return bad(p.ID + " mount")
+		}
+		// A rug (layer "under") may omit its size; nothing else may.
+		if p.Size != "" || p.Layer != "under" {
+			if !slices.Contains(furnishSizes, p.Size) {
+				return bad(p.ID + " size")
+			}
+		}
+		if p.Layer != "" && p.Layer != "under" {
+			return bad(p.ID + " layer")
+		}
+		if p.Tags == nil {
+			return bad(p.ID + " tags")
+		}
 		if len(p.Facings) == 0 {
 			return bad(p.ID + " facings")
 		}
 		for f, art := range p.Facings {
-			if !slices.Contains(furnishFacings, f) {
-				return bad(p.ID + " facing " + f)
-			}
-			if art == "" {
-				continue // art frame names may be empty until the art lands
-			}
-			if !ValidContentID(art) {
+			// Art frame names may be empty until the art lands.
+			if !slices.Contains(furnishFacings, f) || art != "" && !ValidContentID(art) {
 				return bad(p.ID + " facing " + f)
 			}
 		}
@@ -123,9 +182,6 @@ func ValidateFurnishings(doc Furnishings) error {
 		if p.Base.X < 0 || p.Base.Y < 0 || p.Base.W < 1 || p.Base.H < 1 ||
 			p.Base.X+p.Base.W > p.Footprint[0] || p.Base.Y+p.Base.H > p.Footprint[1] {
 			return bad(p.ID + " base")
-		}
-		if p.Offers != nil && (p.Offers.Top < 0 || p.Offers.Shelves < 0 || p.Offers.Top > 12 || p.Offers.Shelves > 12 || p.Offers.Top+p.Offers.Shelves == 0) {
-			return bad(p.ID + " offers")
 		}
 		// A rug lies on the floor, under everything, and never blocks.
 		if p.Layer == "under" && (p.Mount != "floor" || p.Offers != nil) {
@@ -176,11 +232,11 @@ func FurnishingFor(id string) (Furnishing, bool) {
 
 // PlaceOn is what a piece is placed onto: the floor, a wall, a rug, or
 // another piece's surface (its top or one shelf row). Host and Offer are
-// only set for a surface.
+// only set for a surface; built in code, so no json tags.
 type PlaceOn struct {
-	Kind  string      `json:"kind"`
-	Host  *Furnishing `json:"host,omitempty"`
-	Offer string      `json:"offer,omitempty"`
+	Kind  string
+	Host  *Furnishing
+	Offer string
 }
 
 // slotsFor: how many small-item slots a piece fills on a surface, or 0 when
@@ -213,8 +269,8 @@ func CanPlace(piece *Furnishing, onto PlaceOn, at int) bool {
 	case "floor":
 		return true
 	case "rug":
-		// Floor pieces may also stand on a rug.
-		return piece.Mount == "floor"
+		// A rug counts as the floor for every piece but walls and other rugs.
+		return true
 	case "surface":
 		if onto.Host == nil || onto.Host.Offers == nil {
 			return false
