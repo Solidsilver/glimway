@@ -44,7 +44,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            # Pre-releases (vX.Y.Z-alpha.N) get only their own version tag.
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
             type=sha,prefix=sha-,format=long
           labels: |
             org.opencontainers.image.source=https://github.com/Solidsilver/glimway

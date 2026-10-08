@@ -21,7 +21,7 @@ export interface Seen {
   build: string
 }
 
-const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/
+const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.]+))?$/
 
 /** Markdown inline marks to plain text: links keep their words, code its letters. */
 function plain(line: string): string {
@@ -74,7 +74,10 @@ export function parseChangelog(markdown: string): Release[] {
   return releases
 }
 
-/** Negative when `a` comes before `b`; versions that aren't x.y.z sort first. */
+/**
+ * Negative when `a` comes before `b`; versions that aren't x.y.z sort first.
+ * A pre-release (x.y.z-alpha.N) comes before its x.y.z.
+ */
 export function compareVersions(a: string, b: string): number {
   const pa = SEMVER.exec(a)
   const pb = SEMVER.exec(b)
@@ -83,7 +86,10 @@ export function compareVersions(a: string, b: string): number {
     const d = Number(pa[i]) - Number(pb[i])
     if (d) return d
   }
-  return 0
+  if (pa[4] === pb[4]) return 0
+  if (!pa[4]) return 1
+  if (!pb[4]) return -1
+  return pa[4].localeCompare(pb[4], 'en', { numeric: true })
 }
 
 /** Released versions after `seen`, up to and including `running`, that have players' lines; newest first. */

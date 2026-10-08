@@ -28,7 +28,7 @@ const BUILD_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 export function parseVersionInfo(raw: unknown): VersionInfo | null {
   if (!raw || typeof raw !== 'object') return null
   const { version, build } = raw as Record<string, unknown>
-  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) return null
+  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) return null
   if (typeof build !== 'string' || !BUILD_ID.test(build)) return null
   return { version, build }
 }

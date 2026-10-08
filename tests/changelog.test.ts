@@ -67,6 +67,16 @@ test('versions compare as numbers, and only released ones count', () => {
   assert.equal(latestRelease(releases, '0.0.1'), null)
 })
 
+test('a pre-release comes before its release, and shows the releases before it', () => {
+  assert.ok(compareVersions('0.3.0-alpha.1', '0.3.0') < 0)
+  assert.ok(compareVersions('0.3.0-alpha.1', '0.2.0') > 0)
+  assert.ok(compareVersions('0.3.0-alpha.10', '0.3.0-alpha.2') > 0)
+  assert.equal(compareVersions('0.3.0-alpha.2', '0.3.0-alpha.2'), 0)
+  const releases = parseChangelog(SAMPLE)
+  assert.deepEqual(releasesSince(releases, '0.1.0', '0.3.0-alpha.1').map((r) => r.version), ['0.2.0'])
+  assert.deepEqual(releasesSince(releases, '0.2.0-alpha.3', '0.2.0').map((r) => r.version), ['0.2.0'])
+})
+
 test('the card shows after an update, once, and never to a device that has nothing to catch up from', () => {
   const releases = parseChangelog(SAMPLE)
   const now = { version: '0.2.0', build: 'abc123' }

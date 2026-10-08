@@ -31,7 +31,7 @@ const BUILD_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 /** @param {string} root */
 export function readVersion(root) {
   const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version
-  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`package.json version ${JSON.stringify(version)} is not x.y.z`)
+  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/.test(version)) throw new Error(`package.json version ${JSON.stringify(version)} is not x.y.z or x.y.z-pre`)
   return version
 }
 

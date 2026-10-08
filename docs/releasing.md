@@ -36,3 +36,13 @@ that moves the changelog and bumps that version, tagged.
    names the server's version and build.
 
 Never move or reuse a published tag: fix forward with the next patch version.
+
+## Pre-releases
+
+Milestones on the way to a release are tagged `vX.Y.Z-alpha.N`, so a problem can
+be traced to the step that brought it. Bump `package.json` to the same version
+(`npm version X.Y.Z-alpha.N --no-git-tag-version`), commit, and tag the commit on
+the branch where it was built (usually `expansion` or the release's integration
+branch); `main` stays on the last release. The release workflow publishes the
+image as `X.Y.Z-alpha.N` and `sha-<commit>` only: never `X.Y` or `latest`. The
+changelog keeps collecting under `## [Unreleased]` until the real release.

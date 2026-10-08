@@ -9,6 +9,7 @@ const MIN = 60_000;
 test('version.json bodies: only a real { version, build } counts', () => {
   assert.deepEqual(parseVersionInfo({ version: '0.2.0', build: 'abc1234' }), { version: '0.2.0', build: 'abc1234' });
   assert.deepEqual(parseVersionInfo({ version: '0.2.0', build: '35a80b62d321', extra: 1 }), { version: '0.2.0', build: '35a80b62d321' });
+  assert.deepEqual(parseVersionInfo({ version: '0.3.0-alpha.1', build: 'abc1234' }), { version: '0.3.0-alpha.1', build: 'abc1234' });
   for (const odd of [null, undefined, 'abc1234', 42, [], {}, { version: '0.2.0' }, { build: 'abc1234' }, { version: 'v0.2.0', build: 'abc1234' }, { version: '0.2', build: 'abc1234' }, { version: '0.2.0', build: '' }, { version: '0.2.0', build: '<html>' }, { version: '0.2.0', build: 7 }]) {
     assert.equal(parseVersionInfo(odd), null, JSON.stringify(odd));
   }
