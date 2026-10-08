@@ -564,6 +564,175 @@
           "value": -1
         }
       ]
+    },
+    {
+      "name": "elara-desk-and-camp",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "elara-unknown-home",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "home"
+          ],
+          "value": "in:village:missing"
+        }
+      ]
+    },
+    {
+      "name": "elara-desk-outside-room",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "tx"
+          ],
+          "value": 14
+        }
+      ]
+    },
+    {
+      "name": "seated-resident-cannot-use-wall",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "tx"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "seat-must-be-boolean",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "seated"
+          ],
+          "value": "yes"
+        }
+      ]
+    },
+    {
+      "name": "seat-on-existing-furniture",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "tx"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "standing-resident-cannot-use-furniture",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "tx"
+          ],
+          "value": 3
+        },
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk",
+            "seated"
+          ],
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "elara-missing-cycle-spot",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "cycle",
+            1,
+            "spot"
+          ],
+          "value": "square"
+        }
+      ]
+    },
+    {
+      "name": "elara-cycle-must-total-hour",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "cycle",
+            0,
+            "minutes"
+          ],
+          "value": 31
+        }
+      ]
+    },
+    {
+      "name": "seated-resident-needs-accessible-furniture",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            3,
+            "home"
+          ],
+          "value": "in:village:bakery"
+        },
+        {
+          "path": [
+            "residents",
+            3,
+            "spots",
+            "desk"
+          ],
+          "value": {
+            "area": "in:village:bakery",
+            "tx": 7,
+            "ty": 1,
+            "seated": true
+          }
+        }
+      ]
     }
   ],
   "parents": [

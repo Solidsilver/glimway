@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import roomVectors from '../content/vectors/rooms.json' with { type: 'json' };
 import questVectors from '../content/vectors/quests.json' with { type: 'json' };
 import clockVectors from '../content/vectors/clock.json' with { type: 'json' };
+import libraryVectors from '../content/vectors/library.json' with { type: 'json' };
 import roomRaw from '../content/rooms.json' with { type: 'json' };
 import residentRaw from '../content/residents.json' with { type: 'json' };
 import { ROOMS, validateRooms, roomParent, rootArea, knownRoom, roomFootprints, roomFor } from '../src/lib/rooms.ts';
-import { validateResidents, residentAt, residentById } from '../src/lib/residents.ts';
+import { validateResidents, residentAt, residentById, residentSpotFits } from '../src/lib/residents.ts';
 import { cycleAt, cycleSpotsNear } from '../src/lib/clock.ts';
 import { validateQuests } from '../src/lib/story-tables.ts';
 interface Edit { path: (string | number)[]; value: unknown }
@@ -36,7 +37,22 @@ test('prop footprints preserve separate rectangular sack piles', () => {
 test('shared resident cycle phase and grace vectors', () => {
   for (const v of clockVectors.cycles) { assert.deepEqual(cycleAt(v.resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(v.resident,v.now,v.graceSeconds),v.near); }
   assert.deepEqual(residentAt('finn',2700), { area:'in:village:mill:2',tx:7,ty:5 });
+  assert.deepEqual(residentAt('elara',0), { area:'commons',tx:26,ty:5 });
+  assert.deepEqual(residentAt('elara',600), { area:'in:village:library',tx:9,ty:4,seated:true });
+  assert.deepEqual(residentAt('elara',2400), { area:'commons',tx:26,ty:5 });
   assert.equal(residentAt('missing',0),null); assert.equal(residentById('missing'),null);
+});
+
+test('revised library accepts solid boundary shelves, refuses open ones', () => {
+  const doc = structuredClone(roomRaw);
+  doc.rooms[doc.rooms.findIndex(r => r.id === libraryVectors.room.id)] = libraryVectors.room;
+  assert.doesNotThrow(() => validateRooms(doc));
+  const open = structuredClone(doc);
+  open.rooms.find(r => r.id === libraryVectors.room.id)!.props[0]!.solid = false;
+  assert.throws(() => validateRooms(open));
+});
+for (const v of libraryVectors.seats) test(`shared resident seat: ${v.name}`, () => {
+  assert.equal(residentSpotFits(libraryVectors.room, v.spot), v.valid);
 });
 
 test('shared quest wait boundaries', async () => {

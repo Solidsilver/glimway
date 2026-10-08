@@ -1,8 +1,8 @@
 import raw from '../../content/residents.json' with { type: 'json' };
-import { knownContentArea, roomFor, roomWalkable } from './rooms.ts';
+import { knownContentArea, roomFor, roomWalkable, roomContainsTile, type Room } from './rooms.ts';
 import { cycleAt } from './clock.ts';
 
-export interface ResidentSpot { area: string; tx: number; ty: number }
+export interface ResidentSpot { area: string; tx: number; ty: number; seated?: boolean }
 export interface ResidentPhase { spot: string; minutes: number }
 export interface Resident { id: string; offsetMinutes?: number; home?: string; spots: Record<string, ResidentSpot>; cycle: ResidentPhase[] }
 export interface Residents { periodMinutes: number; graceSeconds: number; residents: Resident[] }
@@ -18,8 +18,8 @@ export function validateResidents(value: unknown): Residents {
     if (!obj(r) || !keys(r, ['id','offsetMinutes','home','spots','cycle']) || !id(r.id) || seen.has(r.id) || !int(r.offsetMinutes ?? 0) || (r.offsetMinutes ?? 0) >= doc.periodMinutes || !obj(r.spots) || !Object.keys(r.spots).length || !Array.isArray(r.cycle) || !r.cycle.length) return bad('resident');
     if (r.home !== undefined && !roomFor(r.home)) return bad(`home ${r.id}`);
     for (const [name, s] of Object.entries(r.spots)) {
-      if (!id(name) || !obj(s) || !keys(s, ['area','tx','ty']) || typeof s.area !== 'string' || !knownContentArea(s.area) || !int(s.tx) || !int(s.ty)) return bad(`spot ${r.id}`);
-      const room = roomFor(s.area); if (room && !roomWalkable(room, s.tx, s.ty)) return bad(`blocked spot ${r.id}`);
+      if (!id(name) || !obj(s) || !keys(s, ['area','tx','ty','seated']) || typeof s.area !== 'string' || !knownContentArea(s.area) || !int(s.tx) || !int(s.ty) || s.seated !== undefined && typeof s.seated !== 'boolean') return bad(`spot ${r.id}`);
+      const room = roomFor(s.area); if (room && !residentSpotFits(room, s)) return bad(`blocked spot ${r.id}`);
     }
     let total = 0; const used = new Set<string>();
     for (const p of r.cycle) { if (!obj(p) || !keys(p, ['spot','minutes']) || typeof p.spot !== 'string' || !Object.hasOwn(r.spots, p.spot) || !int(p.minutes) || p.minutes < 1) return bad(`phase ${r.id}`); total += p.minutes; used.add(p.spot); }
@@ -28,6 +28,13 @@ export function validateResidents(value: unknown): Residents {
     seen.add(r.id);
   }
   return doc;
+}
+/** A seated resident may occupy furniture beside a walkable tile, never a wall. */
+export function residentSpotFits(room: Room, spot: ResidentSpot): boolean {
+  if (roomWalkable(room, spot.tx, spot.ty)) return true;
+  if (!spot.seated || !roomContainsTile(room, spot.tx, spot.ty)) return false;
+  const char = room.map[spot.ty]![spot.tx]!;
+  return room.props.some(p => p.char === char) && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy]) => roomWalkable(room, spot.tx + dx!, spot.ty + dy!));
 }
 export const RESIDENTS = validateResidents(raw);
 export function residentById(id: string): Resident | null { return RESIDENTS.residents.find(r => r.id === id) ?? null; }

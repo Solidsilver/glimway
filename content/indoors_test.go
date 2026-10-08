@@ -131,11 +131,61 @@ func TestResidentCycleVectors(t *testing.T) {
 			t.Fatal(v, got)
 		}
 	}
-	if got, ok := ResidentAt("finn", 2700); !ok || got != (ResidentSpot{"in:village:mill:2", 7, 5}) {
+	if got, ok := ResidentAt("finn", 2700); !ok || got != (ResidentSpot{Area: "in:village:mill:2", TX: 7, TY: 5}) {
 		t.Fatal(got, ok)
+	}
+	for now, want := range map[float64]ResidentSpot{
+		0:    {Area: "commons", TX: 26, TY: 5},
+		600:  {Area: "in:village:library", TX: 9, TY: 4, Seated: true},
+		2400: {Area: "commons", TX: 26, TY: 5},
+	} {
+		if got, ok := ResidentAt("elara", now); !ok || got != want {
+			t.Fatal(now, got, ok)
+		}
 	}
 	if _, ok := ResidentAt("missing", 0); ok {
 		t.Fatal("unknown resident")
+	}
+}
+
+func TestRevisedLibraryVectors(t *testing.T) {
+	var vectors struct {
+		Room  Room
+		Seats []struct {
+			Name  string
+			Spot  ResidentSpot
+			Valid bool
+		}
+	}
+	readVectors(t, "library", &vectors)
+	doc, err := LoadRooms()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, room := range doc.Rooms {
+		if room.ID == vectors.Room.ID {
+			doc.Rooms[i] = vectors.Room
+		}
+	}
+	if err := ValidateRooms(doc); err != nil {
+		t.Fatal("revised library:", err)
+	}
+	// Shelves can seal a boundary only while they are solid.
+	for i, room := range doc.Rooms {
+		if room.ID == vectors.Room.ID {
+			doc.Rooms[i].Props = append([]RoomProp(nil), room.Props...)
+			doc.Rooms[i].Props[0].Solid = false
+		}
+	}
+	if err := ValidateRooms(doc); err == nil {
+		t.Fatal("accepted non-solid boundary shelves")
+	}
+	for _, v := range vectors.Seats {
+		t.Run(v.Name, func(t *testing.T) {
+			if got := ResidentSpotFits(vectors.Room, v.Spot); got != v.Valid {
+				t.Fatal(got, v.Valid)
+			}
+		})
 	}
 }
 func TestRoomFootprints(t *testing.T) {

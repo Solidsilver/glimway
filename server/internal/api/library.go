@@ -108,8 +108,8 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 		if paper.Source == "library-start" {
 			return nil, fail(409, "already-shelved")
 		}
-		if s.State.Area != "village" {
-			return nil, fail(409, "wrong-area")
+		if s.State.Area != "in:village:library" || !personHere("elara", s.State.Area, now) {
+			return nil, fail(409, "not-here")
 		}
 		if !slices.Contains(s.State.Flags, "paper:"+req.PaperID) {
 			return nil, fail(403, "not-held")

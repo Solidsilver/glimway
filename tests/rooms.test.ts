@@ -183,7 +183,10 @@ test('who’s home: a room’s resident is in while their spot is in it (the lof
   assert.ok(residentIn('in:village:mill', at(30)), 'at the stones');
   assert.ok(residentIn('in:village:mill', at(50)), 'up in the loft');
   assert.ok(!residentIn('in:village:mill', at(10)), 'out at his door');
-  assert.ok(!residentIn('in:village:library', at(10)), 'nobody keeps the library');
+  assert.ok(residentIn('in:village:library', at(10)), 'Elara arrives at her desk');
+  assert.ok(residentIn('in:village:library', at(39)), 'Elara is still at her desk');
+  assert.ok(!residentIn('in:village:library', at(40)), 'Elara leaves for her camp');
+  assert.ok(!residentIn('in:village:library', at(0)), 'Elara is at camp before opening');
 });
 
 test('residents are placed at every spot they have in an area; the cycle says which one they stand at', () => {
