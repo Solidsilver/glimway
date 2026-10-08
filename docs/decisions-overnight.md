@@ -11,7 +11,7 @@ tags wait for the owner's playtest.
 
 | Tag | Branch | What it adds |
 |---|---|---|
-| `v0.3.0-alpha.1` | `expansion` | Sound (Kenney CC0) with a Menu toggle and volume; phones and high-DPI screens at full resolution; the desolation flake fixed; pre-release version support |
+| `v0.3.0-alpha.1` | `expansion` | (Git tag only: the release workflow still refused pre-release tags, so no image. Fixed for the next alpha.) Sound (Kenney CC0) with a Menu toggle and volume; phones and high-DPI screens at full resolution; the desolation flake fixed; pre-release version support |
 
 ## Decisions
 
