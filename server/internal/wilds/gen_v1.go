@@ -205,7 +205,8 @@ func parseEntityID(entityID string) (kind string, cx, cy, index int, err error) 
 	return kind, cx, cy, index, nil
 }
 
-func lootTableID(e Entity) string {
+// LootTable is the content/wilds.json loot table an entity rolls on.
+func LootTable(e Entity) string {
 	switch e.Kind {
 	case kindCamp:
 		return "camp"
@@ -218,13 +219,11 @@ func lootTableID(e Entity) string {
 	}
 }
 
-// RollLoot is the deterministic loot for one claim cycle of one entity.
-// RNG consumption matches gen-v1.ts exactly: per loot-table entry a chance
-// draw then a quantity draw (both always taken), then the trinket chance draw
-// and — only on a win — the trinket id draw.
+// RollLoot is the deterministic loot for one claim cycle of one v1 entity,
+// found by regenerating its chunk. RNG consumption matches gen-v1.ts exactly
+// (see RollEntityLoot).
 func RollLoot(epoch Epoch, entityID string, cycle int) (LootDrop, error) {
 	drop := LootDrop{Materials: []MaterialQty{}}
-	data := content.WildsRules
 	if cycle < 0 {
 		return drop, errors.New("wilds: cycle must be a non-negative integer")
 	}
@@ -246,11 +245,24 @@ func RollLoot(epoch Epoch, entityID string, cycle int) (LootDrop, error) {
 	if entity == nil {
 		return drop, fmt.Errorf("wilds: unknown entity %s", entityID)
 	}
-	table, ok := data.LootTables[lootTableID(*entity)]
-	if !ok {
-		return drop, fmt.Errorf("wilds: missing loot table %s", lootTableID(*entity))
+	return RollEntityLoot(epoch, *entity, cycle)
+}
+
+// RollEntityLoot rolls one claim cycle of an entity already in hand (v2 reads
+// it from the stored chunk, so nothing is regenerated). The draws are v1's:
+// per loot-table entry a chance draw then a quantity draw (both always
+// taken), then the trinket chance draw and, only on a win, the trinket id.
+func RollEntityLoot(epoch Epoch, entity Entity, cycle int) (LootDrop, error) {
+	drop := LootDrop{Materials: []MaterialQty{}}
+	data := content.WildsRules
+	if cycle < 0 {
+		return drop, errors.New("wilds: cycle must be a non-negative integer")
 	}
-	rng := NewRng(LootSeed(epoch, entityID, cycle))
+	table, ok := data.LootTables[LootTable(entity)]
+	if !ok {
+		return drop, fmt.Errorf("wilds: missing loot table %s", LootTable(entity))
+	}
+	rng := NewRng(LootSeed(epoch, entity.ID, cycle))
 	for _, entry := range table {
 		chance := rng.NextInt(1000)
 		qty := entry.Min + rng.NextInt(entry.Max-entry.Min+1)

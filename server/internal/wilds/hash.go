@@ -1,6 +1,8 @@
-// Package wilds is the Go port of the Wilds generator's server-reproducible
-// parts (entities and loot). The algorithm matches src/lib/wilds/ exactly;
-// parity is enforced by content/vectors/wilds.json in both test suites.
+// Package wilds generates the Wilds. Generator v1 (gen_v1.go) is the Go port
+// of the TypeScript generator's server-reproducible parts (entities and
+// loot), matched exactly through content/vectors/wilds.json. Generator v2
+// (gen_v2.go, woods_v2.go) makes whole chunks on the server, terrain
+// included, and has its own goldens instead of parity.
 //
 // Integer-only hash and PRNG spec (mirrors src/lib/hash.ts):
 //
