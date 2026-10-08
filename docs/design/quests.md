@@ -2,8 +2,9 @@
 
 Status: direction agreed with the owner 2026-10-07. Second pass 2026-10-07
 (the content format, where state lives, the opening, migration, hooks into the
-other designs, build order), asked for by [plan.md](plan.md). Ready to become a
-build brief once the owner has read the open questions at the end.
+other designs, build order), asked for by [plan.md](plan.md). Owner answers on
+chapter 2 folded in the same day. Ready to become a build brief; guest embers
+wait for the guest-accounts session.
 
 ## The pitch
 
@@ -573,20 +574,20 @@ it lasts for good.
   trunnels, warden slivers, stone, and **50 embers**. Projects take materials
   today; taking embers is a small addition (a contribution that debits through
   `debitEmbers`).
-- **This changes the first pass.** The draft had Orrin take 50 embers from each
-  player. On the open map the span is one bridge that everyone shares, so I've
-  made the 50 embers part of the world's project, alongside the materials.
-  Each player's story still needs their own hand in it (any contribution) and
-  the turning. A party shares the cost, the way it shares lamps. See open
-  questions.
+- **Pooled, not per player** (owner, 2026-10-07). The first pass had Orrin
+  take 50 embers from each player. On the open map the span is one bridge that
+  everyone shares, so the 50 embers are part of the world's project, alongside
+  the materials. Each player's story still needs their own hand in it (any
+  contribution) and the turning. A party shares the cost, the way it shares
+  lamps.
 - **The obstacle catalogue.** Dorrit's span is a story structure, not a large
   span from the catalogue, so Brace doesn't open it. Elsewhere, large spans keep
   their warrior and tool ways.
-- **The Echo past the span.** The first pass said crossing reveals an Echo of
-  the lost expedition. I suggest a camp with four bedrolls, not six: the first
-  sign that some of them went on. It's allowed by the reveal order (after the
-  road is lit), but it moves the "they survived" thread forward, so it's the
-  owner's call.
+- **The Echo past the span: four bedrolls** (owner, 2026-10-07). Past the
+  span waits an Echo camp of the Six with four bedrolls, not six. It's the first
+  sign that some of them went on, allowed by the reveal order (after the road
+  is lit). Nobody in the village remarks on it yet; the player's note just
+  counts them.
 
 ### Interiors and residents indoors (layers.md)
 
@@ -638,15 +639,12 @@ nothing else. They don't wait for guest accounts or the open map.
 
 ## Open questions
 
-1. **Chapter 2's 50 embers: pooled or per player?** I've proposed pooled, in
-   the world's project, because the span is shared. Per player is closer to the
-   first pass but makes the fifth person in a party pay for a bridge that
-   already stands.
-2. **The four-bedroll Echo.** Is chapter 2 the right place for the first sign
-   that the Six didn't all die, or should it wait for chapter 3?
-3. **Embers for guest accounts.** Guests can't earn embers from Habitica, and
-   chapter 2 asks for them. The guest-accounts planning session should settle
-   where a guest's embers come from (story beats only, small village chores,
-   or something else).
-4. **Sallow Ford** (from the first pass): reaching it or seeing the lamp from
+1. **Embers for guest accounts** (owner, 2026-10-07: agreed it needs solving).
+   Guests can't earn embers from Habitica, and chapter 2's project and the
+   later chapters ask for them. Pooling helps (a guest in a party can give
+   materials instead), but a solo guest still needs a source. This belongs to
+   the guest-accounts planning session, alongside the profile source. Options to
+   weigh there: story beats only, small village chores, or something else.
+   Until it's settled, nothing in 0.3 depends on it.
+2. **Sallow Ford** (from the first pass): reaching it or seeing the lamp from
    afar. Still open; chapter 3 decides it.
