@@ -10,7 +10,7 @@ import (
 )
 
 func validChunk() *contract.WildsChunk {
-	return &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:2", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
+	return &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:1", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
 }
 func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	ctx := context.Background()
@@ -18,6 +18,9 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	if err := Validate(c); err != nil {
 		t.Fatal(err)
 	}
+	// The way home: the Tangle's entry chunk, its south edge.
+	c.Cy = 1
+	c.Exits[0].Ty, c.Exits[0].Dir = 23, contract.Dir_DIR_SOUTH
 	c.Exits[0].To = "commons"
 	c.Exits[0].Entry = &contract.Tile{Tx: 23, Ty: 2}
 	if err := Validate(c); err != nil {

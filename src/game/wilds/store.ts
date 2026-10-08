@@ -15,6 +15,12 @@
  * is always preceded by a fresh read. The outer epoch carries its `endsAt`;
  * past it the region has turned.
  *
+ * Freshness: a view is fresh once a region read and all its chunks have
+ * loaded. When a later refresh fails, the last view stays to look at but is
+ * marked `stale`; `wildsLive` (what offers and claims read) returns nothing
+ * for a stale view or while the link is not online, so nothing can be claimed,
+ * settled or relit until a fresh read lands (server-first.md 3.3).
+ *
  * There is no local play: without a server the Wilds don't open.
  */
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
@@ -87,6 +93,8 @@ export interface WildsView {
   materials: Record<string, number>;
   /** This player's Echo assignments: site id → member, and whether it is settled. */
   echoes: Map<string, { member: string; settled: boolean }>;
+  /** The last refresh failed: this is the Wilds as last seen, shown but not interactive. */
+  stale: boolean;
   /** Bumps on every change; scenes re-render when it moves. */
   version: number;
 }
@@ -135,6 +143,21 @@ export function wildsMaterials(): Record<string, number> | null {
 
 export function wildsView(region: string = active): WildsView | null {
   return regionState(region).view;
+}
+
+/**
+ * The view, only while it is fresh and the link is online: what interaction
+ * offers, claims, relights and Echo settling read. Null otherwise.
+ */
+export function wildsLive(session: Session, region: string = active): WildsView | null {
+  const v = regionState(region).view;
+  return v && !v.stale && session.link?.status === 'online' ? v : null;
+}
+
+/** Is the region shown as last seen (a stale view, or no connection)? */
+export function wildsStale(session: Session, region: string = active): boolean {
+  const v = regionState(region).view;
+  return v !== null && wildsLive(session, region) === null;
 }
 
 export function wildsEpoch(region: string = active): WildsEpoch {
@@ -230,7 +253,7 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
   const run = async (): Promise<boolean> => {
     const link = session.link;
     if (!link) return false;
-    if (r.view && Date.now() - r.fetchedAt < maxAgeMs) return true;
+    if (r.view && !r.view.stale && Date.now() - r.fetchedAt < maxAgeMs) return true;
     try {
       const ops = link.api.operations;
       const res = await ops.region(region);
@@ -250,6 +273,7 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
         lanterns: res.lanterns.map(lanternView),
         materials: materialsRecord(res.materials),
         echoes: new Map(res.echoes.map((a) => [a.site, { member: a.member, settled: a.settled }])),
+        stale: false,
         version: (prior?.version ?? 0) + 1,
       };
       setMaterials(live.view.materials);
@@ -258,7 +282,13 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
       bump(live.view);
       return true;
     } catch {
-      return regionState(region).view !== null;
+      // The last view stays to look at, marked stale; nothing in it is offered.
+      const v = regionState(region).view;
+      if (v && !v.stale) {
+        v.stale = true;
+        bump(v);
+      }
+      return false;
     }
   };
   r.inflight = run().finally(() => {
@@ -271,7 +301,7 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
 /**
  * Everything a session needs before it can play in the Wilds: the region its
  * save is in becomes active, and its epoch and chunks load. Await this before
- * building a Wilds chunk scene. `maxAgeMs` lets chunk re-entries use a recent
+ * building a Wilds chunk scene. True only for a fresh view. `maxAgeMs` lets chunk re-entries use a recent
  * read instead of refetching every walk.
  */
 export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<boolean> {
@@ -280,7 +310,7 @@ export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<bool
   if (!session.link) return false;
   watchHomesteadMaterials();
   if (isWildsArea(session.state.area)) return refreshWilds(session, maxAgeMs, region);
-  return regionState(region).view !== null;
+  return wildsLive(session, region) !== null;
 }
 
 /** A server claim answer: entity state, loot, balances. */

@@ -34,7 +34,7 @@ import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { Interactable, Interactables } from '../entities/interactables'
 import { openDialogue } from '../dialogue.ts'
-import { applyEchoSettled, wildsView, type WildsEpoch } from './store.ts'
+import { applyEchoSettled, wildsLive, wildsView, type WildsEpoch } from './store.ts'
 import { settleEcho } from './remote.ts'
 import { toRegionPosition } from './regions.ts'
 
@@ -267,8 +267,8 @@ export class WildsSites {
     this.render()
     deps.interactables.register(
       this,
-      // Quiet until the region's read lands, like the claims around them.
-      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsView() ? this.offerAt(s) : null)))
+      // Quiet until a fresh region read lands (and while stale), like the claims around them.
+      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsLive(this.deps.session, this.epoch.regionId) ? this.offerAt(s) : null)))
     )
   }
 
@@ -478,6 +478,7 @@ export class WildsSites {
 
   /** A settle picked in a camp conversation (the keepsake's offer keeps the lamp open). */
   settleEcho(siteId: string): boolean {
+    if (!wildsLive(this.deps.session, this.epoch.regionId)) return false
     const s = this.sites.find((x) => x.id === siteId && x.kind === 'echo')
     const def = s ? this.echoes.get(s.id) : undefined
     if (!s || !def) return false

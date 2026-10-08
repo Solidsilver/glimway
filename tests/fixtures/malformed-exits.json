@@ -1,0 +1,13 @@
+[
+  { "name": "north gap off the north edge", "chunk": "inner-1", "exit": 0, "set": { "ty": 5 } },
+  { "name": "north gap two tiles deep", "chunk": "inner-1", "exit": 0, "set": { "th": 2 } },
+  { "name": "east gap named west", "chunk": "inner-1", "exit": 1, "set": { "dir": "west" } },
+  { "name": "south gap to the chunk north", "chunk": "inner-1", "exit": 2, "set": { "to": "chunk:inner-1:1:0" } },
+  { "name": "east gap to a diagonal chunk", "chunk": "inner-1", "exit": 1, "set": { "to": "chunk:inner-1:2:2" } },
+  { "name": "west gap to itself", "chunk": "inner-1", "exit": 3, "set": { "to": "chunk:inner-1:1:1" } },
+  { "name": "stray crossing from a chunk without one", "chunk": "inner-1", "exit": 0, "set": { "to": "chunk:outer-1:1:1" } },
+  { "name": "crossing back to the wrong Tangle chunk", "chunk": "outer-1", "exit": 4, "set": { "to": "chunk:inner-1:1:1" } },
+  { "name": "crossing into a Whitequiet chunk other than its entry", "chunk": "outer-1", "exit": 0, "set": { "to": "chunk:inner-1:1:0" } },
+  { "name": "way home to the Commons from the Whitequiet", "chunk": "outer-1", "exit": 4, "set": { "to": "commons" } },
+  { "name": "way home on the north edge", "chunk": "inner-1", "exit": 0, "set": { "to": "commons" } }
+]

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,6 +11,8 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	contract "glimway/server/internal/gen/glimway/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 func chunkStore(t *testing.T) *Store {
@@ -125,6 +128,63 @@ func TestChunksCreateCurrentRead(t *testing.T) {
 			t.Fatalf("the Tangle ended: %v", err)
 		}
 	})
+}
+
+// TestChunksTangleIsPermanent: two Tangle epochs made a wick apart, in two
+// worlds with the same seed, get the same fixed season and byte-identical
+// chunks; the Whitequiet made at those two moments gets two seasons and
+// different chunks.
+func TestChunksTangleIsPermanent(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	if _, err := s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('world-twin','owner','seed-world-a',0)"); err != nil {
+		t.Fatal(err)
+	}
+	early, late := int64(1795000000), int64(1795000000+86400*40)
+	c := NewChunks(nil)
+	made := map[string]*contract.WildsEpoch{}
+	inTx(t, s, func(tx *sql.Tx) {
+		for _, m := range []struct {
+			key, world, region string
+			now                int64
+		}{{"inner-early", "world-a", "inner-1", early}, {"inner-late", "world-twin", "inner-1", late}, {"outer-early", "world-a", "outer-1", early}, {"outer-late", "world-twin", "outer-1", late}} {
+			e, err := c.Create(ctx, tx, m.world, m.region, m.now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			made[m.key] = e
+		}
+	})
+	if made["inner-early"].Season != "0" || made["inner-late"].Season != "0" {
+		t.Fatalf("Tangle seasons %q and %q", made["inner-early"].Season, made["inner-late"].Season)
+	}
+	if made["outer-early"].Season == made["outer-late"].Season {
+		t.Fatal("the Whitequiet kept its season across a wick")
+	}
+	// The stored chunks, with the epoch id (the one field that names the row) cleared.
+	chunk := func(epoch string, cx, cy int) []byte {
+		var blob []byte
+		if err := s.DB.QueryRow("SELECT blob FROM wilds_chunks WHERE epoch_id=? AND cx=? AND cy=?", epoch, cx, cy).Scan(&blob); err != nil {
+			t.Fatal(err)
+		}
+		m := &contract.WildsChunk{}
+		if err := proto.Unmarshal(blob, m); err != nil {
+			t.Fatal(err)
+		}
+		m.EpochId = ""
+		b, _ := proto.MarshalOptions{Deterministic: true}.Marshal(m)
+		return b
+	}
+	for cy := range 3 {
+		for cx := range 3 {
+			if !bytes.Equal(chunk(made["inner-early"].Id, cx, cy), chunk(made["inner-late"].Id, cx, cy)) {
+				t.Fatalf("Tangle chunk %d,%d changed across a wick", cx, cy)
+			}
+		}
+	}
+	if bytes.Equal(chunk(made["outer-early"].Id, 1, 1), chunk(made["outer-late"].Id, 1, 1)) {
+		t.Fatal("the Whitequiet's chunks did not turn")
+	}
 }
 
 // A v1 epoch left on a development branch is invisible and gives way.

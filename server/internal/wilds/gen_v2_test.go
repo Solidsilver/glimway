@@ -114,14 +114,13 @@ func TestDeterministicAndStableIDs(t *testing.T) {
 	if chunkHash(alone) != chunkHash(*a.Chunk(2, 1)) {
 		t.Fatal("GenerateChunk differs from GenerateRegion")
 	}
-	// Another wick turns the Whitequiet; the Tangle stays.
+	// Another wick turns the Whitequiet.
 	other := mustRegion(t, outerEpoch("oak-7", 1795000000+86400*15))
 	if chunkHash(other.Chunks[0]) == chunkHash(a.Chunks[0]) {
 		t.Fatal("a new season left the chunk unchanged")
 	}
-	if chunkHash(mustRegion(t, innerEpoch("oak-7")).Chunks[4]) != chunkHash(mustRegion(t, innerEpoch("oak-7")).Chunks[4]) {
-		t.Fatal("the Tangle is not permanent")
-	}
+	// (The Tangle's permanence is its fixed season input: store's
+	// TestChunksTangleIsPermanent creates it a wick apart and compares.)
 	if chunkHash(mustRegion(t, innerEpoch("oak-8")).Chunks[4]) == chunkHash(mustRegion(t, innerEpoch("oak-7")).Chunks[4]) {
 		t.Fatal("the world seed did not change the Tangle")
 	}

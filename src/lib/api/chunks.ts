@@ -1,5 +1,6 @@
 import { clone, fromBinary } from '@bufbuild/protobuf';
-import { WildsChunkSchema, Dir, SiteKind, type WildsChunk, type WildsEntity } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsChunkSchema, Dir, SiteKind, type Exit, type WildsChunk, type WildsEntity } from '../gen/glimway/v1/wilds_pb.js';
+import { loadWilds } from '../wilds/data.ts';
 
 export const CHUNK_SIZE = 24;
 const destinationSize = (to: string): [number, number] => {
@@ -7,6 +8,48 @@ const destinationSize = (to: string): [number, number] => {
   if (to === 'commons') return [62, 42];
   throw new Error('unknown destination');
 };
+/** The one crossing (server/internal/wilds/gen_v2.go): the Tangle's (1,0) north gap ↔ the Whitequiet's entry, south gap. */
+const CROSSING_CHUNK = { cx: 1, cy: 0 };
+const STEP: Record<number, [number, number]> = { [Dir.NORTH]: [0, -1], [Dir.SOUTH]: [0, 1], [Dir.WEST]: [-1, 0], [Dir.EAST]: [1, 0] };
+
+function entryOf(region: string): { cx: number; cy: number } {
+  const r = loadWilds().regions.find((x) => x.id === region);
+  if (!r) throw new Error('unknown region');
+  return { cx: r.entryX, cy: r.entryY };
+}
+
+/** The doorway is a one-tile-deep gap on the edge its dir names. */
+function onEdge(size: number, e: Exit): boolean {
+  switch (e.dir) {
+    case Dir.NORTH: return e.ty === 0 && e.th === 1;
+    case Dir.SOUTH: return e.ty === size - 1 && e.th === 1;
+    case Dir.WEST: return e.tx === 0 && e.tw === 1;
+    case Dir.EAST: return e.tx === size - 1 && e.tw === 1;
+  }
+  return false;
+}
+
+/** A doorway leads to the neighbour its dir names, or is the crossing, or the Tangle's way home. */
+function exitLeads(chunk: WildsChunk, e: Exit): void {
+  const at = (p: { cx: number; cy: number }) => chunk.cx === p.cx && chunk.cy === p.cy;
+  if (e.to === 'commons') {
+    if (chunk.region !== 'inner-1' || !at(entryOf('inner-1')) || e.dir !== Dir.SOUTH) throw new Error('way home off the Tangle\'s entry');
+    return;
+  }
+  const m = /^chunk:(inner-1|outer-1):([0-2]):([0-2])$/.exec(e.to);
+  if (!m) throw new Error('unknown destination');
+  const to = { cx: Number(m[2]), cy: Number(m[3]) };
+  if (m[1] === chunk.region) {
+    const [dx, dy] = STEP[e.dir]!;
+    if (to.cx !== chunk.cx + dx || to.cy !== chunk.cy + dy) throw new Error('exit to a chunk not beside it');
+    return;
+  }
+  const outer = entryOf('outer-1');
+  const there = chunk.region === 'inner-1' && at(CROSSING_CHUNK) && e.dir === Dir.NORTH && m[1] === 'outer-1' && to.cx === outer.cx && to.cy === outer.cy;
+  const back = chunk.region === 'outer-1' && at(outer) && e.dir === Dir.SOUTH && m[1] === 'inner-1' && to.cx === CROSSING_CHUNK.cx && to.cy === CROSSING_CHUNK.cy;
+  if (!there && !back) throw new Error('stray crossing');
+}
+
 export function validateChunk(chunk: WildsChunk): WildsChunk {
   const size = chunk.size;
   if (size !== CHUNK_SIZE || !chunk.epochId || !['inner-1', 'outer-1'].includes(chunk.region) || chunk.generatorVersion !== 2 || chunk.realm !== "hearthwick" || chunk.layer !== 0 || !["tangle", "outer"].includes(chunk.look) || chunk.cx < 0 || chunk.cx >= 3 || chunk.cy < 0 || chunk.cy >= 3) throw new Error('invalid chunk identity');
@@ -30,6 +73,8 @@ export function validateChunk(chunk: WildsChunk): WildsChunk {
   for (const exit of chunk.exits) {
     tile(exit.tx, exit.ty);
     if (!exit.tw || !exit.th || exit.tx + exit.tw > size || exit.ty + exit.th > size || ![Dir.NORTH, Dir.EAST, Dir.SOUTH, Dir.WEST].includes(exit.dir) || !exit.entry) throw new Error('invalid exit');
+    if (!onEdge(size, exit)) throw new Error('exit off its edge');
+    exitLeads(chunk, exit);
     const [width, height] = destinationSize(exit.to);
     if (exit.entry.tx >= width || exit.entry.ty >= height) throw new Error('invalid destination entry');
   }

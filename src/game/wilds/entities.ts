@@ -40,6 +40,8 @@ import {
   refreshWilds,
   wildsEpoch,
   wildsEpochEndsAt,
+  wildsLive,
+  wildsStale,
   wildsView,
   type WildsView,
 } from './store.ts'
@@ -242,6 +244,9 @@ export class WildsEntities {
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
+  /** Shown as last seen (no fresh read, or no connection): the label, and when to try again. */
+  private staleLabel: Phaser.GameObjects.Text | null = null
+  private staleRetryAt = 0
 
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     this.chunk = parseChunkArea(deps.world.areaId) ?? { region: 'inner-1', cx: 0, cy: 0 }
@@ -256,8 +261,28 @@ export class WildsEntities {
     )
     scene.events.once('shutdown', () => {
       this.rendered.clear()
+      this.staleLabel = null
     })
     this.render(wildsView())
+  }
+
+  /** While stale: say so on screen, and try a fresh read now and then. */
+  private showStale(stale: boolean): void {
+    if (stale && !this.staleLabel) {
+      this.staleLabel = this.scene.add
+        .text(this.scene.scale.width / 2, 6, 'Out of reach — the Wilds as you last saw them', { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#ffe9a8', stroke: '#2b1d1a', strokeThickness: 2, resolution: 4 })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(100000)
+    } else if (!stale && this.staleLabel) {
+      this.staleLabel.destroy()
+      this.staleLabel = null
+    }
+    const session = this.deps.session
+    if (stale && session.link?.status === 'online' && Date.now() >= this.staleRetryAt) {
+      this.staleRetryAt = Date.now() + 10_000
+      void refreshWilds(session, 0, this.chunk.region)
+    }
   }
 
   // ------------------------------------------------------------ per frame
@@ -265,6 +290,7 @@ export class WildsEntities {
   update(): void {
     const view = wildsView()
     if (!view) return
+    this.showStale(wildsStale(this.deps.session, this.chunk.region))
     if (view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.render(view)
@@ -345,7 +371,7 @@ export class WildsEntities {
     const session = this.deps.session
     // A fresh read advances respawn cycles; the claim needs the current one.
     const ok = await refreshWilds(session)
-    const fresh = wildsView()
+    const fresh = wildsLive(session)
     if (!ok || !fresh) {
       bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
       return
@@ -393,7 +419,7 @@ export class WildsEntities {
   /** Relight a fallen hero's lantern (own ones too — the warm act, no reward). */
   private async relight(l: WildsLanternView): Promise<void> {
     const session = this.deps.session
-    const view = wildsView()
+    const view = wildsLive(session)
     if (!session.link || !view) return
     const res = await relightLantern(session, { epoch: view.epochId, ownerId: l.ownerId, lanternId: l.id, where: this.where() })
     if (!res.ok) {
@@ -521,13 +547,14 @@ export class WildsEntities {
     if (!view) return this.deps.interactables.register(this, [])
     const entities = this.chunkEntities(view).map((e) =>
       wildsPoint(e.id, this.entityPx(e), 20, () => {
-        const now = wildsView()
+        // Nothing is offered from a stale view, or without a connection.
+        const now = wildsLive(this.deps.session)
         return now && this.claimable(e, now, Math.floor(Date.now() / 1000)) ? this.offerFor(e) : null
       })
     )
     const lanterns = this.chunkLanterns(view)
       .filter((l) => !l.litBy)
-      .map((l) => wildsPoint(l.id, this.lanternPx(l), 32, () => (wildsView() ? this.relightOffer(l) : null)))
+      .map((l) => wildsPoint(l.id, this.lanternPx(l), 32, () => (wildsLive(this.deps.session) ? this.relightOffer(l) : null)))
     this.deps.interactables.register(this, [...entities, ...lanterns])
   }
 
@@ -659,6 +686,7 @@ export class WildsEntities {
   /** Read-only dump for playtests: what the Wilds look like right now. */
   debug(): {
     epochId: string
+    stale: boolean
     region: string
     season: string
     endsAt: number | null
@@ -692,6 +720,7 @@ export class WildsEntities {
     const p = this.regionPosition()
     return {
       epochId: view.epochId,
+      stale: wildsStale(this.deps.session, this.chunk.region),
       region: this.chunk.region,
       season: wildsEpoch(this.chunk.region).season,
       endsAt: wildsEpochEndsAt(this.chunk.region),

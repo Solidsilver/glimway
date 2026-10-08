@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs';
 import { create, toBinary, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { FakeOperations } from '../src/lib/api/operations.ts';
-import { WildsChunkSchema, WildsRegionResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { Dir, WildsChunkSchema, WildsRegionResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { toWorldData } from '../src/game/wilds/terrain.ts';
 import { cachedTerrain, forgetChunks, loadChunk, loadRegionChunks, pruneChunks } from '../src/game/wilds/chunks.ts';
-import { applyClaim, refreshWilds, resetWilds, setActiveWildsRegion, wildsEpoch, wildsView } from '../src/game/wilds/store.ts';
+import { applyClaim, refreshWilds, resetWilds, setActiveWildsRegion, wildsEpoch, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
 import { hasAreaKind } from '../src/game/worlds.ts';
 import type { Session } from '../src/game/session.ts';
@@ -68,6 +68,26 @@ test('decoding refuses a tampered chunk', () => {
   assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, bad)));
 });
 
+test('decoding refuses impossible exits (tests/fixtures/malformed-exits.json, shared with Go)', () => {
+  const cases = JSON.parse(readFileSync(new URL('./fixtures/malformed-exits.json', import.meta.url), 'utf8')) as {
+    name: string;
+    chunk: 'inner-1' | 'outer-1';
+    exit: number;
+    set: { tx?: number; ty?: number; tw?: number; th?: number; dir?: 'north' | 'east' | 'south' | 'west'; to?: string };
+  }[];
+  assert.ok(cases.length >= 10);
+  const dirs = { north: Dir.NORTH, east: Dir.EAST, south: Dir.SOUTH, west: Dir.WEST };
+  for (const region of ['inner-1', 'outer-1'] as const) assert.doesNotThrow(() => decodeChunk(fixtureBytes(region)), region);
+  for (const c of cases) {
+    const m = fixtureChunk(c.chunk);
+    const e = m.exits[c.exit]!;
+    const { dir, ...rest } = c.set;
+    Object.assign(e, rest);
+    if (dir) e.dir = dirs[dir];
+    assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, m)), undefined, c.name);
+  }
+});
+
 test('the chunk cache fetches each chunk once and forgets old epochs', async () => {
   forgetChunks();
   let calls = 0;
@@ -108,12 +128,14 @@ test('a region read loads its chunks and merges bodies with the server’s state
   json.epoch.endsAt = null;
   for (const e of json.entities) e.at ??= null;
   ops.responses.set('/api/wilds/region/inner-1', [json as unknown as JsonValue]);
-  // Only (1,1) is the fixture; the other eight answer with the same body under their coordinates.
+  // Only (1,1) is the fixture; the other eight answer with the same body under
+  // their coordinates, without its exits (which only lead from (1,1)).
   for (let cy = 0; cy < 3; cy++) {
     for (let cx = 0; cx < 3; cx++) {
       const m = decodeChunk(bytes);
       m.cx = cx;
       m.cy = cy;
+      if (cx !== 1 || cy !== 1) m.exits = [];
       ops.responses.set(`/api/wilds/chunk/fixture-inner/0/${cx}/${cy}`, [toBinary(WildsChunkSchema, m)]);
     }
   }
@@ -133,6 +155,26 @@ test('a region read loads its chunks and merges bodies with the server’s state
   applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: 'fixture-inner', entity: { $typeName: 'glimway.v1.WildsEntityState', id: fresh.id, cycle: 0, state: 'harvested', availableAt: 500, by: 'me', at: 1, epoch: 'fixture-inner' }, loot: undefined, materials: { fiber: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
   assert.equal(wildsView()!.entities.find((e) => e.id === fresh.id)!.state, 'harvested');
   assert.equal(wildsView()!.materials.fiber, 6);
+
+  // Freshness: live while fresh and online; a failed refresh keeps the view to look at, stale.
+  const session = fakeSession(ops);
+  assert.ok(wildsLive(session));
+  assert.equal(wildsStale(session), false);
+  const offline = { ...session, link: { ...session.link!, status: 'offline' } } as unknown as Session;
+  assert.equal(wildsLive(offline), null, 'no offers without a connection');
+  assert.equal(wildsStale(offline), true);
+  const version = wildsView()!.version;
+  assert.equal(await refreshWilds(session), false, 'the read fails (no answer queued)');
+  assert.ok(wildsView(), 'the last view stays to look at');
+  assert.equal(wildsView()!.stale, true);
+  assert.ok(wildsView()!.version > version, 'scenes re-render as stale');
+  assert.equal(wildsLive(session), null, 'nothing offered from a stale view');
+  assert.equal(await refreshWilds(session, 60_000), false, 'a stale view is never "recent enough"');
+  // A fresh read (and its chunks, cached now) makes it live again.
+  ops.responses.set('/api/wilds/region/inner-1', [json as unknown as JsonValue]);
+  assert.equal(await refreshWilds(session), true);
+  assert.equal(wildsView()!.stale, false);
+  assert.ok(wildsLive(session));
 });
 
 test('Wilds operations send the lease, a key and where (the region and its pixels)', async () => {
@@ -167,6 +209,7 @@ test('loadRegionChunks asks for the whole grid', async () => {
       m.cx = cx;
       m.cy = cy;
       m.epochId = epoch;
+      m.exits = []; // the entry chunk's exits only lead from (1,1)
       return decodeChunk(toBinary(WildsChunkSchema, m));
     },
   };
