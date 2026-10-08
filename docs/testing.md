@@ -29,7 +29,7 @@ plus a few programs that aren't npm packages:
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
 | `npm run test:smoke` | the `@smoke` playtests (7 tests, a few minutes at most) | while working, often |
 | `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
-| `npm run test:e2e` | the full Playwright suite | GitHub Actions, on pushes, pull requests, or manual dispatch |
+| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `expansion` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
 
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
@@ -47,10 +47,13 @@ the unit tests fail when the committed output has drifted from its inputs:
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
 While working, run `npm test` (or `npm run verify` when the change warrants
-it). At the end, run `npm run test:changed`. GitHub Actions runs the full suite
-in five parallel macOS shards; branch pushes run it before main moves. The
-changed test script itself runs the full suite when shared test code changed
-(see below).
+it). At the end, run `npm run test:changed`. In CI, every push and pull
+request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
+on GitHub's runners. The full suite runs on a self-hosted runner with an
+NVIDIA GPU, for pushes to `main`, `expansion` and `exp/**` and for manual
+dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Push an
+`exp/` branch to run it before main moves. The changed test script itself
+runs the full suite when shared test code changed (see below).
 
 ### Smoke
 
@@ -83,8 +86,10 @@ arguments go to Playwright (`-- --workers=2`, `-- -g "deed"`).
 ## Workers, servers and ports
 
 The suite runs in parallel with `fullyParallel`, so tests from one spec spread
-across workers. Local runs default to 2–3 workers; CI uses 2 workers per shard
-on macOS runners with Metal rendering.
+across workers. Local runs default to 2–3 workers. In CI the smoke tier uses 2
+workers, and the full suite on the self-hosted runner uses 4
+(`E2E_RUNNER_WORKERS`, sized to its memory budget in
+[ci-runner.md](ci-runner.md)).
 Set `E2E_WORKERS` or pass `--workers=N` to override. To reduce its impact on a
 busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
 `npm run test:changed`).
@@ -112,8 +117,12 @@ busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
 - **GPU:** on macOS the browsers render WebGL on the GPU (`--use-angle=metal
   --enable-gpu`). Headless Chromium otherwise uses SwiftShader, software GL on
   the CPU: on a busy machine the game drew about 8 frames a second that way,
-  against 60 on the GPU, and most "timing" flakes came from that. CI runs on
-  macOS to use Metal. `E2E_GPU=0` turns Metal off for local comparisons.
+  against 60 on the GPU, and most "timing" flakes came from that. On Linux
+  with an NVIDIA GPU, `E2E_GPU=nvidia` renders through ANGLE on Vulkan
+  (`E2E_GPU_ANGLE=gl-egl` for EGL); that's how the self-hosted CI runner
+  runs. `E2E_GPU=0` turns the GPU off for comparisons.
+  `node scripts/webgl-renderer.ts` prints the renderer the current settings
+  get, and `E2E_LOG_RENDERER=1` logs it from `first-paint.spec.ts`.
 - **baseURL** is `http://127.0.0.1:<E2E_PORT>`, not `localhost`: `page.request`
   resolves the host in Node, and under load a `localhost` lookup has stalled
   for seconds.

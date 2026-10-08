@@ -63,20 +63,18 @@ jobs:
         if: always()
         run: docker compose down --volumes --remove-orphans
 
-  e2e:
-    name: e2e (${{ matrix.shard }}/5)
-    runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5]
+  # The smoke tier on every push and pull request, on a GitHub-hosted runner
+  # (software WebGL, so only the handful of critical-path tests).
+  e2e-smoke:
+    name: e2e smoke
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: false
       - name: Identify Git LFS objects
         id: lfs
-        run: echo "key=$(git lfs ls-files -l | shasum -a 256 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        run: echo "key=$(git lfs ls-files -l | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .git/lfs/objects
@@ -92,23 +90,122 @@ jobs:
           go-version-file: go.mod
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ~/Library/Caches/ms-playwright
+          path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npm ci
-      - name: Install Chromium
-        run: npx playwright install chromium
-      - name: Run Playwright shard
+      - name: Install Chromium and sqlite3
+        run: |
+          npx playwright install --with-deps chromium
+          command -v sqlite3 || sudo apt-get install -y --no-install-recommends sqlite3
+      - name: Run the smoke tier
         env:
           CI: '1'
           E2E_WORKERS: '2'
           SCREENS: ''
-          E2E_LOG_RENDERER: '1'
-        run: npx playwright test --shard=${{ matrix.shard }}/5 --workers=2
+        run: npx playwright test --grep @smoke
       - name: Upload failure traces and screenshots
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: e2e-failures-${{ matrix.shard }}
+          name: e2e-smoke-failures
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The full suite, on the self-hosted runner with a GPU (docs/ci-runner.md).
+  # A self-hosted runner executes whatever a workflow tells it to, so this job
+  # runs only for pushes to this repository's own branches and for manual
+  # dispatch, by the repository owner: never for pull requests, never for forks.
+  e2e-full:
+    name: e2e full (self-hosted GPU)
+    if: >-
+      github.repository == 'Solidsilver/glimway' &&
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' ||
+         github.ref == 'refs/heads/expansion' ||
+         startsWith(github.ref, 'refs/heads/exp/'))))
+    runs-on: [self-hosted, linux, x64, glimway-e2e]
+    timeout-minutes: 30
+    concurrency:
+      group: e2e-full-${{ github.ref }}
+      cancel-in-progress: true
+    container:
+      # Keep the tag on the @playwright/test version in package-lock.json: the
+      # image's browsers are the ones that version expects.
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      # GPU through CDI (Docker 25+ with the NVIDIA Container Toolkit's spec).
+      # The limits keep the job from starving the host's other services: RAM
+      # capped at 6 GB (4 GB more may spill to swap), at most 12 CPUs at a low
+      # weight, and everything under the host's glimway-ci.slice, which caps
+      # the runner and its containers together.
+      options: >-
+        --device nvidia.com/gpu=all
+        --cgroup-parent=glimway-ci.slice
+        --memory=6g
+        --memory-swap=10g
+        --cpus=12
+        --cpu-shares=256
+        --pids-limit=8192
+        --shm-size=1g
+      volumes:
+        # NixOS hosts: the runner's Node for JavaScript actions links into the
+        # Nix store, and the NVIDIA driver files do too. Harmless elsewhere.
+        - /nix/store:/nix/store:ro
+        # Go, npm and apt caches kept between runs (Docker named volume).
+        - glimway-e2e-cache:/cache
+      env:
+        NVIDIA_DRIVER_CAPABILITIES: all
+        GOCACHE: /cache/go-build
+        GOMODCACHE: /cache/go-mod
+        npm_config_cache: /cache/npm
+    env:
+      CI: '1'
+      E2E_GPU: nvidia
+      # ANGLE backend: vulkan, or gl-egl (repository variable E2E_GPU_ANGLE).
+      E2E_GPU_ANGLE: ${{ vars.E2E_GPU_ANGLE || 'vulkan' }}
+      E2E_LOG_RENDERER: '1'
+      # Four workers fit the memory cap (docs/ci-runner.md); the repository
+      # variable E2E_RUNNER_WORKERS changes it without a commit.
+      E2E_WORKERS: ${{ vars.E2E_RUNNER_WORKERS || '4' }}
+      SCREENS: ''
+    steps:
+      - name: Install Git, Git LFS and sqlite3
+        run: |
+          mkdir -p /cache/apt/partial
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends -o Dir::Cache::Archives=/cache/apt git git-lfs sqlite3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Point Vulkan and EGL at the NVIDIA driver
+        run: |
+          nvidia-smi -L || echo "nvidia-smi is not in the container; the renderer check below decides"
+          for icd in /run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json \
+                     /usr/share/vulkan/icd.d/nvidia_icd.json /etc/vulkan/icd.d/nvidia_icd.json; do
+            if [ -f "$icd" ]; then printf "VK_DRIVER_FILES=%s\nVK_ICD_FILENAMES=%s\n" "$icd" "$icd" >> "$GITHUB_ENV"; echo "Vulkan ICD: $icd"; break; fi
+          done
+          for egl in /run/opengl-driver/share/glvnd/egl_vendor.d /usr/share/glvnd/egl_vendor.d; do
+            if [ -f "$egl/10_nvidia.json" ]; then echo "__EGL_VENDOR_LIBRARY_DIRS=$egl" >> "$GITHUB_ENV"; echo "EGL vendor: $egl"; break; fi
+          done
+      - name: Check the WebGL renderer
+        run: npx playwright install chromium && node scripts/webgl-renderer.ts
+      - name: Run the full suite
+        run: nice -n 10 npx playwright test
+      - name: Upload failure traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-full-failures
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
