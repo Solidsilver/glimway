@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, sql } from './connected'
-import { beginNewJourney, dialogueState, talkText, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
+import { serverState, sql, accountOf, CONTRACT } from './connected'
+import { dialogueState, talkText, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
 import { area, earnEmbers, freshPlayer, fund, go, homeAt, homes, hurt, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, generateLand, homeLights, isLit } from '../src/lib/homestead-land.ts'
@@ -15,7 +15,6 @@ import { LAND, buildableKind, clearable, clearedSet, effectiveKind, generateLand
  *
  * SCREENS=1 also saves review screenshots to .agent/screens/.
  */
-test.use({ server: true })
 
 const L = HOMESTEAD_DATA.land
 const S = L.startLight
@@ -83,51 +82,6 @@ async function claimFirstFree(page: Page): Promise<number> {
   await readOn(page, /in my square hand/)
   return free.gate
 }
-
-test('the Commons gate: walk in from Hearthwick and back; guests walk the lane and the wild land behind a gate', async ({ page }) => {
-  await beginNewJourney(page)
-  // The village's east gate, below the Lantern Road.
-  await go(page, 'village', 39, 15)
-  await page.keyboard.down('ArrowRight')
-  await waitForArea(page, 'commons')
-  await page.keyboard.up('ArrowRight')
-  expect((await player(page)).x).toBeLessThan(6 * 16)
-  await expectAreaCard(page, 'Hearthwick Commons')
-
-  // Guests see spare gates of wild land, and Silas tells them about worlds.
-  const v = await homes(page)
-  expect(v.status).toBe('guest')
-  expect(v.slots.length).toBe(HOMESTEAD_DATA.commons.spareGates)
-  await go(page, 'commons', v.slots[0].entry.tx, v.slots[0].entry.ty)
-  await shot(page, 'commons-lane-guest-desktop')
-  await silasSays(page)
-
-  // Through a gate: wild land, nobody's, and back out onto the lane.
-  await throughGate(page, 0)
-  await expectAreaCard(page, 'Unclaimed land')
-  await expect(page.getByTestId('arrange')).toHaveCount(0)
-  await shot(page, 'land-wild-guest-desktop')
-  await page.keyboard.down('ArrowDown')
-  await waitForArea(page, 'commons')
-  await page.keyboard.up('ArrowDown')
-  const p = await player(page)
-  expect(Math.floor(p.x / 16)).toBe(v.slots[0].entry.tx)
-
-  // And back out through the village gate.
-  await go(page, 'commons', 2, 21)
-  await page.keyboard.down('ArrowLeft')
-  await waitForArea(page, 'village')
-  await page.keyboard.up('ArrowLeft')
-  expect((await player(page)).x).toBeGreaterThan(36 * 16)
-})
-
-test('a guest hears that deeds are for people with a world', async ({ page }) => {
-  await beginNewJourney(page)
-  await go(page, 'commons', 51, 22)
-  const text = await talkText(page, 'Talk to Silas')
-  expect((await dialogueState(page)).seen.at(-1)?.speaker).toBe('Silas')
-  expect(text).toContain('Sign in to your world')
-})
 
 test('claim and guidance, then expansion: lantern posts, naming, clearing, cottage, rest at home', async ({ page }) => {
   test.setTimeout(240_000)
@@ -301,7 +255,7 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   const a = await freshPlayer(page, 'Tansy')
   await earnEmbers(page, a)
   const gate = await claimFirstFree(page)
-  const created = await page.request.post('/api/invites', { data: {} })
+  const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   expect(created.ok()).toBe(true)
   const code = (await created.json()).code as string
 
@@ -356,10 +310,10 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
   // Not on a deed any more: no home chest for him (his own chest goes with him);
   // his post is still in his pack (mail can send it).
-  const storage = await other.request.get('/api/storage')
+  const storage = await other.request.get('/api/storage', CONTRACT)
   expect(storage.status()).toBe(200)
   expect(await storage.json()).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
-  const carried = await (await other.request.get('/api/mail')).json()
+  const carried = await (await other.request.get('/api/mail', CONTRACT)).json()
   expect(carried.inventory.decorations['lantern-post']).toBe(1)
   expect(errors).toEqual([])
   await ctx.close()
@@ -373,7 +327,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
-  const created = await page.request.post('/api/invites', { data: {} })
+  const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const code = (await created.json()).code as string
 
   const ctx = await browser.newContext({ baseURL })
@@ -453,7 +407,7 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
 
   // Days pass (the e2e database's clock is moved back instead).
   const ago = (days: number) =>
-    sql(`UPDATE homesteads SET vacant_since=strftime('%s','now')-${days}*86400 WHERE gate=${gate} AND world_id=(SELECT world_id FROM players WHERE habitica_id='${a}');`)
+    sql(`UPDATE homesteads SET vacant_since=strftime('%s','now')-${days}*86400 WHERE gate=${gate} AND world_id=(SELECT world_id FROM players WHERE account_id='${accountOf(a)}');`)
   ago(HOMESTEAD_DATA.desolation.desolateAfterDays)
   const home = (await homeAt(page, gate))!
   expect(home.desolate).toBe(true)

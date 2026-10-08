@@ -183,13 +183,6 @@ export type WardenView = {
   needed: number
 }
 
-/** Fresh start: title screen → "Wander as a guest" → world is live. */
-export async function beginNewJourney(page: Page): Promise<void> {
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).click()
-  await waitForArea(page, 'village')
-}
-
 /**
  * The area's scene is built and settled: not mid-transition, its fade-in done
  * and a few frames drawn, so held keys and E reach the new scene. (Replaces
@@ -438,29 +431,20 @@ export async function holdUntil(page: Page, key: string, check: () => Promise<bo
   }
 }
 
-/** The saved quest stage, read straight from IndexedDB. */
-export async function savedStage(page: Page): Promise<string | undefined> {
-  return page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      const rec = await new Promise<{ state?: { quest?: string } } | undefined>((resolve) => {
-        const req = db.transaction('saves').objectStore('saves').get('current')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => resolve(undefined)
-      })
-      return rec?.state?.quest
-    } finally {
-      db.close()
-    }
-  })
-}
-
+/**
+ * The quest stage as the server holds it for this browser's session (the
+ * journey lives in the world, not on the device). Read the way the client
+ * reads it: the contract header, and the parser's projection.
+ */
 export async function expectStage(page: Page, stage: string): Promise<void> {
-  await expect.poll(() => savedStage(page), { timeout: 10_000 }).toBe(stage)
+  const { parseState } = await import('../src/lib/api/parse.ts')
+  await expect
+    .poll(async () => {
+      const res = await page.request.get('/api/state', { headers: { 'X-Glimway-Contract': '3' } })
+      if (!res.ok()) return undefined
+      return parseState(await res.json())?.state?.quest
+    }, { timeout: 10_000, message: `the server's quest stage is ${stage}` })
+    .toBe(stage)
 }
 
 export async function dialogueState(page: Page): Promise<DialogueView> {
@@ -600,166 +584,4 @@ export async function talkThrough(page: Page, prompt: RegExp): Promise<void> {
   await expect(dialogue).toBeVisible()
   await readDialogue(page)
   await expect(dialogue).toBeHidden()
-}
-
-/** Fake credentials for the mocked Habitica API (see mockHabitica). */
-export const MOCK_USER = '11111111-aaaa-4bbb-8ccc-222222222222'
-export const MOCK_TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
-
-/**
- * Stand-in for habitica.com: answers GET /api/v3/user with the "Tansy" fixture
- * when the headers match the mock credentials, 401 otherwise. Returns the list
- * of request header pairs seen, so tests can assert what was (not) sent.
- */
-export async function mockHabitica(page: Page): Promise<{ calls: Array<{ user: string; key: string }> }> {
-  const { FIXTURES_BY_KEY } = await import('../src/lib/habitica/fixtures.ts')
-  const calls: Array<{ user: string; key: string }> = []
-  await page.route('https://habitica.com/api/v3/user*', async (route) => {
-    const h = route.request().headers()
-    calls.push({ user: h['x-api-user'], key: h['x-api-key'] })
-    if (h['x-api-user'] !== MOCK_USER || h['x-api-key'] !== MOCK_TOKEN) {
-      return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false }) })
-    }
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify({ success: true, data: FIXTURES_BY_KEY.lowLevel.user })
-    })
-  })
-  return { calls }
-}
-
-/** Raw read of the credentials database (null when absent or empty). */
-export async function rememberedRecord(page: Page): Promise<unknown> {
-  return page.evaluate(async () => {
-    const dbs = await indexedDB.databases()
-    if (!dbs.some((d) => d.name === 'fingersnap-credentials')) return null
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap-credentials')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      return await new Promise((resolve) => {
-        const req = db.transaction('credentials').objectStore('credentials').get('habitica')
-        req.onsuccess = () => resolve(req.result ?? null)
-        req.onerror = () => resolve(null)
-      })
-    } finally {
-      db.close()
-    }
-  })
-}
-
-/** The whole `fingersnap` save record as JSON text. */
-export async function savedRecordText(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      return await new Promise<string>((resolve) => {
-        const req = db.transaction('saves').objectStore('saves').get('current')
-        req.onsuccess = () => resolve(JSON.stringify(req.result ?? null))
-        req.onerror = () => resolve('')
-      })
-    } finally {
-      db.close()
-    }
-  })
-}
-
-/**
- * The guest save on disk has caught up with the game: no debounced save is
- * waiting, and its area and position are the ones the game holds. Wait for it
- * before editing the save by hand or reloading to test persistence. A save is
- * asked for first: the game notes where the hero stands once a second without
- * saving, so a test that arrives after that sample would otherwise wait for a
- * save that only the next change brings.
- */
-export async function savedToDisk(page: Page): Promise<void> {
-  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon?: () => void }).__fsDevSaveSoon?.())
-  await expect
-    .poll(
-      () =>
-        page.evaluate(async () => {
-          const mem = (window as unknown as { __fsDevSaved?: () => { area: string; position: { x: number; y: number }; pending: boolean } }).__fsDevSaved?.()
-          if (!mem || mem.pending) return false
-          const db = await new Promise<IDBDatabase>((resolve, reject) => {
-            const req = indexedDB.open('fingersnap')
-            req.onsuccess = () => resolve(req.result)
-            req.onerror = () => reject(req.error)
-          })
-          try {
-            const rec = await new Promise<{ state?: { area?: string; position?: { x: number; y: number } } } | undefined>((resolve) => {
-              const req = db.transaction('saves').objectStore('saves').get('current')
-              req.onsuccess = () => resolve(req.result)
-              req.onerror = () => resolve(undefined)
-            })
-            const s = rec?.state
-            return !!s && s.area === mem.area && s.position?.x === mem.position.x && s.position?.y === mem.position.y
-          } finally {
-            db.close()
-          }
-        }),
-      { message: 'the save on disk matches the game' }
-    )
-    .toBe(true)
-}
-
-/**
- * Rewrite the saved guest game (story flags added, quest stage set), then
- * reload and Continue: the quick way to a late-story save in a playtest.
- */
-export async function seedSave(page: Page, flags: string[], quest: string): Promise<void> {
-  await savedToDisk(page)
-  await page.evaluate(
-    async ([extra, stage]) => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('fingersnap')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-      const store = () => db.transaction('saves', 'readwrite').objectStore('saves')
-      const rec = await new Promise<{ state: { flags: string[]; quest: string } }>((resolve) => {
-        const req = store().get('current')
-        req.onsuccess = () => resolve(req.result)
-      })
-      rec.state.flags = [...rec.state.flags, ...(extra as string[])]
-      rec.state.quest = stage as string
-      await new Promise((resolve) => {
-        const req = store().put(rec)
-        req.onsuccess = resolve
-      })
-      db.close()
-    },
-    [flags, quest] as const
-  )
-  await page.reload()
-  await page.getByRole('button', { name: /Continue/ }).click()
-  await waitForArea(page, 'village')
-}
-
-/** The saved story flags of the guest save, straight from IndexedDB. */
-export async function savedFlags(page: Page): Promise<string[]> {
-  return page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      const rec = await new Promise<{ state?: { flags?: string[] } } | undefined>((resolve) => {
-        const req = db.transaction('saves').objectStore('saves').get('current')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => resolve(undefined)
-      })
-      return rec?.state?.flags ?? []
-    } finally {
-      db.close()
-    }
-  })
 }

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, dialogueState, readDialogue, savedFlags, seedSave, warp, waitForLive, expectToast } from './helpers'
-import { shot } from './home-helpers'
+import { dialogueState, readDialogue, warp, waitForLive, expectToast } from './helpers'
+import { freshPlayer, shot } from './home-helpers'
+import { reenter, seedStory, serverState } from './connected'
 
 /**
  * The residents (src/content/residents.ts): Hazel in the square, Finn by the
@@ -61,7 +62,7 @@ async function converse(page: Page, name: string, snap?: string, opts: { bust?: 
 
 test('meeting each resident: an introduction, their portrait, and a journal entry', async ({ page }) => {
   test.setTimeout(180_000)
-  await beginNewJourney(page)
+  const id = await freshPlayer(page)
   for (const r of RESIDENTS) {
     await warp(page, r.area as Area, r.stand[0], r.stand[1])
     // Let a new area's title card clear before the screen.
@@ -69,7 +70,7 @@ test('meeting each resident: an introduction, their portrait, and a journal entr
     await shot(page, `resident-${r.id}-in-place-desktop`)
     const lines = await converse(page, r.name, `resident-${r.id}-dialogue-desktop`, { bust: true, toast: `${r.full}: noted in your journal.` })
     expect(lines.join(' ')).toMatch(r.intro)
-    await expect.poll(() => savedFlags(page), { timeout: 10_000 }).toContain(`met:${r.id}@new`)
+    await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 10_000 }).toContain(`met:${r.id}@new`)
     // The second time: not the introduction again, but the stage line (and the day).
     const again = await converse(page, r.name)
     expect(again.join(' ')).not.toMatch(r.intro)
@@ -88,7 +89,7 @@ test('meeting each resident: an introduction, their portrait, and a journal entr
 
 test('Elara’s line follows the calendar: the wick, the Mark, and the day before a Turning', async ({ page }) => {
   test.setTimeout(120_000)
-  await beginNewJourney(page)
+  const id = await freshPlayer(page)
   // The last day of Amber-wick: she has posted the Turning for tomorrow.
   await setDay(page, 8, 7)
   await warp(page, 'commons', 25, 5)
@@ -109,13 +110,14 @@ test('Elara’s line follows the calendar: the wick, the Mark, and the day befor
 
 test('once the road is lit, Hazel hands over her own recipe card', async ({ page }) => {
   test.setTimeout(120_000)
-  await beginNewJourney(page)
-  await seedSave(page, ['met:hazel@new'], 'complete')
+  const id = await freshPlayer(page)
+  await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
+  await reenter(page)
   await warp(page, 'village', 11, 15)
   const lines = await converse(page, 'Hazel', 'resident-hazel-late-desktop')
   expect(lines.join(' ')).toMatch(/My brother Joss was a runner/)
   expect(lines.join(' ')).toMatch(/Take the card off my wall/)
-  await expect.poll(() => savedFlags(page), { timeout: 10_000 }).toContain('paper:keepers-twists-recipe-card')
+  await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 10_000 }).toContain('paper:keepers-twists-recipe-card')
   // Pip no longer has it to give.
   await warp(page, 'village', 28, 16)
   const pip = await converse(page, 'Pip')

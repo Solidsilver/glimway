@@ -1,6 +1,6 @@
 /**
- * M3 CharacterPanel Habitica wiring — UI-side glue for the shared import
- * foundation (src/lib/habitica/*, contract: docs/import-contract.md).
+ * UI-side Habitica wiring: the credentials' in-memory holder and error copy
+ * for the connect guide (src/lib/habitica/*, contract: docs/import-contract.md).
  *
  * SECURITY CONTRACT: credentials live ONLY in this module's in-memory holder,
  * for the lifetime of a connected session — until Disconnect or page unload.
@@ -9,11 +9,10 @@
  * codes — never raw error bodies or token material.
  */
 import { HabiticaApiError, createHabiticaClient, type HabiticaErrorKind } from '../lib/habitica/client.ts'
-import { FIXTURES, type HabiticaFixture } from '../lib/habitica/fixtures.ts'
-import { toHabiticaProfile } from '../lib/habitica/mapping.ts'
-import type { GearStatsLookup, HabiticaClient, HabiticaCredentials, HabiticaProfile } from '../lib/habitica/types.ts'
 
-export type { HabiticaClient, HabiticaCredentials, HabiticaProfile } from '../lib/habitica/types.ts'
+import type { HabiticaClient, HabiticaCredentials, HabiticaProfile } from '../lib/habitica/types.ts'
+
+export type { HabiticaClient, HabiticaCredentials, HabiticaProfile }
 
 // ---------------------------------------------------------------------------
 // Creator identity (X-Client): fixed, PUBLIC app config. The player's own id
@@ -74,22 +73,6 @@ export function disconnectSession(): void {
 // Page unload wipes the credential memory (belt and braces with GC).
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', () => disconnectSession())
-}
-
-// ---------------------------------------------------------------------------
-// Fixture demo: full pipeline exercise with no network and no credentials.
-// ---------------------------------------------------------------------------
-
-export function fixtureProfiles(): Array<{ key: string; label: string; profile: HabiticaProfile }> {
-  return FIXTURES.map((f: HabiticaFixture) => ({
-    key: f.key,
-    label: `${f.key} — ${f.description}`,
-    profile: toHabiticaProfile(f.user, gearLookupForFixture(f))
-  }))
-}
-
-function gearLookupForFixture(f: HabiticaFixture): GearStatsLookup {
-  return (key) => f.gearStats[key]
 }
 
 // ---------------------------------------------------------------------------

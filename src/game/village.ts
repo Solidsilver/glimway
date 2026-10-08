@@ -5,8 +5,8 @@
  * the scene (src/game/entities/festivals.ts, village changes) and the panels
  * read it and hear about changes on the bus.
  *
- * Guests get the calendar computed locally from content/calendar.json (the
- * same function the server uses); everything else needs a world.
+ * The calendar comes from the server (its clock rules), falling back to the
+ * local computation when it can't be reached; everything else needs a world.
  */
 import { calendarAt, type CalendarDay } from '../lib/calendar.ts'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village.ts'
@@ -23,12 +23,12 @@ import type { Session } from './session.ts'
 
 export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
 
-export type Status = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
+export type Status = 'idle' | 'loading' | 'ready' | 'offline'
 
 
 export class Village {
   calendar: CalendarDay
-  /** Calendar came from the server (connected) or this device (guest/offline). */
+  /** Calendar came from the server or this device (offline). */
   calendarSource: 'server' | 'local' = 'local'
   projects: ProjectView[] = blankProjects()
   worldFlags: string[] = []
@@ -61,9 +61,9 @@ export class Village {
       if (paper) grantPaper(this.session, paper)
     })
     this.calendar = calendarAt(this.now())
-    this.projectsStatus = session.link ? 'idle' : 'guest'
-    this.repairsStatus = session.link ? 'idle' : 'guest'
-    this.mailStatus = session.link ? 'idle' : 'guest'
+    this.projectsStatus = 'idle'
+    this.repairsStatus = 'idle'
+    this.mailStatus = 'idle'
   }
 
   now(): number {
@@ -188,11 +188,7 @@ export class Village {
   // ------------------------------------------------------------ projects
 
   async loadProjects(): Promise<void> {
-    const link = this.session.link
-    if (!link) {
-      this.projectsStatus = 'guest'
-      return
-    }
+    const link = this.session.link!
     this.projectsStatus = 'loading'
     const r = await link.readWith((raw) => raw.projects())
     if (!r.ok) {
@@ -225,11 +221,7 @@ export class Village {
   }
 
   async loadRepairs(): Promise<void> {
-    const link = this.session.link
-    if (!link) {
-      this.repairsStatus = 'guest'
-      return
-    }
+    const link = this.session.link!
     if (this.repairsStatus === 'ready') return
     this.repairsStatus = 'loading'
     const r = await link.readWith((raw) => raw.repairs())
@@ -248,8 +240,7 @@ export class Village {
   }
 
   async mend(repairId: string): Promise<Result<MendResult>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<MendResponse>({ kind: 'mend', id: repairId })
     if (!r.ok) return fail(r.code)
     this.adoptRepairs(r.res.result.repairs)
@@ -257,8 +248,7 @@ export class Village {
   }
 
   async contribute(projectId: string, materials: Record<string, number>): Promise<Result<{ completed: boolean }>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const given = Object.fromEntries(Object.entries(materials).filter(([, n]) => n > 0))
     if (Object.keys(given).length === 0) return fail('invalid-contribution')
     const before = this.projects.find((p) => p.id === projectId)?.stage
@@ -273,8 +263,7 @@ export class Village {
   // ------------------------------------------------------------ storage & crafting
 
   async loadStorage(): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.readWith((raw) => raw.storage())
     if (!r.ok) return fail(r.code)
     this.inventory = r.value.inventory
@@ -288,8 +277,7 @@ export class Village {
 
   /** Move goods between your pack and a chest at home (the shared one, or your own). */
   async move(direction: 'deposit' | 'withdraw', asset: Asset, chest: ChestId = 'shared'): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<StorageMoveResponse>({ kind: 'storage', fields: { direction, asset, chest } })
     if (!r.ok) return fail(r.code)
     this.inventory = r.res.result.inventory
@@ -302,8 +290,7 @@ export class Village {
   }
 
   async craft(recipeId: string, qty: number): Promise<Result<Asset>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<CraftResponse>({ kind: 'craft', fields: { recipeId, qty } })
     if (!r.ok) return fail(r.code)
     this.inventory = r.res.result.inventory
@@ -317,8 +304,7 @@ export class Village {
 
   /** Cook food, remedies and oils at the cottage hearth. Everything made carries your maker's mark. */
   async hearthCraft(recipeId: string, qty: number): Promise<Result<Asset>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<HearthCraftResponse>({ kind: 'hearth', fields: { recipeId, qty } })
     if (!r.ok) return fail(r.code)
     this.adoptWorkshop(r.res.result)
@@ -327,8 +313,7 @@ export class Village {
 
   /** Copy a recipe page you hold at the writing desk, to give away. */
   async deskCopy(pageId: string, qty: number): Promise<Result<{ pageId: string; qty: number }>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<DeskCopyResponse>({ kind: 'desk', fields: { pageId, qty } })
     if (!r.ok) return fail(r.code)
     this.adoptWorkshop(r.res.result)
@@ -337,8 +322,7 @@ export class Village {
 
   /** The woodpile's stacks and how far each has seasoned. */
   async loadWoodpile(): Promise<Result<WoodpileView>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.readWith((raw) => raw.woodpile())
     if (!r.ok) return fail(r.code)
     return { ok: true, value: r.value.woodpile }
@@ -346,8 +330,7 @@ export class Village {
 
   /** Stack green timber on the woodpile, or collect the seasoned timber. */
   async woodpile(action: 'stack' | 'collect', qty = 1, stackId?: string): Promise<Result<{ woodpile: WoodpileView; collectedQty?: number }>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<WoodpileActionResponse>({ kind: 'woodpile', fields: { action, qty, stackId } })
     if (!r.ok) return fail(r.code)
     this.adoptWorkshop(r.res.result)
@@ -356,8 +339,7 @@ export class Village {
 
   /** Read the gift shelf at a Commons gate. */
   async loadShelf(gate: number): Promise<Result<ShelfView>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.readWith((raw) => raw.shelf(gate))
     if (!r.ok) return fail(r.code)
     return { ok: true, value: r.value.shelf }
@@ -365,8 +347,7 @@ export class Village {
 
   /** Stock or take from the gift shelf. */
   async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<Result<ShelfActionResponse>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: req })
     if (!r.ok) return fail(r.code)
     if (r.res.inventory) {
@@ -392,8 +373,7 @@ export class Village {
   // ------------------------------------------------------------ mail
 
   async loadMail(): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     this.mailStatus = 'loading'
     const r = await link.readWith((raw) => raw.mail())
     if (!r.ok) {
@@ -434,8 +414,7 @@ export class Village {
 
   /** The next page of settled mail (pending mail repeats; upserted by id). */
   async loadOlderMail(): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     if (!this.mailCursor) return { ok: true, value: undefined }
     const cursor = this.mailCursor
     const r = await link.readWith((raw) => raw.mail({ cursor }))
@@ -459,8 +438,7 @@ export class Village {
   }
 
   async send(toId: string, asset: Asset): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, asset } })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
@@ -468,8 +446,7 @@ export class Village {
   }
 
   async claim(id: string): Promise<Result<Asset | undefined>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-claim', id })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
@@ -477,8 +454,7 @@ export class Village {
   }
 
   async recall(id: string): Promise<Result> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<MailActionResponse>({ kind: 'mail-recall', id })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)

@@ -27,7 +27,7 @@ plus a few programs that aren't npm packages:
 | `npm test` | unit tests | while working |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
-| `npm run test:smoke` | the `@smoke` playtests (7 tests, a few minutes at most) | while working, often |
+| `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | while working, often |
 | `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
 | `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `expansion` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
@@ -66,12 +66,11 @@ full suite when shared test code changed (see below).
 
 ### Smoke
 
-Tagged `{ tag: '@smoke' }` in the specs: guest exits and walking, a guest
-Tangle claim, the connected sign-in (fresh, and bringing a guest quest along),
-a homestead deed with home goods in the inventory, picking up an item, and a
-connected Wilds claim kept across a reload. Keep it to a handful of tests that
-cover the critical paths: tag a test only when nothing in the tier covers its
-path yet.
+Tagged `{ tag: '@smoke' }` in the specs: quest exits and walking, the
+connected sign-in and first world, a homestead deed with home goods in the
+inventory, picking up an item, and a connected Wilds claim kept across a
+reload. Keep it to a handful of tests that cover the critical paths: tag a
+test only when nothing in the tier covers its path yet.
 
 ### Changed
 
@@ -108,8 +107,8 @@ busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
   editing a file mid-run doesn't reload the pages under test (new code is
   still served to the next page load).
 - **Per worker:** a Go server with its own SQLite database, and a fake
-  Habitica (`e2e/server/backend.ts`). Both start the first time a worker runs a
-  `server: true` test, on free ports, so worktrees and workers never collide.
+  Habitica (`e2e/server/backend.ts`). Both start with the worker's first
+  test, on free ports, so worktrees and workers never collide.
   `E2E_API_PORT` and `E2E_HABITICA_PORT` are no longer used. The Go binary is
   built once per run by `e2e/global-setup.ts`, into the run's own directory.
 - **Routing:** each browser context of a worker carries a `fs-e2e-api=<port>`
@@ -136,7 +135,8 @@ busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
   resolves the host in Node, and under load a `localhost` lookup has stalled
   for seconds.
 
-Guest tests block `/api` in the browser, so they play as if no server existed.
+Every browser context of a worker reaches its server; there is no
+guest/no-server mode in the tests (the game has no guest play).
 
 ## Writing a playtest
 
@@ -148,11 +148,17 @@ and therefore its own world. Never depend on another test, on test order, or
 on what else is in the database: other tests run at the same time against the
 same worker server.
 
-**Server state.** Inside `test.use({ server: true })`:
+**Server state.** Every test has a server (the fixtures' `backend` fixture
+starts the worker's and routes every context to it):
 
-- `allow`, `adminInvite`, `setHabitica`, `fund`, `giveInstance` work as before;
+- `allow`, `adminInvite`, `setHabitica`, `freshPlayer`, `fund`, `giveInstance`
+  (e2e/home-helpers.ts) and the rest of `e2e/connected.ts`;
 - `sql(statements)` from `e2e/connected.ts` runs SQL against this worker's
-  database; `habiticaURL()` is the fake Habitica;
+  database; `habiticaURL()` is the fake Habitica; direct `page.request` calls
+  to `/api` carry the contract header (`CONTRACT`);
+- a story state on an account comes from `seedStory(accountId, { quest,
+  marks, questItems, place })` (TODO(B): the new story tables replace the
+  progress document);
 - never hard-code `.e2e-server/glimway.sqlite` or a server port. (An old
   spec that still passes that path to `execFileSync` is pointed at its
   worker's database, with a warning, so branches written before this change
@@ -177,7 +183,6 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | `.area .title` on screen | `expectAreaCard(page, title)` |
 | a pause for a banner to clear | poll `__fsBanners().current` until it is `null` (see `coop.spec.ts`) |
 | a pause before a screenshot | `animationsDone(page)` (running transitions and fades finished, then two frames) |
-| a pause before editing or reloading a guest save | `savedToDisk(page)` |
 
 **Proving something does *not* happen.** Wait for an observable state that
 rules it out, and record what the page does in the meantime:

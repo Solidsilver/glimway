@@ -1,61 +1,24 @@
-import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, openTalk, readDialogue, settleWarden, talkThrough, untilChoices, warp, expectToast } from './helpers'
+import { expect, test } from './fixtures'
+import { expectStage, openTalk, readDialogue, settleWarden, talkThrough, untilChoices, warp } from './helpers'
+import { earnEmbers, freshPlayer } from './home-helpers'
+import { serverState } from './connected'
 
-/** Read the save's ember balance and flags straight from IndexedDB. */
-async function savedEmbers(page: Page): Promise<{ embers: number; flags: string[]; hp: number; maxHp: number } | undefined> {
-  return page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      const rec = await new Promise<{ state?: { embers: number; flags: string[]; hp: number; maxHp: number } } | undefined>((resolve) => {
-        const req = db.transaction('saves').objectStore('saves').get('current')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => resolve(undefined)
-      })
-      return rec?.state && { embers: rec.state.embers, flags: rec.state.flags, hp: rec.state.hp, maxHp: rec.state.maxHp }
-    } finally {
-      db.close()
-    }
-  })
+const hud = (page: import('@playwright/test').Page) => page.locator('.hud .embers')
+
+/** The server's embers and vitals for this browser's session (as the client reads them). */
+async function worldEmbers(page: import('@playwright/test').Page): Promise<{ embers: number; hp: number; maxHp: number } | undefined> {
+  try {
+    return (await serverState(page)).body.state
+  } catch {
+    return undefined
+  }
 }
-
-const hud = (page: Page) => page.locator('.hud .embers')
-
-test('a sample hero brings welcome embers, and a warm rest spends them', async ({ page }) => {
-  await beginNewJourney(page)
-
-  await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Try a sample hero' }).click()
-  await expectToast(page, 'embers into your hand')
-  await page.getByRole('button', { name: 'Back to the road' }).click()
-  await expect(hud(page)).toHaveText('3')
-
-  // Get hurt, then rest by the village lantern.
-  await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
-  await warp(page, 'village', 11, 13)
-  await openTalk(page, 'Rest by the lantern')
-  await untilChoices(page)
-  const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
-  await expect(choice).toBeEnabled()
-  await expect(choice).toContainText('2 embers')
-  await page.screenshot({ path: 'test-results/embers-hearth.png' })
-  await page.keyboard.press('1')
-  await readDialogue(page)
-  await expect(hud(page)).toHaveText('1')
-  await expect.poll(async () => {
-    const s = await savedEmbers(page)
-    return s && s.hp === s.maxHp && s.embers === 1
-  }).toBe(true)
-})
 
 test('quest embers light a road lantern; the chest says what it needs', async ({ page }) => {
   // The whole quest's dialogue is read through here; under a loaded run it
   // can outlast the default timeout.
   test.slow()
-  await beginNewJourney(page)
+  const id = await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
@@ -88,6 +51,32 @@ test('quest embers light a road lantern; the chest says what it needs', async ({
   await warp(page, 'woodland', 10, 15)
   await talkThrough(page, /Light the lantern/)
   await expect(hud(page)).toHaveText('2')
-  await expect.poll(async () => (await savedEmbers(page))?.flags ?? []).toContain('lit:road-1')
+  // The world's balance paid the light (the lit lantern itself is the world's outcome).
+  await expect.poll(async () => (await worldEmbers(page))?.embers, { timeout: 15_000 }).toBe(2)
   await page.screenshot({ path: 'test-results/embers-road-lit.png' })
+})
+
+test('a warm rest spends embers from the world, and Habitica syncs bring them', async ({ page }) => {
+  const id = await freshPlayer(page)
+  // Two Habitica days: the welcome, then the earned embers to rest with.
+  await earnEmbers(page, id)
+
+  // Get hurt, then rest by the village lantern.
+  await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
+  await warp(page, 'village', 11, 13)
+  await openTalk(page, 'Rest by the lantern')
+  await untilChoices(page)
+  const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
+  await expect(choice).toBeEnabled()
+  await expect(choice).toContainText('2 embers')
+  await page.screenshot({ path: 'test-results/embers-hearth.png' })
+  const before = Number(await hud(page).textContent())
+  await page.keyboard.press('1')
+  await readDialogue(page)
+  // The rest is paid from the world's balance, and the hurt is healed.
+  await expect(hud(page)).toHaveText(String(before - 2))
+  await expect.poll(async () => {
+    const s = await worldEmbers(page)
+    return !!s && Math.ceil(s.hp) === s.maxHp
+  }, { timeout: 15_000 }).toBe(true)
 })

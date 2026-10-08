@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { sql } from './connected'
+import { sql, accountOf } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
 import { plantable } from '../src/lib/homestead.ts'
@@ -17,7 +17,6 @@ import { homeLights, isLit } from '../src/lib/homestead-land.ts'
  * stands where you put it.
  * SCREENS=1 saves screenshots to .agent/screens/.
  */
-test.use({ server: true })
 
 type GatherView = {
   area: string
@@ -303,7 +302,7 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
   // One tree short of the day's cap (numbers live on the server only).
   const day = Math.floor(Date.now() / 1000 / 86400)
-  sql(`INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${id}','chop',${day},29,'','',0,0);`)
+  sql(`INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${accountOf(id)}','chop',${day},29,'','',0,0);`)
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)

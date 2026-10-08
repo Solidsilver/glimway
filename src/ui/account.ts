@@ -3,8 +3,9 @@
  * for this tab, the page's play-client id, the server probe, and building a
  * connected Session from a server snapshot or the device's connected cache.
  *
- * Guest play never needs any of this: a build without a server probes once,
- * gets `unavailable`, and everything stays local.
+ * There is no play without the server: a probe that gets no answer leaves
+ * the title at its "can't reach the world" card (a device with a connected
+ * cache can keep playing offline).
  */
 import { claimClientId, createApiClient } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
@@ -14,8 +15,27 @@ import type { Probe } from './account-flow.svelte'
 import { Link, type Unresolved } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
+import { update } from './update.svelte'
 
-export const api = createApiClient()
+/**
+ * The one API client, watching for `reload-needed`: a server that refuses
+ * this client's contract shows the reload notice (src/ui/update.svelte.ts).
+ */
+export const api = createApiClient({
+  fetchImpl: async (input, init) => {
+    const res = await globalThis.fetch(input, init)
+    if (res.status === 409) {
+      res
+        .clone()
+        .json()
+        .then((body) => {
+          if ((body as { error?: { code?: string } })?.error?.code === 'reload-needed') update.reloadNeeded()
+        })
+        .catch(() => undefined)
+    }
+    return res
+  }
+})
 
 /**
  * This page's play-client id, unique among live pages (a duplicated tab

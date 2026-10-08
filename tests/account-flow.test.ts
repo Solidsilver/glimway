@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import './helpers/svelte-runes.ts'
 import { ApiError } from '../src/lib/api/errors.ts'
 import { createNewGame } from '../src/lib/state.ts'
-import { accountCopy, leaseCopy, originCopy } from '../src/content/connected.ts'
+import { accountCopy, leaseCopy } from '../src/content/connected.ts'
 import { firstWorldCopy, worldCopy } from '../src/content/world-moves.ts'
 import type { ConnectedCache } from '../src/lib/api/cache.ts'
 import type { Snapshot, WorldChoice, WorldView } from '../src/lib/api/types.ts'
@@ -155,27 +155,16 @@ test('Continue with a journey: connect, take the lease, play, then the party pro
   assert.deepEqual(t.flow.partyPrompt, view)
 })
 
-test('a first sign-in: the world question, then a fresh start when there is nothing to bring', async () => {
-  const t = setup({ api: { worldChoose: async () => snap({ saveOrigin: null }), origin: async () => snap({ saveOrigin: 'fresh' }), world: async () => ({}) } })
+test('a first sign-in: the world question, then straight into the world', async () => {
+  const t = setup({ api: { worldChoose: async () => snap(), world: async () => ({}) } })
   await t.flow.signedIn(choice(), null)
   assert.equal(t.flow.gate?.kind, 'world')
   assert.equal(t.host.panelClosed, 1)
   await t.flow.chooseWorld('own')
-  assert.deepEqual(t.calls.slice(0, 2), ['worldChoose', 'origin'])
+  // The world answers, the session starts, and the party prompt is asked.
+  assert.deepEqual(t.calls, ['worldChoose', 'world'])
   assert.equal(t.flow.gate, null)
   assert.equal(t.played.length, 1)
-})
-
-test('a guest with progress is asked whether to bring the journey; bringing it says so', async () => {
-  const guest = new FakeSession(null)
-  guest.state.quest = 'accepted'
-  const sent: unknown[] = []
-  const t = setup({ guest, api: { origin: async (req: never) => (sent.push(req), snap()), world: async () => ({}) } })
-  await t.flow.signedIn(snap({ saveOrigin: null }), null)
-  assert.equal(t.flow.gate?.kind, 'origin')
-  await t.flow.chooseOrigin('migrate')
-  assert.ok((sent[0] as { save?: unknown }).save, 'the guest journey goes up')
-  assert.deepEqual(t.toasts, ['Your journey came with you into your world.'])
 })
 
 test('chosen already elsewhere: the world question steps straight into that world', async () => {
@@ -238,14 +227,6 @@ test('stepping back from the lease question drops the waiting session', async ()
   t.flow.dropPending()
   assert.equal(pending.destroyed, true)
   assert.equal(t.flow.gate, null)
-})
-
-test('origin already set on another device: load the account, keep the guest save', async () => {
-  const t = setup({ api: { origin: err('already-set'), state: async () => snap(), world: async () => ({}) } })
-  t.flow.openOrigin('Tansy')
-  await t.flow.chooseOrigin('fresh')
-  assert.deepEqual(t.toasts, [originCopy.alreadySet])
-  assert.equal(t.played.length, 1)
 })
 
 test('a move that lands opens the new world; one that can’t open goes back to the title', async () => {

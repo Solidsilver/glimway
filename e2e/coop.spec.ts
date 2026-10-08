@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld } from './connected'
+import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, signInPage } from './party-helpers'
 import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
 
@@ -11,7 +11,6 @@ import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } 
  * the naming to the Warden and keeps a journal line for it. Screenshots go to
  * .agent/screens/coop-*.png.
  */
-test.use({ server: true })
 
 type Remote = { id: string; name: string }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
@@ -113,7 +112,7 @@ test('a newcomer on a phone starts a world of their own, and the party’s world
   // Let in through the party, Sam makes no invite codes, even from his own world.
   const invites = other.getByTestId('invite-party-admitted')
   await expect(invites).toContainText('You came in with your party, so codes aren’t yours to give.')
-  expect((await other.request.post('/api/invites', { data: {} })).status()).toBe(403)
+  expect((await other.request.post('/api/invites', { data: {}, ...CONTRACT })).status()).toBe(403)
   await ctx.close()
 })
 

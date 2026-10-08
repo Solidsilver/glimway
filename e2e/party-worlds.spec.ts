@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { newUser, serverState, setHabitica, TOKEN, waitForWorld } from './connected'
+import { newUser, serverState, setHabitica, TOKEN, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, settledElsewhere, signInPage } from './party-helpers'
 import { expectToast, waitForWilds, warp, wilds } from './helpers'
 
@@ -8,12 +8,11 @@ import { expectToast, waitForWilds, warp, wilds } from './helpers'
  * to the party, its members sign in with no code, a settled member is asked
  * once whether to join it, the move itself, and a day between moves.
  */
-test.use({ server: true })
 
 type Remote = { id: string; name: string }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
 
-const worldView = async (page: Page) => (await page.request.get('/api/world')).json()
+const worldView = async (page: Page) => (await page.request.get('/api/world', CONTRACT)).json()
 
 test('a party member signs in with no code and, choosing it, lands in the party’s world', async ({ page, browser, baseURL }) => {
   const { party, world } = await partyOwner(page)
@@ -35,13 +34,17 @@ test('a party member signs in with no code and, choosing it, lands in the party�
   await ctx.close()
 })
 
-test('someone outside the party still needs a code', async ({ page }) => {
+test('someone outside the party still needs a code', async ({ page, browser, baseURL }) => {
   await partyOwner(page)
   const ned = newUser()
   await setHabitica(ned, { name: 'Ned', party: newUser() })
-  const res = await page.request.post('/api/session', { data: { userId: ned, token: TOKEN } })
+  // Ned signs in from a device of his own (the page's session cookie would
+  // answer for Olive).
+  const ned_ctx = await browser.newContext({ baseURL })
+  const res = await ned_ctx.request.post('/api/session', { data: { userId: ned, token: TOKEN }, ...CONTRACT })
   expect(res.status()).toBe(403)
   expect((await res.json()).error.code).toBe('access-denied')
+  await ned_ctx.close()
 })
 
 test('a settled member is asked once, then moves into the party’s world', async ({ page, browser, baseURL }) => {
@@ -143,7 +146,7 @@ test('a party’s world takes no invite codes, and a member who leaves the party
   await expect(other.getByTestId('invite-party-admitted')).toContainText('You came in with your party, so codes aren’t yours to give.')
   await expect(other.getByRole('button', { name: 'Create an invite code' })).toHaveCount(0)
   // Signing out lets the play lease go, so the next sign-in plays at once.
-  expect((await other.request.delete('/api/session')).ok()).toBe(true)
+  expect((await other.request.delete('/api/session', CONTRACT)).ok()).toBe(true)
   await ctx.close()
 
   // Rue leaves the party; her next sign-in says what will happen.
@@ -161,7 +164,7 @@ test('a party’s world takes no invite codes, and a member who leaves the party
   await other.keyboard.press('Escape')
   await expect(other.getByTestId('world-settings')).toContainText('You live in your own world.')
   // Her own world now, but still no codes: party admission doesn't chain.
-  const invites = await other.request.get('/api/invites')
+  const invites = await other.request.get('/api/invites', CONTRACT)
   expect(invites.ok()).toBe(true)
   expect(await invites.json()).toMatchObject({ partyAdmitted: true, partyWorld: false, remaining: 5, outstandingLimit: 3, invites: [] })
   await expect(other.getByTestId('invite-party-admitted')).toBeVisible()

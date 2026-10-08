@@ -6,8 +6,9 @@ import { warp } from './helpers'
 
 /**
  * Helpers for the connected playtests: this worker's own Go server (through
- * the shared Vite) and its fake Habitica (e2e/server/backend.ts). They work
- * inside `test.use({ server: true })` tests.
+ * the shared Vite) and its fake Habitica (e2e/server/backend.ts). The
+ * fixtures' `backend` fixture starts the server and routes every context to
+ * it, so every test can use these.
  */
 
 export const TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
@@ -16,6 +17,9 @@ export const TOKEN = '99999999-ffff-4eee-9ddd-888888888888'
 export const habiticaURL = (): string => requireBackend().habitica
 /** This worker's SQLite database (the admin CLI and sqlite3 read it). */
 const dbPath = (): string => requireBackend().db
+
+/** The contract header the /api gate requires on every stateful call. */
+export const CONTRACT = { headers: { 'X-Glimway-Contract': '3' } }
 
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()
@@ -30,6 +34,45 @@ function admin(...args: string[]): string {
  */
 export function sql(statements: string): string {
   return execFileSync('sqlite3', ['-cmd', '.timeout 5000', dbPath(), statements], { encoding: 'utf8' }).trim()
+}
+
+/**
+ * The server's account id for a Habitica subject (A's accounts: random ids,
+ * found through `sign_ins`). Test SQL wants it, never the subject.
+ */
+export function accountOf(habiticaId: string): string {
+  const account = sql(`SELECT account_id FROM sign_ins WHERE method='habitica' AND subject='${habiticaId.replace(/'/g, "''")}';`)
+    .split('\n').at(-1) || ''
+  if (!account) throw new Error(`accountOf: no account for ${habiticaId} (sign in once first)`)
+  return account
+}
+
+/**
+ * Test-only lever: put a story state on an account (replaces the old guest
+ * `seedSave`): a quest stage, story marks (flags), quest items and a place.
+ * The account must exist (sign in once with `freshPlayer`; `accountId` is
+ * the id it returned, the Habitica subject); the change lands on its
+ * progress document, so the next read picks it up (TODO(B): write the new
+ * story tables instead, once the server loads them).
+ */
+export function seedStory(accountId: string, o: { quest?: string; marks?: string[]; questItems?: string[]; place?: { area: string; x: number; y: number } }): void {
+  const esc = (v: string) => v.replace(/'/g, "''")
+  const account = esc(accountOf(accountId))
+  const stmts: string[] = []
+  for (const mark of o.marks ?? []) stmts.push(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', '${esc(mark)}') WHERE account_id='${account}';`)
+  if (o.quest) stmts.push(`UPDATE progress SET doc_json = json_set(doc_json, '$.quest', '${esc(o.quest)}') WHERE account_id='${account}';`)
+  if (o.questItems?.length) {
+    // The array goes in as a SQL string literal (double quotes mean
+    // identifiers on their own).
+    const items = JSON.stringify(o.questItems.map(esc)).replace(/'/g, "''")
+    stmts.push(`UPDATE progress SET doc_json = json_set(doc_json, '$.inventory', json('${items}')) WHERE account_id='${account}';`)
+  }
+  if (o.place) {
+    stmts.push(
+      `UPDATE progress SET doc_json = json_set(doc_json, '$.area', '${esc(o.place.area)}', '$.position.x', ${Math.round(o.place.x)}, '$.position.y', ${Math.round(o.place.y)}) WHERE account_id='${account}';`
+    )
+  }
+  sql(stmts.join('\n'))
 }
 
 /** Owner CLI: let this Habitica id sign in. */
@@ -83,6 +126,13 @@ export async function waitForWorld(page: Page, area: string = 'village'): Promis
   await expect.poll(() => linkStatus(page)).toBe('online')
 }
 
+/** Reload the page and Continue into the world (a fresh read of the server's state). */
+export async function reenter(page: Page, area: string = 'village'): Promise<void> {
+  await page.reload()
+  await page.getByTestId('continue-world').click()
+  await waitForWorld(page, area)
+}
+
 /** The running link's status, read through the HUD state (null for guests). */
 export async function linkStatus(page: Page): Promise<string | null> {
   return page.evaluate(() => (window as unknown as { __fsLink?: () => string | null }).__fsLink?.() ?? null)
@@ -93,10 +143,16 @@ export async function linkRev(page: Page): Promise<number | null> {
   return page.evaluate(() => (window as unknown as { __fsLinkRev?: () => number | null }).__fsLinkRev?.() ?? null)
 }
 
-/** Server state for this browser's session cookie. */
+/**
+ * Server state for this browser's session cookie, read the way the client
+ * reads it (the /api gate's contract header included, the raw PlayerState
+ * projected into the game's own shape by the client's parser).
+ */
 export async function serverState(page: Page): Promise<{ status: number; body: any }> {
-  const res = await page.request.get('/api/state')
-  return { status: res.status(), body: res.ok() ? await res.json() : await res.json().catch(() => null) }
+  const res = await page.request.get('/api/state', { headers: { 'X-Glimway-Contract': '3' } })
+  if (!res.ok()) return { status: res.status(), body: await res.json().catch(() => null) }
+  const { parseState } = await import('../src/lib/api/parse.ts')
+  return { status: res.status(), body: parseState(await res.json()) }
 }
 
 /** Open the Menu and press "Sync character" (Habitica details must be in memory). */

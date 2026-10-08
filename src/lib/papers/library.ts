@@ -3,12 +3,13 @@ import contract from '../../../content/contract.json' with { type: 'json' };
  * The Hearthwick Library: one shared shelf per world.
  *
  * - The starting shelf (papers with source `library-start`) is content: every
- *   player, guest or connected, can read those from day one.
- * - Donations are the players' own. Guests (and connected players whose
- *   server has no library yet) keep theirs in the save as story flags
- *   `donated:<paperId>@<YYYY-MM-DD>`. Connected players share one shelf per
+ *   player can read those from day one.
+ * - Donations are the players' own. Connected players share one shelf per
  *   world through the server (contract below), with a local fallback when
  *   the server has no library.
+ * - The local half (donation flags in the save) is kept only because
+ *   game/papers.ts still calls it: TODO(C2), donations go through the
+ *   operation queue and the local half goes with it.
  *
  * Server contract (server/internal/api/library.go):
  *   GET  /api/library        → 200 { shelves: [{ paperId, donatedBy, donatedAt }] }
@@ -45,12 +46,12 @@ function isoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** The save flag recording a local donation. */
+/** The save flag recording a local donation. TODO(C2): goes with game/papers.ts. */
 export function donationFlag(paperId: string, when: Date): string {
   return `${DONATED_PREFIX}${paperId}@${isoDay(when)}`;
 }
 
-/** Local donations recorded in a save's flags (first per paper wins). */
+/** Local donations recorded in a save's flags (first per paper wins). TODO(C2): goes with game/papers.ts. */
 export function localDonations(flags: readonly string[], donor: string): ShelfEntry[] {
   const out: ShelfEntry[] = [];
   for (const f of flags) {

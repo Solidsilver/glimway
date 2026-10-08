@@ -1,6 +1,6 @@
 import { expect, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld } from './connected'
-import { beginNewJourney, dialogueState, frames, readDialogue, waitForArea, waitForLive, player, expectToast } from './helpers'
+import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld } from './connected'
+import { dialogueState, frames, readDialogue, waitForArea, waitForLive, player, expectToast } from './helpers'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -169,14 +169,14 @@ export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
 
 /** The homestead behind a gate, as the server tells this player (null: unclaimed). */
 export async function homeAt(page: Page, gate: number): Promise<Home | null> {
-  const res = await page.request.get(`/api/homestead/gate/${gate}`)
+  const res = await page.request.get(`/api/homestead/gate/${gate}`, CONTRACT)
   expect(res.ok()).toBe(true)
   return (await res.json()).home as Home | null
 }
 
 /** The Commons lane as the server tells this player. */
 export async function lane(page: Page): Promise<{ gates: HomesView['gates']; gateCount: number; mine: { homeId: string; gate: number } | null; invites: HomesView['invites'] }> {
-  const res = await page.request.get('/api/commons')
+  const res = await page.request.get('/api/commons', CONTRACT)
   expect(res.ok()).toBe(true)
   return res.json()
 }
@@ -204,9 +204,11 @@ export async function throughGate(page: Page, gate: number): Promise<void> {
  * Test-only lever: put goods straight into a player's pack in the e2e
  * database (nothing in the client gathers them yet). The server reads
  * balances from the item tables on every request. Materials and items are
- * unmarked stacks unless a maker is given.
+ * unmarked stacks unless a maker is given. `id` is the Habitica subject
+ * freshPlayer returned; the item tables key on the server's account id.
  */
-export function fund(id: string, goods: { materials?: Record<string, number>; items?: Record<string, number>; maker?: string; personal?: Record<string, number> }): void {
+export function fund(habiticaId: string, goods: { materials?: Record<string, number>; items?: Record<string, number>; maker?: string; personal?: Record<string, number> }): void {
+  const id = accountOf(habiticaId)
   const esc = (v: string) => v.replace(/'/g, "''")
   const maker = esc(goods.maker ?? '')
   const statements: string[] = []
@@ -223,10 +225,10 @@ export function fund(id: string, goods: { materials?: Record<string, number>; it
  * `uses` uses left (full when omitted). Story heirlooms have no gameplay
  * source yet. Returns the instance id.
  */
-export function giveInstance(id: string, def: string, opts: { uses?: number; max: number; maker?: string }): string {
+export function giveInstance(habiticaId: string, def: string, opts: { uses?: number; max: number; maker?: string }): string {
   const instance = `${def}-${Math.random().toString(36).slice(2, 10)}`
   const condition = opts.uses === undefined ? opts.max : opts.uses * 3
-  sql(`INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${id.replace(/'/g, "''")}',${condition},${opts.max},'${opts.maker ?? ''}',0);`)
+  sql(`INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,created_at) VALUES('${instance}','${def}','pack','${accountOf(habiticaId)}',${condition},${opts.max},'${opts.maker ?? ''}',0);`)
   return instance
 }
 

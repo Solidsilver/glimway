@@ -2,21 +2,21 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { BLOCKS, blocked, layersUp, type Layer, type LayerFlags } from '../src/ui/layers.ts'
 
-const LAYERS: Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
+const LAYERS: Layer[] = ['gate', 'lease', 'move', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
 
 /**
  * The five predicates as App.svelte wrote them out by hand before the layer
  * table (src/App.svelte at 7d3bb12), in its own state names.
  */
 function before(f: LayerFlags) {
-  const panel = f.panel, gate = f.gate, leaseBlock = f.lease, moving = f.move, confirm = f.confirm, confirmLogout = f.logout
+  const panel = f.panel, gate = f.gate, leaseBlock = f.lease, moving = f.move, confirmLogout = f.logout
   const namePrompt = f.naming, leaveAsk = f['leave-deed'], endingOpen = f.ending, dialogueOpen = f.dialogue, cinematic = f.cinematic
   const placement = f.placement, linkNotice = f['link-notice'], bannerUp = f.banner, reloading = f.reloading
   return {
     worldInput: panel || endingOpen || gate || leaseBlock || namePrompt || leaveAsk || moving,
-    appKeys: dialogueOpen || cinematic || confirm || gate || leaseBlock || moving || reloading || endingOpen,
+    appKeys: dialogueOpen || cinematic || gate || leaseBlock || moving || reloading || endingOpen,
     notices: !(
-      !moving && !linkNotice && !panel && !cinematic && !dialogueOpen && !endingOpen && !leaseBlock && !gate && !confirm && !confirmLogout && !placement && !namePrompt && !leaveAsk && !bannerUp
+      !moving && !linkNotice && !panel && !cinematic && !dialogueOpen && !endingOpen && !leaseBlock && !gate && !confirmLogout && !placement && !namePrompt && !leaveAsk && !bannerUp
     ),
     actionPrompt: !(!dialogueOpen && !panel && !cinematic && !endingOpen && !placement),
     homeBar: panel || dialogueOpen || cinematic || gate || leaseBlock

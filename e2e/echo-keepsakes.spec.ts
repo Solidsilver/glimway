@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, sql } from './connected'
+import { serverState, sql, accountOf } from './connected'
 import { dialogueState, holdUntil, readDialogue, untilChoices, untilLine, waitForLive, waitForWilds, warp, wilds, type WildsDump } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
@@ -8,7 +8,6 @@ import { siteChunks } from '../src/lib/wilds/outer.ts'
 import { echoAssignments } from '../src/lib/wilds/stories.ts'
 import { calendarAt } from '../src/lib/calendar.ts'
 
-test.use({ server: true })
 
 /**
  * Leaving keepsakes at Echo camps (docs/items/overview.md, "Returning
@@ -86,7 +85,7 @@ test('leaving Nan’s road-nails at her Echo camp, then the softer settling', as
   // A world whose outer Wilds wait for Nan at a camp this wick (the epoch is
   // created from the world's seed on the first read of the region).
   const camp = nanCamp(false)
-  sql(`UPDATE worlds SET seed='${camp.seed}' WHERE id=(SELECT world_id FROM players WHERE habitica_id='${id}') AND id NOT IN (SELECT world_id FROM region_epochs);`)
+  sql(`UPDATE worlds SET seed='${camp.seed}' WHERE id=(SELECT world_id FROM players WHERE account_id='${accountOf(id)}') AND id NOT IN (SELECT world_id FROM region_epochs);`)
 
   // The Wilds gave the road-nails back some turning ago: they're in the pack.
   fund(id, { items: { 'road-nails': 1 } })

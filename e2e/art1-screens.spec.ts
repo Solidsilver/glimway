@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { test } from './fixtures'
 import type { Page } from './fixtures'
-import { beginNewJourney, hold, warp } from './helpers'
+import { hold, warp } from './helpers'
 import { freshPlayer, giveInstance } from './home-helpers'
 
 /**
@@ -82,7 +82,7 @@ test.describe('after: residents', () => {
   test('desktop', async ({ page }) => {
     test.setTimeout(150_000)
     await page.setViewportSize({ width: 1280, height: 800 })
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await residentScreens(page, 'desktop')
   })
 })
@@ -92,8 +92,7 @@ test.describe('after: residents, phone', () => {
   test.use(PHONE)
   test('phone', async ({ page }) => {
     test.setTimeout(150_000)
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await residentScreens(page, 'phone')
   })
@@ -101,7 +100,7 @@ test.describe('after: residents, phone', () => {
 
 test.describe('after: the hero holding the axe', () => {
   test.skip(TAG !== 'after', 'the walking art only')
-  test.use({ server: true, viewport: { width: 1280, height: 800 } })
+  test.use({ viewport: { width: 1280, height: 800 } })
   test('facing left and right', async ({ page }) => {
     test.setTimeout(150_000)
     const id = await freshPlayer(page, 'Teo')
@@ -146,7 +145,7 @@ test.describe('after: round 3', () => {
   test('desktop', async ({ page }) => {
     test.setTimeout(150_000)
     await page.setViewportSize({ width: 1280, height: 800 })
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await round3Screens(page, 'desktop')
   })
 })
@@ -156,8 +155,7 @@ test.describe('after: round 3, phone', () => {
   test.use(PHONE)
   test('phone', async ({ page }) => {
     test.setTimeout(150_000)
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await round3Screens(page, 'phone')
   })
@@ -167,7 +165,7 @@ test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
   test('village, Commons, road edge, water, Mara', async ({ page }) => {
     test.setTimeout(120_000)
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await outdoorScreens(page, 'desktop')
   })
 })
@@ -176,8 +174,7 @@ test.describe('phone', () => {
   test.use(PHONE)
   test('village, Commons, road edge, water, Mara', async ({ page }) => {
     test.setTimeout(120_000)
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
     await outdoorScreens(page, 'phone')
   })

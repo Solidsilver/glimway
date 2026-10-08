@@ -35,7 +35,7 @@
    * filter chips (All, Tools, Supplies, Keepsakes, Home, Papers). Pick an
    * icon (or hover it on a desktop) for its card: name, count, a line, its
    * wear and what you can do with it (use, pocket, carry, hold, give, mend,
-   * fit, plant). In a world it reads the server's item model; guests see
+   * fit, plant). In a world it reads the server's item model; offline it sees
    * the save's pack. App owns the I key; Escape closes an open card first.
    */
   let {
@@ -686,7 +686,7 @@
         <div class="grids">
           {#if mainShown.length === 0}
             <p class="empty">
-              {tab === 'all' ? inventoryCopy.emptyFilter : tab === 'home' ? (connected ? inventoryCopy.empty.homeWorld : inventoryCopy.empty.homeGuest) : inventoryCopy.empty[tab]}
+              {tab === 'all' ? inventoryCopy.emptyFilter : inventoryCopy.empty[tab]}
             </p>
           {:else}
             <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->

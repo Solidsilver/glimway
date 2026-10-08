@@ -1,12 +1,10 @@
 /**
  * The inventory, as data: everything you carry, sorted into the panel's tabs
- * (docs/hands-on-design.md section 2). Pure: the panel feeds it the save's
- * pack, any server counts it has, and your home's decorations.
+ * (docs/hands-on-design.md section 2). Pure: the panel feeds it the pack's
+ * quest things, the server counts it has, and your home's decorations.
  *
- * Today's sources, unchanged:
- * - the pack (`GameState.inventory`): quest items, the Ember Charm, Wilds
- *   trinkets, crafted pieces, and a guest's materials as `material:<id>:<qty>`
- *   entries;
+ * Today's sources:
+ * - the pack (`GameState.inventory`): quest items and the Ember Charm;
  * - server counts in a world (materials, items, decorations), when read;
  * - your home's decoration instances (placed or not).
  *
@@ -83,7 +81,7 @@ export interface InventoryEntry {
 export interface InventorySource {
   /** GameState.inventory. */
   pack: readonly string[];
-  /** Known material balances (a world's, or the Wilds' latest); else read from the pack. */
+  /** Known material balances (a world's, or the Wilds' latest). */
   materials?: Record<string, number> | null;
   /** Known item counts in a world (trinkets, crafted pieces). Ids in the pack count 1 without them. */
   items?: Record<string, number> | null;
@@ -91,10 +89,14 @@ export interface InventorySource {
   decorations?: ReadonlyArray<{ itemDef: string; scene: string | null }>;
 }
 
-/** Pack entries that carry a guest's material balance. */
+/**
+ * The pack entry prefix for a material balance. Guest packs kept materials
+ * this way (`material:<id>:<qty>`); the Wilds store still writes and reads
+ * the form until the server owns the balance (TODO(D), src/game/wilds/store.ts).
+ */
 export const MATERIAL_ITEM_PREFIX = 'material:';
 
-/** A guest's materials from their pack (`material:<id>:<qty>`), every material listed. */
+/** A guest's materials from their pack (`material:<id>:<qty>`), every material listed. TODO(D): goes with src/game/wilds/store.ts's guest pack. */
 export function materialsFromPack(pack: readonly string[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const m of MATERIALS) out[m.id] = 0;
@@ -144,10 +146,8 @@ function describe(id: string, qty: number): InventoryEntry {
 /** Everything carried, described (unsorted; see `newestFirst`). */
 export function inventoryEntries(src: InventorySource): InventoryEntry[] {
   const out: InventoryEntry[] = [];
-  // Materials: known balances win over the pack's guest entries.
-  const materials = src.materials ?? materialsFromPack(src.pack);
   for (const m of MATERIALS) {
-    const qty = Math.max(0, Math.floor(materials[m.id] ?? 0));
+    const qty = Math.max(0, Math.floor(src.materials?.[m.id] ?? 0));
     if (qty > 0) {
       out.push({ key: `material:${m.id}`, tab: 'supplies', section: 'main', kind: 'material', id: m.id, name: m.name, blurb: m.blurb, qty, art: `icon-${m.id}`, icon: MATERIAL_ICON[m.id] ?? 'sparkle' });
     }
@@ -155,7 +155,7 @@ export function inventoryEntries(src: InventorySource): InventoryEntry[] {
   // Pack items, counted by the server where it has told us.
   const seen = new Set<string>();
   for (const id of src.pack) {
-    if (id.startsWith(MATERIAL_ITEM_PREFIX) || seen.has(id)) continue;
+    if (seen.has(id)) continue;
     seen.add(id);
     const qty = src.items?.[id] ?? 1;
     if (qty > 0) out.push(describe(id, qty));

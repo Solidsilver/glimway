@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld } from './connected'
+import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { animationsDone, waitForArea, waitForLive, frames, warp, waitFrames, waitGame } from './helpers'
 
 /**
@@ -8,7 +8,6 @@ import { animationsDone, waitForArea, waitForLive, frames, warp, waitFrames, wai
  * (the second joins with the first one's invite), each in their own browser
  * context. SCREENS=1 saves screenshots to .agent/screens/.
  */
-test.use({ server: true })
 
 type Remote = { id: string; name: string; x: number; y: number; alpha: number; moving: boolean; avatar: boolean; bubble: string | null; bubbleAlpha: number | null }
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
@@ -29,7 +28,7 @@ async function twoPlayers(page: Page, browser: Browser, baseURL: string, viewpor
   await openTitleGuide(page)
   await pasteAndConnect(page, ash)
   await waitForWorld(page)
-  const invite = await (await page.request.post('/api/invites', { data: {} })).json()
+  const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()
 
   const ctx: BrowserContext = await browser.newContext({ baseURL, viewport: viewport ?? { width: 1200, height: 760 } })
   await routeHabitica(ctx)
@@ -171,19 +170,6 @@ test('a takeover stops the old tab\'s presence socket; the new tab takes its pla
   expect(reopened, 'the old tab opened no presence socket').toEqual([])
   expect((await presenceState(page))?.status).toMatch(/superseded|off/)
   await ctx.close()
-})
-
-test('guests have no presence socket', async ({ page }) => {
-  const sockets: string[] = []
-  page.on('websocket', (ws) => sockets.push(ws.url()))
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).click()
-  await waitForArea(page, 'village')
-  // Live play has begun: connected play would have started its feed by now.
-  await waitForLive(page)
-  expect(sockets.filter((u) => u.endsWith('/ws'))).toEqual([])
-  expect(await presenceState(page)).toBeNull()
-  await expect(page.getByTestId('emote-button')).toHaveCount(0)
 })
 
 for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', { width: 390, height: 844 }]] as const) {

@@ -9,7 +9,6 @@ import { homesteadAlone, partyOwner, settledElsewhere, signInPage } from './part
  * showing). Hal holds a deed alone, so the confirmation shows the land going
  * quiet. Only with SCREENS=1 (saved to .agent/screens/).
  */
-test.use({ server: true })
 
 const sizes = [
   ['desktop', { width: 1200, height: 760 }],

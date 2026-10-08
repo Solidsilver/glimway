@@ -19,6 +19,15 @@ class UpdateStore {
     this.ready = null
     this.held = null
   }
+
+  /**
+   * The world server answered `reload-needed`: this client is not the
+   * version the server speaks. The same quiet notice as a newer build —
+   * reload when it suits you (design section 8).
+   */
+  reloadNeeded(): void {
+    this.ready = { version: RUNNING.version, build: 'world' }
+  }
 }
 
 export const update = new UpdateStore()

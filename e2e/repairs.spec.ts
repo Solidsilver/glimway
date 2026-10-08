@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { serverState } from './connected'
+import { serverState, CONTRACT } from './connected'
 import { expectToast, dialogueState, openTalk, readDialogue, untilLine, waitForLive } from './helpers'
 import { freshPlayer, fund, giveInstance, go, shot } from './home-helpers'
 
@@ -14,7 +14,6 @@ import { freshPlayer, fund, giveInstance, go, shot } from './home-helpers'
  * and giving it back is one-time, grants her oil receipts, and thanks only
  * after the world agrees. SCREENS=1 saves screenshots to .agent/screens/.
  */
-test.use({ server: true })
 
 type ItemsView = { stacks: { itemDef: string; qty: number }[] } | null
 const items = (page: Page) =>

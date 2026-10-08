@@ -1,13 +1,12 @@
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, sql, waitForWorld } from './connected'
-import { beginNewJourney, holdUntil, warp, waitForWilds, wilds, type WildsDump, readDialogue, settled, expectToast } from './helpers'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, sql, waitForWorld, CONTRACT } from './connected'
+import { holdUntil, warp, waitForWilds, wilds, type WildsDump, readDialogue, settled, expectToast } from './helpers'
 import { chunkAreaId } from '../src/game/wilds/regions.ts'
 
 /**
  * The Tangle on screen: chunks, a camp, a node harvest, a POI, a lantern —
  * desktop and phone. SCREENS=1 saves images to .agent/screens/.
  */
-test.use({ server: true })
 
 const sizes = [
   ['desktop', { width: 1200, height: 760 }],
@@ -39,7 +38,7 @@ for (const [device, vp] of sizes) {
     // Its first camp, node and POI all have open ground beside them.
     const worldId = (await serverState(page)).body.worldId as string
     sql(`UPDATE worlds SET seed='wilds-screens-0' WHERE id='${worldId}' AND id NOT IN (SELECT world_id FROM region_epochs);`)
-    const region = await page.request.get('/api/wilds/region/inner-1')
+    const region = await page.request.get('/api/wilds/region/inner-1', CONTRACT)
     expect((await region.json()).epoch.worldSeed).toBe('wilds-screens-0')
 
     // In: the entry chunk by the commons gap.
@@ -168,11 +167,3 @@ for (const [device, vp] of sizes) {
   })
 }
 
-// One guest shot for the local-mode look (materials live in the pack).
-test('wilds screens: guest entry', async ({ page }) => {
-  await page.setViewportSize({ width: 1200, height: 760 })
-  await beginNewJourney(page)
-  await warp(page, 'wilds', 2, 22)
-  await waitForWilds(page)
-  await shot(page, '28-wilds-guest-entry')
-})

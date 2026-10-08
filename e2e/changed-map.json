@@ -224,7 +224,7 @@
       "specs": ["repairs.spec.ts"]
     },
     {
-      "paths": ["src/game/nudges.ts", "src/lib/nudges.ts", "src/lib/habitica/**", "src/ui/habitica-local.ts", "src/ui/NamePrompt.svelte"],
+      "paths": ["src/game/nudges.ts", "src/lib/habitica/**", "src/ui/habitica-local.ts", "src/ui/NamePrompt.svelte"],
       "specs": ["onboarding.spec.ts", "onboarding-layout.spec.ts", "connected.spec.ts"]
     },
     {

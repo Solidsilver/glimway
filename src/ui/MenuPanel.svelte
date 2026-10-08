@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { clearSave, exportSave, importSaveDocument, saveGame } from '../lib/save'
-  import { createNewGame } from '../lib/state'
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
   import { soundSettings, type SoundPrefs } from '../game/sound-settings'
@@ -32,7 +30,6 @@
     onClose,
     onSignedIn,
     onLogout,
-    onEnterWorld,
     onMove,
     onLeave,
     onWhatsNew
@@ -42,8 +39,6 @@
     /** The guide signed in to the Glimway server (connected mode starts). */
     onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
     onLogout?: () => void
-    /** Signed in but playing the guest save: switch to the world. */
-    onEnterWorld?: () => void
     /** Move to another world: the confirmation takes over from here. */
     onMove?: (target: WorldRef, home: boolean, view: WorldView) => void
     /** Left the party whose world you live in: go now. */
@@ -53,9 +48,6 @@
   } = $props()
 
   const touch = isTouchFirst()
-  let importText = $state('')
-  let importError = $state('')
-  let confirmReset = $state(false)
   let confirmLogout = $state(false)
   let logoutBusy = $state(false)
 
@@ -67,9 +59,8 @@
     logoutBusy = false
     confirmLogout = true
   }
-  /** Connected play: the world holds the save; export/restore and Start over are guest-only. */
-  const connected = $derived(!!session.link)
-  const offline = $derived(connected && ui.link?.status === 'offline')
+  /** The world holds the save; offline play waits out a dead connection. */
+  const offline = $derived(session.link?.status === 'offline')
 
   /** Text fields must not leak keys to the game (Phaser captures WASD/E/F). */
   const keepKeys = (e: KeyboardEvent) => {
@@ -85,56 +76,6 @@
   function toggleSound(): void {
     setSound({ on: !sound.on })
     if (sound.on) sfx('click')
-  }
-
-  async function copySave(): Promise<void> {
-    // The session is the source of truth for provenance.
-    const json = exportSave(session.state, {
-      vitalsSource: session.vitalsSource,
-      importedProfile: session.importedProfile ?? undefined
-    })
-    try {
-      await navigator.clipboard.writeText(json)
-      ui.toast({ text: 'Save code copied — keep it somewhere safe.', icon: 'scroll' })
-    } catch {
-      importText = json
-      ui.toast({ text: 'Clipboard said no, so the code is in the box below. Copy it from there.' })
-    }
-  }
-
-  function applyImport(): void {
-    try {
-      const imported = importSaveDocument(importText)
-      // Invalidate in-flight syncs BEFORE touching disk: a concurrent
-      // applySynced must not land its write after the restore (reload would
-      // undo it). destroy(true): the restore write below is authoritative.
-      session.destroy(true)
-      // Explicit restore — may overwrite a corrupt stored save on purpose;
-      // provenance travels with the document. importedProfile: null on a demo
-      // document explicitly clears a stored imported baseline.
-      saveGame(imported.state, {
-        overwriteCorrupt: true,
-        vitalsSource: imported.vitalsSource,
-        importedProfile: imported.importedProfile ?? null
-      })
-        .then(() => window.location.reload())
-        .catch(() => {
-          importError = 'That code looked right, but this browser wouldn’t let us save it.'
-        })
-    } catch {
-      importError = 'Hmm, that doesn’t look like a Glimway save code.'
-    }
-  }
-
-  function resetJourney(): void {
-    confirmReset = false
-    // Invalidate in-flight syncs first, then clear + write the fresh save
-    // (a corrupt record refuses silent overwrite; clearSave resets that).
-    session.destroy(true)
-    clearSave()
-      .then(() => saveGame(createNewGame(), { overwriteCorrupt: true, vitalsSource: 'demo', importedProfile: null }))
-      .then(() => window.location.reload())
-      .catch(() => ui.toast({ text: 'Couldn’t start over — this browser wouldn’t save.', kind: 'error' }))
   }
 
   /** Choose how to walk (the radiogroup: one tab stop, arrows move and choose, as in the tab rows). */
@@ -215,46 +156,20 @@
     <section class="card world" data-testid="world-card">
       <h3 class="section-title"><Icon name="lantern" size={14} /> {accountCopy.section}</h3>
       <p class="who"><strong>{accountCopy.signedInAs(ui.account.name)}</strong></p>
-      {#if connected}
-        <p class="fine">
-          {#if offline}<span class="chip off"><Icon name="cloud" size={12} /> {ui.link?.trouble ? offlineCopy.troubleChip : offlineCopy.chip}</span>{/if}
-          {offline ? (ui.link?.trouble ? accountCopy.savedTrouble : accountCopy.savedOffline) : accountCopy.saved}
-        </p>
-      {/if}
+      <p class="fine">
+        {#if offline}<span class="chip off"><Icon name="cloud" size={12} /> {ui.link?.trouble ? offlineCopy.troubleChip : offlineCopy.chip}</span>{/if}
+        {offline ? (ui.link?.trouble ? accountCopy.savedTrouble : accountCopy.savedOffline) : accountCopy.saved}
+      </p>
       <div class="row">
-        {#if !connected && onEnterWorld}
-          <button type="button" class="primary" onclick={onEnterWorld}>Play in your world</button>
-        {/if}
         <button type="button" onclick={requestLogout} disabled={offline || logoutBusy} title={offline ? offlineCopy.needs : undefined}>{accountCopy.logout}</button>
         {#if offline}<span class="tiny inline">{offlineCopy.needs}</span>{/if}
       </div>
-      {#if connected && !offline && onMove}<WorldCard {onMove} {onLeave} />{/if}
+      {#if !offline && onMove}<WorldCard {onMove} {onLeave} />{/if}
     </section>
   {/if}
 
-  {#if !connected}
   <section class="card">
-    <h3 class="section-title"><Icon name="scroll" size={14} /> Save & restore</h3>
-    <p class="fine">Your journey saves itself in this browser as you play. Copy a save code to back it up or carry it to another device.</p>
-    <div class="row">
-      <button type="button" onclick={copySave}>Copy save code</button>
-    </div>
-    <textarea
-      bind:value={importText}
-      rows="3"
-      placeholder="Paste a save code here to restore it…"
-      aria-label="Save code to restore"
-      onkeydown={keepKeys}
-    ></textarea>
-    {#if importError}<p class="error" role="alert">{importError}</p>{/if}
-    <div class="row">
-      <button type="button" onclick={applyImport} disabled={importText.trim().length === 0}>Restore this save</button>
-    </div>
-  </section>
-  {/if}
-
-  <section class="card">
-    <h3 class="section-title"><Icon name="person" size={14} /> {connected ? 'Sync your Habitica hero' : 'Play as your Habitica hero'}</h3>
+    <h3 class="section-title"><Icon name="person" size={14} /> Sync your Habitica hero</h3>
     <ConnectGuide {session} mode="menu" {onSignedIn} />
   </section>
 
@@ -284,11 +199,7 @@
 
   <section class="card">
     <h3 class="section-title"><Icon name="lantern" size={14} /> About</h3>
-    {#if connected}
-      <p class="fine">Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.</p>
-    {:else}
-      <p class="fine">Glimway plays entirely in your browser — no account needed, and your saves never leave this device.</p>
-    {/if}
+    <p class="fine">Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.</p>
     <p class="tiny" data-testid="credits">
       Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed
       <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>;
@@ -296,11 +207,6 @@
       endorsed by Habitica. Sound effects by
       <a href="https://kenney.nl" target="_blank" rel="noopener noreferrer">Kenney</a> (CC0).
     </p>
-    {#if !connected}
-      <div class="row">
-        <button type="button" class="danger" onclick={() => (confirmReset = true)}>Start over…</button>
-      </div>
-    {/if}
   </section>
 
   <p class="tiny version" data-testid="version-line">
@@ -320,17 +226,6 @@
       onLogout?.()
     }}
     onCancel={() => (confirmLogout = false)}
-  />
-{/if}
-
-{#if confirmReset}
-  <ConfirmDialog
-    title="Start a brand-new journey?"
-    body="Your story, discoveries and calmed creatures will be cleared. This can’t be undone — copy a save code first if you might want it back."
-    confirmLabel="Start over"
-    danger
-    onConfirm={resetJourney}
-    onCancel={() => (confirmReset = false)}
   />
 {/if}
 
@@ -478,28 +373,6 @@
     gap: 8px;
     margin: 8px 0;
     flex-wrap: wrap;
-  }
-  textarea {
-    font: inherit;
-    font-family: var(--font-body);
-    font-size: 12.5px;
-    width: 100%;
-    padding: 8px 10px;
-    border: 2px solid var(--wood);
-    border-radius: 8px;
-    background: var(--cream-hi);
-    color: var(--text);
-    resize: vertical;
-    user-select: text;
-    -webkit-user-select: text;
-  }
-  .error {
-    margin: 6px 0;
-    padding: 8px 10px;
-    font-size: 13.5px;
-    color: var(--danger-text);
-    background: var(--danger-wash);
-    border-radius: 8px;
   }
   .keys {
     display: grid;

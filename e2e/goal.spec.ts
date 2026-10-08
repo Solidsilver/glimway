@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, frames, talkThrough, waitForLive, warp } from './helpers'
+import { frames, talkThrough, waitForLive, warp } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * The goal is shown, not only told: the HUD says it in a few words with a
@@ -10,7 +11,7 @@ type Goal = { target: { x: number; y: number; here: boolean } | null; dir: { ang
 const goal = (page: Page) => page.evaluate(() => (window as unknown as { __fsGoal: () => Goal }).__fsGoal())
 
 test('the HUD names the goal in a few words, and the needle points the way', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   // Before the quest: Mara, here in the village.
   await expect(page.locator('.hud .goal-text')).toHaveText('Find Mara in the village square')
   await warp(page, 'village', 4, 18)
@@ -45,7 +46,6 @@ test('the HUD names the goal in a few words, and the needle points the way', asy
 })
 
 test.describe('pinned guides', () => {
-  test.use({ server: true })
 
   test('a pinned "How do I…?" guide leads the goal line and the needle, and unpins back to the story', async ({ page }) => {
     const { freshPlayer, go } = await import('./home-helpers')

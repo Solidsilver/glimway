@@ -7,11 +7,10 @@ import { defineConfig, devices } from '@playwright/test'
  * See docs/testing.md for the tiers, workers and ports.
  *
  * Parallel and isolated: every worker gets its own Go server, SQLite
- * database and fake Habitica (e2e/server/backend.ts), started the first time
- * that worker runs a `server: true` test, on free ports. One Vite dev server
- * on E2E_PORT is shared; it sends each browser's /api and /ws to its worker's
- * server by a cookie (e2e/server/vite-routing.mjs). Guest specs block /api in
- * the browser (e2e/fixtures.ts), so they still play with no server at all.
+ * database and fake Habitica (e2e/server/backend.ts), started by the first
+ * test in that worker, on free ports. One Vite dev server on E2E_PORT is
+ * shared; it sends each browser's /api and /ws to its worker's server by a
+ * cookie (e2e/server/vite-routing.mjs, e2e/fixtures.ts).
  *
  * E2E_PORT gives each git worktree its own Vite (the default, 5199, would be
  * shared by two worktrees). E2E_WORKERS (or --workers) sets the worker count.

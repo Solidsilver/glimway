@@ -11,14 +11,14 @@ import { itemsFor } from './items.ts'
 import type { Session } from './session.ts'
 import { expose } from './dev-hooks.ts'
 
-/** One choice per player and world on this device (a guest has its own). */
+/** One choice per player and world on this device. */
 // `fingersnap:` is the game's old name, kept so saved choices load.
 let key = 'fingersnap:held'
 
 /** The localStorage key for a session: `fingersnap:held:<player>@<world>`. */
 export function deviceKey(base: string, session: Session | null): string {
   const link = session?.link
-  return link ? `${base}:${link.accountId}@${link.worldId || 'home'}` : `${base}:guest`
+  return link ? `${base}:${link.accountId}@${link.worldId || 'home'}` : base
 }
 
 function load(): BeltKind {
@@ -60,7 +60,7 @@ export function setHeld(kind: BeltKind): void {
   emit()
 }
 
-/** Work the belt out again from what's carried (connected; a guest has the weapon only). */
+/** Work the belt out again from what's carried. */
 export function refreshBelt(session: Session): void {
   held.belt = beltFor(session.link ? itemsFor(session).view?.instances : null)
   emit()

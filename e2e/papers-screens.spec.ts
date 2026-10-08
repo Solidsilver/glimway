@@ -1,5 +1,7 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, waitForArea, warp } from './helpers'
+import { warp } from './helpers'
+import { freshPlayer } from './home-helpers'
+import { reenter, seedStory } from './connected'
 
 /**
  * Screenshots of the found-texts library for review (.agent/screens/).
@@ -9,34 +11,10 @@ test.skip(!process.env.SCREENS, 'screenshots only (SCREENS=1)')
 
 const OUT = '.agent/screens'
 
-/** Give the current save some finds (screenshots only), then come back in. */
-async function seed(page: Page, flags: string[], quest = 'new'): Promise<void> {
-  await page.waitForTimeout(800)
-  await page.evaluate(
-    async ([extra, stage]) => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('fingersnap')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-      const store = () => db.transaction('saves', 'readwrite').objectStore('saves')
-      const rec = await new Promise<{ state: { flags: string[]; quest: string } }>((resolve) => {
-        const req = store().get('current')
-        req.onsuccess = () => resolve(req.result)
-      })
-      rec.state.flags = [...rec.state.flags, ...(extra as string[])]
-      rec.state.quest = stage as string
-      await new Promise((resolve) => {
-        const req = store().put(rec)
-        req.onsuccess = resolve
-      })
-      db.close()
-    },
-    [flags, quest] as const
-  )
-  await page.reload()
-  await page.getByRole('button', { name: /Continue/ }).click()
-  await waitForArea(page, 'village')
+/** Give the account some finds (screenshots only), then come back in. */
+async function seed(page: Page, id: string, flags: string[], quest = 'new'): Promise<void> {
+  await seedStory(id, { quest, marks: flags })
+  await reenter(page)
 }
 
 const FINDS = [
@@ -66,8 +44,8 @@ async function read(page: Page, journal: ReturnType<Page['getByRole']>, title: R
 }
 
 test('desktop screens', async ({ page }) => {
-  await beginNewJourney(page)
-  await seed(page, FINDS, 'complete')
+  const id = await freshPlayer(page)
+  await seed(page, id, FINDS, 'complete')
 
   // A pickup in the world (garden corner) and one in Brackenwood.
   await warp(page, 'village', 26, 14)
@@ -116,10 +94,8 @@ test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
 
   test('phone screens', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await waitForArea(page, 'village')
-    await seed(page, FINDS, 'complete')
+    const id = await freshPlayer(page)
+    await seed(page, id, FINDS, 'complete')
 
     await warp(page, 'village', 26, 14)
     await page.waitForTimeout(2600)

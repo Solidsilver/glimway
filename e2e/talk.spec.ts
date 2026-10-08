@@ -1,5 +1,7 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, dialogueState, openTalk, readDialogue, savedToDisk, untilChoices, waitForArea, waitForLive, warp } from './helpers'
+import { dialogueState, openTalk, readDialogue, untilChoices, waitForArea, waitForLive, warp } from './helpers'
+import { reenter } from './connected'
+import { freshPlayer } from './home-helpers'
 import { GREETINGS, TALK_COPY } from '../src/content/talk'
 import { dialogueFor } from '../src/content/world'
 
@@ -18,7 +20,7 @@ async function talk(page: Page, who: RegExp, opts: { pick?: RegExp } = {}): Prom
 }
 
 test('a story is told once; then a greeting, the choices and "Hear it again"', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   const pipNew = dialogueFor('pip', 'new').lines
   await warp(page, 'village', 28, 16)
 
@@ -47,7 +49,7 @@ test('a story is told once; then a greeting, the choices and "Hear it again"', a
 })
 
 test('a quest step plays in full; the new stage’s lines play in full the first time', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   // Mara's first talk moves the quest: always in full.
   const first = await talk(page, /Talk to Mara/)
@@ -59,11 +61,8 @@ test('a quest step plays in full; the new stage’s lines play in full the first
   await untilChoices(page)
   expect(GREETINGS.mara).toContain((await dialogueState(page)).said[0])
   await readDialogue(page, { pick: /Be on my way/ })
-  // Remembered in the save: a reload still greets.
-  await savedToDisk(page)
-  await page.reload()
-  await page.getByRole('button', { name: /Continue/ }).click()
-  await waitForArea(page, 'village')
+  // Remembered in the world: a reload (and Continue) still greets.
+  await reenter(page)
   await warp(page, 'village', 16, 14)
   await waitForLive(page)
   await openTalk(page, /Talk to Mara/)

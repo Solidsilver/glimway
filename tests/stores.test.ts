@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 /**
- * The client stores (session, items, papers, residents, the held tool and
- * the guide pin) in a guest game. They are Phaser-free, so they load here;
- * these tests listen on the real bus.
+ * The client stores (session, papers, residents, the held tool and the
+ * guide pin). They are Phaser-free, so they load here; these tests listen
+ * on the real bus. (A session without a link is what the title screen holds
+ * until a sign-in plays one; C2 removes the branch.)
  */
 
 // The session saves through window timers; hold them so nothing writes.
@@ -16,7 +17,6 @@ const timers: (() => void)[] = [];
 
 const { bus, EV } = await import('../src/game/events.ts');
 const { Session } = await import('../src/game/session.ts');
-const { itemsFor } = await import('../src/game/items.ts');
 const { grantPaper } = await import('../src/game/papers.ts');
 const { emitResidents } = await import('../src/game/residents.ts');
 const { setHeld, held } = await import('../src/game/held.ts');
@@ -58,7 +58,7 @@ test('setVitals clamps to the maxima, tells the HUD once, and saves on a loss', 
   assert.equal(timers.length, 1, 'the mana loss is saved soon');
 });
 
-test('a guest earns embers with a toast; a discovery is recorded once', async () => {
+test('embers are earned with a toast; a discovery is recorded once', async () => {
   const s = guest();
   const before = s.state.embers;
   const heard = await hear([EV.stats, EV.toast, EV.discovery], () => {
@@ -94,20 +94,6 @@ test('the residents journal hears only the flags it writes entries from', async 
   s.state.flags = ['met:hazel@1', 'heirloom:x', 'quest-started', 'warden-sliver:found'];
   const heard = await hear([EV.residentsMet], () => emitResidents(s));
   assert.deepEqual(heard[0].payload, { journalFlags: ['met:hazel@1', 'heirloom:x', 'warden-sliver:found'] });
-});
-
-test('a guest has no carried items, and a gift for another session is ignored', async () => {
-  const s = guest();
-  const items = itemsFor(s);
-  assert.equal(items.status, 'guest');
-  const r = await items.load();
-  assert.equal(r.ok, false);
-  assert.equal(!r.ok && r.code, 'guest');
-  const other = itemsFor(guest());
-  assert.notEqual(other, items, 'a new session gets its own store');
-  const heard = await hear([EV.toast], () => bus.emit(EV.gift, { fromName: 'Pip', kind: 'item', itemDef: 'timber', qty: 2 }));
-  assert.equal(heard.length, 1, 'only the current store answers');
-  assert.match((heard[0].payload as { text: string }).text, /^Pip gave you /);
 });
 
 test('the held tool and the pinned guide tell the HUD when they change', async () => {

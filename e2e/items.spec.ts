@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance, go, hurt, shot } from './home-helpers'
 import { waitForLive, waitFrames, expectToast } from './helpers'
 
@@ -13,7 +13,6 @@ import { waitForLive, waitFrames, expectToast } from './helpers'
  * from the inventory even with no home. SCREENS=1 saves screenshots to
  * .agent/screens/.
  */
-test.use({ server: true })
 
 type Wear = { broke: boolean; state: string; usesLeft: number; condition: number } | { error: string }
 type ItemsView = {
@@ -204,7 +203,7 @@ async function twoPlayers(page: Page, browser: Browser, baseURL: string): Promis
   await openTitleGuide(page)
   await pasteAndConnect(page, ash)
   await waitForWorld(page)
-  const invite = await (await page.request.post('/api/invites', { data: {} })).json()
+  const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()
   const ctx = await browser.newContext({ baseURL, viewport: { width: 1200, height: 760 } })
   await routeHabitica(ctx)
   const other = await ctx.newPage()

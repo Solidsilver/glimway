@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { frames, openTalk, player, readDialogue, settled, waitForLive, warp } from './helpers'
+import { frames, openTalk, player, readDialogue, waitForLive, warp } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * On a phone the camera keeps the hero clear of the HUD and the touch
@@ -68,14 +69,10 @@ async function ensureInsets(page: Page): Promise<void> {
 for (const [name, viewport] of phones) {
   test(`phone ${name}: the hero stays clear of the HUD and the controls at map corners`, async ({ browser, baseURL }) => {
     const context = await browser.newContext({ baseURL, viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })
-    const origin = new URL(baseURL!).host
-    await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
     const page = await context.newPage()
-    await page.goto('/')
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await settled(page, { area: 'village' })
+    await freshPlayer(page)
     await warp(page, 'village', 16, 14)
     await expect(page.locator('.controls')).toBeVisible()
     // The App writes the insets itself once it measures the HUD and controls.
@@ -114,12 +111,8 @@ for (const [name, viewport] of phones) {
 for (const [name, viewport] of phones) {
   test(`phone ${name}: a conversation doesn't move the camera`, async ({ browser, baseURL }) => {
     const context = await browser.newContext({ baseURL, viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })
-    const origin = new URL(baseURL!).host
-    await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
     const page = await context.newPage()
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await settled(page, { area: 'village' })
+    await freshPlayer(page)
     // Mara, by the well: the conversation hides the touch controls (and, under
     // the old measuring, dropped their insets and slid the world aside).
     await warp(page, 'village', 16, 14)
@@ -150,12 +143,8 @@ for (const [name, viewport] of phones) {
 test('phone at 3×: the canvas has every device pixel and frames the world as at 1×', async ({ browser, baseURL }) => {
   const look = async (deviceScaleFactor: number) => {
     const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
-    const origin = new URL(baseURL!).host
-    await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
     const page = await context.newPage()
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await settled(page, { area: 'village' })
+    await freshPlayer(page)
     await warp(page, 'village', 16, 14)
     await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
     await frames(page, 60)
@@ -180,12 +169,8 @@ test('phone at 3×: the canvas has every device pixel and frames the world as at
 
 test('desktop at 2×: the pointer lands on the world point under it', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ baseURL, viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 })
-  const origin = new URL(baseURL!).host
-  await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
   const page = await context.newPage()
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).click()
-  await settled(page, { area: 'village' })
+  await freshPlayer(page)
   const px = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('.stage canvas')!.width)
   expect(px, 'the canvas at 2×').toBe(2560)
   const box = (await page.locator('.stage canvas').boundingBox())!
@@ -200,18 +185,14 @@ test('desktop at 2×: the pointer lands on the world point under it', async ({ b
   await context.close()
 })
 
-/** A guest on a 390×844 touch phone at `deviceScaleFactor`, standing in the village square, past the title card. */
-async function phoneGuest(browser: import('@playwright/test').Browser, baseURL: string, deviceScaleFactor: number, stick?: string) {
+/** A player on a 390×844 touch phone at `deviceScaleFactor`, standing in the village square, past the title card. */
+async function phonePlayer(browser: import('@playwright/test').Browser, baseURL: string, deviceScaleFactor: number, stick?: string) {
   const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
-  const origin = new URL(baseURL).host
-  await context.route((url) => url.host === origin && url.pathname.startsWith('/api/'), (r) => r.abort('internetdisconnected'))
   const page = await context.newPage()
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   if (stick) await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-  await settled(page, { area: 'village' })
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
   await waitForLive(page)
@@ -236,7 +217,7 @@ const insetsNow = (page: Page) => page.evaluate(() => {
 })
 
 test('phone: a device pixel ratio change mid-game refits the canvas and keeps the framing and the textures', async ({ browser, baseURL }) => {
-  const { context, page, errors } = await phoneGuest(browser, baseURL!, 2)
+  const { context, page, errors } = await phonePlayer(browser, baseURL!, 2)
   const before = await canvasNow(page)
   expect(before.px, 'at 2×').toEqual([780, 1688])
   const hero = await heroBox(page)
@@ -277,7 +258,7 @@ async function fingers(page: Page) {
 }
 
 test('phone at 3×, turned to landscape: the same framing, the hero clear of the interface, and touch still walks', async ({ browser, baseURL }) => {
-  const { context, page, errors } = await phoneGuest(browser, baseURL!, 3, 'hold')
+  const { context, page, errors } = await phonePlayer(browser, baseURL!, 3, 'hold')
   const portrait = await canvasNow(page)
   expect(portrait.px).toEqual([1170, 2532])
   await page.setViewportSize({ width: 844, height: 390 })

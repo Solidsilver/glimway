@@ -5,8 +5,8 @@
  * worker's Go server through Vite with the `fs-e2e-api` cookie (see
  * e2e/server/vite-routing.mjs and the fixtures in e2e/fixtures.ts).
  *
- * Started lazily, the first time a worker runs a `server: true` test, and
- * stopped when the worker exits. Ports are picked free at start, so worktrees
+ * Started lazily by the fixtures' `backend` fixture (the first test in the
+ * worker), and stopped when the worker exits. Ports are picked free at start, so worktrees
  * and workers never collide. Each run has its own directory (two runs in one
  * worktree don't share files): .e2e-server/run-<pid>/, with the Go binary and
  * a w<parallel index>/ folder per worker (database, server.log, server.json).
@@ -42,14 +42,14 @@ const workerDir = (): string => `${runDir()}/w${slot()}`
 let running: (Backend & { stop: () => Promise<void> }) | null = null
 let starting: Promise<Backend> | null = null
 
-/** This worker's backend, or null before its first `server: true` test. */
+/** This worker's backend, or null before its first test. */
 export function currentBackend(): Backend | null {
   return running
 }
 
 /** This worker's backend, for the module-level helpers (allow, fund, …). */
 export function requireBackend(): Backend {
-  if (!running) throw new Error('No e2e server in this worker yet: the test needs test.use({ server: true }).')
+  if (!running) throw new Error('No e2e server in this worker yet: the backend fixture starts it.')
   return running
 }
 

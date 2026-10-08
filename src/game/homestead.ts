@@ -7,9 +7,8 @@
  * the UI (Silas's shop, the placement tray) calls it, and both hear about
  * changes on the bus.
  *
- * Guests and connected players who can't reach the server get a walkable
- * Commons and wild land behind every gate, with no homes: building needs a
- * world.
+ * Players who can't reach the server get a walkable Commons and wild land
+ * behind every gate, with no homes: building needs a world.
  */
 import { HOMESTEAD_DATA, homeItem, type HomeInstance, type HomeScene } from '../lib/homestead.ts'
 import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types.ts'
@@ -45,6 +44,7 @@ export const PAPERS = {
   firebox: 'silas-pine-offcut-scrap'
 } as const
 
+/** `guest` stays in the type only for readers in the scene layer (TODO(C2), src/game/entities/homestead-{art,talk}.ts): nothing sets it any more. */
 export type HomeStatus = 'guest' | 'loading' | 'ready' | 'offline'
 
 export interface ArrangeView {
@@ -132,7 +132,7 @@ export class Homesteads {
 
   constructor(session: Session) {
     this.session = session
-    this.status = session.link ? 'loading' : 'guest'
+    this.status = 'loading'
     bus.on(EV.mutationResolved, (p) => {
       if (current?.homes === this) this.onResolved(p)
     })
@@ -198,10 +198,6 @@ export class Homesteads {
 
   /** Read the lane, then your own homestead. Safe to call repeatedly. */
   load(): Promise<void> {
-    if (!this.session.link) {
-      this.status = 'guest'
-      return Promise.resolve()
-    }
     if (this.loading) return this.loading
     this.loading = this.doLoad().finally(() => {
       this.loading = null
@@ -317,8 +313,7 @@ export class Homesteads {
   // ------------------------------------------------------------ actions
 
   async act(action: HomeAction): Promise<ActResult> {
-    const link = this.session.link
-    if (!link) return { ok: false, code: 'guest', text: 'Deeds are for people with a world. Sign in to your world to claim land.' }
+    const link = this.session.link!
     const r = await link.homeAction(action)
     if (!r.ok) {
       if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found') void this.load()
@@ -458,7 +453,7 @@ export function homesteadsFor(session: Session): Homesteads {
     const homes = new Homesteads(session)
     current = { session, homes }
     setLandSource({
-      worldId: () => session.link?.worldId || 'guest',
+      worldId: () => session.link?.worldId || '',
       state: (gate) => {
         const h = homes.homes.get(gate)
         return h ? { cleared: h.cleared, stumps: h.stumps ?? [], plants: h.plants ?? [], desolate: h.desolate } : null
