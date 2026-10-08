@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"glimway/content"
-	"strings"
+	"glimway/server/internal/itemmove"
 )
 
 // ReturnMail settles transit exactly once inside the caller's immediate tx.
@@ -34,20 +35,17 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if err != nil || n != 1 {
 		return false, err
 	}
-	pack := kind + ":" + def
+	pack := itemmove.Currency(kind, def)
 	switch kind {
 	case "material", "item":
-		var split []struct {
-			Maker string `json:"maker"`
-			Qty   int    `json:"qty"`
-		}
+		var split []itemmove.MakerQty
 		if err = json.Unmarshal([]byte(makers), &split); err != nil {
 			return false, err
 		}
 		total := 0
 		for _, m := range split {
 			total += m.Qty
-			if _, err = tx.ExecContext(ctx, "INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('pack',?,?,?,?) ON CONFLICT(location,owner,item_def,maker_id) DO UPDATE SET qty=qty+excluded.qty", sender, def, m.Maker, m.Qty); err != nil {
+			if err = itemmove.RestoreShare(ctx, tx, "pack", sender, def, m); err != nil {
 				return false, err
 			}
 		}
@@ -62,7 +60,6 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		if len(ids) != qty {
 			return false, fmt.Errorf("invalid mail instances")
 		}
-		q := "UPDATE homestead_items SET location='inventory' WHERE id=? AND habitica_id=? AND item_def=? AND location='mail' AND scene IS NULL"
 		if kind == "instance" {
 			pack = content.StackCurrency(def)
 		}
@@ -73,7 +70,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 			isRedirected := false
 			if kind == "instance" {
 				var isWarden bool
-				wSQL := wardenDefsSQL()
+				wSQL := itemmove.WardenDefsSQL()
 				err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM item_instances WHERE location='fitted' AND owner=? AND item_def IN ("+wSQL+"))", instance).Scan(&isWarden)
 				if err != nil {
 					return false, err
@@ -91,27 +88,23 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 						destLocation = "personal"
 						destOwner = sender
 						rackedAt = 0
-						pack = "personal:instance:" + def
+						pack = itemmove.LocationCurrency("personal", "instance", def)
 						isRedirected = true
 					}
 				}
-				result, err = tx.ExecContext(ctx, "UPDATE item_instances SET location=?,owner=?,racked_at=? WHERE id=? AND owner=? AND item_def=? AND location='mail'", destLocation, destOwner, rackedAt, instance, sender, def)
+				err = itemmove.MoveInstance(ctx, tx, instance, def, "mail", sender, destLocation, destOwner, rackedAt)
 			} else {
-				result, err = tx.ExecContext(ctx, q, instance, sender, def)
+				err = itemmove.ReturnDecoration(ctx, tx, instance, sender, def)
 			}
-			if err != nil {
-				return false, err
-			}
-			n, err = result.RowsAffected()
-			if err != nil {
-				return false, err
-			}
-			if n != 1 {
+			if errors.Is(err, itemmove.ErrUnavailable) {
 				return false, fmt.Errorf("mail instance unavailable")
+			}
+			if err != nil {
+				return false, err
 			}
 			if kind == "instance" && !isRedirected {
 				// The tool's fittings come back with it: so does their audit.
-				if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) SELECT ?,'fitted:'||item_def,1,0,?,?,? FROM item_instances WHERE location='fitted' AND owner=? ORDER BY item_def,id", sender, map[bool]string{true: "mail-recall", false: "mail-return"}[reason == "recalled"], id, now, instance); err != nil {
+				if err = itemmove.FittedLedger(ctx, tx, sender, instance, 1, map[bool]string{true: "mail-recall", false: "mail-return"}[reason == "recalled"], id, now); err != nil {
 					return false, err
 				}
 			}
@@ -129,8 +122,8 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		for _, delta := range []struct {
 			currency string
 			amount   int
-		}{{pack, qty}, {"mail:" + kind + ":" + def, -qty}} {
-			if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(habitica_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
+		}{{pack, qty}, {itemmove.LocationCurrency("mail", kind, def), -qty}} {
+			if err = itemmove.RecordCurrency(ctx, tx, sender, delta.currency, delta.amount, ledgerReason, id, now); err != nil {
 				return false, err
 			}
 		}
@@ -198,17 +191,4 @@ func (s *Store) ReturnDueMail(ctx context.Context, now int64) (int, error) {
 		return 0, err
 	}
 	return n, tx.Commit()
-}
-
-func wardenDefsSQL() string {
-	ids := []string{}
-	for _, d := range content.ItemsRules.Items {
-		if d.Fitting == "remember" {
-			ids = append(ids, "'"+d.ID+"'")
-		}
-	}
-	if len(ids) == 0 {
-		return "''"
-	}
-	return strings.Join(ids, ",")
 }

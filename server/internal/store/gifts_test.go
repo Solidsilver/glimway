@@ -8,32 +8,8 @@ import (
 
 func TestGiftMigrationMovesOutdoorShelfAndKeepsOnlyOnePerHome(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gifts-upgrade.sqlite")
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = db.Exec("PRAGMA foreign_keys=ON; CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)"); err != nil {
-		t.Fatal(err)
-	}
-	files, err := migrations.ReadDir("migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, file := range files {
-		if file.Name() == "020_gifts.sql" {
-			break
-		}
-		raw, readErr := migrations.ReadFile("migrations/" + file.Name())
-		if readErr != nil {
-			t.Fatal(readErr)
-		}
-		if _, err = db.Exec(string(raw)); err != nil {
-			t.Fatalf("apply %s: %v", file.Name(), err)
-		}
-		if _, err = db.Exec("INSERT INTO schema_migrations VALUES(?,0)", file.Name()); err != nil {
-			t.Fatal(err)
-		}
-	}
+	db := newUpgradeFixture(t, path, "019_gathering.sql", nil)
+	var err error
 	if _, err = db.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',1);
 INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Alice','w',1,1);
 INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('home','w',0,1);

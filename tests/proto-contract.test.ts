@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
+import { parseCreatedInvite, parseInviteList } from '../src/lib/api/invites.ts';
 import { parseCalendar } from '../src/lib/api/calendar.ts';
 import { SERVER_ERROR_CODES, errorFromResponse } from '../src/lib/api/errors.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
@@ -119,4 +120,63 @@ test('server close 4005 requires reload and latches the current lease', () => {
   client.start('a'.repeat(64));
   assert.equal(opens, 1);
   client.stop();
+});
+
+test('generated invite decoders preserve the original Go HTTP keys, zeros and numeric times', () => {
+  for (const { method, body } of fixture('invites')) {
+    const parse = method === 'POST' ? parseCreatedInvite : parseInviteList;
+    assert.deepEqual(parse(body), body);
+    assert.deepEqual(parse({ ...body, futureField: [] }), body);
+    if (method === 'GET' && body.invites.length) {
+      assert.deepEqual(parse({ ...body, invites: body.invites.map((v: unknown) => ({ ...(v as object), futureField: true })) }), body);
+    }
+  }
+  const created = fixture('invites').find((f: any) => f.method === 'POST').body;
+  for (const key of ['createdAt', 'expiresAt']) {
+    for (const value of [null, '2200000000', Infinity, 'NaN', '-Infinity']) {
+      assert.throws(() => parseCreatedInvite({ ...created, [key]: value }), { code: 'bad-response' });
+    }
+  }
+  for (const key of ['id', 'code', 'used', 'createdAt', 'expiresAt']) {
+    const { [key]: omitted, ...missing } = created;
+    assert.throws(() => parseCreatedInvite(missing), { code: 'bad-response' });
+  }
+  const list = fixture('invites')[0].body;
+  for (const key of ['invites', 'remaining', 'outstandingLimit', 'partyWorld', 'partyAdmitted']) {
+    const { [key]: omitted, ...missing } = list;
+    assert.throws(() => parseInviteList(missing), { code: 'bad-response' });
+  }
+  for (const value of [-1, 1.5, 2147483648, '0', null, Infinity]) {
+    assert.throws(() => parseInviteList({ ...list, remaining: value }), { code: 'bad-response' });
+  }
+  for (const value of ['yes', null, 0]) {
+    assert.throws(() => parseInviteList({ ...list, partyWorld: value }), { code: 'bad-response' });
+  }
+});
+
+
+test('invite decoders reject proto-name aliases at every boundary, including valid duplicate values', () => {
+  const created = fixture('invites').find((f: any) => f.method === 'POST').body;
+  const populated = fixture('invites').find((f: any) => f.name === 'populated').body;
+  for (const [alias, key] of [['created_at', 'createdAt'], ['expires_at', 'expiresAt']]) {
+    for (const value of ['NaN', 'Infinity', '-Infinity', null, created[key]]) {
+      for (const aliasFirst of [true, false]) {
+        const duplicate = aliasFirst ? { [alias]: value, ...created } : { ...created, [alias]: value };
+        assert.throws(() => parseCreatedInvite(duplicate), { code: 'bad-response' });
+        assert.throws(() => parseInviteList({ ...populated, invites: [{ ...populated.invites[0], [alias]: value }] }), { code: 'bad-response' });
+      }
+    }
+  }
+  for (const [alias, key] of [['outstanding_limit', 'outstandingLimit'], ['party_world', 'partyWorld'], ['party_admitted', 'partyAdmitted']]) {
+    for (const value of ['-4', null, populated[key]]) {
+      assert.throws(() => parseInviteList({ ...populated, [alias]: value }), { code: 'bad-response' });
+      assert.throws(() => parseInviteList({ [alias]: value, ...populated }), { code: 'bad-response' });
+    }
+  }
+  for (const key of ['remaining', 'outstandingLimit']) {
+    for (const value of [-1, 1.5, 2147483648, '0', null, Infinity, NaN]) {
+      assert.throws(() => parseInviteList({ ...populated, [key]: value }), { code: 'bad-response' });
+    }
+    assert.equal(parseInviteList({ ...populated, [key]: 2147483647 })[key as 'remaining' | 'outstandingLimit'], 2147483647);
+  }
 });

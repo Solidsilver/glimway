@@ -1,0 +1,87 @@
+[
+  {
+    "name": "empty",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [],
+      "outstandingLimit": 3,
+      "partyAdmitted": false,
+      "partyWorld": false,
+      "remaining": 5
+    }
+  },
+  {
+    "name": "populated",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [
+        {
+          "createdAt": 0,
+          "expiresAt": 2202592000,
+          "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "used": false
+        },
+        {
+          "createdAt": 0,
+          "expiresAt": 0,
+          "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "used": true
+        }
+      ],
+      "outstandingLimit": 3,
+      "partyAdmitted": false,
+      "partyWorld": false,
+      "remaining": 1
+    }
+  },
+  {
+    "name": "exhausted",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [],
+      "outstandingLimit": 3,
+      "partyAdmitted": false,
+      "partyWorld": false,
+      "remaining": 0
+    }
+  },
+  {
+    "name": "party",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [],
+      "outstandingLimit": 3,
+      "partyAdmitted": true,
+      "partyWorld": true,
+      "remaining": 5
+    }
+  },
+  {
+    "name": "party-admitted-own-world",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [],
+      "outstandingLimit": 3,
+      "partyAdmitted": true,
+      "partyWorld": false,
+      "remaining": 5
+    }
+  },
+  {
+    "name": "create",
+    "unix": 2200000000,
+    "method": "POST",
+    "body": {
+      "code": "linen-brook-butterfly-frost-forest-mug-9724",
+      "createdAt": 2200000000,
+      "expiresAt": 2202592000,
+      "id": "898bd10a1a0faa041284eb09427832b31d65198345b25af8f96912fdfe75d426",
+      "used": false
+    }
+  }
+]

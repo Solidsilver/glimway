@@ -236,7 +236,7 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 			if def.Marked {
 				maker = s.HabiticaID
 			}
-			if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{maker, output.Qty}}, "craft", recipe.ID, now); err != nil {
+			if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "craft", recipe.ID, now); err != nil {
 				return nil, err
 			}
 			if err := refreshItems(ctx, tx, s); err != nil {

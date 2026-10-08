@@ -161,6 +161,10 @@ test('a party’s world takes no invite codes, and a member who leaves the party
   await other.keyboard.press('Escape')
   await expect(other.getByTestId('world-settings')).toContainText('You live in your own world.')
   // Her own world now, but still no codes: party admission doesn't chain.
+  const invites = await other.request.get('/api/invites')
+  expect(invites.ok()).toBe(true)
+  expect(await invites.json()).toMatchObject({ partyAdmitted: true, partyWorld: false, remaining: 5, outstandingLimit: 3, invites: [] })
   await expect(other.getByTestId('invite-party-admitted')).toBeVisible()
+  await expect(other.getByRole('button', { name: 'Create an invite code' })).toHaveCount(0)
   await ctx.close()
 })

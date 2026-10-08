@@ -3,20 +3,16 @@ package api
 import (
 	"database/sql"
 	"encoding/hex"
+	"fmt"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"math"
 	"net/http"
 	"strings"
 )
 
 const InviteTTL = 30 * 86400
-
-type InviteMetadata struct {
-	ID        string `json:"id"`
-	CreatedAt int64  `json:"createdAt"`
-	ExpiresAt int64  `json:"expiresAt"`
-	Used      bool   `json:"used"`
-}
 
 // Player invites require authentication and persistent world membership, but
 // no play lease. The raw code is returned once and never persisted. A party's
@@ -72,14 +68,11 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	meta := InviteMetadata{ID: store.Hash(code), CreatedAt: now, ExpiresAt: now + InviteTTL}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", meta.ID, s.HabiticaID, s.WorldID, now, meta.ExpiresAt); err != nil {
+	meta := &contract.CreateInviteResponse{Id: store.Hash(code), CreatedAt: float64(now), ExpiresAt: float64(now + InviteTTL), Code: code}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", meta.Id, s.HabiticaID, s.WorldID, now, now+InviteTTL); err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, struct {
-		InviteMetadata
-		Code string `json:"code"`
-	}{meta, code})
+	return a.finish(w, r, tx, meta)
 }
 func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	tx, s, _, err := a.begin(r)
@@ -91,10 +84,10 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	entries := []InviteMetadata{}
+	entries := []*contract.InviteMetadata{}
 	for rows.Next() {
-		var m InviteMetadata
-		if err = rows.Scan(&m.ID, &m.CreatedAt, &m.ExpiresAt, &m.Used); err != nil {
+		m := &contract.InviteMetadata{}
+		if err = rows.Scan(&m.Id, &m.CreatedAt, &m.ExpiresAt, &m.Used); err != nil {
 			rows.Close()
 			return err
 		}
@@ -119,7 +112,11 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	}
 	// partyWorld: they live in a party's world, which takes no codes.
 	// partyAdmitted: they came in through a party and make no codes anywhere.
-	return a.finish(w, r, tx, map[string]any{"invites": entries, "remaining": max(0, rules.E.LifetimeInvites-lifetime), "outstandingLimit": rules.E.OutstandingInvites, "partyWorld": partyWorld, "partyAdmitted": admitted})
+	remaining := max(0, rules.E.LifetimeInvites-lifetime)
+	if remaining > math.MaxInt32 || rules.E.OutstandingInvites < 0 || rules.E.OutstandingInvites > math.MaxInt32 {
+		return fmt.Errorf("invite quota outside protobuf range")
+	}
+	return a.finish(w, r, tx, &contract.ListInvitesResponse{Invites: entries, Remaining: int32(remaining), OutstandingLimit: int32(rules.E.OutstandingInvites), PartyWorld: partyWorld, PartyAdmitted: admitted})
 }
 func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/api/invites/")

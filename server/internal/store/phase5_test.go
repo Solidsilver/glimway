@@ -8,26 +8,9 @@ import (
 
 func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "phase4.sqlite")
-	old, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer old.Close()
-	if _, err = old.Exec("CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)"); err != nil {
-		t.Fatal(err)
-	}
-	files, err := migrations.ReadDir("migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, file := range files {
-		if file.Name() == "009_mail_returns.sql" {
-			break
-		}
-		if file.Name() == "008_phase5.sql" {
-			// 008 itself keeps placements and instances (checked before the
-			// homestead v2 reset in 010 runs on Open).
-			if _, err = old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',0);
+	old := newUpgradeFixture(t, path, "008_phase5.sql", func(name string, tx *sql.Tx) {
+		if name == "008_phase5.sql" {
+			if _, err := tx.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',0);
  INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,rev) VALUES('alice','Keeper','w',1,100,9);
  INSERT INTO homesteads VALUES('alice','w',0,1);
  INSERT INTO homestead_items(id,habitica_id,item_def,scene,x,y,rotation) VALUES('placed','alice','wooden-stool','outdoor',2,3,90),('unplaced','alice','wooden-stool',NULL,NULL,NULL,NULL);
@@ -36,17 +19,8 @@ func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		raw, err := migrations.ReadFile("migrations/" + file.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec(string(raw)); err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec("INSERT INTO schema_migrations VALUES(?,0)", file.Name()); err != nil {
-			t.Fatal(err)
-		}
-	}
+	})
+	var err error
 	var scene, location string
 	var x, y, rotation, n int
 	if err = old.QueryRow("SELECT scene,x,y,rotation,location FROM homestead_items WHERE id='placed'").Scan(&scene, &x, &y, &rotation, &location); err != nil || scene != "outdoor" || x != 2 || y != 3 || rotation != 90 || location != "inventory" {

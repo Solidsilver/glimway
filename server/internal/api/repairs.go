@@ -412,7 +412,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 
 		// Optional reward gift: its ledger row must land with the mend.
 		if def.Gift != nil {
-			if err = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{"", def.Gift.Qty}}, "village-reward", ref, now); err != nil {
+			if err = packPut(ctx, tx, s.HabiticaID, def.Gift.ID, []makerQty{{Maker: "", Qty: def.Gift.Qty}}, "village-reward", ref, now); err != nil {
 				return nil, err
 			}
 		}

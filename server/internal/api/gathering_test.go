@@ -32,7 +32,7 @@ func TestGatheringUnknownDefinitionsRollBack(t *testing.T) {
 			before := s.Snapshot
 			condition := count(t, x.db, "SELECT condition FROM item_instances WHERE id=?", axe)
 			ledger := count(t, x.db, "SELECT count(*) FROM ledger WHERE habitica_id=?", s.HabiticaID)
-			v := x.op(c, &s, "gather", gatherIn(s, "woodland", [2]int{20, 20}, axe, "chop", "tree", "v1"), 500)
+			v := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", [2]int{20, 20}, axe, "chop", "tree", "v1"), 500)
 			if v.Error.Code != "internal" {
 				t.Fatalf("unknown %s definition: %q", source, v.Error.Code)
 			}
@@ -162,23 +162,23 @@ func TestGatheringWearAndYields(t *testing.T) {
 	here := [2]int{20, 20}
 
 	// Only in the woods: not in the village.
-	if x.op(c, &s, "gather", gatherIn(s, "village", here, axe, "chop", "tree", "v1"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", here, axe, "chop", "tree", "v1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("chopped in the village")
 	}
 	// The tool must suit the target.
-	if x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "break", "tree", "v1"), 409).Error.Code != "wrong-tool" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "break", "tree", "v1"), 409).Error.Code != "wrong-tool" {
 		t.Fatal("broke a tree")
 	}
-	if x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "break", "boulder", "v1"), 409).Error.Code != "wrong-tool" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "break", "boulder", "v1"), 409).Error.Code != "wrong-tool" {
 		t.Fatal("broke a boulder with an axe")
 	}
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "nothing", "v1"), 400)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "nothing", "v1"), 400)
 
 	// A tree in the Tangle: one use off the axe, timber 2–4, and nothing
 	// else in the pack changes (no water, no stray yields; in Amberfall
 	// the sap rides along, and the delta check keeps the pack honest).
 	before := x.items("GET", "/api/items", nil, c, 200).Items
-	r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "v1"), 200)
+	r := x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "v1"), 200)
 	if got, want := packDelta(before, r.Result.Items), gatheredDelta(r.Result.Gathered); fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("the pack changed by %v, the gather said %v", got, want)
 	}
@@ -191,7 +191,7 @@ func TestGatheringWearAndYields(t *testing.T) {
 	// The woods by the village give too.
 	pick := x.instance(s.HabiticaID, "bench-pick", -1, "")
 	before = x.items("GET", "/api/items", nil, c, 200).Items
-	r = x.op(c, &s, "gather", gatherIn(s, "woodland", here, pick, "break", "boulder", "w1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, pick, "break", "boulder", "w1"), 200)
 	if n := stackQty(r.Result.Items, "stone"); n < 2 || n > 4 {
 		t.Fatal("stone", n)
 	}
@@ -207,25 +207,25 @@ func TestGatheringWearAndYields(t *testing.T) {
 		{"woodland", axe, "chop", "iron-oak"},
 		{"wilds", axe, "chop", "ash"},
 	} {
-		if x.op(c, &s, "gather", gatherIn(s, c2.area, here, c2.tool, c2.action, c2.target, "w1"), 409).Error.Code != "cannot-gather-here" {
+		if x.opRefreshing(c, &s, "gather", gatherIn(s, c2.area, here, c2.tool, c2.action, c2.target, "w1"), 409).Error.Code != "cannot-gather-here" {
 			t.Fatal("offered", c2)
 		}
 	}
 
 	// An heirloom blunts at zero and then stops working.
 	brack := x.instance(s.HabiticaID, "brack-felling-axe", 3, "")
-	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || r.Result.Wear.State != "blunt" {
+	if r = x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || r.Result.Wear.State != "blunt" {
 		t.Fatalf("brack %+v", r.Result.Wear)
 	}
-	if x.op(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 409).Error.Code != "tool-blunt" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, brack, "chop", "tangle-tree", "v1"), 409).Error.Code != "tool-blunt" {
 		t.Fatal("chopped with a blunt axe")
 	}
 	// A cheap tool breaks at zero and is gone.
 	cheap := x.instance(s.HabiticaID, "bench-axe", 3, "")
-	if r = x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || !r.Result.Wear.Broke {
+	if r = x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 200); r.Result.Wear == nil || !r.Result.Wear.Broke {
 		t.Fatalf("cheap %+v", r.Result.Wear)
 	}
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 404)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, cheap, "chop", "tangle-tree", "v1"), 404)
 
 	// A refused gather wears nothing.
 	if left := findInstance(x.items("GET", "/api/items", nil, c, 200).Items, axe).UsesLeft; left != 29 {
@@ -242,7 +242,7 @@ func TestGatheringInstancedYieldsAndReplay(t *testing.T) {
 	// Ash now and then gives a green-ash haft: a fitting, so an instance.
 	hafts := 0
 	for i := 0; i < content.GatheringRules.Caps.Day.Chop && hafts == 0; i++ {
-		r := x.op(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("v%d", i/8)), 200)
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("v%d", i/8)), 200)
 		for _, id := range r.Result.Created {
 			if findInstance(r.Result.Items, id).ItemDef == "green-ash-haft" {
 				hafts++
@@ -272,7 +272,7 @@ func TestGatheringCaps(t *testing.T) {
 	pick := x.instance(s.HabiticaID, "bench-pick", -1, "")
 	here := [2]int{20, 20}
 	chop := func(visit string, status int) itemsResponse {
-		return x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", visit), status)
+		return x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", visit), status)
 	}
 	caps := content.GatheringRules.Caps
 
@@ -288,9 +288,9 @@ func TestGatheringCaps(t *testing.T) {
 		t.Fatal("the capped swing wore the axe")
 	}
 	// Each kind of work counts on its own: the boulders still give.
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, pick, "break", "boulder", "first"), 200)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, pick, "break", "boulder", "first"), 200)
 	// Another area is another visit, even with the same visit id.
-	x.op(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", "first"), 200)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", "first"), 200)
 	// Back in the Tangle with a new visit: the trees give again.
 	done := caps.Visit.Chop + 1
 	chop("second", 200)
@@ -308,7 +308,7 @@ func TestGatheringCaps(t *testing.T) {
 	// A new day (UTC), and the woods give again.
 	x.now.Add(86400)
 	chop("tomorrow", 200)
-	x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", string(make([]byte, 65))), 400)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", string(make([]byte, 65))), 400)
 	x.conserved(s.HabiticaID)
 }
 
@@ -325,7 +325,7 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 
 	// The land is the server's own: the target must be what stands there,
 	// and you must stand by it.
-	if x.op(c, &s, "gather", gatherIn(s, area, litTree, pick, "break", "boulder", "h1"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, area, litTree, pick, "break", "boulder", "h1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("broke a tree as a boulder")
 	}
 	// Reach is measured as the client measures it: from just above the
@@ -339,27 +339,27 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 		f["progress"] = doc
 		return f
 	}
-	if x.op(c, &s, "gather", south(52), 409).Error.Code != "too-far-away" {
+	if x.opRefreshing(c, &s, "gather", south(52), 409).Error.Code != "too-far-away" {
 		t.Fatal("chopped from afar")
 	}
 
 	// Inside lamplight a felled tree stays a stump.
-	r := x.op(c, &s, "gather", south(46), 200)
+	r := x.opRefreshing(c, &s, "gather", south(46), 200)
 	if r.Result.Land == nil || !r.Result.Land.Stump || r.Result.Land.Tile != litTree {
 		t.Fatalf("land %+v", r.Result.Land)
 	}
 	if h = x.home(c); !slices.Contains(h.Stumps, litTree) {
 		t.Fatal("stump not kept", h.Stumps)
 	}
-	if x.op(c, &s, "gather", gatherIn(s, area, litTree, axe, "chop", "tree", "h1"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, area, litTree, axe, "chop", "tree", "h1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("felled a stump")
 	}
 	// Reaching from the edge of the client's prompt works as well.
-	if x.op(c, &s, "gather", south(36), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", south(36), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("the stump is no tree, from any distance in reach")
 	}
 	// Digging the stump leaves open ground (and turncap spawn).
-	r = x.op(c, &s, "gather", gatherIn(s, area, litTree, spade, "dig", "stump", "h1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, area, litTree, spade, "dig", "stump", "h1"), 200)
 	if r.Result.Land == nil || !r.Result.Land.Cleared || stackQty(r.Result.Items, "turncap-spawn") < 1 {
 		t.Fatalf("dig %+v", r.Result.Land)
 	}
@@ -367,7 +367,7 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 		t.Fatal("dug stump", h.Stumps, h.Cleared)
 	}
 	// A broken boulder inside lamplight leaves open ground.
-	r = x.op(c, &s, "gather", gatherIn(s, area, litBoulder, pick, "break", "boulder", "h1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, area, litBoulder, pick, "break", "boulder", "h1"), 200)
 	if r.Result.Land == nil || !r.Result.Land.Cleared || stackQty(r.Result.Items, "stone") < 2 {
 		t.Fatalf("boulder %+v", r.Result.Land)
 	}
@@ -377,11 +377,11 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 
 	// The unlit edge regrows like the Tangle: nothing is kept, and the
 	// stump drawn there this visit can still be dug.
-	r = x.op(c, &s, "gather", gatherIn(s, area, darkTree, axe, "chop", "tree", "h1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, area, darkTree, axe, "chop", "tree", "h1"), 200)
 	if r.Result.Land != nil || stackQty(r.Result.Items, "timber") < 4 {
 		t.Fatalf("dark land %+v", r.Result.Land)
 	}
-	if r = x.op(c, &s, "gather", gatherIn(s, area, darkTree, spade, "dig", "stump", "h1"), 200); r.Result.Land != nil {
+	if r = x.opRefreshing(c, &s, "gather", gatherIn(s, area, darkTree, spade, "dig", "stump", "h1"), 200); r.Result.Land != nil {
 		t.Fatal("dark stump kept")
 	}
 	if h = x.home(c); slices.Contains(h.Stumps, darkTree) || slices.Contains(h.Cleared, darkTree) {
@@ -392,12 +392,12 @@ func TestGatheringHomeLandKeepsWhatLamplightHolds(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	x.claimGate(bc, &b, 1-h.Gate)
 	bobAxe := x.instance("bob", "bench-axe", -1, "")
-	if x.op(bc, &b, "gather", gatherIn(b, area, darkTree, bobAxe, "chop", "tree", "b1"), 409).Error.Code != "not-your-land" {
+	if x.opRefreshing(bc, &b, "gather", gatherIn(b, area, darkTree, bobAxe, "chop", "tree", "b1"), 409).Error.Code != "not-your-land" {
 		t.Fatal("chopped a neighbour's tree")
 	}
 	cc, cs := x.member("carol", s.WorldID)
 	carolAxe := x.instance("carol", "bench-axe", -1, "")
-	if x.op(cc, &cs, "gather", gatherIn(cs, area, darkTree, carolAxe, "chop", "tree", "c1"), 409).Error.Code != "not-your-land" {
+	if x.opRefreshing(cc, &cs, "gather", gatherIn(cs, area, darkTree, carolAxe, "chop", "tree", "c1"), 409).Error.Code != "not-your-land" {
 		t.Fatal("chopped with no deed")
 	}
 	x.conserved(s.HabiticaID)
@@ -411,7 +411,7 @@ func TestPlantingAtHome(t *testing.T) {
 	x.stack(s.HabiticaID, "birch-sapling", "", 2)
 	x.stack(s.HabiticaID, "wild-thyme", "", 2)
 	plant := func(def string, tile [2]int, at [2]int, status int) itemsResponse {
-		return x.op(c, &s, "plant", map[string]any{"itemDef": def, "tile": tile, "progress": standAt(s, area, at[0], at[1])}, status)
+		return x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": def, "tile": tile, "progress": standAt(s, area, at[0], at[1])}, status)
 	}
 
 	litTile := litSpots(h)[0]
@@ -437,7 +437,7 @@ func TestPlantingAtHome(t *testing.T) {
 	if plant("birch-sapling", litTile, [2]int{litTile[0] + 5, litTile[1]}, 409).Error.Code != "too-far-away" {
 		t.Fatal("planted from afar")
 	}
-	if x.op(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": standAt(s, "commons", litTile[0], litTile[1])}, 409).Error.Code != "cannot-plant-here" {
+	if x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": standAt(s, "commons", litTile[0], litTile[1])}, 409).Error.Code != "cannot-plant-here" {
 		t.Fatal("planted in the Commons")
 	}
 
@@ -489,7 +489,7 @@ func TestPlantingAtHome(t *testing.T) {
 		t.Fatal("visitor sees", v.Home.Plants)
 	}
 	x.stack("bob", "wild-thyme", "", 1)
-	if x.op(bc, &b, "plant", map[string]any{"itemDef": "wild-thyme", "tile": litTile, "progress": standAt(b, area, litTile[0], litTile[1])}, 409).Error.Code != "not-your-land" {
+	if x.opRefreshing(bc, &b, "plant", map[string]any{"itemDef": "wild-thyme", "tile": litTile, "progress": standAt(b, area, litTile[0], litTile[1])}, 409).Error.Code != "not-your-land" {
 		t.Fatal("planted on a neighbour's land")
 	}
 	x.conserved(s.HabiticaID)
@@ -505,7 +505,7 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	x.stack(s.HabiticaID, "wild-thyme", "", content.GatheringRules.PlantsPerHome+5)
 	plant := func(tile [2]int, status int) itemsResponse {
 		t.Helper()
-		return x.op(c, &s, "plant", map[string]any{"itemDef": "wild-thyme", "tile": tile, "progress": standAt(s, area, tile[0], tile[1])}, status)
+		return x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "wild-thyme", "tile": tile, "progress": standAt(s, area, tile[0], tile[1])}, status)
 	}
 	unique := func(h homeView) {
 		t.Helper()
@@ -521,16 +521,16 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	// Nothing is set out on top of something growing.
 	lit := litSpots(h)[0]
 	plant(lit, 200)
-	stool := x.homeOp(c, &s, "buy", map[string]any{"itemDef": "wooden-stool"}, 200).Result.ItemID
-	if x.homeOp(c, &s, "place", map[string]any{"itemId": stool, "scene": "outdoor", "x": lit[0], "y": lit[1], "rotation": 0}, 409).Error.Code != "plant-in-the-way" {
+	stool := x.homeOpRefreshing(c, &s, "buy", map[string]any{"itemDef": "wooden-stool"}, 200).Result.ItemID
+	if x.homeOpRefreshing(c, &s, "place", map[string]any{"itemId": stool, "scene": "outdoor", "x": lit[0], "y": lit[1], "rotation": 0}, 409).Error.Code != "plant-in-the-way" {
 		t.Fatal("a stool on a sapling")
 	}
 
 	// Silas clearing a kept stump leaves no stump behind in the data.
 	axe := x.instance(s.HabiticaID, "bench-axe", -1, "")
 	tree := landTiles(h, land.Tree, true)[0]
-	x.op(c, &s, "gather", gatherIn(s, area, tree, axe, "chop", "tree", "h1"), 200)
-	x.homeOp(c, &s, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
+	x.opRefreshing(c, &s, "gather", gatherIn(s, area, tree, axe, "chop", "tree", "h1"), 200)
+	x.homeOpRefreshing(c, &s, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
 	if count(t, x.db, "SELECT count(*) FROM homestead_stumps WHERE x=? AND y=?", tree[0], tree[1]) != 0 {
 		t.Fatal("a cleared tile kept its stump row")
 	}

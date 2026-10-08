@@ -56,6 +56,14 @@ raw protobuf enum JSON names are **not** the HTTP error vocabulary.
   existing imports. Wrappers preserve `festival` and `notice` as string or null;
   numeric Unix seconds remain numbers, including dates beyond 2038. The Go
   serializer emits zero scalars and unpopulated collections/message fields.
+- `GET/POST /api/invites` use generated metadata/list/creation messages and TS
+  decoding. Original-handler fixtures cover empty lists, used and unused entries,
+  zero metadata times and remaining quota, party flags, and post-2038 numeric
+  timestamps. Creation retains the one-time raw code; reads never include it.
+  All list fields are always present, including explicit false booleans. The
+  pre-deploy older-server quota fallback was removed: missing or malformed current
+  fields are `bad-response`; additional future fields are ignored. Revocation
+  remains on its existing response path until the world-selection slice.
 
 The golden calendar fixtures were captured from the original handler before
 its conversion. Frozen error vocabulary and presence event fixtures, plus
@@ -70,7 +78,7 @@ regenerated to make a regression pass.
 
 | Order | Domain | Work and main risks |
 | --- | --- | --- |
-| 1 | Small leaf: invite metadata/read/create | These replies do not embed snapshots. Capture empty invite lists, explicit `used: false`, post-2038 numeric times, and the raw `code` returned only on creation. Settle collection/zero/omission adapters on this independent slice before the envelope. |
+| Done | Small leaf: invite metadata/read/create | Generated Go/TS contract with frozen original-handler HTTP fixtures. |
 | 2 | Session, identity and snapshot envelope | Split into profile, progress, save and envelope sub-slices, each with its own zero/null/omission fixtures. Keep all existing `validateSave` and Habitica semantic validation after generated decoding. |
 | 3 | Hearthwick library | Capture read/donate, empty shelves and stored replay fixtures. Generate shelf entries and read/donation response/request messages; move `src/lib/papers/library.ts`'s remote library onto the generated contract and common API transport. Keep its paper lookup/filtering, display-name cap, timestamps and duplicate-donation behavior. The library currently embeds snapshots and has its own fetch/error handling; migrate those deliberately after the envelope. |
 | 4 | Invite revocation and world selection/moves | Reuse invite metadata; quotas, absent older-server fields, world prompts and choice unions need fixtures for every branch. Preserve names, nullable party membership, numeric cooldowns, and redirects/statuses. |
@@ -78,6 +86,8 @@ regenerated to make a regression pass.
 | 6 | Homesteads, Commons, deeds and gate shelves | Land coordinates are JSON tuples; model proto coordinate messages with a JSON boundary adapter. Cover null homes, joint invitations, nullable times, empty gates/plants/slots, furniture placement unions and multiple storage views. |
 | 7 | Mail, projects and repairs | Cover old mail rows lacking return fields, nullable claim/return/completion times, cursors, optional gifts, map counts and all action branches. Reuse generated assets/workshop types. |
 | 8 | Wilds and play/progress/sync/spend | Capture each high-volume result shape and persisted replay before changing writers. Preserve revision/seed precision, entity unions, loot optionals, feature flags, numeric timestamps and imported profiles. This is the broadest persisted surface; migrate in small endpoint slices. |
+
+**Next slice:** profile, before progress, save and the snapshot envelope.
 
 For each slice: capture the old handler's fixtures first; include zero, null,
 empty, populated, omitted optional and mixed-version cases; add Go comparisons
@@ -131,6 +141,16 @@ have migrated. HTTP remains JSON throughout.
   donations use RFC3339 strings. Copy those shapes. `google.protobuf.Timestamp`
   JSON may normalize fractional precision and timezone spelling; it is not a
   drop-in replacement for every existing string/time shape.
+- **HTTP decoder template:** use the invite adapter's sequence for later slices:
+  require the existing JSON keys and raw types (including zero/false/empty values),
+  reject known proto-name aliases such as `created_at` and `outstanding_limit`
+  even when the camelCase field is also present, decode with unknown future fields
+  ignored, then validate the **decoded** message before projecting application
+  types. Check finite times recursively, bounded integral int32 counts and
+  non-negative quotas, plus each domain's semantic rules. ProtoJSON accepts
+  aliases, numeric strings and non-finite strings; raw validation alone cannot
+  guarantee that the decoded values satisfy the HTTP contract. Cover both alias
+  key orders, nested aliases, malformed values and valid boundary values in tests.
 - **Compatibility:** HTTP readers ignore future fields but still validate known
   values. New clients keep unknown error codes as `unknown`. The server keeps a
   strict presence ingress, including unknown nested binary fields. Reserve a new

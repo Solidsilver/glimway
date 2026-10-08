@@ -50,9 +50,6 @@ import type {
   HomeView,
   GateInfo,
   DeedInvite,
-  CreatedInvite,
-  InviteInfo,
-  InviteList,
   PlayResponse,
   ProgressResponse,
   SaveOrigin,
@@ -155,30 +152,10 @@ export function parseSpend(raw: unknown): SpendResponse {
   return { ...parseSnapshot(raw), outcome: typeof o.outcome === 'string' ? o.outcome : '' };
 }
 
-function parseInvite(raw: unknown): InviteInfo {
-  const o = obj(raw);
-  return { id: str(o.id), createdAt: num(o.createdAt), expiresAt: num(o.expiresAt), used: o.used === true };
-}
-
-export function parseCreatedInvite(raw: unknown): CreatedInvite {
-  return { ...parseInvite(raw), code: str(obj(raw).code) };
-}
+export { parseCreatedInvite, parseInviteList } from './invites.ts';
 
 const count = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : undefined;
-
-export function parseInviteList(raw: unknown): InviteList {
-  const o = obj(raw);
-  if (!Array.isArray(o.invites)) throw new ApiError('bad-response');
-  const out: InviteList = { invites: o.invites.map(parseInvite) };
-  const remaining = count(o.remaining);
-  const outstandingLimit = count(o.outstandingLimit);
-  if (remaining !== undefined) out.remaining = remaining;
-  if (outstandingLimit !== undefined) out.outstandingLimit = outstandingLimit;
-  if (o.partyWorld === true) out.partyWorld = true;
-  if (o.partyAdmitted === true) out.partyAdmitted = true;
-  return out;
-}
 
 // ------------------------------------------------------------- worlds
 

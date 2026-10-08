@@ -18,7 +18,7 @@ Date: 2026-10-03. No account credentials were used or stored.
 
 Modifications: the catalog is flattened to per-key numeric stats; i18n
 `text`/`notes` strings are omitted; **no numeric values were changed**.
-Cached art files are byte-identical copies (sha256 recorded in
+Cached art files are exact copies (sha256 recorded in
 `public/assets/habitica/manifest.json`).
 
 Attribution text for the UI credits line is in `ASSETS.md`.

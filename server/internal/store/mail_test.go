@@ -1,40 +1,14 @@
 package store
 
 import (
-	"database/sql"
 	"path/filepath"
 	"testing"
 )
 
 func TestMailReturnMigrationPreservesExistingTransitAndClaims(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "phase5.sqlite")
-	old, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer old.Close()
-	if _, err = old.Exec("CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)"); err != nil {
-		t.Fatal(err)
-	}
-	files, err := migrations.ReadDir("migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, file := range files {
-		if file.Name() == "009_mail_returns.sql" {
-			break
-		}
-		raw, err := migrations.ReadFile("migrations/" + file.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec(string(raw)); err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec("INSERT INTO schema_migrations VALUES(?,0)", file.Name()); err != nil {
-			t.Fatal(err)
-		}
-	}
+	old := newUpgradeFixture(t, path, "008_phase5.sql", nil)
+	var err error
 	if _, err = old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',0);
  INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,rev) VALUES('alice','Alice','w',1,100,9),('bob','Bob','w',1,100,2);
  INSERT INTO homesteads VALUES('alice','w',0,1);

@@ -67,38 +67,38 @@ func TestSeasonalGatherSpots(t *testing.T) {
 
 	// Out of season, a stale client map is refused, not honoured.
 	c = x.jumpToAs("alice", "mark", "Carting")
-	if x.op(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "not-in-season" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "not-in-season" {
 		t.Fatal("swept the shore out of Mudrise")
 	}
 	c = x.jumpToAs("alice", "wick", "Smoke")
-	if x.op(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
 		t.Fatal("picked blooms out of the Bloom wick")
 	}
 
 	// Mudrise: the freshet shore by the village water sweeps up walnut shells.
 	c = x.jumpToAs("alice", "mark", "Mudrise")
-	r := x.op(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 200)
+	r := x.opRefreshing(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 200)
 	if n := stackQty(r.Result.Items, "walnut-shells"); n < 1 || n > 2 {
 		t.Fatalf("walnut shells %d", n)
 	}
 	// The Commons has no freshet shore; the village has no bloom patches.
-	if x.op(c, &s, "gather", gatherIn(s, "commons", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "commons", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("swept the Commons")
 	}
 
 	// Bloom-wick: bloom flowers, in the Commons...
 	c = x.jumpToAs("alice", "wick", "Bloom")
-	if x.op(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("the village offered blooms where none grow")
 	}
-	r = x.op(c, &s, "gather", gatherIn(s, "commons", [2]int{8, 19}, spade, "dig", "bloom-patch", "c1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "commons", [2]int{8, 19}, spade, "dig", "bloom-patch", "c1"), 200)
 	if n := stackQty(r.Result.Items, "bloom-flowers"); n < 1 || n > 2 {
 		t.Fatalf("bloom flowers %d", n)
 	}
 	// ...and in the Tangle, where a flower patch is picked, not dug, in
 	// Bloom. Out of the wick the same patch gives its herbs again.
 	c = x.jumpToAs("alice", "mark", "Amberfall")
-	r = x.op(c, &s, "gather", gatherIn(s, "wilds", [2]int{20, 20}, spade, "dig", "herbs", "v2"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", [2]int{20, 20}, spade, "dig", "herbs", "v2"), 200)
 	for _, g := range r.Result.Gathered {
 		if g.ItemDef == "bloom-flowers" {
 			t.Fatal("herbs in Amberfall gave blooms")
@@ -107,12 +107,12 @@ func TestSeasonalGatherSpots(t *testing.T) {
 
 	// The Quiet: the pond freezes, and a pick breaks the ice for frost-glass.
 	c = x.jumpToAs("alice", "mark", "Quiet")
-	r = x.op(c, &s, "gather", gatherIn(s, "village", ice, pick, "break", "pond-ice", "q1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "village", ice, pick, "break", "pond-ice", "q1"), 200)
 	if n := stackQty(r.Result.Items, "frost-glass"); n < 1 || n > 2 {
 		t.Fatalf("frost-glass %d", n)
 	}
 	// A dig at the ice is not the work it wants.
-	if x.op(c, &s, "gather", gatherIn(s, "village", ice, spade, "dig", "pond-ice", "q1"), 409).Error.Code != "wrong-tool" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", ice, spade, "dig", "pond-ice", "q1"), 409).Error.Code != "wrong-tool" {
 		t.Fatal("dug the ice")
 	}
 	x.conserved(s.HabiticaID)
@@ -127,7 +127,7 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	c = x.jumpToAs("alice", "mark", "Amberfall")
 	sap := 0
 	for i := 0; i < content.GatheringRules.Caps.Day.Chop && sap == 0; i++ {
-		r := x.op(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				sap += g.Qty
@@ -144,7 +144,7 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	x.now.Add(86400)
 	c = x.login("alice", "")
 	for i := 0; i < content.GatheringRules.Caps.Day.Chop; i++ {
-		r := x.op(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", fmt.Sprintf("w%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", fmt.Sprintf("w%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the village woods gave sap")
@@ -157,17 +157,17 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	// wear or cap), and its plain trees give timber only.
 	x.now.Add(86400)
 	c = x.login("alice", "")
-	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), ""), 400).Error.Code != "invalid-region" {
+	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), ""), 400).Error.Code != "invalid-region" {
 		t.Fatal("a wilds gather without its region")
 	}
-	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "made-up"), 400).Error.Code != "invalid-region" {
+	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "made-up"), 400).Error.Code != "invalid-region" {
 		t.Fatal("a wilds gather in a made-up region")
 	}
-	if x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("a Tangle tree out in the drift")
 	}
 	for i := 0; i < content.GatheringRules.Caps.Day.Chop; i++ {
-		r := x.op(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/content.GatheringRules.Caps.Visit.Chop)), whitequietRegion), 200)
+		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/content.GatheringRules.Caps.Visit.Chop)), whitequietRegion), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the outer drift's trees gave sap")
@@ -282,7 +282,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 
 	// Standing by the seller: the rig's own position rides along.
 	buy := func(seller, good string, status int) itemsResponse {
-		return x.op(c, &s, "buy", map[string]any{"seller": seller, "good": good, "progress": bySeller(s, seller)}, status)
+		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": seller, "good": good, "progress": bySeller(s, seller)}, status)
 	}
 
 	// Hazel sells tallow at her kitchen door, cheap.
@@ -300,7 +300,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	doc := s.State
 	doc.Area = "woodland"
 	doc.Position = rules.Position{X: float64(20*16 + 8), Y: float64(20*16 + 12)}
-	if x.op(c, &s, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": doc}, 409).Error.Code != "too-far-away" {
+	if x.opRefreshing(c, &s, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": doc}, 409).Error.Code != "too-far-away" {
 		t.Fatal("bought from afar")
 	}
 	if buy("hazels-kitchen", "flour", 400).Error.Code != "invalid-good" {
@@ -333,7 +333,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	}
 	// Embers run out where they run out.
 	poor, ps := x.ready("bob")
-	if r := x.op(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen")}, 409); r.Error.Code != "insufficient-embers" {
+	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen")}, 409); r.Error.Code != "insufficient-embers" {
 		t.Fatal("tallow without embers", r.Error.Code)
 	}
 	x.conserved(s.HabiticaID)

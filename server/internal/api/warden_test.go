@@ -27,14 +27,14 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	x.stand("bob", s.WorldID, "village", 120, 100)
 
 	// Fitting first sliver onto the axe succeeds.
-	fit1 := x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver1}, 200)
+	fit1 := x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver1}, 200)
 	axeView := findInstance(fit1.Result.Items, axe)
 	if axeView == nil || !axeView.WardenSet {
 		t.Fatal("expected axe to be warden-set")
 	}
 
 	// Fitting second sliver onto pick while already carrying a warden tool in pack is refused.
-	errFit2 := x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver2}, 409)
+	errFit2 := x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver2}, 409)
 	if errFit2.Error.Code != "two-wardens-grind" {
 		t.Fatalf("expected two-wardens-grind on fitting second warden tool, got %s", errFit2.Error.Code)
 	}
@@ -48,7 +48,7 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	s.Snapshot = dep.Snapshot
 
 	// Now that the pack has zero warden-set tools, fitting second sliver onto pick succeeds!
-	fit2 := x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver2}, 200)
+	fit2 := x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver2}, 200)
 	pickView := findInstance(fit2.Result.Items, pick)
 	if pickView == nil || !pickView.WardenSet {
 		t.Fatal("expected pick to be warden-set")
@@ -68,10 +68,10 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	bobSpade := x.instance("bob", "bench-spade", -1, "")
 	bobSliver := x.instance("bob", "warden-sliver", -1, "")
 	x.refresh(bc, &b)
-	x.op(bc, &b, "fit", map[string]any{"tool": bobSpade, "instance": bobSliver}, 200)
+	x.opRefreshing(bc, &b, "fit", map[string]any{"tool": bobSpade, "instance": bobSliver}, 200)
 
 	// Alice tries to give her warden-set pick to Bob: refused with two-wardens-grind.
-	errGive := x.op(c, &s, "give", map[string]any{
+	errGive := x.opRefreshing(c, &s, "give", map[string]any{
 		"toId":  "bob",
 		"asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick},
 	}, 409)
@@ -90,8 +90,8 @@ func TestWardenSliverMovesBetweenToolsAtBench(t *testing.T) {
 	axe := x.instance("alice", "bench-axe", -1, "")
 	pick := x.instance("alice", "bench-pick", -1, "")
 	sliver := x.instance("alice", "warden-sliver", -1, "")
-	x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
-	moved := x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver}, 200)
+	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
+	moved := x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": sliver}, 200)
 	if view := findInstance(moved.Result.Items, axe); view == nil || view.WardenSet {
 		t.Fatal("expected source axe to release its warden fitting")
 	}
@@ -106,19 +106,22 @@ func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
-			x.member("bob", s.WorldID)
+			_, bob := x.member("bob", s.WorldID)
 			s = x.openWorkshop(c, s)
 			axe := x.instance("alice", "bench-axe", -1, "")
 			axeSliver := x.instance("alice", "warden-sliver", -1, "")
 			pick := x.instance("alice", "bench-pick", -1, "")
 			pickSliver := x.instance("alice", "warden-sliver", -1, "")
-			x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": axeSliver}, 200)
+			x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": axeSliver}, 200)
 			sent := x.p5("POST", "/api/mail", body(s, "send-warden", map[string]any{"toId": "bob", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), c, 200)
 			s.Snapshot = sent.Snapshot
-			x.op(c, &s, "fit", map[string]any{"tool": pick, "instance": pickSliver}, 200)
+			x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": pickSliver}, 200)
+			senderRev := count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'")
+			lastSeen := count(t, x.db, "SELECT last_seen_at FROM players WHERE habitica_id='alice'")
 			// Either way it lands in the personal chest, which comes along on a move.
 			expectedLocation, expectedOwner := "personal", "alice"
 			if mode == "expiry-to-personal" {
+				x.now.Add(60)
 				if _, err := x.db.DB.Exec("DELETE FROM homestead_members WHERE habitica_id='alice'"); err != nil {
 					t.Fatal(err)
 				}
@@ -142,6 +145,15 @@ func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
 				t.Fatal("return created a second warden-set tool in the pack")
 			}
 			x.conserved("alice")
+			if count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='alice' AND currency='personal:instance:bench-axe'") != 1 || count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE habitica_id='alice' AND currency='mail:instance:bench-axe'") != 0 {
+				t.Fatal("personal/transit audit does not match returned tool")
+			}
+			if count(t, x.db, "SELECT rev FROM players WHERE habitica_id='alice'") != senderRev+1 || count(t, x.db, "SELECT rev FROM players WHERE habitica_id='bob'") != int(bob.Rev) {
+				t.Fatal("return must bump only the sender revision, once")
+			}
+			if mode == "expiry-to-personal" && count(t, x.db, "SELECT last_seen_at FROM players WHERE habitica_id='alice'") != lastSeen {
+				t.Fatal("unattended return changed last-seen time")
+			}
 		})
 	}
 }
@@ -153,13 +165,13 @@ func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
 
 	axe := x.instance("alice", "bench-axe", -1, "")
 	sliver := x.instance("alice", "warden-sliver", -1, "")
-	x.op(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
+	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
 
 	// Wear axe down to 0 points.
 	// Bench-axe has MaxPoints=120, wearCost with warden fitting is ceil(120/40)=3 points/use.
 	// At zero, a regular bench tool breaks, but warden-set tool does NOT break; it dulls.
 	for i := 0; i < 40; i++ {
-		w := x.op(c, &s, "use", map[string]any{"instance": axe, "action": "chop"}, 200)
+		w := x.opRefreshing(c, &s, "use", map[string]any{"instance": axe, "action": "chop"}, 200)
 		if w.Result.Wear.Broke {
 			t.Fatal("warden-set tool should never break")
 		}
@@ -198,7 +210,7 @@ func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
 	// Test tool rack healing in home storage over ~1h (3600s).
 	// Wear the axe down again.
 	for i := 0; i < 40; i++ {
-		x.op(c, &s, "use", map[string]any{"instance": axe, "action": "chop"}, 200)
+		x.opRefreshing(c, &s, "use", map[string]any{"instance": axe, "action": "chop"}, 200)
 	}
 
 	// alice already has a homestead from openWorkshop. Find its ID.
@@ -305,21 +317,21 @@ func TestUnmooredConsumables(t *testing.T) {
 	x.stack("alice", "willow-bark-tea", "", 2)
 
 	// Without unmoored flag (not unmoored), using remedy is refused with 409 not-needed.
-	errSalve := x.op(c, &s, "use", map[string]any{"itemDef": "comfrey-salve"}, 409)
+	errSalve := x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "comfrey-salve"}, 409)
 	if errSalve.Error.Code != "not-needed" {
 		t.Fatalf("expected not-needed for salve when not unmoored, got %s", errSalve.Error.Code)
 	}
-	errTea := x.op(c, &s, "use", map[string]any{"itemDef": "willow-bark-tea"}, 409)
+	errTea := x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "willow-bark-tea"}, 409)
 	if errTea.Error.Code != "not-needed" {
 		t.Fatalf("expected not-needed for tea when not unmoored, got %s", errTea.Error.Code)
 	}
 
 	// With unmoored: true, using remedies succeeds and consumes one.
-	okSalve := x.op(c, &s, "use", map[string]any{"itemDef": "comfrey-salve", "unmoored": true}, 200)
+	okSalve := x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "comfrey-salve", "unmoored": true}, 200)
 	if okSalve.Result.Used != "comfrey-salve" {
 		t.Fatalf("expected comfrey-salve used, got %s", okSalve.Result.Used)
 	}
-	okTea := x.op(c, &s, "use", map[string]any{"itemDef": "willow-bark-tea", "unmoored": true}, 200)
+	okTea := x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "willow-bark-tea", "unmoored": true}, 200)
 	if okTea.Result.Used != "willow-bark-tea" {
 		t.Fatalf("expected willow-bark-tea used, got %s", okTea.Result.Used)
 	}

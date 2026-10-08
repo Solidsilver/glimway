@@ -42,7 +42,13 @@
         "src/ui/SilasShop.svelte",
         "src/ui/WorkshopPanel.svelte",
         "src/ui/MailPanel.svelte",
-        "server/internal/land/**"
+        "server/internal/land/**",
+        "server/internal/api/homestead.go",
+        "server/internal/api/home_*.go",
+        "server/internal/api/commons.go",
+        "server/internal/api/mail.go",
+        "server/internal/store/mail.go",
+        "server/internal/itemmove/**"
       ],
       "specs": ["homestead.spec.ts", "village.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "art-screens.spec.ts"]
     },
@@ -73,7 +79,11 @@
         "src/ui/InventoryPanel.svelte",
         "src/ui/inventory.svelte.ts",
         "src/game/entities/item-pickups.ts",
-        "src/game/entities/off-hand.ts"
+        "src/game/entities/off-hand.ts",
+        "server/internal/api/items.go",
+        "server/internal/api/item_*.go",
+        "server/internal/api/assets.go",
+        "server/internal/itemmove/**"
       ],
       "specs": ["items.spec.ts", "inventory.spec.ts", "warden.spec.ts"]
     },
@@ -91,7 +101,10 @@
         "src/game/items.ts",
         "src/ui/InventoryPanel.svelte",
         "server/internal/api/items.go",
-        "server/internal/land/**"
+        "server/internal/land/**",
+        "server/internal/api/gathering.go",
+        "server/internal/api/plants.go",
+        "server/internal/api/market.go"
       ],
       "specs": ["gathering.spec.ts"]
     },
@@ -123,7 +136,11 @@
         "server/internal/api/**",
         "server/internal/store/**",
         "server/internal/habitica/**",
-        "server/cmd/**"
+        "server/cmd/**",
+        "server/internal/gen/**",
+        "src/lib/gen/**",
+        "proto/**",
+        "server/internal/itemmove/**"
       ],
       "specs": ["connected.spec.ts", "connected-screens.spec.ts", "onboarding.spec.ts", "polish.spec.ts"]
     },
