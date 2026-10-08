@@ -62,7 +62,9 @@ test('a settled member is asked once, then moves into the party’s world', asyn
 
   // Shown once: a reload and Continue don't ask again.
   await other.reload()
-  await other.getByRole('button', { name: /Continue/ }).click()
+  const resume = other.getByRole('button', { name: /Continue/ })
+  await expect(resume).toBeVisible()
+  await resume.click()
   await waitForWorld(other)
   await expect(other.locator('.hud')).toBeVisible()
   await expect(other.getByTestId('party-prompt')).toHaveCount(0)
@@ -87,7 +89,12 @@ test('a settled member is asked once, then moves into the party’s world', asyn
 
   await warp(other, 'village', 16, 14)
   await other.keyboard.press('Escape')
-  await other.getByTestId('world-party-offer').getByRole('button', { name: 'Join them…' }).click()
+  // The Menu's world card draws the offer only once its GET /api/world has
+  // landed (WorldCard refreshes on mount): wait for the reply's button before
+  // clicking it, or the click waits out the test on an empty Menu.
+  const joinOffer = other.getByTestId('world-party-offer').getByRole('button', { name: 'Join them…' })
+  await expect(joinOffer).toBeVisible()
+  await joinOffer.click()
   await expect(move).toContainText('Comes with you')
   await expect(move).toContainText('Your personal chest')
   await expect(move).toContainText('Stays behind')
@@ -114,9 +121,11 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await back.getByRole('button', { name: 'Stay here' }).click()
   await expect(back).toHaveCount(0)
   await other.keyboard.press('Escape')
+  const road = other.getByRole('button', { name: 'Back to the road' })
+  await expect(road).toBeVisible()
 
   // The Wilds are Olive's now, not the ones Hal walked a minute ago.
-  await other.getByRole('button', { name: 'Back to the road' }).click()
+  await road.click()
   await warp(page, 'wilds', 2, 22)
   await waitForWilds(page)
   await warp(other, 'wilds', 2, 22)

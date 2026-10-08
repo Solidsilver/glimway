@@ -69,6 +69,11 @@ export default defineConfig({
     // under load a localhost lookup has stalled for seconds.
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1200, height: 760 },
+    // A click, fill or waitForFunction waits at most this long (Playwright's
+    // default is no limit): a button a late reply never draws then fails
+    // naming the button instead of hanging until the test's own timeout. A
+    // minute leaves room for GitHub's software-rendered smoke runner.
+    actionTimeout: 60_000,
     trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
     video: 'off',
     screenshot: 'only-on-failure'

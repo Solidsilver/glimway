@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { sql } from './connected'
-import { waitForLive } from './helpers'
+import { dialogueState, waitForLive, waitGame } from './helpers'
 import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
 /**
@@ -19,14 +19,22 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   const tray = page.getByTestId('placement-tray')
   await tray.locator(`[data-piece="${piece}"]`).first().click()
   await expect.poll(async () => (await homes(page)).placement?.spot ?? null).not.toBeNull()
+  // Placement ignores keys while a conversation or a panel owns the screen:
+  // say so here, instead of letting the walk silently step nowhere.
+  expect((await dialogueState(page)).open, 'a conversation owns the screen: read it before the walk').toBe(false)
   // One key press per step, each waited for: presses landing inside one
-  // frame would be read as one.
+  // frame would be read as one. The wait is in game time (docs/testing.md):
+  // a busy machine draws a few frames a second and 5 s of wall clock can be
+  // less than one step's worth of frames.
   const spot = async () => (await homes(page)).placement!.spot!
   for (let at = await spot(); at.x !== x || at.y !== y; ) {
     const key = at.x !== x ? (x > at.x ? 'ArrowRight' : 'ArrowLeft') : y > at.y ? 'ArrowDown' : 'ArrowUp'
+    const before = JSON.stringify(at)
     await page.keyboard.press(key)
-    const before = at
-    await expect.poll(async () => JSON.stringify(await spot())).not.toBe(JSON.stringify(before))
+    await waitGame(page, async () => JSON.stringify(await spot()), (v) => v !== before, {
+      seconds: 2,
+      message: `the piece did not move on ${key} (something may hold the screen)`
+    })
     at = await spot()
   }
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
@@ -94,10 +102,16 @@ test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it'
   await waitForLive(page)
   await page.keyboard.press('e')
   await expect(panel).toBeVisible()
-  await panel.locator('[data-craft="hearth-saltings-tea"]').click()
+  // The Make button is disabled until the pack read says the materials are
+  // there: wait for it, rather than clicking on a button that never enables.
+  const makeTea = panel.locator('[data-craft="hearth-saltings-tea"]')
+  await expect(makeTea).toBeEnabled()
+  await makeTea.click()
   await expect(panel.locator('.msg.ok')).toContainText('Made 2 Saltings tea')
   // The page in hand: the wax seals unlock and carry the maker's mark.
-  await panel.locator('[data-craft="hearth-wax-seal"]').click()
+  const makeSeals = panel.locator('[data-craft="hearth-wax-seal"]')
+  await expect(makeSeals).toBeEnabled()
+  await makeSeals.click()
   await expect(panel.locator('.msg.ok')).toContainText('Made 2 Wax seals')
   await panel.getByRole('button', { name: 'Close the hearth' }).click()
   await expect(panel).toBeHidden()
@@ -130,7 +144,10 @@ test('the writing desk: craft it at the bench, set it out, sit down, copy a reci
   const workshop = page.getByRole('dialog', { name: 'The Workshop' })
   await expect(workshop).toBeVisible()
   await workshop.getByRole('tab', { name: 'Crafting bench' }).click()
-  await workshop.locator('[data-craft="craft-writing-desk"]').click()
+  // Enabled only once the pack read says the seasoned timber is there.
+  const makeDesk = workshop.locator('[data-craft="craft-writing-desk"]')
+  await expect(makeDesk).toBeEnabled()
+  await makeDesk.click()
   await expect(workshop.locator('.msg.ok')).toContainText('Made a Writing desk')
   await workshop.getByRole('button', { name: 'Close the workshop' }).click()
 
@@ -157,7 +174,9 @@ test('the writing desk: craft it at the bench, set it out, sit down, copy a reci
   await page.keyboard.press('e')
   await expect(panel).toBeVisible()
   await panel.locator('[data-page="recipe-page-tea"] [aria-label="More"]').click()
-  await panel.locator('[data-copy="recipe-page-tea"]').click()
+  const copyPage = panel.locator('[data-copy="recipe-page-tea"]')
+  await expect(copyPage).toBeEnabled()
+  await copyPage.click()
   await expect(panel.locator('.msg.ok')).toContainText('2 fresh copies')
   await panel.getByRole('button', { name: 'Close the desk' }).click()
   await expect(panel).toBeHidden()
