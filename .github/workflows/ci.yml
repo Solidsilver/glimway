@@ -176,6 +176,13 @@ jobs:
           mkdir -p /cache/apt/partial
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends -o Dir::Cache::Archives=/cache/apt git git-lfs sqlite3
+          # The checkout belongs to the runner's user, not the container's root:
+          # without this, git refuses it and go build can't stamp the version.
+          git config --global --add safe.directory '*'
+          # The checkout belongs to the runner's user and the container runs
+          # as root: without this, Git refuses the repository after the
+          # checkout step, and `go build` fails to read its VCS stamp.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
