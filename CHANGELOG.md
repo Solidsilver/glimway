@@ -15,6 +15,10 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Felling a tree takes all of it: trees leaning over a path in the Wilds
+  sometimes left their top standing over the stump, or didn't fall at all.
+- Mara, Orrin and Pip have painted portraits in conversation, like the
+  rest of Hearthwick, and Silas's shows too.
 - Your world lives on the server now. Everything you do is checked and kept
   there, so a second device picks up exactly where the first left off.
 - Glimway plays with a Habitica account only: playing without signing in
@@ -34,6 +38,12 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- Everything drawn for a tile registers in one place
+  (`src/game/area/tile-art.ts`), so felling removes the foreground canopy
+  too; a dev-only `__fsArtAt(tx, ty)` hook lets e2e read what's drawn.
+- Dialogue busts for Mara, Orrin and Pip on a new sheet
+  (`fingersnap-portraits-residents`); every speaker maps to a bust, and the
+  sprite crop is only the fallback.
 - Server-first (`docs/design/server-first.md`): the server owns all state
   and rules. `PUT /api/progress` and the uploaded progress document are
   gone; the client sends operations (`proto/glimway/v1/op.proto`,
