@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 )
 
 // pickUp takes a thing lying in the world, once per player, standing by it.
-func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	p, ok := content.PickupFor(req.Pickup)
 	if !ok {
 		return fail(404, "pickup-not-found")

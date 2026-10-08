@@ -179,7 +179,12 @@ export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
 export async function homeAt(page: Page, gate: number): Promise<Home | null> {
   const res = await page.request.get(`/api/homestead/gate/${gate}`, CONTRACT)
   expect(res.ok()).toBe(true)
-  return (await served(res)).home as Home | null
+  // The schema serves tile pairs as {x, y} objects (homestead.proto's Coord);
+  // these helpers read the [x, y] pairs they always did.
+  const home = (await served(res)).home as (Home & { cleared?: unknown[]; stumps?: unknown[] }) | null
+  if (!home) return home
+  const pair = (c: unknown): [number, number] => (Array.isArray(c) ? [c[0], c[1]] : [(c as { x: number }).x, (c as { x: number }).y])
+  return { ...home, cleared: (home.cleared ?? []).map(pair), stumps: (home.stumps ?? []).map(pair) } as Home
 }
 
 /** A gate's land grid as the server serves it. */

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"net/http"
 	"slices"
@@ -185,10 +186,13 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Gate      int            `json:"gate"`
-		LandSeed  uint32         `json:"landSeed"`
-		Home      *homeView      `json:"home"`
-		Materials map[string]int `json:"materials"`
-	}{gate, land.Seed(s.WorldID, gate, content.HomeRules.Land), home, m})
+	result := &contract.HomesteadRead{Gate: int32(gate), LandSeed: land.Seed(s.WorldID, gate, content.HomeRules.Land), Materials: materialCountsProto(m)}
+	if home != nil {
+		result.Home = homeViewProto(*home)
+	}
+	body, err := protoResult(result)
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, body)
 }

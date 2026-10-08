@@ -249,7 +249,12 @@ func TestServerFirstWireFixtures(t *testing.T) {
 			return nil, err
 		}
 		items, err := readItems(ctx, tx, s, now)
-		return itemResult{Items: items, Gathered: []stackView{{ItemDef: "timber", Qty: 2}}}, err
+		if err != nil {
+			return nil, err
+		}
+		result := &contract.ItemsResult{Items: itemsViewProto(items), Gathered: []*contract.Stack{{ItemDef: "timber", Qty: 2}}}
+		raw, err := protoResult(result)
+		return raw, err
 	}); err != nil {
 		t.Fatal(err)
 	}

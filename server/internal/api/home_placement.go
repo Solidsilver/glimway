@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/store"
 	"slices"
@@ -120,7 +121,7 @@ func placedItems(h homeView) []homeInstance {
 
 // validatePlacement mirrors checkPlacement in src/lib/homestead.ts; the
 // server owns the buildable area.
-func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
+func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadRequest) error {
 	def, ok := content.HomeItemFor(item.ItemDef)
 	if !ok {
 		return fail(400, "invalid-item")
@@ -139,7 +140,7 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 		}
 		return nil
 	}
-	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int{0, 90, 180, 270}, *r.Rotation) || !slices.Contains(def.Where, r.Scene) {
+	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int32{0, 90, 180, 270}, r.Rotation.GetValue()) || !slices.Contains(def.Where, r.Scene) {
 		return fail(400, "invalid-placement")
 	}
 	if h.Tier < def.MinTier || (r.Scene == "indoor" && h.Indoor == nil) {
@@ -149,8 +150,8 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	if r.Scene == "indoor" {
 		grid, reserved = *h.Indoor, content.HomeRules.IndoorReserved
 	}
-	w, ht := footprint(def.ID, *r.Rotation)
-	here := rect{*r.X, *r.Y, w, ht}
+	w, ht := footprint(def.ID, int(r.Rotation.GetValue()))
+	here := rect{int(r.X.GetValue()), int(r.Y.GetValue()), w, ht}
 	if here.x < 0 || here.y < 0 || here.x > grid.Width-w || here.y > grid.Height-ht {
 		return fail(409, "out-of-bounds")
 	}
@@ -190,7 +191,7 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 		return fail(409, "unlit")
 	}
 	if def.ID == content.HomeRules.LanternPosts.Item {
-		scene, x, y, rot := r.Scene, *r.X, *r.Y, *r.Rotation
+		scene, x, y, rot := r.Scene, int(r.X.GetValue()), int(r.Y.GetValue()), int(r.Rotation.GetValue())
 		moved := append(slices.DeleteFunc(slices.Clone(placed), func(v homeInstance) bool { return v.ID == item.ID }), homeInstance{ID: item.ID, ItemDef: item.ItemDef, Scene: &scene, X: &x, Y: &y, Rotation: &rot})
 		if !everythingLit(moved) {
 			return fail(409, "post-holds-land")
@@ -199,10 +200,10 @@ func validatePlacement(h homeView, item homeInstance, r homeRequest) error {
 	return nil
 }
 
-func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op string, req homeRequest, now int64) (string, error) {
+func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op string, req *contract.HomesteadRequest, now int64) (string, error) {
 	var item *homeInstance
 	for i := range h.Items {
-		if h.Items[i].ID == req.ItemID {
+		if h.Items[i].ID == req.ItemId {
 			item = &h.Items[i]
 			break
 		}
@@ -243,7 +244,7 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		if post {
 			n, ok := "", false
 			if req.Name != nil {
-				n, ok = cleanPostName(*req.Name)
+				n, ok = cleanPostName(req.Name.GetValue())
 			}
 			if !ok {
 				return "", fail(400, "name-required")
@@ -255,13 +256,13 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		}
 		x, y, rot := 0, 0, 0
 		if req.X != nil {
-			x = *req.X
+			x = int(req.X.GetValue())
 		}
 		if req.Y != nil {
-			y = *req.Y
+			y = int(req.Y.GetValue())
 		}
 		if req.Rotation != nil {
-			rot = *req.Rotation
+			rot = int(req.Rotation.GetValue())
 		}
 		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='placed',account_id=NULL,homestead_id=?,scene=?,x=?,y=?,rotation=?,name=? WHERE id=? AND location='inventory' AND account_id=?", h.ID, req.Scene, x, y, rot, name, item.ID, s.AccountID)
 		if err == nil {
@@ -274,7 +275,7 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		if err = validatePlacement(h, *item, req); err != nil {
 			return "", err
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET scene=?,x=?,y=?,rotation=? WHERE id=?", req.Scene, *req.X, *req.Y, *req.Rotation, item.ID)
+		_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET scene=?,x=?,y=?,rotation=? WHERE id=?", req.Scene, req.X.GetValue(), req.Y.GetValue(), req.Rotation.GetValue(), item.ID)
 		if err == nil {
 			err = currency(ctx, tx, s.AccountID, "decoration:"+item.ItemDef, 0, "homestead-move", item.ID, now)
 		}
@@ -282,11 +283,11 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 	return item.ID, err
 }
 
-func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) error {
+func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) error {
 	if req.X == nil || req.Y == nil {
 		return fail(400, "invalid-placement")
 	}
-	x, y := *req.X, *req.Y
+	x, y := int(req.X.GetValue()), int(req.Y.GetValue())
 	g := groundOf(h)
 	if x < 0 || y < 0 || x >= g.land.Width || y >= g.land.Height || !land.Clearable(g.land.At(x, y)) {
 		return fail(409, "not-clearable")

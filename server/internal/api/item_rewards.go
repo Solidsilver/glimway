@@ -5,13 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"slices"
 	"strings"
 )
 
-func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	itemID := req.ItemDef
 	if itemID == "" {
 		return fail(400, "invalid-item")
@@ -83,12 +85,14 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	}
 
 	out.Returned = itemID
-	out.Paper = paperGranted
+	if paperGranted != nil {
+		out.Paper = wrapperspb.String(*paperGranted)
+	}
 	return nil
 }
 
 // grantHeirloom validates conditions and grants an heirloom tool once per player.
-func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	itemID := req.ItemDef
 	if itemID == "" {
 		return fail(400, "invalid-item")
@@ -201,7 +205,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 }
 
 // giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
-func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	if !nearResident(s, "ada", now, residentReachTiles) {
 		return fail(409, "too-far-away")
 	}
@@ -238,7 +242,7 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 
 	s.State.Flags = rules.AddUnique(s.State.Flags, fmt.Sprintf("ada-oil-gifts:%d", nextCount))
-	out.AdaOilCount = nextCount
+	out.AdaOilCount = int32(nextCount)
 	out.Used = "hearth-oil"
 	return nil
 }

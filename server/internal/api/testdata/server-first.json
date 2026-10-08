@@ -5504,13 +5504,26 @@
           "pickedUp": [],
           "thanks": []
         },
+        "wear": null,
+        "used": "",
+        "pickup": "",
+        "given": null,
+        "mended": "",
+        "created": [],
         "gathered": [
           {
             "itemDef": "timber",
             "qty": 2,
             "maker": null
           }
-        ]
+        ],
+        "plant": null,
+        "land": null,
+        "returned": "",
+        "paper": null,
+        "heirloom": "",
+        "adaOilCount": 0,
+        "bought": null
       }
     }
   }

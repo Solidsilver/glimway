@@ -2,7 +2,9 @@ package api
 
 import (
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"testing"
 )
 
@@ -37,9 +39,9 @@ func post(id string, x, y int) homeInstance {
 	return homeInstance{ID: id, ItemDef: content.HomeRules.LanternPosts.Item, Scene: &scene, X: &x, Y: &y, Rotation: &rot, Name: &name}
 }
 
-func moveTo(x, y int) homeRequest {
+func moveTo(x, y int) *contract.HomesteadRequest {
 	rot := 0
-	return homeRequest{Scene: "outdoor", X: &x, Y: &y, Rotation: &rot}
+	return &contract.HomesteadRequest{Scene: "outdoor", X: wrapperspb.Int32(int32(x)), Y: wrapperspb.Int32(int32(y)), Rotation: wrapperspb.Int32(int32(rot))}
 }
 
 // Review finding 2: two posts must not hold each other up away from the

@@ -1,0 +1,141 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+import "google/protobuf/wrappers.proto";
+
+// Every /api/homestead route: the Commons lane's gates (homestead.go,
+// home_queries.go, home_shelves.go, land.go) and the woodpile
+// (crafting.go), plus the shared goods vocabulary every domain result
+// carries (makers, assets, item instances, carried counts — items.proto
+// builds on them). Counters and timestamps are doubles so ProtoJSON carries
+// numbers; nullable fields are wrapper messages (null on the wire).
+
+// A homestead member (everyone on a deed is equal).
+message HomeMember { string id = 1; string display_name = 2; }
+// A land tile (column, row).
+message Coord { int32 x = 1; int32 y = 2; }
+// A cottage's room grid (content.HomeGrid).
+message HomeGrid { int32 width = 1; int32 height = 2; }
+
+// A maker's mark: who made a carried thing.
+message Maker { string id = 1; string name = 2; }
+// Goods on the move: stacks and home goods by catalogue id and count; an
+// instance (a tool, off-hand item, carry gear or fitting) one at a time by
+// its id; maker picks one maker's stack ('' = unmarked).
+message Asset {
+  string kind = 1; string id = 2; int32 qty = 3;
+  string instance = 4; google.protobuf.StringValue maker = 5;
+}
+// One fitting fitted on a tool.
+message Fitting {
+  string id = 1; string item_def = 2; string fitting = 3;
+  int32 condition = 4; int32 max_condition = 5; int32 uses_left = 6; Maker maker = 7;
+}
+// One item instance: condition in wear points (max_condition 0: never
+// wears); state is whole, worn, blunt, cracked or dull (a warden-set tool
+// at zero).
+message Instance {
+  string id = 1; string item_def = 2; double condition = 3; double max_condition = 4;
+  double uses_left = 5; string state = 6; bool warden_set = 7;
+  google.protobuf.DoubleValue dullness = 8; google.protobuf.DoubleValue speed = 9;
+  repeated Fitting fittings = 10; Maker maker = 11;
+}
+// Counts by kind; a missing key means zero. Carried decorations are the
+// pack's (placed ones belong to the homestead).
+message AssetCounts {
+  map<string, int32> materials = 1; map<string, int32> items = 2; map<string, int32> decorations = 3;
+  repeated Instance instances = 4;
+}
+
+// A piece owned by a homestead: in a member's inventory, or placed
+// (scene, x, y, rotation and, for lantern posts, its name).
+message HomeInstance {
+  string id = 1; string item_def = 2;
+  google.protobuf.StringValue scene = 3;
+  google.protobuf.Int32Value x = 4; google.protobuf.Int32Value y = 5;
+  google.protobuf.Int32Value rotation = 6;
+  google.protobuf.StringValue name = 7;
+}
+// A seed or sapling on the land, where it stands today; planted_at and
+// planted_day are Unix seconds (planted_day the UTC day it went in).
+message HomePlant {
+  string id = 1; string item_def = 2; int32 x = 3; int32 y = 4;
+  double planted_at = 5; double planted_day = 6; bool lit = 7;
+}
+// A gather that changed home land inside lamplight (the drift rule: a stump
+// stays, open ground stays open). The client reads the home again when it
+// sees one, so the next build of the land shows it. Tile is [x, y].
+message HomeLandChange { repeated int32 tile = 1; bool stump = 2; bool cleared = 3; }
+
+// A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
+// land's changes, its placed pieces, and the caller's own pack of
+// decorations when the caller is a member.
+message HomeView {
+  string id = 1; int32 gate = 2; string world_id = 3; int32 tier = 4;
+  repeated HomeMember members = 5; bool member = 6; bool desolate = 7;
+  google.protobuf.DoubleValue vacant_since = 8; uint32 land_seed = 9;
+  repeated Coord cleared = 10; repeated Coord stumps = 11; repeated HomePlant plants = 12;
+  int32 posts_bought = 13; map<string, int32> next_post = 14;
+  HomeGrid outdoor = 15; HomeGrid indoor = 16;
+  repeated HomeInstance items = 17;
+}
+
+// POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave}.
+message HomesteadRequest {
+  OpHeader op = 1; Where where = 2;
+  string item_def = 3; string item_id = 4; google.protobuf.Int32Value tier = 5;
+  string scene = 6; google.protobuf.Int32Value x = 7; google.protobuf.Int32Value y = 8;
+  google.protobuf.Int32Value rotation = 9; google.protobuf.StringValue name = 10;
+  google.protobuf.Int32Value gate = 11; string to = 12; string home_id = 13;
+}
+message HomesteadResult {
+  HomeView home = 1; map<string, int32> materials = 2;
+  string item_id = 3; string status = 4;
+}
+// GET /api/homestead/gate/:g.
+message HomesteadRead { int32 gate = 1; uint32 land_seed = 2; HomeView home = 3; map<string, int32> materials = 4; }
+
+// ------------------------------------------------------------ gate shelf
+
+message ShelfSlot {
+  int32 slot = 1; string kind = 2; string item_def = 3; int32 qty = 4;
+  Maker maker = 5; google.protobuf.StringValue instance = 6;
+  string stocked_by = 7; double stocked_at = 8;
+}
+message ShelfView {
+  int32 gate = 1; string home_id = 2; string owner_name = 3; repeated string names = 4;
+  repeated ShelfSlot slots = 5; bool taken_today = 6; bool can_stock = 7; bool has_shelf = 8;
+}
+message ShelfRead { ShelfView shelf = 1; }
+// POST /api/homestead/shelf (stock or take).
+message ShelfRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; int32 gate = 4; int32 slot = 5; Asset asset = 6;
+}
+message ShelfResult {
+  ShelfView shelf = 1; AssetCounts inventory = 2;
+  Asset taken = 3; string line = 4;
+}
+
+// ------------------------------------------------------------ woodpile
+
+// One stack of green timber on a placed woodpile (seasons after a real day).
+message WoodpileStack {
+  string id = 1; string homestead_id = 2; string account_id = 3;
+  int32 qty = 4; double stacked_at = 5; bool ready = 6; double remaining = 7;
+}
+message WoodpileView {
+  string homestead_id = 1; bool placed = 2; repeated WoodpileStack stacks = 3;
+  int32 ready_count = 4; int32 total_timber = 5;
+}
+message WoodpileRead { WoodpileView woodpile = 1; }
+// POST /api/homestead/woodpile ("stack" or "collect").
+message WoodpileRequest { OpHeader op = 1; Where where = 2; string action = 3; int32 qty = 4; string stack_id = 5; }
+// The workshop view's fields (home, inventory, storage, personal, shared —
+// the shape the storage and craft routes share) plus what the pile did.
+message WoodpileResult {
+  HomeView home = 1; AssetCounts inventory = 2; AssetCounts storage = 3;
+  AssetCounts personal = 4; string shared = 5;
+  WoodpileView woodpile = 6; string action = 7; int32 collected_qty = 8;
+}
