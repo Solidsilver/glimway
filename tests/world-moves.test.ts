@@ -150,7 +150,7 @@ test('a move answer carries the snapshot and the new world', () => {
     displayName: 'Hal',
     habiticaPartyId: 'p1',
     worldId: 'w2',
-    saveOrigin: 'fresh',
+   
     pending: 0,
     verifiedXp: 0,
     flagged: false,

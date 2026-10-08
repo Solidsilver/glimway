@@ -3,8 +3,9 @@
  * for this tab, the page's play-client id, the server probe, and building a
  * connected Session from a server snapshot or the device's connected cache.
  *
- * Guest play never needs any of this: a build without a server probes once,
- * gets `unavailable`, and everything stays local.
+ * There is no play without the server: a probe that gets no answer leaves
+ * the title at its "can't reach the world" card (a device with a connected
+ * cache can keep playing offline).
  */
 import { claimClientId, claimDeviceId, createApiClient, newKey } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
@@ -17,8 +18,14 @@ import { profileOf } from '../lib/api/predict'
 import { Link, openOutbox, outboxStore } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
+import { update } from './update.svelte'
 
-export const api = createApiClient()
+/**
+ * The one API client, watching for `reload-needed` (the client's error path
+ * calls back): a server that refuses this client's contract shows the reload
+ * notice (src/ui/update.svelte.ts).
+ */
+export const api = createApiClient({ onReloadNeeded: () => update.reloadNeeded() })
 
 /**
  * This page's play-client id, unique among live pages (a duplicated tab
@@ -63,6 +70,7 @@ export async function probeServer(): Promise<Probe> {
     return { kind: 'signed-in', snapshot: await api.state() }
   } catch (err) {
     const code = errorCode(err)
+    if (code === 'reload-needed') return { kind: 'reload-needed' }
     if (code === 'world-choice-required') {
       try {
         return { kind: 'choose-world', choice: await api.worldChoice() }

@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { beginNewJourney } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * The packed atlases (scripts/build-atlases.ts) are dense: every canvas-pack
@@ -15,7 +15,7 @@ type Pack = { image: string; density: number; frames: Record<string, [number, nu
 
 test('the game holds the packed texels, drawn at native world size', async ({ page }) => {
   test.setTimeout(120_000)
-  await beginNewJourney(page)
+  await freshPlayer(page)
   const result = await page.evaluate(async () => {
     const w = window as unknown as {
       __fsDevTextureHash: (key: string) => string | null

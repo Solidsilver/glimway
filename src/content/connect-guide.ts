@@ -66,8 +66,7 @@ export const syncCopy = {
   goSafe: 'Head back to Hearthwick or the Commons first — syncing only happens somewhere safe.',
   midSync: 'Something happened mid-sync. Try again from a quiet spot in Hearthwick or the Commons.',
   unsafeUnchanged: 'Syncing only works in Hearthwick or the Commons. Your save is unchanged.',
-  unsafeNothing: 'Syncing only works in Hearthwick or the Commons. Nothing changed.',
-  sampleUnsafe: 'Sample heroes follow the same rules: head back to Hearthwick or the Commons first.'
+  unsafeNothing: 'Syncing only works in Hearthwick or the Commons. Nothing changed.'
 }
 
 export const guideCopy = {
@@ -88,7 +87,7 @@ export const guideCopy = {
   step3: 'Connected',
   rememberLabel: 'Remember on this device',
   rememberExposure:
-    'Stored in this browser, apart from your save and never in a save code. Anything that can run script on this site could read it, and your token can write to your Habitica account. Leave this off to paste again each visit.',
+    'Stored in this browser, apart from your journey. Anything that can run script on this site could read it, and your token can write to your Habitica account. Leave this off to paste again each visit.',
   rememberOffNote: 'Your details stay in this tab’s memory only. Closing the tab forgets them.',
   forgetLabel: 'Forget',
   forgottenToast: 'Forgotten. Nothing is stored on this device.',
@@ -122,13 +121,13 @@ export const whyToken: WhyToken = {
     title: 'What it never does',
     items: [
       'Score or create tasks, spend gold, change stats, equip or buy anything, cast spells, or touch your party.',
-      'Send your token anywhere except Habitica itself.'
+      'Keep your token. Glimway’s server sees it once, at sign-in, to prove your account — and never stores it.'
     ]
   },
   honest:
     'The honest part: Habitica API tokens aren’t read-only. A token can change your account. The game limits itself to reading, and its code is public so you can check, but the token itself has no such limit.',
   where:
-    'Where it goes: into this tab’s memory, and nowhere else. It is never put in your save, a save code, or a log. Only if you tick Remember on this device is it also stored in this browser, apart from your save.'
+    'Where it goes: to Habitica, to read your profile, and once to your Glimway server at sign-in, to prove your account. The server never stores it, and it is never put in your journey or a log. Only if you tick Remember on this device is it also stored in this browser, apart from your journey.'
 }
 
 /** Ember payoff line (shown under the title choice and in the connected step). */
@@ -137,11 +136,12 @@ export function emberLine(xpPerEmber: number): string {
 }
 
 export const titleChoice = {
-  habitica: 'Play as your Habitica hero',
-  guest: 'Wander as a guest',
-  guestMeta: 'The demo hero. No account, no network. You can connect later in the Menu.'
+  habitica: 'Play as your Habitica hero'
 }
 
-/** Pip's one-off line for a guest at the Hearthwick gate. */
-export const pipGateNudge =
-  'Pip calls from the square: “Going out there as a guest? Open the Menu and connect your Habitica hero. Every bit of real-life XP becomes embers for the road!”'
+/** The title, when the world server didn't answer. */
+export const unreachableCopy = {
+  title: 'Can’t reach the world',
+  body: 'Glimway plays in your browser, but your journey lives on its world server — and it didn’t answer. Check your connection, then try again.',
+  retry: 'Try again'
+}

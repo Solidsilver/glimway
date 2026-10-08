@@ -10,14 +10,11 @@
  * and fake sessions (tests/account-flow.test.ts).
  */
 import type { ApiClient } from '../lib/api/client.ts'
-import { newKey } from '../lib/api/client.ts'
 import type { ConnectedCache } from '../lib/api/cache.ts'
 import { errorCode, isUnreachable } from '../lib/api/errors.ts'
-import { hasProgress } from '../lib/api/progress.ts'
 import type { Snapshot, WorldChoice, WorldMoveResponse, WorldRef, WorldView } from '../lib/api/types.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
-import { createNewGame, type GameState } from '../lib/state.ts'
-import { accountCopy, leaseCopy, originCopy } from '../content/connected.ts'
+import { accountCopy, leaseCopy } from '../content/connected.ts'
 import { firstWorldCopy, worldCopy } from '../content/world-moves.ts'
 
 /** What the flow needs of a session's link (src/game/link.ts). */
@@ -34,7 +31,6 @@ export interface FlowLink {
 /** What the flow needs of a session (src/game/session.ts). */
 export interface FlowSession {
   readonly link: FlowLink | null
-  readonly state: GameState
   readonly vitalsSource: VitalsSource
   destroy(skipSave?: boolean): void
 }
@@ -45,9 +41,11 @@ export type Probe =
   /** Signed in, but the first sign-in's world choice is still open (asked again). */
   | { kind: 'choose-world'; choice: WorldChoice }
   | { kind: 'signed-out' }
+  /** The server refused this client's contract: the title shows the reload notice. */
+  | { kind: 'reload-needed' }
   | { kind: 'unavailable' }
 
-export type AccountApi = Pick<ApiClient, 'state' | 'worldChoice' | 'worldChoose' | 'origin' | 'world' | 'worldNotice' | 'logout'>
+export type AccountApi = Pick<ApiClient, 'state' | 'worldChoice' | 'worldChoose' | 'world' | 'worldNotice' | 'logout'>
 
 /** The interface store's fields the flow writes (src/ui/store.svelte.ts). */
 export interface AccountUi {
@@ -59,7 +57,7 @@ export interface AccountUi {
 
 /** What App.svelte does for the flow on the screen it owns. */
 export interface AccountHost<S extends FlowSession> {
-  /** The session running now (a guest's, or a connected one). */
+  /** The session running now (null until a connected one plays). */
   session(): S | null
   /** A game is being started (a double click on Continue mustn't start two). */
   starting(): boolean
@@ -93,10 +91,9 @@ export interface AccountDeps<S extends FlowSession> {
   logoutWaitMs?: number
 }
 
-/** A step between signing in and playing: the world choice, the origin choice or the lease. */
+/** A step between signing in and playing: the world choice or the lease. */
 export type Gate =
   | { kind: 'world'; choice: WorldChoice; busy: boolean; error: string; picked: 'party' | 'own' | null }
-  | { kind: 'origin'; name: string; local: GameState; key: string; busy: boolean; error: string }
   | { kind: 'elsewhere'; busy: boolean; error: string }
 
 /** The move screen: from the party prompt or the Menu; `arriving` once it landed and the new world is opening. */
@@ -152,19 +149,13 @@ export class AccountFlow<S extends FlowSession> {
     return this.deps.host
   }
 
-  /** The running session, when it is a guest's. */
-  private guest(): S | null {
-    const s = this.host.session()
-    return s && !s.link ? s : null
-  }
-
   /**
    * Is there a Glimway server, and are we signed in? A valid session cookie
-   * means signed in even with no remembered Habitica token. No server (a
-   * guest-only build, or offline) leaves guest play exactly as it was,
-   * except that a device with a connected cache can keep playing offline.
+   * means signed in even with no remembered Habitica token. No server means
+   * the title says so — except that a device with a connected cache can keep
+   * playing offline.
    */
-  async init(): Promise<void> {
+  async init(): Promise<Probe> {
     const probe = await this.deps.probe()
     if (probe.kind === 'signed-in') {
       const cache = await this.deps.cache.load(probe.snapshot.accountId)
@@ -180,6 +171,8 @@ export class AccountFlow<S extends FlowSession> {
       this.ui.account = null
     } else if (probe.kind === 'signed-out') {
       this.ui.server = 'available'
+    } else if (probe.kind === 'reload-needed') {
+      this.ui.server = 'available'
     } else {
       this.ui.server = 'unavailable'
       // No server can say who is signed in: offer the latest account played here.
@@ -190,6 +183,7 @@ export class AccountFlow<S extends FlowSession> {
         this.ui.account = { accountId: cache.accountId, name: cache.name || 'Your hero' }
       }
     }
+    return probe
   }
 
   /** Title: Continue in your world. */
@@ -200,10 +194,6 @@ export class AccountFlow<S extends FlowSession> {
     try {
       if (this.choice) {
         await this.openWorldChoice(this.choice)
-        return
-      }
-      if (this.snapshot && this.snapshot.saveOrigin === null) {
-        this.openOrigin(this.ui.account!.name)
         return
       }
       const s = await this.deps.connect({ snapshot: this.snapshot, cache: await this.deps.cache.load(this.ui.account!.accountId), name: this.ui.account!.name })
@@ -234,18 +224,9 @@ export class AccountFlow<S extends FlowSession> {
     this.snapshot = snapshot
     const name = snapshot.displayName || snapshot.importedProfile?.name || profile?.name || this.ui.account?.name || 'Your hero'
     this.ui.account = { accountId: snapshot.accountId, name }
-    // Signed in from the Menu: the next step (origin, lease) takes the screen.
+    // Signed in from the Menu: the next step (the lease question) takes the screen.
     this.host.closePanel()
     this.cache = await this.deps.cache.load(snapshot.accountId)
-    if (snapshot.saveOrigin === null) {
-      const guest = this.guest()
-      if (guest && hasProgress(guest.state)) this.openOrigin(name)
-      else await this.chooseOrigin('fresh', name)
-      return
-    }
-    // The account already has a journey: this device's guest save stays put.
-    const guest = this.guest()
-    if (guest && hasProgress(guest.state)) this.ui.toast({ text: originCopy.alreadySet })
     await this.startAccount(snapshot, name)
   }
 
@@ -333,57 +314,6 @@ export class AccountFlow<S extends FlowSession> {
         return
       }
       g.error = isUnreachable(err) ? firstWorldCopy.offline : firstWorldCopy.failed
-    }
-  }
-
-  openOrigin(name: string): void {
-    const local = this.guest()?.state ?? createNewGame()
-    this.gate = { kind: 'origin', name, local, key: newKey(), busy: false, error: '' }
-  }
-
-  /** First sign-in for the account: bring this device's journey, or start fresh. */
-  async chooseOrigin(choice: 'migrate' | 'fresh', fallbackName?: string): Promise<void> {
-    const g = this.gate?.kind === 'origin' ? this.gate : null
-    if (g?.busy) return
-    const key = g?.key ?? newKey()
-    const name = g?.name ?? fallbackName ?? this.ui.account?.name ?? 'Your hero'
-    if (g) {
-      g.busy = true
-      g.error = ''
-    }
-    const guest = this.guest()
-    try {
-      const snap = await this.deps.api.origin({
-        choice,
-        key,
-        ...(choice === 'migrate' && guest ? { save: { state: guest.state, vitalsSource: guest.vitalsSource } } : {})
-      })
-      this.snapshot = snap
-      this.gate = null
-      await this.startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
-      if (choice === 'migrate' && this.host.session()?.link) this.ui.toast({ text: 'Your journey came with you into your world.', icon: 'lantern' })
-    } catch (err) {
-      if (errorCode(err) === 'already-set') {
-        // Chosen already (another device, a race): keep the local save as a
-        // guest save on this device and load the account.
-        this.gate = null
-        try {
-          const snap = await this.deps.api.state()
-          this.snapshot = snap
-          this.ui.toast({ text: originCopy.alreadySet })
-          await this.startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
-        } catch {
-          this.error = originCopy.offline
-        }
-        return
-      }
-      const error = isUnreachable(err) ? originCopy.offline : originCopy.failed
-      if (g) {
-        g.busy = false
-        g.error = error
-      } else {
-        this.gate = { kind: 'origin', name, local: guest?.state ?? createNewGame(), key, busy: false, error }
-      }
     }
   }
 
@@ -548,7 +478,7 @@ export class AccountFlow<S extends FlowSession> {
 
   /**
    * Log out of the world: upload what's pending, end the session, back to
-   * guest play. The account's cache is cleared only when the server has
+   * the title. The account's cache is cleared only when the server has
    * everything; unsent progress (a refused or slow upload, offline play from
    * an earlier visit) stays on this device for the next sign-in.
    */

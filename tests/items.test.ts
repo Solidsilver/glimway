@@ -305,7 +305,7 @@ const snapshot = {
   displayName: 'Alice',
   habiticaPartyId: null,
   worldId: 'w',
-  saveOrigin: 'fresh',
+ 
   pending: 0,
   verifiedXp: 0,
   flagged: false,

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { stepToWarden, talkThrough, warden, warp, waitForArea, waitForLive } from './helpers'
+import { stepToWarden, talkThrough, warden, warp, waitForLive } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * Screenshots of the naming beats for review (.agent/screens/).
@@ -39,9 +40,7 @@ async function readTheNaming(page: Page, prefix: string, press: () => Promise<vo
 }
 
 test('desktop: copy the naming, then speak it to the warden', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).click()
-  await waitForArea(page, 'village')
+  await freshPlayer(page)
   await toTheStone(page, 'desktop')
   await readTheNaming(page, 'desktop', () => page.keyboard.press('e'))
   await stepToWarden(page, 84, false)
@@ -58,9 +57,7 @@ test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
 
   test('phone: the Speak button', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await waitForArea(page, 'village')
+    await freshPlayer(page)
     await toTheStone(page, 'phone')
     const act = page.locator('.controls .act')
     await readTheNaming(page, 'phone', () => page.keyboard.press('e'))

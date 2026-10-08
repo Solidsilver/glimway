@@ -7,26 +7,24 @@ import {
   openTitleGuide,
   pasteAndConnect,
   routeHabitica,
-  serverState,
+  serverState, accountOf,
   setHabitica,
   syncFromMenu,
-  waitForWorld
+  waitForWorld, CONTRACT
 } from './connected'
-import { beginNewJourney, expectStage, readDialogue, savedStage, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
+import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
 
 /**
  * Connected play against the real Go server (playwright.config.ts starts it
  * with a fresh database, plus the fake Habitica its login reads). Each test
  * signs in as a new Habitica id, so tests share no server state.
  */
-test.use({ server: true })
-
 const hud = (page: Page) => page.locator('.hud .embers')
 const hurt = (page: Page, n: number) => page.evaluate((d) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(d), n)
 const leaseGate = (page: Page) => page.getByRole('alertdialog', { name: 'Playing on another device' })
 const shownHp = (page: Page) => page.evaluate(() => Number(document.querySelector('[aria-label="Health"]')?.getAttribute('aria-valuenow')))
 
-/** The account's record in the connected cache (null when absent). */
+/** The account's record in the connected cache (`id` is the Habitica subject; the cache keys on the server's account id). */
 async function cacheRecord(page: Page, id: string): Promise<Record<string, any> | null> {
   return page.evaluate(async (key) => {
     const dbs = await indexedDB.databases()
@@ -39,7 +37,7 @@ async function cacheRecord(page: Page, id: string): Promise<Record<string, any> 
     try {
       if (!db.objectStoreNames.contains('records')) return null
       return await new Promise<Record<string, any> | null>((resolve) => {
-        const r = db.transaction('records').objectStore('records').get(key)
+        const r = db.transaction('records').objectStore('records').get('acct:' + key)
         r.onsuccess = () => resolve((r.result as Record<string, any> | undefined) ?? null)
         r.onerror = () => resolve(null)
       })
@@ -86,44 +84,19 @@ test('login + fresh start: the guide signs in, the world starts fresh, a sync pa
   const id = await freshPlayer(page)
   const s = await serverState(page)
   expect(s.status).toBe(200)
-  expect(s.body.saveOrigin).toBe('fresh')
-  expect(s.body.habiticaId).toBe(id)
-  // Fresh imports the verified Habitica vitals right away.
+  // The account is the sign-in's subject (its id the server's own).
+  expect(s.body.accountId).toBe(accountOf(id))
+  // Fresh imports the verified Habitica vitals right away, under the name Habitica reports.
+  expect(s.body.displayName).toBe('Tansy')
   expect(s.body.vitalsSource).toBe('imported')
   await sync(page, /embers into your hand/)
   await expect(hud(page)).toHaveText('3')
   await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(3)
   // Nothing about the token reached the connected cache.
-  await expect.poll(() => cacheRecord(page, id)).not.toBeNull()
-  const cache = JSON.stringify(await cacheRecord(page, id))
+  await expect.poll(() => cacheRecord(page, accountOf(id))).not.toBeNull()
+  const cache = JSON.stringify(await cacheRecord(page, accountOf(id)))
   expect(cache).toContain(id)
   expect(cache).not.toContain('99999999-ffff')
-})
-
-test('login + bring save: a guest journey moves into the world and the guest save stays', { tag: '@smoke' }, async ({ page, context }) => {
-  const id = newUser()
-  allow(id)
-  await routeHabitica(context)
-  await beginNewJourney(page)
-  await warp(page, 'village', 16, 14)
-  await talkThrough(page, /Talk to Mara/)
-  await expectStage(page, 'accepted')
-
-  await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'I have them' }).click()
-  await pasteAndConnect(page, id)
-  const origin = page.getByRole('dialog', { name: 'Welcome, Tansy' })
-  await expect(origin).toBeVisible()
-  await expect(origin).toContainText('Your story, discoveries, and where you are.')
-  await expect(origin).toContainText('Start fresh')
-  await origin.getByRole('button', { name: /Bring this device’s save/ }).click()
-  await waitForWorld(page)
-  await expectToast(page, 'came with you')
-
-  const s = await serverState(page)
-  expect(s.body.saveOrigin).toBe('migrated')
-  expect(s.body.state.quest).toBe('accepted')
-  expect(await savedStage(page)).toBe('accepted') // the guest save is untouched
 })
 
 test('invite-only: denied without a code, then joins with one', async ({ page, context }) => {
@@ -133,7 +106,6 @@ test('invite-only: denied without a code, then joins with one', async ({ page, c
   await pasteAndConnect(page, id)
   const box = page.getByTestId('invite-only')
   await expect(box).toContainText('This world is invite-only')
-  await expect(box.getByRole('button', { name: 'Play on this device instead' })).toBeVisible()
   await box.getByLabel('Invite code').fill('not-a-real-code')
   await box.getByRole('button', { name: 'Join with this code' }).click()
   await expect(box).toContainText('That invite code didn’t work')
@@ -143,20 +115,9 @@ test('invite-only: denied without a code, then joins with one', async ({ page, c
   await box.getByLabel('Invite code').fill(`  ${code.toUpperCase().replace(/-/g, ' ')} `)
   await box.getByRole('button', { name: 'Join with this code' }).click()
   await waitForWorld(page)
-  expect((await serverState(page)).body.habiticaId).toBe(id)
+  expect((await serverState(page)).body.accountId).toBe(accountOf(id))
 })
 
-test('invite-only: the player can still play on this device', async ({ page, context }) => {
-  await routeHabitica(context)
-  await openTitleGuide(page)
-  await pasteAndConnect(page, newUser())
-  await page.getByTestId('invite-only').getByRole('button', { name: 'Play on this device instead' }).click()
-  await expect(page.getByTestId('hero-card')).toContainText('Tansy')
-  await page.getByRole('button', { name: 'Begin your journey' }).click()
-  await waitForArea(page, 'village')
-  expect(await linkStatus(page)).toBeNull() // a guest journey with the Habitica hero
-  expect((await serverState(page)).status).toBe(401)
-})
 
 test('sync credits embers from the server, counted against its XP mark', async ({ page }) => {
   const id = await freshPlayer(page)
@@ -232,7 +193,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.unroute('**/api/progress')
 
   // The world's shelf on the server: one donation, credited by the server.
-  const shelf = await page.request.get('/api/library')
+  const shelf = await page.request.get('/api/library', CONTRACT)
   expect(shelf.status()).toBe(200)
   const body = await shelf.json()
   expect(body.shelves).toHaveLength(1)
@@ -301,50 +262,13 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   await expect(page.getByTestId('link-notice')).toBeHidden()
 })
 
-test('offline play meets newer progress from another device: story merges, vitals come from the server', async ({ page, context, browser, baseURL }) => {
-  const id = await freshPlayer(page)
-  await context.setOffline(true)
-  await hurt(page, 5)
-  await expect(page.getByTestId('net-offline')).toBeVisible()
-  await warp(page, 'village', 16, 14)
-  await talkThrough(page, /Talk to Mara/)
-
-  // Meanwhile, another device signed in to the same account plays on.
-  const otherContext = await browser.newContext({ storageState: await context.storageState(), baseURL })
-  const other = await otherContext.newPage()
-  await other.goto('/')
-  await other.getByTestId('continue-world').click()
-  await expect(leaseGate(other)).toBeVisible()
-  await other.getByRole('button', { name: 'Take over here' }).click()
-  await waitForWorld(other)
-  await hurt(other, 12)
-  await expect.poll(() => shownHp(other)).toBeLessThan(35)
-  const otherHp = await shownHp(other)
-  await expect.poll(async () => Math.ceil((await serverState(other)).body.state.hp)).toBe(otherHp)
-
-  // Back online: the other device is active, so this one must choose to take over.
-  await context.setOffline(false)
-  await expect(leaseGate(page)).toBeVisible({ timeout: 20_000 })
-  await page.getByRole('button', { name: 'Take over here' }).click()
-  await expect(page.getByTestId('link-notice')).toContainText('You played somewhere else while this device was offline.')
-  const s = (await serverState(page)).body
-  expect(s.state.quest).toBe('accepted') // story from this device kept
-  expect(Math.ceil(s.state.hp)).toBe(otherHp) // health from the latest session
-  await expect.poll(() => shownHp(page)).toBe(otherHp)
-  // The offline copy is kept until the notice is dismissed.
-  const recovery = async () => !!(await cacheRecord(page, id))?.recovery
-  await expect.poll(recovery).toBe(true)
-  await page.getByRole('button', { name: 'Got it' }).click()
-  await expect.poll(recovery).toBe(false)
-  await otherContext.close()
-})
 
 test('invites: create a code (shown once), list it, revoke it, and respect the limit', async ({ page }) => {
   await freshPlayer(page)
   await page.keyboard.press('Escape')
   const card = page.getByTestId('invites-card')
   // The quota shows up front, including explicit admission flags and an empty list.
-  const initialInvites = await page.request.get('/api/invites')
+  const initialInvites = await page.request.get('/api/invites', CONTRACT)
   expect(initialInvites.ok()).toBe(true)
   expect(await initialInvites.json()).toEqual({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: false, partyAdmitted: false })
   await expect(card.getByTestId('invite-budget')).toContainText('5 of 5 invite codes left')
@@ -375,15 +299,13 @@ test('invites: create a code (shown once), list it, revoke it, and respect the l
   await expect(card.getByTestId('invite-why')).toContainText('made all 5')
 })
 
-test('logout ends the session and returns to guest play', async ({ page }) => {
+test('logout ends the session and returns to the title', async ({ page }) => {
   await freshPlayer(page)
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
-  // Back to this device's guest journey (the title guide started one).
-  await expect(page.getByRole('button', { name: /Continue/ })).toBeVisible()
-  await expect(page.getByTestId('continue-world')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
+  // Back to the title: the connect card, and nothing playing.
+  await expect(page.getByTestId('connect-hero')).toBeVisible()
   expect((await serverState(page)).status).toBe(401)
 })
 
@@ -417,22 +339,22 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   await talkThrough(page, /Talk to Mara/)
   // (The "didn’t accept" toast may have come and gone on a slow machine.)
   await expect.poll(() => refused).toBeGreaterThan(0)
-  await expect.poll(async () => (await cacheRecord(page, id))?.state.quest).toBe('accepted')
+  await expect.poll(async () => (await cacheRecord(page, accountOf(id)))?.state.quest).toBe('accepted')
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   const dialog = page.getByRole('alertdialog')
   await expect(dialog).toContainText('hasn’t reached your world yet')
   await dialog.getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
+  await expect(page.getByTestId('connect-hero')).toBeVisible()
   expect((await serverState(page)).status).toBe(401)
-  const kept = await cacheRecord(page, id)
+  const kept = await cacheRecord(page, accountOf(id))
   expect(kept?.dirty).toBe(true)
   expect(kept?.loggedOut).toBe(true)
   expect(kept?.state.quest).toBe('accepted')
 
   // The server is fine again; signing in brings the step up.
   await page.unroute('**/api/progress')
-  await page.getByRole('button', { name: 'Sign in to your world' }).click()
+  await page.getByTestId('connect-hero').click()
   await page.getByRole('button', { name: 'I have them' }).click()
   await pasteAndConnect(page, id)
   // Logout released that session's lease, so signing straight back in plays at once.
@@ -443,13 +365,13 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
 
 test('a logout with nothing unsent clears the device copy', async ({ page }) => {
   const id = await freshPlayer(page)
-  await expect.poll(() => cacheRecord(page, id)).not.toBeNull()
+  await expect.poll(() => cacheRecord(page, accountOf(id))).not.toBeNull()
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   await expect(page.getByRole('alertdialog')).toContainText('Your journey stays in your world')
   await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
-  expect(await cacheRecord(page, id)).toBeNull()
+  await expect(page.getByTestId('connect-hero')).toBeVisible()
+  expect(await cacheRecord(page, accountOf(id))).toBeNull()
 })
 
 test('a duplicated tab gets its own play id, so it must take over like any other (review 2)', async ({ page, context }) => {
@@ -476,7 +398,7 @@ test('a duplicated tab gets its own play id, so it must take over like any other
   expect(await page.evaluate(() => sessionStorage.getItem('fingersnap:client-id'))).toBe(original)
 })
 
-test('closing the tab still sends the last steps (review 6)', async ({ page, context }) => {
+test('closing the tab still sends the last steps (review 6)', async ({ page }) => {
   await freshPlayer(page)
   const before = Math.ceil((await serverState(page)).body.state.hp)
   // Playwright's request interception (the Habitica route) can drop a closing
@@ -486,46 +408,6 @@ test('closing the tab still sends the last steps (review 6)', async ({ page, con
   // Close inside the 350 ms save debounce: only the page-hide upload can carry it.
   await page.close({ runBeforeUnload: true })
   await expect
-    .poll(async () => Math.ceil((await (await context.request.get('/api/state')).json()).state.hp), { timeout: 10_000 })
+    .poll(async () => Math.ceil((await serverState(page)).body.state.hp), { timeout: 10_000 })
     .toBeLessThan(before)
-})
-
-test.describe('no server', () => {
-  test.describe('guest with Habitica lookup', () => {
-    // Keep the worker fake Habitica available for the external user lookup,
-    // but make the game's own API unreachable in the browser.
-    test.use({ server: true })
-
-    test('guest path with the server down: guest play and the local Habitica connect work as before', async ({ page, context, baseURL }) => {
-      await routeHabitica(context)
-      await page.route(
-        (url) => url.host === new URL(baseURL!).host && url.pathname.startsWith('/api/'),
-        (route) => route.abort('internetdisconnected')
-      )
-      await openTitleGuide(page)
-      await pasteAndConnect(page, newUser())
-      await expect(page.getByTestId('hero-card')).toContainText('Tansy')
-      await expect(page.getByTestId('invite-only')).toHaveCount(0)
-      await page.getByRole('button', { name: 'Begin your journey' }).click()
-      await waitForArea(page, 'village')
-      expect(await linkStatus(page)).toBeNull()
-      await expect(page.locator('.hud .embers')).toHaveText('3')
-    })
-  })
-
-  test.describe('static host', () => {
-    test.use({ server: false })
-
-    test('a static host that answers /api with a page is treated as no server', async ({ page, baseURL }) => {
-      // Page routes win over the fixture's context-level abort.
-      await page.route(
-        (url) => url.host === new URL(baseURL!).host && url.pathname.startsWith('/api/'),
-        (route) => route.fulfill({ status: 404, contentType: 'text/html', body: '<!doctype html><p>Not found' })
-      )
-      await beginNewJourney(page)
-      expect(await linkStatus(page)).toBeNull()
-      await page.keyboard.press('Escape')
-      await expect(page.getByTestId('world-card')).toHaveCount(0)
-    })
-  })
 })

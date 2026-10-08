@@ -88,9 +88,7 @@
     <p>“{SILAS.dialogue.sellDecorations.lines[0]}”</p>
   </div>
 
-  {#if !view.connected}
-    <p class="msg">Deeds on the Commons are for people with a world. Sign in to your world from the Menu, and Silas will sell you one.</p>
-  {:else if !view.ready}
+  {#if !view.ready}
     <p class="msg">Talk to Silas about a deed first: pick a gate on the lane, and he’ll draw it up.</p>
   {:else}
     <p class="balance" aria-live="polite">

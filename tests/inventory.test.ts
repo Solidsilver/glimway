@@ -14,9 +14,10 @@ const group = (entries: readonly InventoryEntry[]) => {
 
 const names = (list: { name: string }[]) => list.map((e) => e.name);
 
-test('a guest pack sorts into supplies, keepsakes and the road', () => {
+test('a pack sorts into supplies, keepsakes and the road', () => {
   const entries = inventoryEntries({
-    pack: ['field-journal', 'hearthwick-map', 'tin-whistle', 'ember-charm', 'material:stone:4', 'material:timber:12', 'whittled-fox', 'lantern-route-rubbing'],
+    pack: ['field-journal', 'hearthwick-map', 'tin-whistle', 'ember-charm', 'whittled-fox', 'lantern-route-rubbing'],
+    materials: { timber: 12, stone: 4, fiber: 0, amber: 0 },
   });
   const g = group(entries);
   assert.deepEqual(names(g.supplies.main), ['Timber', 'Stone'], 'materials in their own order, only what you have');
@@ -35,7 +36,7 @@ test('a guest pack sorts into supplies, keepsakes and the road', () => {
 
 test('in a world, server counts win: materials, items and crafted pieces', () => {
   const entries = inventoryEntries({
-    pack: ['field-journal', 'material:timber:99', 'tin-whistle', 'lamp-wick'],
+    pack: ['field-journal', 'tin-whistle', 'lamp-wick'],
     materials: { timber: 3, stone: 0, fiber: 7, amber: 1 },
     items: { 'tin-whistle': 2, 'lamp-wick': 5, 'wooden-peg': 1 },
   });
@@ -75,19 +76,19 @@ test('unknown ids still show, title-cased, and duplicates count once', () => {
 });
 
 test('new dots: what this device has not seen, by tab', () => {
-  const entries = inventoryEntries({ pack: ['field-journal', 'tin-whistle', 'material:fiber:2'] });
+  const entries = inventoryEntries({ pack: ['field-journal', 'tin-whistle'], materials: { fiber: 2, timber: 0, stone: 0, amber: 0 } });
   const seen = new Set(['quest:field-journal']);
   assert.deepEqual(unseen(entries, seen).map((e) => e.key).sort(), ['item:tin-whistle', 'material:fiber']);
   assert.deepEqual([...newTabs(entries, seen)].sort(), ['keepsakes', 'supplies']);
   assert.equal(newTabs(entries, new Set(entries.map((e) => e.key))).size, 0);
 });
 
-test('the guest material parser reads the pack format', () => {
+test('the guest material parser reads the pack format (TODO(D): the Wilds still write it)', () => {
   assert.deepEqual(materialsFromPack(['material:amber:3', 'material:bogus:9', 'material:stone:x', 'tin-whistle']), { timber: 0, stone: 0, fiber: 0, amber: 3 });
 });
 
 test('newest first: unseen things lead, then the most recently seen, quest things last', () => {
-  const entries = inventoryEntries({ pack: ['field-journal', 'material:timber:4', 'material:amber:1', 'lamp-wick', 'whittled-fox'] });
+  const entries = inventoryEntries({ pack: ['field-journal', 'lamp-wick', 'whittled-fox'], materials: { timber: 4, amber: 1, stone: 0, fiber: 0 } });
   const keys = (list: { key: string }[]) => list.map((e) => e.key);
   // Seen in two looks: timber first, then the wick (the wick is the more recent).
   const order = keys(newestFirst(entries, new Map([['material:timber', 1], ['item:lamp-wick', 2]])));
@@ -98,7 +99,7 @@ test('newest first: unseen things lead, then the most recently seen, quest thing
 });
 
 test('newest first: things seen in one look keep the usual order among themselves', () => {
-  const entries = inventoryEntries({ pack: ['material:timber:4', 'material:stone:2', 'material:amber:1', 'whittled-fox'] });
+  const entries = inventoryEntries({ pack: ['whittled-fox'], materials: { timber: 4, stone: 2, amber: 1, fiber: 0 } });
   const keys = (list: { key: string }[]) => list.map((e) => e.key);
   // Timber, stone and amber seen together (one stamp), the fox in a later look.
   const at = new Map([['material:amber', 1], ['material:timber', 1], ['material:stone', 1], ['item:whittled-fox', 2]]);

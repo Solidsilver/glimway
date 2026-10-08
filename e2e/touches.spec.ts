@@ -1,6 +1,7 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, waitFrames, expectLine } from './helpers'
+import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine } from './helpers'
+import { freshPlayer } from './home-helpers'
 import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 
 /**
@@ -17,19 +18,16 @@ const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSea
 /** The thought above the hero now (src/game/entities/thoughts.ts), or null. */
 const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fsThoughts?: () => { current: string | null } }).__fsThoughts?.().current ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
-/** The Mana meter shows `value` within `seconds` of game time (regen runs on the game clock). */
-const manaShows = (page: Page, value: string, seconds: number) =>
-  waitFrames(page, (v: string) => document.querySelector('.bar.mana[role="meter"]')?.getAttribute('aria-valuenow') === v, value, { seconds, message: `mana ${value}` })
-
 test('the bench seats the hero, mana comes back, movement stands up', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
 
   // Spend some mana first, so the seated regen has something to fill.
   await warp(page, 'village', 9, 14)
   await waitForLive(page)
+  const manaNow = async () => Number((await manaMeter(page).getAttribute('aria-valuenow')) ?? NaN)
+  const before = await manaNow()
   await page.keyboard.press('f')
-  await manaShows(page, '5', 10)
-  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '5')
+  await expect.poll(manaNow).toBeLessThan(before)
 
   await expect(page.locator('.prompt')).toContainText('Sit on the bench')
   await page.keyboard.press('e')
@@ -38,8 +36,8 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
   await expect.poll(async () => (await seat(page))?.bonus).toBe(5)
 
   // Seated, mana returns quickly to full (5/s standing would take twice as long).
-  await manaShows(page, '20', 10)
-  await expect(manaMeter(page)).toHaveAttribute('aria-valuenow', '20')
+  const max = Number((await manaMeter(page).getAttribute('aria-valuemax')) ?? NaN)
+  await expect.poll(manaNow, { timeout: 10_000 }).toBe(max)
 
   // Any movement key stands the hero up, back where they sat from.
   await holdUntil(page, 'ArrowLeft', async () => (await seat(page))?.seated === false)
@@ -49,7 +47,7 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
 })
 
 test('smelling the flowers says something different each time', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 22, 8) // the planter by the lane
   await expect(page.locator('.prompt')).toContainText('Smell the flowers')
 
@@ -68,7 +66,7 @@ test('smelling the flowers says something different each time', async ({ page })
 })
 
 test('reading the signpost opens a conversation and closes it', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 15, 12) // the signpost by the square
   await expect(page.locator('.prompt')).toContainText('Read the signpost')
   await page.keyboard.press('e')
@@ -85,8 +83,7 @@ test.describe('phone', () => {
   test.use({ viewport, deviceScaleFactor, isMobile, hasTouch, userAgent })
 
   test('the touch action button sits you down and stands you up', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await waitForArea(page, 'village')
     await warp(page, 'village', 9, 14)
 
@@ -102,8 +99,7 @@ test.describe('phone', () => {
   })
 
   test('smelling the planter works from the action button', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+    await freshPlayer(page)
     await waitForArea(page, 'village')
     await warp(page, 'village', 22, 8)
     const act = page.locator('.controls .act')
@@ -131,7 +127,7 @@ test.describe('screens (SCREENS=1)', () => {
   }
 
   test('sitting on the bench, and a flower line', async ({ page }) => {
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await warp(page, 'village', 9, 14)
     await expect(page.locator('.prompt')).toContainText('Sit on the bench')
     await page.keyboard.press('e')

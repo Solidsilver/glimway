@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { sql } from './connected'
+import { sql, accountOf } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
 import { plantable } from '../src/lib/homestead.ts'
@@ -17,7 +17,6 @@ import { homeLights, isLit } from '../src/lib/homestead-land.ts'
  * stands where you put it.
  * SCREENS=1 saves screenshots to .agent/screens/.
  */
-test.use({ server: true })
 
 type GatherView = {
   area: string
@@ -303,7 +302,7 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
   // One tree short of the day's cap (numbers live on the server only).
   const day = Math.floor(Date.now() / 1000 / 86400)
-  sql(`INSERT INTO gathering_caps(habitica_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${id}','chop',${day},29,'','',0,0);`)
+  sql(`INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${accountOf(id)}','chop',${day},29,'','',0,0);`)
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
@@ -344,7 +343,7 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   const lights = homeLights(home.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null) as { x: number; y: number }[])
   const at = await player(page)
   const open: [number, number][] = []
-  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, plants: home.plants ?? [] }, x, y)) open.push([x, y])
+  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y)) open.push([x, y])
   open.sort((a, b) => Math.hypot(a[0] * 16 - at.x, a[1] * 16 - at.y) - Math.hypot(b[0] * 16 - at.x, b[1] * 16 - at.y))
   let tile: [number, number] | null = null
   for (const t of open) {

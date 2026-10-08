@@ -1,7 +1,8 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, syncFromMenu, waitForWorld } from './connected'
-import { beginNewJourney, talkThrough, waitForArea, warp, expectToast } from './helpers'
+import { allow, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, syncFromMenu, waitForWorld } from './connected'
+import { talkThrough, warp, expectToast } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * Polish from the docs pass: syncing in the Commons (a safe area), the
@@ -12,25 +13,9 @@ import { beginNewJourney, talkThrough, waitForArea, warp, expectToast } from './
 /** Dev warp to any area id; waits until it has settled. */
 const go = (page: Page, to: string, tx: number, ty: number): Promise<void> => warp(page, to, tx, ty)
 
-test.describe('guest', () => {
-  test('a sample-hero sync works in the Commons, and is refused out on the road', async ({ page }) => {
-    await beginNewJourney(page)
-    await go(page, 'woodland', 15, 20)
-    await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'Try a sample hero' }).click()
-    await expect(page.getByRole('alert')).toContainText('Head back to Hearthwick or the Commons first')
-    await page.getByRole('button', { name: 'Back to the road' }).click()
-
-    await go(page, 'commons', 2, 21)
-    await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'Try a sample hero' }).click()
-    await expectToast(page, 'embers into your hand')
-    await page.getByRole('button', { name: 'Back to the road' }).click()
-    await expect(page.locator('.hud .embers')).toHaveText('3')
-  })
-
+test.describe('the world', () => {
   test('the journal checklist copies the naming and settles the warden', async ({ page }) => {
-    await beginNewJourney(page)
+    await freshPlayer(page)
     // Steps show as they are reached: accept the quest, copy the naming.
     await go(page, 'village', 16, 14)
     await talkThrough(page, /Talk to Mara/)
@@ -45,7 +30,7 @@ test.describe('guest', () => {
   })
 
   test('the menu lists B (arrange) and G (emotes) with the other keys', async ({ page }) => {
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await page.keyboard.press('Escape')
     const keys = page.getByTestId('controls-keys')
     await expect(keys).toContainText('Arrange your home')
@@ -61,7 +46,7 @@ test.describe('guest', () => {
     page.on('request', (r) => {
       if (r.url().includes('/assets/audio/')) audio.push(r.url())
     })
-    await beginNewJourney(page)
+    await freshPlayer(page)
     await page.keyboard.press('Escape')
     const toggle = page.getByTestId('sound-toggle')
     const volume = page.getByTestId('sound-volume')
@@ -75,9 +60,7 @@ test.describe('guest', () => {
     await expect(toggle).toHaveText(/Sound off/)
     await expect(volume).toBeDisabled()
 
-    await page.reload()
-    await page.getByRole('button', { name: /Continue/ }).click()
-    await waitForArea(page, 'village')
+    await reenter(page)
     await page.keyboard.press('Escape')
     await expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await expect(volume).toHaveValue('25')
@@ -91,9 +74,7 @@ test.describe('touch', () => {
   test.use({ viewport, deviceScaleFactor, isMobile, hasTouch, userAgent })
 
   test('on a phone the menu lists the touch controls instead of keys', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-    await waitForArea(page, 'village')
+    await freshPlayer(page)
     await page.getByRole('button', { name: /^Menu/ }).tap()
     const list = page.getByTestId('controls-touch')
     await expect(list).toContainText('Joystick')
@@ -104,9 +85,7 @@ test.describe('touch', () => {
   })
 })
 
-test.describe('connected', () => {
-  test.use({ server: true })
-
+test.describe('in a world', () => {
   test('a sync from the Commons reaches the world', async ({ page, context }) => {
     const id = newUser()
     allow(id)

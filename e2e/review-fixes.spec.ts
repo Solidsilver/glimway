@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { linkRev, linkStatus, serverState } from './connected'
-import { beginNewJourney, frames, expectToast } from './helpers'
+import { frames, expectToast } from './helpers'
 import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
 
 /**
@@ -8,7 +8,6 @@ import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, 
  * Go server: lost answers, the closed Wilds arch, redraw/tween hygiene,
  * modal input ownership, materials on home reads, and Space on the tray.
  */
-test.use({ server: true })
 
 type Stats = { gateDraws: number; tweens: number; deadTweens: number }
 const stats = (page: Page) => page.evaluate(() => (window as unknown as { __fsHomes: () => { stats: Stats } }).__fsHomes().stats)
@@ -74,7 +73,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
 test('finding 2: an exit to an unregistered area is overgrown (no crash, the save stays put)', async ({ page, pageErrors }) => {
   // The Commons arch leads into the Wilds now; a test-only exit stands in for
   // any destination this build has no area kind for.
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await go(page, 'commons', 21, 19)
   const saved = () => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved())
   const before = await saved()

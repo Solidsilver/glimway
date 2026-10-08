@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 /**
  * The client stores (session, items, papers, residents, the held tool and
- * the guide pin) in a guest game. They are Phaser-free, so they load here;
- * these tests listen on the real bus.
+ * the guide pin). They are Phaser-free, so they load here; these tests
+ * listen on the real bus. A session without a link is only ever the
+ * title's `null` — the link-less tests below cover the store fallbacks
+ * until C2 makes `link` non-null.
  */
 
 // The session saves through window timers; hold them so nothing writes.
@@ -12,12 +14,17 @@ const timers: (() => void)[] = [];
 (globalThis as unknown as { window: unknown }).window = {
   setTimeout: (fn: () => void) => timers.push(fn),
   clearTimeout: () => {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 
 const { bus, EV } = await import('../src/game/events.ts');
 const { Session } = await import('../src/game/session.ts');
-const { itemsFor } = await import('../src/game/items.ts');
+const { Link } = await import('../src/game/link.ts');
+const { memoryOutboxStore } = await import('../src/lib/api/outbox.ts');
+const { fakeServer, player, S } = await import('./helpers/link-rig.ts');
 const { grantPaper } = await import('../src/game/papers.ts');
+const { itemsFor } = await import('../src/game/items.ts');
 const { emitResidents } = await import('../src/game/residents.ts');
 const { setHeld, held } = await import('../src/game/held.ts');
 const { pinned, setPinned } = await import('../src/game/guide-pin.ts');
@@ -42,7 +49,8 @@ async function hear(names: string[], fn: () => unknown): Promise<Heard> {
   return heard;
 }
 
-const guest = () => new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 });
+const freshState = () => ({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 });
+const guest = () => new Session(freshState());
 
 test('setVitals clamps to the maxima, tells the HUD once, and saves on a loss', async () => {
   const s = guest();
@@ -58,7 +66,7 @@ test('setVitals clamps to the maxima, tells the HUD once, and saves on a loss', 
   assert.equal(timers.length, 1, 'the mana loss is saved soon');
 });
 
-test('a guest earns embers with a toast; a discovery is recorded once', async () => {
+test('embers are earned with a toast; a discovery is recorded once', async () => {
   const s = guest();
   const before = s.state.embers;
   const heard = await hear([EV.stats, EV.toast, EV.discovery], () => {
@@ -96,18 +104,29 @@ test('the residents journal hears only the flags it writes entries from', async 
   assert.deepEqual(heard[0].payload, { journalFlags: ['met:hazel@1', 'heirloom:x', 'warden-sliver:found'] });
 });
 
-test('a guest has no carried items, and a gift for another session is ignored', async () => {
-  const s = guest();
-  const items = itemsFor(s);
-  assert.equal(items.status, 'guest');
-  const r = await items.load();
-  assert.equal(r.ok, false);
-  assert.equal(!r.ok && r.code, 'guest');
-  const other = itemsFor(guest());
-  assert.notEqual(other, items, 'a new session gets its own store');
+test('a linked session reads its own world, and stores are separate', async () => {
+  const link = new Link({
+    api: fakeServer().api,
+    clientId: 'c1',
+    accountId: 'a1',
+    device: 'd1',
+    name: 'Tansy',
+    state: player(S()),
+    status: 'offline',
+    emit: () => {},
+    store: memoryOutboxStore(),
+    locks: null,
+    channel: null
+  })
+  const s = new Session(freshState(), undefined, link)
+  const items = itemsFor(s)
+  assert.equal(items.status, 'idle')
   const heard = await hear([EV.toast], () => bus.emit(EV.gift, { fromName: 'Pip', kind: 'item', itemDef: 'timber', qty: 2 }));
   assert.equal(heard.length, 1, 'only the current store answers');
   assert.match((heard[0].payload as { text: string }).text, /^Pip gave you /);
+  assert.notEqual(itemsFor(guest()), items, 'a new session gets its own store');
+  s.destroy(true);
+  link.stop();
 });
 
 test('the held tool and the pinned guide tell the HUD when they change', async () => {

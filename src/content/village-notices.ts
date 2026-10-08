@@ -45,6 +45,6 @@ export function projectNotice(id: string): ProjectNotice {
 /** Elara Quill signs the Turning notices (she reads the drift). */
 export const ELARA_SIGNATURE = '— E. Quill, for the Keeper';
 
-/** What the board says when it can't reach the world (guests, offline). */
-export const PROJECTS_NEED_WORLD = 'Village projects are kept by your world. Sign in to your world from the Menu to lend a hand.';
+/** What the board says when it can't reach the world (offline play). */
+export const PROJECTS_NEED_WORLD = 'Village projects are kept by your world. Come back when the road to it is clear, and lend a hand.';
 export const PROJECTS_OFFLINE = 'The project ledger is at Mara’s. Come back when the road to your world is clear.';

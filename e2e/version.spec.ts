@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, waitForWorld } from './connected'
-import { beginNewJourney, player } from './helpers'
+import { serverState } from './connected'
+import { player } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * The "new version" notice (src/ui/update.svelte.ts). The dev server never
@@ -29,7 +30,7 @@ async function stepAside(page: Page): Promise<{ x: number; y: number }> {
 }
 
 test('a new build shows a calm notice, waits for an open panel, and stays away once dismissed', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await serveBuild(page, 'next-build')
 
   // The Menu's quiet version line, linking to the changelog.
@@ -59,64 +60,8 @@ test('a new build shows a calm notice, waits for an open panel, and stays away o
   await expect(notice(page)).toBeVisible()
 })
 
-/**
- * Slows the guest save's writes by `window.__slowSaves` ms: opening its
- * database answers late, so the write itself happens late (holding back
- * only the put's answer would leave the data already on disk).
- */
-const SLOW_SAVES = () => {
-  const open = IDBFactory.prototype.open
-  IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<IDBFactory['open']>) {
-    const req = open.apply(this, args)
-    const ms = (window as unknown as { __slowSaves?: number }).__slowSaves
-    if (!ms || args[0] !== 'fingersnap') return req
-    let handler: ((e: Event) => void) | null = null
-    Object.defineProperty(req, 'onsuccess', { configurable: true, get: () => handler, set: (fn) => (handler = fn) })
-    req.addEventListener('success', (e) => setTimeout(() => handler?.call(req, e), ms))
-    return req
-  }
-}
-
-/** HP in the guest save on disk. */
-const savedHp = (page: Page) =>
-  page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('fingersnap')
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    try {
-      return await new Promise<number | undefined>((resolve) => {
-        const req = db.transaction('saves').objectStore('saves').get('current')
-        req.onsuccess = () => resolve((req.result as { state?: { hp?: number } } | undefined)?.state?.hp)
-        req.onerror = () => resolve(undefined)
-      })
-    } finally {
-      db.close()
-    }
-  })
-
-test('guest Reload: the world holds still, and a hit during the slow final write is saved too', async ({ page }) => {
-  await page.addInitScript(SLOW_SAVES)
-  await beginNewJourney(page)
-  await serveBuild(page, 'next-build')
-  await checkNow(page)
-  await expect(notice(page)).toBeVisible()
-  const hp = Number(await page.locator('[aria-label="Health"]').first().getAttribute('aria-valuenow'))
-  await page.evaluate(() => ((window as unknown as { __slowSaves: number }).__slowSaves = 700))
-  const reloaded = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame() })
-  await notice(page).getByRole('button', { name: 'Reload' }).click()
-  // Frozen while it saves: no input, no enemies, no physics.
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsFrame: () => { live: boolean } }).__fsFrame().live)).toBe(false)
-  await expect(notice(page).getByRole('button', { name: 'Saving…' })).toBeDisabled()
-  // A hit that was already on its way lands while the write is out.
-  await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(3))
-  await reloaded
-  await expect.poll(() => savedHp(page)).toBe(hp - 3)
-})
-
 test('odd answers to the check never bother the player', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   for (const answer of [
     { status: 404, body: 'not found' },
     { status: 200, body: '<!doctype html><title>Glimway</title>' },
@@ -133,20 +78,9 @@ test('odd answers to the check never bother the player', async ({ page }) => {
   await expect(page.locator('.toast.error')).toHaveCount(0)
 })
 
-/** Sign in from the title as a new allowlisted player and start fresh. */
-async function freshPlayer(page: Page): Promise<string> {
-  const id = newUser()
-  allow(id)
-  await routeHabitica(page.context())
-  await openTitleGuide(page)
-  await pasteAndConnect(page, id)
-  await waitForWorld(page)
-  return id
-}
-
 test.describe('phone, short landscape', () => {
   const { defaultBrowserType: _browser, ...phone } = devices['iPhone SE']
-  test.use({ ...phone, viewport: { width: 568, height: 320 }, server: true })
+  test.use({ ...phone, viewport: { width: 568, height: 320 } })
 
   test('568×320: the whole notice, both buttons and the failure copy stay on screen', async ({ page }) => {
     await freshPlayer(page)
@@ -171,9 +105,7 @@ test.describe('phone, short landscape', () => {
   })
 })
 
-test.describe('connected', () => {
-  test.use({ server: true })
-
+test.describe('in a world', () => {
   test('Reload uploads the pending save first, then reloads', async ({ page }) => {
     await freshPlayer(page)
     await serveBuild(page, 'next-build')
@@ -211,5 +143,28 @@ test.describe('connected', () => {
     expect(await page.evaluate(() => (window as unknown as { __stayed?: boolean }).__stayed)).toBe(true)
     // Play goes on: the freeze is lifted.
     await expect.poll(() => page.evaluate(() => (window as unknown as { __fsFrame: () => { live: boolean } }).__fsFrame().live)).toBe(true)
+  })
+
+  test('a reload-needed answer shows the reload notice, and Reload goes', async ({ page }) => {
+    await freshPlayer(page)
+    // The world server refuses this page's contract: strip the header with
+    // page.route, so A's real gate answers 409 reload-needed.
+    await page.route('**/api/sync', (route) => {
+      const headers = { ...route.request().headers() }
+      delete headers['x-glimway-contract']
+      return route.continue({ headers })
+    })
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Sync character' }).click()
+    // The notice waits for an open panel to close.
+    await page.getByRole('button', { name: 'Back to the road' }).click()
+    await expect(notice(page)).toBeVisible()
+    await expect(notice(page)).toContainText('This page is older than the world server.')
+    // Nothing can be written: Reload goes (no save-first settle to hold it).
+    const reloaded = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame() })
+    await notice(page).getByRole('button', { name: 'Reload' }).click()
+    await reloaded
+    // The page is back at the title (nothing was held for a settle).
+    await expect(page.getByTestId('continue-world')).toBeVisible({ timeout: 15_000 })
   })
 })

@@ -16,7 +16,7 @@ import { HEARTH_RECIPES } from '../lib/workshop.ts'
 
 /** One pin per player and world on this device (src/game/held.ts deviceKey). */
 // `fingersnap:` is the game's old name, kept so saved pins load.
-let key = 'fingersnap:pinned-guide:guest'
+let key = 'fingersnap:pinned-guide'
 
 function load(): string | null {
   try {
@@ -52,8 +52,8 @@ export function usePinFor(session: Session): void {
 }
 
 /**
- * Remember every guide step met now as a save flag, so a finished step
- * never un-ticks (the timber spent, the tea drunk). Connected players only.
+ * Remember every guide step met now as a story mark, so a finished step
+ * never un-ticks (the timber spent, the tea drunk).
  */
 export function recordGuideSteps(session: Session): void {
   for (const f of newlyMet(guideContext(session))) session.addFlag(f)
@@ -63,9 +63,9 @@ const HEARTH_MADE = new Set(HEARTH_RECIPES.map((r) => r.output.id))
 
 /** What the guides can see of this player now. */
 export function guideContext(session: Session): GuideContext {
-  const homes = session.link ? homesteadsFor(session) : null
-  const village = session.link ? villageFor(session) : null
-  const view = session.link ? itemsFor(session).view : null
+  const homes = homesteadsFor(session)
+  const village = villageFor(session)
+  const view = itemsFor(session).view
   const mine = homes?.mine ?? null
   const me = homes?.myId ?? null
   const instances = view?.instances ?? []

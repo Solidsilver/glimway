@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 /**
  * The "What's new" card (src/ui/whats-new.svelte.ts): after an update, the
@@ -37,7 +37,7 @@ const stored = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.ge
 
 test('after an update the card says what’s new, once', async ({ page }) => {
   await seenBefore(page)
-  await beginNewJourney(page)
+  await freshPlayer(page)
   // It waits for the arrival card, then shows.
   await expect(card(page)).toBeVisible({ timeout: 20_000 })
   await expect(card(page)).toContainText(`New in Glimway ${VERSION}`)
@@ -50,13 +50,13 @@ test('after an update the card says what’s new, once', async ({ page }) => {
   expect(await stored(page)).toEqual({ version: RUNNING, build: 'dev' })
 
   await page.reload()
-  await page.getByRole('button', { name: /Continue/ }).first().click()
+  await page.getByTestId('continue-world').click()
   await page.waitForTimeout(3000)
   await expect(card(page)).toBeHidden()
 })
 
 test('a first visit catches up quietly, and the Menu shows the newest lines any time', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await page.waitForTimeout(2500)
   await expect(card(page)).toBeHidden()
   expect(await stored(page)).toEqual({ version: RUNNING, build: 'dev' })
@@ -82,8 +82,7 @@ for (const [name, size] of [
     test(`${size.width}×${size.height}: the card and its button stay on screen and clear of the thumbs`, async ({ page }) => {
       // Every release unseen: the longest card.
       await seenBefore(page, '0.0.1')
-      await page.goto('/')
-      await page.getByRole('button', { name: /Wander as a guest/ }).tap()
+      await freshPlayer(page)
       await expect(card(page)).toBeVisible({ timeout: 20_000 })
       await page.waitForTimeout(400) // the slide-in
       const box = (await card(page).boundingBox())!

@@ -61,7 +61,7 @@ export interface EchoKeepsake {
   label: string;
   /** The camp's lines while you carry it and haven't left it yet. */
   offer: string[];
-  /** The one short line for guests: the leave waits until they're signed in. */
+  /** The one short line for guests: the leave waits until they're signed in. TODO(D): goes with the guest branches in wilds/sites.ts. */
   guest: string;
   /** When the keep is left (the server's yes): the echo's own register. */
   leave: string[];

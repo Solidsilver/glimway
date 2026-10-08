@@ -81,8 +81,7 @@ export const ITEM_ERRORS: Table = {
   'insufficient-materials': 'You don’t have enough to mend it.',
   'insufficient-embers': 'You don’t have enough embers.',
   'item-not-available': 'That isn’t in your pack any more.',
-  'item-not-found': 'That isn’t in your pack any more.',
-  guest: 'Things you carry are kept in a world. Sign in to yours from the Menu.'
+  'item-not-found': 'That isn’t in your pack any more.'
 }
 
 /** Village refusals: the chests, the bench, mail, projects, chores, the shelf, the desk and the woodpile (src/game/village.ts). */
@@ -136,8 +135,7 @@ export const VILLAGE_ERRORS: Table = {
   'invalid-page': 'That isn’t a page the desk can copy.',
   'page-not-held': 'You don’t hold that page. The desk copies pages you carry.',
   'nothing-ready': 'Nothing on the pile has seasoned yet. Green wood takes a real day.',
-  'invalid-action': 'That’s not something a woodpile does.',
-  guest: 'That needs a world. Sign in to your world from the Menu.'
+  'invalid-action': 'That’s not something a woodpile does.'
 }
 
 /** Homestead refusals, mostly Silas's (src/game/homestead.ts). */

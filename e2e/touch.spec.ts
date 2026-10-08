@@ -1,13 +1,12 @@
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { frames, player, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
 test('phone layout: joystick, roll, ability and action buttons fit and work', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+  await freshPlayer(page)
   await warp(page, 'woodland', 15, 20)
 
   const roll = page.getByRole('button', { name: 'Roll' })
@@ -36,9 +35,7 @@ test('phone layout: joystick, roll, ability and action buttons fit and work', as
 })
 
 test('phone: the action button speaks the naming to the warden', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
@@ -68,9 +65,7 @@ async function fingers(page: import('@playwright/test').Page) {
 
 async function startWithStick(page: import('@playwright/test').Page, stick: string): Promise<void> {
   await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
-  await page.goto('/')
-  await page.getByRole('button', { name: /Wander as a guest/ }).tap()
-  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
+  await freshPlayer(page)
   await warp(page, 'woodland', 15, 20)
   await waitForLive(page)
 }

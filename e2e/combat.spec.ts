@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { beginNewJourney, expectStage, frames, player, savedStage, stepToWarden, strikeAll, talkThrough, waitForLive, waitFrames, warden, warp, expectToast, savedToDisk } from './helpers'
+import { expectStage, frames, player, stepToWarden, strikeAll, talkThrough, waitForLive, waitFrames, warden, warp, expectToast } from './helpers'
+import { freshPlayer } from './home-helpers'
 
 type EnemyView = { x: number; y: number; state: string; hp: number; type: string; locked: boolean; body: { x: number; y: number; w: number; h: number } }
 
@@ -42,14 +43,14 @@ async function hurtWithin(page: Page, limit: { below: number } | { atMost: numbe
 /** Alone with beetle-a on the long straight at row 12: the slimes are cleared
  *  first, so any damage taken is the beetle's. */
 async function faceBeetle(page: Page): Promise<void> {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'woodland', 29, 12)
   await strikeAll(page, 999, 'wisp')
   await expect.poll(async () => (await enemies(page)).every((e) => e.type === 'beetle')).toBe(true)
 }
 
 test('slimes wind up before they hop, and the hop hurts', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   // Beside wisp-a (17,18), on the path.
   await warp(page, 'woodland', 15, 20)
   const before = await hp(page)
@@ -110,7 +111,7 @@ test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ pa
 })
 
 test('Shift rolls the hero and starts the roll cooldown', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   const before = await player(page)
   await waitForLive(page)
   await page.keyboard.down('ArrowRight')
@@ -121,7 +122,7 @@ test('Shift rolls the hero and starts the roll cooldown', async ({ page }) => {
 })
 
 test('knockback never leaves an enemy on a wall, tree or water tile', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'woodland', 15, 20)
   const near = async () => {
     const p = await player(page)
@@ -153,7 +154,7 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
 })
 
 test('the warden: blows never settle it, speaking the naming does', async ({ page }) => {
-  await beginNewJourney(page)
+  await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
@@ -170,8 +171,7 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   let g = await warden(page)
   expect(g.state).toBe('active')
   expect(g.speakings).toBe(0)
-  await savedToDisk(page)
-  expect(await savedStage(page)).toBe('clue-found')
+  await expectStage(page, 'clue-found')
 
   // Bait a lunge from a few steps off; when it stops to find its feet,
   // step in and speak the naming. Each speaking makes it falter.

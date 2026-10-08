@@ -5,8 +5,7 @@
  * the inventory panel, the pickups in the world and the hero's off hand
  * read it and hear about changes on the bus.
  *
- * Guests carry only the save's pack (src/lib/inventory.ts); everything here
- * needs a world.
+ * Everything here needs a world (the server's item model).
  */
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types.ts'
 import type { Refusal, Result } from '../lib/api/errors.ts'
@@ -17,7 +16,7 @@ import { bus, EV } from './events.ts'
 import type { Session } from './session.ts'
 import { presence } from './presence.ts'
 
-export type ItemsStatus = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
+export type ItemsStatus = 'idle' | 'loading' | 'ready' | 'offline'
 
 export { giftPhrase } from '../lib/items.ts'
 
@@ -31,7 +30,7 @@ export class Items {
 
   constructor(session: Session) {
     this.session = session
-    this.status = session.link ? 'idle' : 'guest'
+    this.status = 'idle'
     bus.on(EV.mutationResolved, (p) => {
       if (current?.items !== this || p.op.kind !== 'items') return
       void this.load().then(() => {
@@ -45,13 +44,9 @@ export class Items {
     })
   }
 
-  /** Read what's carried (connected only). */
+  /** Read what's carried from the server. */
   async load(): Promise<Result> {
-    const link = this.session.link
-    if (!link) {
-      this.status = 'guest'
-      return fail('guest')
-    }
+    const link = this.session.link!
     this.status = 'loading'
     const r = await link.readWith((raw) => raw.items())
     if (!r.ok) {
@@ -71,12 +66,11 @@ export class Items {
 
   /** Adopt an items view carried in another answer (a village mend's). */
   adoptView(v: ItemsView): void {
-    if (this.status !== 'guest') this.adopt(v)
+    this.adopt(v)
   }
 
   private async run(op: ItemsOp, fields: Record<string, unknown>): Promise<Result<ItemsActionResponse['result']>> {
-    const link = this.session.link
-    if (!link) return fail('guest')
+    const link = this.session.link!
     const r = await link.mutate<ItemsActionResponse>({ kind: 'items', op, fields })
     if (!r.ok) return fail(r.code)
     this.adopt(r.res.result.items, op)

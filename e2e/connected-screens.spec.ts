@@ -1,13 +1,11 @@
 import { expect, test, type Page } from './fixtures'
-import { allow, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, TOKEN, waitForWorld } from './connected'
-import { beginNewJourney, openTalk, talkThrough, untilChoices, warp, waitForArea, expectToast } from './helpers'
+import { allow, CONTRACT, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, TOKEN, waitForWorld } from './connected'
+import { openTalk, talkThrough, untilChoices, warp, expectToast } from './helpers'
 
 /**
  * Layout checks and screenshots for the connected-play screens, at desktop
  * and phone sizes. SCREENS=1 saves images to .agent/screens/.
  */
-test.use({ server: true })
-
 const sizes = [
   ['desktop', { width: 1200, height: 760 }],
   ['phone', { width: 390, height: 844 }]
@@ -39,7 +37,7 @@ for (const [name, vp] of sizes) {
     await page.screenshot({ path: `.agent/screens/${n}-${name}.png` })
   }
 
-  test(`screens: sign-in, invite-only, origin choice (${name})`, async ({ page, context }) => {
+  test(`screens: sign-in and invite-only (${name})`, async ({ page, context }) => {
     await page.setViewportSize(vp)
     await routeHabitica(context)
     // Phase 1 screens, reviewed in this pass.
@@ -62,27 +60,8 @@ for (const [name, vp] of sizes) {
     await page.getByRole('button', { name: 'Connect', exact: true }).click()
     const box = page.getByTestId('invite-only')
     await expect(box).toBeVisible()
-    await fits(page, vp, box.getByRole('button', { name: 'Play on this device instead' }))
+    await fits(page, vp, box.getByRole('button', { name: 'Join with this code' }))
     await shot(page, '04-invite-only')
-
-    // Origin choice: a guest with progress signs in from the Menu.
-    const id = newUser()
-    allow(id)
-    await page.goto('/')
-    await page.evaluate(async () => indexedDB.deleteDatabase('fingersnap'))
-    await beginNewJourney(page)
-    await warp(page, 'village', 16, 14)
-    await talkThrough(page, /Talk to Mara/)
-    await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'I have them' }).click()
-    await pasteAndConnect(page, id)
-    const origin = page.getByRole('dialog', { name: 'Welcome, Tansy' })
-    await expect(origin).toBeVisible()
-    await fits(page, vp, origin.getByRole('button', { name: /Start fresh/ }))
-    await origin.getByRole('button', { name: /Bring this device’s save/ }).scrollIntoViewIfNeeded()
-    await shot(page, '05-origin-choice')
-    await origin.getByRole('button', { name: /Bring this device’s save/ }).click()
-    await waitForWorld(page)
   })
 
   test(`screens: world title, lease, offline, notice, menu (${name})`, async ({ page, context, browser, baseURL }) => {
@@ -142,7 +121,7 @@ for (const [name, vp] of sizes) {
 
     // Offline. (Remember the revision this tab is based on: the other device
     // must write past it for the reconnect to count as "played elsewhere".)
-    const ourRev = (await page.request.get('/api/state').then((r) => r.json())).rev as number
+    const ourRev = (await serverState(page)).body.rev as number
     await context.setOffline(true)
     await hurt(page, 3)
     await expect(page.getByTestId('net-offline')).toBeVisible()
@@ -164,7 +143,7 @@ for (const [name, vp] of sizes) {
     await other.getByRole('button', { name: 'Take over here' }).click()
     await waitForWorld(other)
     await hurt(other, 8)
-    await expect.poll(async () => (await other.request.get('/api/state').then((r) => r.json())).rev).toBeGreaterThan(ourRev)
+    await expect.poll(async () => (await serverState(other)).body.rev).toBeGreaterThan(ourRev)
 
     await context.setOffline(false)
     const gate = page.getByRole('alertdialog', { name: 'Playing on another device' })
@@ -179,7 +158,7 @@ for (const [name, vp] of sizes) {
     await otherContext.close()
 
     // Signed out mid-play (the session ended on the server).
-    await page.request.delete('/api/session')
+    await page.request.delete('/api/session', CONTRACT)
     await hurt(page, 2)
     const out = page.getByRole('alertdialog', { name: 'You’ve been signed out' })
     await expect(out).toBeVisible()
@@ -193,11 +172,11 @@ for (const [name, vp] of sizes) {
     await shot(page, '16-title-world-offline')
     await page.unrouteAll()
 
-    // Signed out with a guest save: the title offers to sign in again.
+    // Signed out: the title offers the sign-in again.
     await page.goto('/')
-    await expect(page.getByRole('button', { name: 'Sign in to your world' })).toBeVisible()
+    await expect(page.getByTestId('connect-hero')).toBeVisible()
     await shot(page, '17-title-sign-in-again')
-    await page.getByRole('button', { name: 'Sign in to your world' }).click()
-    await expect(page.getByRole('heading', { name: 'Sign in to your world' })).toBeVisible()
+    await page.getByTestId('connect-hero').click()
+    await expect(page.getByRole('heading', { name: 'Find your User ID and API Token' })).toBeVisible()
   })
 }

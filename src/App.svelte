@@ -22,8 +22,7 @@
   } from './game/events'
   import { ui } from './ui/store.svelte'
   import { Session } from './game/session'
-  import { createNewGame, questObjective, type GameState, type QuestStage } from './lib/state'
-  import { clearSave, loadSaveRecord } from './lib/save'
+  import { questObjective, type GameState, type QuestStage } from './lib/state'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
   import { type ResidentsMetPayload } from './game/residents'
@@ -63,7 +62,7 @@
   import ConnectGuide from './ui/ConnectGuide.svelte'
   import { loadRemembered } from './lib/habitica/remembered'
   import { XP_PER_EMBER } from './lib/embers'
-  import { emberLine, titleChoice } from './content/connect-guide'
+  import { emberLine, titleChoice, unreachableCopy } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
   import { accountName, api, connectedSession, probeServer } from './ui/account'
   import { AccountFlow } from './ui/account-flow.svelte'
@@ -71,7 +70,6 @@
   import { clearCache, loadCache, loadLatestCache, saveCache } from './lib/api/cache'
   import type { Snapshot, WorldChoice } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
-  import OriginChoice from './ui/OriginChoice.svelte'
   import WorldChoiceGate from './ui/WorldChoiceGate.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
@@ -91,11 +89,10 @@
   import { pinnedProgress, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
 
-  type Phase = 'loading' | 'title' | 'playing' | 'recovery'
+  type Phase = 'loading' | 'title' | 'playing'
   type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
 
   let phase = $state<Phase>('loading')
-  let hasSave = $state(false)
   let panel = $state<Panel>(null)
   /** Mail panel opened at a neighbour's mailbox: who to send to. */
   let mailTo = $state<string | null>(null)
@@ -103,10 +100,7 @@
   let shelfGate = $state(0)
   /** Which chest the workshop opens on (the inventory's "your own chest" asks for the personal one). */
   let chestPick = $state<'shared' | 'personal'>('shared')
-  let recovery = $state<{ message: string; raw: string } | null>(null)
-  let rawCopied = $state(false)
-  let confirm = $state<'new' | 'discard' | 'overwrite' | null>(null)
-  /** New-game flow on the title screen: pick a way to play, or walk the connect guide. */
+  /** Title flow: the connect card, or the connect guide. */
   let titleView = $state<'choice' | 'guide'>('choice')
 
   /** The log-out confirm on the title screen. */
@@ -135,16 +129,10 @@
     }
   }
 
-  /** Save preview for the title screen's Continue card. */
-  const saveSummary = $derived(hasSave && session ? journeyLine(session.state) : null)
-
   /** The signed-in account's Continue card on the title screen. */
   const accountSummary = $derived.by(() => {
     if (account.choice) return { place: 'Your world', time: '', goal: firstWorldCopy.titleGoal }
     if (!ui.account) return null
-    if (account.snapshot && account.snapshot.saveOrigin === null) {
-      return { place: 'Your world', time: '', goal: 'Choose how to begin.' }
-    }
     const cached = account.cache && account.cache.accountId === ui.account.accountId ? account.cache : null
     const st = cached && (cached.dirty || !account.snapshot) ? cached.state : account.snapshot?.state
     return st ? journeyLine(st) : null
@@ -238,6 +226,7 @@
     }
     const onPresence = (p: PresencePayload) => {
       ui.presence = p
+      if (p.status === 'reload-needed') update.reloadNeeded()
       if (p.status !== 'live') ui.emoteOpen = false
     }
     const onLink = (p: LinkPayload) => {
@@ -393,34 +382,23 @@
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pagehide', onHide)
 
-    // No implicit fresh fallback: a corrupt or unreadable save surfaces a
-    // recovery state that preserves the data until the player chooses.
-    loadSaveRecord()
-      .then((record) => {
-        hasSave = record !== null
-        ui.vitalsSource = record?.vitalsSource ?? 'demo'
-        ui.importedProfile = record?.importedProfile ?? null
-        session = new Session(record?.state ?? createNewGame(), {
-          vitalsSource: record?.vitalsSource,
-          importedProfile: record?.importedProfile
-        })
+    // No local journey: the title is the server probe (sign in, or continue
+    // from the account's connected cache). The probe is one request; the
+    // title waits for it, so no state flashes.
+    void account
+      .init()
+      .then((probe) => {
+        if (probe.kind === 'reload-needed') update.reloadNeeded()
         phase = 'title'
-        void account.init()
-        // Opt-in remembered credentials: connect without a paste. Storage
-        // trouble just means "nothing remembered".
-        void loadRemembered().then((creds) => {
-          if (!creds) return
-          ui.remembered = true
-          if (!isConnected()) connectSession(creds.userId, creds.apiToken)
-        })
       })
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err)
-        const raw = err && typeof err === 'object' && 'raw' in err && err.raw != null ? JSON.stringify((err as { raw: unknown }).raw, null, 1) : ''
-        console.warn('[glimway] save could not be loaded', err)
-        recovery = { message, raw }
-        phase = 'recovery'
-      })
+      .catch(() => (phase = 'title'))
+    // Opt-in remembered credentials: connect without a paste. Storage
+    // trouble just means "nothing remembered".
+    void loadRemembered().then((creds) => {
+      if (!creds) return
+      ui.remembered = true
+      if (!isConnected()) connectSession(creds.userId, creds.apiToken)
+    })
 
     return () => {
       // Presence first: its socket, link poll and bus listener go with the App.
@@ -442,8 +420,8 @@
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
     sfx('open')
-    // The Wilds need their region before the first chunk builds: guests get
-    // the local epoch, connected players the world's frozen one.
+    // The Wilds need their region before the first chunk builds: the world's
+    // frozen epoch, read through the link.
     await prepareWilds(session)
     // The Commons builds for the lane as the server holds it: reading the
     // lane here, before the scene builds, saves a rebuild (a second ground
@@ -498,12 +476,9 @@
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
-    hasSave = true
-    // The guest journey saves itself one last time and stays on this device.
     if (prev && prev !== next) prev.destroy()
-    // Presence follows connected play (and its lease); guests have none.
-    if (next.link) startPresence(next.link)
-    else stopPresence()
+    // Presence follows connected play (and its lease).
+    startPresence(next.link!)
     if (phase === 'playing') {
       panel = null
       stopGame(game)
@@ -534,6 +509,12 @@
     if (update.reloading) return
     update.reloading = true
     update.held = null
+    // The server refuses this client's contract: nothing can be written, so
+    // skip the save-first settle and just go.
+    if (update.cause === 'contract') {
+      window.location.reload()
+      return
+    }
     const result = session ? await session.settle() : 'saved'
     if (result === 'saved') {
       window.location.reload()
@@ -543,76 +524,12 @@
     update.held = result
   }
 
-  function requestNew(): void {
-    if (hasSave) confirm = 'new'
-    else showChoice()
-  }
-
-  /** A fresh guest journey in place of this one (the old one is dropped, not saved). */
-  function resetGuest(): void {
-    session?.destroy(true)
-    session = new Session(createNewGame())
-    hasSave = false
-    ui.vitalsSource = 'demo'
-    ui.importedProfile = null
-  }
-
-  /** A confirmed new journey: nothing is written until the player picks a way to play. */
-  function showChoice(): void {
-    confirm = null
-    if (starting) return
-    if (hasSave) resetGuest()
-    titleView = 'choice'
-  }
-
-  /** Guest path: today's demo start. */
-  async function startFresh(): Promise<void> {
-    confirm = null
-    if (starting) return
-    resetGuest()
-    void session?.save()
-    await begin()
-  }
-
-  /** Habitica path: a fresh game whose connect guide runs before Mara's first line. */
-  function startHabitica(): void {
-    if (starting) return
-    resetGuest()
-    void session?.save()
-    titleView = 'guide'
-  }
-
-  async function copyRawSave(): Promise<void> {
-    if (!recovery?.raw) return
-    try {
-      await navigator.clipboard.writeText(recovery.raw)
-    } catch {
-      /* text stays visible in the details box */
-    }
-    rawCopied = true
-  }
-
-  async function discardAndReset(): Promise<void> {
-    confirm = null
-    await clearSave()
-    window.location.reload()
-  }
-
-  /** Explicit overwrite of a corrupt record with a fresh demo save. */
-  async function overwriteAndStart(): Promise<void> {
-    confirm = null
-    const { saveGame } = await import('./lib/save')
-    await saveGame(createNewGame(), { overwriteCorrupt: true })
-    window.location.reload()
-  }
-
   /** What is up over the world, top first; src/ui/layers.ts says what each holds back. */
   const layers = $derived(
     layersUp({
       gate: account.gate !== null,
       lease: leaseBlock !== null,
       move: account.moving !== null,
-      confirm: confirm !== null,
       logout: confirmLogout,
       naming: home.namePrompt !== null,
       'leave-deed': home.leaveAsk !== null,
@@ -851,7 +768,7 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={closeCharacter} onMenu={() => (panel = 'menu')} onInventory={() => (panel = 'inventory')} />
+      <CharacterPanel {session} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
       <InventoryPanel
         {session}
@@ -873,10 +790,6 @@
         onClose={() => toggle('menu')}
         {onSignedIn}
         onLogout={logout}
-        onEnterWorld={() => {
-          panel = null
-          void account.continue()
-        }}
         onMove={(target, home, view) => account.openMove(target, home, view)}
         onLeave={(view) => account.openLeave(view)}
         onWhatsNew={() => {
@@ -904,27 +817,7 @@
           <p class="tagline">Relight the old lantern road.</p>
         </div>
 
-        {#if phase === 'recovery' && recovery}
-          <div class="panel card">
-            <h2 class="err">This save got a little scrambled.</h2>
-            <p class="fine">We couldn’t read your journey, but nothing has been deleted. You can try again, keep a copy of the data, or begin fresh.</p>
-            <p class="tech">{recovery.message}</p>
-            <div class="choices">
-              <button type="button" class="primary" onclick={() => window.location.reload()}>Try again</button>
-              {#if recovery.raw}
-                <button type="button" onclick={copyRawSave}>{rawCopied ? 'Copied (also shown below)' : 'Copy the scrambled data'}</button>
-              {/if}
-              <button type="button" onclick={() => (confirm = 'overwrite')}>Start a new journey</button>
-              <button type="button" class="ghost" onclick={() => (confirm = 'discard')}>Delete it and reload</button>
-            </div>
-            {#if recovery.raw}
-              <details>
-                <summary>Show the scrambled data</summary>
-                <textarea readonly rows="6">{recovery.raw}</textarea>
-              </details>
-            {/if}
-          </div>
-        {:else if phase === 'loading'}
+        {#if phase === 'loading'}
           <p class="status"><span class="spark"></span> Lighting the lamps…</p>
         {:else}
           <div class="actions">
@@ -942,33 +835,26 @@
               {#if !account.offline}
                 <button type="button" class="secondary small" onclick={() => (confirmLogout = true)}>{accountCopy.logout}</button>
               {/if}
-            {:else if titleView === 'guide' && session}
+            {:else if titleView === 'guide'}
               <div class="panel guide-card">
-                <h2 class="guide-title"><Icon name="person" size={18} /> {hasSave ? 'Sign in to your world' : titleChoice.habitica}</h2>
-                <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} onReady={begin} {onSignedIn} />
+                <h2 class="guide-title"><Icon name="person" size={18} /> {titleChoice.habitica}</h2>
+                <ConnectGuide {session} mode="title" onBack={() => (titleView = 'choice')} {onSignedIn} />
               </div>
-            {:else if hasSave && saveSummary}
-              <button type="button" class="primary continue" onclick={begin}>
-                <span class="big">Continue</span>
-                <span class="meta"><Icon name="lantern" size={12} /> {saveSummary.place} · {saveSummary.time}</span>
-                <span class="goal">{saveSummary.goal}</span>
-              </button>
-              <button type="button" class="secondary" onclick={requestNew}>New journey</button>
-              {#if ui.server === 'available' && !ui.account && !account.choice}
-                <!-- A returning player whose sign-in ended: the guest journey stays, nothing is replaced. -->
-                <button type="button" class="ghost signin" onclick={() => (titleView = 'guide')}>
-                  <Icon name="lantern" size={12} /> Sign in to your world
-                </button>
-              {/if}
+                {:else if update.ready && update.cause === 'contract'}
+              <!-- The server refused this page's contract: the same quiet notice, here at the title. -->
+              <UpdateNotice onReload={reloadForUpdate} />
+            {:else if ui.server === 'unavailable'}
+              <!-- The world server didn't answer and there's nothing to play from: say so plainly. -->
+              <div class="panel card unreachable" data-testid="unreachable">
+                <h2 class="guide-title"><Icon name="cloud" size={18} /> {unreachableCopy.title}</h2>
+                <p class="fine">{unreachableCopy.body}</p>
+                <button type="button" class="primary" onclick={() => window.location.reload()}>{unreachableCopy.retry}</button>
+              </div>
             {:else}
               <div class="choice-col">
-                <button type="button" class="primary continue" onclick={startHabitica}>
+                <button type="button" class="primary continue" data-testid="connect-hero" onclick={() => (titleView = 'guide')}>
                   <span class="big">{titleChoice.habitica}</span>
                   <span class="meta">{emberLine(XP_PER_EMBER)}</span>
-                </button>
-                <button type="button" class="secondary guest" onclick={startFresh}>
-                  <span class="big">{titleChoice.guest}</span>
-                  <span class="gmeta">{titleChoice.guestMeta}</span>
                 </button>
               </div>
             {/if}
@@ -984,9 +870,7 @@
           {/if}
         {/if}
         {#if account.error && !((ui.account || account.choice) && accountSummary)}<p class="title-error" role="alert">{account.error}</p>{/if}
-        <p class="fineprint">
-          {(ui.account || account.choice) ? 'Plays right here in your browser. Your journey saves to your world.' : 'Plays right here in your browser. Your saves stay on this device.'}
-        </p>
+        <p class="fineprint">Plays right here in your browser. Your journey saves to your world.</p>
       </div>
     </div>
   {/if}
@@ -999,16 +883,6 @@
       error={gate.error}
       picked={gate.picked}
       onChoose={(c) => void account.chooseWorld(c)}
-      onCancel={() => (account.gate = null)}
-    />
-  {:else if account.gate?.kind === 'origin'}
-    {@const gate = account.gate}
-    <OriginChoice
-      name={gate.name}
-      local={gate.local}
-      busy={gate.busy}
-      error={gate.error}
-      onChoose={(c) => void account.chooseOrigin(c)}
       onCancel={() => (account.gate = null)}
     />
   {:else if account.gate?.kind === 'elsewhere'}
@@ -1080,35 +954,6 @@
         bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
       }}
       onCancel={() => (home.leaveAsk = null)}
-    />
-  {/if}
-
-  {#if confirm === 'new'}
-    <ConfirmDialog
-      title="Start a new journey?"
-      body="Your current journey will be replaced. Copy a save code from the Menu first if you might want it back."
-      confirmLabel="Start fresh"
-      danger
-      onConfirm={showChoice}
-      onCancel={() => (confirm = null)}
-    />
-  {:else if confirm === 'discard'}
-    <ConfirmDialog
-      title="Delete the scrambled save?"
-      body="It will be gone for good. If you might want it, copy the data first."
-      confirmLabel="Delete it"
-      danger
-      onConfirm={discardAndReset}
-      onCancel={() => (confirm = null)}
-    />
-  {:else if confirm === 'overwrite'}
-    <ConfirmDialog
-      title="Begin fresh?"
-      body="A brand-new journey replaces the scrambled save — it won’t be recoverable afterwards."
-      confirmLabel="Begin fresh"
-      danger
-      onConfirm={overwriteAndStart}
-      onCancel={() => (confirm = null)}
     />
   {/if}
 </main>
@@ -1301,21 +1146,6 @@
     text-align: center;
     line-height: 1.35;
   }
-  .guest {
-    display: grid;
-    gap: 2px;
-    padding: 10px 16px 12px;
-  }
-  .guest .big {
-    font-family: var(--font-display);
-    font-size: 19px;
-  }
-  .guest .gmeta {
-    font-family: var(--font-body);
-    font-size: 12.5px;
-    font-weight: 600;
-    opacity: 0.8;
-  }
   .guide-card {
     box-sizing: border-box;
     width: min(440px, 100%);
@@ -1370,20 +1200,6 @@
     background: rgba(79, 134, 214, 0.35);
     border-color: rgba(143, 184, 255, 0.55);
   }
-  .ghost.signin {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    font-size: 14px;
-    color: var(--paper);
-    text-decoration: underline;
-    text-decoration-color: rgba(244, 228, 193, 0.4);
-    text-underline-offset: 4px;
-  }
-  .ghost.signin:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-  }
   .secondary.small {
     padding: 5px 14px;
     font-size: 14px;
@@ -1424,41 +1240,6 @@
     user-select: text;
     -webkit-user-select: text;
   }
-  .err {
-    margin: 0 0 6px;
-    font-size: 20px;
-    color: var(--danger);
-  }
-  .tech {
-    font-family: ui-monospace, monospace;
-    font-size: 12px;
-    color: var(--text-faint);
-    word-break: break-word;
-  }
-  .choices {
-    display: grid;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  details {
-    margin-top: 10px;
-  }
-  summary {
-    font-size: 13px;
-    color: var(--text-soft);
-    cursor: pointer;
-  }
-  textarea {
-    width: 100%;
-    margin-top: 6px;
-    font-family: ui-monospace, monospace;
-    font-size: 11px;
-    border: 2px solid var(--wood);
-    border-radius: 8px;
-    padding: 8px;
-    background: var(--cream-hi);
-  }
-
   @keyframes drift {
     from { transform: scale(1) translate(0, 0); }
     to { transform: scale(1.06) translate(-1.5%, -1%); }

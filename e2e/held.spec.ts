@@ -9,7 +9,6 @@ import { expectToast, frames, waitForLive, warp } from './helpers'
  * a moment, never an E); the mouse works the piece under the cursor; on a
  * phone the small buttons around the action button switch.
  */
-test.use({ server: true })
 
 type Held = { kind: string; belt: string[] }
 type Gather = { spots: { target: string; tx: number; ty: number }[]; prompt: { target: string; label: string } | null; hint: { tx: number; ty: number } | null; last: string }

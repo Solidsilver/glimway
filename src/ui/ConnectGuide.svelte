@@ -13,29 +13,28 @@
   import { syncSafety } from '../game/sync-safety'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
-  import { connectedClient, connectSession, creatorId, disconnectSession, fixtureProfiles, friendlyErrorCopy, isConnected } from './habitica-local'
+  import { connectedClient, connectSession, disconnectSession, friendlyErrorCopy, isConnected, memoryCredentials } from './habitica-local'
   import { api } from './account'
   import { errorCode, isUnreachable } from '../lib/api/errors'
   import type { Snapshot, WorldChoice } from '../lib/api/types'
   import { offlineCopy, signInCopy } from '../content/connected'
 
   /**
-   * The Habitica connect guide, shared by the title screen ("title": a fresh
-   * game, nothing has started yet) and the Menu panel ("menu"). Credentials
-   * live in habitica-local's memory holder; only the opt-in Remember box
-   * ever writes them anywhere (src/lib/habitica/remembered.ts).
+   * The Habitica connect guide, shared by the title screen ("title": nobody
+   * is signed in yet, so no session exists) and the Menu panel ("menu": a
+   * connected session is playing). Credentials live in habitica-local's
+   * memory holder; only the opt-in Remember box ever writes them anywhere
+   * (src/lib/habitica/remembered.ts).
    */
   let {
     session,
     mode,
     onBack,
-    onReady,
     onSignedIn
   }: {
-    session: Session
+    session: Session | null
     mode: 'title' | 'menu'
     onBack?: () => void
-    onReady?: () => void
     /** A Glimway server answered the sign-in: connected mode takes over from here. */
     onSignedIn?: (snapshot: Snapshot | WorldChoice, profile: HabiticaProfile) => void
   } = $props()
@@ -59,9 +58,8 @@
   /** True when the last sign-in attempt came from two unlabeled codes. */
   let lastWasUnlabeled = false
   let syncBusy = $state(false)
-  const setupNotice = creatorId() === null
   /** Connected play: pasted details only enable syncing; the server keeps the journey. */
-  const remote = $derived(!!session.link)
+  const remote = $derived(!!session?.link)
   const linkOffline = $derived(remote && ui.link?.status !== 'online')
   /** Offer the server sign-in: a server answered, nobody is signed in yet, and play is not connected. */
   const canSignIn = $derived(ui.server === 'available' && !ui.account && !remote && !!onSignedIn)
@@ -69,9 +67,6 @@
   let showInvite = $state(false)
   /** The server said this account needs an invite. */
   let inviteOnly = $state(false)
-  /** The server refused for another reason (rate limit, trouble): local play is offered. */
-  let offerLocal = $state(false)
-
   const hero = $derived(ui.importedProfile ?? heroPreview)
 
   /** Text fields must not leak keys to the game (Phaser captures WASD/E/F). */
@@ -107,7 +102,7 @@
    * test is the save's, as the shared rules and the server check it.
    */
   function syncBlocker(): string | null {
-    if (mode === 'title') return null // nothing has started: a new game is in the village
+    if (mode === 'title' || !session) return null // nothing has started: the journey begins in the village
     const safety = syncSafety()
     if (!safety) return 'The world is still waking up — try again in a moment.'
     if (!isSafeArea(session.state.area)) return syncCopy.goSafe
@@ -156,7 +151,7 @@
     if (canSignIn) {
       syncBusy = true
       connection = 'syncing'
-      let next: 'done' | 'stop' | 'local' = 'local'
+      let next: 'done' | 'stop' = 'stop'
       try {
         const profile = await connectedClient()!.fetchProfile()
         heroPreview = profile
@@ -168,23 +163,27 @@
         syncBusy = false
         if (connection === 'syncing') connection = isConnected() ? 'connected' : 'disconnected'
       }
-      if (next !== 'local') return
+      if (next === 'done') return
     }
-    await localSignIn(creds)
+    // No world server answered (and nothing to sync): there is no play
+    // without one. Say so plainly — unless the failure already said why.
+    if (!connectionError && !inviteOnly) {
+      ui.server = 'unavailable'
+      connectionError = signInCopy.unreachable
+    }
   }
 
   /**
    * Sign in to the Glimway server with the details just checked against
-   * Habitica. The server reads Habitica once to prove the account, and never
-   * keeps the token. 'local' means no server answered: carry on as today.
+   * Habitica. This is the one time the token reaches the server: it reads
+   * Habitica once to prove the account, and never keeps the token.
    */
-  async function serverSignIn(creds: { userId: string; apiToken: string }, profile: HabiticaProfile): Promise<'done' | 'stop' | 'local'> {
+  async function serverSignIn(creds: { userId: string; apiToken: string }, profile: HabiticaProfile): Promise<'done' | 'stop'> {
     try {
       const snapshot = await api.login({ userId: creds.userId, token: creds.apiToken, invite: inviteCode, party: profile.partyId ?? '' })
       await rememberIfAsked(creds)
       clearPaste()
       inviteOnly = false
-      offerLocal = false
       inviteCode = ''
       connection = 'connected'
       step = 3
@@ -194,7 +193,7 @@
       const code = errorCode(err)
       if (isUnreachable(err)) {
         ui.server = 'unavailable'
-        return 'local'
+        return 'stop'
       }
       if (code === 'habitica-auth') {
         failSignIn(new HabiticaApiError('auth', 'Habitica rejected the details.', { status: 401 }))
@@ -206,52 +205,11 @@
         connectionError = inviteCode.trim() ? 'That invite code didn’t work. Check it, or ask for a new one.' : ''
         return 'stop'
       }
-      offerLocal = true
       const wait = err instanceof Error && 'retryAfterMs' in err ? Number((err as { retryAfterMs?: number }).retryAfterMs ?? 0) : 0
       connectionError = code === 'login-rate-limited' || code === 'login-global-rate-limited' || code === 'login-busy' || code === 'habitica-rate-limited'
         ? signInCopy.rateLimited(Math.max(1, Math.round(wait / 1000)))
         : signInCopy.serverTrouble
       return 'stop'
-    }
-  }
-
-  /** "Play on this device instead": the details stay in memory, the journey stays local. */
-  async function playLocally(): Promise<void> {
-    const creds = connectedClient() ? resolved ?? null : null
-    inviteOnly = false
-    offerLocal = false
-    connectionError = ''
-    if (!creds) {
-      step = 2
-      return
-    }
-    await localSignIn(creds)
-  }
-
-  /** Today's path: apply the hero to the journey on this device. */
-  async function localSignIn(creds: { userId: string; apiToken: string }): Promise<void> {
-    const blocker = syncBlocker()
-    if (blocker) {
-      // Not somewhere safe to apply a sync: still verify the sign-in (one read).
-      syncBusy = true
-      try {
-        heroPreview = await connectedClient()!.fetchProfile()
-        await rememberIfAsked(creds)
-        clearPaste()
-        connection = 'connected'
-        step = 3
-        connectionError = `${blocker} Then press Sync.`
-      } catch (err) {
-        failSignIn(err)
-      } finally {
-        syncBusy = false
-      }
-      return
-    }
-    const ok = await syncCharacter(true)
-    if (ok) {
-      await rememberIfAsked(creds)
-      clearPaste()
     }
   }
 
@@ -265,6 +223,7 @@
   /** One explicit GET per press. Returns true when the profile was fetched
    * and the sync handled (applied or already current). */
   async function syncCharacter(signingIn = false): Promise<boolean> {
+    if (!session) return false // nothing is playing yet: the sign-in signs in
     const client = connectedClient()
     if (!client) {
       connection = 'disconnected'
@@ -390,13 +349,14 @@
    * fetches, the server records").
    */
   async function remoteSync(profile: HabiticaProfile, signingIn: boolean): Promise<boolean> {
-    const result = await session.link!.sync(profile)
+    const s = session!
+    const result = await s.link!.sync(profile)
     if (result.ok) {
       connection = 'connected'
       step = 3
       heroPreview = profile
-      ui.vitalsSource = session.vitalsSource
-      ui.importedProfile = session.importedProfile
+      ui.vitalsSource = s.vitalsSource
+      ui.importedProfile = s.importedProfile
       if (result.welcome > 0) {
         sfx('ember')
         ui.toast({ text: `Mara presses ${result.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
@@ -443,7 +403,7 @@
   function disconnect(alsoForget: boolean): void {
     askForget = false
     // Ends the sync session: an in-flight sync must not commit after this.
-    session.markReset()
+    session?.markReset()
     disconnectSession()
     heroPreview = null
     connectionError = ''
@@ -468,43 +428,6 @@
     }
   }
 
-  /** Offline demo of the import pipeline (no network, no credentials). */
-  async function sampleImport(): Promise<void> {
-    if (syncBusy) return
-    const blocker = syncBlocker()
-    if (blocker) {
-      connectionError = blocker
-      return
-    }
-    const generation = session.currentGeneration
-    const sample = fixtureProfiles().find((f) => f.key === 'lowLevel') ?? fixtureProfiles()[0]
-    const result = syncProfile(
-      { state: session.state, vitalsSource: session.vitalsSource, importedProfile: session.importedProfile ?? undefined },
-      sample.profile,
-      { atSafeBoundary: true }
-    )
-    if (result.status === 'rejected') {
-      connectionError = syncCopy.sampleUnsafe
-      return
-    }
-    syncBusy = true
-    try {
-      const applied = await session.applySynced(result.save, generation)
-      if (applied === 'committed') {
-        ui.vitalsSource = 'imported'
-        ui.importedProfile = sample.profile
-        ui.toast({ text: `${sample.profile.name} steps into Hearthwick.`, icon: 'person' })
-        emberToast(result)
-      } else if (applied === 'save-failed') {
-        connectionError = 'The sample hero is ready, but this browser wouldn’t save — nothing changed.'
-      } else if (applied === 'stale') {
-        connectionError = 'That was cancelled because your journey changed. Nothing was applied.'
-      }
-    } finally {
-      syncBusy = false
-    }
-  }
-
   function onTabKey(e: KeyboardEvent): void {
     const i = guideTabs.findIndex((t) => t.id === tab)
     const next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null
@@ -512,6 +435,34 @@
     e.preventDefault()
     tab = guideTabs[(next + guideTabs.length) % guideTabs.length].id
     queueMicrotask(() => document.getElementById(`guide-tab-${tab}`)?.focus())
+  }
+
+  // Remembered credentials arrive at load, after this guide mounted: catch
+  // the guide up (nobody is signed in yet, and nothing is pasted). An
+  // explicit Disconnect wipes the memory holder, so it never overrides one.
+  $effect(() => {
+    if (ui.remembered && isConnected() && !remote && step < 3 && !parsed) {
+      connection = 'connected'
+      step = 3
+    }
+  })
+
+  /** Sign in to the world with the credentials already in memory (Remember). */
+  async function signInRemembered(): Promise<void> {
+    const creds = memoryCredentials()
+    if (syncBusy || !creds) return
+    syncBusy = true
+    connection = 'syncing'
+    try {
+      const profile = await connectedClient()!.fetchProfile()
+      heroPreview = profile
+      await serverSignIn(creds, profile)
+    } catch (err) {
+      failSignIn(err)
+    } finally {
+      syncBusy = false
+      if (connection === 'syncing') connection = isConnected() ? 'connected' : 'disconnected'
+    }
   }
 
   const activeTab = $derived(guideTabs.find((t) => t.id === tab) ?? guideTabs[0])
@@ -523,18 +474,11 @@
 </script>
 
 <div class="guide">
-  {#if setupNotice}
-    <p class="fine">Live Habitica connection isn’t switched on in this build, but you can still try a sample hero to see how it works.</p>
-    <div class="row">
-      <button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>
-    </div>
-    <p class="tiny">Builders: set VITE_HABITICA_CREATOR_ID to enable live connection.</p>
-  {:else}
-    <ol class="steps" aria-label="Steps">
-      <li class:on={step === 1} class:done={step > 1} aria-current={step === 1 ? 'step' : undefined}><span>1</span> Find</li>
-      <li class:on={step === 2} class:done={step > 2} aria-current={step === 2 ? 'step' : undefined}><span>2</span> Paste</li>
-      <li class:on={step === 3} aria-current={step === 3 ? 'step' : undefined}><span>3</span> Connected</li>
-    </ol>
+  <ol class="steps" aria-label="Steps">
+    <li class:on={step === 1} class:done={step > 1} aria-current={step === 1 ? 'step' : undefined}><span>1</span> Find</li>
+    <li class:on={step === 2} class:done={step > 2} aria-current={step === 2 ? 'step' : undefined}><span>2</span> Paste</li>
+    <li class:on={step === 3} aria-current={step === 3 ? 'step' : undefined}><span>3</span> Connected</li>
+  </ol>
 
     {#if step !== 2}
     <div class="embers-note">
@@ -573,9 +517,7 @@
       <div class="row">
         {#if onBack}<button type="button" class="ghost" onclick={onBack}>Back</button>{/if}
         <button type="button" class="primary" onclick={() => (step = 2)}>I have them</button>
-        {#if !remote}<button type="button" onclick={sampleImport} disabled={syncBusy}>Try a sample hero</button>{/if}
       </div>
-      <!-- A sample hero refused here (not somewhere safe) says why, instead of nothing. -->
       {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
     {:else if step === 2}
       <h4 class="step-title">{guideCopy.step2}</h4>
@@ -651,17 +593,10 @@
           {#if connectionError}<p class="error" role="alert">{connectionError}</p>{/if}
           <div class="row">
             <button type="button" class="primary" onclick={signIn} disabled={syncBusy || !resolved || !inviteCode.trim()}>{signInCopy.inviteJoin}</button>
-            <button type="button" onclick={playLocally} disabled={syncBusy}>{signInCopy.playLocal}</button>
           </div>
-          <p class="tiny">{signInCopy.playLocalNote}</p>
         </div>
       {:else if connectionError}
         <p class="error" role="alert">{connectionError}</p>
-      {/if}
-      {#if offerLocal && !inviteOnly}
-        <div class="row">
-          <button type="button" onclick={playLocally} disabled={syncBusy}>{signInCopy.playLocal}</button>
-        </div>
       {/if}
       {#if rememberNote}<p class="error" role="alert">{rememberNote}</p>{/if}
 
@@ -720,9 +655,10 @@
         </div>
       {:else}
         <div class="row">
-          {#if mode === 'title' && onReady && ui.importedProfile}
-            <button type="button" class="primary" onclick={onReady}>Begin your journey</button>
-          {:else}
+          {#if mode === 'title' && canSignIn && isConnected()}
+            <!-- Remembered details: sign in without a paste. -->
+            <button type="button" class="primary" onclick={signInRemembered} disabled={syncBusy} data-testid="signin-remembered">Sign in to your world</button>
+          {:else if session}
             <button type="button" class="primary" onclick={() => syncCharacter()} disabled={syncBusy || linkOffline} title={linkOffline ? offlineCopy.needs : undefined}>Sync character</button>
           {/if}
           <button type="button" onclick={requestDisconnect}>Disconnect</button>
@@ -740,7 +676,6 @@
       <p>{whyToken.honest}</p>
       <p>{whyToken.where}</p>
     </details>
-  {/if}
 </div>
 
 <style>
