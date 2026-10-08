@@ -14,7 +14,7 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 		return "", fail(400, "invalid-asset")
 	}
 	v := *req.Asset
-	if req.ToID == s.HabiticaID || req.ToID == "" {
+	if req.ToID == s.AccountID || req.ToID == "" {
 		return "", fail(400, "self-gift")
 	}
 	if err := validAsset(v); err != nil {
@@ -28,7 +28,7 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 		return "", fail(409, "not-giveable")
 	}
 	var world string
-	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=?", req.ToID).Scan(&world)
+	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", req.ToID).Scan(&world)
 	if err == sql.ErrNoRows {
 		return "", fail(404, "recipient-not-found")
 	}
@@ -39,14 +39,14 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 		return "", fail(403, "world-access-denied")
 	}
 	var eligible bool
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)", req.ToID, req.ToID).Scan(&eligible); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica')) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica'))", req.ToID, req.ToID).Scan(&eligible); err != nil {
 		return "", err
 	}
 	if !eligible {
 		return "", fail(403, "recipient-unavailable")
 	}
 	radius := float64(content.ItemsRules.Rules.Give.RadiusTiles * wildsTileSize)
-	if a.presence == nil || !a.presence.together(s.WorldID, s.HabiticaID, req.ToID, radius) {
+	if a.presence == nil || !a.presence.together(s.WorldID, s.AccountID, req.ToID, radius) {
 		return "", fail(409, "not-together")
 	}
 	if v.Kind == "instance" {
@@ -71,13 +71,13 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	}
 	switch v.Kind {
 	case "material", "item":
-		err = packPut(ctx, tx, req.ToID, v.ID, got.Makers, "gift", s.HabiticaID, now)
+		err = packPut(ctx, tx, req.ToID, v.ID, got.Makers, "gift", s.AccountID, now)
 	case "instance":
-		if err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.HabiticaID, now); err == nil {
-			err = fittedLedger(ctx, tx, req.ToID, v.Instance, 1, "gift", s.HabiticaID, now)
+		if err = currency(ctx, tx, req.ToID, content.StackCurrency(v.ID), 1, "gift", s.AccountID, now); err == nil {
+			err = fittedLedger(ctx, tx, req.ToID, v.Instance, 1, "gift", s.AccountID, now)
 		}
 	default:
-		err = currency(ctx, tx, req.ToID, "decoration:"+v.ID, v.Qty, "gift", s.HabiticaID, now)
+		err = currency(ctx, tx, req.ToID, "decoration:"+v.ID, v.Qty, "gift", s.AccountID, now)
 	}
 	if err != nil {
 		return "", err

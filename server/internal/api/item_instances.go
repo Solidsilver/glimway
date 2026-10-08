@@ -153,7 +153,7 @@ func makerOf(ctx context.Context, tx *sql.Tx, id string, cache map[string]*maker
 		return v, nil
 	}
 	var name string
-	err := tx.QueryRowContext(ctx, "SELECT display_name FROM players WHERE habitica_id=?", id).Scan(&name)
+	err := tx.QueryRowContext(ctx, "SELECT display_name FROM players WHERE account_id=?", id).Scan(&name)
 	if err == sql.ErrNoRows {
 		cache[id] = nil
 		return nil, nil

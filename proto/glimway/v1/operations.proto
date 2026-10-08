@@ -1,0 +1,41 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+import "glimway/v1/profile.proto";
+import "glimway/v1/wilds.proto";
+
+// Counters and timestamps use doubles so ProtoJSON carries numbers.
+message ReportRequest {
+  string lease = 1; string client = 2; double seq = 3; double basis = 4;
+  Where place = 5; double hp = 6; double mana = 7; double casts = 8; string generation = 9;
+}
+message ReportResult { double seq = 1; bool accepted = 2; bool stale_basis = 3; double casts = 4; string client = 5; string generation = 6; double basis = 7; bool place_ignored = 8; }
+message QuestStepRequest { OpHeader op = 1; string quest = 2; string to = 3; Where where = 4; }
+message QuestStepResult {
+  string quest = 1; string step = 2; repeated string items = 3; repeated string marks = 4;
+  repeated string papers = 5; double embers = 6;
+}
+message MarkRequest { OpHeader op = 1; string mark = 2; Where where = 3; }
+message MarkResult { string mark = 1; bool added = 2; }
+message TakePaperRequest { OpHeader op = 1; string paper = 2; Where where = 3; string epoch = 4; string site = 5; }
+message TakePaperResult { string paper = 1; bool added = 2; }
+message SettleEchoRequest { OpHeader op = 1; string epoch = 2; string site = 3; Where where = 4; string member = 5; }
+message SettleEchoResult { string epoch = 1; string site = 2; string member = 3; string paper = 4; }
+message FallRequest { OpHeader op = 1; Where where = 2; }
+// Lantern is "placed" or "none"; reason is empty on placement. Curated falls
+// use "not-wilds"; invalid Wilds locations use "invalid-place", missing epochs "epoch-missing", caps "daily-cap".
+message FallResult { Vitals vitals = 1; Place place = 2; string lantern = 3; string reason = 4; string lantern_id = 5; string epoch = 6; }
+message ProfileReport { string lease = 1; HabiticaUser raw = 2; ReportBarrier report = 3; }
+message VitalsCredit { double hp = 1; double mana = 2; }
+message ProfileResult { string status = 1; double credit = 2; double pending = 3; VitalsCredit vitals_credit = 4; }
+// Kinds: rest, home-rest, road-lantern, chest. Target identifies the lamp/chest.
+message SpendRequest { OpHeader op = 1; string kind = 2; Where where = 3; string target = 4; }
+message SpendResult { string outcome = 1; }
+message WildsClaimRequest { OpHeader op = 1; string epoch = 2; string entity_id = 3; double cycle = 4; Where where = 5; }
+message WildsClaimResult {
+  string epoch = 1; WildsEntityState entity = 2; WildsLoot loot = 3;
+  map<string,double> materials = 4; bool warden_sliver_found = 5; bool storm_drop_found = 6; repeated string papers = 7;
+}
+message WildsLanternRequest { OpHeader op = 1; string epoch = 2; string owner_id = 3; string lantern_id = 4; Where where = 5; }
+message WildsLanternResult { string epoch = 1; bool rewarded = 2; WildsLoot loot = 3; map<string,double> materials = 4; repeated WildsLantern lanterns = 5; }

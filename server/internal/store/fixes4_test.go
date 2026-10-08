@@ -18,6 +18,7 @@ func TestRound4UpgradeBackfillsLanternCreationCounts(t *testing.T) {
  ('alice','material:amber',1,0,'wilds-relight','light',1791072000);`); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestRound4UpgradeBackfillsLanternCreationCounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer upgraded.Close()
-	rows, err := upgraded.DB.Query("SELECT qty FROM lantern_creations WHERE habitica_id='alice' ORDER BY utc_day")
+	rows, err := upgraded.DB.Query("SELECT qty FROM lantern_creations WHERE account_id='alice' ORDER BY utc_day")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func TestRound4UpgradeBackfillsLanternCreationCounts(t *testing.T) {
 		t.Fatal("incorrect UTC/day backfill", totals)
 	}
 	var rev, ledger int
-	if err = upgraded.DB.QueryRow("SELECT rev FROM players WHERE habitica_id='alice'").Scan(&rev); err != nil || rev != 7 {
+	if err = upgraded.DB.QueryRow("SELECT version FROM players WHERE account_id='alice'").Scan(&rev); err != nil || rev != 7 {
 		t.Fatal("upgrade changed revision", err, rev)
 	}
 	if err = upgraded.DB.QueryRow("SELECT count(*) FROM ledger").Scan(&ledger); err != nil || ledger != 4 {

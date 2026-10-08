@@ -23,7 +23,7 @@ import { firstWorldCopy, worldCopy } from '../content/world-moves.ts'
 /** What the flow needs of a session's link (src/game/link.ts). */
 export interface FlowLink {
   readonly status: 'online' | 'offline' | 'superseded' | 'signed-out'
-  readonly habiticaId: string
+  readonly accountId: string
   readonly dirty: boolean
   reconnect(takeOver: boolean): Promise<void>
   takeOver(): Promise<void>
@@ -52,7 +52,7 @@ export type AccountApi = Pick<ApiClient, 'state' | 'worldChoice' | 'worldChoose'
 /** The interface store's fields the flow writes (src/ui/store.svelte.ts). */
 export interface AccountUi {
   server: 'unknown' | 'available' | 'unavailable'
-  account: { habiticaId: string; name: string } | null
+  account: { accountId: string; name: string } | null
   link: unknown
   toast(payload: { text: string; icon?: string; kind?: 'info' | 'error' }): void
 }
@@ -78,10 +78,10 @@ export interface AccountDeps<S extends FlowSession> {
   api: AccountApi
   probe(): Promise<Probe>
   cache: {
-    load(habiticaId: string): Promise<ConnectedCache | null>
+    load(accountId: string): Promise<ConnectedCache | null>
     latest(): Promise<ConnectedCache | null>
     save(cache: ConnectedCache): Promise<unknown>
-    clear(habiticaId: string): Promise<unknown>
+    clear(accountId: string): Promise<unknown>
   }
   /** A connected session, not yet holding the lease (src/ui/account.ts connectedSession). */
   connect(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<S>
@@ -117,6 +117,7 @@ export class AccountFlow<S extends FlowSession> {
   /** Latest server snapshot for the signed-in account (null when offline or signed out). */
   snapshot = $state<Snapshot | null>(null)
   /** Signed in for the first time, the world not chosen yet (the server holds the sign-in). */
+  pendingSubject = $state<string | null>(null)
   choice = $state<WorldChoice | null>(null)
   /** The device's connected cache (offline copy, revision, lease). */
   cache = $state<ConnectedCache | null>(null)
@@ -166,16 +167,17 @@ export class AccountFlow<S extends FlowSession> {
   async init(): Promise<void> {
     const probe = await this.deps.probe()
     if (probe.kind === 'signed-in') {
-      const cache = await this.deps.cache.load(probe.snapshot.habiticaId)
+      const cache = await this.deps.cache.load(probe.snapshot.accountId)
       this.cache = cache
       this.ui.server = 'available'
       this.snapshot = probe.snapshot
-      this.ui.account = { habiticaId: probe.snapshot.habiticaId, name: this.deps.nameOf(probe.snapshot, cache) }
+      this.ui.account = { accountId: probe.snapshot.accountId, name: this.deps.nameOf(probe.snapshot, cache) }
     } else if (probe.kind === 'choose-world') {
       // A first sign-in whose world is still to choose (a reload, a closed tab): Continue asks again.
       this.ui.server = 'available'
       this.choice = probe.choice
-      this.ui.account = { habiticaId: probe.choice.habiticaId, name: probe.choice.displayName || 'Your hero' }
+      this.pendingSubject = probe.choice.habiticaId
+      this.ui.account = null
     } else if (probe.kind === 'signed-out') {
       this.ui.server = 'available'
     } else {
@@ -185,14 +187,14 @@ export class AccountFlow<S extends FlowSession> {
       this.cache = cache
       if (cache) {
         this.offline = true
-        this.ui.account = { habiticaId: cache.habiticaId, name: cache.name || 'Your hero' }
+        this.ui.account = { accountId: cache.accountId, name: cache.name || 'Your hero' }
       }
     }
   }
 
   /** Title: Continue in your world. */
   async continue(): Promise<void> {
-    if (this.busy || this.host.starting() || !this.ui.account) return
+    if (this.busy || this.host.starting() || (!this.ui.account && !this.choice)) return
     this.busy = true
     this.error = ''
     try {
@@ -201,10 +203,10 @@ export class AccountFlow<S extends FlowSession> {
         return
       }
       if (this.snapshot && this.snapshot.saveOrigin === null) {
-        this.openOrigin(this.ui.account.name)
+        this.openOrigin(this.ui.account!.name)
         return
       }
-      const s = await this.deps.connect({ snapshot: this.snapshot, cache: await this.deps.cache.load(this.ui.account.habiticaId), name: this.ui.account.name })
+      const s = await this.deps.connect({ snapshot: this.snapshot, cache: await this.deps.cache.load(this.ui.account!.accountId), name: this.ui.account!.name })
       await s.link!.reconnect(false)
       await this.settle(s)
     } finally {
@@ -220,19 +222,21 @@ export class AccountFlow<S extends FlowSession> {
       // Signed in, but where to live comes first.
       this.choice = answer
       this.snapshot = null
-      this.ui.account = { habiticaId: answer.habiticaId, name: answer.displayName || profile?.name || 'Your hero' }
+      this.pendingSubject = answer.habiticaId
+      this.ui.account = null
       this.host.closePanel()
       this.gate = { kind: 'world', choice: answer, busy: false, error: '', picked: null }
       return
     }
     const snapshot = answer
+    this.pendingSubject = null
     this.choice = null
     this.snapshot = snapshot
     const name = snapshot.displayName || snapshot.importedProfile?.name || profile?.name || this.ui.account?.name || 'Your hero'
-    this.ui.account = { habiticaId: snapshot.habiticaId, name }
+    this.ui.account = { accountId: snapshot.accountId, name }
     // Signed in from the Menu: the next step (origin, lease) takes the screen.
     this.host.closePanel()
-    this.cache = await this.deps.cache.load(snapshot.habiticaId)
+    this.cache = await this.deps.cache.load(snapshot.accountId)
     if (snapshot.saveOrigin === null) {
       const guest = this.guest()
       if (guest && hasProgress(guest.state)) this.openOrigin(name)
@@ -247,6 +251,7 @@ export class AccountFlow<S extends FlowSession> {
 
   /** The server no longer knows this sign-in: back to the title's sign-in, saying why. */
   private signedOut(): void {
+    this.pendingSubject = null
     this.choice = null
     this.ui.account = null
     this.error = accountCopy.signInEnded
@@ -255,6 +260,7 @@ export class AccountFlow<S extends FlowSession> {
   /** Chosen already (another device, a race): carry on into that world. */
   private async alreadyChosen(): Promise<void> {
     this.gate = null
+    this.pendingSubject = null
     this.choice = null
     try {
       await this.signedIn(await this.deps.api.state(), null)
@@ -273,7 +279,8 @@ export class AccountFlow<S extends FlowSession> {
       const code = errorCode(err)
       if (code === 'world-chosen') {
         // Chosen on another device meanwhile: carry on into that world.
-        this.choice = null
+        this.pendingSubject = null
+    this.choice = null
         await this.signedIn(await this.deps.api.state(), null)
         return
       }
@@ -382,7 +389,7 @@ export class AccountFlow<S extends FlowSession> {
 
   private async startAccount(snapshot: Snapshot, name: string): Promise<void> {
     if (this.ui.account) this.ui.account = { ...this.ui.account, name }
-    const s = await this.deps.connect({ snapshot, cache: await this.deps.cache.load(snapshot.habiticaId), name })
+    const s = await this.deps.connect({ snapshot, cache: await this.deps.cache.load(snapshot.accountId), name })
     await s.link!.reconnect(false)
     await this.settle(s)
   }
@@ -548,14 +555,14 @@ export class AccountFlow<S extends FlowSession> {
   async logout(): Promise<void> {
     const session = this.host.session()
     const link = session?.link
-    const habiticaId = link?.habiticaId ?? this.ui.account?.habiticaId
+    const accountId = link?.accountId ?? this.ui.account?.accountId
     let keep = false
     if (link) {
       await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, this.deps.logoutWaitMs ?? 4000))])
       keep = link.dirty
       if (keep) await link.keepForNextSignIn()
-    } else if (habiticaId) {
-      const cache = await this.deps.cache.load(habiticaId)
+    } else if (accountId) {
+      const cache = await this.deps.cache.load(accountId)
       keep = cache?.dirty === true
       if (cache && keep) await this.deps.cache.save({ ...cache, loggedOut: true })
     }
@@ -564,7 +571,7 @@ export class AccountFlow<S extends FlowSession> {
     } catch {
       /* the cookie expires on its own */
     }
-    if (habiticaId && !keep) await this.deps.cache.clear(habiticaId)
+    if (accountId && !keep) await this.deps.cache.clear(accountId)
     if (link) session?.destroy(true)
     this.host.reload()
   }

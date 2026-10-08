@@ -140,12 +140,12 @@
 
   /** The signed-in account's Continue card on the title screen. */
   const accountSummary = $derived.by(() => {
-    if (!ui.account) return null
     if (account.choice) return { place: 'Your world', time: '', goal: firstWorldCopy.titleGoal }
+    if (!ui.account) return null
     if (account.snapshot && account.snapshot.saveOrigin === null) {
       return { place: 'Your world', time: '', goal: 'Choose how to begin.' }
     }
-    const cached = account.cache && account.cache.habiticaId === ui.account.habiticaId ? account.cache : null
+    const cached = account.cache && account.cache.accountId === ui.account.accountId ? account.cache : null
     const st = cached && (cached.dirty || !account.snapshot) ? cached.state : account.snapshot?.state
     return st ? journeyLine(st) : null
   })
@@ -930,10 +930,10 @@
           <p class="status"><span class="spark"></span> Lighting the lamps…</p>
         {:else}
           <div class="actions">
-            {#if ui.account && accountSummary && titleView !== 'guide'}
+            {#if (ui.account || account.choice) && accountSummary && titleView !== 'guide'}
               <button type="button" class="primary continue" onclick={() => account.continue()} disabled={account.busy} data-testid="continue-world">
                 <span class="big">{account.busy ? 'Opening your world…' : 'Continue'}</span>
-                <span class="meta"><Icon name="person" size={12} /> {ui.account.name} · {accountSummary.place}{accountSummary.time ? ` · ${accountSummary.time}` : ''}</span>
+                <span class="meta"><Icon name="person" size={12} /> {ui.account?.name || account.choice?.displayName || 'Your hero'} · {accountSummary.place}{accountSummary.time ? ` · ${accountSummary.time}` : ''}</span>
                 <span class="goal">{accountSummary.goal}</span>
               </button>
               <p class="world-chip" class:off={account.offline}>
@@ -956,7 +956,7 @@
                 <span class="goal">{saveSummary.goal}</span>
               </button>
               <button type="button" class="secondary" onclick={requestNew}>New journey</button>
-              {#if ui.server === 'available' && !ui.account}
+              {#if ui.server === 'available' && !ui.account && !account.choice}
                 <!-- A returning player whose sign-in ended: the guest journey stays, nothing is replaced. -->
                 <button type="button" class="ghost signin" onclick={() => (titleView = 'guide')}>
                   <Icon name="lantern" size={12} /> Sign in to your world
@@ -985,9 +985,9 @@
             </p>
           {/if}
         {/if}
-        {#if account.error && !(ui.account && accountSummary)}<p class="title-error" role="alert">{account.error}</p>{/if}
+        {#if account.error && !((ui.account || account.choice) && accountSummary)}<p class="title-error" role="alert">{account.error}</p>{/if}
         <p class="fineprint">
-          {ui.account ? 'Plays right here in your browser. Your journey saves to your world.' : 'Plays right here in your browser. Your saves stay on this device.'}
+          {(ui.account || account.choice) ? 'Plays right here in your browser. Your journey saves to your world.' : 'Plays right here in your browser. Your saves stay on this device.'}
         </p>
       </div>
     </div>
@@ -1028,7 +1028,7 @@
     />
   {/if}
 
-  {#if confirmLogout && account.cache?.dirty && account.cache.habiticaId === ui.account?.habiticaId}
+  {#if confirmLogout && account.cache?.dirty && account.cache.accountId === ui.account?.accountId}
     <!-- Progress from an earlier visit hasn't reached the world: upload it first. -->
     <ConfirmDialog
       title={accountCopy.logoutTitle}

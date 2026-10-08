@@ -352,15 +352,15 @@
   }
 
   /** Players standing close enough to hand something to. */
-  function nearby(): { habiticaId: string; displayName: string }[] {
+  function nearby(): { accountId: string; displayName: string }[] {
     const feed = presence()
     if (!feed) return []
     const p = session.state.position
     return feed.nearby(p.x, p.y, ITEM_RULES.give.radiusTiles * 16)
   }
 
-  function giveIt(e: InventoryEntry, to: { habiticaId: string; displayName: string }): void {
-    void act(`give:${e.key}`, () => items.give(to.habiticaId, assetOf(e)), `You gave ${to.displayName} ${giftPhrase(e.id, 1)}.`)
+  function giveIt(e: InventoryEntry, to: { accountId: string; displayName: string }): void {
+    void act(`give:${e.key}`, () => items.give(to.accountId, assetOf(e)), `You gave ${to.displayName} ${giftPhrase(e.id, 1)}.`)
   }
 
   function mendIt(e: InventoryEntry, at: string, who: string): void {
@@ -514,8 +514,8 @@
           <small>{inventoryCopy.giveNobody}</small>
         {:else}
           <small>{inventoryCopy.giveTo}</small>
-          {#each people as p (p.habiticaId)}
-            <button type="button" class="act" data-give-to={p.habiticaId} disabled={action.busy !== null} onclick={() => giveIt(e, p)}>{p.displayName}</button>
+          {#each people as p (p.accountId)}
+            <button type="button" class="act" data-give-to={p.accountId} disabled={action.busy !== null} onclick={() => giveIt(e, p)}>{p.displayName}</button>
           {/each}
         {/if}
       </span>

@@ -87,7 +87,6 @@ func (x *rig) member(id, world string) (*http.Cookie, response) {
 		x.t.Fatal(err)
 	}
 	c := x.login(id, code)
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
 	return c, x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
 }
 func (x *rig) region(c *http.Cookie) expansionResponse {
@@ -112,7 +111,7 @@ func entityKind(t *testing.T, v expansionResponse, kind string) entityView {
 func (x *rig) claimGate(c *http.Cookie, s *response, gate int) homeView {
 	x.t.Helper()
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	v := x.exp("POST", "/api/homestead/claim", body(*s, fmt.Sprintf("claim-%d-%d", gate, s.Rev), map[string]any{"gate": gate}), c, 200)
+	v := x.exp("POST", "/api/homestead/claim", body(*s, fmt.Sprintf("claim-%d-%d", gate, s.Version), map[string]any{"gate": gate}), c, 200)
 	update(s, v)
 	if v.Result.Home == nil || v.Result.Home.Gate != gate {
 		x.t.Fatal("claim answer")
@@ -154,29 +153,29 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM homesteads") != 0 {
 		t.Fatal("visiting the Commons no longer grants a plot")
 	}
-	rev := s.Rev
+	rev := s.Version
 	lane := x.exp("GET", "/api/commons", nil, c, 200)
-	if lane.Rev != rev || lane.GateCount != content.HomeRules.Lane.SpareGates || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
+	if lane.Version != rev || lane.GateCount != content.HomeRules.Lane.SpareGates || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
 		t.Fatal("empty lane", lane.GateCount)
 	}
 	// An unclaimed gate can be visited: wild land, no home.
 	g := x.exp("GET", "/api/homestead/gate/1", nil, c, 200)
-	if g.Home != nil || g.LandSeed != land.Seed(s.WorldID, 1, content.HomeRules.Land) || g.Rev != rev {
+	if g.Home != nil || g.LandSeed != land.Seed(s.WorldID, 1, content.HomeRules.Land) || g.Version != rev {
 		t.Fatal("unclaimed land")
 	}
 	x.exp("GET", "/api/homestead/gate/2", nil, c, 404)
 	x.exp("GET", "/api/homestead/gate/01", nil, c, 404)
 	h := x.claimGate(c, &s, 1)
-	if h.Tier != 0 || h.Indoor != nil || !h.Member || len(h.Members) != 1 || h.Members[0].ID != "alice" || len(h.Items) != 0 {
+	if h.Tier != 0 || h.Indoor != nil || !h.Member || len(h.Members) != 1 || h.Members[0].ID != x.account("alice") || len(h.Items) != 0 {
 		t.Fatal("campsite")
 	}
 	lane = x.exp("GET", "/api/commons", nil, c, 200)
-	if lane.GateCount != 3 || lane.Mine == nil || lane.Mine.Gate != 1 || !lane.Gates[1].Mine || len(lane.Gates[1].Names) != 1 || lane.Gates[1].Members[0].ID != "alice" || lane.Gates[0].Price == nil {
+	if lane.GateCount != 3 || lane.Mine == nil || lane.Mine.Gate != 1 || !lane.Gates[1].Mine || len(lane.Gates[1].Names) != 1 || lane.Gates[1].Members[0].ID != x.account("alice") || lane.Gates[0].Price == nil {
 		t.Fatal("lane after claim", lane.GateCount)
 	}
 	bc, b := x.member("bob", s.WorldID)
 	visited := x.exp("GET", "/api/homestead/gate/1", nil, bc, 200)
-	if visited.Home == nil || visited.Home.Member || visited.HabiticaID != "bob" || visited.Rev != b.Rev {
+	if visited.Home == nil || visited.Home.Member || visited.AccountID != x.account("bob") || visited.Version != b.Version {
 		t.Fatal("visitor view")
 	}
 	if v := x.exp("POST", "/api/homestead/claim", body(b, "taken", map[string]any{"gate": 1}), bc, 409); v.Error.Code != "gate-taken" {
@@ -194,7 +193,7 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fund("alice", 60, 20)
+	x.fund(x.account("alice"), 60, 20)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	x.exp("POST", "/api/homestead/buy", body(s, "no-home", map[string]any{"itemDef": "potted-fern"}), c, 409)
 	h := x.claimGate(c, &s, 0)
@@ -204,7 +203,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	fern := v.Result.ItemID
 	update(&s, v)
 	duplicate := x.exp("POST", "/api/homestead/buy", req, c, 200)
-	if duplicate.Result.ItemID != fern || duplicate.Rev != s.Rev || count(t, x.db, "SELECT count(*) FROM homestead_items") != 1 {
+	if duplicate.Result.ItemID != fern || duplicate.Version != s.Version || count(t, x.db, "SELECT count(*) FROM homestead_items") != 1 {
 		t.Fatal("purchase replay")
 	}
 	req["itemDef"] = "wooden-stool"
@@ -259,7 +258,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	}
 	// Old progress after a purchase cannot restore pre-purchase vitals/balances.
 	old := s
-	old.Rev--
+	old.Version--
 	doc := s.State
 	doc.HP = doc.MaxHP
 	doc.Embers = 999
@@ -271,7 +270,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fund("alice", 5, 0)
+	x.fund(x.account("alice"), 5, 0)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	doc := s.State
 	doc.Area = "home:0"
@@ -288,12 +287,12 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	if x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "gifted", doc), c, 409).Error.Code != "needs-earned" {
 		t.Fatal("gifted revival")
 	}
-	x.fund("alice", 1, 1)
+	x.fund(x.account("alice"), 1, 1)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	s0 := s
 	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "earned", doc), c, 200)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	if s.Rev != s0.Rev+1 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
+	if s.Version != s0.Version+1 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
 		t.Fatal("home rest")
 	}
 	for name, area := range map[string]string{"other-home": "home:1", "commons": "commons", "village": "village", "padded": "home:00"} {
@@ -349,6 +348,7 @@ func TestWildsConcurrentClaimCyclesAndAccess(t *testing.T) {
 			defer wg.Done()
 			req := body(pair.s, "race", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(pair.s, camp), "cycle": 0})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewBufferString(store.JSON(req)))
+			r.Header.Set("X-Glimway-Contract", "3")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(pair.c)
 			w := httptest.NewRecorder()
@@ -406,7 +406,7 @@ func TestWildsConcurrentClaimCyclesAndAccess(t *testing.T) {
 		t.Fatal("cross-world epoch")
 	}
 	x.exp("POST", "/api/wilds/claim", body(o, "other-world", map[string]any{"epoch": ep, "entityId": camp.ID, "progress": nearEntity(o, camp), "cycle": 1}), oc, 403)
-	x.exp("POST", "/api/wilds/lantern", body(o, "other-lantern", map[string]any{"epoch": ep, "progress": atLantern(o), "ownerId": "alice", "lanternId": "unknown"}), oc, 403)
+	x.exp("POST", "/api/wilds/lantern", body(o, "other-lantern", map[string]any{"epoch": ep, "progress": atLantern(o), "ownerId": x.account("alice"), "lanternId": "unknown"}), oc, 403)
 	x.exp("GET", "/api/wilds/region/not-a-region", nil, c, 404)
 	if _, err = x.db.DB.Exec("UPDATE region_epochs SET ends_at=? WHERE id=?", x.now.Load(), ep); err != nil {
 		t.Fatal(err)
@@ -446,7 +446,7 @@ func TestWildsPersonalClaimsDiscoveryReplayAndEpochPin(t *testing.T) {
 	update(&s, x.exp("POST", "/api/wilds/claim", body(s, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "progress": nearEntity(s, poi), "cycle": 0}), c, 200))
 	update(&b, x.exp("POST", "/api/wilds/claim", body(b, "poi", map[string]any{"epoch": ep, "entityId": poi.ID, "progress": nearEntity(b, poi), "cycle": 0}), bc, 200))
 	v = x.region(c)
-	if len(v.PersonalClaims) != 2 || len(v.Discoveries) != 1 || v.Discoveries[0].DiscovererID != "alice" || v.Discoveries[0].DisplayName != "Hero" {
+	if len(v.PersonalClaims) != 2 || len(v.Discoveries) != 1 || v.Discoveries[0].DiscovererID != x.account("alice") || v.Discoveries[0].DisplayName != "Hero" {
 		t.Fatal("discovery ownership")
 	}
 	// Simulate a deployment's new default without rewriting the existing epoch.
@@ -484,12 +484,12 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 		t.Fatal("rate limiter")
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
-	if count(t, x.db, "SELECT qty FROM claim_rate WHERE habitica_id='alice'") != limit || count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='limited'") != 0 {
+	if count(t, x.db, "SELECT qty FROM claim_rate WHERE account_id='"+x.account("alice")+"'") != limit || count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='limited'") != 0 {
 		t.Fatal("rate rejection committed")
 	}
 	x.now.Add(60)
 	update(&s, x.exp("POST", "/api/wilds/claim", req, c, 200))
-	if count(t, x.db, "SELECT qty FROM claim_rate WHERE habitica_id='alice'") != 1 {
+	if count(t, x.db, "SELECT qty FROM claim_rate WHERE account_id='"+x.account("alice")+"'") != 1 {
 		t.Fatal("window reset")
 	}
 }
@@ -508,7 +508,7 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 		update(&s, v)
 		found := false
 		for _, l := range v.Result.Lanterns {
-			if l.OwnerID == "alice" && l.ID == v.Result.LanternID {
+			if l.OwnerID == x.account("alice") && l.ID == v.Result.LanternID {
 				found = true
 			}
 		}
@@ -522,13 +522,13 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 	if first == second || first == "" || second == "" {
 		t.Fatal("replacement identity")
 	}
-	x.exp("POST", "/api/wilds/lantern", body(b, "obsolete", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": first}), bc, 404)
-	own := x.exp("POST", "/api/wilds/lantern", body(s, "own", map[string]any{"epoch": ep, "progress": atLantern(s), "ownerId": "alice", "lanternId": second}), c, 200)
+	x.exp("POST", "/api/wilds/lantern", body(b, "obsolete", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": x.account("alice"), "lanternId": first}), bc, 404)
+	own := x.exp("POST", "/api/wilds/lantern", body(s, "own", map[string]any{"epoch": ep, "progress": atLantern(s), "ownerId": x.account("alice"), "lanternId": second}), c, 200)
 	update(&s, own)
 	if own.Result.Rewarded || len(own.Result.Loot.Materials) != 0 {
 		t.Fatal("own reward")
 	}
-	x.exp("POST", "/api/wilds/lantern", body(b, "already-lit", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": second}), bc, 409)
+	x.exp("POST", "/api/wilds/lantern", body(b, "already-lit", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": x.account("alice"), "lanternId": second}), bc, 409)
 	limit := content.Rules.WildsLimits.LanternRelightsPerDay
 	for i := 0; i <= limit; i++ {
 		owner := fmt.Sprintf("fallen%d", i)
@@ -537,7 +537,7 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 		doc.HP = 0
 		fallen := x.exp("POST", "/api/wilds/defeat", body(cs, "fall", map[string]any{"epoch": ep, "x": 10, "y": 10, "progress": doc}), cc, 200)
 		id := fallen.Result.LanternID
-		req := body(b, fmt.Sprintf("light%d", i), map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": owner, "lanternId": id})
+		req := body(b, fmt.Sprintf("light%d", i), map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": x.account(owner), "lanternId": id})
 		lit := x.exp("POST", "/api/wilds/lantern", req, bc, 200)
 		update(&b, lit)
 		if lit.Result.Rewarded != (i < limit) {
@@ -548,17 +548,17 @@ func TestWildsLanternReplacementRewardsAndDailyCap(t *testing.T) {
 			t.Fatal("relight replay")
 		}
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='bob' AND item_def='amber'") != limit*content.Rules.WildsLimits.LanternReward.Qty {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def='amber'") != limit*content.Rules.WildsLimits.LanternReward.Qty {
 		t.Fatal("relight balance")
 	}
-	if count(t, x.db, "SELECT sum(qty) FROM lantern_rewards WHERE habitica_id='bob'") != limit {
+	if count(t, x.db, "SELECT sum(qty) FROM lantern_rewards WHERE account_id='"+x.account("bob")+"'") != limit {
 		t.Fatal("daily count")
 	}
 	// Reward cap resets at a UTC date boundary, not per session or request.
 	tomorrow := time.Unix(x.now.Load(), 0).UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
 	x.now.Store(tomorrow.Unix())
 	id := defeat("next-day")
-	lit := x.exp("POST", "/api/wilds/lantern", body(b, "tomorrow", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": "alice", "lanternId": id}), bc, 200)
+	lit := x.exp("POST", "/api/wilds/lantern", body(b, "tomorrow", map[string]any{"epoch": ep, "progress": atLantern(b), "ownerId": x.account("alice"), "lanternId": id}), bc, 200)
 	if !lit.Result.Rewarded {
 		t.Fatal("UTC reward reset")
 	}
@@ -619,7 +619,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	doc.Position = rules.Position{X: 160, Y: 160}
 	fallen := x.exp("POST", "/api/wilds/defeat", body(s, "backup-defeat", map[string]any{"epoch": v.Epoch.ID, "x": 10, "y": 10, "progress": doc}), c, 200)
 	update(&s, fallen)
-	update(&b, x.exp("POST", "/api/wilds/lantern", body(b, "backup-relight", map[string]any{"epoch": v.Epoch.ID, "progress": atLantern(b), "ownerId": "alice", "lanternId": fallen.Result.LanternID}), bc, 200))
+	update(&b, x.exp("POST", "/api/wilds/lantern", body(b, "backup-relight", map[string]any{"epoch": v.Epoch.ID, "progress": atLantern(b), "ownerId": x.account("alice"), "lanternId": fallen.Result.LanternID}), bc, 200))
 	currentMaterials := x.region(c).Materials
 	backup := filepath.Join(x.dir, "expansion-backup.sqlite")
 	if err := x.db.Backup(context.Background(), backup); err != nil {
@@ -634,7 +634,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rs, err := store.Load(context.Background(), tx, "alice")
+	rs, err := store.Load(context.Background(), tx, x.account("alice"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -645,20 +645,20 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 			t.Fatal("backup", table)
 		}
 	}
-	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE habitica_id='alice' AND currency='material:fiber'") != currentMaterials["fiber"] {
+	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='material:fiber'") != currentMaterials["fiber"] {
 		t.Fatal("material ledger sum")
 	}
-	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE habitica_id='alice' AND currency='decoration:woven-basket'") != 1 {
+	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='decoration:woven-basket'") != 1 {
 		t.Fatal("instance ledger sum")
 	}
-	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE habitica_id='alice' AND currency='embers'") != rs.State.Embers {
+	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='embers'") != rs.State.Embers {
 		t.Fatal("ember ledger sum")
 	}
 }
 func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fund("alice", 30, 0)
+	x.fund(x.account("alice"), 30, 0)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	bad := body(s, "missing-revision", map[string]any{"itemDef": "wooden-stool"})
 	delete(bad, "baseRev")
@@ -691,7 +691,7 @@ func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 		t.Fatal("concurrent purchase duplicate")
 	}
 	stale := body(s, "stale", map[string]any{"itemDef": "wooden-stool"})
-	stale["baseRev"] = s.Rev - 1
+	stale["baseRev"] = s.Version - 1
 	x.exp("POST", "/api/homestead/buy", stale, c, 409)
 	next := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
 	if x.exp("POST", "/api/homestead/buy", req, c, 409).Error.Code != "superseded" {
@@ -699,7 +699,7 @@ func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 	}
 	req["lease"] = next.Lease
 	replay := x.exp("POST", "/api/homestead/buy", req, c, 200)
-	if replay.Result.ItemID != v.Result.ItemID || replay.Rev != v.Rev {
+	if replay.Result.ItemID != v.Result.ItemID || replay.Version != next.Version {
 		t.Fatal("new lease replay")
 	}
 	region := x.region(c)

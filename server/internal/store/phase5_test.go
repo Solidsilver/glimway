@@ -29,6 +29,7 @@ func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 	if err = old.QueryRow("SELECT count(*) FROM homestead_items WHERE location='inventory'").Scan(&n); err != nil || n != 2 {
 		t.Fatal("lost instances", err)
 	}
+	markFixtureOrigins(t, old)
 	if err = old.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func TestPhase5UpgradePreservesPlacementsAndInventory(t *testing.T) {
 	}
 	defer s.Close()
 	var rev int
-	if err = s.DB.QueryRow("SELECT rev FROM players WHERE habitica_id='alice'").Scan(&rev); err != nil || rev != 9 {
+	if err = s.DB.QueryRow("SELECT version FROM players WHERE account_id='alice'").Scan(&rev); err != nil || rev != 9 {
 		t.Fatal("revision changed", err)
 	}
 	// 010 resets homesteads (nobody plays on a server yet); carried goods stay.

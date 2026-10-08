@@ -18,11 +18,11 @@ class FakeLink implements FlowLink {
   dirty = false
   reconnects = 0
   kept = false
-  habiticaId: string
+  accountId: string
   /** The status after reconnect / takeOver. */
   after: { reconnect?: Status; takeOver?: Status }
-  constructor(habiticaId: string, after: { reconnect?: Status; takeOver?: Status } = {}) {
-    this.habiticaId = habiticaId
+  constructor(accountId: string, after: { reconnect?: Status; takeOver?: Status } = {}) {
+    this.accountId = accountId
     this.after = after
   }
   async reconnect(): Promise<void> {
@@ -52,7 +52,7 @@ class FakeSession implements FlowSession {
 }
 
 const snap = (over: Partial<Snapshot> = {}): Snapshot =>
-  ({ habiticaId: 'h1', displayName: 'Tansy', importedProfile: null, saveOrigin: 'fresh', state: createNewGame(), rev: 1, vitalsSource: 'demo', worldId: 'w1', ...over }) as unknown as Snapshot
+  ({ accountId: 'h1', displayName: 'Tansy', importedProfile: null, saveOrigin: 'fresh', state: createNewGame(), rev: 1, vitalsSource: 'demo', worldId: 'w1', ...over }) as unknown as Snapshot
 
 const choice = (over: Partial<WorldChoice> = {}): WorldChoice => ({ habiticaId: 'h1', displayName: 'Tansy', ...over }) as unknown as WorldChoice
 
@@ -62,7 +62,7 @@ function setup(opts: { probe?: Probe; api?: Partial<Record<keyof AccountApi, (..
   const toasts: string[] = []
   const played: FakeSession[] = []
   const caches = new Map<string, ConnectedCache>()
-  if (opts.cache) caches.set(opts.cache.habiticaId, opts.cache)
+  if (opts.cache) caches.set(opts.cache.accountId, opts.cache)
   const nope = (name: string) => async () => {
     throw new Error(`unexpected api.${name}`)
   }
@@ -78,7 +78,7 @@ function setup(opts: { probe?: Probe; api?: Partial<Record<keyof AccountApi, (..
   let session: FakeSession | null = opts.guest === undefined ? new FakeSession(null) : opts.guest
   const ui = {
     server: 'unknown' as 'unknown' | 'available' | 'unavailable',
-    account: null as { habiticaId: string; name: string } | null,
+    account: null as { accountId: string; name: string } | null,
     link: null as unknown,
     toast: (p: { text: string }) => void toasts.push(p.text)
   }
@@ -105,12 +105,12 @@ function setup(opts: { probe?: Probe; api?: Partial<Record<keyof AccountApi, (..
     cache: {
       load: async (id) => caches.get(id) ?? null,
       latest: async () => opts.cache ?? null,
-      save: async (c) => void caches.set(c.habiticaId, c),
+      save: async (c) => void caches.set(c.accountId, c),
       clear: async (id) => void caches.delete(id)
     },
     connect: async ({ snapshot, cache, name }) => {
       connected.push({ snapshot, name })
-      return new FakeSession(new FakeLink(snapshot?.habiticaId ?? cache!.habiticaId, opts.link))
+      return new FakeSession(new FakeLink(snapshot?.accountId ?? cache!.accountId, opts.link))
     },
     nameOf: (s, c) => s?.displayName || c?.name || 'Your hero',
     ui,
@@ -126,20 +126,21 @@ test('the probe at load: signed in, choosing, signed out, or no server with an a
   const a = setup({ probe: { kind: 'signed-in', snapshot: snap() } })
   await a.flow.init()
   assert.equal(a.ui.server, 'available')
-  assert.deepEqual(a.ui.account, { habiticaId: 'h1', name: 'Tansy' })
-  assert.equal(a.flow.snapshot?.habiticaId, 'h1')
+  assert.deepEqual(a.ui.account, { accountId: 'h1', name: 'Tansy' })
+  assert.equal(a.flow.snapshot?.accountId, 'h1')
 
   const b = setup({ probe: { kind: 'choose-world', choice: choice({ displayName: '' }) } })
   await b.flow.init()
   assert.equal(b.flow.choice?.habiticaId, 'h1')
-  assert.equal(b.ui.account?.name, 'Your hero')
+  assert.equal(b.ui.account, null)
+  assert.equal(b.flow.pendingSubject, 'h1')
 
-  const cache = { habiticaId: 'h9', name: 'Wren', dirty: true } as unknown as ConnectedCache
+  const cache = { accountId: 'h9', name: 'Wren', dirty: true } as unknown as ConnectedCache
   const c = setup({ probe: { kind: 'unavailable' }, cache })
   await c.flow.init()
   assert.equal(c.ui.server, 'unavailable')
   assert.equal(c.flow.offline, true)
-  assert.deepEqual(c.ui.account, { habiticaId: 'h9', name: 'Wren' })
+  assert.deepEqual(c.ui.account, { accountId: 'h9', name: 'Wren' })
 })
 
 test('Continue with a journey: connect, take the lease, play, then the party prompt', async () => {
@@ -199,14 +200,14 @@ test('the party’s world is gone: asked again with what is left', async () => {
 
 test('a sign-in the server forgot ends at the title, saying so', async () => {
   const t = setup({ api: { worldChoice: err('unauthorized') } })
-  t.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  t.ui.account = { accountId: 'h1', name: 'Tansy' }
   t.flow.choice = choice()
   await t.flow.continue()
   assert.equal(t.ui.account, null)
   assert.equal(t.flow.error, accountCopy.signInEnded)
 
   const s = setup({ link: { reconnect: 'signed-out' } })
-  s.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  s.ui.account = { accountId: 'h1', name: 'Tansy' }
   s.flow.snapshot = snap()
   await s.flow.continue()
   assert.equal(s.played.length, 0)
@@ -215,7 +216,7 @@ test('a sign-in the server forgot ends at the title, saying so', async () => {
 
 test('playing on another device: the lease question, a failed take-over, then a good one', async () => {
   const t = setup({ link: { reconnect: 'superseded', takeOver: 'superseded' }, api: { world: async () => ({}) } })
-  t.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  t.ui.account = { accountId: 'h1', name: 'Tansy' }
   t.flow.snapshot = snap()
   await t.flow.continue()
   assert.equal(t.flow.gate?.kind, 'elsewhere')
@@ -230,7 +231,7 @@ test('playing on another device: the lease question, a failed take-over, then a 
 
 test('stepping back from the lease question drops the waiting session', async () => {
   const t = setup({ link: { reconnect: 'superseded' } })
-  t.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  t.ui.account = { accountId: 'h1', name: 'Tansy' }
   t.flow.snapshot = snap()
   await t.flow.continue()
   const pending = (t.flow as unknown as { pending: FakeSession }).pending
@@ -249,7 +250,7 @@ test('origin already set on another device: load the account, keep the guest sav
 
 test('a move that lands opens the new world; one that can’t open goes back to the title', async () => {
   const t = setup({ api: { world: async () => ({}) } })
-  t.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  t.ui.account = { accountId: 'h1', name: 'Tansy' }
   const old = t.session()!
   t.flow.openMove({ id: 'w2', ownerId: '', ownerName: 'Ada', members: 2, ownerHere: false, party: true }, false, null)
   await t.flow.afterMove(snap({ worldId: 'w2' }), 'Welcome.')
@@ -259,7 +260,7 @@ test('a move that lands opens the new world; one that can’t open goes back to 
   assert.deepEqual(t.toasts, ['Welcome.'])
 
   const f = setup()
-  f.ui.account = { habiticaId: 'h1', name: 'Tansy' }
+  f.ui.account = { accountId: 'h1', name: 'Tansy' }
   await f.flow.afterMove(snap({ worldId: 'w3' }), 'Welcome.') // connect works, but world() isn't given…
   assert.equal(f.flow.moving, null)
   // …which only skips the party prompt: the move itself opened.
@@ -278,7 +279,7 @@ test('logging out keeps unsent progress for the next sign-in, and clears a cache
   link.dirty = true
   const s = new FakeSession(link)
   dirty.host.session = () => s
-  dirty.caches.set('h1', { habiticaId: 'h1' } as ConnectedCache)
+  dirty.caches.set('h1', { accountId: 'h1' } as ConnectedCache)
   await dirty.flow.logout()
   assert.equal(link.kept, true)
   assert.ok(dirty.caches.has('h1'), 'kept')
@@ -288,7 +289,7 @@ test('logging out keeps unsent progress for the next sign-in, and clears a cache
   const clean = setup({ api: { logout: err('network') } })
   const s2 = new FakeSession(new FakeLink('h1'))
   clean.host.session = () => s2
-  clean.caches.set('h1', { habiticaId: 'h1' } as ConnectedCache)
+  clean.caches.set('h1', { accountId: 'h1' } as ConnectedCache)
   await clean.flow.logout()
   assert.ok(!clean.caches.has('h1'), 'cleared')
   assert.equal(clean.host.reloaded, true)

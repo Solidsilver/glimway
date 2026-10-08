@@ -299,7 +299,7 @@ export class WildsEntities {
   }
 
   private relightOffer(l: WildsLanternView): WildsClaim {
-    const own = this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false
+    const own = this.deps.session.link ? l.ownerId === this.deps.session.link.accountId : false
     return {
       label: own ? 'Relight your lantern' : 'Relight the fallen lantern',
       verb: 'Relight',
@@ -418,7 +418,7 @@ export class WildsEntities {
     sfx('lantern')
     const at = this.lanternPx(l)
     this.deps.fx.sparkBurst(at.x, at.y - 20, 10)
-    const own = l.ownerId === session.link.habiticaId
+    const own = l.ownerId === session.link.accountId
     const text = own ? FALLEN_HERO_LANTERNS.yourOwnLantern : FALLEN_HERO_LANTERNS.relitByFriend
     bus.emit(EV.toast, { text, icon: 'lantern' })
     if (res.result.rewarded && lootText(res.result.loot)) {
@@ -746,7 +746,7 @@ export class WildsEntities {
       lanterns: view.lanterns.map((l) => ({
         id: l.id,
         ownerId: l.ownerId,
-        own: this.deps.session.link ? l.ownerId === this.deps.session.link.habiticaId : false,
+        own: this.deps.session.link ? l.ownerId === this.deps.session.link.accountId : false,
         lit: !!l.litBy,
         x: l.x,
         y: l.y

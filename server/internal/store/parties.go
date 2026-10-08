@@ -33,11 +33,11 @@ type PartyRecord struct {
 
 func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT p.party_id,w.id,(SELECT count(*) FROM players m WHERE m.world_id=w.id),w.opened_by,o.display_name,w.created_at,
- (SELECT count(*) FROM allowlist a JOIN players x USING(habitica_id) WHERE a.added_by='party' AND x.habitica_party_id=p.party_id),
- (SELECT count(DISTINCT h.habitica_id) FROM pending_sessions h JOIN allowlist a USING(habitica_id) WHERE a.added_by='party' AND h.habitica_party_id=p.party_id AND h.expires_at>? AND NOT EXISTS(SELECT 1 FROM players x WHERE x.habitica_id=h.habitica_id)),c.closed_at
+ (SELECT count(*) FROM allowlist a JOIN sign_ins i ON i.method='habitica' AND i.subject=a.habitica_id JOIN players x ON x.account_id=i.account_id WHERE a.added_by='party' AND x.habitica_party_id=p.party_id),
+ (SELECT count(DISTINCT h.habitica_id) FROM pending_sessions h JOIN allowlist a USING(habitica_id) WHERE a.added_by='party' AND h.habitica_party_id=p.party_id AND h.expires_at>? AND NOT EXISTS(SELECT 1 FROM sign_ins i WHERE i.method='habitica' AND i.subject=h.habitica_id)),c.closed_at
  FROM (SELECT habitica_party_id AS party_id FROM worlds WHERE owner_id='' AND habitica_party_id IS NOT NULL UNION SELECT party_id FROM party_closures) p
  LEFT JOIN worlds w ON w.owner_id='' AND w.habitica_party_id=p.party_id
- LEFT JOIN players o ON o.habitica_id=w.opened_by
+ LEFT JOIN players o ON o.account_id=w.opened_by
  LEFT JOIN party_closures c ON c.party_id=p.party_id
  ORDER BY w.created_at IS NULL,w.created_at,p.party_id`, time.Now().Unix())
 	if err != nil {

@@ -101,7 +101,7 @@ func TestFix6PresenceDBQueriesDoNotHoldHub(t *testing.T) {
 			if check == "registration" {
 				alice.send(map[string]any{"type": "auth", "lease": s.Lease})
 			} else {
-				go func() { defer close(done); x.api.presenceChanged("alice") }()
+				go func() { defer close(done); x.api.presenceChanged(x.account("alice")) }()
 			}
 			waitPresenceDBWait(t, x, before)
 			bob.send(positionMessage(123))
@@ -218,12 +218,12 @@ func TestFix6PresenceRegistrationDiscardsStaleDBResult(t *testing.T) {
 		h.mu.Unlock()
 		t.Fatal("auth query did not release the DB outside the hub lock")
 	}
-	if _, err = x.db.DB.Exec("UPDATE players SET lease_id=? WHERE habitica_id='alice'", strings.Repeat("b", 64)); err != nil {
+	if _, err = x.db.DB.Exec("UPDATE players SET lease_id=? WHERE account_id='"+x.account("alice")+"'", strings.Repeat("b", 64)); err != nil {
 		h.mu.Unlock()
 		t.Fatal(err)
 	}
 	// This is the generation change made by a post-commit play notification.
-	h.accounts["alice"].generation++
+	h.accounts[x.account("alice")].generation++
 	h.mu.Unlock()
 	alice.closeStatus(presenceSuperseded)
 	if len(alice.events) != 0 {

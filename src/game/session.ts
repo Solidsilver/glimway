@@ -10,6 +10,7 @@
  *   repeated transitions.
  * - Save failures surface to the interface, not only to the console.
  */
+import { profileFor } from '../lib/profile.ts'
 import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { advanceQuest, questObjective, questShortGoal } from '../lib/state.ts'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types.ts'
@@ -33,7 +34,11 @@ export class Session {
   state: GameState
   /** Save provenance (format 2): governs defeat recovery and sync rules. */
   vitalsSource: VitalsSource
-  importedProfile: HabiticaProfile | null
+  private profile: HabiticaProfile | null = null
+  get importedProfile(): HabiticaProfile | null {
+    return profileFor({ profileSource: this.profile ? 'habitica' : 'none', profile: this.profile })
+  }
+  set importedProfile(value: HabiticaProfile | null) { this.profile = value }
   private saveTimer: number | null = null
   private autosaveTimer: number | null = null
   private destroyed = false

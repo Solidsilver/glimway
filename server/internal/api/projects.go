@@ -36,7 +36,7 @@ func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsVi
 			v.Contributed[id] = 0
 			v.Mine[id] = 0
 		}
-		mine, err := tx.QueryContext(ctx, "SELECT material,SUM(qty) FROM contributions WHERE world_id=? AND project_def=? AND habitica_id=? GROUP BY material", s.WorldID, def.ID, s.HabiticaID)
+		mine, err := tx.QueryContext(ctx, "SELECT material,SUM(qty) FROM contributions WHERE world_id=? AND project_def=? AND account_id=? GROUP BY material", s.WorldID, def.ID, s.AccountID)
 		if err != nil {
 			return out, err
 		}
@@ -80,7 +80,7 @@ func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsVi
 		if v.CompletedAt != nil {
 			v.Stage = "complete"
 			out.WorldFlags = append(out.WorldFlags, *v.WorldFlag)
-			rows, err = tx.QueryContext(ctx, `SELECT paper_id FROM project_papers WHERE world_id=? AND project_def=? AND EXISTS(SELECT 1 FROM contributions WHERE world_id=? AND project_def=? AND habitica_id=?) ORDER BY paper_id`, s.WorldID, def.ID, s.WorldID, def.ID, s.HabiticaID)
+			rows, err = tx.QueryContext(ctx, `SELECT paper_id FROM project_papers WHERE world_id=? AND project_def=? AND EXISTS(SELECT 1 FROM contributions WHERE world_id=? AND project_def=? AND account_id=?) ORDER BY paper_id`, s.WorldID, def.ID, s.WorldID, def.ID, s.AccountID)
 			if err != nil {
 				return out, err
 			}
@@ -178,7 +178,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			if n > max(0, def.Materials[material]-current) {
 				return nil, fail(409, "project-overfilled")
 			}
-			if err = materialChange(ctx, tx, s.HabiticaID, material, -n, "project-contribute", s.WorldID+":"+id+":"+ref, now); err != nil {
+			if err = materialChange(ctx, tx, s.AccountID, material, -n, "project-contribute", s.WorldID+":"+id+":"+ref, now); err != nil {
 				return nil, err
 			}
 			if _, err = tx.ExecContext(ctx, "INSERT INTO project_materials VALUES(?,?,?,?) ON CONFLICT(world_id,project_def,material) DO UPDATE SET qty=qty+excluded.qty", s.WorldID, id, material, n); err != nil {
@@ -188,7 +188,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			if err != nil {
 				return nil, err
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO contributions VALUES(?,?,?,?,?,?,?)", contribution, s.WorldID, id, s.HabiticaID, material, n, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO contributions VALUES(?,?,?,?,?,?,?)", contribution, s.WorldID, id, s.AccountID, material, n, now); err != nil {
 				return nil, err
 			}
 		}
@@ -199,7 +199,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 		if err != nil {
 			return nil, err
 		}
-		m, err := materials(ctx, tx, s.HabiticaID)
+		m, err := materials(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}

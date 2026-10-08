@@ -129,10 +129,10 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		}
 	}
 	if bumpRevision {
-		if _, err = tx.ExecContext(ctx, "UPDATE players SET rev=rev+1 WHERE habitica_id=?", sender); err != nil {
+		if err = BumpVersion(ctx, tx, &Snapshot{AccountID: sender}); err != nil {
 			return false, err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE progress SET rev=(SELECT rev FROM players WHERE habitica_id=?),updated_at=? WHERE habitica_id=?", sender, now, sender); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE progress SET rev=(SELECT version FROM players WHERE account_id=?),updated_at=? WHERE account_id=?", sender, now, sender); err != nil {
 			return false, err
 		}
 	}
@@ -149,12 +149,12 @@ func ReturnDueMailTx(ctx context.Context, tx *sql.Tx, now int64, participant str
 		filter = " AND (m.from_id=? OR m.to_id=?)"
 		args = append(args, participant, participant)
 	}
-	returnDue := `m.kind!='thanks' AND (m.sent_at<=? OR NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=m.to_id) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=m.to_id))`
+	returnDue := `m.kind!='thanks' AND (m.sent_at<=? OR NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')))`
 	return returnMailBatch(ctx, tx, now, returnDue+filter, args)
 }
 func returnMailBatch(ctx context.Context, tx *sql.Tx, now int64, filter string, args []any) (int, error) {
 	args = append(args, content.MailRules.MaintenanceBatch)
-	rows, err := tx.QueryContext(ctx, `SELECT m.id,CASE WHEN NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=m.to_id) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=m.to_id) THEN 'recipient-removed' ELSE 'expired' END FROM mail m WHERE m.claimed_at IS NULL AND m.returned_at IS NULL AND `+filter+` ORDER BY m.sent_at,m.id LIMIT ?`, args...)
+	rows, err := tx.QueryContext(ctx, `SELECT m.id,CASE WHEN NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')) THEN 'recipient-removed' ELSE 'expired' END FROM mail m WHERE m.claimed_at IS NULL AND m.returned_at IS NULL AND `+filter+` ORDER BY m.sent_at,m.id LIMIT ?`, args...)
 	if err != nil {
 		return 0, err
 	}

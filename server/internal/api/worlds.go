@@ -100,7 +100,7 @@ type worldView struct {
 func loadWorldRef(ctx context.Context, tx *sql.Tx, id string) (worldRef, error) {
 	var w worldRef
 	err := tx.QueryRowContext(ctx, `SELECT w.id,w.owner_id,COALESCE(p.display_name,''),(SELECT count(*) FROM players m WHERE m.world_id=w.id),COALESCE(p.world_id=w.id,0),w.habitica_party_id
- FROM worlds w LEFT JOIN players p ON p.habitica_id=w.owner_id WHERE w.id=?`, id).Scan(&w.ID, &w.OwnerID, &w.OwnerName, &w.Members, &w.OwnerHere, &w.party)
+ FROM worlds w LEFT JOIN players p ON p.account_id=w.owner_id WHERE w.id=?`, id).Scan(&w.ID, &w.OwnerID, &w.OwnerName, &w.Members, &w.OwnerHere, &w.party)
 	w.Party = w.OwnerID == "" && w.party.Valid
 	return w, err
 }
@@ -210,7 +210,7 @@ func leaverOf(w worldRef, party *string) bool {
 // moveOpensAt is when the player may next move (0: now).
 func moveOpensAt(ctx context.Context, tx *sql.Tx, id string, now int64) (int64, error) {
 	var last int64
-	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(created_at),0) FROM ledger WHERE habitica_id=? AND reason='world-move'", id).Scan(&last); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(created_at),0) FROM ledger WHERE account_id=? AND reason='world-move'", id).Scan(&last); err != nil {
 		return 0, err
 	}
 	if last == 0 || now >= last+MoveCooldown {
@@ -226,7 +226,7 @@ func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot
 		return v, err
 	}
 	party := s.HabiticaPartyID
-	v.IsOwner = v.World.OwnerID == s.HabiticaID
+	v.IsOwner = v.World.OwnerID == s.AccountID
 	v.InParty = party != nil && *party != ""
 	pw, err := partyWorld(ctx, tx, party)
 	if err != nil {
@@ -240,7 +240,7 @@ func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot
 		}
 		v.PartyWorld = &ref
 		var seen int
-		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM party_prompts WHERE habitica_id=? AND world_id=?", s.HabiticaID, pw).Scan(&seen); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM party_prompts WHERE account_id=? AND world_id=?", s.AccountID, pw).Scan(&seen); err != nil {
 			return v, err
 		}
 		// Not while they live in a world an older link tied to their party:
@@ -249,14 +249,18 @@ func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot
 		v.Prompt = seen == 0 && !oldLink
 	}
 	if pw == "" && v.InParty {
-		why, err := a.mayOpenParty(ctx, tx, s.HabiticaID, party)
+		subject, err := store.HabiticaSubject(ctx, tx, s.AccountID)
+		if err != nil {
+			return v, err
+		}
+		why, err := a.mayOpenParty(ctx, tx, subject, party)
 		if err != nil {
 			return v, err
 		}
 		v.PartyCanOpen = why == ""
 	}
 	var own string
-	err = tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE owner_id=? AND id!=? ORDER BY created_at,id LIMIT 1", s.HabiticaID, s.WorldID).Scan(&own)
+	err = tx.QueryRowContext(ctx, "SELECT id FROM worlds WHERE owner_id=? AND id!=? ORDER BY created_at,id LIMIT 1", s.AccountID, s.WorldID).Scan(&own)
 	if err != nil && err != sql.ErrNoRows {
 		return v, err
 	}
@@ -267,14 +271,14 @@ func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot
 		}
 		v.OwnWorld = &ref
 	}
-	if v.MoveOpensAt, err = moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+	if v.MoveOpensAt, err = moveOpensAt(ctx, tx, s.AccountID, now); err != nil {
 		return v, err
 	}
 	if v.MoveOpensAt > 0 {
 		v.MoveOpensIn = v.MoveOpensAt - now
 	}
 	var left, movedOut sql.NullInt64
-	if err = tx.QueryRowContext(ctx, "SELECT party_left_at,party_moved_out_at FROM players WHERE habitica_id=?", s.HabiticaID).Scan(&left, &movedOut); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT party_left_at,party_moved_out_at FROM players WHERE account_id=?", s.AccountID).Scan(&left, &movedOut); err != nil {
 		return v, err
 	}
 	if leaverOf(v.World, party) {
@@ -294,26 +298,26 @@ func (a *Server) loadWorldView(ctx context.Context, tx *sql.Tx, s store.Snapshot
 func leaving(ctx context.Context, tx *sql.Tx, s store.Snapshot) (leavingView, error) {
 	l := leavingView{Gate: -1}
 	var members int
-	err := tx.QueryRowContext(ctx, "SELECT h.gate,(SELECT count(*) FROM homestead_members o WHERE o.homestead_id=h.id) FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.habitica_id=?", s.HabiticaID).Scan(&l.Gate, &members)
+	err := tx.QueryRowContext(ctx, "SELECT h.gate,(SELECT count(*) FROM homestead_members o WHERE o.homestead_id=h.id) FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.account_id=?", s.AccountID).Scan(&l.Gate, &members)
 	if err != nil && err != sql.ErrNoRows {
 		return l, err
 	}
 	l.Last = l.Gate >= 0 && members <= 1
 	if l.Gate >= 0 {
-		if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM item_instances t JOIN homestead_members m ON m.homestead_id=t.owner WHERE m.habitica_id=? AND t.location='storage'
- AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def IN (`+wardenDefs()+`))`, s.HabiticaID).Scan(&l.WardenTools); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM item_instances t JOIN homestead_members m ON m.homestead_id=t.owner WHERE m.account_id=? AND t.location='storage'
+ AND EXISTS(SELECT 1 FROM item_instances f WHERE f.location='fitted' AND f.owner=t.id AND f.item_def IN (`+wardenDefs()+`))`, s.AccountID).Scan(&l.WardenTools); err != nil {
 			return l, err
 		}
 	}
 	open := "world_id=? AND claimed_at IS NULL AND returned_at IS NULL AND kind!='thanks'"
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM mail WHERE from_id=? AND "+open, s.HabiticaID, s.WorldID).Scan(&l.Outgoing); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM mail WHERE from_id=? AND "+open, s.AccountID, s.WorldID).Scan(&l.Outgoing); err != nil {
 		return l, err
 	}
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM mail WHERE to_id=? AND "+open, s.HabiticaID, s.WorldID).Scan(&l.Incoming); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM mail WHERE to_id=? AND "+open, s.AccountID, s.WorldID).Scan(&l.Incoming); err != nil {
 		return l, err
 	}
 	var deeds int
-	if err = tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE habitica_id=?),0)", s.HabiticaID).Scan(&deeds); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE account_id=?),0)", s.AccountID).Scan(&deeds); err != nil {
 		return l, err
 	}
 	if !content.HomeRules.Deeds.FirstFree || deeds > 0 {
@@ -351,7 +355,11 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	switch why, err := a.mayOpenParty(ctx, tx, s.HabiticaID, s.HabiticaPartyID); {
+	subject, err := store.HabiticaSubject(ctx, tx, s.AccountID)
+	if err != nil {
+		return err
+	}
+	switch why, err := a.mayOpenParty(ctx, tx, subject, s.HabiticaPartyID); {
 	case err != nil:
 		return err
 	case why == "party-open-denied":
@@ -359,7 +367,7 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	case why != "":
 		return fail(409, why)
 	}
-	if _, err = ensurePartyWorld(ctx, tx, s.HabiticaPartyID, s.HabiticaID, now); err != nil {
+	if _, err = ensurePartyWorld(ctx, tx, s.HabiticaPartyID, s.AccountID, now); err != nil {
 		return err
 	}
 	v, err := a.loadWorldView(ctx, tx, s, now)
@@ -394,7 +402,7 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 		return fail(404, "world-not-found")
 	}
 	now := a.Config.Now().Unix()
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.HabiticaID, req.WorldID, now); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.AccountID, req.WorldID, now); err != nil {
 		return err
 	}
 	v, err := a.loadWorldView(ctx, tx, s, now)
@@ -417,12 +425,12 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 	if err := settleHomes(ctx, tx, from, now); err != nil {
 		return false, 0, err
 	}
-	homeID, member, err := memberOf(ctx, tx, s.HabiticaID)
+	homeID, member, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return false, 0, err
 	}
 	if member {
-		h, err := loadHome(ctx, tx, homeID, s.HabiticaID, now)
+		h, err := loadHome(ctx, tx, homeID, s.AccountID, now)
 		if err != nil {
 			return false, 0, err
 		}
@@ -431,10 +439,10 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 		}
 	}
 	// Deed invitations to them belong to the old world's lane.
-	if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE to_id=?", s.HabiticaID); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE to_id=?", s.AccountID); err != nil {
 		return false, 0, err
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT id FROM mail WHERE to_id=? AND world_id=? AND claimed_at IS NULL AND returned_at IS NULL AND kind!='thanks' ORDER BY sent_at,id", s.HabiticaID, from)
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM mail WHERE to_id=? AND world_id=? AND claimed_at IS NULL AND returned_at IS NULL AND kind!='thanks' ORDER BY sent_at,id", s.AccountID, from)
 	if err != nil {
 		return false, 0, err
 	}
@@ -457,13 +465,13 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 			return false, 0, err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE players SET world_id=?,party_left_at=NULL WHERE habitica_id=?", target.ID, s.HabiticaID); err != nil {
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET world_id=?,party_left_at=NULL WHERE account_id=?", target.ID, s.AccountID); err != nil {
 		return false, 0, err
 	}
 	// Codes they handed out follow them: a friend joins them, not the world
 	// they left. A party's world takes no codes: theirs keep naming the old one.
 	if !target.Party {
-		if _, err = tx.ExecContext(ctx, "UPDATE invites SET world_id=? WHERE created_by=? AND world_id=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", target.ID, s.HabiticaID, from, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE invites SET world_id=? WHERE created_by=? AND world_id=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", target.ID, s.AccountID, from, now); err != nil {
 			return false, 0, err
 		}
 	}
@@ -520,10 +528,10 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if target.ID != pw && target.OwnerID != s.HabiticaID {
+		if target.ID != pw && target.OwnerID != s.AccountID {
 			return nil, fail(403, "world-access-denied")
 		}
-		if opens, err := moveOpensAt(ctx, tx, s.HabiticaID, now); err != nil {
+		if opens, err := moveOpensAt(ctx, tx, s.AccountID, now); err != nil {
 			return nil, err
 		} else if opens > 0 {
 			return nil, fail(409, "move-cooldown")
@@ -539,7 +547,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		mover = s.HabiticaID
+		mover = s.AccountID
 		v, err := a.loadWorldView(ctx, tx, *s, now)
 		if err != nil {
 			return nil, err
@@ -585,7 +593,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if before.Outgoing > 0 {
 			return nil, fail(409, "mail-in-flight")
 		}
-		target, err := ownWorld(ctx, tx, s.HabiticaID, now)
+		target, err := ownWorld(ctx, tx, s.AccountID, now)
 		if err != nil {
 			return nil, err
 		}
@@ -594,7 +602,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		mover = s.HabiticaID
+		mover = s.AccountID
 		v, err := a.loadWorldView(ctx, tx, *s, now)
 		if err != nil {
 			return nil, err
@@ -619,21 +627,21 @@ func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *s
 		return false, err
 	}
 	if !leaverOf(here, party) {
-		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=NULL WHERE habitica_id=?", s.HabiticaID)
+		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=NULL WHERE account_id=?", s.AccountID)
 		return false, err
 	}
 	var left sql.NullInt64
-	if err = tx.QueryRowContext(ctx, "SELECT party_left_at FROM players WHERE habitica_id=?", s.HabiticaID).Scan(&left); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT party_left_at FROM players WHERE account_id=?", s.AccountID).Scan(&left); err != nil {
 		return false, err
 	}
 	if !left.Valid {
-		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=? WHERE habitica_id=?", now, s.HabiticaID)
+		_, err = tx.ExecContext(ctx, "UPDATE players SET party_left_at=? WHERE account_id=?", now, s.AccountID)
 		return false, err
 	}
 	if now < left.Int64+PartyGrace {
 		return false, nil
 	}
-	target, err := ownWorld(ctx, tx, s.HabiticaID, now)
+	target, err := ownWorld(ctx, tx, s.AccountID, now)
 	if err != nil {
 		return false, err
 	}
@@ -644,7 +652,7 @@ func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *s
 	if _, _, err = relocate(ctx, tx, s, target, now); err != nil {
 		return false, err
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=? WHERE habitica_id=?", now, s.HabiticaID); err != nil {
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=? WHERE account_id=?", now, s.AccountID); err != nil {
 		return false, err
 	}
 	if err = settleSlots(ctx, tx, s); err != nil {
@@ -665,7 +673,7 @@ func (a *Server) worldNotice(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=NULL WHERE habitica_id=?", s.HabiticaID); err != nil {
+	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=NULL WHERE account_id=?", s.AccountID); err != nil {
 		return err
 	}
 	v, err := a.loadWorldView(ctx, tx, s, a.Config.Now().Unix())

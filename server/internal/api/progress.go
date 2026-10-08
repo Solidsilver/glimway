@@ -26,7 +26,7 @@ func (a *Server) progress(w http.ResponseWriter, r *http.Request) error {
 	if err = revision(s, req.Mutation, false); err != nil {
 		return err
 	}
-	stale := *req.BaseRev < s.Rev
+	stale := *req.BaseRev < s.Version
 	status := "current"
 	if stale {
 		status = "stale"

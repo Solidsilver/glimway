@@ -6,6 +6,8 @@
  */
 
 /** Server codes checked against Go sources by error_codes_test.go. */
+import { decodePlayerState } from './state-contract.ts';
+import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { ErrorCode, ErrorCodeSchema } from '../gen/glimway/v1/errors_pb.js';
 
 type Hyphens<S extends string> = S extends `${infer A}_${infer B}` ? `${Lowercase<A>}-${Hyphens<B>}` : Lowercase<S>;
@@ -49,20 +51,24 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   'playing-elsewhere': 'Playing on another device.',
   superseded: 'Another device took over.',
   'stale-revision': 'The save moved on.',
+  'reload-needed': 'Reload to use the current Glimway version.',
+  'report-required': 'Waiting for your latest combat report.',
 };
 
 export class ApiError extends Error {
   readonly code: ApiErrorCode;
+  readonly state?: PlayerState;
   /** HTTP status, when there was a response. */
   readonly status?: number;
   /** Retry-After in milliseconds (429s), capped at a minute. */
   readonly retryAfterMs?: number;
 
-  constructor(code: ApiErrorCode, extra: { status?: number; retryAfterMs?: number } = {}) {
+  constructor(code: ApiErrorCode, extra: { status?: number; retryAfterMs?: number; state?: PlayerState } = {}) {
     super(MESSAGES[code] ?? `Glimway server error: ${code}.`);
     this.name = 'ApiError';
     this.code = code;
     this.status = extra.status;
+    this.state = extra.state;
     this.retryAfterMs = extra.retryAfterMs;
   }
 }
@@ -91,8 +97,12 @@ export function errorFromResponse(status: number, body: unknown, retryAfter: str
       ? (body as { error: { code?: unknown } }).error.code
       : undefined;
   if (typeof code !== 'string') return new ApiError('unavailable', { status });
+  let state: PlayerState | undefined;
+  if (typeof body === 'object' && body !== null && 'state' in body) {
+    try { state = decodePlayerState(body.state); } catch { return new ApiError('bad-response', { status }); }
+  }
   const retryAfterMs = status === 429 ? (parseRetryAfter(retryAfter) ?? 1000) : undefined;
-  return new ApiError(isServerErrorCode(code) ? code : 'unknown', { status, retryAfterMs });
+  return new ApiError(isServerErrorCode(code) ? code : 'unknown', { status, retryAfterMs, state });
 }
 
 /** The server can't be reached right now (or isn't there at all). */
@@ -103,3 +113,14 @@ export function isUnreachable(err: unknown): boolean {
 export function errorCode(err: unknown): ApiErrorCode {
   return err instanceof ApiError ? err.code : 'unknown';
 }
+
+/** Only a validated stateful gameplay refusal proves an outbox head failed. */
+export function isSettledRefusal(err: unknown): err is ApiError {
+  return err instanceof ApiError && !!err.state && err.status !== undefined && err.status >= 400 && err.status < 500 && err.status !== 429 && !['not-implemented', 'report-required', 'superseded', 'reload-needed', 'unknown', 'bad-response', 'idempotency-mismatch'].includes(err.code);
+}
+
+export function isReloadNeeded(err: unknown): err is ApiError { return err instanceof ApiError && err.code === 'reload-needed'; }
+/** C2 pauses the outbox with a client-bug notice on strict decode failure. */
+export function isOutboxClientBug(err: unknown): err is ApiError { return err instanceof ApiError && err.status === 400 && err.code === 'invalid-json' && !err.state; }
+/** The key may have committed a different payload; reconcile before prediction rollback. */
+export function needsReconciliation(err: unknown): err is ApiError { return err instanceof ApiError && err.code === 'idempotency-mismatch'; }

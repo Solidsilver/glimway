@@ -1,0 +1,1037 @@
+[
+  {
+    "error": {
+      "code": "invalid-json"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-credentials"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-client"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-progress"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-choice"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-save"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-spend"
+    }
+  },
+  {
+    "error": {
+      "code": "key-required"
+    }
+  },
+  {
+    "error": {
+      "code": "unauthorized"
+    }
+  },
+  {
+    "error": {
+      "code": "habitica-auth"
+    }
+  },
+  {
+    "error": {
+      "code": "access-denied"
+    }
+  },
+  {
+    "error": {
+      "code": "cross-origin"
+    }
+  },
+  {
+    "error": {
+      "code": "world-required"
+    }
+  },
+  {
+    "error": {
+      "code": "player-flagged"
+    }
+  },
+  {
+    "error": {
+      "code": "not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "invite-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "playing-elsewhere"
+    }
+  },
+  {
+    "error": {
+      "code": "superseded"
+    }
+  },
+  {
+    "error": {
+      "code": "origin-required"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-revision"
+    }
+  },
+  {
+    "error": {
+      "code": "stale-revision"
+    }
+  },
+  {
+    "error": {
+      "code": "account-switch"
+    }
+  },
+  {
+    "error": {
+      "code": "not-at-safe-boundary"
+    }
+  },
+  {
+    "error": {
+      "code": "already-set"
+    }
+  },
+  {
+    "error": {
+      "code": "idempotency-mismatch"
+    }
+  },
+  {
+    "error": {
+      "code": "not-defeated"
+    }
+  },
+  {
+    "error": {
+      "code": "short"
+    }
+  },
+  {
+    "error": {
+      "code": "done"
+    }
+  },
+  {
+    "error": {
+      "code": "full"
+    }
+  },
+  {
+    "error": {
+      "code": "needs-earned"
+    }
+  },
+  {
+    "error": {
+      "code": "invite-limit"
+    }
+  },
+  {
+    "error": {
+      "code": "invite-budget"
+    }
+  },
+  {
+    "error": {
+      "code": "invite-used"
+    }
+  },
+  {
+    "error": {
+      "code": "json-required"
+    }
+  },
+  {
+    "error": {
+      "code": "implausible-profile"
+    }
+  },
+  {
+    "error": {
+      "code": "habitica-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "login-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "login-global-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "login-busy"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-claim"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-position"
+    }
+  },
+  {
+    "error": {
+      "code": "lantern-id-required"
+    }
+  },
+  {
+    "error": {
+      "code": "world-access-denied"
+    }
+  },
+  {
+    "error": {
+      "code": "item-not-owned"
+    }
+  },
+  {
+    "error": {
+      "code": "region-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "epoch-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "entity-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "lantern-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "tier-required"
+    }
+  },
+  {
+    "error": {
+      "code": "tier-unavailable"
+    }
+  },
+  {
+    "error": {
+      "code": "insufficient-embers"
+    }
+  },
+  {
+    "error": {
+      "code": "insufficient-materials"
+    }
+  },
+  {
+    "error": {
+      "code": "already-placed"
+    }
+  },
+  {
+    "error": {
+      "code": "not-placed"
+    }
+  },
+  {
+    "error": {
+      "code": "out-of-bounds"
+    }
+  },
+  {
+    "error": {
+      "code": "placement-overlap"
+    }
+  },
+  {
+    "error": {
+      "code": "not-at-own-plot"
+    }
+  },
+  {
+    "error": {
+      "code": "old-cycle"
+    }
+  },
+  {
+    "error": {
+      "code": "entity-unavailable"
+    }
+  },
+  {
+    "error": {
+      "code": "already-claimed"
+    }
+  },
+  {
+    "error": {
+      "code": "already-taken-today"
+    }
+  },
+  {
+    "error": {
+      "code": "slot-occupied"
+    }
+  },
+  {
+    "error": {
+      "code": "slot-empty"
+    }
+  },
+  {
+    "error": {
+      "code": "shelf-not-placed"
+    }
+  },
+  {
+    "error": {
+      "code": "shelf-not-empty"
+    }
+  },
+  {
+    "error": {
+      "code": "homestead-desolate"
+    }
+  },
+  {
+    "error": {
+      "code": "homestead-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "cannot-recall-thanks"
+    }
+  },
+  {
+    "error": {
+      "code": "asset-required"
+    }
+  },
+  {
+    "error": {
+      "code": "gate-required"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-operation"
+    }
+  },
+  {
+    "error": {
+      "code": "craft-only"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-expired"
+    }
+  },
+  {
+    "error": {
+      "code": "epoch-ended"
+    }
+  },
+  {
+    "error": {
+      "code": "not-defeated-in-wilds"
+    }
+  },
+  {
+    "error": {
+      "code": "already-lit"
+    }
+  },
+  {
+    "error": {
+      "code": "claim-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "lantern-creation-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "not-in-wilds"
+    }
+  },
+  {
+    "error": {
+      "code": "too-far-away"
+    }
+  },
+  {
+    "error": {
+      "code": "generator-unavailable"
+    }
+  },
+  {
+    "error": {
+      "code": "not-in-season"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-region"
+    }
+  },
+  {
+    "error": {
+      "code": "sold-out"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-seller"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-good"
+    }
+  },
+  {
+    "error": {
+      "code": "internal"
+    }
+  },
+  {
+    "error": {
+      "code": "habitica-unavailable"
+    }
+  },
+  {
+    "error": {
+      "code": "habitica-invalid-response"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-item"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-placement"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-direction"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-asset"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-quantity"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-recipe"
+    }
+  },
+  {
+    "error": {
+      "code": "insufficient-items"
+    }
+  },
+  {
+    "error": {
+      "code": "insufficient-storage"
+    }
+  },
+  {
+    "error": {
+      "code": "item-not-available"
+    }
+  },
+  {
+    "error": {
+      "code": "self-mail"
+    }
+  },
+  {
+    "error": {
+      "code": "recipient-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-access-denied"
+    }
+  },
+  {
+    "error": {
+      "code": "already-returned"
+    }
+  },
+  {
+    "error": {
+      "code": "recipient-unavailable"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-sender-limit"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-recipient-limit"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-mail-cursor"
+    }
+  },
+  {
+    "error": {
+      "code": "project-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-contribution"
+    }
+  },
+  {
+    "error": {
+      "code": "project-complete"
+    }
+  },
+  {
+    "error": {
+      "code": "project-overfilled"
+    }
+  },
+  {
+    "error": {
+      "code": "land-blocked"
+    }
+  },
+  {
+    "error": {
+      "code": "unlit"
+    }
+  },
+  {
+    "error": {
+      "code": "post-holds-land"
+    }
+  },
+  {
+    "error": {
+      "code": "name-required"
+    }
+  },
+  {
+    "error": {
+      "code": "not-clearable"
+    }
+  },
+  {
+    "error": {
+      "code": "already-cleared"
+    }
+  },
+  {
+    "error": {
+      "code": "not-a-member"
+    }
+  },
+  {
+    "error": {
+      "code": "already-homesteaded"
+    }
+  },
+  {
+    "error": {
+      "code": "already-member"
+    }
+  },
+  {
+    "error": {
+      "code": "gate-taken"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-gate"
+    }
+  },
+  {
+    "error": {
+      "code": "self-invite"
+    }
+  },
+  {
+    "error": {
+      "code": "not-at-table"
+    }
+  },
+  {
+    "error": {
+      "code": "partner-not-at-table"
+    }
+  },
+  {
+    "error": {
+      "code": "chest-full"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-chest"
+    }
+  },
+  {
+    "error": {
+      "code": "item-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "not-a-tool"
+    }
+  },
+  {
+    "error": {
+      "code": "wrong-tool"
+    }
+  },
+  {
+    "error": {
+      "code": "tool-blunt"
+    }
+  },
+  {
+    "error": {
+      "code": "two-wardens-grind"
+    }
+  },
+  {
+    "error": {
+      "code": "not-needed"
+    }
+  },
+  {
+    "error": {
+      "code": "not-usable-yet"
+    }
+  },
+  {
+    "error": {
+      "code": "cannot-mend"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-mender"
+    }
+  },
+  {
+    "error": {
+      "code": "no-free-slot"
+    }
+  },
+  {
+    "error": {
+      "code": "fitting-kind-taken"
+    }
+  },
+  {
+    "error": {
+      "code": "already-fitted"
+    }
+  },
+  {
+    "error": {
+      "code": "not-fitted"
+    }
+  },
+  {
+    "error": {
+      "code": "self-gift"
+    }
+  },
+  {
+    "error": {
+      "code": "not-giveable"
+    }
+  },
+  {
+    "error": {
+      "code": "not-together"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-slot"
+    }
+  },
+  {
+    "error": {
+      "code": "no-such-pocket"
+    }
+  },
+  {
+    "error": {
+      "code": "not-a-keepsake"
+    }
+  },
+  {
+    "error": {
+      "code": "off-hand-closed"
+    }
+  },
+  {
+    "error": {
+      "code": "not-for-the-off-hand"
+    }
+  },
+  {
+    "error": {
+      "code": "pickup-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "already-picked-up"
+    }
+  },
+  {
+    "error": {
+      "code": "too-weak"
+    }
+  },
+  {
+    "error": {
+      "code": "repair-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "repair-not-open"
+    }
+  },
+  {
+    "error": {
+      "code": "already-mended"
+    }
+  },
+  {
+    "error": {
+      "code": "well-rope-broken"
+    }
+  },
+  {
+    "error": {
+      "code": "wrong-recipient"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-target"
+    }
+  },
+  {
+    "error": {
+      "code": "unknown-target"
+    }
+  },
+  {
+    "error": {
+      "code": "condition-unmet"
+    }
+  },
+  {
+    "error": {
+      "code": "already-granted"
+    }
+  },
+  {
+    "error": {
+      "code": "gathered-enough"
+    }
+  },
+  {
+    "error": {
+      "code": "cannot-gather-here"
+    }
+  },
+  {
+    "error": {
+      "code": "cannot-plant-here"
+    }
+  },
+  {
+    "error": {
+      "code": "not-a-seed"
+    }
+  },
+  {
+    "error": {
+      "code": "not-your-land"
+    }
+  },
+  {
+    "error": {
+      "code": "tile-required"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-tool"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-visit"
+    }
+  },
+  {
+    "error": {
+      "code": "plant-in-the-way"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-request"
+    }
+  },
+  {
+    "error": {
+      "code": "world-not-found"
+    }
+  },
+  {
+    "error": {
+      "code": "already-in-world"
+    }
+  },
+  {
+    "error": {
+      "code": "mail-in-flight"
+    }
+  },
+  {
+    "error": {
+      "code": "move-cooldown"
+    }
+  },
+  {
+    "error": {
+      "code": "no-party"
+    }
+  },
+  {
+    "error": {
+      "code": "still-in-party"
+    }
+  },
+  {
+    "error": {
+      "code": "party-closed"
+    }
+  },
+  {
+    "error": {
+      "code": "party-open-denied"
+    }
+  },
+  {
+    "error": {
+      "code": "party-world-invites"
+    }
+  },
+  {
+    "error": {
+      "code": "party-admitted-invites"
+    }
+  },
+  {
+    "error": {
+      "code": "world-choice-required"
+    }
+  },
+  {
+    "error": {
+      "code": "world-chosen"
+    }
+  },
+  {
+    "error": {
+      "code": "recipe-unknown"
+    }
+  },
+  {
+    "error": {
+      "code": "desk-required"
+    }
+  },
+  {
+    "error": {
+      "code": "woodpile-required"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-page"
+    }
+  },
+  {
+    "error": {
+      "code": "page-not-held"
+    }
+  },
+  {
+    "error": {
+      "code": "nothing-ready"
+    }
+  },
+  {
+    "error": {
+      "code": "invalid-action"
+    }
+  },
+  {
+    "error": {
+      "code": "login-user-rate-limited"
+    }
+  },
+  {
+    "error": {
+      "code": "unknown-paper"
+    }
+  },
+  {
+    "error": {
+      "code": "already-shelved"
+    }
+  },
+  {
+    "error": {
+      "code": "not-held"
+    }
+  },
+  {
+    "error": {
+      "code": "upstream"
+    }
+  },
+  {
+    "error": {
+      "code": "presence-full"
+    }
+  },
+  {
+    "error": {
+      "code": "presence-session-limit"
+    }
+  },
+  {
+    "error": {
+      "code": "presence-player-limit"
+    }
+  },
+  {
+    "error": {
+      "code": "reload-needed"
+    }
+  },
+  {
+    "error": {
+      "code": "not-next-step"
+    }
+  },
+  {
+    "error": {
+      "code": "wrong-area"
+    }
+  },
+  {
+    "error": {
+      "code": "unknown-mark"
+    }
+  },
+  {
+    "error": {
+      "code": "server-mark"
+    }
+  },
+  {
+    "error": {
+      "code": "paper-not-due"
+    }
+  },
+  {
+    "error": {
+      "code": "echo-not-here"
+    }
+  },
+  {
+    "error": {
+      "code": "not-implemented"
+    }
+  },
+  {
+    "error": {
+      "code": "report-required"
+    }
+  }
+]

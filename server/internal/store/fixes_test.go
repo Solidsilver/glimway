@@ -90,7 +90,7 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 			if err == nil {
 				var n int
 				err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n)
-				if err == nil && n != 24 {
+				if err == nil && n != len(deployedMigrationHistory) {
 					err = sql.ErrNoRows
 				}
 				s.Close()
@@ -121,6 +121,7 @@ func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	markFixtureOrigins(t, old)
 	old.Close()
 	s, err := Open(path)
 	if err != nil {
@@ -129,7 +130,7 @@ func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 	defer s.Close()
 	var xp float64
 	var embers int
-	if err = s.DB.QueryRow("SELECT reported_xp,embers FROM pending_credits WHERE habitica_id='alice'").Scan(&xp, &embers); err != nil || xp != 10080 || embers != 337 {
+	if err = s.DB.QueryRow("SELECT reported_xp,embers FROM pending_credits WHERE account_id='alice'").Scan(&xp, &embers); err != nil || xp != 10080 || embers != 337 {
 		t.Fatal("old pending lost on upgrade")
 	}
 	var expires int64
@@ -161,6 +162,7 @@ func TestRound2UpgradeLossHistoryRemovalAndSessionDeadline(t *testing.T) {
 	if _, err = old.Exec("INSERT INTO invites(code_hash,created_by,created_at,expires_at) VALUES('player-code','alice',1,9999999)"); err != nil {
 		t.Fatal(err)
 	}
+	markFixtureOrigins(t, old)
 	old.Close()
 	s, err := Open(path)
 	if err != nil {
@@ -168,7 +170,7 @@ func TestRound2UpgradeLossHistoryRemovalAndSessionDeadline(t *testing.T) {
 	}
 	defer s.Close()
 	var level, xp, high float64
-	if err = s.DB.QueryRow("SELECT loss_level,loss_xp,verified_high_level FROM sync_baselines WHERE habitica_id='alice'").Scan(&level, &xp, &high); err != nil || level != 29 || xp != rules.LifetimeXP(29, 0) || high != 120 {
+	if err = s.DB.QueryRow("SELECT loss_level,loss_xp,verified_high_level FROM sync_baselines WHERE account_id='alice'").Scan(&level, &xp, &high); err != nil || level != 29 || xp != rules.LifetimeXP(29, 0) || high != 120 {
 		t.Fatal("upgrade ignored newest checkpoint or verified history")
 	}
 	var deadline, removed, revoked int64

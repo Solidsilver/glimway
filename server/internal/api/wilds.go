@@ -177,7 +177,7 @@ type lanternView struct {
 
 func lanterns(ctx context.Context, tx *sql.Tx, epoch string) ([]lanternView, error) {
 	out := []lanternView{}
-	rows, err := tx.QueryContext(ctx, "SELECT l.id,l.owner_id,p.display_name,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN players p ON p.habitica_id=l.owner_id WHERE l.epoch=? ORDER BY l.owner_id", epoch)
+	rows, err := tx.QueryContext(ctx, "SELECT l.id,l.owner_id,p.display_name,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN players p ON p.account_id=l.owner_id WHERE l.epoch=? ORDER BY l.owner_id", epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -200,9 +200,6 @@ func (a *Server) regionRead(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.Config.Now().Unix()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	e, err := a.ensureEpoch(ctx, tx, s, id, now)
 	if err != nil {
 		return err
@@ -220,7 +217,7 @@ func (a *Server) regionRead(w http.ResponseWriter, r *http.Request) error {
 		states = append(states, v)
 	}
 	claims := []personalClaim{}
-	rows, err := tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE epoch=? AND habitica_id=? ORDER BY entity_id", e.ID, s.HabiticaID)
+	rows, err := tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE epoch=? AND account_id=? ORDER BY entity_id", e.ID, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -238,7 +235,7 @@ func (a *Server) regionRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	discoveries := []discovery{}
-	rows, err = tx.QueryContext(ctx, "SELECT d.entity_id,d.poi_id,d.discoverer_id,p.display_name,d.at FROM discoveries d JOIN players p ON p.habitica_id=d.discoverer_id WHERE d.epoch=? ORDER BY d.entity_id", e.ID)
+	rows, err = tx.QueryContext(ctx, "SELECT d.entity_id,d.poi_id,d.discoverer_id,p.display_name,d.at FROM discoveries d JOIN players p ON p.account_id=d.discoverer_id WHERE d.epoch=? ORDER BY d.entity_id", e.ID)
 	if err != nil {
 		return err
 	}
@@ -259,7 +256,7 @@ func (a *Server) regionRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	m, err := materials(ctx, tx, s.HabiticaID)
+	m, err := materials(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -290,18 +287,18 @@ type wildsRequest struct {
 func claimRate(ctx context.Context, tx *sql.Tx, id string, now int64) error {
 	var at int64
 	var n int
-	err := tx.QueryRowContext(ctx, "SELECT window_at,qty FROM claim_rate WHERE habitica_id=?", id).Scan(&at, &n)
+	err := tx.QueryRowContext(ctx, "SELECT window_at,qty FROM claim_rate WHERE account_id=?", id).Scan(&at, &n)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	if err == sql.ErrNoRows || now-at >= 60 {
-		_, err = tx.ExecContext(ctx, "INSERT INTO claim_rate VALUES(?,?,1) ON CONFLICT(habitica_id) DO UPDATE SET window_at=excluded.window_at,qty=1", id, now)
+		_, err = tx.ExecContext(ctx, "INSERT INTO claim_rate VALUES(?,?,1) ON CONFLICT(account_id) DO UPDATE SET window_at=excluded.window_at,qty=1", id, now)
 		return err
 	}
 	if n >= content.Rules.WildsLimits.ClaimsPerMinute {
 		return fail(429, "claim-rate-limited")
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE claim_rate SET qty=qty+1 WHERE habitica_id=?", id)
+	_, err = tx.ExecContext(ctx, "UPDATE claim_rate SET qty=qty+1 WHERE account_id=?", id)
 	return err
 }
 func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
@@ -359,23 +356,23 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 					timer = content.WildsRules.Timers.NodeRegrowSeconds
 				}
 				state.AvailableAt = now + int64(timer)
-				by := s.HabiticaID
+				by := s.AccountID
 				state.By = &by
 				state.At = &now
-				_, err = tx.ExecContext(ctx, "UPDATE entity_state SET state=?,available_at=?,by_id=?,at=? WHERE epoch=? AND entity_id=?", state.State, state.AvailableAt, s.HabiticaID, now, e.ID, entity.ID)
+				_, err = tx.ExecContext(ctx, "UPDATE entity_state SET state=?,available_at=?,by_id=?,at=? WHERE epoch=? AND entity_id=?", state.State, state.AvailableAt, s.AccountID, now, e.ID, entity.ID)
 			} else {
 				var n int
-				if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM personal_claims WHERE epoch=? AND entity_id=? AND habitica_id=?", e.ID, entity.ID, s.HabiticaID).Scan(&n); err != nil {
+				if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM personal_claims WHERE epoch=? AND entity_id=? AND account_id=?", e.ID, entity.ID, s.AccountID).Scan(&n); err != nil {
 					return nil, err
 				}
 				if n > 0 {
 					return nil, fail(409, "already-claimed")
 				}
-				_, err = tx.ExecContext(ctx, "INSERT INTO personal_claims VALUES(?,?,?,?)", e.ID, entity.ID, s.HabiticaID, now)
+				_, err = tx.ExecContext(ctx, "INSERT INTO personal_claims VALUES(?,?,?,?)", e.ID, entity.ID, s.AccountID, now)
 				if err == nil && entity.Kind == "poi" {
-					_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO discoveries VALUES(?,?,?,?,?)", e.ID, entity.ID, entity.POI, s.HabiticaID, now)
+					_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO discoveries VALUES(?,?,?,?,?)", e.ID, entity.ID, entity.POI, s.AccountID, now)
 					if err == nil {
-						_, err = tx.ExecContext(ctx, "UPDATE entity_state SET state='charted',by_id=COALESCE(by_id,?),at=COALESCE(at,?) WHERE epoch=? AND entity_id=?", s.HabiticaID, now, e.ID, entity.ID)
+						_, err = tx.ExecContext(ctx, "UPDATE entity_state SET state='charted',by_id=COALESCE(by_id,?),at=COALESCE(at,?) WHERE epoch=? AND entity_id=?", s.AccountID, now, e.ID, entity.ID)
 						if err == nil {
 							state, err = entityStatus(ctx, tx, e, entity, now)
 						}
@@ -385,7 +382,7 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			if err = claimRate(ctx, tx, s.HabiticaID, now); err != nil {
+			if err = claimRate(ctx, tx, s.AccountID, now); err != nil {
 				w.Header().Set("Retry-After", "60")
 				return nil, err
 			}
@@ -404,7 +401,7 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			m, err := materials(ctx, tx, s.HabiticaID)
+			m, err := materials(ctx, tx, s.AccountID)
 			if err != nil {
 				return nil, err
 			}
@@ -431,7 +428,7 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 
 			day := time.Unix(now, 0).UTC().Format("2006-01-02")
 			var n int
-			err = tx.QueryRowContext(ctx, "SELECT qty FROM lantern_creations WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day).Scan(&n)
+			err = tx.QueryRowContext(ctx, "SELECT qty FROM lantern_creations WHERE account_id=? AND utc_day=?", s.AccountID, day).Scan(&n)
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
@@ -440,14 +437,14 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 				w.Header().Set("Retry-After", strconv.FormatInt(midnight-now, 10))
 				return nil, fail(429, "lantern-creation-limited")
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_creations VALUES(?,?,1) ON CONFLICT(habitica_id,utc_day) DO UPDATE SET qty=qty+1", s.HabiticaID, day); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_creations VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day); err != nil {
 				return nil, err
 			}
 			id, err := store.Random()
 			if err != nil {
 				return nil, err
 			}
-			_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,region_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(world_id,region_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, e.ID, s.WorldID, e.RegionID, s.HabiticaID, *req.X, *req.Y, now)
+			_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,region_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(world_id,region_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, e.ID, s.WorldID, e.RegionID, s.AccountID, *req.X, *req.Y, now)
 			if err != nil {
 				return nil, err
 			}
@@ -481,10 +478,10 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 			}
 			loot := wilds.LootDrop{Materials: []wilds.MaterialQty{}}
 			rewarded := false
-			if req.OwnerID != s.HabiticaID {
+			if req.OwnerID != s.AccountID {
 				day := time.Unix(now, 0).UTC().Format("2006-01-02")
 				var n int
-				err = tx.QueryRowContext(ctx, "SELECT qty FROM lantern_rewards WHERE habitica_id=? AND utc_day=?", s.HabiticaID, day).Scan(&n)
+				err = tx.QueryRowContext(ctx, "SELECT qty FROM lantern_rewards WHERE account_id=? AND utc_day=?", s.AccountID, day).Scan(&n)
 				if err != nil && err != sql.ErrNoRows {
 					return nil, err
 				}
@@ -492,20 +489,20 @@ func (a *Server) wildsMutation(w http.ResponseWriter, r *http.Request) error {
 					rewarded = true
 					reward := content.Rules.WildsLimits.LanternReward
 					loot.Materials = append(loot.Materials, wilds.MaterialQty{ID: reward.Material, Qty: reward.Qty})
-					_, err = tx.ExecContext(ctx, "INSERT INTO lantern_rewards VALUES(?,?,1) ON CONFLICT(habitica_id,utc_day) DO UPDATE SET qty=qty+1", s.HabiticaID, day)
+					_, err = tx.ExecContext(ctx, "INSERT INTO lantern_rewards VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day)
 					if err != nil {
 						return nil, err
 					}
 				}
 			}
-			_, err = tx.ExecContext(ctx, "UPDATE lanterns SET lit_by=?,lit_at=? WHERE id=?", s.HabiticaID, now, req.LanternID)
+			_, err = tx.ExecContext(ctx, "UPDATE lanterns SET lit_by=?,lit_at=? WHERE id=?", s.AccountID, now, req.LanternID)
 			if err != nil {
 				return nil, err
 			}
 			if err = grantLoot(ctx, tx, s, loot, "wilds-relight", req.LanternID, now); err != nil {
 				return nil, err
 			}
-			m, err := materials(ctx, tx, s.HabiticaID)
+			m, err := materials(ctx, tx, s.AccountID)
 			if err != nil {
 				return nil, err
 			}
@@ -527,7 +524,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		return err
 	}
 	for _, m := range loot.Materials {
-		if err := materialChange(ctx, tx, s.HabiticaID, m.ID, m.Qty, reason, ref, now); err != nil {
+		if err := materialChange(ctx, tx, s.AccountID, m.ID, m.Qty, reason, ref, now); err != nil {
 			return err
 		}
 	}
@@ -536,7 +533,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		// keepsake to a player once, and never repeat it (the roll may name
 		// it again, but nothing is granted). Unbound trinkets repeat.
 		if def, ok := content.ItemFor(*loot.Trinket); ok && def.Kind == "keepsake" && def.Bound {
-			first, err := store.Outcome(ctx, tx, s.HabiticaID, "story-keepsake:"+*loot.Trinket, reason, now)
+			first, err := store.Outcome(ctx, tx, s.AccountID, "story-keepsake:"+*loot.Trinket, reason, now)
 			if err != nil {
 				return err
 			}
@@ -544,7 +541,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 				return nil
 			}
 		}
-		if err := packPut(ctx, tx, s.HabiticaID, *loot.Trinket, []makerQty{{Maker: "", Qty: 1}}, reason, ref, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, *loot.Trinket, []makerQty{{Maker: "", Qty: 1}}, reason, ref, now); err != nil {
 			return err
 		}
 		s.State.Inventory = appendUnique(s.State.Inventory, *loot.Trinket)
@@ -615,7 +612,7 @@ func deepCountry(regionID string, cx, cy int) bool {
 // grants the find.
 func weeklyFind(ctx context.Context, tx *sql.Tx, player, table, salt string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
 	var count int
-	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE habitica_id=? AND found_at>?", player, now-7*86400).Scan(&count)
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE account_id=? AND found_at>?", player, now-7*86400).Scan(&count)
 	if err != nil || count > 0 {
 		return false, err
 	}
@@ -627,7 +624,7 @@ func weeklyFind(ctx context.Context, tx *sql.Tx, player, table, salt string, ent
 	if wilds.Hash(player, entity.ID, int(week), salt, cx, cy)%1000 >= chance {
 		return false, nil
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO "+table+"(habitica_id, found_at) VALUES(?,?)", player, now)
+	_, err = tx.ExecContext(ctx, "INSERT INTO "+table+"(account_id, found_at) VALUES(?,?)", player, now)
 	return err == nil, err
 }
 
@@ -635,7 +632,7 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if !deepCountry(regionID, cx, cy) {
 		return false, nil
 	}
-	found, err := weeklyFind(ctx, tx, s.HabiticaID, "warden_finds", "warden-sliver", entity, cx, cy, now)
+	found, err := weeklyFind(ctx, tx, s.AccountID, "warden_finds", "warden-sliver", entity, cx, cy, now)
 	if err != nil || !found {
 		return false, err
 	}
@@ -643,10 +640,10 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if !ok {
 		return false, nil
 	}
-	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.HabiticaID}, "", sliverDef.MaxPoints(), now); err != nil {
+	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.AccountID}, "", sliverDef.MaxPoints(), now); err != nil {
 		return false, err
 	}
-	if err = currency(ctx, tx, s.HabiticaID, content.StackCurrency("warden-sliver"), 1, "wilds-find", entity.ID, now); err != nil {
+	if err = currency(ctx, tx, s.AccountID, content.StackCurrency("warden-sliver"), 1, "wilds-find", entity.ID, now); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -662,11 +659,11 @@ func maybeGrantStormDrop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, reg
 	if !deepCountry(regionID, cx, cy) {
 		return false, nil
 	}
-	found, err := weeklyFind(ctx, tx, s.HabiticaID, "storm_finds", "storm-drop", entity, cx, cy, now)
+	found, err := weeklyFind(ctx, tx, s.AccountID, "storm_finds", "storm-drop", entity, cx, cy, now)
 	if err != nil || !found {
 		return false, err
 	}
-	if err = packPut(ctx, tx, s.HabiticaID, "storm-grade-drop", []makerQty{{Maker: "", Qty: 1}}, "wilds-find", entity.ID, now); err != nil {
+	if err = packPut(ctx, tx, s.AccountID, "storm-grade-drop", []makerQty{{Maker: "", Qty: 1}}, "wilds-find", entity.ID, now); err != nil {
 		return false, err
 	}
 	return true, refreshItems(ctx, tx, s)

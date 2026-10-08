@@ -1,3 +1,4 @@
+import contract from '../../../content/contract.json' with { type: 'json' };
 /**
  * The Hearthwick Library: one shared shelf per world.
  *
@@ -128,7 +129,7 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
     try {
       const res = await doFetch(`${baseUrl}${path}`, {
         method,
-        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: body === undefined ? { Accept: 'application/json', 'X-Glimway-Contract': String(contract.number) } : { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Glimway-Contract': String(contract.number) },
         body: body === undefined ? undefined : JSON.stringify(body),
         credentials: 'same-origin',
         cache: 'no-store',

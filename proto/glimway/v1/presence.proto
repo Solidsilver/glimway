@@ -4,8 +4,10 @@ option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 
+// Deprecated transport: retained for generated-source compatibility only.
 // One event per frame. The websocket subprotocol versions the binary envelope.
 message PresenceMessage {
+  option deprecated = true;
   oneof event {
     PresenceAuth auth = 1;
     PresenceJoin join = 2;
@@ -19,18 +21,29 @@ message PresenceMessage {
     PresenceWitness witness = 10;
   }
 }
-message PresenceAuth { string lease = 1; }
-message PresenceHeartbeat {}
-message PresenceReady { string habitica_id = 1; }
-message PresenceJoin { string area = 1; PresencePlayer player = 2; }
-message PresenceRoom { string area = 1; repeated PresencePlayer players = 2; }
-message PresenceLeave { string habitica_id = 1; }
-message PresenceEmote { string id = 1; optional string habitica_id = 2; }
-message PresenceGift { string from_name = 1; string kind = 2; string item_def = 3; int32 qty = 4; }
-message PresenceWitness { string beat = 1; string habitica_id = 2; string name = 3; }
+message PresenceAuth {
+  option deprecated = true; string lease = 1; }
+message PresenceHeartbeat {
+  option deprecated = true;}
+message PresenceReady {
+  option deprecated = true; string habitica_id = 1; }
+message PresenceJoin {
+  option deprecated = true; string area = 1; PresencePlayer player = 2; }
+message PresenceRoom {
+  option deprecated = true; string area = 1; repeated PresencePlayer players = 2; }
+message PresenceLeave {
+  option deprecated = true; string habitica_id = 1; }
+message PresenceEmote {
+  option deprecated = true; string id = 1; optional string habitica_id = 2; }
+message PresenceGift {
+  option deprecated = true; string from_name = 1; string kind = 2; string item_def = 3; int32 qty = 4; }
+message PresenceWitness {
+  option deprecated = true; string beat = 1; string habitica_id = 2; string name = 3; }
 // Explicit presence preserves the JSON reader's required-coordinate checks.
-message PresenceFacing { optional double x = 1; optional double y = 2; }
+message PresenceFacing {
+  option deprecated = true; optional double x = 1; optional double y = 2; }
 message PresencePosition {
+  option deprecated = true;
   optional double x = 1;
   optional double y = 2;
   PresenceFacing facing = 3;
@@ -38,12 +51,14 @@ message PresencePosition {
   optional string habitica_id = 5;
 }
 message PresencePlayer {
+  option deprecated = true;
   string habitica_id = 1;
   string display_name = 2;
   PresenceAvatar avatar = 3;
   PresencePosition pos = 4;
 }
 message PresenceAvatar {
+  option deprecated = true;
   PresenceAppearance appearance = 1;
   // Existing JSON maps have explicit null equipment slots.
   map<string, google.protobuf.Value> equipped = 2;
@@ -53,6 +68,7 @@ message PresenceAvatar {
   google.protobuf.StringValue selected_mount = 6;
 }
 message PresenceAppearance {
+  option deprecated = true;
   string size = 1;
   string shirt = 2;
   string skin = 3;

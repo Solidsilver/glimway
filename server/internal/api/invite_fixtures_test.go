@@ -41,14 +41,14 @@ func inviteFixtureResponse(t *testing.T, f inviteFixture) map[string]any {
 	}
 	switch f.Name {
 	case "populated":
-		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,used_by) VALUES(?,?,?,?,?,?)", strings.Repeat("a", 64), "alice", s.WorldID, 0, f.Unix+InviteTTL, nil)
-		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,used_by) VALUES(?,?,?,?,?,?)", strings.Repeat("b", 64), "alice", s.WorldID, 0, 0, "alice")
+		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,used_by) VALUES(?,?,?,?,?,?)", strings.Repeat("a", 64), x.account("alice"), s.WorldID, 0, f.Unix+InviteTTL, nil)
+		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,used_by) VALUES(?,?,?,?,?,?)", strings.Repeat("b", 64), x.account("alice"), s.WorldID, 0, 0, x.account("alice"))
 		// Neither expired nor revoked unused codes appear in the read response.
-		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("c", 64), "alice", s.WorldID, 1, 0, nil)
-		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("d", 64), "alice", s.WorldID, 1, f.Unix+InviteTTL, 1)
+		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("c", 64), x.account("alice"), s.WorldID, 1, 0, nil)
+		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("d", 64), x.account("alice"), s.WorldID, 1, f.Unix+InviteTTL, 1)
 	case "exhausted":
 		for i := 0; i < rules.E.LifetimeInvites; i++ {
-			exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", fmt.Sprintf("%064x", i), "alice", s.WorldID, 0, 0, 1)
+			exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", fmt.Sprintf("%064x", i), x.account("alice"), s.WorldID, 0, 0, 1)
 		}
 	case "party-admitted-own-world":
 		exec("UPDATE allowlist SET added_by='party' WHERE habitica_id='alice'")

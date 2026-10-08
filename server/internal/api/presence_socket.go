@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/coder/websocket"
 	"glimway/content"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/proto"
@@ -18,7 +18,7 @@ import (
 )
 
 func validPresenceRoom(area string) bool {
-	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 {
+	if validArea(area) {
 		return true
 	}
 	parts := strings.Split(area, ":")
@@ -171,7 +171,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	h.peers[identity.ID] = p
-	h.send(p, &contract.PresenceReady{HabiticaId: identity.ID})
+	h.send(p, &contract.PresenceReady{AccountId: identity.ID})
 	if p.area != "" {
 		h.room(p)
 		h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
@@ -220,7 +220,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		// Client messages cannot carry server identity or roster fields.
-		if join := message.GetJoin(); join != nil && join.Player != nil || message.GetPos() != nil && message.GetPos().HabiticaId != nil || message.GetEmote() != nil && message.GetEmote().HabiticaId != nil {
+		if join := message.GetJoin(); join != nil && join.Player != nil || message.GetPos() != nil && message.GetPos().AccountId != nil || message.GetEmote() != nil && message.GetEmote().AccountId != nil {
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			return
 		}
@@ -230,10 +230,10 @@ func (a *Server) presenceReader(p *presencePeer) {
 		var encodeErr error
 		if pos := message.GetPos(); pos != nil {
 			outbound := proto.Clone(pos).(*contract.PresencePosition)
-			outbound.HabiticaId = proto.String(p.identity.ID)
+			outbound.AccountId = proto.String(p.identity.ID)
 			encoded, encodeErr = encodePresence(outbound)
 		} else if emote := message.GetEmote(); emote != nil {
-			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, HabiticaId: proto.String(p.identity.ID)})
+			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, AccountId: proto.String(p.identity.ID)})
 		}
 		now := time.Now()
 		h.mu.Lock()
@@ -272,7 +272,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 				return
 			}
 			if p.area != "" {
-				h.broadcast(p, &contract.PresenceLeave{HabiticaId: p.identity.ID})
+				h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 			}
 			p.area = event.Join.Area
 			p.pos = nil

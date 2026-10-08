@@ -41,7 +41,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if good.Cap > 0 {
 		dayStart := (now / 86400) * 86400
 		var n int
-		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE habitica_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.HabiticaID, content.StackCurrency(good.Item), ref, dayStart).Scan(&n)
+		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE account_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.AccountID, content.StackCurrency(good.Item), ref, dayStart).Scan(&n)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if err := debitEmbers(ctx, tx, s, good.Embers, "market-buy", ref, now); err != nil {
 		return err
 	}
-	if err := packPut(ctx, tx, s.HabiticaID, good.Item, []makerQty{{Maker: "", Qty: good.Qty}}, "market-buy", ref, now); err != nil {
+	if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: good.Qty}}, "market-buy", ref, now); err != nil {
 		return err
 	}
 	out.Bought = &boughtView{Seller: seller.ID, ItemDef: good.Item, Qty: good.Qty, Embers: good.Embers}

@@ -12,7 +12,7 @@ import (
 // cottageHearth returns the homestead ID if the caller is a member of a
 // homestead with Cottage tier (tier 1+): the doc's hearth rule.
 func cottageHearth(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	home, ok, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +32,7 @@ func cottageHearth(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, 
 // writingDeskPlaced checks that the player belongs to a homestead with a
 // placed writing desk.
 func writingDeskPlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	home, ok, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +52,7 @@ func writingDeskPlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (stri
 // woodpilePlaced checks that the player belongs to a homestead with a
 // placed woodpile.
 func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.HabiticaID)
+	home, ok, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		// A found recipe is only known once its page is held (the doc's
 		// "Recipe source" column; starting recipes need no page).
 		if recipe.Page != "" {
-			held, err := stackTotal(ctx, tx, packOf(s.HabiticaID), recipe.Page)
+			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.Page)
 			if err != nil {
 				return nil, err
 			}
@@ -111,7 +111,7 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.HabiticaID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
 			return nil, err
 		}
 		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "hearth", recipe.ID, now); err != nil {
@@ -122,9 +122,9 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		def, ok := content.ItemFor(output.ID)
 		maker := ""
 		if ok && def.Marked {
-			maker = s.HabiticaID
+			maker = s.AccountID
 		}
-		if err := packPut(ctx, tx, s.HabiticaID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "hearth", recipe.ID, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "hearth", recipe.ID, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -169,7 +169,7 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		if !ok || def.Kind != "paper" {
 			return nil, fail(400, "invalid-page")
 		}
-		held, err := stackTotal(ctx, tx, packOf(s.HabiticaID), req.PageID)
+		held, err := stackTotal(ctx, tx, packOf(s.AccountID), req.PageID)
 		if err != nil {
 			return nil, err
 		}
@@ -177,15 +177,15 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(409, "page-not-held")
 		}
 		cost := map[string]int{"fiber": 1}
-		if err := checkMaterials(ctx, tx, s.HabiticaID, scaled(cost, req.Qty)); err != nil {
+		if err := checkMaterials(ctx, tx, s.AccountID, scaled(cost, req.Qty)); err != nil {
 			return nil, err
 		}
 		if err := debitMaterials(ctx, tx, s, cost, req.Qty, "desk", req.PageID, now); err != nil {
 			return nil, err
 		}
 		// Maker's mark carries player's ID
-		maker := s.HabiticaID
-		if err := packPut(ctx, tx, s.HabiticaID, req.PageID, []makerQty{{Maker: maker, Qty: req.Qty}}, "desk", req.PageID, now); err != nil {
+		maker := s.AccountID
+		if err := packPut(ctx, tx, s.AccountID, req.PageID, []makerQty{{Maker: maker, Qty: req.Qty}}, "desk", req.PageID, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -206,7 +206,7 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 type woodpileStackView struct {
 	ID          string `json:"id"`
 	HomesteadID string `json:"homesteadId"`
-	HabiticaID  string `json:"habiticaId"`
+	AccountID   string `json:"accountId"`
 	Qty         int    `json:"qty"`
 	StackedAt   int64  `json:"stackedAt"`
 	Ready       bool   `json:"ready"`
@@ -234,14 +234,14 @@ func readWoodpile(ctx context.Context, tx *sql.Tx, homeID string, now int64) (wo
 		return v, err
 	}
 	v.Placed = placed
-	rows, err := tx.QueryContext(ctx, "SELECT id, homestead_id, habitica_id, qty, stacked_at FROM woodpile_stacks WHERE homestead_id=? ORDER BY stacked_at ASC", homeID)
+	rows, err := tx.QueryContext(ctx, "SELECT id, homestead_id, account_id, qty, stacked_at FROM woodpile_stacks WHERE homestead_id=? ORDER BY stacked_at ASC", homeID)
 	if err != nil {
 		return v, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var st woodpileStackView
-		if err := rows.Scan(&st.ID, &st.HomesteadID, &st.HabiticaID, &st.Qty, &st.StackedAt); err != nil {
+		if err := rows.Scan(&st.ID, &st.HomesteadID, &st.AccountID, &st.Qty, &st.StackedAt); err != nil {
 			return v, err
 		}
 		rem := int64(86400) - (now - st.StackedAt)
@@ -265,14 +265,11 @@ func (a *Server) woodpileRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if s.SaveOrigin == nil {
-		return fail(409, "origin-required")
-	}
 	now := a.Config.Now().Unix()
 	if err = settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
 		return err
 	}
-	homeID, ok, err := memberOf(r.Context(), tx, s.HabiticaID)
+	homeID, ok, err := memberOf(r.Context(), tx, s.AccountID)
 	if err != nil {
 		return err
 	}
@@ -315,7 +312,7 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if req.Qty < 1 || req.Qty > 1000 {
 				return nil, fail(400, "invalid-quantity")
 			}
-			if err := checkMaterials(ctx, tx, s.HabiticaID, map[string]int{"timber": req.Qty}); err != nil {
+			if err := checkMaterials(ctx, tx, s.AccountID, map[string]int{"timber": req.Qty}); err != nil {
 				return nil, err
 			}
 			if err := debitMaterials(ctx, tx, s, map[string]int{"timber": 1}, req.Qty, "woodpile:stack", homeID, now); err != nil {
@@ -325,12 +322,12 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if err != nil {
 				return nil, err
 			}
-			if _, err := tx.ExecContext(ctx, "INSERT INTO woodpile_stacks(id, homestead_id, habitica_id, qty, stacked_at) VALUES(?, ?, ?, ?, ?)", id, homeID, s.HabiticaID, req.Qty, now); err != nil {
+			if _, err := tx.ExecContext(ctx, "INSERT INTO woodpile_stacks(id, homestead_id, account_id, qty, stacked_at) VALUES(?, ?, ?, ?, ?)", id, homeID, s.AccountID, req.Qty, now); err != nil {
 				return nil, err
 			}
 			// The pile's own currency, so the ledger can see the timber on
 			// it (as the shared chest's storage:<kind>:<id> does).
-			if err := currency(ctx, tx, s.HabiticaID, woodpileCurrency, req.Qty, "woodpile:stack", homeID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, woodpileCurrency, req.Qty, "woodpile:stack", homeID, now); err != nil {
 				return nil, err
 			}
 		case "collect":
@@ -364,10 +361,10 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 				}
 			}
 			// Whatever stacks came out, the collector takes them off the pile.
-			if err := currency(ctx, tx, s.HabiticaID, woodpileCurrency, -collectedQty, "woodpile:collect", homeID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, woodpileCurrency, -collectedQty, "woodpile:collect", homeID, now); err != nil {
 				return nil, err
 			}
-			if err := packPut(ctx, tx, s.HabiticaID, "seasoned-timber", []makerQty{{Maker: "", Qty: collectedQty}}, "woodpile:collect", homeID, now); err != nil {
+			if err := packPut(ctx, tx, s.AccountID, "seasoned-timber", []makerQty{{Maker: "", Qty: collectedQty}}, "woodpile:collect", homeID, now); err != nil {
 				return nil, err
 			}
 			if err := refreshItems(ctx, tx, s); err != nil {

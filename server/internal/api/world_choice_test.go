@@ -22,7 +22,7 @@ func (x *rig) signInAsked(id, party, invite string) (worldChoiceView, *http.Cook
 
 func (x *rig) players(id string) int {
 	x.t.Helper()
-	return count(x.t, x.db, "SELECT count(*) FROM players WHERE habitica_id=?", id)
+	return count(x.t, x.db, "SELECT count(*) FROM players p JOIN sign_ins i USING(account_id) WHERE i.method='habitica' AND i.subject=?", id)
 }
 
 // Nothing a held sign-in stored carries the token.
@@ -52,8 +52,8 @@ func TestWorldChoiceHeldUntilChosenThenParty(t *testing.T) {
 	}
 	x.tokenNowhere()
 	// Everything else waits.
-	for _, r := range []struct{ method, path string }{{"GET", "/api/state"}, {"GET", "/api/world"}, {"POST", "/api/origin"}, {"POST", "/api/play"}, {"POST", "/api/world/party"}, {"GET", "/api/invites"}} {
-		body := map[string]any{"choice": "fresh", "key": "origin", "clientId": "tab-a"}
+	for _, r := range []struct{ method, path string }{{"GET", "/api/state"}, {"GET", "/api/world"}, {"POST", "/api/play"}, {"POST", "/api/world/party"}, {"GET", "/api/invites"}} {
+		body := map[string]any{"clientId": "tab-a"}
 		if r.path == "/api/world/party" || r.path == "/api/invites" {
 			body = map[string]any{}
 		}
@@ -77,16 +77,15 @@ func TestWorldChoiceHeldUntilChosenThenParty(t *testing.T) {
 	// The party's world: opened now, by her, and she lives there.
 	st, s, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "party"}, c)
 	pw := x.partyWorldOf("p1")
-	if st != 200 || pw == "" || s.WorldID != pw || s.HabiticaID != "olive" || s.SaveOrigin != nil || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND opened_by='olive'", pw) != 1 {
+	if st != 200 || pw == "" || s.WorldID != pw || s.AccountID != x.account("olive") || s.AccountID == "olive" || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND opened_by='"+x.account("olive")+"'", pw) != 1 {
 		t.Fatal("chose the party", st, e, s.WorldID, pw)
 	}
 	// The same sign-in carries on: no second sign-in, no token.
-	if count(t, x.db, "SELECT count(*) FROM pending_sessions") != 0 || count(t, x.db, "SELECT count(*) FROM sessions WHERE habitica_id='olive'") != 1 {
+	if count(t, x.db, "SELECT count(*) FROM pending_sessions") != 0 || count(t, x.db, "SELECT count(*) FROM sessions WHERE account_id='"+x.account("olive")+"'") != 1 {
 		t.Fatal("session not carried over")
 	}
 	x.tokenNowhere()
 	x.expect("GET", "/api/state", nil, c, 200)
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
 	// Only once: the question is gone.
 	for _, r := range []struct{ method, path string }{{"POST", "/api/world/choose"}, {"GET", "/api/world/choice"}} {
 		if st, _, e, _ := x.request(r.method, r.path, map[string]any{"choice": "own"}, c); st != 409 || e != "world-chosen" {
@@ -117,14 +116,13 @@ func TestWorldChoiceOwnWorldThenMoveLater(t *testing.T) {
 		t.Fatalf("question %+v", q)
 	}
 	st, s, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "own"}, c)
-	if st != 200 || s.WorldID == pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='rue'", s.WorldID) != 1 {
+	if st != 200 || s.WorldID == pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("rue")+"'", s.WorldID) != 1 {
 		t.Fatal("own world", st, e, s.WorldID)
 	}
 	if count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id='rue' AND added_by='party'") != 1 {
 		t.Fatal("admission not kept")
 	}
 	// The offer stays in the Menu, but she isn't prompted again right away.
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
 	v := x.worldReq("GET", "/api/world", nil, c, 200)
 	if v.PartyWorld == nil || v.PartyWorld.ID != pw || v.Prompt || !v.IsOwner || v.MoveOpensAt != 0 {
 		t.Fatal("after choosing her own", v.raw)
@@ -174,7 +172,7 @@ func TestWorldChoiceNotAskedWhenAnInviteNamesAWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 	st, v, e, _ = x.request("POST", "/api/session", map[string]any{"userId": "solo", "token": secret}, nil)
-	if st != 200 || v.WorldChoice != nil || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='solo'", v.WorldID) != 1 {
+	if st != 200 || v.WorldChoice != nil || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("solo")+"'", v.WorldID) != 1 {
 		t.Fatal("solo", st, e)
 	}
 	// A party account let in through a party can't open one, and its party
@@ -256,7 +254,7 @@ func TestWorldChoicePartyClosedMeanwhile(t *testing.T) {
 		t.Fatal("asked again with nothing to ask", st, e)
 	}
 	s := x.expect("GET", "/api/state", nil, c, 200)
-	if count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='olive'", s.WorldID) != 1 || x.partyWorldOf("p1") != "" {
+	if count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("olive")+"'", s.WorldID) != 1 || x.partyWorldOf("p1") != "" {
 		t.Fatal("not in a world of her own", s.WorldID)
 	}
 }
@@ -282,13 +280,14 @@ func TestPartyAdmittedMakeNoInvites(t *testing.T) {
 		PartyWorld    bool `json:"partyWorld"`
 	}
 	r := httptest.NewRequest("GET", "/api/invites", nil)
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.AddCookie(rc)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)
 	if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil || w.Code != 200 || !list.PartyAdmitted || list.PartyWorld {
 		t.Fatalf("list %d %+v %v", w.Code, list, err)
 	}
-	if count(t, x.db, "SELECT count(*) FROM invites WHERE created_by='rue'") != 0 {
+	if count(t, x.db, "SELECT count(*) FROM invites WHERE created_by='"+x.account("rue")+"'") != 0 {
 		t.Fatal("a code was made")
 	}
 	// Zed of p2 has no code and no allowlist entry, and p2 has no world: turned away.

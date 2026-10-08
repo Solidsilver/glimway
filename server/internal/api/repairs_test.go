@@ -39,7 +39,7 @@ func (x *rig) repairsReq(method, path string, b any, c *http.Cookie, status int)
 func (x *rig) mendRefreshing(c *http.Cookie, s *response, repairID string, fields map[string]any, status int) repairsTestResponse {
 	x.t.Helper()
 	x.refresh(c, s)
-	v := x.repairsReq("POST", "/api/repairs/"+repairID+"/mend", body(*s, fmt.Sprintf("mend-%s-%d-%d", repairID, s.Rev, keySeq()), fields), c, status)
+	v := x.repairsReq("POST", "/api/repairs/"+repairID+"/mend", body(*s, fmt.Sprintf("mend-%s-%d-%d", repairID, s.Version, keySeq()), fields), c, status)
 	if status == 200 {
 		s.Snapshot = v.Snapshot
 	}
@@ -78,8 +78,8 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	}
 
 	// 4. Seed fibre-rope in pack
-	x.stack("alice", "fibre-rope", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "fibre-rope", "", 1)
+	x.conserved(x.account("alice"))
 
 	// Mend well-rope
 	mended := x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
@@ -93,7 +93,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 		t.Fatalf("unexpected gift: %+v", mended.Result.Gift)
 	}
 	// Gift placed into pack: check conservation
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 5. Subsequent read: well-rope is mended, fence-rail is now open!
 	read2 := x.repairsReq("GET", "/api/repairs", nil, c, 200)
@@ -108,7 +108,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	}
 
 	// 6. Mending well-rope again fails with already-mended (409)
-	x.stack("alice", "fibre-rope", "", 1)
+	x.stack(x.account("alice"), "fibre-rope", "", 1)
 	bad = x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
 	if bad.Error.Code != "already-mended" {
 		t.Fatalf("expected already-mended, got %s", bad.Error.Code)
@@ -119,8 +119,8 @@ func TestDrawingWaterAtWell(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
-	bucketID := x.instance("alice", "stave-bucket", 90, "")
-	x.conserved("alice")
+	bucketID := x.instance(x.account("alice"), "stave-bucket", 90, "")
+	x.conserved(x.account("alice"))
 
 	// 1. Drawing water when well-rope is broken fails (well-rope-broken)
 	wellDoc := s.State
@@ -132,7 +132,7 @@ func TestDrawingWaterAtWell(t *testing.T) {
 	}
 
 	// 2. Mend well-rope
-	x.stack("alice", "fibre-rope", "", 1)
+	x.stack(x.account("alice"), "fibre-rope", "", 1)
 	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
 
 	// 3. Drawing water far away fails (too-far-away)
@@ -153,7 +153,7 @@ func TestDrawingWaterAtWell(t *testing.T) {
 	if inst == nil || inst.Condition != 87 {
 		t.Fatalf("expected bucket condition 87, got %+v", inst)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 func TestReturningKeepsakes(t *testing.T) {
@@ -161,8 +161,8 @@ func TestReturningKeepsakes(t *testing.T) {
 	c, s := x.ready("alice")
 
 	// 1. Tam's halter -> Ada (tx: 35, ty: 8 in village)
-	x.stack("alice", "knotted-halter", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "knotted-halter", "", 1)
+	x.conserved(x.account("alice"))
 
 	adaDoc := s.State
 	adaDoc.Area = "village"
@@ -194,18 +194,18 @@ func TestReturningKeepsakes(t *testing.T) {
 	if !slices.Contains(retAda.Snapshot.State.Flags, "paper:adas-oil-receipts") || !slices.Contains(retAda.Snapshot.State.Flags, "returned:knotted-halter") {
 		t.Fatalf("expected story flags set, got %+v", retAda.Snapshot.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// Re-returning fails
-	x.stack("alice", "knotted-halter", "", 1)
+	x.stack(x.account("alice"), "knotted-halter", "", 1)
 	bad = x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": adaDoc}, 409)
 	if bad.Error.Code != "already-returned" {
 		t.Fatalf("expected already-returned, got %s", bad.Error.Code)
 	}
 
 	// 2. Joss's whistle -> Hazel (tx: 12, ty: 15 in village)
-	x.stack("alice", "tin-whistle", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "tin-whistle", "", 1)
+	x.conserved(x.account("alice"))
 	hazelDoc := s.State
 	hazelDoc.Area = "village"
 	hazelDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(15*16 + 8)}
@@ -217,11 +217,11 @@ func TestReturningKeepsakes(t *testing.T) {
 	if !slices.Contains(retHazel.Snapshot.State.Flags, "paper:keepers-twists-recipe-card") {
 		t.Fatalf("expected paper flag for recipe card, got %+v", retHazel.Snapshot.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 3. Hollis's fox -> Silas (tx: 51, ty: 21 in commons)
-	x.stack("alice", "whittled-fox", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "whittled-fox", "", 1)
+	x.conserved(x.account("alice"))
 	silasDoc := s.State
 	silasDoc.Area = "commons"
 	silasDoc.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
@@ -233,27 +233,27 @@ func TestReturningKeepsakes(t *testing.T) {
 	if !slices.Contains(retSilas.Snapshot.State.Flags, "returned:whittled-fox") {
 		t.Fatalf("expected returned:whittled-fox flag, got %+v", retSilas.Snapshot.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 4. Bett's candle -> Bett's echo camp (in wilds)
-	x.stack("alice", "beeswax-candle", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "beeswax-candle", "", 1)
+	x.conserved(x.account("alice"))
 	wildsDoc := s.State
 	wildsDoc.Area = "wilds"
 	retBett := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "beeswax-candle", "target": "bett", "progress": wildsDoc}, 200)
 	if retBett.Result.Returned != "beeswax-candle" || !slices.Contains(retBett.Snapshot.State.Flags, "echo:bett:softened") {
 		t.Fatalf("expected echo:bett:softened flag, got %+v", retBett.Snapshot.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// 5. Nan's nails -> Nan's echo camp (in wilds)
-	x.stack("alice", "road-nails", "", 1)
-	x.conserved("alice")
+	x.stack(x.account("alice"), "road-nails", "", 1)
+	x.conserved(x.account("alice"))
 	retNan := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "road-nails", "target": "nan", "progress": wildsDoc}, 200)
 	if retNan.Result.Returned != "road-nails" || !slices.Contains(retNan.Snapshot.State.Flags, "echo:nan:softened") {
 		t.Fatalf("expected echo:nan:softened flag, got %+v", retNan.Snapshot.State.Flags)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 // The break weather (review finding 2, N1): after the scripted two, one new
@@ -285,7 +285,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 		part string
 		doc  rules.State
 	}{{"well-rope", "fibre-rope", wellDoc}, {"fence-rail", "split-rail", fenceDoc}} {
-		x.stack("alice", chore.part, "", 1)
+		x.stack(x.account("alice"), chore.part, "", 1)
 		x.mendRefreshing(c, &s, chore.id, map[string]any{"progress": chore.doc}, 200)
 	}
 
@@ -309,7 +309,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 	roofDoc := s.State
 	roofDoc.Area = "village"
 	roofDoc.Position = rules.Position{X: float64(4*16 + 8), Y: float64(17*16 + 8)}
-	x.stack("alice", "slates", "", 1)
+	x.stack(x.account("alice"), "slates", "", 1)
 	x.mendRefreshing(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
 	read = nextWick()
 	if len(read.Open) != 1 || read.Open[0].ID != "bench-slat" {
@@ -324,7 +324,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 			t.Fatal("the well never breaks again")
 		}
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 // Over many wicks the weather works through every chore (N1): each weather
@@ -347,7 +347,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 		return map[string]any{"progress": d}
 	}
 	for _, id := range content.RepairRules.Rules.Scripted {
-		x.stack("alice", byID[id].Part, "", 1)
+		x.stack(x.account("alice"), byID[id].Part, "", 1)
 		x.mendRefreshing(c, &s, id, doc(id, &s), 200)
 	}
 
@@ -362,7 +362,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 			if o.ID == "well-rope" {
 				t.Fatal("the well never breaks again")
 			}
-			x.stack("alice", o.Part, "", 1)
+			x.stack(x.account("alice"), o.Part, "", 1)
 			x.mendRefreshing(c, &s, o.ID, doc(o.ID, &s), 200)
 			seen[o.ID] = true
 		}
@@ -377,7 +377,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 			t.Fatalf("%s never broke in 30 wicks", id)
 		}
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 // The hame is a festival chore: it only breaks shortly before Carting Day,
@@ -400,7 +400,7 @@ func TestRepairsHameWaitsForCartingDay(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err = x.db.DB.Exec("INSERT INTO village_repair_log(id, world_id, repair_id, mended_by, mended_at) SELECT hex(randomblob(16)), id, 'village-lamp', (SELECT habitica_id FROM players LIMIT 1), 1 FROM worlds"); err != nil {
+	if _, err = x.db.DB.Exec("INSERT INTO village_repair_log(id, world_id, repair_id, mended_by, mended_at) SELECT hex(randomblob(16)), id, 'village-lamp', (SELECT account_id FROM players LIMIT 1), 1 FROM worlds"); err != nil {
 		t.Fatal(err)
 	}
 	// This wick's weather breakage is already spent (wick 6; Cart is wick 6):
@@ -421,7 +421,7 @@ func TestRepairsHameWaitsForCartingDay(t *testing.T) {
 	if len(read.Open) != 1 || read.Open[0].ID != "gate-hame" {
 		t.Fatalf("expected the hame open the day before Carting Day, got %+v", read.Open)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }
 
 // The mend's gift goes through the ledger with everything else (review
@@ -436,12 +436,12 @@ func TestMendGiftFailureRollsBack(t *testing.T) {
 	if _, err := x.db.DB.Exec("CREATE TRIGGER sabotage_reward BEFORE INSERT ON ledger WHEN NEW.reason='village-reward' BEGIN SELECT RAISE(ABORT, 'sabotage'); END"); err != nil {
 		t.Fatal(err)
 	}
-	x.stack("alice", "fibre-rope", "", 1)
+	x.stack(x.account("alice"), "fibre-rope", "", 1)
 	wellDoc := s.State
 	wellDoc.Area = "village"
 	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
 	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 
 	// Nothing changed: the rope is still in the pack, the well still open.
 	var n int
@@ -472,7 +472,7 @@ func TestStoryKeepsakeFoundOnce(t *testing.T) {
 		if err = tx.QueryRow("SELECT id FROM worlds LIMIT 1").Scan(&worldID); err != nil {
 			t.Fatal(err)
 		}
-		s := store.Snapshot{HabiticaID: "alice", WorldID: worldID}
+		s := store.Snapshot{AccountID: x.account("alice"), WorldID: worldID}
 		if err = grantLoot(ctx, tx, &s, wilds.LootDrop{Trinket: &fox}, "wilds-claim", "ref", int64(i)); err != nil {
 			t.Fatal(err)
 		}
@@ -484,14 +484,14 @@ func TestStoryKeepsakeFoundOnce(t *testing.T) {
 		}
 	}
 	var foxes, mirrors int
-	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='alice' AND item_def='whittled-fox'").Scan(&foxes); err != nil {
+	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='whittled-fox'").Scan(&foxes); err != nil {
 		t.Fatal(err)
 	}
-	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='alice' AND item_def='mirror-fox'").Scan(&mirrors); err != nil {
+	if err := x.db.DB.QueryRow("SELECT coalesce(sum(qty),0) FROM item_stacks WHERE owner='" + x.account("alice") + "' AND item_def='mirror-fox'").Scan(&mirrors); err != nil {
 		t.Fatal(err)
 	}
 	if foxes != 1 || mirrors != 2 {
 		t.Fatalf("story keepsake once, mirror foxes repeat: foxes=%d mirrors=%d", foxes, mirrors)
 	}
-	x.conserved("alice")
+	x.conserved(x.account("alice"))
 }

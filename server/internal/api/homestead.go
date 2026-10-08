@@ -116,7 +116,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		op := strings.TrimPrefix(r.URL.Path, "/api/homestead/")
-		homeID, member, err := memberOf(ctx, tx, s.HabiticaID)
+		homeID, member, err := memberOf(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "not-a-member")
 			}
 			var h homeView
-			if h, err = loadHome(ctx, tx, homeID, s.HabiticaID, now); err != nil {
+			if h, err = loadHome(ctx, tx, homeID, s.AccountID, now); err != nil {
 				return nil, err
 			}
 			switch op {
@@ -154,11 +154,11 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		home, err := myHome(ctx, tx, s.HabiticaID, now)
+		home, err := myHome(ctx, tx, s.AccountID, now)
 		if err != nil {
 			return nil, err
 		}
-		m, err := materials(ctx, tx, s.HabiticaID)
+		m, err := materials(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,5234 @@
+[
+  {
+    "name": "glimway.v1.Account",
+    "case": "empty",
+    "json": {
+      "accountId": "",
+      "displayName": "",
+      "profileSource": "",
+      "partyId": null,
+      "worldId": "",
+      "flagged": false
+    }
+  },
+  {
+    "name": "glimway.v1.Account",
+    "case": "populated",
+    "json": {
+      "accountId": "fixture",
+      "displayName": "fixture",
+      "profileSource": "fixture",
+      "partyId": "fixture",
+      "worldId": "fixture",
+      "flagged": true
+    }
+  },
+  {
+    "name": "glimway.v1.DecorList",
+    "case": "empty",
+    "json": {
+      "kinds": [],
+      "kind": [],
+      "tx": [],
+      "ty": [],
+      "ox": [],
+      "oy": [],
+      "variant": [],
+      "flags": ""
+    }
+  },
+  {
+    "name": "glimway.v1.DecorList",
+    "case": "populated",
+    "json": {
+      "kinds": [
+        "fixture"
+      ],
+      "kind": [
+        1
+      ],
+      "tx": [
+        1
+      ],
+      "ty": [
+        1
+      ],
+      "ox": [
+        1
+      ],
+      "oy": [
+        1
+      ],
+      "variant": [
+        1
+      ],
+      "flags": "AQI="
+    }
+  },
+  {
+    "name": "glimway.v1.EchoAssignment",
+    "case": "empty",
+    "json": {
+      "site": "",
+      "member": "",
+      "settled": false
+    }
+  },
+  {
+    "name": "glimway.v1.EchoAssignment",
+    "case": "populated",
+    "json": {
+      "site": "fixture",
+      "member": "fixture",
+      "settled": true
+    }
+  },
+  {
+    "name": "glimway.v1.Embers",
+    "case": "empty",
+    "json": {
+      "balance": 0,
+      "xpEarned": 0,
+      "pending": 0,
+      "xpMark": 0,
+      "verifiedXp": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Embers",
+    "case": "populated",
+    "json": {
+      "balance": 1,
+      "xpEarned": 1,
+      "pending": 1,
+      "xpMark": 1,
+      "verifiedXp": 1
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "claim-loot",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "wildsClaim": {
+        "epoch": "epoch",
+        "entity": {
+          "id": "node:1:0:0",
+          "cycle": 2,
+          "state": "harvested",
+          "availableAt": 1791400020,
+          "by": "fixture-account",
+          "at": 1791400000,
+          "epoch": "epoch"
+        },
+        "loot": {
+          "materials": [
+            {
+              "id": "timber",
+              "qty": 2
+            }
+          ],
+          "trinket": "beeswax-candle"
+        },
+        "materials": {
+          "timber": 3
+        },
+        "wardenSliverFound": false,
+        "stormDropFound": false,
+        "papers": [
+          "failed-grid-of-sector-4"
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "empty",
+    "json": {
+      "state": null
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "fall-",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "fall": {
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "lantern": "placed",
+        "reason": "",
+        "lanternId": "fallen-lamp",
+        "epoch": "epoch"
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "fall-daily-cap",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "fall": {
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "lantern": "none",
+        "reason": "daily-cap",
+        "lanternId": "",
+        "epoch": ""
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "fall-epoch-missing",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "fall": {
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "lantern": "none",
+        "reason": "epoch-missing",
+        "lanternId": "",
+        "epoch": ""
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "fall-invalid-place",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "fall": {
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "lantern": "none",
+        "reason": "invalid-place",
+        "lanternId": "",
+        "epoch": ""
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "fall-not-wilds",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "fall": {
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "lantern": "none",
+        "reason": "not-wilds",
+        "lanternId": "",
+        "epoch": ""
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "lantern-loot",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "wildsLantern": {
+        "epoch": "epoch",
+        "rewarded": true,
+        "loot": {
+          "materials": [
+            {
+              "id": "timber",
+              "qty": 2
+            }
+          ],
+          "trinket": "beeswax-candle"
+        },
+        "materials": {
+          "timber": 3
+        },
+        "lanterns": [
+          {
+            "id": "fallen-lamp",
+            "ownerId": "peer-account",
+            "displayName": "Peer",
+            "x": 400,
+            "y": 300,
+            "litBy": "fixture-account",
+            "at": 1791400000,
+            "litAt": 1791400010
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "populated",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture",
+          "displayName": "fixture",
+          "profileSource": "fixture",
+          "partyId": "fixture",
+          "worldId": "fixture",
+          "flagged": true
+        },
+        "profile": {
+          "id": "fixture",
+          "name": "fixture",
+          "class": "fixture",
+          "level": 1,
+          "exp": 1,
+          "hp": 1,
+          "maxHp": 1,
+          "mp": 1,
+          "maxMp": 1,
+          "stats": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "equipped": {
+            "fixture": null
+          },
+          "pets": [
+            "fixture"
+          ],
+          "mounts": [
+            "fixture"
+          ],
+          "appearance": {
+            "size": "fixture",
+            "shirt": "fixture",
+            "skin": "fixture",
+            "hairColor": "fixture",
+            "hairStyle": 1,
+            "background": "fixture",
+            "hairBangs": 1,
+            "hairMustache": 1,
+            "hairBeard": 1,
+            "hairFlower": 1
+          },
+          "costume": {
+            "fixture": null
+          },
+          "useCostume": true,
+          "selectedPet": "fixture",
+          "selectedMount": "fixture",
+          "partyId": "fixture"
+        },
+        "vitals": {
+          "hp": 1,
+          "mana": 1,
+          "maxHp": 1,
+          "maxMana": 1,
+          "reportSeq": 1,
+          "reportClient": "fixture",
+          "reportGeneration": "fixture",
+          "vitalsSetVersion": 1,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "fixture",
+          "x": 1,
+          "y": 1,
+          "placeSetVersion": 1
+        },
+        "story": {
+          "quests": {
+            "fixture": "fixture"
+          },
+          "marks": [
+            "fixture"
+          ],
+          "discoveries": [
+            "fixture"
+          ],
+          "defeated": [
+            "fixture"
+          ],
+          "questItems": [
+            "fixture"
+          ],
+          "playSeconds": 1
+        },
+        "embers": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
+        }
+      },
+      "report": {
+        "seq": 1,
+        "accepted": true,
+        "staleBasis": true,
+        "casts": 1,
+        "client": "fixture",
+        "generation": "fixture",
+        "basis": 1,
+        "placeIgnored": true
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "valid",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "report": {
+        "seq": 1,
+        "accepted": true,
+        "staleBasis": false,
+        "casts": 0,
+        "client": "client",
+        "generation": "generation",
+        "basis": 1,
+        "placeIgnored": false
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "valid",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "questStep": {
+        "quest": "lantern-road",
+        "step": "accepted",
+        "items": [],
+        "marks": [],
+        "papers": [],
+        "embers": 0
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.ErrorDetail",
+    "case": "empty",
+    "json": {
+      "code": ""
+    }
+  },
+  {
+    "name": "glimway.v1.ErrorDetail",
+    "case": "populated",
+    "json": {
+      "code": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.Exit",
+    "case": "empty",
+    "json": {
+      "tx": 0,
+      "ty": 0,
+      "tw": 0,
+      "th": 0,
+      "dir": "DIR_UNSPECIFIED",
+      "to": "",
+      "entry": null
+    }
+  },
+  {
+    "name": "glimway.v1.Exit",
+    "case": "populated",
+    "json": {
+      "tx": 1,
+      "ty": 1,
+      "tw": 1,
+      "th": 1,
+      "dir": "DIR_NORTH",
+      "to": "fixture",
+      "entry": {
+        "tx": 1,
+        "ty": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.FallRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.FallRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.FallResult",
+    "case": "empty",
+    "json": {
+      "vitals": null,
+      "place": null,
+      "lantern": "",
+      "reason": "",
+      "lanternId": "",
+      "epoch": ""
+    }
+  },
+  {
+    "name": "glimway.v1.FallResult",
+    "case": "populated",
+    "json": {
+      "vitals": {
+        "hp": 1,
+        "mana": 1,
+        "maxHp": 1,
+        "maxMana": 1,
+        "reportSeq": 1,
+        "reportClient": "fixture",
+        "reportGeneration": "fixture",
+        "vitalsSetVersion": 1,
+        "vitalsAt": 1,
+        "castReadyAt": 1
+      },
+      "place": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1,
+        "placeSetVersion": 1
+      },
+      "lantern": "fixture",
+      "reason": "fixture",
+      "lanternId": "fixture",
+      "epoch": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaBuffs",
+    "case": "empty",
+    "json": {
+      "str": 0,
+      "int": 0,
+      "con": 0,
+      "per": 0
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaBuffs",
+    "case": "populated",
+    "json": {
+      "str": 1,
+      "int": 1,
+      "con": 1,
+      "per": 1
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaProfile",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "name": "",
+      "class": null,
+      "level": 0,
+      "hp": 0,
+      "maxHp": 0,
+      "mp": 0,
+      "maxMp": 0,
+      "stats": null,
+      "equipped": {},
+      "pets": [],
+      "mounts": [],
+      "appearance": null,
+      "costume": {},
+      "useCostume": false,
+      "selectedPet": null,
+      "selectedMount": null,
+      "partyId": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaProfile",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "name": "fixture",
+      "class": "fixture",
+      "level": 1,
+      "exp": 1,
+      "hp": 1,
+      "maxHp": 1,
+      "mp": 1,
+      "maxMp": 1,
+      "stats": {
+        "str": 1,
+        "int": 1,
+        "con": 1,
+        "per": 1
+      },
+      "equipped": {
+        "fixture": null
+      },
+      "pets": [
+        "fixture"
+      ],
+      "mounts": [
+        "fixture"
+      ],
+      "appearance": {
+        "size": "fixture",
+        "shirt": "fixture",
+        "skin": "fixture",
+        "hairColor": "fixture",
+        "hairStyle": 1,
+        "background": "fixture",
+        "hairBangs": 1,
+        "hairMustache": 1,
+        "hairBeard": 1,
+        "hairFlower": 1
+      },
+      "costume": {
+        "fixture": null
+      },
+      "useCostume": true,
+      "selectedPet": "fixture",
+      "selectedMount": "fixture",
+      "partyId": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaStats",
+    "case": "empty",
+    "json": {
+      "str": 0,
+      "int": 0,
+      "con": 0,
+      "per": 0
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaStats",
+    "case": "populated",
+    "json": {
+      "str": 1,
+      "int": 1,
+      "con": 1,
+      "per": 1
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUser",
+    "case": "empty",
+    "json": {
+      "_id": "",
+      "stats": null,
+      "profile": null,
+      "flags": null,
+      "items": null,
+      "preferences": null,
+      "party": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUser",
+    "case": "nullable-ownership",
+    "json": {
+      "_id": "fixture-hero",
+      "stats": null,
+      "profile": null,
+      "flags": null,
+      "items": {
+        "gear": null,
+        "pets": {
+          "negative": -1,
+          "owned": true,
+          "released": null,
+          "zero": 0
+        },
+        "mounts": {
+          "negative": -1,
+          "owned": true,
+          "released": null,
+          "zero": 0
+        },
+        "currentPet": null,
+        "currentMount": null
+      },
+      "preferences": null,
+      "party": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUser",
+    "case": "populated",
+    "json": {
+      "_id": "fixture",
+      "stats": {
+        "hp": 1,
+        "mp": 1,
+        "lvl": 1,
+        "exp": 1,
+        "class": "fixture",
+        "str": 1,
+        "int": 1,
+        "con": 1,
+        "per": 1,
+        "buffs": {
+          "str": 1,
+          "int": 1,
+          "con": 1,
+          "per": 1
+        },
+        "maxHealth": 1,
+        "maxMP": 1
+      },
+      "profile": {
+        "name": "fixture"
+      },
+      "flags": {
+        "classSelected": true
+      },
+      "items": {
+        "gear": {
+          "equipped": {
+            "fixture": null
+          },
+          "costume": {
+            "fixture": null
+          }
+        },
+        "pets": {
+          "fixture": null
+        },
+        "mounts": {
+          "fixture": null
+        },
+        "currentPet": "fixture",
+        "currentMount": "fixture"
+      },
+      "preferences": {
+        "size": "fixture",
+        "shirt": "fixture",
+        "skin": "fixture",
+        "background": "fixture",
+        "hair": {
+          "color": "fixture",
+          "base": 1,
+          "bangs": 1,
+          "mustache": 1,
+          "beard": 1,
+          "flower": 1
+        },
+        "costume": "fixture"
+      },
+      "party": {
+        "_id": "fixture"
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserFlags",
+    "case": "empty",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.HabiticaUserFlags",
+    "case": "populated",
+    "json": {
+      "classSelected": true
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserGear",
+    "case": "empty",
+    "json": {
+      "equipped": {},
+      "costume": {}
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserGear",
+    "case": "populated",
+    "json": {
+      "equipped": {
+        "fixture": null
+      },
+      "costume": {
+        "fixture": null
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserHair",
+    "case": "empty",
+    "json": {
+      "color": "",
+      "base": 0,
+      "bangs": 0,
+      "mustache": 0,
+      "beard": 0,
+      "flower": 0
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserHair",
+    "case": "populated",
+    "json": {
+      "color": "fixture",
+      "base": 1,
+      "bangs": 1,
+      "mustache": 1,
+      "beard": 1,
+      "flower": 1
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserItems",
+    "case": "empty",
+    "json": {
+      "gear": null,
+      "pets": {},
+      "mounts": {},
+      "currentPet": null,
+      "currentMount": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserItems",
+    "case": "populated",
+    "json": {
+      "gear": {
+        "equipped": {
+          "fixture": null
+        },
+        "costume": {
+          "fixture": null
+        }
+      },
+      "pets": {
+        "fixture": null
+      },
+      "mounts": {
+        "fixture": null
+      },
+      "currentPet": "fixture",
+      "currentMount": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserName",
+    "case": "empty",
+    "json": {
+      "name": ""
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserName",
+    "case": "populated",
+    "json": {
+      "name": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserParty",
+    "case": "empty",
+    "json": {
+      "_id": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserParty",
+    "case": "populated",
+    "json": {
+      "_id": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserPreferences",
+    "case": "empty",
+    "json": {
+      "size": "",
+      "shirt": "",
+      "skin": "",
+      "background": "",
+      "hair": null,
+      "costume": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserPreferences",
+    "case": "populated",
+    "json": {
+      "size": "fixture",
+      "shirt": "fixture",
+      "skin": "fixture",
+      "background": "fixture",
+      "hair": {
+        "color": "fixture",
+        "base": 1,
+        "bangs": 1,
+        "mustache": 1,
+        "beard": 1,
+        "flower": 1
+      },
+      "costume": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserStats",
+    "case": "empty",
+    "json": {
+      "buffs": null
+    }
+  },
+  {
+    "name": "glimway.v1.HabiticaUserStats",
+    "case": "populated",
+    "json": {
+      "hp": 1,
+      "mp": 1,
+      "lvl": 1,
+      "exp": 1,
+      "class": "fixture",
+      "str": 1,
+      "int": 1,
+      "con": 1,
+      "per": 1,
+      "buffs": {
+        "str": 1,
+        "int": 1,
+        "con": 1,
+        "per": 1
+      },
+      "maxHealth": 1,
+      "maxMP": 1
+    }
+  },
+  {
+    "name": "glimway.v1.HomesteadLand",
+    "case": "empty",
+    "json": {
+      "width": 0,
+      "height": 0,
+      "cells": [],
+      "generatorVersion": 0
+    }
+  },
+  {
+    "name": "glimway.v1.HomesteadLand",
+    "case": "populated",
+    "json": {
+      "width": 1,
+      "height": 1,
+      "cells": [
+        "fixture"
+      ],
+      "generatorVersion": 1
+    }
+  },
+  {
+    "name": "glimway.v1.LoginRequest",
+    "case": "empty",
+    "json": {
+      "userId": "",
+      "token": "",
+      "invite": "",
+      "party": ""
+    }
+  },
+  {
+    "name": "glimway.v1.LoginRequest",
+    "case": "populated",
+    "json": {
+      "userId": "fixture",
+      "token": "fixture",
+      "invite": "fixture",
+      "party": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.MarkRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "mark": "",
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.MarkRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "mark": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MarkResult",
+    "case": "empty",
+    "json": {
+      "mark": "",
+      "added": false
+    }
+  },
+  {
+    "name": "glimway.v1.MarkResult",
+    "case": "populated",
+    "json": {
+      "mark": "fixture",
+      "added": true
+    }
+  },
+  {
+    "name": "glimway.v1.OpHeader",
+    "case": "empty",
+    "json": {
+      "lease": "",
+      "key": "",
+      "report": null
+    }
+  },
+  {
+    "name": "glimway.v1.OpHeader",
+    "case": "populated",
+    "json": {
+      "lease": "fixture",
+      "key": "fixture",
+      "report": {
+        "client": "fixture",
+        "generation": "fixture",
+        "seq": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Place",
+    "case": "empty",
+    "json": {
+      "area": "",
+      "x": 0,
+      "y": 0,
+      "placeSetVersion": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Place",
+    "case": "populated",
+    "json": {
+      "area": "fixture",
+      "x": 1,
+      "y": 1,
+      "placeSetVersion": 1
+    }
+  },
+  {
+    "name": "glimway.v1.PlayRequest",
+    "case": "empty",
+    "json": {
+      "clientId": "",
+      "takeOver": false
+    }
+  },
+  {
+    "name": "glimway.v1.PlayRequest",
+    "case": "populated",
+    "json": {
+      "clientId": "fixture",
+      "takeOver": true
+    }
+  },
+  {
+    "name": "glimway.v1.PlayResponse",
+    "case": "empty",
+    "json": {
+      "state": null,
+      "lease": "",
+      "reportGeneration": "",
+      "reportClient": ""
+    }
+  },
+  {
+    "name": "glimway.v1.PlayResponse",
+    "case": "populated",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture",
+          "displayName": "fixture",
+          "profileSource": "fixture",
+          "partyId": "fixture",
+          "worldId": "fixture",
+          "flagged": true
+        },
+        "profile": {
+          "id": "fixture",
+          "name": "fixture",
+          "class": "fixture",
+          "level": 1,
+          "exp": 1,
+          "hp": 1,
+          "maxHp": 1,
+          "mp": 1,
+          "maxMp": 1,
+          "stats": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "equipped": {
+            "fixture": null
+          },
+          "pets": [
+            "fixture"
+          ],
+          "mounts": [
+            "fixture"
+          ],
+          "appearance": {
+            "size": "fixture",
+            "shirt": "fixture",
+            "skin": "fixture",
+            "hairColor": "fixture",
+            "hairStyle": 1,
+            "background": "fixture",
+            "hairBangs": 1,
+            "hairMustache": 1,
+            "hairBeard": 1,
+            "hairFlower": 1
+          },
+          "costume": {
+            "fixture": null
+          },
+          "useCostume": true,
+          "selectedPet": "fixture",
+          "selectedMount": "fixture",
+          "partyId": "fixture"
+        },
+        "vitals": {
+          "hp": 1,
+          "mana": 1,
+          "maxHp": 1,
+          "maxMana": 1,
+          "reportSeq": 1,
+          "reportClient": "fixture",
+          "reportGeneration": "fixture",
+          "vitalsSetVersion": 1,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "fixture",
+          "x": 1,
+          "y": 1,
+          "placeSetVersion": 1
+        },
+        "story": {
+          "quests": {
+            "fixture": "fixture"
+          },
+          "marks": [
+            "fixture"
+          ],
+          "discoveries": [
+            "fixture"
+          ],
+          "defeated": [
+            "fixture"
+          ],
+          "questItems": [
+            "fixture"
+          ],
+          "playSeconds": 1
+        },
+        "embers": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
+        }
+      },
+      "lease": "fixture",
+      "reportGeneration": "fixture",
+      "reportClient": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.PlayResponse",
+    "case": "valid-play",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "lease": "lease",
+      "reportGeneration": "generation",
+      "reportClient": "client"
+    }
+  },
+  {
+    "name": "glimway.v1.PlayerState",
+    "case": "empty",
+    "json": {
+      "version": 0,
+      "account": null,
+      "profile": null,
+      "vitals": null,
+      "place": null,
+      "story": null,
+      "embers": null
+    }
+  },
+  {
+    "name": "glimway.v1.PlayerState",
+    "case": "populated",
+    "json": {
+      "version": 1,
+      "account": {
+        "accountId": "fixture",
+        "displayName": "fixture",
+        "profileSource": "fixture",
+        "partyId": "fixture",
+        "worldId": "fixture",
+        "flagged": true
+      },
+      "profile": {
+        "id": "fixture",
+        "name": "fixture",
+        "class": "fixture",
+        "level": 1,
+        "exp": 1,
+        "hp": 1,
+        "maxHp": 1,
+        "mp": 1,
+        "maxMp": 1,
+        "stats": {
+          "str": 1,
+          "int": 1,
+          "con": 1,
+          "per": 1
+        },
+        "equipped": {
+          "fixture": null
+        },
+        "pets": [
+          "fixture"
+        ],
+        "mounts": [
+          "fixture"
+        ],
+        "appearance": {
+          "size": "fixture",
+          "shirt": "fixture",
+          "skin": "fixture",
+          "hairColor": "fixture",
+          "hairStyle": 1,
+          "background": "fixture",
+          "hairBangs": 1,
+          "hairMustache": 1,
+          "hairBeard": 1,
+          "hairFlower": 1
+        },
+        "costume": {
+          "fixture": null
+        },
+        "useCostume": true,
+        "selectedPet": "fixture",
+        "selectedMount": "fixture",
+        "partyId": "fixture"
+      },
+      "vitals": {
+        "hp": 1,
+        "mana": 1,
+        "maxHp": 1,
+        "maxMana": 1,
+        "reportSeq": 1,
+        "reportClient": "fixture",
+        "reportGeneration": "fixture",
+        "vitalsSetVersion": 1,
+        "vitalsAt": 1,
+        "castReadyAt": 1
+      },
+      "place": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1,
+        "placeSetVersion": 1
+      },
+      "story": {
+        "quests": {
+          "fixture": "fixture"
+        },
+        "marks": [
+          "fixture"
+        ],
+        "discoveries": [
+          "fixture"
+        ],
+        "defeated": [
+          "fixture"
+        ],
+        "questItems": [
+          "fixture"
+        ],
+        "playSeconds": 1
+      },
+      "embers": {
+        "balance": 1,
+        "xpEarned": 1,
+        "pending": 1,
+        "xpMark": 1,
+        "verifiedXp": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.PlayerState",
+    "case": "valid",
+    "json": {
+      "version": 1,
+      "account": {
+        "accountId": "fixture-account",
+        "displayName": "Hero",
+        "profileSource": "habitica",
+        "partyId": null,
+        "worldId": "fixture-world",
+        "flagged": false
+      },
+      "profile": {
+        "id": "fixture-hero",
+        "name": "Hero",
+        "class": null,
+        "level": 1,
+        "exp": 0,
+        "hp": 20,
+        "maxHp": 50,
+        "mp": 10,
+        "maxMp": 30,
+        "stats": {
+          "str": 0,
+          "int": 0,
+          "con": 0,
+          "per": 0
+        },
+        "equipped": {
+          "armor": null,
+          "back": null,
+          "body": null,
+          "eyewear": null,
+          "head": null,
+          "headAccessory": null,
+          "shield": null,
+          "weapon": null,
+          "weaponSpecial": null
+        },
+        "pets": [],
+        "mounts": [],
+        "appearance": {
+          "size": "",
+          "shirt": "",
+          "skin": "",
+          "hairColor": "",
+          "hairStyle": 0,
+          "background": "",
+          "hairBangs": 0,
+          "hairMustache": 0,
+          "hairBeard": 0,
+          "hairFlower": 0
+        },
+        "costume": {},
+        "useCostume": false,
+        "selectedPet": null,
+        "selectedMount": null,
+        "partyId": null
+      },
+      "vitals": {
+        "hp": 20,
+        "mana": 10,
+        "maxHp": 50,
+        "maxMana": 30,
+        "reportSeq": 0,
+        "reportClient": "client",
+        "reportGeneration": "generation",
+        "vitalsSetVersion": 0,
+        "vitalsAt": 1,
+        "castReadyAt": 1
+      },
+      "place": {
+        "area": "village",
+        "x": 400,
+        "y": 300,
+        "placeSetVersion": 0
+      },
+      "story": {
+        "quests": {},
+        "marks": [],
+        "discoveries": [],
+        "defeated": [],
+        "questItems": [
+          "field-journal",
+          "hearthwick-map"
+        ],
+        "playSeconds": 0
+      },
+      "embers": {
+        "balance": 0,
+        "xpEarned": 0,
+        "pending": 0,
+        "xpMark": 0,
+        "verifiedXp": 0
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileAppearance",
+    "case": "empty",
+    "json": {
+      "size": "",
+      "shirt": "",
+      "skin": "",
+      "hairColor": "",
+      "hairStyle": 0,
+      "background": "",
+      "hairBangs": 0,
+      "hairMustache": 0,
+      "hairBeard": 0,
+      "hairFlower": 0
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileAppearance",
+    "case": "populated",
+    "json": {
+      "size": "fixture",
+      "shirt": "fixture",
+      "skin": "fixture",
+      "hairColor": "fixture",
+      "hairStyle": 1,
+      "background": "fixture",
+      "hairBangs": 1,
+      "hairMustache": 1,
+      "hairBeard": 1,
+      "hairFlower": 1
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileReport",
+    "case": "empty",
+    "json": {
+      "lease": "",
+      "raw": null,
+      "report": null
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileReport",
+    "case": "populated",
+    "json": {
+      "lease": "fixture",
+      "raw": {
+        "_id": "fixture",
+        "stats": {
+          "hp": 1,
+          "mp": 1,
+          "lvl": 1,
+          "exp": 1,
+          "class": "fixture",
+          "str": 1,
+          "int": 1,
+          "con": 1,
+          "per": 1,
+          "buffs": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "maxHealth": 1,
+          "maxMP": 1
+        },
+        "profile": {
+          "name": "fixture"
+        },
+        "flags": {
+          "classSelected": true
+        },
+        "items": {
+          "gear": {
+            "equipped": {
+              "fixture": null
+            },
+            "costume": {
+              "fixture": null
+            }
+          },
+          "pets": {
+            "fixture": null
+          },
+          "mounts": {
+            "fixture": null
+          },
+          "currentPet": "fixture",
+          "currentMount": "fixture"
+        },
+        "preferences": {
+          "size": "fixture",
+          "shirt": "fixture",
+          "skin": "fixture",
+          "background": "fixture",
+          "hair": {
+            "color": "fixture",
+            "base": 1,
+            "bangs": 1,
+            "mustache": 1,
+            "beard": 1,
+            "flower": 1
+          },
+          "costume": "fixture"
+        },
+        "party": {
+          "_id": "fixture"
+        }
+      },
+      "report": {
+        "client": "fixture",
+        "generation": "fixture",
+        "seq": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileResult",
+    "case": "empty",
+    "json": {
+      "status": "",
+      "credit": 0,
+      "pending": 0,
+      "vitalsCredit": null
+    }
+  },
+  {
+    "name": "glimway.v1.ProfileResult",
+    "case": "populated",
+    "json": {
+      "status": "fixture",
+      "credit": 1,
+      "pending": 1,
+      "vitalsCredit": {
+        "hp": 1,
+        "mana": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.QuestStepRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "quest": "",
+      "to": "",
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.QuestStepRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "quest": "fixture",
+      "to": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.QuestStepResult",
+    "case": "empty",
+    "json": {
+      "quest": "",
+      "step": "",
+      "items": [],
+      "marks": [],
+      "papers": [],
+      "embers": 0
+    }
+  },
+  {
+    "name": "glimway.v1.QuestStepResult",
+    "case": "populated",
+    "json": {
+      "quest": "fixture",
+      "step": "fixture",
+      "items": [
+        "fixture"
+      ],
+      "marks": [
+        "fixture"
+      ],
+      "papers": [
+        "fixture"
+      ],
+      "embers": 1
+    }
+  },
+  {
+    "name": "glimway.v1.Refusal",
+    "case": "empty",
+    "json": {
+      "error": null,
+      "state": null
+    }
+  },
+  {
+    "name": "glimway.v1.Refusal",
+    "case": "populated",
+    "json": {
+      "error": {
+        "code": "fixture"
+      },
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture",
+          "displayName": "fixture",
+          "profileSource": "fixture",
+          "partyId": "fixture",
+          "worldId": "fixture",
+          "flagged": true
+        },
+        "profile": {
+          "id": "fixture",
+          "name": "fixture",
+          "class": "fixture",
+          "level": 1,
+          "exp": 1,
+          "hp": 1,
+          "maxHp": 1,
+          "mp": 1,
+          "maxMp": 1,
+          "stats": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "equipped": {
+            "fixture": null
+          },
+          "pets": [
+            "fixture"
+          ],
+          "mounts": [
+            "fixture"
+          ],
+          "appearance": {
+            "size": "fixture",
+            "shirt": "fixture",
+            "skin": "fixture",
+            "hairColor": "fixture",
+            "hairStyle": 1,
+            "background": "fixture",
+            "hairBangs": 1,
+            "hairMustache": 1,
+            "hairBeard": 1,
+            "hairFlower": 1
+          },
+          "costume": {
+            "fixture": null
+          },
+          "useCostume": true,
+          "selectedPet": "fixture",
+          "selectedMount": "fixture",
+          "partyId": "fixture"
+        },
+        "vitals": {
+          "hp": 1,
+          "mana": 1,
+          "maxHp": 1,
+          "maxMana": 1,
+          "reportSeq": 1,
+          "reportClient": "fixture",
+          "reportGeneration": "fixture",
+          "vitalsSetVersion": 1,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "fixture",
+          "x": 1,
+          "y": 1,
+          "placeSetVersion": 1
+        },
+        "story": {
+          "quests": {
+            "fixture": "fixture"
+          },
+          "marks": [
+            "fixture"
+          ],
+          "discoveries": [
+            "fixture"
+          ],
+          "defeated": [
+            "fixture"
+          ],
+          "questItems": [
+            "fixture"
+          ],
+          "playSeconds": 1
+        },
+        "embers": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Refusal",
+    "case": "valid-refusal",
+    "json": {
+      "error": {
+        "code": "not-next-step"
+      },
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.ReportBarrier",
+    "case": "empty",
+    "json": {
+      "client": "",
+      "generation": "",
+      "seq": 0
+    }
+  },
+  {
+    "name": "glimway.v1.ReportBarrier",
+    "case": "populated",
+    "json": {
+      "client": "fixture",
+      "generation": "fixture",
+      "seq": 1
+    }
+  },
+  {
+    "name": "glimway.v1.ReportRequest",
+    "case": "empty",
+    "json": {
+      "lease": "",
+      "client": "",
+      "seq": 0,
+      "basis": 0,
+      "place": null,
+      "hp": 0,
+      "mana": 0,
+      "casts": 0,
+      "generation": ""
+    }
+  },
+  {
+    "name": "glimway.v1.ReportRequest",
+    "case": "populated",
+    "json": {
+      "lease": "fixture",
+      "client": "fixture",
+      "seq": 1,
+      "basis": 1,
+      "place": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "hp": 1,
+      "mana": 1,
+      "casts": 1,
+      "generation": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.ReportResult",
+    "case": "empty",
+    "json": {
+      "seq": 0,
+      "accepted": false,
+      "staleBasis": false,
+      "casts": 0,
+      "client": "",
+      "generation": "",
+      "basis": 0,
+      "placeIgnored": false
+    }
+  },
+  {
+    "name": "glimway.v1.ReportResult",
+    "case": "populated",
+    "json": {
+      "seq": 1,
+      "accepted": true,
+      "staleBasis": true,
+      "casts": 1,
+      "client": "fixture",
+      "generation": "fixture",
+      "basis": 1,
+      "placeIgnored": true
+    }
+  },
+  {
+    "name": "glimway.v1.SessionResponse",
+    "case": "empty",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.SessionResponse",
+    "case": "populated",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture",
+          "displayName": "fixture",
+          "profileSource": "fixture",
+          "partyId": "fixture",
+          "worldId": "fixture",
+          "flagged": true
+        },
+        "profile": {
+          "id": "fixture",
+          "name": "fixture",
+          "class": "fixture",
+          "level": 1,
+          "exp": 1,
+          "hp": 1,
+          "maxHp": 1,
+          "mp": 1,
+          "maxMp": 1,
+          "stats": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "equipped": {
+            "fixture": null
+          },
+          "pets": [
+            "fixture"
+          ],
+          "mounts": [
+            "fixture"
+          ],
+          "appearance": {
+            "size": "fixture",
+            "shirt": "fixture",
+            "skin": "fixture",
+            "hairColor": "fixture",
+            "hairStyle": 1,
+            "background": "fixture",
+            "hairBangs": 1,
+            "hairMustache": 1,
+            "hairBeard": 1,
+            "hairFlower": 1
+          },
+          "costume": {
+            "fixture": null
+          },
+          "useCostume": true,
+          "selectedPet": "fixture",
+          "selectedMount": "fixture",
+          "partyId": "fixture"
+        },
+        "vitals": {
+          "hp": 1,
+          "mana": 1,
+          "maxHp": 1,
+          "maxMana": 1,
+          "reportSeq": 1,
+          "reportClient": "fixture",
+          "reportGeneration": "fixture",
+          "vitalsSetVersion": 1,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "fixture",
+          "x": 1,
+          "y": 1,
+          "placeSetVersion": 1
+        },
+        "story": {
+          "quests": {
+            "fixture": "fixture"
+          },
+          "marks": [
+            "fixture"
+          ],
+          "discoveries": [
+            "fixture"
+          ],
+          "defeated": [
+            "fixture"
+          ],
+          "questItems": [
+            "fixture"
+          ],
+          "playSeconds": 1
+        },
+        "embers": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.SessionResponse",
+    "case": "world-choice",
+    "json": {
+      "worldChoice": {
+        "habiticaId": "held-subject",
+        "displayName": "New hero",
+        "partyWorld": {
+          "id": "party-world",
+          "ownerId": "",
+          "ownerName": "Party",
+          "members": 2,
+          "ownerHere": false,
+          "party": true
+        },
+        "partyCanOpen": false,
+        "partyAdmitted": true
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.SettleEchoRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "epoch": "",
+      "site": "",
+      "where": null,
+      "member": ""
+    }
+  },
+  {
+    "name": "glimway.v1.SettleEchoRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "epoch": "fixture",
+      "site": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "member": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.SettleEchoResult",
+    "case": "empty",
+    "json": {
+      "epoch": "",
+      "site": "",
+      "member": "",
+      "paper": ""
+    }
+  },
+  {
+    "name": "glimway.v1.SettleEchoResult",
+    "case": "populated",
+    "json": {
+      "epoch": "fixture",
+      "site": "fixture",
+      "member": "fixture",
+      "paper": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.SpendRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "kind": "",
+      "where": null,
+      "target": ""
+    }
+  },
+  {
+    "name": "glimway.v1.SpendRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "kind": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "target": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.SpendResult",
+    "case": "empty",
+    "json": {
+      "outcome": ""
+    }
+  },
+  {
+    "name": "glimway.v1.SpendResult",
+    "case": "populated",
+    "json": {
+      "outcome": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.StateResponse",
+    "case": "empty",
+    "json": {
+      "state": null,
+      "leaseActive": false
+    }
+  },
+  {
+    "name": "glimway.v1.StateResponse",
+    "case": "populated",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture",
+          "displayName": "fixture",
+          "profileSource": "fixture",
+          "partyId": "fixture",
+          "worldId": "fixture",
+          "flagged": true
+        },
+        "profile": {
+          "id": "fixture",
+          "name": "fixture",
+          "class": "fixture",
+          "level": 1,
+          "exp": 1,
+          "hp": 1,
+          "maxHp": 1,
+          "mp": 1,
+          "maxMp": 1,
+          "stats": {
+            "str": 1,
+            "int": 1,
+            "con": 1,
+            "per": 1
+          },
+          "equipped": {
+            "fixture": null
+          },
+          "pets": [
+            "fixture"
+          ],
+          "mounts": [
+            "fixture"
+          ],
+          "appearance": {
+            "size": "fixture",
+            "shirt": "fixture",
+            "skin": "fixture",
+            "hairColor": "fixture",
+            "hairStyle": 1,
+            "background": "fixture",
+            "hairBangs": 1,
+            "hairMustache": 1,
+            "hairBeard": 1,
+            "hairFlower": 1
+          },
+          "costume": {
+            "fixture": null
+          },
+          "useCostume": true,
+          "selectedPet": "fixture",
+          "selectedMount": "fixture",
+          "partyId": "fixture"
+        },
+        "vitals": {
+          "hp": 1,
+          "mana": 1,
+          "maxHp": 1,
+          "maxMana": 1,
+          "reportSeq": 1,
+          "reportClient": "fixture",
+          "reportGeneration": "fixture",
+          "vitalsSetVersion": 1,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "fixture",
+          "x": 1,
+          "y": 1,
+          "placeSetVersion": 1
+        },
+        "story": {
+          "quests": {
+            "fixture": "fixture"
+          },
+          "marks": [
+            "fixture"
+          ],
+          "discoveries": [
+            "fixture"
+          ],
+          "defeated": [
+            "fixture"
+          ],
+          "questItems": [
+            "fixture"
+          ],
+          "playSeconds": 1
+        },
+        "embers": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
+        }
+      },
+      "leaseActive": true
+    }
+  },
+  {
+    "name": "glimway.v1.StateResponse",
+    "case": "valid-state",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "leaseActive": true
+    }
+  },
+  {
+    "name": "glimway.v1.Story",
+    "case": "empty",
+    "json": {
+      "quests": {},
+      "marks": [],
+      "discoveries": [],
+      "defeated": [],
+      "questItems": [],
+      "playSeconds": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Story",
+    "case": "populated",
+    "json": {
+      "quests": {
+        "fixture": "fixture"
+      },
+      "marks": [
+        "fixture"
+      ],
+      "discoveries": [
+        "fixture"
+      ],
+      "defeated": [
+        "fixture"
+      ],
+      "questItems": [
+        "fixture"
+      ],
+      "playSeconds": 1
+    }
+  },
+  {
+    "name": "glimway.v1.StorySite",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "kind": "SITE_KIND_UNSPECIFIED",
+      "tx": 0,
+      "ty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.StorySite",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "kind": "SITE_KIND_ECHO",
+      "tx": 1,
+      "ty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.TakePaperRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "paper": "",
+      "where": null,
+      "epoch": "",
+      "site": ""
+    }
+  },
+  {
+    "name": "glimway.v1.TakePaperRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "paper": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "epoch": "fixture",
+      "site": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.TakePaperResult",
+    "case": "empty",
+    "json": {
+      "paper": "",
+      "added": false
+    }
+  },
+  {
+    "name": "glimway.v1.TakePaperResult",
+    "case": "populated",
+    "json": {
+      "paper": "fixture",
+      "added": true
+    }
+  },
+  {
+    "name": "glimway.v1.Tile",
+    "case": "empty",
+    "json": {
+      "tx": 0,
+      "ty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Tile",
+    "case": "populated",
+    "json": {
+      "tx": 1,
+      "ty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.Vitals",
+    "case": "empty",
+    "json": {
+      "hp": 0,
+      "mana": 0,
+      "maxHp": 0,
+      "maxMana": 0,
+      "reportSeq": 0,
+      "reportClient": "",
+      "reportGeneration": "",
+      "vitalsSetVersion": 0,
+      "vitalsAt": 0,
+      "castReadyAt": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Vitals",
+    "case": "populated",
+    "json": {
+      "hp": 1,
+      "mana": 1,
+      "maxHp": 1,
+      "maxMana": 1,
+      "reportSeq": 1,
+      "reportClient": "fixture",
+      "reportGeneration": "fixture",
+      "vitalsSetVersion": 1,
+      "vitalsAt": 1,
+      "castReadyAt": 1
+    }
+  },
+  {
+    "name": "glimway.v1.VitalsCredit",
+    "case": "empty",
+    "json": {
+      "hp": 0,
+      "mana": 0
+    }
+  },
+  {
+    "name": "glimway.v1.VitalsCredit",
+    "case": "populated",
+    "json": {
+      "hp": 1,
+      "mana": 1
+    }
+  },
+  {
+    "name": "glimway.v1.Where",
+    "case": "empty",
+    "json": {
+      "area": "",
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Where",
+    "case": "populated",
+    "json": {
+      "area": "fixture",
+      "x": 1,
+      "y": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunk",
+    "case": "empty",
+    "json": {
+      "epochId": "",
+      "region": "",
+      "realm": "",
+      "layer": 0,
+      "cx": 0,
+      "cy": 0,
+      "generatorVersion": 0,
+      "size": 0,
+      "palette": [],
+      "ground": "",
+      "solid": "",
+      "exits": [],
+      "decor": null,
+      "sites": [],
+      "spawn": null,
+      "look": "",
+      "mark": "",
+      "entities": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunk",
+    "case": "populated",
+    "json": {
+      "epochId": "fixture",
+      "region": "fixture",
+      "realm": "fixture",
+      "layer": 1,
+      "cx": 1,
+      "cy": 1,
+      "generatorVersion": 1,
+      "size": 1,
+      "palette": [
+        "fixture"
+      ],
+      "ground": "AQI=",
+      "solid": "AQI=",
+      "exits": [
+        {
+          "tx": 1,
+          "ty": 1,
+          "tw": 1,
+          "th": 1,
+          "dir": "DIR_NORTH",
+          "to": "fixture",
+          "entry": {
+            "tx": 1,
+            "ty": 1
+          }
+        }
+      ],
+      "decor": {
+        "kinds": [
+          "fixture"
+        ],
+        "kind": [
+          1
+        ],
+        "tx": [
+          1
+        ],
+        "ty": [
+          1
+        ],
+        "ox": [
+          1
+        ],
+        "oy": [
+          1
+        ],
+        "variant": [
+          1
+        ],
+        "flags": "AQI="
+      },
+      "sites": [
+        {
+          "id": "fixture",
+          "kind": "SITE_KIND_ECHO",
+          "tx": 1,
+          "ty": 1
+        }
+      ],
+      "spawn": {
+        "tx": 1,
+        "ty": 1
+      },
+      "look": "fixture",
+      "mark": "fixture",
+      "entities": [
+        {
+          "id": "fixture",
+          "kind": "fixture",
+          "tx": 1,
+          "ty": 1,
+          "enemies": [
+            "fixture"
+          ],
+          "material": "fixture",
+          "tier": 1,
+          "poi": "fixture"
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunk",
+    "case": "valid",
+    "json": {
+      "epochId": "epoch",
+      "region": "inner-1",
+      "realm": "hearthwick",
+      "layer": 0,
+      "cx": 1,
+      "cy": 0,
+      "generatorVersion": 2,
+      "size": 24,
+      "palette": [
+        "grass"
+      ],
+      "ground": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "solid": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "exits": [
+        {
+          "tx": 12,
+          "ty": 0,
+          "tw": 1,
+          "th": 1,
+          "dir": "DIR_NORTH",
+          "to": "chunk:outer-1:1:2",
+          "entry": {
+            "tx": 12,
+            "ty": 23
+          }
+        }
+      ],
+      "decor": {
+        "kinds": [
+          "tree"
+        ],
+        "kind": [
+          0
+        ],
+        "tx": [
+          2
+        ],
+        "ty": [
+          3
+        ],
+        "ox": [
+          1
+        ],
+        "oy": [
+          -2
+        ],
+        "variant": [
+          0
+        ],
+        "flags": "AA=="
+      },
+      "sites": [
+        {
+          "id": "echo",
+          "kind": "SITE_KIND_ECHO",
+          "tx": 3,
+          "ty": 5
+        }
+      ],
+      "spawn": {
+        "tx": 1,
+        "ty": 1
+      },
+      "look": "tangle",
+      "mark": "",
+      "entities": [
+        {
+          "id": "node:1:0:0",
+          "kind": "node",
+          "tx": 3,
+          "ty": 4,
+          "enemies": [],
+          "material": "timber",
+          "tier": 0,
+          "poi": ""
+        }
+      ]
+    },
+    "binaryHex": "0a0565706f63681207696e6e65722d311a0a6865617274687769636b2802380240184a05677261737352a0020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005a480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006221080c18012001280132116368756e6b3a6f757465722d313a313a323a04080c10176a1b0a04747265651201001a01022201032a01023201033a0100420100720c0a046563686f1001180320057a040801100182010674616e676c6592011e0a0a6e6f64653a313a303a3012046e6f646518032004320674696d626572"
+  },
+  {
+    "name": "glimway.v1.WildsClaimRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "epoch": "",
+      "entityId": "",
+      "cycle": 0,
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClaimRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "epoch": "fixture",
+      "entityId": "fixture",
+      "cycle": 1,
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClaimResult",
+    "case": "empty",
+    "json": {
+      "epoch": "",
+      "entity": null,
+      "loot": null,
+      "materials": {},
+      "wardenSliverFound": false,
+      "stormDropFound": false,
+      "papers": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClaimResult",
+    "case": "populated",
+    "json": {
+      "epoch": "fixture",
+      "entity": {
+        "id": "fixture",
+        "cycle": 1,
+        "state": "fixture",
+        "availableAt": 1,
+        "by": "fixture",
+        "at": 1,
+        "epoch": "fixture"
+      },
+      "loot": {
+        "materials": [
+          {
+            "id": "fixture",
+            "qty": 1
+          }
+        ],
+        "trinket": "fixture"
+      },
+      "materials": {
+        "fixture": 1
+      },
+      "wardenSliverFound": true,
+      "stormDropFound": true,
+      "papers": [
+        "fixture"
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscovery",
+    "case": "empty",
+    "json": {
+      "entityId": "",
+      "poiId": "",
+      "discovererId": "",
+      "displayName": "",
+      "at": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscovery",
+    "case": "populated",
+    "json": {
+      "entityId": "fixture",
+      "poiId": "fixture",
+      "discovererId": "fixture",
+      "displayName": "fixture",
+      "at": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEntity",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "kind": "",
+      "tx": 0,
+      "ty": 0,
+      "enemies": [],
+      "material": "",
+      "tier": 0,
+      "poi": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEntity",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "kind": "fixture",
+      "tx": 1,
+      "ty": 1,
+      "enemies": [
+        "fixture"
+      ],
+      "material": "fixture",
+      "tier": 1,
+      "poi": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEntityState",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "cycle": 0,
+      "state": "",
+      "availableAt": 0,
+      "by": null,
+      "at": null,
+      "epoch": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEntityState",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "cycle": 1,
+      "state": "fixture",
+      "availableAt": 1,
+      "by": "fixture",
+      "at": 1,
+      "epoch": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEpoch",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "worldSeed": "",
+      "regionId": "",
+      "generatorVersion": 0,
+      "season": "",
+      "startsAt": 0,
+      "endsAt": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsEpoch",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "worldSeed": "fixture",
+      "regionId": "fixture",
+      "generatorVersion": 1,
+      "season": "fixture",
+      "startsAt": 1,
+      "endsAt": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLantern",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "ownerId": "",
+      "displayName": "",
+      "x": 0,
+      "y": 0,
+      "litBy": null,
+      "at": 0,
+      "litAt": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLantern",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "ownerId": "fixture",
+      "displayName": "fixture",
+      "x": 1,
+      "y": 1,
+      "litBy": "fixture",
+      "at": 1,
+      "litAt": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLanternRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "epoch": "",
+      "ownerId": "",
+      "lanternId": "",
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLanternRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "epoch": "fixture",
+      "ownerId": "fixture",
+      "lanternId": "fixture",
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLanternResult",
+    "case": "empty",
+    "json": {
+      "epoch": "",
+      "rewarded": false,
+      "loot": null,
+      "materials": {},
+      "lanterns": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLanternResult",
+    "case": "populated",
+    "json": {
+      "epoch": "fixture",
+      "rewarded": true,
+      "loot": {
+        "materials": [
+          {
+            "id": "fixture",
+            "qty": 1
+          }
+        ],
+        "trinket": "fixture"
+      },
+      "materials": {
+        "fixture": 1
+      },
+      "lanterns": [
+        {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "displayName": "fixture",
+          "x": 1,
+          "y": 1,
+          "litBy": "fixture",
+          "at": 1,
+          "litAt": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLoot",
+    "case": "empty",
+    "json": {
+      "materials": [],
+      "trinket": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLoot",
+    "case": "populated",
+    "json": {
+      "materials": [
+        {
+          "id": "fixture",
+          "qty": 1
+        }
+      ],
+      "trinket": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMaterial",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMaterial",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "qty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsPersonalClaim",
+    "case": "empty",
+    "json": {
+      "entityId": "",
+      "at": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsPersonalClaim",
+    "case": "populated",
+    "json": {
+      "entityId": "fixture",
+      "at": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsRegionResult",
+    "case": "empty",
+    "json": {
+      "epoch": null,
+      "entities": [],
+      "personalClaims": [],
+      "discoveries": [],
+      "lanterns": [],
+      "materials": {},
+      "echoes": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsRegionResult",
+    "case": "populated",
+    "json": {
+      "epoch": {
+        "id": "fixture",
+        "worldSeed": "fixture",
+        "regionId": "fixture",
+        "generatorVersion": 1,
+        "season": "fixture",
+        "startsAt": 1,
+        "endsAt": 1
+      },
+      "entities": [
+        {
+          "id": "fixture",
+          "cycle": 1,
+          "state": "fixture",
+          "availableAt": 1,
+          "by": "fixture",
+          "at": 1,
+          "epoch": "fixture"
+        }
+      ],
+      "personalClaims": [
+        {
+          "entityId": "fixture",
+          "at": 1
+        }
+      ],
+      "discoveries": [
+        {
+          "entityId": "fixture",
+          "poiId": "fixture",
+          "discovererId": "fixture",
+          "displayName": "fixture",
+          "at": 1
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "displayName": "fixture",
+          "x": 1,
+          "y": 1,
+          "litBy": "fixture",
+          "at": 1,
+          "litAt": 1
+        }
+      ],
+      "materials": {
+        "fixture": 1
+      },
+      "echoes": [
+        {
+          "site": "fixture",
+          "member": "fixture",
+          "settled": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsRegionResult",
+    "case": "valid-region",
+    "json": {
+      "epoch": {
+        "id": "epoch",
+        "worldSeed": "world-seed",
+        "regionId": "outer-1",
+        "generatorVersion": 2,
+        "season": "autumn",
+        "startsAt": 1791300000,
+        "endsAt": 1791500000
+      },
+      "entities": [
+        {
+          "id": "node:1:0:0",
+          "cycle": 2,
+          "state": "harvested",
+          "availableAt": 1791400020,
+          "by": "fixture-account",
+          "at": 1791400000,
+          "epoch": "epoch"
+        }
+      ],
+      "personalClaims": [],
+      "discoveries": [],
+      "lanterns": [
+        {
+          "id": "fallen-lamp",
+          "ownerId": "peer-account",
+          "displayName": "Peer",
+          "x": 400,
+          "y": 300,
+          "litBy": "fixture-account",
+          "at": 1791400000,
+          "litAt": 1791400010
+        }
+      ],
+      "materials": {
+        "timber": 3
+      },
+      "echoes": [
+        {
+          "site": "echo-tam",
+          "member": "tam",
+          "settled": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WorldChoice",
+    "case": "empty",
+    "json": {
+      "habiticaId": "",
+      "displayName": "",
+      "partyWorld": null,
+      "partyCanOpen": false,
+      "partyAdmitted": false
+    }
+  },
+  {
+    "name": "glimway.v1.WorldChoice",
+    "case": "populated",
+    "json": {
+      "habiticaId": "fixture",
+      "displayName": "fixture",
+      "partyWorld": {
+        "id": "fixture",
+        "ownerId": "fixture",
+        "ownerName": "fixture",
+        "members": 1,
+        "ownerHere": true,
+        "party": true
+      },
+      "partyCanOpen": true,
+      "partyAdmitted": true
+    }
+  },
+  {
+    "name": "glimway.v1.WorldChooseRequest",
+    "case": "empty",
+    "json": {
+      "choice": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WorldChooseRequest",
+    "case": "populated",
+    "json": {
+      "choice": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WorldRef",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "ownerId": "",
+      "ownerName": "",
+      "members": 0,
+      "ownerHere": false,
+      "party": false
+    }
+  },
+  {
+    "name": "glimway.v1.WorldRef",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "ownerId": "fixture",
+      "ownerName": "fixture",
+      "members": 1,
+      "ownerHere": true,
+      "party": true
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "/api/commons",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "gateCount": 2,
+        "gates": [
+          {
+            "gate": 0,
+            "homeId": null,
+            "names": [],
+            "members": [],
+            "tier": 0,
+            "desolate": false,
+            "mine": false,
+            "price": 0,
+            "reclaim": false,
+            "shelf": false,
+            "shelfStocked": false
+          },
+          {
+            "gate": 1,
+            "homeId": null,
+            "names": [],
+            "members": [],
+            "tier": 0,
+            "desolate": false,
+            "mine": false,
+            "price": 0,
+            "reclaim": false,
+            "shelf": false,
+            "shelfStocked": false
+          }
+        ],
+        "invites": [],
+        "mine": null
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "/api/items",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "items": {
+          "stacks": [],
+          "instances": [],
+          "pockets": [
+            {
+              "slot": "pocket-1",
+              "itemDef": null,
+              "instance": null
+            }
+          ],
+          "offHand": {
+            "open": false,
+            "class": null,
+            "itemDef": null,
+            "instance": null
+          },
+          "pickedUp": [],
+          "thanks": []
+        }
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "/api/mail",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "inventory": {
+          "materials": {},
+          "items": {},
+          "decorations": {},
+          "instances": []
+        },
+        "mail": [],
+        "nextCursor": null,
+        "nextPendingCursor": null
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "/api/projects",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "grantablePapers": [],
+        "projects": [
+          {
+            "id": "north-bridge",
+            "name": "Repair the north bridge",
+            "stage": "open",
+            "required": {
+              "stone": 80,
+              "timber": 200
+            },
+            "contributed": {
+              "stone": 0,
+              "timber": 0
+            },
+            "mine": {
+              "stone": 0,
+              "timber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          },
+          {
+            "id": "well-canopy",
+            "name": "Build a well canopy",
+            "stage": "open",
+            "required": {
+              "fiber": 20,
+              "stone": 40,
+              "timber": 60
+            },
+            "contributed": {
+              "fiber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "mine": {
+              "fiber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          },
+          {
+            "id": "mill-wheel",
+            "name": "Reinforce the mill wheel",
+            "stage": "open",
+            "required": {
+              "fiber": 60,
+              "timber": 120
+            },
+            "contributed": {
+              "fiber": 0,
+              "timber": 0
+            },
+            "mine": {
+              "fiber": 0,
+              "timber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          },
+          {
+            "id": "wheel-wick-guildhouse",
+            "name": "Reopen the Wheel \u0026 Wick guildhouse",
+            "stage": "open",
+            "required": {
+              "fiber": 40,
+              "stone": 60,
+              "timber": 160
+            },
+            "contributed": {
+              "fiber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "mine": {
+              "fiber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          },
+          {
+            "id": "orrins-hinges",
+            "name": "Fit Orrin’s hinges",
+            "stage": "open",
+            "required": {
+              "amber": 10,
+              "stone": 30,
+              "timber": 50
+            },
+            "contributed": {
+              "amber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "mine": {
+              "amber": 0,
+              "stone": 0,
+              "timber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          },
+          {
+            "id": "cooley-window-fund",
+            "name": "Keep Ada’s window lit",
+            "stage": "open",
+            "required": {
+              "amber": 20,
+              "fiber": 40
+            },
+            "contributed": {
+              "amber": 0,
+              "fiber": 0
+            },
+            "mine": {
+              "amber": 0,
+              "fiber": 0
+            },
+            "completedAt": null,
+            "worldFlag": null,
+            "grantablePapers": []
+          }
+        ],
+        "worldFlags": []
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "/api/storage",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "home": null,
+        "inventory": {
+          "materials": {},
+          "items": {},
+          "decorations": {},
+          "instances": []
+        },
+        "personal": {
+          "materials": {},
+          "items": {},
+          "decorations": {},
+          "instances": []
+        },
+        "shared": "not-a-member",
+        "storage": null
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "empty",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "home": null,
+        "itemId": "",
+        "materials": {}
+      }
+    }
+  },
+  {
+    "name": "mixed",
+    "case": "keyed-items",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        }
+      },
+      "result": {
+        "items": {
+          "stacks": [
+            {
+              "itemDef": "timber",
+              "qty": 2,
+              "maker": null
+            }
+          ],
+          "instances": [],
+          "pockets": [
+            {
+              "slot": "pocket-1",
+              "itemDef": null,
+              "instance": null
+            }
+          ],
+          "offHand": {
+            "open": false,
+            "class": null,
+            "itemDef": null,
+            "instance": null
+          },
+          "pickedUp": [],
+          "thanks": []
+        },
+        "gathered": [
+          {
+            "itemDef": "timber",
+            "qty": 2,
+            "maker": null
+          }
+        ]
+      }
+    }
+  }
+]

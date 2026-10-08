@@ -82,7 +82,7 @@ class UiStore {
   /** Glimway server: unknown until the first probe; unavailable = guest-only build or offline. */
   server = $state<'unknown' | 'available' | 'unavailable'>('unknown')
   /** Signed in to the Glimway server (session cookie), whether or not play has started. */
-  account = $state<{ habiticaId: string; name: string } | null>(null)
+  account = $state<{ accountId: string; name: string } | null>(null)
   /** Connected play: the running session's server link (null for guests). */
   link = $state<LinkPayload | null>(null)
   /** Connected play: the reconnect notice ("you played somewhere else"). */

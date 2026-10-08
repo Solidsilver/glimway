@@ -13,11 +13,11 @@ func invite(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req 
 	if req.To == "" || len(req.To) > 128 {
 		return "", fail(404, "not-found")
 	}
-	if req.To == s.HabiticaID {
+	if req.To == s.AccountID {
 		return "", fail(400, "self-invite")
 	}
 	var world string
-	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE habitica_id=?", req.To).Scan(&world)
+	err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", req.To).Scan(&world)
 	if err == sql.ErrNoRows {
 		return "", fail(404, "not-found")
 	}
@@ -32,7 +32,7 @@ func invite(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req 
 	}
 	expires := now + int64(content.HomeRules.JointDeed.InviteHours)*3600
 	_, err = tx.ExecContext(ctx, `INSERT INTO homestead_invites(homestead_id,to_id,from_id,created_at,expires_at) VALUES(?,?,?,?,?)
-ON CONFLICT(homestead_id,to_id) DO UPDATE SET from_id=excluded.from_id,created_at=excluded.created_at,expires_at=excluded.expires_at,from_confirmed_at=NULL,to_confirmed_at=NULL`, h.ID, req.To, s.HabiticaID, now, expires)
+ON CONFLICT(homestead_id,to_id) DO UPDATE SET from_id=excluded.from_id,created_at=excluded.created_at,expires_at=excluded.expires_at,from_confirmed_at=NULL,to_confirmed_at=NULL`, h.ID, req.To, s.AccountID, now, expires)
 	return "invited", err
 }
 
@@ -57,7 +57,7 @@ func (a *Server) joint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 		return "", err
 	}
 	other, column, otherAt := from, "to_confirmed_at", fromAt
-	switch s.HabiticaID {
+	switch s.AccountID {
 	case req.To:
 	case from:
 		other, column, otherAt = req.To, "from_confirmed_at", toAt
@@ -72,7 +72,7 @@ func (a *Server) joint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 	if !ok || fromHome != req.HomeID {
 		return "", fail(404, "invite-not-found")
 	}
-	if !a.atTable(s.WorldID, s.HabiticaID) {
+	if !a.atTable(s.WorldID, s.AccountID) {
 		return "", fail(409, "not-at-table")
 	}
 	if !a.atTable(s.WorldID, other) {
@@ -104,13 +104,13 @@ func (a *Server) joint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 // already); placed pieces, posts and the shared chest stay. The last one out
 // leaves the land vacant: desolate in a while, the deed lost after that.
 func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now int64) error {
-	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_members WHERE habitica_id=?", s.HabiticaID); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_members WHERE account_id=?", s.AccountID); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO homestead_departures VALUES(?,?,?) ON CONFLICT(homestead_id,habitica_id) DO UPDATE SET left_at=excluded.left_at", h.ID, s.HabiticaID, now); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO homestead_departures VALUES(?,?,?) ON CONFLICT(homestead_id,account_id) DO UPDATE SET left_at=excluded.left_at", h.ID, s.AccountID, now); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE homestead_id=? AND from_id=?", h.ID, s.HabiticaID); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_invites WHERE homestead_id=? AND from_id=?", h.ID, s.AccountID); err != nil {
 		return err
 	}
 	if len(h.Members) <= 1 {
@@ -135,7 +135,7 @@ func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64
 		return err
 	}
 	var mine int
-	err := tx.QueryRowContext(ctx, "SELECT h.gate FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.habitica_id=?", s.HabiticaID).Scan(&mine)
+	err := tx.QueryRowContext(ctx, "SELECT h.gate FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.account_id=?", s.AccountID).Scan(&mine)
 	if err == sql.ErrNoRows || (err == nil && mine != gate) {
 		return fail(409, "not-at-own-plot")
 	}

@@ -57,7 +57,7 @@ func TestRound3HighestCreditDetectsHiddenForgery(t *testing.T) {
 			x.set(profile("alice", 20, 0, 20))
 			c = x.login("alice", "")
 			flagged := x.expect("GET", "/api/state", nil, c, 200)
-			if !flagged.Flagged || flagged.Pending != high.Pending || flagged.State.XPEmbers != high.State.XPEmbers || flagged.Rev != before.Rev+1 {
+			if !flagged.Flagged || flagged.Pending != high.Pending || flagged.State.XPEmbers != high.State.XPEmbers || flagged.Version != before.Version+1 {
 				t.Fatal("highest credit did not flag without confiscation")
 			}
 			if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='checkpoint-flag' AND ref='highest-credit'") != 1 {
@@ -83,7 +83,7 @@ func TestRound3CheckpointCursorExcludesReviewedSameSecondCredit(t *testing.T) {
 	if x.expect("GET", "/api/state", nil, c, 200).Flagged {
 		t.Fatal("same-second checkpoint counted old credit again")
 	}
-	if count(t, x.db, "SELECT checkpoint_ledger_id FROM sync_baselines WHERE habitica_id='alice'") != count(t, x.db, "SELECT max(id) FROM ledger WHERE habitica_id='alice'") {
+	if count(t, x.db, "SELECT checkpoint_ledger_id FROM sync_baselines WHERE account_id='"+x.account("alice")+"'") != count(t, x.db, "SELECT max(id) FROM ledger WHERE account_id='"+x.account("alice")+"'") {
 		t.Fatal("cursor not advanced")
 	}
 }
@@ -95,17 +95,17 @@ func TestRound3HighestCreditUsesLegacyPending(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	snapshot, err := store.Load(context.Background(), tx, "alice")
+	snapshot, err := store.Load(context.Background(), tx, x.account("alice"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Legacy pending can retain a high report with no modern matching ledger row.
 	at := snapshot.CheckpointAt + 1
 	xp := rules.LifetimeXP(60, 0)
-	if _, err = tx.Exec("INSERT INTO pending_credits VALUES('alice',?,1,?)", xp, at); err != nil {
+	if _, err = tx.Exec("INSERT INTO pending_credits VALUES('"+x.account("alice")+"',?,1,?)", xp, at); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = tx.Exec("UPDATE sync_baselines SET pending=1 WHERE habitica_id='alice'"); err != nil {
+	if _, err = tx.Exec("UPDATE sync_baselines SET pending=1 WHERE account_id='" + x.account("alice") + "'"); err != nil {
 		t.Fatal(err)
 	}
 	got, when, err := highestCredit(context.Background(), tx, &snapshot)
@@ -151,12 +151,13 @@ func TestRound3SessionIdleSlidingAbsoluteAndRollback(t *testing.T) {
 }
 func proofRequest(x *rig, id, token, remote string) (int, string, string) {
 	r := httptest.NewRequest("POST", "/api/session", bytes.NewBufferString(store.JSON(map[string]any{"userId": id, "token": token})))
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.Header.Set("Content-Type", "application/json")
 	r.RemoteAddr = remote
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)
 	var v struct{ Error struct{ Code string } }
-	_ = json.Unmarshal(w.Body.Bytes(), &v)
+	_ = json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v)
 	return w.Code, v.Error.Code, w.Header().Get("Retry-After")
 }
 func proofUpstream(x *rig, handler func(http.ResponseWriter, *http.Request)) *httptest.Server {
@@ -298,11 +299,12 @@ func TestRound3StateLeaseActivityAndDisplayName(t *testing.T) {
 		t.Fatal(err)
 	}
 	status, s, _, c := x.request("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil)
-	if status != 200 || s.DisplayName != p.Name || s.SaveOrigin != nil {
+	if status != 200 || s.DisplayName != p.Name {
 		t.Fatal("pre-origin display name")
 	}
 	read := func(lease string, want bool) response {
 		r := httptest.NewRequest("GET", "/api/state", nil)
+		r.Header.Set("X-Glimway-Contract", "3")
 		r.AddCookie(c)
 		if lease != "" {
 			r.Header.Set("X-Play-Lease", lease)
@@ -313,7 +315,7 @@ func TestRound3StateLeaseActivityAndDisplayName(t *testing.T) {
 			response
 			LeaseActive *bool `json:"leaseActive"`
 		}
-		if err := json.Unmarshal(w.Body.Bytes(), &doc); err != nil {
+		if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &doc); err != nil {
 			t.Fatal(err)
 		}
 		if w.Code != 200 || doc.LeaseActive == nil || *doc.LeaseActive != want || doc.DisplayName != p.Name {
@@ -322,17 +324,16 @@ func TestRound3StateLeaseActivityAndDisplayName(t *testing.T) {
 		return doc.response
 	}
 	read("", false)
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "first"}, c, 200)
 	before := s.Snapshot
 	x.now.Add(60)
 	got := read(s.Lease, true)
 	unchanged(t, before, got.Snapshot)
 	takeover := x.expect("POST", "/api/play", map[string]any{"clientId": "second", "takeOver": true}, c, 200)
-	seen := count(t, x.db, "SELECT lease_seen_at FROM players WHERE habitica_id='alice'")
+	seen := count(t, x.db, "SELECT lease_seen_at FROM players WHERE account_id='"+x.account("alice")+"'")
 	x.now.Add(1)
 	read(s.Lease, false)
-	if count(t, x.db, "SELECT lease_seen_at FROM players WHERE habitica_id='alice'") != seen {
+	if count(t, x.db, "SELECT lease_seen_at FROM players WHERE account_id='"+x.account("alice")+"'") != seen {
 		t.Fatal("old header refreshed active lease")
 	}
 	read(takeover.Lease, true)
@@ -347,6 +348,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 	c := x.login("owner", "")
 	list := func(remaining, entries int) {
 		r := httptest.NewRequest("GET", "/api/invites", nil)
+		r.Header.Set("X-Glimway-Contract", "3")
 		r.AddCookie(c)
 		w := httptest.NewRecorder()
 		x.api.ServeHTTP(w, r)
@@ -355,7 +357,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 			Remaining        int
 			OutstandingLimit int
 		}
-		if err := json.Unmarshal(w.Body.Bytes(), &doc); err != nil {
+		if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &doc); err != nil {
 			t.Fatal(err)
 		}
 		if w.Code != 200 || doc.Remaining != remaining || doc.OutstandingLimit != rules.E.OutstandingInvites || len(doc.Invites) != entries {
@@ -377,7 +379,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 	list(2, 2)
 	inviteReq(t, x, "POST", "/api/invites", c, 200)
 	list(1, 3)
-	if _, err := x.db.DB.Exec("UPDATE invites SET expires_at=? WHERE created_by='owner' AND used_by IS NULL", x.now.Load()); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE invites SET expires_at=? WHERE created_by='"+x.account("owner")+"' AND used_by IS NULL", x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	list(1, 1)

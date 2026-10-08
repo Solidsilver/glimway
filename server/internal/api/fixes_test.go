@@ -176,6 +176,7 @@ func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 	x.api = New(x.db, x.api.Habitica, Config{TrustedProxies: []string{"127.0.0.1"}, LoginRate: 2, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
 	attempt := func(remote, xff string) int {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(`{"userId":"alice","token":"secret"}`))
+		r.Header.Set("X-Glimway-Contract", "3")
 		r.RemoteAddr = remote
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Forwarded-For", xff)
@@ -243,8 +244,8 @@ func TestReplaySpendUnderNewLease(t *testing.T) {
 	next := x.expect("POST", "/api/play", map[string]any{"clientId": "other", "takeOver": true}, c, 200)
 	body["lease"] = next.Lease
 	replay := x.expect("POST", "/api/spend", body, c, 200)
-	if replay.Rev != paid.Rev || replay.State.Embers != paid.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
-		t.Fatal("new lease did not replay exact spend")
+	if replay.Version != next.Version || replay.State.Embers != paid.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
+		t.Fatal("new lease replay must carry current state and the original result")
 	}
 	body["kind"] = "road-lantern"
 	x.expect("POST", "/api/spend", body, c, 409)
@@ -385,7 +386,7 @@ func TestPlayerInviteLifecycleLimitExpiryAndWorlds(t *testing.T) {
 		t.Fatal("used history missing or expired unused listed")
 	}
 	x.expect("POST", "/api/session", map[string]any{"userId": "expired", "token": secret, "invite": created[2].Code}, nil, 403)
-	if x.expect("GET", "/api/state", nil, owner, 200).Rev != baseline.Rev {
+	if x.expect("GET", "/api/state", nil, owner, 200).Version != baseline.Version+1 {
 		t.Fatal("invites bumped gameplay rev")
 	}
 	var raw string

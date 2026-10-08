@@ -2,7 +2,7 @@ package api
 
 import (
 	"glimway/content"
-	contract "glimway/server/internal/gen/glimway/v1"
+	contract "glimway/server/internal/gen/glimway/v2"
 )
 
 // ------------------------------------------------------------ presence

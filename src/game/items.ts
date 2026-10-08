@@ -93,7 +93,7 @@ export class Items {
   async gather(tool: string, action: string, target: string, visitId: string, where: { tile?: [number, number]; region?: string } = {}) {
     const makerId = this.view?.instances.find((i) => i.id === tool)?.maker?.id
     const r = await this.run('gather', { tool, action, target, visitId, ...(where.tile ? { tile: where.tile } : {}), ...(where.region ? { region: where.region } : {}) })
-    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
+    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.accountId) {
       this.thankNearby(makerId)
     }
     return r
@@ -106,7 +106,7 @@ export class Items {
   async useTool(instance: string, action?: string) {
     const makerId = this.view?.instances.find((i) => i.id === instance)?.maker?.id
     const r = await this.run('use', { instance, ...(action ? { action } : {}) })
-    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.habiticaId) {
+    if (r.ok && (r.value?.wear?.broke || r.value?.wear?.woreOut) && makerId && makerId !== this.session.link?.accountId) {
       this.thankNearby(makerId)
     }
     return r
@@ -120,7 +120,7 @@ export class Items {
       } else if (itemDef === 'willow-bark-tea') {
         bus.emit(EV.clearUnmoored, { instant: false })
       }
-      if (maker && maker !== this.session.link?.habiticaId) this.thankNearby(maker)
+      if (maker && maker !== this.session.link?.accountId) this.thankNearby(maker)
     }
     return r
   }
@@ -129,7 +129,7 @@ export class Items {
     const feed = presence()
     if (!feed) return
     if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * TILE)) {
-      bus.emit(EV.emote, { habiticaId: makerId, id: 'heart' })
+      bus.emit(EV.emote, { accountId: makerId, id: 'heart' })
     }
   }
   /** Mend an heirloom at your bench ('bench') or by a mender ('silas', 'orrin'). */

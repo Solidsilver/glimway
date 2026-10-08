@@ -3,6 +3,10 @@
  * still goes through the same validators as a save, so a malformed answer
  * can never reach the running game (and unknown fields are dropped).
  */
+import { decodePlayerState } from './state-contract.ts';
+import { toJson } from '@bufbuild/protobuf';
+import { HabiticaProfileSchema } from '../gen/glimway/v1/profile_pb.js';
+import { createNewGame } from '../state.ts';
 import { validateSave } from '../state.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
@@ -91,8 +95,18 @@ function num(v: unknown): number {
   return v;
 }
 
+// TODO(C2): remove the retained domain document projection with the old Link.
 export function parseSnapshot(raw: unknown): Snapshot {
   const o = obj(raw);
+  // TODO(C2): replace this local GameState projection when the predictor lands.
+  // The v3 server state stays typed on the operations facade.
+  if (typeof o.state === 'object' && o.state !== null && 'account' in o.state) {
+    try {
+      const p = decodePlayerState(o.state);
+      const state = validateSave({ ...createNewGame(), area: p.place!.area, position: { x: p.place!.x, y: p.place!.y }, quest: p.story!.quests['lantern-road'] ?? 'new', hp: p.vitals!.hp, maxHp: p.vitals!.maxHp, mana: p.vitals!.mana, maxMana: p.vitals!.maxMana, flags: p.story!.marks, inventory: p.story!.questItems, discoveries: p.story!.discoveries, defeatedEnemies: p.story!.defeated, playSeconds: p.story!.playSeconds, embers: p.embers!.balance, xpEmbers: p.embers!.xpEarned, emberXp: p.embers!.xpMark });
+      return { state, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: p.account!.profileSource === 'habitica' ? 'imported' : 'demo', saveOrigin: 'fresh', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(p.profile ? { importedProfile: validateHabiticaProfile(toJson(HabiticaProfileSchema, p.profile, { alwaysEmitImplicit: true })) } : {}) };
+    } catch { throw new ApiError('bad-response'); }
+  }
   let state;
   let importedProfile;
   try {
@@ -101,7 +115,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
   } catch {
     throw new ApiError('bad-response');
   }
-  const rev = num(o.rev);
+  const rev = num(o.version);
   if (!Number.isInteger(rev) || rev < 0) throw new ApiError('bad-response');
   const vitalsSource = o.vitalsSource === 'imported' ? 'imported' : 'demo';
   const origin = o.saveOrigin;
@@ -110,7 +124,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
     state,
     rev,
     vitalsSource,
-    habiticaId: str(o.habiticaId),
+    accountId: str(o.accountId),
     displayName: typeof o.displayName === 'string' ? o.displayName.slice(0, 128) : '',
     habiticaPartyId: typeof o.habiticaPartyId === 'string' ? o.habiticaPartyId : null,
     worldId: typeof o.worldId === 'string' ? o.worldId : '',
@@ -605,7 +619,11 @@ export function parseItems(raw: unknown): ItemsResponse {
 }
 
 export function parseItemsAction(raw: unknown): ItemsActionResponse {
-  const r = obj(obj(raw).result);
+  return { ...parseSnapshot(raw), result: parseItemsResult(obj(raw).result) };
+}
+/** Shared domain parser for the server-first mixed envelope. */
+export function parseItemsResult(raw: unknown): ItemsActionResponse['result'] {
+  const r = obj(raw);
   const result: ItemsActionResponse['result'] = { items: parseItemsView(r.items) };
   if (r.wear) {
     const w = obj(r.wear);
@@ -661,7 +679,7 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
       cleared: lo.cleared === true,
     };
   }
-  return { ...parseSnapshot(raw), result };
+  return result;
 }
 
 export { parseCalendar } from './calendar.ts';
@@ -730,7 +748,7 @@ function parseWoodpile(v: unknown): WoodpileView {
       return {
         id: str(w.id),
         homesteadId: str(w.homesteadId),
-        habiticaId: str(w.habiticaId),
+        accountId: str(w.accountId),
         qty: int(w.qty, 1),
         stackedAt: num(w.stackedAt),
         ready: w.ready === true || remaining <= 0,

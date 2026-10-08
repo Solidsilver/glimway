@@ -16,7 +16,7 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 	if !nearTile(s, p.Area, p.TX, p.TY, 3) {
 		return fail(409, "too-far-away")
 	}
-	added, err := store.Outcome(ctx, tx, s.HabiticaID, "pickup:"+p.ID, "pickup", now)
+	added, err := store.Outcome(ctx, tx, s.AccountID, "pickup:"+p.ID, "pickup", now)
 	if err != nil {
 		return err
 	}
@@ -30,12 +30,12 @@ func pickUp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest,
 		if p.UsesLeft > 0 {
 			condition = p.UsesLeft * content.ItemsRules.Rules.Wear.PointsPerUse
 		}
-		id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.HabiticaID}, "", condition, now)
+		id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", condition, now)
 		if err != nil {
 			return err
 		}
 		out.Created = []string{id}
-		return currency(ctx, tx, s.HabiticaID, content.StackCurrency(def.ID), 1, "pickup", p.ID, now)
+		return currency(ctx, tx, s.AccountID, content.StackCurrency(def.ID), 1, "pickup", p.ID, now)
 	}
-	return packPut(ctx, tx, s.HabiticaID, def.ID, []makerQty{{Maker: "", Qty: p.Qty}}, "pickup", p.ID, now)
+	return packPut(ctx, tx, s.AccountID, def.ID, []makerQty{{Maker: "", Qty: p.Qty}}, "pickup", p.ID, now)
 }

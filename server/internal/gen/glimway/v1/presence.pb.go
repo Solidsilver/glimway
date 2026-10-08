@@ -23,7 +23,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Deprecated transport: retained for generated-source compatibility only.
 // One event per frame. The websocket subprotocol versions the binary envelope.
+//
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Event:
@@ -234,6 +237,7 @@ func (*PresenceMessage_Gift) isPresenceMessage_Event() {}
 
 func (*PresenceMessage_Witness) isPresenceMessage_Event() {}
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceAuth struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Lease         string                 `protobuf:"bytes,1,opt,name=lease,proto3" json:"lease,omitempty"`
@@ -278,6 +282,7 @@ func (x *PresenceAuth) GetLease() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceHeartbeat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -314,6 +319,7 @@ func (*PresenceHeartbeat) Descriptor() ([]byte, []int) {
 	return file_glimway_v1_presence_proto_rawDescGZIP(), []int{2}
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceReady struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HabiticaId    string                 `protobuf:"bytes,1,opt,name=habitica_id,json=habiticaId,proto3" json:"habitica_id,omitempty"`
@@ -358,6 +364,7 @@ func (x *PresenceReady) GetHabiticaId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceJoin struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Area          string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
@@ -410,6 +417,7 @@ func (x *PresenceJoin) GetPlayer() *PresencePlayer {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceRoom struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Area          string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
@@ -462,6 +470,7 @@ func (x *PresenceRoom) GetPlayers() []*PresencePlayer {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceLeave struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HabiticaId    string                 `protobuf:"bytes,1,opt,name=habitica_id,json=habiticaId,proto3" json:"habitica_id,omitempty"`
@@ -506,6 +515,7 @@ func (x *PresenceLeave) GetHabiticaId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceEmote struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -558,6 +568,7 @@ func (x *PresenceEmote) GetHabiticaId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceGift struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FromName      string                 `protobuf:"bytes,1,opt,name=from_name,json=fromName,proto3" json:"from_name,omitempty"`
@@ -626,6 +637,7 @@ func (x *PresenceGift) GetQty() int32 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceWitness struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Beat          string                 `protobuf:"bytes,1,opt,name=beat,proto3" json:"beat,omitempty"`
@@ -687,6 +699,8 @@ func (x *PresenceWitness) GetName() string {
 }
 
 // Explicit presence preserves the JSON reader's required-coordinate checks.
+//
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceFacing struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             *float64               `protobuf:"fixed64,1,opt,name=x,proto3,oneof" json:"x,omitempty"`
@@ -739,6 +753,7 @@ func (x *PresenceFacing) GetY() float64 {
 	return 0
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresencePosition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             *float64               `protobuf:"fixed64,1,opt,name=x,proto3,oneof" json:"x,omitempty"`
@@ -815,6 +830,7 @@ func (x *PresencePosition) GetHabiticaId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresencePlayer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HabiticaId    string                 `protobuf:"bytes,1,opt,name=habitica_id,json=habiticaId,proto3" json:"habitica_id,omitempty"`
@@ -883,6 +899,7 @@ func (x *PresencePlayer) GetPos() *PresencePosition {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceAvatar struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Appearance *PresenceAppearance    `protobuf:"bytes,1,opt,name=appearance,proto3" json:"appearance,omitempty"`
@@ -968,6 +985,7 @@ func (x *PresenceAvatar) GetSelectedMount() *wrapperspb.StringValue {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/presence.proto.
 type PresenceAppearance struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Size          string                 `protobuf:"bytes,1,opt,name=size,proto3" json:"size,omitempty"`
@@ -1089,7 +1107,7 @@ var File_glimway_v1_presence_proto protoreflect.FileDescriptor
 const file_glimway_v1_presence_proto_rawDesc = "" +
 	"\n" +
 	"\x19glimway/v1/presence.proto\x12\n" +
-	"glimway.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x9d\x04\n" +
+	"glimway.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xa1\x04\n" +
 	"\x0fPresenceMessage\x12.\n" +
 	"\x04auth\x18\x01 \x01(\v2\x18.glimway.v1.PresenceAuthH\x00R\x04auth\x12.\n" +
 	"\x04join\x18\x02 \x01(\v2\x18.glimway.v1.PresenceJoinH\x00R\x04join\x120\n" +
@@ -1101,60 +1119,60 @@ const file_glimway_v1_presence_proto_rawDesc = "" +
 	"\x05leave\x18\b \x01(\v2\x19.glimway.v1.PresenceLeaveH\x00R\x05leave\x12.\n" +
 	"\x04gift\x18\t \x01(\v2\x18.glimway.v1.PresenceGiftH\x00R\x04gift\x127\n" +
 	"\awitness\x18\n" +
-	" \x01(\v2\x1b.glimway.v1.PresenceWitnessH\x00R\awitnessB\a\n" +
-	"\x05event\"$\n" +
+	" \x01(\v2\x1b.glimway.v1.PresenceWitnessH\x00R\awitness:\x02\x18\x01B\a\n" +
+	"\x05event\"(\n" +
 	"\fPresenceAuth\x12\x14\n" +
-	"\x05lease\x18\x01 \x01(\tR\x05lease\"\x13\n" +
-	"\x11PresenceHeartbeat\"0\n" +
+	"\x05lease\x18\x01 \x01(\tR\x05lease:\x02\x18\x01\"\x17\n" +
+	"\x11PresenceHeartbeat:\x02\x18\x01\"4\n" +
 	"\rPresenceReady\x12\x1f\n" +
 	"\vhabitica_id\x18\x01 \x01(\tR\n" +
-	"habiticaId\"V\n" +
+	"habiticaId:\x02\x18\x01\"Z\n" +
 	"\fPresenceJoin\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x122\n" +
-	"\x06player\x18\x02 \x01(\v2\x1a.glimway.v1.PresencePlayerR\x06player\"X\n" +
+	"\x06player\x18\x02 \x01(\v2\x1a.glimway.v1.PresencePlayerR\x06player:\x02\x18\x01\"\\\n" +
 	"\fPresenceRoom\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x124\n" +
-	"\aplayers\x18\x02 \x03(\v2\x1a.glimway.v1.PresencePlayerR\aplayers\"0\n" +
+	"\aplayers\x18\x02 \x03(\v2\x1a.glimway.v1.PresencePlayerR\aplayers:\x02\x18\x01\"4\n" +
 	"\rPresenceLeave\x12\x1f\n" +
 	"\vhabitica_id\x18\x01 \x01(\tR\n" +
-	"habiticaId\"U\n" +
+	"habiticaId:\x02\x18\x01\"Y\n" +
 	"\rPresenceEmote\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
 	"\vhabitica_id\x18\x02 \x01(\tH\x00R\n" +
-	"habiticaId\x88\x01\x01B\x0e\n" +
-	"\f_habitica_id\"l\n" +
+	"habiticaId\x88\x01\x01:\x02\x18\x01B\x0e\n" +
+	"\f_habitica_id\"p\n" +
 	"\fPresenceGift\x12\x1b\n" +
 	"\tfrom_name\x18\x01 \x01(\tR\bfromName\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
 	"\bitem_def\x18\x03 \x01(\tR\aitemDef\x12\x10\n" +
-	"\x03qty\x18\x04 \x01(\x05R\x03qty\"Z\n" +
+	"\x03qty\x18\x04 \x01(\x05R\x03qty:\x02\x18\x01\"^\n" +
 	"\x0fPresenceWitness\x12\x12\n" +
 	"\x04beat\x18\x01 \x01(\tR\x04beat\x12\x1f\n" +
 	"\vhabitica_id\x18\x02 \x01(\tR\n" +
 	"habiticaId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"B\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name:\x02\x18\x01\"F\n" +
 	"\x0ePresenceFacing\x12\x11\n" +
 	"\x01x\x18\x01 \x01(\x01H\x00R\x01x\x88\x01\x01\x12\x11\n" +
-	"\x01y\x18\x02 \x01(\x01H\x01R\x01y\x88\x01\x01B\x04\n" +
+	"\x01y\x18\x02 \x01(\x01H\x01R\x01y\x88\x01\x01:\x02\x18\x01B\x04\n" +
 	"\x02_xB\x04\n" +
-	"\x02_y\"\xd6\x01\n" +
+	"\x02_y\"\xda\x01\n" +
 	"\x10PresencePosition\x12\x11\n" +
 	"\x01x\x18\x01 \x01(\x01H\x00R\x01x\x88\x01\x01\x12\x11\n" +
 	"\x01y\x18\x02 \x01(\x01H\x01R\x01y\x88\x01\x01\x122\n" +
 	"\x06facing\x18\x03 \x01(\v2\x1a.glimway.v1.PresenceFacingR\x06facing\x12\x1b\n" +
 	"\x06moving\x18\x04 \x01(\bH\x02R\x06moving\x88\x01\x01\x12$\n" +
 	"\vhabitica_id\x18\x05 \x01(\tH\x03R\n" +
-	"habiticaId\x88\x01\x01B\x04\n" +
+	"habiticaId\x88\x01\x01:\x02\x18\x01B\x04\n" +
 	"\x02_xB\x04\n" +
 	"\x02_yB\t\n" +
 	"\a_movingB\x0e\n" +
-	"\f_habitica_id\"\xb8\x01\n" +
+	"\f_habitica_id\"\xbc\x01\n" +
 	"\x0ePresencePlayer\x12\x1f\n" +
 	"\vhabitica_id\x18\x01 \x01(\tR\n" +
 	"habiticaId\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x122\n" +
 	"\x06avatar\x18\x03 \x01(\v2\x1a.glimway.v1.PresenceAvatarR\x06avatar\x12.\n" +
-	"\x03pos\x18\x04 \x01(\v2\x1c.glimway.v1.PresencePositionR\x03pos\"\xa9\x04\n" +
+	"\x03pos\x18\x04 \x01(\v2\x1c.glimway.v1.PresencePositionR\x03pos:\x02\x18\x01\"\xad\x04\n" +
 	"\x0ePresenceAvatar\x12>\n" +
 	"\n" +
 	"appearance\x18\x01 \x01(\v2\x1e.glimway.v1.PresenceAppearanceR\n" +
@@ -1170,7 +1188,7 @@ const file_glimway_v1_presence_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\x1aR\n" +
 	"\fCostumeEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xb4\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01:\x02\x18\x01\"\xb8\x02\n" +
 	"\x12PresenceAppearance\x12\x12\n" +
 	"\x04size\x18\x01 \x01(\tR\x04size\x12\x14\n" +
 	"\x05shirt\x18\x02 \x01(\tR\x05shirt\x12\x12\n" +
@@ -1189,7 +1207,7 @@ const file_glimway_v1_presence_proto_rawDesc = "" +
 	"hair_beard\x18\t \x01(\x01R\thairBeard\x12\x1f\n" +
 	"\vhair_flower\x18\n" +
 	" \x01(\x01R\n" +
-	"hairFlowerB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"hairFlower:\x02\x18\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_presence_proto_rawDescOnce sync.Once

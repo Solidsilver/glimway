@@ -12,10 +12,10 @@ import (
 
 // Legacy JSON client view, independent of the generated payload.
 type witnessMessage struct {
-	Type       string `json:"type"`
-	Beat       string `json:"beat"`
-	HabiticaID string `json:"habiticaId"`
-	Name       string `json:"name"`
+	Type      string `json:"type"`
+	Beat      string `json:"beat"`
+	AccountID string `json:"accountId"`
+	Name      string `json:"name"`
 }
 
 func TestStoryBeats(t *testing.T) {
@@ -41,7 +41,7 @@ func TestStoryBeats(t *testing.T) {
 }
 
 type witnessed struct {
-	Type, Beat, HabiticaID, Name string
+	Type, Beat, AccountID, Name string
 }
 
 func (w *wsClient) witness() witnessed {
@@ -58,7 +58,7 @@ func (w *wsClient) witness() witnessed {
 func (x *rig) upload(c *http.Cookie, s *response, doc rules.State) {
 	x.t.Helper()
 	r := x.expect("PUT", "/api/progress", mutation(*s, doc), c, 200)
-	s.Rev = r.Rev
+	s.Version = r.Version
 	s.State = r.State
 }
 
@@ -114,7 +114,7 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	bob.none()
 	doc.Quest = "guardian-defeated"
 	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "warden" || m.HabiticaID != "olive" || m.Name != "Olive" {
+	if m := bob.witness(); m.Beat != "warden" || m.AccountID != x.account("olive") || m.Name != "Olive" {
 		t.Fatal("witness", m)
 	}
 	for _, w := range []*wsClient{olive, cal, dee, eve} {
@@ -130,13 +130,13 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	// The last lantern, the same way.
 	doc.Quest = "lantern-lit"
 	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "lantern" || m.HabiticaID != "olive" {
+	if m := bob.witness(); m.Beat != "lantern" || m.AccountID != x.account("olive") {
 		t.Fatal("lantern", m)
 	}
 	cal.none()
 
 	// No client can send one: the hub refuses the message outright.
-	bob.send(map[string]any{"type": "witness", "beat": "warden", "habiticaId": "bob", "name": "Bob"})
+	bob.send(map[string]any{"type": "witness", "beat": "warden", "accountId": x.account("bob"), "name": "Bob"})
 	bob.closeStatus(websocket.StatusPolicyViolation)
 	olive.none()
 }
@@ -167,7 +167,7 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	bob.expect("pos")
 	doc.Flags = append(doc.Flags, "echo:nan")
 	x.upload(oc, &o, doc)
-	if m := bob.witness(); m.Beat != "echo:nan" || m.HabiticaID != "olive" {
+	if m := bob.witness(); m.Beat != "echo:nan" || m.AccountID != x.account("olive") {
 		t.Fatal("echo", m)
 	}
 	// A beat whose place doesn't match where she stands (her save says the
@@ -180,7 +180,7 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	doc.Area = "wilds"
 	doc.Flags = append(doc.Flags, "echo:joss")
 	stale := o
-	stale.Rev--
+	stale.Version--
 	if r := x.expect("PUT", "/api/progress", mutation(stale, doc), oc, 200); r.Status != "stale" {
 		t.Fatal("not stale", r.Status)
 	}

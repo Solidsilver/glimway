@@ -26,6 +26,7 @@ type rig struct {
 	db       *store.Store
 	api      *Server
 	upstream *httptest.Server
+	accounts map[string]string
 	profiles map[string]rules.Profile
 	mu       sync.Mutex
 	now      atomic.Int64
@@ -49,7 +50,7 @@ func profile(id string, level, exp, hp float64) rules.Profile {
 
 func newRig(t *testing.T) *rig {
 	t.Helper()
-	x := &rig{t: t, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
+	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
 	x.now.Store(time.Now().Unix())
 	var err error
 	x.db, err = store.Open(filepath.Join(x.dir, "game.sqlite"))
@@ -86,6 +87,21 @@ func (x *rig) request(method, path string, body any, cookie *http.Cookie) (int, 
 	x.t.Helper()
 	w := x.rawHTTP(method, path, body, cookie)
 	v := decodeHTTP[response](x.t, w)
+	// Domain assertions include pack items; PlayerState intentionally does not.
+	if w.Code == 200 && v.AccountID != "" && (path == "/api/state" || path == "/api/play" || path == "/api/session" || path == "/api/world/choose") {
+		tx, err := x.db.DB.Begin()
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		items, err := store.PackItems(context.Background(), tx, v.AccountID)
+		tx.Rollback()
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		for _, item := range items {
+			v.State.Inventory = rules.AddUnique(v.State.Inventory, item)
+		}
+	}
 	errDoc := decodeHTTP[struct{ Error struct{ Code string } }](x.t, w)
 	var out *http.Cookie
 	if cs := w.Result().Cookies(); len(cs) > 0 {
@@ -129,21 +145,20 @@ func (x *rig) chooseIfAsked(v response, c *http.Cookie) {
 
 func (x *rig) ready(id string) (*http.Cookie, response) {
 	c := x.login(id, "")
-	x.expect("POST", "/api/origin", map[string]any{"choice": "fresh", "key": "origin"}, c, 200)
 	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
 	return c, s
 }
 
 func mutation(s response, doc rules.State) map[string]any {
-	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "doc": doc}
+	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "doc": doc}
 }
 
 func syncBody(s response, p rules.Profile, doc rules.State) map[string]any {
-	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "profile": p, "progress": doc}
+	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "profile": p, "progress": doc}
 }
 
 func spendBody(s response, kind, target, key string, doc rules.State) map[string]any {
-	return map[string]any{"lease": s.Lease, "baseRev": s.Rev, "kind": kind, "target": target, "key": key, "progress": doc}
+	return map[string]any{"lease": s.Lease, "baseRev": s.Version, "kind": kind, "target": target, "key": key, "progress": doc}
 }
 
 func count(t *testing.T, s *store.Store, q string, args ...any) int {
@@ -163,7 +178,7 @@ func unchanged(t *testing.T, a, b store.Snapshot) {
 }
 
 func body(s response, key string, fields map[string]any) map[string]any {
-	out := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "key": key}
+	out := map[string]any{"lease": s.Lease, "baseRev": s.Version, "key": key}
 	for k, v := range fields {
 		out[k] = v
 	}
@@ -186,7 +201,7 @@ func keySeq() int {
 // up to what the tables hold (stacks plus loose instances) for this player.
 func (x *rig) conserved(id string) {
 	x.t.Helper()
-	rows, err := x.db.DB.Query("SELECT currency,SUM(delta) FROM ledger WHERE habitica_id=? AND (currency LIKE 'material:%' OR currency LIKE 'item:%' OR currency LIKE 'fitted:%') GROUP BY currency", id)
+	rows, err := x.db.DB.Query("SELECT currency,SUM(delta) FROM ledger WHERE account_id=? AND (currency LIKE 'material:%' OR currency LIKE 'item:%' OR currency LIKE 'fitted:%') GROUP BY currency", id)
 	if err != nil {
 		x.t.Fatal(err)
 	}
@@ -249,19 +264,21 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 		}
 	}
 	r := httptest.NewRequest(method, path, bytes.NewReader(b))
+	r.Header.Set("X-Glimway-Contract", "3")
 	r.Header.Set("Content-Type", "application/json")
 	if cookie != nil {
 		r.AddCookie(cookie)
 	}
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)
+	x.cacheAccounts()
 	return w
 }
 
 func decodeHTTP[T any](t *testing.T, w *httptest.ResponseRecorder) T {
 	t.Helper()
 	var v T
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
+	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
 		t.Fatalf("HTTP %d: invalid JSON: %v\n%s", w.Code, err, w.Body.String())
 	}
 	return v
@@ -274,4 +291,32 @@ func httpResponse[T any](x *rig, method, path string, body any, c *http.Cookie, 
 		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
 	}
 	return decodeHTTP[T](x.t, w), w
+}
+
+// account explicitly resolves a test sign-in subject to its gameplay identity.
+func (x *rig) account(subject string) string {
+	x.t.Helper()
+
+	id, ok := x.accounts[subject]
+	if !ok {
+		x.t.Fatalf("account %s does not exist", subject)
+	}
+	return id
+}
+func (x *rig) cacheAccounts() {
+	rows, err := x.db.DB.Query("SELECT subject,account_id FROM sign_ins WHERE method='habitica'")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var subject, id string
+		if err = rows.Scan(&subject, &id); err != nil {
+			x.t.Fatal(err)
+		}
+		x.accounts[subject] = id
+	}
+	if err = rows.Err(); err != nil {
+		x.t.Fatal(err)
+	}
 }

@@ -42,7 +42,11 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	if owner.String == "" {
 		return fail(409, "party-world-invites")
 	}
-	if admitted, err := partyAdmitted(ctx, tx, s.HabiticaID); err != nil {
+	subject, err := store.HabiticaSubject(ctx, tx, s.AccountID)
+	if err != nil {
+		return err
+	}
+	if admitted, err := partyAdmitted(ctx, tx, subject); err != nil {
 		return err
 	} else if admitted {
 		return fail(403, "party-admitted-invites")
@@ -51,14 +55,14 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 		return fail(403, "player-flagged")
 	}
 	var lifetime int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=?", s.HabiticaID).Scan(&lifetime); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=?", s.AccountID).Scan(&lifetime); err != nil {
 		return err
 	}
 	if lifetime >= rules.E.LifetimeInvites {
 		return fail(409, "invite-budget")
 	}
 	var outstanding int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", s.HabiticaID, now).Scan(&outstanding); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", s.AccountID, now).Scan(&outstanding); err != nil {
 		return err
 	}
 	if outstanding >= rules.E.OutstandingInvites {
@@ -69,7 +73,7 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	meta := &contract.CreateInviteResponse{Id: store.Hash(code), CreatedAt: float64(now), ExpiresAt: float64(now + InviteTTL), Code: code}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", meta.Id, s.HabiticaID, s.WorldID, now, now+InviteTTL); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", meta.Id, s.AccountID, s.WorldID, now, now+InviteTTL); err != nil {
 		return err
 	}
 	return a.finish(w, r, tx, meta)
@@ -80,7 +84,7 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at,used_by IS NOT NULL FROM invites WHERE created_by=? AND (used_by IS NOT NULL OR (revoked_at IS NULL AND expires_at>?)) ORDER BY created_at,code_hash", s.HabiticaID, a.Config.Now().Unix())
+	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at,used_by IS NOT NULL FROM invites WHERE created_by=? AND (used_by IS NOT NULL OR (revoked_at IS NULL AND expires_at>?)) ORDER BY created_at,code_hash", s.AccountID, a.Config.Now().Unix())
 	if err != nil {
 		return err
 	}
@@ -99,14 +103,18 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var lifetime int
-	if err = tx.QueryRowContext(r.Context(), "SELECT count(*) FROM invites WHERE created_by=?", s.HabiticaID).Scan(&lifetime); err != nil {
+	if err = tx.QueryRowContext(r.Context(), "SELECT count(*) FROM invites WHERE created_by=?", s.AccountID).Scan(&lifetime); err != nil {
 		return err
 	}
 	var partyWorld bool
 	if err = tx.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM worlds WHERE id=? AND owner_id='')", s.WorldID).Scan(&partyWorld); err != nil {
 		return err
 	}
-	admitted, err := partyAdmitted(r.Context(), tx, s.HabiticaID)
+	subject, err := store.HabiticaSubject(r.Context(), tx, s.AccountID)
+	if err != nil {
+		return err
+	}
+	admitted, err := partyAdmitted(r.Context(), tx, subject)
 	if err != nil {
 		return err
 	}
@@ -130,7 +138,7 @@ func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	var used, revoked sql.NullString
-	err = tx.QueryRowContext(ctx, "SELECT used_by,CAST(revoked_at AS TEXT) FROM invites WHERE code_hash=? AND created_by=?", id, s.HabiticaID).Scan(&used, &revoked)
+	err = tx.QueryRowContext(ctx, "SELECT used_by,CAST(revoked_at AS TEXT) FROM invites WHERE code_hash=? AND created_by=?", id, s.AccountID).Scan(&used, &revoked)
 	if err == sql.ErrNoRows {
 		return fail(404, "invite-not-found")
 	}
