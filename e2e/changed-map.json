@@ -252,7 +252,8 @@
         "src/game/input.ts",
         "src/game/events.ts",
         "src/game/event-names.ts",
-        "src/game/sfx.ts"
+        "src/game/sfx.ts",
+        "src/game/sound*.ts"
       ],
       "specs": ["polish.spec.ts", "quest.spec.ts", "onboarding-layout.spec.ts", "embers.spec.ts"]
     },

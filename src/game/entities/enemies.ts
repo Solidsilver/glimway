@@ -334,7 +334,7 @@ export class EnemySystem {
 
   private killEnemy(enemy: Enemy): void {
     enemy.dead = true
-    sfx('pop')
+    sfx('calm')
     // Wilds camp enemies belong to their camp's respawn cycle, not to the
     // permanent defeated list (wilds:*, see src/game/wilds/entities.ts).
     if (!enemy.id.startsWith('wilds:')) this.deps.session.recordDefeat(enemy.id)

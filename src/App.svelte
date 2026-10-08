@@ -28,7 +28,7 @@
   import { startGame, stopGame } from './game/main'
   import { type ResidentsMetPayload } from './game/residents'
   import { uiState } from './game/input'
-  import { sfx, unlockAudio } from './game/sfx'
+  import { sfx } from './game/sfx'
   import { isTouchFirst } from './ui/device'
   import Hud from './ui/Hud.svelte'
   import DialoguePanel from './ui/DialoguePanel.svelte'
@@ -234,7 +234,6 @@
       ui.artIcons = { ...ui.artIcons, ...p }
     }
     const onDiscovery = (p: DiscoveryPayload) => {
-      sfx('discover')
       ui.toast({ text: `New in your journal: ${discoveryInfo(p.id).name}`, icon: 'scroll' })
     }
     const onPresence = (p: PresencePayload) => {
@@ -442,7 +441,6 @@
   async function begin(): Promise<void> {
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
-    unlockAudio()
     sfx('open')
     // The Wilds need their region before the first chunk builds: guests get
     // the local epoch, connected players the world's frozen one.

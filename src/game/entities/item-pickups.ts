@@ -13,7 +13,6 @@ import { pickupsIn, type ItemPickup } from '../../lib/items'
 import { bus, EV } from '../events'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { itemsFor } from '../items'
-import { sfx } from '../sfx'
 import { tileBottom, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
@@ -67,7 +66,6 @@ export class ItemPickups {
       .then((r) => {
         this.busy = false
         if (r.ok) {
-          sfx('discover')
           this.deps.fx.sparkBurst(l.image.x, l.image.y - 4, 8)
           this.remove(key)
           this.publish()

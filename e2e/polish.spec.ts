@@ -5,7 +5,8 @@ import { beginNewJourney, talkThrough, waitForArea, warp, expectToast } from './
 
 /**
  * Polish from the docs pass: syncing in the Commons (a safe area), the
- * Journal's quest checklist, and the Menu's controls list (keys and touch).
+ * Journal's quest checklist, the Menu's controls list (keys and touch), and
+ * its sound setting.
  */
 
 /** Dev warp to any area id; waits until it has settled. */
@@ -52,6 +53,35 @@ test.describe('guest', () => {
     await expect(keys.locator('.kbd', { hasText: /^B$/ })).toHaveCount(1)
     await expect(keys.locator('.kbd', { hasText: /^G$/ })).toHaveCount(1)
     await expect(page.getByTestId('controls-touch')).toHaveCount(0)
+  })
+
+  test('the sound setting is kept on this device; the test browser stays silent', async ({ page }) => {
+    // Under automation the sound module stays off: no sample is ever fetched.
+    const audio: string[] = []
+    page.on('request', (r) => {
+      if (r.url().includes('/assets/audio/')) audio.push(r.url())
+    })
+    await beginNewJourney(page)
+    await page.keyboard.press('Escape')
+    const toggle = page.getByTestId('sound-toggle')
+    const volume = page.getByTestId('sound-volume')
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(volume).toHaveValue('60')
+    // By keyboard, as a player would (and the game's arrow keys must not take them).
+    await volume.focus()
+    for (let i = 0; i < 7; i++) await volume.press('ArrowLeft')
+    await expect(volume).toHaveValue('25')
+    await toggle.click()
+    await expect(toggle).toHaveText(/Sound off/)
+    await expect(volume).toBeDisabled()
+
+    await page.reload()
+    await page.getByRole('button', { name: /Continue/ }).click()
+    await waitForArea(page, 'village')
+    await page.keyboard.press('Escape')
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(volume).toHaveValue('25')
+    expect(audio).toEqual([])
   })
 })
 
