@@ -42,8 +42,6 @@ const steps = (ground: Ground): CueDef => ({
 export const BANK = {
   // Interface
   click: { files: ['ui-click.mp3'], gain: 0.35, jitter: 0.04 },
-  open: { files: ['ui-open.mp3'], gain: 0.4, jitter: 0.02, window: 0.15 },
-  close: { files: ['ui-close.mp3'], gain: 0.4, jitter: 0.02, window: 0.15 },
   confirm: { files: ['ui-confirm.mp3'], gain: 0.45, window: 0.2 },
   /** Not now: no mana, can't place it here, out of reach. */
   fizzle: { files: ['ui-refuse.mp3'], gain: 0.4, window: 0.2 },

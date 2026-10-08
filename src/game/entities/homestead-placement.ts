@@ -131,7 +131,6 @@ export class HomesteadArranging {
     window.addEventListener('keydown', this.onKey)
     this.scene.input.on('pointerdown', this.onPointer, this)
     this.scene.scale.on('resize', this.reframe, this)
-    sfx('open')
     this.refreshPlacement()
   }
 
@@ -181,7 +180,6 @@ export class HomesteadArranging {
     if (animate) {
       const cam = this.scene.cameras.main
       cam.startFollow(this.deps.hero(), true, 0.12, 0.12)
-      sfx('close')
       // A short grace so the key that closed the tray doesn't swing a sword.
       uiState.blockedUntil = performance.now() + 220
     }
@@ -318,7 +316,6 @@ export class HomesteadArranging {
         p.selected = null
         p.clearing = null
         p.message = null
-        sfx('close')
         return this.refreshPlacement()
       case 'nudge': {
         const it = p.selected ? this.instance(p.selected) : undefined
@@ -436,7 +433,6 @@ export class HomesteadArranging {
     p.busy = false
     p.message = r.ok ? { text: `${itemName(it.itemDef)}: put away.`, kind: 'ok' } : { text: r.text, kind: 'error' }
     if (r.ok) {
-      sfx('close')
       p.selected = null
       if (it.itemDef === POST) this.home.art.drawShade()
     }

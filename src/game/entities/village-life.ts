@@ -16,7 +16,6 @@ import Phaser from 'phaser'
 import { FESTIVAL_NOTES } from '../../lib/village'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
-import { sfx } from '../sfx'
 import { commonsArt } from '../commons-pass'
 import { buildingKey } from '../buildings'
 import { millWheelKeys, MILL_WHEEL_SIZE } from '../items-pass'
@@ -365,6 +364,5 @@ export class VillageLayer {
 /** Open the notice board panel (village or Commons). */
 export function openBoard(): void {
   uiState.dialogueOpen = false
-  sfx('open')
   bus.emit(EV.villageOpen, { panel: 'board' })
 }

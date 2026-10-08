@@ -106,7 +106,6 @@ export class HomesteadTalk {
     const out: Interactable[] = []
     const say = (speaker: string, lines: string[]) => () => this.say({ speaker, lines })
     const panel = (which: VillagePanel, gate?: number) => () => {
-      sfx('open')
       bus.emit(EV.villageOpen, gate === undefined ? { panel: which } : { panel: which, gate })
     }
     const restCost = () => checkSpend(this.deps.session.state, { kind: 'home-rest' }).cost
@@ -308,7 +307,6 @@ export class HomesteadTalk {
   private openMailbox(): void {
     if (!this.home.homes.connected) return this.say({ speaker: 'Mailbox', lines: ['A carter’s post box. Parcels go between neighbours in a world. Sign in to yours from the Menu.'] })
     const home = this.home.here()
-    sfx('open')
     const other = home?.members.find((m) => m.id !== this.home.homes.myId)
     bus.emit(EV.villageOpen, home?.member || !other ? { panel: 'mail' } : { panel: 'mail', to: other.id })
   }
@@ -597,7 +595,6 @@ export class HomesteadTalk {
 
   private async goInside(): Promise<void> {
     if (!this.home.land) return
-    sfx('open')
     this.deps.enterRoom(this.home.land.gate, this.home.land.doorstep)
   }
 
@@ -605,7 +602,6 @@ export class HomesteadTalk {
   async onAction(action: string): Promise<void> {
     if (action.startsWith('home:shelf:')) {
       const gate = Number(action.slice('home:shelf:'.length))
-      sfx('open')
       bus.emit(EV.villageOpen, { panel: 'shelf', gate })
       return
     }
@@ -686,7 +682,6 @@ export class HomesteadTalk {
       bus.emit(EV.toast, { text: r.text, kind: 'error' })
       return
     }
-    sfx('close')
     this.home.scheduleRedraw()
     this.say({
       speaker: SILAS.name,

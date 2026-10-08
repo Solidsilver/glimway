@@ -342,7 +342,7 @@ Downloaded from kenney.nl on 2026-10-07:
 - **Impact Sounds** (1.0): https://kenney.nl/assets/impact-sounds
 
 Files: `public/assets/audio/kenney/` (notice: `public/assets/audio/kenney/LICENSE`),
-43 MP3s, about 121 KB together. The game plays them through the sound module
+41 MP3s, about 113 KB together. The game plays them through the sound module
 (`src/game/sound.ts`; cue table `src/game/sound-bank.ts`).
 
 **Edits, the same for every file:** leading and trailing silence trimmed
@@ -357,8 +357,6 @@ in the cue table), not in the files.
 | File | Cue | Pack | Source file |
 |---|---|---|---|
 | `ui-click.mp3` | click | Interface Sounds | `select_002.ogg` |
-| `ui-open.mp3` | open (a panel) | Interface Sounds | `open_002.ogg` |
-| `ui-close.mp3` | close (a panel) | Interface Sounds | `close_002.ogg` |
 | `ui-confirm.mp3` | confirm (a purchase, an upgrade) | Interface Sounds | `confirmation_001.ogg` |
 | `ui-refuse.mp3` | fizzle (refused: no mana, can't place, an error) | Interface Sounds | `error_008.ogg` |
 | `ui-notice.mp3` | notice (a toast) | Interface Sounds | `glass_001.ogg` |
@@ -455,7 +453,7 @@ one row each:
 |---|---|---|---|---|---|---|
 | `content/habitica-gear.json` | `https://habitica.com/api/v3/content` (public static GET; snapshot of HabitRPG/habitica `develop` @ `789bbe4ab779febbed92d92b533c70f41b9f7b09`) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 — https://github.com/HabitRPG/habitica/blob/develop/LICENSE (notice: `content/habitica-gear.NOTICE.md`) | "Gear statistics derived from Habitica's content data (GPL-3.0)." | Flattened to per-key numeric stats; i18n text/notes omitted; no numeric values changed | 2026-10-03 |
 | `public/assets/habitica/*.png` (41 files, scoped subset) + `manifest.json` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/{name}.png` (byte-identical copies; sha256 in manifest) | HabitRPG, Inc. (Habitica art) | CC BY-NC-SA 3.0 — https://creativecommons.org/licenses/by-nc-sa/3.0/ (notice: `public/assets/habitica/LICENSE`) | "Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed CC BY-NC-SA 3.0." | None (byte-identical); subset selection only | 2026-10-03 |
-| `public/assets/audio/kenney/*.mp3` (43 files, Register I) | https://kenney.nl/assets/interface-sounds, https://kenney.nl/assets/rpg-audio, https://kenney.nl/assets/impact-sounds | Kenney (www.kenney.nl) | CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/ (notice: `public/assets/audio/kenney/LICENSE`) | "Sound effects by Kenney (kenney.nl), CC0." (courtesy, not required) | Trimmed, mono, levelled, MP3 (Register I) | 2026-10-07 |
+| `public/assets/audio/kenney/*.mp3` (41 files, Register I) | https://kenney.nl/assets/interface-sounds, https://kenney.nl/assets/rpg-audio, https://kenney.nl/assets/impact-sounds | Kenney (www.kenney.nl) | CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/ (notice: `public/assets/audio/kenney/LICENSE`) | "Sound effects by Kenney (kenney.nl), CC0." (courtesy, not required) | Trimmed, mono, levelled, MP3 (Register I) | 2026-10-07 |
 | Layer order / sprite naming facts (docs/habitica-assets.md) | `website/client/src/components/avatar.vue`, `sprite.vue`, `spritesmith-main.css`, `constants/gifSprites.js` (same revision) | HabitRPG, Inc. and Habitica contributors | GPL-3.0 (code; facts recorded, no code copied) | same as data row | Recorded as documentation facts only | 2026-10-03 |
 
 Rules (from the plan): Habitica source code is GPL v3; Habitica original
@@ -580,3 +578,5 @@ any instance, the main one included, "official".
   credited in the Menu and the README as a courtesy. Register C's audio row
   split: UI and interaction delivered, ambience still pending. Audio files
   go through Git LFS like the art.
+- 2026-10-08 — Register I: `ui-open.mp3` and `ui-close.mp3` removed (the
+  owner found the panel open and close sound grating); 41 MP3s remain.

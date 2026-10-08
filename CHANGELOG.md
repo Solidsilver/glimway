@@ -15,6 +15,8 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Opening and closing a conversation or a panel is quiet again: the
+  zip it made is gone.
 - Felling a tree takes all of it: trees leaning over a path in the Wilds
   sometimes left their top standing over the stump, or didn't fall at all.
 - Mara, Orrin and Pip have painted portraits in conversation, like the

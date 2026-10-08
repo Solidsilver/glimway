@@ -143,7 +143,6 @@
     open = false
     ui.dialogueOpen = false
     uiState.dialogueOpen = false
-    sfx('close')
     const event = questEvent
     const action = chosenAction
     questEvent = undefined

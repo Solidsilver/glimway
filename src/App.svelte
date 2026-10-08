@@ -27,7 +27,6 @@
   import { startGame, stopGame } from './game/main'
   import { type ResidentsMetPayload } from './game/residents'
   import { uiState } from './game/input'
-  import { sfx } from './game/sfx'
   import { isTouchFirst } from './ui/device'
   import Hud from './ui/Hud.svelte'
   import DialoguePanel from './ui/DialoguePanel.svelte'
@@ -419,7 +418,6 @@
   async function begin(): Promise<void> {
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
-    sfx('open')
     // The Wilds need their region before the first chunk builds: the world's
     // frozen epoch, read through the link.
     await prepareWilds(session)
@@ -564,7 +562,6 @@
     if (update.reloading) return
     if (session) inventory.syncPack(session.state.inventory)
     const next = panel === p ? null : p
-    sfx(next ? 'open' : 'close')
     panel = next
   }
 
@@ -607,7 +604,6 @@
       } else if (panel === 'character' && characterFromBag) {
         closeCharacter()
       } else if (panel) {
-        sfx('close')
         panel = null
       } else {
         toggle('menu')
@@ -676,7 +672,6 @@
   function closeCharacter(): void {
     if (characterFromBag && panel === 'character') {
       characterFromBag = false
-      sfx('close')
       panel = 'inventory'
       return
     }
