@@ -59,8 +59,10 @@ export function defaultState(piece: Furnishing): string | null {
 export function pieceFrame(piece: Furnishing, facing: Facing, state: string | null): { frame: string | null; flipX: boolean } {
   const name = state && piece.states?.[state] ? state : defaultState(piece)
   const s = name ? piece.states?.[name] : undefined
-  // States are drawn front-on (the signature pieces' only facing so far).
-  if (s && facing === 'front') return { frame: s.frames[0] || null, flipX: false }
+  // A state's frames are painted in the piece's own facing (a piece with states has one).
+  const mirror = facing === 'left' ? 'right' : facing === 'right' ? 'left' : null
+  if (s && piece.facings[facing] !== undefined) return { frame: s.frames[0] || null, flipX: false }
+  if (s && mirror && piece.facings[mirror] !== undefined) return { frame: s.frames[0] || null, flipX: true }
   const own = piece.facings[facing]
   if (own) return { frame: own, flipX: false }
   if (facing === 'left' && piece.facings.right) return { frame: piece.facings.right, flipX: true }
@@ -93,7 +95,7 @@ export function pieceFoot(piece: Furnishing, at: PieceAt): { x: number; y: numbe
     return { x, y: p.foot.y - surfaceHeight(p, offer), depth: p.depth + 0.5 + slot * 0.01 }
   }
   const x = (at.tx + tw / 2) * TILE
-  if (piece.mount === 'wall') return { x, y: (at.ty + 1) * TILE - 3, depth: -7.5 }
+  if (piece.mount === 'wall') return { x, y: (at.ty + 1) * TILE - 3, depth: (at.ty + 1) * TILE + 0.5 }
   const y = (at.ty + th) * TILE
   return { x, y, depth: piece.layer === 'under' ? -8.5 : y }
 }

@@ -3,7 +3,7 @@
     {
       "id": "wooden-stool",
       "name": "Wooden Stool",
-      "facings": { "front": "", "left": "", "right": "" },
+      "facings": { "front": "stool-front-default", "left": "", "right": "" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -33,7 +33,7 @@
     {
       "id": "iron-lantern",
       "name": "Iron Lantern",
-      "facings": { "front": "" },
+      "facings": { "front": "lamp-oil-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -54,7 +54,7 @@
     {
       "id": "potted-fern",
       "name": "Potted Fern",
-      "facings": { "front": "" },
+      "facings": { "front": "plant-leafy-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -106,7 +106,7 @@
     {
       "id": "woven-basket",
       "name": "Woven Basket",
-      "facings": { "front": "" },
+      "facings": { "front": "basket-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -318,11 +318,10 @@
       "size": "small",
       "tags": []
     },
-
     {
       "id": "rag-rug",
       "name": "Rag Rug",
-      "facings": { "front": "" },
+      "facings": { "front": "rug-woven-front-default" },
       "footprint": [3, 2],
       "base": { "x": 0, "y": 0, "w": 3, "h": 2 },
       "mount": "floor",
@@ -332,7 +331,7 @@
     {
       "id": "wall-shelves",
       "name": "Wall Shelves",
-      "facings": { "front": "" },
+      "facings": { "front": "shelf-generic-front-default" },
       "footprint": [2, 1],
       "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
       "mount": "wall",
@@ -363,7 +362,7 @@
     {
       "id": "crate",
       "name": "Crate",
-      "facings": { "front": "", "left": "", "right": "" },
+      "facings": { "front": "crate-front-default", "left": "", "right": "" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -374,7 +373,7 @@
     {
       "id": "barrel",
       "name": "Barrel",
-      "facings": { "front": "", "left": "", "right": "" },
+      "facings": { "front": "barrel-front-default", "left": "", "right": "" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -385,7 +384,7 @@
     {
       "id": "sack",
       "name": "Flour Sack",
-      "facings": { "front": "" },
+      "facings": { "front": "sack-large-front-upright" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -395,7 +394,7 @@
     {
       "id": "candle",
       "name": "Candle",
-      "facings": { "front": "" },
+      "facings": { "front": "candle-stick-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "surface",
@@ -405,7 +404,7 @@
     {
       "id": "picture",
       "name": "Picture",
-      "facings": { "front": "" },
+      "facings": { "front": "picture-frame-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "wall",
@@ -415,7 +414,7 @@
     {
       "id": "calendar",
       "name": "Calendar",
-      "facings": { "front": "" },
+      "facings": { "front": "calendar-front-default" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "wall",
@@ -446,7 +445,7 @@
     {
       "id": "small-table",
       "name": "Small Table",
-      "facings": { "front": "", "left": "", "right": "" },
+      "facings": { "front": "side-table-front-default", "left": "", "right": "" },
       "footprint": [1, 1],
       "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
@@ -468,132 +467,112 @@
     {
       "id": "kitchen-hearth",
       "name": "Bread Oven and Hearth",
-      "facings": {"front": "oven-hearth-fire-0"},
+      "facings": { "front": "kitchen-oven-front-fire" },
       "footprint": [3, 2],
-      "base": {"x": 0, "y": 1, "w": 3, "h": 1},
+      "base": { "x": 0, "y": 1, "w": 3, "h": 1 },
       "mount": "floor",
       "size": "large",
       "states": {
-        "lit": {"frames": ["oven-hearth-fire-0", "oven-hearth-fire-1", "oven-hearth-fire-2", "oven-hearth-fire-3"], "loop": true, "default": true},
-        "banked": {"frames": ["oven-hearth-fire-0"]}
+        "lit": { "frames": ["kitchen-oven-front-fire"], "default": true },
+        "banked": { "frames": ["kitchen-oven-front-fire"] }
       },
       "tags": ["light", "hearth"]
     },
     {
       "id": "kitchen-crocks",
       "name": "Shelves of Crocks",
-      "facings": {"front": "crock-shelves"},
+      "facings": { "front": "kitchen-jar-shelf-front-default" },
       "footprint": [2, 1],
-      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
       "mount": "floor",
-      "offers": {"shelves": 4},
+      "offers": { "shelves": 4 },
       "size": "large",
       "tags": []
     },
     {
       "id": "kitchen-tallow-pot",
       "name": "Tallow Pot on its Stand",
-      "facings": {"front": "tallow-pot-steam-0"},
-      "footprint": [2, 1],
-      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "facings": { "front": "kitchen-cauldron-front-steaming-0" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
-      "size": "large",
+      "size": "medium",
       "states": {
-        "still": {"frames": ["tallow-pot-steam-0"], "default": true},
-        "steaming": {"frames": ["tallow-pot-steam-0", "tallow-pot-steam-1", "tallow-pot-steam-2"], "loop": true}
+        "still": { "frames": ["kitchen-cauldron-front-steaming-0"], "default": true },
+        "steaming": { "frames": ["kitchen-cauldron-front-steaming-0", "kitchen-cauldron-front-steaming-1", "kitchen-cauldron-front-steaming-2", "kitchen-cauldron-front-steaming-3"], "loop": true }
       },
       "tags": []
     },
     {
       "id": "kitchen-worktable",
       "name": "Worktable",
-      "facings": {"front": "worktable"},
+      "facings": { "front": "kitchen-worktable-front-default" },
       "footprint": [4, 2],
-      "base": {"x": 0, "y": 0, "w": 4, "h": 2},
+      "base": { "x": 0, "y": 0, "w": 4, "h": 2 },
       "mount": "floor",
-      "offers": {"top": 4},
+      "offers": { "top": 4 },
       "size": "large",
       "tags": []
     },
     {
       "id": "kitchen-sponge-bowl",
       "name": "Sponge Bowl on a Stool",
-      "facings": {"front": "sponge-bowl-flat"},
+      "facings": { "front": "kitchen-washtub-front-default" },
       "footprint": [1, 1],
-      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
       "size": "medium",
       "states": {
-        "flat": {"frames": ["sponge-bowl-flat"], "default": true},
-        "risen": {"frames": ["sponge-bowl-risen"]}
+        "flat": { "frames": ["kitchen-washtub-front-default"], "default": true },
+        "risen": { "frames": ["kitchen-washtub-front-default"] }
       },
       "tags": []
     },
     {
       "id": "kitchen-bread-rack",
       "name": "Bread Rack",
-      "facings": {"front": "bread-rack"},
+      "facings": { "front": "kitchen-bread-rack-front-default" },
       "footprint": [1, 1],
-      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
-      "offers": {"shelves": 2},
+      "offers": { "shelves": 2 },
       "size": "large",
       "tags": []
     },
     {
       "id": "mill-gears",
       "name": "Gear Train",
-      "facings": {"front": "gear-train-0"},
-      "footprint": [3, 2],
-      "base": {"x": 0, "y": 1, "w": 3, "h": 1},
+      "facings": { "left": "mill-gear-wheel-left-turn-0" },
+      "footprint": [2, 1],
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
       "mount": "floor",
       "size": "large",
       "states": {
-        "turning": {"frames": ["gear-train-0", "gear-train-1", "gear-train-2", "gear-train-3"], "loop": true, "default": true},
-        "still": {"frames": ["gear-train-0"]}
+        "turning": { "frames": ["mill-gear-wheel-left-turn-0", "mill-gear-wheel-left-turn-1", "mill-gear-wheel-left-turn-2", "mill-gear-wheel-left-turn-3"], "loop": true, "default": true },
+        "still": { "frames": ["mill-gear-wheel-left-turn-0"] }
       },
       "tags": []
     },
     {
       "id": "millstones",
       "name": "Millstones under the Hopper",
-      "facings": {"front": "millstones-0"},
+      "facings": { "front": "millstone-hopper-front-turn-0" },
       "footprint": [2, 2],
-      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "base": { "x": 0, "y": 1, "w": 2, "h": 1 },
       "mount": "floor",
       "size": "large",
       "states": {
-        "turning": {"frames": ["millstones-0", "millstones-1", "millstones-2", "millstones-3"], "loop": true, "default": true},
-        "still": {"frames": ["millstones-0"]}
+        "turning": { "frames": ["millstone-hopper-front-turn-0", "millstone-hopper-front-turn-1", "millstone-hopper-front-turn-2", "millstone-hopper-front-turn-3"], "loop": true, "default": true },
+        "still": { "frames": ["millstone-hopper-front-turn-0"] }
       },
-      "tags": []
-    },
-    {
-      "id": "mill-chute",
-      "name": "Chute and Meal Bin",
-      "facings": {"front": "chute-meal-bin-0"},
-      "footprint": [2, 2],
-      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
-      "mount": "floor",
-      "size": "large",
-      "tags": []
-    },
-    {
-      "id": "flour-sacks",
-      "name": "Flour Sacks",
-      "facings": {"front": "flour-sacks-0"},
-      "footprint": [2, 2],
-      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
-      "mount": "floor",
-      "size": "large",
       "tags": []
     },
     {
       "id": "counting-stool",
       "name": "Counting Stool",
-      "facings": {"front": "counting-stool-window"},
+      "facings": { "front": "stool-front-default" },
       "footprint": [1, 1],
-      "base": {"x": 0, "y": 0, "w": 1, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
       "size": "large",
       "tags": ["seat"]
@@ -601,80 +580,242 @@
     {
       "id": "mill-hoist",
       "name": "Sack Hoist and Hatch",
-      "facings": {"front": "sack-hoist-seized"},
+      "facings": { "front": "loft-hoist-front-default" },
       "footprint": [2, 2],
-      "base": {"x": 0, "y": 1, "w": 2, "h": 1},
+      "base": { "x": 0, "y": 1, "w": 2, "h": 1 },
       "mount": "floor",
       "size": "large",
-      "states": {
-        "seized": {"frames": ["sack-hoist-seized"], "default": true},
-        "working": {"frames": ["sack-hoist-working"]},
-        "swinging": {"frames": ["sack-hoist-swing-0", "sack-hoist-swing-1", "sack-hoist-swing-2"], "loop": true}
-      },
       "tags": []
     },
     {
       "id": "library-shelves",
       "name": "Tall Bookshelf",
-      "facings": {"front": "library-shelf-1"},
+      "facings": { "front": "library-shelf-front-half" },
       "footprint": [2, 1],
-      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
       "mount": "floor",
-      "offers": {"shelves": 6},
+      "offers": { "shelves": 6 },
       "size": "large",
       "states": {
-        "sparse": {"frames": ["library-shelf-0"]},
-        "half": {"frames": ["library-shelf-1"], "default": true},
-        "full": {"frames": ["library-shelf-2"]}
+        "sparse": { "frames": ["library-shelf-front-sparse"] },
+        "half": { "frames": ["library-shelf-front-half"], "default": true },
+        "full": { "frames": ["library-shelf-front-full"] }
       },
       "tags": ["books"]
     },
     {
       "id": "library-side-shelves",
-      "name": "Side Bookshelves",
-      "facings": {"left": "", "right": ""},
-      "footprint": [1, 4],
-      "base": {"x": 0, "y": 0, "w": 1, "h": 4},
+      "name": "Tall Side Bookshelf",
+      "facings": { "left": "library-shelf-tall-left-half", "right": "library-shelf-tall-right-half" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "mount": "floor",
-      "offers": {"shelves": 8},
+      "offers": { "shelves": 4 },
       "size": "large",
       "tags": ["books"]
     },
     {
       "id": "reading-table",
       "name": "Reading Table",
-      "facings": {"front": "reading-table-unlit"},
+      "facings": { "front": "reading-table-unlit" },
       "footprint": [4, 2],
-      "base": {"x": 0, "y": 0, "w": 4, "h": 2},
+      "base": { "x": 0, "y": 0, "w": 4, "h": 2 },
       "mount": "floor",
-      "offers": {"top": 4},
+      "offers": { "top": 4 },
       "size": "large",
       "states": {
-        "unlit": {"frames": ["reading-table-unlit"], "default": true},
-        "lit": {"frames": ["reading-table-lit"]}
+        "unlit": { "frames": ["reading-table-unlit"], "default": true },
+        "lit": { "frames": ["reading-table-lit"] }
       },
       "tags": ["seat", "light"]
     },
     {
       "id": "reading-nook",
       "name": "Reading Nook",
-      "facings": {"front": "window-seat"},
+      "facings": { "front": "library-reading-nook-front-default" },
       "footprint": [3, 2],
-      "base": {"x": 0, "y": 0, "w": 3, "h": 2},
+      "base": { "x": 0, "y": 0, "w": 3, "h": 2 },
       "mount": "floor",
+      "offers": { "top": 2 },
       "size": "large",
       "tags": ["seat", "light"]
     },
     {
       "id": "elara-desk",
       "name": "Elara's Desk",
-      "facings": {"front": ""},
+      "facings": { "front": "library-elara-desk-front-empty" },
       "footprint": [2, 1],
-      "base": {"x": 0, "y": 0, "w": 2, "h": 1},
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
       "mount": "floor",
-      "offers": {"top": 2},
+      "offers": { "top": 3 },
       "size": "large",
       "tags": ["books"]
+    },
+    {
+      "id": "rug-braided",
+      "name": "Braided Oval Rug",
+      "facings": { "front": "rug-braided-front-default" },
+      "footprint": [3, 2],
+      "base": { "x": 0, "y": 0, "w": 3, "h": 2 },
+      "mount": "floor",
+      "layer": "under",
+      "tags": []
+    },
+    {
+      "id": "rug-patchwork",
+      "name": "Patchwork Runner",
+      "facings": { "front": "rug-patchwork-front-default" },
+      "footprint": [4, 2],
+      "base": { "x": 0, "y": 0, "w": 4, "h": 2 },
+      "mount": "floor",
+      "layer": "under",
+      "tags": []
+    },
+    {
+      "id": "wall-pegs-tools",
+      "name": "Wall Pegs with Tools",
+      "facings": { "front": "wall-pegs-front-tools" },
+      "footprint": [3, 1],
+      "base": { "x": 0, "y": 0, "w": 3, "h": 1 },
+      "mount": "wall",
+      "size": "medium",
+      "tags": []
+    },
+    {
+      "id": "plant-flowering",
+      "name": "Flowering Plant",
+      "facings": { "front": "plant-flowering-front-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "floor",
+      "size": "small",
+      "tags": []
+    },
+    {
+      "id": "candle-holder",
+      "name": "Candle in a Holder",
+      "facings": { "front": "candle-holder-front-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "surface",
+      "size": "small",
+      "tags": ["light"]
+    },
+    {
+      "id": "chair-side",
+      "name": "Side Chair",
+      "facings": { "left": "chair-left-default", "right": "chair-right-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "floor",
+      "size": "large",
+      "tags": ["seat"]
+    },
+    {
+      "id": "kitchen-flour-handprint",
+      "name": "Flour Handprint Board",
+      "facings": { "front": "kitchen-flour-handprint-wall-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": []
+    },
+    {
+      "id": "kitchen-oven-peel",
+      "name": "Oven Peel",
+      "facings": { "front": "kitchen-oven-peel-wall-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": []
+    },
+    {
+      "id": "mill-sifter",
+      "name": "Flour Sifter",
+      "facings": { "front": "mill-sifter-front-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "wall",
+      "offers": { "shelves": 1 },
+      "size": "medium",
+      "tags": []
+    },
+    {
+      "id": "mill-tally-board",
+      "name": "Tally Board",
+      "facings": { "front": "mill-tally-board-wall-default" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": []
+    },
+    {
+      "id": "mill-sack",
+      "name": "Flour Sack",
+      "facings": { "front": "mill-sack-front-upright" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "floor",
+      "size": "medium",
+      "states": {
+        "upright": { "frames": ["mill-sack-front-upright"], "default": true },
+        "slumped": { "frames": ["mill-sack-front-slumped"] }
+      },
+      "tags": []
+    },
+    {
+      "id": "library-side-shelf-short",
+      "name": "Short Side Bookshelf",
+      "facings": { "left": "library-shelf-short-left-half", "right": "library-shelf-short-right-half" },
+      "footprint": [1, 1],
+      "base": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "mount": "floor",
+      "offers": { "shelves": 2 },
+      "size": "large",
+      "tags": ["books"]
+    },
+    {
+      "id": "library-section-sign-stories",
+      "name": "Section Sign: Stories",
+      "facings": { "front": "library-section-sign-front-stories" },
+      "footprint": [2, 1],
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": ["section:stories"]
+    },
+    {
+      "id": "library-section-sign-histories",
+      "name": "Section Sign: Histories",
+      "facings": { "front": "library-section-sign-front-histories" },
+      "footprint": [2, 1],
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": ["section:histories"]
+    },
+    {
+      "id": "library-section-sign-recipes",
+      "name": "Section Sign: Recipes",
+      "facings": { "front": "library-section-sign-front-recipes" },
+      "footprint": [2, 1],
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": ["section:recipes"]
+    },
+    {
+      "id": "library-section-sign-field-notes",
+      "name": "Section Sign: Field Notes",
+      "facings": { "front": "library-section-sign-front-field-notes" },
+      "footprint": [2, 1],
+      "base": { "x": 0, "y": 0, "w": 2, "h": 1 },
+      "mount": "wall",
+      "size": "small",
+      "tags": ["section:field-notes"]
     }
   ]
 }

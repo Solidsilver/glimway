@@ -1,7 +1,7 @@
 {
  "version": 1,
  "generator": "scripts/build-atlases.ts",
- "generatorVersion": 7,
+ "generatorVersion": 8,
  "inputs": {
   "assets/generated/commons-pass/fingersnap-boundaries.png": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
   "assets/generated/commons-pass/fingersnap-camp-home.png": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
@@ -175,7 +175,7 @@
   "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "indoors.webp": "e574fae2d655158db165950b6d4a7d6d4c053956b8d2cef8afed353fb83760c7",
+  "indoors.webp": "afa63991bd9461c76aa0766c10d33a3e99514b38ac8b37c6a780366b55e11550",
   "items.webp": "61c6a5e4eda99cb9e5094888a68a616ccf1b93f926de0970686a09f5b63984ff",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",

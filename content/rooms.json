@@ -18,7 +18,7 @@
       "map": [
         "##############",
         "#==w==OOO==w=#",
-        "#ss...OOO..pp#",
+        "#ss...OOO..p.#",
         "#.....:::....#",
         "#..TTTT......#",
         "#..TTTT...b..#",
@@ -119,8 +119,8 @@
           "ty": 6
         },
         {
-          "piece": "wall-tools",
-          "tx": 4,
+          "piece": "kitchen-oven-peel",
+          "tx": 5,
           "ty": 1
         },
         {
@@ -144,8 +144,8 @@
         },
         {
           "piece": "woven-basket",
-          "tx": 1,
-          "ty": 7
+          "tx": 2,
+          "ty": 8
         },
         {
           "piece": "small-table",
@@ -155,6 +155,16 @@
         {
           "piece": "potted-fern",
           "parent": 7
+        },
+        {
+          "piece": "kitchen-flour-handprint",
+          "tx": 9,
+          "ty": 1
+        },
+        {
+          "piece": "plant-flowering",
+          "tx": 12,
+          "ty": 2
         }
       ]
     },
@@ -164,14 +174,14 @@
       "parent": "village",
       "map": [
         "##############",
-        "#=w=======GGG#",
-        "#...kkMM..GGG#",
-        "#...kkMM.....#",
+        "#=w==========#",
+        "#.....MM...GG#",
+        "#.....MM.....#",
         "#^^..........#",
         "#^^.........n#",
         "#............#",
-        "#..........ff#",
-        "#..........ff#",
+        "#............#",
+        "#............#",
         "#......@.....#",
         "######DD######"
       ],
@@ -207,21 +217,12 @@
         {
           "art": "mill-gears",
           "char": "G",
-          "solid": true
+          "solid": true,
+          "facing": "left"
         },
         {
           "art": "millstones",
           "char": "M",
-          "solid": true
-        },
-        {
-          "art": "mill-chute",
-          "char": "k",
-          "solid": true
-        },
-        {
-          "art": "flour-sacks",
-          "char": "f",
           "solid": true
         },
         {
@@ -265,18 +266,18 @@
       },
       "furnishings": [
         {
-          "piece": "braided-rug",
+          "piece": "rug-braided",
           "tx": 5,
           "ty": 6
         },
         {
-          "piece": "wall-peg",
-          "tx": 4,
+          "piece": "mill-tally-board",
+          "tx": 1,
           "ty": 1
         },
         {
-          "piece": "wall-tools",
-          "tx": 5,
+          "piece": "wall-pegs-tools",
+          "tx": 3,
           "ty": 1
         },
         {
@@ -294,8 +295,18 @@
           "parent": 4
         },
         {
+          "piece": "mill-sack",
+          "tx": 11,
+          "ty": 7
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 12,
+          "ty": 7
+        },
+        {
           "piece": "sack",
-          "tx": 9,
+          "tx": 12,
           "ty": 8
         },
         {
@@ -307,6 +318,11 @@
           "piece": "woven-basket",
           "tx": 3,
           "ty": 8
+        },
+        {
+          "piece": "mill-sifter",
+          "tx": 9,
+          "ty": 1
         }
       ]
     },
@@ -317,8 +333,8 @@
       "map": [
         "##############",
         "#=w=====w==HH#",
-        "#.ff..ff...HH#",
-        "#.ff..ff.....#",
+        "#..........HH#",
+        "#............#",
         "#vv..........#",
         "#vv..........#",
         "#............#",
@@ -338,11 +354,6 @@
         }
       ],
       "props": [
-        {
-          "art": "flour-sacks",
-          "char": "f",
-          "solid": true
-        },
         {
           "art": "mill-hoist",
           "char": "H",
@@ -381,17 +392,37 @@
           "parent": 0
         },
         {
+          "piece": "mill-sack",
+          "tx": 2,
+          "ty": 2
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 3,
+          "ty": 2
+        },
+        {
+          "piece": "sack",
+          "tx": 6,
+          "ty": 2
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 7,
+          "ty": 2
+        },
+        {
           "piece": "sack",
           "tx": 9,
           "ty": 6
         },
         {
-          "piece": "sack",
+          "piece": "mill-sack",
           "tx": 12,
           "ty": 4
         },
         {
-          "piece": "wall-peg",
+          "piece": "wall-pegs-tools",
           "tx": 4,
           "ty": 1
         }
@@ -404,10 +435,10 @@
       "map": [
         "##############",
         "#SS=SS=SS=SS=#",
-        "l............L",
+        "#............#",
         "l.RRRR.......L",
-        "l.RRRR...EE..L",
-        "l............L",
+        "#.RRRR...EE..#",
+        "k............K",
         "#.........NNN#",
         "#.........NNN#",
         "#.....@......#",
@@ -440,6 +471,18 @@
         {
           "art": "library-side-shelves",
           "char": "L",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "library-side-shelf-short",
+          "char": "k",
+          "solid": true,
+          "facing": "right"
+        },
+        {
+          "art": "library-side-shelf-short",
+          "char": "K",
           "solid": true,
           "facing": "left"
         },
@@ -524,7 +567,27 @@
       },
       "furnishings": [
         {
-          "piece": "braided-rug",
+          "piece": "library-section-sign-stories",
+          "tx": 1,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-histories",
+          "tx": 4,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-recipes",
+          "tx": 7,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-field-notes",
+          "tx": 10,
+          "ty": 1
+        },
+        {
+          "piece": "rag-rug",
           "tx": 6,
           "ty": 5
         },
@@ -539,18 +602,8 @@
           "ty": 7
         },
         {
-          "piece": "candle",
-          "parent": 2
-        },
-        {
-          "piece": "wooden-stool",
-          "tx": 8,
-          "ty": 4
-        },
-        {
-          "piece": "calendar",
-          "tx": 3,
-          "ty": 1
+          "piece": "candle-holder",
+          "parent": 6
         },
         {
           "piece": "woven-basket",
@@ -561,6 +614,11 @@
           "piece": "iron-lantern",
           "tx": 12,
           "ty": 5
+        },
+        {
+          "piece": "plant-flowering",
+          "tx": 12,
+          "ty": 2
         }
       ]
     }

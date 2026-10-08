@@ -378,11 +378,13 @@ func validRoomFurnishings(r Room) bool {
 					return false
 				}
 				c := string(r.Map[y][x])
-				allowed := roomFloor
 				if piece.Mount == "wall" {
-					allowed = roomBackWall
-				}
-				if !strings.Contains(allowed, c) {
+					// The back wall, or in front of a piece standing against it on its row (a shelf's sign).
+					onProp := y == 1 && slices.ContainsFunc(r.Props, func(p RoomProp) bool { return p.Char == c })
+					if !strings.Contains(roomBackWall, c) && !onProp {
+						return false
+					}
+				} else if !strings.Contains(roomFloor, c) {
 					return false
 				}
 				tiles[RoomTile{x, y}] = true

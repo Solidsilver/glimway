@@ -18,13 +18,13 @@ for (const v of vectors.loader) test(`shared furnishings loader: ${v.name}`, () 
 });
 
 test('the shipped catalogue keeps every home good and the interior kit', () => {
-  // 31 home goods, the 14-piece kit, and the village rooms' 17 signature pieces (lane B).
-  assert.equal(FURNISHINGS.pieces.length, 62);
+  // 31 home goods, the 14-piece kit, the village rooms' 15 signature pieces and round 2b's 16 kit and wall pieces (lane B).
+  assert.equal(FURNISHINGS.pieces.length, 76);
   for (const sig of ['kitchen-hearth', 'kitchen-worktable', 'millstones', 'mill-gears', 'mill-hoist', 'library-shelves', 'library-side-shelves', 'reading-table', 'reading-nook', 'elara-desk']) assert.ok(furnishingFor(sig), `signature piece ${sig}`);
   for (const good of HOMESTEAD_DATA.items) assert.ok(furnishingFor(good.id), `${good.id} left the catalogue`);
   for (const kit of ['rag-rug', 'wall-shelves', 'wall-peg', 'wall-tools', 'crate', 'barrel', 'sack', 'candle', 'picture', 'calendar', 'curtains', 'counter', 'small-table', 'chest']) assert.ok(furnishingFor(kit), `interior kit lost ${kit}`);
   // Art frame names may be empty until the art lands; a rug may omit its size.
-  assert.equal(furnishingFor('candle')!.facings.front, '');
+  assert.equal(furnishingFor('chest')!.facings.front, '');
   assert.equal(furnishingFor('rag-rug')!.size, undefined);
 });
 

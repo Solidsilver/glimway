@@ -28,7 +28,7 @@ import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 
 export const PACKED_BASE = '/assets/fingersnap/packed/'
 /** Bump when the baking itself changes (tests/atlases.test.ts compares it). */
-export const ATLAS_GENERATOR_VERSION = 7
+export const ATLAS_GENERATOR_VERSION = 8
 export const PACKED_MANIFEST_KEY = 'glimway-packed'
 
 /**

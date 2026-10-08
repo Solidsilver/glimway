@@ -189,12 +189,11 @@ func TestRevisedLibraryVectors(t *testing.T) {
 	}
 }
 func TestRoomFootprints(t *testing.T) {
-	loft, ok := RoomFor("in:village:mill:2")
-	if !ok {
-		t.Fatal("missing loft")
-	}
-	want := []RoomFootprint{{"f", 2, 2, 2, 2}, {"f", 6, 2, 2, 2}}
-	if got := RoomFootprints(loft, "f"); !reflect.DeepEqual(got, want) {
+	// Two separate piles of one letter stay two footprints (a fixture: the loft's
+	// sacks are dressing since the round-2 art).
+	piles := Room{Map: []string{"##########", "#.ff..ff.#", "#.ff..ff.#", "##########"}}
+	want := []RoomFootprint{{"f", 2, 1, 2, 2}, {"f", 6, 1, 2, 2}}
+	if got := RoomFootprints(piles, "f"); !reflect.DeepEqual(got, want) {
 		t.Fatal(got)
 	}
 	if MarkWriter("library:lamp") != "server" || MarkWriter("quest-item:east-finger") != "server" {

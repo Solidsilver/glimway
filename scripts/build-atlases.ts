@@ -255,10 +255,12 @@ async function main(): Promise<void> {
 
   // The 0.4 indoors pass is authored at 64 texels per 16px world tile. Keep
   // its requested native canvases whole in a separate source-density pack.
-  // A piece is never stretched to its canvas: props, effects, overlays and
-  // icons keep their painted aspect, scaled to fit and standing on the
-  // canvas's bottom centre (their foot point); only the tiling pieces
-  // (floors, walls) fill their cell, since they must meet their neighbours.
+  // A piece is never stretched: props, effects, overlays and icons keep
+  // their painted aspect, scaled to fit inside the destination rectangle the
+  // manifest gives them and standing on its bottom centre (the first pass
+  // gave the whole canvas; round 2b places each piece, e.g. a shelf under
+  // the wall line). Only the tiling pieces (floors, walls) fill their cell,
+  // since they must meet their neighbours.
   type IndoorsFrame = { key: string; source: string; role?: string; sourceRect: { x: number; y: number; w: number; h: number }; canvasSize: { w: number; h: number }; destinationRect: { x: number; y: number; w: number; h: number } }
   type IndoorsManifest = { sources: { key: string; file: string }[]; frames: IndoorsFrame[] }
   const indoors = readJson<IndoorsManifest>('assets/generated/indoors-pass/manifest.json')
@@ -270,9 +272,10 @@ async function main(): Promise<void> {
     const { w: sw, h: sh } = f.sourceRect
     const { w: cw, h: ch } = f.canvasSize
     const tiling = f.role === 'tile' || f.role === 'wall'
-    const k = Math.min(cw / sw, ch / sh)
+    const r = f.destinationRect
+    const k = Math.min(r.w / sw, r.h / sh)
     const [dw, dh] = [Math.max(1, Math.round(sw * k)), Math.max(1, Math.round(sh * k))]
-    const d: Job['d'] = tiling ? [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h] : [Math.floor((cw - dw) / 2), ch - dh, dw, dh]
+    const d: Job['d'] = tiling ? [r.x, r.y, r.w, r.h] : [r.x + Math.floor((r.w - dw) / 2), r.y + r.h - dh, dw, dh]
     return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, sw, sh], w: cw, h: ch, d, box: true }
   })
 
