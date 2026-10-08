@@ -1,6 +1,8 @@
 # Guests on the server
 
-Status: **agreed with the owner, 2026-10-07**, including the smaller decisions below. This is the
+Status: **agreed with the owner, 2026-10-07**, including the smaller decisions below.
+**Timing changed the same day:** Habitica comes first. Steps 1–2 ship in 0.4; steps 3–6 move to
+the standalone track, and local guest play stays as a demo until then (see [plan.md](plan.md)). This is the
 "Guest accounts" foundation in [plan.md](plan.md). It has to land with or before W1 (the server
 generator), or guests lose the Wilds.
 

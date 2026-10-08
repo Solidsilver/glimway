@@ -521,6 +521,9 @@ bring, which the server can work out from the seed.
   in the world can walk between them. The fast travel. It replaces "Old ways"
   for everyone in `docs/hands-on-design.md` §5. A world without such a mage
   has no fast travel.
+- **One-use way-home items** for everyone else (owner, 2026-10-07): crafted, one way,
+  used up each time, so the Old ways stay better. See [plan.md](plan.md), "Ways back
+  without a mage".
 - **The turncap jar** already tilts toward the nearest named light.
 - **The carter's map** (UI step 10) shows lit land and your lamps.
 

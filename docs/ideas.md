@@ -76,6 +76,15 @@ worth thinking about; **(later)** means parked on purpose.
   - Some residents could mostly live indoors, so you go inside to talk to them, which leans
     naturally into shops.
 
+## Standalone version (later)
+Glimway without Habitica, with Habitica as one mode. The owner plays with Habitica, so this waits.
+- **Guest accounts** (agreed, designed): key phrase sign-in, devices, linking. Steps 3–6 of
+  [design/guests.md](design/guests.md).
+- **Embers without Habitica** (needs a design session): today guests earn embers only from story
+  and gifts, so ember gates stop them. A standalone game needs its own source.
+- **Our own look, classes, levels and companions** (agreed, standing goal): the backups listed
+  above, plugged in through the profile source.
+
 ## Social
 - **Party notice board** (maybe).
 - **See which friends are online, and where** (maybe).

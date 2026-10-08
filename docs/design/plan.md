@@ -154,16 +154,23 @@ Each release is a minor version with its own art round, written as one request.
 | **0.2 Foundations** | Versioning and proto stage 1 (in review now), the "What's new" card, the remaining proto domains | Codex for the server, Opus for the client |
 | **0.3 Indoors** | Cleanup phase 3's interactions path and WorldScene split first. Then: rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; pets steps 1–3 (fixes, friends' pets, Companions, yard pets); the quest tree with a Quests tab, pinning and the tutorial hook | Opus (game and UI), Codex (area checks, save ids) |
 | **0.4 Crafts** | Guest accounts steps 1–2 (account ids, the profile source seam; server lane, no behaviour change); magic groundwork (ability table, highest-level mark, server mana, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
-| **0.5 The open map** | Guest accounts steps 3–6 (key phrase, title screen, dropping local guest play, devices, linking), world changes with expiry, the Go generator for today's Tangle and Whitequiet, per-chunk epochs | Codex-heavy |
+| **0.5 The open map** | World changes with expiry, the Go generator for today's Tangle and Whitequiet, per-chunk epochs | Codex-heavy |
 | **0.6 Lake country** | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles | mixed |
 | **0.7 Lamps** | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span) | mixed |
 | **0.8 Shared fights** | The server enemy sim at camps, combat abilities in server rooms | Codex-heavy |
 | **0.9 and on** | Caves, the next lands, capstones, home water | — |
+| **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
 
 **Decided (owner, 2026-10-07): interleave.** The cleanup the features lean on comes first. The
 polish update (sound, the player body, phone resolution, UI steps 8 and 9) runs alongside 0.3 and
 0.4 as its own lanes. The gold purse and the Habitica wardrobe follow 0.4, before the open map.
-The server-world track starts after the guest planning session.
+The server-world track starts after 0.4.
+
+**Habitica first (owner, 2026-10-07).** The owner and their friends play with Habitica, so that
+mode comes first. The standalone game (Habitica as one mode among others) comes later. Until
+then, guests keep today's local play as a demo: the village and the story, without the generated
+Wilds once 0.5 ships. Guest accounts steps 1–2 (`account_id` and the profile source) stay in 0.4,
+because they're cheap now and painful to retrofit.
 
 ### Cleanup phases 2–4, adjusted
 - **Already covered:** the generated error catalog (phase 2), which the proto enum replaced.
@@ -174,6 +181,60 @@ The server-world track starts after the guest planning session.
   worth doing with interiors.
 - **Unchanged:** panels and CSS, App's layer value, the account flow, art-loading collapse,
   migrations, and the formatter and folders last.
+
+## Shared fights: staying fast and fair
+
+Server authority is the standard answer: almost every online action game keeps one source of
+truth on the server and hides latency on the client. The usual toolkit, and what Glimway needs
+from it at 8–10 Hz with a handful of friends on a home server:
+
+- **Your own hero is predicted.** You move and swing at once on your screen; the server checks.
+  (Glimway already works this way: movement is client-side.)
+- **Enemies are interpolated.** The client draws them about 100–150 ms in the past, smoothly
+  between two server snapshots, so they never jitter.
+- **Hits are lag-compensated.** The server keeps about a second of enemy positions and judges
+  your swing against where the enemy was on *your* screen when you swung ("favour the attacker",
+  as most shooters and action games do).
+- **Hurt is judged on your screen** (already decided in layers.md), so a dodge you saw always
+  counts. Co-op games often trust the client this way; the trust model is friends on invites.
+- **Design hides the rest:** telegraphed enemy attacks (a wind-up of 300 ms or more), generous
+  hit boxes, slow cozy enemies. This matters more than the transport.
+- **Transport:** the binary protobuf presence socket (WebSocket) is enough at this scale. A
+  WebSocket runs over TCP, so one lost packet delays the ones behind it. If measurements on phones
+  show stutter, WebTransport datagrams (HTTP/3, unreliable and unordered) are the upgrade; the
+  protobuf messages carry over unchanged. Measure first.
+- **Prototype one camp first** (wisps at one Tangle camp, two players, a phone on mobile data)
+  before building caves on top of it.
+
+## Ways back without a mage
+
+The Old ways stay the mage's capstone. Everyone else gets **one-use crafted items**, so a world
+without a mage always has a way home, while the Old ways stay clearly better:
+
+| | Old ways (mage) | Crafted way-home items |
+|---|---|---|
+| Cost | Mana once | Materials, used up each time |
+| Who | Anyone in the world, any number of times | Only the one who uses it |
+| Where | Between two named lamps, both ways | One way: home, or to a lamp you named |
+| Lasts | Past turnings | Once |
+
+First sketch: a **homing turncap** (a turncap set in amber; crush it and the drift walks you back
+to Hearthwick's gate) and a **lamp-ash pouch** (ash from a way-lamp you named; scatter it to step
+back to that lamp). Not usable in a fight, with a short pause before you go. Crafted at the bench;
+recipes are papers. Numbers and names to settle when lamps are built (0.7).
+
+## Stepping back between releases
+
+The owner builds mostly with agents, so the risk isn't size, it's drift. After each release:
+
+1. **A global review round.** Fresh reviewers from both model families read the whole project
+   (server, game, UI, tooling) as on 2026-10-07, looking for duplication, oversized files, dead
+   code and seams the next release needs.
+2. **A cleanup lane** acts on it before the next feature lanes start.
+3. **Test health:** flaky specs found and fixed, e2e run time checked, coverage of the new
+   systems.
+4. **Docs:** design docs updated to what was built, and the plan's order revisited.
+5. **A playtest by the owner** before tagging.
 
 ## Art, by release
 - **0.3:** an interior kit (floors, walls, doorways, stairs, a ladder, windows, counters); Hazel's
