@@ -23,7 +23,12 @@ export function curatedToRestore<S extends { id: string; type: string }>(spots: 
   return spots.filter((s) => s.type !== 'guardian' && !s.id.startsWith('wilds:') && !defeated.includes(s.id) && !standing.has(s.id))
 }
 
-/** The warden rests settled on screen, but the step that settled it was refused: it stands again. */
-export function wardenToRestore(quest: QuestStage, resting: 'dormant' | 'settled' | null, active: boolean): boolean {
-  return quest === 'clue-found' && !active && resting !== 'dormant'
+/**
+ * The warden rests settled on screen, but its settling was refused: it
+ * stands again. The `defeated:stone-warden` mark goes first (the step's
+ * `defeat` trigger needs it), so a warden marked defeated has settled even
+ * while the step that follows it is still on its way.
+ */
+export function wardenToRestore(quest: QuestStage, resting: 'dormant' | 'settled' | null, active: boolean, defeated = false): boolean {
+  return quest === 'clue-found' && !defeated && !active && resting !== 'dormant'
 }

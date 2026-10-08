@@ -1,5 +1,5 @@
 import { expect, type Page } from './fixtures'
-import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, seedStory, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
+import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
 import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 
@@ -115,10 +115,7 @@ export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, o
   await openTitleGuide(page)
   await pasteAndConnect(page, id, invite ? { invite } : {})
   await waitForWorld(page)
-  if (!opts.opening) {
-    seedStory(id, { quests: { signpost: 'light-first-lamp' } })
-    await reenter(page)
-  }
+  if (!opts.opening) await pastOpening(page, id)
   return id
 }
 

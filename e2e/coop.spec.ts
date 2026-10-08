@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
+import { newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, signInPage } from './party-helpers'
 import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
 
@@ -117,7 +117,8 @@ test('a newcomer on a phone starts a world of their own, and the party’s world
 })
 
 test('a second player watches the naming, sees the warden rest a moment, and keeps the line', async ({ page, browser, baseURL }) => {
-  const { party, world } = await partyOwner(page)
+  const { olive, party, world } = await partyOwner(page)
+  await pastOpening(page, olive)
   // Hal comes in through Olive's party, and chooses to live with them.
   const hal = newUser()
   await setHabitica(hal, { name: 'Hal', party })
@@ -153,7 +154,7 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
   await expect
     .poll(async () => {
       const s = (await serverState(other)).body
-      return { quest: s.state.quest, seen: s.state.flags.filter((f: string) => f.startsWith('witness:')) }
+      return { quest: s.state.quests['lantern-road'] ?? 'new', seen: s.state.flags.filter((f: string) => f.startsWith('witness:')) }
     })
     .toEqual({ quest: 'new', seen: [expect.stringMatching(/^witness:warden:.+:Olive$/)] })
   await other.keyboard.press('j')

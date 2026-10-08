@@ -37,6 +37,7 @@ test('the warden stands again when its settling step was refused, and only then'
   assert.equal(wardenToRestore('clue-found', null, true), false, 'already fighting');
   assert.equal(wardenToRestore('guardian-defeated', 'settled', false), false);
   assert.equal(wardenToRestore('accepted', 'dormant', false), false);
+  assert.equal(wardenToRestore('clue-found', 'settled', false, true), false, 'marked defeated: the step is on its way');
 });
 
 test('the view a refused defeat leaves behind names the enemy as undefeated again', async (t) => {

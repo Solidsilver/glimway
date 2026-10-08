@@ -73,7 +73,7 @@ test('the hero is confined to each map', async ({ page }) => {
 })
 
 test('the area title card always names the area you are in', async ({ page }) => {
-  await freshPlayer(page)
+  await freshPlayer(page, 'Tansy', undefined, { opening: true })
   // Leave while Hearthwick's card is still up, then again while Brackenwood's is.
   await expectAreaCard(page, 'Hearthwick')
   await warp(page, 'woodland', 15, 20)

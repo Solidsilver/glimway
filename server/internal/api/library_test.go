@@ -26,6 +26,7 @@ func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) lib
 	return v
 }
 
+// donateBody donates from the reading room.
 func donateBody(s response, paperID, key string) map[string]any {
 	return body(s, key, map[string]any{"paperId": paperID, "where": map[string]any{"area": "in:village:library", "x": 80, "y": 80}})
 }

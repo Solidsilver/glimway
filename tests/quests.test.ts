@@ -271,7 +271,9 @@ test('automatic triggers: carrying flour, walking into the library, a lit lamp, 
   const needs = { habitica: false };
   const ctx = { area: 'village', flags: [] as string[], defeated: [] as string[], carrying: () => 0 };
   assert.deepEqual(autoSteps({}, needs, ctx), []);
-  assert.deepEqual(autoSteps({ signpost: 'meet-orrin' }, needs, { ...ctx, defeated: ['finger-wisp'] }), [{ quest: 'signpost', step: 'fetch-finger' }]);
+  assert.deepEqual(autoSteps({ signpost: 'meet-orrin' }, needs, { ...ctx, area: 'woodland', defeated: ['finger-wisp'] }), [{ quest: 'signpost', step: 'fetch-finger' }]);
+  // A step `at` the woodland waits there: the world would refuse it in the village.
+  assert.deepEqual(autoSteps({ signpost: 'meet-orrin' }, needs, { ...ctx, defeated: ['finger-wisp'] }), []);
   assert.deepEqual(autoSteps({ signpost: 'see-mara' }, needs, { ...ctx, flags: ['lit:road-1'] }), [{ quest: 'signpost', step: 'light-first-lamp' }]);
   // The library starts itself, but only after the opening.
   assert.deepEqual(autoSteps({ signpost: 'see-mara' }, needs, { ...ctx, area: 'in:village:library' }), []);

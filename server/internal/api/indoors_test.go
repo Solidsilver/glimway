@@ -54,6 +54,10 @@ func TestRoomPositionAndPresence(t *testing.T) {
 	if finiteWhere(&contract.Where{Area: room.ID, X: float64(len(room.Map[0]) * 16), Y: 8}) || finiteWhere(&contract.Where{Area: room.ID, X: 8, Y: float64(len(room.Map) * 16)}) {
 		t.Fatal("exclusive bounds")
 	}
+	// The cottage: its floor grid plus the walls (14 x 14 tiles); you come in at the doorway, low in the room.
+	if !finiteWhere(&contract.Where{Area: "in:home:0", X: 104, Y: 184}) || finiteWhere(&contract.Where{Area: "in:home:0", X: 224, Y: 8}) || finiteWhere(&contract.Where{Area: "in:home:0", X: 8, Y: 224}) {
+		t.Fatal("cottage bounds")
+	}
 	x := newRig(t)
 	c, s := x.ready("alice")
 	before := x.expect("GET", "/api/state", nil, c, 200).Snapshot
@@ -347,6 +351,10 @@ func TestIndoorsRestAndGathering(t *testing.T) {
 	c, s := x.ready("alice")
 	x.fund(s.AccountID, 10, 0)
 	x.claimGate(c, &s, 0)
+	// With the cottage up, the doorstep no longer rests you (the tier-0 bedroll does: TestHomeRestAndSafeBoundaries).
+	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0"); err != nil {
+		t.Fatal(err)
+	}
 	doc := s.State
 	doc.Area = "home:0"
 	doc.Position = rules.Position{X: 80, Y: 80}
