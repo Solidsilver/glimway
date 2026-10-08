@@ -1,0 +1,2592 @@
+{
+  "date": "2026-10-08",
+  "tool": "built-in image_gen",
+  "sources": {
+    "lib": "library-round2-alpha.png",
+    "kit": "shared-kit-round2-alpha.png",
+    "kitchen": "kitchen-round2-alpha.png",
+    "mill": "mill-loft-round2-alpha.png"
+  },
+  "imageHandling": "Edge-connected generated neutral checkerboard pixels converted to alpha; measured crops are trimmed and kept as independent source sprites; source pixels are not painted over.",
+  "prompts": {
+    "library": "Straight-on library bookcases in three fill states; side-on shelves, built-in window alcove, Elara desk empty/seated states, four exact section plaque texts and icons. Coarse resident-scale pixels, true transparency.",
+    "sharedKit": "Generic reusable furnishings: three rugs, shelves, wall pegs/tools, crate, barrel, sacks, basket, plants, lamps, candles, picture, calendar, curtains, side table, chair, stool, chest. Neutral owner-free details, resident-scale pixels.",
+    "kitchen": "Hazel signature kitchen sprites: face-on oven/hearth fire states, worktable, wash tub, cauldron, bread rack, jar shelf, flour handprint and oven peel. Resident-scale pixels.",
+    "mill": "Finn signature mill and loft sprites: hopper millstone slow turn, sifter, side-on gears, correctly sized sacks, wall-aligned stairs and matching loft opening, hoist, tally board. Resident-scale pixels."
+  },
+  "cropJobs": [
+    {
+      "key": "library-shelf-front-sparse",
+      "source": "lib",
+      "crop": [
+        394,
+        9,
+        225,
+        390
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "front",
+      "state": "sparse",
+      "artBox": [
+        128,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        2,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 6
+      },
+      "tags": [
+        "books",
+        "library-fill:sparse"
+      ]
+    },
+    {
+      "key": "library-shelf-front-half",
+      "source": "lib",
+      "crop": [
+        670,
+        9,
+        225,
+        390
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "front",
+      "state": "half",
+      "artBox": [
+        128,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        2,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 6
+      },
+      "tags": [
+        "books",
+        "library-fill:half"
+      ]
+    },
+    {
+      "key": "library-shelf-front-full",
+      "source": "lib",
+      "crop": [
+        946,
+        9,
+        225,
+        390
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "front",
+      "state": "full",
+      "artBox": [
+        128,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        2,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 6
+      },
+      "tags": [
+        "books",
+        "library-fill:full"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-left-sparse",
+      "source": "lib",
+      "crop": [
+        66,
+        417,
+        90,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "left",
+      "state": "sparse",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-right-sparse",
+      "source": "lib",
+      "crop": [
+        205,
+        417,
+        85,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "right",
+      "state": "sparse",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-left-half",
+      "source": "lib",
+      "crop": [
+        360,
+        417,
+        93,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "left",
+      "state": "half",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-right-half",
+      "source": "lib",
+      "crop": [
+        499,
+        417,
+        94,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "right",
+      "state": "half",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-left-full",
+      "source": "lib",
+      "crop": [
+        656,
+        417,
+        96,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "left",
+      "state": "full",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-tall-right-full",
+      "source": "lib",
+      "crop": [
+        792,
+        417,
+        95,
+        213
+      ],
+      "fit": [
+        64,
+        192
+      ],
+      "id": "library-shelf-tall",
+      "facing": "right",
+      "state": "full",
+      "artBox": [
+        64,
+        128
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-left-sparse",
+      "source": "lib",
+      "crop": [
+        953,
+        440,
+        85,
+        178
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "left",
+      "state": "sparse",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-right-sparse",
+      "source": "lib",
+      "crop": [
+        1079,
+        440,
+        82,
+        179
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "right",
+      "state": "sparse",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-left-half",
+      "source": "lib",
+      "crop": [
+        1242,
+        440,
+        90,
+        182
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "left",
+      "state": "half",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-right-half",
+      "source": "lib",
+      "crop": [
+        1378,
+        440,
+        85,
+        178
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "right",
+      "state": "half",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-left-full",
+      "source": "lib",
+      "crop": [
+        656,
+        417,
+        96,
+        213
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "left",
+      "state": "full",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-shelf-short-right-full",
+      "source": "lib",
+      "crop": [
+        792,
+        417,
+        95,
+        213
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "library-shelf-short",
+      "facing": "right",
+      "state": "full",
+      "artBox": [
+        64,
+        64
+      ],
+      "artOffsetY": 64,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "books",
+        "side-wall"
+      ]
+    },
+    {
+      "key": "library-reading-nook-front-default",
+      "source": "lib",
+      "crop": [
+        64,
+        653,
+        485,
+        330
+      ],
+      "fit": [
+        192,
+        192
+      ],
+      "id": "library-reading-nook",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        3,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "offers": {
+        "top": 2
+      },
+      "tags": [
+        "seat",
+        "light",
+        "library-signature"
+      ]
+    },
+    {
+      "key": "library-elara-desk-front-empty",
+      "source": "lib",
+      "crop": [
+        592,
+        713,
+        303,
+        279
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "library-elara-desk",
+      "facing": "front",
+      "state": "empty",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "library-signature"
+      ]
+    },
+    {
+      "key": "library-elara-desk-front-seated",
+      "source": "lib",
+      "crop": [
+        921,
+        649,
+        294,
+        343
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "library-elara-desk",
+      "facing": "front",
+      "state": "elara-seated",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "resident-state",
+        "library-signature"
+      ]
+    },
+    {
+      "key": "library-section-sign-front-stories",
+      "source": "lib",
+      "crop": [
+        1240,
+        650,
+        235,
+        76
+      ],
+      "fit": [
+        192,
+        64
+      ],
+      "id": "library-section-sign-stories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        3,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:stories"
+      ]
+    },
+    {
+      "key": "library-section-sign-front-histories",
+      "source": "lib",
+      "crop": [
+        1240,
+        730,
+        235,
+        76
+      ],
+      "fit": [
+        192,
+        64
+      ],
+      "id": "library-section-sign-histories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        3,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:histories"
+      ]
+    },
+    {
+      "key": "library-section-sign-front-recipes",
+      "source": "lib",
+      "crop": [
+        1240,
+        810,
+        235,
+        76
+      ],
+      "fit": [
+        192,
+        64
+      ],
+      "id": "library-section-sign-recipes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        3,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:recipes"
+      ]
+    },
+    {
+      "key": "library-section-sign-front-field-notes",
+      "source": "lib",
+      "crop": [
+        1240,
+        890,
+        235,
+        76
+      ],
+      "fit": [
+        192,
+        64
+      ],
+      "id": "library-section-sign-field-notes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        3,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:field-notes"
+      ]
+    },
+    {
+      "key": "rug-woven-front-default",
+      "source": "kit",
+      "crop": [
+        94,
+        60,
+        383,
+        156
+      ],
+      "fit": [
+        192,
+        128
+      ],
+      "id": "rug-woven",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        2
+      ],
+      "base": [
+        0,
+        1.75,
+        3,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "layer": "under"
+    },
+    {
+      "key": "rug-braided-front-default",
+      "source": "kit",
+      "crop": [
+        538,
+        55,
+        390,
+        169
+      ],
+      "fit": [
+        192,
+        128
+      ],
+      "id": "rug-braided",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        2
+      ],
+      "base": [
+        0,
+        1.75,
+        3,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "layer": "under"
+    },
+    {
+      "key": "rug-patchwork-front-default",
+      "source": "kit",
+      "crop": [
+        966,
+        56,
+        509,
+        168
+      ],
+      "fit": [
+        256,
+        128
+      ],
+      "id": "rug-patchwork",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        4,
+        2
+      ],
+      "base": [
+        0,
+        1.75,
+        4,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "layer": "under"
+    },
+    {
+      "key": "shelf-generic-front-default",
+      "source": "kit",
+      "crop": [
+        74,
+        257,
+        296,
+        204
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "shelf-generic-front",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "offers": {
+        "shelves": 6
+      }
+    },
+    {
+      "key": "shelf-generic-left-default",
+      "source": "kit",
+      "crop": [
+        815,
+        273,
+        101,
+        193
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "shelf-generic-side",
+      "facing": "left",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 3
+      }
+    },
+    {
+      "key": "shelf-generic-right-default",
+      "source": "kit",
+      "crop": [
+        815,
+        273,
+        101,
+        193
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "shelf-generic-side",
+      "facing": "right",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 3
+      },
+      "flip": true
+    },
+    {
+      "key": "wall-pegs-front-tools",
+      "source": "kit",
+      "crop": [
+        978,
+        268,
+        325,
+        252
+      ],
+      "fit": [
+        192,
+        128
+      ],
+      "id": "wall-pegs-tools",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        3,
+        1
+      ],
+      "base": [
+        0,
+        0.8,
+        3,
+        0.2
+      ],
+      "size": "medium",
+      "mount": "wall"
+    },
+    {
+      "key": "crate-front-default",
+      "source": "kit",
+      "crop": [
+        39,
+        535,
+        186,
+        173
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "crate",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "offers": {
+        "top": 1
+      }
+    },
+    {
+      "key": "barrel-front-default",
+      "source": "kit",
+      "crop": [
+        248,
+        517,
+        161,
+        190
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "barrel",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "offers": {
+        "top": 1
+      }
+    },
+    {
+      "key": "sack-large-front-upright",
+      "source": "kit",
+      "crop": [
+        414,
+        510,
+        151,
+        193
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "sack-large",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor"
+    },
+    {
+      "key": "sack-large-front-slumped",
+      "source": "kit",
+      "crop": [
+        570,
+        549,
+        117,
+        154
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "sack-large",
+      "facing": "front",
+      "state": "slumped",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor"
+    },
+    {
+      "key": "basket-front-default",
+      "source": "kit",
+      "crop": [
+        713,
+        599,
+        155,
+        110
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "basket",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor"
+    },
+    {
+      "key": "plant-leafy-front-default",
+      "source": "kit",
+      "crop": [
+        883,
+        545,
+        151,
+        194
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "plant-leafy",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor"
+    },
+    {
+      "key": "plant-flowering-front-default",
+      "source": "kit",
+      "crop": [
+        1040,
+        550,
+        113,
+        160
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "plant-flowering",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor"
+    },
+    {
+      "key": "lamp-oil-front-default",
+      "source": "kit",
+      "crop": [
+        1174,
+        545,
+        102,
+        164
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "lamp-oil",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor",
+      "tags": [
+        "light"
+      ]
+    },
+    {
+      "key": "candle-holder-front-default",
+      "source": "kit",
+      "crop": [
+        1304,
+        545,
+        104,
+        165
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "candle-holder",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor",
+      "tags": [
+        "light"
+      ]
+    },
+    {
+      "key": "candle-stick-front-default",
+      "source": "kit",
+      "crop": [
+        1420,
+        540,
+        116,
+        170
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "candle-stick",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "floor",
+      "tags": [
+        "light"
+      ]
+    },
+    {
+      "key": "picture-frame-front-default",
+      "source": "kit",
+      "crop": [
+        26,
+        755,
+        183,
+        180
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "picture-frame",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall"
+    },
+    {
+      "key": "calendar-front-default",
+      "source": "kit",
+      "crop": [
+        232,
+        743,
+        119,
+        201
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "calendar",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "small",
+      "mount": "wall"
+    },
+    {
+      "key": "curtains-front-default",
+      "source": "kit",
+      "crop": [
+        371,
+        741,
+        231,
+        224
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "curtains",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "wall"
+    },
+    {
+      "key": "side-table-front-default",
+      "source": "kit",
+      "crop": [
+        606,
+        798,
+        145,
+        165
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "side-table",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "offers": {
+        "top": 2
+      }
+    },
+    {
+      "key": "chair-front-default",
+      "source": "kit",
+      "crop": [
+        764,
+        781,
+        112,
+        186
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "chair-front",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor"
+    },
+    {
+      "key": "chair-left-default",
+      "source": "kit",
+      "crop": [
+        905,
+        781,
+        109,
+        186
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "chair-side",
+      "facing": "left",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor"
+    },
+    {
+      "key": "chair-right-default",
+      "source": "kit",
+      "crop": [
+        905,
+        781,
+        109,
+        186
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "chair-side",
+      "facing": "right",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "flip": true
+    },
+    {
+      "key": "stool-front-default",
+      "source": "kit",
+      "crop": [
+        1035,
+        833,
+        118,
+        132
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "stool",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor"
+    },
+    {
+      "key": "chest-front-default",
+      "source": "kit",
+      "crop": [
+        1177,
+        813,
+        190,
+        153
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "chest",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 2
+      }
+    },
+    {
+      "key": "kitchen-oven-front-fire",
+      "source": "kitchen",
+      "crop": [
+        24,
+        24,
+        770,
+        600
+      ],
+      "fit": [
+        192,
+        192
+      ],
+      "id": "kitchen-oven-hearth",
+      "facing": "front",
+      "state": "fire",
+      "footprint": [
+        3,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        3,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 2
+      },
+      "tags": [
+        "light",
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-worktable-front-default",
+      "source": "kitchen",
+      "crop": [
+        798,
+        357,
+        707,
+        303
+      ],
+      "fit": [
+        256,
+        128
+      ],
+      "id": "kitchen-worktable",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        4,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        4,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 4
+      },
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-washtub-front-default",
+      "source": "kitchen",
+      "crop": [
+        48,
+        745,
+        276,
+        220
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-washtub",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-cauldron-front-steaming-0",
+      "source": "kitchen",
+      "crop": [
+        805,
+        89,
+        152,
+        228
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-cauldron",
+      "facing": "front",
+      "state": "steaming",
+      "frame": 0,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "kitchen-cauldron-front-steaming-1",
+      "source": "kitchen",
+      "crop": [
+        974,
+        88,
+        151,
+        229
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-cauldron",
+      "facing": "front",
+      "state": "steaming",
+      "frame": 1,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "kitchen-cauldron-front-steaming-2",
+      "source": "kitchen",
+      "crop": [
+        1144,
+        88,
+        148,
+        229
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-cauldron",
+      "facing": "front",
+      "state": "steaming",
+      "frame": 2,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "kitchen-cauldron-front-steaming-3",
+      "source": "kitchen",
+      "crop": [
+        1310,
+        90,
+        147,
+        227
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-cauldron",
+      "facing": "front",
+      "state": "steaming",
+      "frame": 3,
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "kitchen-bread-rack-front-default",
+      "source": "kitchen",
+      "crop": [
+        564,
+        685,
+        349,
+        286
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "kitchen-bread-rack",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "offers": {
+        "shelves": 2
+      },
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-jar-shelf-front-default",
+      "source": "kitchen",
+      "crop": [
+        953,
+        694,
+        382,
+        298
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "kitchen-jar-shelf",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "offers": {
+        "shelves": 4
+      },
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-flour-handprint-wall-default",
+      "source": "kitchen",
+      "crop": [
+        1384,
+        675,
+        94,
+        121
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "kitchen-flour-handprint",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0.4,
+        0.4,
+        0.2,
+        0.2
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "kitchen-oven-peel-wall-default",
+      "source": "kitchen",
+      "crop": [
+        1384,
+        805,
+        100,
+        195
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "kitchen-oven-peel",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0.4,
+        0.4,
+        0.2,
+        0.2
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "hazel-signature"
+      ]
+    },
+    {
+      "key": "millstone-hopper-front-turn-0",
+      "source": "mill",
+      "crop": [
+        29,
+        55,
+        193,
+        341
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "millstone-hopper",
+      "facing": "front",
+      "state": "turn",
+      "frame": 0,
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "millstone-hopper-front-turn-1",
+      "source": "mill",
+      "crop": [
+        254,
+        55,
+        193,
+        341
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "millstone-hopper",
+      "facing": "front",
+      "state": "turn",
+      "frame": 1,
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "millstone-hopper-front-turn-2",
+      "source": "mill",
+      "crop": [
+        477,
+        55,
+        193,
+        341
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "millstone-hopper",
+      "facing": "front",
+      "state": "turn",
+      "frame": 2,
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "millstone-hopper-front-turn-3",
+      "source": "mill",
+      "crop": [
+        701,
+        55,
+        193,
+        341
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "millstone-hopper",
+      "facing": "front",
+      "state": "turn",
+      "frame": 3,
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "mill-sifter-front-default",
+      "source": "mill",
+      "crop": [
+        975,
+        41,
+        194,
+        346
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "mill-sifter",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "offers": {
+        "shelves": 1
+      },
+      "tags": [
+        "finn-signature"
+      ]
+    },
+    {
+      "key": "mill-gear-wheel-left-turn-0",
+      "source": "mill",
+      "crop": [
+        530,
+        421,
+        144,
+        193
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "mill-gear-wheel",
+      "facing": "left",
+      "state": "turn",
+      "frame": 0,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "mill-gear-wheel-left-turn-1",
+      "source": "mill",
+      "crop": [
+        695,
+        421,
+        130,
+        193
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "mill-gear-wheel",
+      "facing": "left",
+      "state": "turn",
+      "frame": 1,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "mill-gear-wheel-left-turn-2",
+      "source": "mill",
+      "crop": [
+        854,
+        421,
+        132,
+        193
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "mill-gear-wheel",
+      "facing": "left",
+      "state": "turn",
+      "frame": 2,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "mill-gear-wheel-left-turn-3",
+      "source": "mill",
+      "crop": [
+        998,
+        421,
+        131,
+        193
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "mill-gear-wheel",
+      "facing": "left",
+      "state": "turn",
+      "frame": 3,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "key": "mill-sack-front-upright",
+      "source": "mill",
+      "crop": [
+        82,
+        435,
+        143,
+        166
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "mill-sack",
+      "facing": "front",
+      "state": "upright",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ]
+    },
+    {
+      "key": "mill-sack-front-slumped",
+      "source": "mill",
+      "crop": [
+        245,
+        502,
+        193,
+        120
+      ],
+      "fit": [
+        64,
+        64
+      ],
+      "id": "mill-sack",
+      "facing": "front",
+      "state": "slumped",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.75,
+        1,
+        0.25
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "finn-signature"
+      ]
+    },
+    {
+      "key": "mill-stairs-diag-default",
+      "source": "mill",
+      "crop": [
+        44,
+        619,
+        350,
+        368
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "mill-wall-stairs",
+      "facing": "diag",
+      "state": "default",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature",
+        "exit"
+      ]
+    },
+    {
+      "key": "loft-stair-opening-front-default",
+      "source": "mill",
+      "crop": [
+        492,
+        695,
+        445,
+        230
+      ],
+      "fit": [
+        128,
+        128
+      ],
+      "id": "loft-stair-opening",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "tags": [
+        "finn-signature",
+        "exit"
+      ]
+    },
+    {
+      "key": "loft-hoist-front-default",
+      "source": "mill",
+      "crop": [
+        984,
+        636,
+        272,
+        316
+      ],
+      "fit": [
+        128,
+        192
+      ],
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ]
+    },
+    {
+      "key": "mill-tally-board-wall-default",
+      "source": "mill",
+      "crop": [
+        1337,
+        793,
+        83,
+        145
+      ],
+      "fit": [
+        64,
+        96
+      ],
+      "id": "mill-tally-board",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0.4,
+        0.4,
+        0.2,
+        0.2
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ]
+    },
+    {
+      "key": "mill-gear-wall-small-default",
+      "source": "mill",
+      "crop": [
+        1390,
+        40,
+        103,
+        331
+      ],
+      "fit": [
+        64,
+        128
+      ],
+      "id": "mill-gear-small",
+      "facing": "left",
+      "state": "default",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0.4,
+        0.4,
+        0.2,
+        0.2
+      ],
+      "size": "medium",
+      "mount": "wall",
+      "tags": [
+        "finn-signature"
+      ]
+    }
+  ]
+}

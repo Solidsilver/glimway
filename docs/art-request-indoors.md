@@ -103,3 +103,18 @@ position recorded in the building atlas.
 
 The runtime art pass makes frames available in the packed atlas; room wiring is
 owned by the 0.4 code lanes.
+
+
+## Round 2b delivery: shared furnishing kit and room refinements
+
+Applied the interior rules in design section 7.0 and the furnishing data contract in section 2.8. The detailed deliverable is catalogued in `assets/generated/indoors-pass/README.md` and `furnishings.json`. Every piece records its facings, state frames, tile footprint, normalized floor-contact base, size, mount, and offered surfaces/slots. Stable frame names are keyed by piece, facing, state, and loop index where needed. Art uses 64 texels per 16 px tile; individual crops preserve aspect ratio on transparent canvases.
+
+The generic kit can dress any building and later be reused for player homes: three rugs; front and side shelving; wall pegs/tools; crate, barrel, sacks, basket; two plants; oil lamp, candle holder, candle stick; picture, calendar, curtains; side table, front and side chairs, stool, and chest. These pieces carry no owner-specific decoration. The library shelves and four section plaques, reading nook, and desk are library signatures. Kitchen signatures cover the oven/hearth, worktable, washtub, cauldron, bread rack, jar shelf, flour mark, and oven peel. Mill signatures cover millstone/hopper, sifter, gear wheels, sacks, wall stairs, loft opening, hoist, and tally board.
+
+Only the cauldron steam, millstone, and gear wheel use slow loops; all other states are static. Each room has a contact sheet and an in-room mock-up in `.agent/screens/`. The five mock-ups include the library, Hazel's kitchen, Finn's mill, the sack loft, and a cottage dressed from the shared kit.
+
+The cut-edge review checked all 176 pass frames. Round 2b crop files now have a 4 px transparent gutter; five small detached edge fragments in legacy frames were cleared. Refreshed contact sheets and mock-ups are in `.agent/screens/`, and `edge-audit.json` records the frame audit.
+
+### Replaced frame families
+
+Round 2b's room-scale pieces supersede these earlier art families for interior placement: `oven-hearth-fire-0..3`, `worktable`, `crock-shelves`, `tallow-pot-steam-0..2`, `sponge-bowl-flat/risen`, `bread-rack`, `millstones-0..3`, `gear-train-0..3`, `chute-meal-bin-0..3`, `flour-sacks-0..1`, `counting-stool-window`, `sack-hoist-seized/working/swing-0..2`, `library-shelf-0..2`, `reading-table-unlit/lit`, `reading-lamp-flame-0..2`, `donation-shelf-0..2`, and `window-seat`. Use the Round 2b names in the README and manifest. Floor, wall, doorway, surround, exterior overlays, and quest icons remain from the first pass. The old keys remain in the manifest for compatibility and history; lane B can switch room placements to the replacement families.
