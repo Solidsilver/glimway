@@ -1308,7 +1308,9 @@ export class Link {
 
   /** Page hide: the report goes now with keepalive, unqueued. */
   private sendReportNow(leaving: boolean): void {
-    const c = this.reports.capture(false)
+    // Leaving: the newest report, even past one still in flight (it may be
+    // older than what the screen shows now, and the page won't be here for its answer).
+    const c = leaving ? this.reports.leaving() : this.reports.capture(false)
     if (!c || !leaving) {
       this.reportWanted = true
       this.pump()
