@@ -15,7 +15,7 @@ import { TILE, tileBottom, tileMid } from '../../lib/tile'
 import { layoutHash01 } from '../../lib/hash'
 import { FLOOR_VARIANTS, hasInArt, inArt } from '../indoors-art'
 import { wallFacing, type Footprint, type RoomScene } from '../room-kind'
-import { furnishing, ROOM_DRESSING, type Furnishing } from '../../lib/furnishings-stand-in'
+import { furnishingFor } from '../../lib/furnishings'
 import { drawPiece, setPieceState, type DrawnPiece } from './furnishings-art'
 import type { RoomLight } from '../../lib/rooms'
 import type { WorldData } from '../worlds'
@@ -171,18 +171,18 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
   const pieces: (DrawnPiece | null)[] = []
   const sprites: Phaser.GameObjects.Sprite[] = []
   for (const f of room.props) {
-    const piece = furnishing(f.art)
-    const drawn = piece ? drawPiece(scene, piece, { tx: f.tx, ty: f.ty, facing: wallFacing(world, f) }) : null
+    const piece = furnishingFor(f.art)
+    const drawn = piece ? drawPiece(scene, piece, { tx: f.tx, ty: f.ty, facing: f.facing ?? wallFacing(world, f) }) : null
     pieces.push(drawn)
     sprites.push(drawn?.sprite ?? placeProp(scene, f, f.art, tileBottom(f.ty + f.th - 1)))
   }
-  // The dressing (7.0 rule 3): the shared kit, placed by id; never blocks.
+  // The dressing (7.0 rule 3): the room's furnishings from the shared kit, by id (rooms.json); never blocks.
   const dressing: DrawnPiece[] = []
-  for (const p of ROOM_DRESSING[room.def.id] ?? []) {
-    const piece: Furnishing | null = furnishing(p.piece)
-    if (!piece) continue
+  for (const p of room.def.furnishings ?? []) {
+    const piece = furnishingFor(p.piece)
+    if (!piece) continue // the loader has refused this already
     const parent = p.parent !== undefined ? dressing[p.parent] : undefined
-    dressing.push(drawPiece(scene, piece, { tx: p.tx, ty: p.ty, facing: p.facing, parent, slot: p.slot }))
+    dressing.push(drawPiece(scene, piece, { tx: p.tx ?? 0, ty: p.ty ?? 0, facing: p.facing, parent, offer: p.offer, slot: p.slot }))
   }
   // The loft's roof beams cross its top, over everyone.
   if (/:\d+$/.test(room.def.id) && hasInArt(scene, 'loft-roof-beams')) {

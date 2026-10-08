@@ -66,6 +66,8 @@ export interface NpcSpot {
   ty: number
   /** A resident's cycle spot (src/game/resident-cycle.ts): they stand here only while the cycle says so. */
   spot?: string
+  /** They sit here, at the furniture on this tile (Elara at her desk). */
+  seated?: boolean
 }
 
 export interface EnemySpot {

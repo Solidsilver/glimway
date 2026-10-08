@@ -6,12 +6,12 @@
     "map": [
       "##############",
       "#SS=SS=SS=SS=#",
-      "S............S",
-      "S.RRRR.......S",
-      "S.RRRR...EE..S",
-      "S............S",
-      "S.........NNN#",
-      "S.........NNN#",
+      "l............L",
+      "l.RRRR.......L",
+      "l.RRRR...EE..L",
+      "l............L",
+      "#.........NNN#",
+      "#.........NNN#",
       "#.....@......#",
       "######DD######"
     ],
@@ -34,6 +34,18 @@
     ],
     "props": [
       {
+        "art": "library-side-shelves",
+        "char": "l",
+        "solid": true,
+        "facing": "right"
+      },
+      {
+        "art": "library-side-shelves",
+        "char": "L",
+        "solid": true,
+        "facing": "left"
+      },
+      {
         "art": "library-shelves",
         "char": "S",
         "solid": true
@@ -49,7 +61,7 @@
         "solid": true
       },
       {
-        "art": "library-nook",
+        "art": "reading-nook",
         "char": "N",
         "solid": true
       }
@@ -61,6 +73,12 @@
         "ty": 3,
         "kind": "lamp",
         "r": 5
+      },
+      {
+        "tx": 11,
+        "ty": 6,
+        "kind": "lamp",
+        "r": 3
       }
     ],
     "outside": {

@@ -111,7 +111,52 @@
           "x": 99,
           "y": 81
         }
-      }
+      },
+      "furnishings": [
+        {
+          "piece": "rag-rug",
+          "tx": 5,
+          "ty": 6
+        },
+        {
+          "piece": "wall-tools",
+          "tx": 4,
+          "ty": 1
+        },
+        {
+          "piece": "calendar",
+          "tx": 10,
+          "ty": 1
+        },
+        {
+          "piece": "barrel",
+          "tx": 1,
+          "ty": 8
+        },
+        {
+          "piece": "candle",
+          "parent": 3
+        },
+        {
+          "piece": "sack",
+          "tx": 12,
+          "ty": 8
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 1,
+          "ty": 7
+        },
+        {
+          "piece": "small-table",
+          "tx": 12,
+          "ty": 4
+        },
+        {
+          "piece": "potted-fern",
+          "parent": 7
+        }
+      ]
     },
     {
       "id": "in:village:mill",
@@ -217,7 +262,53 @@
           "tx": 30,
           "ty": 20
         }
-      }
+      },
+      "furnishings": [
+        {
+          "piece": "braided-rug",
+          "tx": 5,
+          "ty": 6
+        },
+        {
+          "piece": "wall-peg",
+          "tx": 4,
+          "ty": 1
+        },
+        {
+          "piece": "wall-tools",
+          "tx": 5,
+          "ty": 1
+        },
+        {
+          "piece": "calendar",
+          "tx": 8,
+          "ty": 1
+        },
+        {
+          "piece": "crate",
+          "tx": 1,
+          "ty": 8
+        },
+        {
+          "piece": "candle",
+          "parent": 4
+        },
+        {
+          "piece": "sack",
+          "tx": 9,
+          "ty": 8
+        },
+        {
+          "piece": "barrel",
+          "tx": 12,
+          "ty": 3
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 3,
+          "ty": 8
+        }
+      ]
     },
     {
       "id": "in:village:mill:2",
@@ -278,6 +369,32 @@
           "kind": "window",
           "r": 3
         }
+      ],
+      "furnishings": [
+        {
+          "piece": "crate",
+          "tx": 6,
+          "ty": 6
+        },
+        {
+          "piece": "candle",
+          "parent": 0
+        },
+        {
+          "piece": "sack",
+          "tx": 9,
+          "ty": 6
+        },
+        {
+          "piece": "sack",
+          "tx": 12,
+          "ty": 4
+        },
+        {
+          "piece": "wall-peg",
+          "tx": 4,
+          "ty": 1
+        }
       ]
     },
     {
@@ -287,10 +404,10 @@
       "map": [
         "##############",
         "#SS=SS=SS=SS=#",
-        "#l..........l#",
-        "#l.RRRR.....l#",
-        "#l.RRRR..EE.l#",
-        "#l..........l#",
+        "l............L",
+        "l.RRRR.......L",
+        "l.RRRR...EE..L",
+        "l............L",
         "#.........NNN#",
         "#.........NNN#",
         "#.....@......#",
@@ -315,13 +432,20 @@
       ],
       "props": [
         {
-          "art": "library-shelves",
-          "char": "S",
-          "solid": true
+          "art": "library-side-shelves",
+          "char": "l",
+          "solid": true,
+          "facing": "right"
         },
         {
           "art": "library-side-shelves",
-          "char": "l",
+          "char": "L",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "library-shelves",
+          "char": "S",
           "solid": true
         },
         {
@@ -367,7 +491,7 @@
           "label": "Sit and read"
         },
         "reading-lamp": {
-          "tx": 6,
+          "tx": 5,
           "ty": 5,
           "label": "Oil the lamp"
         },
@@ -379,7 +503,7 @@
       },
       "lights": [
         {
-          "tx": 5,
+          "tx": 4,
           "ty": 3,
           "kind": "lamp",
           "r": 5
@@ -397,7 +521,48 @@
           "tx": 5,
           "ty": 15
         }
-      }
+      },
+      "furnishings": [
+        {
+          "piece": "braided-rug",
+          "tx": 6,
+          "ty": 5
+        },
+        {
+          "piece": "potted-fern",
+          "tx": 1,
+          "ty": 7
+        },
+        {
+          "piece": "small-table",
+          "tx": 9,
+          "ty": 7
+        },
+        {
+          "piece": "candle",
+          "parent": 2
+        },
+        {
+          "piece": "wooden-stool",
+          "tx": 8,
+          "ty": 4
+        },
+        {
+          "piece": "calendar",
+          "tx": 3,
+          "ty": 1
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 2,
+          "ty": 7
+        },
+        {
+          "piece": "iron-lantern",
+          "tx": 12,
+          "ty": 5
+        }
+      ]
     }
   ]
 }

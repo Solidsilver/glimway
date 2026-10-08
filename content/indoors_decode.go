@@ -38,6 +38,10 @@ func (v *RoomProp) UnmarshalJSON(raw []byte) error {
 	type plain RoomProp
 	return decodeContent(raw, (*plain)(v), "art", "char", "solid")
 }
+func (v *RoomFurnishing) UnmarshalJSON(raw []byte) error {
+	type plain RoomFurnishing
+	return decodeContent(raw, (*plain)(v), "piece")
+}
 func (v *RoomSpot) UnmarshalJSON(raw []byte) error {
 	type plain RoomSpot
 	return decodeContent(raw, (*plain)(v), "tx", "ty", "label")
