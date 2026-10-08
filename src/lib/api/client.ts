@@ -8,6 +8,7 @@
  *
  * The Habitica token passes through `login` only, and is never stored here.
  */
+import { noteServerDate } from '../server-time.ts';
 import contract from '../../../content/contract.json' with { type: 'json' };
 import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
@@ -245,6 +246,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     } finally {
       clearTimeout(timer);
     }
+    noteServerDate(response.headers?.get?.('date') ?? null);
     if (response.ok && extra.binary) {
       if (!response.headers.get('content-type')?.includes('application/x-protobuf')) throw new ApiError('bad-response', { status: response.status });
       return new Uint8Array(await response.arrayBuffer());

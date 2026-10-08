@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { residentsOut } from './room-helpers'
 import { dialogueState, readDialogue, warp, waitForLive, expectToast } from './helpers'
 import { freshPlayer, shot } from './home-helpers'
 import { reenter, seedStory, serverState } from './connected'
@@ -23,9 +24,9 @@ const RESIDENTS = [
   { id: 'elara', name: 'Elara', full: 'Elara Quill', area: 'commons', stand: [25, 5], intro: /Elara Quill: forager/ }
 ] as const
 
-/** Set Hearthwick's clock (dev hook) and wait for the village to read it. */
+/** Set Hearthwick's clock (dev hook) and wait for the village to read it (at :57, when Hazel and Finn are out). */
 async function setDay(page: Page, wick: number, day: number): Promise<void> {
-  await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (wick * 7 + day - 1) * DAY + 3600)
+  await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (wick * 7 + day - 1) * DAY + 3600 + 57 * 60)
   await page.waitForFunction(
     ([w, d]) => {
       const v = (window as unknown as { __fsVillage?: () => { calendar: { wickNumber: number; day: number } } }).__fsVillage?.()
@@ -63,6 +64,8 @@ async function converse(page: Page, name: string, snap?: string, opts: { bust?: 
 test('meeting each resident: an introduction, their portrait, and a journal entry', async ({ page }) => {
   test.setTimeout(180_000)
   await freshPlayer(page)
+  // The hour Hazel is in the square and Finn at his door.
+  await residentsOut(page)
   for (const r of RESIDENTS) {
     await warp(page, r.area as Area, r.stand[0], r.stand[1])
     // Let a new area's title card clear before the screen.
@@ -113,6 +116,7 @@ test('once the road is lit, Hazel hands over her own recipe card', async ({ page
   const id = await freshPlayer(page)
   await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
   await reenter(page)
+  await residentsOut(page)
   await warp(page, 'village', 11, 15)
   const lines = await converse(page, 'Hazel', 'resident-hazel-late-desktop')
   expect(lines.join(' ')).toMatch(/My brother Joss was a runner/)

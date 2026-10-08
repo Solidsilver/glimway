@@ -216,7 +216,7 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
   const mill = village.mill!;
   assert.equal(finn.ty, mill.ty + mill.th, 'Finn stands on the ground in front of the mill');
   assert.ok(Math.abs(finn.tx - mill.door.tx) <= 1, 'beside the door');
-  assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8 });
+  assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8, spot: 'window' });
   const arch = commons.exits.find((e) => e.to === 'wilds')!;
   const elara = spot(commons, 'elara');
   assert.ok(Math.abs(elara.ty - arch.ty) <= 6 && elara.tx >= arch.tx && elara.tx <= arch.tx + arch.tw + 1);

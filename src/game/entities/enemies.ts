@@ -113,7 +113,7 @@ export class EnemySystem {
     for (const spot of world.enemies) {
       if (spot.type === 'guardian') continue // guardian is quest-driven
       if (state.defeatedEnemies.includes(spot.id)) continue
-      this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
+      this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty, spot.hp)
     }
     if (world.areaId === 'ruin' && world.shrine) {
       // The warden is always on its path: standing in its pose before you
@@ -135,7 +135,7 @@ export class EnemySystem {
    */
   reconcile(state: GameState): void {
     const standing = new Set(this._enemies.filter((e) => !e.dead).map((e) => e.id))
-    for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
+    for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty, spot.hp)
     if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(state.quest)
   }
 
@@ -279,7 +279,8 @@ export class EnemySystem {
     return this.spawnEnemy(id, type, tx, ty)
   }
 
-  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number): Enemy {
+  /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */
+  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number, hp?: number): Enemy {
     // Woodland enemies use the delivered slime/mushroom art; the guardian
     // uses the delivered native 24x24 pose textures when present (procedural
     // placeholder otherwise). Every pose shares the same 24x24 texture size
@@ -312,8 +313,8 @@ export class EnemySystem {
       id,
       type,
       sprite,
-      hp: ENEMY_TUNING[type].hp,
-      maxHp: ENEMY_TUNING[type].hp,
+      hp: hp ?? ENEMY_TUNING[type].hp,
+      maxHp: hp ?? ENEMY_TUNING[type].hp,
       homeX: tileMid(tx),
       homeY: tileBottom(ty),
       dirX: 0,

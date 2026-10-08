@@ -180,6 +180,11 @@ export interface GoalDirPayload {
   here: boolean
 }
 
+/** The library panel, opened from the reading room: on its shelves, the donations, or the reader on the paper you last read. */
+export interface LibraryOpenPayload {
+  focus?: 'shelf' | 'donate' | 'read'
+}
+
 export interface DialoguePayload {
   id: string
   speaker: string
@@ -406,7 +411,7 @@ export interface EventMap {
   [EV.homeAction]: { action: string }
   [EV.paperFound]: PaperFoundPayload
   [EV.papersSync]: PapersSyncPayload
-  [EV.libraryOpen]: void
+  [EV.libraryOpen]: LibraryOpenPayload | void
   [EV.residentsMet]: ResidentsMetPayload
   [EV.sfx]: { cue: SoundCue; speaker?: string }
   [EV.footstep]: { terrain: number }

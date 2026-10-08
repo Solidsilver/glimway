@@ -1,7 +1,7 @@
 import { expect, type Page } from './fixtures'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -9,7 +9,7 @@ import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectTo
  */
 
 const OUT = '.agent/screens'
-export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'cottage' | `home:${number}`
+export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | `in:home:${number}` | `home:${number}`
 
 type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
 export interface Home {
@@ -287,7 +287,7 @@ export async function intoCottage(page: Page): Promise<void> {
   await expect(page.locator('.prompt')).toContainText('Go inside')
   await waitForLive(page)
   await page.keyboard.press('e')
-  await waitForArea(page, 'cottage')
+  await settled(page, { prefix: 'in:home:' })
 }
 
 /** Stand at your mailbox (on your land). */

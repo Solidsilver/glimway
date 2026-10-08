@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { residentsOut } from './room-helpers'
 import { serverState } from './connected'
 import { earnEmbers, freshPlayer, fund, giveInstance } from './home-helpers'
 import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
@@ -49,7 +50,8 @@ test('Hazel sells a lump of tallow for an ember, in her own words', async ({ pag
   fund(id, { items: { 'tin-whistle': 1 } })
   await packReads(page, async () => (await stack(page, 'tin-whistle')) === 1)
 
-  // Hazel's kitchen door: her seller row is her resident spot (12,15).
+  // Hazel in the square with her basket (her seller row follows her: the world's clock too).
+  await residentsOut(page, { server: true })
   await warp(page, 'village', 13, 15)
   await openTalk(page, 'Talk to Hazel')
   const choices = await untilChoices(page)
