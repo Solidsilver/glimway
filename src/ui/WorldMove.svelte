@@ -253,7 +253,7 @@
   }
   .stop.to {
     border-color: var(--gold-deep);
-    background: linear-gradient(180deg, #fff3c2 0%, #f6d77c 100%);
+    background: linear-gradient(180deg, var(--cream) 0%, #f6d77c 100%);
   }
   .stop small {
     font-family: var(--font-body);

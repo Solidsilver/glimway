@@ -13,3 +13,19 @@ export const updateCopy = {
   menuBuild: (build: string) => `build ${build}`,
   menuTitle: 'What’s new: the changelog on GitHub'
 }
+
+/** The "What's new" card (src/ui/WhatsNew.svelte), fed by CHANGELOG.md's "For players" lines. */
+export const whatsNewCopy = {
+  /** One release since you last played. */
+  title: (version: string) => `New in Glimway ${version}`,
+  /** Several. */
+  titleSince: 'New since you were last here',
+  /** Each release's heading when there are several. */
+  release: (version: string) => `Glimway ${version}`,
+  ok: 'Off we go',
+  all: 'Everything that changed',
+  /** The Menu's button beside the version line. */
+  menu: 'What’s new',
+  /** Opened from the Menu on a build with nothing written up yet. */
+  nothing: 'Nothing new to tell yet. The lamps are just as you left them.'
+}

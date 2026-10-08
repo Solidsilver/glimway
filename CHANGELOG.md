@@ -20,6 +20,8 @@ the game can show the first part as "What's new":
   notice says so and waits.
 - The Menu shows which version you're playing, with a link to this list of
   what's new.
+- After an update, a short card says what's new since you last played. The
+  Menu's "What's new" brings it back any time.
 
 ### Technical
 
@@ -42,6 +44,22 @@ the game can show the first part as "What's new":
 - The release workflow stops early when the tag doesn't match
   `package.json`'s version.
 - This changelog, and the release steps in `docs/releasing.md`.
+- The "What's new" card reads each release's `### For players` lines from
+  this file when the game is built (`virtual:whats-new`,
+  `scripts/whats-new.mjs`), never at runtime. A device remembers the build it
+  last caught up to (`glimway:whats-new` in localStorage); a device that
+  never saw the card catches up without one. `CHANGELOG.md` is now a build
+  input (the build hash, the Docker context, the Nix web package).
+- Interface cleanup: one panel shell (`Panel.svelte`) and notice card
+  (`NoticeCard.svelte`), shared panel styles and colour tokens in `app.css`,
+  the panel action and bus helpers (`panel-state.svelte.ts`), one table of
+  what each overlay holds back (`layers.ts`), the camera insets measured
+  from marked elements (`play-insets.ts`), connected play's state machine
+  out of `App.svelte` (`account-flow.svelte.ts`, unit-tested), and the
+  refusal copy in `src/content/errors.ts`. Node tests can import rune
+  modules through `tests/helpers/svelte-runes.ts`.
+- The client no longer falls back when a server has no mail recall: every
+  server since the first deploy has it.
 
 ## [0.1.0] - 2026-10-07
 

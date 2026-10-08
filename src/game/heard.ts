@@ -11,6 +11,7 @@
  */
 import type { Session } from './session'
 import { GREETINGS } from '../content/talk'
+import { readJson, stringList, writeJson } from '../lib/local-json'
 
 const PREFIX = 'heard:'
 
@@ -34,13 +35,7 @@ const DAY_MAX = 200
 let day: string[] | null = null
 
 function dayList(): string[] {
-  if (day) return day
-  try {
-    const v = JSON.parse(localStorage.getItem(DAY_KEY) ?? '[]')
-    day = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
-  } catch {
-    day = []
-  }
+  day ??= readJson(DAY_KEY, stringList, [])
   return day
 }
 
@@ -54,11 +49,7 @@ export function markDay(who: string, topic: string): void {
   if (list.includes(key)) return
   list.push(key)
   if (list.length > DAY_MAX) list.splice(0, list.length - DAY_MAX)
-  try {
-    localStorage.setItem(DAY_KEY, JSON.stringify(list))
-  } catch {
-    /* remembered for this visit */
-  }
+  writeJson(DAY_KEY, list) // refused: remembered for this visit
 }
 
 // ------------------------------------------------------------- greetings

@@ -14,7 +14,8 @@
 import { HOMESTEAD_DATA, homeItem, type HomeInstance, type HomeScene } from '../lib/homestead'
 import type { DeedInvite, GateInfo, HomeAction, HomeActionResponse, HomeView } from '../lib/api/types'
 import type { CommonsLaneView, MutationOp } from './link'
-import type { ApiErrorCode } from '../lib/api/errors'
+import type { Refusal } from '../lib/api/errors'
+import { homeErrorText } from '../content/errors'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing'
 import { setCommonsGateCount } from './worlds'
 import { setLandSource } from './homeland'
@@ -117,73 +118,7 @@ export interface PlacementView {
   spot: { x: number; y: number; rotation: number } | null
 }
 
-/** Player-facing words for a homestead refusal. */
-export function homeErrorText(code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | string): string {
-  switch (code) {
-    case 'tier-required':
-      return 'That needs the cottage first. Silas can raise it for you.'
-    case 'tier-unavailable':
-      return 'Silas isn’t building that yet.'
-    case 'placement-overlap':
-      return 'Something’s already there.'
-    case 'out-of-bounds':
-      return 'That’s past the edge of your land.'
-    case 'invalid-placement':
-      return 'That one doesn’t belong there.'
-    case 'land-blocked':
-      return 'A tree or a rock is in the way. Build around it, or have Silas clear it.'
-    case 'plant-in-the-way':
-      return 'Something’s growing there.'
-    case 'unlit':
-      return 'That ground is past your lamplight. Set a lantern post nearer to hold it.'
-    case 'post-holds-land':
-      return 'That lamp is holding up ground you’ve built on. Move those pieces first.'
-    case 'name-required':
-      return 'A lamp needs a name before it holds anything.'
-    case 'not-clearable':
-      return 'There’s nothing there for Silas to clear.'
-    case 'insufficient-embers':
-      return 'Not enough embers for that.'
-    case 'insufficient-materials':
-      return 'You’re short on materials for that.'
-    case 'already-placed':
-      return 'That’s already set out.'
-    case 'shelf-not-empty':
-      return 'Take the gifts off your shelf before putting it away.'
-    case 'not-placed':
-      return 'That’s already put away.'
-    case 'item-not-owned':
-      return 'That isn’t yours to move.'
-    case 'not-a-member':
-      return 'That’s for the folk on this deed.'
-    case 'already-homesteaded':
-      return 'One place on the Commons each. You’d have to give up your deed first.'
-    case 'gate-taken':
-      return 'Someone has that deed already.'
-    case 'not-at-table':
-      return 'Silas signs deeds at his table. Stand by it.'
-    case 'partner-not-at-table':
-      return 'Both names go on at once. Your partner needs to be at the table too.'
-    case 'invite-not-found':
-      return 'That offer has lapsed. Ask again.'
-    case 'chest-full':
-      return 'Your own chest is full.'
-    case 'offline':
-      return 'Needs a connection. Nothing changed — try again when you’re back online.'
-    case 'superseded':
-      return 'Another device took over this journey.'
-    case 'busy':
-      return 'Hold on — the last one is still on its way.'
-    case 'resolved':
-      return 'Your last order with Silas went through after all. Check what you have before trying again.'
-    case 'pending':
-      return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
-    default:
-      return 'Silas didn’t catch that. Nothing changed — try again in a moment.'
-  }
-}
-
-export type ActResult = { ok: true; itemId?: string; status?: 'joined' | 'waiting' } | { ok: false; code: string; text: string }
+export type ActResult = { ok: true; itemId?: string; status?: 'joined' | 'waiting' } | Refusal
 
 /** "Lot 3": how a gate is named to players (gates count from 0). */
 export function lotName(gate: number): string {

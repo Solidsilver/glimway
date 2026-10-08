@@ -101,8 +101,8 @@
     color: var(--text);
   }
   .option.bring {
-    background: linear-gradient(180deg, #fff3c2 0%, #f6d77c 100%);
-    box-shadow: 0 4px 0 var(--wood-dark), 0 0 0 3px rgba(255, 210, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    background: linear-gradient(180deg, var(--cream) 0%, #f6d77c 100%);
+    box-shadow: 0 4px 0 var(--wood-dark), 0 0 0 3px var(--gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
   .option.bring:hover:not(:disabled) {
     background: linear-gradient(180deg, #fff8d8 0%, #f8df93 100%);

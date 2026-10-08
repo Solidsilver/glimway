@@ -268,7 +268,8 @@
   </nav>
 {/snippet}
 
-<div class="hud" class:slim={touch} class:hidden={ui.cinematic} aria-hidden={ui.cinematic}>
+<!-- data-inset: App measures the HUD's children for the camera (src/ui/play-insets.ts). -->
+<div class="hud" class:slim={touch} class:hidden={ui.cinematic} aria-hidden={ui.cinematic} data-inset="hud">
   {#if touch}
     <div class="strip panel">
       {@render bars()}
@@ -296,12 +297,12 @@
     {@render buttons()}
   {/if}
   {#if openWhy}
-    <p class="why" role="status">{openWhy}</p>
+    <p class="why" role="status" data-inset-skip>{openWhy}</p>
   {/if}
   <!-- Read out in full: gains (the tags only show "+7 Fiber"), the hero's thoughts (canvas text), and status changes. -->
-  <p class="sr" aria-live="polite">{bagGain?.text ?? ''} {journalGain?.text ?? ''}</p>
-  <p class="sr" aria-live="polite">{ui.thought?.text ?? ''}</p>
-  <p class="sr" role="status">{statusLine}</p>
+  <p class="sr" aria-live="polite" data-inset-skip>{bagGain?.text ?? ''} {journalGain?.text ?? ''}</p>
+  <p class="sr" aria-live="polite" data-inset-skip>{ui.thought?.text ?? ''}</p>
+  <p class="sr" role="status" data-inset-skip>{statusLine}</p>
 </div>
 
 {#if !touch && showBars}
@@ -633,7 +634,7 @@
     fill: var(--wood-dark);
   }
   .needle.here {
-    background: radial-gradient(circle, #fff3c4 0%, #ffd24a 100%);
+    background: radial-gradient(circle, #fff3c4 0%, var(--gold) 100%);
     box-shadow: 0 0 6px rgba(255, 210, 74, 0.8);
   }
   /* A pinned guide leads: the goal icon becomes a gold pin. */
@@ -1080,7 +1081,7 @@
     font-family: var(--font-display);
     font-size: 12px;
     color: #fff3c4;
-    text-shadow: 0 1px 0 #2b1d1a, 1px 0 0 #2b1d1a, -1px 0 0 #2b1d1a, 0 -1px 0 #2b1d1a;
+    text-shadow: 0 1px 0 var(--outline), 1px 0 0 var(--outline), -1px 0 0 var(--outline), 0 -1px 0 var(--outline);
     white-space: nowrap;
   }
   .cost {
