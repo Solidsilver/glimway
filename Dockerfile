@@ -35,7 +35,7 @@ ARG TARGETARCH
 ARG GLIMWAY_BUILD=
 # modernc.org/sqlite is pure Go; both supported architectures need no CGO.
 # The version is package.json's; a full commit hash is shortened to seven.
-RUN version=$(sed -n 's/^  "version": "\([0-9]*\.[0-9]*\.[0-9]*\)",$/\1/p' package.json) \
+RUN version=$(sed -n 's/^  "version": "\([0-9]*\.[0-9]*\.[0-9]*\(-[0-9A-Za-z.]*\)\{0,1\}\)",$/\1/p' package.json) \
     && test -n "$version" \
     && build=$GLIMWAY_BUILD \
     && if echo "$build" | grep -Eq '^[0-9a-f]{40}$'; then build=$(printf %.7s "$build"); fi \
