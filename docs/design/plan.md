@@ -2,7 +2,7 @@
 
 Status: agreed with the owner, 2026-10-07 (items 1–3 and the order decided; defaults at the end stand). It combines the six design docs in this folder
 ([world](world.md), [layers](layers.md), [pets](pets.md), [magic](magic.md),
-[quests](quests.md), [fishing](fishing.md)). It names the shared foundations, the places where the
+[quests](quests.md), [fishing](fishing.md), and later [guests](guests.md)). It names the shared foundations, the places where the
 docs disagree and how each was settled, and the order to build in.
 
 ## The shape of it
@@ -252,4 +252,4 @@ These go ahead as written unless the owner says otherwise.
 - ~~**A second pass on quests**~~: done (content format, gates on the server, the opening). Quests steps 1–5 go in 0.3; the quest operation ships with Aldo's kiln (0.6); the Keeper's hand and chapter 2 in 0.7. Chapter 2's 50 embers are pooled into the world's project.
 - ~~**Guest accounts planning session**~~: done, see [guests.md](guests.md).
 - **The mage bolt's name:** stays Fingersnap.
-- **Fishing's open questions** stay with the fishing tab until the owner calls it done.
+- ~~**Fishing's open questions**~~: settled with the owner (one-press Reel, Keep/Release, a 10–60 s wait by stock, shared depletion with no personal daily quota, dependable everyday fish at home, the mill-race open all year). See [fishing.md](fishing.md).

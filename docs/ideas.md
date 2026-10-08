@@ -6,8 +6,8 @@ entry short.
 
 Designed ideas now live in [design/](design/plan.md): the combined [plan](design/plan.md), the
 open [world](design/world.md), [layers](design/layers.md), [pets](design/pets.md),
-[magic](design/magic.md), [quests](design/quests.md) and [guests on the server](design/guests.md).
-Fishing is still being designed.
+[magic](design/magic.md), [quests](design/quests.md), [fishing](design/fishing.md) and
+[guests on the server](design/guests.md).
 
 Tags: **(agreed)** means the owner wants it and it has a place in the order; **(maybe)** means
 worth thinking about; **(later)** means parked on purpose.
