@@ -11,6 +11,7 @@
     type DefeatPayload,
     type DiscoveryPayload,
     type GoalDirPayload,
+    type LibraryOpenPayload,
     type LinkPayload,
     type PresencePayload,
     type PortraitsPayload,
@@ -262,8 +263,10 @@
     const onLinkNotice = () => {
       ui.linkNotice = 'played-elsewhere'
     }
-    const onOpenLibrary = () => {
-      if (panel === null) toggle('library')
+    const onOpenLibrary = (p: LibraryOpenPayload | void) => {
+      if (panel !== null) return
+      libraryAt = p ? { ...p } : {}
+      toggle('library')
     }
     const onOpenShop = () => {
       if (panel === null) toggle('shop')
@@ -644,6 +647,8 @@
 
   /** Nothing else is asking for the player's attention: a notice (the party prompt…) may show. */
   const promptClear = $derived(!blocked(layers, BLOCKS.notices))
+  /** What the library panel was opened for (a section's shelves, Elara's donations). */
+  let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
   let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
   /** A quest to put at the top of the Quests page (the opening while its note waits). */
@@ -709,11 +714,16 @@
     // Playtests (src/game/dev-hooks.ts): the quest record, the pin and what the needle follows, read-only.
     const w = window as unknown as Record<string, unknown>
     if (import.meta.env.DEV) w.__fsQuests = () => ({ quests: { ...s.quests }, gateAt: { ...s.state.questGateAt }, pin: pinned.slot, goal: goalTarget(s) })
+    // …and the library panel's way in, as a section's shelves or Elara open it (src/game/library-open.ts).
+    if (import.meta.env.DEV) w.__fsDevLibrary = (p: LibraryOpenPayload) => bus.emit(EV.libraryOpen, p)
     return () => {
       clearInterval(t)
       bus.off(EV.guidePin, read)
       bus.off(EV.quest, read)
-      if (import.meta.env.DEV) delete w.__fsQuests
+      if (import.meta.env.DEV) {
+        delete w.__fsQuests
+        delete w.__fsDevLibrary
+      }
     }
   })
 
@@ -795,7 +805,7 @@
     {#if panel === 'journal'}
       <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} focus={journalFocus} />
     {:else if panel === 'library'}
-      <LibraryPanel {session} onClose={() => toggle('library')} />
+      <LibraryPanel {session} onClose={() => toggle('library')} focus={libraryAt.focus} section={libraryAt.section} />
     {:else if panel === 'shop'}
       <SilasShop {session} onClose={() => toggle('shop')} />
     {:else if panel === 'board'}

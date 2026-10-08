@@ -59,7 +59,7 @@ class UiStore {
   goalDir = $state<GoalDirPayload>({ angle: null, here: false })
   /** False until the first quest snapshot arrives (load is not a "change"). */
   questKnown = $state(false)
-  area = $state<AreaPayload>({ areaId: 'village', name: 'Village', description: '' })
+  area = $state<AreaPayload>({ areaId: 'village', name: '', description: '' })
   prompt = $state<PromptPayload>({ label: null })
   toasts = $state<StoredToast[]>([])
   /** Gains on show beside the bag and journal buttons (newest last). */

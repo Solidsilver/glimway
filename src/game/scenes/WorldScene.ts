@@ -72,6 +72,8 @@ import { GoalGuide } from '../entities/goal-guide'
 import { heldNow } from '../held'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
+import { LIBRARY_ACTION } from '../../content/residents.ts'
+import { openLibrary } from '../library-open.ts'
 import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
@@ -755,6 +757,8 @@ export class WorldScene extends Phaser.Scene {
     uiState.blockedUntil = performance.now() + 220
     // A quest step's offer (`quest:<quest>:<step>`) or talk (`<quest>:<step>`) is the session's.
     if (payload?.action?.startsWith(QUEST_ACTION)) void this.session.reachRef(payload.action.slice(QUEST_ACTION.length))
+    // Elara's shelves and donations (`library:shelf`, `library:donate`): the library panel.
+    else if (payload?.action?.startsWith(LIBRARY_ACTION)) openLibrary({ focus: payload.action.slice(LIBRARY_ACTION.length) === 'donate' ? 'donate' : 'shelf' })
     else if (payload?.action) this.actions.apply(payload.action)
     if (payload?.event?.includes(':')) {
       void this.session.reachRef(payload.event)

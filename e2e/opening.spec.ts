@@ -28,9 +28,10 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect.poll(() => step(page, 'signpost')).toBe('meet-orrin')
   await expect(goal(page)).toContainText('Find the signpost’s east finger')
 
-  // The finger-wisp, seeded settled: the trigger sees the mark.
+  // The finger-wisp, seeded settled, and the hero where it sat (the step is Brackenwood's): the trigger sees the mark.
+  await warp(page, 'woodland', 10, 15)
   seedMarks(id, 'defeated:finger-wisp')
-  await reenter(page)
+  await reenter(page, 'woodland')
   await expect.poll(() => step(page, 'signpost')).toBe('fetch-finger')
   await expect(goal(page)).toContainText('Take the finger back to Orrin')
 
@@ -55,11 +56,11 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await readDialogue(page, { pick: /Three fingers off plumb, east/ })
   await expect.poll(() => step(page, 'signpost')).toBe('set-post')
 
-  // Mara writes it in the ledger: five embers.
+  // Mara writes it in the ledger: five embers, and her top-up of three more for a hero with none.
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await expect.poll(() => step(page, 'signpost')).toBe('see-mara')
-  await expectToast(page, /\+5 embers/, { timeout: 15_000 })
+  await expectToast(page, /\+8 embers/, { timeout: 15_000 })
   await expect(goal(page)).toContainText('Light the first lamp past the gate')
 
   // The first lamp: lighting it is the step (its `lit:` mark), with its moment.

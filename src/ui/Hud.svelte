@@ -86,7 +86,8 @@
     const name = ui.area.name
     const prev = lastPlace
     lastPlace = name
-    if (prev === null || prev === name) return
+    // The first place after a load (before it, the name is empty) is arriving, not coming from anywhere.
+    if (!prev || prev === name) return
     // A first visit has its storybook card; the chip is for coming back.
     const carded = ui.banners.some((b) => b.kind === 'area')
     if (fromTimer !== null) window.clearTimeout(fromTimer)
