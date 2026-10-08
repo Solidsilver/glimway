@@ -179,6 +179,7 @@ export class Session {
   /** What a gate on `quest` can see now (the server checks the same again). */
   gateContext(quest: string): GateContext {
     return {
+      // The world's clock (and the dev clock): the cycle and the waits are the server's.
       now: serverNow(),
       area: placeArea(this.state),
       embers: this.state.embers,

@@ -1,6 +1,7 @@
 import type { AreaId, GameState, QuestStage } from '../lib/state.ts';
 import { LANTERN_ROAD, QUESTS, reachedIndex, type QuestRecord } from '../lib/quests.ts';
 import { SIGNPOST_BETWEEN } from './quests/signpost.ts';
+import { roomFor } from '../lib/rooms.ts';
 import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER, echoKeepsakeJournalEntries } from './echoes.ts';
@@ -168,11 +169,49 @@ export function displayArea(state: { area: AreaId; wildsRegion?: string }): Area
   return state.area === 'wilds' && state.wildsRegion === 'outer-1' ? 'chunk:outer-1' : state.area;
 }
 
+/**
+ * The rooms' cards (docs/design/indoors.md 3): the name is the room's own
+ * (`content/rooms.json`), the rest is said here.
+ */
+const ROOM_CARDS: Record<string, Omit<LocationInfo, 'name'>> = {
+  'in:village:bakery': {
+    eyebrow: 'Behind the bakery',
+    tagline: 'Flour on everything, and the oven never quite out.',
+    description: 'The warmest room in Hearthwick: a bread oven with the pot on its crane, a scrubbed worktable, crocks on the shelves and a sponge bowl on a stool by the window.',
+  },
+  'in:village:mill': {
+    eyebrow: 'The Tolley mill',
+    tagline: 'The wheel turns outside, so the gears turn in here.',
+    description: 'Millstones under their hopper, a chute and a meal bin, flour sacks against the wall, and Finn’s counting stool where he can hear every paddle of the wheel.',
+  },
+  'in:village:mill:2': {
+    eyebrow: 'Up the mill stairs',
+    tagline: 'Sacks waiting to go down, and the beams close overhead.',
+    description: 'The sack loft under the mill roof: sacks stacked two deep and the hoist on its beam over the hatch to the yard.',
+  },
+  'in:village:library': {
+    eyebrow: 'On the square’s quiet side',
+    tagline: 'The village keeps its papers here. Nobody keeps the library.',
+    description: 'Tall shelves along the back wall, a donation shelf with a slot box, a window seat, and the reading table with its lamp. It runs on the honour system and Mara’s ledger.',
+  },
+};
+
+/** A room's card, or null when `areaId` isn't one of the rooms. */
+function roomInfo(areaId: string): LocationInfo | null {
+  const room = roomFor(areaId);
+  if (!room) return null;
+  const card = ROOM_CARDS[room.id] ?? { eyebrow: 'Indoors', tagline: '', description: '' };
+  // The data's names keep a plain apostrophe; the game's words use the curly one.
+  return { name: room.name.replace(/'/g, '’'), ...card };
+}
+
 export function areaInfo(areaId: AreaId): LocationInfo {
   const known = (locations as unknown as Record<string, LocationInfo | undefined>)[areaId];
   if (known) return known;
+  const room = roomInfo(areaId);
+  if (room) return room;
   if (areaId === 'commons') return HEARTHWICK_COMMONS;
-  if (areaId === 'cottage') return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
+  if (areaId === 'cottage' || /^in:home:\d+$/.test(areaId)) return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
   const lot = /^home:(\d+)$/.exec(areaId);
   if (lot) return { name: `Lot ${Number(lot[1]) + 1}`, eyebrow: 'Behind the Commons gates', tagline: 'Wild land, held by lamplight.', description: 'Land past a Commons gate: trees, stumps and stones, and whatever the deed-holders have built where their lamps reach.' };
   if (areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;

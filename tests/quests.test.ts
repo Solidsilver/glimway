@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import items from '../content/items.json' with { type: 'json' };
 import {
+  fingerInBracken,
   questLine,
   questTitle,
   autoSteps,
@@ -29,7 +30,7 @@ import { cycleAt as cycle } from '../src/lib/clock.ts';
 const cycleAt = (id: string, now: number) => cycle(residentById(id)!, now);
 import { calendarAt } from '../src/lib/clock.ts';
 import { createNewGame } from '../src/lib/state.ts';
-import { dialogueFor, dialogueRefs } from '../src/content/world.ts';
+import { areaInfo, dialogueFor, dialogueRefs } from '../src/content/world.ts';
 import { questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, type QuestTalkContext } from '../src/content/quests/index.ts';
 import { questShelves } from '../src/ui/quests-page.ts';
 
@@ -122,6 +123,23 @@ test('refs: a quest is done at its last step; a step ref holds from that step on
   assert.ok(refHolds('signpost:see-mara', DONE_OPENING));
   assert.ok(!refHolds('signpost:see-mara', { signpost: 'set-post' }));
   assert.ok(!refHolds('nothing:here', DONE_OPENING));
+});
+
+test('the east finger lies in the bracken until the wisp is shooed off it', () => {
+  assert.ok(fingerInBracken({}));
+  assert.ok(fingerInBracken({ signpost: 'meet-orrin' }));
+  assert.ok(!fingerInBracken({ signpost: 'fetch-finger' }));
+  assert.ok(!fingerInBracken(DONE_OPENING));
+});
+
+test('rooms read as themselves on the HUD and the area card, not as their ids', () => {
+  assert.deepEqual(['in:village:bakery', 'in:village:mill', 'in:village:mill:2', 'in:village:library'].map((id) => areaInfo(id).name), ['Hazel’s kitchen', 'Finn’s mill', 'The sack loft', 'The library reading room']);
+  for (const id of ['in:village:bakery', 'in:village:mill', 'in:village:mill:2', 'in:village:library']) {
+    const card = areaInfo(id);
+    assert.ok(card.eyebrow && card.tagline && card.description, id);
+    assert.doesNotMatch(card.name, /in:/i);
+  }
+  assert.equal(areaInfo('in:home:12').name, 'Cottage');
 });
 
 test('the road’s goal: the opening, then the lantern road, then wander', () => {
