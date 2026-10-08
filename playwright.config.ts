@@ -32,17 +32,23 @@ export const HABITICA_PORT = Number(process.env.E2E_HABITICA_PORT) || 18303
 const GPU = process.env.E2E_GPU !== '0' && process.platform === 'darwin'
 const GPU_ARGS = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-accelerated-2d-canvas']
 
-// Half the cores, 2–6: each worker drives a Phaser canvas and a Go server.
-const WORKERS = Number(process.env.E2E_WORKERS) || Math.min(6, Math.max(2, Math.floor(cpus().length / 2)))
+// CI uses two workers on a four-core runner. Locally, keep canvases and Go
+// servers from taking over the machine; E2E_WORKERS (or --workers) overrides it.
+const WORKERS = Number(process.env.E2E_WORKERS) || (process.env.CI
+  ? 2
+  : Math.min(3, Math.max(2, Math.floor(cpus().length / 2))))
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 90_000,
+  // SwiftShader is slower than Metal, so give timing-sensitive CI tests more room.
+  timeout: process.env.CI ? 120_000 : 90_000,
   // Every test makes its own player and world, so tests spread across workers.
   fullyParallel: true,
   workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  reporter: process.env.CI
+    ? [['list'], ['blob', { outputDir: 'blob-report' }]]
+    : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   globalSetup: './e2e/global-setup.ts',
   use: {
     // 127.0.0.1, not localhost: page.request resolves the host in Node, and
