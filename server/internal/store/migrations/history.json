@@ -11,7 +11,7 @@
     "name": "003_loss_and_admission.sql",
     "sha256": "03d7c0295dcf81caa0c670dc1c4eabf3aeef2b5426981e309856c54b30bdb457",
     "backfill": "migration_003_backfill.go",
-    "backfillSha256": "1c1b7520f46b82cde03f8a76874336649b9a1bef091fbb1d3e32dbbe395ed15f"
+    "backfillSha256": "92a8281da70fae2c6d756cff1bb0b9864ced81408afca4dc99884859eacb162f"
   },
   {
     "name": "004_homestead_wilds.sql",

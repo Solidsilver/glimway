@@ -153,3 +153,30 @@ test('generated invite decoders preserve the original Go HTTP keys, zeros and nu
     assert.throws(() => parseInviteList({ ...list, partyWorld: value }), { code: 'bad-response' });
   }
 });
+
+
+test('invite decoders reject proto-name aliases at every boundary, including valid duplicate values', () => {
+  const created = fixture('invites').find((f: any) => f.method === 'POST').body;
+  const populated = fixture('invites').find((f: any) => f.name === 'populated').body;
+  for (const [alias, key] of [['created_at', 'createdAt'], ['expires_at', 'expiresAt']]) {
+    for (const value of ['NaN', 'Infinity', '-Infinity', null, created[key]]) {
+      for (const aliasFirst of [true, false]) {
+        const duplicate = aliasFirst ? { [alias]: value, ...created } : { ...created, [alias]: value };
+        assert.throws(() => parseCreatedInvite(duplicate), { code: 'bad-response' });
+        assert.throws(() => parseInviteList({ ...populated, invites: [{ ...populated.invites[0], [alias]: value }] }), { code: 'bad-response' });
+      }
+    }
+  }
+  for (const [alias, key] of [['outstanding_limit', 'outstandingLimit'], ['party_world', 'partyWorld'], ['party_admitted', 'partyAdmitted']]) {
+    for (const value of ['-4', null, populated[key]]) {
+      assert.throws(() => parseInviteList({ ...populated, [alias]: value }), { code: 'bad-response' });
+      assert.throws(() => parseInviteList({ [alias]: value, ...populated }), { code: 'bad-response' });
+    }
+  }
+  for (const key of ['remaining', 'outstandingLimit']) {
+    for (const value of [-1, 1.5, 2147483648, '0', null, Infinity, NaN]) {
+      assert.throws(() => parseInviteList({ ...populated, [key]: value }), { code: 'bad-response' });
+    }
+    assert.equal(parseInviteList({ ...populated, [key]: 2147483647 })[key as 'remaining' | 'outstandingLimit'], 2147483647);
+  }
+});

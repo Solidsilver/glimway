@@ -1,3 +1,8 @@
+// The item system core (docs/items/): instances with condition, fittings
+// and a maker; wear, breaking and blunting; mending at the bench or by a
+// mender; consumables; handing things over; pockets and the off hand; and
+// pickups lying in the world. Every change is a keyed mutation.
+
 package api
 
 import (

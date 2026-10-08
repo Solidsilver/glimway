@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"glimway/content"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/rules"
@@ -71,6 +72,7 @@ type stackAt struct{ location, owner string }
 
 func packOf(id string) stackAt { return stackAt{"pack", id} }
 
+// makerQty is one maker's share of a moved stack (the empty string is unmarked).
 type makerQty = itemmove.MakerQty
 
 func splitTotal(split []makerQty) int { return itemmove.SplitTotal(split) }
@@ -298,7 +300,7 @@ func decorationIDs(ctx context.Context, tx *sql.Tx, from holder, def string, n i
 }
 func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to holder) error {
 	err := itemmove.MoveDecorations(ctx, tx, ids, itemmove.DecorationPlace{Location: from.location, Player: from.player, Home: from.home}, itemmove.DecorationPlace{Location: to.location, Player: to.player, Home: to.home})
-	if err == itemmove.ErrUnavailable {
+	if errors.Is(err, itemmove.ErrUnavailable) {
 		return fail(409, "item-not-available")
 	}
 	return err
@@ -572,6 +574,7 @@ func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error
 	return home, nil
 }
 
+// ledgerKind is an asset's chest/mail ledger kind ("storage:<kind>:<id>").
 func ledgerKind(v content.Asset) string { return itemmove.Currency(v.Kind, v.ID) }
 
 // grantOnce gives one unmarked item unless the pack already holds one (the

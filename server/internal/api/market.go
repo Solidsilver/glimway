@@ -7,6 +7,8 @@ import (
 	"glimway/server/internal/store"
 )
 
+// ------------------------------------------------------------- the sellers
+
 // marketBuy buys a good from a seller: a named resident (Hazel's kitchen,
 // Finn's mill door) or a stall that stands on its festival day only (the
 // Carting Day market). You stand by them; the embers leave the pack; the

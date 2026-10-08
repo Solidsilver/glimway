@@ -6,6 +6,8 @@ import (
 	"glimway/server/internal/itemmove"
 )
 
+// ------------------------------------------------------------ wear
+
 func utcDay(now int64) int64 { return now / 86400 }
 
 // healWardens: warden-set tools heal overnight (the next calendar day / worn_day < utcDay(now))

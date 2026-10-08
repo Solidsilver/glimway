@@ -14,7 +14,7 @@
    * front, so the limit is never a surprise.
    */
   let invites = $state<InviteInfo[]>([])
-  /** Lifetime creations left (undefined until the server says). */
+  /** Lifetime creations left (undefined before the initial load). */
   let remaining = $state<number | undefined>(undefined)
   let outstandingLimit = $state(INVITE_LIMIT)
   /** You live in a party's world: it takes no codes (the server refuses them too). */
@@ -58,10 +58,10 @@
     try {
       const list = await api.listInvites()
       invites = list.invites
-      if (list.remaining !== undefined) remaining = list.remaining
-      if (list.outstandingLimit !== undefined) outstandingLimit = list.outstandingLimit
-      partyWorld = list.partyWorld === true
-      partyAdmitted = list.partyAdmitted === true
+      remaining = list.remaining
+      outstandingLimit = list.outstandingLimit
+      partyWorld = list.partyWorld
+      partyAdmitted = list.partyAdmitted
       loaded = true
     } catch (err) {
       error = explain(err)

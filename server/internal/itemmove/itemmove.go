@@ -12,6 +12,7 @@ import (
 
 var ErrUnavailable = errors.New("item unavailable")
 
+// MakerQty is one maker's share of a moved stack (the empty string is unmarked).
 type MakerQty struct {
 	Maker string `json:"maker"`
 	Qty   int    `json:"qty"`

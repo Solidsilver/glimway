@@ -3,10 +3,13 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"glimway/content"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 )
+
+// ------------------------------------------------------------ instances
 
 // instanceAt is where an instance lies: a pack, a chest or a parcel (owner:
 // the player or the home), or 'fitted' on a tool (owner: the tool's id).
@@ -123,7 +126,7 @@ func moveInstance(ctx context.Context, tx *sql.Tx, id, def string, from, to inst
 		rackedAt = now
 	}
 	err := itemmove.MoveInstance(ctx, tx, id, def, from.location, from.owner, to.location, to.owner, rackedAt)
-	if err == itemmove.ErrUnavailable {
+	if errors.Is(err, itemmove.ErrUnavailable) {
 		return fail(409, "item-not-available")
 	}
 	if err != nil {

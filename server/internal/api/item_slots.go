@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// ------------------------------------------------------------ position
+
 // near: the caller's last uploaded spot is in an area, within r tiles of a tile.
 // residentReachTiles: how near a named resident (Ada, Hazel) you stand to
 // hand them something or take something from them. The client offers the
@@ -30,6 +32,8 @@ func offHandOpen(s *store.Snapshot) (bool, *string) {
 	}
 	return true, s.ImportedProfile.Class
 }
+
+// ------------------------------------------------------------ pockets and the off hand
 
 func carriesGear(ctx context.Context, tx *sql.Tx, player string) (bool, error) {
 	ids := []string{}

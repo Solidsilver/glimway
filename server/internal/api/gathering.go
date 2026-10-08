@@ -12,6 +12,8 @@ import (
 	"slices"
 )
 
+// ------------------------------------------------------------ gathering & planting
+
 func gatherCaps(action string) (visit, day int) {
 	c := content.GatheringRules.Caps
 	switch action {

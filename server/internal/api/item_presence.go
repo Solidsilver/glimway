@@ -5,6 +5,8 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 )
 
+// ------------------------------------------------------------ presence
+
 // together: both players are connected in this world, in the same room, and
 // stood within radius px of each other when they last moved.
 func (h *presenceHub) together(world, a, b string, radius float64) bool {

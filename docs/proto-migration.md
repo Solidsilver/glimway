@@ -141,6 +141,16 @@ have migrated. HTTP remains JSON throughout.
   donations use RFC3339 strings. Copy those shapes. `google.protobuf.Timestamp`
   JSON may normalize fractional precision and timezone spelling; it is not a
   drop-in replacement for every existing string/time shape.
+- **HTTP decoder template:** use the invite adapter's sequence for later slices:
+  require the existing JSON keys and raw types (including zero/false/empty values),
+  reject known proto-name aliases such as `created_at` and `outstanding_limit`
+  even when the camelCase field is also present, decode with unknown future fields
+  ignored, then validate the **decoded** message before projecting application
+  types. Check finite times recursively, bounded integral int32 counts and
+  non-negative quotas, plus each domain's semantic rules. ProtoJSON accepts
+  aliases, numeric strings and non-finite strings; raw validation alone cannot
+  guarantee that the decoded values satisfy the HTTP contract. Cover both alias
+  key orders, nested aliases, malformed values and valid boundary values in tests.
 - **Compatibility:** HTTP readers ignore future fields but still validate known
   values. New clients keep unknown error codes as `unknown`. The server keeps a
   strict presence ingress, including unknown nested binary fields. Reserve a new

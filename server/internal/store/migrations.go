@@ -1,10 +1,8 @@
 package store
 
 import (
-	"crypto/sha256"
 	"database/sql"
 	"embed"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -48,39 +46,12 @@ func readMigrationHistory(source fs.FS) ([]migrationRecord, error) {
 	if len(history) != len(files) {
 		return nil, fmt.Errorf("migration history does not match SQL files")
 	}
-	usedBackfills := map[string]bool{}
+	// Startup checks only the bundle's names and count. Tests freeze deployed
+	// hashes and validate SQL/backfill contents and registration metadata.
 	for i, m := range history {
 		if m.Name != files[i][len("migrations/"):] {
 			return nil, fmt.Errorf("migration history entry %d has unexpected name %s", i, m.Name)
 		}
-		check := func(path, expected string) error {
-			b, err := fs.ReadFile(source, path)
-			if err != nil {
-				return err
-			}
-			digest := sha256.Sum256(b)
-			if hex.EncodeToString(digest[:]) != expected {
-				return fmt.Errorf("migration history checksum mismatch: %s", path)
-			}
-			return nil
-		}
-		if err = check("migrations/"+m.Name, m.SHA256); err != nil {
-			return nil, err
-		}
-		if m.Backfill != "" {
-			if migrationBackfills[m.Backfill] == nil || usedBackfills[m.Backfill] {
-				return nil, fmt.Errorf("unregistered or duplicate backfill: %s", m.Backfill)
-			}
-			if err = check(m.Backfill, m.BackfillSHA256); err != nil {
-				return nil, err
-			}
-			usedBackfills[m.Backfill] = true
-		} else if m.BackfillSHA256 != "" {
-			return nil, fmt.Errorf("backfill checksum without source: %s", m.Name)
-		}
-	}
-	if len(usedBackfills) != len(migrationBackfills) {
-		return nil, fmt.Errorf("migration history omits a registered backfill")
 	}
 	return history, nil
 }

@@ -1,3 +1,6 @@
+// DO NOT EDIT; hashed by migrations/history.json. Change behavior in a forward migration.
+// This historical backfill depends on rules.Profile, rules.LossReference and
+// rules.LifetimeXP; their JSON shape and XP formula also affect replaying 003.
 package store
 
 import (

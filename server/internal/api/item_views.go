@@ -99,6 +99,8 @@ func instancesAt(ctx context.Context, tx *sql.Tx, at instanceAt) ([]instanceView
 	return out, nil
 }
 
+// ------------------------------------------------------------ the view
+
 type stackView struct {
 	ItemDef string     `json:"itemDef"`
 	Qty     int        `json:"qty"`
@@ -237,6 +239,8 @@ func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (i
 	}
 	return v, rows.Err()
 }
+
+// ------------------------------------------------------------ endpoints
 
 func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 	tx, s, _, err := a.begin(r)

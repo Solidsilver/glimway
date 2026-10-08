@@ -50,6 +50,8 @@ func inviteFixtureResponse(t *testing.T, f inviteFixture) map[string]any {
 		for i := 0; i < rules.E.LifetimeInvites; i++ {
 			exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", fmt.Sprintf("%064x", i), "alice", s.WorldID, 0, 0, 1)
 		}
+	case "party-admitted-own-world":
+		exec("UPDATE allowlist SET added_by='party' WHERE habitica_id='alice'")
 	case "party":
 		exec("UPDATE worlds SET owner_id='' WHERE id=?", s.WorldID)
 		exec("UPDATE allowlist SET added_by='party' WHERE habitica_id='alice'")

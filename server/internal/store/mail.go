@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/itemmove"
@@ -95,7 +96,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 			} else {
 				err = itemmove.ReturnDecoration(ctx, tx, instance, sender, def)
 			}
-			if err == itemmove.ErrUnavailable {
+			if errors.Is(err, itemmove.ErrUnavailable) {
 				return false, fmt.Errorf("mail instance unavailable")
 			}
 			if err != nil {

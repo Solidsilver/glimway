@@ -61,6 +61,18 @@
     }
   },
   {
+    "name": "party-admitted-own-world",
+    "unix": 2200000000,
+    "method": "GET",
+    "body": {
+      "invites": [],
+      "outstandingLimit": 3,
+      "partyAdmitted": true,
+      "partyWorld": false,
+      "remaining": 5
+    }
+  },
+  {
     "name": "create",
     "unix": 2200000000,
     "method": "POST",

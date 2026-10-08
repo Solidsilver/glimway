@@ -64,7 +64,7 @@ The owner asked about protobuf for bandwidth, speed and shared FE/BE types.
   error codes the client didn't know and response fields parsed differently.
 - **Where it helps little or costs:** REST traffic is low-frequency and dominated by
   latency and SQLite commits; gzip already shrinks JSON well. Idempotent replays store
-  byte-identical JSON responses, progress is JSON in SQLite, and the parity vectors are
+  responses with the same JSON shape, progress is JSON in SQLite, and the parity vectors are
   JSON. JSON is readable in dev tools, logs and e2e tests. Protobuf adds a browser
   runtime and a codegen step for both sides.
 - **Suggested path if ever done:** (1) binary presence only, as protobuf or a tiny

@@ -1,3 +1,8 @@
+// Homesteads, second version (docs/hands-on-design.md section 1): each
+// homestead is a gate on the Commons lane and its own map of wild land. Any
+// number of players share one as equal members of its deed; a player belongs
+// to at most one (homestead_members' primary key).
+
 package api
 
 import (
