@@ -69,6 +69,11 @@ export default defineConfig({
     // under load a localhost lookup has stalled for seconds.
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1200, height: 760 },
+    // A click or fill waits for its element at most this long (Playwright's
+    // default is no limit): a button a late reply never draws then fails in
+    // seconds, naming the button, instead of hanging until the test's own
+    // timeout. waitForFunction takes its own timeout where it needs one.
+    actionTimeout: 30_000,
     trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
     video: 'off',
     screenshot: 'only-on-failure'
