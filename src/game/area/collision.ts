@@ -77,6 +77,8 @@ export function buildSolids(scene: Phaser.Scene, world: WorldData): Solids {
   if (world.well) addPropBody(world.well.tx, world.well.ty, 14, 10)
   if (world.mural) addPropBody(world.mural.tx, world.mural.ty, 16, 8)
   for (const n of world.npcs) addPropBody(n.tx, n.ty, 12, 8)
+  // A room's pieces: their bases only (src/game/room-kind.ts).
+  for (const b of world.bodies ?? []) addBlock(b.x + b.w / 2, b.y + b.h / 2, b.w, b.h)
   return { group, runs, props }
 }
 

@@ -4,7 +4,11 @@ import { ROOMS as ROOM_DATA, knownRoom, roomFor, roomParent, rootArea } from '..
 import { RESIDENTS, residentById } from '../src/lib/residents.ts';
 import { cycleAt, cycleSpotsNear } from '../src/lib/clock.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
-import { facingFor, groupsOf, residentSpotsIn, roomArrival } from '../src/game/room-kind.ts';
+import { baseBox, facingFor, groupsOf, residentSpotsIn, roomArrival, wallFacing, warmAt } from '../src/game/room-kind.ts';
+import { ROOM_DRESSING, canPlace, furnishing, FURNISHINGS } from '../src/lib/furnishings-stand-in.ts';
+import { pieceFoot, pieceFrame } from '../src/game/area/furnishings-art.ts';
+import { SEATED_MANA_BONUS, manaRegenRate } from '../src/game/seats.ts';
+import { residentAt } from '../src/lib/residents.ts';
 import { doorFor, residentPlace, residentIn, twoLegs } from '../src/game/resident-cycle.ts';
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../src/game/cottage.ts';
 import { landDoor } from '../src/game/homeland.ts';
@@ -46,9 +50,10 @@ test('props stand on their footprints: one rectangle per group of their letter, 
   const kitchen = buildArea('in:village:bakery');
   const table = kitchen.room!.props.find((p) => p.art === 'kitchen-worktable')!;
   assert.deepEqual({ tx: table.tx, ty: table.ty, tw: table.tw, th: table.th }, { tx: 3, ty: 4, tw: 4, th: 2 });
-  for (let y = table.ty; y < table.ty + table.th; y++) for (let x = table.tx; x < table.tx + table.tw; x++) assert.equal(kitchen.solid[y][x], true);
-  // The library's three tall shelves are three props.
-  assert.equal(buildArea('in:village:library').room!.props.filter((p) => p.art === 'library-shelves').length, 3);
+  // It blocks by its base (below), not its footprint's tiles.
+  assert.ok(kitchen.bodies!.some((b) => b.y + b.h === (table.ty + table.th) * TILE && b.x >= table.tx * TILE && b.x + b.w <= (table.tx + table.tw) * TILE));
+  // The library's four back-wall shelf units (one per section) are four props.
+  assert.equal(buildArea('in:village:library').room!.props.filter((p) => p.art === 'library-shelves').length, 4);
   // A letter that isn't a rectangle is refused.
   assert.throws(() => groupsOf({ ...roomFor('in:village:bakery')!, map: ['#####', '#aa.#', '#.a.#', '#####'] }, 'a'), /isn't a rectangle/);
   assert.throws(() => buildArea('in:village:nowhere'));
@@ -88,7 +93,7 @@ test('a doorway leads out to the doorstep on the parent, facing away from the do
   }
 });
 
-test('the mill’s stairs: up onto the loft beside its stairs down, and back down beside the stairs up', () => {
+test('the mill’s stairs run along its west wall; the loft’s opening is right above them; arrivals face on', () => {
   const mill = buildArea('in:village:mill');
   const loft = buildArea('in:village:mill:2');
   const up = mill.exits.find((e) => e.kind === 'stair')!;
@@ -96,16 +101,22 @@ test('the mill’s stairs: up onto the loft beside its stairs down, and back dow
   assert.equal(up.to, 'in:village:mill:2');
   assert.equal(down.to, 'in:village:mill');
   assert.equal(up.label, 'The sack loft');
+  // Along a wall (7.0 rule 5), and the opening directly over them.
+  assert.ok(up.tx === 1 || up.tx + up.tw === mill.width - 1, 'against a side wall');
+  assert.deepEqual([down.tx, down.ty, down.tw, down.th], [up.tx, up.ty, up.tw, up.th], 'the loft’s opening is over the stairs');
   const inside = (e: typeof up, t: { tx: number; ty: number }) => t.tx >= e.tx && t.tx < e.tx + e.tw && t.ty >= e.ty && t.ty < e.ty + e.th;
-  // Each arrival is open floor, beside (not on) the stair going back.
+  // Up: stepped onto from the south, you come out north of the opening, facing on (north).
+  assert.equal(up.side, 'south');
   assert.equal(loft.solid[up.entry.ty][up.entry.tx], false);
-  assert.ok(!inside(down, up.entry), 'arriving in the loft is off its stairs');
-  assert.equal(up.entry.tx, down.tx + down.tw, 'just east of the stairs down');
-  assert.deepEqual(facingFor({ side: up.side!, kind: up.kind }), { x: 1, y: 0 }, 'facing east, off the stairs');
-  assert.deepEqual(facingFor({ side: down.side!, kind: down.kind }), { x: -1, y: 0 }, 'facing west on the mill floor');
+  assert.ok(!inside(down, up.entry));
+  assert.equal(up.entry.ty, down.ty - 1, 'just north of the opening');
+  assert.deepEqual(facingFor({ side: up.side!, kind: up.kind }), { x: 0, y: -1 });
+  // Down: stepped onto from the north, you come out south of the stairs, facing on (south).
+  assert.equal(down.side, 'north');
   assert.equal(mill.solid[down.entry.ty][down.entry.tx], false);
-  assert.ok(!inside(up, down.entry), 'arriving on the mill floor is off its stairs');
-  assert.ok(Math.abs(down.entry.tx - up.tx) <= 1 && down.entry.ty >= up.ty && down.entry.ty < up.ty + up.th, 'beside the stairs up');
+  assert.ok(!inside(up, down.entry));
+  assert.equal(down.entry.ty, up.ty + up.th, 'just south of the stairs');
+  assert.deepEqual(facingFor({ side: down.side!, kind: down.kind }), { x: 0, y: 1 });
 });
 
 test('room ids: parents, roots, and what counts as a room', () => {
@@ -198,10 +209,10 @@ test('residents are placed at every spot they have in an area; the cycle says wh
 test('the walk at a change: to the doorway, the stairs, or the front door outside', () => {
   // Hazel leaving the kitchen for the square: out through the doorway.
   assert.deepEqual(doorFor('hazel', 'in:village:bakery', 'village'), { step: { tx: 6, ty: 8 }, door: { tx: 6, ty: 9 } });
-  // Finn going up to the loft: onto the stairs from the floor below them.
-  assert.deepEqual(doorFor('finn', 'in:village:mill', 'in:village:mill:2'), { step: { tx: 10, ty: 7 }, door: { tx: 10, ty: 6 } });
-  // ...and from the loft out to his door: down the stairs.
-  assert.deepEqual(doorFor('finn', 'in:village:mill:2', 'village')?.door, { tx: 2, ty: 5 });
+  // Finn going up to the loft: onto the stairs from their foot (their `side`).
+  assert.deepEqual(doorFor('finn', 'in:village:mill', 'in:village:mill:2'), { step: { tx: 1, ty: 6 }, door: { tx: 1, ty: 5 } });
+  // ...and from the loft out to his door: down through the opening, from its north side.
+  assert.deepEqual(doorFor('finn', 'in:village:mill:2', 'village'), { step: { tx: 1, ty: 3 }, door: { tx: 1, ty: 4 } });
   // Outside, Hazel comes and goes by her front door.
   assert.deepEqual(doorFor('hazel', 'village', 'in:village:bakery'), { step: { tx: 7, ty: 8 }, door: { tx: 7, ty: 7 } });
   // Two legs, across then up or down, ending on the target's feet.
@@ -219,8 +230,152 @@ test('a room is framed closer: its height fills most of the open screen, never b
   assert.equal(roomZoomFor(1280, 800, kitchen, none, 1), 4);
   // The canvas ratio scales it like the outdoor zoom.
   assert.equal(roomZoomFor(2560, 1600, kitchen, none, 2), 8);
-  // A phone keeps its outdoor framing (the room scrolls if it must).
-  assert.equal(roomZoomFor(390, 844, kitchen, none, 1), zoomFor(390, 844));
+  // A phone shows the whole room, all four walls, in what the interface leaves open
+  // (zoomed out a little from its outdoor 2×: 14 tiles are 448 px at 2×).
+  for (const [w, h, insets] of [[390, 844, none], [390, 844, { top: 150, right: 0, bottom: 170, left: 0 }], [844, 390, { top: 0, right: 120, bottom: 0, left: 0 }], [360, 640, none]] as const) {
+    for (const room of ROOMS.map((d) => buildArea(d.id))) {
+      const z = roomZoomFor(w, h, room, insets, 1);
+      assert.ok(z * room.widthPx <= w - insets.left - insets.right, `${room.areaId} fits ${w}×${h} across (${z})`);
+      assert.ok(z * room.heightPx <= h - insets.top - insets.bottom, `${room.areaId} fits ${w}×${h} down (${z})`);
+    }
+  }
+  assert.equal(roomZoomFor(390, 844, kitchen, none, 1), 1.5);
   // Never past the top zoom.
   assert.ok(roomZoomFor(4000, 3000, kitchen, none, 1) <= 5);
+});
+
+// ------------------------------------------------------------ the hearth
+
+test('standing at the kitchen’s hearth warms you like a seat: the seated mana bonus, no seat, no HP', () => {
+  const kitchen = buildArea('in:village:bakery');
+  const spot = kitchen.room!.def.spots['kitchen-hearth']!;
+  // On the apron in front of it, where the action button reaches.
+  assert.ok(warmAt(kitchen, (spot.tx + 0.5) * TILE, (spot.ty + 1.5) * TILE));
+  // Across the room, or out in the village: no.
+  assert.ok(!warmAt(kitchen, 2 * TILE, 8 * TILE));
+  assert.ok(!warmAt(buildArea('village'), 7 * TILE, 3 * TILE));
+  const plain = manaRegenRate({ seated: false, warm: false, rest: 0 });
+  assert.equal(manaRegenRate({ seated: false, warm: true, rest: 0 }), plain + SEATED_MANA_BONUS);
+  assert.equal(manaRegenRate({ seated: false, warm: true, rest: 0 }), manaRegenRate({ seated: true, warm: false, rest: 0 }), 'the same as sitting');
+  assert.equal(manaRegenRate({ seated: true, warm: true, rest: 0 }), plain + SEATED_MANA_BONUS, 'never twice');
+});
+
+test('residentPlace is the shared loader’s place, with the phase’s spot and end', () => {
+  for (const id of ['hazel', 'finn', 'ada']) for (const m of [0, 21, 44, 50, 59]) {
+    const p = residentPlace(id, at(m))!;
+    assert.deepEqual({ area: p.area, tx: p.tx, ty: p.ty }, residentAt(id, at(m)));
+  }
+  assert.equal(residentPlace('nobody', at(0)), null);
+});
+
+// ------------------------------------------------------------ furnishings: bases, dressing, drawing
+
+type Box = { x: number; y: number; w: number; h: number };
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/** The hero's foot box (px; the body that collides). */
+const HERO = { w: 10, h: 4 };
+
+test('pieces block by their base, never their picture: their footprints are open floor, and you walk behind tall ones', () => {
+  for (const def of ROOMS) {
+    const w = buildArea(def.id);
+    const bodies = w.bodies ?? [];
+    const solidTile = (b: Box) => {
+      for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h - 0.01) / TILE); y++)
+        for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w - 0.01) / TILE); x++) if (w.solid[y]?.[x] !== false) return true;
+      return false;
+    };
+    const solidProps = w.room!.props.filter((p) => p.solid);
+    assert.equal(bodies.length, solidProps.length, `${def.id}: one body per piece; the dressing never blocks`);
+    for (const f of solidProps) {
+      const base = baseBox(f);
+      // The base lies inside the footprint, on its bottom edge.
+      assert.ok(base.x >= f.tx * TILE && base.x + base.w <= (f.tx + f.tw) * TILE, `${def.id} ${f.art}: base within the footprint across`);
+      assert.equal(base.y + base.h, (f.ty + f.th) * TILE, `${def.id} ${f.art}: base on the footprint's bottom edge`);
+      // Footprint tiles below the back wall aren't solid tiles: only the base blocks.
+      for (let y = Math.max(2, f.ty); y < f.ty + f.th; y++) for (let x = f.tx; x < f.tx + f.tw; x++) assert.equal(w.solid[y][x], false, `${def.id} ${f.art}: ${x},${y} is open`);
+      // Right up to its sides: the hero's feet beside the base touch nothing of it.
+      for (const x of [base.x - HERO.w, base.x + base.w]) assert.ok(!overlaps({ x, y: base.y + base.h - HERO.h, ...HERO }, base));
+      // Behind a tall piece (its footprint rises above its base, onto floor): free to stand there.
+      const behind = { x: base.x + base.w / 2 - HERO.w / 2, y: base.y - HERO.h - 0.5, ...HERO };
+      if (behind.y >= 2 * TILE && behind.y >= f.ty * TILE) {
+        assert.ok(!bodies.some((b) => overlaps(behind, b)) && !solidTile(behind), `${def.id} ${f.art}: you can stand behind it`);
+      }
+    }
+  }
+  // The millstones: a 2×2 footprint, but you can walk up into its back row.
+  const mill = buildArea('in:village:mill');
+  const stones = mill.room!.props.find((p) => p.art === 'millstones')!;
+  assert.ok(baseBox(stones).h < stones.th * TILE);
+});
+
+test('the dressing: kit pieces by id, each where 2.8’s rule lets it go, on open ground or the back wall', () => {
+  for (const def of ROOMS) {
+    const list = ROOM_DRESSING[def.id] ?? [];
+    const propChars = new Set(def.props.map((p) => p.char));
+    list.forEach((p, i) => {
+      const piece = furnishing(p.piece);
+      assert.ok(piece, `${def.id}: ${p.piece} is in the catalogue`);
+      if (p.parent !== undefined) {
+        assert.ok(p.parent < i, `${def.id}: ${p.piece} comes after the piece it stands on`);
+        const parent = furnishing(list[p.parent]!.piece)!;
+        assert.ok(canPlace(piece!, parent), `${def.id}: ${p.piece} may stand on ${parent.id}`);
+        return;
+      }
+      const [tw, th] = piece!.footprint;
+      for (let y = p.ty; y < p.ty + th; y++)
+        for (let x = p.tx; x < p.tx + tw; x++) {
+          const c = def.map[y]![x]!;
+          if (piece!.mount === 'wall') assert.ok(y === 1 && (c === '=' || c === 'w'), `${def.id}: ${p.piece} hangs on the back wall (${x},${y} "${c}")`);
+          else assert.ok('.:@'.includes(c) && !propChars.has(c), `${def.id}: ${p.piece} stands on open floor (${x},${y} "${c}")`);
+        }
+      assert.ok(canPlace(piece!, piece!.mount === 'wall' ? 'wall' : 'floor'));
+    });
+  }
+  // The rule's table: small on any surface, medium on a big enough top, large only on the floor, rugs and wall pieces in their places.
+  const table = furnishing('small-table')!;
+  assert.ok(canPlace(furnishing('candle')!, table));
+  assert.ok(canPlace(furnishing('lamp')!, table));
+  assert.ok(!canPlace(furnishing('lamp')!, furnishing('crate')!), 'a crate’s top is one slot: too small for a lamp');
+  assert.ok(!canPlace(furnishing('chest')!, table));
+  assert.ok(!canPlace(furnishing('rug-rag')!, table));
+  assert.ok(!canPlace(furnishing('picture')!, 'floor') && canPlace(furnishing('picture')!, 'wall'));
+  // Every catalogue piece's base fits its footprint.
+  for (const piece of FURNISHINGS) assert.ok(piece.base[0] <= piece.footprint[0] * TILE && piece.base[1] <= piece.footprint[1] * TILE, piece.id);
+});
+
+test('drawing furnishings: a piece on another stands on its surface, in its slot, just in front; side-on art mirrors', () => {
+  const table = furnishing('small-table')!;
+  const drawnTable = { piece: table, foot: { x: 104, y: 80 }, depth: 80, facing: 'front' as const, state: null, sprite: null as never };
+  const left = pieceFoot(furnishing('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 0 });
+  const right = pieceFoot(furnishing('candle')!, { tx: 0, ty: 0, parent: drawnTable, slot: 1 });
+  assert.equal(left.y, 80 - table.offers!.top!.height, 'on the top');
+  assert.ok(left.x < 104 && right.x > 104, 'two slots, left and right of the middle');
+  assert.ok(left.depth > 80 && left.depth < 81, 'just in front of the table');
+  // A rug lies under everything; a wall piece hangs on the back wall.
+  assert.ok(pieceFoot(furnishing('rug-rag')!, { tx: 5, ty: 6 }).depth < 0);
+  assert.equal(pieceFoot(furnishing('picture')!, { tx: 3, ty: 1 }).y, 2 * TILE - 3);
+  // Facing: the art for it, the other side mirrored, else the front.
+  const sideOn = { ...table, art: { front: 'f', left: 'l' } };
+  assert.deepEqual(pieceFrame(sideOn, 'left', null, 0), { frame: 'l', flipX: false });
+  assert.deepEqual(pieceFrame(sideOn, 'right', null, 0), { frame: 'l', flipX: true });
+  assert.deepEqual(pieceFrame(sideOn, 'diag', null, 0), { frame: 'f', flipX: false });
+  // A state picks its frames; with none asked, the default state's.
+  const oven = furnishing('kitchen-hearth')!;
+  assert.equal(pieceFrame(oven, 'front', 'banked', 0).frame, 'oven-hearth-fire-0');
+});
+
+test('the library as revised: shelves on the back and both side walls (side-on), a section each, the nook a seat, no donation shelf', () => {
+  const lib = buildArea('in:village:library');
+  const sides = lib.room!.props.filter((p) => p.art === 'library-side-shelves');
+  assert.deepEqual(sides.map((f) => wallFacing(lib, f)).sort(), ['left', 'right'], 'each faces into the room');
+  assert.equal(lib.room!.props.filter((p) => p.art === 'library-shelves').length, 4, 'four back-wall units, one per section');
+  assert.ok(!lib.room!.props.some((p) => p.art === 'donation-shelf' || p.art === 'window-seat'));
+  const spots = Object.keys(lib.room!.def.spots);
+  for (const id of ['library-shelf', 'shelf-histories', 'shelf-recipes', 'shelf-field-notes', 'reading-table', 'reading-lamp', 'reading-nook']) assert.ok(spots.includes(id), id);
+  // The nook sits in its corner alcove against the east wall.
+  const nook = lib.room!.props.find((p) => p.art === 'reading-nook')!;
+  assert.equal(nook.tx + nook.tw, lib.width - 1);
+  assert.ok(furnishing('reading-nook')!.tags!.includes('seat'));
+  // Back-wall pieces face front.
+  for (const f of lib.room!.props.filter((p) => p.art === 'library-shelves')) assert.equal(wallFacing(lib, f), 'front');
 });

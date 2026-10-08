@@ -192,7 +192,12 @@ export interface GoalDirPayload {
 /** The library panel, opened from the reading room: on its shelves, the donations, or the reader on the paper you last read. */
 export interface LibraryOpenPayload {
   focus?: 'shelf' | 'donate' | 'read'
+  /** The shelves' section (docs/design/indoors.md 3.3): the panel opens on papers of that kind (none of it: the whole collection). */
+  section?: LibrarySection
 }
+
+/** The reading room's four sections, painted on their shelves' signs. */
+export type LibrarySection = 'stories' | 'histories' | 'recipes' | 'field-notes'
 
 export interface DialoguePayload {
   id: string

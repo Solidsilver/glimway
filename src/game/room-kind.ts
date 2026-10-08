@@ -14,6 +14,7 @@ import { roomFootprints, roomFor, type Room, type RoomDoor } from '../lib/rooms.
 import { RESIDENTS } from '../lib/residents.ts'
 import { TERRAIN, TILE } from '../lib/tile.ts'
 import { buildRoom, parseHomeRoom } from './cottage.ts'
+import { furnishing } from '../lib/furnishings-stand-in.ts'
 import { landDoor } from './homeland.ts'
 import type { AreaKind, ExitDef, NpcId, NpcSpot, WorldData } from './worlds.ts'
 
@@ -84,7 +85,8 @@ export function residentSpotsIn(area: string): NpcSpot[] {
 function exitFor(def: Room, door: RoomDoor): ExitDef {
   const [g] = groupsOf(def, door.at)
   if (!g) throw new Error(`[glimway] room ${def.id}: door ${door.id} has no "${door.at}" tiles`)
-  const label = door.kind === 'stair' ? (roomFor(door.to)?.name ?? null) : undefined
+  // A stair names the floor it reaches; a doorway shows its chevron alone (the HUD already names the room).
+  const label = door.kind === 'stair' ? (roomFor(door.to)?.name ?? null) : ''
   return { ...g, to: door.to, entry: { ...door.entry }, side: door.side, kind: door.kind, ...(label === undefined ? {} : { label }) }
 }
 
@@ -104,9 +106,10 @@ export function buildRoomArea(def: Room): WorldData {
       if (c === '@') arrive = { tx: x, ty: y }
       const prop = propChars.get(c)
       if (!prop && !GROUND.has(c)) throw new Error(`[glimway] room ${def.id}: "${c}" at ${x},${y} is in no legend or prop`)
-      // Props stand on the floor (a back-wall row's prop on the wall).
+      // Props stand on the floor (a back-wall row's prop on the wall). Only
+      // walls are solid tiles: a piece blocks by its base (`bodies`, below).
       g.push(WALLS.has(c) || (prop && y <= 1) ? TERRAIN.planks_dark : c === ':' ? TERRAIN.cobble : TERRAIN.planks)
-      s.push(WALLS.has(c) || (prop ? prop.solid : false))
+      s.push(WALLS.has(c) || (!!prop && y <= 1))
     }
     ground.push(g)
     solid.push(s)
@@ -137,8 +140,21 @@ export function buildRoomArea(def: Room): WorldData {
     villageLantern: null,
     emberSpots: [],
     spawn: { ...arrive },
-    room
+    room,
+    bodies: props.filter((p) => p.solid).map(baseBox)
   }
+}
+
+/**
+ * Where a piece touches the floor (7.0 rule 4): its catalogue base box,
+ * centred on the footprint's bottom edge (a piece the catalogue doesn't
+ * know: its footprint, a little inset, at most a tile deep). Tall pieces
+ * rise above it, and the hero walks behind them by draw order.
+ */
+export function baseBox(f: Footprint): { x: number; y: number; w: number; h: number } {
+  const [w, h] = furnishing(f.art)?.base ?? [f.tw * TILE - 4, Math.min(f.th * TILE, TILE) - 4]
+  const bottom = (f.ty + f.th) * TILE
+  return { x: (f.tx + f.tw / 2) * TILE - w / 2, y: bottom - h, w, h }
 }
 
 /** The area kind for an `in:` id (null for any other id, or a room this build doesn't know). */
@@ -160,4 +176,31 @@ export function roomArrival(id: string): { tx: number; ty: number } | null {
     if (x >= 0) return { tx: x, ty: y }
   }
   return null
+}
+
+/** A room's hearths: the spots that warm whoever stands at them (the kitchen's oven). */
+const HEARTH_SPOTS = new Set(['kitchen-hearth'])
+/** How near the hero's feet must be: the action button's reach (./entities/interactables.ts). */
+const HEARTH_REACH = 34
+
+/**
+ * Standing at a room's hearth (docs/design/indoors.md 3.1, "Warm your
+ * hands"): the hero's feet within reach of its spot, where the action
+ * button would warm them. The hero takes the seated mana bonus there.
+ */
+export function warmAt(world: WorldData, x: number, y: number): boolean {
+  const spots = world.room?.def.spots
+  if (!spots) return false
+  return Object.entries(spots).some(([id, s]) => HEARTH_SPOTS.has(id) && Math.hypot(x - (s.tx + 0.5) * TILE, y - ((s.ty + 1) * TILE - 4)) < HEARTH_REACH)
+}
+
+/**
+ * Which way a piece faces by where it stands (7.0 rule 1): a narrow piece
+ * against a side wall is side-on, facing into the room; anything else
+ * faces front.
+ */
+export function wallFacing(world: Pick<WorldData, 'width'>, f: Footprint): 'front' | 'left' | 'right' {
+  if (f.tw === 1 && f.th > 1 && f.tx === 1) return 'right'
+  if (f.tw === 1 && f.th > 1 && f.tx + f.tw === world.width - 1) return 'left'
+  return 'front'
 }

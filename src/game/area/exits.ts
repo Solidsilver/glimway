@@ -44,6 +44,8 @@ export function buildExitSigns(scene: Phaser.Scene, world: WorldData, reducedMot
       scene.tweens.add({ targets: chevron, x: x + dx, y: y + dy, alpha: 0.45, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     }
     // Destination label: high-resolution text so it stays crisp at zoom.
+    // An empty label: the chevron alone (a room's doorway: out is out, and the HUD names the room).
+    if (exit.label === '') continue
     const name = exit.label ?? exitName(exit.to)
     // A stair names the floor it climbs to (`…:2`) or comes down to.
     const text = stair ? (/:\d+$/.test(exit.to) ? `▴ ${name}` : `▾ ${name}`) : edge === 'west' ? `◂ ${name}` : edge === 'east' ? `${name} ▸` : edge === 'north' ? `▴ ${name}` : `${name} ▾`

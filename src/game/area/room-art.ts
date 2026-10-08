@@ -1,56 +1,27 @@
 /**
- * Area construction — a village room's look (docs/design/indoors.md 2.7):
- * the indoors pass's floors, back wall and windows, doorway and stairs, the
- * furniture on its footprints (./room-kind.ts), the loft's roof beams over
- * everything; the side and near walls and the dark wood beyond them drawn
- * in code. Lighting, cheaply: a warm pool per `lights` row (a code-made
- * radial texture, additive, a hearth flickering) and a dark vignette at the
- * room's edges. No lighting engine, no day and night.
- *
- * Any frame that didn't load draws as the kit's placeholder: a plain box of
- * the footprint's size.
+ * Area construction — a village room's look (docs/design/indoors.md 2.7,
+ * 7.0): the indoors pass's floors, back wall and windows, doorway and
+ * stairs; the room's furnishings (./furnishings-art.ts): its signature
+ * pieces on their footprints (./room-kind.ts) and its dressing from the
+ * shared kit; the loft's roof beams over everything; the side and near
+ * walls and the dark wood beyond them drawn in code. Lighting, cheaply: a
+ * warm pool per `lights` row (a code-made radial texture, additive) and a
+ * dark vignette at the room's edges. No lighting engine, no day and night.
+ * Everything is still unless a state says otherwise (a working machine) or
+ * the current quest points at it (its light flickers).
  */
 import Phaser from 'phaser'
 import { TILE, tileBottom, tileMid } from '../../lib/tile'
 import { layoutHash01 } from '../../lib/hash'
-import { hasInArt, inArt } from '../indoors-art'
-import type { Footprint, RoomScene } from '../room-kind'
+import { FLOOR_VARIANTS, hasInArt, inArt } from '../indoors-art'
+import { wallFacing, type Footprint, type RoomScene } from '../room-kind'
+import { furnishing, ROOM_DRESSING, type Furnishing } from '../../lib/furnishings-stand-in'
+import { drawPiece, setPieceState, type DrawnPiece } from './furnishings-art'
 import type { RoomLight } from '../../lib/rooms'
 import type { WorldData } from '../worlds'
 
 /** The dark wood beyond a room's walls (the camera's backdrop indoors). */
 export const ROOM_SURROUND = 0x22160f
-
-/**
- * A prop's art: its frame, the loop it plays, and the frames of its states
- * (the sponge risen, the hoist mended, the shelves' fill, the lamp lit).
- */
-interface PropArt {
-  frame: string
-  anim?: string
-  states?: Record<string, string>
-  /** Variants picked per footprint (the sacks). */
-  variants?: string[]
-}
-
-const PROP_ART: Readonly<Record<string, PropArt>> = {
-  'kitchen-hearth': { frame: 'oven-hearth-fire-0', anim: 'oven-hearth-fire' },
-  'kitchen-crocks': { frame: 'crock-shelves' },
-  'kitchen-tallow-pot': { frame: 'tallow-pot-steam-0', anim: 'tallow-steam' },
-  'kitchen-worktable': { frame: 'worktable' },
-  'kitchen-sponge-bowl': { frame: 'sponge-bowl-flat', states: { risen: 'sponge-bowl-risen' } },
-  'kitchen-bread-rack': { frame: 'bread-rack' },
-  'mill-gears': { frame: 'gear-train-0', anim: 'gear-train' },
-  millstones: { frame: 'millstones-0', anim: 'millstones' },
-  'mill-chute': { frame: 'chute-meal-bin-0' },
-  'flour-sacks': { frame: 'flour-sacks-0', variants: ['flour-sacks-0', 'flour-sacks-1'] },
-  'counting-stool': { frame: 'counting-stool-window' },
-  'mill-hoist': { frame: 'sack-hoist-seized', states: { working: 'sack-hoist-working' } },
-  'library-shelves': { frame: 'library-shelf-1', states: { sparse: 'library-shelf-0', half: 'library-shelf-1', full: 'library-shelf-2' } },
-  'reading-table': { frame: 'reading-table-unlit', states: { lit: 'reading-table-lit' } },
-  'donation-shelf': { frame: 'donation-shelf-0', states: { sparse: 'donation-shelf-0', half: 'donation-shelf-1', full: 'donation-shelf-2' } },
-  'window-seat': { frame: 'window-seat' }
-}
 
 /** Light pools by kind: colour, strength, and how much they breathe. */
 const LIGHTS: Readonly<Record<RoomLight['kind'], { tint: number; alpha: number; flicker: number }>> = {
@@ -59,30 +30,32 @@ const LIGHTS: Readonly<Record<RoomLight['kind'], { tint: number; alpha: number; 
   window: { tint: 0xc8dcff, alpha: 0.18, flicker: 0 }
 }
 
-/**
- * A floor tile's variant: mostly the plain boards, the stained one (1) now
- * and then, so the floor never reads as a checkerboard.
- */
-function floorVariant(r: number): number {
-  return r < 0.45 ? 0 : r < 0.7 ? 2 : r < 0.94 ? 3 : 1
-}
-
 /** What the room layer asks the game while drawing (which state a prop is in, which lights burn). */
 export interface RoomArtDeps {
-  /** A prop's state by its art name (null: its first frame). */
-  propState: (art: string) => string | null
+  /**
+   * A signature piece's state, from what has happened (Hazel home: the oven
+   * lit; the hoist greased: working; null: its default).
+   */
+  propState: (f: Footprint) => string | null
+  /**
+   * Whether the current quest points at a piece (a spot on it or just in
+   * front of it): only then does its light flicker.
+   */
+  pointed: (f: Footprint) => boolean
   /** Whether a light row burns now (a banked hearth: dimmed; an unlit lamp: out). */
-  lit: (kind: RoomLight['kind']) => boolean
+  lit: (light: RoomLight) => boolean
   reducedMotion: boolean
 }
 
 export interface RoomArt {
-  /** The props drawn, by art name (a state change swaps their frame). */
-  props: Map<string, Phaser.GameObjects.Sprite[]>
-  /** The same sprites in the order of the room's footprints. */
+  /** The signature pieces drawn, in the order of the room's footprints. */
+  pieces: (DrawnPiece | null)[]
+  /** The same pieces' sprites (null where the catalogue doesn't know the art: a placeholder box). */
   sprites: Phaser.GameObjects.Sprite[]
+  /** The dressing, in the order of the room's dressing list. */
+  dressing: DrawnPiece[]
   /** The light pools (dimmed when their light goes out). */
-  lights: { kind: RoomLight['kind']; image: Phaser.GameObjects.Image; alpha: number }[]
+  lights: { kind: RoomLight['kind']; light: RoomLight; image: Phaser.GameObjects.Image; alpha: number }[]
   /** Redraw what follows the game's state (a prop's state, a light). */
   refresh(): void
 }
@@ -181,7 +154,9 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
       const c = map[y][x]
       if (c === '#' || c === '=' || c === 'w') continue
       if (y === 1) continue // a back-wall prop: the wall is behind it
-      const frame = `${c === ':' ? 'flagstone' : 'plank'}-floor-${floorVariant(layoutHash01(x, y, 21))}`
+      const family = c === ':' ? 'flagstone' : 'plank'
+      const variants = FLOOR_VARIANTS[family]
+      const frame = `${family}-floor-${variants[Math.floor(layoutHash01(x, y, 21) * variants.length)]}`
       if (hasInArt(scene, frame)) scene.add.image(x * TILE, y * TILE, inArt(frame)).setOrigin(0, 0).setDepth(-9)
     }
   // The back wall: two tiles tall from its foot on row 1, windows letting in daylight.
@@ -192,17 +167,22 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
   drawWalls(scene, world, room)
   if (room.doorway) placeProp(scene, room.doorway, 'doorway', tileBottom(room.doorway.ty))
   for (const s of room.stairs) placeProp(scene, s, s.art, -6)
-  const props = new Map<string, Phaser.GameObjects.Sprite[]>()
+  // The signature pieces, each by its catalogue entry (a piece the catalogue doesn't know: a box).
+  const pieces: (DrawnPiece | null)[] = []
   const sprites: Phaser.GameObjects.Sprite[] = []
   for (const f of room.props) {
-    const art = PROP_ART[f.art]
-    const frame = art?.variants ? art.variants[Math.floor(layoutHash01(f.tx, f.ty, 23) * art.variants.length)] : art?.frame ?? f.art
-    const sprite = placeProp(scene, f, frame, tileBottom(f.ty + f.th - 1))
-    if (art?.anim && !deps.reducedMotion && scene.anims.exists(inArt(art.anim))) sprite.play({ key: inArt(art.anim), startFrame: Math.floor(layoutHash01(f.tx, f.ty, 24) * 3) })
-    sprites.push(sprite)
-    const list = props.get(f.art) ?? []
-    list.push(sprite)
-    props.set(f.art, list)
+    const piece = furnishing(f.art)
+    const drawn = piece ? drawPiece(scene, piece, { tx: f.tx, ty: f.ty, facing: wallFacing(world, f) }) : null
+    pieces.push(drawn)
+    sprites.push(drawn?.sprite ?? placeProp(scene, f, f.art, tileBottom(f.ty + f.th - 1)))
+  }
+  // The dressing (7.0 rule 3): the shared kit, placed by id; never blocks.
+  const dressing: DrawnPiece[] = []
+  for (const p of ROOM_DRESSING[room.def.id] ?? []) {
+    const piece: Furnishing | null = furnishing(p.piece)
+    if (!piece) continue
+    const parent = p.parent !== undefined ? dressing[p.parent] : undefined
+    dressing.push(drawPiece(scene, piece, { tx: p.tx, ty: p.ty, facing: p.facing, parent, slot: p.slot }))
   }
   // The loft's roof beams cross its top, over everyone.
   if (/:\d+$/.test(room.def.id) && hasInArt(scene, 'loft-roof-beams')) {
@@ -213,13 +193,21 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
   const glow = lightTexture(scene)
   for (const l of room.def.lights) {
     const look = LIGHTS[l.kind]
+    // The piece a light belongs to (the oven's fire, the reading lamp's table): it flickers only while pointed at.
+    const owner = room.props.find((f) => l.tx >= f.tx && l.tx < f.tx + f.tw && l.ty >= f.ty && l.ty < f.ty + f.th)
     const size = l.r * TILE * 2
     const image = scene.add.image(tileMid(l.tx), tileMid(l.ty), glow).setDisplaySize(size, size).setTint(look.tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(5100).setAlpha(look.alpha)
-    lights.push({ kind: l.kind, image, alpha: look.alpha })
+    lights.push({ kind: l.kind, light: l, image, alpha: look.alpha })
     if (look.flicker > 0 && !deps.reducedMotion) {
       const flick = () => {
         if (!image.active) return
-        const on = deps.lit(l.kind) ? look.alpha : look.alpha * 0.3
+        const on = deps.lit(l) ? look.alpha : look.alpha * 0.3
+        // Still unless the quest points at its piece: look again in a second.
+        if (!owner || !deps.pointed(owner)) {
+          image.setAlpha(on)
+          scene.time.delayedCall(1000, flick)
+          return
+        }
         scene.tweens.add({ targets: image, alpha: on * (1 - look.flicker + Math.random() * look.flicker * 2), duration: 140 + Math.random() * 220, onComplete: flick })
       }
       flick()
@@ -228,20 +216,19 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
   const pad = TILE * 2
   scene.add.image(world.widthPx / 2, world.heightPx / 2, vignetteTexture(scene)).setDisplaySize(world.widthPx + pad * 2, world.heightPx + pad * 2).setDepth(5300)
   const art: RoomArt = {
-    props,
+    pieces,
     sprites,
+    dressing,
     lights,
     refresh() {
-      for (const [name, sprites] of props) {
-        const states = PROP_ART[name]?.states
-        if (!states) continue
-        const state = deps.propState(name)
-        const frame = (state && states[state]) || PROP_ART[name].frame
-        for (const s of sprites) if (hasInArt(scene, frame) && s.texture.key !== inArt(frame)) s.setTexture(inArt(frame))
-      }
-      for (const l of lights) if (!scene.tweens.isTweening(l.image)) l.image.setAlpha(deps.lit(l.kind) ? l.alpha : l.alpha * 0.3)
+      // States follow what has happened; only a state's own slow loop moves.
+      room.props.forEach((f, i) => {
+        const d = pieces[i]
+        if (d) setPieceState(scene, d, deps.propState(f), deps.reducedMotion)
+      })
+      for (const l of lights) if (!scene.tweens.isTweening(l.image)) l.image.setAlpha(deps.lit(l.light) ? l.alpha : l.alpha * 0.3)
       // A lamp with no oil is out; a banked hearth only glows low.
-      for (const l of lights) l.image.setVisible(l.kind !== 'lamp' || deps.lit(l.kind))
+      for (const l of lights) l.image.setVisible(l.kind !== 'lamp' || deps.lit(l.light))
     }
   }
   art.refresh()
