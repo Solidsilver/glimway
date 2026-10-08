@@ -188,8 +188,8 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
    `E2E_PORT=5231 npx playwright test e2e/x.spec.ts -g "title" --repeat-each=5 --workers=5`.
    Add `--workers=1` to see whether it only fails under load.
 2. Open the trace: `npx playwright show-trace test-results/<test>/trace.zip`
-   (kept for every failure). The actions and network tabs show which step
-   waited, and for how long.
+   (local failures keep traces; CI records only the first retry). The actions
+   and network tabs show which step waited, and for how long.
 3. The worker's server log is `.e2e-server/latest/w<N>/server.log`
    (`server.json` in the same folder has its ports).
 4. Look for a wall-clock assumption: a fixed pause, a `{ timeout }` on

@@ -46,16 +46,15 @@ export default defineConfig({
   fullyParallel: true,
   workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI
-    ? [['list'], ['blob', { outputDir: 'blob-report' }]]
-    : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   globalSetup: './e2e/global-setup.ts',
   use: {
     // 127.0.0.1, not localhost: page.request resolves the host in Node, and
     // under load a localhost lookup has stalled for seconds.
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1200, height: 760 },
-    trace: 'retain-on-failure',
+    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
+    video: 'off',
     screenshot: 'only-on-failure'
   },
   projects: [
