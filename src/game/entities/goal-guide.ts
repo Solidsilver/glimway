@@ -4,19 +4,28 @@
  * sits on the screen's edge in its direction, inside the part of the
  * screen the interface leaves open (src/game/viewport.ts).
  *
- * In the goal's own area the guide points at the goal itself (Mara, the
- * route stone, the warden, the shrine lantern). Anywhere else it points at
- * the way out that leads toward it, by the road's areas: Hearthwick sits
- * between Brackenwood and the Commons, and Brackenwood leads to the ruin.
+ * What it points at is the pinned quest's or guide's next step, else the
+ * road's current quest's (src/game/guide-pin.ts goalTarget): a step's
+ * `where` (docs/design/indoors.md 5.5). In the goal's own area the guide
+ * points at the goal itself (Mara, the route stone, the warden, the sponge
+ * bowl). Anywhere else it points at the way out that leads toward it, by
+ * the road's areas: Hearthwick sits between Brackenwood and the Commons,
+ * Brackenwood leads to the ruin, and each room opens off its parent (the
+ * mill loft is two steps from the square). A resident's place is the
+ * cycle's: the needle points at the mill door while Finn is in.
  */
 import Phaser from 'phaser'
 import { bus, EV, type GoalDirPayload } from '../events'
 import { TILE } from '../../lib/tile'
 import { canvasRatio, playInsets } from '../viewport'
-import type { QuestStage } from '../../lib/state'
 import type { WorldData } from '../worlds'
 import type { GuideWhere } from '../../content/guides'
 import { expose } from '../dev-hooks'
+import type { GoalTarget } from '../guide-pin'
+import type { QuestWhere } from '../../lib/quests'
+import { gameNow } from '../clock'
+import { ROOMS, roomParent } from '../../lib/rooms'
+import { residentAt } from '../../lib/residents'
 
 /**
  * The places and the ways between them. Homesteads are by whose they are:
@@ -35,6 +44,13 @@ const ROAD: Record<string, string[]> = {
   wilds: ['commons']
 }
 
+// Every room opens off its parent (a floor off the floor below).
+for (const { id } of ROOMS.rooms) {
+  const parent = roomParent(id)
+  ROAD[id] = [parent]
+  ROAD[parent] = [...(ROAD[parent] ?? []), id]
+}
+
 /** Where each "How do I…?" step's place is (src/content/guides.ts GuideWhere). */
 const WHERE_PLACE: Record<GuideWhere, string> = {
   silas: 'commons',
@@ -44,15 +60,6 @@ const WHERE_PLACE: Record<GuideWhere, string> = {
   bench: 'cottage',
   hearth: 'cottage',
   wilds: 'wilds'
-}
-
-/** Each stage's goal: the area, and what to point at there (an NPC, an interactable, or the warden). */
-const GOALS: Partial<Record<QuestStage, { area: string; npc?: string; spot?: string; warden?: boolean }>> = {
-  new: { area: 'village', npc: 'mara' },
-  accepted: { area: 'ruin', spot: 'clue' },
-  'clue-found': { area: 'ruin', warden: true, spot: 'clue' },
-  'guardian-defeated': { area: 'ruin', spot: 'lantern' },
-  'lantern-lit': { area: 'village', npc: 'mara' }
 }
 
 /** Steps from `from` to `to` over the road (Infinity when there's no way). */
@@ -78,8 +85,8 @@ function steps(from: string, to: string): number {
 
 export interface GoalGuideDeps {
   world: WorldData
-  /** The quest stage now. */
-  stage: () => QuestStage
+  /** What to head for: a pinned guide's step, or a quest step's `where` (null: nothing). */
+  goal: () => GoalTarget | null
   /** Live positions: an NPC's sprite, an interactable, the warden (null when absent). */
   npcAt: (id: string) => { x: number; y: number } | null
   spotAt: (id: string) => { x: number; y: number } | null
@@ -87,8 +94,6 @@ export interface GoalGuideDeps {
   /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
   placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
   guidePoint: (where: GuideWhere) => { x: number; y: number } | null
-  /** The pinned guide's current step (null: none pinned, or it's done): the needle follows it instead of the story. */
-  pinnedStep: () => { where: GuideWhere | null } | null
   reducedMotion: boolean
 }
 
@@ -123,16 +128,29 @@ export class GoalGuide {
 
   /** The point to head for now, in world px, and whether it's the goal itself. */
   target(): { x: number; y: number; here: boolean } | null {
-    const step = this.deps.pinnedStep()
-    if (step) return step.where ? this.towardGuide(step.where) : null
-    const goal = GOALS[this.deps.stage()]
+    const goal = this.deps.goal()
     if (!goal) return null
-    const area = this.deps.world.areaId
-    if (area === goal.area) {
-      const p = (goal.warden ? this.deps.wardenAt() : null) ?? (goal.npc ? this.deps.npcAt(goal.npc) : null) ?? (goal.spot ? this.deps.spotAt(goal.spot) : null)
+    if (goal.kind === 'guide') return goal.where ? this.towardGuide(goal.where) : null
+    return this.towardQuest(goal.where)
+  }
+
+  /** A quest step's `where`: the person, spot or enemy when it's here, else the way toward its area. */
+  private towardQuest(where: QuestWhere): { x: number; y: number; here: boolean } | null {
+    if (where.ui) return null // the journal: the book button glows instead
+    // TODO(B): serverNow() once the server-time offset lands.
+    const resident = where.npc ? residentAt(where.npc, gameNow()) : null
+    const area = where.area ?? resident?.area
+    if (!area) return null
+    if (String(this.deps.world.areaId) === area) {
+      const p =
+        // The warden, or its route stone while it isn't standing up to be settled.
+        (where.enemy === 'stone-warden' ? this.deps.wardenAt() ?? this.deps.spotAt('clue') : null) ??
+        (where.npc ? this.deps.npcAt(where.npc) : null) ??
+        (where.spot ? this.deps.spotAt(where.spot) : null) ??
+        (resident ? { x: (resident.tx + 0.5) * TILE, y: (resident.ty + 0.5) * TILE } : null)
       return p ? { ...p, here: true } : null
     }
-    return this.wayToward(goal.area)
+    return this.wayToward(area)
   }
 
   /** A pinned guide's step: its point when it's here, else the way toward its place. */

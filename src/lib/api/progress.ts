@@ -17,7 +17,7 @@ export const QUEST_ITEMS: readonly string[] = ['field-journal', 'hearthwick-map'
 /** Whether a state carries progress worth migrating (vs a brand-new journey). */
 export function hasProgress(state: GameState): boolean {
   return (
-    state.quest !== 'new' ||
+    Object.keys(state.quests).length > 0 ||
     state.embers > 0 ||
     state.discoveries.length > 0 ||
     state.defeatedEnemies.length > 0 ||

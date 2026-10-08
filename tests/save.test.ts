@@ -16,11 +16,11 @@ import {
   MAX_IMPORT_LENGTH,
 } from '../src/lib/save.ts';
 import {
-  advanceQuest,
   createNewGame,
   InvalidSaveError,
   type GameState,
 } from '../src/lib/state.ts';
+import { road } from './helpers/quests.ts';
 
 const DB_NAME = 'fingersnap';
 const STORE_NAME = 'saves';
@@ -38,7 +38,7 @@ test('loadGame returns null when no save exists', async () => {
 
 test('saveGame then loadGame round-trips state', async () => {
   setup();
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   await saveGame(state);
   const loaded = await loadGame();
   assert.deepEqual(loaded, state);
@@ -46,7 +46,7 @@ test('saveGame then loadGame round-trips state', async () => {
 
 test('state survives a close and reopen (reload simulation)', async () => {
   setup();
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   await saveGame(state);
   assert.deepEqual(await loadGame(), state);
   assert.deepEqual(await loadGame(), state);
@@ -63,7 +63,7 @@ test('saveGame rejects invalid state and writes nothing', async () => {
 
 test('exportSave strips credentials and wraps a portable document', async () => {
   setup();
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   const dirty = {
     ...state,
     token: 'habitica-user-token-abc123',
@@ -88,7 +88,7 @@ test('importSave accepts exported documents and bare states', () => {
 });
 
 test('importSave round-trips through export', () => {
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   assert.deepEqual(importSave(exportSave(state)), state);
 });
 
@@ -165,7 +165,7 @@ test('queued writes: later save wins over an earlier slow one', async () => {
 
 test('queued writes: load issued after save observes the saved data', async () => {
   setup();
-  const state = advanceQuest(createNewGame(), 'accept');
+  const state = road(createNewGame(), 'accept');
   const saving = saveGame(state);
   const loading = loadGame();
   await saving;

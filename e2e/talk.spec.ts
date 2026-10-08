@@ -21,7 +21,7 @@ async function talk(page: Page, who: RegExp, opts: { pick?: RegExp } = {}): Prom
 
 test('a story is told once; then a greeting, the choices and "Hear it again"', async ({ page }) => {
   await freshPlayer(page)
-  const pipNew = dialogueFor('pip', 'new').lines
+  const pipNew = dialogueFor('pip', { signpost: 'light-first-lamp' }).lines
   await warp(page, 'village', 28, 16)
 
   // First talk: everything Pip has to say.
@@ -53,9 +53,9 @@ test('a quest step plays in full; the new stage’s lines play in full the first
   await warp(page, 'village', 16, 14)
   // Mara's first talk moves the quest: always in full.
   const first = await talk(page, /Talk to Mara/)
-  expect(first.slice(0, 3)).toEqual(dialogueFor('mara', 'new').lines)
+  expect(first.slice(0, 3)).toEqual(dialogueFor('mara', { signpost: 'light-first-lamp' }).lines)
   // The next stage: her new lines, in full, once.
-  expect(await talk(page, /Talk to Mara/)).toEqual(dialogueFor('mara', 'accepted').lines)
+  expect(await talk(page, /Talk to Mara/)).toEqual(dialogueFor('mara', { signpost: 'light-first-lamp', 'lantern-road': 'accepted' }).lines)
   await waitForLive(page)
   await openTalk(page, /Talk to Mara/)
   await untilChoices(page)

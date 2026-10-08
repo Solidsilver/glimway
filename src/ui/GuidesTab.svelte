@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Session } from '../game/session'
-  import { guideContext, pinned, setPinned } from '../game/guide-pin'
+  import { guideContext, pinnedGuide, setPinned } from '../game/guide-pin'
   import { allGuides } from '../lib/guides'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
@@ -24,19 +24,20 @@
     void ui.goalLine
     return allGuides(guideContext(session))
   })
-  // The pin follows the game (a finished guide unpins itself while this page is open).
-  let pinnedId = $state(pinned.id)
+  // The pin follows the game (a finished guide unpins itself while this page is open;
+  // pinning a quest unpins the guide).
+  let pinnedId = $state(pinnedGuide())
   $effect(() => {
-    const onPin = (p: { id: string | null }) => (pinnedId = p.id)
+    const onPin = (p: { id: string | null }) => (pinnedId = p.id?.startsWith('guide:') ? p.id.slice(6) : null)
     bus.on(EV.guidePin, onPin)
     return () => {
       bus.off(EV.guidePin, onPin)
     }
   })
-  let open = $state<string | null>(pinned.id)
+  let open = $state<string | null>(pinnedGuide())
 
   function togglePin(id: string): void {
-    setPinned(pinnedId === id ? null : id)
+    setPinned(pinnedId === id ? null : `guide:${id}`)
   }
 </script>
 

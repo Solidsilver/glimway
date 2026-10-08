@@ -20,6 +20,7 @@ import { grantPaper } from './papers.ts'
 import { calendarFind } from '../lib/wilds/stories.ts'
 import { homesteadsFor } from './homestead.ts'
 import type { Session } from './session.ts'
+import { roadStep } from '../lib/quests.ts'
 
 export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
 
@@ -62,7 +63,7 @@ export class Village {
     bus.on(EV.villageOpen, (p) => {
       if (current?.village !== this || p.panel !== 'board') return
       const s = this.session.state
-      const paper = calendarFind('board', { flags: s.flags, late: s.quest === 'complete', mark: null })
+      const paper = calendarFind('board', { flags: s.flags, late: roadStep(s) === 'complete', mark: null })
       if (paper) grantPaper(this.session, paper)
     })
     this.calendar = calendarAt(this.now())

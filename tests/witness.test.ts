@@ -38,8 +38,8 @@ test('the journal says "you were there", in voice and short, without naming whos
   // Never the Echo's owner: that is the settler's to learn.
   for (const e of entries) for (const echo of ECHOES) assert.ok(!e.body.includes(echo.name.split(' ')[0]), echo.name);
   // And they join the journal (not before, with no flags).
-  assert.equal(journalEntries('new', flags).filter((e) => e.title === witnessCopy.journalTitle).length, 3);
-  assert.equal(journalEntries('new', []).filter((e) => e.title === witnessCopy.journalTitle).length, 0);
+  assert.equal(journalEntries({}, flags).filter((e) => e.title === witnessCopy.journalTitle).length, 3);
+  assert.equal(journalEntries({}, []).filter((e) => e.title === witnessCopy.journalTitle).length, 0);
   const samples: string[] = [witnessCopy.wardenRises, witnessCopy.wardenFloat, witnessCopy.journalTitle];
   for (const name of ['Olive', LONG, '']) {
     for (const b of ['warden', 'lantern', 'echo:nan'] as const) samples.push(witnessMoment(b, name));

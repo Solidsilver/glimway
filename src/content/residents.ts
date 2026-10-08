@@ -224,6 +224,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
     intro: [
       'There you are. Pip has told me all about you, twice, at a run. I’m Hazel Penhallow. The bakery’s the one with the basket out front.',
       'Take a twist. No, take it. Anyone working for the village gets fed. Mara does soup and I do bread, and between us nobody wilts.',
+      '…and if you’ve a minute after, I’ve a sponge that wants feeding.',
     ],
     stages: {
       new: ['Mara will have a job for you. She always does. Go on, then. Come back hungry.'],

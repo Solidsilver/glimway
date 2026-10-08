@@ -70,8 +70,8 @@ import {
 import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
 import { GoalGuide } from '../entities/goal-guide'
 import { heldNow } from '../held'
-import { pinnedProgress } from '../guide-pin'
-import type { GuideWhere } from '../../content/guides'
+import { goalTarget } from '../guide-pin'
+import { QUEST_ACTION } from '../../content/quests/index.ts'
 import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
@@ -464,7 +464,7 @@ export class WorldScene extends Phaser.Scene {
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
-      stage: () => this.session.questStage,
+      goal: () => goalTarget(this.session),
       npcAt: (id) => {
         const n = this.npcs.npcs.find((x) => x.id === id)
         return n ? { x: n.sprite.x, y: n.sprite.y - 8 } : null
@@ -479,7 +479,6 @@ export class WorldScene extends Phaser.Scene {
       },
       placeKind: () => this.homesteads?.placeKind ?? null,
       guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
-      pinnedStep: () => this.guideStep(),
       reducedMotion: this.reducedMotion
     })
     // Passing thoughts above the hero (flavour lines; cleans up on shutdown).
@@ -657,18 +656,6 @@ export class WorldScene extends Phaser.Scene {
     return toRegionPosition(chunk.cx, chunk.cy, x, y)
   }
 
-  /** The pinned guide's current step, re-read twice a second (it reads the item and home models). */
-  private guideStepAt = -1
-  private guideStepCache: { where: GuideWhere | null } | null = null
-  private guideStep(): { where: GuideWhere | null } | null {
-    const now = this.time.now
-    if (now - this.guideStepAt < 500 && this.guideStepAt >= 0) return this.guideStepCache
-    this.guideStepAt = now
-    const p = pinnedProgress(this.session)
-    this.guideStepCache = p && !p.done && !p.locked && p.current !== null ? { where: p.steps[p.current].where } : null
-    return this.guideStepCache
-  }
-
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {
     return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
@@ -762,7 +749,13 @@ export class WorldScene extends Phaser.Scene {
   private onDialogueClosed(payload: DialogueClosedPayload): void {
     uiState.dialogueOpen = false
     uiState.blockedUntil = performance.now() + 220
-    if (payload?.action) this.actions.apply(payload.action)
+    // A quest step's offer (`quest:<quest>:<step>`) or talk (`<quest>:<step>`) is the session's.
+    if (payload?.action?.startsWith(QUEST_ACTION)) void this.session.reachRef(payload.action.slice(QUEST_ACTION.length))
+    else if (payload?.action) this.actions.apply(payload.action)
+    if (payload?.event?.includes(':')) {
+      void this.session.reachRef(payload.event)
+      return
+    }
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
     // The clue is journaled under the shared content id (advanceQuest also

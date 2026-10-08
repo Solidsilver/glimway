@@ -12,7 +12,8 @@ import {
 } from '../src/lib/habitica/sync.ts';
 import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
 import { FIXTURES_BY_KEY, gearLookupFor } from '../src/lib/habitica/fixtures.ts';
-import { advanceQuest, createNewGame } from '../src/lib/state.ts';
+import { createNewGame } from '../src/lib/state.ts';
+import { road } from './helpers/quests.ts';
 import type { SyncedSave } from '../src/lib/habitica/sync.ts';
 import type { HabiticaProfile } from '../src/lib/habitica/types.ts';
 
@@ -22,11 +23,11 @@ function profileFrom(key: keyof typeof FIXTURES_BY_KEY): HabiticaProfile {
 }
 
 function storyState() {
-  return advanceQuest(advanceQuest(createNewGame(), 'accept'), 'find-clue');
+  return road(createNewGame(), "accept", "find-clue");
 }
 
 test('applyImportedProfile: first import replaces demo vitals at the village', () => {
-  const base = advanceQuest(createNewGame(), 'accept');
+  const base = road(createNewGame(), 'accept');
   const profile = profileFrom('lowHp');
   const result = applyImportedProfile(base, profile);
 
@@ -35,7 +36,7 @@ test('applyImportedProfile: first import replaces demo vitals at the village', (
   assert.equal(result.state.maxHp, 50);
   assert.equal(result.state.mana, 22);
   assert.equal(result.state.maxMana, profile.maxMp);
-  assert.equal(result.state.quest, 'accepted');
+  assert.equal(result.state.quests["lantern-road"], 'accepted');
   assert.deepEqual(result.state.inventory, base.inventory);
   assert.deepEqual(result.importedProfile, profile);
 });
@@ -254,7 +255,7 @@ test('resolveDefeatRecovery: demo rule is full recovery in the village', () => {
   assert.equal(result.state.area, 'village');
   assert.equal(result.state.hp, result.state.maxHp);
   assert.equal(result.state.mana, result.state.maxMana);
-  assert.equal(result.state.quest, 'clue-found');
+  assert.equal(result.state.quests["lantern-road"], 'clue-found');
 });
 
 test('resolveDefeatRecovery: imported capped by last imported HP/MP', () => {

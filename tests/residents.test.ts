@@ -73,19 +73,19 @@ test('meeting flags carry the stage and round-trip', () => {
 
 test('a resident’s journal entry joins the notes after the stage you met them at', () => {
   const flags = [metFlag('hazel', 'new'), metFlag('elara', 'clue-found'), 'met:nobody@new', 'met:finn@nonsense'];
-  const titles = journalEntries('complete', flags).map((e) => e.title);
+  const titles = journalEntries({ 'lantern-road': 'complete' }, flags).map((e) => e.title);
   const at = (t: string) => titles.indexOf(t);
   assert.ok(at('Hazel Penhallow') > at('Arrival in Hearthwick') && at('Hazel Penhallow') < at("Mara's Request"));
   assert.ok(at('Elara Quill') > at('The Closure Mark') && at('Elara Quill') < at('The Warden Settled'));
   assert.equal(at('Finn Tolley'), -1, 'an unknown stage never shows');
   // Not met yet: nothing about them.
-  assert.ok(!journalEntries('complete').some((e) => e.title === 'Ada Cooley'));
+  assert.ok(!journalEntries({ 'lantern-road': 'complete' }).some((e) => e.title === 'Ada Cooley'));
   // Met at a later stage than the journal has reached: not yet.
-  assert.ok(!journalEntries('new', flags).some((e) => e.title === 'Elara Quill'));
+  assert.ok(!journalEntries({}, flags).some((e) => e.title === 'Elara Quill'));
   // Stable for older callers, and never duplicated.
-  assert.deepEqual(journalEntries('new'), journalEntries('new', []));
+  assert.deepEqual(journalEntries({}), journalEntries({}, []));
   assert.equal(residentJournal([metFlag('ada', 'new'), metFlag('ada', 'new')], 'new').length, 1);
-  const quest = new Set(journalEntries('complete').map((e) => e.title));
+  const quest = new Set(journalEntries({ 'lantern-road': 'complete' }).map((e) => e.title));
   for (const e of allResidentJournal()) {
     assert.ok(!quest.has(e.title), e.title);
     assert.ok(e.body.length > 40 && e.body.length < 320, e.title);

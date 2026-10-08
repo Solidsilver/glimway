@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { emptyRecord, idbOutboxStore, memoryOutboxStore } from '../src/lib/api/outbox.ts';
 import { TxIDB } from './helpers/fake-idb-tx.ts';
 import { env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts } from './helpers/link-rig.ts';
+import { roadStep } from '../src/lib/quests.ts';
 
 /**
  * Review round 1, findings 1, 2, 9 and 10: who may write the outbox, when a
@@ -167,11 +168,11 @@ test('a fall whose write fails is taken back whole; a chain keeps only what was 
   assert.equal(await r.link.fall(), null);
   assert.deepEqual([r.session.state.area, r.session.state.hp, r.link.reports.next.boundary], ['woodland', 0, null]);
   store.fail = (op, rec) => op === 'save' && (rec?.entries.length ?? 0) > 1;
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   await tick();
-  r.link.questStep('find-clue');
+  r.link.questStep('lantern-road', 'clue-found');
   await tick();
-  assert.equal(r.session.state.quest, 'accepted', 'the second step wasn’t stored, so it isn’t shown');
+  assert.equal(roadStep(r.session.state), 'accepted', 'the second step wasn’t stored, so it isn’t shown');
   assert.deepEqual(r.link.outbox.map((e) => JSON.parse(e.body).to), ['accepted']);
 });
 
@@ -200,7 +201,7 @@ test('a failed refusal-removal write is retried; the next page never replays the
   await online(r);
   r.server.on('POST /api/quest/step', refuse('not-next-step', S({ version: 2 })));
   store.fail = (op, rec) => op === 'save' && (rec?.entries.length ?? 1) === 0;
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.equal((await store.load('fixture-account', 'dev'))!.entries.length, 1, 'not durable yet');

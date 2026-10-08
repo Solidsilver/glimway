@@ -2,6 +2,7 @@ import { knownRoom } from './rooms.ts';
 // Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
 export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
 
+/** The lantern road's step reached (`'new'` before it starts): what the game's older reads follow. */
 export type QuestStage =
   | 'new'
   | 'accepted'
@@ -10,6 +11,7 @@ export type QuestStage =
   | 'lantern-lit'
   | 'complete';
 
+/** The lantern road's five events, as the scene still fires them (src/lib/quests.ts ROAD_EVENT_STEP). */
 export type QuestEvent =
   | 'accept'
   | 'find-clue'
@@ -21,7 +23,13 @@ export interface GameState {
   version: 1;
   area: AreaId;
   position: { x: number; y: number };
-  quest: QuestStage;
+  /** Quest id → the step reached (src/lib/quests.ts). No entry: not started. */
+  quests: Record<string, string>;
+  /**
+   * The server's (and the predictor's): when each quest last reached a gated
+   * step, or its first (Unix seconds). Waits count from it.
+   */
+  questGateAt?: Record<string, number>;
   hp: number;
   maxHp: number;
   mana: number;
@@ -112,7 +120,7 @@ export function createNewGame(): GameState {
     version: SAVE_VERSION,
     area: 'village',
     position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
-    quest: 'new',
+    quests: {},
     hp: DEFAULT_HP,
     maxHp: DEFAULT_MAX_HP,
     mana: DEFAULT_MANA,
@@ -190,6 +198,39 @@ function describe(value: unknown): string {
   return `${typeof value} ${String(value)}`;
 }
 
+const QUEST_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * The quest record: `quests` (id → step reached). A save from before the
+ * quest tree (`quest`, the lantern road's stage) loads as that road's
+ * record, with the opening counted done, as migration 029 does on the server.
+ */
+function validateQuests(data: Record<string, unknown>): Record<string, string> {
+  if (data.quests === undefined && typeof data.quest === 'string') {
+    if (!(QUEST_STAGES as readonly string[]).includes(data.quest)) {
+      throw new InvalidSaveError(`expected one of ${QUEST_STAGES.map((s) => JSON.stringify(s)).join(', ')}, got ${describe(data.quest)}`, 'quest');
+    }
+    return data.quest === 'new' ? {} : { 'lantern-road': data.quest, signpost: 'light-first-lamp' };
+  }
+  if (!isPlainObject(data.quests)) {
+    throw new InvalidSaveError(`expected an object of quest steps, got ${describe(data.quests)}`, 'quests');
+  }
+  const out: Record<string, string> = {};
+  for (const [id, step] of Object.entries(data.quests)) {
+    if (!QUEST_ID_RE.test(id) || typeof step !== 'string' || !QUEST_ID_RE.test(step)) {
+      throw new InvalidSaveError(`expected a kebab-case step id, got ${describe(step)}`, `quests.${id}`);
+    }
+    out[id] = step;
+  }
+  return out;
+}
+
+function numberMap(value: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(value)) if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  return out;
+}
+
 /**
  * Validates unknown data as a GameState. Throws InvalidSaveError with a
  * descriptive message and field path when the data is invalid. Unknown fields
@@ -226,15 +267,8 @@ export function validateSave(data: unknown): GameState {
   const x = requireFiniteNumber(data.position.x, 'position.x');
   const y = requireFiniteNumber(data.position.y, 'position.y');
 
-  if (
-    typeof data.quest !== 'string' ||
-    !(QUEST_STAGES as readonly string[]).includes(data.quest)
-  ) {
-    throw new InvalidSaveError(
-      `expected one of ${QUEST_STAGES.map((s) => JSON.stringify(s)).join(', ')}, got ${describe(data.quest)}`,
-      'quest',
-    );
-  }
+  const quests = validateQuests(data);
+  const questGateAt = isPlainObject(data.questGateAt) ? numberMap(data.questGateAt) : undefined;
 
   const maxHp = requireFiniteNumber(data.maxHp, 'maxHp', { min: 1 });
   const hp = requireFiniteNumber(data.hp, 'hp', { min: 0, max: maxHp });
@@ -277,7 +311,8 @@ export function validateSave(data: unknown): GameState {
     version: SAVE_VERSION,
     area: data.area as AreaId,
     position: { x, y },
-    quest: data.quest as QuestStage,
+    quests,
+    ...(questGateAt ? { questGateAt } : {}),
     hp,
     maxHp,
     mana,
@@ -293,125 +328,9 @@ export function validateSave(data: unknown): GameState {
   };
 }
 
-interface QuestTransition {
-  from: QuestStage;
-  to: QuestStage;
-  apply: (state: GameState) => GameState;
-}
-
-function addUnique(list: string[], item: string): string[] {
-  return list.includes(item) ? [...list] : [...list, item];
-}
-
-const TRANSITIONS: Record<QuestEvent, QuestTransition> = {
-  accept: {
-    from: 'new',
-    to: 'accepted',
-    apply: (state) => ({ ...state, quest: 'accepted' }),
-  },
-  'find-clue': {
-    from: 'accepted',
-    to: 'clue-found',
-    apply: (state) => ({
-      ...state,
-      quest: 'clue-found',
-      inventory: addUnique(state.inventory, 'lantern-route-rubbing'),
-      discoveries: addUnique(state.discoveries, 'old-route-marker'),
-    }),
-  },
-  'defeat-guardian': {
-    from: 'clue-found',
-    to: 'guardian-defeated',
-    apply: (state) => ({
-      ...state,
-      quest: 'guardian-defeated',
-      inventory: addUnique(state.inventory, 'warden-seal'),
-      defeatedEnemies: addUnique(state.defeatedEnemies, 'stone-warden'),
-    }),
-  },
-  'light-lantern': {
-    from: 'guardian-defeated',
-    to: 'lantern-lit',
-    apply: (state) => ({
-      ...state,
-      quest: 'lantern-lit',
-      discoveries: addUnique(state.discoveries, 'hilltop-lantern'),
-    }),
-  },
-  'return-village': {
-    from: 'lantern-lit',
-    to: 'complete',
-    apply: (state) => ({
-      ...state,
-      quest: 'complete',
-      discoveries: addUnique(state.discoveries, 'lantern-road-restored'),
-    }),
-  },
-};
-
-/**
- * Applies a quest event immutably. Only the legal next event for the current
- * stage is accepted; anything else throws with a descriptive error. Returns a
- * new state object; the input is never mutated.
- */
-export function advanceQuest(state: GameState, event: QuestEvent): GameState {
-  const current = validateSave(state);
-
-  if (typeof event !== 'string' || !(QUEST_EVENTS as readonly string[]).includes(event)) {
-    throw new InvalidSaveError(
-      `unknown quest event ${describe(event)} (expected one of ${QUEST_EVENTS.map((e) => JSON.stringify(e)).join(', ')})`,
-    );
-  }
-
-  const transition = TRANSITIONS[event];
-  if (current.quest !== transition.from) {
-    throw new InvalidSaveError(
-      `illegal quest transition: event ${JSON.stringify(event)} requires stage ${JSON.stringify(transition.from)}, but the game is at ${JSON.stringify(current.quest)}`,
-    );
-  }
-
-  return transition.apply(current);
-}
-
-const OBJECTIVES: Record<QuestStage, string> = {
-  new: 'Speak with Mara in the Hearthwick square about the dark lantern road.',
-  accepted: 'Leave by the east gate, cross Brackenwood, and copy the naming cut on the route stone in Ashwatch Ruin.',
-  'clue-found': 'Settle the stone warden: when it stops after a lunge, get close and speak the naming.',
-  'guardian-defeated': 'Light the hilltop lantern at the old shrine.',
-  'lantern-lit': 'Return to Mara in Hearthwick and tell her the light is back.',
-  complete:
-    'The lantern road glows again. Explore Hearthwick, Brackenwood, and the ruin at your own pace.',
-};
-
-/**
- * The goal in a few words, for the HUD's one line and the quest ribbon
- * (40 characters at most). The journal keeps the full objective.
- */
-const SHORT_GOALS: Record<QuestStage, string> = {
-  new: 'Find Mara in the village square',
-  accepted: 'Copy the route stone in Ashwatch Ruin',
-  'clue-found': 'Settle the stone warden',
-  'guardian-defeated': 'Light the lantern at the shrine',
-  'lantern-lit': 'Tell Mara the light is back',
-  complete: 'The road is lit. Wander as you like',
-};
-
-export function questShortGoal(stage: QuestStage): string {
-  return SHORT_GOALS[stage] ?? OBJECTIVES[stage] ?? '';
-}
-
-export function questObjective(stage: QuestStage): string {
-  if (typeof stage !== 'string' || !(QUEST_STAGES as readonly string[]).includes(stage)) {
-    throw new InvalidSaveError(
-      `unknown quest stage ${describe(stage)} (expected one of ${QUEST_STAGES.map((s) => JSON.stringify(s)).join(', ')})`,
-    );
-  }
-  return OBJECTIVES[stage];
-}
-
 /**
  * The guest (demo vitals) defeat rule: the player returns to the Hearthwick
- * spawn and recovers full demo health and mana. Quest stage, inventory,
+ * spawn and recovers full demo health and mana. Quests, inventory,
  * discoveries, defeated enemies, and play time are kept, so story progress
  * survives defeat. Imported vitals go through resolveDefeatRecovery
  * (src/lib/habitica/sync.ts), which caps them; see docs/runtime-contract.md.

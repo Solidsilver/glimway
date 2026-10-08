@@ -5,34 +5,32 @@
  * Rules from the demo design:
  * - Damage, position, and enemy defeats persist across reloads. A reload must
  *   never act as a heal: vitals decreases schedule an immediate save.
- * - Quest transitions are gated against the expected source stage before
- *   calling advanceQuest, because the shared logic rejects illegal or
- *   repeated transitions.
+ * - Quest steps (src/lib/quests.ts) are taken only when they are the next
+ *   step of their quest, and a gated step only once its gate holds as far as
+ *   the client can tell: the server checks it again.
  * - Save failures surface to the interface, not only to the console.
  */
 import { parseHomeRoom } from './cottage.ts'
 import { profileFor } from '../lib/profile.ts'
 import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
-import { advanceQuest, questObjective, questShortGoal } from '../lib/state.ts'
+import { autoSteps, checkGate, needsServer, parseRef, questById, reachStep, roadStep, ROAD_EVENT_STEP, LANTERN_ROAD, stepsBy, type GateContext, type GateResult, type NeedsContext, type QuestRecord } from '../lib/quests.ts'
+import { roadGoal } from '../content/quests/index.ts'
+import { questErrorText } from '../content/errors.ts'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types.ts'
 import { resolveDefeatRecovery } from '../lib/habitica/sync.ts'
-import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers.ts'
+import { checkSpend, grantEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers.ts'
 import { saveCurrent, saveGame } from '../lib/save.ts'
-import { bus, EV, type StatsPayload, type ToastPayload } from './events.ts'
-import type { Link } from './link.ts'
-import { DEFEATED, FOUND, isClientMark } from '../lib/api/predict.ts'
+import { bus, EV, type StatsPayload } from './events.ts'
+import type { Link, QuestStepOutcome } from './link.ts'
+import { DEFEATED, FOUND, isClientMark, placeArea } from '../lib/api/predict.ts'
+import { itemsFor } from './items.ts'
+import { gameNow } from './clock.ts'
 import { displayArea } from '../content/world.ts'
 import { foundPapers, paperFlag } from '../content/papers.ts'
 import { announcePaper } from './papers.ts'
 
-/** advanceQuest is only called when the current stage matches this gate. */
-const QUEST_GATE: Record<QuestEvent, QuestStage> = {
-  accept: 'new',
-  'find-clue': 'accepted',
-  'defeat-guardian': 'clue-found',
-  'light-lantern': 'guardian-defeated',
-  'return-village': 'lantern-lit'
-}
+/** A quest step that didn't happen: null when it did (or queued), else why not. */
+export type ReachOutcome = QuestStepOutcome | 'not-next' | Exclude<GateResult, { ok: true }>['why']
 
 export class Session {
   state: GameState
@@ -163,36 +161,132 @@ export class Session {
     }
   }
 
+  /** The lantern road's step (`'new'` before it starts): what the scene's older reads follow. */
   get questStage(): QuestStage {
-    return this.state.quest
+    return roadStep(this.state)
+  }
+
+  /** Quest id → the step reached. */
+  get quests(): QuestRecord {
+    return this.state.quests
+  }
+
+  /** What `needs` can see: a connected Habitica hero. */
+  get needs(): NeedsContext {
+    return { habitica: this.vitalsSource === 'imported' && !!this.importedProfile }
+  }
+
+  /** What a gate on `quest` can see now (the server checks the same again). */
+  gateContext(quest: string): GateContext {
+    return {
+      // TODO(B): serverNow() from game/clock.ts once the server-time offset lands.
+      now: gameNow(),
+      area: placeArea(this.state),
+      embers: this.state.embers,
+      carrying: (def) => this.carrying(def),
+      gateAt: this.state.questGateAt?.[quest],
+      online: this.link ? this.link.online : true
+    }
+  }
+
+  /** How many of an item you carry: a server stack, or a keepsake in the pack. */
+  carrying(def: string): number {
+    const stack = this.link ? itemsFor(this).view?.stacks.find((s) => s.itemDef === def) : undefined
+    return (stack?.qty ?? 0) + (this.state.inventory.includes(def) ? 1 : 0)
+  }
+
+  /** The lantern road's scene events (the stone, the warden, the shrine, Mara). */
+  applyQuestEvent(event: QuestEvent): void {
+    const to = ROAD_EVENT_STEP[event]
+    if (to) void this.reachStep(LANTERN_ROAD, to)
+  }
+
+  /** A dialogue's `quest:step` event or choice: reach that step. */
+  reachRef(ref: string): Promise<ReachOutcome> {
+    const p = parseRef(ref)
+    return p ? this.reachStep(p.quest.id, p.step.id) : Promise.resolve('not-next')
+  }
+
+  /** Steps sent and not yet seen in the record: a trigger seen twice sends once. */
+  private questsSent = new Set<string>()
+
+  /**
+   * Reach `to` on `quest`, if it's the next step and its gate holds as far
+   * as this client can tell. Connected: a `quest-step` operation; a plain
+   * step shows at once (predicted, queues offline), a gated one waits for
+   * the world's answer. Guests: the same rules on this device.
+   */
+  async reachStep(quest: string, to: string): Promise<ReachOutcome> {
+    if (this.destroyed) return 'error'
+    const q = questById(quest)
+    const next = q && reachStep(this.state, quest, to, gameNow())
+    if (!q || !next) return 'not-next' // not the next step: repeated, or out of order
+    const step = q.steps.find((s) => s.id === to)!
+    const gate = checkGate(step, this.gateContext(quest))
+    if (!gate.ok) return gate.why
+    const ref = `${quest}:${to}`
+    if (this.questsSent.has(ref)) return 'busy'
+    if (this.link) {
+      this.questsSent.add(ref)
+      const server = needsServer(step)
+      if (server) this.remoteBusy = true
+      try {
+        const r = await this.link.questStep(quest, to, { server })
+        // Server items taken or given: the pack says so.
+        if (r === null && (step.gate?.item || step.give?.length)) void itemsFor(this).load()
+        // A gated step waits for its answer, so its refusal is told here (a plain one's by the link).
+        else if (server && r !== null && r !== 'superseded') bus.emit(EV.toast, { text: questErrorText(r), kind: 'error' })
+        return r
+      } finally {
+        if (server) this.remoteBusy = false
+        this.questsSent.delete(ref)
+      }
+    }
+    this.state = next
+    this.emitQuest({ quest, step: to })
+    if (step.embers > 0) this.addEmbers(step.embers, `+${step.embers} embers — a little warmth from the road.`)
+    this.saveSoon()
+    return null
+  }
+
+  /** The steps a trigger of this kind finishes now (`open: journal`), taken in the tree's order. */
+  questTrigger(kind: 'open' | 'use' | 'talk', id: string): void {
+    for (const { quest, step } of stepsBy(kind, id, this.state.quests, this.needs)) void this.reachStep(quest.id, step.id)
+  }
+
+  /** XP embers when `sync: embers` became the next step (a sync after it pays the step). */
+  private syncBase = new Map<string, number>()
+  /**
+   * Automatic steps already tried this visit. A refused one rolls back (the
+   * world said no), and trying it again every second would only say so again.
+   */
+  private autoTried = new Set<string>()
+
+  private autoStep(quest: string, step: string): void {
+    const ref = `${quest}:${step}`
+    if (this.autoTried.has(ref)) return
+    this.autoTried.add(ref)
+    void this.reachStep(quest, step).then((r) => {
+      // Not taken for a passing reason (busy, a gate the client saw shut): try again later.
+      if (r !== null && r !== 'not-next') this.autoTried.delete(ref)
+    })
   }
 
   /**
-   * Apply a quest event and notify the UI. Connected: a `quest-step`
-   * operation, shown at once as predicted (the server grants the step's
-   * items, marks and gifts, and the answer's state carries them).
+   * The automatic triggers (`reach`, `carry`, `flag`, `defeat`, `sync`),
+   * checked against what the game holds now. The interface calls it about
+   * once a second and on every change.
    */
-  applyQuestEvent(event: QuestEvent): void {
-    if (this.destroyed) return
-    const expected = QUEST_GATE[event]
-    if (this.state.quest !== expected) return // illegal or repeated transition
-    if (this.link) {
-      this.link.questStep(event)
-      this.emitQuest()
-      return
+  checkQuests(): void {
+    if (this.destroyed || this.persistenceInFlight) return
+    const s = this.state
+    const ctx = { area: placeArea(s), flags: s.flags, defeated: s.defeatedEnemies, carrying: (def: string) => this.carrying(def) }
+    for (const { quest, step } of autoSteps(s.quests, this.needs, ctx)) this.autoStep(quest, step)
+    for (const { quest, step } of stepsBy('sync', 'embers', s.quests, this.needs)) {
+      const base = this.syncBase.get(quest.id)
+      if (base === undefined) this.syncBase.set(quest.id, s.xpEmbers)
+      else if (s.xpEmbers > base) this.autoStep(quest.id, step.id)
     }
-    try {
-      this.state = advanceQuest(this.state, event)
-    } catch (err) {
-      console.warn('[glimway] advanceQuest rejected event', event, err)
-      const toast: ToastPayload = { text: 'The story hiccupped — that step didn\u2019t take. Try again?', kind: 'error' }
-      bus.emit(EV.toast, toast)
-      return
-    }
-    this.emitQuest()
-    const reward = questEmbers(event)
-    if (reward > 0) this.addEmbers(reward, `+${reward} embers — a little warmth from the road.`)
-    this.saveSoon()
   }
 
   /** Credit embers locally (quest beats). Habitica-earned embers arrive via
@@ -273,7 +367,7 @@ export class Session {
     this.vitalsSource = provenance.vitalsSource
     this.importedProfile = provenance.importedProfile
     this.emitStats()
-    if (prev.quest !== next.quest) this.emitQuest()
+    this.questsChanged(prev.quests, next.quests)
     // Papers the server granted on its own (a quest step's, a claim's). A
     // predicted find is announced by whoever found it (game/papers.ts).
     if (!opts.predicted) for (const id of foundPapers(next.flags)) if (!prev.flags.includes(paperFlag(id))) announcePaper(this, id)
@@ -285,12 +379,25 @@ export class Session {
     }
   }
 
-  emitQuest(): void {
-    bus.emit(EV.quest, {
-      stage: this.state.quest,
-      objective: questObjective(this.state.quest),
-      short: questShortGoal(this.state.quest)
-    })
+  /** Tell the interface about every step a new view reached (a prediction or the world's answer). */
+  private questsChanged(prev: QuestRecord, next: QuestRecord): void {
+    if (JSON.stringify(prev) === JSON.stringify(next)) return
+    let told = false
+    for (const [quest, step] of Object.entries(next)) {
+      const q = questById(quest)
+      if (!q || prev[quest] === step) continue
+      const before = prev[quest] === undefined ? -1 : q.steps.findIndex((s) => s.id === prev[quest])
+      if (q.steps.findIndex((s) => s.id === step) <= before) continue
+      this.emitQuest({ quest, step })
+      told = true
+    }
+    if (!told) this.emitQuest()
+  }
+
+  /** The road's goal for the HUD, and the step just reached when there is one. */
+  emitQuest(reached?: { quest: string; step: string }): void {
+    const goal = roadGoal(this.state.quests)
+    bus.emit(EV.quest, { stage: this.questStage, objective: goal.objective, short: goal.short, ...(reached ?? {}) })
   }
 
   emitStats(): void {
