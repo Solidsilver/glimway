@@ -884,6 +884,14 @@ most of all. These rules hold for every room and every later interior.
    crowd a small room.
 6. **No baked backgrounds, no stretching.** True transparency; art is placed at its native
    aspect, never scaled to a footprint.
+8. **One shared interior kit.** Dressing comes from one kit of generic pieces that fit any
+   building: rugs, shelves, wall pegs and tools, crates, barrels, sacks, baskets, plants, lamps and
+   candles, pictures and calendars, curtains, small tables, chairs and stools, a chest. Each room
+   is that kit plus a few signature pieces (Hazel's oven, Finn's millstone, Elara's desk). Every kit
+   piece gets an id, a footprint, a base box and a facing like the home goods in
+   `content/homestead.json`, so that **later** players can place the same pieces in their own
+   cottage: turning a kit piece into a home good (bought, crafted or found) is a data change, not
+   new art. In 0.4 the kit only dresses the village's rooms.
 7. **Still by default.** Props don't idle-animate. Only something the current quest or plot points
    at may move or glow (the quest marker says so already); working machines (the millstone, the
    oven's fire) may have a slow loop.
