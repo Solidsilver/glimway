@@ -16,6 +16,7 @@ import {
   checkGate,
   isDone,
   nextStep,
+  parseRef,
   questById,
   QUESTS,
   questLine,
@@ -162,17 +163,27 @@ export function questTalk(npc: string, ctx: QuestTalkContext): Dialogue | null {
   return triggerTalk('talk', npc, ctx);
 }
 
-/** Whether a quest talk would start its quest (its step is the quest's first; no record yet). */
-export function startsQuest(step: Dialogue, ctx: QuestTalkContext): boolean {
-  const ref = step.key?.startsWith('quest:') ? step.key.slice('quest:'.length) : '';
-  const quest = ref.slice(0, ref.indexOf(':'));
-  return !!quest && ctx.quests[quest] === undefined;
+/**
+ * Who speaks first (docs/design/indoors.md 5.9): whether a quest's talk
+ * takes the whole of a person's talk. The main story's does (the opening,
+ * the lantern road), and so does a step the player is mid-way through
+ * there: its quest started and the step ready to take now (its gate holds).
+ * Anything else, a quest's start, a "not yet", a "still no flour?", follows
+ * the person's own lines (`afterTheirTalk`).
+ */
+export function takesTheTalk(step: Dialogue, ctx: QuestTalkContext): boolean {
+  const p = step.key?.startsWith('quest:') ? parseRef(step.key.slice('quest:'.length)) : null;
+  if (!p) return false;
+  if (questLine(p.quest) === 'road') return true;
+  if (ctx.quests[p.quest.id] === undefined) return false;
+  return checkGate(p.step, ctx.gate(p.quest.id)).ok;
 }
 
 /**
- * A resident's own talk with a quest's start after it: their words first
- * (quests never stop residents being themselves), then the asking and its
- * offer. Their choices stay, after the offer, with one "Not yet" at the end.
+ * A person's own talk with a quest's talk after it: their words first
+ * (quests never stop people being themselves), then the quest's lines and
+ * its offer. Their choices stay, after the offer, with one "Not yet" at the
+ * end.
  */
 export function afterTheirTalk(own: Dialogue, step: Dialogue): Dialogue {
   const offers = (step.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet');
