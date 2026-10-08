@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkRev, linkStatus, serverState } from './connected'
-import { beginNewJourney, dialogueState, frames, readDialogue, expectToast } from './helpers'
-import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, silasSays } from './home-helpers'
+import { beginNewJourney, frames, expectToast } from './helpers'
+import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
 
 /**
  * Regressions for the phase 3 review, against the real
@@ -127,9 +127,8 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await claim(page)
   await silasSays(page, /Raise a cottage/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  // Silas may say a word more on his own: read it if he does.
-  await frames(page, 36)
-  if ((await dialogueState(page)).open) await readDialogue(page)
+  // Silas answers once the server has the cottage: read it (it would hold the screen).
+  await readOn(page, /Steady as a route stone/)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.locator('[data-buy="wooden-stool"]').click()

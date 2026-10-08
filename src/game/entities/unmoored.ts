@@ -19,6 +19,7 @@ import { WILDS_REGION_ID, parseChunkArea } from '../wilds/regions.ts'
 import { onSceneEnd } from '../scene-end.ts'
 import type { Session } from '../session.ts'
 import type { WorldData } from '../worlds.ts'
+import { canvasRatio } from '../viewport.ts'
 
 /** Seconds deep in the Tangle before the land lets go of you. */
 const DEEP_TANGLE_S = 240
@@ -195,20 +196,22 @@ export class Unmoored {
 
     const ex = (cam.width / 2) * (1 - 1 / cam.zoom)
     const ey = (cam.height / 2) * (1 - 1 / cam.zoom)
+    // Bands 28 CSS px deep along each edge (scroll-factor-0, so still zoomed).
+    const b = (28 * canvasRatio()) / cam.zoom
     if (this.edges.length === 0) {
       const band = (x: number, y: number, w: number, h: number) => this.scene.add.rectangle(x, y, w, h, 0x8fa4b8, 0.22).setScrollFactor(0).setDepth(8501)
       this.edges = [
-        band(cam.centerX, ey + 14 / cam.zoom, cam.width * 2, 28 / cam.zoom),
-        band(cam.centerX, cam.height - ey - 14 / cam.zoom, cam.width * 2, 28 / cam.zoom),
-        band(ex + 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2),
-        band(cam.width - ex - 14 / cam.zoom, cam.centerY, 28 / cam.zoom, cam.height * 2)
+        band(cam.centerX, ey + b / 2, cam.width * 2, b),
+        band(cam.centerX, cam.height - ey - b / 2, cam.width * 2, b),
+        band(ex + b / 2, cam.centerY, b, cam.height * 2),
+        band(cam.width - ex - b / 2, cam.centerY, b, cam.height * 2)
       ]
     } else {
       const alpha = (0.2 + Math.sin(time * 0.0022) * 0.08) * factor
-      this.edges[0].setPosition(cam.centerX, ey + 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(alpha)
-      this.edges[1].setPosition(cam.centerX, cam.height - ey - 14 / cam.zoom).setSize(cam.width * 2, 28 / cam.zoom).setAlpha(alpha)
-      this.edges[2].setPosition(ex + 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(alpha)
-      this.edges[3].setPosition(cam.width - ex - 14 / cam.zoom, cam.centerY).setSize(28 / cam.zoom, cam.height * 2).setAlpha(alpha)
+      this.edges[0].setPosition(cam.centerX, ey + b / 2).setSize(cam.width * 2, b).setAlpha(alpha)
+      this.edges[1].setPosition(cam.centerX, cam.height - ey - b / 2).setSize(cam.width * 2, b).setAlpha(alpha)
+      this.edges[2].setPosition(ex + b / 2, cam.centerY).setSize(b, cam.height * 2).setAlpha(alpha)
+      this.edges[3].setPosition(cam.width - ex - b / 2, cam.centerY).setSize(b, cam.height * 2).setAlpha(alpha)
     }
 
     cam.setRotation(Math.sin(time * 0.0018) * 0.007 * factor)

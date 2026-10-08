@@ -40,12 +40,18 @@ export const PACKED_MANIFEST_KEY = 'glimway-packed'
  */
 export const ART_DENSITY = 4
 /**
- * What phones keep (./density.ts `artDensity`): they frame the world at 2
- * screen px per world px, so the packs are box-filtered 2:1 at boot.
+ * What a phone whose canvas renders above 1× keeps (./density.ts
+ * `densityFor`; a 1× phone keeps half of ART_DENSITY, box-filtered 2:1 at
+ * boot).
+ *
+ * The second knob for an older phone, after MAX_CANVAS_RATIO
+ * (./viewport.ts): if a phone runs short of memory (the tab reloads, or
+ * textures go missing, on entering the Commons), set this to 2. That
+ * quarters the canvas-built art (about 44 MB → 16 MB of textures).
  */
-export const PHONE_ART_DENSITY = 2
+export const PHONE_ART_DENSITY = 4
 
-/** Largest camera zoom (WorldScene.zoomFor). */
+/** Largest camera zoom, in CSS px per world px (src/game/viewport.ts zoomFor). */
 export const MAX_SCREEN_SCALE = 5
 /** The lantern beat pushes in 1.3× more (the ruin: hero, shrine, arch, ferns, chest, route stone). */
 export const BEAT_SCREEN_SCALE = MAX_SCREEN_SCALE * 1.3

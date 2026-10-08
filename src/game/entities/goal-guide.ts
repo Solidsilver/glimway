@@ -12,7 +12,7 @@
 import Phaser from 'phaser'
 import { bus, EV, type GoalDirPayload } from '../events'
 import { TILE } from '../../lib/tile'
-import { playInsets } from '../viewport'
+import { canvasRatio, playInsets } from '../viewport'
 import type { QuestStage } from '../../lib/state'
 import type { WorldData } from '../worlds'
 import type { GuideWhere } from '../../content/guides'
@@ -213,14 +213,16 @@ export class GoalGuide {
     const W = cam.width
     const H = cam.height
     const view = cam.worldView
-    // Screen px of the target, and the open rectangle the interface leaves.
+    // Canvas px of the target, and the open rectangle the interface leaves
+    // (the insets and the margin are CSS px).
+    const r = canvasRatio()
     const sx = (target.x - view.x) * z
     const sy = (target.y - view.y) * z
     const m = 22
-    const left = playInsets.left + m
-    const right = W - playInsets.right - m
-    const top = playInsets.top + m
-    const bottom = H - playInsets.bottom - m
+    const left = (playInsets.left + m) * r
+    const right = W - (playInsets.right + m) * r
+    const top = (playInsets.top + m) * r
+    const bottom = H - (playInsets.bottom + m) * r
     if (sx > left && sx < right && sy > top && sy < bottom) {
       this.hide()
       return
@@ -238,7 +240,7 @@ export class GoalGuide {
     const px = (X - W / 2) / z + W / 2
     const py = (Y - H / 2) / z + H / 2
     const pulse = this.deps.reducedMotion ? 1 : 0.85 + Math.sin(this.t * 4) * 0.15
-    this.glow.setPosition(px, py).setScale((0.55 * pulse) / Math.max(1, z / 2)).setVisible(true)
+    this.glow.setPosition(px, py).setScale((0.55 * pulse) / Math.max(1, z / r / 2)).setVisible(true)
     this.chevron.setPosition(px, py).setRotation(a).setVisible(true)
   }
 }

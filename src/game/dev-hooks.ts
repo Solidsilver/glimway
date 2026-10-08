@@ -77,6 +77,8 @@ export interface FsHooks {
   __fsDevHeroScreen: () => Box & { zoom: number }
   /** A world point on screen (CSS px from the canvas's top left). */
   __fsDevToScreen: (x: number, y: number) => { x: number; y: number }
+  /** The world point under the pointer. */
+  __fsDevPointerWorld: () => { x: number; y: number }
   __fsDevAddFlag: (flag: string) => void
   /** The ground tileset painted again on the main thread (no workers): its hash. */
   __fsDevGroundMainThreadHash: () => Promise<string | null>
@@ -86,6 +88,8 @@ export interface FsHooks {
   __fsDevTextureSize: (key: string) => { w: number; h: number; density: number } | null
   /** Texture memory as the GPU holds it (RGBA), by texture and in total. */
   __fsDevTextureMemory: () => { total: number; largest: number; textures: Record<string, number> }
+  /** Frame timings over `ms` (p50/p95 ms): frame-to-frame gaps and the game's step (`finish`: the GPU's drawing included); the canvas size in px. */
+  __fsDevFrameTimes: (ms: number, finish?: boolean) => Promise<{ frames: number; gap: { p50: number; p95: number }; step: { p50: number; p95: number }; canvas: [number, number] }>
   __fsDevDodge: (dx: number, dy: number) => void
   __fsDevAttack: () => void
   __fsDevParkCreatures: () => void
