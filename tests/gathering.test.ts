@@ -301,3 +301,36 @@ test('nothing is set out on top of something growing', () => {
   assert.equal(checkPlacement(home, stool, 'outdoor', spot[0], spot[1], 0), null);
   assert.equal(checkPlacement({ ...home, plants: [{ x: spot[0], y: spot[1] }] }, stool, 'outdoor', spot[0], spot[1], 0), 'plant-in-the-way');
 });
+
+test('felling takes all of a tile’s art: a fading canopy goes with the trunk', async () => {
+  const { TileArt } = await import('../src/game/area/tile-art.ts');
+  const destroyed: string[] = [];
+  const img = (name: string) => ({ name, destroy: () => destroyed.push(name) });
+  const art = new TileArt<ReturnType<typeof img>>();
+  const standing = img('flowers');
+  const canopy = img('oak-1 (fades)');
+  art.keep(4, 5, standing);
+  art.keep(4, 5, canopy);
+  art.keep(5, 5, img('pine-0'));
+  const gone = art.fell(4, 5);
+  assert.deepEqual(gone, [standing, canopy], 'what went, for the scene to drop from its occluders');
+  assert.deepEqual(destroyed, ['flowers', 'oak-1 (fades)']);
+  assert.deepEqual(art.at(4, 5), []);
+  assert.equal(art.at(5, 5).length, 1, 'the next tile keeps its tree');
+  assert.deepEqual(art.fell(4, 5), [], 'felling again is nothing');
+});
+
+test('every workable piece in a Wilds chunk names its tile, the fading (path-side) trees too', () => {
+  for (const region of ['inner-1', 'outer-1']) {
+    const world = toWorldData(fixtureTerrain(region), `chunk:${region}:1:1` as never);
+    const anchored = (tx: number, ty: number) => world.scenery!.filter((s) => s.tx === tx && s.ty === ty);
+    let fading = 0;
+    for (const spot of world.gathering!) {
+      const art = anchored(spot.tx, spot.ty);
+      assert.ok(art.length > 0, `${region} ${spot.tx},${spot.ty}: art to remove when felled`);
+      if (art.some((s) => s.fade)) fading += 1;
+    }
+    // About a third of the trees overhang a path: the ones that were left standing.
+    assert.ok(fading > 0, `${region}: the fixture has fading trees to fell`);
+  }
+});

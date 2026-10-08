@@ -15,6 +15,7 @@ import type { AreaId, QuestEvent } from '../../lib/state'
 import { buildGround } from '../area/terrain'
 import { buildSolids, clearSolidTile, type Solids } from '../area/collision'
 import { buildProps } from '../area/props'
+import { TileArt } from '../area/tile-art'
 import { buildForeground, updateOccluders as updateAreaOccluders, type Occluder } from '../area/foreground'
 import { buildExitSigns } from '../area/exits'
 import { lanternRestRate, refreshLanternVisuals, type LightProp } from '../area/lanterns'
@@ -22,7 +23,7 @@ import { bus, EV, listen, type DialogueClosedPayload, type RelocatePayload } fro
 import { prefersReducedMotion } from '../sfx'
 import { heroScreen, uiBlocked, uiState } from '../input'
 import { canvasRatio } from '../viewport'
-import { TILE, tileAt, tileCenter, tileKey, tileMid } from '../../lib/tile'
+import { TILE, tileAt, tileCenter, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import { hasAreaKind, type WorldData } from '../worlds'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
@@ -122,7 +123,7 @@ export class WorldScene extends Phaser.Scene {
   /** Collisions for terrain tiles and prop footprints (area/collision; a cleared tile opens). */
   private solids!: Solids
   /** Tile-anchored sprites (a felled tree removes its own). */
-  private scenerySprites = new Map<string, Phaser.GameObjects.Image[]>()
+  private tileArt = new TileArt<Phaser.GameObjects.Image>()
   /** Gathering: the workable pieces of this area (null where there are none). */
   private gathering: Gathering | null = null
   /** Atlas-prop lanterns that can glow when lit (area/lanterns owns visuals). */
@@ -207,9 +208,12 @@ export class WorldScene extends Phaser.Scene {
     const groundPainting = buildGround(this, this.world)
     const solids = buildSolids(this, this.world)
     this.solids = solids
-    const props = buildProps(this, this.world, solids.group)
+    this.tileArt = new TileArt()
+    const props = buildProps(this, this.world, solids.group, this.tileArt)
     this.lightProps = props.lights
-    this.scenerySprites = props.sprites
+    // The foreground (canopies that fade) is built before anything can fell a
+    // piece: a felling replayed for this stay (Gathering) takes its canopy too.
+    this.occluders = buildForeground(this, this.world, this.tileArt)
 
     // Entities
     // Everything the action button can be used on registers here (entities/interactables).
@@ -277,10 +281,10 @@ export class WorldScene extends Phaser.Scene {
       interactables: this.interactables,
       notePosition: () => this.notePosition(),
       clearSolid: (tx, ty) => clearSolidTile(this, this.world, this.solids, tx, ty),
-      spritesAt: (tx, ty) => this.scenerySprites.get(tileKey(tx, ty)) ?? [],
+      spritesAt: (tx, ty) => this.tileArt.at(tx, ty),
       fell: (tx, ty) => {
-        for (const img of this.scenerySprites.get(tileKey(tx, ty)) ?? []) img.destroy()
-        this.scenerySprites.delete(tileKey(tx, ty))
+        const gone = this.tileArt.fell(tx, ty)
+        if (gone.length) this.occluders = this.occluders.filter((o) => !gone.includes(o.image))
       }
     })
     // The village's broken things, mended with the right part (shared per world).
@@ -316,7 +320,6 @@ export class WorldScene extends Phaser.Scene {
         this.interactables.invalidatePrompt()
       }
     })
-    this.occluders = buildForeground(this, this.world)
     buildExitSigns(this, this.world, this.reducedMotion)
     this.physics.add.collider(this.hero.sprite, this.solids.group)
 

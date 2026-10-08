@@ -1,6 +1,6 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { sql, accountOf } from './connected'
+import { sql, accountOf, refusal } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, landOf, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
 import { HOMESTEAD_DATA, plantable } from '../src/lib/homestead.ts'
@@ -241,6 +241,10 @@ const landAt = async (page: Page, gate: number) => (await homeAt(page, gate)) as
 
 const spotAt = async (page: Page, s: { tx: number; ty: number }) => (await gather(page))?.spots.find((o) => o.tx === s.tx && o.ty === s.ty)?.target ?? null
 
+/** What is drawn on screen for a tile's piece (window.__fsArtAt): frames, and whether each fades. */
+const artAt = (page: Page, s: { tx: number; ty: number }) =>
+  page.evaluate(([x, y]) => (window as unknown as { __fsArtAt: (x: number, y: number) => { frame: string; fades: boolean }[] }).__fsArtAt(x, y), [s.tx, s.ty] as const)
+
 test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Teo')
@@ -249,11 +253,34 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
-  const spot = await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/)
+  // A path-side tree: its canopy is drawn by the foreground pass (it fades
+  // when walked under). That canopy used to stay standing over the stump.
+  await hold(page, 'chop')
+  await parkCreatures(page)
+  let tree: Spot | null = null
+  for (const c of await candidatesNear(page, ['tangle-tree', 'ash'], undefined, true)) {
+    if ((await artAt(page, c.spot)).some((a) => a.fades)) {
+      tree = c.spot
+      break
+    }
+  }
+  expect(tree, 'a path-side tree to fell').not.toBeNull()
+  const standing = await artAt(page, tree!)
+
+  // Refused: the whole tree stays, canopy and all, and it can still be chopped.
+  await page.route('**/api/items/gather', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
+  await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/, { at: tree!, says: /You need to be right there/ })
+  await page.unroute('**/api/items/gather')
+  expect(await artAt(page, tree!)).toEqual(standing)
+  expect(await spotAt(page, tree!)).toMatch(/^(tangle-tree|ash)$/)
+
+  const spot = await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/, { at: tree! })
   // The axe wore one use; the tree paid timber and left a stump to dig.
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)
   expect(await stack(page, 'timber')).toBeGreaterThanOrEqual(2)
   await expect.poll(async () => spotAt(page, spot)).toBe('stump')
+  // Felled whole: nothing of the tree is drawn there any more (the stump is the gathering's own).
+  expect(await artAt(page, spot)).toEqual([])
   await shot(page, 'gathering-tangle-chop')
 
   // The stump digs out (turncap spawn), and the ground opens.
@@ -263,13 +290,14 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   await expect.poll(async () => spotAt(page, spot)).toBeNull()
 
   // The same chunk built again within the visit: the dug-out tree stays
-  // open ground, with nothing drawn on it.
+  // open ground, with nothing drawn on it (its canopy neither).
   const chunk = (await gather(page))!.area
   await warp(page, 'wilds', 20, 20)
   await waitForWilds(page)
   expect((await gather(page))!.area).toBe(chunk)
   await expect.poll(async () => spotAt(page, spot)).toBeNull()
   expect((await gather(page))!.left.filter((l) => l.tx === spot.tx && l.ty === spot.ty)).toEqual([])
+  expect(await artAt(page, spot)).toEqual([])
 
   // The drift: leave, come back, and the woods have regrown.
   await warp(page, 'commons', 23, 19)
