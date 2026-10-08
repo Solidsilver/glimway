@@ -29,18 +29,17 @@ type Economy struct {
 		RoadLantern int `json:"roadLantern"`
 		Chest       int `json:"chest"`
 	} `json:"costs"`
-	QuestEmbers           map[string]int `json:"questEmbers"`
-	RoadLanterns          []string       `json:"roadLanterns"`
-	ChestID               string         `json:"chestId"`
-	CharmItem             string         `json:"charmItem"`
-	OutstandingInvites    int            `json:"outstandingInvites"`
-	SyncCreditDailyGrowth int            `json:"syncCreditDailyGrowth"`
-	SyncCreditMax         int            `json:"syncCreditMax"`
-	PendingCreditDays     int            `json:"pendingCreditDays"`
-	LifetimeInvites       int            `json:"lifetimeInvites"`
-	SyncCreditCap         int            `json:"syncCreditCap"`
-	MigrationGiftCap      int            `json:"migrationGiftCap"`
-	CheckpointToleranceXP float64        `json:"checkpointToleranceXp"`
+	RoadLanterns          []string `json:"roadLanterns"`
+	ChestID               string   `json:"chestId"`
+	CharmItem             string   `json:"charmItem"`
+	OutstandingInvites    int      `json:"outstandingInvites"`
+	SyncCreditDailyGrowth int      `json:"syncCreditDailyGrowth"`
+	SyncCreditMax         int      `json:"syncCreditMax"`
+	PendingCreditDays     int      `json:"pendingCreditDays"`
+	LifetimeInvites       int      `json:"lifetimeInvites"`
+	SyncCreditCap         int      `json:"syncCreditCap"`
+	MigrationGiftCap      int      `json:"migrationGiftCap"`
+	CheckpointToleranceXP float64  `json:"checkpointToleranceXp"`
 }
 
 func LoadEconomy() (Economy, error) {
@@ -225,8 +224,12 @@ type Paper struct {
 	ID         string    `json:"id"`
 	Collection string    `json:"collection"`
 	Source     string    `json:"source"`
+	Section    string    `json:"section"`
 	Rule       PaperRule `json:"rule"`
 }
+
+// paperSections: the library's shelf signs (docs/design/indoors.md 3.3).
+var paperSections = map[string]bool{"stories": true, "histories": true, "recipes": true, "field-notes": true}
 
 var paperSources = map[string]bool{
 	"library-start": true, "placed": true, "quest": true, "gift": true,
@@ -251,7 +254,7 @@ func LoadPapers() ([]Paper, error) {
 	seen := make(map[string]bool, len(doc.Papers))
 	for _, p := range doc.Papers {
 		// A find is the story flag "paper:<id>"; story flags cap at 128 characters.
-		if p.ID == "" || len(p.ID) > 128-len("paper:") || p.Collection == "" || !paperSources[p.Source] || seen[p.ID] {
+		if p.ID == "" || len(p.ID) > 128-len("paper:") || p.Collection == "" || !paperSources[p.Source] || !paperSections[p.Section] || seen[p.ID] {
 			return nil, fmt.Errorf("invalid papers: row %+v", p)
 		}
 		q := p.Rule

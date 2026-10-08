@@ -1,6 +1,6 @@
 import economyJson from '../../content/economy.json' with { type: 'json' };
 import type { Economy } from './economy.ts';
-import { validateSave, type GameState, type QuestEvent } from './state.ts';
+import { validateSave, type GameState } from './state.ts';
 
 const economy = economyJson as unknown as Economy;
 
@@ -37,8 +37,6 @@ export function withCharm<K extends { critChance: number }>(kit: K, inventory: r
   if (!inventory.includes(CHARM_ITEM)) return kit;
   return { ...kit, critChance: Math.min(0.6, kit.critChance + CHARM_CRIT_BONUS) };
 }
-
-const QUEST_EMBERS = economy.questEmbers;
 
 export const FLAGS = {
   welcome: 'embers:welcome',
@@ -116,10 +114,6 @@ export function grantEmbers(state: GameState, n: number, opts: { fromXp?: boolea
     embers: current.embers + add,
     xpEmbers: opts.fromXp ? current.xpEmbers + add : current.xpEmbers,
   };
-}
-
-export function questEmbers(event: QuestEvent): number {
-  return QUEST_EMBERS[event] ?? 0;
 }
 
 /** The first-import gift, at most once per save. */

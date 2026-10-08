@@ -7,10 +7,6 @@
     "chest": 5,
     "homeRest": 1
   },
-  "questEmbers": {
-    "defeat-guardian": 2,
-    "return-village": 3
-  },
   "roadLanterns": [
     "road-1",
     "road-2",

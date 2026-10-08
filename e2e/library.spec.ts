@@ -33,10 +33,17 @@ test('a section’s shelves open the panel on it; an empty section opens the who
   await page.keyboard.press('Escape')
   await expect(lib).toBeHidden()
 
-  // Nothing on the Recipes shelves yet: the whole collection, and it says so.
+  // Recipes starts with the remedies and the cutter's handbook (printed pages, shelved as recipes).
   await openLibrary(page, { focus: 'shelf', section: 'recipes' })
+  await expect(panel(page).locator('[data-section="recipes"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel(page).locator('[data-paper="remedies-of-the-oaker-hills"]')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(panel(page)).toBeHidden()
+
+  // Nothing on the Field notes shelves yet: the whole collection, and it says so.
+  await openLibrary(page, { focus: 'shelf', section: 'field-notes' })
   await expect(panel(page).locator('[data-section="all"]')).toHaveAttribute('aria-pressed', 'true')
-  await expect(panel(page).getByTestId('library-empty-section')).toContainText('Nothing on the Recipes shelves yet')
+  await expect(panel(page).getByTestId('library-empty-section')).toContainText('Nothing on the Field notes shelves yet')
 })
 
 test('Elara’s desk: the papers you found that the shelves lack, and Donate', async ({ page }) => {

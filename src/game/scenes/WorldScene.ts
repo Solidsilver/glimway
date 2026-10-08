@@ -766,8 +766,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
-    // The clue is journaled under the shared content id (advanceQuest also
-    // carries it; addUnique keeps it single-entry).
+    // The clue is journaled under the shared content id (the step's
+    // prediction, reachStep, also carries it, once).
     if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'The Closure Mark')
     if (event === 'light-lantern' || event === 'return-village') {
       playLanternBeat(this, {
