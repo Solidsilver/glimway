@@ -13,6 +13,7 @@ import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
 import { explodeFrames, registerAnims, type PassAnimation } from './art-pass.ts'
 import { TILE } from '../lib/tile.ts'
+import { artDataUrl, artSource } from './density.ts'
 
 /** Texture key of the packed indoors atlas (./packed.ts loads it). */
 export const INDOORS_PACKED_KEY = 'packed-indoors'
@@ -51,4 +52,37 @@ export function createIndoorsArt(scene: Phaser.Scene): boolean {
 /** Whether an indoors frame loaded. */
 export function hasInArt(scene: Phaser.Scene, frame: string): boolean {
   return scene.textures.exists(inArt(frame))
+}
+
+/**
+ * The pass's interface icons, for the Quests page and the bag (EV.artIcons,
+ * by frame name): the shelf icons, the pin, the gate marks and the
+ * opening's two keepsakes. Drawn at the art's full density (they're finer
+ * than the 16-px item icons).
+ */
+export const INDOORS_ICONS = [
+  'shelf-icon-road',
+  'shelf-icon-village',
+  'shelf-icon-craft',
+  'pin-unpinned',
+  'pin-pinned',
+  'gate-waiting',
+  'gate-needs-embers',
+  'gate-locked',
+  'keepsake-east-finger',
+  'keepsake-tally-token'
+] as const
+
+export function indoorsIconUrls(scene: Phaser.Scene): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const frame of INDOORS_ICONS) {
+    const src = artSource(scene, inArt(frame))
+    if (!src) continue
+    try {
+      out[frame] = artDataUrl(src, src.density)
+    } catch {
+      /* an icon is optional: the page draws its own */
+    }
+  }
+  return out
 }

@@ -23,7 +23,7 @@ import type { GuideWhere } from '../../content/guides'
 import { expose } from '../dev-hooks'
 import type { GoalTarget } from '../guide-pin'
 import type { QuestWhere } from '../../lib/quests'
-import { gameNow } from '../clock'
+import { serverNow } from '../clock'
 import { ROOMS, roomParent } from '../../lib/rooms'
 import { residentAt } from '../../lib/residents'
 
@@ -91,6 +91,8 @@ export interface GoalGuideDeps {
   npcAt: (id: string) => { x: number; y: number } | null
   spotAt: (id: string) => { x: number; y: number } | null
   wardenAt: () => { x: number; y: number } | null
+  /** A curated enemy still standing here (the finger-wisp), by its id. */
+  enemyAt: (id: string) => { x: number; y: number } | null
   /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
   placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
   guidePoint: (where: GuideWhere) => { x: number; y: number } | null
@@ -137,14 +139,13 @@ export class GoalGuide {
   /** A quest step's `where`: the person, spot or enemy when it's here, else the way toward its area. */
   private towardQuest(where: QuestWhere): { x: number; y: number; here: boolean } | null {
     if (where.ui) return null // the journal: the book button glows instead
-    // TODO(B): serverNow() once the server-time offset lands.
-    const resident = where.npc ? residentAt(where.npc, gameNow()) : null
+    const resident = where.npc ? residentAt(where.npc, serverNow()) : null
     const area = where.area ?? resident?.area
     if (!area) return null
     if (String(this.deps.world.areaId) === area) {
       const p =
         // The warden, or its route stone while it isn't standing up to be settled.
-        (where.enemy === 'stone-warden' ? this.deps.wardenAt() ?? this.deps.spotAt('clue') : null) ??
+        (where.enemy === 'stone-warden' ? this.deps.wardenAt() ?? this.deps.spotAt('clue') : where.enemy ? this.deps.enemyAt(where.enemy) : null) ??
         (where.npc ? this.deps.npcAt(where.npc) : null) ??
         (where.spot ? this.deps.spotAt(where.spot) : null) ??
         (resident ? { x: (resident.tx + 0.5) * TILE, y: (resident.ty + 0.5) * TILE } : null)
