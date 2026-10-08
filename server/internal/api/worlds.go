@@ -506,7 +506,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	}
 	mover := ""
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if !rules.SafeAreas[s.State.Area] {
+		if !rules.SafeAreas[content.RootArea(s.State.Area)] {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		from := s.WorldID
@@ -578,7 +578,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if !leaverOf(here, s.HabiticaPartyID) {
 			return nil, fail(409, "still-in-party")
 		}
-		if !rules.SafeAreas[s.State.Area] {
+		if !rules.SafeAreas[content.RootArea(s.State.Area)] {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		before, err := leaving(ctx, tx, *s)
@@ -640,7 +640,7 @@ func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *s
 	if err != nil {
 		return false, err
 	}
-	if !rules.SafeAreas[s.State.Area] {
+	if !rules.SafeAreas[content.RootArea(s.State.Area)] {
 		start := rules.NewState()
 		s.State.Area, s.State.Position = start.Area, start.Position
 	}

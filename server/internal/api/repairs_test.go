@@ -203,12 +203,13 @@ func TestReturningKeepsakes(t *testing.T) {
 		t.Fatalf("expected already-returned, got %s", bad.Error.Code)
 	}
 
-	// 2. Joss's whistle -> Hazel (tx: 12, ty: 15 in village)
+	// 2. Joss's whistle -> Hazel, wherever her cycle has her now.
 	x.stack(x.account("alice"), "tin-whistle", "", 1)
 	x.conserved(x.account("alice"))
 	hazelDoc := s.State
-	hazelDoc.Area = "village"
-	hazelDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(15*16 + 8)}
+	hazel, _ := content.ResidentAt("hazel", float64(x.now.Load()))
+	hazelDoc.Area = hazel.Area
+	hazelDoc.Position = rules.Position{X: float64(hazel.TX*16 + 8), Y: float64(hazel.TY*16 + 8)}
 
 	retHazel := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "tin-whistle", "target": "hazel", "progress": hazelDoc}, 200)
 	if retHazel.Result.Returned != "tin-whistle" || retHazel.Result.Paper == nil || *retHazel.Result.Paper != "keepers-twists-recipe-card" {

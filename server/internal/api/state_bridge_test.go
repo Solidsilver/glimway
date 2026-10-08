@@ -34,6 +34,13 @@ func testSnapshotJSON(raw []byte) []byte {
 			s.ImportedProfile = &imported
 		}
 	}
+	s.State.Quests = p.Story.Quests
+	for quest, at := range p.Story.ReachedAt {
+		s.State.ReachedAt[quest] = int64(at)
+	}
+	for quest, at := range p.Story.GateAt {
+		s.State.GateAt[quest] = int64(at)
+	}
 	s.State.HP = p.Vitals.Hp
 	s.State.Mana = p.Vitals.Mana
 	s.State.MaxHP = p.Vitals.MaxHp

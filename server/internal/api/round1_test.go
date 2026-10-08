@@ -102,6 +102,7 @@ func TestTerminalSpendRefusalReplaysWithCurrentState(t *testing.T) {
 func TestQuestWrongAreaRollsBackEveryReward(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.seedOpeningDone(s.AccountID)
 	x.quest(c, &s, "accepted", "village")
 	x.quest(c, &s, "clue-found", "ruin")
 	before := x.expect("GET", "/api/state", nil, c, 200)

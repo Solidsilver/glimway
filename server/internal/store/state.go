@@ -22,13 +22,25 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	}
 	s.State.Inventory = []string{}
 	s.State.Flags = []string{}
-	var step string
-	err = tx.QueryRowContext(ctx, "SELECT step FROM quest_progress WHERE account_id=? AND quest='lantern-road'", id).Scan(&step)
-	if err != nil && err != sql.ErrNoRows {
+	quests, err := tx.QueryContext(ctx, "SELECT quest,step,reached_at,gate_at FROM quest_progress WHERE account_id=? ORDER BY quest", id)
+	if err != nil {
 		return s, err
 	}
-	if err == nil {
-		s.State.Quest = step
+	for quests.Next() {
+		var quest, step string
+		var reached, gate int64
+		if err = quests.Scan(&quest, &step, &reached, &gate); err != nil {
+			quests.Close()
+			return s, err
+		}
+		s.State.Quests[quest] = step
+		s.State.ReachedAt[quest] = reached
+		s.State.GateAt[quest] = gate
+	}
+	err = quests.Err()
+	quests.Close()
+	if err != nil {
+		return s, err
 	}
 	marks, err := tx.QueryContext(ctx, "SELECT mark,writer FROM story_marks WHERE account_id=? ORDER BY at,mark", id)
 	if err != nil {
@@ -92,9 +104,13 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 		return s, err
 	}
 	items, err := PackItems(ctx, tx, id)
+	if err != nil {
+		return s, err
+	}
 	for _, v := range items {
 		s.State.Inventory = rules.AddUnique(s.State.Inventory, v)
 	}
+	err = recoverRoom(ctx, tx, &s)
 	return s, err
 }
 
@@ -146,8 +162,8 @@ func Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
 	if _, err := tx.ExecContext(ctx, "UPDATE players SET play_seconds=? WHERE account_id=?", s.State.PlaySeconds, s.AccountID); err != nil {
 		return err
 	}
-	if s.State.Quest != "new" {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO quest_progress VALUES(?,'lantern-road',?) ON CONFLICT(account_id,quest) DO UPDATE SET step=excluded.step`, s.AccountID, s.State.Quest); err != nil {
+	for quest, step := range s.State.Quests {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO quest_progress(account_id,quest,step,reached_at,gate_at) VALUES(?,?,?,?,?) ON CONFLICT(account_id,quest) DO UPDATE SET step=excluded.step,reached_at=excluded.reached_at,gate_at=excluded.gate_at`, s.AccountID, quest, step, s.State.ReachedAt[quest], s.State.GateAt[quest]); err != nil {
 			return err
 		}
 	}

@@ -57,7 +57,7 @@ func TestEchoAssignmentRestrictionsAndStability(t *testing.T) {
 		s.State.Flags = nil
 	}
 	check(false)
-	s.State.Quest = "complete"
+	s.State.Quests["lantern-road"] = "complete"
 	check(true)
 }
 
@@ -121,13 +121,13 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	p := content.PapersByID["pip-copybook-warden-corrections"].Rule
 	w := &contract.Where{Area: p.Area, X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 8)}
 	eligible("pip-copybook-warden-corrections", w, true)
-	s.State.Quest = "accepted"
+	s.State.Quests["lantern-road"] = "accepted"
 	eligible("pip-copybook-warden-corrections", w, true)
 	w.X += 100
 	eligible("pip-copybook-warden-corrections", w, false)
 	w = &contract.Where{Area: "village"}
 	eligible("ashwatch-ledger-excerpts", w, false)
-	s.State.Quest = "clue-found"
+	s.State.Quests["lantern-road"] = "clue-found"
 	eligible("ashwatch-ledger-excerpts", w, true)
 	eligible("joss-penhallow-letter-map-case", w, false)
 	if _, e := r.Grant(context.Background(), tx, &s, "joss-penhallow-letter-map-case", now); e == nil {
@@ -152,7 +152,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	w.X += 100
 	eligible("mary-fenns-cairn-slip", w, false)
 	// Echo papers are due only for a settled member at that player's assigned site.
-	s.State.Quest = "complete"
+	s.State.Quests["lantern-road"] = "complete"
 	var echoSites []ports.EchoSite
 	for i := 0; i < 9; i++ {
 		cx, cy := int32(i%3), int32(i/3)
@@ -196,7 +196,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	}
 	s.State.Flags = []string{"paper:will-of-elias-fenn"}
 	// Observing an initial epoch establishes the watermark without a turning.
-	s.State.Quest = "complete"
+	s.State.Quests["lantern-road"] = "complete"
 	w.X = 56
 	if err = r.Record(context.Background(), tx, &s, w, now); err != nil {
 		t.Fatal(err)

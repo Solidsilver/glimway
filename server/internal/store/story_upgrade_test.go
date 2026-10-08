@@ -74,7 +74,7 @@ func TestStory028Upgrade(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			if snap.State.Quest != "complete" || snap.State.PlaySeconds != 123 || snap.Version != 8 || len(questInventory(snap.State.Inventory)) != 3 {
+			if snap.State.Quests["lantern-road"] != "complete" || snap.State.PlaySeconds != 123 || snap.Version != 8 || len(questInventory(snap.State.Inventory)) != 3 {
 				t.Fatal(JSON(snap))
 			}
 			if kind == "wilds" && (snap.State.Area != "commons" || snap.State.Position != (rules.Position{X: 23*16 + 8, Y: 2*16 + 8})) {

@@ -38,3 +38,23 @@ test('shared resident cycle phase and grace vectors', () => {
   assert.deepEqual(residentAt('finn',2700), { area:'in:village:mill:2',tx:7,ty:5 });
   assert.equal(residentAt('missing',0),null); assert.equal(residentById('missing'),null);
 });
+
+test('shared quest wait boundaries', async () => {
+  const { default: vectors } = await import('../content/vectors/quest-waits.json', { with: { type: 'json' } });
+  const { questWaitReady } = await import('../src/lib/clock.ts');
+  for (const v of vectors) assert.equal(questWaitReady(v.wait, v.since, v.now), v.ready, v.name);
+});
+
+test('shared resident seller schema', async () => {
+  const { default: vectors } = await import('../content/vectors/sellers.json', { with: { type: 'json' } });
+  const { default: raw } = await import('../content/items.json', { with: { type: 'json' } });
+  const { validateItems, sellerFor } = await import('../src/lib/items.ts');
+  for (const v of vectors) {
+    const value = edited(raw, v.edits);
+    if (v.valid) assert.doesNotThrow(() => validateItems(value), v.name);
+    else assert.throws(() => validateItems(value), undefined, v.name);
+  }
+  assert.equal(sellerFor('hazels-kitchen', 0)?.area, 'in:village:bakery');
+  assert.equal(sellerFor('hazels-kitchen', 3000)?.area, 'village');
+  assert.equal(sellerFor('finns-mill-door', 3000)?.area, 'in:village:mill:2');
+});

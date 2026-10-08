@@ -54,7 +54,7 @@ func validatePayload(m protoreflect.Message) error {
 	return err
 }
 func validArea(area string) bool {
-	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 {
+	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
 		return true
 	}
 	if !strings.HasPrefix(area, "wilds:") {
@@ -82,7 +82,8 @@ func validStoryMark(mark string) bool {
 			if len(parts) != 2 || !validPayloadID(parts[0]) || !validPayloadID(parts[1]) {
 				return false
 			}
-			return prefix == "heard:" || parts[1] == "new" || content.QuestIndex(parts[1]) >= 0
+			quest, step, explicit := strings.Cut(parts[1], ":")
+			return prefix == "heard:" || explicit && content.QuestIndex(quest, step) >= 0 || !explicit && (parts[1] == "new" || content.QuestIndex(parts[1]) >= 0)
 		}
 	}
 	return validPayloadID(mark) || validWitnessMark(mark)

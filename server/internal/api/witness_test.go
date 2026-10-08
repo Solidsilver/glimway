@@ -36,6 +36,9 @@ func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 	x.t.Helper()
 	doc := s.State
 	doc.Area = area
+	if to == "guardian-defeated" {
+		s.Snapshot = x.expect("POST", "/api/story/mark", body(*s, "quest-defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
+	}
 	out := x.expect("POST", "/api/quest/step", body(*s, to, map[string]any{"quest": "lantern-road", "to": to, "where": testWhere(doc)}), c, 200)
 	s.Snapshot = out.Snapshot
 }
@@ -45,6 +48,7 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	ts := startPresence(t, x, presenceTestConfig())
 	x.hero("olive", "Olive", "p1")
 	oc, o := x.ready("olive")
+	x.seedOpeningDone(o.AccountID)
 	x.hero("bob", "Bob", "p1")
 	bc, b := x.ready("bob")
 	x.hero("cal", "Cal", "p1")

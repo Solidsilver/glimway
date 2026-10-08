@@ -58,20 +58,6 @@
         "ty": 9,
         "radiusTiles": 4
       }
-    ],
-    "residents": [
-      {
-        "id": "ada",
-        "area": "village",
-        "tx": 35,
-        "ty": 8
-      },
-      {
-        "id": "hazel",
-        "area": "village",
-        "tx": 12,
-        "ty": 15
-      }
     ]
   },
   "items": [
@@ -1178,9 +1164,6 @@
     {
       "id": "hazels-kitchen",
       "npc": "Hazel",
-      "area": "village",
-      "tx": 12,
-      "ty": 15,
       "radiusTiles": 4,
       "goods": [
         {
@@ -1190,14 +1173,12 @@
           "label": "Buy a lump of tallow · 1 ember",
           "line": "Tallow's an ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
         }
-      ]
+      ],
+      "with": "hazel"
     },
     {
       "id": "finns-mill-door",
       "npc": "Finn",
-      "area": "village",
-      "tx": 30,
-      "ty": 23,
       "radiusTiles": 4,
       "goods": [
         {
@@ -1207,7 +1188,8 @@
           "label": "Buy a sack of flour · 1 ember",
           "line": "The fine sift, not the grist — I milled it while the wheel held. Forty-one and holding, this morning."
         }
-      ]
+      ],
+      "with": "finn"
     },
     {
       "id": "madder-stall",

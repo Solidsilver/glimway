@@ -26,7 +26,7 @@ type Rules struct {
 }
 
 func RoadLit(s store.Snapshot) bool {
-	return content.QuestIndex(s.State.Quest) >= content.QuestIndex("complete")
+	return content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex("complete")
 }
 func Mark(s *store.Snapshot, mark string) bool {
 	added := !slices.Contains(s.State.Flags, mark)
@@ -91,9 +91,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	}
 	switch p.Source {
 	case "placed":
-		return w.Area == q.Area && content.QuestIndex(s.State.Quest) >= content.QuestIndex(defaultStage(q.After)) && near(w, float64(q.TX*16+8), float64(q.TY*16+8)), nil
+		return w.Area == q.Area && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(defaultStage(q.After)) && near(w, float64(q.TX*16+8), float64(q.TY*16+8)), nil
 	case "quest", "gift":
-		return q.From != "" && w.Area == q.Area && content.QuestIndex(s.State.Quest) >= content.QuestIndex(q.Stage), nil
+		return q.From != "" && w.Area == q.Area && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(q.Stage), nil
 	case "village-project":
 		var due bool
 		// A finished project in this world holds the paper, and this player helped build it
