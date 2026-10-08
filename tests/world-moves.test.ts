@@ -121,24 +121,20 @@ const view = {
   movedOutAt: 0,
 };
 
-test('world views parse, with unknown or broken fields made safe', () => {
+test('world views parse, with unknown fields dropped and broken fields refused', () => {
   assert.deepEqual(parseWorld(view), view);
-  const odd = parseWorld({ ...view, world: { id: 'w1', ownerId: 'o', ownerName: 'O', members: 1, ownerHere: 'yes' }, partyWorld: undefined, prompt: 'yes', leaving: { gate: -3, last: true, outgoing: -1, incoming: 1.5, wardenTools: -2 }, moveOpensAt: -4, moveOpensIn: 'soon', leaver: undefined, partyCanOpen: 'yes', extra: 1 });
-  assert.equal(odd.partyWorld, null);
-  assert.equal(odd.prompt, false);
-  assert.equal(odd.world.ownerHere, false);
-  assert.equal(odd.world.party, false);
-  assert.equal(odd.moveOpensAt, 0);
-  assert.equal(odd.moveOpensIn, 0);
-  assert.equal(odd.leaver, null);
-  assert.equal(odd.partyCanOpen, false);
-  assert.deepEqual(parseWorld({ ...view, leaver: { leftAt: 'x', hasOwn: 1 } }).leaver, { leftAt: 0, moveOutAt: 0, moveOutIn: 0, hasOwn: false });
+  // Unknown future fields are dropped; absent message fields read as null.
+  const extra = parseWorld({ ...view, partyWorld: null, leaver: null, extra: 1 });
+  assert.equal(extra.partyWorld, null);
+  assert.equal(extra.leaver, null);
   // The invite list says when you live in a party's world.
   assert.equal(parseInviteList({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: true, partyAdmitted: false }).partyWorld, true);
   assert.throws(() => parseInviteList({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: 'yes', partyAdmitted: false }), { code: 'bad-response' });
-  assert.deepEqual(odd.leaving, { gate: -1, last: false, outgoing: 0, incoming: 0, wardenTools: 0, deedCost: 0 });
-  assert.throws(() => parseWorld({ ...view, world: { id: 1 } }));
-  assert.throws(() => parseWorld({ ...view, leaving: null }));
+  // Broken views and wrong-typed fields are a bad response, not defaults.
+  assert.throws(() => parseWorld({ ...view, world: { id: 1 } }), { code: 'bad-response' });
+  assert.throws(() => parseWorld({ ...view, leaving: null }), { code: 'bad-response' });
+  assert.throws(() => parseWorld({ ...view, world: { ...view.world, ownerHere: 'yes' } }), { code: 'bad-response' });
+  assert.throws(() => parseWorld({ ...view, leaver: { leftAt: 'x', hasOwn: 1 } }), { code: 'bad-response' });
 });
 
 test('a move answer carries the snapshot and the new world', () => {
@@ -155,7 +151,7 @@ test('a move answer carries the snapshot and the new world', () => {
     verifiedXp: 0,
     flagged: false,
   };
-  const res = parseWorldMove({ ...snapshot, result: { world: view, from: 'w1', leftHome: true, returned: 2 } });
+  const res = parseWorldMove({ ...snapshot, worldMove: { world: view, from: 'w1', leftHome: true, returned: 2 } });
   assert.equal(res.worldId, 'w2');
   assert.equal(res.rev, 7);
   assert.deepEqual(res.result, { world: view, from: 'w1', leftHome: true, returned: 2 });

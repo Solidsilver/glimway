@@ -21,6 +21,7 @@ function message(schema: DescMessage, raw: unknown): void {
   }
   if (schema.typeName === 'google.protobuf.StringValue') { if (raw !== null) scalar(ScalarType.STRING, raw); return; }
   if (schema.typeName === 'google.protobuf.DoubleValue') { if (raw !== null) scalar(ScalarType.DOUBLE, raw); return; }
+  if (schema.typeName === 'google.protobuf.Int32Value' || schema.typeName === 'google.protobuf.Int64Value') { if (raw !== null) scalar(ScalarType.INT64, raw); return; }
   if (raw === null) return;
   const input = record(raw);
   for (const field of schema.fields) {

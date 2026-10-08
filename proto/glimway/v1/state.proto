@@ -5,6 +5,8 @@ import "glimway/v1/profile.proto";
 import "glimway/v1/operations.proto";
 import "glimway/v1/op.proto";
 import "google/protobuf/wrappers.proto";
+import "glimway/v1/village.proto";
+import "glimway/v1/world.proto";
 
 message Account {
   string account_id = 1; string display_name = 2; string profile_source = 3;
@@ -33,11 +35,16 @@ message Envelope {
     TakePaperResult take_paper = 13; SettleEchoResult settle_echo = 14;
     FallResult fall = 15; ProfileResult profile = 16; SpendResult spend = 17;
     WildsClaimResult wilds_claim = 18; WildsLanternResult wilds_lantern = 19;
+    LibraryDonateResult library_donate = 20;
+    MailSendResult mail_send = 21; MailActionResult mail_claim = 22;
+    MailActionResult mail_recall = 23;
+    WorkshopView storage_move = 24;
+    CraftResult craft = 25; HearthCraftResult hearth_craft = 26;
+    DeskCopyResult desk_copy = 27;
+    WorldMoveResult world_move = 28; WorldMoveResult world_leave = 29;
+    ContributeResult contribute = 30; MendResult mend = 31;
   }
 }
-message WorldRef { string id = 1; string owner_id = 2; string owner_name = 3; double members = 4; bool owner_here = 5; bool party = 6; }
-// Held identity is a Habitica subject: no account exists until world choice.
-message WorldChoice { string habitica_id = 1; string display_name = 2; WorldRef party_world = 3; bool party_can_open = 4; bool party_admitted = 5; }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }
 message SessionResponse { oneof answer { PlayerState state = 1; WorldChoice world_choice = 2; } }
 message WorldChooseRequest { string choice = 1; }

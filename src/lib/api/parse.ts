@@ -21,37 +21,16 @@ import type {
   StackView,
   ThanksView,
   WorkshopView,
-  ContributeResponse,
-  CraftResponse,
-  DeskCopyResponse,
-  HearthCraftResponse,
   WoodpileActionResponse,
   WoodpileResponse,
   WoodpileView,
-  Mail,
-  MailActionResponse,
-  MailResponse,
-  ProjectView,
-  ProjectsResponse,
-  ProjectsView,
-  ChoreView,
-  MendedView,
-  ChoreHistoryView,
-  RepairsView,
-  RepairsResponse,
-  MendResponse,
   ShelfSlotView,
   ShelfView,
   ShelfResponse,
   ShelfActionResponse,
-  StorageMoveResponse,
-  StorageResponse,
-  CommonsResponse,
   HomeActionResponse,
   HomeResponse,
   HomeView,
-  GateInfo,
-  DeedInvite,
   PlayResponse,
   ProgressResponse,
   Snapshot,
@@ -68,11 +47,6 @@ import type {
   WildsLoot,
   WildsMaterials,
   WildsRegionResponse,
-  WorldLeaver,
-  WorldMoveResponse,
-  WorldChoice,
-  WorldRef,
-  WorldView,
 } from './types.ts';
 
 type Obj = Record<string, unknown>;
@@ -161,71 +135,12 @@ export function parseSpend(raw: unknown): SpendResponse {
 
 export { parseCreatedInvite, parseInviteList } from './invites.ts';
 
-const count = (v: unknown): number | undefined =>
-  typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : undefined;
+// The worlds (world.ts) and the village domains (village.ts) decode through
+// the generated messages.
+export { parseWorld, parseWorldChoice, parseWorldMove } from './world.ts';
+export { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailAction, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend } from './village.ts';
 
 // ------------------------------------------------------------- worlds
-
-function parseWorldRef(raw: unknown): WorldRef {
-  const o = obj(raw);
-  return { id: str(o.id), ownerId: str(o.ownerId), ownerName: str(o.ownerName).slice(0, 128), members: count(o.members) ?? 0, ownerHere: o.ownerHere === true, party: o.party === true };
-}
-
-function parseLeaver(raw: unknown): WorldLeaver {
-  const o = obj(raw);
-  return { leftAt: count(o.leftAt) ?? 0, moveOutAt: count(o.moveOutAt) ?? 0, moveOutIn: count(o.moveOutIn) ?? 0, hasOwn: o.hasOwn === true };
-}
-
-export function parseWorld(raw: unknown): WorldView {
-  const o = obj(raw);
-  const l = obj(o.leaving);
-  const gate = typeof l.gate === 'number' && Number.isInteger(l.gate) && l.gate >= 0 ? l.gate : -1;
-  return {
-    world: parseWorldRef(o.world),
-    isOwner: o.isOwner === true,
-    inParty: o.inParty === true,
-    partyHome: o.partyHome === true,
-    partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
-    partyCanOpen: o.partyCanOpen === true,
-    ownWorld: o.ownWorld == null ? null : parseWorldRef(o.ownWorld),
-    prompt: o.prompt === true,
-    leaving: {
-      gate,
-      last: gate >= 0 && l.last === true,
-      outgoing: count(l.outgoing) ?? 0,
-      incoming: count(l.incoming) ?? 0,
-      wardenTools: count(l.wardenTools) ?? 0,
-      deedCost: count(l.deedCost) ?? 0,
-    },
-    moveOpensAt: count(o.moveOpensAt) ?? 0,
-    moveOpensIn: count(o.moveOpensIn) ?? 0,
-    leaver: o.leaver == null ? null : parseLeaver(o.leaver),
-    movedOutAt: count(o.movedOutAt) ?? 0,
-  };
-}
-
-/** A held first sign-in's question (`{ worldChoice }`), or null when the answer is something else. */
-export function parseWorldChoice(raw: unknown): WorldChoice | null {
-  const c = obj(raw).worldChoice;
-  if (c == null || typeof c !== 'object') return null;
-  const o = obj(c);
-  const habiticaId = str(o.habiticaId);
-  return {
-    habiticaId,
-    displayName: str(o.displayName).slice(0, 128),
-    partyWorld: o.partyWorld == null ? null : parseWorldRef(o.partyWorld),
-    partyCanOpen: o.partyCanOpen === true,
-    partyAdmitted: o.partyAdmitted === true,
-  };
-}
-
-export function parseWorldMove(raw: unknown): WorldMoveResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: { world: parseWorld(r.world), from: str(r.from), leftHome: r.leftHome === true, returned: count(r.returned) ?? 0 },
-  };
-}
 
 // ------------------------------------------------------------- the Wilds
 
@@ -470,46 +385,6 @@ export function parseHome(raw: unknown): HomeResponse {
   return { ...parseSnapshot(raw), gate: int(o.gate), landSeed: int(o.landSeed), home: maybeHome(o.home), materials: materials(o.materials) };
 }
 
-function person(v: unknown): { id: string; name: string } {
-  const o = obj(v);
-  return { id: str(o.id), name: name(o.name) };
-}
-
-export function parseCommons(raw: unknown): CommonsResponse {
-  const o = obj(raw);
-  if (!Array.isArray(o.gates)) throw new ApiError('bad-response');
-  const gates: GateInfo[] = o.gates.map((row) => {
-    const r = obj(row);
-    return {
-      gate: int(r.gate),
-      homeId: typeof r.homeId === 'string' && r.homeId ? r.homeId : null,
-      names: Array.isArray(r.names) ? r.names.map(name) : [],
-      members: Array.isArray(r.members) ? r.members.map((m) => ({ id: str(obj(m).id), displayName: name(obj(m).displayName) })) : [],
-      tier: int(r.tier ?? 0),
-      desolate: r.desolate === true,
-      mine: r.mine === true,
-      price: nullableInt(r.price),
-      reclaim: r.reclaim === true,
-      shelf: r.shelf === true,
-      shelfStocked: r.shelfStocked === true,
-    };
-  });
-  const mine = o.mine && typeof o.mine === 'object' ? { homeId: str(obj(o.mine).homeId), gate: int(obj(o.mine).gate) } : null;
-  const invites: DeedInvite[] = (Array.isArray(o.invites) ? o.invites : []).map((row) => {
-    const r = obj(row);
-    return {
-      homeId: str(r.homeId),
-      gate: int(r.gate),
-      from: person(r.from),
-      to: person(r.to),
-      expiresAt: num(r.expiresAt),
-      fromConfirmedAt: nullableInt(r.fromConfirmedAt),
-      toConfirmedAt: nullableInt(r.toConfirmedAt),
-    };
-  });
-  return { ...parseSnapshot(raw), gates, gateCount: int(o.gateCount ?? gates.length), mine, invites };
-}
-
 export function parseHomeAction(raw: unknown): HomeActionResponse {
   const r = obj(obj(raw).result);
   return {
@@ -684,51 +559,6 @@ function parseWorkshop(o: Obj): WorkshopView {
   return { home, inventory: parseCounts(o.inventory), storage, personal: parseCounts(o.personal), shared: typeof o.shared === 'string' ? o.shared : home ? 'open' : 'not-a-member' };
 }
 
-export function parseStorage(raw: unknown): StorageResponse {
-  return { ...parseSnapshot(raw), ...parseWorkshop(obj(raw)) };
-}
-
-export function parseStorageMove(raw: unknown): StorageMoveResponse {
-  return { ...parseSnapshot(raw), result: parseWorkshop(obj(obj(raw).result)) };
-}
-
-export function parseCraft(raw: unknown): CraftResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      ...parseWorkshop(r),
-      recipeId: str(r.recipeId),
-      output: parseAsset(r.output),
-      instanceIds: Array.isArray(r.instanceIds) ? r.instanceIds.filter((v): v is string => typeof v === 'string') : [],
-    },
-  };
-}
-
-export function parseHearthCraft(raw: unknown): HearthCraftResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      ...parseWorkshop(r),
-      recipeId: str(r.recipeId),
-      output: parseAsset(r.output),
-    },
-  };
-}
-
-export function parseDeskCopy(raw: unknown): DeskCopyResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      ...parseWorkshop(r),
-      pageId: str(r.pageId),
-      qty: int(r.qty, 1),
-    },
-  };
-}
-
 function parseWoodpile(v: unknown): WoodpileView {
   const o = obj(v);
   const stacks = Array.isArray(o.stacks) ? o.stacks : [];
@@ -766,155 +596,6 @@ export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
       woodpile: parseWoodpile(r.woodpile),
       action: str(r.action),
       collectedQty: typeof r.collectedQty === 'number' ? r.collectedQty : undefined,
-    },
-  };
-}
-
-function optTime(v: unknown): number | null {
-  return typeof v === 'number' && Number.isFinite(v) ? v : null;
-}
-
-function parseMailEntry(raw: unknown): Mail {
-  const o = obj(raw);
-  const m: Mail = {
-    id: str(o.id),
-    worldId: typeof o.worldId === 'string' ? o.worldId : '',
-    fromId: str(o.fromId),
-    toId: str(o.toId),
-    fromName: name(o.fromName),
-    toName: name(o.toName),
-    asset: parseAsset(o.asset),
-    sentAt: num(o.sentAt),
-    claimedAt: optTime(o.claimedAt),
-  };
-  if ('returnedAt' in o) m.returnedAt = optTime(o.returnedAt);
-  if (o.returnReason === 'recalled' || o.returnReason === 'expired' || o.returnReason === 'recipient-removed') m.returnReason = o.returnReason;
-  else if ('returnReason' in o) m.returnReason = null;
-  return m;
-}
-
-function mailList(v: unknown): Mail[] {
-  if (!Array.isArray(v)) throw new ApiError('bad-response');
-  return v.map(parseMailEntry);
-}
-
-export function parseMail(raw: unknown): MailResponse {
-  const o = obj(raw);
-  const out: MailResponse = { ...parseSnapshot(raw), mail: mailList(o.mail) };
-  if (o.inventory) out.inventory = parseCounts(o.inventory);
-  out.nextCursor = typeof o.nextCursor === 'string' ? o.nextCursor : null;
-  out.nextPendingCursor = typeof o.nextPendingCursor === 'string' ? o.nextPendingCursor : null;
-  return out;
-}
-
-export function parseMailAction(raw: unknown): MailActionResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      mailId: typeof r.mailId === 'string' ? r.mailId : '',
-      mail: Array.isArray(r.mail) ? mailList(r.mail) : [],
-      inventory: parseCounts(r.inventory),
-      ...(r.asset ? { asset: parseAsset(r.asset) } : {}),
-    },
-  };
-}
-
-function parseProject(raw: unknown): ProjectView {
-  const o = obj(raw);
-  if (!['open', 'in-progress', 'complete'].includes(o.stage as string)) throw new ApiError('bad-response');
-  return {
-    id: str(o.id),
-    name: str(o.name),
-    stage: o.stage as ProjectView['stage'],
-    required: countMap(o.required),
-    contributed: countMap(o.contributed),
-    mine: countMap(o.mine),
-    completedAt: optTime(o.completedAt),
-    worldFlag: typeof o.worldFlag === 'string' ? o.worldFlag : null,
-    grantablePapers: Array.isArray(o.grantablePapers) ? o.grantablePapers.filter((v): v is string => typeof v === 'string') : [],
-  };
-}
-
-function parseProjectsView(o: Record<string, unknown>): ProjectsView {
-  if (!Array.isArray(o.projects)) throw new ApiError('bad-response');
-  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-  return { projects: o.projects.map(parseProject), worldFlags: strings(o.worldFlags), grantablePapers: strings(o.grantablePapers) };
-}
-
-export function parseProjects(raw: unknown): ProjectsResponse {
-  return { ...parseSnapshot(raw), ...parseProjectsView(obj(raw)) };
-}
-
-export function parseContribute(raw: unknown): ContributeResponse {
-  const r = obj(obj(raw).result);
-  return { ...parseSnapshot(raw), result: { ...parseProjectsView(r), projectId: str(r.projectId), materials: countMap(r.materials) } };
-}
-
-function parseChore(raw: unknown): ChoreView {
-  const o = obj(raw);
-  const pos = obj(o.pos);
-  return {
-    id: str(o.id),
-    name: str(o.name),
-    part: str(o.part),
-    area: str(o.area),
-    target: str(o.target),
-    pos: { tx: int(pos.tx ?? 0), ty: int(pos.ty ?? 0) },
-    resident: str(o.resident),
-    hint: str(o.hint),
-    description: str(o.description),
-  };
-}
-
-function parseMended(raw: unknown): MendedView {
-  const o = obj(raw);
-  return {
-    repairId: str(o.repairId),
-    mendedBy: str(o.mendedBy),
-    displayName: str(o.displayName),
-    mendedAt: num(o.mendedAt),
-  };
-}
-
-function parseChoreHistory(raw: unknown): ChoreHistoryView {
-  const o = obj(raw);
-  return {
-    id: str(o.id),
-    repairId: str(o.repairId),
-    repairName: str(o.repairName),
-    mendedBy: str(o.mendedBy),
-    displayName: str(o.displayName),
-    mendedAt: num(o.mendedAt),
-  };
-}
-
-function parseRepairsView(o: Record<string, unknown>): RepairsView {
-  if (!Array.isArray(o.open) || !Array.isArray(o.mended)) throw new ApiError('bad-response');
-  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-  return {
-    open: o.open.map(parseChore),
-    mended: o.mended.map(parseMended),
-    worldFlags: strings(o.worldFlags),
-    history: Array.isArray(o.history) ? o.history.map(parseChoreHistory) : [],
-  };
-}
-
-export function parseRepairs(raw: unknown): RepairsResponse {
-  return { ...parseSnapshot(raw), ...parseRepairsView(obj(raw)) };
-}
-
-export function parseMend(raw: unknown): MendResponse {
-  const r = obj(obj(raw).result);
-  const gift = r.gift ? obj(r.gift) : undefined;
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      repairs: parseRepairsView(obj(r.repairs)),
-      mended: str(r.mended),
-      reaction: str(r.reaction),
-      gift: gift ? { kind: str(gift.kind), id: str(gift.id), qty: int(gift.qty ?? 1) } : undefined,
-      items: parseItemsView(r.items),
     },
   };
 }

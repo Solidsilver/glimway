@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -118,31 +119,30 @@ func (a *Server) projectsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		projectsView
-	}{v})
+	return a.finishRead(w, r, tx, s, projectsViewProto(v))
 }
 func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error {
 	id, err := pathActionID(r.URL.Path, "/api/projects/", "/contribute")
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Mutation
-		Materials map[string]int `json:"materials"`
-	}
-	if err = decode(w, r, &req); err != nil {
+	var req contract.ContributeRequest
+	if err = decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	given := map[string]int{}
+	for id, n := range req.Materials {
+		given[id] = int(n)
+	}
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		def, ok := content.ProjectFor(id)
 		if !ok {
 			return nil, fail(404, "project-not-found")
 		}
-		if len(req.Materials) == 0 || len(req.Materials) > len(def.Materials) {
+		if len(given) == 0 || len(given) > len(def.Materials) {
 			return nil, fail(400, "invalid-contribution")
 		}
-		for material, n := range req.Materials {
+		for material, n := range given {
 			if def.Materials[material] == 0 || n < 1 || n > 10000 {
 				return nil, fail(400, "invalid-contribution")
 			}
@@ -162,7 +162,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			return nil, err
 		}
 		for _, material := range content.WildsRules.Materials {
-			n := req.Materials[material]
+			n := given[material]
 			if n == 0 {
 				continue
 			}
@@ -195,15 +195,16 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 		if err != nil {
 			return nil, err
 		}
-		m, err := materials(ctx, tx, s.AccountID)
+		counts, err := materials(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			projectsView
-			ProjectID string         `json:"projectId"`
-			Materials map[string]int `json:"materials"`
-		}{v, id, m}, nil
+		carried := map[string]int32{}
+		for id, n := range counts {
+			carried[id] = int32(n)
+		}
+		pv := projectsViewProto(v)
+		return &contract.ContributeResult{Projects: pv.Projects, WorldFlags: pv.WorldFlags, GrantablePapers: pv.GrantablePapers, ProjectId: id, Materials: carried}, nil
 	})
 }
 

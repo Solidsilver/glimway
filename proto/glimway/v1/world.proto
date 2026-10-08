@@ -1,0 +1,82 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+
+// Worlds, sessions and play. Sign-in (POST /api/session), the world choice
+// (GET /api/world/choice, POST /api/world/choose), GET /api/state and
+// POST /api/play already used the generated SessionResponse, StateResponse
+// and PlayRequest/PlayResponse (state.proto); this file adds the remaining
+// world reads and moves, and owns the world reference and choice messages
+// both files need.
+
+message WorldRef { string id = 1; string owner_id = 2; string owner_name = 3; double members = 4; bool owner_here = 5; bool party = 6; }
+// Held identity is a Habitica subject: no account exists until world choice.
+message WorldChoice { string habitica_id = 1; string display_name = 2; WorldRef party_world = 3; bool party_can_open = 4; bool party_admitted = 5; }
+
+// What a move would leave behind, for the confirmation screen.
+message WorldLeaving {
+  // Gate of the caller's homestead (-1: none); Last: they are its only member.
+  int32 gate = 1;
+  bool last = 2;
+  // Outgoing parcels still on the road block a move (recall them first);
+  // incoming ones go back to their senders.
+  int32 outgoing = 3;
+  int32 incoming = 4;
+  // Warden-set tools resting in the homestead's shared chest, which stays
+  // behind (take them first).
+  int32 warden_tools = 5;
+  // DeedCost: embers a deed costs in the next world (the first is free).
+  int32 deed_cost = 6;
+}
+// The caller lives in a party's world but has left that party.
+message WorldLeaver {
+  // LeftAt: the sign-in that first saw it; MoveOutAt: when the next sign-in
+  // moves them out; MoveOutIn: seconds until then, by the server's clock.
+  double left_at = 1;
+  double move_out_at = 2;
+  double move_out_in = 3;
+  // HasOwn: they own a world to go to (otherwise one is made for them).
+  bool has_own = 4;
+}
+// GET /api/world: your world, your party's world, and when you may next move.
+message WorldView {
+  WorldRef world = 1;
+  bool is_owner = 2;
+  // The caller's last sign-in reported a party.
+  bool in_party = 3;
+  // This world is the caller's party's world.
+  bool party_home = 4;
+  // The caller's party's world, when they live somewhere else.
+  WorldRef party_world = 5;
+  // The caller's party has no world here and they may open it.
+  bool party_can_open = 6;
+  // A world the caller owns, when they live somewhere else.
+  WorldRef own_world = 7;
+  // PartyWorld is set and its join prompt hasn't been shown.
+  bool prompt = 8;
+  WorldLeaving leaving = 9;
+  // When the next move is allowed (unix seconds); 0: now. MoveOpensIn:
+  // seconds until then, by the server's clock (the device counts down from
+  // it on its own clock).
+  double move_opens_at = 10;
+  double move_opens_in = 11;
+  // They live in a party's world and have left that party.
+  WorldLeaver leaver = 12;
+  // When the server moved them out of a party's world they had left (0: it
+  // didn't), until POST /api/world/notice.
+  double moved_out_at = 13;
+}
+// Empty bodies (POST /api/world/party, POST /api/world/notice).
+message WorldPartyRequest {}
+message WorldNoticeRequest {}
+message WorldPromptRequest { string world_id = 1; }
+message WorldMoveRequest { OpHeader op = 1; Where where = 2; string world_id = 3; }
+// Body of POST /api/world/leave (no cooldown; the other move rules hold).
+message WorldLeaveRequest { OpHeader op = 1; Where where = 2; }
+message WorldMoveResult {
+  WorldView world = 1;
+  string from = 2;
+  bool left_home = 3;
+  int32 returned = 4;
+}

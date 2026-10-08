@@ -371,7 +371,12 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
       calls.push({ url, init });
       const base = snapshot();
       if (calls.length === 3) return json(200, { ...base, woodpile: { homesteadId: 'h1', placed: true, stacks: [{ id: 's1', homesteadId: 'h1', accountId: 'a', qty: 10, stackedAt: 100, ready: true, remaining: 0 }], readyCount: 10, totalTimber: 10 } });
-      return json(200, { ...base, result: { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2 }, pageId: 'recipe-page-tea', qty: 2, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: undefined } });
+      const answer = { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2 }, pageId: 'recipe-page-tea', qty: 2 };
+      // The hearth and desk answers sit under their Envelope case; the
+      // woodpile (a homestead lane route) keeps the mixed result.
+      if (calls.length === 1) return json(200, { ...base, hearthCraft: answer });
+      if (calls.length === 2) return json(200, { ...base, deskCopy: answer });
+      return json(200, { ...base, result: { ...answer, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: undefined } });
     }) as typeof fetch,
   });
   const hearth = await api.hearthCraft({ lease: 'L', baseRev: 3, key: 'k1', recipeId: 'hearth-wax-seal', qty: 2 });

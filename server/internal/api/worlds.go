@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -335,7 +336,7 @@ func (a *Server) worldRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v)
+	return a.finish(w, r, tx, worldViewProto(v))
 }
 
 // worldParty makes the party's world for the party the caller's last
@@ -343,8 +344,8 @@ func (a *Server) worldRead(w http.ResponseWriter, r *http.Request) error {
 // a session older than that, or a party reopened since). Only an account the
 // operator let in may (mayOpenParty). It moves no one. Session only, no lease.
 func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
-	var req struct{}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldPartyRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
 	tx, s, _, err := a.begin(r)
@@ -373,18 +374,16 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v)
+	return a.finish(w, r, tx, worldViewProto(v))
 }
 
 // worldPrompt records that the party world's join prompt was shown.
 func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		WorldID string `json:"worldId"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldPromptRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	if req.WorldID == "" || len(req.WorldID) > 128 {
+	if req.WorldId == "" || len(req.WorldId) > 128 {
 		return fail(400, "invalid-request")
 	}
 	tx, s, _, err := a.begin(r)
@@ -394,21 +393,21 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	var exists int
-	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM worlds WHERE id=?", req.WorldID).Scan(&exists); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM worlds WHERE id=?", req.WorldId).Scan(&exists); err != nil {
 		return err
 	}
 	if exists == 0 {
 		return fail(404, "world-not-found")
 	}
 	now := a.Config.Now().Unix()
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.AccountID, req.WorldID, now); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.AccountID, req.WorldId, now); err != nil {
 		return err
 	}
 	v, err := a.loadWorldView(ctx, tx, s, now)
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v)
+	return a.finish(w, r, tx, worldViewProto(v))
 }
 
 // relocate moves the player to target, the move's one shared step. With
@@ -481,12 +480,11 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 	return member, len(incoming), nil
 }
 
-// moveResult is a move's answer under "result".
-type moveResult struct {
-	World    worldView `json:"world"`
-	From     string    `json:"from"`
-	LeftHome bool      `json:"leftHome"`
-	Returned int       `json:"returned"`
+// moveResult is a move's answer under the Envelope's result (world.proto:
+// contract.WorldMoveResult, built by moveResultProto).
+
+func moveResultProto(world worldView, from string, leftHome bool, returned int) *contract.WorldMoveResult {
+	return &contract.WorldMoveResult{World: worldViewProto(world), From: from, LeftHome: leftHome, Returned: int32(returned)}
 }
 
 // worldMove moves the caller to their party's world or to one they own, in
@@ -494,26 +492,23 @@ type moveResult struct {
 // once a day, and only once parcels they sent are home (a move never takes
 // back a gift on its own).
 func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		WorldID string `json:"worldId"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldMoveRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	if req.WorldID == "" || len(req.WorldID) > 128 {
+	if req.WorldId == "" || len(req.WorldId) > 128 {
 		return fail(400, "invalid-request")
 	}
 	mover := ""
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if !rules.SafeAreas[content.RootArea(s.State.Area)] {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		from := s.WorldID
-		if req.WorldID == from {
+		if req.WorldId == from {
 			return nil, fail(409, "already-in-world")
 		}
-		target, err := loadWorldRef(ctx, tx, req.WorldID)
+		target, err := loadWorldRef(ctx, tx, req.WorldId)
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "world-not-found")
 		}
@@ -549,7 +544,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return moveResult{v, from, left, returned}, nil
+		return moveResultProto(v, from, left, returned), nil
 	}, func() {
 		// Presence follows: the live socket moves to the new world's rooms.
 		if mover != "" {
@@ -563,14 +558,12 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 // away, without waiting out the grace period or the move cooldown. The
 // other move rules hold: from the village or the Commons, parcels home first.
 func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldLeaveRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
 	mover := ""
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		here, err := loadWorldRef(ctx, tx, s.WorldID)
 		if err != nil {
 			return nil, err
@@ -602,7 +595,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return moveResult{v, from, left, returned}, nil
+		return moveResultProto(v, from, left, returned), nil
 	}, func() {
 		if mover != "" {
 			a.presenceChanged(mover)
@@ -658,8 +651,8 @@ func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *s
 
 // worldNotice records that the "you were moved out" notice was shown.
 func (a *Server) worldNotice(w http.ResponseWriter, r *http.Request) error {
-	var req struct{}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WorldNoticeRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
 	tx, s, _, err := a.begin(r)
@@ -675,5 +668,5 @@ func (a *Server) worldNotice(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, v)
+	return a.finish(w, r, tx, worldViewProto(v))
 }

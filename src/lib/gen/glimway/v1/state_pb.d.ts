@@ -7,6 +7,8 @@ import type { Message } from "@bufbuild/protobuf";
 import type { HabiticaProfile } from "./profile_pb.js";
 import type { Place, Vitals } from "./op_pb.js";
 import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsLanternResult } from "./operations_pb.js";
+import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
+import type { WorldChoice, WorldMoveResult } from "./world_pb.js";
 
 /**
  * Describes the file glimway/v1/state.proto.
@@ -300,6 +302,78 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: WildsLanternResult;
     case: "wildsLantern";
+  } | {
+    /**
+     * @generated from field: glimway.v1.LibraryDonateResult library_donate = 20;
+     */
+    value: LibraryDonateResult;
+    case: "libraryDonate";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MailSendResult mail_send = 21;
+     */
+    value: MailSendResult;
+    case: "mailSend";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MailActionResult mail_claim = 22;
+     */
+    value: MailActionResult;
+    case: "mailClaim";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MailActionResult mail_recall = 23;
+     */
+    value: MailActionResult;
+    case: "mailRecall";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WorkshopView storage_move = 24;
+     */
+    value: WorkshopView;
+    case: "storageMove";
+  } | {
+    /**
+     * @generated from field: glimway.v1.CraftResult craft = 25;
+     */
+    value: CraftResult;
+    case: "craft";
+  } | {
+    /**
+     * @generated from field: glimway.v1.HearthCraftResult hearth_craft = 26;
+     */
+    value: HearthCraftResult;
+    case: "hearthCraft";
+  } | {
+    /**
+     * @generated from field: glimway.v1.DeskCopyResult desk_copy = 27;
+     */
+    value: DeskCopyResult;
+    case: "deskCopy";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WorldMoveResult world_move = 28;
+     */
+    value: WorldMoveResult;
+    case: "worldMove";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WorldMoveResult world_leave = 29;
+     */
+    value: WorldMoveResult;
+    case: "worldLeave";
+  } | {
+    /**
+     * @generated from field: glimway.v1.ContributeResult contribute = 30;
+     */
+    value: ContributeResult;
+    case: "contribute";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MendResult mend = 31;
+     */
+    value: MendResult;
+    case: "mend";
   } | { case: undefined; value?: undefined };
 };
 
@@ -308,85 +382,6 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
  * Use `create(EnvelopeSchema)` to create a new message.
  */
 export declare const EnvelopeSchema: GenMessage<Envelope>;
-
-/**
- * @generated from message glimway.v1.WorldRef
- */
-export declare type WorldRef = Message<"glimway.v1.WorldRef"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string owner_id = 2;
-   */
-  ownerId: string;
-
-  /**
-   * @generated from field: string owner_name = 3;
-   */
-  ownerName: string;
-
-  /**
-   * @generated from field: double members = 4;
-   */
-  members: number;
-
-  /**
-   * @generated from field: bool owner_here = 5;
-   */
-  ownerHere: boolean;
-
-  /**
-   * @generated from field: bool party = 6;
-   */
-  party: boolean;
-};
-
-/**
- * Describes the message glimway.v1.WorldRef.
- * Use `create(WorldRefSchema)` to create a new message.
- */
-export declare const WorldRefSchema: GenMessage<WorldRef>;
-
-/**
- * Held identity is a Habitica subject: no account exists until world choice.
- *
- * @generated from message glimway.v1.WorldChoice
- */
-export declare type WorldChoice = Message<"glimway.v1.WorldChoice"> & {
-  /**
-   * @generated from field: string habitica_id = 1;
-   */
-  habiticaId: string;
-
-  /**
-   * @generated from field: string display_name = 2;
-   */
-  displayName: string;
-
-  /**
-   * @generated from field: glimway.v1.WorldRef party_world = 3;
-   */
-  partyWorld?: WorldRef | undefined;
-
-  /**
-   * @generated from field: bool party_can_open = 4;
-   */
-  partyCanOpen: boolean;
-
-  /**
-   * @generated from field: bool party_admitted = 5;
-   */
-  partyAdmitted: boolean;
-};
-
-/**
- * Describes the message glimway.v1.WorldChoice.
- * Use `create(WorldChoiceSchema)` to create a new message.
- */
-export declare const WorldChoiceSchema: GenMessage<WorldChoice>;
 
 /**
  * @generated from message glimway.v1.LoginRequest

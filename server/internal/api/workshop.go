@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/content"
 	"glimway/server/internal/store"
 	"net/http"
@@ -66,9 +67,7 @@ func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		workshopView
-	}{v})
+	return a.finishRead(w, r, tx, s, workshopProto(v))
 }
 
 // chestUnits is everything in a chest, counted in units (the personal cap).
@@ -82,16 +81,12 @@ func chestUnits(c assetCounts) int {
 	return n
 }
 func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		Direction string        `json:"direction"`
-		Chest     string        `json:"chest,omitempty"`
-		Asset     content.Asset `json:"asset"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.StorageMoveRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	asset := assetFromProto(req.Asset)
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -119,7 +114,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 		default:
 			return nil, fail(400, "invalid-chest")
 		}
-		v := req.Asset
+		v := asset
 		if err := validAsset(v); err != nil {
 			return nil, err
 		}
@@ -147,7 +142,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = putStack(ctx, tx, chest.stackPlace(), v.ID, got.Makers); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Op.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Op.GetKey(), now); err != nil {
 				return nil, err
 			}
 		case "withdraw":
@@ -171,35 +166,35 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = giveAsset(ctx, tx, s, v, got, chest, "storage-withdraw", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Op.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Op.GetKey(), now); err != nil {
 				return nil, err
 			}
 		default:
 			return nil, fail(400, "invalid-direction")
 		}
-		return readWorkshop(ctx, tx, s, now)
+		v2, err := readWorkshop(ctx, tx, s, now)
+		if err != nil {
+			return nil, err
+		}
+		return workshopProto(v2), nil
 	})
 }
 
 // craft makes things at the Workshop bench. Made things carry the maker's
 // mark when their definition says so ("marked").
 func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		RecipeID string `json:"recipeId"`
-		Qty      int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.CraftRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := workshop(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		recipe, ok := content.RecipeFor(req.RecipeID)
+		recipe, ok := content.RecipeFor(req.RecipeId)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
 		}
@@ -211,14 +206,15 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		qty := int(req.Qty)
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, qty), recipe.Swaps); err != nil {
 			return nil, err
 		}
-		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "craft", recipe.ID, now); err != nil {
+		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, qty, "craft", recipe.ID, now); err != nil {
 			return nil, err
 		}
 		output := recipe.Output
-		output.Qty *= req.Qty
+		output.Qty *= qty
 		ids := []string{}
 		switch output.Kind {
 		case "item":
@@ -268,12 +264,9 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			RecipeID    string        `json:"recipeId"`
-			Output      content.Asset `json:"output"`
-			InstanceIDs []string      `json:"instanceIds"`
-		}{v, recipe.ID, output, ids}, nil
+		out := &contract.CraftResult{RecipeId: recipe.ID, Output: assetProto(output), InstanceIds: ids}
+		fillWorkshop(out, v)
+		return out, nil
 	})
 }
 

@@ -15,20 +15,8 @@ import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { ApiError, errorFromResponse, isReloadNeeded, isServerErrorCode, type ServerErrorCode } from './errors.ts';
 import {
   parseCalendar,
-  parseContribute,
-  parseCraft,
-  parseDeskCopy,
-  parseHearthCraft,
   parseWoodpileRead,
   parseWoodpileAction,
-  parseMail,
-  parseMailAction,
-  parseProjects,
-  parseRepairs,
-  parseMend,
-  parseStorage,
-  parseStorageMove,
-  parseCommons,
   parseHome,
   parseHomeAction,
   parseShelf,
@@ -41,12 +29,11 @@ import {
   parseSnapshot,
   parseState,
   parseWildsRegion,
-  parseWorld,
-  parseWorldChoice,
-  parseWorldMove,
 } from './parse.ts';
+import { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailAction, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend, parseLibraryDonate } from './village.ts';
+import { parseWorld, parseWorldChoice, parseWorldMove } from './world.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
-import { parseEntry, type ShelfEntry } from '../papers/library.ts';
+import type { ShelfEntry } from '../papers/library.ts';
 import type {
   Asset,
   CalendarResponse,
@@ -406,10 +393,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseOperationResult(raw);
     },
     async libraryDonate(req) {
-      const res = await request('POST', '/api/library/donate', req);
-      const entry = parseEntry((res as { result?: { entry?: unknown } } | null)?.result?.entry);
-      if (!entry) throw new ApiError('bad-response', { status: 200 });
-      return { ...parseSnapshot(res), result: { entry } };
+      return parseLibraryDonate(await request('POST', '/api/library/donate', req));
     },
   };
 
