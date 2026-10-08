@@ -6,12 +6,15 @@
  * Guest play never needs any of this: a build without a server probes once,
  * gets `unavailable`, and everything stays local.
  */
-import { claimClientId, createApiClient } from '../lib/api/client'
+import { claimClientId, claimDeviceId, createApiClient, newKey } from '../lib/api/client'
 import { errorCode } from '../lib/api/errors'
 import type { ConnectedCache } from '../lib/api/cache'
 import type { Snapshot } from '../lib/api/types'
 import type { Probe } from './account-flow.svelte'
-import { Link, type Unresolved } from '../game/link'
+import { fromJson } from '@bufbuild/protobuf'
+import { PlayerStateSchema } from '../lib/gen/glimway/v1/state_pb.js'
+import { profileOf } from '../lib/api/predict'
+import { Link, openOutbox, outboxStore } from '../game/link'
 import { Session } from '../game/session'
 import { bus } from '../game/events'
 
@@ -88,9 +91,10 @@ export function accountName(snapshot: Snapshot | null, cache: ConnectedCache | n
 }
 
 /**
- * A connected Session, not yet holding the lease. The account's cache wins
- * over the server snapshot when it holds unsent progress (offline play, even
- * from a closed tab or before a logout) or was written by this very page.
+ * A connected Session, not yet holding the lease, built from the account's
+ * outbox on this device (src/lib/api/outbox.ts) and the newest state known:
+ * the server's answer, or the outbox's copy when no server answered. The old
+ * connected cache (`cache`) is no longer read; its records are a clean break.
  * Call `session.link.reconnect()` next.
  */
 export async function connectedSession(opts: { snapshot: Snapshot | null; cache: ConnectedCache | null; name: string }): Promise<Session> {
@@ -98,29 +102,36 @@ export async function connectedSession(opts: { snapshot: Snapshot | null; cache:
   const clientId = (await claim).id // current, even after a re-claim
   const accountId = snapshot?.accountId ?? opts.cache?.accountId
   if (!accountId) throw new Error('connectedSession needs a snapshot or a cache')
-  const cache = opts.cache?.accountId === accountId ? opts.cache : null
-  const useCache = !!cache && (!snapshot || cache.dirty || cache.clientId === clientId)
-  const base = useCache
-    ? { state: cache!.state, rev: cache!.rev, vitalsSource: cache!.vitalsSource, importedProfile: cache!.importedProfile ?? null }
-    : { state: snapshot!.state, rev: snapshot!.rev, vitalsSource: snapshot!.vitalsSource, importedProfile: snapshot!.importedProfile ?? null }
+  const device = deviceId()
+  const store = outboxStore()
+  const record = await openOutbox(store, accountId, device)
+  const state = snapshot?.player ?? (record.server ? fromJson(PlayerStateSchema, record.server, { ignoreUnknownFields: true }) : null)
+  if (!state) throw new Error('connectedSession needs a state')
   const link = new Link({
     api,
     clientId,
     accountId,
-    worldId: snapshot?.worldId || cache?.worldId,
+    device,
+    worldId: snapshot?.worldId || record.worldId,
     name: opts.name,
-    rev: base.rev,
-    lease: useCache && cache!.clientId === clientId ? cache!.lease : null,
+    state,
+    record,
     status: 'offline',
-    dirty: useCache ? cache!.dirty : false,
-    offlineProgress: useCache ? cache!.offlineProgress : false,
-    sent: useCache ? cache!.sent : undefined,
-    recovery: cache?.recovery,
-    // The same account's lost request is replayed whichever state snapshot wins.
-    unresolved: cache?.unresolved as Unresolved | undefined,
+    store,
     emit: (event, ...args) => bus.emit(event, ...args)
   })
   for (const old of [...links]) if (!old.active) links.delete(old)
   links.add(link)
-  return new Session(base.state, { vitalsSource: base.vitalsSource, importedProfile: base.importedProfile }, link)
+  const profile = profileOf(state)
+  return new Session(link.initialState(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, link)
 }
+
+function deviceId(): string {
+  try {
+    return claimDeviceId()
+  } catch {
+    // No localStorage: one device id for this page.
+    return (pageDevice ??= newKey())
+  }
+}
+let pageDevice: string | null = null

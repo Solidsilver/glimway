@@ -847,14 +847,13 @@ export class WorldScene extends Phaser.Scene {
     // Tell the UI first: it holds the bars while the hero collapses, then
     // shows the recovered vitals once the screen is dark.
     bus.emit(EV.defeat, { phase: 'falling' })
-    const wildsReport = isWildsArea(this.session.state.area) ? this.wilds?.reportDefeat() ?? null : null
+    // Connected, the fall is one operation from where the hero fell; in the
+    // Wilds its answer places the fallen-hero lantern.
     this.session.defeat()
     this.hero.sprite.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
-    // The report is queued ahead of everything else this tab sends; the
-    // recovery never waits on it, but it must not be dropped either.
-    this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => void wildsReport?.catch(() => undefined) })
+    this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100 })
   }
 
   /**
@@ -871,9 +870,12 @@ export class WorldScene extends Phaser.Scene {
   ): void {
     this.transitioning = true
     const state = this.session.state
+    const changed = to.area !== undefined && to.area !== state.area
     if (to.area !== undefined) state.area = to.area
     if (to.position) state.position = to.position
     if (to.save ?? true) this.session.saveSoon()
+    // Every area change reaches the server in a report (design 2.2).
+    if (changed) this.session.link?.reportSoon()
     const go = () => {
       const pending = opts.inDark?.()
       if (pending instanceof Promise) void pending.finally(() => this.scene.restart(data))

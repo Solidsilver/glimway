@@ -119,11 +119,15 @@ export class Turning {
   /** You saw the outer Wilds turn: the canon notice, and what a Turning gives. */
   note(live: boolean): void {
     const s = this.deps.session
-    s.addFlag(TURNED_FLAG)
     bus.emit(EV.toast, { text: live ? SEASON_SHIFT_NOTICE : `${TURNED_SINCE_LINE} ${SEASON_SHIFT_NOTICE}`, icon: 'map' })
-    const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
-    const paper = calendarFind('turning', ctx)
-    if (paper) this.scene.time.delayedCall(1400, () => grantPaper(s, paper))
+    // Connected, the turning is the server's to record: it writes `wilds:turned`
+    // and grants what a turning gives when it sees this place reported.
+    if (!s.link) {
+      s.addFlag(TURNED_FLAG)
+      const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
+      const paper = calendarFind('turning', ctx)
+      if (paper) this.scene.time.delayedCall(1400, () => grantPaper(s, paper))
+    }
     this.deps.unmoored.trigger()
   }
 }

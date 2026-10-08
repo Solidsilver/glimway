@@ -5,7 +5,6 @@ import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERR
 import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
 import { parseItemsAction, parseWildsClaim } from '../src/lib/api/parse.ts';
-import type { Progress } from '../src/lib/api/types.ts';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
@@ -95,25 +94,18 @@ test('queue: idle waits for everything queued so far', async () => {
 });
 
 test('client: run builds each request when it starts, after earlier calls settle', async () => {
-  const seen: number[] = [];
-  let rev = 3;
+  const seen: string[] = [];
+  let lease = 'L1';
   const fetchImpl = (async (_url: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body));
-    seen.push(body.baseRev);
-    rev += 1;
-    return json(200, { ...snapshot({ version: rev }), status: 'current' });
+    seen.push(body.op.lease);
+    lease = `L${seen.length + 1}`;
+    return json(200, { ...snapshot({ version: seen.length }), result: { recipeId: 'plank', qty: 1, made: {}, inventory: {} } });
   }) as typeof fetch;
   const api = createApiClient({ fetchImpl });
-  let current = 3;
-  const doc: Progress = { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 1, mana: 1, inventory: [], discoveries: [], defeatedEnemies: [], flags: [], playSeconds: 0 };
-  const upload = () =>
-    api.run(async (raw) => {
-      const res = await raw.progress({ lease: 'L', baseRev: current, doc: { ...doc } });
-      current = res.rev;
-      return res;
-    });
-  await Promise.all([upload(), upload(), upload()]);
-  assert.deepEqual(seen, [3, 4, 5]);
+  const craft = () => api.run((raw) => raw.craft({ op: { lease, key: newKey() }, where: { area: 'village', x: 1, y: 1 }, recipeId: 'plank', qty: 1 }).catch(() => undefined));
+  await Promise.all([craft(), craft(), craft()]);
+  assert.deepEqual(seen, ['L1', 'L2', 'L3']);
 });
 
 // ---------------------------------------------------------------- errors
@@ -128,7 +120,7 @@ test('errors: every documented code maps to itself with its status', () => {
 });
 
 test('client: crafting refusals survive the real hearth, desk and woodpile methods', async () => {
-  const envelope = { lease: 'L', baseRev: 3, key: 'craft-refused' };
+  const envelope = { op: { lease: 'L', key: 'craft-refused' }, where: { area: 'village', x: 1, y: 1 } };
   const cases = [
     { code: 'recipe-unknown', status: 409, path: '/api/hearth/craft', call: (api: ReturnType<typeof createApiClient>) => api.hearthCraft({ ...envelope, recipeId: 'herb-broth', qty: 1 }) },
     { code: 'desk-required', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'recipe-page', qty: 1 }) },

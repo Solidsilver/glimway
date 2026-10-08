@@ -89,7 +89,7 @@ export function parseShelves(data: unknown): ShelfEntry[] | null {
   return out;
 }
 
-function parseEntry(row: unknown): ShelfEntry | null {
+export function parseEntry(row: unknown): ShelfEntry | null {
   if (!row || typeof row !== 'object') return null;
   const r = row as Record<string, unknown>;
   if (typeof r.paperId !== 'string' || !paperById(r.paperId)) return null;
@@ -102,14 +102,9 @@ function parseEntry(row: unknown): ShelfEntry | null {
 
 type RemoteLoad = { ok: true; shelves: ShelfEntry[] } | { ok: false; reason: 'unsupported' | 'offline' | 'error' };
 
-type DonateOutcome =
-  | { ok: true; entry: ShelfEntry }
-  | { ok: false; reason: 'already-shelved'; entry: ShelfEntry | null }
-  | { ok: false; reason: 'unsupported' | 'offline' | 'not-held' | 'unknown-paper' | 'signed-out' | 'error' };
-
+/** The shelf read. Donations are keyed operations through the link's outbox (game/papers.ts). */
 export interface RemoteLibrary {
   load(): Promise<RemoteLoad>;
-  donate(paperId: string, key: string): Promise<DonateOutcome>;
 }
 
 export interface RemoteLibraryOptions {
@@ -152,11 +147,6 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
     }
   }
 
-  const code = (json: unknown): string => {
-    const e = (json as { error?: { code?: unknown } } | undefined)?.error;
-    return typeof e?.code === 'string' ? e.code : '';
-  };
-
   /** No library here: a 404/405/501, or an answer that is not JSON (an HTML fallback page). */
   const unsupported = (r: { status: number; json: unknown }) => r.status === 404 || r.status === 405 || r.status === 501 || (r.status < 300 && r.json === undefined);
 
@@ -168,24 +158,6 @@ export function createRemoteLibrary(options: RemoteLibraryOptions = {}): RemoteL
       if (r.status >= 300) return { ok: false, reason: r.status >= 500 ? 'offline' : 'error' };
       const shelves = parseShelves(r.json);
       return shelves ? { ok: true, shelves } : { ok: false, reason: 'error' };
-    },
-    async donate(paperId, key) {
-      const r = await call('POST', '/api/library/donate', { paperId, key });
-      if (r === 'offline') return { ok: false, reason: 'offline' };
-      if (unsupported(r)) return { ok: false, reason: 'unsupported' };
-      if (r.status === 200 || r.status === 201) {
-        const entry = parseEntry((r.json as { entry?: unknown } | undefined)?.entry);
-        return entry ? { ok: true, entry } : { ok: false, reason: 'error' };
-      }
-      const c = code(r.json);
-      if (c === 'already-shelved') {
-        return { ok: false, reason: 'already-shelved', entry: parseEntry((r.json as { entry?: unknown } | undefined)?.entry) };
-      }
-      if (r.status === 401) return { ok: false, reason: 'signed-out' };
-      if (c === 'not-held' || r.status === 403) return { ok: false, reason: 'not-held' };
-      if (c === 'unknown-paper' || r.status === 422) return { ok: false, reason: 'unknown-paper' };
-      if (r.status >= 500) return { ok: false, reason: 'offline' };
-      return { ok: false, reason: 'error' };
     },
   };
 }

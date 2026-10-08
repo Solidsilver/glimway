@@ -4,8 +4,7 @@
  * (queue.ts) that every call goes through.
  *
  * `run(raw => …)` queues a task that builds its request when it actually
- * starts, so a progress upload behind a spend reads the revision and lease
- * the spend returned, not the ones current when it was queued.
+ * starts, so a request behind another reads the lease that one left.
  *
  * The Habitica token passes through `login` only, and is never stored here.
  */
@@ -37,20 +36,15 @@ import {
   parseCreatedInvite,
   parseInviteList,
   parsePlay,
-  parseProgress,
   parseSnapshot,
   parseState,
-  parseSpend,
-  parseSync,
-  parseWildsClaim,
-  parseWildsDefeat,
-  parseWildsLantern,
   parseWildsRegion,
   parseWorld,
   parseWorldChoice,
   parseWorldMove,
 } from './parse.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
+import { parseEntry, type ShelfEntry } from '../papers/library.ts';
 import type {
   Asset,
   CalendarResponse,
@@ -84,20 +78,8 @@ import type {
   LoginRequest,
   OriginRequest,
   PlayResponse,
-  ProgressRequest,
-  ProgressResponse,
   Snapshot,
   StateResponse,
-  SpendRequest,
-  SpendResponse,
-  SyncRequest,
-  SyncResponse,
-  WildsClaimRequest,
-  WildsClaimResponse,
-  WildsDefeatRequest,
-  WildsDefeatResponse,
-  WildsLanternRequest,
-  WildsLanternResponse,
   WildsRegionResponse,
   WorldChoice,
   WorldMoveResponse,
@@ -124,9 +106,6 @@ export interface RawApi {
   state(lease?: string | null): Promise<StateResponse>;
   origin(req: OriginRequest): Promise<Snapshot>;
   play(req: { clientId: string; takeOver?: boolean }): Promise<PlayResponse>;
-  progress(req: ProgressRequest, opts?: { keepalive?: boolean }): Promise<ProgressResponse>;
-  sync(req: SyncRequest): Promise<SyncResponse>;
-  spend(req: SpendRequest): Promise<SpendResponse>;
   createInvite(): Promise<CreatedInvite>;
   listInvites(): Promise<InviteList>;
   revokeInvite(id: string): Promise<void>;
@@ -147,9 +126,6 @@ export interface RawApi {
   /** Answer it, once: the party's world, or one of your own. The same sign-in carries on. */
   worldChoose(choice: 'party' | 'own'): Promise<Snapshot>;
   wildsRegion(regionId: string): Promise<WildsRegionResponse>;
-  wildsClaim(req: WildsClaimRequest): Promise<WildsClaimResponse>;
-  wildsDefeat(req: WildsDefeatRequest): Promise<WildsDefeatResponse>;
-  wildsLantern(req: WildsLanternRequest): Promise<WildsLanternResponse>;
 
   /** The homestead behind a Commons gate (null home: unclaimed land; read-only for visitors). */
   home(gate: number): Promise<HomeResponse>;
@@ -189,14 +165,22 @@ export interface RawApi {
   repairs(): Promise<RepairsResponse>;
   /** Mend a village repair. */
   repairMend(id: string, req: Envelope): Promise<MendResponse>;
+  /** Donate a paper you hold (the server checks its `paper:` mark) to the world's library. */
+  libraryDonate(req: Envelope & { paperId: string }): Promise<LibraryDonateResponse>;
 }
 
-/** The common keyed-mutation fields (Link.mutate fills them). */
+export interface LibraryDonateResponse extends Snapshot {
+  result: { entry: ShelfEntry };
+}
+
+/**
+ * The common keyed-mutation fields (Link.mutate fills them): the operation
+ * header and where the hero stands (design server-first 2.1). No `baseRev`,
+ * no `progress`.
+ */
 export interface Envelope {
-  lease: string;
-  baseRev: number;
-  key: string;
-  progress?: unknown;
+  op: { lease: string; key: string; report?: { client: string; generation: string; seq: number } };
+  where: { area: string; x: number; y: number };
 }
 
 export interface ApiClient extends RawApi {
@@ -283,15 +267,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async play(req) {
       return parsePlay(await request('POST', '/api/play', { clientId: req.clientId, takeOver: req.takeOver === true }));
     },
-    async progress(req, opts) {
-      return parseProgress(await request('PUT', '/api/progress', req, { keepalive: opts?.keepalive }));
-    },
-    async sync(req) {
-      return parseSync(await request('POST', '/api/sync', req));
-    },
-    async spend(req) {
-      return parseSpend(await request('POST', '/api/spend', req));
-    },
     async createInvite() {
       return parseCreatedInvite(await request('POST', '/api/invites', {}));
     },
@@ -329,15 +304,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     },
     async wildsRegion(regionId) {
       return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
-    },
-    async wildsClaim(req) {
-      return parseWildsClaim(await request('POST', '/api/wilds/claim', req));
-    },
-    async wildsDefeat(req) {
-      return parseWildsDefeat(await request('POST', '/api/wilds/defeat', req));
-    },
-    async wildsLantern(req) {
-      return parseWildsLantern(await request('POST', '/api/wilds/lantern', req));
     },
     async home(gate) {
       return parseHome(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`));
@@ -412,6 +378,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async repairMend(id, req) {
       return parseMend(await request('POST', `/api/repairs/${encodeURIComponent(id)}/mend`, req));
     },
+    async libraryDonate(req) {
+      const res = await request('POST', '/api/library/donate', req);
+      const entry = parseEntry((res as { result?: { entry?: unknown } } | null)?.result?.entry);
+      if (!entry) throw new ApiError('bad-response', { status: 200 });
+      return { ...parseSnapshot(res), result: { entry } };
+    },
   };
 
   const run = <T>(task: (r: RawApi) => Promise<T>): Promise<T> => queue.run(() => task(raw));
@@ -426,9 +398,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     state: (lease) => run((r) => r.state(lease)),
     origin: (req) => run((r) => r.origin(req)),
     play: (req) => run((r) => r.play(req)),
-    progress: (req, opts) => run((r) => r.progress(req, opts)),
-    sync: (req) => run((r) => r.sync(req)),
-    spend: (req) => run((r) => r.spend(req)),
     createInvite: () => run((r) => r.createInvite()),
     listInvites: () => run((r) => r.listInvites()),
     revokeInvite: (id) => run((r) => r.revokeInvite(id)),
@@ -441,9 +410,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     worldChoice: () => run((r) => r.worldChoice()),
     worldChoose: (choice) => run((r) => r.worldChoose(choice)),
     wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
-    wildsClaim: (req) => run((r) => r.wildsClaim(req)),
-    wildsDefeat: (req) => run((r) => r.wildsDefeat(req)),
-    wildsLantern: (req) => run((r) => r.wildsLantern(req)),
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
     shelf: (gate: number) => run((r) => r.shelf(gate)),
@@ -467,6 +433,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     itemAction: (op, req) => run((r) => r.itemAction(op, req)),
     repairs: () => run((r) => r.repairs()),
     repairMend: (id, req) => run((r) => r.repairMend(id, req)),
+    libraryDonate: (req) => run((r) => r.libraryDonate(req)),
   };
 }
 

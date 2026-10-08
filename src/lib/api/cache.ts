@@ -1,289 +1,72 @@
 /**
- * Local cache of the connected save (design: "Offline connected play").
- * Kept in its own IndexedDB database, apart from the guest save, so connected
- * play never touches the device's guest journey.
+ * The connected cache, reshaped (design server-first 2.4): what the title
+ * screen and the account flow read about this device's play, projected from
+ * the account's outbox (src/lib/api/outbox.ts). The outbox is the only
+ * thing written; this module only reads it, marks it kept after a logout, or
+ * clears it.
  *
- * Two kinds of record, both in one store keyed by `id`:
- * - `acct:<accountId>`, one per account: the state with the revision it was
- *   based on, the lease and clientId, unsent-change flags, the recovery copy.
- *   Keyed by account so a second account on this browser can never overwrite
- *   the first one's unsent progress.
- * - `orphan:<accountId>:<clientId>`: unsent progress from a tab that lost
- *   the lease to another tab. It is never this tab's to upload as current;
- *   the next lease holder uploads it as a stale write (story merges only) and
- *   deletes it, so story made in the takeover window is not lost.
- *
- * No credentials ever go in here. Storage failures are reported, not thrown:
- * the server copy is the durable one.
+ * Records of the old connected cache (`fingersnap-connected`) are a clean
+ * break: they are never read.
  */
-import { validateSave, type GameState } from '../state.ts';
-import { validateHabiticaProfile } from '../habitica/mapping.ts';
-import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
-
-// The game's old name, kept so saves load.
-const DB_NAME = 'fingersnap-connected';
-const DB_VERSION = 2;
-const STORE = 'records';
-/** Version 1 kept a single out-of-line record under this store/key. */
-const LEGACY_STORE = 'connected';
+import { fromJson } from '@bufbuild/protobuf';
+import { PlayerStateSchema } from '../gen/glimway/v1/state_pb.js';
+import type { GameState } from '../state.ts';
+import { claimDeviceId } from './client.ts';
+import { outboxStore as outbox, type OutboxRecord } from './outbox.ts';
+import { gameStateOf } from './predict.ts';
 
 export interface ConnectedCache {
   accountId: string;
   name: string;
+  /** The last state this device adopted, for the title's journey line. */
   state: GameState;
-  vitalsSource: VitalsSource;
-  importedProfile?: HabiticaProfile;
-  /** The server revision `state` was based on. */
-  rev: number;
-  lease: string | null;
-  clientId: string;
-  /** Local changes the server hasn't accepted yet. */
+  /** Unanswered operations wait in the outbox. */
   dirty: boolean;
-  /** Set while the device plays without the server. */
-  offline: boolean;
-  /** Changes were made while offline (drives the reconnect notice). */
-  offlineProgress: boolean;
-  /** The last upload sent: if its answer was lost, a reconnect can tell it landed. */
-  sent?: { rev: number; key: string };
-  /** The player logged out with unsent progress: kept for their next sign-in only. */
+  /** Logged out with unsent work kept for this account's next sign-in. */
   loggedOut?: boolean;
-  /** The account's world (seeds homestead land offline). */
   worldId?: string;
-  /** The offline copy that a reconnect merged into newer server progress. */
-  recovery?: { state: GameState; savedAt: number };
-  /** A keyed mutation whose answer was lost: resolved by exact replay (game/link.ts). */
-  unresolved?: { op: unknown; body: Record<string, unknown>; at: number };
   savedAt: number;
 }
 
-export interface OrphanCopy {
-  accountId: string;
-  clientId: string;
-  state: GameState;
-  rev: number;
-  savedAt: number;
-}
-
-const accountKey = (accountId: string) => `acct:${accountId}`;
-const orphanKey = (accountId: string, clientId: string) => `orphan:${accountId}:${clientId}`;
-
-function open(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const factory = (globalThis as { indexedDB?: IDBFactory }).indexedDB;
-    if (!factory) {
-      reject(new Error('IndexedDB is not available.'));
-      return;
-    }
-    const req = factory.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
-      // Carry a version-1 record over to its account key.
-      if (db.objectStoreNames.contains(LEGACY_STORE)) {
-        try {
-          const tx = req.transaction!;
-          const get = tx.objectStore(LEGACY_STORE).get('current');
-          get.onsuccess = () => {
-            const old = normalizeCache(get.result);
-            if (old) tx.objectStore(STORE).put({ ...old, id: accountKey(old.accountId) });
-            db.deleteObjectStore(LEGACY_STORE);
-          };
-        } catch {
-          /* nothing to carry */
-        }
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error('Could not open the connected cache.'));
-    req.onblocked = () => reject(new Error('The connected cache is blocked by another tab.'));
-  });
-}
-
-function done<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB request failed.'));
-  });
-}
-
-let chain: Promise<unknown> = Promise.resolve();
-function serial<T>(task: () => Promise<T>): Promise<T> {
-  const run = chain.then(task, task);
-  chain = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
-}
-
-/** Run against the store; any storage failure becomes `fallback`. */
-function withStore<T>(mode: IDBTransactionMode, fallback: T, fn: (store: IDBObjectStore) => Promise<T>): Promise<T> {
-  return serial(async () => {
-    try {
-      const db = await open();
-      try {
-        return await fn(db.transaction(STORE, mode).objectStore(STORE));
-      } finally {
-        db.close();
-      }
-    } catch {
-      return fallback;
-    }
-  });
-}
-
-/** Validate a stored record; anything unreadable counts as no cache. */
-export function normalizeCache(raw: unknown): ConnectedCache | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const r = raw as Record<string, unknown>;
+function device(): string | null {
   try {
-    if (typeof r.accountId !== 'string' || typeof r.clientId !== 'string') return null;
-    if (typeof r.rev !== 'number' || !Number.isInteger(r.rev) || r.rev < 0) return null;
-    const out: ConnectedCache = {
-      accountId: r.accountId,
-      name: typeof r.name === 'string' ? r.name : '',
-      state: validateSave(r.state),
-      vitalsSource: r.vitalsSource === 'imported' ? 'imported' : 'demo',
-      rev: r.rev,
-      lease: typeof r.lease === 'string' ? r.lease : null,
-      clientId: r.clientId,
-      dirty: r.dirty === true,
-      offline: r.offline === true,
-      offlineProgress: r.offlineProgress === true,
-      savedAt: typeof r.savedAt === 'number' ? r.savedAt : 0,
-    };
-    if (r.loggedOut === true) out.loggedOut = true;
-    if (typeof r.worldId === 'string' && r.worldId.length > 0 && r.worldId.length <= 128) out.worldId = r.worldId;
-    const sent = r.sent as { rev?: unknown; key?: unknown } | undefined;
-    if (sent && typeof sent === 'object' && typeof sent.rev === 'number' && Number.isInteger(sent.rev) && typeof sent.key === 'string') {
-      out.sent = { rev: sent.rev, key: sent.key };
-    }
-    if (r.importedProfile != null) out.importedProfile = validateHabiticaProfile(r.importedProfile);
-    const unresolved = normalizeUnresolved(r.unresolved);
-    if (unresolved) out.unresolved = unresolved;
-    const rec = r.recovery as { state?: unknown; savedAt?: unknown } | undefined;
-    if (rec && typeof rec === 'object') {
-      out.recovery = { state: validateSave(rec.state), savedAt: typeof rec.savedAt === 'number' ? rec.savedAt : 0 };
-    }
-    return out;
+    return claimDeviceId();
   } catch {
     return null;
   }
 }
 
-const MUTATION_KINDS = ['home', 'storage', 'craft', 'mail-send', 'mail-claim', 'mail-recall', 'contribute', 'items', 'mend', 'world-move', 'world-leave'];
-const ITEM_OPS = ['use', 'repair', 'fit', 'unfit', 'give', 'pocket', 'offhand', 'pickup', 'return', 'heirloom', 'ada-oil'];
-const HOME_OPS = ['buy', 'place', 'move', 'remove', 'upgrade', 'claim', 'clear', 'invite', 'joint', 'leave'];
-
-/**
- * A lost mutation's exact request (game/link.ts `Unresolved`), kept so the
- * next page replays it rather than paying twice. Malformed records are dropped.
- */
-function normalizeUnresolved(raw: unknown): ConnectedCache['unresolved'] | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const u = raw as { op?: Record<string, unknown>; body?: Record<string, unknown>; at?: unknown };
-  const op = u.op;
-  const body = u.body;
-  if (!op || typeof op !== 'object' || !body || typeof body !== 'object' || Array.isArray(body)) return undefined;
-  if (!MUTATION_KINDS.includes(op.kind as string)) return undefined;
-  if (op.kind === 'home' && !HOME_OPS.includes(op.op as string)) return undefined;
-  if (op.kind === 'items' && !ITEM_OPS.includes(op.op as string)) return undefined;
-  if (['mail-claim', 'mail-recall', 'contribute', 'mend'].includes(op.kind as string) && (typeof op.id !== 'string' || !op.id)) return undefined;
-  if (op.kind === 'world-move' && typeof (op.fields as { worldId?: unknown } | undefined)?.worldId !== 'string') return undefined;
-  if (op.fields !== undefined && (typeof op.fields !== 'object' || op.fields === null || Array.isArray(op.fields))) return undefined;
-  if (typeof body.key !== 'string' || !body.key || !Number.isInteger(body.baseRev)) return undefined;
-  return { op: structuredClone(op), body: structuredClone(body), at: typeof u.at === 'number' ? u.at : 0 };
-}
-
-function normalizeOrphan(raw: unknown): OrphanCopy | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const r = raw as Record<string, unknown>;
+function project(record: OutboxRecord | null): ConnectedCache | null {
+  if (!record?.server) return null;
   try {
-    if (typeof r.accountId !== 'string' || typeof r.clientId !== 'string') return null;
-    if (typeof r.rev !== 'number' || !Number.isInteger(r.rev) || r.rev < 0) return null;
-    return {
-      accountId: r.accountId,
-      clientId: r.clientId,
-      state: validateSave(r.state),
-      rev: r.rev,
-      savedAt: typeof r.savedAt === 'number' ? r.savedAt : 0,
-    };
+    const state = gameStateOf(fromJson(PlayerStateSchema, record.server, { ignoreUnknownFields: true }));
+    return { accountId: record.account, name: record.name, state, dirty: record.entries.length > 0, savedAt: record.savedAt, ...(record.loggedOut ? { loggedOut: true } : {}), ...(record.worldId ? { worldId: record.worldId } : {}) };
   } catch {
     return null;
   }
 }
 
-/** The account's record, or null. */
-export function loadCache(accountId: string): Promise<ConnectedCache | null> {
-  return withStore('readonly', null, async (store) => normalizeCache(await done(store.get(accountKey(accountId)))));
+/** The account's record on this device, or null. */
+export async function loadCache(accountId: string): Promise<ConnectedCache | null> {
+  const d = device();
+  return d ? project(await outbox().load(accountId, d)) : null;
 }
 
-/**
- * The most recently saved account record (offline start, when no server can
- * say who is signed in). Records kept after a logout are skipped.
- */
-export function loadLatestCache(): Promise<ConnectedCache | null> {
-  return withStore('readonly', null, async (store) => {
-    const all = (await done(store.getAll())) as Array<Record<string, unknown>>;
-    let best: ConnectedCache | null = null;
-    for (const raw of all) {
-      if (typeof raw?.id !== 'string' || !raw.id.startsWith('acct:')) continue;
-      const rec = normalizeCache(raw);
-      if (rec && !rec.loggedOut && (!best || rec.savedAt > best.savedAt)) best = rec;
-    }
-    return best;
-  });
+/** The most recently played account on this device (offline start). Records kept after a logout are skipped. */
+export async function loadLatestCache(): Promise<ConnectedCache | null> {
+  const d = device();
+  return d ? project(await outbox().latest(d)) : null;
 }
 
-export function saveCache(record: ConnectedCache): Promise<boolean> {
-  return withStore('readwrite', false, async (store) => {
-    const clean = normalizeCache({ ...record, savedAt: Date.now() });
-    if (!clean) return false;
-    await done(store.put({ ...clean, id: accountKey(clean.accountId) }));
-    return true;
-  });
+/** Only the logout mark is written through here: the outbox owns everything else. */
+export async function saveCache(cache: ConnectedCache): Promise<boolean> {
+  const d = device();
+  const record = d ? await outbox().load(cache.accountId, d) : null;
+  if (!record) return false;
+  return outbox().save({ ...record, loggedOut: cache.loggedOut === true });
 }
 
-export function clearCache(accountId: string): Promise<boolean> {
-  return withStore('readwrite', false, async (store) => {
-    await done(store.delete(accountKey(accountId)));
-    return true;
-  });
+export async function clearCache(accountId: string): Promise<boolean> {
+  const d = device();
+  return d ? outbox().clear(accountId, d) : false;
 }
-
-export function saveOrphan(orphan: OrphanCopy): Promise<boolean> {
-  return withStore('readwrite', false, async (store) => {
-    const clean = normalizeOrphan({ ...orphan, savedAt: Date.now() });
-    if (!clean) return false;
-    await done(store.put({ ...clean, id: orphanKey(clean.accountId, clean.clientId) }));
-    return true;
-  });
-}
-
-export function loadOrphans(accountId: string): Promise<OrphanCopy[]> {
-  return withStore('readonly', [] as OrphanCopy[], async (store) => {
-    const all = (await done(store.getAll())) as Array<Record<string, unknown>>;
-    const prefix = `orphan:${accountId}:`;
-    return all
-      .filter((raw) => typeof raw?.id === 'string' && raw.id.startsWith(prefix))
-      .map(normalizeOrphan)
-      .filter((o): o is OrphanCopy => o !== null);
-  });
-}
-
-export function deleteOrphan(accountId: string, clientId: string): Promise<boolean> {
-  return withStore('readwrite', false, async (store) => {
-    await done(store.delete(orphanKey(accountId, clientId)));
-    return true;
-  });
-}
-
-/** The store surface the Link uses (injectable for tests). */
-export interface LinkStore {
-  save(record: ConnectedCache): Promise<boolean>;
-  saveOrphan(orphan: OrphanCopy): Promise<boolean>;
-  loadOrphans(accountId: string): Promise<OrphanCopy[]>;
-  deleteOrphan(accountId: string, clientId: string): Promise<boolean>;
-}
-
-export const idbLinkStore: LinkStore = { save: saveCache, saveOrphan, loadOrphans, deleteOrphan };

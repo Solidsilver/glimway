@@ -80,6 +80,18 @@ function parseRetryAfterMs(headerValue: string | null): number {
 }
 
 /**
+ * The `/user` projection each fetched profile was mapped from. The server
+ * maps it again itself (design server-first 2.2, `profile`): the browser
+ * posts this raw projection, never its own mapping.
+ */
+const rawUsers = new WeakMap<HabiticaProfile, unknown>();
+
+/** The raw `/user` projection behind a profile this page fetched, if any. */
+export function rawUserFor(profile: HabiticaProfile): unknown {
+  return rawUsers.get(profile);
+}
+
+/**
  * Read-only Habitica client. Exactly one operation: fetch and map the
  * authenticated user's profile. There are no write methods by design —
  * Glimway never changes a Habitica account.
@@ -185,7 +197,9 @@ export function createHabiticaClient(options: HabiticaClientOptions): HabiticaCl
           throw new HabiticaApiError('invalid-response', 'Habitica response had no user data.');
         }
         try {
-          return toHabiticaProfile(data, gearStats);
+          const profile = toHabiticaProfile(data, gearStats);
+          rawUsers.set(profile, data);
+          return profile;
         } catch (err) {
           if (err instanceof InvalidHabiticaUserError) {
             throw new HabiticaApiError(
