@@ -1,0 +1,153 @@
+package content
+
+import (
+	"encoding/json"
+	"os"
+	"reflect"
+	"testing"
+)
+
+type loaderVector struct {
+	Name  string `json:"name"`
+	Valid bool   `json:"valid"`
+	Edits []struct {
+		Path  []any `json:"path"`
+		Value any   `json:"value"`
+	} `json:"edits"`
+}
+
+func readVectors(t *testing.T, name string, out any) {
+	t.Helper()
+	raw, err := os.ReadFile("vectors/" + name + ".json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(raw, out); err != nil {
+		t.Fatal(err)
+	}
+}
+func editVector(t *testing.T, base json.RawMessage, v loaderVector) []byte {
+	t.Helper()
+	var doc any
+	if err := json.Unmarshal(base, &doc); err != nil {
+		t.Fatal(err)
+	}
+	for _, edit := range v.Edits {
+		target := doc
+		for _, key := range edit.Path[:len(edit.Path)-1] {
+			switch k := key.(type) {
+			case string:
+				target = target.(map[string]any)[k]
+			case float64:
+				target = target.([]any)[int(k)]
+			}
+		}
+		switch k := edit.Path[len(edit.Path)-1].(type) {
+		case string:
+			target.(map[string]any)[k] = edit.Value
+		case float64:
+			target.([]any)[int(k)] = edit.Value
+		}
+	}
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+func TestIndoorsLoaderVectors(t *testing.T) {
+	var roomVectors struct {
+		Rooms, Residents []loaderVector
+		Parents          []struct {
+			Area, Parent, Root string
+			Known              bool
+		}
+	}
+	readVectors(t, "rooms", &roomVectors)
+	roomBase, _ := FS.ReadFile("rooms.json")
+	residentBase, _ := FS.ReadFile("residents.json")
+	for _, v := range roomVectors.Rooms {
+		t.Run("rooms/"+v.Name, func(t *testing.T) {
+			var doc Rooms
+			err := json.Unmarshal(editVector(t, roomBase, v), &doc)
+			if err == nil {
+				err = ValidateRooms(doc)
+			}
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+		})
+	}
+	for _, v := range roomVectors.Residents {
+		t.Run("residents/"+v.Name, func(t *testing.T) {
+			var doc Residents
+			err := json.Unmarshal(editVector(t, residentBase, v), &doc)
+			if err == nil {
+				err = ValidateResidents(doc)
+			}
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+		})
+	}
+	for _, v := range roomVectors.Parents {
+		if RoomParent(v.Area) != v.Parent || RootArea(v.Area) != v.Root || KnownRoom(v.Area) != v.Known {
+			t.Fatal(v)
+		}
+	}
+	var questVectors struct {
+		Base  json.RawMessage
+		Cases []loaderVector
+	}
+	readVectors(t, "quests", &questVectors)
+	for _, v := range questVectors.Cases {
+		t.Run("quests/"+v.Name, func(t *testing.T) {
+			_, err := DecodeQuests(editVector(t, questVectors.Base, v))
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+		})
+	}
+}
+func TestResidentCycleVectors(t *testing.T) {
+	var vectors struct {
+		Cycles []struct {
+			Resident     Resident
+			Now          float64
+			GraceSeconds int
+			Expected     CyclePlace
+			Near         []string
+		}
+	}
+	readVectors(t, "clock", &vectors)
+	if len(vectors.Cycles) == 0 {
+		t.Fatal("no cycle vectors")
+	}
+	for _, v := range vectors.Cycles {
+		if got := CycleAt(v.Resident, v.Now); got != v.Expected {
+			t.Fatal(v, got)
+		}
+		if got := CycleSpotsNear(v.Resident, v.Now, v.GraceSeconds); !reflect.DeepEqual(got, v.Near) {
+			t.Fatal(v, got)
+		}
+	}
+	if got, ok := ResidentAt("finn", 2700); !ok || got != (ResidentSpot{"in:village:mill:2", 7, 5}) {
+		t.Fatal(got, ok)
+	}
+	if _, ok := ResidentAt("missing", 0); ok {
+		t.Fatal("unknown resident")
+	}
+}
+func TestRoomFootprints(t *testing.T) {
+	loft, ok := RoomFor("in:village:mill:2")
+	if !ok {
+		t.Fatal("missing loft")
+	}
+	want := []RoomFootprint{{"f", 2, 2, 2, 2}, {"f", 6, 2, 2, 2}}
+	if got := RoomFootprints(loft, "f"); !reflect.DeepEqual(got, want) {
+		t.Fatal(got)
+	}
+	if MarkWriter("library:lamp") != "server" || MarkWriter("quest-item:east-finger") != "server" {
+		t.Fatal("quest reward namespaces")
+	}
+}

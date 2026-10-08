@@ -1,0 +1,920 @@
+{
+  "base": {
+    "quests": [
+      {
+        "id": "sponge",
+        "title": "Set to Rise",
+        "line": "village",
+        "steps": [
+          {
+            "id": "hear-hazel",
+            "at": "",
+            "do": {
+              "talk": "hazel"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": "",
+            "gate": {
+              "with": "hazel"
+            },
+            "where": {
+              "npc": "hazel"
+            }
+          },
+          {
+            "id": "fetch-flour",
+            "at": "",
+            "do": {
+              "carry": "flour"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": ""
+          },
+          {
+            "id": "set-sponge",
+            "at": "",
+            "do": {
+              "talk": "hazel"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": "",
+            "gate": {
+              "with": "hazel",
+              "item": {
+                "def": "flour",
+                "qty": 1,
+                "keep": false
+              }
+            }
+          },
+          {
+            "id": "let-it-rise",
+            "at": "",
+            "do": {
+              "talk": "hazel"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": "",
+            "gate": {
+              "with": "hazel",
+              "wait": {
+                "hours": 2
+              }
+            },
+            "give": [
+              {
+                "def": "keepers-twists",
+                "qty": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "lamp",
+        "line": "village",
+        "after": [
+          "sponge:set-sponge"
+        ],
+        "steps": [
+          {
+            "id": "find-library",
+            "at": "in:village:library",
+            "do": {
+              "reach": "in:village:library"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": ""
+          },
+          {
+            "id": "oil-lamp",
+            "at": "in:village:library",
+            "do": {
+              "use": "reading-lamp"
+            },
+            "items": [],
+            "marks": [
+              "library:lamp"
+            ],
+            "papers": [],
+            "embers": 0,
+            "witness": "",
+            "gate": {
+              "embers": 1
+            },
+            "where": {
+              "area": "in:village:library",
+              "spot": "reading-lamp"
+            }
+          },
+          {
+            "id": "read-awhile",
+            "at": "in:village:library",
+            "do": {
+              "use": "reading-table"
+            },
+            "items": [],
+            "marks": [],
+            "papers": [],
+            "embers": 0,
+            "witness": ""
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "room-and-resident-quests",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "turning-wait",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "gate",
+            "wait"
+          ],
+          "value": {
+            "turnings": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "fractional-hour-wait",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "gate",
+            "wait"
+          ],
+          "value": {
+            "hours": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "new-start",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "start"
+          ],
+          "value": {
+            "new": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-quest",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "id"
+          ],
+          "value": "sponge"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-step",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "id"
+          ],
+          "value": "hear-hazel"
+        }
+      ]
+    },
+    {
+      "name": "unknown-after",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "after"
+          ],
+          "value": [
+            "missing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-after-step",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "after"
+          ],
+          "value": [
+            "sponge:missing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cyclic-after",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "after"
+          ],
+          "value": [
+            "lamp"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "self-step-cycle",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "after"
+          ],
+          "value": [
+            "sponge:set-sponge"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-npc",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "do"
+          ],
+          "value": {
+            "talk": "nobody"
+          }
+        }
+      ]
+    },
+    {
+      "name": "two-triggers",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "do"
+          ],
+          "value": {
+            "talk": "hazel",
+            "open": "journal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-trigger-key",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "do"
+          ],
+          "value": {
+            "talk": "",
+            "open": "journal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "new-not-a-step-trigger",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "do"
+          ],
+          "value": {
+            "new": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "resident-needs-with",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate"
+          ],
+          "value": {
+            "embers": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-with",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate",
+            "with"
+          ],
+          "value": "nobody"
+        }
+      ]
+    },
+    {
+      "name": "deferred-world-gate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate",
+            "world"
+          ],
+          "value": "project:kiln"
+        }
+      ]
+    },
+    {
+      "name": "deferred-project-gate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate",
+            "project"
+          ],
+          "value": "kiln"
+        }
+      ]
+    },
+    {
+      "name": "unknown-give",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "give",
+            0,
+            "def"
+          ],
+          "value": "missing"
+        }
+      ]
+    },
+    {
+      "name": "give-needs-gate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "give"
+          ],
+          "value": [
+            {
+              "def": "flour",
+              "qty": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-keep",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            2,
+            "gate",
+            "item"
+          ],
+          "value": {
+            "def": "flour",
+            "qty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero-item",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            2,
+            "gate",
+            "item",
+            "qty"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-gate-item",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            2,
+            "gate",
+            "item",
+            "def"
+          ],
+          "value": "east-finger"
+        }
+      ]
+    },
+    {
+      "name": "both-waits",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "gate",
+            "wait"
+          ],
+          "value": {
+            "hours": 2,
+            "turnings": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero-wait",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "gate",
+            "wait"
+          ],
+          "value": {
+            "hours": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "first-step-wait",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate",
+            "wait"
+          ],
+          "value": {
+            "hours": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-gate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "zero-spend-even-with",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "gate",
+            "embers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "ember-grant-cap",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "embers"
+          ],
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "goal-length",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "goal"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "unknown-use",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "steps",
+            1,
+            "do"
+          ],
+          "value": {
+            "use": "missing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "use-wrong-room",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "steps",
+            1,
+            "at"
+          ],
+          "value": "in:village:mill"
+        }
+      ]
+    },
+    {
+      "name": "where-spot-wrong-area",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "steps",
+            1,
+            "where",
+            "area"
+          ],
+          "value": "village"
+        }
+      ]
+    },
+    {
+      "name": "where-unknown-enemy",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "area": "woodland",
+            "enemy": "missing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "needs-world-deferred",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "needs"
+          ],
+          "value": "world"
+        }
+      ]
+    },
+    {
+      "name": "anywhere-open",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "do"
+          ],
+          "value": {
+            "open": "journal"
+          }
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "where"
+          ],
+          "value": {
+            "ui": "journal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-carry",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "do"
+          ],
+          "value": {
+            "carry": "missing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "quest-keepsake-carry",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "items"
+          ],
+          "value": [
+            "east-finger"
+          ]
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "do"
+          ],
+          "value": {
+            "carry": "east-finger"
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-at-reach",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            1,
+            "steps",
+            0,
+            "at"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "unknown-paper",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "papers"
+          ],
+          "value": [
+            "missing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empty-note",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "note"
+          ],
+          "value": {
+            "title": "Note",
+            "body": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-quest-item",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "items"
+          ],
+          "value": [
+            "not-a-keepsake"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "quest-id-kebab-case",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "id"
+          ],
+          "value": "-sponge"
+        }
+      ]
+    },
+    {
+      "name": "step-id-kebab-case",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "id"
+          ],
+          "value": "hear--hazel"
+        }
+      ]
+    }
+  ]
+}

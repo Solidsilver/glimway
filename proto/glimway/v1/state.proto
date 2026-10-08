@@ -14,6 +14,9 @@ message Story {
   map<string,string> quests = 1; repeated string marks = 2;
   repeated string discoveries = 3; repeated string defeated = 4;
   repeated string quest_items = 5; double play_seconds = 6;
+  // Quest timestamps are Unix seconds, keyed by quest id.
+  map<string, double> reached_at = 7;
+  map<string, double> gate_at = 8;
 }
 message Embers { double balance = 1; double xp_earned = 2; double pending = 3; double xp_mark = 4; double verified_xp = 5; }
 message PlayerState {

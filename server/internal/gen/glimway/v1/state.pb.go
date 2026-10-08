@@ -107,13 +107,16 @@ func (x *Account) GetFlagged() bool {
 }
 
 type Story struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Quests        map[string]string      `protobuf:"bytes,1,rep,name=quests,proto3" json:"quests,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Marks         []string               `protobuf:"bytes,2,rep,name=marks,proto3" json:"marks,omitempty"`
-	Discoveries   []string               `protobuf:"bytes,3,rep,name=discoveries,proto3" json:"discoveries,omitempty"`
-	Defeated      []string               `protobuf:"bytes,4,rep,name=defeated,proto3" json:"defeated,omitempty"`
-	QuestItems    []string               `protobuf:"bytes,5,rep,name=quest_items,json=questItems,proto3" json:"quest_items,omitempty"`
-	PlaySeconds   float64                `protobuf:"fixed64,6,opt,name=play_seconds,json=playSeconds,proto3" json:"play_seconds,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Quests      map[string]string      `protobuf:"bytes,1,rep,name=quests,proto3" json:"quests,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Marks       []string               `protobuf:"bytes,2,rep,name=marks,proto3" json:"marks,omitempty"`
+	Discoveries []string               `protobuf:"bytes,3,rep,name=discoveries,proto3" json:"discoveries,omitempty"`
+	Defeated    []string               `protobuf:"bytes,4,rep,name=defeated,proto3" json:"defeated,omitempty"`
+	QuestItems  []string               `protobuf:"bytes,5,rep,name=quest_items,json=questItems,proto3" json:"quest_items,omitempty"`
+	PlaySeconds float64                `protobuf:"fixed64,6,opt,name=play_seconds,json=playSeconds,proto3" json:"play_seconds,omitempty"`
+	// Quest timestamps are Unix seconds, keyed by quest id.
+	ReachedAt     map[string]float64 `protobuf:"bytes,7,rep,name=reached_at,json=reachedAt,proto3" json:"reached_at,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	GateAt        map[string]float64 `protobuf:"bytes,8,rep,name=gate_at,json=gateAt,proto3" json:"gate_at,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -188,6 +191,20 @@ func (x *Story) GetPlaySeconds() float64 {
 		return x.PlaySeconds
 	}
 	return 0
+}
+
+func (x *Story) GetReachedAt() map[string]float64 {
+	if x != nil {
+		return x.ReachedAt
+	}
+	return nil
+}
+
+func (x *Story) GetGateAt() map[string]float64 {
+	if x != nil {
+		return x.GateAt
+	}
+	return nil
 }
 
 type Embers struct {
@@ -1213,7 +1230,7 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x0eprofile_source\x18\x03 \x01(\tR\rprofileSource\x127\n" +
 	"\bparty_id\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\apartyId\x12\x19\n" +
 	"\bworld_id\x18\x05 \x01(\tR\aworldId\x12\x18\n" +
-	"\aflagged\x18\x06 \x01(\bR\aflagged\"\x91\x02\n" +
+	"\aflagged\x18\x06 \x01(\bR\aflagged\"\x83\x04\n" +
 	"\x05Story\x125\n" +
 	"\x06quests\x18\x01 \x03(\v2\x1d.glimway.v1.Story.QuestsEntryR\x06quests\x12\x14\n" +
 	"\x05marks\x18\x02 \x03(\tR\x05marks\x12 \n" +
@@ -1221,10 +1238,19 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\bdefeated\x18\x04 \x03(\tR\bdefeated\x12\x1f\n" +
 	"\vquest_items\x18\x05 \x03(\tR\n" +
 	"questItems\x12!\n" +
-	"\fplay_seconds\x18\x06 \x01(\x01R\vplaySeconds\x1a9\n" +
+	"\fplay_seconds\x18\x06 \x01(\x01R\vplaySeconds\x12?\n" +
+	"\n" +
+	"reached_at\x18\a \x03(\v2 .glimway.v1.Story.ReachedAtEntryR\treachedAt\x126\n" +
+	"\agate_at\x18\b \x03(\v2\x1d.glimway.v1.Story.GateAtEntryR\x06gateAt\x1a9\n" +
 	"\vQuestsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x93\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a<\n" +
+	"\x0eReachedAtEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\x1a9\n" +
+	"\vGateAtEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x93\x01\n" +
 	"\x06Embers\x12\x18\n" +
 	"\abalance\x18\x01 \x01(\x01R\abalance\x12\x1b\n" +
 	"\txp_earned\x18\x02 \x01(\x01R\bxpEarned\x12\x18\n" +
@@ -1315,7 +1341,7 @@ func file_glimway_v1_state_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_state_proto_rawDescData
 }
 
-var file_glimway_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_glimway_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_glimway_v1_state_proto_goTypes = []any{
 	(*Account)(nil),                // 0: glimway.v1.Account
 	(*Story)(nil),                  // 1: glimway.v1.Story
@@ -1333,53 +1359,57 @@ var file_glimway_v1_state_proto_goTypes = []any{
 	(*PlayRequest)(nil),            // 13: glimway.v1.PlayRequest
 	(*PlayResponse)(nil),           // 14: glimway.v1.PlayResponse
 	nil,                            // 15: glimway.v1.Story.QuestsEntry
-	(*wrapperspb.StringValue)(nil), // 16: google.protobuf.StringValue
-	(*HabiticaProfile)(nil),        // 17: glimway.v1.HabiticaProfile
-	(*Vitals)(nil),                 // 18: glimway.v1.Vitals
-	(*Place)(nil),                  // 19: glimway.v1.Place
-	(*ReportResult)(nil),           // 20: glimway.v1.ReportResult
-	(*QuestStepResult)(nil),        // 21: glimway.v1.QuestStepResult
-	(*MarkResult)(nil),             // 22: glimway.v1.MarkResult
-	(*TakePaperResult)(nil),        // 23: glimway.v1.TakePaperResult
-	(*SettleEchoResult)(nil),       // 24: glimway.v1.SettleEchoResult
-	(*FallResult)(nil),             // 25: glimway.v1.FallResult
-	(*ProfileResult)(nil),          // 26: glimway.v1.ProfileResult
-	(*SpendResult)(nil),            // 27: glimway.v1.SpendResult
-	(*WildsClaimResult)(nil),       // 28: glimway.v1.WildsClaimResult
-	(*WildsLanternResult)(nil),     // 29: glimway.v1.WildsLanternResult
+	nil,                            // 16: glimway.v1.Story.ReachedAtEntry
+	nil,                            // 17: glimway.v1.Story.GateAtEntry
+	(*wrapperspb.StringValue)(nil), // 18: google.protobuf.StringValue
+	(*HabiticaProfile)(nil),        // 19: glimway.v1.HabiticaProfile
+	(*Vitals)(nil),                 // 20: glimway.v1.Vitals
+	(*Place)(nil),                  // 21: glimway.v1.Place
+	(*ReportResult)(nil),           // 22: glimway.v1.ReportResult
+	(*QuestStepResult)(nil),        // 23: glimway.v1.QuestStepResult
+	(*MarkResult)(nil),             // 24: glimway.v1.MarkResult
+	(*TakePaperResult)(nil),        // 25: glimway.v1.TakePaperResult
+	(*SettleEchoResult)(nil),       // 26: glimway.v1.SettleEchoResult
+	(*FallResult)(nil),             // 27: glimway.v1.FallResult
+	(*ProfileResult)(nil),          // 28: glimway.v1.ProfileResult
+	(*SpendResult)(nil),            // 29: glimway.v1.SpendResult
+	(*WildsClaimResult)(nil),       // 30: glimway.v1.WildsClaimResult
+	(*WildsLanternResult)(nil),     // 31: glimway.v1.WildsLanternResult
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
-	16, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
+	18, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
 	15, // 1: glimway.v1.Story.quests:type_name -> glimway.v1.Story.QuestsEntry
-	0,  // 2: glimway.v1.PlayerState.account:type_name -> glimway.v1.Account
-	17, // 3: glimway.v1.PlayerState.profile:type_name -> glimway.v1.HabiticaProfile
-	18, // 4: glimway.v1.PlayerState.vitals:type_name -> glimway.v1.Vitals
-	19, // 5: glimway.v1.PlayerState.place:type_name -> glimway.v1.Place
-	1,  // 6: glimway.v1.PlayerState.story:type_name -> glimway.v1.Story
-	2,  // 7: glimway.v1.PlayerState.embers:type_name -> glimway.v1.Embers
-	4,  // 8: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
-	3,  // 9: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
-	3,  // 10: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
-	20, // 11: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
-	21, // 12: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
-	22, // 13: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
-	23, // 14: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
-	24, // 15: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
-	25, // 16: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
-	26, // 17: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
-	27, // 18: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
-	28, // 19: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
-	29, // 20: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
-	7,  // 21: glimway.v1.WorldChoice.party_world:type_name -> glimway.v1.WorldRef
-	3,  // 22: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	8,  // 23: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
-	3,  // 24: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
-	3,  // 25: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
-	26, // [26:26] is the sub-list for method output_type
-	26, // [26:26] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	16, // 2: glimway.v1.Story.reached_at:type_name -> glimway.v1.Story.ReachedAtEntry
+	17, // 3: glimway.v1.Story.gate_at:type_name -> glimway.v1.Story.GateAtEntry
+	0,  // 4: glimway.v1.PlayerState.account:type_name -> glimway.v1.Account
+	19, // 5: glimway.v1.PlayerState.profile:type_name -> glimway.v1.HabiticaProfile
+	20, // 6: glimway.v1.PlayerState.vitals:type_name -> glimway.v1.Vitals
+	21, // 7: glimway.v1.PlayerState.place:type_name -> glimway.v1.Place
+	1,  // 8: glimway.v1.PlayerState.story:type_name -> glimway.v1.Story
+	2,  // 9: glimway.v1.PlayerState.embers:type_name -> glimway.v1.Embers
+	4,  // 10: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
+	3,  // 11: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
+	3,  // 12: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
+	22, // 13: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
+	23, // 14: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
+	24, // 15: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
+	25, // 16: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
+	26, // 17: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
+	27, // 18: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
+	28, // 19: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
+	29, // 20: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
+	30, // 21: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
+	31, // 22: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
+	7,  // 23: glimway.v1.WorldChoice.party_world:type_name -> glimway.v1.WorldRef
+	3,  // 24: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
+	8,  // 25: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	3,  // 26: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
+	3,  // 27: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_state_proto_init() }
@@ -1412,7 +1442,7 @@ func file_glimway_v1_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_state_proto_rawDesc), len(file_glimway_v1_state_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,0 +1,631 @@
+{
+  "rooms": [
+    {
+      "name": "shipped-rooms",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "ragged-map",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            3
+          ],
+          "value": "#.#"
+        }
+      ]
+    },
+    {
+      "name": "unclaimed-letter",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            3
+          ],
+          "value": "#......Z.....#"
+        }
+      ]
+    },
+    {
+      "name": "nonrectangular-prop",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            5
+          ],
+          "value": "#..TTT....b..#"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-room",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "id"
+          ],
+          "value": "in:village:bakery"
+        }
+      ]
+    },
+    {
+      "name": "unknown-parent",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "parent"
+          ],
+          "value": "bogus"
+        }
+      ]
+    },
+    {
+      "name": "floor-one-suffix",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "id"
+          ],
+          "value": "in:village:bakery:1"
+        }
+      ]
+    },
+    {
+      "name": "missing-base-floor",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            2,
+            "id"
+          ],
+          "value": "in:village:missing:2"
+        }
+      ]
+    },
+    {
+      "name": "invalid-legend",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "legend",
+            "#"
+          ],
+          "value": "planks"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-prop-char",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            1,
+            "char"
+          ],
+          "value": "O"
+        }
+      ]
+    },
+    {
+      "name": "unclaimed-exit",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors"
+          ],
+          "value": [
+            {
+              "id": "front",
+              "kind": "door",
+              "at": "D",
+              "side": "south",
+              "to": "village",
+              "outside": {
+                "tx": 29,
+                "ty": 22
+              },
+              "entry": {
+                "tx": 29,
+                "ty": 23
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wrong-door-side",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "doors",
+            0,
+            "side"
+          ],
+          "value": "east"
+        }
+      ]
+    },
+    {
+      "name": "stair-to-unknown-room",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "to"
+          ],
+          "value": "in:village:missing"
+        }
+      ]
+    },
+    {
+      "name": "stair-arrives-in-wall",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "entry"
+          ],
+          "value": {
+            "tx": 0,
+            "ty": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-stair-coordinate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "entry"
+          ],
+          "value": {
+            "tx": 4
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-spot",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "spots",
+            "sponge-bowl"
+          ],
+          "value": {
+            "tx": 4,
+            "ty": 4,
+            "label": "Look"
+          }
+        }
+      ]
+    },
+    {
+      "name": "curated-spot-collision",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "route-stone"
+          ],
+          "value": {
+            "tx": 4,
+            "ty": 6,
+            "label": "Look"
+          }
+        }
+      ]
+    },
+    {
+      "name": "spot-outside-grid",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "sponge-bowl",
+            "tx"
+          ],
+          "value": 14
+        }
+      ]
+    },
+    {
+      "name": "spot-blocked-on-all-sides",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "sponge-bowl"
+          ],
+          "value": {
+            "tx": 7,
+            "ty": 1,
+            "label": "Look"
+          }
+        }
+      ]
+    },
+    {
+      "name": "nonpositive-light",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "r"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "open-boundary",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            0
+          ],
+          "value": ".#############"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-arrival",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            7
+          ],
+          "value": "#.....@......#"
+        }
+      ]
+    },
+    {
+      "name": "missing-solid",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            0
+          ],
+          "value": {
+            "char": "O",
+            "art": "kitchen-hearth"
+          }
+        }
+      ]
+    },
+    {
+      "name": "non-solid-prop",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            0,
+            "solid"
+          ],
+          "value": false
+        }
+      ]
+    }
+  ],
+  "residents": [
+    {
+      "name": "shipped-residents",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "phase-total",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "cycle",
+            0,
+            "minutes"
+          ],
+          "value": 39
+        }
+      ]
+    },
+    {
+      "name": "phase-duration",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "cycle",
+            0,
+            "minutes"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-cycle-spot",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "cycle",
+            0,
+            "spot"
+          ],
+          "value": "missing"
+        }
+      ]
+    },
+    {
+      "name": "unknown-area",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "spots",
+            "square",
+            "area"
+          ],
+          "value": "in:village:missing"
+        }
+      ]
+    },
+    {
+      "name": "resident-in-wall",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "spots",
+            "kitchen",
+            "tx"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "offset-wraps-period",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            1,
+            "offsetMinutes"
+          ],
+          "value": 60
+        }
+      ]
+    },
+    {
+      "name": "duplicate-resident",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            1,
+            "id"
+          ],
+          "value": "hazel"
+        }
+      ]
+    },
+    {
+      "name": "unknown-home",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "home"
+          ],
+          "value": "in:village:missing"
+        }
+      ]
+    },
+    {
+      "name": "unused-spot",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "spots",
+            "extra"
+          ],
+          "value": {
+            "area": "village",
+            "tx": 1,
+            "ty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-resident-coordinate",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "spots",
+            "square"
+          ],
+          "value": {
+            "area": "village",
+            "tx": 12
+          }
+        }
+      ]
+    },
+    {
+      "name": "grace-negative",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "graceSeconds"
+          ],
+          "value": -1
+        }
+      ]
+    }
+  ],
+  "parents": [
+    {
+      "area": "village",
+      "parent": "village",
+      "root": "village",
+      "known": false
+    },
+    {
+      "area": "in:village:bakery",
+      "parent": "village",
+      "root": "village",
+      "known": true
+    },
+    {
+      "area": "in:village:mill:2",
+      "parent": "in:village:mill",
+      "root": "village",
+      "known": true
+    },
+    {
+      "area": "in:home:0",
+      "parent": "home:0",
+      "root": "home:0",
+      "known": true
+    },
+    {
+      "area": "in:home:12",
+      "parent": "home:12",
+      "root": "home:12",
+      "known": true
+    },
+    {
+      "area": "in:home:9999",
+      "parent": "home:9999",
+      "root": "home:9999",
+      "known": true
+    },
+    {
+      "area": "in:home:10000",
+      "parent": "in:home:10000",
+      "root": "in:home:10000",
+      "known": false
+    },
+    {
+      "area": "in:home:01",
+      "parent": "in:home:01",
+      "root": "in:home:01",
+      "known": false
+    },
+    {
+      "area": "in:village:missing:2",
+      "parent": "in:village:missing",
+      "root": "village",
+      "known": false
+    },
+    {
+      "area": "in:village:mill:1",
+      "parent": "in:village:mill:1",
+      "root": "in:village:mill:1",
+      "known": false
+    }
+  ]
+}

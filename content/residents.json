@@ -1,0 +1,85 @@
+{
+  "periodMinutes": 60,
+  "graceSeconds": 90,
+  "residents": [
+    {
+      "id": "hazel",
+      "offsetMinutes": 0,
+      "home": "in:village:bakery",
+      "spots": {
+        "kitchen": {
+          "area": "in:village:bakery",
+          "tx": 4,
+          "ty": 6
+        },
+        "square": {
+          "area": "village",
+          "tx": 12,
+          "ty": 15
+        }
+      },
+      "cycle": [
+        {
+          "spot": "kitchen",
+          "minutes": 40
+        },
+        {
+          "spot": "square",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "finn",
+      "offsetMinutes": 20,
+      "home": "in:village:mill",
+      "spots": {
+        "stones": {
+          "area": "in:village:mill",
+          "tx": 8,
+          "ty": 4
+        },
+        "loft": {
+          "area": "in:village:mill:2",
+          "tx": 7,
+          "ty": 5
+        },
+        "door": {
+          "area": "village",
+          "tx": 30,
+          "ty": 23
+        }
+      },
+      "cycle": [
+        {
+          "spot": "stones",
+          "minutes": 25
+        },
+        {
+          "spot": "loft",
+          "minutes": 10
+        },
+        {
+          "spot": "door",
+          "minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "ada",
+      "spots": {
+        "window": {
+          "area": "village",
+          "tx": 35,
+          "ty": 8
+        }
+      },
+      "cycle": [
+        {
+          "spot": "window",
+          "minutes": 60
+        }
+      ]
+    }
+  ]
+}

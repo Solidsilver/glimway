@@ -23,7 +23,7 @@ func jsonInto(raw string, v any) error { return json.Unmarshal([]byte(raw), v) }
 func (x *rig) rawGet(path string, c *http.Cookie) string {
 	x.t.Helper()
 	r := httptest.NewRequest("GET", path, nil)
-	r.Header.Set("X-Glimway-Contract", "3")
+	r.Header.Set("X-Glimway-Contract", "4")
 	r.AddCookie(c)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)

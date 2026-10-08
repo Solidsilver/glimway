@@ -87,6 +87,18 @@ export declare type Story = Message<"glimway.v1.Story"> & {
    * @generated from field: double play_seconds = 6;
    */
   playSeconds: number;
+
+  /**
+   * Quest timestamps are Unix seconds, keyed by quest id.
+   *
+   * @generated from field: map<string, double> reached_at = 7;
+   */
+  reachedAt: { [key: string]: number };
+
+  /**
+   * @generated from field: map<string, double> gate_at = 8;
+   */
+  gateAt: { [key: string]: number };
 };
 
 /**

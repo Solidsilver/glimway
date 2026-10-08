@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import roomVectors from '../content/vectors/rooms.json' with { type: 'json' };
+import questVectors from '../content/vectors/quests.json' with { type: 'json' };
+import clockVectors from '../content/vectors/clock.json' with { type: 'json' };
+import roomRaw from '../content/rooms.json' with { type: 'json' };
+import residentRaw from '../content/residents.json' with { type: 'json' };
+import { ROOMS, validateRooms, roomParent, rootArea, knownRoom, roomFootprints, roomFor } from '../src/lib/rooms.ts';
+import { validateResidents, residentAt, residentById } from '../src/lib/residents.ts';
+import { cycleAt, cycleSpotsNear } from '../src/lib/clock.ts';
+import { validateQuests } from '../src/lib/story-tables.ts';
+interface Edit { path: (string | number)[]; value: unknown }
+function edited(base: unknown, edits: Edit[]): unknown {
+  const value = structuredClone(base);
+  for (const e of edits) { let target = value as any; for (const key of e.path.slice(0,-1)) target = target[key]; target[e.path.at(-1)!] = e.value; }
+  return value;
+}
+for (const [kind, base, vectors, validate] of [
+  ['rooms', roomRaw, roomVectors.rooms, validateRooms],
+  ['residents', residentRaw, roomVectors.residents, validateResidents],
+  ['quests', questVectors.base, questVectors.cases, validateQuests]
+] as const) {
+  for (const v of vectors) test(`shared ${kind} loader: ${v.name}`, () => {
+    const value = edited(base, v.edits);
+    if (v.valid) assert.doesNotThrow(() => validate(value)); else assert.throws(() => validate(value));
+  });
+}
+test('shared room parent, root and known-id vectors', () => {
+  for (const v of roomVectors.parents) { assert.equal(roomParent(v.area),v.parent,v.area); assert.equal(rootArea(v.area),v.root,v.area); assert.equal(knownRoom(v.area),v.known,v.area); }
+});
+test('prop footprints preserve separate rectangular sack piles', () => {
+  const loft = roomFor('in:village:mill:2')!;
+  assert.deepEqual(roomFootprints(loft,'f'), [{ char:'f',tx:2,ty:2,tw:2,th:2 },{ char:'f',tx:6,ty:2,tw:2,th:2 }]);
+  assert.equal(ROOMS.rooms.length,4);
+});
+test('shared resident cycle phase and grace vectors', () => {
+  for (const v of clockVectors.cycles) { assert.deepEqual(cycleAt(v.resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(v.resident,v.now,v.graceSeconds),v.near); }
+  assert.deepEqual(residentAt('finn',2700), { area:'in:village:mill:2',tx:7,ty:5 });
+  assert.equal(residentAt('missing',0),null); assert.equal(residentById('missing'),null);
+});
