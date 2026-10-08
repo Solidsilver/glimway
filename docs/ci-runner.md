@@ -172,6 +172,8 @@ in
   ];
 
   # One budget for the runner and its job containers (--cgroup-parent).
+  # The dash nests it in glimway.slice, which needs the low weights too.
+  systemd.slices.glimway.sliceConfig = { CPUWeight = 20; IOWeight = 20; };
   systemd.slices.glimway-ci.sliceConfig = {
     CPUWeight = 20;
     IOWeight = 20;
@@ -200,6 +202,10 @@ in
       # The module's PrivateUsers=true hides the docker group from the service.
       PrivateUsers = false;
       SupplementaryGroups = [ "docker" ];
+      # The module's ProtectProc=invisible hides /proc/1, which the runner
+      # reads before it starts a container job.
+      ProtectProc = "default";
+      ProcSubset = "all";
       # Keep the runner process away from production data and secrets.
       InaccessiblePaths = [ "-/var/lib/<app>" "-/run/agenix" ];
     };
@@ -214,6 +220,13 @@ Notes:
   would sit in RAM.
 - **`PrivateUsers = false`.** Without it the runner can't open
   `/run/docker.sock`.
+- **`ProtectProc = "default"`.** With the module's `invisible`, container
+  jobs fail in "Initialize containers" with `Could not find a part of the
+  path '/proc/1/cgroup'`.
+- **Slice names nest at dashes.** `glimway-ci.slice` is a child of
+  `glimway.slice` (cgroup `/sys/fs/cgroup/glimway.slice/glimway-ci.slice`).
+  Weights only compete among siblings, so the parent gets the low weights.
+  Memory limits work at any level.
 - **Docker and GPU.** `virtualisation.docker.enable` and
   `hardware.nvidia-container-toolkit.enable` (CDI) are needed on the host.
 
@@ -236,6 +249,6 @@ re-register after its next job and full-suite runs queue until it's replaced.
 - The "Check the WebGL renderer" step shows whether the GPU was used.
 - `systemd-cgls -u glimway-ci.slice` during a run shows the runner and the
   job's `docker-<id>.scope` together.
-- `/sys/fs/cgroup/glimway-ci.slice/memory.peak` and `memory.swap.peak` give the
+- `/sys/fs/cgroup/glimway.slice/glimway-ci.slice/memory.peak` and `memory.swap.peak` give the
   run's peak memory; `memory.events` counts how often it hit `high` or `max`.
   Use them to pick `E2E_RUNNER_WORKERS`.
