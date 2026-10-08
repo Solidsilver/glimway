@@ -32,7 +32,8 @@
     onLogout,
     onMove,
     onLeave,
-    onWhatsNew
+    onWhatsNew,
+    onDev
   }: {
     session: Session
     onClose: () => void
@@ -45,6 +46,8 @@
     onLeave?: (view: WorldView) => void
     /** The "What's new" card for this version (src/ui/WhatsNew.svelte). */
     onWhatsNew?: () => void
+    /** Dev mode's panel (Vite dev only; src/ui/dev/DevPanel.svelte). */
+    onDev?: () => void
   } = $props()
 
   const touch = isTouchFirst()
@@ -150,6 +153,14 @@
         </button>
       {/each}
     </div>
+  {/if}
+
+  {#if import.meta.env.DEV && onDev}
+    <section class="card dev-row" data-testid="menu-dev">
+      <h3 class="section-title"><Icon name="key" size={14} /> Dev</h3>
+      <p class="fine">Local playtesting: give yourself embers, materials and items. Only in dev builds. Key: <span class="kbd">`</span></p>
+      <button type="button" onclick={onDev}>Open dev mode</button>
+    </section>
   {/if}
 
   {#if ui.account}

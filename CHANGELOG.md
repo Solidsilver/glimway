@@ -15,6 +15,10 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- When someone speaks the warden's naming, the warden you're watching rests
+  for its few seconds and no longer, even on a slow or background screen.
+- Coming back online after playing offline sends your health and place to
+  the world at once, instead of up to ten seconds later.
 - Opening and closing a conversation or a panel is quiet again: the
   zip it made is gone.
 - Felling a tree takes all of it: trees leaning over a path in the Wilds
@@ -40,6 +44,13 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- Dev mode for local playtesting (dev builds only, which `npm run server`
+  now makes): `POST /api/dev/grant` gives the signed-in account embers,
+  items or home goods through the real store paths, never anything from
+  Habitica; the dev panel (`` ` `` or the Menu's Dev row) exists only under
+  `vite` dev. Production binaries and bundles don't contain either.
+- e2e waits for a server answer allow 15 s (`SERVER_ANSWER_MS`): the first
+  answers of a session take 3-5 s on the software-rendered smoke runner.
 - Everything drawn for a tile registers in one place
   (`src/game/area/tile-art.ts`), so felling removes the foreground canopy
   too; a dev-only `__fsArtAt(tx, ty)` hook lets e2e read what's drawn.

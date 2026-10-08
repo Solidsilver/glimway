@@ -297,7 +297,7 @@ func run(args []string) error {
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
 	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
 	defer handler.ClosePresence()
-	httpHandler, closeStatic, err := withStatic(clock.mount(handler), *staticDir)
+	httpHandler, closeStatic, err := withStatic(clock.mount(devRoutes(handler)(handler)), *staticDir)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,7 @@
   "name": "glimway",
   "private": true,
   "license": "AGPL-3.0-or-later",
-  "version": "0.3.0-alpha.4",
+  "version": "0.3.0-alpha.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,7 @@
     "test:changed": "node scripts/e2e-changed.ts",
     "test:screens": "SCREENS=1 playwright test",
     "verify:all": "npm run verify && npm run test:e2e",
-    "server": "go run ./server/cmd/glimway-server -cookie-secure=false",
+    "server": "go run -tags dev ./server/cmd/glimway-server -cookie-secure=false",
     "vectors": "node scripts/backend-vectors.ts",
     "vectors:homestead": "node scripts/homestead-vectors.ts",
     "vectors:calendar": "node scripts/calendar-vectors.ts",

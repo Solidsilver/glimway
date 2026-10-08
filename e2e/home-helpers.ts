@@ -1,7 +1,7 @@
 import { expect, type Page } from './fixtures'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectToast } from './helpers'
+import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -255,10 +255,10 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
 /** Claim the first unclaimed gate on the lane from Silas (read his reply); returns the gate. */
 export async function claimDeed(page: Page): Promise<number> {
   await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
   await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
-  await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  await expect.poll(async () => (await homes(page)).myGate, { timeout: SERVER_ANSWER_MS }).toBe(free.gate)
   // Silas answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, /in my square hand/)
   return free.gate
@@ -268,9 +268,9 @@ export async function claimDeed(page: Page): Promise<number> {
 export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {
   const gate = (await lane(page)).mine!.gate
   if ((await area(page)) !== 'commons') await go(page, 'commons', 23, 19)
-  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   await throughGate(page, gate)
-  await expect.poll(async () => (await homes(page)).land).not.toBeNull()
+  await expect.poll(async () => (await homes(page)).land, { timeout: SERVER_ANSWER_MS }).not.toBeNull()
   return (await homes(page)).land!
 }
 
