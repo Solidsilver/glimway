@@ -25,6 +25,19 @@ const observe = (page: Page) =>
     }).observe({ type: 'longtask', buffered: true })
   })
 
+async function logWebGLRenderer(page: Page): Promise<void> {
+  if (!process.env.E2E_LOG_RENDERER) return
+  const renderer = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas') as HTMLCanvasElement | null
+    if (!canvas) return 'no canvas'
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    if (!gl) return 'no WebGL context'
+    const extension = gl.getExtension('WEBGL_debug_renderer_info')
+    return extension ? String(gl.getParameter(extension.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER))
+  })
+  console.log(`WebGL renderer: ${renderer}`)
+}
+
 /** Warp into an area and wait for its ground to be complete; the long tasks since the warp. */
 async function enter(page: Page, area: 'commons' | 'village', tx: number, ty: number): Promise<{ tasks: LongTask[]; ground: unknown; ms: number }> {
   await page.evaluate(() => ((window as unknown as { __lt: LongTask[] }).__lt = []))
@@ -54,12 +67,16 @@ test('entering the Commons blocks the main thread for no long task', async ({ pa
   await observe(page)
   await page.setViewportSize({ width: 1280, height: 800 })
   await beginNewJourney(page)
+  await logWebGLRenderer(page)
   const village = await tilesetHash(page)
   // The workers' tileset is texel for texel the one painted on the main thread.
   expect(village).toBe(await mainThreadHash(page))
   const commons = await enter(page, 'commons', 23, 19)
   const commonsHash = await tilesetHash(page)
   expect(commonsHash).toBe(await mainThreadHash(page))
+  if (process.env.E2E_LOG_RENDERER) {
+    console.log(`First-paint measurement: ${commons.ms} ms total; longest long task ${longest(commons.tasks)} ms`)
+  }
   test.info().annotations.push({ type: 'longest task (ms)', description: String(longest(commons.tasks)) })
   if (process.env.PERF) writeFileSync(`.agent/perf-${process.env.PERF_TAG ?? 'now'}-desktop.json`, JSON.stringify({ commons, hashes: { village, commons: commonsHash } }, null, 1))
   // Generous for a loaded test machine; the report has the quiet numbers.

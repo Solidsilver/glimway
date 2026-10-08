@@ -24,11 +24,12 @@ plus a few programs that aren't npm packages:
 | Command | What runs | When |
 |---|---|---|
 | `npm run verify` | typecheck, svelte-check, unit tests, build | every change |
+| `npm test` | unit tests | while working |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
 | `npm run test:smoke` | the `@smoke` playtests (7 tests, a few minutes at most) | while working, often |
-| `npm run test:changed` | the playtests mapped to what this branch changed | while working, before handing back |
-| `npm run test:e2e` | the full Playwright suite | once per merge batch, and after changing shared test code |
+| `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
+| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `expansion` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
 
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
@@ -44,6 +45,14 @@ the unit tests fail when the committed output has drifted from its inputs:
 | `npm run vectors:wilds`, `vectors:homestead`, `vectors:calendar`, `vectors:items` | the other parity vectors the Go tests read |
 | `npm run papers` | `src/content/papers-text.ts` and `content/papers.json` from `docs/lore/texts` |
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
+
+While working, run `npm test` (or `npm run verify` when the change warrants
+it). At the end, run `npm run test:changed`. In CI, every push and pull
+request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
+on GitHub's runners. The full suite runs on a self-hosted runner with an
+NVIDIA GPU, for pushes to `main`, `expansion` and `exp/**` and for manual
+dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Push an
+`exp/` branch to run it before main moves.
 
 Unit tests can load rune modules (`*.svelte.ts`, such as
 `src/ui/account-flow.svelte.ts`): import `tests/helpers/svelte-runes.ts`
@@ -85,9 +94,14 @@ arguments go to Playwright (`-- --workers=2`, `-- -g "deed"`).
 
 ## Workers, servers and ports
 
-The suite runs in parallel: `E2E_WORKERS` workers (default: half the cores,
-2 to 6), `fullyParallel`, so tests from one spec spread across workers.
-`--workers=N` works too.
+The suite runs in parallel with `fullyParallel`, so tests from one spec spread
+across workers. Local runs default to 2–3 workers. In CI the smoke tier uses 2
+workers, and the full suite on the self-hosted runner uses 4
+(`E2E_RUNNER_WORKERS`, sized to its memory budget in
+[ci-runner.md](ci-runner.md)).
+Set `E2E_WORKERS` or pass `--workers=N` to override. To reduce its impact on a
+busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
+`npm run test:changed`).
 
 - **Vite** (one, shared): `E2E_PORT` (default 5199). Give each git worktree
   its own, or two worktrees share one Vite. HMR is off in the playtest Vite, so
@@ -112,8 +126,12 @@ The suite runs in parallel: `E2E_WORKERS` workers (default: half the cores,
 - **GPU:** on macOS the browsers render WebGL on the GPU (`--use-angle=metal
   --enable-gpu`). Headless Chromium otherwise uses SwiftShader, software GL on
   the CPU: on a busy machine the game drew about 8 frames a second that way,
-  against 60 on the GPU, and most "timing" flakes came from that. `E2E_GPU=0`
-  turns it off (other platforms always use SwiftShader).
+  against 60 on the GPU, and most "timing" flakes came from that. On Linux
+  with an NVIDIA GPU, `E2E_GPU=nvidia` renders through ANGLE on Vulkan
+  (`E2E_GPU_ANGLE=gl-egl` for EGL); that's how the self-hosted CI runner
+  runs. `E2E_GPU=0` turns the GPU off for comparisons.
+  `node scripts/webgl-renderer.ts` prints the renderer the current settings
+  get, and `E2E_LOG_RENDERER=1` logs it from `first-paint.spec.ts`.
 - **baseURL** is `http://127.0.0.1:<E2E_PORT>`, not `localhost`: `page.request`
   resolves the host in Node, and under load a `localhost` lookup has stalled
   for seconds.
@@ -188,8 +206,8 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
    `E2E_PORT=5231 npx playwright test e2e/x.spec.ts -g "title" --repeat-each=5 --workers=5`.
    Add `--workers=1` to see whether it only fails under load.
 2. Open the trace: `npx playwright show-trace test-results/<test>/trace.zip`
-   (kept for every failure). The actions and network tabs show which step
-   waited, and for how long.
+   (local failures keep traces; CI records only the first retry). The actions
+   and network tabs show which step waited, and for how long.
 3. The worker's server log is `.e2e-server/latest/w<N>/server.log`
    (`server.json` in the same folder has its ports).
 4. Look for a wall-clock assumption: a fixed pause, a `{ timeout }` on
