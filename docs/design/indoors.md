@@ -308,7 +308,10 @@ home goods in `content/homestead.json` (moved, not copied; homestead keeps its t
   crate), or `large` (furniture). **The rule is one table:** `small` goes on any `top` or `shelves`
   slot or the floor; `medium` goes on a `top` that's big enough, or the floor; `large` only on the
   floor; `wall` pieces only on walls; a rug (`layer: under`) only on the floor, under everything,
-  and never blocks. No per-item exceptions: a piece's `size` and `mount` decide.
+  and never blocks. A rug counts as floor for every piece but walls and other rugs. A medium piece
+  fills two slots of a top. Outdoors, fences, the gate and the cottage's outer walls are walls (the
+  bunting across your gate, a door carving). No per-item exceptions: a piece's `size` and `mount`
+  decide.
 - **`states`** (optional): named states, each with its frames and an optional slow `loop`
   (`pot`: `empty`, `filled`, `steaming`). One state is the default. A state changes only by
   something that happens (a quest beat, cooking, a resident's routine, later a player's use),
