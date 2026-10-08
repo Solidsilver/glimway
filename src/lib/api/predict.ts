@@ -116,6 +116,7 @@ export function gameStateOf(p: PlayerState): GameState {
     embers: embers.balance,
     xpEmbers: embers.xpEarned,
     emberXp: embers.xpMark,
+    ...(place.outerEpoch ? { outerEpoch: place.outerEpoch } : {}),
   });
 }
 

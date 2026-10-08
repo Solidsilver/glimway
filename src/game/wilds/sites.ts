@@ -445,8 +445,10 @@ export class WildsSites {
   private settle(s: StorySite, def: EchoDef): void {
     const session = this.deps.session
     if (echoSettled(session.state.flags, def.member)) return
-    // Predicted: the moment plays now; the server's answer confirms it.
-    session.addFlag(echoFlag(def.member))
+    // The moment plays now. Connected, the settle is a predicted operation
+    // and its answer carries the mark and the Echo's paper (the server grants
+    // both); a take sent first would be refused as not yet due.
+    if (!session.link) session.addFlag(echoFlag(def.member))
     this.sendSettle(s, def)
     const at = this.sitePx(s)
     sfx('lantern')
@@ -454,7 +456,7 @@ export class WildsSites {
     // A keep left here before the settling: the moment finishes a little softer.
     const softened = def.keepsake && session.state.flags.includes(echoSoftenedFlag(def.member)) ? [def.keepsake.softened] : []
     openDialogue({ id: `wilds-echo:${def.member}`, speaker: `An Echo — ${def.name}`, lines: [...def.settle, ...softened] }, { sound: null })
-    if (def.paper && !session.state.flags.includes(paperFlag(def.paper))) grantPaper(session, def.paper)
+    if (!session.link && def.paper && !session.state.flags.includes(paperFlag(def.paper))) grantPaper(session, def.paper)
     this.render()
   }
 
@@ -537,7 +539,14 @@ export class WildsSites {
   private find(s: StorySite, paper: string): void {
     const text = SITE_TEXT[s.kind as keyof typeof SITE_TEXT]
     if (text) bus.emit(EV.toast, { text: text.look, icon: 'map', kind: 'thought' })
-    grantPaper(this.deps.session, paper)
+    const session = this.deps.session
+    if (session.link) {
+      // A site's paper is the server's to check against this epoch's site:
+      // the take names both, from where the hero stands. Its answer brings
+      // the paper (announced when its mark arrives).
+      bus.emit(EV.notePosition)
+      void session.link.takePaper(paper, { epoch: this.epoch.id, site: s.id }).then(() => this.render())
+    } else grantPaper(session, paper)
     this.render()
   }
 

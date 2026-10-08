@@ -47,12 +47,12 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import { LANTERN_ROAD } from '../lib/api/ports.ts'
-import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsClaimResult, WildsDefeatResult, WildsLanternResult, WildsRegionResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
-import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult } from '../lib/gen/glimway/v1/operations_pb.js'
+import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
@@ -1346,16 +1346,18 @@ export class Link {
   }
 
   /** Settle an Echo (the server checks this player's assignment). */
-  async settleEcho(req: { epoch: string; site: string; member: string }): Promise<WildsOutcome<{ paper: string }>> {
+  async settleEcho(req: { epoch: string; site: string; member: string; where?: WhereJson }): Promise<WildsOutcome<SettleEchoResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     const key = newKey()
-    const body = toJson(SettleEchoRequestSchema, create(SettleEchoRequestSchema, { op: { lease: '', key }, epoch: req.epoch, site: req.site, member: req.member, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const body = toJson(SettleEchoRequestSchema, create(SettleEchoRequestSchema, { op: { lease: '', key }, epoch: req.epoch, site: req.site, member: req.member, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     const { outcome: r } = await this.submit('settle-echo', TYPED['settle-echo']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: { paper?: string } }
-    return { ok: true, result: { paper: res?.case === 'settleEcho' ? res.value?.paper ?? '' : '' } }
+    const res = r.result as { case?: string; value?: SettleEchoResult }
+    if (res?.case !== 'settleEcho' || !res.value) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
   }
+
 
   /** Spend through the server. The payoff waits for its answer; rests carry a report barrier. */
   async spend(spend: EmberSpend): Promise<RemoteSpendResult> {
@@ -1559,31 +1561,31 @@ export class Link {
   }
 
   /** Claim a camp/node/chest/POI from where the hero stands. */
-  async wildsClaim(req: { epoch: string; entityId: string; cycle: number }): Promise<WildsOutcome<WildsClaimResult>> {
+  async wildsClaim(req: { epoch: string; entityId: string; cycle: number; where?: WhereJson }): Promise<WildsOutcome<WildsClaimProto>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
     const key = newKey()
-    const body = toJson(WildsClaimRequestSchema, create(WildsClaimRequestSchema, { op: { lease: '', key }, epoch: req.epoch, entityId: req.entityId, cycle: req.cycle, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const body = toJson(WildsClaimRequestSchema, create(WildsClaimRequestSchema, { op: { lease: '', key }, epoch: req.epoch, entityId: req.entityId, cycle: req.cycle, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     const { outcome: r } = await this.submit('wilds-claim', TYPED['wilds-claim']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: import('../lib/gen/glimway/v1/operations_pb.js').WildsClaimResult }
+    const res = r.result as { case?: string; value?: WildsClaimProto }
     if (res?.case !== 'wildsClaim' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: claimResult(res.value) }
+    return { ok: true, result: res.value }
   }
 
   /** Relight a fallen hero's lantern (the exact instance, by id). */
-  async wildsRelight(req: { epoch: string; ownerId: string; lanternId: string }): Promise<WildsOutcome<WildsLanternResult>> {
+  async wildsRelight(req: { epoch: string; ownerId: string; lanternId: string; where?: WhereJson }): Promise<WildsOutcome<WildsLanternProto>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
     const key = newKey()
-    const body = toJson(WildsLanternRequestSchema, create(WildsLanternRequestSchema, { op: { lease: '', key }, epoch: req.epoch, ownerId: req.ownerId, lanternId: req.lanternId, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const body = toJson(WildsLanternRequestSchema, create(WildsLanternRequestSchema, { op: { lease: '', key }, epoch: req.epoch, ownerId: req.ownerId, lanternId: req.lanternId, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     const { outcome: r } = await this.submit('wilds-lantern', TYPED['wilds-lantern']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: import('../lib/gen/glimway/v1/operations_pb.js').WildsLanternResult }
+    const res = r.result as { case?: string; value?: WildsLanternProto }
     if (res?.case !== 'wildsLantern' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: lanternResult(res.value) }
+    return { ok: true, result: res.value }
   }
 
   /**
@@ -1914,38 +1916,3 @@ function defaultChannel(): ChannelLike | null {
 }
 
 /** The typed claim result as the Wilds code keeps it. */
-function claimResult(r: import('../lib/gen/glimway/v1/operations_pb.js').WildsClaimResult): WildsClaimResult {
-  const e = r.entity
-  return {
-    epoch: r.epoch,
-    entity: {
-      id: e?.id ?? '',
-      kind: 'camp',
-      tx: 0,
-      ty: 0,
-      enemies: [],
-      material: '',
-      tier: 0,
-      poi: '',
-      cycle: e?.cycle ?? 0,
-      state: (e?.state ?? 'available') as WildsClaimResult['entity']['state'],
-      available_at: e?.availableAt ?? 0,
-      by: e?.by ?? null,
-      at: e?.at ?? null
-    },
-    loot: { materials: (r.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: r.loot?.trinket ?? null },
-    materials: { timber: r.materials.timber ?? 0, stone: r.materials.stone ?? 0, fiber: r.materials.fiber ?? 0, amber: r.materials.amber ?? 0 },
-    wardenSliverFound: r.wardenSliverFound,
-    stormDropFound: r.stormDropFound
-  }
-}
-
-function lanternResult(r: import('../lib/gen/glimway/v1/operations_pb.js').WildsLanternResult): WildsLanternResult {
-  return {
-    epoch: r.epoch,
-    rewarded: r.rewarded,
-    loot: { materials: (r.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: r.loot?.trinket ?? null },
-    materials: { timber: r.materials.timber ?? 0, stone: r.materials.stone ?? 0, fiber: r.materials.fiber ?? 0, amber: r.materials.amber ?? 0 },
-    lanterns: r.lanterns.map((l) => ({ id: l.id, ownerId: l.ownerId, displayName: l.displayName, x: l.x, y: l.y, litBy: l.litBy ?? null, at: l.at, litAt: l.litAt ?? null }))
-  }
-}

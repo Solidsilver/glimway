@@ -152,6 +152,9 @@ export declare type Vitals = Message<"glimway.v1.Vitals"> & {
 export declare const VitalsSchema: GenMessage<Vitals>;
 
 /**
+ * outer_epoch: the outer Wilds epoch this player's place was last recorded in
+ * ('' before any); a place left in an ended epoch is moved to the entrance.
+ *
  * @generated from message glimway.v1.Place
  */
 export declare type Place = Message<"glimway.v1.Place"> & {
@@ -174,6 +177,11 @@ export declare type Place = Message<"glimway.v1.Place"> & {
    * @generated from field: double place_set_version = 4;
    */
   placeSetVersion: number;
+
+  /**
+   * @generated from field: string outer_epoch = 5;
+   */
+  outerEpoch: string;
 };
 
 /**

@@ -182,7 +182,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -318,7 +319,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -356,7 +358,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "lantern": "placed",
         "reason": "",
@@ -442,7 +445,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -480,7 +484,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "lantern": "none",
         "reason": "daily-cap",
@@ -566,7 +571,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -604,7 +610,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "lantern": "none",
         "reason": "epoch-missing",
@@ -690,7 +697,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -728,7 +736,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "lantern": "none",
         "reason": "invalid-place",
@@ -814,7 +823,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -852,7 +862,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "lantern": "none",
         "reason": "not-wilds",
@@ -938,7 +949,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1064,7 +1076,8 @@
           "area": "fixture",
           "x": 1,
           "y": 1,
-          "placeSetVersion": 1
+          "placeSetVersion": 1,
+          "outerEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -1181,7 +1194,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1291,7 +1305,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1425,7 +1440,8 @@
         "area": "fixture",
         "x": 1,
         "y": 1,
-        "placeSetVersion": 1
+        "placeSetVersion": 1,
+        "outerEpoch": "fixture"
       },
       "lantern": "fixture",
       "reason": "fixture",
@@ -1951,7 +1967,8 @@
       "area": "",
       "x": 0,
       "y": 0,
-      "placeSetVersion": 0
+      "placeSetVersion": 0,
+      "outerEpoch": ""
     }
   },
   {
@@ -1961,7 +1978,8 @@
       "area": "fixture",
       "x": 1,
       "y": 1,
-      "placeSetVersion": 1
+      "placeSetVersion": 1,
+      "outerEpoch": "fixture"
     }
   },
   {
@@ -2065,7 +2083,8 @@
           "area": "fixture",
           "x": 1,
           "y": 1,
-          "placeSetVersion": 1
+          "placeSetVersion": 1,
+          "outerEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -2175,7 +2194,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -2288,7 +2308,8 @@
         "area": "fixture",
         "x": 1,
         "y": 1,
-        "placeSetVersion": 1
+        "placeSetVersion": 1,
+        "outerEpoch": "fixture"
       },
       "story": {
         "quests": {
@@ -2393,7 +2414,8 @@
         "area": "village",
         "x": 400,
         "y": 300,
-        "placeSetVersion": 0
+        "placeSetVersion": 0,
+        "outerEpoch": ""
       },
       "story": {
         "quests": {},
@@ -2703,7 +2725,8 @@
           "area": "fixture",
           "x": 1,
           "y": 1,
-          "placeSetVersion": 1
+          "placeSetVersion": 1,
+          "outerEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -2813,7 +2836,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -2996,7 +3020,8 @@
           "area": "fixture",
           "x": 1,
           "y": 1,
-          "placeSetVersion": 1
+          "placeSetVersion": 1,
+          "outerEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -3229,7 +3254,8 @@
           "area": "fixture",
           "x": 1,
           "y": 1,
-          "placeSetVersion": 1
+          "placeSetVersion": 1,
+          "outerEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -3337,7 +3363,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4352,7 +4379,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4485,7 +4513,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4606,7 +4635,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4717,7 +4747,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4952,7 +4983,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -5069,7 +5101,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},
@@ -5174,7 +5207,8 @@
           "area": "village",
           "x": 400,
           "y": 300,
-          "placeSetVersion": 0
+          "placeSetVersion": 0,
+          "outerEpoch": ""
         },
         "story": {
           "quests": {},

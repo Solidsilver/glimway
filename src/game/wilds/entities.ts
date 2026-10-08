@@ -70,6 +70,7 @@ const CLAIM_ERROR: Record<string, string> = {
   offline: 'Needs a connection. The Wilds keep what you have not claimed.',
   superseded: TRANSPORT_ERRORS.superseded,
   busy: TRANSPORT_ERRORS.busy,
+  pending: TRANSPORT_ERRORS.pending,
   unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
 }
 
@@ -453,8 +454,10 @@ export class WildsEntities {
     const kind: ToastPayload['kind'] = loot ? 'gain' : entity.kind === 'chest' ? 'thought' : 'info'
     if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop), kind, ...(loot ? { gain: lootGain(drop) } : {}) })
 
-    // Found texts ride their personal claim (see ./placements.ts).
-    const paperId = wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
+    // Found texts ride their personal claim (see ./placements.ts). Connected,
+    // the claim's answer names the ones the server granted (already in the
+    // adopted state); a take of the client's own guess would be refused.
+    const paperId = this.deps.session.link ? null : wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
     for (const paper of new Set([...papers, ...(paperId ? [paperId] : [])])) {
       if (!this.deps.session.state.flags.includes(`paper:${paper}`)) grantPaper(this.deps.session, paper)
     }

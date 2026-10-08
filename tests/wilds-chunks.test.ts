@@ -10,13 +10,10 @@ import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { toWorldData } from '../src/game/wilds/terrain.ts';
 import { cachedTerrain, forgetChunks, loadChunk, loadRegionChunks, pruneChunks } from '../src/game/wilds/chunks.ts';
 import { applyClaim, refreshWilds, resetWilds, setActiveWildsRegion, wildsEpoch, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
-import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
 import { hasAreaKind } from '../src/game/worlds.ts';
 import type { Session } from '../src/game/session.ts';
 import { fixtureBytes, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
 
-const envelopes = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { name: string; case: string; json: JsonValue }[];
-const validState = envelopes.find((f) => f.name === 'glimway.v1.PlayerState' && f.case === 'valid')!.json;
 
 test('a served chunk unpacks into grids, decor, exits, sites and bodies', () => {
   const m = fixtureChunk('inner-1');
@@ -175,28 +172,6 @@ test('a region read loads its chunks and merges bodies with the server’s state
   assert.equal(await refreshWilds(session), true);
   assert.equal(wildsView()!.stale, false);
   assert.ok(wildsLive(session));
-});
-
-test('Wilds operations send the lease, a key and where (the region and its pixels)', async () => {
-  const ops = new FakeOperations();
-  const envelope = (result: JsonValue) => ({ state: validState, ...(result as object) }) as JsonValue;
-  ops.responses.set('/api/wilds/claim', [envelope({ wildsClaim: { epoch: 'e', entity: null, loot: null, materials: {}, wardenSliverFound: false, stormDropFound: false, papers: ['failed-grid-of-sector-4'] } })]);
-  ops.responses.set('/api/wilds/echo', [new Error('refused')]);
-  const session = fakeSession(ops);
-  const claim = await claimEntity(session, { epoch: 'e', entityId: 'poi:1:1:0', cycle: 2, where: { region: 'outer-1', x: 100, y: 200 } });
-  assert.ok(claim.ok);
-  if (!claim.ok) return;
-  assert.deepEqual(claim.result.papers, ['failed-grid-of-sector-4']);
-  const sent = ops.calls[0]!.body as { op: { lease: string; key: string }; where: unknown; cycle: number; entityId: string };
-  assert.equal(sent.op.lease, 'lease-1');
-  assert.ok(sent.op.key.length > 0);
-  assert.deepEqual(sent.where, { area: 'wilds:outer-1', x: 100, y: 200 });
-  assert.equal(sent.cycle, 2);
-  const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { region: 'outer-1', x: 1, y: 2 } });
-  assert.equal(settled.ok, false);
-  // No lease, no operation.
-  const offline = await claimEntity({ ...session, link: { ...session.link!, lease: null } } as unknown as Session, { epoch: 'e', entityId: 'x', cycle: 0, where: { region: 'inner-1', x: 0, y: 0 } });
-  assert.deepEqual(offline, { ok: false, code: 'offline' });
 });
 
 test('loadRegionChunks asks for the whole grid', async () => {

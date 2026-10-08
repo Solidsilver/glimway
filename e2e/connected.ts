@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, type APIResponse, type BrowserContext, type Page } from '@playwright/test'
 import contract from '../content/contract.json' with { type: 'json' }
 import story from '../content/story.json' with { type: 'json' }
-import { BIN, requireBackend } from './server/backend.ts'
+import { BIN, moveBackendClock, requireBackend } from './server/backend.ts'
 import { FAKE_TOKEN } from './server/fake-habitica.ts'
 
 /**
@@ -45,6 +45,24 @@ export async function refusal(page: Page, code: string, status = 409): Promise<{
   const res = await page.request.get('/api/state', CONTRACT)
   expect(res.ok()).toBe(true)
   return { status, contentType: 'application/json', body: JSON.stringify({ error: { code }, state: (await res.json()).state }) }
+}
+
+/**
+ * Move the world server's clock forward to `unix` (a dev build's clock route;
+ * never back). The worker's backend is replaced after this test, since its
+ * world is then ahead of real time. Returns the server's new now.
+ */
+export async function moveServerClock(page: Page, unix: number): Promise<number> {
+  // In steps of at most six days, with a signed-in read between them: the
+  // session slides on use (seven idle days sign you out), as it would for a
+  // player who kept playing through that week.
+  const step = 6 * 86400
+  let now = await moveBackendClock({ advance_seconds: 0 })
+  while (now < unix) {
+    now = await moveBackendClock({ unix: Math.min(unix, now + step) })
+    expect((await page.request.get('/api/state', CONTRACT)).ok()).toBe(true)
+  }
+  return now
 }
 
 /** A fresh Habitica user id per test, so tests never share server state. */

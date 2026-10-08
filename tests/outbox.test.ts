@@ -134,7 +134,7 @@ test('a Wilds place loads: wilds:<region> becomes the Wilds area plus its region
   const outer = at('wilds:outer-1');
   assert.deepEqual([outer.area, outer.wildsRegion], ['wilds', 'outer-1']);
   // Through the response parser too (a reload's state read).
-  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'wilds:outer-1', x: 424, y: 744, placeSetVersion: 0 } } });
+  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'wilds:outer-1', x: 424, y: 744, placeSetVersion: 0, outerEpoch: '' } } });
   assert.deepEqual([snap.state.area, snap.state.wildsRegion], ['wilds', 'outer-1']);
   // A place this build can't draw never fails the load.
   const lost = at('somewhere-new');
@@ -184,4 +184,11 @@ test('fall recovery: a quarter of max HP and half of max mana, rounded up, never
   const fallen = predict({ ...g, area: 'ruin', hp: 0 }, { kind: 'fall' }, { profile: null });
   assert.equal(fallen.area, 'village');
   assert.equal(fallen.hp, 13);
+});
+
+test('the outer epoch the server last recorded the place in comes with the state', () => {
+  const s = gameStateOf(state((j) => (j.place = { area: 'wilds:outer-1', x: 424, y: 744, placeSetVersion: 0, outerEpoch: 'e-old' })));
+  assert.equal(s.outerEpoch, 'e-old');
+  const none = gameStateOf(state((j) => (j.place = { area: 'village', x: 400, y: 300, placeSetVersion: 0, outerEpoch: '' })));
+  assert.equal(none.outerEpoch, undefined);
 });

@@ -1,5 +1,5 @@
 import { expect, test as base, type Browser, type BrowserContext } from '@playwright/test'
-import { ensureBackend, currentBackend, installLegacyDbPath, stopBackend, ROUTE_COOKIE, type Backend } from './server/backend.ts'
+import { ensureBackend, currentBackend, installLegacyDbPath, retireMovedBackend, stopBackend, ROUTE_COOKIE, type Backend } from './server/backend.ts'
 
 installLegacyDbPath()
 
@@ -41,11 +41,13 @@ export const test = base.extend<{ pageErrors: string[]; backend: void }, { e2eBa
     { scope: 'worker', auto: true }
   ],
   // Every context of this worker is routed to its backend, which is started
-  // on first use and kept for the worker's remaining tests.
+  // on first use and kept for the worker's remaining tests (unless a test
+  // moved its clock: then the next test gets a fresh one).
   backend: [
     async ({ context, baseURL }, use) => {
       await routeToBackend(context, await ensureBackend(), baseURL ?? 'http://127.0.0.1')
       await use()
+      await retireMovedBackend()
     },
     { auto: true }
   ],

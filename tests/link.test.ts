@@ -4,6 +4,8 @@ import { EV } from '../src/game/event-names.ts';
 import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS, type OutboxRecord } from '../src/lib/api/outbox.ts';
 import contract from '../content/contract.json' with { type: 'json' };
 import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
+import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
+import type { Session } from '../src/game/session.ts';
 import { ackReport, BASE, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
 
 /**
@@ -618,4 +620,27 @@ test('asking again for an order whose answer was lost settles that order: resolv
   const other = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'nail', qty: 1 } });
   assert.ok(other.ok);
   assert.equal(r.server.sent('POST /api/craft').length, 3);
+});
+
+test('Wilds operations go through the outbox: the lease, a key and where, and their answer’s state is adopted', async (t) => {
+  const r = await rig(t);
+  const session = { link: r.link } as unknown as Session;
+  // No connection, no operation.
+  assert.deepEqual(await claimEntity(session, { epoch: 'e', entityId: 'x', cycle: 0, where: { region: 'inner-1', x: 0, y: 0 } }), { ok: false, code: 'offline' });
+  await online(r);
+  r.server.on('POST /api/wilds/claim', env(S({ version: 2, balance: 4 }), { wildsClaim: { epoch: 'e', entity: null, loot: null, materials: {}, wardenSliverFound: false, stormDropFound: false, papers: ['failed-grid-of-sector-4'] } }));
+  const claim = await claimEntity(session, { epoch: 'e', entityId: 'poi:1:1:0', cycle: 2, where: { region: 'outer-1', x: 100, y: 200 } });
+  assert.ok(claim.ok);
+  if (!claim.ok) return;
+  assert.deepEqual(claim.result.papers, ['failed-grid-of-sector-4']);
+  const sent = r.server.sent('POST /api/wilds/claim')[0]!.body;
+  assert.equal(sent.op.lease, 'L1');
+  assert.ok(sent.op.key.length > 0);
+  assert.deepEqual(sent.where, { area: 'wilds:outer-1', x: 100, y: 200 });
+  assert.equal(sent.cycle, 2);
+  assert.equal(r.link.rev, 2, 'the answer’s state is the world’s now');
+  assert.equal(r.session.state.embers, 4);
+  r.server.on('POST /api/wilds/echo', refuse('echo-not-here', S({ version: 2, balance: 4 })));
+  const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { region: 'outer-1', x: 1, y: 2 } });
+  assert.deepEqual(settled, { ok: false, code: 'echo-not-here' });
 });

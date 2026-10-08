@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { reenter, seedStory, serverState, CONTRACT } from './connected'
+import { moveServerClock, reenter, seedStory, serverState, CONTRACT } from './connected'
 import { holdUntil, warp, waitForWilds, wilds, type WildsDump, waitForLive, readDialogue, settled, toastAfter, expectToast } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { chunkAreaId, wildsRegion } from '../src/game/wilds/regions.ts'
@@ -9,8 +9,9 @@ import { SEASON_SHIFT_NOTICE } from '../src/content/expansion-writing.ts'
 
 /**
  * The outer Wilds (region outer-1, "the Whitequiet"): over the Tangle
- * crossing, an Echo settled, the Turning (a claim refused with
- * `epoch-ended`, simulated), and a found text the Turning gives back.
+ * crossing, an Echo settled, the Turning (the world server's clock moved
+ * past the wick's end, see moveServerClock), and a found text the Turning
+ * gives back.
  * SCREENS=1 saves images to .agent/screens/.
  */
 
@@ -120,6 +121,9 @@ test('over the crossing, an Echo settled, the Wilds turn and give a text back', 
   // The Turning: move the calendar to just before the wick's end.
   const before = await wilds(page)
   const end = Number(before.season.split(':')[2])
+  // The world's clock passes the end (the server serves the next wick), and
+  // this page's comes up to it a moment later.
+  await moveServerClock(page, end + 1)
   await page.evaluate((n) => (window as unknown as { __fsDevCalendar: (n: number) => void }).__fsDevCalendar(n), end - 2)
   await page.waitForFunction(() => (window as unknown as { __fsSafety: () => { transitioning: boolean } }).__fsSafety().transitioning === true, undefined, { timeout: 10_000 })
   if (process.env.SCREENS) await page.waitForTimeout(1200)
@@ -173,9 +177,9 @@ test('a place in the outer Wilds reloads there, and a turned wick brings you to 
   // gone, so you come to at the region's entrance, told it has turned.
   await crossOver(page)
   await warp(page, chunkAreaId(1, 0, OUTER), 12, 21)
-  await page.route('**/api/wilds/region/**', (route) =>
-    route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'epoch-ended' } }) })
-  )
+  // The wick ends while you're away: the world's clock moves past it.
+  const end = Number((await wilds(page)).season.split(':')[2])
+  await moveServerClock(page, end + 1)
   await reenter(page, 'wilds')
   expect(await waitForWilds(page, OUTER)).toBe(chunkAreaId(1, 1, OUTER))
   await expectToast(page, /turned since you were last here/)
@@ -210,11 +214,10 @@ test.describe('in a world', () => {
     expect(dump.entities.find((e) => e.id === node.id)!.state).toBe('harvested')
     await shot(page, '48-outer-connected-harvest-desktop')
 
-    // The wick ends under us: the server refuses the next claim with
-    // epoch-ended (simulated here), and the Turning brings us to the entrance.
-    await page.route('**/api/wilds/claim', (route) =>
-      route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'epoch-ended' } }) })
-    )
+    // The wick ends under us: the world's clock passes its end, the server
+    // refuses the next claim with epoch-ended, and the Turning brings us to
+    // the entrance.
+    await moveServerClock(page, Number(dump.season.split(':')[2]) + 1)
     const next = dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id && e.chunk.cx === node.chunk.cx && e.chunk.cy === node.chunk.cy)
       ?? dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id)!
     await warp(page, chunkAreaId(next.chunk.cx, next.chunk.cy, OUTER), next.tx + 1, next.ty)
@@ -223,7 +226,6 @@ test.describe('in a world', () => {
     await waitTurning(page, null as unknown as string)
     expect(await areaNow(page)).toBe(chunkAreaId(1, 1, OUTER))
     await expectToast(page, SEASON_SHIFT_NOTICE)
-    await page.unroute('**/api/wilds/claim')
     expect((await wilds(page)).epochId, 'the server’s epoch').toBeTruthy()
   })
 })

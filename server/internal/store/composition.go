@@ -68,7 +68,7 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	if err = tx.QueryRowContext(ctx, "SELECT place_set_version FROM player_place WHERE account_id=?", s.AccountID).Scan(&out.Place.PlaceSetVersion); err != nil && err != sql.ErrNoRows {
+	if err = tx.QueryRowContext(ctx, "SELECT place_set_version,last_outer_epoch FROM player_place WHERE account_id=?", s.AccountID).Scan(&out.Place.PlaceSetVersion, &out.Place.OuterEpoch); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	return out, nil

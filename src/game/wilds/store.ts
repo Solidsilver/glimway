@@ -270,6 +270,10 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
       const terrains = await loadRegionChunks(ops, e.id, wildsRegion(region));
       const live = regionState(region);
       const changed = live.epoch.id !== e.id;
+      // The outer region came back in another epoch than the one held: its
+      // wick ended (the server's clock is past it, whatever this page's
+      // says), so the Wilds turn under the player (the scene plays it).
+      const turned = changed && !!live.epoch.id && region === OUTER_REGION_ID;
       live.epoch = { id: e.id, worldSeed: e.worldSeed, regionId: e.regionId, generatorVersion: e.generatorVersion, season: e.season, endsAt: e.endsAt ?? null };
       registerWildsAreas(live.epoch);
       const states = new Map(res.entities.map((s) => [s.id, s]));
@@ -289,6 +293,7 @@ export async function refreshWilds(session: Session, maxAgeMs = 0, region: strin
       live.fetchedAt = Date.now();
       if (changed) void pruneChunks([...regions.values()].map((x) => x.epoch.id).filter(Boolean));
       bump(live.view);
+      if (turned) bus.emit(EV.turning, { reason: 'epoch-ended' });
       return true;
     } catch {
       // The last view stays to look at, marked stale; nothing in it is offered.

@@ -317,12 +317,15 @@ func (x *Vitals) GetCastReadyAt() float64 {
 	return 0
 }
 
+// outer_epoch: the outer Wilds epoch this player's place was last recorded in
+// (” before any); a place left in an ended epoch is moved to the entrance.
 type Place struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Area            string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
 	X               float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y               float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	PlaceSetVersion float64                `protobuf:"fixed64,4,opt,name=place_set_version,json=placeSetVersion,proto3" json:"place_set_version,omitempty"`
+	OuterEpoch      string                 `protobuf:"bytes,5,opt,name=outer_epoch,json=outerEpoch,proto3" json:"outer_epoch,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -385,6 +388,13 @@ func (x *Place) GetPlaceSetVersion() float64 {
 	return 0
 }
 
+func (x *Place) GetOuterEpoch() string {
+	if x != nil {
+		return x.OuterEpoch
+	}
+	return ""
+}
+
 var File_glimway_v1_op_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_op_proto_rawDesc = "" +
@@ -417,12 +427,14 @@ const file_glimway_v1_op_proto_rawDesc = "" +
 	"\x12vitals_set_version\x18\b \x01(\x01R\x10vitalsSetVersion\x12\x1b\n" +
 	"\tvitals_at\x18\t \x01(\x01R\bvitalsAt\x12\"\n" +
 	"\rcast_ready_at\x18\n" +
-	" \x01(\x01R\vcastReadyAt\"c\n" +
+	" \x01(\x01R\vcastReadyAt\"\x84\x01\n" +
 	"\x05Place\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12*\n" +
-	"\x11place_set_version\x18\x04 \x01(\x01R\x0fplaceSetVersionB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x11place_set_version\x18\x04 \x01(\x01R\x0fplaceSetVersion\x12\x1f\n" +
+	"\vouter_epoch\x18\x05 \x01(\tR\n" +
+	"outerEpochB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_op_proto_rawDescOnce sync.Once
