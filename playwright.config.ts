@@ -32,8 +32,8 @@ export const HABITICA_PORT = Number(process.env.E2E_HABITICA_PORT) || 18303
 const GPU = process.env.E2E_GPU !== '0' && process.platform === 'darwin'
 const GPU_ARGS = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-accelerated-2d-canvas']
 
-// CI uses two workers on a four-core runner. Locally, keep canvases and Go
-// servers from taking over the machine; E2E_WORKERS (or --workers) overrides it.
+// CI uses two workers per runner. Locally, keep canvases and Go servers from
+// taking over the machine; E2E_WORKERS (or --workers) overrides it.
 const WORKERS = Number(process.env.E2E_WORKERS) || (process.env.CI
   ? 2
   : Math.min(3, Math.max(2, Math.floor(cpus().length / 2))))

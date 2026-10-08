@@ -488,29 +488,41 @@ test('closing the tab still sends the last steps (review 6)', async ({ page, con
 })
 
 test.describe('no server', () => {
-  test.use({ server: false })
+  test.describe('guest with Habitica lookup', () => {
+    // Keep the worker fake Habitica available for the external user lookup,
+    // but make the game's own API unreachable in the browser.
+    test.use({ server: true })
 
-  test('guest path with the server down: guest play and the local Habitica connect work as before', async ({ page, context }) => {
-    await routeHabitica(context)
-    await openTitleGuide(page)
-    await pasteAndConnect(page, newUser())
-    await expect(page.getByTestId('hero-card')).toContainText('Tansy')
-    await expect(page.getByTestId('invite-only')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Begin your journey' }).click()
-    await waitForArea(page, 'village')
-    expect(await linkStatus(page)).toBeNull()
-    await expect(page.locator('.hud .embers')).toHaveText('3')
+    test('guest path with the server down: guest play and the local Habitica connect work as before', async ({ page, context, baseURL }) => {
+      await routeHabitica(context)
+      await page.route(
+        (url) => url.host === new URL(baseURL!).host && url.pathname.startsWith('/api/'),
+        (route) => route.abort('internetdisconnected')
+      )
+      await openTitleGuide(page)
+      await pasteAndConnect(page, newUser())
+      await expect(page.getByTestId('hero-card')).toContainText('Tansy')
+      await expect(page.getByTestId('invite-only')).toHaveCount(0)
+      await page.getByRole('button', { name: 'Begin your journey' }).click()
+      await waitForArea(page, 'village')
+      expect(await linkStatus(page)).toBeNull()
+      await expect(page.locator('.hud .embers')).toHaveText('3')
+    })
   })
 
-  test('a static host that answers /api with a page is treated as no server', async ({ page, baseURL }) => {
-    // Page routes win over the fixture's context-level abort.
-    await page.route(
-      (url) => url.host === new URL(baseURL!).host && url.pathname.startsWith('/api/'),
-      (route) => route.fulfill({ status: 404, contentType: 'text/html', body: '<!doctype html><p>Not found' })
-    )
-    await beginNewJourney(page)
-    expect(await linkStatus(page)).toBeNull()
-    await page.keyboard.press('Escape')
-    await expect(page.getByTestId('world-card')).toHaveCount(0)
+  test.describe('static host', () => {
+    test.use({ server: false })
+
+    test('a static host that answers /api with a page is treated as no server', async ({ page, baseURL }) => {
+      // Page routes win over the fixture's context-level abort.
+      await page.route(
+        (url) => url.host === new URL(baseURL!).host && url.pathname.startsWith('/api/'),
+        (route) => route.fulfill({ status: 404, contentType: 'text/html', body: '<!doctype html><p>Not found' })
+      )
+      await beginNewJourney(page)
+      expect(await linkStatus(page)).toBeNull()
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('world-card')).toHaveCount(0)
+    })
   })
 })
