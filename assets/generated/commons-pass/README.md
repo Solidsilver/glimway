@@ -1,6 +1,6 @@
 # Fingersnap Commons and Wilds art pass
 
-Delivered 2026-10-05 from `docs/art-requests.md`: 21 transparent source PNG sheets, 173 named frames and 11 looping animation definitions. Includes all priorities and the optional Hazel, Ada, and Wilds sets. Original artwork generated with the built-in image generation tool; prompts are in `jobs.json` and `portrait-job.json`. No Habitica artwork was copied into this pack.
+Delivered 2026-10-05 from `docs/art-requests.md`, with dialogue portraits added 2026-10-08: 22 transparent source PNG sheets, 176 named frames and 11 looping animation definitions. Includes all priorities and the optional Hazel, Ada, and Wilds sets, plus Mara, Orrin and Pip dialogue busts. Original artwork generated with the built-in image generation tool; prompts are in `jobs.json`, `portrait-job.json`, and `portrait-residents-job.json`. No Habitica artwork was copied into this pack.
 
 ## Start here
 

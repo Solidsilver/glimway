@@ -221,16 +221,17 @@ generated pack does not inherit Habitica's artwork licence.
 ## Register F — Commons pass (Commons, homes, village life, Wilds, icons)
 
 Delivered 2026-10-05 to `assets/generated/commons-pass/` (archive of
-record: 21 sheets, per-sheet atlases, `manifest.json`, `jobs.json` and
-`portrait-job.json` prompts, `preview.html`, `validation.json`,
-`frame-inspection.json`, `build_manifest.py`, README and
-COVERAGE). `public/assets/fingersnap/commons-pass/` ships only
+record: 22 source sheets, per-sheet atlases, `manifest.json`, prompts,
+`preview.html`, validation and inspection data, `build_manifest.py`, README
+and COVERAGE). Mara, Orrin and Pip dialogue portraits were added 2026-10-08
+with `portrait-residents-job.json`. `public/assets/fingersnap/commons-pass/` ships only
 `manifest.json`; the frames ship baked into the packed atlas (see the
 2026-10-05 changelog entry on packed atlases).
 
-Provenance: original artwork generated 2026-10-05 with the built-in
-image-generation tool; prompts in `jobs.json` / `portrait-job.json`; no
-Habitica artwork copied (pack README). 173 measured frames, 11 looping
+Provenance: original artwork generated 2026-10-05, with the three dialogue
+busts added 2026-10-08 using the built-in image-generation tool; prompts in
+`jobs.json`, `portrait-job.json`, and `portrait-residents-job.json`; no
+Habitica artwork copied (pack README). 176 measured frames, 11 looping
 animations, 11 aliases; answers `docs/art-requests.md` in full including
 the optional Hazel, Ada and Wilds sets. Integration: `src/game/commons-pass.ts`
 (loader, `commons-art:` native textures) and

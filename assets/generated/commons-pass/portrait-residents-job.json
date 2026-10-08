@@ -1,0 +1,12 @@
+{
+  "id": "portraits-residents",
+  "file": "fingersnap-portraits-residents.png",
+  "columns": 3,
+  "rows": 1,
+  "frames": [
+    {"key": "portrait-mara", "width": 64, "height": 64, "origin": [0.5, 1], "role": "portrait"},
+    {"key": "portrait-orrin", "width": 64, "height": 64, "origin": [0.5, 1], "role": "portrait"},
+    {"key": "portrait-pip", "width": 64, "height": 64, "origin": [0.5, 1], "role": "portrait"}
+  ],
+  "prompt": "Use case: stylized-concept. Asset type: transparent dialogue bust portraits for Fingersnap. Three separately generated transparent painted pixel-art portraits assembled left-to-right as Mara, Orrin, Pip in three equal cells. Match the existing portrait sheet's dark warm-brown outlines, warm lighting, readable eyes, head-and-shoulders framing, and polished chunky pixel clusters. Mara Hale, 27: red/auburn hair in her familiar practical bun with loose curls; blue work dress and cream apron; thoughtful. Orrin, 60s: swept-back white hair, heavy white moustache and beard, strong brows, brown builder's coat, cream shirt and leather tool straps; gruff. Pip Penhallow, 12: clearly a child, tousled dark brown hair with small pink flower, rose-red tunic and brown runner's satchel strap; curious. Front-facing slight three-quarter angle. Full busts, bottoms aligned, centered in cells, transparent gutters. True transparent alpha; no backdrop, aura, frame, text, or watermark. Built-in image generation tool; source character references are the existing resident sprites; style reference is fingersnap-portraits.png."
+}

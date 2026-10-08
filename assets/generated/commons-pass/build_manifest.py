@@ -59,6 +59,8 @@ def main():
     jobs = json.loads((ROOT/'jobs.json').read_text())
     if (ROOT/'portrait-job.json').exists():
         jobs.append(json.loads((ROOT/'portrait-job.json').read_text()))
+    if (ROOT/'portrait-residents-job.json').exists():
+        jobs.append(json.loads((ROOT/'portrait-residents-job.json').read_text()))
     frames, sources, inspections = [], [], []
     pending = []
     for job in jobs:

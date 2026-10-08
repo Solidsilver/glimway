@@ -16,6 +16,7 @@
   "assets/generated/commons-pass/fingersnap-papers.png": "f3e9598f34c44be92c5a5de8b75bb1ad2afdf2b6076aa4f2017142310d49261c",
   "assets/generated/commons-pass/fingersnap-path-edges.png": "14fbf6d422f0164fe43a64cf9203832e601e186299e1302092b74fc4834cdba0",
   "assets/generated/commons-pass/fingersnap-plank-floor.png": "a55c67f04960ea0c9cb56641507f997e1361ed4c57b34c676681cfd8e951c33d",
+  "assets/generated/commons-pass/fingersnap-portraits-residents.png": "d4f0dbe99f017553188efc013d949f70d7b2cad4ccee934bb80b52268821e629",
   "assets/generated/commons-pass/fingersnap-portraits.png": "29f4a3e14ea9400042e348eeda25110eaff61269fe4dea5f5fe62db0c07dd88f",
   "assets/generated/commons-pass/fingersnap-residents-v2.png": "c2573fe5488f18d0b9b3241ac8bc9b41dae4bff23f8c6a3e65de7b74bf8a7adf",
   "assets/generated/commons-pass/fingersnap-resource-nodes.png": "f9b3ada08d3d10cf8a5a3af14cb12a8c77733b84dd6bf7e4aa98409c989e5384",
@@ -24,7 +25,7 @@
   "assets/generated/commons-pass/fingersnap-wilds-camp.png": "c91a3214d593ce105a21f28b486cde09532cd496228d5196650edecaab8a18a6",
   "assets/generated/commons-pass/fingersnap-wilds-nature.png": "5aa84a4244c8f6ef0a7b3180253b7caf0b6aab4bd7a5123866c836a01024f462",
   "assets/generated/commons-pass/fingersnap-yard.png": "63ba0fc00b99625f707b5107f98138a7ef9618468f183e74aff7dbc90e7f3b53",
-  "assets/generated/commons-pass/manifest.json": "af5895de2ca6e221880910bd3b0137fe06f42f54ea659490a2bcb7f3e33520f1",
+  "assets/generated/commons-pass/manifest.json": "54020efd7ee920b39c5cfe2b276a2ff3db5d18e779357bde9582261e522d49fb",
   "assets/generated/expansion/fingersnap-demo-walk.atlas.json": "99cd4a015537c90d3f1f5736a84dfab6c51b88a11110fbc9f0018c985dd1fd78",
   "assets/generated/expansion/fingersnap-demo-walk.png": "3ddb7ce037ba0ea5f589e9dbf5786ab77c5e228058f8b3c9a3e93528cddaa21c",
   "assets/generated/expansion/fingersnap-enemies.atlas.json": "5e3bc43f96a60fa1194b53060bd998a3fbf9d62cc2c1141035c731a00625a495",
@@ -75,7 +76,7 @@
  },
  "outputs": {
   "buildings.webp": "0f4dd3afdf6ddcbd8ec7a842f293591275166d34ca6245555277fd25b2d88cd3",
-  "commons.webp": "ef4c9fbcc8592c70dd1e86c8198b7191aa39f8af05c19fec911bdf9b3a7563eb",
+  "commons.webp": "874ee414b6c1834f29f571ae6ae0a509d2b5f65a9b736db5034e036621cefcde",
   "fingersnap-demo-walk.png": "17ee5d810665b334e8406fc62714aea736e8c7ffb17f2f1530974303dd132a9f",
   "fingersnap-enemies.png": "adedf5d4b5728224ad1a13ed34d0057c4f922f79421151c8183774b0934582b4",
   "fingersnap-foreground.png": "1f11d2e6b110445499109eb6db0b54bbcbb5a8709912ca91f57543538862536d",
@@ -185,68 +186,68 @@
  "commons": {
   "image": "commons.webp",
   "size": [
-   1763,
-   1580
+   1836,
+   1616
   ],
   "density": 4,
   "frames": {
    "silas-idle-0": [
-    1536,
-    1400,
+    1152,
+    1448,
     64,
     64
    ],
    "silas-idle-1": [
-    1600,
-    1400,
+    1216,
+    1448,
     64,
     64
    ],
    "elara-idle-0": [
-    900,
-    1272,
+    644,
+    1320,
     64,
     64
    ],
    "elara-idle-1": [
-    964,
-    1272,
+    708,
+    1320,
     64,
     64
    ],
    "finn-idle-0": [
-    1348,
-    1272,
+    1092,
+    1320,
     64,
     64
    ],
    "finn-idle-1": [
-    1412,
-    1272,
+    1156,
+    1320,
     64,
     64
    ],
    "hazel-idle-0": [
-    1476,
-    1272,
+    1220,
+    1320,
     64,
     64
    ],
    "hazel-idle-1": [
-    1540,
-    1272,
+    1284,
+    1320,
     64,
     64
    ],
    "ada-idle-0": [
-    580,
-    1272,
+    324,
+    1320,
     64,
     64
    ],
    "ada-idle-1": [
-    644,
-    1272,
+    388,
+    1320,
     64,
     64
    ],
@@ -269,488 +270,488 @@
     368
    ],
    "workshop-addon": [
-    1024,
-    368,
+    0,
+    624,
     128,
     240
    ],
    "interior-back-wall": [
-    0,
+    128,
     624,
     896,
     192
    ],
    "hearth-fire-0": [
-    492,
-    1464,
+    0,
+    1512,
     96,
     56
    ],
    "hearth-fire-1": [
-    588,
-    1464,
+    96,
+    1512,
     96,
     56
    ],
    "hearth-fire-2": [
-    684,
-    1464,
+    192,
+    1512,
     96,
     56
    ],
    "hearth-fire-3": [
-    780,
-    1464,
+    288,
+    1512,
     96,
     56
    ],
    "camp-flame-0": [
-    1288,
-    1528,
+    712,
+    1568,
     32,
     36
    ],
    "camp-flame-1": [
-    1320,
-    1528,
+    744,
+    1568,
     32,
     36
    ],
    "camp-flame-2": [
-    1352,
-    1528,
+    776,
+    1568,
     32,
     36
    ],
    "campsite-0": [
     304,
-    976,
+    1024,
     128,
     96
    ],
    "campsite-1": [
     432,
-    976,
+    1024,
     128,
     96
    ],
    "campsite-2": [
     560,
-    976,
+    1024,
     128,
     96
    ],
    "camp-windbreak": [
-    448,
-    1176,
+    320,
+    1224,
     160,
     92
    ],
    "camp-cot": [
-    368,
-    1464,
+    1712,
+    1448,
     124,
     56
    ],
    "camp-ring": [
-    876,
-    1464,
+    384,
+    1512,
     88,
     56
    ],
    "wooden-stool": [
-    128,
-    1464,
+    1472,
+    1448,
     64,
     64
    ],
    "reading-chair": [
     1076,
-    816,
+    864,
     64,
     128
    ],
    "braided-rug": [
     576,
-    816,
+    864,
     128,
     128
    ],
    "iron-lantern": [
-    1536,
-    1336,
+    1216,
+    1384,
     64,
     64
    ],
    "oak-table": [
     832,
-    816,
+    864,
     128,
     128
    ],
    "potted-fern": [
-    1472,
-    1400,
+    1088,
+    1448,
     64,
     64
    ],
    "bookshelf": [
-    0,
-    1272,
+    1540,
+    1224,
     128,
     64
    ],
    "wash-basin": [
-    0,
-    1464,
+    1344,
+    1448,
     64,
     64
    ],
    "stone-hearth": [
-    256,
-    1272,
+    0,
+    1320,
     128,
     64
    ],
    "carved-bed": [
     704,
-    816,
+    864,
     128,
     128
    ],
    "woven-basket": [
-    192,
-    1464,
+    1536,
+    1448,
     64,
     64
    ],
    "display-stand": [
-    772,
-    1272,
+    516,
+    1320,
     64,
     64
    ],
    "tool-rack": [
-    384,
-    1272,
+    128,
+    1320,
     128,
     64
    ],
    "amber-sconce": [
-    708,
-    1272,
+    452,
+    1320,
     64,
     64
    ],
    "workshop-chest": [
-    768,
-    1176,
+    640,
+    1224,
     112,
     88
    ],
    "workshop-bench": [
     0,
-    976,
+    1024,
     176,
     104
    ],
    "mailbox": [
-    880,
-    1176,
+    752,
+    1224,
     76,
     88
    ],
    "hame": [
-    956,
-    1176,
+    828,
+    1224,
     68,
     88
    ],
    "gatepost": [
-    1152,
+    1280,
     624,
     56,
     176
    ],
    "gate-leaf": [
-    1500,
-    1176,
+    1372,
+    1224,
     168,
     64
    ],
    "plot-sign": [
-    608,
-    1176,
+    480,
+    1224,
     160,
     88
    ],
    "commons-well": [
-    1208,
+    1336,
     624,
     128,
     168
    ],
    "notice-board": [
     1268,
-    816,
+    864,
     96,
     120
    ],
    "commons-gateway": [
-    896,
+    1024,
     624,
     256,
     192
    ],
    "hedge-straight-h": [
-    256,
-    1336,
+    1732,
+    1320,
     64,
     64
    ],
    "hedge-straight-v": [
-    320,
-    1336,
+    0,
+    1384,
     64,
     64
    ],
    "hedge-corner-ne": [
-    1604,
-    1272,
+    1348,
+    1320,
     64,
     64
    ],
    "hedge-corner-nw": [
-    1668,
-    1272,
+    1412,
+    1320,
     64,
     64
    ],
    "hedge-end-e": [
-    128,
-    1336,
+    1604,
+    1320,
     64,
     64
    ],
    "hedge-end-w": [
-    192,
-    1336,
+    1668,
+    1320,
     64,
     64
    ],
    "hedge-corner-se": [
-    0,
-    1336,
+    1476,
+    1320,
     64,
     64
    ],
    "hedge-corner-sw": [
-    64,
-    1336,
+    1540,
+    1320,
     64,
     64
    ],
    "fence-straight-h": [
-    1220,
-    1272,
+    964,
+    1320,
     64,
     64
    ],
    "fence-straight-v": [
-    1284,
-    1272,
+    1028,
+    1320,
     64,
     64
    ],
    "fence-corner": [
-    1028,
-    1272,
+    772,
+    1320,
     64,
     64
    ],
    "fence-gateway": [
-    1156,
-    1272,
+    900,
+    1320,
     64,
     64
    ],
    "sawhorse": [
-    104,
-    1528,
+    1336,
+    1512,
     72,
     48
    ],
    "timber-stack": [
-    1024,
-    1176,
+    896,
+    1224,
     124,
     80
    ],
    "skids": [
-    1336,
+    1464,
     624,
     344,
     160
    ],
    "firebox": [
-    1276,
-    1176,
+    1148,
+    1224,
     64,
     72
    ],
    "toolbox": [
-    304,
-    1528,
+    1536,
+    1512,
     64,
     48
    ],
    "woodpile": [
-    1444,
-    1464,
+    952,
+    1512,
     64,
     56
    ],
    "path-dirt-edge-n": [
-    1024,
-    1400,
+    640,
+    1448,
     64,
     64
    ],
    "path-dirt-edge-e": [
-    960,
-    1400,
+    576,
+    1448,
     64,
     64
    ],
    "path-dirt-edge-s": [
-    1088,
-    1400,
+    704,
+    1448,
     64,
     64
    ],
    "path-dirt-edge-w": [
-    1152,
-    1400,
+    768,
+    1448,
     64,
     64
    ],
    "path-dirt-end-n": [
-    1280,
-    1400,
+    896,
+    1448,
     64,
     64
    ],
    "path-dirt-end-e": [
-    1216,
-    1400,
+    832,
+    1448,
     64,
     64
    ],
    "path-dirt-corner-ne": [
-    704,
-    1400,
+    320,
+    1448,
     64,
     64
    ],
    "path-dirt-corner-nw": [
-    768,
-    1400,
+    384,
+    1448,
     64,
     64
    ],
    "path-dirt-corner-se": [
-    832,
-    1400,
+    448,
+    1448,
     64,
     64
    ],
    "path-dirt-corner-sw": [
-    896,
-    1400,
+    512,
+    1448,
     64,
     64
    ],
    "path-dirt-end-s": [
-    1344,
-    1400,
+    960,
+    1448,
     64,
     64
    ],
    "path-dirt-end-w": [
-    1408,
-    1400,
+    1024,
+    1448,
     64,
     64
    ],
    "path-cobble-edge-n": [
-    256,
-    1400,
+    1664,
+    1384,
     64,
     64
    ],
    "path-cobble-edge-e": [
-    192,
-    1400,
+    1600,
+    1384,
     64,
     64
    ],
    "path-cobble-edge-s": [
-    320,
-    1400,
+    1728,
+    1384,
     64,
     64
    ],
    "path-cobble-edge-w": [
-    384,
-    1400,
+    0,
+    1448,
     64,
     64
    ],
    "path-cobble-end-n": [
-    512,
-    1400,
+    128,
+    1448,
     64,
     64
    ],
    "path-cobble-end-e": [
-    448,
-    1400,
+    64,
+    1448,
     64,
     64
    ],
    "path-cobble-corner-ne": [
-    1664,
-    1336,
+    1344,
+    1384,
     64,
     64
    ],
    "path-cobble-corner-nw": [
-    0,
-    1400,
+    1408,
+    1384,
     64,
     64
    ],
    "path-cobble-corner-se": [
-    64,
-    1400,
+    1472,
+    1384,
     64,
     64
    ],
    "path-cobble-corner-sw": [
-    128,
-    1400,
+    1536,
+    1384,
     64,
     64
    ],
    "path-cobble-end-s": [
-    576,
-    1400,
+    192,
+    1448,
     64,
     64
    ],
    "path-cobble-end-w": [
-    640,
-    1400,
+    256,
+    1448,
     64,
     64
    ],
@@ -762,444 +763,444 @@
    ],
    "stall-a": [
     96,
-    816,
+    864,
     160,
     144
    ],
    "stall-b": [
     256,
-    816,
+    864,
     160,
     144
    ],
    "stall-c": [
     416,
-    816,
+    864,
     160,
     144
    ],
    "well-canopy": [
     1364,
-    816,
+    864,
     120,
     112
    ],
    "mended-bridge": [
     1484,
-    816,
+    864,
     192,
     104
    ],
    "candle-hull-0": [
-    1120,
-    1528,
+    544,
+    1568,
     40,
     40
    ],
    "candle-hull-1": [
-    1160,
-    1528,
+    584,
+    1568,
     40,
     40
    ],
    "candle-hull-2": [
-    1200,
-    1528,
+    624,
+    1568,
     40,
     40
    ],
    "window-lamp-glow": [
-    128,
-    1176,
+    0,
+    1224,
     128,
     96
    ],
    "bunting": [
-    864,
-    1528,
+    288,
+    1568,
     256,
     40
    ],
    "library-sign": [
-    176,
-    1528,
+    1408,
+    1512,
     64,
     48
    ],
    "paper-folded-0": [
-    432,
-    1528,
+    1664,
+    1512,
     48,
     48
    ],
    "paper-folded-1": [
-    480,
-    1528,
+    1712,
+    1512,
     48,
     48
    ],
    "paper-folded-2": [
-    528,
-    1528,
+    1760,
+    1512,
     48,
     48
    ],
    "paper-scroll-0": [
-    576,
-    1528,
+    0,
+    1568,
     48,
     48
    ],
    "paper-scroll-1": [
-    624,
-    1528,
+    48,
+    1568,
     48,
     48
    ],
    "paper-scroll-2": [
-    672,
-    1528,
+    96,
+    1568,
     48,
     48
    ],
    "paper-slate-0": [
-    720,
-    1528,
+    144,
+    1568,
     48,
     48
    ],
    "paper-slate-1": [
-    768,
-    1528,
+    192,
+    1568,
     48,
     48
    ],
    "paper-slate-2": [
-    816,
-    1528,
+    240,
+    1568,
     48,
     48
    ],
    "turncaps-east": [
-    1664,
-    1400,
+    1280,
+    1448,
     64,
     64
    ],
    "cairn": [
-    1148,
-    1176,
+    1020,
+    1224,
     64,
     80
    ],
    "cairn-white-stones": [
-    1212,
-    1176,
+    1084,
+    1224,
     64,
     80
    ],
    "iron-oak-stump": [
-    1600,
-    1336,
+    1280,
+    1384,
     64,
     64
    ],
    "dead-birch-turncaps": [
     0,
-    816,
+    864,
     96,
     160
    ],
    "fallen-log": [
-    128,
-    1272,
+    1668,
+    1224,
     128,
     64
    ],
    "mossy-boulder": [
-    352,
-    1176,
+    224,
+    1224,
     96,
     96
    ],
    "drift-stone": [
-    836,
-    1272,
+    580,
+    1320,
     64,
     64
    ],
    "reed-pool": [
     512,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-timber-available": [
     1408,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-timber-depleted": [
     1536,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-stone-available": [
     1152,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-stone-depleted": [
     1280,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-fiber-available": [
     896,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-fiber-depleted": [
     1024,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-amber-available": [
     640,
-    1080,
+    1128,
     128,
     96
    ],
    "resource-amber-depleted": [
     768,
-    1080,
+    1128,
     128,
     96
    ],
    "wilds-tent": [
-    0,
-    1176,
+    1664,
+    1128,
     128,
     96
    ],
    "wilds-fire-ring": [
-    368,
-    1528,
+    1600,
+    1512,
     64,
     48
    ],
    "wilds-pack": [
-    64,
-    1464,
+    1408,
+    1448,
     64,
     64
    ],
    "fallen-hero-lantern-lit": [
-    1404,
-    1176,
+    1276,
+    1224,
     48,
     72
    ],
    "fallen-hero-lantern-unlit": [
-    1452,
-    1176,
+    1324,
+    1224,
     48,
     72
    ],
    "echo-hollis-solid": [
     1328,
-    976,
+    1024,
     128,
     96
    ],
    "echo-tam-solid": [
     384,
-    1080,
+    1128,
     128,
     96
    ],
    "echo-bett-solid": [
     816,
-    976,
+    1024,
     128,
     96
    ],
    "echo-dorrit-solid": [
     1072,
-    976,
+    1024,
     128,
     96
    ],
    "echo-joss-solid": [
     1584,
-    976,
+    1024,
     128,
     96
    ],
    "echo-nan-solid": [
     128,
-    1080,
+    1128,
     128,
     96
    ],
    "echo-hollis-faint": [
     1200,
-    976,
+    1024,
     128,
     96
    ],
    "echo-tam-faint": [
     256,
-    1080,
+    1128,
     128,
     96
    ],
    "echo-bett-faint": [
     688,
-    976,
+    1024,
     128,
     96
    ],
    "echo-dorrit-faint": [
     944,
-    976,
+    1024,
     128,
     96
    ],
    "echo-joss-faint": [
     1456,
-    976,
+    1024,
     128,
     96
    ],
    "echo-nan-faint": [
     0,
-    1080,
+    1128,
     128,
     96
    ],
    "icon-timber": [
-    1216,
-    1336,
+    896,
+    1384,
     64,
     64
    ],
    "icon-stone": [
-    1152,
-    1336,
+    832,
+    1384,
     64,
     64
    ],
    "icon-fiber": [
-    832,
-    1336,
+    512,
+    1384,
     64,
     64
    ],
    "icon-amber": [
-    384,
-    1336,
+    64,
+    1384,
     64,
     64
    ],
    "icon-whittled-fox": [
-    1344,
-    1336,
+    1024,
+    1384,
     64,
     64
    ],
    "icon-beeswax-candle": [
-    448,
-    1336,
+    128,
+    1384,
     64,
     64
    ],
    "icon-river-glass-bead": [
-    1024,
-    1336,
+    704,
+    1384,
     64,
     64
    ],
    "icon-spare-bootlace": [
-    1088,
-    1336,
+    768,
+    1384,
     64,
     64
    ],
    "icon-tin-whistle": [
-    1280,
-    1336,
+    960,
+    1384,
     64,
     64
    ],
    "icon-lamp-wick": [
-    896,
-    1336,
+    576,
+    1384,
     64,
     64
    ],
    "icon-oilcloth-wrap": [
-    960,
-    1336,
+    640,
+    1384,
     64,
     64
    ],
    "icon-wooden-peg": [
-    1408,
-    1336,
+    1088,
+    1384,
     64,
     64
    ],
    "icon-emote-wave": [
-    768,
-    1336,
+    448,
+    1384,
     64,
     64
    ],
    "icon-emote-nod": [
-    640,
-    1336,
+    320,
+    1384,
     64,
     64
    ],
    "icon-emote-cheer": [
-    512,
-    1336,
+    192,
+    1384,
     64,
     64
    ],
    "icon-emote-thanks": [
-    704,
-    1336,
+    384,
+    1384,
     64,
     64
    ],
    "icon-emote-lantern": [
-    576,
-    1336,
+    256,
+    1384,
     64,
     64
    ],
    "interior-floor": [
-    1472,
-    1336,
+    1152,
+    1384,
     64,
     64
    ],
    "guardian-settled": [
-    256,
-    1176,
+    128,
+    1224,
     96,
     96
    ],
    "portrait-silas": [
-    768,
+    1536,
     368,
     256,
     256
@@ -1227,126 +1228,144 @@
     0,
     256,
     256
+   ],
+   "portrait-mara": [
+    768,
+    368,
+    256,
+    256
+   ],
+   "portrait-orrin": [
+    1024,
+    368,
+    256,
+    256
+   ],
+   "portrait-pip": [
+    1280,
+    368,
+    256,
+    256
    ]
   },
   "blits": {
    "reading-chair@17x16": [
-    512,
-    1272,
+    256,
+    1320,
     68,
     64
    ],
    "bookshelf@32x31": [
     1140,
-    816,
+    864,
     128,
     124
    ],
    "stone-hearth@29x32": [
     960,
-    816,
+    864,
     116,
     128
    ],
    "stone-hearth@16x18": [
-    1340,
-    1176,
+    1212,
+    1224,
     64,
     72
    ],
    "tool-rack@32x25": [
     176,
-    976,
+    1024,
     128,
     100
    ],
    "tool-rack@16x12": [
-    240,
-    1528,
+    1472,
+    1512,
     64,
     48
    ],
    "fallen-log@26x13": [
-    1620,
-    1464,
+    1128,
+    1512,
     104,
     52
    ],
    "fallen-log@26x13~f": [
-    0,
-    1528,
+    1232,
+    1512,
     104,
     52
    ],
    "mossy-boulder@20x14": [
-    1284,
-    1464,
+    792,
+    1512,
     80,
     56
    ],
    "mossy-boulder@20x14~f": [
-    1364,
-    1464,
+    872,
+    1512,
     80,
     56
    ],
    "cairn@14x14": [
-    1508,
-    1464,
+    1016,
+    1512,
     56,
     56
    ],
    "cairn@14x14~f": [
-    1564,
-    1464,
+    1072,
+    1512,
     56,
     56
    ],
    "turncaps-east@12x9": [
-    1240,
-    1528,
+    664,
+    1568,
     48,
     36
    ],
    "iron-oak-stump@20x14": [
-    1124,
-    1464,
+    632,
+    1512,
     80,
     56
    ],
    "iron-oak-stump@20x14~f": [
-    1204,
-    1464,
+    712,
+    1512,
     80,
     56
    ],
    "drift-stone@20x14": [
-    964,
-    1464,
+    472,
+    1512,
     80,
     56
    ],
    "drift-stone@20x14~f": [
-    1044,
-    1464,
+    552,
+    1512,
     80,
     56
    ],
    "cairn-white-stones@14x16": [
-    256,
-    1464,
+    1600,
+    1448,
     56,
     64
    ],
    "cairn-white-stones@14x16~f": [
-    312,
-    1464,
+    1656,
+    1448,
     56,
     64
    ],
    "fence-corner@16x16~f": [
-    1092,
-    1272,
+    836,
+    1320,
     64,
     64
    ]
