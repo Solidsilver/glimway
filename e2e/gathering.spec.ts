@@ -1,9 +1,9 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
 import { sql, accountOf } from './connected'
-import { claimDeed, freshPlayer, fund, giveInstance, homeAt, shot, toMyLand, type Home } from './home-helpers'
+import { claimDeed, freshPlayer, fund, giveInstance, homeAt, landOf, shot, toMyLand, type Home } from './home-helpers'
 import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
-import { plantable } from '../src/lib/homestead.ts'
+import { HOMESTEAD_DATA, plantable } from '../src/lib/homestead.ts'
 import { gatheringTarget } from '../src/lib/gathering.ts'
 import { homeLights, isLit } from '../src/lib/homestead-land.ts'
 
@@ -340,10 +340,11 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
 
   // Plant a sapling on open grass in the lamplight, from the inventory.
   const home = (await landAt(page, land.gate))!
+  const ground = await landOf(page, land.gate)
   const lights = homeLights(home.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null) as { x: number; y: number }[])
   const at = await player(page)
   const open: [number, number][] = []
-  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y)) open.push([x, y])
+  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y, HOMESTEAD_DATA, ground)) open.push([x, y])
   open.sort((a, b) => Math.hypot(a[0] * 16 - at.x, a[1] * 16 - at.y) - Math.hypot(b[0] * 16 - at.x, b[1] * 16 - at.y))
   let tile: [number, number] | null = null
   for (const t of open) {

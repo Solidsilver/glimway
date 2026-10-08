@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { sql, accountOf, CONTRACT } from './connected'
+import { sql, accountOf, CONTRACT, served } from './connected'
 import { dialogueState, waitForLive, waitGame } from './helpers'
 import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
@@ -114,7 +114,7 @@ test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it'
   await expect(panel.locator('.msg.ok')).toContainText('Made 2 Wax seals')
   await panel.getByRole('button', { name: 'Close the hearth' }).click()
   await expect(panel).toBeHidden()
-  const st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  const st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.inventory.items['saltings-tea']).toBe(2)
   expect(st.inventory.items['wild-thyme']).toBe(2)
   expect(st.inventory.items['wax-seal']).toBe(2)
@@ -179,7 +179,7 @@ test('the writing desk: craft it at the bench, set it out, sit down, copy a reci
   await expect(panel.locator('.msg.ok')).toContainText('2 fresh copies')
   await panel.getByRole('button', { name: 'Close the desk' }).click()
   await expect(panel).toBeHidden()
-  const st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  const st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.inventory.items['recipe-page-tea']).toBe(3)
   const marks = sql(`SELECT maker_id || '|' || qty FROM item_stacks WHERE owner='${accountOf(id)}' AND item_def='recipe-page-tea' AND location='pack' ORDER BY maker_id;`).split('\n').map((s) => s.trim()).filter(Boolean)
   expect(marks.sort()).toEqual(['|1', `${accountOf(id)}|2`].sort())

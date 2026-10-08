@@ -210,6 +210,10 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-full-failures
-          path: test-results/
+          # Screenshots and error context only: a bad run's traces came to 2.6 GB
+          # and ran the job past its timeout while uploading.
+          path: |
+            test-results/**/*.png
+            test-results/**/error-context.md
           if-no-files-found: ignore
           retention-days: 7

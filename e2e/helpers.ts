@@ -13,9 +13,11 @@ import { expect, type Page } from '@playwright/test'
  */
 
 type AreaId = 'village' | 'woodland' | 'ruin' | (string & {})
+/** An exit of the current area, in tiles. */
+export type ExitView = { tx: number; ty: number; tw: number; th: number; to: string }
 type Hooks = {
   __fsPlayer?: () => { x: number; y: number }
-  __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number } }
+  __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; exits: ExitView[] }
   __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
   __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
   __fsDevStrike?: (n: number, type?: string) => void
@@ -334,6 +336,16 @@ export async function player(page: Page): Promise<{ x: number; y: number }> {
 
 export async function world(page: Page) {
   return page.evaluate(() => (window as unknown as Hooks).__fsWorld!())
+}
+
+/**
+ * The current area's exit into `to` (Wilds chunks take their exits from the
+ * served chunk, so specs ask rather than assume where a gap is).
+ */
+export async function exitTo(page: Page, to: AreaId): Promise<ExitView> {
+  const found = (await world(page)).exits.find((e) => e.to === to)
+  if (!found) throw new Error(`no exit to ${to} from ${(await world(page)).areaId}`)
+  return found
 }
 
 /** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). */

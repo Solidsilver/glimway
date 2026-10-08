@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { expect, type BrowserContext, type Page } from '@playwright/test'
+import { expect, type APIResponse, type BrowserContext, type Page } from '@playwright/test'
 import contract from '../content/contract.json' with { type: 'json' }
+import story from '../content/story.json' with { type: 'json' }
 import { BIN, requireBackend } from './server/backend.ts'
 import { FAKE_TOKEN } from './server/fake-habitica.ts'
 
@@ -21,6 +22,19 @@ const dbPath = (): string => requireBackend().db
 
 /** The contract header the /api gate requires on every stateful call. */
 export const CONTRACT = { headers: { 'X-Glimway-Contract': String(contract.number) } }
+
+/**
+ * A domain read's body. The server answers reads as `{ state, result }` (the
+ * player's state beside the view); this is the view with `state` beside it,
+ * the way the client reads them (`mixedRead` in src/lib/api/client.ts).
+ */
+export async function served(res: APIResponse): Promise<any> {
+  const raw = await res.json()
+  if (!raw || typeof raw !== 'object' || !('state' in raw) || !('result' in raw)) return raw
+  const result = raw.result
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return raw
+  return { ...result, state: raw.state }
+}
 
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()
@@ -48,32 +62,64 @@ export function accountOf(habiticaId: string): string {
   return account
 }
 
+/** Who writes a story mark (content/story.json; the server's `content.MarkWriter`): the longest matching namespace. */
+function markWriter(mark: string): string {
+  let best = 0
+  let writer = ''
+  for (const n of story.namespaces) {
+    if ((mark === n.prefix || (n.prefix.endsWith(':') && mark.startsWith(n.prefix))) && n.prefix.length > best) {
+      best = n.prefix.length
+      writer = n.writer
+    }
+  }
+  if (!writer) throw new Error(`seedStory: no namespace writes ${mark}`)
+  return writer
+}
+
+/** Economy flags live in `outcomes`, not `story_marks` (the server's `rules.EconomyFlag`). */
+const economyFlag = (mark: string) => mark === 'embers:welcome' || mark.startsWith('lit:') || mark.startsWith('opened:')
+
 /**
  * Test-only lever: put a story state on an account (replaces the old guest
  * `seedSave`): a quest stage, story marks (flags), quest items and a place.
- * `habiticaId` is the subject `freshPlayer` returned (sign in once first);
- * the change lands on the account's progress document, so a page that is
- * already playing won't see it — follow it with `reenter(page)`
- * (TODO(B): write the new story tables instead, once the server loads them).
+ * `habiticaId` is the subject `freshPlayer` returned (sign in once first).
+ * It writes the server's story tables (quest_progress, story_marks, outcomes,
+ * player_place) at the account's current version, so a page that is already
+ * playing won't see it: follow it with `reenter(page)`, whose sign-in read
+ * adopts the server's copy.
  */
 export function seedStory(habiticaId: string, o: { quest?: string; marks?: string[]; questItems?: string[]; place?: { area: string; x: number; y: number } }): void {
   const esc = (v: string) => v.replace(/'/g, "''")
   const account = esc(accountOf(habiticaId))
+  const at = Math.floor(Date.now() / 1000)
   const stmts: string[] = []
-  for (const mark of o.marks ?? []) stmts.push(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', '${esc(mark)}') WHERE account_id='${account}';`)
-  if (o.quest) stmts.push(`UPDATE progress SET doc_json = json_set(doc_json, '$.quest', '${esc(o.quest)}') WHERE account_id='${account}';`)
-  if (o.questItems?.length) {
-    // The array goes in as a SQL string literal (double quotes mean
-    // identifiers on their own).
-    const items = JSON.stringify(o.questItems.map(esc)).replace(/'/g, "''")
-    stmts.push(`UPDATE progress SET doc_json = json_set(doc_json, '$.inventory', json('${items}')) WHERE account_id='${account}';`)
+  for (const mark of o.marks ?? []) {
+    if (economyFlag(mark)) stmts.push(`INSERT OR IGNORE INTO outcomes(account_id,outcome_id,reason,at) VALUES('${account}','${esc(mark)}','seed',${at});`)
+    else stmts.push(`INSERT OR IGNORE INTO story_marks VALUES('${account}','${esc(mark)}','${markWriter(mark)}',${at});`)
+  }
+  if (o.quest) {
+    stmts.push(
+      o.quest === 'new'
+        ? `DELETE FROM quest_progress WHERE account_id='${account}' AND quest='lantern-road';`
+        : `INSERT INTO quest_progress VALUES('${account}','lantern-road','${esc(o.quest)}') ON CONFLICT(account_id,quest) DO UPDATE SET step=excluded.step;`
+    )
+  }
+  if (o.questItems) {
+    stmts.push(`DELETE FROM story_marks WHERE account_id='${account}' AND writer='quest-item';`)
+    for (const item of o.questItems) stmts.push(`INSERT OR IGNORE INTO story_marks VALUES('${account}','${esc(item)}','quest-item',${at});`)
   }
   if (o.place) {
+    // A place set at the account's version: the client takes it as the server's word.
     stmts.push(
-      `UPDATE progress SET doc_json = json_set(doc_json, '$.area', '${esc(o.place.area)}', '$.position.x', ${Math.round(o.place.x)}, '$.position.y', ${Math.round(o.place.y)}) WHERE account_id='${account}';`
+      `UPDATE player_place SET area='${esc(o.place.area)}', x=${o.place.x}, y=${o.place.y}, place_set_version=(SELECT version FROM players WHERE account_id='${account}') WHERE account_id='${account}';`
     )
   }
   sql(stmts.join('\n'))
+}
+
+/** Add story marks to an account (see `seedStory`). */
+export function seedMarks(habiticaId: string, ...marks: string[]): void {
+  seedStory(habiticaId, { marks })
 }
 
 /** Owner CLI: let this Habitica id sign in. */

@@ -9,7 +9,7 @@ import {
   warp
 } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
-import { serverState, sql, accountOf } from './connected'
+import { serverState, sql, accountOf, seedMarks } from './connected'
 
 
 /**
@@ -74,7 +74,7 @@ test.describe('heirloom story beats', () => {
     const id = await freshPlayer(page, 'SilasTester')
 
     // Authoritative ledger / progress paper flag
-    sql(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', 'paper:ashwatch-ledger-excerpts') WHERE account_id='${accountOf(id)}';`)
+    seedMarks(id, 'paper:ashwatch-ledger-excerpts')
 
     // Mirror flag to client session
     await page.evaluate(() => {

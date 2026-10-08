@@ -902,7 +902,7 @@ export class Link {
     if ((how === 'conflict' || how === 'older') && (await this.reconcile()) !== 'ok') return false
     this.entries = this.entries.filter((e) => e !== head)
     if (state && (how === 'newer' || how === 'equal')) this.adopt(state, head.kind === 'fall' ? { fall: head } : {})
-    if (head.kind === 'fall') this.fallSettled(head)
+    if (head.kind === 'fall') this.fallSettled(head, result)
     else this.refresh()
     const stored = await this.dispositionSaved()
     // A step's gift (paid once, by the server): the toast follows its answer.
@@ -959,7 +959,7 @@ export class Link {
       if ((result as { case?: string } | null)?.case !== TYPED[head.kind]!.result) return this.stalled(untrusted())
     }
     this.entries = this.entries.filter((e) => e !== head)
-    if (head.kind === 'fall') this.fallSettled(head)
+    if (head.kind === 'fall') this.fallSettled(head, result)
     else this.refresh()
     const stored = await this.dispositionSaved()
     if (!same) {
@@ -977,9 +977,12 @@ export class Link {
    * This happens whether or not its answer moved the vitals watermark (a
    * replay of a fall the world already held).
    */
-  private fallSettled(fall: OutboxEntry): void {
+  private fallSettled(fall: OutboxEntry, result: unknown): void {
     this.reports.release(fall.id, this.server.vitals?.vitalsSetVersion ?? 0)
     this.refresh()
+    // The answer says whether a fallen-hero lantern now waits in the Wilds.
+    const r = result as { case?: string; value?: { lantern?: string } } | null
+    if (r?.case === 'fall') this.emitter(EV.fallSettled, { lantern: r.value?.lantern ?? 'none' })
   }
 
   /** The head wasn't answered with success. */
@@ -1365,15 +1368,16 @@ export class Link {
       if (!this.canSend()) return { ok: false, code: 'offline' }
       const barrier = await this.flushBarrier()
       if (!barrier) return { ok: false, code: 'offline' }
-      const before = s.state
+      const welcomedBefore = s.state.flags.includes(FLAGS.welcome)
       const env = await this.api.run(() => this.ops.profile(create(ProfileReportSchema, { lease: this.lease ?? '', raw, report: barrier })))
       this.answered()
       if (env.result.case !== 'profile') return { ok: false, code: 'bad-response' }
       this.adopt(env.state)
       void this.saveRecord()
       const res = env.result.value
+      // `credit` is the XP credit alone; the welcome is paid beside it (its own ledger line).
       const gained = Math.max(0, res.credit)
-      const welcome = !before.flags.includes(FLAGS.welcome) && s.state.flags.includes(FLAGS.welcome) ? Math.min(gained, WELCOME_EMBERS) : 0
+      const welcome = !welcomedBefore && s.state.flags.includes(FLAGS.welcome) ? WELCOME_EMBERS : 0
       return { ok: true, status: res.status === 'unchanged' ? 'unchanged' : 'synced', gained, welcome, credit: { hp: res.vitalsCredit?.hp ?? 0, mana: res.vitalsCredit?.mana ?? 0 } }
     } catch (err) {
       const code = errorCode(err)

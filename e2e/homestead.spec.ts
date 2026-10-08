@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, sql, accountOf, CONTRACT } from './connected'
+import { serverState, sql, accountOf, CONTRACT, served } from './connected'
 import { dialogueState, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
 import { area, earnEmbers, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
@@ -346,8 +346,8 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   // his post is still in his pack (mail can send it).
   const storage = await other.request.get('/api/storage', CONTRACT)
   expect(storage.status()).toBe(200)
-  expect(await storage.json()).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
-  const carried = await (await other.request.get('/api/mail', CONTRACT)).json()
+  expect(await served(storage)).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
+  const carried = await served(await other.request.get('/api/mail', CONTRACT))
   expect(carried.inventory.decorations['lantern-post']).toBe(1)
   expect(errors).toEqual([])
   await ctx.close()

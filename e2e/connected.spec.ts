@@ -1,6 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import {
-  adminInvite,
+import { adminInvite,
   allow,
   linkStatus,
   newUser,
@@ -10,8 +9,7 @@ import {
   serverState, accountOf,
   setHabitica,
   syncFromMenu,
-  waitForWorld, CONTRACT
-} from './connected'
+  waitForWorld, CONTRACT, served } from './connected'
 import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast } from './helpers'
 
 /**
@@ -24,27 +22,28 @@ const hurt = (page: Page, n: number) => page.evaluate((d) => (window as unknown 
 const leaseGate = (page: Page) => page.getByRole('alertdialog', { name: 'Playing on another device' })
 const shownHp = (page: Page) => page.evaluate(() => Number(document.querySelector('[aria-label="Health"]')?.getAttribute('aria-valuenow')))
 
-/** The account's record in the connected cache (`id` is the Habitica subject; the cache keys on the server's account id). */
-async function cacheRecord(page: Page, id: string): Promise<Record<string, any> | null> {
-  return page.evaluate(async (key) => {
+/** The account's outbox record on this device (C2's store; keyed by the server's account id), or null. */
+async function cacheRecord(page: Page, account: string): Promise<Record<string, any> | null> {
+  return page.evaluate(async (account) => {
     const dbs = await indexedDB.databases()
-    if (!dbs.some((d) => d.name === 'fingersnap-connected')) return null
+    if (!dbs.some((d) => d.name === 'glimway-outbox')) return null
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const r = indexedDB.open('fingersnap-connected')
+      const r = indexedDB.open('glimway-outbox')
       r.onsuccess = () => resolve(r.result)
       r.onerror = () => reject(r.error)
     })
     try {
       if (!db.objectStoreNames.contains('records')) return null
+      // Keyed by [account, device]: this page's device is the only one here.
       return await new Promise<Record<string, any> | null>((resolve) => {
-        const r = db.transaction('records').objectStore('records').get('acct:' + key)
-        r.onsuccess = () => resolve((r.result as Record<string, any> | undefined) ?? null)
+        const r = db.transaction('records').objectStore('records').getAll()
+        r.onsuccess = () => resolve((r.result as Record<string, any>[]).find((rec) => rec.account === account) ?? null)
         r.onerror = () => resolve(null)
       })
     } finally {
       db.close()
     }
-  }, `acct:${id}`)
+  }, account)
 }
 
 /** Read a conversation to its end (replies included). */
@@ -195,7 +194,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   // The world's shelf on the server: one donation, credited by the server.
   const shelf = await page.request.get('/api/library', CONTRACT)
   expect(shelf.status()).toBe(200)
-  const body = await shelf.json()
+  const body = await served(shelf)
   expect(body.shelves).toHaveLength(1)
   expect(body.shelves[0].paperId).toBe('pip-copybook-warden-corrections')
   expect(body.shelves[0].donatedBy).toBe('Tansy')

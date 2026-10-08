@@ -109,6 +109,13 @@ interface RegionState {
 const regions = new Map<string, RegionState>();
 let active: string = WILDS_REGION_ID;
 
+// A fall that left a lantern changed the region: the next entry reads it
+// again instead of reusing a recent read (prepareWilds' maxAge).
+bus.on(EV.fallSettled, ({ lantern }) => {
+  if (lantern !== 'placed') return;
+  for (const r of regions.values()) r.fetchedAt = 0;
+});
+
 function unread(regionId: string): WildsEpoch {
   return { id: '', worldSeed: '', regionId, generatorVersion: 0, season: '', endsAt: null };
 }

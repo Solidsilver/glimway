@@ -1,5 +1,5 @@
 import { expect, type Page } from './fixtures'
-import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld } from './connected'
+import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
 import { dialogueState, frames, readDialogue, waitForArea, waitForLive, expectToast } from './helpers'
 
@@ -132,11 +132,12 @@ export async function earnEmbers(page: Page, id: string): Promise<void> {
  */
 async function syncEmberBalance(page: Page): Promise<number> {
   const [response] = await Promise.all([
-    page.waitForResponse((r) => r.url().endsWith('/api/sync') && r.request().method() === 'POST'),
+    page.waitForResponse((r) => r.url().endsWith('/api/profile') && r.request().method() === 'POST'),
     syncFromMenu(page)
   ])
   expect(response.ok()).toBe(true)
-  return (await response.json()).state.embers as number
+  // An operation envelope: the state is the server's PlayerState.
+  return (await response.json()).state.embers.balance as number
 }
 
 /** Read an open conversation (one the world opened on its own) to its end. */
@@ -172,7 +173,7 @@ export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
 export async function homeAt(page: Page, gate: number): Promise<Home | null> {
   const res = await page.request.get(`/api/homestead/gate/${gate}`, CONTRACT)
   expect(res.ok()).toBe(true)
-  return (await res.json()).home as Home | null
+  return (await served(res)).home as Home | null
 }
 
 /** A gate's land grid as the server serves it. */
@@ -186,7 +187,7 @@ export async function landOf(page: Page, gate: number): Promise<Land> {
 export async function lane(page: Page): Promise<{ gates: HomesView['gates']; gateCount: number; mine: { homeId: string; gate: number } | null; invites: HomesView['invites'] }> {
   const res = await page.request.get('/api/commons', CONTRACT)
   expect(res.ok()).toBe(true)
-  return res.json()
+  return served(res)
 }
 
 /** Your own homestead (the server's word). The id argument is accepted for older call sites. */

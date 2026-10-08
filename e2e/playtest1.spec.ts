@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
-import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf } from './connected'
+import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, seedMarks } from './connected'
 import { claimDeed, earnEmbers, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 
@@ -186,7 +186,7 @@ for (const device of ['desktop', 'phone'] as const) {
 
       test('Silas hands over the axe on the first try, even from a stale saved spot', async ({ page }) => {
         const id = await freshPlayer(page, 'AxeTester')
-        sql(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', 'echo:hollis') WHERE account_id='${accountOf(id)}';`)
+        seedMarks(id, 'echo:hollis')
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         await warp(page, 'commons', 51, 22)
         await openTalk(page, 'Talk to Silas')
@@ -206,7 +206,7 @@ for (const device of ['desktop', 'phone'] as const) {
 
       test('a refused offer is the giver’s own reply, in the conversation', async ({ page }) => {
         const id = await freshPlayer(page, 'RefusedTester')
-        sql(`UPDATE progress SET doc_json = json_insert(doc_json, '$.flags[#]', 'echo:hollis') WHERE account_id='${accountOf(id)}';`)
+        seedMarks(id, 'echo:hollis')
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         // The server says no (as it would to someone it measured too far off).
         await page.route('**/api/items/heirloom', (route) =>

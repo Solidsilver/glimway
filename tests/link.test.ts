@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { EV } from '../src/game/event-names.ts';
 import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS, type OutboxRecord } from '../src/lib/api/outbox.ts';
 import contract from '../content/contract.json' with { type: 'json' };
+import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
 import { ackReport, BASE, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
 
 /**
@@ -472,6 +473,8 @@ test('a fall is predicted at once, queues offline, and the next report waits for
   const rep = r.server.sent('POST /api/report')[0]!.body;
   assert.equal(rep.basis, 3, 'reported against the fall');
   assert.equal(r.session.state.hp, 9, 'the hurt after waking is kept');
+  // The answer is announced (the Wilds store rereads its region when a lantern was placed).
+  assert.deepEqual(r.events.filter(([e]) => e === EV.fallSettled).map(([, p]) => p), [{ lantern: 'none' }]);
 });
 
 // ---------------------------------------------------------------- logout and storage
@@ -519,4 +522,21 @@ test('idempotency reconciliation of a stored refusal settles as refused and roll
   assert.deepEqual(r.session.state.flags, []);
   assert.equal(r.link.paused, null);
   assert.equal(toasts(r).length, 1);
+});
+
+test('a first profile sync reports the welcome even when no XP is credited', async (t) => {
+  const r = await rig(t);
+  await online(r, S({ balance: 0 }));
+  r.server.on('POST /api/report', ackReport(() => S({ balance: 0 })));
+  // The server pays the welcome beside the XP credit: `credit` stays 0.
+  r.server.on('POST /api/profile', env(S({ version: 2, balance: 3, marks: ['embers:welcome'] }), { profile: { status: 'unchanged', credit: 0, pending: 0, vitalsCredit: { hp: 0, mana: 0 } } }));
+  const raw = FIXTURES_BY_KEY.lowLevel.user;
+  const first = await r.link.profile(raw);
+  assert.ok(first.ok);
+  assert.deepEqual([first.welcome, first.gained], [3, 0]);
+  assert.equal(r.session.state.embers, 3);
+  r.server.on('POST /api/profile', env(S({ version: 3, balance: 3, marks: ['embers:welcome'] }), { profile: { status: 'unchanged', credit: 0, pending: 0, vitalsCredit: { hp: 0, mana: 0 } } }));
+  const again = await r.link.profile(raw);
+  assert.ok(again.ok);
+  assert.equal(again.welcome, 0, 'paid once');
 });

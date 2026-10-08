@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, CONTRACT } from './connected'
+import { serverState, CONTRACT, served } from './connected'
 import { waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, readOn, shot, silasSays } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
@@ -132,11 +132,11 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await panel.locator('[data-store="timber:5"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Stored 5 timber')
   await shot(page, 'storage-chest-desktop')
-  let st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  let st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.storage.materials.timber).toBe(5)
   await panel.locator('[data-take="timber:1"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Took out 1 timber')
-  st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.storage.materials.timber).toBe(4)
   // Your own chest: small, yours alone, and it goes with you if you ever leave the deed.
   await panel.locator('[data-chest="personal"]').click()
@@ -144,7 +144,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await expect(panel.locator('.msg.ok')).toContainText('Stored 5 timber (your own chest)')
   await expect(panel.locator('[data-chest="personal"]')).toContainText('5/')
   await shot(page, 'personal-chest-desktop')
-  st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.personal.materials.timber).toBe(5)
   expect(st.storage.materials.timber).toBe(4)
 
@@ -156,7 +156,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await panel.locator('[data-craft="craft-wooden-stool"]').click()
   await expect(panel.locator('.msg.ok')).toContainText('Made a Wooden Stool')
   await shot(page, 'crafting-bench-desktop')
-  st = await (await page.request.get('/api/storage', CONTRACT)).json()
+  st = await served(await page.request.get('/api/storage', CONTRACT))
   expect(st.inventory.items['wooden-peg']).toBe(1)
   expect(st.inventory.decorations['wooden-stool']).toBe(1)
   // No amber for an oak table? It says so plainly.
@@ -202,7 +202,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   const bead = mail.locator('[data-sent]', { hasText: 'River Glass Bead' })
   await bead.getByRole('button', { name: 'Recall' }).click()
   await expect(mail.locator('.msg.ok')).toContainText('A River Glass Bead came back to you')
-  const back = await (await page.request.get('/api/mail', CONTRACT)).json()
+  const back = await served(await page.request.get('/api/mail', CONTRACT))
   expect(back.inventory.items['river-glass-bead']).toBe(1)
   expect(back.mail.find((m: { asset: { id: string } }) => m.asset.id === 'river-glass-bead').returnReason).toBe('recalled')
   await expect(mail.locator('[data-sent]')).toHaveCount(1)
@@ -224,7 +224,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await shot(other, 'mailbox-collect-desktop')
   await parcel.getByRole('button', { name: 'Collect' }).click()
   await expect(box.locator('.msg.ok')).toContainText('You collect 3 timber from Tansy')
-  const got = await (await other.request.get('/api/mail', CONTRACT)).json()
+  const got = await served(await other.request.get('/api/mail', CONTRACT))
   expect(got.inventory.materials.timber).toBe(3)
   expect(got.mail.find((m: { asset: { id: string } }) => m.asset.id === 'timber').claimedAt).not.toBeNull()
   void b

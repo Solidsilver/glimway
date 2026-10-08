@@ -66,6 +66,8 @@ export const EV = {
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
   worldRefresh: 'game:world-refresh',
+  /** Connected play: the world answered a fall: { lantern } ('placed': a fallen-hero lantern now waits in the Wilds). */
+  fallSettled: 'game:fall-settled',
   /** The Wilds region changed (loaded, claimed, materials moved): { materials }. */
   wilds: 'ui:wilds',
   /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
@@ -374,6 +376,7 @@ export interface EventMap {
   [EV.witness]: WitnessPayload
   [EV.mutationResolved]: MutationResolvedPayload
   [EV.worldRefresh]: void
+  [EV.fallSettled]: { lantern: string }
   [EV.wilds]: WildsPayload
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }

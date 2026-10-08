@@ -149,7 +149,7 @@ test.describe('in a world', () => {
     await freshPlayer(page)
     // The world server refuses this page's contract: strip the header with
     // page.route, so A's real gate answers 409 reload-needed.
-    await page.route('**/api/sync', (route) => {
+    await page.route('**/api/profile', (route) => {
       const headers = { ...route.request().headers() }
       delete headers['x-glimway-contract']
       return route.continue({ headers })
