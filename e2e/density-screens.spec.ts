@@ -124,7 +124,7 @@ test.describe('in a world', () => {
       // Touch: tap the action button at the door.
       await p.locator('.controls .act').tap()
     })
-    await p.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } }).__fsSafety?.().areaId === 'cottage')
+    await p.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } }).__fsSafety?.().areaId.startsWith('in:home:'))
     await waitForLive(p)
     await place(p, 104, 104)
     await snap(p, 'cottage-interior', 'phone')

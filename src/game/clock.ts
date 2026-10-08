@@ -1,8 +1,11 @@
 /**
  * The game's clock: real Unix seconds plus a dev/playtest offset, so the
  * calendar (festivals, the Turning) can be moved to any day. The village's
- * calendar and guests' outer Wilds both read it.
+ * calendar and guests' outer Wilds both read it. `serverNow` is the same
+ * clock set to the server's (the residents' cycles, docs/design/indoors.md 4).
  */
+import { serverSkew } from '../lib/server-time.ts'
+
 let devOffset = 0
 
 /** The game's "now" in Unix seconds. */
@@ -18,4 +21,9 @@ export function clockMoved(): boolean {
 /** Dev/playtest: pretend it is `unix` now (null: the real clock again). */
 export function setGameNow(unix: number | null): void {
   devOffset = unix === null ? 0 : unix - Math.floor(Date.now() / 1000)
+}
+
+/** The server's "now" in Unix seconds (fractional): this device's clock, the server's skew, and the dev offset. */
+export function serverNow(): number {
+  return Date.now() / 1000 + serverSkew() + devOffset
 }

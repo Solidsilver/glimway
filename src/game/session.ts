@@ -10,6 +10,7 @@
  *   repeated transitions.
  * - Save failures surface to the interface, not only to the console.
  */
+import { parseHomeRoom } from './cottage.ts'
 import { profileFor } from '../lib/profile.ts'
 import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { advanceQuest, questObjective, questShortGoal } from '../lib/state.ts'
@@ -305,7 +306,9 @@ export class Session {
   }
 
   emitArea(): void {
-    bus.emit(EV.area, { areaId: displayArea(this.state) })
+    // A cottage (`in:home:<gate>`) reads as the cottage it always was: the
+    // interface names it by whose it is (EV.homeRoom).
+    bus.emit(EV.area, { areaId: parseHomeRoom(this.state.area) !== null ? 'cottage' : displayArea(this.state) })
   }
 
   /**

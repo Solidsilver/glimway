@@ -20,7 +20,7 @@ import { onSceneEnd, type SceneEvents } from './scene-end.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
-type ExitView = { tx: number; ty: number; tw: number; th: number; to: string }
+type ExitView = { tx: number; ty: number; tw: number; th: number; to: string; side?: 'north' | 'south' | 'east' | 'west'; kind?: 'edge' | 'door' | 'stair' }
 
 export interface FsHooks {
   // ---- WorldScene (scenes/world-dev-hooks.ts), read-only
@@ -126,7 +126,26 @@ export interface FsHooks {
   /** The built ground (area/terrain.ts). */
   __fsGround: () => GroundView | null
   /** The walking residents' poses (entities/npcs.ts). */
-  __fsNpcs: () => { id: string; x: number; y: number; facing: string; mode: string; frame: string }[]
+  __fsNpcs: () => { id: string; x: number; y: number; facing: string; mode: string; frame: string; present: boolean; spot: string | null; walking: boolean }[]
+  /**
+   * The room you're in (null outdoors): its art on its footprints, spots,
+   * light pools, the camera's zoom (CSS px per world px), and the residents
+   * on their cycle here; outdoors and in, the lit windows and smoke.
+   */
+  __fsRoom: () => {
+    areaId: string
+    room: { id: string; name: string; arrive: { tx: number; ty: number } } | null
+    zoom: number
+    facing: { x: number; y: number }
+    props: { art: string; frame: string; tx: number; ty: number; tw: number; th: number }[]
+    spots: string[]
+    lights: { kind: string; visible: boolean }[]
+    houses: { room: string; window: boolean; smoke: boolean }[]
+  }
+  /** Check the residents' cycle now (a moved dev clock shows at once, not within a second). */
+  __fsDevCycleCheck: () => void
+  /** Play Pip's walk-on now (the opening's `set-post`); false when Pip isn't in this scene. */
+  __fsDevPipWalkOn: () => boolean
   /** What the goal guide points at, and whether the edge glint shows. */
   __fsGoal: () => unknown
   /** The thought on screen now, and every one shown this page. */

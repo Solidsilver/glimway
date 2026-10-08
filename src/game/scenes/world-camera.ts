@@ -5,7 +5,7 @@
  * fade where the map ends.
  */
 import Phaser from 'phaser'
-import { canvasRatio, canvasZoomFor, playInsets } from '../viewport'
+import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor } from '../viewport'
 import type { WorldData } from '../worlds'
 
 export class WorldCamera {
@@ -24,8 +24,13 @@ export class WorldCamera {
     scene.events.once('shutdown', () => scene.scale.off('resize', onResize))
   }
 
+  /** A room (`in:…`): framed closer, its height filling most of the open screen. */
+  private get indoors(): boolean {
+    return this.world.areaId.startsWith('in:')
+  }
+
   private apply(w: number, h: number): void {
-    this.scene.cameras.main.setZoom(canvasZoomFor(w, h))
+    this.scene.cameras.main.setZoom(this.indoors ? roomZoomFor(w, h, this.world) : canvasZoomFor(w, h))
     this.frameCamera()
   }
 
@@ -63,13 +68,15 @@ export class WorldCamera {
     cam.setBounds(bx, by, bw, bh)
     this.followOffset = { x: (left - right) / (2 * z), y: (top - bottom) / (2 * z) }
     cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
-    this.layEdgeFade(left || right || top || bottom ? 1 : 0)
+    // Indoors the room's own vignette and dark surround end it (./area/room-art.ts).
+    this.layEdgeFade(!this.indoors && (left || right || top || bottom) ? 1 : 0)
   }
 
   /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */
   keepFramed(): void {
     const cam = this.scene.cameras.main
-    if (this.framedFor !== `${playInsets.rev}:${canvasRatio()}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
+    if (this.indoors && this.framedFor.split(':')[0] !== String(playInsets.rev)) this.apply(cam.width, cam.height)
+    else if (this.framedFor !== `${playInsets.rev}:${canvasRatio()}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
     // startFollow elsewhere (placement, the lantern beat) resets the offset.
     else if (cam.followOffset.x !== this.followOffset.x || cam.followOffset.y !== this.followOffset.y) cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
   }

@@ -259,7 +259,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await talk(page, /Rest at your bedroll/, /Rest a while/)
   await expectToast(page, 'Home, and rested')
 
-  // Raise the cottage, go inside; the save stays on your land, by the door.
+  // Raise the cottage, go inside: the cottage is a place of its own, saved inside.
   const embers2 = (await serverState(page)).body.state.embers
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
@@ -271,8 +271,8 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await go(page, `home:${free.gate}`, land.doorstep.tx, land.doorstep.ty)
   await expect(page.locator('.prompt')).toContainText('Go inside')
   await page.keyboard.press('e')
-  await waitForArea(page, 'cottage')
-  expect((await serverState(page)).body.state.area).toBe(`home:${free.gate}`)
+  await waitForArea(page, `in:home:${free.gate}`)
+  await expect.poll(async () => (await serverState(page)).body.state.area).toBe(`in:home:${free.gate}`)
   await hurt(page, 4)
   await place(page, 181, 66)
   await talk(page, /Rest by your hearth/, /Rest a while/)
@@ -395,15 +395,15 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   await go(other, `home:${gate}`, land.doorstep.tx, land.doorstep.ty)
   await expect(other.locator('.prompt')).toContainText('Visit the cottage')
   await other.keyboard.press('e')
-  await waitForArea(other, 'cottage')
+  await waitForArea(other, `in:home:${gate}`)
   await expectAreaCard(other, 'Tansy’s Place')
   await expect(other.getByTestId('arrange')).toHaveCount(0)
   await shot(other, 'visiting-interior-desktop')
   await place(other, 181, 66)
   await expect(other.locator('.prompt')).toContainText('Sit by the hearth')
-  expect(await area(other)).toBe('cottage')
-  // The visitor's save is on Tansy's land: they show up in its presence room.
-  expect((await serverState(other)).body.state.area).toBe(`home:${gate}`)
+  expect(await area(other)).toBe(`in:home:${gate}`)
+  // The visitor's save is inside Tansy's cottage: they show up in its presence room.
+  await expect.poll(async () => (await serverState(other)).body.state.area).toBe(`in:home:${gate}`)
   expect(errors).toEqual([])
   await ctx.close()
 })

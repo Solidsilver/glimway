@@ -1,17 +1,17 @@
 /**
  * World builder: the first areas (village, woodland, ruin), generated
  * deterministically from code (seeded), and the area-kind registry every
- * area resolves through (those three, the Commons, the cottage, homestead
- * land by `home:<gate>`, and the Wilds chunks registered at runtime).
+ * area resolves through (those three, the Commons, homestead land by
+ * `home:<gate>`, the rooms by `in:…` (./room-kind.ts: the village rooms and
+ * the cottages), and the Wilds chunks registered at runtime).
  */
 import type { AreaId } from '../lib/state.ts'
-import { ITEM_RULES, sellerFor } from '../lib/items.ts'
 import { repairFor } from '../lib/repairs.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../lib/tile.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
 import { homeLandKind } from './homeland.ts'
-import { buildRoom } from './cottage.ts'
+import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
 import { gameNow } from './clock.ts'
 import { rng01 } from '../lib/hash.ts'
 
@@ -32,7 +32,9 @@ export type InteractId =
   | EmberSpotId
   | 'library'
   | 'warden'
+  | RoomSpotId
   | `paper:${string}`
+  | `door:${string}`
   | `home:${string}`
   | `village:${string}`
   | `touch:${string}`
@@ -40,6 +42,19 @@ export type InteractId =
   | `repair:${string}`
   | `gather:${string}`
   | `wilds:${string}`
+/** A room's spot (the rooms data's `spots`): one id across all content, the quest `use` trigger's. */
+export type RoomSpotId =
+  | 'kitchen-hearth'
+  | 'sponge-bowl'
+  | 'tallow-pot'
+  | 'millstones'
+  | 'counting-stool'
+  | 'mill-hoist'
+  | 'library-shelf'
+  | 'donation-shelf'
+  | 'reading-table'
+  | 'reading-lamp'
+  | 'window-seat'
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -47,6 +62,8 @@ export interface NpcSpot {
   id: NpcId
   tx: number
   ty: number
+  /** A resident's cycle spot (src/game/resident-cycle.ts): they stand here only while the cycle says so. */
+  spot?: string
 }
 
 export interface EnemySpot {
@@ -54,6 +71,8 @@ export interface EnemySpot {
   type: EnemyType
   tx: number
   ty: number
+  /** Its own health, when not the type's (the opening's finger-wisp: a Slash or two). */
+  hp?: number
 }
 
 export interface ExitDef {
@@ -65,6 +84,10 @@ export interface ExitDef {
   entry: { tx: number; ty: number }
   /** Sign text (default: the destination's name); null hides the sign (a doorway). */
   label?: string | null
+  /** The side you step out of (the chevron, and which way you face arriving). Edge exits infer it. */
+  side?: 'north' | 'south' | 'east' | 'west'
+  /** A map edge (the default), a room's doorway, or a stair to another floor. */
+  kind?: 'edge' | 'door' | 'stair'
 }
 
 /** Supplied atlas props placed in the world at a consistent small-world scale. */
@@ -175,6 +198,8 @@ export interface WorldData {
   groundMark?: string | null
   /** Wilds story sites in this chunk (Echo camps, given-back finds): src/game/wilds/sites.ts. */
   storySites?: { id: string; kind: string; tx: number; ty: number }[]
+  /** A village room: its row, footprints and arrival (./room-kind.ts; drawn by ./area/room-art.ts). */
+  room?: RoomScene
 }
 
 // ---------------------------------------------------------------- utilities
@@ -383,18 +408,12 @@ function buildVillage(): WorldData {
     wheel: { x: 32 * TILE + 7, y: 21 * TILE + 4 },
     hopper: millHopper
   }
-  // The residents, placed after the scatter too (the seeded layout stays):
-  // Hazel in the square below the well with her basket, Finn at his mill
-  // door, Ada under her window on the east house (village-life.ts
-  // ADA_HOUSE_WINDOW). All off the quest route. Ada and Hazel stand where
-  // the shared residents data says, Finn where his mill-door seller row
-  // does (the server checks proximity against the same rows).
-  for (const res of ITEM_RULES.residents) {
-    if (res.area !== 'village') continue
-    npcs.push({ id: res.id as NpcId, tx: res.tx, ty: res.ty })
-  }
-  const finnsDoor = sellerFor('finns-mill-door')!
-  npcs.push({ id: 'finn', tx: finnsDoor.tx, ty: finnsDoor.ty })
+  // The residents' outdoor spots, placed after the scatter too (the seeded
+  // layout stays): Hazel in the square below the well with her basket, Finn
+  // at his mill door, Ada under her window on the east house (village-life.ts
+  // ADA_HOUSE_WINDOW). All off the quest route. Each stands there only while
+  // their cycle says so (the residents data; the server checks against it).
+  npcs.push(...residentSpotsIn('village'))
 
   // Supplied atlas props, consistent small-world display heights
   const props: PropSpot[] = [
@@ -543,6 +562,10 @@ function buildWoodland(): WorldData {
   const marker = { tx: 25, ty: 13 }
   const npcs: NpcSpot[] = []
   const enemies: EnemySpot[] = [
+    // The opening (Three Fingers off Plumb): a weak wisp just inside the west
+    // entry, sitting on the signpost's lost east finger. Low health, the
+    // same telegraphed hops: the basic attack alone is enough.
+    { id: 'finger-wisp', type: 'wisp', tx: 6, ty: 17, hp: 4 },
     { id: 'wisp-a', type: 'wisp', tx: 17, ty: 18 },
     { id: 'wisp-b', type: 'wisp', tx: 31, ty: 11 },
     { id: 'wisp-c', type: 'wisp', tx: 45, ty: 19 },
@@ -767,9 +790,7 @@ const AREA_KINDS: Record<string, AreaKind> = {
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
   // The lane's length follows the world's gate count (src/game/homestead.ts keeps it).
-  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground },
-  // Inside a homestead's cottage (a view on its land's save area; see cottage.ts).
-  cottage: { build: () => buildRoom(0, { tx: 19, ty: 11 }), foreground: () => [] }
+  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground }
 }
 
 /** How many gates the Commons lane must show (the roster's count, once known). */
@@ -778,10 +799,10 @@ export function setCommonsGateCount(n: number): void {
   commonsGateCount = Math.max(0, Math.floor(n))
 }
 
-/** Registered kinds, then families resolved by id (a homestead's land behind each gate: `home:<gate>`). */
+/** Registered kinds, then families resolved by id (a homestead's land behind each gate: `home:<gate>`; the rooms: `in:…`). */
 function resolveKind(id: string): AreaKind | null {
   if (Object.prototype.hasOwnProperty.call(AREA_KINDS, id)) return AREA_KINDS[id]
-  return homeLandKind(id)
+  return homeLandKind(id) ?? roomKind(id)
 }
 
 /** Look up an area kind (its data builder plus kind-specific decor). */

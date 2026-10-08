@@ -78,10 +78,10 @@ test('game events map to their sounds', () => {
   emit(() => b.emit(EV.planted, { plant: {} as never }))
   emit(() => b.emit(EV.homeChanged, { reason: 'buy' }))
   emit(() => b.emit(EV.homeChanged, { reason: 'placed' })) // nothing
-  emit(() => b.emit(EV.libraryOpen))
+  emit(() => b.emit(EV.libraryOpen)) // nothing: the reading room's door already sounded
   emit(() => b.emit(EV.sfx, { cue: 'hurt' }))
   emit(() => b.emit(EV.sfx, { cue: 'voice', speaker: 'Pip' }))
-  assert.deepEqual(backend.cues(), ['chop', 'quarry', 'dig', 'roll', 'cast', 'fizzle', 'defeat', 'discover', 'plant', 'confirm', 'door-open', 'hurt', 'voice'])
+  assert.deepEqual(backend.cues(), ['chop', 'quarry', 'dig', 'roll', 'cast', 'fizzle', 'defeat', 'discover', 'plant', 'confirm', 'hurt', 'voice'])
   assert.equal(backend.played.at(-1)?.speaker, 'Pip')
   assert.equal(backend.played.at(-1)?.synth, 'voice', 'the dialogue patter stays procedural')
 })
@@ -139,9 +139,9 @@ function sfxOn(b: Bus<EventMap>, cue: 'ember') {
   b.emit(EV.sfx, { cue })
 }
 
-test('the door sounds going in and out of the cottage, not on other moves', () => {
+test('the door sounds going in and out of a room, not up its stairs or on other moves', () => {
   const { bus: b, backend, tick } = rig()
-  for (const areaId of ['village', 'village', 'cottage', 'village', 'woodland']) {
+  for (const areaId of ['village', 'village', 'in:village:mill', 'in:village:mill:2', 'in:village:mill', 'village', 'woodland']) {
     b.emit(EV.area, { areaId })
     tick()
   }

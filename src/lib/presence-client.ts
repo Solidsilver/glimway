@@ -18,6 +18,7 @@
  * Pure: the socket and timers are injected, so this runs under node --test.
  * It never sees credentials beyond the lease, and never logs messages.
  */
+import { knownRoom } from './rooms.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
@@ -112,17 +113,19 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
   return 'retry';
 }
 
-/** Server-accepted presence areas (curated areas and Wilds chunks). */
+/** Server-accepted presence areas (curated areas and Wilds chunks; rooms are checked against the content). */
 const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
-  return AREA_RE.test(area);
+  return AREA_RE.test(area) || knownRoom(area);
 }
 
 /**
  * The presence room for a scene's area id: curated areas as they are, and a
  * Wilds chunk (`chunk:<region>:<cx>:<cy>`, the Wilds client's area ids) as the
- * server's `wilds:<region>:<cx>:<cy>`. Anything else has no room (null).
+ * server's `wilds:<region>:<cx>:<cy>`. A room (`in:village:mill`, a cottage's
+ * `in:home:<gate>`) is its own presence room, its id unchanged. Anything else
+ * has no room (null).
  */
 export function presenceAreaFor(areaId: string): string | null {
   const chunk = /^chunk:([a-z0-9-]+):(\d+):(\d+)$/.exec(areaId);

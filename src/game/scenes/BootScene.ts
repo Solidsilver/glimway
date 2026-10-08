@@ -9,6 +9,7 @@ import { createItemsPass, installItemsPass, preloadItemsPass } from '../items-pa
 import { preloadPacked } from '../packed'
 import { createPeople } from '../people'
 import { createBuildings } from '../buildings'
+import { createIndoorsArt } from '../indoors-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -65,6 +66,8 @@ export class BootScene extends Phaser.Scene {
     createPeople(this)
     // The playtest-1 buildings: the village houses and the Brackenwood footbridge.
     createBuildings(this)
+    // The 0.4 indoors pass: the rooms' kit and furniture, smoke and lit windows.
+    createIndoorsArt(this)
 
     this.scene.start('World')
   }

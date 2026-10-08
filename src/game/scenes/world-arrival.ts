@@ -1,14 +1,11 @@
 /**
  * Which area a build of the world scene plays, and where the hero arrives:
- * a cottage (a view on its homestead's land), a Wilds chunk (the save keeps
- * region-wide pixels; the chunk and the tile come from them), or a
- * registered area. A save in an area this build can't draw comes back in at
- * the Commons arch.
+ * a Wilds chunk (the save keeps region-wide pixels; the chunk and the tile
+ * come from them), or a registered area (rooms included: `in:…`). A save in
+ * an area this build can't draw comes back in at the Commons arch.
  */
-import { homeArea } from '../../lib/homestead'
 import { tileCenter } from '../../lib/tile'
 import { COMMONS_FROM_WILDS } from '../commons'
-import { buildRoom } from '../cottage'
 import { homesteadsFor } from '../homestead'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type WorldData } from '../worlds'
@@ -17,8 +14,6 @@ import { ensureWildsAreaKinds, setActiveWildsRegion, wildsEpoch } from '../wilds
 
 export interface Arrival {
   world: WorldData
-  /** Inside a homestead's cottage (null: outdoors, or the save moved on). */
-  room: { gate: number; doorstep: { tx: number; ty: number } } | null
   /** The Wilds chunk and its arrival tile (null outside the Wilds). */
   wildsEntry: ReturnType<typeof wildsSceneEntry>
   /** Where the hero stands (null: the save's position). */
@@ -29,12 +24,10 @@ export interface Arrival {
 
 export function arrive(
   session: Session,
-  asked: { room: Arrival['room']; entry: Arrival['entry']; turned: boolean }
+  asked: { entry: Arrival['entry']; turned: boolean }
 ): Arrival {
   const state = session.state
-  let { room, entry } = asked
-  // A cottage is a view on its homestead: the save keeps saying `home:<gate>`.
-  if (room && state.area !== homeArea(room.gate)) room = null
+  let { entry } = asked
   // Wilds: the save's region (the Tangle, or past the crossing) is the one
   // this scene plays in; resolve the region-wide position into its chunk
   // area and a chunk-local arrival tile (see src/game/wilds/regions.ts).
@@ -68,6 +61,6 @@ export function arrive(
     entry = { ...back.at }
     session.saveSoon()
   }
-  const world = room ? buildRoom(room.gate, room.doorstep) : wildsEntry ? buildArea(wildsEntry.areaId) : buildArea(state.area)
-  return { world, room, wildsEntry, entry, turnedAway }
+  const world = wildsEntry ? buildArea(wildsEntry.areaId) : buildArea(state.area)
+  return { world, wildsEntry, entry, turnedAway }
 }

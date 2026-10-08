@@ -176,8 +176,8 @@ export function groundOf(terrain: number): Ground {
 /** Gathering work by action (content/gathering.json). */
 export const WORK_CUE: Record<string, SoundCue> = { chop: 'chop', break: 'quarry', dig: 'dig' }
 
-/** Areas you walk into through a door. */
-const INDOORS = new Set(['cottage'])
+/** Areas you walk into through a door: the rooms (a cottage, a village room). */
+const indoors = (area: string) => area.startsWith('in:') || area === 'cottage'
 
 type Handlers = { [K in keyof EventMap]?: (p: EventMap[K]) => void }
 
@@ -213,11 +213,11 @@ export function routeSounds(bus: Bus<EventMap>, director: SoundDirector): () => 
     [EV.homeChanged]: (p) => {
       if (p.reason === 'buy' || p.reason === 'upgrade') director.play('confirm')
     },
-    [EV.libraryOpen]: () => director.play('door-open'),
     [EV.area]: (p) => {
       if (area !== null && area !== p.areaId) {
-        if (INDOORS.has(p.areaId)) director.play('door-open')
-        else if (INDOORS.has(area)) director.play('door-close')
+        // Up or down a stair is indoors to indoors: no door.
+        if (indoors(p.areaId) && !indoors(area)) director.play('door-open')
+        else if (indoors(area) && !indoors(p.areaId)) director.play('door-close')
       }
       area = p.areaId
       director.setArea(p.areaId)
