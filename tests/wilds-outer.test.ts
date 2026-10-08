@@ -8,7 +8,6 @@ import { WILDS_PAPER_PLACEMENTS } from '../src/game/wilds/placements.ts';
 import { PAPERS as COMMONS_PAPERS } from '../src/game/homestead.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
-import { mergeServerState, toProgress } from '../src/lib/api/progress.ts';
 import projects from '../content/projects.json' with { type: 'json' };
 
 // The outer Wilds' terrain, sites, crossing and Echo assignments are the
@@ -102,15 +101,6 @@ test('the outer-region save markers are client-only and stay with their position
   // Out of the Wilds the region marker means nothing and is dropped.
   assert.equal(validateSave({ ...s, area: 'village' }).wildsRegion, undefined);
   assert.equal('wildsRegion' in validateSave(createNewGame()), false);
-  // Never uploaded.
-  const up = toProgress(v) as unknown as Record<string, unknown>;
-  assert.equal('wildsRegion' in up || 'outerSeason' in up, false);
-  // A merge keeps the marker only while the position it describes stands.
-  const server = { ...createNewGame(), area: 'wilds' as const, position: { x: 424, y: 744 } };
-  assert.equal(mergeServerState(v, server, 'keep-local').wildsRegion, 'outer-1');
-  assert.equal(mergeServerState(v, server, 'server').wildsRegion, 'outer-1');
-  assert.equal(mergeServerState(v, { ...server, position: { x: 30, y: 30 } }, 'server').wildsRegion, undefined);
-  assert.equal(mergeServerState(v, { ...server, position: { x: 30, y: 30 } }, 'server').outerSeason, outerSeasonAt(NOW));
 });
 
 test('days in a wick are calendar days', () => {

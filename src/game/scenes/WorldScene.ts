@@ -240,6 +240,8 @@ export class WorldScene extends Phaser.Scene {
     const saved = { ...state.position }
     this.notePosition()
     if (Math.hypot(state.position.x - saved.x, state.position.y - saved.y) > 1) this.session.saveSoon()
+    // Arriving in another area, or another Wilds region, reaches the server in a report (design 2.2).
+    this.session.link?.arrived()
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
@@ -654,6 +656,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** Connected play: balances or paid outcomes changed on the server. */
   private onWorldRefresh(): void {
+    // A refused prediction (a defeat, the warden's settling) shows again.
+    this.enemies.reconcile(this.session.state)
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.refreshMarkers()
     this.interactables.invalidatePrompt()
@@ -849,14 +853,15 @@ export class WorldScene extends Phaser.Scene {
     // Tell the UI first: it holds the bars while the hero collapses, then
     // shows the recovered vitals once the screen is dark.
     bus.emit(EV.defeat, { phase: 'falling' })
-    const wildsReport = isWildsArea(this.session.state.area) ? this.wilds?.reportDefeat() ?? null : null
+    // Connected, the fall is one operation from where the hero fell (sampled
+    // now, not a second ago); in the Wilds its answer places the lantern.
+    this.notePosition()
     this.session.defeat()
     this.hero.sprite.setVelocity(0, 0)
     this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
-    // The report is queued ahead of everything else this tab sends; the
-    // recovery never waits on it, but it must not be dropped either.
-    this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => void wildsReport?.catch(() => undefined) })
+    // The scene wakes once the fall is queued and its recovery shown.
+    this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => this.session.falling ?? undefined })
   }
 
   /**

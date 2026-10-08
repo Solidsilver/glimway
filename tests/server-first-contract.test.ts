@@ -135,8 +135,8 @@ test('every raw client call and remote library call carries contract 3', async (
     assert.equal(calls.length, before + 1, name);
   }
   const library = createRemoteLibrary({ fetchImpl });
-  await library.load(); await library.donate('pip-doorstep-note', 'key');
-  assert.equal(calls.length, Object.keys(client.raw).length + 2);
+  await library.load();
+  assert.equal(calls.length, Object.keys(client.raw).length + 1);
   for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '3', call.url);
 });
 

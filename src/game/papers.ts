@@ -7,7 +7,7 @@
 import { DEMO_CHARACTER } from '../content/world.ts'
 import { foundPapers, foundToast, paperById, paperFlag } from '../content/papers.ts'
 import { createRemoteLibrary, donationFlag, localDonations, mergeShelf, type RemoteLibrary, type ShelfEntry } from '../lib/papers/library.ts'
-import { newKey } from '../lib/api/client.ts'
+import type { LibraryDonateResponse } from '../lib/api/client.ts'
 import { bus, EV } from './events.ts'
 import { sfx } from './sfx.ts'
 import type { Session } from './session.ts'
@@ -32,6 +32,18 @@ export function grantPaper(session: Session, id: string, opts: { quiet?: boolean
   if (!paper || session.state.flags.includes(paperFlag(id))) return false
   session.addFlag(paperFlag(id))
   if (!session.state.flags.includes(paperFlag(id))) return false // session torn down
+  announcePaper(session, id, opts)
+  return true
+}
+
+/**
+ * A paper arrived: chime, toast, UI event. Also for papers the server grants
+ * on its own (a quest step's, a claim's, a turning's), when their mark first
+ * shows in an adopted state.
+ */
+export function announcePaper(session: Session, id: string, opts: { quiet?: boolean } = {}): void {
+  const paper = paperById(id)
+  if (!paper) return
   if (!opts.quiet) {
     sfx('discover')
     bus.emit(EV.toast, { text: foundToast(paper), icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: paper.title } })
@@ -39,7 +51,6 @@ export function grantPaper(session: Session, id: string, opts: { quiet?: boolean
   const payload: PaperFoundPayload = { id }
   bus.emit(EV.paperFound, payload)
   emitPapers(session)
-  return true
 }
 
 // ------------------------------------------------------------ the library
@@ -101,26 +112,23 @@ export class Library {
     const paper = paperById(paperId)
     if (!paper) return { ok: false, text: 'That page isn’t one the library knows.' }
     if (!this.session.state.flags.includes(paperFlag(paperId))) return { ok: false, text: 'You can only donate papers you have found yourself.' }
-    if (this.connected) {
-      // The server checks you hold it against your stored progress, so the
-      // upload carrying this find must land before the donation is sent.
-      await this.session.save()
-      await this.session.link?.flush()
-      const r = await this.remote.donate(paperId, newKey())
+    const link = this.session.link
+    if (this.connected && link) {
+      // The server checks you hold it against its own `paper:` mark, so the
+      // take that found it goes first: the donation queues behind it.
+      await link.flush()
+      const r = await link.mutate<LibraryDonateResponse>({ kind: 'donate', fields: { paperId } })
       if (r.ok) {
-        lastShared = [...lastShared.filter((e) => e.paperId !== paperId), r.entry]
+        const entry = r.res.result.entry
+        lastShared = [...lastShared.filter((e) => e.paperId !== paperId), entry]
         sfx('lantern')
-        return r
+        return { ok: true, entry }
       }
-      if (r.reason === 'already-shelved') {
-        if (r.entry) lastShared = [...lastShared.filter((e) => e.paperId !== paperId), r.entry]
-        return { ok: false, text: 'Someone in your world shelved that one first.' }
-      }
-      if (r.reason === 'offline') return { ok: false, text: 'Needs a connection. Your paper is safe — try again when you’re back online.' }
-      if (r.reason === 'signed-out') return { ok: false, text: 'You’re signed out of your world. Sign in again to donate.' }
-      if (r.reason === 'not-held') return { ok: false, text: 'Your world hasn’t seen that find yet. Give it a moment, then try again.' }
-      if (r.reason !== 'unsupported') return { ok: false, text: 'The librarian couldn’t take it just now. Try again in a moment.' }
-      remoteUnsupported = true
+      if (r.code === 'already-shelved') return { ok: false, text: 'Someone in your world shelved that one first.' }
+      if (r.code === 'offline' || r.code === 'pending') return { ok: false, text: 'Needs a connection. Your paper is safe — try again when you’re back online.' }
+      if (r.code === 'unauthorized') return { ok: false, text: 'You’re signed out of your world. Sign in again to donate.' }
+      if (r.code === 'not-held') return { ok: false, text: 'Your world hasn’t seen that find yet. Give it a moment, then try again.' }
+      return { ok: false, text: 'The librarian couldn’t take it just now. Try again in a moment.' }
     }
     const shelf = mergeShelf(this.local())
     if (shelf.has(paperId)) return { ok: false, text: 'That one is already on the shelves.' }

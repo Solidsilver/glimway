@@ -24,7 +24,7 @@ import {
 } from '../src/lib/papers/library.ts';
 import { buildArea, type WorldData } from '../src/game/worlds.ts';
 import { AREAS, type AreaId } from '../src/lib/state.ts';
-import { isServerFlag, toProgress } from '../src/lib/api/progress.ts';
+import { isClientMark } from '../src/lib/api/predict.ts';
 import { createNewGame } from '../src/lib/state.ts';
 
 // ------------------------------------------------------------ content
@@ -109,11 +109,8 @@ test('found papers are story flags `paper:<id>`; unknown ids are ignored', () =>
   assert.deepEqual(foundPapers(['paper:will-of-elias-fenn', 'paper:nope', 'lit:road-1', 'paper:will-of-elias-fenn']), ['will-of-elias-fenn']);
 });
 
-test('paper and donation flags are story flags the server keeps (not economy flags)', () => {
-  const flags = [paperFlag('will-of-elias-fenn'), donationFlag('will-of-elias-fenn', new Date())];
-  for (const f of flags) assert.equal(isServerFlag(f), false);
-  const progress = toProgress({ ...createNewGame(), flags });
-  assert.deepEqual(progress.flags, flags);
+test('paper and donation marks are written by the server only (never a client mark)', () => {
+  for (const f of [paperFlag('will-of-elias-fenn'), donationFlag('will-of-elias-fenn', new Date())]) assert.equal(isClientMark(f), false);
 });
 
 // ------------------------------------------------------------ placement
@@ -288,29 +285,11 @@ function fakeFetch(status: number, body: unknown, type = 'application/json'): { 
 test('remote library: a 404 or an HTML page means "no library here" (fall back to local)', async () => {
   assert.deepEqual(await createRemoteLibrary(fakeFetch(404, { error: { code: 'not-found' } })).load(), { ok: false, reason: 'unsupported' });
   assert.deepEqual(await createRemoteLibrary(fakeFetch(200, '<html></html>', 'text/html')).load(), { ok: false, reason: 'unsupported' });
-  assert.deepEqual(await createRemoteLibrary(fakeFetch(404, { error: { code: 'not-found' } })).donate('will-of-elias-fenn', 'k'), { ok: false, reason: 'unsupported' });
 });
 
-test('remote library: shelves, donations, conflicts and a dead network', async () => {
+test('remote library: shelves and a dead network (donations go through the outbox)', async () => {
   const entry = { paperId: 'will-of-elias-fenn', donatedBy: 'Tansy', donatedAt: '2026-10-04T10:00:00Z' };
   assert.deepEqual(await createRemoteLibrary(fakeFetch(200, { shelves: [entry] })).load(), { ok: true, shelves: [entry] });
-
-  const ok = fakeFetch(200, { entry });
-  assert.deepEqual(await createRemoteLibrary(ok).donate('will-of-elias-fenn', 'key-1'), { ok: true, entry });
-  assert.equal(ok.calls[0].url, '/api/library/donate');
-  assert.equal(ok.calls[0].init.method, 'POST');
-  assert.deepEqual(JSON.parse(String(ok.calls[0].init.body)), { paperId: 'will-of-elias-fenn', key: 'key-1' });
-
-  assert.deepEqual(await createRemoteLibrary(fakeFetch(409, { error: { code: 'already-shelved' }, entry })).donate('will-of-elias-fenn', 'k'), {
-    ok: false,
-    reason: 'already-shelved',
-    entry,
-  });
-  assert.deepEqual(await createRemoteLibrary(fakeFetch(403, { error: { code: 'not-held' } })).donate('will-of-elias-fenn', 'k'), { ok: false, reason: 'not-held' });
-  // Only the already-shelved answer means "someone was first": other conflicts are errors.
-  for (const code of ['idempotency-mismatch', 'world-choice-required']) {
-    assert.deepEqual(await createRemoteLibrary(fakeFetch(409, { error: { code } })).donate('will-of-elias-fenn', 'k'), { ok: false, reason: 'error' }, code);
-  }
   const dead = { fetchImpl: (async () => { throw new TypeError('network'); }) as unknown as typeof fetch };
   assert.deepEqual(await createRemoteLibrary(dead).load(), { ok: false, reason: 'offline' });
 });
