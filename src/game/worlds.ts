@@ -8,18 +8,38 @@ import type { AreaId } from '../lib/state.ts'
 import { ITEM_RULES, sellerFor } from '../lib/items.ts'
 import { repairFor } from '../lib/repairs.ts'
 import { calendarAt } from '../lib/calendar.ts'
-import { TERRAIN, TILE } from './textures.ts'
+import { TERRAIN, TILE, tileBottom, tileMid } from '../lib/tile.ts'
 import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
 import { homeLandKind } from './homeland.ts'
 import { buildRoom } from './cottage.ts'
 import { gameNow } from './clock.ts'
+import { rng01 } from '../lib/hash.ts'
 
 /** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
 export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada'
 /** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
-/** 'library': the Hearthwick Library door; `paper:<id>`: a found-text pickup (content/papers.ts). */
-export type InteractId = NpcId | 'clue' | 'lantern' | EmberSpotId | 'library' | `paper:${string}` | `home:${string}` | `village:${string}` | `touch:${string}` | `pickup:${string}` | `repair:${string}`
+/**
+ * What can be used (src/game/entities/interactables.ts), by the feature that
+ * owns it: 'library' is the Hearthwick Library door, `paper:<id>` a
+ * found-text pickup (content/papers.ts), `gather:<tx,ty>` a workable piece,
+ * `wilds:<id>` a claim in a Wilds chunk, 'warden' the naming spoken to it.
+ */
+export type InteractId =
+  | NpcId
+  | 'clue'
+  | 'lantern'
+  | EmberSpotId
+  | 'library'
+  | 'warden'
+  | `paper:${string}`
+  | `home:${string}`
+  | `village:${string}`
+  | `touch:${string}`
+  | `pickup:${string}`
+  | `repair:${string}`
+  | `gather:${string}`
+  | `wilds:${string}`
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -159,17 +179,6 @@ export interface WorldData {
 
 // ---------------------------------------------------------------- utilities
 
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 class Grid {
   width: number
   height: number
@@ -253,7 +262,7 @@ function scatter(grid: Grid, rng: () => number, count: number, kept: Array<{ tx:
 function buildVillage(): WorldData {
   const W = 42
   const H = 26
-  const rng = mulberry32(20261002)
+  const rng = rng01(20261002)
   const g = new Grid(W, H, TERRAIN.grass_a)
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
@@ -294,11 +303,11 @@ function buildVillage(): WorldData {
   const gardenFence: ScenerySpot[] = []
   const fenceH = (x0: number, x1: number, y: number) => {
     for (let x = x0; x <= x1; x++) g.set(x, y, TERRAIN.grass_a, true)
-    gardenFence.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: (y + 1) * TILE, originX: 0 })
+    gardenFence.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: tileBottom(y), originX: 0 })
   }
   const fenceV = (x: number, y0: number, y1: number) => {
     for (let y = y0; y <= y1; y++) g.set(x, y, TERRAIN.grass_a, true)
-    gardenFence.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: (y1 + 1) * TILE, originX: 0 })
+    gardenFence.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: tileBottom(y1), originX: 0 })
   }
   fenceH(24, 30, 13)
   fenceV(24, 14, 17)
@@ -360,7 +369,7 @@ function buildVillage(): WorldData {
   // The Tolley mill: a small watermill on the pond's west edge, below the
   // garden fence (its gap at 27,18 still opens onto the grass), its wheel
   // on the east wall dipping into the pond the Wend feeds. Raised after the
-  // scatter too, so the seeded layout stays; code-drawn (src/game/mill-art.ts).
+  // scatter too, so the seeded layout stays; its art is the items pass's (src/game/items-pass.ts).
   const millAt = { tx: 28, ty: 19, tw: 4, th: 4 }
   g.rect(millAt.tx, millAt.ty, millAt.tw, millAt.th, TERRAIN.grass_a, true)
   // The wheel turns in a short mill-race cut through the pond's sandy rim.
@@ -411,13 +420,13 @@ function buildVillage(): WorldData {
   if (mark === 'Mudrise') {
     for (const [tx, ty, v] of [[34, 18, 0], [36, 18, 1], [38, 18, 2]] as const) {
       const frame = `pebbles-${v}`
-      seasonalScenery.push({ key: 'tangle-decor', frame, x: tx * TILE + 8, y: (ty + 1) * TILE, tx, ty })
+      seasonalScenery.push({ key: 'tangle-decor', frame, x: tileMid(tx), y: tileBottom(ty), tx, ty })
       gathering.push({ target: 'freshet-shore', label: 'Sweep the freshet shore', tx, ty, art: { key: 'tangle-decor', frame } })
     }
   }
   if (mark === 'Quiet') {
     for (const [tx, ty] of [[34, 19], [37, 19], [38, 21]] as const) {
-      seasonalScenery.push({ key: 'pond-ice', x: tx * TILE + 8, y: (ty + 1) * TILE, tx, ty })
+      seasonalScenery.push({ key: 'pond-ice', x: tileMid(tx), y: tileBottom(ty), tx, ty })
       gathering.push({ target: 'pond-ice', label: 'Break the pond ice', tx, ty, art: { key: 'pond-ice' } })
     }
   }
@@ -456,9 +465,9 @@ function buildVillage(): WorldData {
         y: (h.ty + 4) * TILE,
         groundUnder: { tx: h.tx, ty: h.ty, tw: h.w, th: 4, tile: TERRAIN.grass_a }
       })),
-      { key: 'notice-board', x: board.tx * TILE + 8, y: board.ty * TILE + TILE },
+      { key: 'notice-board', x: tileMid(board.tx), y: tileBottom(board.ty) },
       { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
-      { key: 'mill-hopper', x: millHopper.tx * TILE + 8, y: (millHopper.ty + 1) * TILE },
+      { key: 'mill-hopper', x: tileMid(millHopper.tx), y: tileBottom(millHopper.ty) },
       {
         key: 'commons-art:hearthwick-library',
         x: (libraryAt.tx + libraryAt.w / 2) * TILE,
@@ -475,7 +484,7 @@ function buildVillage(): WorldData {
 function buildWoodland(): WorldData {
   const W = 56
   const H = 30
-  const rng = mulberry32(73191)
+  const rng = rng01(73191)
   const g = new Grid(W, H, TERRAIN.grass_a)
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
@@ -606,7 +615,7 @@ function onPathCorridor(tx: number, ty: number): boolean {
 function buildRuin(): WorldData {
   const W = 34
   const H = 24
-  const rng = mulberry32(4413)
+  const rng = rng01(4413)
   const g = new Grid(W, H, TERRAIN.stone_a)
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {

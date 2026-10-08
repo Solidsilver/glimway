@@ -21,20 +21,7 @@ type libraryResponse struct {
 
 func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) libraryResponse {
 	x.t.Helper()
-	r := httptest.NewRequest(method, path, bytes.NewBufferString(store.JSON(body)))
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	var v libraryResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		x.t.Fatal(err)
-	}
-	if w.Code != status {
-		x.t.Fatalf("%s %s: got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
+	v, _ := httpResponse[libraryResponse](x, method, path, body, c, status)
 	return v
 }
 

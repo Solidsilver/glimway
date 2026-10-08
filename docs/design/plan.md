@@ -151,26 +151,54 @@ Each release is a minor version with its own art round, written as one request.
 
 | Release | Contents | Lanes |
 |---|---|---|
-| **0.2 Foundations** | Versioning and proto stage 1 (in review now), the "What's new" card, the remaining proto domains | Codex for the server, Opus for the client |
-| **0.3 Indoors** | Cleanup phase 3's interactions path and WorldScene split first. Then: rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; pets steps 1–3 (fixes, friends' pets, Companions, yard pets); the quest tree with a Quests tab, pinning and the tutorial hook | Opus (game and UI), Codex (area checks, save ids) |
-| **0.4 Crafts** | Guest accounts steps 1–2 (account ids, the profile source seam; server lane, no behaviour change); magic groundwork (ability table, highest-level mark, server mana, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
-| **0.5 The open map** | World changes with expiry, the Go generator for today's Tangle and Whitequiet, per-chunk epochs | Codex-heavy |
-| **0.6 Lake country** | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles | mixed |
-| **0.7 Lamps** | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span) | mixed |
-| **0.8 Shared fights** | The server enemy sim at camps, combat abilities in server rooms | Codex-heavy |
-| **0.9 and on** | Caves, the next lands, capstones, home water | — |
+| **0.2 Foundations** (shipped 2026-10-08) | Versioning and proto stage 1, the "What's new" card, the cleanup lanes | Codex for the server, Opus for the client |
+| **0.3 Server-first** | The server owns all state and rules; the client sends intents, predicts and draws (see "Server-first" below). Local guest play is dropped. | Codex-heavy, Opus for the client |
+| **0.4 Indoors** | Rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; the quest tree with a Quests tab, pinning and the tutorial hook, its gates as server operations | Opus (game and UI), Codex (area checks, quest operations) |
+| **0.5 Crafts** | Pets steps 1–3 (fixes, friends' pets, Companions, yard pets); magic groundwork (ability table, highest-level mark, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
+| **Then, as revisions** | The open map (per-chunk epochs on the server generator), lake country, lamps, shared fights, caves and the next lands, in the order below | — |
 | **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
 
-**Decided (owner, 2026-10-07): interleave.** The cleanup the features lean on comes first. The
-polish update (sound, the player body, phone resolution, UI steps 8 and 9) runs alongside 0.3 and
-0.4 as its own lanes. The gold purse and the Habitica wardrobe follow 0.4, before the open map.
-The server-world track starts after 0.4.
+**Server-first (owner, 2026-10-07).** Before more features, move to a proper client/server
+split, so nothing new is built twice (TypeScript and Go) and kept in step by parity tests. The
+server already owns items, crafting, gathering, homesteads, mail, the library, worlds and Wilds
+loot. 0.3 moves the rest:
+1. **Progress as operations.** `PUT /api/progress` (a client-written document the server merges)
+   becomes typed operations in protobuf: quest steps, discoveries, rests, vitals. This finishes
+   the remaining proto domains (profile, progress, save, envelope).
+2. **One set of rules.** Rule tables live in `content/` and both sides read them; the TypeScript
+   copies of rules the server decides are deleted. The client keeps only what it needs to predict
+   and draw.
+3. **The server generates the Wilds.** The same Tangle and Whitequiet as today, served by chunk;
+   the client generator and the parity tests retire. (The open map's new lands and epochs come
+   later.)
+4. **Groundwork:** `account_id` and the profile-source seam (guest steps 1–2), the world-changes
+   table with expiry, the shared clock module, server-owned mana.
+5. **Local guest play is dropped** (owner: every player today has Habitica). Glimway needs a
+   server and a Habitica hero until the standalone version brings guest accounts.
+
+Not in 0.3: a live server simulation of enemies and combat. Movement and story fights stay on
+your own screen; that stays the shared-fights revision. The polish lane (sound, the player body,
+phones, UI steps 8 and 9) runs alongside so the release has something to notice.
+
+The later revisions keep their earlier order:
+
+| Revision | Contents |
+|---|---|
+| The open map | Per-chunk epochs on the server generator, regeneration at the turning |
+| Lake country | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles |
+| Lamps | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span) |
+| Shared fights | The server enemy sim at camps, combat abilities in server rooms |
+| On from there | Caves, the next lands, capstones, home water |
+
+**Decided (owner, 2026-10-07): interleave.** The cleanup the features lean on comes first (done
+in 0.2). The polish update (sound, the player body, phone resolution, UI steps 8 and 9) runs
+alongside 0.3 and 0.4 as its own lanes. The gold purse and the Habitica wardrobe follow 0.5
+Crafts, before the open map.
 
 **Habitica first (owner, 2026-10-07).** The owner and their friends play with Habitica, so that
-mode comes first. The standalone game (Habitica as one mode among others) comes later. Until
-then, guests keep today's local play as a demo: the village and the story, without the generated
-Wilds once 0.5 ships. Guest accounts steps 1–2 (`account_id` and the profile source) stay in 0.4,
-because they're cheap now and painful to retrofit.
+mode comes first. The standalone game (Habitica as one mode among others) comes later. Local guest
+play is dropped in 0.3 (see "Server-first"); guest accounts steps 1–2 (`account_id` and the
+profile source) land in 0.3 because they're cheap now and painful to retrofit.
 
 ### Cleanup phases 2–4, adjusted
 - **Already covered:** the generated error catalog (phase 2), which the proto enum replaced.

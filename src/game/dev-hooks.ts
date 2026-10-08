@@ -11,9 +11,9 @@
 import type { AreaId } from '../lib/state'
 import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
-import type { WardenView } from './entities/enemies'
+import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
-import type { ItemsResult } from './items'
+import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
@@ -43,7 +43,7 @@ export interface FsHooks {
   /** The server revision this tab's link is based on (null for guests). */
   __fsLinkRev: () => number | null
   /** The item model as last read (null for guests or before a read). */
-  __fsItems: (() => ItemsView | null) & { load: () => Promise<ItemsResult> }
+  __fsItems: (() => ItemsView | null) & { load: () => Promise<Result> }
   __fsVitals: () => { hp: number; maxHp: number; mana: number; maxMana: number }
   /** Connected-play status (null for guests). */
   __fsLink: () => string | null
@@ -149,7 +149,8 @@ export interface FsHooks {
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
-  if (import.meta.env.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
+  if (import.meta.env?.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

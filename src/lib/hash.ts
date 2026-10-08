@@ -1,5 +1,13 @@
 /**
- * Integer-only hash and PRNG shared by the TypeScript and Go generators.
+ * The one hash and PRNG module.
+ *
+ * The first part is integer-only and shared by the TypeScript and Go
+ * generators (server/internal/wilds/hash.go mirrors it). The last part,
+ * "Client decor", is float noise used only to place and draw decor in the
+ * browser; the server never reproduces it.
+ *
+ * Layouts and art are seed-deterministic: every formula here is kept
+ * exactly, so changing one moves trees and repaints textures.
  *
  * Everything here is 32-bit unsigned integer arithmetic: trivially portable
  * to Go (`uint32`), with no floating point anywhere the server must reproduce.
@@ -47,9 +55,14 @@ const encoder = new TextEncoder();
 
 /** FNV-1a 32-bit over the UTF-8 bytes of a string. */
 export function fnv1a32(input: string): number {
+  return fnv1a32Bytes(encoder.encode(input));
+}
+
+/** FNV-1a 32-bit over bytes (a texture's pixels, for the dev hooks' texture hashes). */
+export function fnv1a32Bytes(bytes: ArrayLike<number>): number {
   let h = FNV_OFFSET;
-  for (const b of encoder.encode(input)) {
-    h = Math.imul(h ^ b, FNV_PRIME) >>> 0;
+  for (let i = 0; i < bytes.length; i++) {
+    h = Math.imul(h ^ bytes[i], FNV_PRIME) >>> 0;
   }
   return h >>> 0;
 }
@@ -111,4 +124,39 @@ export function chunkSeed(epoch: SeedEpoch, cx: number, cy: number): number {
 /** Seed for one loot roll: hash(worldSeed, regionId, generatorVersion, season, entityId, cycle). */
 export function lootSeed(epoch: SeedEpoch, entityId: string, cycle: number): number {
   return hash([epoch.worldSeed, epoch.regionId, epoch.generatorVersion, epoch.season, entityId, cycle]);
+}
+
+// ---------------------------------------------------------------- client decor
+
+/** 2^32: turns a 32-bit hash into [0, 1). */
+const UNIT = 4294967296;
+
+/** A [0, 1) stream from a seed: mulberry32, the float output of `Rng`. */
+export function rng01(seed: number): () => number {
+  const rng = new Rng(seed);
+  return () => rng.next() / UNIT;
+}
+
+/**
+ * Deterministic [0, 1) for integer x, y and a salt: a spatial hash (primes
+ * 73856093, 19349663, 83492791, XOR-folded) with a final avalanche. The
+ * ground field and the Tangle's art speckle with it. Non-integer inputs are
+ * truncated.
+ */
+export function hash01(x: number, y: number, s = 0): number {
+  let v = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(s | 0, 83492791)) | 0;
+  v = Math.imul(v ^ (v >>> 13), 1274126177);
+  return ((v ^ (v >>> 16)) >>> 0) / UNIT;
+}
+
+/**
+ * Deterministic [0, 1) for a tile and a seed, used to lay out the Commons
+ * and a homestead's land: the primes are summed in floating point before
+ * truncating, which is not the same as `hash01` for large seeds (a land
+ * seed is a full 32-bit value). Kept exactly: it places the trees.
+ */
+export function layoutHash01(x: number, y: number, seed: number): number {
+  let h = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / UNIT;
 }

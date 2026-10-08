@@ -1,12 +1,21 @@
+import type { HomePlantView } from '../lib/api/types'
+import type { BeltKind } from '../lib/belt'
+import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PresenceStatus } from '../lib/presence-client.ts'
+import type { HeldPayload } from './held'
+import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
+import type { MutationOp } from './link'
+import type { PaperFoundPayload, PapersSyncPayload } from './papers'
+import type { ResidentsMetPayload } from './residents'
+import type { VillagePanel } from './village'
 
 /**
- * Event names and payloads for the bus (src/game/events.ts). Kept free of
- * Phaser so plain modules (the server link) and Node tests can use them.
+ * Event names and payloads for the bus (src/game/events.ts): the one registry.
+ * Kept free of Phaser so plain modules (the server link) and Node tests can
+ * use them. A new event gets a name here and a payload in `EventMap` below.
  */
 export const EV = {
   // game -> ui
-  sync: 'ui:sync',
   stats: 'ui:stats',
   quest: 'ui:quest',
   /** What the hero holds changed: { kind } (src/game/held.ts, src/lib/belt.ts). */
@@ -15,8 +24,6 @@ export const EV = {
   hold: 'game:hold',
   /** A "How do I…?" guide was pinned or unpinned: { id } (src/game/guide-pin.ts). */
   guidePin: 'ui:guide-pin',
-  /** The goal line's text and source changed: GoalLinePayload. */
-  goalLine: 'ui:goal-line',
   /** Which way the quest goal lies: { angle, here } (GoalDirPayload). */
   goalDir: 'ui:goal-dir',
   area: 'ui:area',
@@ -73,8 +80,61 @@ export const EV = {
   cast: 'game:cast',
   /** Touch roll button. */
   dodge: 'game:dodge',
-  dpad: 'game:dpad',
-  dialogueClosed: 'game:dialogue-closed'
+  dialogueClosed: 'game:dialogue-closed',
+  /** Leave the unmoored state: { instant } (instant: at once, e.g. a turncap jar; else it eases off). */
+  clearUnmoored: 'game:clear-unmoored',
+  /** The hero became unmoored or steady again: { active } (src/game/entities/unmoored.ts). */
+  unmoored: 'ui:unmoored',
+
+  // items (src/game/items.ts)
+  /** The carried items changed: { what? }. */
+  itemsChanged: 'items:changed',
+
+  // village (src/game/village.ts)
+  /** Something here changed: { what: 'calendar' | 'projects' | 'goods' | 'mail' }. */
+  villageChanged: 'village:changed',
+  /** Open a panel: { panel, to?, gate? }. */
+  villageOpen: 'ui:village-open',
+
+  // homesteads (src/game/homestead.ts, src/game/entities/homesteads.ts)
+  /** The lane or a home changed: { reason, gate? }. */
+  homeChanged: 'home:changed',
+  /** The UI should open Silas's shop. */
+  homeShop: 'ui:home-shop',
+  /** Placement-mode state for the tray: PlacementView | null. */
+  homePlacement: 'ui:home-placement',
+  /** Tray → scene: a placement command (PlacementCommand). */
+  homeCommand: 'game:home-command',
+  /** Whether the player stands where they may arrange their home: ArrangeView. */
+  homeArrange: 'ui:home-arrange',
+  /** UI → scene: start (or leave) arranging, from the Arrange button or B. */
+  homeArrangeToggle: 'game:home-arrange-toggle',
+  /** Decoration art as data URLs: Record<itemId, string>. */
+  homeThumbs: 'ui:home-thumbs',
+  /** Entered a homestead or a cottage: { key, title, eyebrow, body }. */
+  homeRoom: 'ui:home-room',
+  /** The homestead goal for the journal and HUD: { text }. */
+  homeGoal: 'ui:home-goal',
+  /** Ask the player to name a lantern post: NamePrompt; answered on `homeNamed`. */
+  homeNamePrompt: 'ui:home-name-prompt',
+  /** The name given (null: cancelled). */
+  homeNamed: 'game:home-named',
+  /** Ask the player to confirm leaving the deed. */
+  homeConfirmLeave: 'ui:home-confirm-leave',
+  /** UI → scene: a homestead action decided outside a conversation: { action }. */
+  homeAction: 'game:home-action',
+
+  // papers (src/game/papers.ts)
+  /** A paper was found just now: { id }. */
+  paperFound: 'ui:paper-found',
+  /** The full found list for this save: { found }. */
+  papersSync: 'ui:papers-sync',
+  /** The player stepped up to the library door. */
+  libraryOpen: 'ui:library-open',
+
+  // residents (src/game/residents.ts)
+  /** Flags used to assemble journal entries, including first meetings. */
+  residentsMet: 'ui:residents-met'
 } as const
 
 export interface StatsPayload {
@@ -228,3 +288,115 @@ export interface EmotePayload {
   habiticaId: string | null
   id: string
 }
+
+export interface MutationResolvedPayload {
+  op: MutationOp
+  outcome: 'landed' | 'refused'
+  /** The original response, when it landed and came back. */
+  res?: unknown
+  /** Why it was refused. */
+  code?: string
+}
+
+export interface GiftPayload {
+  fromName: string
+  kind: string
+  itemDef: string
+  qty: number
+}
+
+export interface WitnessPayload {
+  beat: string
+  habiticaId: string
+  name: string
+}
+
+export interface VillageOpenPayload {
+  panel: VillagePanel
+  /** Mail: the neighbour to write to. */
+  to?: string
+  /** Shelf: whose gate. */
+  gate?: number
+}
+
+export interface HomeRoomPayload {
+  /** First-visit key for the banner. */
+  key: string
+  eyebrow: string
+  title: string
+  body: string
+}
+
+/** Every event's payload (`void`: none). `bus.on`/`emit` check against this. */
+export interface EventMap {
+  [EV.stats]: StatsPayload
+  [EV.quest]: QuestPayload
+  [EV.held]: HeldPayload
+  [EV.hold]: { kind: BeltKind }
+  [EV.guidePin]: { id: string | null }
+  [EV.goalDir]: GoalDirPayload
+  [EV.area]: Pick<AreaPayload, 'areaId'>
+  [EV.prompt]: PromptPayload
+  [EV.dialogue]: DialoguePayload
+  [EV.toast]: ToastPayload
+  [EV.thought]: { text: string }
+  [EV.defeat]: DefeatPayload
+  [EV.profileChanged]: { profile: HabiticaProfile | null }
+  [EV.ability]: AbilityPayload
+  [EV.cinematic]: CinematicPayload
+  [EV.portraits]: PortraitsPayload
+  [EV.artIcons]: Record<string, string>
+  [EV.discovery]: DiscoveryPayload
+  [EV.rolled]: { cooldown: number }
+  [EV.link]: LinkPayload
+  [EV.linkNotice]: { kind: 'played-elsewhere' }
+  [EV.relocate]: RelocatePayload
+  [EV.presence]: PresencePayload
+  [EV.emote]: EmotePayload
+  [EV.gift]: GiftPayload
+  [EV.witness]: WitnessPayload
+  [EV.mutationResolved]: MutationResolvedPayload
+  [EV.worldRefresh]: void
+  [EV.wilds]: WildsPayload
+  [EV.clock]: void
+  [EV.turning]: { reason: 'epoch-ended' }
+  [EV.planted]: { plant: HomePlantView }
+  [EV.notePosition]: void
+  [EV.action]: void
+  [EV.cast]: void
+  [EV.dodge]: void
+  [EV.dialogueClosed]: DialogueClosedPayload
+  [EV.clearUnmoored]: { instant: boolean }
+  [EV.unmoored]: { active: boolean }
+  [EV.itemsChanged]: { what?: string } | undefined
+  [EV.villageChanged]: { what?: string } | undefined
+  [EV.villageOpen]: VillageOpenPayload
+  [EV.homeChanged]: { reason: string; gate?: number }
+  [EV.homeShop]: void
+  [EV.homePlacement]: PlacementView | null
+  [EV.homeCommand]: PlacementCommand
+  [EV.homeArrange]: ArrangeView
+  [EV.homeArrangeToggle]: void
+  [EV.homeThumbs]: Record<string, string>
+  [EV.homeRoom]: HomeRoomPayload
+  [EV.homeGoal]: { text: string | null }
+  [EV.homeNamePrompt]: NamePrompt
+  [EV.homeNamed]: { name: string | null }
+  [EV.homeConfirmLeave]: { place: string; shared: boolean }
+  [EV.homeAction]: { action: string }
+  [EV.paperFound]: PaperFoundPayload
+  [EV.papersSync]: PapersSyncPayload
+  [EV.libraryOpen]: void
+  [EV.residentsMet]: ResidentsMetPayload
+}
+
+export type EventName = keyof EventMap
+
+/** The bus's emit, for code that has it injected (the server link). */
+export type Emit = <K extends EventName>(name: K, ...args: EventArgs<EventMap[K]>) => void
+
+/** A handler for payload `P` (none for `void`). */
+export type EventHandler<P> = [P] extends [void] ? () => void : (payload: P) => void
+
+/** `emit`'s arguments after the name: none for `void`, optional when `P` may be undefined. */
+export type EventArgs<P> = [P] extends [void] ? [] : undefined extends P ? [payload?: P] : [payload: P]

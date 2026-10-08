@@ -22,7 +22,7 @@
  */
 import { CALENDAR, calendarAt, type Calendar } from '../calendar.ts';
 import { chunkEntities } from './gen-v1.ts';
-import { hash, chunkSeed, type SeedEpoch } from './hash.ts';
+import { hash, chunkSeed, type SeedEpoch } from '../hash.ts';
 import { loadWilds } from './data.ts';
 import type { ChunkExit, Epoch, Tile, WildsRegion } from './types.ts';
 

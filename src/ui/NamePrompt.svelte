@@ -76,7 +76,7 @@
     font-size: 16px;
     border: 2px solid var(--paper-line);
     border-radius: 6px;
-    background: #fffaf0;
+    background: var(--paper-glow);
     color: var(--ink);
   }
   .count {

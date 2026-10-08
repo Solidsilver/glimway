@@ -3,23 +3,23 @@
  * the world is something you handle — smell the flowers, sit on a bench,
  * read the signs. All of it is flavor: no items, no spends, nothing saved.
  *
- * A feature-scoped InteractionProvider (like ./village-life) owning
- * `touch:*` ids: it scans the built WorldData (props, flower beds, exits)
- * for touchable spots and answers for them. The lines are content
+ * It registers `touch:*` points (./interactables): it scans the built
+ * WorldData (props, flower beds, exits) for touchable spots, each carrying
+ * its own prompt and what it does. The lines are content
  * (src/content/touches.ts); sitting itself lives on the hero
  * (./hero — the seated pose on the seat, slow mana, stand on any movement;
  * the bench's geometry is ../seats).
  */
 import { FLOWER_LINES, SIT_LINES, nextLine, signCopy } from '../../content/touches'
 import { bus, EV } from '../events'
-import { TILE, TERRAIN } from '../textures'
+import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import { sfx } from '../sfx'
-import { uiState } from '../input'
 import type { InteractId, PropSpot, WorldData } from '../worlds'
-import type { Interactable, InteractionProvider, Interactables } from './interactables'
+import type { Interactable, Interactables } from './interactables'
 import type { Hero } from './hero'
 import type { Effects } from './fx'
 import { benchSeat } from '../seats'
+import { openDialogue } from '../dialogue'
 
 /** A touchable spot: what it is, where, and (for signs) what it says. */
 interface TouchSpec {
@@ -53,46 +53,14 @@ function clustersOf(world: WorldData, kind: number): { tx: number; ty: number }[
   }))
 }
 
-export class Touches implements InteractionProvider {
+/** Small world touches: never marked; the prompt and keycap hint are enough. */
+export class Touches {
   private points: Interactable[] = []
-  private specs = new Map<string, TouchSpec>()
   private counts = new Map<string, number>()
 
   constructor(private deps: TouchesDeps) {
     this.build(deps.world)
-    deps.interactables.setDynamic(this.points, this)
-  }
-
-  owns(id: InteractId): boolean {
-    return id.startsWith('touch:')
-  }
-
-  /** Ambient touches are never marked; the prompt and keycap hint are enough. */
-  marker(): null {
-    return null
-  }
-
-  verb(id: InteractId): string | null {
-    const spec = this.specs.get(id)
-    if (spec?.kind === 'bench') return this.deps.hero().isSeated ? 'Stand' : 'Sit'
-    if (spec?.kind === 'flowers') return 'Smell'
-    return 'Read'
-  }
-
-  label(id: InteractId): string | null {
-    const point = this.points.find((p) => p.id === id)
-    const spec = this.specs.get(id)
-    if (!point || !spec) return null
-    if (spec.kind === 'bench' && this.deps.hero().isSeated) return 'Stand up'
-    return point.label
-  }
-
-  activate(id: InteractId): void {
-    const spec = this.specs.get(id)
-    if (!spec) return
-    if (spec.kind === 'bench') this.useBench(id, spec)
-    else if (spec.kind === 'flowers') this.useFlowers(id, spec)
-    else this.useSign(id, spec)
+    deps.interactables.register(this, this.points)
   }
 
   // ------------------------------------------------------------ the touches
@@ -117,9 +85,7 @@ export class Touches implements InteractionProvider {
 
   private useSign(id: InteractId, spec: TouchSpec): void {
     const copy = signCopy(spec.signKey ?? 'sign:generic')
-    uiState.dialogueOpen = true
-    sfx('open')
-    bus.emit(EV.dialogue, { id, speaker: copy.speaker, lines: [this.take(id, copy.lines)] })
+    openDialogue({ id, speaker: copy.speaker, lines: [this.take(id, copy.lines)] })
   }
 
   /** The next line in a pool for this spot, so each press varies. */
@@ -132,8 +98,14 @@ export class Touches implements InteractionProvider {
   // ------------------------------------------------------------ spot finding
 
   private add(id: InteractId, x: number, y: number, label: string, spec: TouchSpec): void {
-    this.points.push({ id, x, y, label })
-    this.specs.set(id, { ...spec, x, y })
+    const seated = () => this.deps.hero().isSeated
+    if (spec.kind === 'bench') {
+      this.points.push({ id, x, y, label: () => (seated() ? 'Stand up' : label), verb: () => (seated() ? 'Stand' : 'Sit'), activate: () => this.useBench(id, spec) })
+    } else if (spec.kind === 'flowers') {
+      this.points.push({ id, x, y, label, verb: 'Smell', activate: () => this.useFlowers(id, spec) })
+    } else {
+      this.points.push({ id, x, y, label, verb: 'Read', activate: () => this.useSign(id, spec) })
+    }
   }
 
   private build(w: WorldData): void {
@@ -143,10 +115,10 @@ export class Touches implements InteractionProvider {
       for (const bed of clustersOf(w, TERRAIN.flowers)) {
         this.add(
           `touch:flowers:${bed.tx},${bed.ty}` as InteractId,
-          bed.tx * TILE + 8,
-          bed.ty * TILE + 8,
+          tileMid(bed.tx),
+          tileMid(bed.ty),
           'Smell the flowers',
-          { kind: 'flowers', x: bed.tx * TILE + 8, y: bed.ty * TILE + 8 }
+          { kind: 'flowers', x: tileMid(bed.tx), y: tileMid(bed.ty) }
         )
       }
     }
@@ -155,7 +127,7 @@ export class Touches implements InteractionProvider {
       if (e.label === null) continue
       const eastWest = e.tw === 1 && e.th > 1
       const x = eastWest ? (e.tx === 0 ? (e.tx + 1) * TILE - 4 : e.tx * TILE + 4) : (e.tx + e.tw / 2) * TILE
-      const y = eastWest ? (e.ty + e.th / 2) * TILE : e.ty === 0 ? (e.ty + 1) * TILE - 4 : e.ty * TILE + 4
+      const y = eastWest ? (e.ty + e.th / 2) * TILE : e.ty === 0 ? tileBottom(e.ty) - 4 : e.ty * TILE + 4
       this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', {
         kind: 'sign',
         x,
@@ -167,8 +139,8 @@ export class Touches implements InteractionProvider {
 
   /** The props that can be touched: benches, planters, milestones, signs. */
   private prop(w: WorldData, p: PropSpot): void {
-    const x = p.tx * TILE + 8
-    const y = p.ty * TILE + TILE
+    const x = tileMid(p.tx)
+    const y = tileBottom(p.ty)
     if (p.frame === 'patched-bench') {
       this.add(`touch:bench:${p.tx},${p.ty}` as InteractId, x, y, 'Sit on the bench', { kind: 'bench', x, y })
     } else if (p.frame === 'flower-planter') {

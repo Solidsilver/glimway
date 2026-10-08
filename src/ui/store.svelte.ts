@@ -99,9 +99,8 @@ class UiStore {
   cinematic = $state(false)
   /** The save's resident-meeting flags (`met:<id>@<stage>`): the journal's resident notes. */
   residentsMet = $state<string[]>([])
-  /** Unmoored status (light drift status from deep Tangle, turns, or stirs). */
+  /** Unmoored status (light drift status from deep Tangle, turns, or stirs): the game's, via EV.unmoored. */
   unmoored = $state(false)
-  unmooredEasing = $state(false)
   /** Speaker -> portrait data URL. */
   portraits = $state<Record<string, string>>({})
   /** Delivered UI icons by frame key (`icon-timber`, …): src/ui/ArtIcon.svelte. */

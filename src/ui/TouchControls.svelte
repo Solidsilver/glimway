@@ -265,10 +265,12 @@
       <span class="hold-mark" style={`left:${holdAt.x}px; top:${holdAt.y}px`} aria-hidden="true"></span>
     {/if}
   {/if}
-  <div class="controls" class:hidden aria-label="Touch controls">
+  <!-- data-inset: what the camera and the docks keep clear of (src/ui/play-insets.ts). -->
+  <div class="controls" class:hidden aria-label="Touch controls" data-inset-watch>
     {#if mode === 'fixed'}
       <div
         class="pad"
+        data-inset="pad"
         bind:this={padEl}
         onpointerdown={padDown}
         onpointermove={padMove}
@@ -283,8 +285,8 @@
       </div>
     {/if}
 
-    <div class="actions" class:with-belt={heldUi.belt.length > 1}>
-      <div class="col">
+    <div class="actions" class:with-belt={heldUi.belt.length > 1} data-inset="cluster" data-inset-watch>
+      <div class="col" data-inset="col">
       <button
         type="button"
         class="round roll"
@@ -316,12 +318,13 @@
       </div>
       <div class="actwrap">
         {#if heldUi.belt.length > 1}
-          <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
+          <div class="belt" role="group" aria-label="Take in hand" data-testid="belt" data-inset-watch>
             {#each others as b, i (b.kind)}
               {@const at = RING[i] ?? RING[RING.length - 1]}
               <button
                 type="button"
                 class="bslot"
+                data-inset="ring"
                 class:worn={!b.usable}
                 aria-label={`Hold the ${b.kind === 'weapon' ? kit.basicName.toLowerCase() : KIND_WORDS[b.kind].toLowerCase()}`}
                 data-kind={b.kind}
@@ -337,6 +340,7 @@
         <button
           type="button"
           class="round act"
+          data-inset="act"
           class:talk={talkMode}
           data-held={heldUi.kind}
           onpointerdown={actionDown}
@@ -459,7 +463,7 @@
     width: 54px;
     height: 54px;
     border-radius: 50%;
-    background: linear-gradient(180deg, #fff6dd, #e3cf9f);
+    background: linear-gradient(180deg, #fff6dd, var(--paper-dark));
     border: 3px solid var(--wood-dark);
     box-shadow: 0 4px 0 rgba(20, 12, 16, 0.5);
     transition: transform 40ms linear;
@@ -535,7 +539,7 @@
     bottom: -20px;
     font-size: 12px;
     color: #fff3c4;
-    text-shadow: 0 1px 0 #2b1d1a, 1px 0 0 #2b1d1a, -1px 0 0 #2b1d1a, 0 -1px 0 #2b1d1a;
+    text-shadow: 0 1px 0 var(--outline), 1px 0 0 var(--outline), -1px 0 0 var(--outline), 0 -1px 0 var(--outline);
     white-space: nowrap;
   }
   .col {

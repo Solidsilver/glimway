@@ -41,7 +41,7 @@ import type { HomeAction, HomeActionRequest, HomeActionResponse, HomeOp, HomeVie
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
-import { EV, type LinkPayload, type LinkStatus } from './event-names.ts'
+import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
 
 const HEARTBEAT_MS = 30_000
 
@@ -186,7 +186,7 @@ export interface LinkInit {
   /** A mutation whose answer was lost before the page went away (cache). */
   unresolved?: Unresolved | null
   /** Bus emit (src/game/events.ts); injectable for tests. */
-  emit: (event: string, payload?: unknown) => void
+  emit: Emit
   /** Injectable for tests. */
   store?: LinkStore
 }
@@ -238,7 +238,7 @@ export class Link {
   private sealed = false
   private settleRun = 0
   private readonly store: LinkStore
-  private readonly emitter: (event: string, payload?: unknown) => void
+  private readonly emitter: Emit
   private readonly onOnline = () => {
     if (this.status === 'offline') void this.reconnect(false)
   }

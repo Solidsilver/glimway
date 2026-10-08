@@ -4,6 +4,7 @@
   import {
     bus,
     EV,
+    listen,
     type AbilityPayload,
     type AreaPayload,
     type CinematicPayload,
@@ -25,7 +26,7 @@
   import { clearSave, loadSaveRecord } from './lib/save'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
   import { startGame, stopGame } from './game/main'
-  import { RESIDENT_EV, type ResidentsMetPayload } from './game/residents'
+  import { type ResidentsMetPayload } from './game/residents'
   import { uiState } from './game/input'
   import { sfx, unlockAudio } from './game/sfx'
   import { isTouchFirst } from './ui/device'
@@ -33,8 +34,7 @@
   import DialoguePanel from './ui/DialoguePanel.svelte'
   import JournalPanel from './ui/JournalPanel.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
-  import { PAPER_EV } from './game/papers'
-  import { HOME_EV, homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
+  import { homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
@@ -46,7 +46,7 @@
   import WoodpilePanel from './ui/WoodpilePanel.svelte'
   import GateShelfPanel from './ui/GateShelfPanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
-  import { VILLAGE_EV, villageFor, type VillagePanel } from './game/village'
+  import { villageFor, type VillagePanel } from './game/village'
   import { villageUi } from './ui/village.svelte'
   import HomeBar from './ui/HomeBar.svelte'
   import CharacterPanel from './ui/CharacterPanel.svelte'
@@ -65,19 +65,19 @@
   import { XP_PER_EMBER } from './lib/embers'
   import { emberLine, titleChoice } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
-  import { accountName, api, connectedSession, isWorldChoice, probeServer } from './ui/account'
+  import { accountName, api, connectedSession, probeServer } from './ui/account'
+  import { AccountFlow } from './ui/account-flow.svelte'
   import { prepareWilds, resetWilds } from './game/wilds/store'
-  import { clearCache, loadCache, loadLatestCache, saveCache, type ConnectedCache } from './lib/api/cache'
-  import { newKey } from './lib/api/client'
-  import { errorCode, isUnreachable } from './lib/api/errors'
-  import { hasProgress } from './lib/api/progress'
-  import type { Snapshot, WorldChoice, WorldMoveResponse, WorldRef, WorldView } from './lib/api/types'
+  import { clearCache, loadCache, loadLatestCache, saveCache } from './lib/api/cache'
+  import type { Snapshot, WorldChoice } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
   import OriginChoice from './ui/OriginChoice.svelte'
   import WorldChoiceGate from './ui/WorldChoiceGate.svelte'
   import LinkGate from './ui/LinkGate.svelte'
   import LinkNotice from './ui/LinkNotice.svelte'
   import UpdateNotice from './ui/UpdateNotice.svelte'
+  import WhatsNew from './ui/WhatsNew.svelte'
+  import { whatsNew } from './ui/whats-new.svelte'
   import { update, watchForUpdates } from './ui/update.svelte'
   import PartyPrompt from './ui/PartyPrompt.svelte'
   import LeaverNotice from './ui/LeaverNotice.svelte'
@@ -86,9 +86,10 @@
   import EmotePicker from './ui/EmotePicker.svelte'
   import { presence, startPresence, stopPresence } from './game/presence'
   import { EMOTES } from './content/presence'
-  import { accountCopy, leaseCopy, originCopy } from './content/connected'
-  import { setPlayInsets } from './game/viewport'
+  import { accountCopy, leaseCopy } from './content/connected'
+  import { watchPlayInsets, type Docks } from './ui/play-insets'
   import { pinnedProgress, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
+  import { BLOCKS, blocked, layersUp } from './ui/layers'
 
   type Phase = 'loading' | 'title' | 'playing' | 'recovery'
   type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | VillagePanel | null
@@ -108,35 +109,8 @@
   /** New-game flow on the title screen: pick a way to play, or walk the connect guide. */
   let titleView = $state<'choice' | 'guide'>('choice')
 
-  // ---- connected play (Glimway server) ----
-  /** Latest server snapshot for the signed-in account (null when offline or signed out). */
-  let accountSnapshot = $state<Snapshot | null>(null)
-  /** Signed in for the first time, the world not chosen yet (the server holds the sign-in). */
-  let accountChoice = $state<WorldChoice | null>(null)
-  /** The device's connected cache (offline copy, revision, lease). */
-  let accountCache = $state<ConnectedCache | null>(null)
-  /** Signed in earlier, but no server answered at load: play from the cache. */
-  let accountOffline = $state(false)
-  let accountBusy = $state(false)
-  let accountError = $state('')
-  type Gate =
-    | { kind: 'world'; choice: WorldChoice; busy: boolean; error: string; picked: 'party' | 'own' | null }
-    | { kind: 'origin'; name: string; local: GameState; key: string; busy: boolean; error: string }
-    | { kind: 'elsewhere'; busy: boolean; error: string }
-  /** A step between signing in and playing: the world choice, the origin choice or the lease. */
-  let gate = $state<Gate | null>(null)
-  /** A connected session waiting for the player to take over the lease. */
-  let pending: Session | null = null
-  /** In-play lease screen (taken over elsewhere, or signed out). */
-  let leaseBusy = $state(false)
-  let leaseError = $state('')
+  /** The log-out confirm on the title screen. */
   let confirmLogout = $state(false)
-  /** Your party plays in a world that isn't yours: the one-time prompt. */
-  let partyPrompt = $state<WorldView | null>(null)
-  /** The move confirmation (from the prompt or the Menu); `arriving` once it landed and the new world is opening. */
-  let moving = $state<{ target: WorldRef; home: boolean; view: WorldView | null; arriving: boolean; leave?: boolean } | null>(null)
-  /** Left the party whose world you live in (or were moved out of it): said once a sign-in. */
-  let leaverNotice = $state<WorldView | null>(null)
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
@@ -151,34 +125,29 @@
     'lantern-lit': { eyebrow: 'The light returns', title: 'A Flame on the Hill' }
   }
 
-  /** Save preview for the title screen's Continue card. */
-  const saveSummary = $derived.by(() => {
-    if (!hasSave || !session) return null
-    const s = session.state
+  /** A journey's line on a title-screen Continue card: where, what next, how long played. */
+  function journeyLine(s: GameState): { place: string; goal: string; time: string } {
     const mins = Math.floor(s.playSeconds / 60)
     return {
       place: areaInfo(displayArea(s)).name,
       goal: questObjective(s.quest),
       time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
     }
-  })
+  }
+
+  /** Save preview for the title screen's Continue card. */
+  const saveSummary = $derived(hasSave && session ? journeyLine(session.state) : null)
 
   /** The signed-in account's Continue card on the title screen. */
   const accountSummary = $derived.by(() => {
     if (!ui.account) return null
-    if (accountChoice) return { place: 'Your world', time: '', goal: firstWorldCopy.titleGoal }
-    if (accountSnapshot && accountSnapshot.saveOrigin === null) {
+    if (account.choice) return { place: 'Your world', time: '', goal: firstWorldCopy.titleGoal }
+    if (account.snapshot && account.snapshot.saveOrigin === null) {
       return { place: 'Your world', time: '', goal: 'Choose how to begin.' }
     }
-    const cached = accountCache && accountCache.habiticaId === ui.account.habiticaId ? accountCache : null
-    const st = cached && (cached.dirty || !accountSnapshot) ? cached.state : accountSnapshot?.state
-    if (!st) return null
-    const mins = Math.floor(st.playSeconds / 60)
-    return {
-      place: areaInfo(displayArea(st)).name,
-      goal: questObjective(st.quest),
-      time: mins < 1 ? 'just started' : mins < 60 ? `${mins} min played` : `${Math.floor(mins / 60)}h ${mins % 60}m played`
-    }
+    const cached = account.cache && account.cache.habiticaId === ui.account.habiticaId ? account.cache : null
+    const st = cached && (cached.dirty || !account.snapshot) ? cached.state : account.snapshot?.state
+    return st ? journeyLine(st) : null
   })
 
   /** Connected play can't go on here: taken over elsewhere, or signed out. */
@@ -211,7 +180,7 @@
       const beat = QUEST_BEATS[p.stage as QuestStage]
       if (beat) ui.banner({ kind: 'quest', eyebrow: beat.eyebrow, title: beat.title, body: p.short ?? p.objective })
     }
-    const onArea = (p: AreaPayload) => {
+    const onArea = (p: Pick<AreaPayload, 'areaId'>) => {
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       // A homestead's land and its cottage announce themselves (whose place, in words).
@@ -290,8 +259,11 @@
       }
       void api
         .state()
-        .then((snap) => afterMove(snap, worldCopy.landed))
+        .then((snap) => account.afterMove(snap, worldCopy.landed))
         .catch(() => ui.toast({ text: worldCopy.landed, icon: 'world' }))
+    }
+    const onUnmoored = (p: { active: boolean }) => {
+      ui.unmoored = p.active
     }
     const onLinkNotice = () => {
       ui.linkNotice = 'played-elsewhere'
@@ -339,42 +311,39 @@
       if (/^home:\d+$/.test(ui.area.areaId) || ui.area.areaId === 'cottage') ui.area = { ...ui.area, name: v.title }
       if (firstVisit(v.key)) ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
     }
-    const pairs: [string, (...args: never[]) => void][] = [
-      [EV.stats, onStats],
-      [EV.quest, onQuest],
-      [EV.area, onArea],
-      [EV.prompt, onPrompt],
-      [EV.goalDir, onGoalDir],
-      [EV.toast, onToast],
-      [EV.defeat, onDefeat],
-      [EV.ability, onAbility],
-      [EV.rolled, onRolled],
-      [EV.cinematic, onCinematic],
-      [EV.portraits, onPortraits],
-      [RESIDENT_EV.met, onResidentsMet],
-      [EV.artIcons, onArtIcons],
-      [EV.discovery, onDiscovery],
-      [EV.link, onLink],
-      [EV.presence, onPresence],
-      [EV.linkNotice, onLinkNotice],
-      [EV.mutationResolved, onResolved],
-      [EV.wilds, onWilds],
-      [PAPER_EV.openLibrary, onOpenLibrary],
-      [HOME_EV.openShop, onOpenShop],
-      [HOME_EV.arrange, onArrange],
-      [HOME_EV.placement, onPlacement],
-      [HOME_EV.thumbs, onThumbs],
-      [HOME_EV.namePrompt, onNamePrompt],
-      [HOME_EV.confirmLeave, onConfirmLeave],
-      [HOME_EV.goal, onHomeGoal],
-      [HOME_EV.room, onRoom],
-      [VILLAGE_EV.open, onVillageOpen],
-      [VILLAGE_EV.changed, onVillageChanged]
-    ]
-    for (const [ev, fn] of pairs) bus.on(ev, fn)
-    return () => {
-      for (const [ev, fn] of pairs) bus.off(ev, fn)
-    }
+    return listen({
+      [EV.stats]: onStats,
+      [EV.quest]: onQuest,
+      [EV.area]: onArea,
+      [EV.prompt]: onPrompt,
+      [EV.goalDir]: onGoalDir,
+      [EV.toast]: onToast,
+      [EV.defeat]: onDefeat,
+      [EV.ability]: onAbility,
+      [EV.rolled]: onRolled,
+      [EV.cinematic]: onCinematic,
+      [EV.portraits]: onPortraits,
+      [EV.residentsMet]: onResidentsMet,
+      [EV.artIcons]: onArtIcons,
+      [EV.discovery]: onDiscovery,
+      [EV.link]: onLink,
+      [EV.presence]: onPresence,
+      [EV.linkNotice]: onLinkNotice,
+      [EV.unmoored]: onUnmoored,
+      [EV.mutationResolved]: onResolved,
+      [EV.wilds]: onWilds,
+      [EV.libraryOpen]: onOpenLibrary,
+      [EV.homeShop]: onOpenShop,
+      [EV.homeArrange]: onArrange,
+      [EV.homePlacement]: onPlacement,
+      [EV.homeThumbs]: onThumbs,
+      [EV.homeNamePrompt]: onNamePrompt,
+      [EV.homeConfirmLeave]: onConfirmLeave,
+      [EV.homeGoal]: onHomeGoal,
+      [EV.homeRoom]: onRoom,
+      [EV.villageOpen]: onVillageOpen,
+      [EV.villageChanged]: onVillageChanged
+    })
   }
   /** The action button's word for a prompt without one: its first word ("Pick up" keeps its particle). */
   function verbOf(label: string): string {
@@ -437,7 +406,7 @@
           importedProfile: record?.importedProfile
         })
         phase = 'title'
-        void initServer()
+        void account.init()
         // Opt-in remembered credentials: connect without a paste. Storage
         // trouble just means "nothing remembered".
         void loadRemembered().then((creds) => {
@@ -491,288 +460,43 @@
     }
     phase = 'playing'
     game = startGame(stageEl, session)
+    whatsNew.start()
   }
 
   // ------------------------------------------------------------ connected play
 
-  /**
-   * Is there a Glimway server, and are we signed in? A valid session
-   * cookie means signed in even with no remembered Habitica token. No server
-   * (a guest-only build, or offline) leaves guest play exactly as it was,
-   * except that a device with a connected cache can keep playing offline.
-   */
-  async function initServer(): Promise<void> {
-    const probe = await probeServer()
-    if (probe.kind === 'signed-in') {
-      const cache = await loadCache(probe.snapshot.habiticaId)
-      accountCache = cache
-      ui.server = 'available'
-      accountSnapshot = probe.snapshot
-      ui.account = { habiticaId: probe.snapshot.habiticaId, name: accountName(probe.snapshot, cache) }
-    } else if (probe.kind === 'choose-world') {
-      // A first sign-in whose world is still to choose (a reload, a closed tab): Continue asks again.
-      ui.server = 'available'
-      accountChoice = probe.choice
-      ui.account = { habiticaId: probe.choice.habiticaId, name: probe.choice.displayName || 'Your hero' }
-    } else if (probe.kind === 'signed-out') {
-      ui.server = 'available'
-    } else {
-      ui.server = 'unavailable'
-      // No server can say who is signed in: offer the latest account played here.
-      const cache = await loadLatestCache()
-      accountCache = cache
-      if (cache) {
-        accountOffline = true
-        ui.account = { habiticaId: cache.habiticaId, name: cache.name || 'Your hero' }
-      }
+  /** Connected play's state machine (src/ui/account-flow.svelte.ts); App owns the screen it runs on. */
+  const account = new AccountFlow<Session>({
+    api,
+    probe: probeServer,
+    cache: { load: loadCache, latest: loadLatestCache, save: saveCache, clear: clearCache },
+    connect: connectedSession,
+    nameOf: (snapshot, cache) => accountName(snapshot, cache),
+    ui,
+    host: {
+      session: () => session,
+      starting: () => starting,
+      play: enterSession,
+      closePanel: () => (panel = null),
+      leaveWorld: () => {
+        resetWilds()
+        villageUi.waiting = 0
+      },
+      toTitle: () => {
+        stopPresence()
+        stopGame(game)
+        game = null
+        areaShown = false
+        phase = 'title'
+      },
+      reload: () => window.location.reload()
     }
-  }
-
-  /** Title: Continue in your world. */
-  async function continueAccount(): Promise<void> {
-    if (accountBusy || starting || !ui.account) return
-    accountBusy = true
-    accountError = ''
-    try {
-      if (accountChoice) {
-        await openWorldChoice(accountChoice)
-        return
-      }
-      if (accountSnapshot && accountSnapshot.saveOrigin === null) {
-        openOrigin(ui.account.name)
-        return
-      }
-      const s = await connectedSession({ snapshot: accountSnapshot, cache: await loadCache(ui.account.habiticaId), name: ui.account.name })
-      await s.link!.reconnect(false)
-      await settle(s)
-    } finally {
-      accountBusy = false
-    }
-  }
-
-  /** The guide signed in to the server (or the world choice was just answered). */
-  async function onSignedIn(answer: Snapshot | WorldChoice, profile: HabiticaProfile | null): Promise<void> {
-    ui.server = 'available'
-    accountOffline = false
-    if (isWorldChoice(answer)) {
-      // Signed in, but where to live comes first.
-      accountChoice = answer
-      accountSnapshot = null
-      ui.account = { habiticaId: answer.habiticaId, name: answer.displayName || profile?.name || 'Your hero' }
-      panel = null
-      gate = { kind: 'world', choice: answer, busy: false, error: '', picked: null }
-      return
-    }
-    const snapshot = answer
-    accountChoice = null
-    accountSnapshot = snapshot
-    const name = snapshot.displayName || snapshot.importedProfile?.name || profile?.name || ui.account?.name || 'Your hero'
-    ui.account = { habiticaId: snapshot.habiticaId, name }
-    // Signed in from the Menu: the next step (origin, lease) takes the screen.
-    panel = null
-    accountCache = await loadCache(snapshot.habiticaId)
-    if (snapshot.saveOrigin === null) {
-      const guest = session && !session.link ? session : null
-      if (guest && hasProgress(guest.state)) openOrigin(name)
-      else await chooseOrigin('fresh', name)
-      return
-    }
-    // The account already has a journey: this device's guest save stays put.
-    if (session && !session.link && hasProgress(session.state)) ui.toast({ text: originCopy.alreadySet })
-    await startAccount(snapshot, name)
-  }
-
-  /** Ask (again) where to live: the server's question, fresh, so the party's head count is current. */
-  async function openWorldChoice(known: WorldChoice): Promise<void> {
-    let choice = known
-    try {
-      choice = await api.worldChoice()
-      accountChoice = choice
-    } catch (err) {
-      const code = errorCode(err)
-      if (code === 'world-chosen') {
-        // Chosen on another device meanwhile: carry on into that world.
-        accountChoice = null
-        const snap = await api.state()
-        await onSignedIn(snap, null)
-        return
-      }
-      if (code === 'unauthorized') {
-        accountChoice = null
-        ui.account = null
-        accountError = 'Your sign-in ended. Sign in again to play in your world.'
-        return
-      }
-      // Offline: ask with what we know; choosing will say if it can't reach the server.
-    }
-    gate = { kind: 'world', choice, busy: false, error: '', picked: null }
-  }
-
-  /** First sign-in: the party's world, or one of your own. The same sign-in carries on. */
-  async function chooseWorld(pick: 'party' | 'own'): Promise<void> {
-    const g = gate?.kind === 'world' ? gate : null
-    if (!g || g.busy) return
-    g.busy = true
-    g.error = ''
-    g.picked = pick
-    try {
-      const snap = await api.worldChoose(pick)
-      gate = null
-      await onSignedIn(snap, null)
-    } catch (err) {
-      const code = errorCode(err)
-      if (code === 'world-chosen') {
-        gate = null
-        accountChoice = null
-        try {
-          await onSignedIn(await api.state(), null)
-        } catch {
-          accountError = firstWorldCopy.offline
-        }
-        return
-      }
-      if (code === 'unauthorized') {
-        gate = null
-        accountChoice = null
-        ui.account = null
-        accountError = 'Your sign-in ended. Sign in again to play in your world.'
-        return
-      }
-      g.busy = false
-      g.picked = null
-      if (code === 'party-closed' || code === 'party-open-denied' || code === 'no-party') {
-        // The party's world can't be had now: ask again with what's left,
-        // or (nothing left to ask) step into the world of their own made for them.
-        try {
-          g.choice = accountChoice = await api.worldChoice()
-        } catch (again) {
-          if (errorCode(again) === 'world-chosen') {
-            gate = null
-            accountChoice = null
-            try {
-              await onSignedIn(await api.state(), null)
-            } catch {
-              accountError = firstWorldCopy.offline
-            }
-            return
-          }
-          /* keep the old question */
-        }
-        g.error = firstWorldCopy.partyGone
-        return
-      }
-      g.error = isUnreachable(err) ? firstWorldCopy.offline : firstWorldCopy.failed
-    }
-  }
-
-  function openOrigin(name: string): void {
-    const local = session && !session.link ? session.state : createNewGame()
-    gate = { kind: 'origin', name, local, key: newKey(), busy: false, error: '' }
-  }
-
-  /** First sign-in for the account: bring this device's journey, or start fresh. */
-  async function chooseOrigin(choice: 'migrate' | 'fresh', fallbackName?: string): Promise<void> {
-    const g = gate?.kind === 'origin' ? gate : null
-    if (g?.busy) return
-    const key = g?.key ?? newKey()
-    const name = g?.name ?? fallbackName ?? ui.account?.name ?? 'Your hero'
-    if (g) {
-      g.busy = true
-      g.error = ''
-    }
-    const guest = session && !session.link ? session : null
-    try {
-      const snap = await api.origin({
-        choice,
-        key,
-        ...(choice === 'migrate' && guest ? { save: { state: guest.state, vitalsSource: guest.vitalsSource } } : {})
-      })
-      accountSnapshot = snap
-      gate = null
-      await startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
-      if (choice === 'migrate' && session?.link) ui.toast({ text: 'Your journey came with you into your world.', icon: 'lantern' })
-    } catch (err) {
-      if (errorCode(err) === 'already-set') {
-        // Chosen already (another device, a race): keep the local save as a
-        // guest save on this device and load the account.
-        gate = null
-        try {
-          const snap = await api.state()
-          accountSnapshot = snap
-          ui.toast({ text: originCopy.alreadySet })
-          await startAccount(snap, snap.displayName || snap.importedProfile?.name || name)
-        } catch {
-          accountError = originCopy.offline
-        }
-        return
-      }
-      const error = isUnreachable(err) ? originCopy.offline : originCopy.failed
-      if (g) {
-        g.busy = false
-        g.error = error
-      } else {
-        gate = { kind: 'origin', name, local: guest?.state ?? createNewGame(), key, busy: false, error }
-      }
-    }
-  }
-
-  async function startAccount(snapshot: Snapshot, name: string): Promise<void> {
-    if (ui.account) ui.account = { ...ui.account, name }
-    const s = await connectedSession({ snapshot, cache: await loadCache(snapshot.habiticaId), name })
-    await s.link!.reconnect(false)
-    await settle(s)
-  }
-
-  /** After the first lease attempt: play, ask to take over, or step back. */
-  async function settle(s: Session): Promise<void> {
-    const status = s.link!.status
-    if (status === 'superseded') {
-      pending = s
-      gate = { kind: 'elsewhere', busy: false, error: '' }
-      return
-    }
-    if (status === 'signed-out') {
-      s.destroy(true)
-      ui.link = null
-      ui.account = null
-      accountSnapshot = null
-      accountError = 'Your sign-in ended. Sign in again to play in your world.'
-      return
-    }
-    // Online, or offline (the link keeps retrying and the world plays on).
-    await enterSession(s)
-  }
-
-  async function takeOverPending(): Promise<void> {
-    const g = gate?.kind === 'elsewhere' ? gate : null
-    if (!pending || !g || g.busy) return
-    g.busy = true
-    g.error = ''
-    await pending.link!.takeOver()
-    if (pending.link!.status === 'superseded') {
-      g.busy = false
-      g.error = leaseCopy.failed
-      return
-    }
-    const s = pending
-    pending = null
-    await settle(s)
-  }
-
-  function dropPending(): void {
-    pending?.destroy(true)
-    pending = null
-    gate = null
-    ui.link = null
-  }
+  })
 
   /** Swap the running session for a connected one (title or mid-game). */
   async function enterSession(next: Session): Promise<void> {
-    gate = null
-    pending = null
     const prev = session
     session = next
-    accountOffline = next.link?.status === 'offline'
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
@@ -794,140 +518,14 @@
     } else {
       await begin()
     }
-    void checkPartyPrompt(next)
   }
 
-  /**
-   * Your party has a world and you live elsewhere: say so once (the server remembers it
-   * was shown; the Menu keeps the offer). Reads need only the session.
-   */
-  async function checkPartyPrompt(s: Session): Promise<void> {
-    if (!s.link || s.link.status !== 'online') return
-    try {
-      const v = await api.world()
-      // PartyPrompt records it as shown when it is really on screen.
-      if (session !== s) return
-      if (v.movedOutAt > 0 || v.leaver) leaverNotice = v
-      else if (v.prompt && v.partyWorld) partyPrompt = v
-    } catch {
-      /* the Menu still offers it */
-    }
-  }
-
-  function openMove(target: WorldRef, home: boolean, view: WorldView | null, leave = false): void {
-    panel = null
-    partyPrompt = null
-    leaverNotice = null
-    moving = { target, home, view, arriving: false, leave }
-  }
-
-  /** "Leave now": to your own world, or one made for you (the move screen, no cooldown). */
-  function openLeave(view: WorldView): void {
-    openMove(view.ownWorld ?? { id: '', ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, true, view, true)
-  }
-
-  /** The "you were moved out" notice was seen: the server stops reporting it. */
-  function closeLeaverNotice(): void {
-    if (leaverNotice && leaverNotice.movedOutAt > 0) void api.worldNotice().catch(() => undefined)
-    leaverNotice = null
-  }
-
-  /**
-   * After a move: a fresh connected session from the server's answer, so
-   * every per-world view (the lane, homesteads, the village, the Wilds, the
-   * mailbox badge) starts over in the new world. The lease is the same one:
-   * this page and this sign-in still hold it. The move screen stays up
-   * ("Arriving…"), freezing the old scene, until the new world is open.
-   */
-  async function afterMove(snapshot: Snapshot, line: string): Promise<void> {
-    if (moving) moving.arriving = true
-    else moving = { target: { id: snapshot.worldId, ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, home: false, view: null, arriving: true }
-    partyPrompt = null
-    leaverNotice = null
-    const prev = session
-    try {
-      // Its link already adopted the move's answer; nothing is left to upload.
-      prev?.destroy(true)
-      resetWilds()
-      villageUi.waiting = 0
-      const name = ui.account?.name ?? snapshot.displayName
-      const s = await connectedSession({ snapshot, cache: null, name })
-      await s.link!.reconnect(false)
-      await settle(s)
-      moving = null
-      ui.toast({ text: line, icon: 'world' })
-    } catch {
-      // The move stands on the server; this page couldn't open the new
-      // world. Back to the title, where Continue steps in.
-      moving = null
-      stopPresence()
-      stopGame(game)
-      game = null
-      areaShown = false
-      accountSnapshot = snapshot
-      accountError = worldCopy.arriveFailed
-      phase = 'title'
-    }
-  }
-
-  function onMoved(res: WorldMoveResponse): void {
-    const m = moving
-    const v = res.result.world
-    void afterMove(
-      res,
-      m?.leave && !m.target.id ? worldCopy.done(worldCopy.newWorld.toLowerCase()) : m?.home ? worldCopy.doneHome : worldCopy.done(worldCopy.place(m?.target ?? v.world, m ? true : v.partyHome))
-    )
-  }
-
-  /** Already in that world (another device moved first): step in. */
-  function onHere(): void {
-    void api
-      .state()
-      .then((snap) => afterMove(snap, worldCopy.landed))
-      .catch(() => {
-        moving = null
-        ui.toast({ text: worldCopy.offline, kind: 'error' })
-      })
-  }
-
-  async function takeOverInPlay(): Promise<void> {
-    if (!session?.link || leaseBusy) return
-    leaseBusy = true
-    leaseError = ''
-    await session.link.takeOver()
-    leaseBusy = false
-    if (session.link.status === 'superseded') leaseError = leaseCopy.failed
-  }
-
-  /**
-   * Log out of the world: upload what's pending, end the session, back to
-   * guest play. The account's cache is cleared only when the server has
-   * everything; unsent progress (a refused or slow upload, offline play from
-   * an earlier visit) stays on this device for the next sign-in.
-   */
-  async function logout(): Promise<void> {
+  function logout(): void {
     confirmLogout = false
-    const link = session?.link
-    const habiticaId = link?.habiticaId ?? ui.account?.habiticaId
-    let keep = false
-    if (link) {
-      await Promise.race([link.flush().catch(() => undefined), new Promise((r) => setTimeout(r, 4000))])
-      keep = link.dirty
-      if (keep) await link.keepForNextSignIn()
-    } else if (habiticaId) {
-      const cache = await loadCache(habiticaId)
-      keep = cache?.dirty === true
-      if (cache && keep) await saveCache({ ...cache, loggedOut: true })
-    }
-    try {
-      await api.logout()
-    } catch {
-      /* the cookie expires on its own */
-    }
-    if (habiticaId && !keep) await clearCache(habiticaId)
-    if (link) session?.destroy(true)
-    window.location.reload()
+    void account.logout()
   }
+
+  const onSignedIn = (answer: Snapshot | WorldChoice, profile: HabiticaProfile | null) => account.signedIn(answer, profile)
 
   /**
    * The new-version notice's Reload: everything saved first (the browser,
@@ -952,17 +550,20 @@
     else showChoice()
   }
 
+  /** A fresh guest journey in place of this one (the old one is dropped, not saved). */
+  function resetGuest(): void {
+    session?.destroy(true)
+    session = new Session(createNewGame())
+    hasSave = false
+    ui.vitalsSource = 'demo'
+    ui.importedProfile = null
+  }
+
   /** A confirmed new journey: nothing is written until the player picks a way to play. */
   function showChoice(): void {
     confirm = null
     if (starting) return
-    if (hasSave) {
-      session?.destroy(true)
-      session = new Session(createNewGame())
-      hasSave = false
-      ui.vitalsSource = 'demo'
-      ui.importedProfile = null
-    }
+    if (hasSave) resetGuest()
     titleView = 'choice'
   }
 
@@ -970,24 +571,16 @@
   async function startFresh(): Promise<void> {
     confirm = null
     if (starting) return
-    session?.destroy(true)
-    session = new Session(createNewGame())
-    hasSave = false
-    ui.vitalsSource = 'demo'
-    ui.importedProfile = null
-    void session.save()
+    resetGuest()
+    void session?.save()
     await begin()
   }
 
   /** Habitica path: a fresh game whose connect guide runs before Mara's first line. */
   function startHabitica(): void {
     if (starting) return
-    session?.destroy(true)
-    session = new Session(createNewGame())
-    hasSave = false
-    ui.vitalsSource = 'demo'
-    ui.importedProfile = null
-    void session.save()
+    resetGuest()
+    void session?.save()
     titleView = 'guide'
   }
 
@@ -1015,8 +608,29 @@
     window.location.reload()
   }
 
+  /** What is up over the world, top first; src/ui/layers.ts says what each holds back. */
+  const layers = $derived(
+    layersUp({
+      gate: account.gate !== null,
+      lease: leaseBlock !== null,
+      move: account.moving !== null,
+      confirm: confirm !== null,
+      logout: confirmLogout,
+      naming: home.namePrompt !== null,
+      'leave-deed': home.leaveAsk !== null,
+      panel: panel !== null,
+      ending: ui.endingOpen,
+      dialogue: ui.dialogueOpen,
+      cinematic: ui.cinematic,
+      placement: !!home.placement,
+      'link-notice': !!ui.linkNotice,
+      banner: ui.bannerUp,
+      reloading: update.reloading
+    })
+  )
+
   $effect(() => {
-    uiState.panelOpen = panel !== null || ui.endingOpen || gate !== null || leaseBlock !== null || home.namePrompt !== null || home.leaveAsk !== null || moving !== null
+    uiState.panelOpen = blocked(layers, BLOCKS.worldInput)
   })
 
   // The pack lives on the (non-reactive) save; mirror it for the HUD's bag
@@ -1046,13 +660,12 @@
    * fields (credentials, import codes) are ignored so typing never toggles.
    */
   function onKeyGlobal(e: KeyboardEvent): void {
-    if (phase !== 'playing' || ui.dialogueOpen || ui.cinematic || confirm || gate || leaseBlock || moving || update.reloading) return
+    if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
     // closes (standard dismiss UX, including from a focused field).
     if (typing && e.code !== 'Escape') return
-    if (ui.endingOpen) return
     // Placement mode owns its keys (Escape steps back out of it).
     if (home.placement && !panel) return
     // One owner per key: anything handled here is marked, so the world
@@ -1094,117 +707,19 @@
     ui.emoteOpen = false
   }
 
-  /**
-   * Measure what the interface covers while playing: the HUD along the top,
-   * the touch buttons along the bottom. The camera keeps the hero out of it
-   * (src/game/viewport.ts), and the cards and toasts sit under the HUD
-   * (--hud-bottom). On a phone the prompt docks beside the action button.
-   */
-  let promptDock = $state<{ right: number; bottom: number } | null>(null)
-  /** Touch: px from the screen's bottom to just above the action buttons (the Arrange button docks there). */
-  let controlsDock = $state<number | undefined>(undefined)
+  /** Phones: the prompt docks beside the action button, the Arrange button above the cluster (src/ui/play-insets.ts). */
+  let promptDock = $state<Docks['prompt']>(null)
+  let controlsDock = $state<Docks['controls']>(undefined)
   $effect(() => {
     if (phase !== 'playing') return
-    let raf = 0
-    const measure = () => {
-      raf = 0
-      const vh = window.innerHeight
-      const vw = window.innerWidth
-      // Layout boxes, not painted ones: a hidden HUD (a cinematic) or hidden
-      // controls (a conversation) keep their place, so the camera never
-      // slides when a dialogue opens and closes.
-      const hud = document.querySelector<HTMLElement>('.hud')
-      const hudBottom = hud
-        ? Math.max(0, ...[...hud.children].filter((c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains('why') && !c.classList.contains('sr')).map((c) => hud.offsetTop + c.offsetTop + c.offsetHeight))
-        : 0
-      const root = document.documentElement.style
-      root.setProperty('--hud-bottom', `${Math.round(hudBottom)}px`)
-      if (!touch) {
-        // Desktop: the HUD is a corner card on a wide screen; the camera centres as before.
-        setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
-        // The action bar and the prompt tag on it.
-        root.setProperty('--dock-bottom', '128px')
-        return
-      }
-      // The buttons at the bottom right always; the joystick at the bottom left when it's fixed there.
-      const box = (sel: string) => {
-        const el = document.querySelector<HTMLElement>(`.controls ${sel}`)
-        // Hidden controls only fade (opacity): their boxes stay where they are laid out.
-        return el && el.offsetHeight > 0 ? el.getBoundingClientRect() : null
-      }
-      // The cluster: the action button and the roll/cast column. The belt's
-      // small buttons arc above it as an overlay: the docks keep clear of
-      // them, the camera only in landscape (where the hero walks beside them).
-      const union = (rs: (DOMRect | null)[]) => {
-        const r = rs.filter((x): x is DOMRect => !!x)
-        return r.length ? { top: Math.min(...r.map((x) => x.top)), left: Math.min(...r.map((x) => x.left)) } : null
-      }
-      const cluster = union([box('.act'), box('.col')])
-      const ring = union([...document.querySelectorAll<HTMLElement>('.controls .belt .bslot')].map((el) => (el.offsetHeight > 0 ? el.getBoundingClientRect() : null)))
-      const pad = box('.pad')
-      if (vw > vh) {
-        // Landscape: the thumbs sit at the sides, so the hero keeps to the middle band.
-        const left = Math.min(cluster?.left ?? vw, ring?.left ?? vw)
-        setPlayInsets({ top: hudBottom, right: cluster ? vw - left : 0, bottom: 0, left: pad ? pad.right : 0 })
-      } else {
-        const tops = [cluster?.top, pad?.top].filter((t): t is number => t !== undefined)
-        setPlayInsets({ top: hudBottom, right: 0, bottom: tops.length ? vh - Math.min(...tops) : 0, left: 0 })
-      }
-      controlsDock = cluster ? Math.round(vh - Math.min(cluster.top, ring?.top ?? vh) + 10) : undefined
-      // The prompt sits just above the cluster and its belt (and the Arrange button, when it's out), right-aligned with the action button.
-      const act = box('.act')
-      const arrange = document.querySelector<HTMLElement>('[data-testid="arrange"]')?.getBoundingClientRect()
-      const above = Math.min(cluster?.top ?? vh, ring?.top ?? vh, arrange && arrange.height > 0 ? arrange.top : vh)
-      promptDock = act && cluster ? { right: Math.round(vw - act.right), bottom: Math.round(vh - above + 8) } : null
-      // Cards and notices that sit low keep above the buttons and the prompt tag on them.
-      root.setProperty('--dock-bottom', `${Math.round(vh - above + 8 + (promptDock ? 48 : 0))}px`)
-    }
-    const soon = () => {
-      if (!raf) raf = requestAnimationFrame(measure)
-    }
-    const ro = new ResizeObserver(soon)
-    // Only the HUD, the controls and the Arrange button matter: watch them,
-    // and re-attach when one of them mounts or unmounts.
-    const mo = new MutationObserver(soon)
-    const top = new MutationObserver(() => watch())
-    const watch = () => {
-      ro.disconnect()
-      mo.disconnect()
-      for (const el of document.querySelectorAll('.hud, .hud > *, .controls, .controls .actions, .controls .act, .controls .col, .controls .pad, .controls .belt, [data-testid="arrange"]')) ro.observe(el)
-      for (const el of document.querySelectorAll('.hud, .controls')) mo.observe(el, { childList: true, subtree: true })
-      soon()
-    }
-    const main = document.querySelector('main')
-    if (main) top.observe(main, { childList: true })
-    window.addEventListener('resize', soon)
-    watch()
-    return () => {
-      ro.disconnect()
-      mo.disconnect()
-      top.disconnect()
-      window.removeEventListener('resize', soon)
-      if (raf) cancelAnimationFrame(raf)
-      setPlayInsets({ top: 0, right: 0, bottom: 0, left: 0 })
-    }
+    return watchPlayInsets(touch, (d) => {
+      promptDock = d.prompt
+      controlsDock = d.controls
+    })
   })
 
-  /** Nothing else is asking for the player's attention: the party prompt may show. */
-  const promptClear = $derived(
-    !moving &&
-      !ui.linkNotice &&
-      panel === null &&
-      !ui.cinematic &&
-      !ui.dialogueOpen &&
-      !ui.endingOpen &&
-      !leaseBlock &&
-      !gate &&
-      !confirm &&
-      !confirmLogout &&
-      !home.placement &&
-      !home.namePrompt &&
-      !home.leaveAsk &&
-      !ui.bannerUp
-  )
+  /** Nothing else is asking for the player's attention: a notice (the party prompt…) may show. */
+  const promptClear = $derived(!blocked(layers, BLOCKS.notices))
   /** The journal page to open on (the HUD's pinned goal opens "How do I…?"). */
   let journalTab = $state<'road' | 'papers' | 'guides'>('road')
   $effect(() => {
@@ -1256,7 +771,7 @@
     if (panel !== 'character') characterFromBag = false
   })
 
-  const showPrompt = $derived(!!ui.prompt.label && !ui.dialogueOpen && panel === null && !ui.cinematic && !ui.endingOpen && !home.placement)
+  const showPrompt = $derived(!!ui.prompt.label && !blocked(layers, BLOCKS.actionPrompt))
 </script>
 
 <svelte:window onkeydown={onKeyGlobal} />
@@ -1289,7 +804,7 @@
     {/if}
     <DialoguePanel />
     {#if !home.placement}<TouchControls />{/if}
-    <HomeBar hidden={panel !== null || ui.dialogueOpen || ui.cinematic || gate !== null || leaseBlock !== null} dockBottom={controlsDock} />
+    <HomeBar hidden={blocked(layers, BLOCKS.homeBar)} dockBottom={controlsDock} />
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -1301,17 +816,21 @@
         }}
       />
     {/if}
-    {#if partyPrompt?.partyWorld && promptClear}
-      {@const pw = partyPrompt.partyWorld}
-      <PartyPrompt world={pw} onJoin={() => openMove(pw, false, partyPrompt)} onLater={() => (partyPrompt = null)} />
-    {:else if leaverNotice && promptClear}
-      {@const lv = leaverNotice}
-      <LeaverNotice view={lv} onLeave={() => openLeave(lv)} onClose={closeLeaverNotice} />
+    {#if whatsNew.shown && promptClear}
+      <WhatsNew releases={whatsNew.shown} onClose={() => whatsNew.close()} />
+    {:else if account.partyPrompt?.partyWorld && promptClear}
+      {@const pw = account.partyPrompt.partyWorld}
+      {@const view = account.partyPrompt}
+      <PartyPrompt world={pw} onJoin={() => account.openMove(pw, false, view)} onLater={() => (account.partyPrompt = null)} />
+    {:else if account.leaverNotice && promptClear}
+      {@const lv = account.leaverNotice}
+      <LeaverNotice view={lv} onLeave={() => account.openLeave(lv)} onClose={() => account.closeLeaverNotice()} />
     {:else if update.ready && (promptClear || update.reloading)}
       <UpdateNotice onReload={reloadForUpdate} />
     {/if}
-    {#if moving}
-      <WorldMove {session} target={moving.target} home={moving.home} leave={moving.leave ?? false} view={moving.view} arriving={moving.arriving} {onMoved} {onHere} onCancel={() => (moving = null)} />
+    {#if account.moving}
+      {@const m = account.moving}
+      <WorldMove {session} target={m.target} home={m.home} leave={m.leave ?? false} view={m.view} arriving={m.arriving} onMoved={(res) => account.onMoved(res)} onHere={() => account.onHere()} onCancel={() => (account.moving = null)} />
     {/if}
     {#if panel === 'journal'}
       <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} />
@@ -1358,10 +877,14 @@
         onLogout={logout}
         onEnterWorld={() => {
           panel = null
-          void continueAccount()
+          void account.continue()
         }}
-        onMove={openMove}
-        onLeave={openLeave}
+        onMove={(target, home, view) => account.openMove(target, home, view)}
+        onLeave={(view) => account.openLeave(view)}
+        onWhatsNew={() => {
+          panel = null
+          whatsNew.openLatest()
+        }}
       />
     {/if}
   {/if}
@@ -1408,17 +931,17 @@
         {:else}
           <div class="actions">
             {#if ui.account && accountSummary && titleView !== 'guide'}
-              <button type="button" class="primary continue" onclick={continueAccount} disabled={accountBusy} data-testid="continue-world">
-                <span class="big">{accountBusy ? 'Opening your world…' : 'Continue'}</span>
+              <button type="button" class="primary continue" onclick={() => account.continue()} disabled={account.busy} data-testid="continue-world">
+                <span class="big">{account.busy ? 'Opening your world…' : 'Continue'}</span>
                 <span class="meta"><Icon name="person" size={12} /> {ui.account.name} · {accountSummary.place}{accountSummary.time ? ` · ${accountSummary.time}` : ''}</span>
                 <span class="goal">{accountSummary.goal}</span>
               </button>
-              <p class="world-chip" class:off={accountOffline}>
-                <Icon name={accountOffline ? 'cloud' : 'lantern'} size={12} />
-                {accountOffline ? accountCopy.titleChipOffline : accountCopy.titleChip}
+              <p class="world-chip" class:off={account.offline}>
+                <Icon name={account.offline ? 'cloud' : 'lantern'} size={12} />
+                {account.offline ? accountCopy.titleChipOffline : accountCopy.titleChip}
               </p>
-              {#if accountError}<p class="title-error" role="alert">{accountError}</p>{/if}
-              {#if !accountOffline}
+              {#if account.error}<p class="title-error" role="alert">{account.error}</p>{/if}
+              {#if !account.offline}
                 <button type="button" class="secondary small" onclick={() => (confirmLogout = true)}>{accountCopy.logout}</button>
               {/if}
             {:else if titleView === 'guide' && session}
@@ -1462,7 +985,7 @@
             </p>
           {/if}
         {/if}
-        {#if accountError && !(ui.account && accountSummary)}<p class="title-error" role="alert">{accountError}</p>{/if}
+        {#if account.error && !(ui.account && accountSummary)}<p class="title-error" role="alert">{account.error}</p>{/if}
         <p class="fineprint">
           {ui.account ? 'Plays right here in your browser. Your journey saves to your world.' : 'Plays right here in your browser. Your saves stay on this device.'}
         </p>
@@ -1470,40 +993,42 @@
     </div>
   {/if}
 
-  {#if gate?.kind === 'world'}
+  {#if account.gate?.kind === 'world'}
+    {@const gate = account.gate}
     <WorldChoiceGate
       choice={gate.choice}
       busy={gate.busy}
       error={gate.error}
       picked={gate.picked}
-      onChoose={(c) => void chooseWorld(c)}
-      onCancel={() => (gate = null)}
+      onChoose={(c) => void account.chooseWorld(c)}
+      onCancel={() => (account.gate = null)}
     />
-  {:else if gate?.kind === 'origin'}
+  {:else if account.gate?.kind === 'origin'}
+    {@const gate = account.gate}
     <OriginChoice
       name={gate.name}
       local={gate.local}
       busy={gate.busy}
       error={gate.error}
-      onChoose={(c) => void chooseOrigin(c)}
-      onCancel={() => (gate = null)}
+      onChoose={(c) => void account.chooseOrigin(c)}
+      onCancel={() => (account.gate = null)}
     />
-  {:else if gate?.kind === 'elsewhere'}
-    <LinkGate kind="elsewhere" busy={gate.busy} error={gate.error} onTakeOver={takeOverPending} onBack={dropPending} />
+  {:else if account.gate?.kind === 'elsewhere'}
+    <LinkGate kind="elsewhere" busy={account.gate.busy} error={account.gate.error} onTakeOver={() => account.takeOverPending()} onBack={() => account.dropPending()} />
   {/if}
 
-  {#if leaseBlock && !gate}
+  {#if leaseBlock && !account.gate}
     <LinkGate
       kind={leaseBlock}
-      busy={leaseBusy}
-      error={leaseError}
-      onTakeOver={takeOverInPlay}
+      busy={account.leaseBusy}
+      error={account.leaseError}
+      onTakeOver={() => account.takeOverInPlay()}
       onBack={() => window.location.reload()}
       backLabel={leaseCopy.toTitle}
     />
   {/if}
 
-  {#if confirmLogout && accountCache?.dirty && accountCache.habiticaId === ui.account?.habiticaId}
+  {#if confirmLogout && account.cache?.dirty && account.cache.habiticaId === ui.account?.habiticaId}
     <!-- Progress from an earlier visit hasn't reached the world: upload it first. -->
     <ConfirmDialog
       title={accountCopy.logoutTitle}
@@ -1511,7 +1036,7 @@
       confirmLabel={accountCopy.uploadFirst}
       onConfirm={() => {
         confirmLogout = false
-        void continueAccount()
+        void account.continue()
       }}
       altLabel={accountCopy.logoutAnyway}
       onAlt={logout}
@@ -1535,11 +1060,11 @@
       max={home.namePrompt.max}
       onName={(name) => {
         home.namePrompt = null
-        bus.emit(HOME_EV.named, { name })
+        bus.emit(EV.homeNamed, { name })
       }}
       onCancel={() => {
         home.namePrompt = null
-        bus.emit(HOME_EV.named, { name: null })
+        bus.emit(EV.homeNamed, { name: null })
       }}
     />
   {/if}
@@ -1554,7 +1079,7 @@
       danger
       onConfirm={() => {
         home.leaveAsk = null
-        bus.emit(HOME_EV.action, { action: 'home:leave-confirmed' })
+        bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
       }}
       onCancel={() => (home.leaveAsk = null)}
     />
@@ -1721,13 +1246,13 @@
     line-height: 1;
     letter-spacing: 0.04em;
     color: #fff3c4;
-    text-shadow: 0 4px 0 #6b3a12, 0 0 30px rgba(255, 190, 80, 0.55), 0 0 2px #2b1d1a;
+    text-shadow: 0 4px 0 #6b3a12, 0 0 30px rgba(255, 190, 80, 0.55), 0 0 2px var(--outline);
   }
   .tagline {
     margin: 6px 0 0;
     font-size: 18px;
     font-style: italic;
-    color: #f4e4c1;
+    color: var(--paper);
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
   }
   .actions {
@@ -1743,7 +1268,7 @@
     padding: 12px 18px 14px;
     border-width: 3px;
     border-radius: 14px;
-    box-shadow: 0 5px 0 #5a3410, 0 0 40px rgba(255, 210, 74, 0.35);
+    box-shadow: 0 5px 0 #5a3410, 0 0 40px var(--gold-glow);
   }
   .continue .big {
     font-size: 24px;
@@ -1807,7 +1332,7 @@
   }
   .secondary {
     background: rgba(36, 28, 40, 0.75);
-    color: #f4e4c1;
+    color: var(--paper);
     border-color: rgba(244, 228, 193, 0.6);
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
   }
@@ -1837,7 +1362,7 @@
     font-family: var(--font-display);
     font-size: 12.5px;
     color: #fff3c4;
-    background: rgba(47, 127, 122, 0.55);
+    background: var(--ok-tint);
     border: 1.5px solid rgba(143, 220, 210, 0.55);
   }
   .world-chip.off {
@@ -1850,7 +1375,7 @@
     gap: 6px;
     padding: 4px 12px;
     font-size: 14px;
-    color: #f4e4c1;
+    color: var(--paper);
     text-decoration: underline;
     text-decoration-color: rgba(244, 228, 193, 0.4);
     text-underline-offset: 4px;
@@ -1881,7 +1406,7 @@
     gap: 10px;
     font-family: var(--font-display);
     font-size: 17px;
-    color: #f4e4c1;
+    color: var(--paper);
   }
   .spark {
     width: 10px;
@@ -1930,7 +1455,7 @@
     border: 2px solid var(--wood);
     border-radius: 8px;
     padding: 8px;
-    background: #fffbef;
+    background: var(--cream-hi);
   }
 
   @keyframes drift {

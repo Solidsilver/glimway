@@ -7,7 +7,7 @@
  * restrained placeholder bob. Positions come from WorldData.
  */
 import type Phaser from 'phaser'
-import { TILE } from '../textures'
+import { tileBottom, tileMid } from '../../lib/tile'
 import { commonsAnim, commonsArt } from '../commons-pass'
 import { isResident, residentName, RESIDENT_IDS } from '../../content/residents'
 import type { InteractId, WorldData } from '../worlds'
@@ -63,8 +63,8 @@ export class Npcs {
     // Read-only, for playtests: the walking residents' poses.
     expose('__fsNpcs', () => this.view(), scene)
     for (const n of world.npcs) {
-      const x = n.tx * TILE + 8
-      const y = n.ty * TILE + TILE
+      const x = tileMid(n.tx)
+      const y = tileBottom(n.ty)
       if (k && hasPerson(scene, n.id)) {
         // The walking art: feet at the canvas's bottom centre, drawn at world size.
         const sprite = scene.add.sprite(x, y, PEOPLE_KEY, `resident-${n.id}-down-idle-0`).setOrigin(0.5, 1).setScale(1 / k).setDepth(y)

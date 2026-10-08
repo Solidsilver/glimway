@@ -1,6 +1,7 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, blitKey, fitRect, type PackedManifest, type PackedRect } from './atlas-plan.ts'
-import { artDataUrl, artDensity, artSource, contextDensity, drawArt, resampleFor, setDensity } from './density.ts'
+import { artDataUrl, artSource, contextDensity, drawArt, resampleFor } from './density.ts'
+import { explodeFrames, registerAnims, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
 
 /**
  * Typed port of `assets/generated/commons-pass/integration.js`: the Commons
@@ -16,13 +17,12 @@ import { artDataUrl, artDensity, artSource, contextDensity, drawArt, resampleFor
  * (./density.ts) that draw at the native world size. Source PNGs are never
  * modified.
  *
- * Code-drawn placeholders (./commons-art.ts, ./textures.ts, the Wilds art)
- * stay the fallback layer: every frame is optional, so a pack that fails to
- * load leaves the placeholders in place. `installCommonsPass` deliberately
- * copies delivered frames onto the placeholder keys the scenes already use
- * (boot only, before any world sprite exists); scene code that needs the
- * new states (animations, depleted nodes, faint echoes, the settled warden)
- * asks for `commons-art:` keys through `commonsArt` and falls back itself.
+ * The packed art always ships (owner decision, 2026-10-07): the code-drawn
+ * placeholders it covers were retired. `installCommonsPass` copies the
+ * delivered frames under the keys the scenes draw with (boot only, before
+ * any world sprite exists); scene code that needs the new states
+ * (animations, depleted nodes, faint echoes, the settled warden) asks for
+ * `commons-art:` keys through `commonsArt`.
  */
 
 export const COMMONS_PASS_BASE = '/assets/fingersnap/commons-pass/'
@@ -31,20 +31,6 @@ export const COMMONS_PASS_MANIFEST_KEY = 'glimway-commons-pass'
 
 /** Namespace for every texture and animation this pack creates. */
 export const COMMONS_ART_PREFIX = 'commons-art:'
-
-export interface CommonsPassRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface CommonsPassSource {
-  key: string
-  file: string
-  width: number
-  height: number
-}
 
 export interface CommonsPassFrame {
   key: string
@@ -55,9 +41,9 @@ export interface CommonsPassFrame {
   /** Frames sharing a scale group were measured at one common scale. */
   scaleGroup?: string
   source: string
-  sourceRect: CommonsPassRect
+  sourceRect: PassRect
   sheet: string
-  destinationRect: CommonsPassRect
+  destinationRect: PassRect
   /** 'cell': the crop is fitted into its 16-px slot (tiles, boundaries). */
   fit?: 'cell'
   role?: 'transition' | 'glow' | 'tile' | 'portrait'
@@ -65,21 +51,14 @@ export interface CommonsPassFrame {
   alphaMultiplier?: number
 }
 
-export interface CommonsPassAnimation {
-  key: string
-  frames: string[]
-  frameRate: number
-  repeat: number
-}
-
 export interface CommonsPassManifest {
   version: number
   date: string
   baseUrl: string
   specSource: string
-  sources: CommonsPassSource[]
+  sources: PassSource[]
   frames: CommonsPassFrame[]
-  animations: CommonsPassAnimation[]
+  animations: PassAnimation[]
   aliases: Record<string, string>
   pendingSheets: string[]
   notes: string[]
@@ -118,44 +97,21 @@ export function commonsFrame(key: string): CommonsPassFrame | null {
  * the native canvas at ART_DENSITY (scripts/build-atlases.ts), and drawn at
  * its native world size (./density.ts). Frames missing from the atlas are
  * left out, and so are animations missing any frame. Returns the manifest,
- * or null when the pack didn't load (the placeholders carry on alone).
+ * or null when the pack didn't load.
  */
 export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | null {
   const manifest = scene.cache.json.get(COMMONS_PASS_MANIFEST_KEY) as CommonsPassManifest | undefined
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.commons
-  if (!manifest || !Array.isArray(manifest.frames) || !packed || !scene.textures.exists(COMMONS_PACKED_KEY)) return null
-  const atlas = scene.textures.get(COMMONS_PACKED_KEY).getSourceImage() as CanvasImageSource
+  if (!manifest || !Array.isArray(manifest.frames)) return null
+  const made = explodeFrames(scene, COMMONS_PACKED_KEY, packed, manifest.frames, artKey)
+  if (!made || !packed) return null
   aliases = { ...manifest.aliases }
-  frames = new Map()
+  frames = new Map(made.held.map((f) => [f.key, f]))
   packedBlits = packed.blits ?? {}
   packedDensity = packed.density ?? 1
-  const k = artDensity(scene)
-  for (const item of manifest.frames) {
-    const r = packed.frames[item.key]
-    if (!r) continue
-    frames.set(item.key, item)
-    const key = artKey(item.key)
-    if (scene.textures.exists(key)) continue
-    const output = scene.textures.createCanvas(key, item.width * k, item.height * k)
-    if (!output) continue
-    resampleFor(output.context, packed.density ?? 1, k)
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
-    output.refresh()
-    setDensity(output, k)
-  }
-  // The atlas was staging: its GPU copy goes (the image stays for blitFrame).
-  packedAtlas = atlas
-  scene.textures.remove(COMMONS_PACKED_KEY)
-  for (const definition of manifest.animations) {
-    const key = artKey(definition.key)
-    if (scene.anims.exists(key) || !definition.frames.every((f) => frames.has(f))) continue
-    scene.anims.create({
-      key,
-      frames: definition.frames.map((f) => ({ key: artKey(f) })),
-      frameRate: definition.frameRate,
-      repeat: definition.repeat,
-    })
-  }
+  // The atlas's GPU copy went; its image stays for blitFrame.
+  packedAtlas = made.atlas
+  registerAnims(scene, manifest.animations, (f) => frames.has(f), artKey)
   return manifest
 }
 
@@ -168,7 +124,7 @@ export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | nu
  * the native frame instead — run `npm run atlases` after adding one to the
  * plan.
  */
-export function blitFrame(scene: Phaser.Scene, frame: CommonsPassFrame, context: CanvasRenderingContext2D, dest: CommonsPassRect, flipX = false): void {
+export function blitFrame(scene: Phaser.Scene, frame: CommonsPassFrame, context: CanvasRenderingContext2D, dest: PassRect, flipX = false): void {
   const native = artSource(scene, artKey(frame.key))
   if (!native) return
   const d = frame.destinationRect

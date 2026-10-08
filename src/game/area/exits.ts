@@ -5,7 +5,7 @@
  */
 import type Phaser from 'phaser'
 import { areaInfo } from '../../content/world'
-import { TILE } from '../textures'
+import { TILE, tileBottom } from '../../lib/tile'
 import type { ExitDef, WorldData } from '../worlds'
 
 /** Destination name for an exit label (areas registered later may lack an entry). */
@@ -30,7 +30,7 @@ export function buildExitSigns(scene: Phaser.Scene, world: WorldData, reducedMot
     const midX = (exit.tx + exit.tw / 2) * TILE
     const midY = (exit.ty + exit.th / 2) * TILE
     const x = edge === 'west' ? exit.tx * TILE + 6 : edge === 'east' ? (exit.tx + 1) * TILE - 6 : midX
-    const y = edge === 'north' ? exit.ty * TILE + 6 : edge === 'south' ? (exit.ty + 1) * TILE - 6 : midY
+    const y = edge === 'north' ? exit.ty * TILE + 6 : edge === 'south' ? tileBottom(exit.ty) - 6 : midY
     const chevron = scene.add.image(x, y, 'mark-chevron').setDepth(5500).setAlpha(0.9)
     if (edge === 'west') chevron.setFlipX(true)
     if (edge === 'north') chevron.setAngle(-90)

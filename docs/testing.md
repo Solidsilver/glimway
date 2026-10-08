@@ -52,8 +52,17 @@ request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
 on GitHub's runners. The full suite runs on a self-hosted runner with an
 NVIDIA GPU, for pushes to `main`, `expansion` and `exp/**` and for manual
 dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Push an
-`exp/` branch to run it before main moves. The changed test script itself
-runs the full suite when shared test code changed (see below).
+`exp/` branch to run it before main moves.
+
+Unit tests can load rune modules (`*.svelte.ts`, such as
+`src/ui/account-flow.svelte.ts`): import `tests/helpers/svelte-runes.ts`
+first, then the module with `await import(…)`. Keep such modules free of
+Phaser and of imports without a `.ts` extension, and hand them their
+collaborators (an API, a session) so a test can pass fakes.
+
+**Agents:** run `test:smoke` and `test:changed` while you work. The full suite
+runs once per merge batch, not once per agent. `test:changed` itself runs the
+full suite when shared test code changed (see below).
 
 ### Smoke
 

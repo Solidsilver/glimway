@@ -544,7 +544,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 				return nil
 			}
 		}
-		if err := packPut(ctx, tx, s.HabiticaID, *loot.Trinket, []makerQty{{"", 1}}, reason, ref, now); err != nil {
+		if err := packPut(ctx, tx, s.HabiticaID, *loot.Trinket, []makerQty{{Maker: "", Qty: 1}}, reason, ref, now); err != nil {
 			return err
 		}
 		s.State.Inventory = appendUnique(s.State.Inventory, *loot.Trinket)
@@ -666,7 +666,7 @@ func maybeGrantStormDrop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, reg
 	if err != nil || !found {
 		return false, err
 	}
-	if err = packPut(ctx, tx, s.HabiticaID, "storm-grade-drop", []makerQty{{"", 1}}, "wilds-find", entity.ID, now); err != nil {
+	if err = packPut(ctx, tx, s.HabiticaID, "storm-grade-drop", []makerQty{{Maker: "", Qty: 1}}, "wilds-find", entity.ID, now); err != nil {
 		return false, err
 	}
 	return true, refreshItems(ctx, tx, s)

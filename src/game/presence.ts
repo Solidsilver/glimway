@@ -7,13 +7,13 @@
  * away (unmount, hot reload) or a guest journey takes over. Guests never
  * have one.
  */
-import type { SocketLike } from '../lib/presence-client'
-import { bus } from './events'
-import type { Link } from './link'
-import { PresenceFeed } from './presence-feed'
-import { expose } from './dev-hooks'
+import type { SocketLike } from '../lib/presence-client.ts'
+import { bus } from './events.ts'
+import type { Link } from './link.ts'
+import { PresenceFeed } from './presence-feed.ts'
+import { expose } from './dev-hooks.ts'
 
-export { LEAVE_FADE_MS, PresenceFeed, type Peer } from './presence-feed'
+export { LEAVE_FADE_MS, PresenceFeed, type Peer } from './presence-feed.ts'
 
 let current: PresenceFeed | null = null
 

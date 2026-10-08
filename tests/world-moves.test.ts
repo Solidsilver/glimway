@@ -100,8 +100,8 @@ test('the sign-in screen tells a party member they can come straight in, in shor
   assert.equal(signInCopy.inviteOnlyBody, 'Your Habitica hero is fine. To come in you need an invite code, or a party that already plays here.');
   assert.ok(inviteCopy.partyWorld.length <= 160 && /party/.test(inviteCopy.partyWorld));
   assert.ok(inviteCopy.partyAdmitted.length <= 160 && /party/.test(inviteCopy.partyAdmitted));
-  assert.equal(parseInviteList({ invites: [], partyAdmitted: true }).partyAdmitted, true);
-  assert.equal(parseInviteList({ invites: [] }).partyAdmitted, undefined);
+  assert.equal(parseInviteList({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: false, partyAdmitted: true }).partyAdmitted, true);
+  assert.throws(() => parseInviteList({ invites: [] }), { code: 'bad-response' });
   assert.equal(errorFromResponse(403, { error: { code: 'party-admitted-invites' } }).code, 'party-admitted-invites');
 });
 
@@ -134,8 +134,8 @@ test('world views parse, with unknown or broken fields made safe', () => {
   assert.equal(odd.partyCanOpen, false);
   assert.deepEqual(parseWorld({ ...view, leaver: { leftAt: 'x', hasOwn: 1 } }).leaver, { leftAt: 0, moveOutAt: 0, moveOutIn: 0, hasOwn: false });
   // The invite list says when you live in a party's world.
-  assert.equal(parseInviteList({ invites: [], partyWorld: true }).partyWorld, true);
-  assert.equal(parseInviteList({ invites: [], partyWorld: 'yes' }).partyWorld, undefined);
+  assert.equal(parseInviteList({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: true, partyAdmitted: false }).partyWorld, true);
+  assert.throws(() => parseInviteList({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: 'yes', partyAdmitted: false }), { code: 'bad-response' });
   assert.deepEqual(odd.leaving, { gate: -1, last: false, outgoing: 0, incoming: 0, wardenTools: 0, deedCost: 0 });
   assert.throws(() => parseWorld({ ...view, world: { id: 1 } }));
   assert.throws(() => parseWorld({ ...view, leaving: null }));

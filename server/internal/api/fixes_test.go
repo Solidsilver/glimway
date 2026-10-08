@@ -1,9 +1,7 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/rules"
@@ -338,21 +336,7 @@ type inviteResponse struct {
 
 func inviteReq(t *testing.T, x *rig, method, path string, c *http.Cookie, status int) inviteResponse {
 	t.Helper()
-	body := []byte(`{}`)
-	r := httptest.NewRequest(method, path, bytes.NewReader(body))
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	if w.Code != status {
-		t.Fatalf("%s %s: %d %s", method, path, w.Code, w.Body.String())
-	}
-	var v inviteResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		t.Fatal(err)
-	}
+	v, w := httpResponse[inviteResponse](x, method, path, map[string]any{}, c, status)
 	if method == "GET" && status == 200 && strings.Contains(w.Body.String(), `"code"`) {
 		t.Fatal("invite raw code listed")
 	}

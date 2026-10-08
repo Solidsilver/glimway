@@ -10,16 +10,15 @@
  *   repeated transitions.
  * - Save failures surface to the interface, not only to the console.
  */
-import Phaser from 'phaser'
-import type { GameState, QuestEvent, QuestStage } from '../lib/state'
-import { advanceQuest, questObjective, questShortGoal } from '../lib/state'
-import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types'
-import { resolveDefeatRecovery } from '../lib/habitica/sync'
-import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers'
-import { saveCurrent, saveGame } from '../lib/save'
-import { bus, EV, type StatsPayload, type ToastPayload } from './events'
-import type { Link } from './link'
-import { displayArea } from '../content/world'
+import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
+import { advanceQuest, questObjective, questShortGoal } from '../lib/state.ts'
+import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types.ts'
+import { resolveDefeatRecovery } from '../lib/habitica/sync.ts'
+import { checkSpend, grantEmbers, questEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers.ts'
+import { saveCurrent, saveGame } from '../lib/save.ts'
+import { bus, EV, type StatsPayload, type ToastPayload } from './events.ts'
+import type { Link } from './link.ts'
+import { displayArea } from '../content/world.ts'
 
 /** advanceQuest is only called when the current stage matches this gate. */
 const QUEST_GATE: Record<QuestEvent, QuestStage> = {
@@ -271,8 +270,8 @@ export class Session {
   setVitals(hp: number, mana: number): void {
     const prevHp = this.state.hp
     const prevMana = this.state.mana
-    this.state.hp = Phaser.Math.Clamp(hp, 0, this.state.maxHp)
-    this.state.mana = Phaser.Math.Clamp(mana, 0, this.state.maxMana)
+    this.state.hp = Math.min(Math.max(hp, 0), this.state.maxHp)
+    this.state.mana = Math.min(Math.max(mana, 0), this.state.maxMana)
     if (this.state.hp !== prevHp || this.state.mana !== prevMana) this.emitStats()
     if (this.state.hp < prevHp || this.state.mana < prevMana) this.saveSoon()
   }

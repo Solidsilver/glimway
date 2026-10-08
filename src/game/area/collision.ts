@@ -5,7 +5,7 @@
  * open up (gathering: a broken boulder, a dug stump).
  */
 import Phaser from 'phaser'
-import { TILE } from '../textures'
+import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
 
 /** One merged horizontal run of solid tiles, and its body. */
@@ -52,7 +52,7 @@ export function buildSolids(scene: Phaser.Scene, world: WorldData): Solids {
       if (world.solid[y][x]) {
         let x2 = x
         while (x2 + 1 < world.width && world.solid[y][x2 + 1]) x2++
-        runs.push({ x0: x, x1: x2, y, body: addBlock((x + (x2 - x + 1) / 2) * TILE, y * TILE + TILE / 2, (x2 - x + 1) * TILE, TILE) })
+        runs.push({ x0: x, x1: x2, y, body: addBlock((x + (x2 - x + 1) / 2) * TILE, tileMid(y), (x2 - x + 1) * TILE, TILE) })
         x = x2 + 1
       } else {
         x++
@@ -65,8 +65,8 @@ export function buildSolids(scene: Phaser.Scene, world: WorldData): Solids {
     // stands on one): a second body would only slow the build down. Clearing
     // the tile (WorldScene.clearSolidTile) opens the run either way.
     if (world.solid[ty]?.[tx]) return
-    const body = addBlock(tx * TILE + TILE / 2, ty * TILE + TILE - h / 2, w, h)
-    const key = `${tx},${ty}`
+    const body = addBlock(tileMid(tx), tileBottom(ty) - h / 2, w, h)
+    const key = tileKey(tx, ty)
     const list = props.get(key) ?? []
     list.push(body)
     props.set(key, list)
@@ -78,4 +78,34 @@ export function buildSolids(scene: Phaser.Scene, world: WorldData): Solids {
   if (world.mural) addPropBody(world.mural.tx, world.mural.ty, 16, 8)
   for (const n of world.npcs) addPropBody(n.tx, n.ty, 12, 8)
   return { group, runs, props }
+}
+
+/**
+ * A worked piece leaves open ground (a broken boulder, a dug stump): the
+ * tile opens in the solid grid, its run body is split or dropped, and any
+ * prop body there goes with it. Scenery-only: regrows on the next visit.
+ */
+export function clearSolidTile(scene: Phaser.Scene, world: WorldData, solids: Solids, tx: number, ty: number): void {
+  // A prop's own body first (the woods' rocks are props on open ground).
+  for (const body of solids.props.get(tileKey(tx, ty)) ?? []) {
+    solids.group.remove(body)
+    body.destroy()
+  }
+  solids.props.delete(tileKey(tx, ty))
+  if (!world.solid[ty]?.[tx]) return
+  world.solid[ty][tx] = false
+  const i = solids.runs.findIndex((r) => r.y === ty && tx >= r.x0 && tx <= r.x1)
+  if (i < 0) return
+  const run = solids.runs.splice(i, 1)[0]
+  solids.group.remove(run.body)
+  run.body.destroy()
+  for (const [x0, x1] of [
+    [run.x0, tx - 1],
+    [tx + 1, run.x1]
+  ] as const) {
+    if (x1 < x0) continue
+    const body = solidBox(scene, (x0 + (x1 - x0 + 1) / 2) * TILE, tileMid(ty), (x1 - x0 + 1) * TILE, TILE)
+    solids.group.add(body)
+    solids.runs.push({ x0, x1, y: ty, body })
+  }
 }

@@ -153,12 +153,12 @@
     display: grid;
     place-items: center;
     border-radius: 6px;
-    background: rgba(255, 210, 74, 0.35);
+    background: var(--gold-glow);
     color: var(--wood-dark);
     font-family: var(--font-display);
   }
   .missing .ico {
-    background: rgba(107, 76, 46, 0.12);
+    background: var(--wood-wash);
     color: var(--text-faint);
   }
   .shelf .ico {

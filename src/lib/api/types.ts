@@ -110,32 +110,7 @@ export interface SpendRequest {
   key: string;
 }
 
-/** Invite metadata. `id` is the code's hash; timestamps are Unix seconds. */
-export interface InviteInfo {
-  id: string;
-  createdAt: number;
-  expiresAt: number;
-  used: boolean;
-}
-
-/** Only creation returns the raw code, once. */
-export interface CreatedInvite extends InviteInfo {
-  /** Readable words plus digits, e.g. `amber-fox-river-lantern-moss-ivy-7392`. Shown once. */
-  code: string;
-}
-
-export interface InviteList {
-  /** Waiting codes plus used history (hash metadata only). */
-  invites: InviteInfo[];
-  /** Lifetime creations left (CLI codes don't count). Undefined from older servers. */
-  remaining?: number;
-  /** How many unused codes may wait at once. */
-  outstandingLimit?: number;
-  /** You live in a party's world, which takes no codes. */
-  partyWorld?: boolean;
-  /** You came in through a party: you make no codes anywhere. */
-  partyAdmitted?: boolean;
-}
+export type { InviteInfo, CreatedInvite, InviteList } from './invites.ts';
 
 // ------------------------------------------------------------- worlds
 

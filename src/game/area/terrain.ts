@@ -8,7 +8,7 @@
  * Commons).
  */
 import type Phaser from 'phaser'
-import { TERRAIN, TILE } from '../textures.ts'
+import { TERRAIN, TILE, tileKey } from '../../lib/tile.ts'
 import type { WorldData } from '../worlds.ts'
 import { buildTangleGround } from '../wilds/tangle-art.ts'
 import { TIE_BIAS, addArtCanvas, artDensity, artSource, resampleFor } from '../density.ts'
@@ -18,6 +18,7 @@ import { EDGE_TEXTURE, WATER_FPS, WATER_FRAME_COUNT, WATER_SETS, baseTile, class
 import { edgeRefNames, putCell, type EdgeJob, type Texels } from './ground-paint.ts'
 import { PaintPool, refreshWhenPainted, startWorkers } from './ground-pool.ts'
 import { expose } from '../dev-hooks.ts'
+import { fnv1a32Bytes } from '../../lib/hash.ts'
 
 /**
  * Explicit mapping from procedural terrain ids to the delivered expansion's
@@ -137,7 +138,7 @@ export function groundTileset(scene: Phaser.Scene): GroundTileset {
  * a bridge's planks), then the Commons' path edges.
  */
 export function groundStack(world: WorldData, x: number, y: number, under: ReadonlyMap<string, number>, edges: boolean): string[] {
-  const id = under.get(`${x},${y}`) ?? world.ground[y][x]
+  const id = under.get(tileKey(x, y)) ?? world.ground[y][x]
   const out = id === TERRAIN.bridge ? ['pond-water'] : []
   out.push(TERRAIN_TO_EXPANSION[id] ?? 'grass')
   if (edges) out.push(...pathEdgeOverlays(world, x, y))
@@ -150,7 +151,7 @@ function groundUnder(scene: Phaser.Scene, world: WorldData): Map<string, number>
   for (const s of world.scenery ?? []) {
     const g = s.groundUnder
     if (!g || !scene.textures.exists(s.key)) continue
-    for (let y = g.ty; y < g.ty + g.th; y++) for (let x = g.tx; x < g.tx + g.tw; x++) under.set(`${x},${y}`, g.tile)
+    for (let y = g.ty; y < g.ty + g.th; y++) for (let x = g.tx; x < g.tx + g.tw; x++) under.set(tileKey(x, y), g.tile)
   }
   return under
 }
@@ -322,7 +323,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
   const cell = TILE * k
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest).ground
   const under = groundUnder(scene, world)
-  const idAt = (x: number, y: number) => under.get(`${x},${y}`) ?? world.ground[y][x]
+  const idAt = (x: number, y: number) => under.get(tileKey(x, y)) ?? world.ground[y][x]
   const ground = world.ground.map((row, y) => row.map((_, x) => idAt(x, y)))
   const grid = classGrid(ground)
   const footbridge = scene.textures.exists('p1:brackenwood-bridge-worn') && scene.textures.exists('p1:brackenwood-bridge-mended')
@@ -578,7 +579,7 @@ export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: World
   const k = artDensity(scene)
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest).ground
   const under = groundUnder(scene, world)
-  const ground = world.ground.map((row, y) => row.map((_, x) => under.get(`${x},${y}`) ?? world.ground[y][x]))
+  const ground = world.ground.map((row, y) => row.map((_, x) => under.get(tileKey(x, y)) ?? world.ground[y][x]))
   const grid = classGrid(ground)
   const edges = new Map<string, boolean>()
   ground.forEach((row, y) =>
@@ -596,9 +597,7 @@ export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: World
     await p.done
     const c = p.canvas
     const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data
-    let h = 2166136261
-    for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619)
-    return `${c.width}x${c.height}:${(h >>> 0).toString(16)}`
+    return `${c.width}x${c.height}:${fnv1a32Bytes(d).toString(16)}`
   } finally {
     forceMainThread = false
   }

@@ -8,133 +8,18 @@
  * Guests carry only the save's pack (src/lib/inventory.ts); everything here
  * needs a world.
  */
-import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types'
-import type { ApiErrorCode } from '../lib/api/errors'
-import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items'
-import { GATHERING_DATA } from '../lib/gathering'
-import { bus, EV } from './events'
-import type { MutationOp } from './link'
-import type { Session } from './session'
-import { presence } from './presence'
-
-export const ITEMS_EV = {
-  /** The carried items changed: { what?: string }. */
-  changed: 'items:changed'
-} as const
+import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types.ts'
+import type { Refusal, Result } from '../lib/api/errors.ts'
+import { itemErrorText } from '../content/errors.ts'
+import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items.ts'
+import { TILE } from '../lib/tile.ts'
+import { bus, EV } from './events.ts'
+import type { Session } from './session.ts'
+import { presence } from './presence.ts'
 
 export type ItemsStatus = 'guest' | 'idle' | 'loading' | 'ready' | 'offline'
-export type ItemsResult<T = undefined> = { ok: true; value: T } | { ok: false; code: string; text: string }
 
-/** Player-facing words for item refusals. */
-export function itemErrorText(code: ApiErrorCode | string): string {
-  switch (code) {
-    case 'tool-blunt':
-      return 'It’s too blunt to work with. Mend it first.'
-    case 'two-wardens-grind':
-      return 'Two slivers in one pack pull toward each other’s pose and grind.'
-    case 'gathered-enough':
-      return GATHERING_DATA.softCapLine
-    case 'cannot-gather-here':
-      return 'There’s nothing there to work.'
-    case 'cannot-plant-here':
-      return 'Plant it on your own land.'
-    case 'not-your-land':
-      return 'That’s someone else’s land. Leave it as you found it.'
-    case 'land-blocked':
-      return 'There’s no open ground to plant in here.'
-    case 'not-a-seed':
-      return 'That isn’t something you can plant.'
-    case 'wrong-tool':
-      return 'That isn’t the tool for this.'
-    case 'not-a-tool':
-      return 'That isn’t a tool.'
-    case 'not-needed':
-      return 'No need just now.'
-    case 'too-weak':
-      return 'You’re too far gone to eat. Rest by a hearth first.'
-    case 'not-usable-yet':
-      return 'Keep it for when you need it.'
-    case 'cannot-mend':
-      return 'Bench tools aren’t worth mending. Make another.'
-    case 'too-far-away':
-      return 'You need to be right there.'
-    case 'not-a-member':
-    case 'tier-required':
-      return 'That needs your own workshop bench.'
-    case 'no-free-slot':
-      return 'There’s no room on it for another fitting.'
-    case 'fitting-kind-taken':
-      return 'It already has one of those.'
-    case 'already-fitted':
-      return 'That’s already on it.'
-    case 'not-fitted':
-      return 'That isn’t fitted to anything.'
-    case 'not-together':
-      return 'Stand next to them to hand it over.'
-    case 'not-giveable':
-      return 'That one stays with you.'
-    case 'well-rope-broken':
-      return 'The well rope is rotten through. Mend it first.'
-    case 'already-returned':
-      return 'You have already returned that.'
-    case 'wrong-recipient':
-      return 'That doesn’t belong to them.'
-    case 'self-gift':
-      return 'You can’t give something to yourself.'
-    case 'recipient-not-found':
-    case 'world-access-denied':
-    case 'recipient-unavailable':
-      return 'They aren’t in your world just now.'
-    case 'no-such-pocket':
-      return 'A satchel, apron or coat gives you a second pocket.'
-    case 'not-a-keepsake':
-      return 'Pockets are for keepsakes.'
-    case 'off-hand-closed':
-      return 'Your off hand opens when you take a class.'
-    case 'not-for-the-off-hand':
-      return 'That isn’t something to carry in your off hand.'
-    case 'already-picked-up':
-      return 'You’ve already picked that up.'
-    case 'invalid-region':
-      return 'The woods have shifted under you. Step back a moment.'
-    case 'not-in-season':
-      return 'Not now — that belongs to another season. Come back when it turns.'
-    case 'sold-out':
-      return 'That’s all they had today. Come back tomorrow.'
-    case 'invalid-seller':
-    case 'invalid-good':
-      return 'There’s nothing like that to buy here.'
-    case 'condition-unmet':
-      return 'You aren’t ready for that yet.'
-    case 'already-granted':
-      return 'You’ve already received that heirloom.'
-    case 'insufficient-items':
-      return 'You don’t have that any more.'
-    case 'insufficient-materials':
-      return 'You don’t have enough to mend it.'
-    case 'insufficient-embers':
-      return 'You don’t have enough embers.'
-    case 'item-not-available':
-    case 'item-not-found':
-      return 'That isn’t in your pack any more.'
-    case 'offline':
-      return 'Needs a connection. Nothing changed — try again when you’re back online.'
-    case 'superseded':
-      return 'Another device took over this journey.'
-    case 'busy':
-      return 'Hold on — the last one is still on its way.'
-    case 'resolved':
-      return 'Your last request went through after all. Check what you have before trying again.'
-    case 'pending':
-      return 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.'
-    case 'guest':
-      return 'Things you carry are kept in a world. Sign in to yours from the Menu.'
-    default:
-      return 'That didn’t go through. Nothing changed — try again in a moment.'
-  }
-}
-
-export { giftPhrase } from '../lib/items'
+export { giftPhrase } from '../lib/items.ts'
 
 export class Items {
   view: ItemsView | null = null
@@ -142,15 +27,18 @@ export class Items {
   private inFlightGrants = new Set<string>()
   private inFlightAdaOil = false
 
-  constructor(private session: Session) {
+  private readonly session: Session
+
+  constructor(session: Session) {
+    this.session = session
     this.status = session.link ? 'idle' : 'guest'
-    bus.on(EV.mutationResolved, (p: { op: MutationOp; outcome: 'landed' | 'refused' }) => {
+    bus.on(EV.mutationResolved, (p) => {
       if (current?.items !== this || p.op.kind !== 'items') return
       void this.load().then(() => {
         bus.emit(EV.toast, { text: p.outcome === 'landed' ? 'Your last change to your pack went through after all.' : 'Your last change to your pack didn’t go through. Nothing changed.', icon: 'bag' })
       })
     })
-    bus.on(EV.gift, (g: { fromName: string; kind: string; itemDef: string; qty: number }) => {
+    bus.on(EV.gift, (g) => {
       if (current?.items !== this) return
       bus.emit(EV.toast, { text: `${g.fromName} gave you ${giftPhrase(g.itemDef, g.qty)}.`, icon: 'heart' })
       void this.load()
@@ -158,7 +46,7 @@ export class Items {
   }
 
   /** Read what's carried (connected only). */
-  async load(): Promise<ItemsResult> {
+  async load(): Promise<Result> {
     const link = this.session.link
     if (!link) {
       this.status = 'guest'
@@ -186,7 +74,7 @@ export class Items {
     if (this.status !== 'guest') this.adopt(v)
   }
 
-  private async run(op: ItemsOp, fields: Record<string, unknown>): Promise<ItemsResult<ItemsActionResponse['result']>> {
+  private async run(op: ItemsOp, fields: Record<string, unknown>): Promise<Result<ItemsActionResponse['result']>> {
     const link = this.session.link
     if (!link) return fail('guest')
     const r = await link.mutate<ItemsActionResponse>({ kind: 'items', op, fields })
@@ -228,9 +116,9 @@ export class Items {
     const r = await this.run('use', { itemDef, ...(maker !== undefined ? { maker } : {}), ...(unmoored !== undefined ? { unmoored } : {}) })
     if (r.ok) {
       if (itemDef === 'comfrey-salve') {
-        bus.emit('game:clear-unmoored', { instant: true })
+        bus.emit(EV.clearUnmoored, { instant: true })
       } else if (itemDef === 'willow-bark-tea') {
-        bus.emit('game:clear-unmoored', { instant: false })
+        bus.emit(EV.clearUnmoored, { instant: false })
       }
       if (maker && maker !== this.session.link?.habiticaId) this.thankNearby(maker)
     }
@@ -240,7 +128,7 @@ export class Items {
   private thankNearby(makerId: string): void {
     const feed = presence()
     if (!feed) return
-    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * 16)) {
+    if (feed.isWithin(makerId, ITEM_RULES.thanks.nearbyTiles * TILE)) {
       bus.emit(EV.emote, { habiticaId: makerId, id: 'heart' })
     }
   }
@@ -325,11 +213,11 @@ export class Items {
   }
 
   private emit(what: string): void {
-    bus.emit(ITEMS_EV.changed, { what })
+    bus.emit(EV.itemsChanged, { what })
   }
 }
 
-function fail(code: string): { ok: false; code: string; text: string } {
+function fail(code: string): Refusal {
   return { ok: false, code, text: itemErrorText(code) }
 }
 

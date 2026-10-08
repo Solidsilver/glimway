@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { generateTextures } from '../textures'
-import { createGlimwayAnimations, createGlimwayTerrain, preloadGlimwayExpansion } from '../expansion'
+import { createGlimwayAnimations, preloadGlimwayExpansion } from '../expansion'
 import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../runtime-art'
 import { generateCommonsArt, generateDecorationArt } from '../commons-art'
 import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
@@ -12,15 +12,13 @@ import { createBuildings } from '../buildings'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
- * Boot: loads the delivered expansion atlases (terrain, hero walk, enemies,
- * foreground) and the NPC/guardian/class-effect pass, then generates
- * placeholder textures for anything the delivered art does not cover.
- * Drop-in files loaded in `preload` win over generated keys; the runtime-pass
- * helper builds native per-frame textures after the fallbacks and replaces
- * the shared alias keys (`mara`, `guardian0`, `slash`, `bolt`, …) before the
- * world starts. The Commons pass (Silas, homes, the Commons, village life,
- * papers, the Wilds, UI icons) does the same over the code-drawn Commons
- * placeholders. See docs/runtime-asset-spec.md.
+ * Boot: loads the delivered art (the expansion atlases, the runtime pass of
+ * NPCs, the guardian and class effects, the Commons and items passes, all
+ * packed), then draws in code only what the delivered art doesn't cover.
+ * The runtime pass then replaces the shared alias keys (`mara`,
+ * `guardian0`, `slash`, `bolt`, …) and the Commons pass installs its frames
+ * under the keys the scenes draw with, before the world starts. The packed
+ * art always ships. See docs/runtime-asset-spec.md.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -39,16 +37,14 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     // The terrain tileset ships baked (packed/terrain.webp, preloaded under
-    // its runtime key), so this finds it; then the placeholder textures for
-    // uncovered slots.
-    createGlimwayTerrain(this, 32)
+    // its runtime key); then code-drawn textures for what nothing delivers.
     createGlimwayAnimations(this)
     generateTextures(this)
-    // The Commons and homesteads (code-drawn placeholders; see commons-art).
+    // The Commons and homesteads: what the Commons pass doesn't deliver (./commons-art).
     generateCommonsArt(this)
     generateDecorationArt(this, HOMESTEAD_DATA.items)
     // Commons pass: native `commons-art:` textures and animations, then the
-    // delivered frames copied onto the placeholder keys (before the
+    // delivered frames installed under the scenes' keys (before the
     // breathing fallback below names them, and before any world sprite).
     createCommonsPass(this)
     installCommonsPass(this, HOMESTEAD_DATA.items)
@@ -61,7 +57,7 @@ export class BootScene extends Phaser.Scene {
     createRuntimeArt(this)
     installRuntimeAliases(this, { replaceExisting: true })
 
-    // Native items-pass textures, mill animations, and mill art replacement
+    // Native items-pass textures, and the Tolley mill's frames under their keys
     createItemsPass(this)
     installItemsPass(this)
 

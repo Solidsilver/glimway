@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor, villageErrorText } from '../game/village'
-  import { itemsFor, ITEMS_EV } from '../game/items'
-  import { homesteadsFor, HOME_EV } from '../game/homestead'
+  import { villageFor } from '../game/village'
+  import { villageErrorText } from '../content/errors'
+  import { itemsFor } from '../game/items'
+  import { homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
   import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
   import type { Asset, ShelfSlotView, ShelfView } from '../lib/api/types'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
+  import { actionRunner, busVersion } from './panel-state.svelte'
   import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
 
   let { session, gate = 0, onClose }: { session: Session; gate?: number; onClose: () => void } = $props()
@@ -19,13 +20,12 @@
   const items = $derived(itemsFor(session))
   const homes = $derived(homesteadsFor(session))
 
+  const action = actionRunner()
   let loaded = $state<'loading' | 'ready' | string>('loading')
-  let busy = $state<string | null>(null)
-  let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
   let view = $state<ShelfView | null>(null)
   let pickingSlot = $state<number | null>(null)
   /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
-  let version = $state(0)
+  const changed = busVersion(bus, EV.itemsChanged, EV.homeChanged)
 
   async function reread(): Promise<void> {
     const r = await village.loadShelf(gate)
@@ -39,22 +39,15 @@
   }
 
   onMount(() => {
-    const bump = () => (version += 1)
     // The pack arriving (the read above, or another answer carrying it)
-    // re-opens the choice list as well as re-reading the shelf.
-    const onItems = () => {
-      bump()
-      void reread()
-    }
-    bus.on(VILLAGE_EV.changed, reread)
-    bus.on(ITEMS_EV.changed, onItems)
-    bus.on(HOME_EV.changed, bump)
+    // re-reads the shelf as well as re-opening the choice list.
+    bus.on(EV.villageChanged, reread)
+    bus.on(EV.itemsChanged, reread)
     void reread()
     if (session.link) void items.load()
     return () => {
-      bus.off(VILLAGE_EV.changed, reread)
-      bus.off(ITEMS_EV.changed, onItems)
-      bus.off(HOME_EV.changed, bump)
+      bus.off(EV.villageChanged, reread)
+      bus.off(EV.itemsChanged, reread)
     }
   })
 
@@ -75,7 +68,7 @@
   }
 
   const stockChoices = $derived.by(() => {
-    void version
+    void changed.value
     const out: StockChoice[] = []
     if (!items.view) return out
 
@@ -131,156 +124,130 @@
   }
 
   async function take(slot: number): Promise<void> {
-    if (busy) return
-    busy = `take-${slot}`
-    message = null
-    const r = await village.shelfAction({ op: 'take', gate, slot })
-    busy = null
-    if (r.ok) {
-      view = r.value.shelf
-      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
-      const line = r.value.line ?? 'You took a gift from the shelf.'
-      message = { text: line, kind: 'ok' }
-      bus.emit(EV.toast, { text: line, icon: 'gift' })
-      bus.emit(VILLAGE_EV.changed)
-      bus.emit(ITEMS_EV.changed)
-    } else {
-      message = { text: villageErrorText(r.code), kind: 'error' }
-    }
+    const r = await action.run(`take-${slot}`, () => village.shelfAction({ op: 'take', gate, slot }), (done) => done.value.line ?? 'You took a gift from the shelf.')
+    if (!r?.ok) return
+    view = r.value.shelf
+    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
+    bus.emit(EV.toast, { text: r.value.line ?? 'You took a gift from the shelf.', icon: 'gift' })
+    bus.emit(EV.villageChanged)
+    bus.emit(EV.itemsChanged)
   }
 
   async function stock(slot: number, asset: Asset): Promise<void> {
-    if (busy) return
-    busy = `stock-${slot}`
-    message = null
-    const r = await village.shelfAction({ op: 'stock', gate, slot, asset })
-    busy = null
+    const r = await action.run(`stock-${slot}`, () => village.shelfAction({ op: 'stock', gate, slot, asset }), 'Placed on the shelf for travellers to take.')
+    if (!r) return
     pickingSlot = null
-    if (r.ok) {
-      view = r.value.shelf
-      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
-      message = { text: 'Placed on the shelf for travellers to take.', kind: 'ok' }
-      bus.emit(VILLAGE_EV.changed)
-      bus.emit(ITEMS_EV.changed)
-    } else {
-      message = { text: villageErrorText(r.code), kind: 'error' }
-    }
+    if (!r.ok) return
+    view = r.value.shelf
+    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
+    bus.emit(EV.villageChanged)
+    bus.emit(EV.itemsChanged)
   }
 
   const shelfItem = $derived(homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate'))
   const isEmpty = $derived(slots.every((s) => s === null))
 
   async function removeShelf(): Promise<void> {
-    if (busy || !shelfItem) return
-    busy = 'remove'
-    message = null
-    const r = await homes.act({ op: 'remove', itemId: shelfItem.id })
-    busy = null
-    if (r.ok) {
-      message = { text: 'Gift shelf put away.', kind: 'ok' }
-      setTimeout(onClose, 800)
-    } else {
-      message = { text: r.text, kind: 'error' }
-    }
+    if (!shelfItem) return
+    const itemId = shelfItem.id
+    const r = await action.run('remove', () => homes.act({ op: 'remove', itemId }), 'Gift shelf put away.')
+    if (r?.ok) setTimeout(onClose, 800)
   }
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="shelf-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the gift shelf"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="shelf-title">
-        <Icon name="home" size={20} />
-        {view ? (view.ownerName ? `${view.ownerName}’s Gift Shelf` : `Lot ${view.gate + 1} Gift Shelf`) : 'The Gift Shelf'}
-      </h2>
-    </header>
-    <p class="lede">Pure gifts for travellers walking past on the Commons lane. Take one into your pack: exactly one gift per traveller each day.</p>
-    {#if view?.takenToday}
-      <p class="notice"><Icon name="check" size={14} /> You have taken your gift from this shelf today. Walk past again tomorrow.</p>
-    {/if}
-    {#if message}<p class="msg {message.kind}" role="status">{message.text}</p>{/if}
+<Panel
+  id="shelf"
+  icon="home"
+  title={view ? (view.ownerName ? `${view.ownerName}’s Gift Shelf` : `Lot ${view.gate + 1} Gift Shelf`) : 'The Gift Shelf'}
+  closeLabel="Close the gift shelf"
+  {onClose}
+>
+  <p class="lede">Pure gifts for travellers walking past on the Commons lane. Take one into your pack: exactly one gift per traveller each day.</p>
+  {#if view?.takenToday}
+    <p class="notice"><Icon name="check" size={14} /> You have taken your gift from this shelf today. Walk past again tomorrow.</p>
+  {/if}
+  {#if action.message}<p class="msg {action.message.kind}" role="status">{action.message.text}</p>{/if}
 
-    {#if loaded !== 'ready'}
-      <p class="msg">{loaded === 'loading' ? 'Looking at the shelf…' : villageErrorText(loaded)}</p>
-    {:else if view}
-      {#if !view.hasShelf}<p class="none">No shelf is set out at this gate.</p>{/if}
-      <ul class="slots" aria-label="Shelf slots">
-        {#each slots as slot, i}
-          <li class="slot-card" class:occupied={slot !== null}>
-            {#if slot}
-              <div class="item-info">
-                <span class="thumb"><ArtIcon art={`icon-${slot.itemDef}`} name="sparkle" size={20} /></span>
-                <div class="details">
-                  <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}</span>
-                  {#if slot.maker}
-                    <span class="maker"><Icon name="heart" size={12} /> by {slot.maker.name}</span>
-                  {/if}
-                </div>
+  {#if loaded !== 'ready'}
+    <p class="msg">{loaded === 'loading' ? 'Looking at the shelf…' : villageErrorText(loaded)}</p>
+  {:else if view}
+    {#if !view.hasShelf}<p class="none">No shelf is set out at this gate.</p>{/if}
+    <ul class="slots" aria-label="Shelf slots">
+      {#each slots as slot, i}
+        <li class="slot-card" class:occupied={slot !== null}>
+          {#if slot}
+            <div class="item-info">
+              <span class="thumb"><ArtIcon art={`icon-${slot.itemDef}`} name="sparkle" size={20} /></span>
+              <div class="details">
+                <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}</span>
+                {#if slot.maker}
+                  <span class="maker"><Icon name="heart" size={12} /> by {slot.maker.name}</span>
+                {/if}
               </div>
+            </div>
+            <button
+              type="button"
+              class="small primary"
+              disabled={action.busy !== null || view.takenToday}
+              onclick={() => take(i)}
+              data-testid={`take-slot-${i}`}
+            >
+              {action.busy === `take-${i}` ? 'Taking…' : view.takenToday ? 'Taken today' : 'Take gift'}
+            </button>
+          {:else}
+            <div class="empty-info">
+              <span class="empty-lbl">Empty slot</span>
+            </div>
+            {#if view.hasShelf && view.canStock}
               <button
                 type="button"
-                class="small primary"
-                disabled={busy !== null || view.takenToday}
-                onclick={() => take(i)}
-                data-testid={`take-slot-${i}`}
+                class="small"
+                class:on={pickingSlot === i}
+                disabled={action.busy !== null}
+                onclick={() => (pickingSlot = pickingSlot === i ? null : i)}
               >
-                {busy === `take-${i}` ? 'Taking…' : view.takenToday ? 'Taken today' : 'Take gift'}
+                {pickingSlot === i ? 'Cancel' : '+ Put a gift'}
               </button>
+            {/if}
+          {/if}
+        </li>
+        {#if pickingSlot === i && view.canStock}
+          <li class="picker-row">
+            <p class="picker-hint">Choose a gift from your pack to leave on the shelf:</p>
+            {#if stockChoices.length === 0}
+              <p class="none">Nothing in your pack that can be gifted.</p>
             {:else}
-              <div class="empty-info">
-                <span class="empty-lbl">Empty slot</span>
-              </div>
-              {#if view.hasShelf && view.canStock}
-                <button
-                  type="button"
-                  class="small"
-                  class:on={pickingSlot === i}
-                  disabled={busy !== null}
-                  onclick={() => (pickingSlot = pickingSlot === i ? null : i)}
-                >
-                  {pickingSlot === i ? 'Cancel' : '+ Put a gift'}
-                </button>
-              {/if}
+              <ul class="stock-list">
+                {#each stockChoices as c}
+                  <li>
+                    <button
+                      type="button"
+                      class="stock-btn"
+                      disabled={action.busy !== null}
+                      onclick={() => stock(i, c.asset)}
+                    >
+                      <span class="thumb"><ArtIcon art={`icon-${c.asset.id}`} name="sparkle" size={16} /></span>
+                      <span class="nm">{c.name}</span>
+                      {#if c.maker}<span class="mk">by {c.maker}</span>{/if}
+                    </button>
+                  </li>
+                {/each}
+              </ul>
             {/if}
           </li>
-          {#if pickingSlot === i && view.canStock}
-            <li class="picker-row">
-              <p class="picker-hint">Choose a gift from your pack to leave on the shelf:</p>
-              {#if stockChoices.length === 0}
-                <p class="none">Nothing in your pack that can be gifted.</p>
-              {:else}
-                <ul class="stock-list">
-                  {#each stockChoices as c}
-                    <li>
-                      <button
-                        type="button"
-                        class="stock-btn"
-                        disabled={busy !== null}
-                        onclick={() => stock(i, c.asset)}
-                      >
-                        <span class="thumb"><ArtIcon art={`icon-${c.asset.id}`} name="sparkle" size={16} /></span>
-                        <span class="nm">{c.name}</span>
-                        {#if c.maker}<span class="mk">by {c.maker}</span>{/if}
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-            </li>
-          {/if}
-        {/each}
-      </ul>
+        {/if}
+      {/each}
+    </ul>
 
-      {#if view.canStock && isEmpty && shelfItem}
-        <div class="footer-actions">
-          <button type="button" class="small muted" disabled={busy !== null} onclick={removeShelf}>
-            {busy === 'remove' ? 'Putting away…' : 'Take down shelf'}
-          </button>
-        </div>
-      {/if}
+    {#if view.canStock && isEmpty && shelfItem}
+      <div class="footer-actions">
+        <button type="button" class="small muted" disabled={action.busy !== null} onclick={removeShelf}>
+          {action.busy === 'remove' ? 'Putting away…' : 'Take down shelf'}
+        </button>
+      </div>
     {/if}
-  </div>
-</div>
+  {/if}
+</Panel>
 
 <style>
   .lede {
@@ -335,11 +302,11 @@
   .name {
     font-weight: bold;
     font-size: 13px;
-    color: #2b1d1a;
+    color: var(--outline);
   }
   .maker {
     font-size: 11px;
-    color: #c4523a;
+    color: var(--danger);
     display: flex;
     align-items: center;
     gap: 4px;

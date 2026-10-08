@@ -1,16 +1,13 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"net/http"
-	"net/http/httptest"
 	"slices"
 	"testing"
 )
@@ -35,29 +32,11 @@ type repairsTestResponse struct {
 
 func (x *rig) repairsReq(method, path string, b any, c *http.Cookie, status int) repairsTestResponse {
 	x.t.Helper()
-	var r *http.Request
-	if b == nil {
-		r = httptest.NewRequest(method, path, nil)
-	} else {
-		r = httptest.NewRequest(method, path, bytes.NewBufferString(store.JSON(b)))
-	}
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	var v repairsTestResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		x.t.Fatal(err)
-	}
-	if w.Code != status {
-		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
+	v, _ := httpResponse[repairsTestResponse](x, method, path, b, c, status)
 	return v
 }
 
-func (x *rig) mend(c *http.Cookie, s *response, repairID string, fields map[string]any, status int) repairsTestResponse {
+func (x *rig) mendRefreshing(c *http.Cookie, s *response, repairID string, fields map[string]any, status int) repairsTestResponse {
 	x.t.Helper()
 	x.refresh(c, s)
 	v := x.repairsReq("POST", "/api/repairs/"+repairID+"/mend", body(*s, fmt.Sprintf("mend-%s-%d-%d", repairID, s.Rev, keySeq()), fields), c, status)
@@ -84,7 +63,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	farDoc := s.State
 	farDoc.Area = "village"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
-	bad := x.mend(c, &s, "well-rope", map[string]any{"progress": farDoc}, 409)
+	bad := x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away, got %s", bad.Error.Code)
 	}
@@ -93,7 +72,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	wellDoc := s.State
 	wellDoc.Area = "village"
 	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
-	bad = x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
+	bad = x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
 	if bad.Error.Code != "insufficient-items" {
 		t.Fatalf("expected insufficient-items, got %s", bad.Error.Code)
 	}
@@ -103,7 +82,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	x.conserved("alice")
 
 	// Mend well-rope
-	mended := x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
+	mended := x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
 	if mended.Result.Mended != "well-rope" {
 		t.Fatalf("expected mended well-rope, got %s", mended.Result.Mended)
 	}
@@ -130,7 +109,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 
 	// 6. Mending well-rope again fails with already-mended (409)
 	x.stack("alice", "fibre-rope", "", 1)
-	bad = x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
+	bad = x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
 	if bad.Error.Code != "already-mended" {
 		t.Fatalf("expected already-mended, got %s", bad.Error.Code)
 	}
@@ -147,26 +126,26 @@ func TestDrawingWaterAtWell(t *testing.T) {
 	wellDoc := s.State
 	wellDoc.Area = "village"
 	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
-	bad := x.op(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 409)
+	bad := x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 409)
 	if bad.Error.Code != "well-rope-broken" {
 		t.Fatalf("expected well-rope-broken, got %s", bad.Error.Code)
 	}
 
 	// 2. Mend well-rope
 	x.stack("alice", "fibre-rope", "", 1)
-	x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
+	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 200)
 
 	// 3. Drawing water far away fails (too-far-away)
 	farDoc := s.State
 	farDoc.Area = "village"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
-	bad = x.op(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": farDoc}, 409)
+	bad = x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away, got %s", bad.Error.Code)
 	}
 
 	// 4. Drawing water at the well succeeds and wears the bucket by 3 wear points (1 use)
-	used := x.op(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 200)
+	used := x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 200)
 	if used.Result.Wear == nil || used.Result.Wear.ItemDef != "stave-bucket" {
 		t.Fatalf("expected wear on stave-bucket, got %+v", used.Result.Wear)
 	}
@@ -193,19 +172,19 @@ func TestReturningKeepsakes(t *testing.T) {
 	farDoc := s.State
 	farDoc.Area = "village"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
-	bad := x.op(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": farDoc}, 409)
+	bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away, got %s", bad.Error.Code)
 	}
 
 	// Wrong recipient
-	bad = x.op(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "hazel", "progress": adaDoc}, 400)
+	bad = x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "hazel", "progress": adaDoc}, 400)
 	if bad.Error.Code != "wrong-recipient" {
 		t.Fatalf("expected wrong-recipient, got %s", bad.Error.Code)
 	}
 
 	// Return halter to Ada
-	retAda := x.op(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": adaDoc}, 200)
+	retAda := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": adaDoc}, 200)
 	if retAda.Result.Returned != "knotted-halter" {
 		t.Fatalf("expected returned knotted-halter, got %s", retAda.Result.Returned)
 	}
@@ -219,7 +198,7 @@ func TestReturningKeepsakes(t *testing.T) {
 
 	// Re-returning fails
 	x.stack("alice", "knotted-halter", "", 1)
-	bad = x.op(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": adaDoc}, 409)
+	bad = x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": adaDoc}, 409)
 	if bad.Error.Code != "already-returned" {
 		t.Fatalf("expected already-returned, got %s", bad.Error.Code)
 	}
@@ -231,7 +210,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	hazelDoc.Area = "village"
 	hazelDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(15*16 + 8)}
 
-	retHazel := x.op(c, &s, "return", map[string]any{"itemDef": "tin-whistle", "target": "hazel", "progress": hazelDoc}, 200)
+	retHazel := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "tin-whistle", "target": "hazel", "progress": hazelDoc}, 200)
 	if retHazel.Result.Returned != "tin-whistle" || retHazel.Result.Paper == nil || *retHazel.Result.Paper != "keepers-twists-recipe-card" {
 		t.Fatalf("expected keepers-twists-recipe-card, got %+v", retHazel.Result)
 	}
@@ -247,7 +226,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	silasDoc.Area = "commons"
 	silasDoc.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
 
-	retSilas := x.op(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": silasDoc}, 200)
+	retSilas := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": silasDoc}, 200)
 	if retSilas.Result.Returned != "whittled-fox" || retSilas.Result.Paper != nil {
 		t.Fatalf("expected no paper from Silas, got %+v", retSilas.Result)
 	}
@@ -261,7 +240,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.conserved("alice")
 	wildsDoc := s.State
 	wildsDoc.Area = "wilds"
-	retBett := x.op(c, &s, "return", map[string]any{"itemDef": "beeswax-candle", "target": "bett", "progress": wildsDoc}, 200)
+	retBett := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "beeswax-candle", "target": "bett", "progress": wildsDoc}, 200)
 	if retBett.Result.Returned != "beeswax-candle" || !slices.Contains(retBett.Snapshot.State.Flags, "echo:bett:softened") {
 		t.Fatalf("expected echo:bett:softened flag, got %+v", retBett.Snapshot.State.Flags)
 	}
@@ -270,7 +249,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	// 5. Nan's nails -> Nan's echo camp (in wilds)
 	x.stack("alice", "road-nails", "", 1)
 	x.conserved("alice")
-	retNan := x.op(c, &s, "return", map[string]any{"itemDef": "road-nails", "target": "nan", "progress": wildsDoc}, 200)
+	retNan := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "road-nails", "target": "nan", "progress": wildsDoc}, 200)
 	if retNan.Result.Returned != "road-nails" || !slices.Contains(retNan.Snapshot.State.Flags, "echo:nan:softened") {
 		t.Fatalf("expected echo:nan:softened flag, got %+v", retNan.Snapshot.State.Flags)
 	}
@@ -307,7 +286,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 		doc  rules.State
 	}{{"well-rope", "fibre-rope", wellDoc}, {"fence-rail", "split-rail", fenceDoc}} {
 		x.stack("alice", chore.part, "", 1)
-		x.mend(c, &s, chore.id, map[string]any{"progress": chore.doc}, 200)
+		x.mendRefreshing(c, &s, chore.id, map[string]any{"progress": chore.doc}, 200)
 	}
 
 	// The weather holds off the rest of this wick: it starts the next one.
@@ -331,7 +310,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 	roofDoc.Area = "village"
 	roofDoc.Position = rules.Position{X: float64(4*16 + 8), Y: float64(17*16 + 8)}
 	x.stack("alice", "slates", "", 1)
-	x.mend(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
+	x.mendRefreshing(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
 	read = nextWick()
 	if len(read.Open) != 1 || read.Open[0].ID != "bench-slat" {
 		t.Fatalf("expected the bench next wick, got %+v", read.Open)
@@ -369,7 +348,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 	}
 	for _, id := range content.RepairRules.Rules.Scripted {
 		x.stack("alice", byID[id].Part, "", 1)
-		x.mend(c, &s, id, doc(id, &s), 200)
+		x.mendRefreshing(c, &s, id, doc(id, &s), 200)
 	}
 
 	seen := map[string]bool{}
@@ -384,7 +363,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 				t.Fatal("the well never breaks again")
 			}
 			x.stack("alice", o.Part, "", 1)
-			x.mend(c, &s, o.ID, doc(o.ID, &s), 200)
+			x.mendRefreshing(c, &s, o.ID, doc(o.ID, &s), 200)
 			seen[o.ID] = true
 		}
 		// Eight-day jumps sweep every day of the wick, so the hame's
@@ -461,7 +440,7 @@ func TestMendGiftFailureRollsBack(t *testing.T) {
 	wellDoc := s.State
 	wellDoc.Area = "village"
 	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
-	x.mend(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
+	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
 	x.conserved("alice")
 
 	// Nothing changed: the rope is still in the pack, the well still open.

@@ -1,42 +1,39 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Session } from '../game/session'
-  import { VILLAGE_EV, villageFor } from '../game/village'
-  import { bus } from '../game/events'
+  import { villageFor } from '../game/village'
+  import { bus, EV } from '../game/events'
   import { calendarLine, contributionLimits, FESTIVAL_NOTES, nextFestival, projectProgress, turningNotice } from '../lib/village'
   import { ELARA_SIGNATURE, PROJECTS_NEED_WORLD, PROJECTS_OFFLINE, projectNotice } from '../content/village-notices'
   import { MATERIALS } from '../content/expansion-writing'
   import { paperById, paperFlag } from '../content/papers'
   import { itemDef } from '../lib/items'
   import type { ProjectView } from '../lib/api/types'
-  import { focusTrap } from './focus'
-  import { sheet } from './sheet'
+  import { busVersion } from './panel-state.svelte'
   import Icon from './Icon.svelte'
+  import Panel from './Panel.svelte'
 
   // A notice board (Hearthwick or the Commons): Elara's Turning notice, the
   // festivals, and the world's village projects, which you can give to.
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const village = $derived(villageFor(session))
-  let version = $state(0)
+  const changed = busVersion(bus, EV.villageChanged)
   let give = $state<Record<string, Record<string, number>>>({})
   let busy = $state<string | null>(null)
   let messages = $state<Record<string, { text: string; kind: 'ok' | 'error' }>>({})
 
   onMount(() => {
-    const bump = () => (version += 1)
-    bus.on(VILLAGE_EV.changed, bump)
     village.refreshIfStale() // the board may open just past midnight
     if (session.link) {
       void village.loadProjects()
       void village.loadRepairs()
       void village.loadMail() // carried counts
     }
-    return () => bus.off(VILLAGE_EV.changed, bump)
   })
 
   const view = $derived.by(() => {
-    void version
+    void changed.value
     const now = village.now()
     const day = village.calendar
     return {
@@ -84,134 +81,128 @@
   const heldPapers = (p: ProjectView) => p.grantablePapers.filter((id) => session.state.flags.includes(paperFlag(id)))
 </script>
 
-<div class="overlay sheet" use:sheet={onClose} role="dialog" aria-modal="true" aria-labelledby="board-title">
-  <div class="panel" use:focusTrap>
-    <header class="panel-head">
-      <button type="button" class="modal-close" onclick={onClose} aria-label="Close the notice board"><Icon name="close" size={14} /></button>
-      <h2 class="panel-title" id="board-title"><Icon name="scroll" size={20} /> Notice Board</h2>
-    </header>
-    <p class="today" data-testid="board-date">{calendarLine(view.day)}</p>
+<Panel id="board" icon="scroll" title="Notice Board" closeLabel="Close the notice board" {onClose}>
+  <p class="today" data-testid="board-date">{calendarLine(view.day)}</p>
 
-    <section aria-label="Notices">
-      <div class="notice" class:soon={view.turning.soon} data-testid="turning-notice">
+  <section aria-label="Notices">
+    <div class="notice" class:soon={view.turning.soon} data-testid="turning-notice">
+      <span class="pin" aria-hidden="true"></span>
+      <p class="hand">{view.turning.text}</p>
+      <p class="sig">{ELARA_SIGNATURE}</p>
+    </div>
+    {#if view.day.festival}
+      <div class="notice festive">
         <span class="pin" aria-hidden="true"></span>
-        <p class="hand">{view.turning.text}</p>
-        <p class="sig">{ELARA_SIGNATURE}</p>
+        <p class="hand"><b>{view.day.festival}.</b> {FESTIVAL_NOTES[view.day.festival]}</p>
       </div>
-      {#if view.day.festival}
-        <div class="notice festive">
-          <span class="pin" aria-hidden="true"></span>
-          <p class="hand"><b>{view.day.festival}.</b> {FESTIVAL_NOTES[view.day.festival]}</p>
-        </div>
-      {:else if view.next}
-        <div class="notice small">
-          <span class="pin" aria-hidden="true"></span>
-          <p class="hand"><b>{view.next.name}</b> falls on {view.next.day.wick}-wick, day {view.next.day.day} ({when(view.next.at)}).</p>
-        </div>
-      {/if}
-    </section>
-
-    <h3 class="section-title">Village chores</h3>
-    {#if !view.connected}
-      <p class="msg">Chores on the board are for folk with a world.</p>
-    {:else if view.repairsStatus === 'offline'}
-      <p class="msg">Can’t read the chores list just now.</p>
-    {:else if view.repairs.open.length === 0}
-      <p class="msg">All quiet. Nothing broken in the village today.</p>
-    {:else}
-      <ul class="chores" data-testid="chores-list">
-        {#each view.repairs.open as chore (chore.id)}
-          <li class="chore" data-chore={chore.id}>
-            <div class="ph">
-              <span class="name">{chore.name}</span>
-              <span class="stage open">Open</span>
-            </div>
-            <p class="say">{chore.description}</p>
-            <div class="chore-meta">
-              <span class="hint"><Icon name="map" size={12} /> {chore.hint}</span>
-              <span class="part"><Icon name="tools" size={12} /> Needs: <b>{partName(chore.part)}</b></span>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-
-    {#if view.connected && view.repairs.history.length > 0}
-      <div class="history-block" data-testid="repairs-history">
-        <h4 class="sub-title">Mended recently</h4>
-        <ul class="history-list">
-          {#each view.repairs.history as h (h.id)}
-            <li class="history-item">
-              <span class="mended-name">{h.repairName}</span>
-              <span class="mended-by">— mended by {h.displayName || 'a neighbour'}</span>
-            </li>
-          {/each}
-        </ul>
+    {:else if view.next}
+      <div class="notice small">
+        <span class="pin" aria-hidden="true"></span>
+        <p class="hand"><b>{view.next.name}</b> falls on {view.next.day.wick}-wick, day {view.next.day.day} ({when(view.next.at)}).</p>
       </div>
     {/if}
+  </section>
 
-    <h3 class="section-title">Village projects</h3>
-    {#if !view.connected}
-      <p class="msg">{PROJECTS_NEED_WORLD}</p>
-    {:else if view.status === 'offline'}
-      <p class="msg">{PROJECTS_OFFLINE}</p>
-    {:else if view.status === 'loading' && version === 0}
-      <p class="msg">Mara is finding the ledger page…</p>
-    {/if}
-    {#if view.connected}
-      <p class="carried" aria-live="polite">
-        You carry:
-        {#each MATERIALS as m (m.id)}<span>{view.carried[m.id] ?? 0} {m.name.toLowerCase()}</span>{/each}
-      </p>
-    {/if}
-    <ul class="projects">
-      {#each view.projects as p (p.id)}
-        {@const n = projectNotice(p.id)}
-        {@const limits = contributionLimits(p, view.carried)}
-        {@const giving = Object.values(give[p.id] ?? {}).reduce((a, b) => a + b, 0)}
-        <li class="project" class:done={p.stage === 'complete'} data-project={p.id}>
+  <h3 class="section-title">Village chores</h3>
+  {#if !view.connected}
+    <p class="msg">Chores on the board are for folk with a world.</p>
+  {:else if view.repairsStatus === 'offline'}
+    <p class="msg">Can’t read the chores list just now.</p>
+  {:else if view.repairs.open.length === 0}
+    <p class="msg">All quiet. Nothing broken in the village today.</p>
+  {:else}
+    <ul class="chores" data-testid="chores-list">
+      {#each view.repairs.open as chore (chore.id)}
+        <li class="chore" data-chore={chore.id}>
           <div class="ph">
-            <span class="name">{p.name}</span>
-            <span class="stage {p.stage}">{p.stage === 'complete' ? 'Done' : p.stage === 'open' ? 'Open' : 'Under way'}</span>
+            <span class="name">{chore.name}</span>
+            <span class="stage open">Open</span>
           </div>
-          <p class="say">“{p.stage === 'complete' ? n.complete : p.stage === 'open' ? n.open : n.inProgress}” <span class="by">— {n.by}</span></p>
-          <div class="bar" aria-label={`${Math.round(projectProgress(p) * 100)}% done`}><span style={`width:${projectProgress(p) * 100}%`}></span></div>
-          <table class="mats">
-            <tbody>
-              {#each Object.keys(p.required) as m (m)}
-                <tr>
-                  <th scope="row">{matName(m)}</th>
-                  <td class="num">{p.contributed[m] ?? 0} / {p.required[m]}</td>
-                  <td class="mine">{#if (p.mine[m] ?? 0) > 0}you: {p.mine[m]}{/if}</td>
-                  {#if view.connected && p.stage !== 'complete'}
-                    <td class="step">
-                      <button type="button" class="tiny" aria-label={`Less ${matName(m)}`} disabled={amount(p, m) <= 0} onclick={() => setAmount(p, m, amount(p, m) - 5)}>−</button>
-                      <input type="number" inputmode="numeric" min="0" max={limits[m]} value={amount(p, m)} aria-label={`${matName(m)} to give`} data-give={`${p.id}:${m}`} oninput={(e) => setAmount(p, m, Number((e.currentTarget as HTMLInputElement).value))} />
-                      <button type="button" class="tiny" aria-label={`More ${matName(m)}`} disabled={amount(p, m) >= limits[m]} onclick={() => setAmount(p, m, amount(p, m) + 5)}>+</button>
-                      <button type="button" class="tiny max" disabled={limits[m] <= 0} onclick={() => setAmount(p, m, limits[m])}>All</button>
-                    </td>
-                  {/if}
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-          {#if view.connected && p.stage !== 'complete'}
-            <div class="act">
-              <button type="button" class="primary small" data-contribute={p.id} disabled={busy !== null || giving <= 0} onclick={() => contribute(p)}>
-                {busy === p.id ? 'Giving…' : giving > 0 ? `Give ${giving}` : 'Give'}
-              </button>
-            </div>
-          {/if}
-          {#if p.stage === 'complete' && heldPapers(p).length}
-            <p class="papers"><Icon name="scroll" size={12} /> In your journal: {heldPapers(p).map((id) => paperById(id)?.title ?? id).join(', ')}</p>
-          {/if}
-          {#if messages[p.id]}<p class="msg {messages[p.id].kind}" role="status">{messages[p.id].text}</p>{/if}
+          <p class="say">{chore.description}</p>
+          <div class="chore-meta">
+            <span class="hint"><Icon name="map" size={12} /> {chore.hint}</span>
+            <span class="part"><Icon name="tools" size={12} /> Needs: <b>{partName(chore.part)}</b></span>
+          </div>
         </li>
       {/each}
     </ul>
+  {/if}
 
-  </div>
-</div>
+  {#if view.connected && view.repairs.history.length > 0}
+    <div class="history-block" data-testid="repairs-history">
+      <h4 class="sub-title">Mended recently</h4>
+      <ul class="history-list">
+        {#each view.repairs.history as h (h.id)}
+          <li class="history-item">
+            <span class="mended-name">{h.repairName}</span>
+            <span class="mended-by">— mended by {h.displayName || 'a neighbour'}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+
+  <h3 class="section-title">Village projects</h3>
+  {#if !view.connected}
+    <p class="msg">{PROJECTS_NEED_WORLD}</p>
+  {:else if view.status === 'offline'}
+    <p class="msg">{PROJECTS_OFFLINE}</p>
+  {:else if view.status === 'loading' && changed.value === 0}
+    <p class="msg">Mara is finding the ledger page…</p>
+  {/if}
+  {#if view.connected}
+    <p class="carried" aria-live="polite">
+      You carry:
+      {#each MATERIALS as m (m.id)}<span>{view.carried[m.id] ?? 0} {m.name.toLowerCase()}</span>{/each}
+    </p>
+  {/if}
+  <ul class="projects">
+    {#each view.projects as p (p.id)}
+      {@const n = projectNotice(p.id)}
+      {@const limits = contributionLimits(p, view.carried)}
+      {@const giving = Object.values(give[p.id] ?? {}).reduce((a, b) => a + b, 0)}
+      <li class="project" class:done={p.stage === 'complete'} data-project={p.id}>
+        <div class="ph">
+          <span class="name">{p.name}</span>
+          <span class="stage {p.stage}">{p.stage === 'complete' ? 'Done' : p.stage === 'open' ? 'Open' : 'Under way'}</span>
+        </div>
+        <p class="say">“{p.stage === 'complete' ? n.complete : p.stage === 'open' ? n.open : n.inProgress}” <span class="by">— {n.by}</span></p>
+        <div class="bar" aria-label={`${Math.round(projectProgress(p) * 100)}% done`}><span style={`width:${projectProgress(p) * 100}%`}></span></div>
+        <table class="mats">
+          <tbody>
+            {#each Object.keys(p.required) as m (m)}
+              <tr>
+                <th scope="row">{matName(m)}</th>
+                <td class="num">{p.contributed[m] ?? 0} / {p.required[m]}</td>
+                <td class="mine">{#if (p.mine[m] ?? 0) > 0}you: {p.mine[m]}{/if}</td>
+                {#if view.connected && p.stage !== 'complete'}
+                  <td class="step">
+                    <button type="button" class="tiny" aria-label={`Less ${matName(m)}`} disabled={amount(p, m) <= 0} onclick={() => setAmount(p, m, amount(p, m) - 5)}>−</button>
+                    <input type="number" inputmode="numeric" min="0" max={limits[m]} value={amount(p, m)} aria-label={`${matName(m)} to give`} data-give={`${p.id}:${m}`} oninput={(e) => setAmount(p, m, Number((e.currentTarget as HTMLInputElement).value))} />
+                    <button type="button" class="tiny" aria-label={`More ${matName(m)}`} disabled={amount(p, m) >= limits[m]} onclick={() => setAmount(p, m, amount(p, m) + 5)}>+</button>
+                    <button type="button" class="tiny max" disabled={limits[m] <= 0} onclick={() => setAmount(p, m, limits[m])}>All</button>
+                  </td>
+                {/if}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+        {#if view.connected && p.stage !== 'complete'}
+          <div class="act">
+            <button type="button" class="primary small" data-contribute={p.id} disabled={busy !== null || giving <= 0} onclick={() => contribute(p)}>
+              {busy === p.id ? 'Giving…' : giving > 0 ? `Give ${giving}` : 'Give'}
+            </button>
+          </div>
+        {/if}
+        {#if p.stage === 'complete' && heldPapers(p).length}
+          <p class="papers"><Icon name="scroll" size={12} /> In your journal: {heldPapers(p).map((id) => paperById(id)?.title ?? id).join(', ')}</p>
+        {/if}
+        {#if messages[p.id]}<p class="msg {messages[p.id].kind}" role="status">{messages[p.id].text}</p>{/if}
+      </li>
+    {/each}
+  </ul>
+
+</Panel>
 
 <style>
   .today {
@@ -223,7 +214,7 @@
     position: relative;
     margin: 0 0 8px;
     padding: 10px 12px 8px;
-    background: #fffbef;
+    background: var(--cream-hi);
     border: 1.5px solid var(--paper-line);
     border-radius: 3px;
     box-shadow: 2px 3px 0 rgba(74, 50, 32, 0.18);
@@ -267,18 +258,6 @@
     letter-spacing: 0.04em;
     font-size: 15px;
     margin-top: 14px;
-  }
-  .carried {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 10px;
-    margin: 0 0 8px;
-    font-size: 13px;
-    color: var(--text-soft);
-  }
-  .carried span {
-    font-weight: 800;
-    color: var(--wood-dark);
   }
   .projects {
     list-style: none;
@@ -379,7 +358,7 @@
     text-align: center;
     border: 1.5px solid var(--wood);
     border-radius: 6px;
-    background: #fffbef;
+    background: var(--cream-hi);
   }
   .tiny {
     min-width: 30px;
@@ -409,17 +388,6 @@
   }
   .msg {
     margin: 8px 0 0;
-    padding: 7px 10px;
-    border-radius: 8px;
-    font-size: 13.5px;
-    border: 2px solid var(--paper-line);
-    background: rgba(255, 255, 255, 0.4);
-  }
-  .msg.error {
-    border-color: rgba(196, 82, 58, 0.6);
-  }
-  .msg.ok {
-    border-color: rgba(47, 127, 122, 0.55);
   }
   @media (max-width: 480px) {
     .mats tr {

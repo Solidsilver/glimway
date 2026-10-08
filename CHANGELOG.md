@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
 ### For players
 
 - When a new version of Glimway is ready, a small notice offers to reload.
@@ -20,6 +22,10 @@ the game can show the first part as "What's new":
   notice says so and waits.
 - The Menu shows which version you're playing, with a link to this list of
   what's new.
+- After an update, a short card says what's new since you last played. The
+  Menu's "What's new" brings it back any time.
+- Prompts are steadier: the nearest thing you can reach always shows its
+  prompt, and a click reaches exactly as far as the action itself.
 
 ### Technical
 
@@ -42,6 +48,43 @@ the game can show the first part as "What's new":
 - The release workflow stops early when the tag doesn't match
   `package.json`'s version.
 - This changelog, and the release steps in `docs/releasing.md`.
+- The "What's new" card reads each release's `### For players` lines from
+  this file when the game is built (`virtual:whats-new`,
+  `scripts/whats-new.mjs`), never at runtime. A device remembers the build it
+  last caught up to (`glimway:whats-new` in localStorage); a device that
+  never saw the card catches up without one. `CHANGELOG.md` is now a build
+  input (the build hash, the Docker context, the Nix web package).
+- Interface cleanup: one panel shell (`Panel.svelte`) and notice card
+  (`NoticeCard.svelte`), shared panel styles and colour tokens in `app.css`,
+  the panel action and bus helpers (`panel-state.svelte.ts`), one table of
+  what each overlay holds back (`layers.ts`), the camera insets measured
+  from marked elements (`play-insets.ts`), connected play's state machine
+  out of `App.svelte` (`account-flow.svelte.ts`, unit-tested), and the
+  refusal copy in `src/content/errors.ts`. Node tests can import rune
+  modules through `tests/helpers/svelte-runes.ts`.
+- The client no longer falls back when a server has no mail recall: every
+  server since the first deploy has it.
+- A shared contract in protobuf (`proto/`, generated with `buf` into
+  `server/internal/gen` and `src/lib/gen`, checked in): the error codes are
+  one enum on both sides, calendar and invites are served from generated
+  types with today's JSON shape, and CI regenerates the code and runs
+  `buf breaking` against `main`. Plan for the remaining domains:
+  `docs/proto-migration.md`.
+- Presence is binary protobuf over the `glimway.presence.v1` subprotocol;
+  a broadcast is encoded once for every recipient (about 7.5 times faster).
+  A tab from an older build is told to reload (close code 4005).
+- Game cleanup: one typed, Phaser-free event bus; `lib/tile.ts` and one
+  hash module; one interactions path (each point carries its verb, label,
+  marker and reach) with one nearest-wins loop; `WorldScene` split into
+  controllers (unmoored, the Turning, dialogue actions, moves); homesteads
+  and enemies split by concern; the superseded placeholder drawers retired
+  and the art-pass loaders collapsed into `art-pass.ts`.
+- Server cleanup: `api.go`, `items.go`, `homestead.go` and `presence.go`
+  split by responsibility (`expansion.go` is now `mutation.go`), shared
+  HTTP test helpers, `internal/itemmove` for item transfers (API and mail),
+  and a pinned migration history (`store/history.json`) with upgrade
+  fixtures that carry data.
+- Playwright uses at most 3 local workers by default.
 
 ## [0.1.0] - 2026-10-07
 
@@ -82,5 +125,6 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Solidsilver/glimway/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Solidsilver/glimway/releases/tag/v0.1.0

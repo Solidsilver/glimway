@@ -127,7 +127,7 @@ func TestGateShelfPlacementAndStock(t *testing.T) {
 
 	// Alice has a gate-shelf in inventory
 	shelfItem := x.decoration("alice", "gate-shelf")
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
 
 	// Now shelf is placed
 	sh = x.getShelf(ac, 0, 200)
@@ -137,7 +137,7 @@ func TestGateShelfPlacementAndStock(t *testing.T) {
 
 	// Trying to place a second shelf fails with placement-overlap
 	shelf2 := x.decoration("alice", "gate-shelf")
-	errResp := x.homeOp(ac, &a, "place", map[string]any{"itemId": shelf2, "scene": "gate"}, 409)
+	errResp := x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelf2, "scene": "gate"}, 409)
 	if errResp.Error.Code != "placement-overlap" {
 		t.Fatalf("expected placement-overlap got %s", errResp.Error.Code)
 	}
@@ -248,7 +248,7 @@ func TestGateShelfPlacementAndStock(t *testing.T) {
 	}, 400)
 
 	// Removing the shelf while stocked fails with shelf-not-empty
-	remErr := x.homeOp(ac, &a, "remove", map[string]any{"itemId": shelfItem}, 409)
+	remErr := x.homeOpRefreshing(ac, &a, "remove", map[string]any{"itemId": shelfItem}, 409)
 	if remErr.Error.Code != "shelf-not-empty" {
 		t.Fatalf("expected shelf-not-empty, got %s", remErr.Error.Code)
 	}
@@ -270,7 +270,7 @@ func TestGateShelfTakeAndDailyLimit(t *testing.T) {
 	x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0")
 
 	shelfItem := x.decoration("alice", "gate-shelf")
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
 
 	// Alice stocks a comfrey-salve crafted by Alice
 	x.stack("alice", "comfrey-salve", "alice", 1)
@@ -400,7 +400,7 @@ func TestGateShelfTakeReplayIsConserved(t *testing.T) {
 	x.claimGate(ac, &a, 0)
 	x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0")
 	shelfItem := x.decoration("alice", "gate-shelf")
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
 	x.stack("alice", "comfrey-salve", "alice", 1)
 	x.shelfOp(ac, &a, map[string]any{
 		"op": "stock", "gate": 0, "slot": 0,
@@ -447,7 +447,7 @@ func TestConcurrentGateShelfTakesSerializeOneAvailableSlot(t *testing.T) {
 	x.claimGate(ac, &a, 0)
 	x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0")
 	shelfItem := x.decoration("alice", "gate-shelf")
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
 	x.stack("alice", "comfrey-salve", "alice", 1)
 	x.shelfOp(ac, &a, map[string]any{
 		"op": "stock", "gate": 0, "slot": 0,
@@ -501,7 +501,7 @@ func TestGateShelfLostDeedWriteOff(t *testing.T) {
 	x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0")
 
 	shelfItem := x.decoration("alice", "gate-shelf")
-	x.homeOp(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": shelfItem, "scene": "gate"}, 200)
 
 	// Stock an item and an instance
 	x.stack("alice", "comfrey-salve", "alice", 1)
@@ -536,7 +536,7 @@ func TestGateShelfLostDeedWriteOff(t *testing.T) {
 	}, 200)
 
 	// Alice leaves the homestead
-	x.homeOp(ac, &a, "leave", nil, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 
 	// Fast-forward past deed loss window
 	lostDays := int64(content.HomeRules.Desolation.DeedLostAfterDays) + 1
@@ -575,7 +575,7 @@ func TestMakerThankYouMail(t *testing.T) {
 	}
 
 	// Alice is offline/away. Bob uses the twists
-	x.op(bc, &b, "use", map[string]any{
+	x.opRefreshing(bc, &b, "use", map[string]any{
 		"itemDef": "keepers-twists",
 		"maker":   "alice",
 	}, 200)
@@ -606,7 +606,7 @@ func TestMakerThankYouMail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	x.op(bc, &b, "use", map[string]any{
+	x.opRefreshing(bc, &b, "use", map[string]any{
 		"itemDef": "keepers-twists",
 		"maker":   "alice",
 	}, 200)
@@ -640,7 +640,7 @@ func TestMakerThankYouMail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	x.op(bc, &b, "use", map[string]any{
+	x.opRefreshing(bc, &b, "use", map[string]any{
 		"itemDef": "keepers-twists",
 		"maker":   "alice",
 	}, 200)
@@ -669,7 +669,7 @@ func TestToolWearOutThankYouMail(t *testing.T) {
 	axe := x.instance("bob", "bench-axe", 1, "alice")
 
 	// Alice is offline. Bob uses the tool: it breaks at condition 0
-	res := x.op(bc, &b, "use", map[string]any{
+	res := x.opRefreshing(bc, &b, "use", map[string]any{
 		"instance": axe,
 	}, 200)
 
@@ -708,7 +708,7 @@ func TestWardenDullingDoesNotThankMaker(t *testing.T) {
 	if _, err := x.db.DB.Exec("UPDATE item_instances SET worn_day=? WHERE id=?", utcDay(x.now.Load()), axe); err != nil {
 		t.Fatal(err)
 	}
-	used := x.op(bc, &b, "use", map[string]any{"instance": axe}, 200)
+	used := x.opRefreshing(bc, &b, "use", map[string]any{"instance": axe}, 200)
 	if used.Result.Wear == nil || used.Result.Wear.Broke || used.Result.Wear.Condition != 0 {
 		t.Fatalf("expected the warden-set axe to dull at zero: %+v", used.Result.Wear)
 	}

@@ -19,7 +19,8 @@
 import { PresenceClient, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
 import type { PresenceAvatar, PresencePlayer, PresencePosition } from '../lib/presence.ts'
-import { EV, type EmotePayload, type PresencePayload } from './event-names.ts'
+import { EV, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
+import type { Bus } from './events.ts'
 
 /** Peers stay drawn this long after a leave, fading out. */
 export const LEAVE_FADE_MS = 400
@@ -44,11 +45,7 @@ export interface FeedLink {
   beat(force?: boolean): Promise<void>
 }
 
-export interface FeedBus {
-  on(event: string, fn: (...args: never[]) => void): unknown
-  off(event: string, fn: (...args: never[]) => void): unknown
-  emit(event: string, payload?: unknown): unknown
-}
+export type FeedBus = Pick<Bus<EventMap>, 'on' | 'off' | 'emit'>
 
 export interface FeedDeps {
   link: FeedLink

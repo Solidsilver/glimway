@@ -83,6 +83,8 @@ export const offlineCopy = {
 export const accountCopy = {
   section: 'Your world',
   signedInAs: (name: string) => `Signed in as ${name}`,
+  /** The title, after the server forgot this sign-in. */
+  signInEnded: 'Your sign-in ended. Sign in again to play in your world.',
   saved: 'Your journey saves to your world as you play.',
   savedOffline: 'Offline: your journey saves on this device and goes up when you reconnect.',
   savedTrouble: 'The world server is having trouble. Your journey saves on this device and goes up once it recovers.',

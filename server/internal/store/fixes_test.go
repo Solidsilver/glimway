@@ -109,20 +109,9 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 }
 func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "db.sqlite")
-	old, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	schema, err := migrations.ReadFile("migrations/001_core.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = old.Exec(string(schema)); err != nil {
-		t.Fatal(err)
-	}
+	old := newUpgradeFixture(t, path, "001_core.sql", nil)
+	var err error
 	for _, q := range []string{
-		"CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL)",
-		"INSERT INTO schema_migrations VALUES('001_core.sql',0)",
 		"INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',0)",
 		"INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Hero','w',0,0)",
 		"INSERT INTO sync_baselines(habitica_id,xp_mark,pending,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice',10080,337,4000,'{}',0,42)",
@@ -154,23 +143,12 @@ func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 
 func TestRound2UpgradeLossHistoryRemovalAndSessionDeadline(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "round1.sqlite")
-	old, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"001_core.sql", "002_fix_round.sql"} {
-		schema, err := migrations.ReadFile("migrations/" + name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = old.Exec(string(schema)); err != nil {
-			t.Fatal(err)
-		}
-	}
+	old := newUpgradeFixture(t, path, "002_fix_round.sql", nil)
+	var err error
 	p := rules.Profile{ID: "alice", Name: "Hero", Level: 30, Exp: new(float64)}
 	cp := p
 	cp.Level = 29
-	if _, err = old.Exec("CREATE TABLE schema_migrations(name TEXT PRIMARY KEY,applied_at INTEGER NOT NULL); INSERT INTO schema_migrations VALUES('001_core.sql',0),('002_fix_round.sql',0); INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',1); INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Hero','w',1,100)"); err != nil {
+	if _, err = old.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','s',1); INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Hero','w',1,100)"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = old.Exec("INSERT INTO sync_baselines(habitica_id,profile_json,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice',?,10080,?,?,200,100)", JSON(p), rules.LifetimeXP(29, 0), JSON(cp)); err != nil {

@@ -9,7 +9,7 @@
  * lit (quest complete), the same gate the late project papers use.
  */
 import { ECHOES, echoFlag, type EchoDef, type EchoMember } from '../../content/echoes.ts';
-import { hash } from './hash.ts';
+import { hash } from '../hash.ts';
 import { loadWilds } from './data.ts';
 import type { Epoch } from './types.ts';
 import type { SiteKind, StorySite } from './outer.ts';

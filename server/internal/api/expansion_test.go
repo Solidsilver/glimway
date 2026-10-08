@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/land"
@@ -55,29 +54,10 @@ type expansionResponse struct {
 
 func (x *rig) exp(method, path string, body any, c *http.Cookie, status int) expansionResponse {
 	x.t.Helper()
-	r := httptest.NewRequest(method, path, bytes.NewBufferString(store.JSON(body)))
-	r.Header.Set("Content-Type", "application/json")
-	if c != nil {
-		r.AddCookie(c)
-	}
-	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	var v expansionResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
-		x.t.Fatal(err)
-	}
-	if w.Code != status {
-		x.t.Fatalf("%s %s: got %d %s want %d", method, path, w.Code, w.Body.String(), status)
-	}
+	v, _ := httpResponse[expansionResponse](x, method, path, body, c, status)
 	return v
 }
-func body(s response, key string, fields map[string]any) map[string]any {
-	out := map[string]any{"lease": s.Lease, "baseRev": s.Rev, "key": key}
-	for k, v := range fields {
-		out[k] = v
-	}
-	return out
-}
+
 func update(s *response, v expansionResponse) { s.Snapshot = v.Snapshot }
 func (x *rig) fund(id string, n, earned int) {
 	x.t.Helper()

@@ -213,13 +213,13 @@ test('client: invites POST an empty JSON object and revoke by encoded id', async
     fetchImpl: (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       if (init.method === 'POST') return json(200, { id: 'h', createdAt: 1, expiresAt: 2, used: false, code: 'c0de' });
-      if (init.method === 'GET') return json(200, { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3 });
+      if (init.method === 'GET') return json(200, { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3, partyWorld: false, partyAdmitted: false });
       return json(200, { ok: true });
     }) as typeof fetch,
   });
   assert.equal((await api.createInvite()).code, 'c0de');
   assert.equal(calls[0].init.body, '{}');
-  assert.deepEqual(await api.listInvites(), { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3 });
+  assert.deepEqual(await api.listInvites(), { invites: [{ id: 'h', createdAt: 1, expiresAt: 2, used: true }], remaining: 4, outstandingLimit: 3, partyWorld: false, partyAdmitted: false });
   await api.revokeInvite('a/b');
   assert.equal(calls[2].url, '/api/invites/a%2Fb');
   assert.equal(calls[2].init.method, 'DELETE');
@@ -248,9 +248,9 @@ test('state: displayName and leaseActive are kept; older servers leave them empt
   assert.equal(o.leaseActive, undefined);
 });
 
-test('invites: older servers without quota fields still list', async () => {
+test('invites: missing current contract fields are rejected', async () => {
   const api = createApiClient({ fetchImpl: (async () => json(200, { invites: [], remaining: -1 })) as typeof fetch });
-  assert.deepEqual(await api.listInvites(), { invites: [] });
+  await assert.rejects(api.listInvites(), { code: 'bad-response' });
 });
 
 test('invite codes: typed or pasted any way, they become the canonical form', async () => {

@@ -16,11 +16,12 @@ import { LAND, generateLand, landSeed, type Land } from '../lib/homestead-land.t
 import { TANGLE_GROUND } from '../lib/wilds/tangle.ts'
 import type { DecorKind } from '../lib/wilds/types.ts'
 import { DECOR_ART } from '../lib/wilds/tangle.ts'
-import { TILE } from './textures.ts'
+import { TILE, tileBottom, tileKey, tileMid } from '../lib/tile.ts'
 import { tangleFrame } from './wilds/tangle-key.ts'
 import { lookAtlasKey } from './wilds/wilds-looks.ts'
 import { itemIcon } from './items-pass.ts'
 import type { ScenerySpot, WorldData, GatherSpot } from './worlds.ts'
+import { layoutHash01 } from '../lib/hash.ts'
 
 /** Planted things drawn as a patch of the woods' own (the rest as their sapling). */
 const PLANTED_PATCH: Partial<Record<string, DecorKind>> = {
@@ -36,8 +37,8 @@ const PLANTED_PATCH: Partial<Record<string, DecorKind>> = {
  */
 export function plantScenery(p: { itemDef: string; x: number; y: number }, atlas: string): ScenerySpot {
   const patch = PLANTED_PATCH[p.itemDef]
-  const at = { x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, depth: 'y' as const, flipX: h32(p.x, p.y, 6) < 0.5, tx: p.x, ty: p.y }
-  return patch ? { key: atlas, frame: tangleFrame(patch, Math.floor(h32(p.x, p.y, 13) * 16)), ...at } : { key: itemIcon(p.itemDef), ...at }
+  const at = { x: tileMid(p.x), y: tileBottom(p.y), depth: 'y' as const, flipX: layoutHash01(p.x, p.y, 6) < 0.5, tx: p.x, ty: p.y }
+  return patch ? { key: atlas, frame: tangleFrame(patch, Math.floor(layoutHash01(p.x, p.y, 13) * 16)), ...at } : { key: itemIcon(p.itemDef), ...at }
 }
 
 /** What the land map needs from the homestead state (none: a guest, or not read yet). */
@@ -94,12 +95,6 @@ export function seedFor(gate: number): number {
   return source.seed?.(gate) ?? landSeed(source.worldId(), gate)
 }
 
-function h32(x: number, y: number, s: number): number {
-  let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
-
 const TREES: DecorKind[] = ['oak', 'oak', 'pine', 'birch', 'pine', 'oak']
 
 export function buildLand(gate: number): LandWorld {
@@ -107,8 +102,8 @@ export function buildLand(gate: number): LandWorld {
   const seed = seedFor(gate)
   const land = generateLand(seed)
   const st = source.state(gate)
-  const cleared = new Set((st?.cleared ?? []).map(([x, y]) => `${x},${y}`))
-  const stumps = new Set((st?.stumps ?? []).map(([x, y]) => `${x},${y}`))
+  const cleared = new Set((st?.cleared ?? []).map(([x, y]) => tileKey(x, y)))
+  const stumps = new Set((st?.stumps ?? []).map(([x, y]) => tileKey(x, y)))
   const plants = st?.plants ?? []
   const desolate = st?.desolate ?? false
   const W = land.width
@@ -122,10 +117,10 @@ export function buildLand(gate: number): LandWorld {
     scenery.push({
       key: atlas,
       frame: tangleFrame(kind, v),
-      x: tx * TILE + TILE / 2 + Math.round((h32(tx, ty, 5) - 0.5) * 4),
-      y: (ty + 1) * TILE,
+      x: tileMid(tx) + Math.round((layoutHash01(tx, ty, 5) - 0.5) * 4),
+      y: tileBottom(ty),
       depth: DECOR_ART[kind].flat ? -5 : 'y',
-      flipX: h32(tx, ty, 6) < 0.5,
+      flipX: layoutHash01(tx, ty, 6) < 0.5,
       tx,
       ty,
       ...opts
@@ -137,14 +132,14 @@ export function buildLand(gate: number): LandWorld {
     const so: boolean[] = []
     for (let x = 0; x < W; x++) {
       let k = land.tiles[y * W + x]
-      const r = h32(x, y, 11)
-      if (stumps.has(`${x},${y}`)) k = LAND.STUMP
-      if ((k === LAND.TREE || k === LAND.STUMP || k === LAND.BOULDER) && cleared.has(`${x},${y}`)) k = LAND.GRASS
+      const r = layoutHash01(x, y, 11)
+      if (stumps.has(tileKey(x, y))) k = LAND.STUMP
+      if ((k === LAND.TREE || k === LAND.STUMP || k === LAND.BOULDER) && cleared.has(tileKey(x, y))) k = LAND.GRASS
       switch (k) {
         case LAND.EDGE:
           g.push(TANGLE_GROUND.woods)
           so.push(true)
-          if (r < 0.75) decor(TREES[Math.floor(h32(x, y, 3) * TREES.length)], x, y, Math.floor(r * 16), { tint: 0xc4c4cc })
+          if (r < 0.75) decor(TREES[Math.floor(layoutHash01(x, y, 3) * TREES.length)], x, y, Math.floor(r * 16), { tint: 0xc4c4cc })
           break
         case LAND.TREE:
           g.push(TANGLE_GROUND.woods)
@@ -154,7 +149,7 @@ export function buildLand(gate: number): LandWorld {
               ? { target: 'iron-oak', label: 'Chop the iron-oak', tx: x, ty: y }
               : { target: 'tree', label: 'Chop the tree', tx: x, ty: y }
           )
-          decor(r < 0.08 ? 'iron-oak' : TREES[Math.floor(h32(x, y, 3) * TREES.length)], x, y, Math.floor(r * 16))
+          decor(r < 0.08 ? 'iron-oak' : TREES[Math.floor(layoutHash01(x, y, 3) * TREES.length)], x, y, Math.floor(r * 16))
           break
         case LAND.STUMP:
           g.push(TANGLE_GROUND.moss)

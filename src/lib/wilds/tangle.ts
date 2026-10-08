@@ -26,7 +26,7 @@
  * and any blocking piece whose art overhangs a walkable tile is flagged
  * `overhang` so it fades when someone walks beneath it.
  */
-import { TERRAIN } from '../../game/textures.ts';
+import { TERRAIN } from '../tile.ts';
 import type { ChunkExit, DecorKind, DecorSpot, Tile, WildsEntity } from './types.ts';
 
 /** Ground ids the Tangle paints with (the ground art reads them back). */

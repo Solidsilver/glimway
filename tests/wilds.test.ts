@@ -21,7 +21,7 @@ import {
   type Tile,
   type WildsEntity,
 } from '../src/lib/wilds/index.ts';
-import { TERRAIN } from '../src/game/textures.ts';
+import { TERRAIN } from '../src/lib/tile.ts';
 import { DECOR_ART, TANGLE_GROUND } from '../src/lib/wilds/tangle.ts';
 import { CROSSING_CHUNK } from '../src/lib/wilds/outer.ts';
 import wildsJson from '../content/wilds.json' with { type: 'json' };

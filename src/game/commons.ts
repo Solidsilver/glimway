@@ -30,8 +30,9 @@ import { ITEM_RULES } from '../lib/items.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { landEntry } from './homeland.ts'
 import { gameNow } from './clock.ts'
-import { TERRAIN, TILE } from './textures.ts'
+import { TERRAIN, TILE, tileBottom, tileKey, tileMid } from '../lib/tile.ts'
 import type { ExitDef, ForegroundSpot, GatherSpot, PropSpot, ScenerySpot, WorldData } from './worlds.ts'
+import { layoutHash01 } from '../lib/hash.ts'
 
 /** One homestead gate on the lane, in Commons tiles. */
 export interface GateSlot {
@@ -91,12 +92,6 @@ const WILDS_ENTRY = { tx: 2, ty: 22 }
 
 // ---------------------------------------------------------------- noise
 
-function hash(x: number, y: number, seed: number): number {
-  let h = (x * 374761393 + y * 668265263 + seed * 2147483647) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
-
 /** Smooth value noise on a coarse lattice: patches, not salt and pepper. */
 function patch(x: number, y: number, cell: number, seed: number): number {
   const gx = Math.floor(x / cell)
@@ -104,10 +99,10 @@ function patch(x: number, y: number, cell: number, seed: number): number {
   const fx = (x % cell) / cell
   const fy = (y % cell) / cell
   const s = (t: number) => t * t * (3 - 2 * t)
-  const a = hash(gx, gy, seed)
-  const b = hash(gx + 1, gy, seed)
-  const c = hash(gx, gy + 1, seed)
-  const d = hash(gx + 1, gy + 1, seed)
+  const a = layoutHash01(gx, gy, seed)
+  const b = layoutHash01(gx + 1, gy, seed)
+  const c = layoutHash01(gx, gy + 1, seed)
+  const d = layoutHash01(gx + 1, gy + 1, seed)
   const top = a + (b - a) * s(fx)
   const bottom = c + (d - c) * s(fx)
   return top + (bottom - top) * s(fy)
@@ -149,7 +144,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
       // Meadow: grass, with drifts of moss in the shade and wildflowers.
       const moss = patch(x, y, 6, seed)
       const bloom = patch(x + 40, y + 17, 5, seed + 1)
-      g.push(moss > 0.72 ? TERRAIN.grass_b : bloom > 0.8 ? TERRAIN.flowers : (hash(x, y, seed) < 0.5 ? TERRAIN.grass_a : TERRAIN.grass_c))
+      g.push(moss > 0.72 ? TERRAIN.grass_b : bloom > 0.8 ? TERRAIN.flowers : (layoutHash01(x, y, seed) < 0.5 ? TERRAIN.grass_a : TERRAIN.grass_c))
       s.push(false)
     }
     ground.push(g)
@@ -177,7 +172,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   const scenery: ScenerySpot[] = []
   /** Scenery anchored bottom-centre on a tile's bottom edge. */
   const put = (key: string, tx: number, ty: number, opts: Partial<ScenerySpot> = {}) =>
-    scenery.push({ key, x: tx * TILE + TILE / 2, y: ty * TILE + TILE, ...opts })
+    scenery.push({ key, x: tileMid(tx), y: tileBottom(ty), ...opts })
 
   // ---- the fences along the lane, with a gate in them for every homestead.
   // Behind the fences the land is wild: the homesteads lie out there, each
@@ -191,7 +186,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   for (const fx of [westX, eastX]) {
     let run: number | null = null
     const flush = (end: number) => {
-      if (run !== null && end >= run) scenery.push({ key: `fence-v-${end - run + 1}`, x: fx * TILE, y: (end + 1) * TILE, originX: 0 })
+      if (run !== null && end >= run) scenery.push({ key: `fence-v-${end - run + 1}`, x: fx * TILE, y: tileBottom(end), originX: 0 })
       run = null
     }
     for (let y = fenceTop; y <= fenceBottom; y++) {
@@ -209,11 +204,11 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     for (let y = g.ty; y <= g.ty + 1; y++) {
       set(g.tx, y, TERRAIN.cobble_moss)
       // A worn track running off into the trees behind the gate.
-      for (let d = 1; d <= 3; d++) if (hash(g.tx + d * 7, y, 33) < 0.85 - d * 0.2) set(g.side === 'west' ? g.tx - d : g.tx + d, y, d === 1 ? TERRAIN.dirt : TERRAIN.grass_b)
+      for (let d = 1; d <= 3; d++) if (layoutHash01(g.tx + d * 7, y, 33) < 0.85 - d * 0.2) set(g.side === 'west' ? g.tx - d : g.tx + d, y, d === 1 ? TERRAIN.dirt : TERRAIN.grass_b)
       set(g.entry.tx, y, TERRAIN.cobble_moss)
     }
-    put('gatepost-small', g.tx, g.ty - 1, { x: g.tx * TILE + 8 })
-    put('gatepost-small', g.tx, g.ty + 2, { x: g.tx * TILE + 8, y: (g.ty + 2) * TILE + 6 })
+    put('gatepost-small', g.tx, g.ty - 1, { x: tileMid(g.tx) })
+    put('gatepost-small', g.tx, g.ty + 2, { x: tileMid(g.tx), y: (g.ty + 2) * TILE + 6 })
     block(g.tx, g.ty - 1)
     block(g.tx, g.ty + 2)
     block(g.sign.tx, g.sign.ty)
@@ -222,7 +217,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   // ---- the plot lane, north to south: the old carting lane, worn cobbles
   // gone to moss, with grass creeping in at the edges.
   const ragged = (x: number, y: number, edge: boolean, seedN: number) => {
-    const r = hash(x, y, seedN)
+    const r = layoutHash01(x, y, seedN)
     set(x, y, edge && r < 0.35 ? (r < 0.15 ? TERRAIN.grass_b : TERRAIN.grass_a) : r > 0.93 ? TERRAIN.cobble : TERRAIN.cobble_moss)
   }
   for (let y = 0; y <= H - 4; y++) for (let x = LANE.path0; x <= LANE.path1; x++) ragged(x, y, x === LANE.path0 || x === LANE.path1, 5)
@@ -234,7 +229,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   fill(19, BAND.y0 + 1, 28, BAND.y1 - 1, TERRAIN.cobble_moss)
   fill(20, BAND.y0 + 2, 27, BAND.y1 - 2, TERRAIN.cobble)
   for (let y = BAND.y0 + 2; y <= BAND.y1 - 2; y++)
-    for (let x = 20; x <= 27; x++) if (hash(x, y, 21) < 0.18) set(x, y, TERRAIN.cobble_moss)
+    for (let x = 20; x <= 27; x++) if (layoutHash01(x, y, 21) < 0.18) set(x, y, TERRAIN.cobble_moss)
   // The gate mouth: the carters' old staging ground, cobbles worn bare.
   fill(0, CROSS.y0, 4, CROSS.y1, TERRAIN.cobble_moss)
 
@@ -291,18 +286,18 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   for (let y = YARD.y0 + 1; y <= YARD.y1 - 1; y++)
     for (let x = YARD.x0 + 1; x <= YARD.x1 - 1; x++) {
       const d = Math.min(Math.hypot((x - 50) / 3.2, (y - 20) / 2.6), Math.hypot((x - 53.5) / 4.5, (y - 26) / 2.2), Math.hypot((x - 53) / 1.6, (y - 18.5) / 1.4))
-      if (d + (hash(x, y, 41) - 0.5) * 0.5 < 1) set(x, y, TERRAIN.dirt)
-      else set(x, y, hash(x, y, 42) < 0.3 ? TERRAIN.grass_b : TERRAIN.grass_a)
+      if (d + (layoutHash01(x, y, 41) - 0.5) * 0.5 < 1) set(x, y, TERRAIN.dirt)
+      else set(x, y, layoutHash01(x, y, 42) < 0.3 ? TERRAIN.grass_b : TERRAIN.grass_a)
     }
   for (let x = 52; x <= 53; x++) set(x, 18, TERRAIN.dirt)
   // Fence round the yard, open to the cross lane on the west.
   const fenceH = (x0: number, x1: number, y: number) => {
     for (let x = x0; x <= x1; x++) block(x, y)
-    scenery.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: (y + 1) * TILE, originX: 0 })
+    scenery.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: tileBottom(y), originX: 0 })
   }
   const fenceV = (x: number, y0: number, y1: number) => {
     for (let y = y0; y <= y1; y++) block(x, y)
-    scenery.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: (y1 + 1) * TILE, originX: 0 })
+    scenery.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: tileBottom(y1), originX: 0 })
   }
   fenceH(YARD.x0, YARD.x1, YARD.y0)
   fenceH(YARD.x0, YARD.x1, YARD.y1)
@@ -354,7 +349,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
       if ((!west && !east) || solid[y][x] || inBand(y) || nearGate(x, y)) continue
       if (x >= YARD.x0 - 1 && x <= YARD.x1 + 1 && y >= YARD.y0 - 1 && y <= YARD.y1 + 1) continue
       const depth = west ? westX - x : x - eastX
-      if (hash(x, y, 61) < (depth <= 3 ? 0.22 : 0.55)) {
+      if (layoutHash01(x, y, 61) < (depth <= 3 ? 0.22 : 0.55)) {
         set(x, y, TERRAIN.grass_b)
         block(x, y)
         trees.push({ tx: x, ty: y })
@@ -370,16 +365,16 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     for (let x = 3; x < W - 2; x++) {
       if (!free(x, y)) continue
       if (x >= YARD.x0 - 1 && x <= YARD.x1 && y >= YARD.y0 && y <= YARD.y1) continue
-      const r = hash(x, y, 91)
+      const r = layoutHash01(x, y, 91)
       // A stump never pinches a walkway: all four neighbours stay open.
       const roomy = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => !solid[y + dy][x + dx])
       if (r < 0.025 && roomy) {
         block(x, y)
         put('stump', x, y)
       } else if (r < 0.2) {
-        put(r < 0.11 ? 'tall-grass-a' : 'tall-grass-b', x, y, { x: x * TILE + 4 + Math.floor(hash(x, y, 3) * 8), depth: 'y' })
+        put(r < 0.11 ? 'tall-grass-a' : 'tall-grass-b', x, y, { x: x * TILE + 4 + Math.floor(layoutHash01(x, y, 3) * 8), depth: 'y' })
       } else if (r < 0.24 && ground[y][x] === TERRAIN.flowers) {
-        flowerTufts.add(`${x},${y}`)
+        flowerTufts.add(tileKey(x, y))
         put('wildflowers', x, y, { depth: 'y' })
       }
     }
@@ -395,10 +390,10 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     let n = 0
     for (let y = BAND.y0; y <= BAND.y1 && n < 8; y++) {
       for (let x = 6; x < YARD.x0 - 2 && n < 8; x++) {
-        if (solid[y][x] || ground[y][x] !== TERRAIN.flowers || flowerTufts.has(`${x},${y}`)) continue
+        if (solid[y][x] || ground[y][x] !== TERRAIN.flowers || flowerTufts.has(tileKey(x, y))) continue
         const roomy = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => !solid[y + dy][x + dx])
         if (!roomy) continue
-        scenery.push({ key: 'wildflowers', x: x * TILE + 8, y: (y + 1) * TILE, depth: 'y', tx: x, ty: y })
+        scenery.push({ key: 'wildflowers', x: tileMid(x), y: tileBottom(y), depth: 'y', tx: x, ty: y })
         gathering.push({ target: 'bloom-patch', label: 'Pick the bloom flowers', tx: x, ty: y, art: { key: 'wildflowers' } })
         n++
       }
@@ -423,18 +418,18 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   for (let x = 0; x < W; x++) {
     tree(x, 0)
     tree(x, 1)
-    if (hash(x, 2, 7) < 0.55) tree(x, 2)
+    if (layoutHash01(x, 2, 7) < 0.55) tree(x, 2)
     tree(x, H - 1)
     tree(x, H - 2)
-    if (hash(x, H - 3, 8) < 0.4) tree(x, H - 3)
+    if (layoutHash01(x, H - 3, 8) < 0.4) tree(x, H - 3)
   }
   for (let y = 0; y < H; y++) {
     tree(0, y)
     tree(1, y)
-    if (hash(2, y, 9) < 0.5 && (y < BAND.y0 - 1 || y > BAND.y1 + 1)) tree(2, y)
+    if (layoutHash01(2, y, 9) < 0.5 && (y < BAND.y0 - 1 || y > BAND.y1 + 1)) tree(2, y)
     tree(W - 1, y)
     tree(W - 2, y)
-    if (hash(W - 3, y, 10) < 0.5 && !(y >= YARD.y0 && y <= YARD.y1)) tree(W - 3, y)
+    if (layoutHash01(W - 3, y, 10) < 0.5 && !(y >= YARD.y0 && y <= YARD.y1)) tree(W - 3, y)
   }
   // Keep the gate mouth and the arch mouth open whatever the border did.
   for (const e of exits) for (let y = e.ty; y < e.ty + e.th; y++) for (let x = e.tx; x < e.tx + e.tw; x++) open(x, y)
@@ -494,7 +489,7 @@ export function commonsForeground(world: WorldData): ForegroundSpot[] {
       const y = t.ty + dy
       return x >= 0 && y >= 0 && x < world.width && y < world.height && !world.solid[y][x]
     })
-    if (inner || hash(t.tx, t.ty, 13) < 0.3) spots.push({ frame: i % 2 === 0 ? 'oak-canopy' : 'pine-canopy', tx: t.tx, ty: t.ty, w: 48 + Math.floor(hash(t.tx, t.ty, 14) * 16) })
+    if (inner || layoutHash01(t.tx, t.ty, 13) < 0.3) spots.push({ frame: i % 2 === 0 ? 'oak-canopy' : 'pine-canopy', tx: t.tx, ty: t.ty, w: 48 + Math.floor(layoutHash01(t.tx, t.ty, 14) * 16) })
   }
   spots.push({ frame: 'leafy-arch', tx: LANE.path0 + 1, ty: 1, w: 74 })
   spots.push({ frame: 'fern-cluster', tx: 4, ty: 24, w: 22 })

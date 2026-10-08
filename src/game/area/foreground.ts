@@ -5,7 +5,7 @@
  * something walks beneath them.
  */
 import { placeGlimwayOccluder } from '../expansion'
-import { TILE } from '../textures'
+import { tileBottom, tileMid } from '../../lib/tile'
 import { areaKind, type WorldData } from '../worlds'
 import { ensureSceneryArt } from './props'
 import { addAll } from './bulk'
@@ -28,8 +28,8 @@ export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder
   // Canopies over the Commons' thousand-odd trees: added in one go (./bulk.ts).
   const images: Phaser.GameObjects.Image[] = []
   for (const s of spots) {
-    const footY = s.ty * TILE + TILE
-    const image = placeGlimwayOccluder(scene, s.frame, s.tx * TILE + 8, footY, s.w, false)
+    const footY = tileBottom(s.ty)
+    const image = placeGlimwayOccluder(scene, s.frame, tileMid(s.tx), footY, s.w, false)
     images.push(image)
     occluders.push({ image, bounds: image.getBounds(), footY })
   }
