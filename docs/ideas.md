@@ -4,6 +4,11 @@ A canvas for ideas that come up along the way. Nothing here is planned or promis
 becomes real work, it moves into a plan or brief and gets a link here. Add freely and keep each
 entry short.
 
+Designed ideas now live in [design/](design/plan.md): the combined [plan](design/plan.md), the
+open [world](design/world.md), [layers](design/layers.md), [pets](design/pets.md),
+[magic](design/magic.md), [quests](design/quests.md) and [guests on the server](design/guests.md).
+Fishing is still being designed.
+
 Tags: **(agreed)** means the owner wants it and it has a place in the order; **(maybe)** means
 worth thinking about; **(later)** means parked on purpose.
 
