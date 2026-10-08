@@ -1,0 +1,11 @@
+{
+  "framesChecked": 176,
+  "framesWithPriorEdgeCleanup": [
+    "interior-wall-3",
+    "interior-wall-6",
+    "cellar-ladder",
+    "chute-meal-bin-2",
+    "chimney-smoke-5"
+  ],
+  "remainingSmallEdgeFragments": []
+}

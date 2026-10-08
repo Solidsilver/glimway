@@ -540,8 +540,8 @@
     "interior-wall-3": {
       "source": "interior-kit",
       "frame": {
-        "x": 40,
-        "y": 468,
+        "x": 0,
+        "y": 0,
         "w": 44,
         "h": 88
       },
@@ -550,12 +550,12 @@
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 64
+        "w": 44,
+        "h": 88
       },
       "sourceSize": {
-        "w": 64,
-        "h": 64
+        "w": 44,
+        "h": 88
       },
       "footPoint": {
         "x": 32,
@@ -568,7 +568,8 @@
       "canvasSize": {
         "w": 64,
         "h": 64
-      }
+      },
+      "filename": "edge-clean-interior-wall-3"
     },
     "interior-wall-4": {
       "source": "interior-kit",
@@ -639,8 +640,8 @@
     "interior-wall-6": {
       "source": "interior-kit",
       "frame": {
-        "x": 272,
-        "y": 468,
+        "x": 0,
+        "y": 0,
         "w": 44,
         "h": 88
       },
@@ -649,12 +650,12 @@
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 64
+        "w": 44,
+        "h": 88
       },
       "sourceSize": {
-        "w": 64,
-        "h": 64
+        "w": 44,
+        "h": 88
       },
       "footPoint": {
         "x": 32,
@@ -667,7 +668,8 @@
       "canvasSize": {
         "w": 64,
         "h": 64
-      }
+      },
+      "filename": "edge-clean-interior-wall-6"
     },
     "interior-wall-7": {
       "source": "interior-kit",
@@ -804,8 +806,8 @@
     "cellar-ladder": {
       "source": "interior-kit",
       "frame": {
-        "x": 100,
-        "y": 536,
+        "x": 0,
+        "y": 0,
         "w": 80,
         "h": 180
       },
@@ -814,12 +816,12 @@
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 128
+        "w": 80,
+        "h": 180
       },
       "sourceSize": {
-        "w": 64,
-        "h": 128
+        "w": 80,
+        "h": 180
       },
       "footPoint": {
         "x": 32,
@@ -832,7 +834,8 @@
       "canvasSize": {
         "w": 64,
         "h": 128
-      }
+      },
+      "filename": "edge-clean-cellar-ladder"
     },
     "trapdoor-shut": {
       "source": "interior-kit",
@@ -1794,8 +1797,8 @@
     "chute-meal-bin-2": {
       "source": "mill-machinery",
       "frame": {
-        "x": 496,
-        "y": 580,
+        "x": 0,
+        "y": 0,
         "w": 212,
         "h": 344
       },
@@ -1804,12 +1807,12 @@
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 128,
-        "h": 128
+        "w": 212,
+        "h": 344
       },
       "sourceSize": {
-        "w": 128,
-        "h": 128
+        "w": 212,
+        "h": 344
       },
       "footPoint": {
         "x": 64,
@@ -1822,7 +1825,8 @@
       "canvasSize": {
         "w": 128,
         "h": 128
-      }
+      },
+      "filename": "edge-clean-chute-meal-bin-2"
     },
     "chute-meal-bin-3": {
       "source": "mill-machinery",
@@ -2685,8 +2689,8 @@
     "chimney-smoke-5": {
       "source": "exterior-icons",
       "frame": {
-        "x": 792,
-        "y": 140,
+        "x": 0,
+        "y": 0,
         "w": 40,
         "h": 44
       },
@@ -2695,12 +2699,12 @@
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 128
+        "w": 40,
+        "h": 44
       },
       "sourceSize": {
-        "w": 64,
-        "h": 128
+        "w": 40,
+        "h": 44
       },
       "footPoint": {
         "x": 32,
@@ -2713,7 +2717,8 @@
       "canvasSize": {
         "w": 64,
         "h": 128
-      }
+      },
+      "filename": "edge-clean-chimney-smoke-5"
     },
     "lit-window-bakery": {
       "source": "exterior-icons",
@@ -3373,6 +3378,1731 @@
       "canvasSize": {
         "w": 192,
         "h": 192
+      }
+    },
+    "library-shelf-front-sparse": {
+      "filename": "round2-library-shelf-front-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      }
+    },
+    "library-shelf-front-half": {
+      "filename": "round2-library-shelf-front-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      }
+    },
+    "library-shelf-front-full": {
+      "filename": "round2-library-shelf-front-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      }
+    },
+    "library-shelf-tall-left-sparse": {
+      "filename": "round2-library-shelf-tall-left-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      }
+    },
+    "library-shelf-tall-right-sparse": {
+      "filename": "round2-library-shelf-tall-right-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      }
+    },
+    "library-shelf-tall-left-half": {
+      "filename": "round2-library-shelf-tall-left-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-right-half": {
+      "filename": "round2-library-shelf-tall-right-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-left-full": {
+      "filename": "round2-library-shelf-tall-left-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-right-full": {
+      "filename": "round2-library-shelf-tall-right-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      }
+    },
+    "library-shelf-short-left-sparse": {
+      "filename": "round2-library-shelf-short-left-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      }
+    },
+    "library-shelf-short-right-sparse": {
+      "filename": "round2-library-shelf-short-right-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      }
+    },
+    "library-shelf-short-left-half": {
+      "filename": "round2-library-shelf-short-left-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      }
+    },
+    "library-shelf-short-right-half": {
+      "filename": "round2-library-shelf-short-right-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      }
+    },
+    "library-shelf-short-left-full": {
+      "filename": "round2-library-shelf-short-left-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      }
+    },
+    "library-shelf-short-right-full": {
+      "filename": "round2-library-shelf-short-right-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      }
+    },
+    "library-reading-nook-front-default": {
+      "filename": "round2-library-reading-nook-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      }
+    },
+    "library-elara-desk-front-empty": {
+      "filename": "round2-library-elara-desk-front-empty",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      }
+    },
+    "library-elara-desk-front-seated": {
+      "filename": "round2-library-elara-desk-front-seated",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      }
+    },
+    "library-section-sign-front-stories": {
+      "filename": "round2-library-section-sign-front-stories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      }
+    },
+    "library-section-sign-front-histories": {
+      "filename": "round2-library-section-sign-front-histories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      }
+    },
+    "library-section-sign-front-recipes": {
+      "filename": "round2-library-section-sign-front-recipes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      }
+    },
+    "library-section-sign-front-field-notes": {
+      "filename": "round2-library-section-sign-front-field-notes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      }
+    },
+    "rug-woven-front-default": {
+      "filename": "round2-rug-woven-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      }
+    },
+    "rug-braided-front-default": {
+      "filename": "round2-rug-braided-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      }
+    },
+    "rug-patchwork-front-default": {
+      "filename": "round2-rug-patchwork-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      }
+    },
+    "shelf-generic-front-default": {
+      "filename": "round2-shelf-generic-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      }
+    },
+    "shelf-generic-left-default": {
+      "filename": "round2-shelf-generic-left-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      }
+    },
+    "shelf-generic-right-default": {
+      "filename": "round2-shelf-generic-right-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      }
+    },
+    "wall-pegs-front-tools": {
+      "filename": "round2-wall-pegs-front-tools",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      }
+    },
+    "crate-front-default": {
+      "filename": "round2-crate-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      }
+    },
+    "barrel-front-default": {
+      "filename": "round2-barrel-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      }
+    },
+    "sack-large-front-upright": {
+      "filename": "round2-sack-large-front-upright",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      }
+    },
+    "sack-large-front-slumped": {
+      "filename": "round2-sack-large-front-slumped",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      }
+    },
+    "basket-front-default": {
+      "filename": "round2-basket-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      }
+    },
+    "plant-leafy-front-default": {
+      "filename": "round2-plant-leafy-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      }
+    },
+    "plant-flowering-front-default": {
+      "filename": "round2-plant-flowering-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      }
+    },
+    "lamp-oil-front-default": {
+      "filename": "round2-lamp-oil-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      }
+    },
+    "candle-holder-front-default": {
+      "filename": "round2-candle-holder-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      }
+    },
+    "candle-stick-front-default": {
+      "filename": "round2-candle-stick-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      }
+    },
+    "picture-frame-front-default": {
+      "filename": "round2-picture-frame-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      }
+    },
+    "calendar-front-default": {
+      "filename": "round2-calendar-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      }
+    },
+    "curtains-front-default": {
+      "filename": "round2-curtains-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      }
+    },
+    "side-table-front-default": {
+      "filename": "round2-side-table-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      }
+    },
+    "chair-front-default": {
+      "filename": "round2-chair-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      }
+    },
+    "chair-left-default": {
+      "filename": "round2-chair-left-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      }
+    },
+    "chair-right-default": {
+      "filename": "round2-chair-right-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      }
+    },
+    "stool-front-default": {
+      "filename": "round2-stool-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      }
+    },
+    "chest-front-default": {
+      "filename": "round2-chest-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      }
+    },
+    "kitchen-oven-front-fire": {
+      "filename": "round2-kitchen-oven-front-fire",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      }
+    },
+    "kitchen-worktable-front-default": {
+      "filename": "round2-kitchen-worktable-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      }
+    },
+    "kitchen-washtub-front-default": {
+      "filename": "round2-kitchen-washtub-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      }
+    },
+    "kitchen-cauldron-front-steaming-0": {
+      "filename": "round2-kitchen-cauldron-front-steaming-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      }
+    },
+    "kitchen-cauldron-front-steaming-1": {
+      "filename": "round2-kitchen-cauldron-front-steaming-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      }
+    },
+    "kitchen-cauldron-front-steaming-2": {
+      "filename": "round2-kitchen-cauldron-front-steaming-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      }
+    },
+    "kitchen-cauldron-front-steaming-3": {
+      "filename": "round2-kitchen-cauldron-front-steaming-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      }
+    },
+    "kitchen-bread-rack-front-default": {
+      "filename": "round2-kitchen-bread-rack-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      }
+    },
+    "kitchen-jar-shelf-front-default": {
+      "filename": "round2-kitchen-jar-shelf-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      }
+    },
+    "kitchen-flour-handprint-wall-default": {
+      "filename": "round2-kitchen-flour-handprint-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      }
+    },
+    "kitchen-oven-peel-wall-default": {
+      "filename": "round2-kitchen-oven-peel-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      }
+    },
+    "millstone-hopper-front-turn-0": {
+      "filename": "round2-millstone-hopper-front-turn-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-1": {
+      "filename": "round2-millstone-hopper-front-turn-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-2": {
+      "filename": "round2-millstone-hopper-front-turn-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-3": {
+      "filename": "round2-millstone-hopper-front-turn-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "mill-sifter-front-default": {
+      "filename": "round2-mill-sifter-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      }
+    },
+    "mill-gear-wheel-left-turn-0": {
+      "filename": "round2-mill-gear-wheel-left-turn-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-1": {
+      "filename": "round2-mill-gear-wheel-left-turn-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-2": {
+      "filename": "round2-mill-gear-wheel-left-turn-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-3": {
+      "filename": "round2-mill-gear-wheel-left-turn-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      }
+    },
+    "mill-sack-front-upright": {
+      "filename": "round2-mill-sack-front-upright",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      }
+    },
+    "mill-sack-front-slumped": {
+      "filename": "round2-mill-sack-front-slumped",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      }
+    },
+    "mill-stairs-diag-default": {
+      "filename": "round2-mill-stairs-diag-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      }
+    },
+    "loft-stair-opening-front-default": {
+      "filename": "round2-loft-stair-opening-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      }
+    },
+    "loft-hoist-front-default": {
+      "filename": "round2-loft-hoist-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      }
+    },
+    "mill-tally-board-wall-default": {
+      "filename": "round2-mill-tally-board-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      }
+    },
+    "mill-gear-wall-small-default": {
+      "filename": "round2-mill-gear-wall-small-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
       }
     }
   },

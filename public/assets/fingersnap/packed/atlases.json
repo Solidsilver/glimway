@@ -39,7 +39,12 @@
   "assets/generated/fingersnap-props.png": "ad450ddc744b78fc9fcd74136b015974e106158a6f252436ffc89c4638f48bd2",
   "assets/generated/fingersnap-shrine.png": "66410699ea96728c271e35edd907389757b027cda7ee8cf87fa63fb6b9d29292",
   "assets/generated/fingersnap-village.png": "b14b4f2cfd9fa6b25712aea709e868d6a2a980f7d8923869043f19d408f46c8c",
-  "assets/generated/indoors-pass/manifest.json": "141b176eea1ca0e6b88ada76cf9bf5b689bc4d3f9eed577294896a215bb939a7",
+  "assets/generated/indoors-pass/manifest.json": "98c05bd1f4660f8effd264f03094691a037101b38efe45079ee6cf7de57db1e0",
+  "assets/generated/indoors-pass/sheets/edge-clean/cellar-ladder.png": "247bbd8e77d9950f2bd5c980139e8bdec4b8e6d6b20bd492fe6018fb75bcd424",
+  "assets/generated/indoors-pass/sheets/edge-clean/chimney-smoke-5.png": "47b54c84740536f8a503c9f30ce4bd8450a3dd668231b1f04199c57a3ff924d3",
+  "assets/generated/indoors-pass/sheets/edge-clean/chute-meal-bin-2.png": "1fc38857dd2e732b34cf796406eac0ef1040c98a707af15d545328910e963c2c",
+  "assets/generated/indoors-pass/sheets/edge-clean/interior-wall-3.png": "ca76a6237b1a618a6e5d115a42ebd48c9d459875fa7e6e1c9e1a19783c09b47d",
+  "assets/generated/indoors-pass/sheets/edge-clean/interior-wall-6.png": "6abdfc5108b7ae82e3eafba70b2d55ab5cba47d2884b747bffc8891558e562f9",
   "assets/generated/indoors-pass/sheets/exterior-icons.png": "06c20c8b697d54dfe010a91e1e195812a231bc790d14a4ab8dfd4ab85ea7e1ff",
   "assets/generated/indoors-pass/sheets/floors-seamless.png": "5b07364b7514e334b8a1ddec7f96b836adccfa85e507446420cfc3e9e9fdbb3a",
   "assets/generated/indoors-pass/sheets/interior-detail.png": "4d6f9a8aaf611a938f1c8b3b5427d154e5f50fe85c303c7bc4e1032f90e46722",
@@ -50,6 +55,81 @@
   "assets/generated/indoors-pass/sheets/mill-hoist-beams.png": "f35c37b630a770dc5d859255500bc355f5d97df179ffb853ae84ca2194975f7f",
   "assets/generated/indoors-pass/sheets/mill-machinery.png": "44e5d040aa76fb9c30c643f20578a419a6df78b165d71b6a165c549b8f226116",
   "assets/generated/indoors-pass/sheets/oven-hearth-frames.png": "0296b0aacc4e76cddcb2ad6cbeddbf35e17b6f34b219658aad06e433b857157f",
+  "assets/generated/indoors-pass/sheets/round2-crops/barrel-front-default.png": "85daebec2802cd6daedd038bfeabffeb1fb5b93f37c2bf59a0cc83293c109d88",
+  "assets/generated/indoors-pass/sheets/round2-crops/basket-front-default.png": "6fb2a004cc14dd0ffb1fa4697a19be29f0183a8deee8cd12483d3c31c49e9c80",
+  "assets/generated/indoors-pass/sheets/round2-crops/calendar-front-default.png": "fa6a914724da575d2884cb1515433bc5d903f312c8d2971630ab0c1879f25042",
+  "assets/generated/indoors-pass/sheets/round2-crops/candle-holder-front-default.png": "e8580be085712f317a933e8094a97e4daf96690e138582bba41f7c056ae3afb9",
+  "assets/generated/indoors-pass/sheets/round2-crops/candle-stick-front-default.png": "d05e35ffd73342f91b5558c542704d34ec803a64a1bec11e6812fdb9e710c5b3",
+  "assets/generated/indoors-pass/sheets/round2-crops/chair-front-default.png": "f9808889da0e6bbfdbbda5da485581349deb0b02f5be8817ae4baf1416a089fa",
+  "assets/generated/indoors-pass/sheets/round2-crops/chair-left-default.png": "dc306bcc039f27d73a862487fe2755515d130771b0152f91802137bb84749413",
+  "assets/generated/indoors-pass/sheets/round2-crops/chair-right-default.png": "db23150d897661b48f24116d956582175984aac91ec0ba8964cddadc0a0ad4a1",
+  "assets/generated/indoors-pass/sheets/round2-crops/chest-front-default.png": "9a889770bbc30b9fa5a2045ab5646fe363170e29dad5f40838267e914ae8dc06",
+  "assets/generated/indoors-pass/sheets/round2-crops/crate-front-default.png": "d872fd29678a8e84ccb6169902ae4e0294cefec0fedc1bfe98ab991765143a7f",
+  "assets/generated/indoors-pass/sheets/round2-crops/curtains-front-default.png": "f304455747492d5ebca8e4cbd108aa74ca40bd2cca26a3147c8ba4c1d4b61de7",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-bread-rack-front-default.png": "89c49bd1187d848a044435bdac8ef041302ca55d2272f1155e55ca20d75042c4",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-cauldron-front-steaming-0.png": "195ea1af76d411790a6e343fe6cde1752a02794e8f1f2a661b563097104105c5",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-cauldron-front-steaming-1.png": "4c13d9861a7a67489add8970aebbc02fcb80b4b515d41e221d49c9e48671e7d5",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-cauldron-front-steaming-2.png": "db938771c4883573e532e002d0fc5ff1f03a11f0102791710684b668928739de",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-cauldron-front-steaming-3.png": "d036514ce4212095448efb41af00273ec4559d494e81a162ef68e80ef12f7adb",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-flour-handprint-wall-default.png": "bd152029687a0e0dcfae202b408f837ee05226e74f8d82b0549ac763710198db",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-jar-shelf-front-default.png": "8a5248679dbc631a5699996b785621a6cb2049b508634a016694fbf52c2be25a",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-oven-front-fire.png": "2ddb9b38daa5de7fc07f601b16be4d21ef8f9a1ee852604095a99e082ac755ed",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-oven-peel-wall-default.png": "f6d6a0d0fc475face27bb5de678a61f04fe4a516c8b975527ef2429f4c443531",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-washtub-front-default.png": "83743bc44bb2db1619415b23414e90fb9a27f53375c334ad6aca1a2cb59b39e4",
+  "assets/generated/indoors-pass/sheets/round2-crops/kitchen-worktable-front-default.png": "01f1ccb59a3f56ac95aa16c43298a4e3c989343c1102edf4550eee1333015d50",
+  "assets/generated/indoors-pass/sheets/round2-crops/lamp-oil-front-default.png": "e6ce5a46c2085c82709003b7eaef834125032dc29a26e969a934fa80c8627591",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-elara-desk-front-empty.png": "3caee866ac98b5c3182c34712ab2174fb9fd384c20235338fb98f264510bce45",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-elara-desk-front-seated.png": "b8db2a5cef9da6e12005102a23bba954a642375cc4bd85fc920292845d3299e4",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-reading-nook-front-default.png": "96f0f6639b0fcc701ad9adf37027a7d28a751bf45d52e9c23732b4b2beea6a38",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-section-sign-front-field-notes.png": "d25eb6b5e40a35643712ba4a49a92695b95efea5e98667868de82f5c4e915219",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-section-sign-front-histories.png": "ffaf7fb80126229b1cb5f019e2a977d693e18f4a936a263fbdb0041ffb4fe0c3",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-section-sign-front-recipes.png": "517c8d4948da2dab0c7595e77568ee96c44a4f275ca2f20a9acb6d772549ddf1",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-section-sign-front-stories.png": "b20fa42bf460a54bc0f075f47168534c46a03fa4490fe6e68eac04ce897de39f",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-front-full.png": "2cf8b56379b39541dabdf5fe75645fe000d8792611517003f28c1fda3c7efea7",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-front-half.png": "ac03fef79cd622ef05d3085c7add089b302ddd68a151480fd8dc9f58b535e208",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-front-sparse.png": "30c674dac8aa1432fac89616574093dbf9d7440fb16ed61f929faffaf200491a",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-left-full.png": "0c74b19da51cf719938eeb419a046383e4cefc7aded4ca2dd3887ecfed2ca03f",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-left-half.png": "d0cb860159e45e9f7bb32a198ab497e04a73eeed363d38247cd81cd44286a973",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-left-sparse.png": "a36f4cfa47ee01e31c6672dc45948a8cf00e5e1b632e3cd25946acbf0f7878d4",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-right-full.png": "5b6428aac667e6772a6906c9af1b7b213f7e1a3efd84a48f1d39d45726b62985",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-right-half.png": "f49d7f0dc73221d3fa51a4fee284f9fcbaa6bcb45630e026bbb81be8d9fddbe6",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-short-right-sparse.png": "c32e20885d9711cefc6f044f1327cc7cbc621086e7f7ad1df9b3e80c1c0f15c0",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-left-full.png": "0c74b19da51cf719938eeb419a046383e4cefc7aded4ca2dd3887ecfed2ca03f",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-left-half.png": "3fc4a53069109c86dfbe90eb47e59e29fd927ba598fd7882ef1e2699a3bdcfcf",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-left-sparse.png": "d4213ebe42bc7e6a36e6d9326f7ee39c1cb50c02ca5e1438dfb8bf64a983b594",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-right-full.png": "5b6428aac667e6772a6906c9af1b7b213f7e1a3efd84a48f1d39d45726b62985",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-right-half.png": "a9bff33c673249f028b7171cb0f98ac65b12d5880199032b3db4b6887c1c766a",
+  "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-tall-right-sparse.png": "e5a4443634ab7424f40a3a809a827f0f41a3cdd80be8fcdd1cd3336e2e81f588",
+  "assets/generated/indoors-pass/sheets/round2-crops/loft-hoist-front-default.png": "7d86760ab9ccc32b68fd69f9e4d5a21e74258ee5fb1ab73d49d085ef766fcd60",
+  "assets/generated/indoors-pass/sheets/round2-crops/loft-stair-opening-front-default.png": "3268fe166c919bf20206ab6742e6c29a115bd954ece029d358adca0b3596bea9",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-gear-wall-small-default.png": "feba70a629be53d421952ad570cd6e076a0b8edab2506629861b3358ea633b51",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-gear-wheel-left-turn-0.png": "4a004cc13b269f097e6c5bb895cb0ce5692f94b6778a86d8a5269a500121b0c8",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-gear-wheel-left-turn-1.png": "281cc919af90c75de45073e061a3979461f1a0592a0ce572351813594032e944",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-gear-wheel-left-turn-2.png": "39e5c66331b28d4de836ef25b1a4a30eac5b6491ecc6aedf2c079dc17566000a",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-gear-wheel-left-turn-3.png": "f69699a9d02c144cd12d73486bc7c03bea2a8362ecfcc475d7866fe3179d2619",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-sack-front-slumped.png": "532fd07ec55c76e9c4fc6972f531cad8f9190f5af5b846db8153e8ec0adc5dd1",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-sack-front-upright.png": "ba49b9d6e1e3a2906006ac0a9aaa57e9f000f12298fbde21d1def782ef75c8b1",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-sifter-front-default.png": "b4e4e81cfa837168b0f5eb3912d634ee42182c5ceb64d1b992a06d062b8d3fef",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-stairs-diag-default.png": "1a6ca8ac257074a842c30b25e0388ae3daf4b033f7ae4a2ad657be560ca49c9b",
+  "assets/generated/indoors-pass/sheets/round2-crops/mill-tally-board-wall-default.png": "593c8becd3b5e23f307ea54dc23dc5484480563b9bf8334200cab9c8c571241a",
+  "assets/generated/indoors-pass/sheets/round2-crops/millstone-hopper-front-turn-0.png": "8c99b33c6362dc1ebc2b97dd27bcdef22f193a985b6614631d107f7b99074d5b",
+  "assets/generated/indoors-pass/sheets/round2-crops/millstone-hopper-front-turn-1.png": "23a9c8d461237668206fd99fea088c180304e2e207a3e1eb32bb9a305e6da336",
+  "assets/generated/indoors-pass/sheets/round2-crops/millstone-hopper-front-turn-2.png": "1bd2280599eda0398a6f9283556916a93100c275ccfbde70cc5a7a7d7f684d9a",
+  "assets/generated/indoors-pass/sheets/round2-crops/millstone-hopper-front-turn-3.png": "a90cf77b0f85e2fefb45d1e50066d6d78af16da9a97eb0df0480c03f4f90c299",
+  "assets/generated/indoors-pass/sheets/round2-crops/picture-frame-front-default.png": "b1b16c0f382978a883e5cd031c1e2fb292e9307fc13917572face8907f6c52af",
+  "assets/generated/indoors-pass/sheets/round2-crops/plant-flowering-front-default.png": "d32ecc3723e698fff3c05475a05f40a7ad9f5e2303b49698edeecb23c4b12a73",
+  "assets/generated/indoors-pass/sheets/round2-crops/plant-leafy-front-default.png": "6015cdb2be7a1f737d57aaa7103c3b0f2f162436b3d0e613bcb5d3948c26a8a0",
+  "assets/generated/indoors-pass/sheets/round2-crops/rug-braided-front-default.png": "c7962edbc6858e443c6847e8fec7aa3d5ccb652febb021307d58bf019ffed769",
+  "assets/generated/indoors-pass/sheets/round2-crops/rug-patchwork-front-default.png": "6b58e695e30103009140ab1f35f2df11eb73dc762ebaf60b4a6476d83617bd06",
+  "assets/generated/indoors-pass/sheets/round2-crops/rug-woven-front-default.png": "e3581d8c3a558d5da25dc6484a3f56572c72e25f454843470f2b7575844082f8",
+  "assets/generated/indoors-pass/sheets/round2-crops/sack-large-front-slumped.png": "5b47fcf65f0d6de44ec25801a17025524df693eddb505aaf7ffc98e0187c6d81",
+  "assets/generated/indoors-pass/sheets/round2-crops/sack-large-front-upright.png": "3c744a024612b1172a8f4e68b4c7ff3f992b3ef2d2e00f703e15235018e33fa3",
+  "assets/generated/indoors-pass/sheets/round2-crops/shelf-generic-front-default.png": "c59e3e6278f067308918c61e1f2ab4517778a4dff186b03381b6a3dc9b373960",
+  "assets/generated/indoors-pass/sheets/round2-crops/shelf-generic-left-default.png": "b6b45de747784f0cad74d9baec2d795b889303bf877cce78fe1c56a37bd26352",
+  "assets/generated/indoors-pass/sheets/round2-crops/shelf-generic-right-default.png": "767eeb94cd2e7aa4bd076973cacf9abd1220db21b0e85ab7ccc722811da5767e",
+  "assets/generated/indoors-pass/sheets/round2-crops/side-table-front-default.png": "f4b3cfa8df1c4a2a6b802e159186abb02c374703ea0e2d4c45bbc5897a37f0a3",
+  "assets/generated/indoors-pass/sheets/round2-crops/stool-front-default.png": "9faa32fdf9ef5d816146adb9d1956eec8313e24c198b47db6efbf5f3d86ce34b",
+  "assets/generated/indoors-pass/sheets/round2-crops/wall-pegs-front-tools.png": "1b86198426afc7ab11526631a06f5810b10c6ea975666a1db7983ff203e00375",
   "assets/generated/items-pass/fingersnap-home-goods-1.png": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129",
   "assets/generated/items-pass/fingersnap-keepsakes-1.png": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f",
   "assets/generated/items-pass/fingersnap-papers-1.png": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad",
@@ -95,7 +175,7 @@
   "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "indoors.webp": "d93443bedeccb605e2912e914d3ff4094aa4c40484a3e8f0e043208326006ee0",
+  "indoors.webp": "e574fae2d655158db165950b6d4a7d6d4c053956b8d2cef8afed353fb83760c7",
   "items.webp": "61c6a5e4eda99cb9e5094888a68a616ccf1b93f926de0970686a09f5b63984ff",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -2588,290 +2668,290 @@
  "indoors": {
   "image": "indoors.webp",
   "size": [
-   1360,
-   1152
+   1770,
+   1504
   ],
   "density": 64,
   "frames": {
    "plank-floor-0": [
-    192,
-    1088,
+    704,
+    1376,
     64,
     64
    ],
    "plank-floor-1": [
-    256,
-    1088,
+    768,
+    1376,
     64,
     64
    ],
    "plank-floor-2": [
-    320,
-    1088,
+    832,
+    1376,
     64,
     64
    ],
    "plank-floor-3": [
-    384,
-    1088,
+    896,
+    1376,
     64,
     64
    ],
    "flagstone-floor-0": [
-    1216,
-    960,
+    576,
+    1312,
     64,
     64
    ],
    "flagstone-floor-1": [
-    1280,
-    960,
+    640,
+    1312,
     64,
     64
    ],
    "flagstone-floor-2": [
-    0,
-    1024,
+    704,
+    1312,
     64,
     64
    ],
    "flagstone-floor-3": [
-    64,
-    1024,
+    768,
+    1312,
     64,
     64
    ],
    "back-wall-0": [
-    1152,
-    704,
+    768,
+    992,
     64,
     128
    ],
    "back-wall-1": [
-    1216,
-    704,
+    832,
+    992,
     64,
     128
    ],
    "back-wall-2": [
-    1280,
-    704,
+    896,
+    992,
     64,
     128
    ],
    "back-wall-window": [
-    0,
-    832,
+    960,
+    992,
     64,
     128
    ],
    "interior-wall-0": [
-    576,
-    1024,
+    1280,
+    1312,
     64,
     64
    ],
    "interior-wall-1": [
-    640,
-    1024,
+    1344,
+    1312,
     64,
     64
    ],
    "interior-wall-2": [
-    704,
-    1024,
+    1408,
+    1312,
     64,
     64
    ],
    "interior-wall-3": [
-    768,
-    1024,
+    1472,
+    1312,
     64,
     64
    ],
    "interior-wall-4": [
-    832,
-    1024,
+    1536,
+    1312,
     64,
     64
    ],
    "interior-wall-5": [
-    896,
-    1024,
+    1600,
+    1312,
     64,
     64
    ],
    "interior-wall-6": [
-    960,
-    1024,
+    1664,
+    1312,
     64,
     64
    ],
    "interior-wall-7": [
-    1024,
-    1024,
+    0,
+    1376,
     64,
     64
    ],
    "doorway": [
-    768,
-    960,
+    1536,
+    1248,
     128,
     64
    ],
    "stairs-up": [
-    512,
-    704,
+    128,
+    992,
     128,
     128
    ],
    "stairs-down": [
-    384,
-    704,
+    0,
+    992,
     128,
     128
    ],
    "cellar-ladder": [
-    128,
-    832,
+    1088,
+    992,
     64,
     128
    ],
    "trapdoor-shut": [
-    1024,
-    1088,
+    64,
+    1440,
     64,
     64
    ],
    "trapdoor-open": [
-    960,
-    1088,
+    0,
+    1440,
     64,
     64
    ],
    "rug-rag": [
     192,
-    576,
+    736,
     192,
     128
    ],
    "rug-braided": [
-    0,
+    1472,
     576,
     192,
     128
    ],
    "counter": [
-    1152,
-    384,
+    1280,
+    576,
     192,
     128
    ],
    "room-surround": [
-    640,
-    1088,
+    1152,
+    1376,
     64,
     64
    ],
    "worktable": [
-    896,
-    384,
+    1024,
+    576,
     256,
     128
    ],
    "counting-stool-window": [
-    1152,
-    960,
+    448,
+    1312,
     64,
     64
    ],
    "crock-shelves": [
-    896,
-    576,
+    1280,
+    736,
     128,
     128
    ],
    "tallow-pot-steam-0": [
-    640,
-    704,
+    256,
+    992,
     128,
     128
    ],
    "tallow-pot-steam-1": [
-    768,
-    704,
+    384,
+    992,
     128,
     128
    ],
    "tallow-pot-steam-2": [
-    896,
-    704,
+    512,
+    992,
     128,
     128
    ],
    "sponge-bowl-flat": [
-    576,
     832,
+    1120,
     64,
     128
    ],
    "sponge-bowl-risen": [
-    640,
-    832,
+    896,
+    1120,
     64,
     128
    ],
    "bread-rack": [
-    64,
-    832,
+    1024,
+    992,
     64,
     128
    ],
    "hearth-fire-0": [
-    320,
     1024,
+    1312,
     64,
     64
    ],
    "hearth-fire-1": [
-    384,
-    1024,
+    1088,
+    1312,
     64,
     64
    ],
    "hearth-fire-2": [
-    448,
-    1024,
+    1152,
+    1312,
     64,
     64
    ],
    "hearth-fire-3": [
-    512,
-    1024,
+    1216,
+    1312,
     64,
     64
    ],
    "millstones-0": [
-    576,
+    1600,
     192,
     128,
     192
    ],
    "millstones-1": [
-    704,
-    192,
+    0,
+    384,
     128,
     192
    ],
    "millstones-2": [
-    832,
-    192,
+    128,
+    384,
     128,
     192
    ],
    "millstones-3": [
-    960,
-    192,
+    256,
+    384,
     128,
     192
    ],
@@ -2900,74 +2980,74 @@
     192
    ],
    "chute-meal-bin-0": [
-    384,
-    576,
+    768,
+    736,
     128,
     128
    ],
    "chute-meal-bin-1": [
-    512,
-    576,
+    896,
+    736,
     128,
     128
    ],
    "chute-meal-bin-2": [
-    640,
-    576,
+    1024,
+    736,
     128,
     128
    ],
    "chute-meal-bin-3": [
-    768,
-    576,
+    1152,
+    736,
     128,
     128
    ],
    "flour-sacks-0": [
-    128,
-    704,
+    256,
+    864,
     128,
     128
    ],
    "flour-sacks-1": [
-    256,
-    704,
+    384,
+    864,
     128,
     128
    ],
    "sack-hoist-seized": [
-    1088,
-    192,
+    384,
+    384,
     128,
     192
    ],
    "sack-hoist-working": [
-    256,
+    896,
     384,
     128,
     192
    ],
    "sack-hoist-swing-0": [
-    1216,
-    192,
+    512,
+    384,
     128,
     192
    ],
    "sack-hoist-swing-1": [
-    0,
+    640,
     384,
     128,
     192
    ],
    "sack-hoist-swing-2": [
-    128,
+    768,
     384,
     128,
     192
    ],
    "loft-roof-beams": [
     0,
-    960,
+    1248,
     768,
     64
    ],
@@ -2990,205 +3070,205 @@
     192
    ],
    "reading-table-unlit": [
-    640,
-    384,
+    256,
+    576,
     256,
     160
    ],
    "reading-table-lit": [
-    384,
-    384,
+    0,
+    576,
     256,
     160
    ],
    "reading-lamp-flame-0": [
-    448,
-    1088,
+    960,
+    1376,
     64,
     64
    ],
    "reading-lamp-flame-1": [
-    512,
-    1088,
+    1024,
+    1376,
     64,
     64
    ],
    "reading-lamp-flame-2": [
-    576,
     1088,
+    1376,
     64,
     64
    ],
    "donation-shelf-0": [
-    1024,
-    576,
+    1536,
+    736,
     128,
     128
    ],
    "donation-shelf-1": [
-    1152,
-    576,
+    0,
+    864,
     128,
     128
    ],
    "donation-shelf-2": [
-    0,
-    704,
+    128,
+    864,
     128,
     128
    ],
    "window-seat": [
-    1024,
-    704,
+    640,
+    992,
     128,
     128
    ],
    "chimney-smoke-0": [
-    192,
-    832,
+    1152,
+    992,
     64,
     128
    ],
    "chimney-smoke-1": [
-    256,
-    832,
+    1216,
+    992,
     64,
     128
    ],
    "chimney-smoke-2": [
-    320,
-    832,
+    1280,
+    992,
     64,
     128
    ],
    "chimney-smoke-3": [
-    384,
-    832,
+    1344,
+    992,
     64,
     128
    ],
    "chimney-smoke-4": [
-    448,
-    832,
+    1408,
+    992,
     64,
     128
    ],
    "chimney-smoke-5": [
-    512,
-    832,
+    1472,
+    992,
     64,
     128
    ],
    "lit-window-bakery": [
-    1216,
-    1024,
+    256,
+    1376,
     64,
     64
    ],
    "lit-window-mill": [
-    0,
-    1088,
+    384,
+    1376,
     64,
     64
    ],
    "lit-window-library": [
-    1280,
-    1024,
+    320,
+    1376,
     64,
     64
    ],
    "shelf-icon-road": [
-    768,
-    1088,
+    1408,
+    1376,
     64,
     64
    ],
    "shelf-icon-village": [
-    832,
-    1088,
+    1472,
+    1376,
     64,
     64
    ],
    "shelf-icon-craft": [
-    704,
-    1088,
+    1344,
+    1376,
     64,
     64
    ],
    "pin-unpinned": [
-    128,
-    1088,
+    640,
+    1376,
     64,
     64
    ],
    "pin-pinned": [
-    64,
-    1088,
+    576,
+    1376,
     64,
     64
    ],
    "gate-waiting": [
-    256,
-    1024,
+    960,
+    1312,
     64,
     64
    ],
    "gate-needs-embers": [
-    192,
-    1024,
+    896,
+    1312,
     64,
     64
    ],
    "gate-locked": [
-    128,
-    1024,
+    832,
+    1312,
     64,
     64
    ],
    "signpost-plumb-missing-east": [
-    896,
-    1088,
+    1600,
+    1376,
     64,
     64
    ],
    "east-finger-bracken": [
-    896,
-    960,
+    0,
+    1312,
     128,
     64
    ],
    "east-finger-painted": [
-    1024,
-    960,
+    128,
+    1312,
     128,
     64
    ],
    "keepsake-east-finger": [
-    1088,
-    1024,
+    64,
+    1376,
     64,
     64
    ],
    "keepsake-tally-token": [
-    1152,
-    1024,
+    128,
+    1376,
     64,
     64
    ],
    "oven-hearth-fire-0": [
-    768,
+    1152,
     0,
     192,
     192
    ],
    "oven-hearth-fire-1": [
-    960,
+    1344,
     0,
     192,
     192
    ],
    "oven-hearth-fire-2": [
-    1152,
+    1536,
     0,
     192,
     192
@@ -3198,6 +3278,456 @@
     192,
     192,
     192
+   ],
+   "library-shelf-front-sparse": [
+    832,
+    192,
+    128,
+    192
+   ],
+   "library-shelf-front-half": [
+    704,
+    192,
+    128,
+    192
+   ],
+   "library-shelf-front-full": [
+    576,
+    192,
+    128,
+    192
+   ],
+   "library-shelf-tall-left-sparse": [
+    1280,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-tall-right-sparse": [
+    1472,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-tall-left-half": [
+    1216,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-tall-right-half": [
+    1408,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-tall-left-full": [
+    1152,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-tall-right-full": [
+    1344,
+    384,
+    64,
+    192
+   ],
+   "library-shelf-short-left-sparse": [
+    320,
+    1120,
+    64,
+    128
+   ],
+   "library-shelf-short-right-sparse": [
+    512,
+    1120,
+    64,
+    128
+   ],
+   "library-shelf-short-left-half": [
+    256,
+    1120,
+    64,
+    128
+   ],
+   "library-shelf-short-right-half": [
+    448,
+    1120,
+    64,
+    128
+   ],
+   "library-shelf-short-left-full": [
+    192,
+    1120,
+    64,
+    128
+   ],
+   "library-shelf-short-right-full": [
+    384,
+    1120,
+    64,
+    128
+   ],
+   "library-reading-nook-front-default": [
+    960,
+    0,
+    192,
+    192
+   ],
+   "library-elara-desk-front-empty": [
+    640,
+    864,
+    128,
+    128
+   ],
+   "library-elara-desk-front-seated": [
+    768,
+    864,
+    128,
+    128
+   ],
+   "library-section-sign-front-stories": [
+    1344,
+    1248,
+    192,
+    64
+   ],
+   "library-section-sign-front-histories": [
+    960,
+    1248,
+    192,
+    64
+   ],
+   "library-section-sign-front-recipes": [
+    1152,
+    1248,
+    192,
+    64
+   ],
+   "library-section-sign-front-field-notes": [
+    768,
+    1248,
+    192,
+    64
+   ],
+   "rug-woven-front-default": [
+    384,
+    736,
+    192,
+    128
+   ],
+   "rug-braided-front-default": [
+    0,
+    736,
+    192,
+    128
+   ],
+   "rug-patchwork-front-default": [
+    768,
+    576,
+    256,
+    128
+   ],
+   "shelf-generic-front-default": [
+    1024,
+    384,
+    128,
+    192
+   ],
+   "shelf-generic-left-default": [
+    704,
+    1120,
+    64,
+    128
+   ],
+   "shelf-generic-right-default": [
+    768,
+    1120,
+    64,
+    128
+   ],
+   "wall-pegs-front-tools": [
+    576,
+    736,
+    192,
+    128
+   ],
+   "crate-front-default": [
+    512,
+    1312,
+    64,
+    64
+   ],
+   "barrel-front-default": [
+    256,
+    1312,
+    64,
+    64
+   ],
+   "sack-large-front-upright": [
+    1280,
+    1376,
+    64,
+    64
+   ],
+   "sack-large-front-slumped": [
+    1216,
+    1376,
+    64,
+    64
+   ],
+   "basket-front-default": [
+    320,
+    1312,
+    64,
+    64
+   ],
+   "plant-leafy-front-default": [
+    1664,
+    1120,
+    64,
+    96
+   ],
+   "plant-flowering-front-default": [
+    1600,
+    1120,
+    64,
+    96
+   ],
+   "lamp-oil-front-default": [
+    1408,
+    1120,
+    64,
+    96
+   ],
+   "candle-holder-front-default": [
+    1024,
+    1120,
+    64,
+    96
+   ],
+   "candle-stick-front-default": [
+    1088,
+    1120,
+    64,
+    96
+   ],
+   "picture-frame-front-default": [
+    1536,
+    1120,
+    64,
+    96
+   ],
+   "calendar-front-default": [
+    960,
+    1120,
+    64,
+    96
+   ],
+   "curtains-front-default": [
+    1408,
+    736,
+    128,
+    128
+   ],
+   "side-table-front-default": [
+    1536,
+    1376,
+    64,
+    64
+   ],
+   "chair-front-default": [
+    1152,
+    1120,
+    64,
+    96
+   ],
+   "chair-left-default": [
+    1216,
+    1120,
+    64,
+    96
+   ],
+   "chair-right-default": [
+    1280,
+    1120,
+    64,
+    96
+   ],
+   "stool-front-default": [
+    1664,
+    1376,
+    64,
+    64
+   ],
+   "chest-front-default": [
+    384,
+    1312,
+    64,
+    64
+   ],
+   "kitchen-oven-front-fire": [
+    768,
+    0,
+    192,
+    192
+   ],
+   "kitchen-worktable-front-default": [
+    512,
+    576,
+    256,
+    128
+   ],
+   "kitchen-washtub-front-default": [
+    128,
+    1120,
+    64,
+    128
+   ],
+   "kitchen-cauldron-front-steaming-0": [
+    1600,
+    992,
+    64,
+    128
+   ],
+   "kitchen-cauldron-front-steaming-1": [
+    1664,
+    992,
+    64,
+    128
+   ],
+   "kitchen-cauldron-front-steaming-2": [
+    0,
+    1120,
+    64,
+    128
+   ],
+   "kitchen-cauldron-front-steaming-3": [
+    64,
+    1120,
+    64,
+    128
+   ],
+   "kitchen-bread-rack-front-default": [
+    1536,
+    992,
+    64,
+    128
+   ],
+   "kitchen-jar-shelf-front-default": [
+    512,
+    864,
+    128,
+    128
+   ],
+   "kitchen-flour-handprint-wall-default": [
+    192,
+    1376,
+    64,
+    64
+   ],
+   "kitchen-oven-peel-wall-default": [
+    1344,
+    1120,
+    64,
+    96
+   ],
+   "millstone-hopper-front-turn-0": [
+    1088,
+    192,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-1": [
+    1216,
+    192,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-2": [
+    1344,
+    192,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-3": [
+    1472,
+    192,
+    128,
+    192
+   ],
+   "mill-sifter-front-default": [
+    640,
+    1120,
+    64,
+    128
+   ],
+   "mill-gear-wheel-left-turn-0": [
+    1024,
+    864,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-1": [
+    1152,
+    864,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-2": [
+    1280,
+    864,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-3": [
+    1408,
+    864,
+    128,
+    128
+   ],
+   "mill-sack-front-upright": [
+    512,
+    1376,
+    64,
+    64
+   ],
+   "mill-sack-front-slumped": [
+    448,
+    1376,
+    64,
+    64
+   ],
+   "mill-stairs-diag-default": [
+    1536,
+    864,
+    128,
+    128
+   ],
+   "loft-stair-opening-front-default": [
+    896,
+    864,
+    128,
+    128
+   ],
+   "loft-hoist-front-default": [
+    960,
+    192,
+    128,
+    192
+   ],
+   "mill-tally-board-wall-default": [
+    1472,
+    1120,
+    64,
+    96
+   ],
+   "mill-gear-wall-small-default": [
+    576,
+    1120,
+    64,
+    128
    ]
   }
  },
