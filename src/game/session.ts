@@ -185,7 +185,8 @@ export class Session {
       embers: this.state.embers,
       carrying: (def) => this.carrying(def),
       gateAt: this.state.questGateAt?.[quest],
-      online: this.link ? this.link.online : true
+      // No link, no world: a gated step needs a connection.
+      online: !!this.link && this.link.online
     }
   }
 
@@ -214,7 +215,9 @@ export class Session {
    * Reach `to` on `quest`, if it's the next step and its gate holds as far
    * as this client can tell. Connected: a `quest-step` operation; a plain
    * step shows at once (predicted, queues offline), a gated one waits for
-   * the world's answer. Guests: the same rules on this device.
+   * the world's answer. With no link (only tests make one since 0.3 ended
+   * local play) a plain step is taken on this device, and a gated or giving
+   * step is refused: its gate and grants are the server's to check and pay.
    */
   async reachStep(quest: string, to: string): Promise<ReachOutcome> {
     if (this.destroyed) return 'error'
@@ -242,6 +245,7 @@ export class Session {
         this.questsSent.delete(ref)
       }
     }
+    if (step.gate || step.give?.length) return 'offline'
     this.state = next
     this.emitQuest({ quest, step: to })
     if (step.embers > 0) this.addEmbers(step.embers, `+${step.embers} embers — a little warmth from the road.`)

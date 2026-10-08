@@ -300,7 +300,7 @@ export function reachStep(state: GameState, quest: string, to: string, now: numb
   const i = reachedIndex(q, state.quests) + 1;
   const s = q.steps[i];
   if (!s || s.id !== to) return null;
-  let next: GameState = { ...state, quests: { ...state.quests, [quest]: to } };
+  let next: GameState = { ...state, quests: { ...state.quests, [quest]: to }, questReachedAt: { ...state.questReachedAt, [quest]: now } };
   if (s.gate || i === 0) next.questGateAt = { ...state.questGateAt, [quest]: now };
   for (const item of s.items) next = { ...next, inventory: unique(next.inventory, item) };
   for (const mark of s.marks) {
@@ -312,7 +312,12 @@ export function reachStep(state: GameState, quest: string, to: string, now: numb
   return next;
 }
 
-/** Whether a step must go to the server online (a gate, or server items given): never queued offline. */
+/**
+ * Whether a step must go to the server online and wait for its answer: a
+ * gated one (indoors.md 5.3). Every other step is predicted and queues
+ * offline, as in 0.3; anything it grants, server items included, arrives
+ * with the answer.
+ */
 export function needsServer(step: QuestStepDef): boolean {
-  return !!step.gate || !!step.give?.length;
+  return !!step.gate;
 }

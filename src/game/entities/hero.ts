@@ -25,7 +25,7 @@ import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
-import { SEAT_CUT, type SeatPose } from '../seats'
+import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
 
 const PLAYER_SPEED = 110
 const ATTACK_RANGE = 26
@@ -36,8 +36,7 @@ const CONTACT_IFRAMES = 1.1
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
 const DODGE = { speed: 240, time: 0.2, iframes: 0.32, cooldown: 0.75 }
 
-/** Extra mana a second while seated (a bench in the square, a lit lantern's rest). */
-export const SEATED_MANA_BONUS = 5
+export { SEATED_MANA_BONUS }
 
 /** State carried across area changes and defeat recovery (per tab). */
 const carried = { attackCooldown: 0, castCooldown: 0, dashTime: 0, iframes: 0, facingX: 0, facingY: 1 }
@@ -52,6 +51,8 @@ export interface HeroDeps {
   avatar: () => AvatarVisual
   /** Lit-lantern rest rate (see WorldScene.lanternRestRate). */
   restRate: () => number
+  /** Standing at a room's hearth (src/game/room-spots.ts `warmAt`): the seated mana bonus without a seat. */
+  warm: () => boolean
   transitioning: () => boolean
   cinematic: () => boolean
   /** Defeat beat: collapse, fade, wake at the village well. */
@@ -81,9 +82,9 @@ export class Hero {
   /** Gathering / working (chops, digs, breaks; tucks off-hand). */
   isGathering = false
 
-  /** Mana a second added while seated (the scene's playtests read this). */
+  /** Mana a second added while seated, or warm at a hearth (the scene's playtests read this). */
   get seatedBonus(): number {
-    return this.seat ? SEATED_MANA_BONUS : 0
+    return this.seat || this.deps.warm() ? SEATED_MANA_BONUS : 0
   }
 
   constructor(private scene: Phaser.Scene, private deps: HeroDeps, entry: { tx: number; ty: number } | null) {
@@ -216,7 +217,7 @@ export class Hero {
         this.sprite.anims.stop()
         const state = this.deps.session.state
         const rest = this.deps.restRate()
-        const mana = Math.min(state.maxMana, state.mana + (5 + this.seatedBonus + 6 * rest) * dt)
+        const mana = Math.min(state.maxMana, state.mana + manaRegenRate({ seated: true, warm: false, rest }) * dt)
         this.deps.session.setVitals(state.hp, mana)
         return
       }
@@ -247,7 +248,8 @@ export class Hero {
     // Lit road lanterns are ember-bought rest spots: mana for everyone, HP
     // for demo heroes (still local only — Habitica is never touched).
     const rest = this.deps.restRate()
-    const mana = Math.min(state.maxMana, state.mana + (5 + 6 * rest) * dt)
+    // Standing still at a hearth warms you like a seat (mana only).
+    const mana = Math.min(state.maxMana, state.mana + manaRegenRate({ seated: false, warm: len <= 0.1 && this.deps.warm(), rest }) * dt)
     let hp = state.hp
     // HP only for demo vitals: imported health mirrors Habitica (approved
     // policy: no passive HP refill for imported heroes, lanterns included).

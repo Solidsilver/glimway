@@ -28,11 +28,10 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect.poll(() => step(page, 'signpost')).toBe('meet-orrin')
   await expect(goal(page)).toContainText('Find the signpost’s east finger')
 
-  // The finger-wisp, seeded settled: the trigger sees the mark where the
-  // step is (`at: woodland`; the world refuses it anywhere else).
+  // The finger-wisp, seeded settled, and the hero where it sat (the step is Brackenwood's): the trigger sees the mark.
+  await warp(page, 'woodland', 10, 15)
   seedMarks(id, 'defeated:finger-wisp')
-  await reenter(page)
-  await warp(page, 'woodland', 6, 17)
+  await reenter(page, 'woodland')
   await expect.poll(() => step(page, 'signpost')).toBe('fetch-finger')
   await expect(goal(page)).toContainText('Take the finger back to Orrin')
 
@@ -48,7 +47,12 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect(journal.getByRole('tab', { name: 'Quests' })).toHaveAttribute('aria-selected', 'true')
   await expect(journal.locator('[data-quest]').first()).toHaveAttribute('data-quest', 'signpost')
   await expect.poll(() => step(page, 'signpost')).toBe('note-lean')
-  await expect(journal.locator('article.note').first()).toContainText('Three Fingers off Plumb')
+  // The step's note is the newest of the Notes, the wisp's under it; it reads like a paper.
+  await expect(journal.locator('[data-note]')).toHaveText([/Three Fingers off Plumb/, /A Wisp on the Finger/])
+  await journal.locator('[data-note="note:signpost:note-lean"]').click()
+  await expect(journal.getByRole('article', { name: 'Three Fingers off Plumb' })).toContainText('I don’t think it’s the frost.')
+  await journal.getByRole('button', { name: /Quests/ }).first().click()
+  await expect(journal.locator('[data-note="note:signpost:note-lean"]')).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('journal-button')).not.toHaveClass(/glow/)
 
@@ -57,8 +61,7 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await readDialogue(page, { pick: /Three fingers off plumb, east/ })
   await expect.poll(() => step(page, 'signpost')).toBe('set-post')
 
-  // Mara writes it in the ledger: five embers, and her top-up of three (the
-  // server's grant for a hero short of 3 before the five; this one has none).
+  // Mara writes it in the ledger: five embers, and her top-up of three more for a hero with none.
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await expect.poll(() => step(page, 'signpost')).toBe('see-mara')

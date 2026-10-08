@@ -473,3 +473,26 @@ test('review-6 #1: terminal closes latch the lease; only a new lease starts agai
     assert.equal(r.client.stoppedFor, null);
   }
 });
+
+test('a room the server refuses (1008 invalid-room) is a place, not a bug: off there, the lease never latched, back on at the next area change', () => {
+  const r = rig();
+  r.live();
+  r.client.setArea('in:village:mill');
+  assert.deepEqual(r.sock().sent.at(-1), { type: 'join', area: 'in:village:mill' });
+  r.sock().onclose?.({ code: 1008, reason: 'invalid-room' });
+  assert.equal(r.client.status, 'room-refused');
+  assert.equal(r.client.stoppedFor, null, 'the lease is not latched');
+  // Still there: nothing reconnects (no loop), and the same lease's start is a no-op.
+  r.client.start('L'.repeat(64));
+  r.client.setArea('in:village:mill');
+  r.clock.advance(60_000);
+  assert.equal(r.sockets.length, 1);
+  // Out to the village: the same lease opens again and joins there.
+  r.client.setArea('village');
+  assert.equal(r.sockets.length, 2);
+  r.sock().open();
+  r.sock().push({ type: 'ready', accountId: 'me' });
+  assert.equal(r.client.status, 'live');
+  assert.deepEqual(r.sock().sent.at(-1), { type: 'join', area: 'village' });
+  assert.equal(closeAction(1008, 'invalid-room'), 'room-refused');
+});

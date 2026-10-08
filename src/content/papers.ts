@@ -11,6 +11,7 @@
  * A found paper is the story flag `paper:<id>` in GameState.flags.
  */
 import type { AreaId, QuestStage } from '../lib/state.ts';
+import { sectionForStyle, type LibrarySection } from './library.ts';
 import { QUEST_STAGES } from '../lib/state.ts';
 import { PAPER_COLLECTIONS, PAPER_TEXTS, type PaperTextRecord } from './papers-text.ts';
 
@@ -56,6 +57,8 @@ export interface Paper extends PaperTextRecord {
   source: FindSource;
   /** Where to look, shown while it is not yet found (never the text). */
   hint: string;
+  /** The library section it's shelved in (./library.ts): its kind's, unless SECTIONS says otherwise. */
+  section: LibrarySection;
 }
 
 interface Design {
@@ -317,10 +320,37 @@ export function designedSource(id: string): FindSource | undefined {
   return DESIGN[id]?.source;
 }
 
+/**
+ * Papers shelved somewhere other than their kind's section (the library's
+ * painted signs, docs/design/indoors.md 3.3): the scholarly pages are field
+ * notes, the remedies and handbooks are recipes, a skipping rhyme is a story.
+ */
+const SECTIONS: Readonly<Record<string, LibrarySection>> = {
+  'annotated-flora-of-the-eastern-reaches': 'field-notes',
+  'principia-memoria-excerpt': 'field-notes',
+  'fauna-of-the-slack-water': 'field-notes',
+  'weir-effect-survey-draft': 'field-notes',
+  'barge-knee-yields-report': 'field-notes',
+  'a-salting-drift-table': 'field-notes',
+  'remedies-of-the-oaker-hills': 'recipes',
+  'brackenwood-cutters-handbook': 'recipes',
+  'marens-notes-on-hubs-and-tyres': 'recipes',
+  'orrins-drift-slap-foundation-standard': 'recipes',
+  'twoford-almanac-silas-copy': 'histories',
+  'eleven-days': 'histories',
+  'the-ashwatch-skipping-game': 'stories',
+};
+
+/** A paper's library section, for the shared catalog too (scripts/papers.ts). */
+export function designedSection(id: string): LibrarySection | undefined {
+  const d = DESIGN[id];
+  return d ? (SECTIONS[id] ?? sectionForStyle(d.style)) : undefined;
+}
+
 export const PAPERS: readonly Paper[] = PAPER_TEXTS.map((t) => {
   const d = DESIGN[t.id];
   if (!d) throw new Error(`[papers] no find source for ${t.id}`);
-  return { ...t, style: d.style, source: d.source, hint: d.hint ?? hintFor(d.source) };
+  return { ...t, style: d.style, source: d.source, hint: d.hint ?? hintFor(d.source), section: designedSection(t.id)! };
 });
 
 export { PAPER_COLLECTIONS };

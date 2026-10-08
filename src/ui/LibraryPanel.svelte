@@ -3,15 +3,22 @@
   import type { Session } from '../game/session'
   import { Library, type ShelfView } from '../game/papers'
   import { PAPER_COLLECTIONS, PAPERS, paperById, paperFlag } from '../content/papers'
+  import { LIBRARY_SECTIONS, openingSection, sectionById, sectionOf, type LibrarySection } from '../content/library'
   import type { ShelfEntry } from '../lib/papers/library'
   import { actionRunner } from './panel-state.svelte'
   import { papers } from './papers.svelte'
   import PaperReader, { KIND_LABEL } from './PaperReader.svelte'
   import Panel from './Panel.svelte'
 
-  // The Hearthwick Library's reading room, opened at its door. Anyone can
-  // read what is shelved; you can donate papers you found that aren't yet.
-  let { session, onClose }: { session: Session; onClose: () => void } = $props()
+  // The Hearthwick Library's reading room (docs/design/indoors.md 3.3,
+  // revised). Anyone can read what is shelved, by section; donating goes
+  // through Elara, who opens the panel on her desk (`focus: 'donate'`).
+  let {
+    session,
+    onClose,
+    focus = 'shelf',
+    section = null
+  }: { session: Session; onClose: () => void; focus?: 'shelf' | 'donate' | 'read'; section?: string | null } = $props()
 
   const library = $derived(new Library(session))
   let view = $state<ShelfView | null>(null)
@@ -19,21 +26,39 @@
   const action = actionRunner()
   let listEl = $state<HTMLElement | null>(null)
   let lastOpened: string | null = null
+  /** The section shown (null: the whole collection). */
+  let filter = $state<LibrarySection | null>(null)
+  /** Elara's desk: the papers you carry that the shelves lack. */
+  let donating = $state(false)
+  /** The section asked for had nothing shelved yet (said once, above the whole collection). */
+  let emptyAsked = $state<string | null>(null)
 
   onMount(() => {
-    void library.load().then((v) => (view = v))
+    donating = focus === 'donate'
+    void library.load().then((v) => {
+      view = v
+      const shelved = PAPERS.filter((p) => v.shelf.has(p.id))
+      filter = openingSection(section, shelved)
+      emptyAsked = section && !filter ? (sectionById(section)?.label ?? null) : null
+    })
   })
 
   const shelf = $derived(view?.shelf ?? new Map<string, ShelfEntry>())
   const owned = $derived(new Set(papers.found))
+  const inView = (p: (typeof PAPERS)[number]) => !filter || sectionOf(p) === filter
   const groups = $derived(
     PAPER_COLLECTIONS.map((name) => {
-      const list = PAPERS.filter((p) => p.collection === name)
+      const list = PAPERS.filter((p) => p.collection === name && inView(p))
       return { name, list, shelved: list.filter((p) => shelf.has(p.id)).length }
-    })
+    }).filter((g) => g.list.length > 0)
+  )
+  const counts = $derived(
+    Object.fromEntries(LIBRARY_SECTIONS.map((s) => [s.id, PAPERS.filter((p) => sectionOf(p) === s.id && shelf.has(p.id)).length]))
   )
   const current = $derived(reading ? paperById(reading) : undefined)
   const currentEntry = $derived(reading ? shelf.get(reading) : undefined)
+  const canDonate = (id: string) => session.state.flags.includes(paperFlag(id)) && !shelf.has(id)
+  const donatable = $derived(PAPERS.filter((p) => canDonate(p.id)))
 
   function formatDay(iso: string | null): string {
     if (!iso) return ''
@@ -61,6 +86,11 @@
     queueMicrotask(() => listEl?.querySelector<HTMLElement>(`[data-paper="${lastOpened}"]`)?.focus())
   }
 
+  function show(s: LibrarySection | null): void {
+    filter = s
+    emptyAsked = null
+  }
+
   async function donate(id: string): Promise<void> {
     const r = await action.run(id, () => library.donate(id), `“${paperById(id)?.title}” is on the shelves now. Thank you.`)
     if (!r) return
@@ -73,8 +103,6 @@
       void library.load().then((v) => (view = v))
     }
   }
-
-  const canDonate = (id: string) => session.state.flags.includes(paperFlag(id)) && !shelf.has(id)
 </script>
 
 <Panel id="library" icon="book" title="Hearthwick Library" closeLabel="Close the library" {onClose}>
@@ -85,7 +113,9 @@
     </PaperReader>
   {:else}
     <p class="lede">
-      {#if view?.mode === 'shared'}
+      {#if donating}
+        Elara’s desk. What you’ve found that the shelves don’t have yet, she’ll write in the ledger and shelve.
+      {:else if view?.mode === 'shared'}
         The Keepers’ old reading room. Everyone in your world fills these shelves together.
       {:else}
         The Keepers’ old reading room. Bring what you find; the shelves remember.
@@ -102,9 +132,43 @@
       </div>
     {/if}
 
-    {#if action.message}<p class="msg {action.message.kind}" role="status">{action.message.text}</p>{/if}
+    {#if action.message}<p class="msg {action.message.kind}" role="status" data-testid="library-message">{action.message.text}</p>{/if}
 
-    {#if view}
+    {#if view && donating}
+      <section class="desk" aria-label="Elara’s desk" data-testid="library-donate">
+        {#if donatable.length === 0}
+          <p class="fine">Nothing you carry is missing from the shelves. Elara looks almost disappointed.</p>
+        {:else}
+          <ul>
+            {#each donatable as p (p.id)}
+              <li>
+                <div class="row held">
+                  <span class="spine gap" aria-hidden="true"></span>
+                  <span class="txt">
+                    <span class="name">{p.title}</span>
+                    <span class="desc">You found this one. The shelf has a gap its size.</span>
+                  </span>
+                  <button type="button" class="primary small" data-donate={p.id} disabled={action.busy !== null} onclick={() => donate(p.id)}>
+                    {action.busy === p.id ? 'Shelving…' : 'Donate'}
+                  </button>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        <button type="button" class="ghost back" onclick={() => (donating = false)}>The shelves ›</button>
+      </section>
+    {:else if view}
+      <!-- The shelves' painted signs: one section, or the whole collection. -->
+      <div class="sections" role="group" aria-label="Sections">
+        <button type="button" class="chip" aria-pressed={filter === null} onclick={() => show(null)} data-section="all">Everything</button>
+        {#each LIBRARY_SECTIONS as s (s.id)}
+          <button type="button" class="chip" aria-pressed={filter === s.id} onclick={() => show(s.id)} data-section={s.id}>
+            {s.label} <span class="n">{counts[s.id]}</span>
+          </button>
+        {/each}
+      </div>
+      {#if emptyAsked}<p class="fine" data-testid="library-empty-section">Nothing on the {emptyAsked} shelves yet. Here’s the whole collection.</p>{/if}
       <div bind:this={listEl}>
         {#each groups as g (g.name)}
           <section aria-label={g.name}>
@@ -123,15 +187,12 @@
                       <span class="go" aria-hidden="true">Read ›</span>
                     </button>
                   {:else if canDonate(p.id)}
-                    <div class="row held">
+                    <div class="row held" data-held={p.id}>
                       <span class="spine gap" aria-hidden="true"></span>
                       <span class="txt">
                         <span class="name">{p.title}</span>
-                        <span class="desc">You found this one. The shelf has a gap its size.</span>
+                        <span class="desc">You found this one. Elara will shelve it when she’s at her desk.</span>
                       </span>
-                      <button type="button" class="primary small" data-donate={p.id} disabled={action.busy !== null} onclick={() => donate(p.id)}>
-                        {action.busy === p.id ? 'Shelving…' : 'Donate'}
-                      </button>
                     </div>
                   {:else}
                     <div class="row missing">
@@ -268,5 +329,45 @@
     flex: none;
     padding: 5px 12px;
     font-size: 14px;
+  }
+  /* The sections: small painted signs, one pressed. */
+  .sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 2px;
+  }
+  .chip {
+    min-height: 36px;
+    padding: 4px 10px;
+    border-radius: 9px;
+    border: 2px solid var(--paper-line);
+    box-shadow: none;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 13.5px;
+  }
+  .chip[aria-pressed='true'] {
+    background: #fff1c2;
+    border-color: var(--gold-deep);
+    color: var(--wood-dark);
+  }
+  .chip:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+  .chip .n {
+    margin-left: 2px;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+  .desk {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .back {
+    justify-self: start;
+    min-height: 40px;
   }
 </style>

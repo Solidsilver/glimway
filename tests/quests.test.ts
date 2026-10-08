@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import items from '../content/items.json' with { type: 'json' };
 import {
+  needsServer,
   fingerInBracken,
   questLine,
   questTitle,
@@ -30,9 +31,9 @@ import { cycleAt as cycle } from '../src/lib/clock.ts';
 const cycleAt = (id: string, now: number) => cycle(residentById(id)!, now);
 import { calendarAt } from '../src/lib/clock.ts';
 import { createNewGame } from '../src/lib/state.ts';
-import { areaInfo, dialogueFor, dialogueRefs } from '../src/content/world.ts';
-import { questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, type QuestTalkContext } from '../src/content/quests/index.ts';
-import { questShelves } from '../src/ui/quests-page.ts';
+import { areaInfo, dialogueFor, dialogueRefs, journalEntries } from '../src/content/world.ts';
+import { afterTheirTalk, questMarker, questSpotLabel, questSpotTalk, questTalk, roadGoal, rumourChoice, RUMOUR_ASK, startsQuest, type QuestTalkContext } from '../src/content/quests/index.ts';
+import { noteAsPaper, questNotes, questShelves } from '../src/ui/quests-page.ts';
 
 /** 2026-10-08 10:00 UTC: a whole hour, so the cycles start here. */
 const HOUR = Date.UTC(2026, 9, 8, 10) / 1000;
@@ -76,11 +77,39 @@ test('the tree: kebab-case ids, short goals, small ember grants, items that exis
   assert.deepEqual([...ids].sort(), ['lantern-road', 'seat-by-the-lamp', 'set-to-rise', 'signpost', 'stuck-hoist', 'your-own-day']);
 });
 
-test('the lantern road keeps 0.3’s step ids and gifts', () => {
+test('the lantern road keeps 0.3’s step ids and every grant row (028’s gift outcomes read them)', () => {
   const road = questById('lantern-road')!;
-  assert.deepEqual(road.steps.map((s) => s.id), ['accepted', 'clue-found', 'guardian-defeated', 'lantern-lit', 'complete']);
-  assert.deepEqual(road.steps.map((s) => s.embers), [0, 0, 2, 0, 3]);
+  const grants = road.steps.map(({ id, at, items, marks, papers, embers, witness }) => ({ id, at, items, marks, papers, embers, witness }));
+  assert.deepEqual(grants, [
+    { id: 'accepted', at: 'village', items: [], marks: [], papers: [], embers: 0, witness: '' },
+    { id: 'clue-found', at: 'ruin', items: ['lantern-route-rubbing'], marks: ['found:old-route-marker'], papers: [], embers: 0, witness: '' },
+    { id: 'guardian-defeated', at: 'ruin', items: ['warden-seal'], marks: ['defeated:stone-warden'], papers: ['eleven-days'], embers: 2, witness: 'warden' },
+    { id: 'lantern-lit', at: 'ruin', items: [], marks: ['found:hilltop-lantern'], papers: ['principia-memoria-excerpt'], embers: 0, witness: 'lantern' },
+    { id: 'complete', at: 'village', items: [], marks: ['found:lantern-road-restored'], papers: [], embers: 3, witness: '' },
+  ]);
   assert.deepEqual(road.after, ['signpost']);
+});
+
+test('the Notes: the reached steps’ notes, newest first, read like papers', () => {
+  const rec = { ...DONE_OPENING, 'set-to-rise': 'let-it-rise' };
+  // Set to Rise reached last: its note comes first, then the opening's, latest step first.
+  const notes = questNotes(rec, { signpost: 100, 'set-to-rise': 200 });
+  assert.deepEqual(notes.map((n) => n.title), ['Set to Rise', 'The First Lamp', 'In the Ledger', 'Three Fingers off Plumb', 'A Wisp on the Finger']);
+  assert.deepEqual(questNotes({ signpost: 'bring-finger' }).map((n) => n.title), ['A Wisp on the Finger']);
+  assert.deepEqual(questNotes({}), []);
+  const paper = noteAsPaper(notes[0]);
+  assert.equal(paper.title, 'Set to Rise');
+  assert.equal(paper.style, 'notebook');
+  assert.deepEqual(paper.meta, [{ label: 'Quest', value: 'Set to Rise' }]);
+  // The journal's own pages don't repeat them.
+  assert.ok(!journalEntries(rec).some((e) => notes.some((n) => n.title === e.title && n.body === e.body)));
+});
+
+test('a gated step goes to the world and waits; a step with only grants is predicted and queues', () => {
+  const rise = questById('set-to-rise')!;
+  assert.equal(needsServer(rise.steps.find((s) => s.id === 'set-sponge')!), true);
+  assert.equal(needsServer(rise.steps.find((s) => s.id === 'fetch-flour')!), false);
+  assert.equal(needsServer({ ...rise.steps[1], give: [{ def: 'flour', qty: 1 }] }), false, 'gate-only');
 });
 
 test('a wait always has a gate to count from: a gated step before it, or the quest’s first', () => {
@@ -308,6 +337,21 @@ test('Set to Rise: Hazel asks; the offer is disabled with why; "not yet" says th
   assert.equal(risen.choices?.[0].action, 'quest:set-to-rise:let-it-rise');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 2 * 3600 + 60 })), 'quest');
   assert.equal(questMarker('hazel', talkCtx(set, { ...kitchen, gateAt: HOUR, now: HOUR + 30 * 60 })), null);
+});
+
+test('a quest that starts with a resident comes after their own talk, never instead of it', () => {
+  const kitchen = { area: 'in:village:bakery' };
+  const start = questTalk('hazel', talkCtx(DONE_OPENING, kitchen))!;
+  assert.ok(startsQuest(start, talkCtx(DONE_OPENING, kitchen)), 'hear-hazel starts Set to Rise');
+  // Mid-quest, the step is the talk.
+  const asked = { ...DONE_OPENING, 'set-to-rise': 'fetch-flour' };
+  assert.ok(!startsQuest(questTalk('hazel', talkCtx(asked, { ...kitchen, carrying: () => 1 }))!, talkCtx(asked, kitchen)));
+  const own = { speaker: 'Hazel', lines: ['Joss liked the ends burnt.'], choices: [{ text: 'Hear it again', replay: true }, { text: 'Be on my way', dismiss: true }] };
+  const d = afterTheirTalk(own, start);
+  assert.deepEqual(d.lines, ['Joss liked the ends burnt.', ...start.lines]);
+  assert.deepEqual(d.choices!.map((c) => c.text), ['I’ll fetch you some flour.', 'Hear it again', 'Not yet']);
+  assert.equal(d.choices![0].action, 'quest:set-to-rise:hear-hazel');
+  assert.equal(d.speaker, 'Hazel');
 });
 
 test('the sponge bowl shows the wait; room spots take their steps', () => {

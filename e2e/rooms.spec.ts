@@ -11,9 +11,33 @@ import { DOORSTEP, goIn, inRoom, roomView, setHour } from './room-helpers'
  * and Hazel and Finn come and go on their hour. Screens of each room go to
  * .agent/screens/ with SCREENS=1 (desktop and phone).
  *
- * The reload and two-player tests need the server to know rooms (lane A2:
- * `validArea`, presence rooms); until then the server refuses a room's place.
+ * The world keeps a room's place (lane A2). The refusal test forces its own
+ * refusal (a world that doesn't know the room), so it holds either way; the
+ * phone and hearth checks play offline, since what they check is drawing
+ * and local regen.
  */
+
+type Seat = { seated: boolean; bonus: number; mana: number; maxMana: number }
+const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSeat: () => Seat }).__fsSeat())
+
+/**
+ * Answer the first report that names `area` as a place the world doesn't
+ * take (a real refusal: the world's own state with it, holding the hero on
+ * the doorstep outside, as a world that doesn't know the room would).
+ * Other reports go through.
+ */
+async function refuseReportFrom(page: Page, area: string): Promise<void> {
+  let refused = false
+  await page.route('**/api/report', async (route) => {
+    if (refused || !(route.request().postData() ?? '').includes(area)) return route.continue()
+    refused = true
+    // A moment later than a world would answer, so the room is seen to settle first.
+    await new Promise((r) => setTimeout(r, 1500))
+    const { state } = await (await page.request.get('/api/state', CONTRACT)).json()
+    state.place = { ...state.place, area: 'village', x: 7 * 16 + 8, y: 8 * 16 + 8 }
+    await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-position' }, state }) })
+  })
+}
 
 type Npc = { id: string; x: number; y: number; present: boolean; spot: string | null; walking: boolean }
 const npc = (page: Page, id: string) => page.evaluate((who) => (window as unknown as { __fsNpcs: () => Npc[] }).__fsNpcs().find((n) => n.id === who) ?? null, id)
@@ -56,29 +80,29 @@ test('each room: in at its front door, facing in, framed close; out through the 
   }
 })
 
-test('the mill’s stairs: up to the sack loft and back down', async ({ page }) => {
+test('the mill’s stairs: up the west wall to the loft, out north of its opening; back down, out south of the stairs', async ({ page }) => {
   test.setTimeout(90_000)
   await freshPlayer(page)
   await goIn(page, 'in:village:mill')
-  // Just below the stairs up, then onto them.
-  await warp(page, 'in:village:mill', 10, 7)
+  // At the stairs' foot, then up onto them.
+  await warp(page, 'in:village:mill', 1, 6)
   await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   await inRoom(page, 'in:village:mill:2')
   await page.keyboard.up('ArrowUp')
   let at = await player(page)
-  expect([Math.floor(at.x / 16), Math.floor(at.y / 16)], 'beside the stairs down').toEqual([4, 5])
-  expect((await roomView(page)).facing.x, 'facing east, off the stairs').toBeGreaterThan(0)
+  expect([Math.floor(at.x / 16), Math.floor(at.y / 16)], 'just north of the opening').toEqual([1, 3])
+  expect((await roomView(page)).facing.y, 'facing on, north').toBeLessThan(0)
   expect((await roomView(page)).props.some((p) => p.art === 'mill-hoist')).toBe(true)
   await shot(page, 'room-loft')
-  // West, onto the stairs down: back on the mill floor beside the stairs up.
+  // Back down through the opening: out on the mill floor south of the stairs.
   await waitForLive(page)
-  await page.keyboard.down('ArrowLeft')
+  await page.keyboard.down('ArrowDown')
   await inRoom(page, 'in:village:mill')
-  await page.keyboard.up('ArrowLeft')
+  await page.keyboard.up('ArrowDown')
   at = await player(page)
-  expect([Math.floor(at.x / 16), Math.floor(at.y / 16)]).toEqual([9, 6])
-  expect((await roomView(page)).facing.x, 'facing west').toBeLessThan(0)
+  expect([Math.floor(at.x / 16), Math.floor(at.y / 16)]).toEqual([1, 6])
+  expect((await roomView(page)).facing.y, 'facing on, south').toBeGreaterThan(0)
 })
 
 test('a resident at the change of the hour: Hazel walks out of her kitchen, and her door says Knock', async ({ page }) => {
@@ -107,7 +131,7 @@ test('a resident at the change of the hour: Hazel walks out of her kitchen, and 
   expect((await npc(page, 'hazel'))?.present, 'an empty kitchen').toBe(false)
 })
 
-test('a reload inside comes back inside (needs A2: the server keeps a room’s place)', async ({ page }) => {
+test('a reload inside comes back inside', async ({ page }) => {
   test.setTimeout(90_000)
   await freshPlayer(page)
   await goIn(page, 'in:village:library')
@@ -118,15 +142,16 @@ test('a reload inside comes back inside (needs A2: the server keeps a room’s p
   expect([Math.floor(at.x / 16), Math.floor(at.y / 16)]).toEqual([9, 6])
 })
 
-test('two players in one room see each other (needs A2: rooms are presence rooms)', async ({ page, browser, baseURL }) => {
+test('two players in one room see each other, and the room is left behind on the way out', async ({ page, browser, baseURL }) => {
   test.setTimeout(120_000)
   await freshPlayer(page, 'Tansy')
-  // Bram joins Tansy's world by her invite (each newcomer otherwise gets a world of their own).
+  // Presence is per world: Bram joins Tansy's by her invite.
   const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   expect(created.ok()).toBe(true)
+  const code = (await created.json()).code as string
   const ctx = await browser.newContext({ baseURL })
   const other = await ctx.newPage()
-  await freshPlayer(other, 'Bram', (await created.json()).code as string)
+  await freshPlayer(other, 'Bram', code)
   for (const p of [page, other]) await goIn(p, 'in:village:mill')
   const presence = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { area: string | null; peers: string[] } }).__fsPresence())
   expect((await presence(page)).area).toBe('in:village:mill')
@@ -137,5 +162,51 @@ test('two players in one room see each other (needs A2: rooms are presence rooms
   await walkOut(other)
   await waitForArea(other, 'village')
   await expect.poll(async () => (await presence(page)).peers.length, { timeout: 20_000 }).toBe(0)
+  await ctx.close()
+})
+
+test('a room place the world refuses: the hero is put back where the world says, and a reload starts there too', async ({ page }) => {
+  test.setTimeout(90_000)
+  await freshPlayer(page)
+  await refuseReportFrom(page, 'in:village:bakery')
+  await goIn(page, 'in:village:bakery')
+  // The arrival's report is refused: back outside, by the world's place (where the server holds the hero).
+  await settled(page, { area: 'village' })
+  const at = await player(page)
+  expect(Math.hypot(at.x - (7 * 16 + 8), at.y - (8 * 16 + 8)), 'on the place the world said').toBeLessThan(24)
+  // The next report names that place, so the world holds it, and a reload starts there.
+  await page.unroute('**/api/report')
+  await expect.poll(async () => (await serverState(page)).body.state.area, { timeout: 20_000 }).toBe('village')
+  await reenter(page, 'village')
+})
+
+test('on a phone the whole room is in view, all four walls; standing at the hearth warms you', async ({ browser, baseURL }) => {
+  test.setTimeout(150_000)
+  const ctx = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })
+  const page = await ctx.newPage()
+  await freshPlayer(page)
+  // What this checks is the framing and local regen: the world's answers (which,
+  // before A2, refuse a room and rightly put the hero back outside) are held back.
+  await page.route('**/api/**', (route) => route.abort())
+  for (const r of ROOMS) {
+    await goIn(page, r.id, { touch: true })
+    const box = await page.evaluate(() => {
+      const w = window as unknown as { __fsDevToScreen: (x: number, y: number) => { x: number; y: number }; __fsWorld: () => { widthPx: number; heightPx: number } }
+      const world = w.__fsWorld()
+      return { tl: w.__fsDevToScreen(0, 0), br: w.__fsDevToScreen(world.widthPx, world.heightPx) }
+    })
+    expect(box.tl.x, `${r.id}: the west wall`).toBeGreaterThanOrEqual(0)
+    expect(box.tl.y, `${r.id}: the back wall`).toBeGreaterThanOrEqual(0)
+    expect(box.br.x, `${r.id}: the east wall`).toBeLessThanOrEqual(390)
+    expect(box.br.y, `${r.id}: the near wall`).toBeLessThanOrEqual(844)
+    await page.evaluate(() => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('village', 8, 10))
+    await settled(page, { area: 'village' })
+  }
+  // The kitchen's oven: standing on its apron, the seated bonus without a seat.
+  await goIn(page, 'in:village:bakery', { touch: true })
+  expect((await seat(page)).bonus, 'by the door: nothing').toBe(0)
+  await warp(page, 'in:village:bakery', 7, 4)
+  await expect.poll(async () => (await seat(page)).bonus).toBe(5)
+  expect((await seat(page)).seated, 'standing, not seated').toBe(false)
   await ctx.close()
 })

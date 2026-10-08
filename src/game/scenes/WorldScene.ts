@@ -72,6 +72,8 @@ import { GoalGuide } from '../entities/goal-guide'
 import { heldNow } from '../held'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
+import { LIBRARY_ACTION } from '../../content/residents.ts'
+import { openLibrary } from '../library-open.ts'
 import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
@@ -86,12 +88,12 @@ import { WorldControls } from './world-controls'
 import { presenceMoments } from '../entities/presence-moments'
 import { arrive } from './world-arrival'
 import { buildRoomArt, type RoomArt } from '../area/room-art'
-import { RoomSpots, LAMP_MARK, LIBRARY } from '../room-spots'
+import { RoomSpots, LAMP_MARK, LIBRARY, spotWanted } from '../room-spots'
 import { ResidentCycle, residentIn } from '../resident-cycle'
 import { Doors } from '../entities/doors'
 import { HouseLights } from '../entities/house-lights'
 import { PipWalkOn } from '../entities/pip-walk-on'
-import { facingFor, roomArrival } from '../room-kind'
+import { facingFor, roomArrival, warmAt, type Footprint } from '../room-kind'
 import { tileKey } from '../../lib/tile'
 
 interface SceneData {
@@ -246,6 +248,7 @@ export class WorldScene extends Phaser.Scene {
         projectiles: () => this.projectiles,
         avatar: () => this.avatar,
         restRate: () => lanternRestRate(this.lightProps, this.session.state, this.hero.sprite, this.enemies.enemies),
+        warm: () => warmAt(this.world, this.hero.sprite.x, this.hero.sprite.y),
         transitioning: () => this.transitioning,
         cinematic: () => this.cinematic,
         onDefeat: () => this.defeatRecovery()
@@ -309,12 +312,22 @@ export class WorldScene extends Phaser.Scene {
     // Rooms (docs/design/indoors.md 2.7): the front doors out here, and
     // inside a village room its art, light pools and spots.
     new Doors({ world: this.world, interactables: this.interactables, enter: (room) => this.goIn(room) })
+    // A spot on the piece, or on the floor just in front of it, that the current quest marks.
+    const pointed = (f: Footprint) =>
+      Object.entries(this.world.room?.def.spots ?? {}).some(
+        ([id, s]) => s.tx >= f.tx && s.tx < f.tx + f.tw && s.ty >= f.ty && s.ty <= f.ty + f.th && spotWanted(id, this.session)
+      )
     this.roomArt = buildRoomArt(this, this.world, {
       reducedMotion: this.reducedMotion,
-      // A resident's hearth is banked while they're out; the library's reading lamp burns once its oil is paid.
-      lit: (kind) =>
-        kind === 'hearth' ? residentIn(this.world.areaId) : kind === 'lamp' && this.world.areaId === LIBRARY ? this.session.state.flags.includes(LAMP_MARK) : true,
-      propState: (art) => (art === 'reading-table' && this.session.state.flags.includes(LAMP_MARK) ? 'lit' : null)
+      // A resident's hearth is banked while they're out; the reading lamp (on the library's table) burns once its oil is paid.
+      lit: (light) => {
+        if (light.kind === 'hearth') return residentIn(this.world.areaId)
+        const table = this.world.areaId === LIBRARY ? this.world.room?.props.find((p) => p.art === 'reading-table') : undefined
+        const onTable = !!table && light.tx >= table.tx && light.tx < table.tx + table.tw && light.ty >= table.ty && light.ty < table.ty + table.th
+        return !onTable || this.session.state.flags.includes(LAMP_MARK)
+      },
+      propState: (f) => this.pieceState(f, pointed),
+      pointed
     })
     new RoomSpots({ world: this.world, session: this.session, interactables: this.interactables, hero: () => this.hero, present: (id) => this.npcs.npcs.some((n) => n.id === id && n.present) })
     const homeRoom = parseHomeRoom(this.world.areaId)
@@ -678,6 +691,8 @@ export class WorldScene extends Phaser.Scene {
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
   private refreshMarkers(): void {
     this.interactables.refreshMarkers()
+    // What the quest points at may move and glow; the rest of a room stands still.
+    this.roomArt?.refresh()
   }
 
   private onProfileChanged(): void {
@@ -755,6 +770,8 @@ export class WorldScene extends Phaser.Scene {
     uiState.blockedUntil = performance.now() + 220
     // A quest step's offer (`quest:<quest>:<step>`) or talk (`<quest>:<step>`) is the session's.
     if (payload?.action?.startsWith(QUEST_ACTION)) void this.session.reachRef(payload.action.slice(QUEST_ACTION.length))
+    // Elara's shelves and donations (`library:shelf`, `library:donate`): the library panel.
+    else if (payload?.action?.startsWith(LIBRARY_ACTION)) openLibrary({ focus: payload.action.slice(LIBRARY_ACTION.length) === 'donate' ? 'donate' : 'shelf' })
     else if (payload?.action) this.actions.apply(payload.action)
     if (payload?.event?.includes(':')) {
       void this.session.reachRef(payload.event)
@@ -762,8 +779,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
-    // The clue is journaled under the shared content id (advanceQuest also
-    // carries it; addUnique keeps it single-entry).
+    // The clue is journaled under the shared content id (the step's
+    // prediction, reachStep, also carries it, once).
     if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'The Closure Mark')
     if (event === 'light-lantern' || event === 'return-village') {
       playLanternBeat(this, {
@@ -876,6 +893,34 @@ export class WorldScene extends Phaser.Scene {
     const entry = parseHomeRoom(room) !== null ? ROOM_ENTRY : roomArrival(room)
     if (!entry) return
     this.transitionTo(room, entry, { x: 0, y: -1 })
+  }
+
+  /**
+   * A room's signature piece in the state what has happened puts it in
+   * (docs/design/indoors.md 2.8: never by idling): the oven lit while Hazel
+   * is home, the stones and gears turning while Finn is in, the reading
+   * lamp lit once its oil is paid, the hoist working once greased, the
+   * tallow pot steaming while a quest points at it. Null: its default.
+   */
+  private pieceState(f: Footprint, pointed: (f: Footprint) => boolean): string | null {
+    const home = residentIn(this.world.areaId.replace(/:\d+$/, ''))
+    switch (f.art) {
+      case 'kitchen-hearth':
+        return home ? 'lit' : 'banked'
+      case 'millstones':
+      case 'mill-gears':
+        return home ? 'turning' : 'still'
+      case 'reading-table':
+        return this.session.state.flags.includes(LAMP_MARK) ? 'lit' : 'unlit'
+      case 'mill-hoist': {
+        const reached = this.session.state.quests?.['stuck-hoist']
+        return reached === 'grease-hoist' || reached === 'tell-finn' ? 'working' : 'seized'
+      }
+      case 'kitchen-tallow-pot':
+        return pointed(f) ? 'steaming' : 'still'
+      default:
+        return null
+    }
   }
 
   /** The map changed under us (the lane grew, land was cleared): rebuild it where we stand. */

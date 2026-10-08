@@ -80,6 +80,34 @@
           "minutes": 60
         }
       ]
+    },
+    {
+      "id": "elara",
+      "offsetMinutes": 10,
+      "home": "in:village:library",
+      "spots": {
+        "desk": {
+          "area": "in:village:library",
+          "tx": 9,
+          "ty": 4,
+          "seated": true
+        },
+        "camp": {
+          "area": "commons",
+          "tx": 26,
+          "ty": 5
+        }
+      },
+      "cycle": [
+        {
+          "spot": "desk",
+          "minutes": 30
+        },
+        {
+          "spot": "camp",
+          "minutes": 30
+        }
+      ]
     }
   ]
 }

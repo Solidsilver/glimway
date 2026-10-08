@@ -254,9 +254,12 @@ async function main(): Promise<void> {
   })
 
   // The 0.4 indoors pass is authored at 64 texels per 16px world tile. Keep
-  // its requested native canvases whole in a separate source-density pack;
-  // the room lane can sample these frames without wiring them into scenes.
-  type IndoorsFrame = { key: string; source: string; sourceRect: { x: number; y: number; w: number; h: number }; canvasSize: { w: number; h: number }; destinationRect: { x: number; y: number; w: number; h: number } }
+  // its requested native canvases whole in a separate source-density pack.
+  // A piece is never stretched to its canvas: props, effects, overlays and
+  // icons keep their painted aspect, scaled to fit and standing on the
+  // canvas's bottom centre (their foot point); only the tiling pieces
+  // (floors, walls) fill their cell, since they must meet their neighbours.
+  type IndoorsFrame = { key: string; source: string; role?: string; sourceRect: { x: number; y: number; w: number; h: number }; canvasSize: { w: number; h: number }; destinationRect: { x: number; y: number; w: number; h: number } }
   type IndoorsManifest = { sources: { key: string; file: string }[]; frames: IndoorsFrame[] }
   const indoors = readJson<IndoorsManifest>('assets/generated/indoors-pass/manifest.json')
   const indoorsSrc = new Map(indoors.sources.map((s) => [s.key, `assets/generated/indoors-pass/sheets/${s.file}`]))
@@ -264,7 +267,13 @@ async function main(): Promise<void> {
   const indoorsJobs: Job[] = indoors.frames.map((f) => {
     const src = indoorsSrc.get(f.source)
     if (!src) throw new Error(`indoors-pass: ${f.key} has no source sheet ${f.source}`)
-    return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, f.sourceRect.w, f.sourceRect.h], w: f.canvasSize.w, h: f.canvasSize.h, d: [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h], box: true }
+    const { w: sw, h: sh } = f.sourceRect
+    const { w: cw, h: ch } = f.canvasSize
+    const tiling = f.role === 'tile' || f.role === 'wall'
+    const k = Math.min(cw / sw, ch / sh)
+    const [dw, dh] = [Math.max(1, Math.round(sw * k)), Math.max(1, Math.round(sh * k))]
+    const d: Job['d'] = tiling ? [f.destinationRect.x, f.destinationRect.y, f.destinationRect.w, f.destinationRect.h] : [Math.floor((cw - dw) / 2), ch - dh, dw, dh]
+    return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, sw, sh], w: cw, h: ch, d, box: true }
   })
 
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at

@@ -30,6 +30,8 @@ export interface GameState {
    * step, or its first (Unix seconds). Waits count from it.
    */
   questGateAt?: Record<string, number>;
+  /** The server's (and the predictor's): when each quest's record step was reached (Unix seconds). */
+  questReachedAt?: Record<string, number>;
   hp: number;
   maxHp: number;
   mana: number;
@@ -94,14 +96,6 @@ export const QUEST_STAGES: readonly QuestStage[] = [
   'guardian-defeated',
   'lantern-lit',
   'complete',
-];
-
-export const QUEST_EVENTS: readonly QuestEvent[] = [
-  'accept',
-  'find-clue',
-  'defeat-guardian',
-  'light-lantern',
-  'return-village',
 ];
 
 export const SAVE_VERSION = 1 as const;
@@ -269,6 +263,7 @@ export function validateSave(data: unknown): GameState {
 
   const quests = validateQuests(data);
   const questGateAt = isPlainObject(data.questGateAt) ? numberMap(data.questGateAt) : undefined;
+  const questReachedAt = isPlainObject(data.questReachedAt) ? numberMap(data.questReachedAt) : undefined;
 
   const maxHp = requireFiniteNumber(data.maxHp, 'maxHp', { min: 1 });
   const hp = requireFiniteNumber(data.hp, 'hp', { min: 0, max: maxHp });
@@ -313,6 +308,7 @@ export function validateSave(data: unknown): GameState {
     position: { x, y },
     quests,
     ...(questGateAt ? { questGateAt } : {}),
+    ...(questReachedAt ? { questReachedAt } : {}),
     hp,
     maxHp,
     mana,

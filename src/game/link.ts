@@ -58,6 +58,7 @@ import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
 import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
+import { serverNow } from './clock.ts'
 
 const HEARTBEAT_MS = 30_000
 /** After this long without an answer the chip says "Reaching the world…". */
@@ -223,6 +224,8 @@ export interface LinkInit {
   /** Tells other tabs the outbox changed (null: none). */
   channel?: ChannelLike | null
   now?: () => number
+  /** The server's clock as the client knows it (Unix seconds; ./clock.ts `serverNow`): a predicted quest step's gate time. */
+  serverNow?: () => number
 }
 
 interface ChannelLike {
@@ -305,6 +308,16 @@ function predictionOf(entry: OutboxEntry): Prediction {
   }
 }
 
+/** The `where` a frozen operation carries (null: none, or unreadable). */
+function whereIn(entry: OutboxEntry): WhereJson | null {
+  try {
+    const w = (JSON.parse(entry.body) as { where?: WhereJson }).where
+    return w && typeof w.area === 'string' ? w : null
+  } catch {
+    return null
+  }
+}
+
 export class Link {
   readonly api: ApiClient
   readonly ops: OperationsApi
@@ -335,6 +348,7 @@ export class Link {
   private readonly store: OutboxStore
   private readonly emitter: Emit
   private readonly now: () => number
+  private readonly serverClock: () => number
   private readonly locks: LockLike | null
   private readonly channel: ChannelLike | null
   private lock: HeldLock | null = null
@@ -387,6 +401,7 @@ export class Link {
     this.store = init.store ?? outboxStore()
     this.emitter = init.emit
     this.now = init.now ?? Date.now
+    this.serverClock = init.serverNow ?? serverNow
     this.locks = init.locks === undefined ? browserLocks() : init.locks
     this.channel = init.channel === undefined ? defaultChannel() : init.channel
     this.lastContact = this.now()
@@ -494,7 +509,7 @@ export class Link {
   // ------------------------------------------------------------ the view
 
   private view(): GameState {
-    return predictedView(this.server, this.entries.map(predictionOf), { profile: profileOf(this.server) })
+    return predictedView(this.server, this.entries.map(predictionOf), { profile: profileOf(this.server), now: Math.floor(this.serverClock()) })
   }
 
   /** Show the view. `relocate`: the server (or a fall) moved the hero; `vitals`: the overlay moved. */
@@ -1046,6 +1061,9 @@ export class Link {
       for (const e of [head, ...dependents]) this.drop(e)
       if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
       this.refresh()
+      // Its `where` isn't a place the world takes: the hero goes where the world says.
+      const where = code === 'invalid-position' ? whereIn(head) : null
+      if (where) this.followServerPlace(where)
       // Persist the local disposition before advancing, including stored server refusals.
       const stored = await this.dispositionSaved()
       console.warn('[glimway] the world refused a', head.kind, code)
@@ -1237,10 +1255,24 @@ export class Link {
         return { ok: false }
       }
       this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
+      // The world kept its own place over this one (it moved the hero since):
+      // if the hero still stands where the report said, they go where it says.
+      if (ack?.accepted && !ack.staleBasis && ack.placeIgnored) this.followServerPlace(retired.place, { otherArea: true })
       await this.saveRecord()
       return { ok: true, sent: retired, ack }
     } catch (err) {
       const code = errorCode(err)
+      if (isSettledRefusal(err) && code === 'invalid-position') {
+        // The world doesn't take this place at all (a room it doesn't know, a
+        // place the content lost): the report goes, and the hero goes where
+        // the world says they are.
+        this.answered()
+        this.reports.drop()
+        if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
+        this.followServerPlace(c.place)
+        await this.saveRecord()
+        return { ok: true }
+      }
       if (code === 'superseded' || code === 'playing-elsewhere') {
         // A retired generation: its captured report never moves to a new one.
         this.reports.drop()
@@ -1251,6 +1283,23 @@ export class Link {
       this.stopFor(err)
       return { ok: false }
     }
+  }
+
+  /**
+   * The world didn't take the place `refused` names: while the hero still
+   * stands there, they're moved to the world's place (the scene follows,
+   * EV.relocate), and the next report names it, so a reload starts there too.
+   * `otherArea`: only when the world holds them in another area (an ignored
+   * place: within one area it's a stale sample, and the next report settles it).
+   */
+  private followServerPlace(refused: WhereJson, opts: { otherArea?: boolean } = {}): void {
+    const s = this.session
+    const held = this.server.place
+    if (!s || !held) return
+    if (held.area === refused.area && (opts.otherArea || (held.x === refused.x && held.y === refused.y))) return
+    if (whereOf(s.state).area !== refused.area) return
+    this.refresh({ relocate: true })
+    this.noteLive()
   }
 
   private reportRequest(c: CapturedReport) {

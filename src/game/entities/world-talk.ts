@@ -14,7 +14,7 @@ import { tileBottom, tileMid } from '../../lib/tile'
 import type { EmberSpotId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
-import { isResident, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
+import { isResident, keeperTalk, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
 import { shortTalk } from '../../content/talk'
 import { greetingFor, heardDay, heardStory, markDay, markStory } from '../heard'
 import { meetResident, residentContext } from '../residents'
@@ -24,8 +24,10 @@ import type { Village } from '../village'
 import { HEIRLOOM_GUEST_LINES, NORTH_BRIDGE_DONE, countAdaOilGifts } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
 import { openDialogue } from '../dialogue'
-import { questMarker, questTalk, rumourChoice } from '../../content/quests/index.ts'
+import { afterTheirTalk, questMarker, questTalk, rumourChoice, startsQuest } from '../../content/quests/index.ts'
 import { questContext } from '../guide-pin'
+import { placeArea } from '../../lib/api/predict'
+import { LIBRARY } from '../room-spots'
 import type { Interactable, Interactables, MarkerKind } from './interactables'
 import type { PaperPickups } from './papers'
 
@@ -156,8 +158,10 @@ export class WorldTalk {
       const quest = questContext(session)
       const talk = isResident(id) ? residentTalk(id, residentContext(session)) : null
       // A quest step that talking to them takes (a resident once you've been introduced).
+      // Mid-quest it's the talk; a quest's start comes after their own talk, never instead of it.
       const step = talk?.first ? null : questTalk(id, quest)
-      if (talk && step) payload = step
+      const starting = !!step && startsQuest(step, quest)
+      if (talk && step && !starting) payload = step
       else if (talk && isResident(id)) {
         // Residents talk around the quest: their words come from the save,
         // the calendar, the world's projects and your plot. Heard before:
@@ -177,6 +181,10 @@ export class WorldTalk {
         // "Heard anything?": an open quest you haven't pinned, in their voice.
         const rumour = talk.first ? null : rumourChoice(id, quest)
         if (rumour) payload = { ...payload, choices: [rumour, ...(payload.choices ?? [])] }
+        // Elara keeping the library: the shelves, and donating through her (indoors.md 3.3).
+        if (id === 'elara' && placeArea(session.state) === LIBRARY) payload = keeperTalk(payload, talk.first)
+        // A quest that starts with them: asked after they've said their piece.
+        if (step && starting) payload = afterTheirTalk(payload, step)
       } else payload = isEmberSpot(id)
         ? emberDialogue(id, session.state, {
           connected: session.vitalsSource === 'imported',

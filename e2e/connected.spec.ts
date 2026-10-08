@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { openLibraryShelves } from './room-helpers'
+import { goIn, openLibraryShelves, setHour } from './room-helpers'
 import { adminInvite,
   allow,
   linkStatus,
@@ -171,6 +171,8 @@ test('quest embers come from the server once the story upload lands', async ({ p
 
 test('the shared library shelf: a connected donation lands on the world shelf and stays', async ({ page }) => {
   await freshPlayer(page)
+  // Elara keeps the library from :10 to :40, and takes donations at her desk (both clocks).
+  await setHour(page, { minute: 20, server: true })
   // Find a paper and donate it straight away: the donation must wait for the
   // upload that carries the find, so there's no wait for the server here.
   // Hold the pickup (its own operation now) for a while so the donation is
@@ -184,13 +186,16 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.keyboard.press('e')
   await expectToast(page, 'Found: A Page from Pip’s Copybook')
 
-  // The shelves, in the reading room (the door is a way in now).
-  await openLibraryShelves(page)
+  // Elara's desk, in the reading room.
+  await goIn(page, 'in:village:library')
+  await page.evaluate(() => (window as unknown as { __fsDevLibrary: (p: { focus: 'donate' }) => void }).__fsDevLibrary({ focus: 'donate' }))
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
-  await expect(library).toBeVisible()
-  await library.locator('[data-donate="pip-copybook-warden-corrections"]').click()
+  const desk = library.getByTestId('library-donate')
+  await desk.locator('[data-donate="pip-copybook-warden-corrections"]').click()
   // The donation waits for the held upload carrying the find.
-  await expect(library.getByText('14 of 52')).toBeVisible({ timeout: 20_000 })
+  await expect(library.getByTestId('library-message')).toContainText('is on the shelves now', { timeout: 20_000 })
+  await desk.getByRole('button', { name: /The shelves/ }).click()
+  await expect(library.getByText('14 of 52')).toBeVisible()
   await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
   await page.unroute('**/api/papers/take')
 

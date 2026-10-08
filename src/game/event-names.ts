@@ -1,3 +1,4 @@
+import type { LibrarySection } from '../content/library'
 import type { HomePlantView } from '../lib/api/types'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
@@ -189,10 +190,19 @@ export interface GoalDirPayload {
   here: boolean
 }
 
-/** The library panel, opened from the reading room: on its shelves, the donations, or the reader on the paper you last read. */
+/**
+ * The library panel, opened from the reading room (src/game/library-open.ts):
+ * on its shelves (`section`: one of them; nothing shelved there yet opens
+ * the whole collection), on Elara's donations, or the reader.
+ */
 export interface LibraryOpenPayload {
   focus?: 'shelf' | 'donate' | 'read'
+  /** A section's shelves (docs/design/indoors.md 3.3): the panel opens on that section (an empty one: the whole collection). */
+  section?: LibrarySection
 }
+
+/** The reading room's four sections, painted on their shelves' signs. */
+export type { LibrarySection } from '../content/library'
 
 export interface DialoguePayload {
   id: string

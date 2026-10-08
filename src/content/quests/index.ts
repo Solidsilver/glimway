@@ -162,6 +162,30 @@ export function questTalk(npc: string, ctx: QuestTalkContext): Dialogue | null {
   return triggerTalk('talk', npc, ctx);
 }
 
+/** Whether a quest talk would start its quest (its step is the quest's first; no record yet). */
+export function startsQuest(step: Dialogue, ctx: QuestTalkContext): boolean {
+  const ref = step.key?.startsWith('quest:') ? step.key.slice('quest:'.length) : '';
+  const quest = ref.slice(0, ref.indexOf(':'));
+  return !!quest && ctx.quests[quest] === undefined;
+}
+
+/**
+ * A resident's own talk with a quest's start after it: their words first
+ * (quests never stop residents being themselves), then the asking and its
+ * offer. Their choices stay, after the offer, with one "Not yet" at the end.
+ */
+export function afterTheirTalk(own: Dialogue, step: Dialogue): Dialogue {
+  const offers = (step.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet');
+  const theirs = (own.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet');
+  const choices = [...offers, ...theirs];
+  return {
+    ...own,
+    lines: [...own.lines, ...step.lines],
+    ...(step.event ? { event: step.event } : {}),
+    ...(choices.length ? { choices: [...choices, { text: 'Not yet', dismiss: true }] } : {}),
+  };
+}
+
 /** A room spot's quest talk, or its quest-aware look (the sponge bowl, the lit lamp). Null: the spot's default. */
 export function questSpotTalk(spot: string, ctx: QuestTalkContext): Dialogue | null {
   const step = triggerTalk('use', spot, ctx);

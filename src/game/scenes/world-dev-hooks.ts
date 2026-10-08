@@ -85,6 +85,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       props: (world.room?.props ?? []).map((f, i) => ({ art: f.art, frame: String(art?.sprites[i]?.texture.key ?? ''), tx: f.tx, ty: f.ty, tw: f.tw, th: f.th })),
       spots: Object.keys(world.room?.def.spots ?? {}),
       lights: (art?.lights ?? []).map((l) => ({ kind: l.kind, visible: l.image.visible })),
+      dressing: (art?.dressing ?? []).map((d) => ({ piece: d.piece.id, depth: d.depth, x: d.foot.x, y: d.foot.y })),
+      bodies: s['world'].bodies ?? [],
       houses: s['houseLights']?.view() ?? []
     }
   })

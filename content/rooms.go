@@ -190,11 +190,13 @@ func ValidateRooms(doc Rooms) error {
 		}
 		seen[r.ID] = r
 		props := map[string]bool{}
+		solidProps := map[string]bool{}
 		for _, p := range r.Props {
 			if len(p.Char) != 1 || p.Char[0] < 'A' || p.Char[0] > 'z' || p.Char[0] > 'Z' && p.Char[0] < 'a' || props[p.Char] || doc.Legend[p.Char] != "" || !ValidContentID(p.Art) {
 				return bad("prop " + r.ID)
 			}
 			props[p.Char] = true
+			solidProps[p.Char] = p.Solid
 		}
 		arrive := 0
 		for y, row := range r.Map {
@@ -209,7 +211,7 @@ func ValidateRooms(doc Rooms) error {
 				if doc.Legend[c] == "" && !props[c] {
 					return bad("unclaimed character " + r.ID)
 				}
-				if (x == 0 || y == 0 || x == len(row)-1 || y == len(r.Map)-1) && c != "#" && c != "D" {
+				if (x == 0 || y == 0 || x == len(row)-1 || y == len(r.Map)-1) && c != "#" && c != "D" && !solidProps[c] {
 					return bad("open boundary " + r.ID)
 				}
 			}

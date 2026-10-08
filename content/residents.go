@@ -1,11 +1,15 @@
 package content
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type ResidentSpot struct {
-	Area string `json:"area"`
-	TX   int    `json:"tx"`
-	TY   int    `json:"ty"`
+	Area   string `json:"area"`
+	TX     int    `json:"tx"`
+	TY     int    `json:"ty"`
+	Seated bool   `json:"seated,omitempty"`
 }
 type ResidentPhase struct {
 	Spot    string `json:"spot"`
@@ -43,7 +47,7 @@ func ValidateResidents(doc Residents) error {
 			if !ValidContentID(id) || !KnownContentArea(s.Area) || s.TX < 0 || s.TY < 0 {
 				return bad("spot " + r.ID)
 			}
-			if room, ok := RoomFor(s.Area); ok && !room.Walkable(s.TX, s.TY) {
+			if room, ok := RoomFor(s.Area); ok && !ResidentSpotFits(room, s) {
 				return bad("blocked spot " + r.ID)
 			}
 		}
@@ -71,6 +75,27 @@ func ValidateResidents(doc Residents) error {
 		seen[r.ID] = true
 	}
 	return nil
+}
+
+// A seated resident may occupy furniture, with a walkable tile beside it.
+// Walls and out-of-bounds tiles remain invalid, even when seated.
+func ResidentSpotFits(room Room, spot ResidentSpot) bool {
+	if room.Walkable(spot.TX, spot.TY) {
+		return true
+	}
+	if !spot.Seated || !room.ContainsTile(spot.TX, spot.TY) {
+		return false
+	}
+	char := string(room.Map[spot.TY][spot.TX])
+	if !slices.ContainsFunc(room.Props, func(p RoomProp) bool { return p.Char == char }) {
+		return false
+	}
+	for _, d := range []RoomTile{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		if room.Walkable(spot.TX+d.TX, spot.TY+d.TY) {
+			return true
+		}
+	}
+	return false
 }
 func LoadResidents() (Residents, error) {
 	var doc Residents

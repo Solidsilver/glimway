@@ -4,6 +4,7 @@
  * rest kept back (no spoilers). Pure, so the page's rules are tested.
  */
 import { YOUR_OWN_DAY_LOCKED } from '../content/quests/index.ts';
+import type { Paper } from '../content/papers.ts';
 import { nextStep, QUESTS, questLine, questStatus, questTitle, reachedIndex, waitOpensAt, waitTurnings, waitWords, type GateContext, type NeedsContext, type QuestLine, type QuestRecord } from '../lib/quests.ts';
 
 export interface QuestCard {
@@ -84,4 +85,48 @@ export function questShelves(record: QuestRecord, ctx: PageContext): QuestShelf[
     if (open.length || done.length) shelves.push({ line, title: SHELF_TITLES[line], open, done });
   }
   return shelves;
+}
+
+/** A step's note, written when the step was reached (5.4's Notes). */
+export interface QuestNote {
+  /** `note:<quest>:<step>`. */
+  id: string;
+  quest: string;
+  questTitle: string;
+  step: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * The notes of every step reached, newest first: quests by when their last
+ * step was reached (the state's `questReachedAt`; unknown ones last, in the
+ * tree's order), and within a quest its later steps first.
+ */
+export function questNotes(record: QuestRecord, reachedAt: Readonly<Record<string, number>> = {}): QuestNote[] {
+  const quests = QUESTS.map((q, i) => ({ q, i, at: reachedAt[q.id] ?? -Infinity })).sort((a, b) => b.at - a.at || a.i - b.i);
+  const out: QuestNote[] = [];
+  for (const { q } of quests) {
+    for (let i = reachedIndex(q, record); i >= 0; i--) {
+      const s = q.steps[i];
+      if (s.note) out.push({ id: `note:${q.id}:${s.id}`, quest: q.id, questTitle: questTitle(q), step: s.id, title: s.note.title, body: s.note.body });
+    }
+  }
+  return out;
+}
+
+/** A note as the papers' reader shows it (src/ui/PaperReader.svelte): a pencilled page of your journal. */
+export function noteAsPaper(note: QuestNote): Paper {
+  return {
+    id: note.id,
+    title: note.title,
+    description: note.questTitle,
+    collection: 'Your journal',
+    meta: [{ label: 'Quest', value: note.questTitle }],
+    body: note.body,
+    style: 'notebook',
+    source: { kind: 'library-start' },
+    hint: '',
+    section: 'field-notes',
+  };
 }

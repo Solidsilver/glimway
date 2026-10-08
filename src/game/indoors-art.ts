@@ -86,3 +86,14 @@ export function indoorsIconUrls(scene: Phaser.Scene): Record<string, string> {
   }
   return out
 }
+
+/**
+ * The floor variants used, by family: only the first. The pass's other
+ * variants were seam-healed to it at their borders but keep their own tone
+ * in the middle, so each reads as a hard-edged patch on the floor
+ * (.agent/ART-FIXES.md); the first tiles cleanly with itself.
+ */
+export const FLOOR_VARIANTS: Readonly<Record<'plank' | 'flagstone', readonly number[]>> = {
+  plank: [0],
+  flagstone: [0]
+}

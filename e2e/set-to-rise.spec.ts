@@ -67,9 +67,9 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
   expect((await dialogueState(page)).said.join(' ')).toMatch(/Not yet.*Give it about 2 h/)
   expect((await quests(page)).quests['set-to-rise']).toBe('set-sponge')
 
-  // Two hours on (back in the square), the sponge has risen.
+  // Two hours on from when the sponge was set (the world's clock ran on from `start`), back in
+  // the square in her time out, it has risen.
   const embers = (await serverState(page)).body.state.embers as number
-  // From when the sponge was set (the world's clock ran on from `start`), still in her square time.
   await clockTo(page, setAt + 2 * 3600 + 5)
   await waitForLive(page)
   await openTalk(page, /Talk to Hazel/)
@@ -82,5 +82,5 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
 
   // Her note in the journal.
   await page.keyboard.press('j')
-  await expect(page.getByRole('dialog', { name: 'Journal' }).locator('article.note').first()).toContainText('Set to Rise')
+  await expect(page.getByRole('dialog', { name: 'Journal' }).locator('[data-note]').first()).toHaveText(/Set to Rise/)
 })
