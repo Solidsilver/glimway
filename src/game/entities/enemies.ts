@@ -137,7 +137,7 @@ export class EnemySystem {
   reconcile(state: GameState): void {
     const standing = new Set(this._enemies.filter((e) => !e.dead).map((e) => e.id))
     for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty, spot.hp)
-    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(roadStep(state))
+    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(roadStep(state), state.defeatedEnemies.includes('stone-warden'))
   }
 
   /** Take an enemy off the list (killed, or the warden settled). */

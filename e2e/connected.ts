@@ -227,6 +227,38 @@ export async function reenter(page: Page, area: string = 'village'): Promise<voi
   await waitForWorld(page, area)
 }
 
+/**
+ * Log out and sign in again from the title (a fresh read of the server's
+ * state, like `reenter`). Unlike a reload, this keeps the Habitica link:
+ * the details live only in the page's memory, and the Menu's Sync needs them.
+ */
+export async function signInAgain(page: Page, id: string, area: string = 'village'): Promise<void> {
+  await expect
+    .poll(async () => {
+      const mine = await linkRev(page)
+      const world = (await serverState(page)).body.rev
+      return mine !== null && mine === world
+    }, { timeout: 15_000, message: "the world has this tab's latest revision" })
+    .toBe(true)
+  await page.keyboard.press('Escape')
+  await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
+  await page.getByTestId('connect-hero').click()
+  await page.getByRole('button', { name: 'I have them' }).click()
+  await pasteAndConnect(page, id)
+  await waitForWorld(page, area)
+}
+
+/**
+ * Put a just-signed-in player past the opening (as migration 029 leaves
+ * every account that played before it), so a spec starts where the lantern
+ * road does: the signpost's last step, then a fresh sign-in to read it.
+ */
+export async function pastOpening(page: Page, id: string): Promise<void> {
+  seedStory(id, { quests: { signpost: 'light-first-lamp' } })
+  await signInAgain(page, id)
+}
+
 /** The running link's status, read through the HUD state (null for guests). */
 export async function linkStatus(page: Page): Promise<string | null> {
   return page.evaluate(() => (window as unknown as { __fsLink?: () => string | null }).__fsLink?.() ?? null)

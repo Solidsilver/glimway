@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { expectToast, player, settled, waitForLive, warp, waitForArea } from './helpers'
 import { freshPlayer, shot } from './home-helpers'
-import { reenter, serverState } from './connected'
+import { CONTRACT, reenter, serverState } from './connected'
 import { DOORSTEP, goIn, inRoom, roomView, setHour } from './room-helpers'
 
 /**
@@ -121,9 +121,12 @@ test('a reload inside comes back inside (needs A2: the server keeps a room’s p
 test('two players in one room see each other (needs A2: rooms are presence rooms)', async ({ page, browser, baseURL }) => {
   test.setTimeout(120_000)
   await freshPlayer(page, 'Tansy')
+  // Bram joins Tansy's world by her invite (each newcomer otherwise gets a world of their own).
+  const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
+  expect(created.ok()).toBe(true)
   const ctx = await browser.newContext({ baseURL })
   const other = await ctx.newPage()
-  await freshPlayer(other, 'Bram')
+  await freshPlayer(other, 'Bram', (await created.json()).code as string)
   for (const p of [page, other]) await goIn(p, 'in:village:mill')
   const presence = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { area: string | null; peers: string[] } }).__fsPresence())
   expect((await presence(page)).area).toBe('in:village:mill')

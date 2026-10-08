@@ -1,5 +1,5 @@
 import { expect, type Page } from './fixtures'
-import { settled, waitForLive } from './helpers'
+import { readDialogue, settled, waitForLive } from './helpers'
 import { moveServerClock } from './connected'
 
 /**
@@ -54,10 +54,19 @@ export async function openLibraryShelves(page: Page, opts: { touch?: boolean } =
   await goIn(page, 'in:village:library', opts)
   await page.evaluate(() => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('in:village:library', 3, 2))
   await inRoom(page, 'in:village:library')
-  await expect(page.locator('.prompt')).toContainText('Browse the shelves')
+  const act = () => (opts.touch ? page.locator('.controls .act').tap() : page.keyboard.press('e'))
+  // Past the opening, while A Seat by the Lamp's `browse-shelf` step is next,
+  // the shelves tell the step first ("Browse the tall shelves"); the next use opens the panel.
+  await expect(page.locator('.prompt')).toContainText(/Browse the (tall )?shelves/)
   await waitForLive(page)
-  if (opts.touch) await page.locator('.controls .act').tap()
-  else await page.keyboard.press('e')
+  if (/tall shelves/.test((await page.locator('.prompt').textContent()) ?? '')) {
+    await act()
+    await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
+    await readDialogue(page)
+    await expect(page.locator('.prompt')).toContainText('Browse the shelves')
+    await waitForLive(page)
+  }
+  await act()
 }
 
 /**

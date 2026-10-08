@@ -23,7 +23,7 @@ test.describe('the world', () => {
     await talkThrough(page, /Copy the naming from the stone/)
     await page.keyboard.press('j')
     const journal = page.getByRole('dialog', { name: /Journal/ })
-    await expect(journal).toContainText('Copy the naming from the route stone')
+    await expect(journal).toContainText('Copy the route stone in Ashwatch Ruin')
     await expect(journal).toContainText('Settle the stone warden')
     await expect(journal).not.toContainText('Face the stone warden')
     await expect(journal).not.toContainText('Find the old route marker')

@@ -108,7 +108,8 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 		if paper.Source == "library-start" {
 			return nil, fail(409, "already-shelved")
 		}
-		if s.State.Area != "village" {
+		// The shelves are in the reading room (docs/design/indoors.md 3); its door no longer opens the panel.
+		if s.State.Area != "in:village:library" {
 			return nil, fail(409, "wrong-area")
 		}
 		if !slices.Contains(s.State.Flags, "paper:"+req.PaperID) {

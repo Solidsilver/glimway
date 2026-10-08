@@ -114,7 +114,8 @@ test('Elara’s line follows the calendar: the wick, the Mark, and the day befor
 test('once the road is lit, Hazel hands over her own recipe card', async ({ page }) => {
   test.setTimeout(120_000)
   const id = await freshPlayer(page)
-  await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
+  // Set to Rise done too: while its ask is open, Hazel's talk is the ask, not her road lines.
+  await seedStory(id, { quest: 'complete', quests: { 'set-to-rise': 'let-it-rise' }, marks: ['met:hazel@new'] })
   await reenter(page)
   await residentsOut(page)
   await warp(page, 'village', 11, 15)

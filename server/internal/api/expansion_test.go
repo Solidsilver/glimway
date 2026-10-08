@@ -266,6 +266,23 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	if s.Version != s0.Version+2 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
 		t.Fatal("home rest")
 	}
+	// Before the cottage (tier 0) the bedroll on the land rests you; once it stands, only inside.
+	doc = s.State
+	doc.HP = 1
+	doc.Area = "home:0"
+	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
+	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "bedroll", doc), c, 200)
+	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
+	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE gate=0"); err != nil {
+		t.Fatal(err)
+	}
+	doc = s.State
+	doc.HP = 1
+	doc.Area = "home:0"
+	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
+	if v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "doorstep", doc), c, 409); v.Error.Code != "not-at-own-plot" {
+		t.Fatal("doorstep rest with a cottage", v.Error.Code)
+	}
 	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "village": "village", "padded": "in:home:00"} {
 		doc = s.State
 		doc.HP = 1

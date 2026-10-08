@@ -26,8 +26,11 @@ func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) lib
 	return v
 }
 
+// donateBody donates from the reading room, at its tall shelves.
 func donateBody(s response, paperID, key string) map[string]any {
-	return body(s, key, map[string]any{"paperId": paperID})
+	out := body(s, key, map[string]any{"paperId": paperID})
+	out["where"] = map[string]any{"area": "in:village:library", "x": 56, "y": 40}
+	return out
 }
 
 // hold seeds a server-granted find for the donation fixtures.
@@ -176,6 +179,10 @@ func TestLibraryGuardsLeaveNoTrace(t *testing.T) {
 	}
 	if code := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", ""), c, 400).Error.Code; code != "key-required" {
 		t.Fatalf("missing key: %s", code)
+	}
+	// Out in the square, where 0.3's door opened the panel: the shelves are inside now.
+	if code := x.lib("POST", "/api/library/donate", body(s, "k4", map[string]any{"paperId": "will-of-elias-fenn"}), c, 409).Error.Code; code != "wrong-area" {
+		t.Fatalf("from the square: %s", code)
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
 		t.Fatal("a rejected donation was stored")

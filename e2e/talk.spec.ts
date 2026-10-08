@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { dialogueState, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
-import { reenter } from './connected'
+import { reenter, seedStory } from './connected'
 import { freshPlayer } from './home-helpers'
 import { GREETINGS, TALK_COPY } from '../src/content/talk'
 import { dialogueFor } from '../src/content/world'
@@ -49,7 +49,10 @@ test('a story is told once; then a greeting, the choices and "Hear it again"', a
 })
 
 test('a quest step plays in full; the new stage’s lines play in full the first time', async ({ page }) => {
-  await freshPlayer(page)
+  const id = await freshPlayer(page)
+  // Your Own Day done: while its first step is open, Mara's next talk is that step, not the road's lines.
+  seedStory(id, { quests: { 'your-own-day': 'show-mara' } })
+  await reenter(page)
   await warp(page, 'village', 16, 14)
   // Mara's first talk moves the quest: always in full.
   const first = await talk(page, /Talk to Mara/)

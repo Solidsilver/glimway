@@ -6,6 +6,7 @@ import { adminInvite,
   newUser,
   openTitleGuide,
   pasteAndConnect,
+  pastOpening,
   routeHabitica,
   serverState, accountOf,
   setHabitica,
@@ -62,7 +63,7 @@ async function lanternReplies(page: Page): Promise<void> {
   await untilChoices(page)
 }
 
-/** Sign in from the title as a new allowlisted player and start fresh. */
+/** Sign in from the title as a new allowlisted player, past the opening. */
 async function freshPlayer(page: Page): Promise<string> {
   const id = newUser()
   allow(id)
@@ -70,6 +71,7 @@ async function freshPlayer(page: Page): Promise<string> {
   await openTitleGuide(page)
   await pasteAndConnect(page, id)
   await waitForWorld(page)
+  await pastOpening(page, id)
   return id
 }
 
@@ -163,7 +165,7 @@ test('quest embers come from the server once the story upload lands', async ({ p
   await expectToast(page, '+2 embers — a little warmth from the road.')
   await expect(hud(page)).toHaveText('2')
   const s = (await serverState(page)).body
-  expect(s.state.quest).toBe('guardian-defeated')
+  expect(s.state.quests['lantern-road']).toBe('guardian-defeated')
   expect(s.state.embers).toBe(2)
 })
 
@@ -205,9 +207,9 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   await page.keyboard.press('Escape')
   await page.reload()
   await page.getByRole('button', { name: /Continue/ }).click()
-  await waitForArea(page, 'village')
-  await warp(page, 'village', 4, 18)
-  await page.keyboard.press('e')
+  // A reload inside comes back inside the reading room.
+  await waitForArea(page, 'in:village:library')
+  await openLibraryShelves(page)
   await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
 })
 
@@ -260,7 +262,7 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   // Back online, what was played offline goes up at once (not at the next
   // 10 s report): the world holds it within moments of reconnecting.
   await expect.poll(async () => Math.ceil((await serverState(page)).body.state.hp), { timeout: 5_000 }).toBe(localHp) // vitals uploaded as-is
-  expect((await serverState(page)).body.state.quest).toBe('accepted')
+  expect((await serverState(page)).body.state.quests['lantern-road']).toBe('accepted')
   await expect(page.getByTestId('link-notice')).toBeHidden()
 })
 
@@ -316,7 +318,8 @@ test('a returning player is signed in by the cookie alone', async ({ page, conte
   await hurt(page, 4)
   await expect.poll(() => shownHp(page)).toBeLessThan(41)
   const hp = await shownHp(page)
-  await expect.poll(async () => Math.ceil((await serverState(page)).body.state.hp)).toBe(hp)
+  // The hurt goes up with the next report (about every 10 s).
+  await expect.poll(async () => Math.ceil((await serverState(page)).body.state.hp), { timeout: 15_000 }).toBe(hp)
   const fresh = await context.newPage()
   await page.close()
   await fresh.goto('/')
@@ -363,7 +366,7 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   // Logout released that session's lease, so signing straight back in plays at once.
   await waitForWorld(page)
   await expect(leaseGate(page)).toHaveCount(0)
-  await expect.poll(async () => (await serverState(page)).body.state.quest).toBe('accepted')
+  await expect.poll(async () => (await serverState(page)).body.state.quests['lantern-road']).toBe('accepted')
 })
 
 test('a logout with nothing unsent clears the device copy', async ({ page }) => {

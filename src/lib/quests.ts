@@ -263,7 +263,8 @@ export function autoSteps(record: QuestRecord, needs: NeedsContext, ctx: Trigger
     if (!inPlay(q, record, needs)) continue;
     const s = nextStep(q, record);
     // A started quest only, or the first step of one that starts by itself (the library's `reach`).
-    if (s && autoMet(s.do, ctx) && !s.gate && (record[q.id] !== undefined || !q.start || 'new' in q.start)) out.push({ quest: q.id, step: s.id });
+    // A step `at` an area is only taken there (the world refuses it elsewhere: wrong-area).
+    if (s && autoMet(s.do, ctx) && !s.gate && (!s.at || s.at === ctx.area) && (record[q.id] !== undefined || !q.start || 'new' in q.start)) out.push({ quest: q.id, step: s.id });
   }
   return out;
 }
