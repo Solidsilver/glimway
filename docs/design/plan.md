@@ -41,12 +41,12 @@ Building these once keeps every feature after them smaller.
 
 | Foundation | Used by | Notes |
 |---|---|---|
-| **Guest accounts** | world, layers, fishing, magic | Designed in [guests.md](guests.md) (owner, 2026-10-07): a guest is an invite-only account with a key phrase (passkeys later); every table keys on an opaque `account_id`; one **profile source** seam (`habitica` or `none`) answers class, level, look, companions and ember earning. Guests earn embers from story and gifts only, so ember gates stop them for now. The no-server game is dropped: Glimway needs a server. Steps 1–4 must land before W1. |
+| **Guest accounts** | world, layers, fishing, magic | Designed in [guests.md](guests.md) (owner, 2026-10-07): a guest is an invite-only account with a key phrase (passkeys later); every table keys on an opaque `account_id`; one **profile source** seam (`habitica` or `none`) answers class, level, look, companions and ember earning. Guests earn embers from story and gifts only, so ember gates stop them for now. The no-server game is dropped: Glimway needs a server. Steps 1, 2 and 4 (dropping local play) land with W1 in 0.3; step 3 comes with the standalone version. |
 | **The protobuf contract** | world (chunks), layers (enemy state over presence) | Stage 1 is in review now. The remaining HTTP domains follow `docs/proto-migration.md`. |
-| **World changes with expiry** | world, magic, fishing, layers | One server table of shared changes keyed by world, realm, layer, chunk, epoch and entity. Each change carries when it ends: at the next turning, when its chunk turns, or never. Reads ignore expired rows, so nothing has to clean up on a timer. |
+| **World changes with expiry** | world, magic, fishing, layers | Built in 0.5 with its first writer (owner, 2026-10-07). One server table of shared changes keyed by world, realm, layer, chunk, epoch and entity. Each change carries when it ends: at the next turning, when its chunk turns, or never. Reads ignore expired rows, so nothing has to clean up on a timer. |
 | **One interactions path** (cleanup phase 3) | layers (doors, stairs), pets (pet a pet), magic (workings on the action button), fishing (Cast/Reel) | Every one of these adds an interactable. Do the cleanup first so each feature adds one registration instead of a fifth nearest-wins loop. |
 | **A clock module** | layers, world, fishing, pets, magic | Shared Go and TypeScript helpers for cycles, elapsed-time recovery and "the next turning", with shared test vectors. |
-| **Server-owned mana** | magic, shared enemies | A save upload may only lower mana; every refill is a server operation. This is magic's step 1 and has no other dependency. |
+| **Server-owned mana** | magic, shared enemies | From 0.3 there is no save upload: reports cannot raise mana above a server-computed recovery bound, and other refills are server operations ([server-first.md](server-first.md)). This is magic's step 1 and has no other dependency. |
 | **The ability table** | magic, shared enemies | In `content/`, read by Go and TypeScript. The server needs it once enemies and workings run there. |
 
 ## Where the docs disagree
@@ -105,6 +105,8 @@ Quests propose a `quests` record in the client-written progress document. The ot
 toward the server, and chapter gates spend embers and wait for turnings, which the server already
 owns. **Proposal:** stages that pass a gate (embers spent, a turning passed, a world change) are
 server operations. Purely narrative steps can stay client-written, as discoveries are today.
+**Superseded by Server-first (0.3):** every step is a server operation; gates add checks to the
+same operation ([server-first.md](server-first.md)).
 
 ### 5. Smaller fixes to fold in
 - `hands-on-design.md` and `items/overview.md` describe the Old ways for everyone. Update them
@@ -145,6 +147,9 @@ world changes with expiry ──────────────┤         
                      W6 obstacles with class ways (magic workings) ─► W7 next lands ─► caves
 ```
 
+Since Server-first (0.3), W1 doesn't wait for world changes: that table comes in 0.5 with its
+first writer.
+
 ## Proposed order, as releases
 
 Each release is a minor version with its own art round, written as one request.
@@ -168,13 +173,17 @@ loot. 0.3 moves the rest:
 2. **One set of rules.** Rule tables live in `content/` and both sides read them; the TypeScript
    copies of rules the server decides are deleted. The client keeps only what it needs to predict
    and draw.
-3. **The server generates the Wilds.** The same Tangle and Whitequiet as today, served by chunk;
-   the client generator and the parity tests retire. (The open map's new lands and epochs come
-   later.)
-4. **Groundwork:** `account_id` and the profile-source seam (guest steps 1–2), the world-changes
-   table with expiry, the shared clock module, server-owned mana.
+3. **The server generates the Wilds.** The same regions and gameplay as today (the Tangle and
+   the Whitequiet), served by chunk, with the terrain regenerated in Go. Nothing has to match
+   the old TypeScript generator (owner, 2026-10-07); the client generator and the parity tests
+   retire. (The open map's new lands and epochs come later.)
+4. **Groundwork:** `account_id` and the profile-source seam (guest steps 1–2), the shared clock
+   module, server-owned mana. The world-changes table moves to 0.5, with its first writer
+   (owner, 2026-10-07).
 5. **Local guest play is dropped** (owner: every player today has Habitica). Glimway needs a
    server and a Habitica hero until the standalone version brings guest accounts.
+
+The design: [server-first.md](server-first.md).
 
 Not in 0.3: a live server simulation of enemies and combat. Movement and story fights stay on
 your own screen; that stays the shared-fights revision. The polish lane (sound, the player body,
@@ -205,7 +214,7 @@ profile source) land in 0.3 because they're cheap now and painful to retrofit.
 - **Do before 0.3:** the event bus and `lib/tile.ts` (phase 2), the interactions path, the
   WorldScene split and the server file splits (phase 3). Features land on top of them.
 - **Skip or shrink:** client Wilds generator work (`wildsFor(session)`, area-build inputs for
-  chunks). The server generator replaces it in 0.5. Area-build inputs for hand-made rooms are still
+  chunks). The server generator replaces it in 0.3. Area-build inputs for hand-made rooms are still
   worth doing with interiors.
 - **Unchanged:** panels and CSS, App's layer value, the account flow, art-loading collapse,
   migrations, and the formatter and folders last.
@@ -249,7 +258,7 @@ without a mage always has a way home, while the Old ways stay clearly better:
 First sketch: a **homing turncap** (a turncap set in amber; crush it and the drift walks you back
 to Hearthwick's gate) and a **lamp-ash pouch** (ash from a way-lamp you named; scatter it to step
 back to that lamp). Not usable in a fight, with a short pause before you go. Crafted at the bench;
-recipes are papers. Numbers and names to settle when lamps are built (0.7).
+recipes are papers. Numbers and names to settle when lamps are built (the Lamps revision).
 
 ## Stepping back between releases
 
@@ -265,19 +274,19 @@ The owner builds mostly with agents, so the risk isn't size, it's drift. After e
 5. **A playtest by the owner** before tagging.
 
 ## Art, by release
-- **0.3:** an interior kit (floors, walls, doorways, stairs, a ladder, windows, counters); Hazel's
+- **0.4 Indoors:** an interior kit (floors, walls, doorways, stairs, a ladder, windows, counters); Hazel's
   kitchen, Finn's mill and loft, and the library; smoke and lit windows; quest icons.
-- **0.4:** 20 ability icons and effects (Stand, Kindle, Ward-light, Echo); the stable and stall
+- **0.5 Crafts:** 20 ability icons and effects (Stand, Kindle, Ward-light, Echo); the stable and stall
   bays; a rod, a float and the first fish; a cooked dish.
-- **0.6:** lake-country ground, water and props; reed and clay icons; the kiln (cold and lit);
+- **Lake country:** lake-country ground, water and props; reed and clay icons; the kiln (cold and lit);
   pottery pieces and glazes; the fen-light; heavable boulders and logs.
-- **0.7:** way-lamps, dark lamp stones, route stones, the lamp-pair mark.
+- **Lamps:** way-lamps, dark lamp stones, route stones, the lamp-pair mark.
 - **Caves:** a cave set, mouths, a boss chamber, naming shards, cave enemies.
 
 ## Open questions with a default
 These go ahead as written unless the owner says otherwise.
 - **Quest gates on the server** (item 4): yes.
-- ~~**A second pass on quests**~~: done (content format, gates on the server, the opening). Quests steps 1–5 go in 0.3; the quest operation ships with Aldo's kiln (0.6); the Keeper's hand and chapter 2 in 0.7. Chapter 2's 50 embers are pooled into the world's project.
+- ~~**A second pass on quests**~~: done (content format, gates on the server, the opening). Quests step 1 (the tree as content), with the lantern road only, goes in 0.3, because Server-first needs the transitions on the server; steps 2–5 and the gates go in 0.4; the Keeper's hand and chapter 2 come with Lamps. Chapter 2's 50 embers are pooled into the world's project.
 - ~~**Guest accounts planning session**~~: done, see [guests.md](guests.md).
 - **The mage bolt's name:** stays Fingersnap.
 - ~~**Fishing's open questions**~~: settled with the owner (one-press Reel, Keep/Release, a 10–60 s wait by stock, shared depletion with no personal daily quota, dependable everyday fish at home, the mill-race open all year). See [fishing.md](fishing.md).
