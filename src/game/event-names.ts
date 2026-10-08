@@ -189,9 +189,15 @@ export interface GoalDirPayload {
   here: boolean
 }
 
-/** The library panel, opened from the reading room: on its shelves, the donations, or the reader on the paper you last read. */
+/**
+ * The library panel, opened from the reading room (src/game/library-open.ts):
+ * on its shelves (`section`: one of them; nothing shelved there yet opens
+ * the whole collection), on Elara's donations, or the reader.
+ */
 export interface LibraryOpenPayload {
   focus?: 'shelf' | 'donate' | 'read'
+  /** A section's shelves (src/content/library.ts `LibrarySection`). */
+  section?: string
 }
 
 export interface DialoguePayload {
