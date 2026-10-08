@@ -12,6 +12,7 @@ import { ensureSceneryTexture } from '../commons-art'
 import { solidBox } from './collision'
 import { addAll, looseImage } from './bulk'
 import { ensureTangleAtlas } from '../wilds/tangle-art'
+import { TILE_DATA, type TileArt } from './tile-art'
 
 /**
  * Code-drawn scenery textures: the Commons' runs, the Tangle's woods; or a
@@ -24,22 +25,19 @@ export function ensureSceneryArt(scene: Phaser.Scene, key: string): boolean {
 
 export interface PropsBuilt {
   lights: LightProp[]
-  /** Standing sprites by anchor tile (`tx,ty`): a felled piece removes its own. */
-  sprites: Map<string, Phaser.GameObjects.Image[]>
 }
 
 export function buildProps(
   scene: Phaser.Scene,
   world: WorldData,
-  solidGroup: Phaser.Physics.Arcade.StaticGroup
+  solidGroup: Phaser.Physics.Arcade.StaticGroup,
+  /** Standing sprites by anchor tile: a felled piece removes its own. */
+  art: TileArt<Phaser.GameObjects.Image>
 ): PropsBuilt {
   const lightProps: LightProp[] = []
-  const sprites = new Map<string, Phaser.GameObjects.Image[]>()
   const keep = (tx: number, ty: number, img: Phaser.GameObjects.Image) => {
-    const key = tileKey(tx, ty)
-    const list = sprites.get(key) ?? []
-    list.push(img)
-    sprites.set(key, list)
+    img.setData(TILE_DATA, tileKey(tx, ty))
+    art.keep(tx, ty, img)
   }
   // Trees by the thousand in the Commons: added in one go (./bulk.ts).
   const trees = world.trees.map((t) => {
@@ -99,5 +97,5 @@ export function buildProps(
     if (s.tint !== undefined) img.setTint(s.tint)
     if (s.tx !== undefined && s.ty !== undefined) keep(s.tx, s.ty, img)
   }
-  return { lights: lightProps, sprites }
+  return { lights: lightProps }
 }

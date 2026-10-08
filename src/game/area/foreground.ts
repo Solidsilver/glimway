@@ -9,6 +9,8 @@ import { tileBottom, tileMid } from '../../lib/tile'
 import { areaKind, type WorldData } from '../worlds'
 import { ensureSceneryArt } from './props'
 import { addAll } from './bulk'
+import { tileKey } from '../../lib/tile'
+import { TILE_DATA, type TileArt } from './tile-art'
 
 /** Foreground occluder: canopy/arch image, its bounds, and its ground foot. */
 export interface Occluder {
@@ -22,7 +24,7 @@ export interface Occluder {
  * collisions stay the trees'), arches over area gates, ferns as pure decor.
  * No new collision — occluders are visual only.
  */
-export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder[] {
+export function buildForeground(scene: Phaser.Scene, world: WorldData, art: TileArt<Phaser.GameObjects.Image>): Occluder[] {
   const spots = areaKind(world.areaId).foreground(world)
   const occluders: Occluder[] = []
   // Canopies over the Commons' thousand-odd trees: added in one go (./bulk.ts).
@@ -35,10 +37,16 @@ export function buildForeground(scene: Phaser.Scene, world: WorldData): Occluder
   }
   addAll(scene, images)
   // Code-drawn canopies over a walkable tile (the Tangle's path-side trees).
+  // A piece standing for a map tile is that tile's art too: felling the tree
+  // takes its canopy with it (./tile-art.ts).
   for (const s of world.scenery ?? []) {
     if (!s.fade || !ensureSceneryArt(scene, s.key)) continue
     const image = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y)
     if (s.tint !== undefined) image.setTint(s.tint)
+    if (s.tx !== undefined && s.ty !== undefined) {
+      image.setData(TILE_DATA, tileKey(s.tx, s.ty))
+      art.keep(s.tx, s.ty, image)
+    }
     occluders.push({ image, bounds: image.getBounds(), footY: s.y })
   }
   return occluders

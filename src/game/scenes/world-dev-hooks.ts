@@ -12,7 +12,8 @@ import Phaser from 'phaser'
 import type { AreaId } from '../../lib/state'
 import { devMainThreadTilesetHash } from '../area/terrain'
 import { bus } from '../events'
-import { TILE, tileBottom } from '../../lib/tile'
+import { TILE, tileBottom, tileKey } from '../../lib/tile'
+import { TILE_DATA } from '../area/tile-art'
 import type { EnemyType } from '../worlds'
 import { itemsFor } from '../items'
 import { isLit as isLandLit } from '../../lib/homestead-land'
@@ -267,6 +268,12 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       return !!b && b.x < (tx + 1) * TILE && b.right > tx * TILE && b.y < tileBottom(ty) && b.bottom > ty * TILE
     })
   )
+  on('__fsArtAt', (tx, ty) => {
+    const fading = new Set(s['occluders'].map((o) => o.image))
+    return s.children.list
+      .filter((c): c is Phaser.GameObjects.Image => c instanceof Phaser.GameObjects.Image && c.active && c.getData(TILE_DATA) === tileKey(tx, ty))
+      .map((c) => ({ frame: String(c.frame.name), fades: fading.has(c) }))
+  })
   on('__fsSafety', syncSafety)
   // Seated: the seat's pose and the depths drawn at (the hero's and the
   // layered avatar's), so a playtest can check the hero sits on the seat.

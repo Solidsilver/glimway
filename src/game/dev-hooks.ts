@@ -61,6 +61,12 @@ export interface FsHooks {
   } | null
   /** Whether any collision body covers a tile. */
   __fsSolidAt: (tx: number, ty: number) => boolean
+  /**
+   * The art drawn for a map tile's piece, read from what is on screen (not
+   * from the felling registry): each live image anchored there, its frame,
+   * and whether it is a fading canopy.
+   */
+  __fsArtAt: (tx: number, ty: number) => { frame: string; fades: boolean }[]
   /** The sync-safety snapshot the UI's sync gate reads (sync-safety.ts). */
   __fsSafety: () => SyncSafety | null
   /** The seat, and the depths the hero and the layered avatar are drawn at. */

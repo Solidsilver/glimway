@@ -25,6 +25,7 @@ All requested categories, including optional sets, have source frames in this pa
 | fingersnap-plank-floor.png | `interior-floor` |
 | fingersnap-warden-settled.png | `guardian-settled` |
 | fingersnap-portraits.png | `portrait-silas`, `portrait-elara`, `portrait-finn`, `portrait-hazel`, `portrait-ada` |
+| fingersnap-portraits-residents.png | `portrait-mara`, `portrait-orrin`, `portrait-pip` |
 
 Silas’s carved fox uses the viewer-left long ear on home and mantel art. Hollis’s whittled fox uses the viewer-right long ear in his echo prop and trinket icon. Do not horizontally flip those story props.
 
