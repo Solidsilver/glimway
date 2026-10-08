@@ -77,3 +77,22 @@ export function zoomFor(w: number, h: number): number {
 export function canvasZoomFor(w: number, h: number, r = ratio): number {
   return zoomFor(w / r, h / r) * r
 }
+
+/**
+ * The camera's zoom in a room (docs/design/indoors.md 2.7), canvas px per
+ * world px: the room's height fills about 80% of the play area between the
+ * interface's insets, in half steps, never below the outdoor zoom and never
+ * past its top; and the whole room, all four walls, always fits that open
+ * area (a phone shows the whole room, zoomed out a little if it must, in
+ * quarter steps).
+ */
+export function roomZoomFor(w: number, h: number, room: { widthPx: number; heightPx: number }, insets: { top: number; right: number; bottom: number; left: number } = playInsets, r = ratio): number {
+  const cssW = w / r
+  const cssH = h / r
+  const openW = Math.max(1, cssW - insets.left - insets.right)
+  const openH = Math.max(1, cssH - insets.top - insets.bottom)
+  const fill = Math.floor(Math.min((openH * 0.8) / room.heightPx, (openW * 0.96) / room.widthPx) * 2) / 2
+  const fitAll = Math.min(openW / room.widthPx, openH / room.heightPx)
+  const z = Math.min(MAX_SCREEN_SCALE, fitAll, Math.max(fill, zoomFor(cssW, cssH)))
+  return Math.max(0.25, Math.floor(z * 4) / 4) * r
+}

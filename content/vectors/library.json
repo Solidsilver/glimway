@@ -1,0 +1,186 @@
+{
+  "room": {
+    "id": "in:village:library",
+    "name": "The library reading room",
+    "parent": "village",
+    "map": [
+      "##############",
+      "#SS=SS=SS=SS=#",
+      "#............#",
+      "l.RRRR.......L",
+      "#.RRRR...EE..#",
+      "k............K",
+      "#.........NNN#",
+      "#.........NNN#",
+      "#.....@......#",
+      "######DD######"
+    ],
+    "doors": [
+      {
+        "id": "front",
+        "kind": "door",
+        "at": "D",
+        "side": "south",
+        "to": "village",
+        "outside": {
+          "tx": 4,
+          "ty": 17
+        },
+        "entry": {
+          "tx": 4,
+          "ty": 18
+        }
+      }
+    ],
+    "props": [
+      {
+        "art": "library-side-shelves",
+        "char": "l",
+        "solid": true,
+        "facing": "right"
+      },
+      {
+        "art": "library-side-shelves",
+        "char": "L",
+        "solid": true,
+        "facing": "left"
+      },
+      {
+        "art": "library-side-shelf-short",
+        "char": "k",
+        "solid": true,
+        "facing": "right"
+      },
+      {
+        "art": "library-side-shelf-short",
+        "char": "K",
+        "solid": true,
+        "facing": "left"
+      },
+      {
+        "art": "library-shelves",
+        "char": "S",
+        "solid": true
+      },
+      {
+        "art": "reading-table",
+        "char": "R",
+        "solid": true
+      },
+      {
+        "art": "elara-desk",
+        "char": "E",
+        "solid": true
+      },
+      {
+        "art": "reading-nook",
+        "char": "N",
+        "solid": true
+      }
+    ],
+    "spots": {},
+    "lights": [
+      {
+        "tx": 4,
+        "ty": 3,
+        "kind": "lamp",
+        "r": 5
+      },
+      {
+        "tx": 11,
+        "ty": 6,
+        "kind": "lamp",
+        "r": 3
+      }
+    ],
+    "outside": {
+      "building": "library",
+      "window": {
+        "tx": 5,
+        "ty": 15
+      }
+    }
+  },
+  "seats": [
+    {
+      "name": "left-desk-seat",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 9,
+        "ty": 4,
+        "seated": true
+      },
+      "valid": true
+    },
+    {
+      "name": "right-desk-seat",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 10,
+        "ty": 4,
+        "seated": true
+      },
+      "valid": true
+    },
+    {
+      "name": "floor-beside-desk",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 9,
+        "ty": 5,
+        "seated": false
+      },
+      "valid": true
+    },
+    {
+      "name": "standing-on-desk",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 9,
+        "ty": 4,
+        "seated": false
+      },
+      "valid": false
+    },
+    {
+      "name": "wall-even-when-seated",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 0,
+        "ty": 0,
+        "seated": true
+      },
+      "valid": false
+    },
+    {
+      "name": "outside-even-when-seated",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 14,
+        "ty": 4,
+        "seated": true
+      },
+      "valid": false
+    },
+    {
+      "name": "alcove-edge-seat",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 10,
+        "ty": 6,
+        "seated": true
+      },
+      "valid": true
+    },
+    {
+      "name": "solid-boundary-shelf",
+      "spot": {
+        "area": "in:village:library",
+        "tx": 0,
+        "ty": 3,
+        "seated": false
+      },
+      "valid": false
+    }
+  ]
+}

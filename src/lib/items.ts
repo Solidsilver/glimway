@@ -4,6 +4,7 @@
  * the inventory panel and the game use: grade rules, wear states, icons,
  * effects in words, pockets and the off hand. No Phaser, no network.
  */
+import { RESIDENTS, residentById, residentAt } from './residents.ts';
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
@@ -86,7 +87,8 @@ interface ItemGood {
 export interface ItemSeller {
   id: string;
   npc: string;
-  area: (typeof PICKUP_AREAS)[number];
+  with?: string;
+  area: string;
   tx: number;
   ty: number;
   radiusTiles: number;
@@ -246,7 +248,7 @@ export function validateItems(value: unknown): Items {
   const sellers = new Set<string>();
   for (const s of v.sellers ?? []) {
     if (!isObj(s) || !validId(s.id) || sellers.has(s.id) || typeof s.npc !== 'string' || !s.npc || s.npc.length > 40 ||
-      !(PICKUP_AREAS as readonly string[]).includes(s.area) || !isInt(s.tx) || !isInt(s.ty) || !isInt(s.radiusTiles, 1, 16) ||
+      (s.with !== undefined ? typeof s.with !== 'string' || !residentById(s.with) || s.area !== undefined || s.tx !== undefined || s.ty !== undefined : !(PICKUP_AREAS as readonly string[]).includes(s.area) || !isInt(s.tx) || !isInt(s.ty)) || !isInt(s.radiusTiles, 1, 16) ||
       !Array.isArray(s.goods) || !s.goods.length || (s.festival !== undefined && !festivals.includes(s.festival))) return bad(`seller ${String(s?.id)}`);
     sellers.add(s.id);
     const goods = new Set<string>();
@@ -258,7 +260,13 @@ export function validateItems(value: unknown): Items {
       goods.add(g.item);
     }
   }
-  return v;
+  // Compatibility for the outdoor builder while lane B switches to cycles.
+  // These rows are derived from residents.json, never authored in items.json.
+  const exterior = (id: string) => {
+    const res = residentById(id)!;
+    return Object.values(res.spots).find(s => !s.area.startsWith('in:')) ?? Object.values(res.spots)[0]!;
+  };
+  return { ...v, rules: { ...r, residents: RESIDENTS.residents.filter(res => res.id !== 'finn').map(res => ({ id: res.id, ...exterior(res.id) })) }, sellers: v.sellers?.map(s => s.with ? { ...s, ...exterior(s.with) } : s) };
 }
 
 export const ITEMS: Items = validateItems(itemsRaw);
@@ -441,8 +449,10 @@ export function menderNear(area: string, x: number, y: number, tile = 16): ItemM
 }
 
 /** A seller by id (shared content; the server checks the same rows). */
-export function sellerFor(id: string): ItemSeller | null {
-  return ITEMS.sellers?.find((s) => s.id === id) ?? null;
+export function sellerFor(id: string, now?: number): ItemSeller | null {
+  const seller = ITEMS.sellers?.find(s => s.id === id) ?? null;
+  if (seller?.with && now !== undefined) return { ...seller, ...residentAt(seller.with, now)! };
+  return seller;
 }
 
 /** Any pocketed keepsake gives this help (e.g. papers-glint). */

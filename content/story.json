@@ -87,6 +87,14 @@
     {
       "prefix": "donated:",
       "writer": "server"
+    },
+    {
+      "prefix": "library:",
+      "writer": "server"
+    },
+    {
+      "prefix": "quest-item:",
+      "writer": "server"
     }
   ],
   "ids": {
@@ -102,7 +110,8 @@
       "wisp-b": "woodland",
       "wisp-c": "woodland",
       "beetle-a": "woodland",
-      "beetle-b": "woodland"
+      "beetle-b": "woodland",
+      "finger-wisp": "woodland"
     }
   },
   "areas": {
@@ -150,5 +159,29 @@
       "tx": 26,
       "ty": 17
     }
-  }
+  },
+  "npcs": {
+    "mara": "village",
+    "orrin": "village",
+    "pip": "village",
+    "silas": "commons"
+  },
+  "spots": {
+    "route-stone": "ruin",
+    "clue": "ruin",
+    "lantern": "ruin",
+    "hilltop-lantern": "ruin",
+    "road-1": "woodland",
+    "road-2": "woodland",
+    "road-3": "woodland",
+    "signpost": "village"
+  },
+  "questItems": [
+    "field-journal",
+    "hearthwick-map",
+    "lantern-route-rubbing",
+    "warden-seal",
+    "east-finger",
+    "tally-token"
+  ]
 }

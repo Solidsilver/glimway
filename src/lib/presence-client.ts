@@ -18,6 +18,7 @@
  * Pure: the socket and timers are injected, so this runs under node --test.
  * It never sees credentials beyond the lease, and never logs messages.
  */
+import { knownRoom } from './rooms.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
@@ -49,6 +50,12 @@ export type PresenceStatus =
   | 'replaced'
   /** Stopped after a protocol rejection (a client bug; no retry loop). */
   | 'rejected'
+  /**
+   * The server holds no room for the area we joined (a room it doesn't know
+   * yet): off while we're there, back on at the next area change. The lease
+   * is never latched for it.
+   */
+  | 'room-refused'
   /** The server requires a newer presence protocol. Reload before reconnecting. */
   | 'reload-needed';
 
@@ -97,13 +104,15 @@ export function presenceBackoff(attempt: number, random: () => number = Math.ran
  * What a close code means for the client. Only definite answers stop it;
  * everything else backs off and retries, keeping sign-in and lease state.
  */
-export function closeAction(code: number, reason = ''): 'retry' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected' | 'reload-needed' {
+export function closeAction(code: number, reason = ''): 'retry' | 'superseded' | 'unauthorized' | 'replaced' | 'rejected' | 'room-refused' | 'reload-needed' {
   if (code === PRESENCE_CLOSE.reloadNeeded) return 'reload-needed';
   if (code === PRESENCE_CLOSE.superseded) return 'superseded';
   if (code === PRESENCE_CLOSE.unauthorized) return 'unauthorized';
   if (code === PRESENCE_CLOSE.replaced) return 'replaced';
   // A sustained message flood (1008 rate-limited): back off, then try again.
   if (code === 1008 && reason === 'rate-limited') return 'retry';
+  // A room the server doesn't hold: a place, not a bug. Off there, on again elsewhere.
+  if (code === 1008 && reason === 'invalid-room') return 'room-refused';
   // Protocol violations: retrying would only repeat them.
   if (code === 1003 || code === 1008 || code === 1009) return 'rejected';
   // 1000 ordinary, 1001 shutdown, 1006 transport loss or a refused upgrade
@@ -112,17 +121,19 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
   return 'retry';
 }
 
-/** Server-accepted presence areas (curated areas and Wilds chunks). */
+/** Server-accepted presence areas (curated areas and Wilds chunks; rooms are checked against the content). */
 const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
-  return AREA_RE.test(area);
+  return AREA_RE.test(area) || knownRoom(area);
 }
 
 /**
  * The presence room for a scene's area id: curated areas as they are, and a
  * Wilds chunk (`chunk:<region>:<cx>:<cy>`, the Wilds client's area ids) as the
- * server's `wilds:<region>:<cx>:<cy>`. Anything else has no room (null).
+ * server's `wilds:<region>:<cx>:<cy>`. A room (`in:village:mill`, a cottage's
+ * `in:home:<gate>`) is its own presence room, its id unchanged. Anything else
+ * has no room (null).
  */
 export function presenceAreaFor(areaId: string): string | null {
   const chunk = /^chunk:([a-z0-9-]+):(\d+):(\d+)$/.exec(areaId);
@@ -165,6 +176,8 @@ export class PresenceClient {
   private stableTimer: unknown = null;
   /** A lease a terminal close stopped for good. */
   private latched: string | null = null;
+  /** The area the server refused a room for (we wait for the next area change; null: none). */
+  private refusedArea: string | null = null;
   /** The area we want to be in (null: none) and the one last sent. */
   private area: string | null = null;
   private sentArea: string | null = null;
@@ -219,6 +232,7 @@ export class PresenceClient {
    */
   stop(): void {
     this.lease = null;
+    this.refusedArea = null;
     this.clearTimers();
     this.ready = false;
     this.sentArea = null;
@@ -243,6 +257,13 @@ export class PresenceClient {
       // A new area starts with no position until we say where we stand.
       this.lastPos = null;
       this.pendingPos = null;
+    }
+    // Off since the server refused the last room: a new place starts the feed again (same lease).
+    if (this.refusedArea !== null && next !== this.refusedArea && this.lease && !this.socket && this.retryTimer === null) {
+      this.refusedArea = null;
+      this.attempts = 0;
+      this.open();
+      return;
     }
     this.flushJoin();
   }
@@ -316,6 +337,7 @@ export class PresenceClient {
     };
     socket.onclose = (ev) => {
       if (this.socket !== socket) return;
+      const joined = this.sentArea ?? this.area;
       this.socket = null;
       this.ready = false;
       this.sentArea = null;
@@ -323,6 +345,12 @@ export class PresenceClient {
       const action = closeAction(ev.code, ev.reason ?? '');
       if (action === 'retry' && this.lease) {
         this.scheduleRetry();
+        return;
+      }
+      if (action === 'room-refused' && this.lease) {
+        // Keep the lease (never latched): setArea opens again elsewhere.
+        this.refusedArea = joined;
+        this.setStatus('room-refused', ev.code);
         return;
       }
       if (action !== 'retry') this.latched = this.lease;

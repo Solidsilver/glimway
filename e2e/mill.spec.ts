@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { residentsOut } from './room-helpers'
 import { serverState } from './connected'
 import { talkText, warp, waitForLive } from './helpers'
 import { freshPlayer, fund, go, shot } from './home-helpers'
@@ -20,6 +21,8 @@ const readThrough = (page: Page, prompt: RegExp): Promise<string> => talkText(pa
 test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper keeps a tally', async ({ page }) => {
   test.setTimeout(90_000)
   await freshPlayer(page)
+  // Finn's hour at his door (he's inside at the stones for part of it).
+  await residentsOut(page)
   await warp(page, 'village', 29, 24)
   const first = await mill(page)
   expect(first).not.toBeNull()
@@ -44,6 +47,7 @@ test.describe('in a world', () => {
   test('finishing the mill-wheel project mends the wheel: new paddles, and it turns smooth', async ({ page }) => {
     test.setTimeout(150_000)
     const id = await freshPlayer(page)
+    await residentsOut(page)
     fund(id, { materials: { timber: 120, fiber: 60 } })
     await go(page, 'village', 15, 10)
     await expect(page.locator('.prompt')).toContainText('Read the notice board')

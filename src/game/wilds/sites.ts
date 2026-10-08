@@ -37,6 +37,7 @@ import { openDialogue } from '../dialogue.ts'
 import { applyEchoSettled, wildsLive, wildsView, type WildsEpoch } from './store.ts'
 import { settleEcho } from './remote.ts'
 import { toRegionPosition } from './regions.ts'
+import { roadStep } from '../../lib/quests.ts'
 
 type C = CanvasRenderingContext2D
 
@@ -274,7 +275,7 @@ export class WildsSites {
 
   private ctx(): StoryContext {
     const s = this.deps.session.state
-    return { flags: s.flags, late: s.quest === 'complete', mark: seasonMark(this.epoch.season) }
+    return { flags: s.flags, late: roadStep(s) === 'complete', mark: seasonMark(this.epoch.season) }
   }
 
   /** Re-render when anything a site shows has changed (flags, the road being lit). */

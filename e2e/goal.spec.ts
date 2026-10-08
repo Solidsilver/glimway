@@ -13,7 +13,7 @@ const goal = (page: Page) => page.evaluate(() => (window as unknown as { __fsGoa
 test('the HUD names the goal in a few words, and the needle points the way', async ({ page }) => {
   await freshPlayer(page)
   // Before the quest: Mara, here in the village.
-  await expect(page.locator('.hud .goal-text')).toHaveText('Find Mara in the village square')
+  await expect(page.locator('.hud .goal-text')).toHaveText('Hear Mara out about the road')
   await warp(page, 'village', 4, 18)
   await frames(page, 10)
   let g = await goal(page)
@@ -82,6 +82,6 @@ test.describe('pinned guides', () => {
     await page.getByTestId('pin-first-tool').click()
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('goal-pinned')).toHaveCount(0)
-    await expect(page.locator('.hud .goal-text')).toHaveText('Find Mara in the village square')
+    await expect(page.locator('.hud .goal-text')).toHaveText('Hear Mara out about the road')
   })
 })

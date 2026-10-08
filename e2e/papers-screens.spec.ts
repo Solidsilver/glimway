@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { openLibraryShelves } from './room-helpers'
 import { warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { reenter, seedStory } from './connected'
@@ -76,9 +77,8 @@ test('desktop screens', async ({ page }) => {
   await read(page, journal, /Flora of the Eastern Reaches/, 'desktop-read-page.png')
   await page.keyboard.press('Escape')
 
-  // The reading room.
-  await warp(page, 'village', 4, 18)
-  await page.keyboard.press('e')
+  // The reading room: the panel opens at its shelves.
+  await openLibraryShelves(page)
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
   await expect(library.getByText(/of 52/)).toBeVisible()
   await page.waitForTimeout(500)
@@ -112,8 +112,7 @@ test.describe('phone', () => {
     await page.screenshot({ path: `${OUT}/phone-read-ledger.png` })
     await page.getByRole('button', { name: 'Close journal' }).tap()
 
-    await warp(page, 'village', 4, 18)
-    await page.locator('.controls .act').tap()
+    await openLibraryShelves(page, { touch: true })
     const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
     await expect(library.getByText(/of 52/)).toBeVisible()
     await page.waitForTimeout(500)

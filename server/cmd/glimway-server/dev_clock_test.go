@@ -3,9 +3,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"glimway/server/internal/api"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -128,5 +131,42 @@ func TestDevBuildWithoutDevClockHasNoRoute(t *testing.T) {
 	}
 	if d := time.Since(c.now()); d < 0 || d > time.Second {
 		t.Fatal("not the real clock", d)
+	}
+}
+
+func TestAPIAnswersFollowMovableClock(t *testing.T) {
+	c := devSetup(t, "-dev-clock=1000")
+	a := api.New(nil, nil, api.Config{Now: c.now})
+	defer a.ClosePresence()
+	h := c.mount(devRoutes(a)(a))
+	check := func(path string, status int, want int64) {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.RemoteAddr = "127.0.0.1:5000"
+		r.Header.Set("X-Glimway-Contract", "4")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != status || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(want, 10) {
+			t.Fatal(path, w.Code, w.Header(), w.Body.String())
+		}
+	}
+	check("/api/calendar", 200, 1000)
+	w := post(h, `{"advance_seconds":3600}`, "127.0.0.1:5000")
+	var moved struct{ Unix int64 }
+	if err := json.Unmarshal(w.Body.Bytes(), &moved); err != nil || w.Code != 200 || moved.Unix != 4600 || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(moved.Unix, 10) {
+		t.Fatal(w.Code, w.Header(), w.Body.String(), err)
+	}
+	check("/api/calendar", 200, 4600)
+	check("/api/not-a-route", 404, 4600)
+	check(api.DevGrantPath, 405, 4600)
+	check(devClockPath, 405, 4600)
+	for _, row := range []struct {
+		body, remote string
+		status       int
+	}{{`{}`, "127.0.0.1:5000", 400}, {`{"unix":1}`, "127.0.0.1:5000", 409}, {`{"advance_seconds":1}`, "203.0.113.9:5000", 404}} {
+		w := post(h, row.body, row.remote)
+		if w.Code != row.status || w.Header().Get("X-Glimway-Now") != "4600" {
+			t.Fatal(row, w.Code, w.Header())
+		}
 	}
 }

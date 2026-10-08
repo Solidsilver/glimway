@@ -2,6 +2,16 @@
   "quests": [
     {
       "id": "lantern-road",
+      "title": "The Lantern Road",
+      "blurb": "Mara’s grandmother kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years.",
+      "line": "road",
+      "chapter": 1,
+      "after": [
+        "signpost"
+      ],
+      "start": {
+        "talk": "mara"
+      },
       "steps": [
         {
           "id": "accepted",
@@ -10,7 +20,20 @@
           "marks": [],
           "papers": [],
           "embers": 0,
-          "witness": ""
+          "witness": "",
+          "goal": "Hear Mara out about the road",
+          "objective": "Mara has a question for you about the dark lantern road. Find her in the Hearthwick square.",
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          },
+          "moment": {
+            "eyebrow": "Quest accepted",
+            "title": "The Lantern Road"
+          }
         },
         {
           "id": "clue-found",
@@ -23,7 +46,20 @@
           ],
           "papers": [],
           "embers": 0,
-          "witness": ""
+          "witness": "",
+          "goal": "Copy the route stone in Ashwatch Ruin",
+          "objective": "Leave by the east gate, cross Brackenwood, and copy the naming cut on the route stone in Ashwatch Ruin.",
+          "where": {
+            "area": "ruin",
+            "spot": "clue"
+          },
+          "do": {
+            "use": "clue"
+          },
+          "moment": {
+            "eyebrow": "Clue found",
+            "title": "The Closure Mark"
+          }
         },
         {
           "id": "guardian-defeated",
@@ -38,7 +74,20 @@
             "eleven-days"
           ],
           "embers": 2,
-          "witness": "warden"
+          "witness": "warden",
+          "goal": "Settle the stone warden",
+          "objective": "Settle the stone warden: when it stops after a lunge, get close and speak the naming.",
+          "where": {
+            "area": "ruin",
+            "enemy": "stone-warden"
+          },
+          "do": {
+            "defeat": "stone-warden"
+          },
+          "moment": {
+            "eyebrow": "Settled",
+            "title": "The Warden Rests"
+          }
         },
         {
           "id": "lantern-lit",
@@ -51,7 +100,20 @@
             "principia-memoria-excerpt"
           ],
           "embers": 0,
-          "witness": "lantern"
+          "witness": "lantern",
+          "goal": "Light the lantern at the shrine",
+          "objective": "Light the hilltop lantern at the old shrine.",
+          "where": {
+            "area": "ruin",
+            "spot": "lantern"
+          },
+          "do": {
+            "use": "lantern"
+          },
+          "moment": {
+            "eyebrow": "The light returns",
+            "title": "A Flame on the Hill"
+          }
         },
         {
           "id": "complete",
@@ -62,7 +124,571 @@
           ],
           "papers": [],
           "embers": 3,
-          "witness": ""
+          "witness": "",
+          "goal": "Tell Mara the light is back",
+          "objective": "Return to Mara in Hearthwick and tell her the light is back.",
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          }
+        }
+      ]
+    },
+    {
+      "id": "signpost",
+      "title": "Three Fingers off Plumb",
+      "blurb": "The frost stood Orrin’s signpost up straight, and he won’t have it.",
+      "line": "road",
+      "chapter": 0,
+      "start": {
+        "new": true
+      },
+      "steps": [
+        {
+          "id": "meet-orrin",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "See what Orrin’s grumbling about",
+          "objective": "Someone up a ladder by the signpost in the square is arguing with it. Go and see.",
+          "where": {
+            "area": "village",
+            "npc": "orrin"
+          },
+          "do": {
+            "talk": "orrin"
+          }
+        },
+        {
+          "id": "fetch-finger",
+          "at": "woodland",
+          "items": [
+            "east-finger"
+          ],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Find the signpost’s east finger",
+          "objective": "The frost threw the signpost’s east finger out past the east gate, into the bracken. A wisp has settled on it. Shoo it off and bring the finger back to Orrin.",
+          "where": {
+            "area": "woodland",
+            "enemy": "finger-wisp"
+          },
+          "do": {
+            "defeat": "finger-wisp"
+          },
+          "note": {
+            "title": "A Wisp on the Finger",
+            "body": "A wisp had settled on Orrin’s signpost finger and was glowing at the paint. One good swing and it hopped off into the bracken to sulk. The finger says ASHWATCH in fresh paint. Under it, older and nearly gone: SALLOW FD."
+          }
+        },
+        {
+          "id": "bring-finger",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Take the finger back to Orrin",
+          "objective": "Bring the east finger back to Orrin at the signpost.",
+          "where": {
+            "area": "village",
+            "npc": "orrin"
+          },
+          "do": {
+            "talk": "orrin"
+          }
+        },
+        {
+          "id": "note-lean",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Write the lean in your journal",
+          "objective": "Orrin won’t set the post until the lean is written down: three fingers off plumb, leaning east. Open your journal and note it.",
+          "where": {
+            "ui": "journal"
+          },
+          "do": {
+            "open": "journal"
+          },
+          "note": {
+            "title": "Three Fingers off Plumb",
+            "body": "Orrin’s signpost: three fingers off plumb, leaning east. He made me write it down. He says it’s the frost. I don’t think it’s the frost."
+          }
+        },
+        {
+          "id": "set-post",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Read the lean back to Orrin",
+          "objective": "Read the lean back to Orrin so he can set the post.",
+          "where": {
+            "area": "village",
+            "npc": "orrin"
+          },
+          "do": {
+            "talk": "orrin"
+          }
+        },
+        {
+          "id": "see-mara",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 5,
+          "witness": "",
+          "goal": "Find Mara and her ledger",
+          "objective": "Pip says Mara has the ledger open in the square and the soup on. Go and see her.",
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          },
+          "note": {
+            "title": "In the Ledger",
+            "body": "Mara wrote the signpost into her grandmother’s ledger: ‘East finger recovered, lean set. Traveller’s hand.’ Work done and written down is warmth you carry, she says. Here they call it embers."
+          }
+        },
+        {
+          "id": "light-first-lamp",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Light the first lamp past the gate",
+          "objective": "The road lantern just past the east gate has been dark for thirty years. Light it with your embers.",
+          "where": {
+            "area": "woodland",
+            "spot": "road-1"
+          },
+          "do": {
+            "flag": "lit:road-1"
+          },
+          "note": {
+            "title": "The First Lamp",
+            "body": "Lit the road lantern past the east gate. Back in the square, Mara stood up from the ledger to look."
+          },
+          "moment": {
+            "eyebrow": "One link held",
+            "title": "The First Lamp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "your-own-day",
+      "title": "Your Own Day",
+      "blurb": "Mara will write in what you get done in your own day.",
+      "line": "village",
+      "after": [
+        "signpost:see-mara"
+      ],
+      "start": {
+        "talk": "mara"
+      },
+      "needs": "habitica",
+      "steps": [
+        {
+          "id": "hear-mara",
+          "at": "village",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Ask Mara about your own day",
+          "objective": "Mara says whatever you get done in your own day counts. Ask her what she means.",
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          }
+        },
+        {
+          "id": "do-something",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Bring Mara something from your day",
+          "objective": "Tick off a task, a daily or a habit in Habitica. Every 10 XP you earn there becomes an ember. Then sync from the Menu in Hearthwick or the Commons.",
+          "do": {
+            "sync": "embers"
+          }
+        },
+        {
+          "id": "show-mara",
+          "at": "village",
+          "items": [
+            "tally-token"
+          ],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Show Mara what you did",
+          "objective": "Tell Mara what you got done, and she’ll write it in.",
+          "where": {
+            "area": "village",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          },
+          "note": {
+            "title": "A Punched Token",
+            "body": "Mara didn’t ask what I did, only whether it was done. She punched an old wheel-tax token and gave it to me. ‘Receipted,’ she said. ‘The Count House would’ve wanted it.’"
+          }
+        }
+      ]
+    },
+    {
+      "id": "set-to-rise",
+      "title": "Set to Rise",
+      "blurb": "Hazel’s starter wants feeding, and Finn has the flour.",
+      "line": "village",
+      "after": [
+        "signpost"
+      ],
+      "start": {
+        "talk": "hazel"
+      },
+      "steps": [
+        {
+          "id": "hear-hazel",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "See what Hazel needs",
+          "objective": "Hazel has a sponge that wants feeding. Find her in her kitchen or out with the basket.",
+          "where": {
+            "npc": "hazel"
+          },
+          "do": {
+            "talk": "hazel"
+          },
+          "gate": {
+            "with": "hazel"
+          }
+        },
+        {
+          "id": "fetch-flour",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Bring Hazel a sack of flour",
+          "objective": "Hazel’s out of the fine sift. Finn sells it at the mill, a sack an ember.",
+          "where": {
+            "npc": "finn"
+          },
+          "do": {
+            "carry": "flour"
+          }
+        },
+        {
+          "id": "set-sponge",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Help Hazel set the sponge",
+          "objective": "Take the flour to Hazel in her kitchen and set the sponge with her.",
+          "where": {
+            "npc": "hazel"
+          },
+          "do": {
+            "talk": "hazel"
+          },
+          "gate": {
+            "with": "hazel",
+            "item": {
+              "def": "flour",
+              "qty": 1,
+              "keep": false
+            }
+          }
+        },
+        {
+          "id": "let-it-rise",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 2,
+          "witness": "",
+          "goal": "Come back when it has risen",
+          "objective": "A sponge won’t be hurried. Come back to Hazel’s kitchen in a couple of hours.",
+          "where": {
+            "area": "in:village:bakery",
+            "spot": "sponge-bowl"
+          },
+          "do": {
+            "talk": "hazel"
+          },
+          "gate": {
+            "with": "hazel",
+            "wait": {
+              "hours": 2
+            }
+          },
+          "give": [
+            {
+              "def": "keepers-twists",
+              "qty": 2
+            }
+          ],
+          "note": {
+            "title": "Set to Rise",
+            "body": "Hazel says you can’t hurry a sponge, only leave it somewhere warm and trust it. Two twists for my trouble, still hot. She burnt the ends of one on purpose."
+          }
+        }
+      ]
+    },
+    {
+      "id": "stuck-hoist",
+      "title": "The Stuck Hoist",
+      "blurb": "Finn can’t get his sacks down: the hoist in the loft has seized.",
+      "line": "village",
+      "after": [
+        "signpost"
+      ],
+      "start": {
+        "talk": "finn"
+      },
+      "steps": [
+        {
+          "id": "hear-finn",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "See what’s troubling Finn",
+          "objective": "Finn is counting the wrong thing again. Find him at the mill.",
+          "where": {
+            "npc": "finn"
+          },
+          "do": {
+            "talk": "finn"
+          },
+          "gate": {
+            "with": "finn"
+          }
+        },
+        {
+          "id": "look-hoist",
+          "at": "in:village:mill:2",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Look at the hoist in the sack loft",
+          "objective": "The sack hoist is up in the mill’s loft, over the hatch. The stairs are at the back. Mind the third one.",
+          "where": {
+            "area": "in:village:mill:2",
+            "spot": "mill-hoist"
+          },
+          "do": {
+            "use": "mill-hoist"
+          }
+        },
+        {
+          "id": "get-tallow",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Get a lump of tallow from Hazel",
+          "objective": "The hoist’s pulley is dry as a bone. Hazel sells tallow from her kitchen, an ember a lump.",
+          "where": {
+            "npc": "hazel"
+          },
+          "do": {
+            "carry": "tallow"
+          }
+        },
+        {
+          "id": "grease-hoist",
+          "at": "in:village:mill:2",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 3,
+          "witness": "",
+          "goal": "Grease the hoist",
+          "objective": "Take the tallow up to the sack loft and work it into the hoist’s pulley.",
+          "where": {
+            "area": "in:village:mill:2",
+            "spot": "mill-hoist"
+          },
+          "do": {
+            "use": "mill-hoist"
+          },
+          "gate": {
+            "item": {
+              "def": "tallow",
+              "qty": 1,
+              "keep": false
+            }
+          }
+        },
+        {
+          "id": "tell-finn",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Tell Finn the hoist runs",
+          "objective": "The hoist turns again. Go and tell Finn before he counts another sack by hand.",
+          "where": {
+            "npc": "finn"
+          },
+          "do": {
+            "talk": "finn"
+          },
+          "gate": {
+            "with": "finn"
+          },
+          "give": [
+            {
+              "def": "oatcakes",
+              "qty": 1
+            }
+          ],
+          "note": {
+            "title": "Forty Turns and a Squeak",
+            "body": "Greased Finn’s sack hoist. He sent a sack down the hatch and counted the pulley round: forty turns and a squeak. ‘The squeak’s fine,’ he said. ‘The squeak was always there. I’d miss it.’"
+          }
+        }
+      ]
+    },
+    {
+      "id": "seat-by-the-lamp",
+      "title": "A Seat by the Lamp",
+      "blurb": "The library’s reading lamp wants oil, and the oil wants an ember.",
+      "line": "village",
+      "after": [
+        "signpost"
+      ],
+      "steps": [
+        {
+          "id": "find-library",
+          "at": "in:village:library",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Look inside the library",
+          "objective": "The small reading house stands on the square’s quiet side. Step in.",
+          "where": {
+            "area": "in:village:library"
+          },
+          "do": {
+            "reach": "in:village:library"
+          }
+        },
+        {
+          "id": "browse-shelf",
+          "at": "in:village:library",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Browse the tall shelves",
+          "objective": "The village keeps its papers on the tall shelves at the back. Have a look.",
+          "where": {
+            "area": "in:village:library",
+            "spot": "library-shelf"
+          },
+          "do": {
+            "use": "library-shelf"
+          }
+        },
+        {
+          "id": "oil-lamp",
+          "at": "in:village:library",
+          "items": [],
+          "marks": [
+            "library:lamp"
+          ],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Oil the reading lamp",
+          "objective": "The lamp on the reading table is dry. A note on it in Mara’s hand: ‘One ember the oil. Ledger. — M.H.’",
+          "where": {
+            "area": "in:village:library",
+            "spot": "reading-lamp"
+          },
+          "do": {
+            "use": "reading-lamp"
+          },
+          "gate": {
+            "embers": 1
+          }
+        },
+        {
+          "id": "read-awhile",
+          "at": "in:village:library",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 2,
+          "witness": "",
+          "goal": "Sit and read by the lamp",
+          "objective": "The lamp is lit. Take a seat at the reading table and read a while.",
+          "where": {
+            "area": "in:village:library",
+            "spot": "reading-table"
+          },
+          "do": {
+            "use": "reading-table"
+          },
+          "note": {
+            "title": "A Seat by the Lamp",
+            "body": "Paid an ember for the library lamp’s oil and sat under it with a paper till the light went gold. Mara’s note was still tied to the lamp. Somebody had written under it, in a different hand: ‘Worth it.’"
+          }
         }
       ]
     }

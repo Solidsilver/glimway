@@ -14,5 +14,5 @@ export function serializeCalendarVectors() { return JSON.stringify(calendarVecto
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
  const path = new URL('../content/vectors/clock.json', import.meta.url);
  const existing = JSON.parse(readFileSync(path, 'utf8'));
- writeFileSync(path, JSON.stringify({ recovery: existing.recovery, calendar: calendarVectors() }) + '\n');
+ writeFileSync(path, JSON.stringify({ ...existing, calendar: calendarVectors() }) + '\n');
 }

@@ -23,6 +23,7 @@ import type { Effects } from './fx'
 import { WARDEN, WardenEncounter } from './warden'
 import { curatedToRestore } from '../rollback'
 import { Creatures } from './creatures'
+import { roadStep } from '../../lib/quests'
 
 export interface Enemy {
   id: string
@@ -113,13 +114,13 @@ export class EnemySystem {
     for (const spot of world.enemies) {
       if (spot.type === 'guardian') continue // guardian is quest-driven
       if (state.defeatedEnemies.includes(spot.id)) continue
-      this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
+      this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty, spot.hp)
     }
     if (world.areaId === 'ruin' && world.shrine) {
       // The warden is always on its path: standing in its pose before you
       // carry the mark, awake while you do, resting in its pose afterwards.
-      if (state.quest === 'clue-found') this.warden.spawnGuardian(false)
-      else this.warden.placeRestingWarden(state.quest === 'new' || state.quest === 'accepted' ? 'dormant' : 'settled')
+      if (roadStep(state) === 'clue-found') this.warden.spawnGuardian(false)
+      else this.warden.placeRestingWarden(roadStep(state) === 'new' || roadStep(state) === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
   }
@@ -135,8 +136,8 @@ export class EnemySystem {
    */
   reconcile(state: GameState): void {
     const standing = new Set(this._enemies.filter((e) => !e.dead).map((e) => e.id))
-    for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty)
-    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(state.quest)
+    for (const spot of curatedToRestore(this.deps.world.enemies, state.defeatedEnemies, standing)) this.spawnEnemy(spot.id, spot.type, spot.tx, spot.ty, spot.hp)
+    if (this.deps.world.areaId === 'ruin' && this.deps.world.shrine) this.warden.reconcile(roadStep(state), state.defeatedEnemies.includes('stone-warden'))
   }
 
   /** Take an enemy off the list (killed, or the warden settled). */
@@ -279,7 +280,8 @@ export class EnemySystem {
     return this.spawnEnemy(id, type, tx, ty)
   }
 
-  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number): Enemy {
+  /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */
+  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number, hp?: number): Enemy {
     // Woodland enemies use the delivered slime/mushroom art; the guardian
     // uses the delivered native 24x24 pose textures when present (procedural
     // placeholder otherwise). Every pose shares the same 24x24 texture size
@@ -312,8 +314,8 @@ export class EnemySystem {
       id,
       type,
       sprite,
-      hp: ENEMY_TUNING[type].hp,
-      maxHp: ENEMY_TUNING[type].hp,
+      hp: hp ?? ENEMY_TUNING[type].hp,
+      maxHp: hp ?? ENEMY_TUNING[type].hp,
       homeX: tileMid(tx),
       homeY: tileBottom(ty),
       dirX: 0,

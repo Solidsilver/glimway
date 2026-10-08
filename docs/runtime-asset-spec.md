@@ -422,3 +422,43 @@ The Playtest-1 atlas metadata corrects two source-cell labels: the former `groun
 ## Playtest-1 round-3 art (October 7, 2026)
 
 The source pack now includes West, middle, and Ada house sprites with footprint rectangles and foot points; worn and mended Brackenwood bridge states; and a still 256×256 pond-bed texture. `atlas.json` includes a keyed source catalog matching its frame source keys, including the flagstone and water-bed sheets added in round 2. The ground plan now uses the corrected sand cell, all three flagstone tiles, and all five water frames. The additional house, bridge, and pond source frames are catalogued for runtime placement; scene-specific loading and placement still belong to the runtime owner.
+
+## Indoors pass (0.4, October 8, 2026)
+
+`assets/generated/indoors-pass/` contains the interior kit, Hazel's kitchen,
+Finn's mill and loft, the library, smoke/window overlays, and quest/keepsake
+art. The request and coverage list are in `docs/art-request-indoors.md`;
+`manifest.json`, `atlas.json`, `prompts.json`, and `README.md` record 101
+frames, 13 animation/state groups, source sheets, exact 64-texel-per-tile
+canvases, footprints, and foot points.
+
+`scripts/build-atlases.ts` packs these at density 64 into `indoors.webp`.
+`src/game/atlas-plan.ts` exposes the `indoors` pack and its frame keys through
+`PackedManifest`; each key is indexed in
+`public/assets/fingersnap/packed/atlases.json`. Source art, delivery limits
+and licence are recorded in `ASSETS.md` (Register J).
+
+At boot `src/game/indoors-art.ts` turns each frame into a dense texture
+`in-art:<frame>` at its world size (64 texels per tile is 4 per world px)
+and registers the loops it plays (the oven fire, millstones, gear train,
+tallow steam, reading-lamp flame, hoist swing, chimney smoke). Rooms draw
+them in `src/game/area/room-art.ts`: floors, the back wall and its windows,
+the doorway, stairs, furniture on its footprints and the loft's roof beams.
+What the game doesn't use from this pass, and why:
+
+- the side and near walls, trapdoors, rugs, counter and room surround: their
+  crops don't line up with the pieces, so rooms draw their walls and the dark
+  wood beyond them in code;
+- smoke frames 4 and 5: cropped as slivers, so the plume loops on 0–3;
+- the three lit-window overlays: each is a whole framed window, larger than
+  the glass on the delivered buildings, whose windows are already painted
+  lit. The game dims the glass instead while a resident is out
+  (`src/game/entities/house-lights.ts`).
+
+The sack hoist and the oven still show patches of the generator's
+checkerboard inside their frames; a cleanup pass on those two sheets would
+fix it.
+
+The build seam-heals the four plank and four flagstone variants as two separate
+families before packing. The remaining animated poses are authored frames in
+the source sheets; room call sites choose their state and timing.

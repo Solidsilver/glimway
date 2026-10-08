@@ -132,12 +132,12 @@ test('a linked session reads its own world, and stores are separate', async () =
 test('the held tool and the pinned guide tell the HUD when they change', async () => {
   const heard = await hear([EV.held, EV.guidePin], () => {
     setHeld('chop');
-    setPinned('lanterns');
-    setPinned('lanterns');
+    setPinned('guide:lanterns');
+    setPinned('guide:lanterns');
     setPinned(null);
   });
   assert.equal(held.kind, 'chop');
-  assert.equal(pinned.id, null);
+  assert.equal(pinned.slot, null);
   assert.deepEqual(
     heard.map((h) => h.name),
     [EV.held, EV.guidePin, EV.guidePin]

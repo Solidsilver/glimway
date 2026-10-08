@@ -47,9 +47,8 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, QUEST_STEP, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
-import { LANTERN_ROAD } from '../lib/api/ports.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
@@ -57,14 +56,18 @@ import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
-import type { GameState, QuestEvent } from '../lib/state.ts'
+import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
+import { serverNow } from './clock.ts'
 
 const HEARTBEAT_MS = 30_000
 /** After this long without an answer the chip says "Reaching the world…". */
 const REACHING_MS = 60_000
 /** A barrier asks for a fresh report at most this many times before backing off. */
 const BARRIER_TRIES = 3
+
+/** How a quest step went: null when it landed (or queued), else why not. */
+export type QuestStepOutcome = null | 'not-yet' | 'not-here' | 'short' | 'needs-earned' | 'needs-habitica' | 'offline' | 'superseded' | 'busy' | 'error'
 
 export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 'unsafe' | 'not-home' | 'busy' | 'error'
 
@@ -221,6 +224,8 @@ export interface LinkInit {
   /** Tells other tabs the outbox changed (null: none). */
   channel?: ChannelLike | null
   now?: () => number
+  /** The server's clock as the client knows it (Unix seconds; ./clock.ts `serverNow`): a predicted quest step's gate time. */
+  serverNow?: () => number
 }
 
 interface ChannelLike {
@@ -303,6 +308,16 @@ function predictionOf(entry: OutboxEntry): Prediction {
   }
 }
 
+/** The `where` a frozen operation carries (null: none, or unreadable). */
+function whereIn(entry: OutboxEntry): WhereJson | null {
+  try {
+    const w = (JSON.parse(entry.body) as { where?: WhereJson }).where
+    return w && typeof w.area === 'string' ? w : null
+  } catch {
+    return null
+  }
+}
+
 export class Link {
   readonly api: ApiClient
   readonly ops: OperationsApi
@@ -333,6 +348,7 @@ export class Link {
   private readonly store: OutboxStore
   private readonly emitter: Emit
   private readonly now: () => number
+  private readonly serverClock: () => number
   private readonly locks: LockLike | null
   private readonly channel: ChannelLike | null
   private lock: HeldLock | null = null
@@ -385,6 +401,7 @@ export class Link {
     this.store = init.store ?? outboxStore()
     this.emitter = init.emit
     this.now = init.now ?? Date.now
+    this.serverClock = init.serverNow ?? serverNow
     this.locks = init.locks === undefined ? browserLocks() : init.locks
     this.channel = init.channel === undefined ? defaultChannel() : init.channel
     this.lastContact = this.now()
@@ -492,7 +509,7 @@ export class Link {
   // ------------------------------------------------------------ the view
 
   private view(): GameState {
-    return predictedView(this.server, this.entries.map(predictionOf), { profile: profileOf(this.server) })
+    return predictedView(this.server, this.entries.map(predictionOf), { profile: profileOf(this.server), now: Math.floor(this.serverClock()) })
   }
 
   /** Show the view. `relocate`: the server (or a fall) moved the hero; `vitals`: the overlay moved. */
@@ -1044,6 +1061,9 @@ export class Link {
       for (const e of [head, ...dependents]) this.drop(e)
       if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
       this.refresh()
+      // Its `where` isn't a place the world takes: the hero goes where the world says.
+      const where = code === 'invalid-position' ? whereIn(head) : null
+      if (where) this.followServerPlace(where)
       // Persist the local disposition before advancing, including stored server refusals.
       const stored = await this.dispositionSaved()
       console.warn('[glimway] the world refused a', head.kind, code)
@@ -1235,10 +1255,24 @@ export class Link {
         return { ok: false }
       }
       this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
+      // The world kept its own place over this one (it moved the hero since):
+      // if the hero still stands where the report said, they go where it says.
+      if (ack?.accepted && !ack.staleBasis && ack.placeIgnored) this.followServerPlace(retired.place, { otherArea: true })
       await this.saveRecord()
       return { ok: true, sent: retired, ack }
     } catch (err) {
       const code = errorCode(err)
+      if (isSettledRefusal(err) && code === 'invalid-position') {
+        // The world doesn't take this place at all (a room it doesn't know, a
+        // place the content lost): the report goes, and the hero goes where
+        // the world says they are.
+        this.answered()
+        this.reports.drop()
+        if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
+        this.followServerPlace(c.place)
+        await this.saveRecord()
+        return { ok: true }
+      }
       if (code === 'superseded' || code === 'playing-elsewhere') {
         // A retired generation: its captured report never moves to a new one.
         this.reports.drop()
@@ -1251,13 +1285,32 @@ export class Link {
     }
   }
 
+  /**
+   * The world didn't take the place `refused` names: while the hero still
+   * stands there, they're moved to the world's place (the scene follows,
+   * EV.relocate), and the next report names it, so a reload starts there too.
+   * `otherArea`: only when the world holds them in another area (an ignored
+   * place: within one area it's a stale sample, and the next report settles it).
+   */
+  private followServerPlace(refused: WhereJson, opts: { otherArea?: boolean } = {}): void {
+    const s = this.session
+    const held = this.server.place
+    if (!s || !held) return
+    if (held.area === refused.area && (opts.otherArea || (held.x === refused.x && held.y === refused.y))) return
+    if (whereOf(s.state).area !== refused.area) return
+    this.refresh({ relocate: true })
+    this.noteLive()
+  }
+
   private reportRequest(c: CapturedReport) {
     return create(ReportRequestSchema, { lease: this.lease ?? '', client: c.client, generation: c.generation, seq: c.seq, basis: c.basis, place: c.place, hp: c.hp, mana: c.mana, casts: c.casts })
   }
 
   /** Page hide: the report goes now with keepalive, unqueued. */
   private sendReportNow(leaving: boolean): void {
-    const c = this.reports.capture(false)
+    // Leaving: the newest report, even past one still in flight (it may be
+    // older than what the screen shows now, and the page won't be here for its answer).
+    const c = leaving ? this.reports.leaving() : this.reports.capture(false)
     if (!c || !leaving) {
       this.reportWanted = true
       this.pump()
@@ -1300,13 +1353,22 @@ export class Link {
 
   // ------------------------------------------------------------ operations
 
-  /** A quest step (predicted; queues offline). */
-  questStep(event: QuestEvent): void {
+  /**
+   * A quest step: reach `to` on `quest` (indoors.md 5.2). A plain step is
+   * predicted and queues offline; a gated one (`server`) waits for the
+   * world's answer and needs a connection, as spends do.
+   */
+  async questStep(quest: string, to: string, opts: { server?: boolean } = {}): Promise<QuestStepOutcome> {
     const s = this.session
-    if (!s) return
+    if (!s || this.stopped) return 'error'
     const key = newKey()
-    const body = toJson(QuestStepRequestSchema, create(QuestStepRequestSchema, { op: { lease: '', key }, quest: LANTERN_ROAD, to: QUEST_STEP[event], where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    void this.submit('quest-step', TYPED['quest-step']!.path, key, body, { offline: true })
+    const body = toJson(QuestStepRequestSchema, create(QuestStepRequestSchema, { op: { lease: '', key }, quest, to, where: whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('quest-step', TYPED['quest-step']!.path, key, body, { offline: !opts.server })
+    if (r.ok) return null
+    const code = r.code
+    if (code === 'not-yet' || code === 'not-here' || code === 'short' || code === 'needs-earned' || code === 'needs-habitica') return code
+    if (code === 'offline' || code === 'pending' || code === 'superseded' || code === 'busy') return code === 'pending' ? 'offline' : code
+    return 'error'
   }
 
   /** A client-namespace mark (seen:, met:, found:, defeated:…; predicted; queues offline). */

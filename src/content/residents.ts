@@ -15,6 +15,7 @@
  */
 import type { QuestStage } from '../lib/state.ts';
 import type { Dialogue, JournalEntry } from './world.ts';
+import { TALK_COPY } from './talk.ts';
 
 export type ResidentId = 'elara' | 'finn' | 'hazel' | 'ada';
 
@@ -224,6 +225,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
     intro: [
       'There you are. Pip has told me all about you, twice, at a run. I’m Hazel Penhallow. The bakery’s the one with the basket out front.',
       'Take a twist. No, take it. Anyone working for the village gets fed. Mara does soup and I do bread, and between us nobody wilts.',
+      '…and if you’ve a minute after, I’ve a sponge that wants feeding.',
     ],
     stages: {
       new: ['Mara will have a job for you. She always does. Go on, then. Come back hungry.'],
@@ -365,6 +367,66 @@ export function millHopperLines(flags: readonly string[]): string[] {
 
 const MET_PREFIX = 'met:';
 
+/**
+ * What a resident calls out when you knock and they're elsewhere
+ * (docs/design/indoors.md 2.6): one line per spot away from home, keyed by
+ * the cycle's spot (`content/residents.json`), with where they call from.
+ * Doors never latch: after the line you go in to an empty room.
+ */
+export const KNOCK_LINES: Readonly<Record<string, Readonly<Record<string, { from: string; line: string }>>>> = {
+  hazel: {
+    square: { from: 'from the square', line: 'Out with the basket. Shop’s open, mind the oven.' },
+  },
+  finn: {
+    door: { from: 'round the front', line: 'Wheel’s turning, I’m round the front.' },
+  },
+  elara: {
+    camp: { from: 'from her camp on the Commons', line: 'Out at the arch taking readings. The shelves are open; donations wait for me.' },
+  },
+};
+
+/** A choice's action that opens the library panel: `library:shelf` (the whole collection) or `library:donate`. */
+export const LIBRARY_ACTION = 'library:';
+
+/**
+ * Elara keeps the library half of each hour (docs/design/indoors.md 3.3,
+ * revised): she says she's studying the drift, and the library is where she
+ * does it. Talking to her there opens the shelves, and donating goes through
+ * her. (Canon: she's stranded, not studying; nothing here says so.)
+ */
+export const KEEPER = {
+  lines: [
+    'The reading room is the quietest instrument in Hearthwick. Paper holds still, so I can see what the drift does around it.',
+    'I keep the room while I take readings. Every page here was written by someone the ground was busy forgetting. Comparative data.',
+  ],
+  /** After her introduction, the first time you meet her here. */
+  firstLine: 'I keep the library while I read the drift. Half the hour, anyway. The rest I’m at my camp by the arch, checking my sums against the Wilds.',
+  shelves: { text: 'Show me the shelves', reply: ['Help yourself. Put things back where you found them. The drift won’t, so we have to.'] },
+  donate: { text: 'I’ve a paper for the shelves', reply: ['Let me see it. If it’s new to the room, it goes in the ledger and on a shelf. If it’s wet, it goes by the stove first.'] },
+  /** A donation refused because she'd stepped out (the server's `not-here`). */
+  away: 'A note on Elara’s desk: “Out at my camp taking readings. Back on the half hour. Donations wait for me. E. Q.”',
+} as const;
+
+/**
+ * Elara's talk while she keeps the library: her lines (her introduction the
+ * first time), then the shelves and Donate, keeping anything else on offer.
+ */
+export function keeperTalk(base: Dialogue, first: boolean): Dialogue {
+  const lines = first ? [...base.lines, KEEPER.firstLine] : [...KEEPER.lines];
+  // Her story lines are the stage's, not the room's: "Hear it again" waits for the square.
+  const rest = (base.choices ?? []).filter((c) => !c.dismiss && c.text !== 'Not yet' && c.text !== TALK_COPY.again);
+  return {
+    ...base,
+    lines,
+    choices: [
+      { text: KEEPER.shelves.text, reply: [...KEEPER.shelves.reply], action: `${LIBRARY_ACTION}shelf` },
+      { text: KEEPER.donate.text, reply: [...KEEPER.donate.reply], action: `${LIBRARY_ACTION}donate` },
+      ...rest,
+      { text: 'Not yet', dismiss: true },
+    ],
+  };
+}
+
 /** The story flag recording that you met a resident, and at which quest stage. */
 export function metFlag(id: ResidentId, stage: QuestStage): string {
   return `${MET_PREFIX}${id}@${stage}`;
@@ -477,6 +539,8 @@ export function allResidentLines(): string[] {
     const d = RESIDENTS[id];
     out.push(...d.intro, ...Object.values(d.stages).flat(), ...(d.papers ?? []).flatMap((p) => p.lines), ...topicalLines(d));
     if (id === 'finn') out.push(...millHopperLines([]), ...millHopperLines(['paper:forty-one-and-holding']));
+    out.push(...Object.values(KNOCK_LINES[id] ?? {}).map((k) => k.line));
+    if (id === 'elara') out.push(...KEEPER.lines, KEEPER.firstLine, KEEPER.shelves.text, ...KEEPER.shelves.reply, KEEPER.donate.text, ...KEEPER.donate.reply, KEEPER.away);
   }
   return out;
 }

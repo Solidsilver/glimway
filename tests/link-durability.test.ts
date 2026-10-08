@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { emptyRecord, idbOutboxStore, memoryOutboxStore } from '../src/lib/api/outbox.ts';
 import { TxIDB } from './helpers/fake-idb-tx.ts';
 import { env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts } from './helpers/link-rig.ts';
+import { roadStep } from '../src/lib/quests.ts';
 
 /**
  * Review round 1, findings 1, 2, 9 and 10: who may write the outbox, when a
@@ -53,7 +54,7 @@ test('without Web Locks the newest tab owns the record; the older one is fenced 
 test('a slow lock: nothing is allocated before the record is claimed, so ids never collide with a previous page’s', async (t) => {
   const store = memoryOutboxStore();
   const old = emptyRecord('fixture-account', 'dev');
-  old.entries = [{ id: 6, kind: 'mark', path: '/api/story/mark', key: 'k6', body: JSON.stringify({ op: { lease: '', key: 'k6' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: 3, createdAt: Date.now(), sent: false, barrier: false, offline: true }];
+  old.entries = [{ id: 6, kind: 'mark', path: '/api/story/mark', key: 'k6', body: JSON.stringify({ op: { lease: '', key: 'k6' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: 4, createdAt: Date.now(), sent: false, barrier: false, offline: true }];
   old.nextId = 7;
   seed(store, old);
   let grant!: () => void;
@@ -167,11 +168,11 @@ test('a fall whose write fails is taken back whole; a chain keeps only what was 
   assert.equal(await r.link.fall(), null);
   assert.deepEqual([r.session.state.area, r.session.state.hp, r.link.reports.next.boundary], ['woodland', 0, null]);
   store.fail = (op, rec) => op === 'save' && (rec?.entries.length ?? 0) > 1;
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   await tick();
-  r.link.questStep('find-clue');
+  r.link.questStep('lantern-road', 'clue-found');
   await tick();
-  assert.equal(r.session.state.quest, 'accepted', 'the second step wasn’t stored, so it isn’t shown');
+  assert.equal(roadStep(r.session.state), 'accepted', 'the second step wasn’t stored, so it isn’t shown');
   assert.deepEqual(r.link.outbox.map((e) => JSON.parse(e.body).to), ['accepted']);
 });
 
@@ -200,7 +201,7 @@ test('a failed refusal-removal write is retried; the next page never replays the
   await online(r);
   r.server.on('POST /api/quest/step', refuse('not-next-step', S({ version: 2 })));
   store.fail = (op, rec) => op === 'save' && (rec?.entries.length ?? 1) === 0;
-  r.link.questStep('accept');
+  r.link.questStep('lantern-road', 'accepted');
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.equal((await store.load('fixture-account', 'dev'))!.entries.length, 1, 'not durable yet');
@@ -227,7 +228,7 @@ test('a failed logout mark is reported, not assumed', async (t) => {
 test('recovery: work from an earlier page that needed a connection and was never sent goes; sent work replays only after a state read', async (t) => {
   const store = memoryOutboxStore();
   const record = emptyRecord('fixture-account', 'dev');
-  const craft = (id: number, sent: boolean) => ({ id, kind: 'mutation' as const, path: '/api/craft', key: `k${id}`, body: JSON.stringify({ recipeId: 'plank', qty: 1, op: { lease: '', key: `k${id}` }, where: { area: 'village', x: 1, y: 1 } }), contract: 3, createdAt: Date.now(), sent, barrier: false, offline: false });
+  const craft = (id: number, sent: boolean) => ({ id, kind: 'mutation' as const, path: '/api/craft', key: `k${id}`, body: JSON.stringify({ recipeId: 'plank', qty: 1, op: { lease: '', key: `k${id}` }, where: { area: 'village', x: 1, y: 1 } }), contract: 4, createdAt: Date.now(), sent, barrier: false, offline: false });
   record.entries = [craft(1, true), craft(2, false)];
   record.nextId = 3;
   seed(store, record);

@@ -7,6 +7,7 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
+	"strings"
 )
 
 func invite(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) (string, error) {
@@ -124,19 +125,20 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-leave", h.ID, nil, now)
 }
 
-// checkHomeRest: resting at home means standing on your own homestead's map
-// (or in its cottage, which saves as the map).
+// checkHomeRest requires the cottage on a gate named by your deed, or, before
+// there is a cottage (tier 0), the bedroll on that land.
 func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
-	gate := rules.HomeGate(s.State.Area)
+	gate := rules.HomeGate(content.RootArea(s.State.Area))
+	inside := strings.HasPrefix(s.State.Area, "in:home:")
 	if gate < 0 {
 		return fail(409, "not-at-own-plot")
 	}
 	if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
-	var mine int
-	err := tx.QueryRowContext(ctx, "SELECT h.gate FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.account_id=?", s.AccountID).Scan(&mine)
-	if err == sql.ErrNoRows || (err == nil && mine != gate) {
+	var mine, tier int
+	err := tx.QueryRowContext(ctx, "SELECT h.gate, h.tier FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.account_id=?", s.AccountID).Scan(&mine, &tier)
+	if err == sql.ErrNoRows || (err == nil && (mine != gate || !inside && tier > 0)) {
 		return fail(409, "not-at-own-plot")
 	}
 	return err

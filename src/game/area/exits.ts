@@ -1,7 +1,8 @@
 /**
  * Area construction — exits. Readable exits: a floating destination label
  * and pulsing chevrons on the exit tiles pointing the way out, on whichever
- * map edge the exit sits.
+ * map edge the exit sits (or the side a room's doorway or stair names; a
+ * stair's chevron sits on its steps, its label above them).
  */
 import type Phaser from 'phaser'
 import { areaInfo } from '../../content/world'
@@ -15,7 +16,8 @@ export function exitName(to: string): string {
 
 type Edge = 'west' | 'east' | 'north' | 'south'
 
-function edgeOf(world: WorldData, exit: ExitDef): Edge {
+export function edgeOf(world: WorldData, exit: ExitDef): Edge {
+  if (exit.side) return exit.side
   if (exit.tx === 0) return 'west'
   if (exit.ty === 0 && exit.tw > exit.th) return 'north'
   if (exit.ty + exit.th === world.height && exit.tw > exit.th) return 'south'
@@ -26,11 +28,12 @@ export function buildExitSigns(scene: Phaser.Scene, world: WorldData, reducedMot
   for (const exit of world.exits) {
     if (exit.label === null) continue
     const edge = edgeOf(world, exit)
+    const stair = exit.kind === 'stair'
     const vertical = edge === 'north' || edge === 'south'
     const midX = (exit.tx + exit.tw / 2) * TILE
     const midY = (exit.ty + exit.th / 2) * TILE
-    const x = edge === 'west' ? exit.tx * TILE + 6 : edge === 'east' ? (exit.tx + 1) * TILE - 6 : midX
-    const y = edge === 'north' ? exit.ty * TILE + 6 : edge === 'south' ? tileBottom(exit.ty) - 6 : midY
+    const x = stair ? midX : edge === 'west' ? exit.tx * TILE + 6 : edge === 'east' ? (exit.tx + 1) * TILE - 6 : midX
+    const y = stair ? midY : edge === 'north' ? exit.ty * TILE + 6 : edge === 'south' ? tileBottom(exit.ty) - 6 : midY
     const chevron = scene.add.image(x, y, 'mark-chevron').setDepth(5500).setAlpha(0.9)
     if (edge === 'west') chevron.setFlipX(true)
     if (edge === 'north') chevron.setAngle(-90)
@@ -41,10 +44,13 @@ export function buildExitSigns(scene: Phaser.Scene, world: WorldData, reducedMot
       scene.tweens.add({ targets: chevron, x: x + dx, y: y + dy, alpha: 0.45, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     }
     // Destination label: high-resolution text so it stays crisp at zoom.
+    // An empty label: the chevron alone (a room's doorway: out is out, and the HUD names the room).
+    if (exit.label === '') continue
     const name = exit.label ?? exitName(exit.to)
-    const text = edge === 'west' ? `◂ ${name}` : edge === 'east' ? `${name} ▸` : edge === 'north' ? `▴ ${name}` : `${name} ▾`
-    const lx = edge === 'west' ? exit.tx * TILE + 26 : edge === 'east' ? (exit.tx + 1) * TILE - 26 : midX
-    const ly = vertical ? (edge === 'north' ? exit.ty * TILE + 22 : exit.ty * TILE - 10) : midY - 20
+    // A stair names the floor it climbs to (`…:2`) or comes down to.
+    const text = stair ? (/:\d+$/.test(exit.to) ? `▴ ${name}` : `▾ ${name}`) : edge === 'west' ? `◂ ${name}` : edge === 'east' ? `${name} ▸` : edge === 'north' ? `▴ ${name}` : `${name} ▾`
+    const lx = stair ? midX : edge === 'west' ? exit.tx * TILE + 26 : edge === 'east' ? (exit.tx + 1) * TILE - 26 : midX
+    const ly = stair ? exit.ty * TILE - 6 : vertical ? (edge === 'north' ? exit.ty * TILE + 22 : exit.ty * TILE - 10) : midY - 20
     scene.add
       .text(lx, ly, text, {
         fontFamily: '"Pixelify Sans", monospace',
@@ -54,7 +60,7 @@ export function buildExitSigns(scene: Phaser.Scene, world: WorldData, reducedMot
         strokeThickness: 3,
         resolution: 8
       })
-      .setOrigin(edge === 'west' ? 0 : edge === 'east' ? 1 : 0.5, 0.5)
+      .setOrigin(stair || vertical ? 0.5 : edge === 'west' ? 0 : 1, 0.5)
       .setDepth(5501)
   }
 }

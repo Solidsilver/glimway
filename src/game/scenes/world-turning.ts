@@ -19,6 +19,7 @@ import type { Hero } from '../entities/hero.ts'
 import type { Unmoored } from '../entities/unmoored.ts'
 import { OUTER_REGION_ID, WILDS_AREA, parseChunkArea, wildsArrivalPosition } from '../wilds/regions.ts'
 import { outerTurned, prepareWilds, resetWildsRegion, wildsEpoch } from '../wilds/store.ts'
+import { roadStep } from '../../lib/quests.ts'
 
 export interface TurningDeps {
   session: Session
@@ -124,7 +125,7 @@ export class Turning {
     // and grants what a turning gives when it sees this place reported.
     if (!s.link) {
       s.addFlag(TURNED_FLAG)
-      const ctx = { flags: s.state.flags, late: s.state.quest === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
+      const ctx = { flags: s.state.flags, late: roadStep(s.state) === 'complete', mark: seasonMark(wildsEpoch(OUTER_REGION_ID).season) }
       const paper = calendarFind('turning', ctx)
       if (paper) this.scene.time.delayedCall(1400, () => grantPaper(s, paper))
     }

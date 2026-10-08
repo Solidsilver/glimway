@@ -1,0 +1,626 @@
+{
+  "legend": {
+    "#": "wall",
+    "=": "back-wall",
+    "w": "window",
+    ".": "planks",
+    ":": "flagstone",
+    "D": "doorway",
+    "^": "stairs-up",
+    "v": "stairs-down",
+    "@": "arrive"
+  },
+  "rooms": [
+    {
+      "id": "in:village:bakery",
+      "name": "Hazel's kitchen",
+      "parent": "village",
+      "map": [
+        "##############",
+        "#==w==OOO==w=#",
+        "#ss...OOO..p.#",
+        "#.....:::....#",
+        "#..TTTT......#",
+        "#..TTTT...b..#",
+        "#...........c#",
+        "#............#",
+        "#.....@......#",
+        "######DD######"
+      ],
+      "doors": [
+        {
+          "id": "front",
+          "kind": "door",
+          "at": "D",
+          "side": "south",
+          "to": "village",
+          "outside": {
+            "tx": 7,
+            "ty": 7
+          },
+          "entry": {
+            "tx": 7,
+            "ty": 8
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "kitchen-hearth",
+          "char": "O",
+          "solid": true
+        },
+        {
+          "art": "kitchen-crocks",
+          "char": "s",
+          "solid": true
+        },
+        {
+          "art": "kitchen-tallow-pot",
+          "char": "p",
+          "solid": true
+        },
+        {
+          "art": "kitchen-worktable",
+          "char": "T",
+          "solid": true
+        },
+        {
+          "art": "kitchen-sponge-bowl",
+          "char": "b",
+          "solid": true
+        },
+        {
+          "art": "kitchen-bread-rack",
+          "char": "c",
+          "solid": true
+        }
+      ],
+      "spots": {
+        "kitchen-hearth": {
+          "tx": 7,
+          "ty": 3,
+          "label": "Warm your hands"
+        },
+        "sponge-bowl": {
+          "tx": 10,
+          "ty": 5,
+          "label": "Look in the bowl"
+        },
+        "tallow-pot": {
+          "tx": 11,
+          "ty": 2,
+          "label": "Look at the pot"
+        }
+      },
+      "lights": [
+        {
+          "tx": 7,
+          "ty": 2,
+          "kind": "hearth",
+          "r": 5
+        }
+      ],
+      "outside": {
+        "building": "house-west",
+        "window": {
+          "tx": 9,
+          "ty": 6
+        },
+        "chimney": {
+          "x": 99,
+          "y": 81
+        }
+      },
+      "furnishings": [
+        {
+          "piece": "rag-rug",
+          "tx": 5,
+          "ty": 6
+        },
+        {
+          "piece": "kitchen-oven-peel",
+          "tx": 5,
+          "ty": 1
+        },
+        {
+          "piece": "calendar",
+          "tx": 10,
+          "ty": 1
+        },
+        {
+          "piece": "barrel",
+          "tx": 1,
+          "ty": 8
+        },
+        {
+          "piece": "candle",
+          "parent": 3
+        },
+        {
+          "piece": "sack",
+          "tx": 12,
+          "ty": 8
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 2,
+          "ty": 8
+        },
+        {
+          "piece": "small-table",
+          "tx": 12,
+          "ty": 4
+        },
+        {
+          "piece": "potted-fern",
+          "parent": 7
+        },
+        {
+          "piece": "kitchen-flour-handprint",
+          "tx": 9,
+          "ty": 1
+        },
+        {
+          "piece": "plant-flowering",
+          "tx": 12,
+          "ty": 2
+        }
+      ]
+    },
+    {
+      "id": "in:village:mill",
+      "name": "Finn's mill",
+      "parent": "village",
+      "map": [
+        "##############",
+        "#=w==========#",
+        "#.....MM...GG#",
+        "#.....MM.....#",
+        "#^^..........#",
+        "#^^.........n#",
+        "#............#",
+        "#............#",
+        "#............#",
+        "#......@.....#",
+        "######DD######"
+      ],
+      "doors": [
+        {
+          "id": "front",
+          "kind": "door",
+          "at": "D",
+          "side": "south",
+          "to": "village",
+          "outside": {
+            "tx": 29,
+            "ty": 22
+          },
+          "entry": {
+            "tx": 29,
+            "ty": 23
+          }
+        },
+        {
+          "id": "loft",
+          "kind": "stair",
+          "at": "^",
+          "side": "south",
+          "to": "in:village:mill:2",
+          "entry": {
+            "tx": 1,
+            "ty": 3
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "mill-gears",
+          "char": "G",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "millstones",
+          "char": "M",
+          "solid": true
+        },
+        {
+          "art": "counting-stool",
+          "char": "n",
+          "solid": true
+        }
+      ],
+      "spots": {
+        "counting-stool": {
+          "tx": 12,
+          "ty": 5,
+          "label": "Sit"
+        },
+        "millstones": {
+          "tx": 7,
+          "ty": 4,
+          "label": "Look at the millstones"
+        }
+      },
+      "lights": [
+        {
+          "tx": 2,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 12,
+          "ty": 5,
+          "kind": "lamp",
+          "r": 4
+        }
+      ],
+      "outside": {
+        "building": "tolley-mill",
+        "window": {
+          "tx": 30,
+          "ty": 20
+        }
+      },
+      "furnishings": [
+        {
+          "piece": "rug-braided",
+          "tx": 5,
+          "ty": 6
+        },
+        {
+          "piece": "mill-tally-board",
+          "tx": 1,
+          "ty": 1
+        },
+        {
+          "piece": "wall-pegs-tools",
+          "tx": 3,
+          "ty": 1
+        },
+        {
+          "piece": "calendar",
+          "tx": 8,
+          "ty": 1
+        },
+        {
+          "piece": "crate",
+          "tx": 1,
+          "ty": 8
+        },
+        {
+          "piece": "candle",
+          "parent": 4
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 11,
+          "ty": 7
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 12,
+          "ty": 7
+        },
+        {
+          "piece": "sack",
+          "tx": 12,
+          "ty": 8
+        },
+        {
+          "piece": "barrel",
+          "tx": 12,
+          "ty": 3
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 3,
+          "ty": 8
+        },
+        {
+          "piece": "mill-sifter",
+          "tx": 9,
+          "ty": 1
+        }
+      ]
+    },
+    {
+      "id": "in:village:mill:2",
+      "name": "The sack loft",
+      "parent": "village",
+      "map": [
+        "##############",
+        "#=w=====w==HH#",
+        "#..........HH#",
+        "#............#",
+        "#vv..........#",
+        "#vv..........#",
+        "#............#",
+        "##############"
+      ],
+      "doors": [
+        {
+          "id": "floor",
+          "kind": "stair",
+          "at": "v",
+          "side": "north",
+          "to": "in:village:mill",
+          "entry": {
+            "tx": 1,
+            "ty": 6
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "mill-hoist",
+          "char": "H",
+          "solid": true
+        }
+      ],
+      "spots": {
+        "mill-hoist": {
+          "tx": 11,
+          "ty": 3,
+          "label": "Look at the hoist"
+        }
+      },
+      "lights": [
+        {
+          "tx": 2,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 8,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        }
+      ],
+      "furnishings": [
+        {
+          "piece": "crate",
+          "tx": 6,
+          "ty": 6
+        },
+        {
+          "piece": "candle",
+          "parent": 0
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 2,
+          "ty": 2
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 3,
+          "ty": 2
+        },
+        {
+          "piece": "sack",
+          "tx": 6,
+          "ty": 2
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 7,
+          "ty": 2
+        },
+        {
+          "piece": "sack",
+          "tx": 9,
+          "ty": 6
+        },
+        {
+          "piece": "mill-sack",
+          "tx": 12,
+          "ty": 4
+        },
+        {
+          "piece": "wall-pegs-tools",
+          "tx": 4,
+          "ty": 1
+        }
+      ]
+    },
+    {
+      "id": "in:village:library",
+      "name": "The library reading room",
+      "parent": "village",
+      "map": [
+        "##############",
+        "#SS=SS=SS=SS=#",
+        "#............#",
+        "l.RRRR.......L",
+        "#.RRRR...EE..#",
+        "k............K",
+        "#.........NNN#",
+        "#.........NNN#",
+        "#.....@......#",
+        "######DD######"
+      ],
+      "doors": [
+        {
+          "id": "front",
+          "kind": "door",
+          "at": "D",
+          "side": "south",
+          "to": "village",
+          "outside": {
+            "tx": 4,
+            "ty": 17
+          },
+          "entry": {
+            "tx": 4,
+            "ty": 18
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "library-side-shelves",
+          "char": "l",
+          "solid": true,
+          "facing": "right"
+        },
+        {
+          "art": "library-side-shelves",
+          "char": "L",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "library-side-shelf-short",
+          "char": "k",
+          "solid": true,
+          "facing": "right"
+        },
+        {
+          "art": "library-side-shelf-short",
+          "char": "K",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "library-shelves",
+          "char": "S",
+          "solid": true
+        },
+        {
+          "art": "reading-table",
+          "char": "R",
+          "solid": true
+        },
+        {
+          "art": "elara-desk",
+          "char": "E",
+          "solid": true
+        },
+        {
+          "art": "reading-nook",
+          "char": "N",
+          "solid": true
+        }
+      ],
+      "spots": {
+        "library-shelf": {
+          "tx": 2,
+          "ty": 2,
+          "label": "Browse the stories"
+        },
+        "shelf-histories": {
+          "tx": 5,
+          "ty": 2,
+          "label": "Browse the histories"
+        },
+        "shelf-recipes": {
+          "tx": 8,
+          "ty": 2,
+          "label": "Browse the recipes"
+        },
+        "shelf-field-notes": {
+          "tx": 11,
+          "ty": 2,
+          "label": "Browse the field notes"
+        },
+        "reading-table": {
+          "tx": 3,
+          "ty": 5,
+          "label": "Sit and read"
+        },
+        "reading-lamp": {
+          "tx": 5,
+          "ty": 5,
+          "label": "Oil the lamp"
+        },
+        "reading-nook": {
+          "tx": 11,
+          "ty": 7,
+          "label": "Sit in the nook"
+        }
+      },
+      "lights": [
+        {
+          "tx": 4,
+          "ty": 3,
+          "kind": "lamp",
+          "r": 5
+        },
+        {
+          "tx": 11,
+          "ty": 6,
+          "kind": "lamp",
+          "r": 3
+        }
+      ],
+      "outside": {
+        "building": "library",
+        "window": {
+          "tx": 5,
+          "ty": 15
+        }
+      },
+      "furnishings": [
+        {
+          "piece": "library-section-sign-stories",
+          "tx": 1,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-histories",
+          "tx": 4,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-recipes",
+          "tx": 7,
+          "ty": 1
+        },
+        {
+          "piece": "library-section-sign-field-notes",
+          "tx": 10,
+          "ty": 1
+        },
+        {
+          "piece": "rag-rug",
+          "tx": 6,
+          "ty": 5
+        },
+        {
+          "piece": "potted-fern",
+          "tx": 1,
+          "ty": 7
+        },
+        {
+          "piece": "small-table",
+          "tx": 9,
+          "ty": 7
+        },
+        {
+          "piece": "candle-holder",
+          "parent": 6
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 2,
+          "ty": 7
+        },
+        {
+          "piece": "iron-lantern",
+          "tx": 12,
+          "ty": 5
+        },
+        {
+          "piece": "plant-flowering",
+          "tx": 12,
+          "ty": 2
+        }
+      ]
+    }
+  ]
+}

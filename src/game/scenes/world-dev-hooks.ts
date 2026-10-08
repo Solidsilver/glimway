@@ -72,8 +72,26 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsWorld', () => {
     const b = s.physics.world.bounds
     const world = s['world']
-    return { areaId: world.areaId, widthPx: world.widthPx, heightPx: world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: world.solid, exits: world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to) })) }
+    return { areaId: world.areaId, widthPx: world.widthPx, heightPx: world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: world.solid, exits: world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to), side: e.side, kind: e.kind })) }
   })
+  on('__fsRoom', () => {
+    const world = s['world']
+    const art = s['roomArt']
+    return {
+      areaId: world.areaId,
+      room: world.room ? { id: world.room.def.id, name: world.room.def.name, arrive: world.room.arrive } : null,
+      zoom: s.cameras.main.zoom / canvasRatio(),
+      facing: { x: s['hero'].facing.x, y: s['hero'].facing.y },
+      props: (world.room?.props ?? []).map((f, i) => ({ art: f.art, frame: String(art?.sprites[i]?.texture.key ?? ''), tx: f.tx, ty: f.ty, tw: f.tw, th: f.th })),
+      spots: Object.keys(world.room?.def.spots ?? {}),
+      lights: (art?.lights ?? []).map((l) => ({ kind: l.kind, visible: l.image.visible })),
+      dressing: (art?.dressing ?? []).map((d) => ({ piece: d.piece.id, depth: d.depth, x: d.foot.x, y: d.foot.y })),
+      bodies: s['world'].bodies ?? [],
+      houses: s['houseLights']?.view() ?? []
+    }
+  })
+  on('__fsDevCycleCheck', () => s['cycle']?.check())
+  on('__fsDevPipWalkOn', () => s['pipWalkOn']?.play() ?? false)
 
   // How settled this area is, so playtests wait on the game instead of the
   // clock: frames drawn since it was built, the camera fade, and whether

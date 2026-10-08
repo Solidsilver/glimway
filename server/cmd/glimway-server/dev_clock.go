@@ -81,6 +81,7 @@ func devClockRoute(c *movableClock, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		w.Header().Set("X-Glimway-Now", strconv.FormatInt(c.now().Unix(), 10))
 		if !devLocal(r) {
 			http.NotFound(w, r)
 			return
@@ -106,6 +107,7 @@ func devClockRoute(c *movableClock, next http.Handler) http.Handler {
 			}
 			return now.Add(time.Duration(*req.AdvanceSeconds * float64(time.Second)))
 		})
+		w.Header().Set("X-Glimway-Now", strconv.FormatInt(now.Unix(), 10))
 		w.Header().Set("Content-Type", "application/json")
 		if !ok {
 			w.WriteHeader(http.StatusConflict)

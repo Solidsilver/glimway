@@ -1,3 +1,4 @@
+import itemsRaw from '../content/items.json' with { type: 'json' };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -90,11 +91,11 @@ test('the validator refuses malformed rows, like content/items.go', () => {
     ['hold that wears faster', (v) => (v.rules.wear.holdPointsPerUse = 9)],
   ];
   for (const [name, mutate] of cases) {
-    const copy = structuredClone(ITEMS);
+    const copy = structuredClone(itemsRaw) as unknown as Items;
     mutate(copy);
     assert.throws(() => validateItems(copy), undefined, name);
   }
-  assert.doesNotThrow(() => validateItems(structuredClone(ITEMS)));
+  assert.doesNotThrow(() => validateItems(structuredClone(itemsRaw) as unknown as Items));
 });
 
 test('recipes make tools as instances and charge any carried stack', () => {

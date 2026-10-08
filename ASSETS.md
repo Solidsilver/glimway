@@ -24,7 +24,7 @@ Decided 2026-10-07 (reasons in `docs/licensing-and-funding.md`). Each
 register below carries its own licence line.
 
 - **Our art: CC0 1.0** (public domain dedication). Every register of our own
-  art (A, B's output, D, E, F, G, H) is AI-generated: made with OpenAI's
+  art (A, B's output, D, E, F, G, H, J) is AI-generated: made with OpenAI's
   image generation through Codex, then measured, cut and packed by scripts,
   not repainted. With no human author there is likely no copyright to
   license, so it is dedicated to the public domain and needs no credit. The
@@ -329,6 +329,26 @@ generation). **Source** — original generation, prompts in-repo.
 to ART_DENSITY and the ground tiles (not the pond bed) seam-healed by
 `scripts/build-atlases.ts`.
 **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
+
+## Register J — Indoors pass (Round 2b rooms and shared kit)
+
+Delivered 2026-10-08 to `assets/generated/indoors-pass/`; generated source sheets, measured crops, and metadata are the archive of record. `public/assets/fingersnap/indoors-pass/` ships `manifest.json`; the 176 named frames are packed into `packed/indoors.webp` and indexed under `indoors.frames` in `packed/atlases.json` when the atlas build is run. Room wiring remains with the code lanes.
+
+Provenance: original art generated 2026-10-08 with the built-in image generation tool; prompts and generation IDs are recorded in `prompts.json` and `round2-jobs.json`. Edge-connected neutral checkerboard pixels were converted to alpha. Hand-measured crops are aspect-contained on transparent native-size canvases, with 64 texels per 16 px tile. Round 2b crops include a 4 px transparent gutter; all 176 frame crops were audited for small edge fragments, with five legacy fragments removed (`edge-audit.json`). `manifest.json` and `atlas.json` record frame geometry; `furnishings.json` records 48 placeable pieces with facing/state frames, footprint, base, size, mount, and offered surfaces. Contact and room preview sheets are in `.agent/screens/`; `assets/generated/indoors-pass/README.md` lists them.
+
+| File | Keys / contents | Role |
+|---|---|---|
+| `sheets/floors-seamless.png` | `plank-floor-0..3`, `flagstone-floor-0..3` | Four variants per seamless floor family |
+| `sheets/interior-detail.png`, `interior-kit.png` | walls, openings, stairs, rugs, counters, first-pass room pieces | First-pass architecture and pieces retained for compatible use |
+| `sheets/library-round2.png` | library shelves, desk, nook, signs | Round 2b library signatures |
+| `sheets/shared-kit-round2.png` | generic reusable furnishing kit | Shared building and player-home dressing |
+| `sheets/kitchen-round2.png` | kitchen signature furniture | Hazel's kitchen |
+| `sheets/mill-loft-round2.png` | mill and loft signature furniture | Finn's mill and sack loft |
+| `sheets/round2-crops/` | 75 individual transparent frames | Precisely measured Round 2b frames |
+| `manifest.json`, `atlas.json`, `furnishings.json`, `edge-audit.json` | 176 frames, 90 sources, 16 animation/state groups, 48 piece definitions | Frame and placement contracts and crop-edge audit |
+| `.agent/screens/*-pass.png`, `*-in-room.png` | room contact sheets and five mock-ups | Visual review |
+
+Three slow loops: cauldron steaming, millstone turning, and gear wheel turning. Other states are static. Round 2b replaces interior use of the prior oven, table, crock shelf, tallow pot, bread rack, mill machinery/sacks/hoist, and library shelf/table/donation shelf/window seat families; the exact old keys and replacement policy are in `docs/art-request-indoors.md`. First-pass floors, walls, openings, exterior overlays, and quest icons remain. Known limitations: mill machinery turns are approximate; exterior windows still need alignment to exact building masks; the seated desk is a combined desk/resident art state. **Licence** — CC0 1.0 (public domain; see "Licences"). **Attribution** — none required.
 
 ## Register I — sound (Kenney's CC0 packs, delivered 2026-10-07)
 

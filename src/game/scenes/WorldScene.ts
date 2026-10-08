@@ -49,8 +49,8 @@ import { emitResidents } from '../residents'
 import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
-import { ROOM_ENTRY } from '../cottage'
-import { homeArea, parseHomeArea } from '../../lib/homestead'
+import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../cottage'
+import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
@@ -70,8 +70,10 @@ import {
 import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
 import { GoalGuide } from '../entities/goal-guide'
 import { heldNow } from '../held'
-import { pinnedProgress } from '../guide-pin'
-import type { GuideWhere } from '../../content/guides'
+import { goalTarget } from '../guide-pin'
+import { QUEST_ACTION } from '../../content/quests/index.ts'
+import { LIBRARY_ACTION } from '../../content/residents.ts'
+import { openLibrary } from '../library-open.ts'
 import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
@@ -85,12 +87,20 @@ import { playLanternBeat } from '../entities/lantern-beat'
 import { WorldControls } from './world-controls'
 import { presenceMoments } from '../entities/presence-moments'
 import { arrive } from './world-arrival'
+import { buildRoomArt, type RoomArt } from '../area/room-art'
+import { RoomSpots, LAMP_MARK, LIBRARY, spotWanted } from '../room-spots'
+import { ResidentCycle, residentIn } from '../resident-cycle'
+import { Doors } from '../entities/doors'
+import { HouseLights } from '../entities/house-lights'
+import { PipWalkOn } from '../entities/pip-walk-on'
+import { facingFor, roomArrival, warmAt, type Footprint } from '../room-kind'
+import { tileKey } from '../../lib/tile'
 
 interface SceneData {
   entry?: { tx: number; ty: number }
+  /** Which way the hero faces arriving (through a door or up a stair: away from where they came in). */
+  facing?: { x: number; y: number }
   fromDefeat?: boolean
-  /** Inside a homestead's cottage: which gate's, and the doorstep outside it. */
-  room?: { gate: number; doorstep: { tx: number; ty: number } }
   /** Rebuilt by the Turning: the outer Wilds just shifted under the player. */
   turned?: boolean
 }
@@ -156,7 +166,15 @@ export class WorldScene extends Phaser.Scene {
   private presenceArea: string | null = null
   /** The Commons/cottage homestead layer (null elsewhere). */
   private homesteads: HomesteadLayer | null = null
-  private room: SceneData['room'] | null = null
+  /** A village room's art and lights (null outdoors and in a cottage). */
+  private roomArt: RoomArt | null = null
+  /** The residents on their hour (../resident-cycle.ts), and the lit windows outside. */
+  private cycle: ResidentCycle | null = null
+  private houseLights: HouseLights | null = null
+  /** Pip running up with Mara's message (the opening). */
+  private pipWalkOn: PipWalkOn | null = null
+  /** Which way to face arriving (SceneData.facing). */
+  private pendingFacing: { x: number; y: number } | null = null
 
   constructor() {
     super('World')
@@ -168,7 +186,7 @@ export class WorldScene extends Phaser.Scene {
     this.fadeHold++
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
-    this.room = data?.room ?? null
+    this.pendingFacing = data?.facing ?? null
     this.pendingTurned = data?.turned === true
   }
 
@@ -189,8 +207,7 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    const arrival = arrive(this.session, { room: this.room ?? null, entry: this.pendingEntry, turned: this.pendingTurned })
-    this.room = arrival.room
+    const arrival = arrive(this.session, { entry: this.pendingEntry, turned: this.pendingTurned })
     this.pendingEntry = arrival.entry
     this.world = arrival.world
     const wildsEntry = arrival.wildsEntry
@@ -231,12 +248,14 @@ export class WorldScene extends Phaser.Scene {
         projectiles: () => this.projectiles,
         avatar: () => this.avatar,
         restRate: () => lanternRestRate(this.lightProps, this.session.state, this.hero.sprite, this.enemies.enemies),
+        warm: () => warmAt(this.world, this.hero.sprite.x, this.hero.sprite.y),
         transitioning: () => this.transitioning,
         cinematic: () => this.cinematic,
         onDefeat: () => this.defeatRecovery()
       },
       wildsEntry ? wildsEntry.tile : this.pendingEntry
     )
+    if (this.pendingFacing) this.hero.facing.set(this.pendingFacing.x, this.pendingFacing.y)
     // The save names where the hero really stands from the first frame: a
     // saved spot that's blocked (a fresh game's default, a tile built over)
     // puts the hero on the area's spawn, and until the first position sample
@@ -250,6 +269,7 @@ export class WorldScene extends Phaser.Scene {
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))
+    this.interactables.setGone((id) => this.npcs.gone(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
     this.enemies = new EnemySystem(
       this,
@@ -289,8 +309,30 @@ export class WorldScene extends Phaser.Scene {
     })
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    // Rooms (docs/design/indoors.md 2.7): the front doors out here, and
+    // inside a village room its art, light pools and spots.
+    new Doors({ world: this.world, interactables: this.interactables, enter: (room) => this.goIn(room) })
+    // A spot on the piece, or on the floor just in front of it, that the current quest marks.
+    const pointed = (f: Footprint) =>
+      Object.entries(this.world.room?.def.spots ?? {}).some(
+        ([id, s]) => s.tx >= f.tx && s.tx < f.tx + f.tw && s.ty >= f.ty && s.ty <= f.ty + f.th && spotWanted(id, this.session)
+      )
+    this.roomArt = buildRoomArt(this, this.world, {
+      reducedMotion: this.reducedMotion,
+      // A resident's hearth is banked while they're out; the reading lamp (on the library's table) burns once its oil is paid.
+      lit: (light) => {
+        if (light.kind === 'hearth') return residentIn(this.world.areaId)
+        const table = this.world.areaId === LIBRARY ? this.world.room?.props.find((p) => p.art === 'reading-table') : undefined
+        const onTable = !!table && light.tx >= table.tx && light.tx < table.tx + table.tw && light.ty >= table.ty && light.ty < table.ty + table.th
+        return !onTable || this.session.state.flags.includes(LAMP_MARK)
+      },
+      propState: (f) => this.pieceState(f, pointed),
+      pointed
+    })
+    new RoomSpots({ world: this.world, session: this.session, interactables: this.interactables, hero: () => this.hero, present: (id) => this.npcs.npcs.some((n) => n.id === id && n.present) })
+    const homeRoom = parseHomeRoom(this.world.areaId)
     this.homesteads = null
-    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || this.room) {
+    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || homeRoom !== null) {
       this.homesteads = new HomesteadLayer(this, {
         world: this.world,
         session: this.session,
@@ -300,8 +342,8 @@ export class WorldScene extends Phaser.Scene {
         interactables: this.interactables,
         hero: () => this.hero.sprite,
         sitter: () => this.hero,
-        room: this.room ? { gate: this.room.gate } : null,
-        enterRoom: (gate, doorstep) => this.enterRoom(gate, doorstep),
+        room: homeRoom !== null ? { gate: homeRoom } : null,
+        enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
         rebuild: () => this.rebuildArea()
       })
     }
@@ -322,6 +364,23 @@ export class WorldScene extends Phaser.Scene {
     })
     buildExitSigns(this, this.world, this.reducedMotion)
     this.physics.add.collider(this.hero.sprite, this.solids.group)
+    // The residents stand where their hour puts them; a change you watch is walked.
+    const cycle = (this.cycle = new ResidentCycle(this, {
+      world: this.world,
+      npcs: this.npcs,
+      reducedMotion: this.reducedMotion,
+      block: (tx, ty, on) => {
+        for (const body of this.solids.props.get(tileKey(tx, ty)) ?? []) (body.body as Phaser.Physics.Arcade.StaticBody).enable = on
+      },
+      onScreen: (x, y) => this.cameras.main.worldView.contains(x, y)
+    }))
+    const lights = (this.houseLights = new HouseLights(this, { world: this.world, reducedMotion: this.reducedMotion }))
+    this.pipWalkOn = new PipWalkOn(this, { world: this.world, npcs: this.npcs, hero: () => this.hero.sprite })
+    cycle.onChange(() => {
+      this.roomArt?.refresh()
+      lights.refresh()
+      this.interactables.invalidatePrompt()
+    })
 
     // The Wilds layer: camps, nodes, chests, POIs and lanterns (null in the
     // curated areas). The region read refreshes in the background; entities
@@ -409,17 +468,16 @@ export class WorldScene extends Phaser.Scene {
       this.avatar.invalidate()
     })
     // Remote players (phase 6 presence): join this area's room and draw the
-    // others in it. A cottage is part of its homestead's room, but its map is
-    // not: inside, nobody is drawn and we stand at our door for the others.
+    // others in it. A room (a cottage, the mill) is its own presence room.
     const feed = presence()
-    this.presenceArea = presenceAreaFor(this.room ? homeArea(this.room.gate) : this.world.areaId)
+    this.presenceArea = presenceAreaFor(this.world.areaId)
     feed?.setArea(this.presenceArea)
-    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, !!this.room)
+    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea)
     this.events.once('shutdown', () => this.remotePlayers.clear())
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
-      stage: () => this.session.questStage,
+      goal: () => goalTarget(this.session),
       npcAt: (id) => {
         const n = this.npcs.npcs.find((x) => x.id === id)
         return n ? { x: n.sprite.x, y: n.sprite.y - 8 } : null
@@ -432,9 +490,12 @@ export class WorldScene extends Phaser.Scene {
         const w = this.enemies.warden.wardenView()
         return w.state === 'active' && w.visible ? { x: w.x, y: w.y - 8 } : null
       },
-      placeKind: () => this.homesteads?.placeKind ?? (this.room ? 'cottage' : null),
+      enemyAt: (id) => {
+        const e = this.enemies.enemies.find((x) => x.id === id && !x.dead)
+        return e ? { x: e.sprite.x, y: e.sprite.y - 8 } : null
+      },
+      placeKind: () => this.homesteads?.placeKind ?? null,
       guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
-      pinnedStep: () => this.guideStep(),
       reducedMotion: this.reducedMotion
     })
     // Passing thoughts above the hero (flavour lines; cleans up on shutdown).
@@ -570,9 +631,8 @@ export class WorldScene extends Phaser.Scene {
     this.offHand?.update(time)
 
     this.positionTimer += dt
-    // In a cottage the save keeps the doorstep (set on the way in). Nor while
-    // a move began this frame (an exit, above): the save already names the
-    // destination, and this spot belongs to the area being left.
+    // Not while a move began this frame (an exit, above): the save already
+    // names the destination, and this spot belongs to the area being left.
     if (this.positionTimer > 1 || this.devSampleEveryFrame) {
       this.positionTimer = 0
       this.notePosition()
@@ -585,7 +645,7 @@ export class WorldScene extends Phaser.Scene {
    * measures reach from where the hero really is).
    */
   private notePosition(): void {
-    if (this.room || this.transitioning) return
+    if (this.transitioning) return
     // Wilds: saved progress is region-wide pixels (one convention for
     // saves, reloads, claims and defeat reports).
     this.session.state.position = this.wildsEntryNow()
@@ -597,12 +657,6 @@ export class WorldScene extends Phaser.Scene {
   private samplePresence(): void {
     const feed = presence()
     if (!feed || !this.presenceArea) return
-    if (this.room) {
-      // Indoors: the others see us at our door.
-      const door = this.session.state.position
-      feed.position({ x: door.x, y: door.y, facing: { x: 0, y: 1 }, moving: false })
-      return
-    }
     const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
     const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
     feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving })
@@ -617,18 +671,6 @@ export class WorldScene extends Phaser.Scene {
   private wildsPosition(x: number, y: number): { x: number; y: number } {
     const chunk = parseChunkArea(this.world.areaId) ?? { cx: 0, cy: 0 }
     return toRegionPosition(chunk.cx, chunk.cy, x, y)
-  }
-
-  /** The pinned guide's current step, re-read twice a second (it reads the item and home models). */
-  private guideStepAt = -1
-  private guideStepCache: { where: GuideWhere | null } | null = null
-  private guideStep(): { where: GuideWhere | null } | null {
-    const now = this.time.now
-    if (now - this.guideStepAt < 500 && this.guideStepAt >= 0) return this.guideStepCache
-    this.guideStepAt = now
-    const p = pinnedProgress(this.session)
-    this.guideStepCache = p && !p.done && !p.locked && p.current !== null ? { where: p.steps[p.current].where } : null
-    return this.guideStepCache
   }
 
   /** World input is live only while the hero actually has control. */
@@ -649,6 +691,8 @@ export class WorldScene extends Phaser.Scene {
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
   private refreshMarkers(): void {
     this.interactables.refreshMarkers()
+    // What the quest points at may move and glow; the rest of a room stands still.
+    this.roomArt?.refresh()
   }
 
   private onProfileChanged(): void {
@@ -724,11 +768,19 @@ export class WorldScene extends Phaser.Scene {
   private onDialogueClosed(payload: DialogueClosedPayload): void {
     uiState.dialogueOpen = false
     uiState.blockedUntil = performance.now() + 220
-    if (payload?.action) this.actions.apply(payload.action)
+    // A quest step's offer (`quest:<quest>:<step>`) or talk (`<quest>:<step>`) is the session's.
+    if (payload?.action?.startsWith(QUEST_ACTION)) void this.session.reachRef(payload.action.slice(QUEST_ACTION.length))
+    // Elara's shelves and donations (`library:shelf`, `library:donate`): the library panel.
+    else if (payload?.action?.startsWith(LIBRARY_ACTION)) openLibrary({ focus: payload.action.slice(LIBRARY_ACTION.length) === 'donate' ? 'donate' : 'shelf' })
+    else if (payload?.action) this.actions.apply(payload.action)
+    if (payload?.event?.includes(':')) {
+      void this.session.reachRef(payload.event)
+      return
+    }
     const event = payload?.event as QuestEvent | undefined
     if (!event) return
-    // The clue is journaled under the shared content id (advanceQuest also
-    // carries it; addUnique keeps it single-entry).
+    // The clue is journaled under the shared content id (the step's
+    // prediction, reachStep, also carries it, once).
     if (event === 'find-clue') this.session.recordDiscovery('old-route-marker', 'The Closure Mark')
     if (event === 'light-lantern' || event === 'return-village') {
       playLanternBeat(this, {
@@ -756,7 +808,7 @@ export class WorldScene extends Phaser.Scene {
     // Zero-HP gates expeditions only from the village; a legacy zero-HP save
     // found outside may travel home freely (nothing heals en route).
     // The Commons counts as home: a hurt hero may walk there to rest.
-    const locked = this.session.zeroHpLocked && (safeArea(this.world.areaId) || !!this.room)
+    const locked = this.session.zeroHpLocked && safeArea(this.world.areaId)
     const tx = tileAt(this.hero.sprite.x)
     const ty = tileAt(this.hero.sprite.y)
     for (const exit of this.world.exits) {
@@ -766,7 +818,8 @@ export class WorldScene extends Phaser.Scene {
           this.overgrown(exit)
           return
         }
-        this.transitionTo(exit.to, exit.entry)
+        // Out through a doorway or up a stair: arrive facing on, away from it.
+        this.transitionTo(exit.to, exit.entry, exit.side && exit.kind && exit.kind !== 'edge' ? facingFor({ side: exit.side, kind: exit.kind }) : undefined)
         return
       }
     }
@@ -792,7 +845,7 @@ export class WorldScene extends Phaser.Scene {
     bus.emit(EV.toast, { text: 'The way is overgrown. Brambles and fallen iron-oak — nobody has cleared it yet.', icon: 'map', kind: 'thought' })
   }
 
-  private transitionTo(area: AreaId, entry: { tx: number; ty: number }): void {
+  private transitionTo(area: AreaId, entry: { tx: number; ty: number }, facing?: { x: number; y: number }): void {
     if (!canEnter(area)) return
     const state = this.session.state
     const leavingWilds = isWildsArea(state.area)
@@ -828,21 +881,51 @@ export class WorldScene extends Phaser.Scene {
       entry = { tx: tile.tx, ty: tile.ty }
     }
     // A homestead's land is the server's: fetched while the screen is dark.
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry }, { inDark: () => prepareHomeLand(String(area)) })
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...(facing ? { facing } : {}) }, { inDark: () => prepareHomeLand(String(area)) })
   }
 
   /**
-   * Walk into a cottage. The save stays on the homestead's land, on the
-   * doorstep, and the scene rebuilds as the room.
+   * Go in at a front door (a village room, or a cottage): an ordinary area
+   * change into the room, arriving at its `@` facing in.
    */
-  private enterRoom(gate: number, doorstep: { tx: number; ty: number }): void {
+  private goIn(room: string): void {
     if (this.transitioning) return
-    this.moveTo({ area: homeArea(gate), position: tileCenter(doorstep.tx, doorstep.ty) }, { entry: ROOM_ENTRY, room: { gate, doorstep } })
+    const entry = parseHomeRoom(room) !== null ? ROOM_ENTRY : roomArrival(room)
+    if (!entry) return
+    this.transitionTo(room, entry, { x: 0, y: -1 })
+  }
+
+  /**
+   * A room's signature piece in the state what has happened puts it in
+   * (docs/design/indoors.md 2.8: never by idling): the oven lit while Hazel
+   * is home, the stones and gears turning while Finn is in, the reading
+   * lamp lit once its oil is paid, the hoist working once greased, the
+   * tallow pot steaming while a quest points at it. Null: its default.
+   */
+  private pieceState(f: Footprint, pointed: (f: Footprint) => boolean): string | null {
+    const home = residentIn(this.world.areaId.replace(/:\d+$/, ''))
+    switch (f.art) {
+      case 'kitchen-hearth':
+        return home ? 'lit' : 'banked'
+      case 'millstones':
+      case 'mill-gears':
+        return home ? 'turning' : 'still'
+      case 'reading-table':
+        return this.session.state.flags.includes(LAMP_MARK) ? 'lit' : 'unlit'
+      case 'mill-hoist': {
+        const reached = this.session.state.quests?.['stuck-hoist']
+        return reached === 'grease-hoist' || reached === 'tell-finn' ? 'working' : 'seized'
+      }
+      case 'kitchen-tallow-pot':
+        return pointed(f) ? 'steaming' : 'still'
+      default:
+        return null
+    }
   }
 
   /** The map changed under us (the lane grew, land was cleared): rebuild it where we stand. */
   private rebuildArea(): void {
-    if (this.transitioning || this.room) return
+    if (this.transitioning) return
     const entry = { tx: tileAt(this.hero.sprite.x), ty: tileAt(this.hero.sprite.y) }
     this.moveTo({ position: { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }, save: false }, { entry }, { fadeMs: null })
   }

@@ -163,8 +163,8 @@ test('the world is built from the shared spots the server checks', () => {
   const well = repairFor('well-rope')!.pos;
   assert.deepEqual(v.well, { tx: well.tx, ty: well.ty });
   for (const res of ITEM_RULES.residents) {
-    const npc = v.npcs.find((n) => n.id === res.id);
-    assert.ok(npc, `${res.id} stands in the village`);
+    const npc = buildArea(res.area).npcs.find((n) => n.id === res.id);
+    assert.ok(npc, `${res.id} stands in ${res.area}`);
     assert.deepEqual({ tx: npc!.tx, ty: npc!.ty }, { tx: res.tx, ty: res.ty });
   }
   // Silas from the menders rows, in the Commons.

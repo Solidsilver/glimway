@@ -26,8 +26,9 @@ func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) lib
 	return v
 }
 
+// donateBody donates from the reading room.
 func donateBody(s response, paperID, key string) map[string]any {
-	return body(s, key, map[string]any{"paperId": paperID})
+	return body(s, key, map[string]any{"paperId": paperID, "where": map[string]any{"area": "in:village:library", "x": 80, "y": 80}})
 }
 
 // hold seeds a server-granted find for the donation fixtures.
@@ -52,6 +53,7 @@ func (x *rig) named(id, name string) {
 
 func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 	x := newRig(t)
+	x.now.Store(x.now.Load()/3600*3600 + 20*60)
 	x.named("alice", "Alice")
 	c, s := x.ready("alice")
 	if shelves := x.lib("GET", "/api/library", nil, c, 200).Shelves; len(shelves) != 0 {
@@ -101,6 +103,7 @@ func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 
 func TestLibraryRaceFirstDonorWins(t *testing.T) {
 	x := newRig(t)
+	x.now.Store(x.now.Load()/3600*3600 + 20*60)
 	x.named("alice", "Alice")
 	x.named("bob", "Bob")
 	c, s := x.ready("alice")
@@ -124,7 +127,7 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 		go func(i int, c *http.Cookie, s response, key string) {
 			defer wg.Done()
 			r := httptest.NewRequest("POST", "/api/library/donate", bytes.NewBufferString(store.JSON(donateBody(s, "will-of-elias-fenn", key))))
-			r.Header.Set("X-Glimway-Contract", "3")
+			r.Header.Set("X-Glimway-Contract", "4")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(c)
 			w := httptest.NewRecorder()
@@ -158,6 +161,7 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 
 func TestLibraryGuardsLeaveNoTrace(t *testing.T) {
 	x := newRig(t)
+	x.now.Store(x.now.Load()/3600*3600 + 20*60)
 	x.named("alice", "Alice")
 	c, s := x.ready("alice")
 	s = x.hold(c, s, "will-of-elias-fenn")
@@ -186,6 +190,7 @@ func TestLibraryGuardsLeaveNoTrace(t *testing.T) {
 
 func TestLibraryWorldsAreIsolated(t *testing.T) {
 	x := newRig(t)
+	x.now.Store(x.now.Load()/3600*3600 + 20*60)
 	x.named("alice", "Alice")
 	x.named("bob", "Bob")
 	ac, a := x.ready("alice")
@@ -217,6 +222,82 @@ func TestLibraryNeedsSession(t *testing.T) {
 	x.lib("POST", "/api/library/donate", donateBody(response{}, "will-of-elias-fenn", "k"), nil, 401)
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
 		t.Fatal("unauthenticated donation stored")
+	}
+}
+
+func TestLibraryDonationNeedsElaraWithinGrace(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		seconds int64
+		area    string
+		status  int
+	}{
+		{"before-arrival-grace", 509, "in:village:library", 409},
+		{"arrival-grace-inclusive", 510, "in:village:library", 200},
+		{"arrives-at-desk", 600, "in:village:library", 200},
+		{"during-desk-phase", 1200, "in:village:library", 200},
+		{"departure-grace-inclusive", 2490, "in:village:library", 200},
+		{"after-departure-grace", 2491, "in:village:library", 409},
+		{"at-camp", 3000, "in:village:library", 409},
+		{"hour-wrap", 3600, "in:village:library", 409},
+		{"next-arrival-grace", 4110, "in:village:library", 200},
+		{"outside-with-elara", 3000, "commons", 409},
+		{"outside-library", 1200, "village", 409},
+		{"other-room", 1200, "in:village:bakery", 409},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			x := newRig(t)
+			x.now.Store(x.now.Load()/3600*3600 + tc.seconds)
+			c, s := x.ready("alice")
+			s = x.hold(c, s, "will-of-elias-fenn")
+			before := x.expect("GET", "/api/state", nil, c, 200)
+			request := donateBody(s, "will-of-elias-fenn", "donate")
+			request["where"] = map[string]any{"area": tc.area, "x": 80, "y": 80}
+			answer := x.lib("POST", "/api/library/donate", request, c, tc.status)
+			if tc.status == 409 {
+				if answer.Error.Code != "not-here" {
+					t.Fatal(answer.Error.Code)
+				}
+				after := x.expect("GET", "/api/state", nil, c, 200)
+				unchanged(t, before.Snapshot, after.Snapshot)
+				if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
+					t.Fatal("refused donation stored")
+				}
+			} else if answer.Entry == nil {
+				t.Fatal("missing donated shelf entry")
+			}
+			// Browsing is available even outside the room and without Elara.
+			x.lib("GET", "/api/library", nil, c, 200)
+		})
+	}
+}
+
+func TestLibraryDonationClockMovesKeepStatefulReplays(t *testing.T) {
+	x := newRig(t)
+	base := x.now.Load() / 3600 * 3600
+	x.now.Store(base + 3000) // Elara is at camp.
+	c, s := x.ready("alice")
+	s = x.hold(c, s, "will-of-elias-fenn")
+	request := donateBody(s, "will-of-elias-fenn", "outside-hours")
+	if got := x.lib("POST", "/api/library/donate", request, c, 409).Error.Code; got != "not-here" {
+		t.Fatal(got)
+	}
+	x.now.Store(base + 4800) // Next hour, :20, at her desk.
+	if got := x.lib("POST", "/api/library/donate", request, c, 409).Error.Code; got != "not-here" {
+		t.Fatal("refusal replay changed:", got)
+	}
+	request = donateBody(s, "will-of-elias-fenn", "during-hours")
+	donated := x.lib("POST", "/api/library/donate", request, c, 200)
+	x.now.Store(base + 6600) // Back at camp.
+	replay := x.lib("POST", "/api/library/donate", request, c, 200)
+	if donated.Entry == nil || replay.Entry == nil || *donated.Entry != *replay.Entry {
+		t.Fatal("successful donation did not replay after departure")
+	}
+	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {
+		t.Fatal("replay stored another donation")
+	}
+	if shelves := x.lib("GET", "/api/library", nil, c, 200).Shelves; len(shelves) != 1 || shelves[0].PaperID != "will-of-elias-fenn" {
+		t.Fatal("donated paper unavailable without Elara")
 	}
 }
 

@@ -80,6 +80,7 @@ const CLAIM_ERROR: Record<string, string> = {
  */
 import { wildsPaperFor } from './placements.ts'
 import { openDialogue } from '../dialogue.ts'
+import { roadStep } from '../../lib/quests.ts'
 
 export interface WildsDeps {
   world: WorldData
@@ -457,7 +458,7 @@ export class WildsEntities {
     // Found texts ride their personal claim (see ./placements.ts). Connected,
     // the claim's answer names the ones the server granted (already in the
     // adopted state); a take of the client's own guess would be refused.
-    const paperId = this.deps.session.link ? null : wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, this.deps.session.state.quest === 'complete')
+    const paperId = this.deps.session.link ? null : wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, roadStep(this.deps.session.state) === 'complete')
     for (const paper of new Set([...papers, ...(paperId ? [paperId] : [])])) {
       if (!this.deps.session.state.flags.includes(`paper:${paper}`)) grantPaper(this.deps.session, paper)
     }

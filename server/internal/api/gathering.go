@@ -96,6 +96,9 @@ func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
 // gather checks stored Wilds decor or home land before charging wear and caps.
 // Curated scenery retains its area rules.
 func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+	if strings.HasPrefix(s.State.Area, "in:") {
+		return fail(409, "cannot-gather-here")
+	}
 	if req.Tool == "" {
 		return fail(400, "invalid-tool")
 	}

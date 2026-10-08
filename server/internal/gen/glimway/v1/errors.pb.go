@@ -234,6 +234,9 @@ const (
 	ErrorCode_ERROR_CODE_ECHO_NOT_HERE             ErrorCode = 205
 	ErrorCode_ERROR_CODE_NOT_IMPLEMENTED           ErrorCode = 206
 	ErrorCode_ERROR_CODE_REPORT_REQUIRED           ErrorCode = 207
+	ErrorCode_ERROR_CODE_NOT_YET                   ErrorCode = 208
+	ErrorCode_ERROR_CODE_NOT_HERE                  ErrorCode = 209
+	ErrorCode_ERROR_CODE_NEEDS_HABITICA            ErrorCode = 210
 )
 
 // Enum value maps for ErrorCode.
@@ -447,6 +450,9 @@ var (
 		205: "ERROR_CODE_ECHO_NOT_HERE",
 		206: "ERROR_CODE_NOT_IMPLEMENTED",
 		207: "ERROR_CODE_REPORT_REQUIRED",
+		208: "ERROR_CODE_NOT_YET",
+		209: "ERROR_CODE_NOT_HERE",
+		210: "ERROR_CODE_NEEDS_HABITICA",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -657,6 +663,9 @@ var (
 		"ERROR_CODE_ECHO_NOT_HERE":             205,
 		"ERROR_CODE_NOT_IMPLEMENTED":           206,
 		"ERROR_CODE_REPORT_REQUIRED":           207,
+		"ERROR_CODE_NOT_YET":                   208,
+		"ERROR_CODE_NOT_HERE":                  209,
+		"ERROR_CODE_NEEDS_HABITICA":            210,
 	}
 )
 
@@ -692,7 +701,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xe93\n" +
+	"glimway.v1*\xbc4\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -902,7 +911,10 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x18ERROR_CODE_PAPER_NOT_DUE\x10\xcc\x01\x12\x1d\n" +
 	"\x18ERROR_CODE_ECHO_NOT_HERE\x10\xcd\x01\x12\x1f\n" +
 	"\x1aERROR_CODE_NOT_IMPLEMENTED\x10\xce\x01\x12\x1f\n" +
-	"\x1aERROR_CODE_REPORT_REQUIRED\x10\xcf\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x1aERROR_CODE_REPORT_REQUIRED\x10\xcf\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NOT_YET\x10\xd0\x01\x12\x18\n" +
+	"\x13ERROR_CODE_NOT_HERE\x10\xd1\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_NEEDS_HABITICA\x10\xd2\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

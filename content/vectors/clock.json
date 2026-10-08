@@ -33978,5 +33978,1803 @@
         "wickDays": 14
       }
     }
+  ],
+  "cycles": [
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen",
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 90,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen",
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 90.001,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2309.999,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2310,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen",
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2399.5,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 0,
+        "until": 2400
+      },
+      "near": [
+        "kitchen",
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2400,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "square",
+        "since": 2400,
+        "until": 3600
+      },
+      "near": [
+        "square",
+        "kitchen"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2490,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "square",
+        "since": 2400,
+        "until": 3600
+      },
+      "near": [
+        "square",
+        "kitchen"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2490.001,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "square",
+        "since": 2400,
+        "until": 3600
+      },
+      "near": [
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 3600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "kitchen",
+        "since": 3600,
+        "until": 6000
+      },
+      "near": [
+        "kitchen",
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": -1,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "square",
+        "since": -1200,
+        "until": 0
+      },
+      "near": [
+        "square",
+        "kitchen"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "door",
+        "since": -300,
+        "until": 1200
+      },
+      "near": [
+        "door"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 1110,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "door",
+        "since": -300,
+        "until": 1200
+      },
+      "near": [
+        "door",
+        "stones"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 1200,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "stones",
+        "since": 1200,
+        "until": 2700
+      },
+      "near": [
+        "stones",
+        "door"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 2610,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "stones",
+        "since": 1200,
+        "until": 2700
+      },
+      "near": [
+        "stones",
+        "loft"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 2700,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "loft",
+        "since": 2700,
+        "until": 3300
+      },
+      "near": [
+        "loft",
+        "stones"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 3300,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "door",
+        "since": 3300,
+        "until": 4800
+      },
+      "near": [
+        "door",
+        "loft"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": 3600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "door",
+        "since": 3300,
+        "until": 4800
+      },
+      "near": [
+        "door"
+      ]
+    },
+    {
+      "resident": {
+        "id": "finn",
+        "offsetMinutes": 20,
+        "home": "in:village:mill",
+        "spots": {
+          "stones": {
+            "area": "in:village:mill",
+            "tx": 8,
+            "ty": 4
+          },
+          "loft": {
+            "area": "in:village:mill:2",
+            "tx": 7,
+            "ty": 5
+          },
+          "door": {
+            "area": "village",
+            "tx": 30,
+            "ty": 23
+          }
+        },
+        "cycle": [
+          {
+            "spot": "stones",
+            "minutes": 25
+          },
+          {
+            "spot": "loft",
+            "minutes": 10
+          },
+          {
+            "spot": "door",
+            "minutes": 25
+          }
+        ]
+      },
+      "now": -2400,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "stones",
+        "since": -2400,
+        "until": -900
+      },
+      "near": [
+        "stones",
+        "door"
+      ]
+    },
+    {
+      "resident": {
+        "id": "ada",
+        "spots": {
+          "window": {
+            "area": "village",
+            "tx": 35,
+            "ty": 8
+          }
+        },
+        "cycle": [
+          {
+            "spot": "window",
+            "minutes": 60
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "window",
+        "since": 0,
+        "until": 3600
+      },
+      "near": [
+        "window"
+      ]
+    },
+    {
+      "resident": {
+        "id": "ada",
+        "spots": {
+          "window": {
+            "area": "village",
+            "tx": 35,
+            "ty": 8
+          }
+        },
+        "cycle": [
+          {
+            "spot": "window",
+            "minutes": 60
+          }
+        ]
+      },
+      "now": 3599,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "window",
+        "since": 0,
+        "until": 3600
+      },
+      "near": [
+        "window"
+      ]
+    },
+    {
+      "resident": {
+        "id": "ada",
+        "spots": {
+          "window": {
+            "area": "village",
+            "tx": 35,
+            "ty": 8
+          }
+        },
+        "cycle": [
+          {
+            "spot": "window",
+            "minutes": 60
+          }
+        ]
+      },
+      "now": -0.25,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "window",
+        "since": -3600,
+        "until": 0
+      },
+      "near": [
+        "window"
+      ]
+    },
+    {
+      "resident": {
+        "id": "wrap",
+        "offsetMinutes": 55,
+        "spots": {
+          "a": {
+            "area": "village",
+            "tx": 1,
+            "ty": 1
+          },
+          "b": {
+            "area": "village",
+            "tx": 2,
+            "ty": 2
+          }
+        },
+        "cycle": [
+          {
+            "spot": "a",
+            "minutes": 10
+          },
+          {
+            "spot": "b",
+            "minutes": 50
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "a",
+        "since": -300,
+        "until": 300
+      },
+      "near": [
+        "a"
+      ]
+    },
+    {
+      "resident": {
+        "id": "wrap",
+        "offsetMinutes": 55,
+        "spots": {
+          "a": {
+            "area": "village",
+            "tx": 1,
+            "ty": 1
+          },
+          "b": {
+            "area": "village",
+            "tx": 2,
+            "ty": 2
+          }
+        },
+        "cycle": [
+          {
+            "spot": "a",
+            "minutes": 10
+          },
+          {
+            "spot": "b",
+            "minutes": 50
+          }
+        ]
+      },
+      "now": 300,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "b",
+        "since": 300,
+        "until": 3300
+      },
+      "near": [
+        "b",
+        "a"
+      ]
+    },
+    {
+      "resident": {
+        "id": "wrap",
+        "offsetMinutes": 55,
+        "spots": {
+          "a": {
+            "area": "village",
+            "tx": 1,
+            "ty": 1
+          },
+          "b": {
+            "area": "village",
+            "tx": 2,
+            "ty": 2
+          }
+        },
+        "cycle": [
+          {
+            "spot": "a",
+            "minutes": 10
+          },
+          {
+            "spot": "b",
+            "minutes": 50
+          }
+        ]
+      },
+      "now": 3300,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "a",
+        "since": 3300,
+        "until": 3900
+      },
+      "near": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "resident": {
+        "id": "hazel",
+        "offsetMinutes": 0,
+        "home": "in:village:bakery",
+        "spots": {
+          "kitchen": {
+            "area": "in:village:bakery",
+            "tx": 4,
+            "ty": 6
+          },
+          "square": {
+            "area": "village",
+            "tx": 12,
+            "ty": 15
+          }
+        },
+        "cycle": [
+          {
+            "spot": "kitchen",
+            "minutes": 40
+          },
+          {
+            "spot": "square",
+            "minutes": 20
+          }
+        ]
+      },
+      "now": 2400,
+      "graceSeconds": 0,
+      "expected": {
+        "spot": "square",
+        "since": 2400,
+        "until": 3600
+      },
+      "near": [
+        "square"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": -1,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 0,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 509.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 510,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 599.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": -1200,
+        "until": 600
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 690,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 690.25,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 1200,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2309.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2310,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2399.75,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 600,
+        "until": 2400
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2400,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2490,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 2490.25,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 3600,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 4110,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "camp",
+        "since": 2400,
+        "until": 4200
+      },
+      "near": [
+        "camp",
+        "desk"
+      ]
+    },
+    {
+      "resident": {
+        "id": "elara",
+        "offsetMinutes": 10,
+        "home": "in:village:library",
+        "spots": {
+          "desk": {
+            "area": "in:village:library",
+            "tx": 9,
+            "ty": 4,
+            "seated": true
+          },
+          "camp": {
+            "area": "commons",
+            "tx": 26,
+            "ty": 5
+          }
+        },
+        "cycle": [
+          {
+            "spot": "desk",
+            "minutes": 30
+          },
+          {
+            "spot": "camp",
+            "minutes": 30
+          }
+        ]
+      },
+      "now": 4200,
+      "graceSeconds": 90,
+      "expected": {
+        "spot": "desk",
+        "since": 4200,
+        "until": 6000
+      },
+      "near": [
+        "desk",
+        "camp"
+      ]
+    }
   ]
 }

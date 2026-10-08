@@ -17,7 +17,7 @@ import (
 
 func TestContractGate(t *testing.T) {
 	x := newRig(t)
-	for _, header := range []string{"", "2", "4", "03", "+3", "3.0", " 3", "bad"} {
+	for _, header := range []string{"", "3", "5", "04", "+4", "4.0", " 4", "bad"} {
 		for _, route := range []struct{ method, path string }{{"GET", "/api/state"}, {"POST", "/api/session"}, {"POST", "/api/story/mark"}} {
 			r := httptest.NewRequest(route.method, route.path, strings.NewReader(`{"userId":"alice","token":"test"}`))
 			r.Header.Set("X-Glimway-Contract", header)
@@ -38,7 +38,7 @@ func TestContractGate(t *testing.T) {
 			t.Fatal("public route gated", path)
 		}
 	}
-	if content.ContractNumber != 3 {
+	if content.ContractNumber != 4 {
 		t.Fatal("unexpected contract number")
 	}
 }

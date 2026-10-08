@@ -86,7 +86,8 @@
     const name = ui.area.name
     const prev = lastPlace
     lastPlace = name
-    if (prev === null || prev === name) return
+    // The first place after a load (before it, the name is empty) is arriving, not coming from anywhere.
+    if (!prev || prev === name) return
     // A first visit has its storybook card; the chip is for coming back.
     const carded = ui.banners.some((b) => b.kind === 'area')
     if (fromTimer !== null) window.clearTimeout(fromTimer)
@@ -187,6 +188,18 @@
         </span>
       {/if}
     </button>
+  {:else if ui.goalLine.quest}
+    {@const q = ui.goalLine.quest}
+    <!-- A pinned quest leads: its next step, with a pin; tap for the Quests page. -->
+    <button type="button" class="objective pinned" onclick={onJournal} title={`${q.title}: ${q.objective}`} aria-label={`Pinned quest, ${q.title}: ${q.objective}${needleWords ? ` (${needleWords})` : ''}`} data-testid="goal-pinned-quest">
+      <span class="goal-icon pin"><Icon name="pin" size={14} /></span>
+      <span class="goal-text">{q.step}</span>
+      {#if ui.goalDir.angle !== null}
+        <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
+          <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
+        </span>
+      {/if}
+    </button>
   {:else}
   <!-- The goal in a few words, and a needle toward it; open, the whole objective. -->
   <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title={ui.quest.objective} aria-label={`Current goal: ${ui.quest.objective}${needleWords ? ` (${needleWords})` : ''}`}>
@@ -238,7 +251,8 @@
 
 {#snippet buttons()}
   <nav class="buttons" aria-label="Menus">
-    <button type="button" class="hb" onclick={onJournal} aria-label={papers.unread.length ? `Journal (J), ${papers.unread.length} new paper${papers.unread.length === 1 ? '' : 's'}` : 'Journal (J)'} title="Journal">
+    <!-- The next step is in the journal (the opening's note): the book glows like the edge glint. -->
+    <button type="button" class="hb" class:glow={ui.goalLine.journal} data-testid="journal-button" onclick={onJournal} aria-label={papers.unread.length ? `Journal (J), ${papers.unread.length} new paper${papers.unread.length === 1 ? '' : 's'}` : 'Journal (J)'} title="Journal">
       <Icon name="book" size={20} />
       {#if papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span>{/if}
       {#if !touch}<span class="kbd">J</span>{/if}
@@ -752,6 +766,21 @@
     place-items: center;
     border-width: 3px;
     border-radius: 12px;
+  }
+  .hb.glow {
+    border-color: var(--gold-deep);
+    box-shadow: 0 0 0 3px var(--gold-glow), 0 0 14px rgba(255, 210, 74, 0.85);
+    animation: book-glow 1.6s ease-in-out infinite;
+  }
+  @keyframes book-glow {
+    50% {
+      box-shadow: 0 0 0 3px var(--gold-glow), 0 0 4px rgba(255, 210, 74, 0.4);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hb.glow {
+      animation: none;
+    }
   }
   .newdot {
     position: absolute;

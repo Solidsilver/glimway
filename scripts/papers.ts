@@ -12,7 +12,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { designedRule } from '../src/content/papers.ts';
+import { designedRule, designedSection } from '../src/content/papers.ts';
 
 export interface PaperMeta {
   label: string;
@@ -160,7 +160,8 @@ export function generate(): string {
 
 /**
  * The shared catalog the Go server embeds (content/papers.json): every
- * paper's id, collection and where it is found (source kind). Generated
+ * paper's id, collection, where it is found (source kind) and its library
+ * section (the shelves' signs). Generated
  * from the same design layer the client plays with, so the server's
  * "known paper" and "starting shelf" checks can never drift from it.
  */
@@ -168,6 +169,7 @@ export interface PaperCatalogRow {
   id: string;
   collection: string;
   source: string;
+  section: string;
   rule: ReturnType<typeof designedRule>;
 }
 
@@ -183,7 +185,7 @@ export function paperCatalog(): PaperCatalogRow[] {
   return buildRecords(readme, files).map((r) => {
     const source = designedRule(r.id);
     if (!source) throw new Error(`[papers] no find source for ${r.id} in src/content/papers.ts`);
-    return { id: r.id, collection: r.collection, source: source.kind, rule: source };
+    return { id: r.id, collection: r.collection, source: source.kind, section: designedSection(r.id)!, rule: source };
   });
 }
 

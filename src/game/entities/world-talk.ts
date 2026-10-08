@@ -14,7 +14,7 @@ import { tileBottom, tileMid } from '../../lib/tile'
 import type { EmberSpotId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
-import { isResident, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
+import { isResident, keeperTalk, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
 import { shortTalk } from '../../content/talk'
 import { greetingFor, heardDay, heardStory, markDay, markStory } from '../heard'
 import { meetResident, residentContext } from '../residents'
@@ -24,6 +24,10 @@ import type { Village } from '../village'
 import { HEIRLOOM_GUEST_LINES, NORTH_BRIDGE_DONE, countAdaOilGifts } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
 import { openDialogue } from '../dialogue'
+import { afterTheirTalk, questMarker, questTalk, rumourChoice, takesTheTalk } from '../../content/quests/index.ts'
+import { questContext } from '../guide-pin'
+import { placeArea } from '../../lib/api/predict'
+import { LIBRARY } from '../room-spots'
 import type { Interactable, Interactables, MarkerKind } from './interactables'
 import type { PaperPickups } from './papers'
 
@@ -109,6 +113,8 @@ export class WorldTalk {
     const { session } = this.deps
     const flags = session.state.flags
     const adaSpade = id === 'ada' && Boolean(session.link) && countAdaOilGifts(flags) >= 3 && !flags.includes('heirloom:ada-garden-spade') && !itemsFor(session).isGrantInFlight('ada-garden-spade')
+    // A quest step that talking takes (once you've been introduced).
+    if (!residentTalk(id, residentContext(session)).first && questMarker(id, questContext(session))) return 'quest'
     return residentHasNews(session, id) || handoverFor(id, session.questStage, flags) || adaSpade ? 'talk' : null
   }
 
@@ -119,10 +125,10 @@ export class WorldTalk {
     const flags = session.state.flags
     const orrinPick = id === 'orrin' && Boolean(session.link) && this.deps.village.hasWorldFlag('project:north-bridge:complete') && !flags.includes('heirloom:orrins-mason-pick') && !itemsFor(session).isGrantInFlight('orrins-mason-pick')
     try {
-      const d = dialogueFor(id, stage)
-      if (d.event) return 'quest'
+      const d = dialogueFor(id, session.quests)
+      if (d.event || questMarker(id, questContext(session))) return 'quest'
       if (orrinPick) return 'talk'
-      if (id in NPC_NAMES && !heardStory(flags, id, stage)) return 'talk'
+      if (id in NPC_NAMES && !heardStory(flags, id, d.key ?? stage)) return 'talk'
       if (id in NPC_NAMES && handoverFor(id, stage, flags)) return 'talk'
     } catch {
       return null
@@ -149,11 +155,17 @@ export class WorldTalk {
     const { session, papers } = this.deps
     let payload: Dialogue
     try {
-      if (isResident(id)) {
+      const quest = questContext(session)
+      const talk = isResident(id) ? residentTalk(id, residentContext(session)) : null
+      // A quest step that talking to them takes (a resident once you've been introduced):
+      // the whole talk only when it takes it (indoors.md 5.9), else after their own lines.
+      const step = talk?.first ? null : questTalk(id, quest)
+      const takes = !!step && takesTheTalk(step, quest)
+      if (talk && step && takes) payload = step
+      else if (talk && isResident(id)) {
         // Residents talk around the quest: their words come from the save,
         // the calendar, the world's projects and your plot. Heard before:
         // a greeting, anything new about the day, and "Hear it again".
-        const talk = residentTalk(id, residentContext(session))
         payload = talk.dialogue
         const flags = session.state.flags
         if (!talk.first && heardStory(flags, id, talk.story.key)) {
@@ -166,12 +178,19 @@ export class WorldTalk {
           meetResident(session, id)
           bus.emit(EV.toast, { text: `${residentFullName(id)}: noted in your journal.`, icon: 'book', kind: 'gain', gain: { to: 'journal', label: residentFullName(id) } })
         }
+        // "Heard anything?": an open quest you haven't pinned, in their voice.
+        const rumour = talk.first ? null : rumourChoice(id, quest)
+        if (rumour) payload = { ...payload, choices: [rumour, ...(payload.choices ?? [])] }
+        // Elara keeping the library: the shelves, and donating through her (indoors.md 3.3).
+        if (id === 'elara' && placeArea(session.state) === LIBRARY) payload = keeperTalk(payload, talk.first)
+        // Another quest's start or reminder: after they've said their piece.
+        if (step && !takes) payload = afterTheirTalk(payload, step)
       } else payload = isEmberSpot(id)
         ? emberDialogue(id, session.state, {
           connected: session.vitalsSource === 'imported',
           remote: session.link ? (session.link.online ? 'online' : 'offline') : null
         })
-        : this.storyTalk(id, dialogueFor(id, session.questStage))
+        : this.storyOrQuestTalk(id)
     } catch (err) {
       console.warn('[glimway] no dialogue available for', id, err)
       return
@@ -268,6 +287,22 @@ export class WorldTalk {
   }
 
   /**
+   * Mara, Pip, Orrin: the story's rule, with a quest's talk by the rule of
+   * who speaks first (indoors.md 5.9). A step that takes the talk (the
+   * opening's, or one you're mid-way through here) is the talk; any other
+   * follows their lines. A story line that moves the road on goes alone:
+   * the other quest waits for the next talk.
+   */
+  private storyOrQuestTalk(id: string): Dialogue {
+    const { session } = this.deps
+    const ctx = questContext(session)
+    const d = dialogueFor(id, session.quests)
+    const step = questTalk(id, ctx)
+    if (!step || d.event) return this.storyTalk(id, d)
+    return takesTheTalk(step, ctx) ? step : afterTheirTalk(this.storyTalk(id, d), step)
+  }
+
+  /**
    * Mara, Pip, Orrin (and the stone and the lantern, which don't greet): a
    * stage's lines play in full once; a quest step (an event) always plays
    * in full. After that, a greeting and "Hear it again".
@@ -275,9 +310,9 @@ export class WorldTalk {
   private storyTalk(id: string, d: Dialogue): Dialogue {
     if (!(id in NPC_NAMES) || d.event) return d
     const { session } = this.deps
-    const stage = session.questStage
-    const heard = heardStory(session.state.flags, id, stage)
-    markStory(session, id, stage)
+    const key = d.key ?? session.questStage
+    const heard = heardStory(session.state.flags, id, key)
+    markStory(session, id, key)
     if (!heard) return d
     return { ...d, ...shortTalk({ greeting: greetingFor(id), fresh: [], full: d.lines, choices: d.choices }) }
   }

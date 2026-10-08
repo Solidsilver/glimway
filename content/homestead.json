@@ -164,12 +164,7 @@
   "items": [
     {
       "id": "wooden-stool",
-      "name": "Wooden Stool",
       "category": "furniture",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -180,12 +175,7 @@
     },
     {
       "id": "reading-chair",
-      "name": "Reading Chair",
       "category": "furniture",
-      "footprint": [
-        1,
-        2
-      ],
       "where": [
         "indoor"
       ],
@@ -195,12 +185,7 @@
     },
     {
       "id": "braided-rug",
-      "name": "Braided Rug",
       "category": "decor",
-      "footprint": [
-        2,
-        2
-      ],
       "where": [
         "indoor"
       ],
@@ -210,12 +195,7 @@
     },
     {
       "id": "iron-lantern",
-      "name": "Iron Lantern",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -225,12 +205,7 @@
     },
     {
       "id": "oak-table",
-      "name": "Oak Table",
       "category": "furniture",
-      "footprint": [
-        2,
-        2
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -241,12 +216,7 @@
     },
     {
       "id": "potted-fern",
-      "name": "Potted Fern",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -257,12 +227,7 @@
     },
     {
       "id": "bookshelf",
-      "name": "Short Bookshelf",
       "category": "furniture",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -273,12 +238,7 @@
     },
     {
       "id": "wash-basin",
-      "name": "Wash Basin",
       "category": "utility",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -289,12 +249,7 @@
     },
     {
       "id": "stone-hearth",
-      "name": "Stone Hearth",
       "category": "utility",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -307,12 +262,7 @@
     },
     {
       "id": "carved-bed",
-      "name": "Carved Bed",
       "category": "furniture",
-      "footprint": [
-        2,
-        2
-      ],
       "where": [
         "indoor"
       ],
@@ -325,12 +275,7 @@
     },
     {
       "id": "woven-basket",
-      "name": "Woven Basket",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -343,12 +288,7 @@
     },
     {
       "id": "display-stand",
-      "name": "Display Stand",
       "category": "furniture",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -360,12 +300,7 @@
     },
     {
       "id": "tool-rack",
-      "name": "Tool Rack",
       "category": "decor",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -379,12 +314,7 @@
     },
     {
       "id": "amber-sconce",
-      "name": "Amber Sconce",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -397,12 +327,7 @@
     },
     {
       "id": "lantern-post",
-      "name": "Lantern Post",
       "category": "utility",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "outdoor"
       ],
@@ -416,12 +341,7 @@
     },
     {
       "id": "gate-shelf",
-      "name": "Gate shelf",
       "category": "utility",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "gate"
       ],
@@ -432,12 +352,7 @@
     },
     {
       "id": "writing-desk",
-      "name": "Writing desk",
       "category": "furniture",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -448,12 +363,7 @@
     },
     {
       "id": "keepsake-cabinet",
-      "name": "Keepsake cabinet",
       "category": "furniture",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -464,12 +374,7 @@
     },
     {
       "id": "drying-rack",
-      "name": "Herb drying rack",
       "category": "utility",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -481,12 +386,7 @@
     },
     {
       "id": "apothecary-shelf",
-      "name": "Apothecary shelf",
       "category": "furniture",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -497,12 +397,7 @@
     },
     {
       "id": "woodpile",
-      "name": "Woodpile",
       "category": "utility",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "outdoor"
       ],
@@ -513,12 +408,7 @@
     },
     {
       "id": "raised-bed",
-      "name": "Raised bed",
       "category": "utility",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "outdoor"
       ],
@@ -529,12 +419,7 @@
     },
     {
       "id": "window-lamp",
-      "name": "Window lamp",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -545,12 +430,7 @@
     },
     {
       "id": "naming-frame",
-      "name": "Naming-slip frame",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -561,12 +441,7 @@
     },
     {
       "id": "pencil-map",
-      "name": "Pip's pencil map",
       "category": "decor",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -577,12 +452,7 @@
     },
     {
       "id": "pressed-flowers",
-      "name": "Pressed-flower frame",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -593,12 +463,7 @@
     },
     {
       "id": "candle-hulls",
-      "name": "Candle hulls",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -610,12 +475,7 @@
     },
     {
       "id": "carting-bunting",
-      "name": "Carting bunting",
       "category": "decor",
-      "footprint": [
-        2,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -627,12 +487,7 @@
     },
     {
       "id": "empty-chair",
-      "name": "The Empty Chair",
       "category": "furniture",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor"
       ],
@@ -643,12 +498,7 @@
     },
     {
       "id": "closure-lamp",
-      "name": "Closure Night lamp",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"
@@ -660,12 +510,7 @@
     },
     {
       "id": "door-fox",
-      "name": "Door-fox",
       "category": "decor",
-      "footprint": [
-        1,
-        1
-      ],
       "where": [
         "indoor",
         "outdoor"

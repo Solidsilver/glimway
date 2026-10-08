@@ -11,6 +11,7 @@ import type { LibraryDonateResponse } from '../lib/api/client.ts'
 import { bus, EV } from './events.ts'
 import { sfx } from './sfx.ts'
 import type { Session } from './session.ts'
+import { KEEPER } from '../content/residents.ts'
 
 export interface PaperFoundPayload {
   id: string
@@ -125,6 +126,8 @@ export class Library {
         return { ok: true, entry }
       }
       if (r.code === 'already-shelved') return { ok: false, text: 'Someone in your world shelved that one first.' }
+      // Donating waits for Elara at her desk (docs/design/indoors.md 3.3): her note says where she is.
+      if (r.code === 'not-here') return { ok: false, text: KEEPER.away }
       if (r.code === 'offline' || r.code === 'pending') return { ok: false, text: 'Needs a connection. Your paper is safe — try again when you’re back online.' }
       if (r.code === 'unauthorized') return { ok: false, text: 'You’re signed out of your world. Sign in again to donate.' }
       if (r.code === 'not-held') return { ok: false, text: 'Your world hasn’t seen that find yet. Give it a moment, then try again.' }

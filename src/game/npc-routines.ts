@@ -1,7 +1,8 @@
 /**
  * Residents' small routines (playtest 1, the walking art): a few of them
  * stroll a short loop from their spot, or go and sit on the square's bench
- * for a while, then come back. No Phaser here: src/game/entities/npcs.ts
+ * for a while, then come back; Hazel, in her kitchen, goes between the
+ * worktable and the oven. No Phaser here: src/game/entities/npcs.ts
  * drives a walker per resident each frame, and tests run the same code.
  *
  * Whenever you come near a resident's spot (APPROACH), they head home the
@@ -35,6 +36,11 @@ export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly 
     pip: [wait(5), walk(26, 17), walk(26, 15), walk(28, 15), wait(2), walk(28, 17)],
     // Orrin checks the road a few steps east, and comes back.
     orrin: [wait(12), walk(23, 9), wait(4), walk(21, 9)],
+  },
+  // Indoors, while her hour has her in (src/game/resident-cycle.ts).
+  'in:village:bakery': {
+    // Hazel goes from the dough on the worktable to the oven, and back.
+    hazel: [wait(10), walk(7, 6), walk(7, 3), wait(6), walk(7, 6), walk(4, 6)],
   },
 }
 

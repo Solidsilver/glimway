@@ -253,6 +253,32 @@ async function main(): Promise<void> {
     return { id: f.key, src: cut.src, raw: cut.raw, s: [s[0] - cut.at[0], s[1] - cut.at[1], s[2], s[3]], w: W, h: H, d: [W - d[0] - d[2], d[1], d[2], d[3]], flipX: true, box: true }
   })
 
+  // The 0.4 indoors pass is authored at 64 texels per 16px world tile. Keep
+  // its requested native canvases whole in a separate source-density pack.
+  // A piece is never stretched: props, effects, overlays and icons keep
+  // their painted aspect, scaled to fit inside the destination rectangle the
+  // manifest gives them and standing on its bottom centre (the first pass
+  // gave the whole canvas; round 2b places each piece, e.g. a shelf under
+  // the wall line). Only the tiling pieces (floors, walls) fill their cell,
+  // since they must meet their neighbours.
+  type IndoorsFrame = { key: string; source: string; role?: string; sourceRect: { x: number; y: number; w: number; h: number }; canvasSize: { w: number; h: number }; destinationRect: { x: number; y: number; w: number; h: number } }
+  type IndoorsManifest = { sources: { key: string; file: string }[]; frames: IndoorsFrame[] }
+  const indoors = readJson<IndoorsManifest>('assets/generated/indoors-pass/manifest.json')
+  const indoorsSrc = new Map(indoors.sources.map((s) => [s.key, `assets/generated/indoors-pass/sheets/${s.file}`]))
+  for (const path of indoorsSrc.values()) read(path)
+  const indoorsJobs: Job[] = indoors.frames.map((f) => {
+    const src = indoorsSrc.get(f.source)
+    if (!src) throw new Error(`indoors-pass: ${f.key} has no source sheet ${f.source}`)
+    const { w: sw, h: sh } = f.sourceRect
+    const { w: cw, h: ch } = f.canvasSize
+    const tiling = f.role === 'tile' || f.role === 'wall'
+    const r = f.destinationRect
+    const k = Math.min(r.w / sw, r.h / sh)
+    const [dw, dh] = [Math.max(1, Math.round(sw * k)), Math.max(1, Math.round(sh * k))]
+    const d: Job['d'] = tiling ? [r.x, r.y, r.w, r.h] : [r.x + Math.floor((r.w - dw) / 2), r.y + r.h - dh, dw, dh]
+    return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, sw, sh], w: cw, h: ch, d, box: true }
+  })
+
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
   // ART_DENSITY (64 texels at 4×). A cell delivered at that size is copied
   // texel for texel; larger paintings are box-filtered down.
@@ -590,8 +616,8 @@ async function main(): Promise<void> {
    * WebP: a PNG drawn from them in the page, encoded, and the WebP's decode
    * checked against the texels.
    */
-  const encodeRawWebp = async (name: string, raw: Buffer, size: [number, number]): Promise<string> => {
-    for (let i = 3; i < raw.length; i += 4) if (raw[i] !== 255) throw new Error(`${name}: texels must be opaque`)
+  const encodeRawWebp = async (name: string, raw: Buffer, size: [number, number], allowAlpha = false): Promise<string> => {
+    if (!allowAlpha) for (let i = 3; i < raw.length; i += 4) if (raw[i] !== 255) throw new Error(`${name}: texels must be opaque`)
     const url = await page.evaluate(
       ({ b64, w, h }) => {
         const bin = atob(b64)
@@ -625,6 +651,25 @@ async function main(): Promise<void> {
   const runtimeImage = await bakeDenseWebp('runtime', runtimeJobs, rPack.at, rPack.size)
   const iPack = pack(itemsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const itemsImage = await bakeDenseWebp('items', itemsJobs, iPack.at, iPack.size)
+  const indoorPack = pack(indoorsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  const indoorsBaked = await bake(indoorsJobs, indoorPack.at, indoorPack.size, true)
+  const indoorsRaw = Buffer.from(indoorsBaked.raw!, 'base64')
+  const indoorsPixels: Rgba = { w: indoorPack.size[0], h: indoorPack.size[1], data: new Uint8Array(indoorsRaw) }
+  const extractIndoor = (id: string): Rgba => {
+    const [x, y, w, h] = [...indoorPack.at.get(id)!, indoorsJobs.find((j) => j.id === id)!.w, indoorsJobs.find((j) => j.id === id)!.h]
+    const data = new Uint8Array(w * h * 4)
+    for (let row = 0; row < h; row++) data.set(indoorsPixels.data.subarray(((y + row) * indoorsPixels.w + x) * 4, ((y + row) * indoorsPixels.w + x + w) * 4), row * w * 4)
+    return { w, h, data }
+  }
+  const putIndoor = (id: string, tile: Rgba): void => {
+    const [x, y] = indoorPack.at.get(id)!
+    for (let row = 0; row < tile.h; row++) indoorsPixels.data.set(tile.data.subarray(row * tile.w * 4, (row + 1) * tile.w * 4), ((y + row) * indoorsPixels.w + x) * 4)
+  }
+  for (const family of [['plank-floor-0', 'plank-floor-1', 'plank-floor-2', 'plank-floor-3'], ['flagstone-floor-0', 'flagstone-floor-1', 'flagstone-floor-2', 'flagstone-floor-3']]) {
+    const healed = healFamily(family.map(extractIndoor))
+    family.forEach((id, i) => putIndoor(id, healed[i]))
+  }
+  const indoorsImage = await encodeRawWebp('indoors', Buffer.from(indoorsPixels.data), indoorPack.size, true)
   const bPack = pack(buildingJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const buildingsImage = await bakeDenseWebp('buildings', buildingJobs, bPack.at, bPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
@@ -835,6 +880,7 @@ async function main(): Promise<void> {
     commons: { image: commonsImage, size: cPack.size, density: ART_DENSITY, frames: rects(commonsJobs, cPack.at), blits: rects(blitJobs, cPack.at) },
     runtime: { image: runtimeImage, size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
     items: { image: itemsImage, size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
+    indoors: { image: indoorsImage, size: indoorPack.size, density: 64, frames: rects(indoorsJobs, indoorPack.at) },
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
     people,

@@ -122,9 +122,10 @@ export class Touches {
         )
       }
     }
-    // Exit signs, just inside the map edge so reading them doesn't walk you out.
+    // Exit signs, just inside the map edge so reading them doesn't walk you out
+    // (a room's doorway and stairs have no sign to read).
     for (const e of w.exits) {
-      if (e.label === null) continue
+      if (e.label === null || (e.kind && e.kind !== 'edge')) continue
       const eastWest = e.tw === 1 && e.th > 1
       const x = eastWest ? (e.tx === 0 ? (e.tx + 1) * TILE - 4 : e.tx * TILE + 4) : (e.tx + e.tw / 2) * TILE
       const y = eastWest ? (e.ty + e.th / 2) * TILE : e.ty === 0 ? tileBottom(e.ty) - 4 : e.ty * TILE + 4

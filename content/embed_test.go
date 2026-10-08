@@ -7,8 +7,8 @@ func TestSharedContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e.QuestEmbers["defeat-guardian"] != 2 || e.QuestEmbers["return-village"] != 3 || e.RoadLanterns[0] != "road-1" || e.RoadLanterns[1] != "road-2" || e.RoadLanterns[2] != "road-3" {
-		t.Fatal("invalid quest/lantern content")
+	if e.RoadLanterns[0] != "road-1" || e.RoadLanterns[1] != "road-2" || e.RoadLanterns[2] != "road-3" {
+		t.Fatal("invalid lantern content")
 	}
 	gear, err := LoadGear()
 	if err != nil || len(gear) == 0 {
@@ -22,9 +22,17 @@ func TestSharedContent(t *testing.T) {
 		t.Fatalf("paper catalog: %d rows", len(papers))
 	}
 	start := 0
+	sections := map[string]int{}
 	for _, p := range papers {
 		if p.Source == "library-start" {
 			start++
+		}
+		sections[p.Section]++
+	}
+	// Every shelf sign has papers under it (docs/design/indoors.md 3.3).
+	for _, s := range []string{"stories", "histories", "recipes", "field-notes"} {
+		if sections[s] == 0 {
+			t.Fatalf("library section %s is empty", s)
 		}
 	}
 	if start != 13 {

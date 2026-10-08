@@ -41,7 +41,7 @@ test('the shared catalog the server embeds matches the client papers (run `npm r
   const rows = paperCatalog();
   assert.equal(rows.length, PAPERS.length);
   for (const [i, p] of PAPERS.entries()) {
-    assert.deepEqual(rows[i], { id: p.id, collection: p.collection, source: p.source.kind, rule: designedRule(p.id) });
+    assert.deepEqual(rows[i], { id: p.id, collection: p.collection, source: p.source.kind, section: p.section, rule: designedRule(p.id) });
   }
 });
 

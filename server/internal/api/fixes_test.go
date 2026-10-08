@@ -176,7 +176,7 @@ func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 	x.api = New(x.db, x.api.Habitica, Config{TrustedProxies: []string{"127.0.0.1"}, LoginRate: 2, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
 	attempt := func(remote, xff string) int {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(`{"userId":"alice","token":"secret"}`))
-		r.Header.Set("X-Glimway-Contract", "3")
+		r.Header.Set("X-Glimway-Contract", "4")
 		r.RemoteAddr = remote
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Forwarded-For", xff)

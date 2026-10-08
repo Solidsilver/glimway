@@ -1,0 +1,5248 @@
+{
+  "sources": [
+    {
+      "key": "interior-kit",
+      "file": "sheets/interior-kit.png"
+    },
+    {
+      "key": "interior-detail",
+      "file": "sheets/interior-detail.png"
+    },
+    {
+      "key": "kitchen-furniture",
+      "file": "sheets/kitchen-furniture.png"
+    },
+    {
+      "key": "mill-machinery",
+      "file": "sheets/mill-machinery.png"
+    },
+    {
+      "key": "library-furniture",
+      "file": "sheets/library-furniture.png"
+    },
+    {
+      "key": "exterior-icons",
+      "file": "sheets/exterior-icons.png"
+    },
+    {
+      "key": "mill-hoist-beams",
+      "file": "sheets/mill-hoist-beams.png"
+    },
+    {
+      "key": "kitchen-shelf-detail",
+      "file": "sheets/kitchen-shelf-detail.png"
+    },
+    {
+      "key": "oven-hearth-frames",
+      "file": "sheets/oven-hearth-frames.png"
+    },
+    {
+      "key": "floors-seamless",
+      "file": "sheets/floors-seamless.png"
+    }
+  ],
+  "frames": {
+    "plank-floor-0": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 16,
+        "y": 16,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "plank-floor-1": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 459,
+        "y": 16,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "plank-floor-2": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 902,
+        "y": 16,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "plank-floor-3": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 1345,
+        "y": 16,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "flagstone-floor-0": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 16,
+        "y": 459,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "flagstone-floor-1": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 459,
+        "y": 459,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "flagstone-floor-2": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 902,
+        "y": 459,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "flagstone-floor-3": {
+      "source": "floors-seamless",
+      "frame": {
+        "x": 1345,
+        "y": 459,
+        "w": 426,
+        "h": 426
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "back-wall-0": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 768,
+        "y": 76,
+        "w": 112,
+        "h": 144
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "back-wall-1": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 888,
+        "y": 76,
+        "w": 120,
+        "h": 144
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "back-wall-2": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1016,
+        "y": 76,
+        "w": 132,
+        "h": 144
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "back-wall-window": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1260,
+        "y": 52,
+        "w": 212,
+        "h": 168
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "interior-wall-0": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 24,
+        "y": 336,
+        "w": 60,
+        "h": 140
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "interior-wall-1": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 96,
+        "y": 320,
+        "w": 168,
+        "h": 100
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "interior-wall-2": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 276,
+        "y": 336,
+        "w": 60,
+        "h": 140
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "interior-wall-3": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 88
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 88
+      },
+      "sourceSize": {
+        "w": 44,
+        "h": 88
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "filename": "edge-clean-interior-wall-3"
+    },
+    "interior-wall-4": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 96,
+        "y": 428,
+        "w": 68,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "interior-wall-5": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 192,
+        "y": 428,
+        "w": 68,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "interior-wall-6": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 88
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 88
+      },
+      "sourceSize": {
+        "w": 44,
+        "h": 88
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "filename": "edge-clean-interior-wall-6"
+    },
+    "interior-wall-7": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 40,
+        "y": 408,
+        "w": 88,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "doorway": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 388,
+        "y": 344,
+        "w": 284,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 64
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      }
+    },
+    "stairs-up": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 756,
+        "y": 304,
+        "w": 208,
+        "h": 248
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "stairs-down": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 1092,
+        "y": 336,
+        "w": 268,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "cellar-ladder": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 180
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 180
+      },
+      "sourceSize": {
+        "w": 80,
+        "h": 180
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "filename": "edge-clean-cellar-ladder"
+    },
+    "trapdoor-shut": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 292,
+        "y": 596,
+        "w": 168,
+        "h": 124
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "trapdoor-open": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 484,
+        "y": 548,
+        "w": 160,
+        "h": 172
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "rug-rag": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 688,
+        "y": 592,
+        "w": 212,
+        "h": 124
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 128
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      }
+    },
+    "rug-braided": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 912,
+        "y": 580,
+        "w": 208,
+        "h": 148
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 128
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      }
+    },
+    "counter": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 1168,
+        "y": 576,
+        "w": 348,
+        "h": 124
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 128
+      },
+      "footprint": [
+        3,
+        1
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      }
+    },
+    "room-surround": {
+      "source": "interior-kit",
+      "frame": {
+        "x": 56,
+        "y": 760,
+        "w": 196,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "worktable": {
+      "source": "kitchen-furniture",
+      "frame": {
+        "x": 768,
+        "y": 100,
+        "w": 672,
+        "h": 456
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 128,
+        "y": 128
+      },
+      "footprint": [
+        4,
+        2
+      ],
+      "canvasSize": {
+        "w": 256,
+        "h": 128
+      }
+    },
+    "counting-stool-window": {
+      "source": "kitchen-furniture",
+      "frame": {
+        "x": 96,
+        "y": 576,
+        "w": 416,
+        "h": 456
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "crock-shelves": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1096,
+        "y": 740,
+        "w": 228,
+        "h": 140
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "tallow-pot-steam-0": {
+      "source": "kitchen-shelf-detail",
+      "frame": {
+        "x": 684,
+        "y": 308,
+        "w": 164,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "tallow-pot-steam-1": {
+      "source": "kitchen-shelf-detail",
+      "frame": {
+        "x": 868,
+        "y": 308,
+        "w": 164,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "tallow-pot-steam-2": {
+      "source": "kitchen-shelf-detail",
+      "frame": {
+        "x": 1056,
+        "y": 192,
+        "w": 160,
+        "h": 388
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "sponge-bowl-flat": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1100,
+        "y": 892,
+        "w": 92,
+        "h": 92
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "sponge-bowl-risen": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1208,
+        "y": 892,
+        "w": 96,
+        "h": 92
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "bread-rack": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 1332,
+        "y": 872,
+        "w": 164,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "hearth-fire-0": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 292,
+        "y": 940,
+        "w": 80,
+        "h": 52
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "hearth-fire-1": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 388,
+        "y": 936,
+        "w": 80,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "hearth-fire-2": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 480,
+        "y": 940,
+        "w": 80,
+        "h": 52
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "hearth-fire-3": {
+      "source": "interior-detail",
+      "frame": {
+        "x": 572,
+        "y": 936,
+        "w": 76,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "millstones-0": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 28,
+        "y": 120,
+        "w": 180,
+        "h": 316
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "millstones-1": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 216,
+        "y": 120,
+        "w": 184,
+        "h": 312
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "millstones-2": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 408,
+        "y": 116,
+        "w": 180,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "millstones-3": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 596,
+        "y": 120,
+        "w": 184,
+        "h": 316
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "gear-train-0": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 816,
+        "y": 108,
+        "w": 176,
+        "h": 368
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "gear-train-1": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 992,
+        "y": 108,
+        "w": 176,
+        "h": 368
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "gear-train-2": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 1168,
+        "y": 108,
+        "w": 176,
+        "h": 368
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "gear-train-3": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 1344,
+        "y": 108,
+        "w": 176,
+        "h": 368
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "chute-meal-bin-0": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 56,
+        "y": 580,
+        "w": 212,
+        "h": 344
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "chute-meal-bin-1": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 276,
+        "y": 580,
+        "w": 212,
+        "h": 344
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "chute-meal-bin-2": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 212,
+        "h": 344
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 212,
+        "h": 344
+      },
+      "sourceSize": {
+        "w": 212,
+        "h": 344
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "filename": "edge-clean-chute-meal-bin-2"
+    },
+    "chute-meal-bin-3": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 716,
+        "y": 580,
+        "w": 212,
+        "h": 344
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "flour-sacks-0": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 996,
+        "y": 640,
+        "w": 212,
+        "h": 252
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "flour-sacks-1": {
+      "source": "mill-machinery",
+      "frame": {
+        "x": 1240,
+        "y": 736,
+        "w": 256,
+        "h": 168
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "sack-hoist-seized": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 28,
+        "y": 20,
+        "w": 372,
+        "h": 476
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "sack-hoist-working": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 428,
+        "y": 16,
+        "w": 372,
+        "h": 484
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "sack-hoist-swing-0": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 80,
+        "y": 520,
+        "w": 200,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "sack-hoist-swing-1": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 316,
+        "y": 524,
+        "w": 204,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "sack-hoist-swing-2": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 560,
+        "y": 520,
+        "w": 200,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "loft-roof-beams": {
+      "source": "mill-hoist-beams",
+      "frame": {
+        "x": 864,
+        "y": 260,
+        "w": 1068,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 768,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 768,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 384,
+        "y": 64
+      },
+      "footprint": [
+        12,
+        1
+      ],
+      "canvasSize": {
+        "w": 768,
+        "h": 64
+      }
+    },
+    "library-shelf-0": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 76,
+        "y": 60,
+        "w": 196,
+        "h": 464
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "library-shelf-1": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 316,
+        "y": 60,
+        "w": 196,
+        "h": 464
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "library-shelf-2": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 556,
+        "y": 60,
+        "w": 192,
+        "h": 464
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      }
+    },
+    "reading-table-unlit": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 820,
+        "y": 60,
+        "w": 596,
+        "h": 276
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 160
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 160
+      },
+      "footPoint": {
+        "x": 128,
+        "y": 160
+      },
+      "footprint": [
+        4,
+        2
+      ],
+      "canvasSize": {
+        "w": 256,
+        "h": 160
+      }
+    },
+    "reading-table-lit": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 820,
+        "y": 352,
+        "w": 596,
+        "h": 276
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 160
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 160
+      },
+      "footPoint": {
+        "x": 128,
+        "y": 160
+      },
+      "footprint": [
+        4,
+        2
+      ],
+      "canvasSize": {
+        "w": 256,
+        "h": 160
+      }
+    },
+    "reading-lamp-flame-0": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 1456,
+        "y": 264,
+        "w": 52,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "reading-lamp-flame-1": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 1456,
+        "y": 380,
+        "w": 52,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "reading-lamp-flame-2": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 1456,
+        "y": 496,
+        "w": 52,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "donation-shelf-0": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 72,
+        "y": 660,
+        "w": 232,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "donation-shelf-1": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 352,
+        "y": 660,
+        "w": 232,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "donation-shelf-2": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 636,
+        "y": 660,
+        "w": 236,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "window-seat": {
+      "source": "library-furniture",
+      "frame": {
+        "x": 988,
+        "y": 644,
+        "w": 440,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      }
+    },
+    "chimney-smoke-0": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 48,
+        "y": 52,
+        "w": 116,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "chimney-smoke-1": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 208,
+        "y": 48,
+        "w": 100,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "chimney-smoke-2": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 352,
+        "y": 40,
+        "w": 92,
+        "h": 200
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "chimney-smoke-3": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 504,
+        "y": 60,
+        "w": 84,
+        "h": 180
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "chimney-smoke-4": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 652,
+        "y": 148,
+        "w": 24,
+        "h": 28
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 128
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      }
+    },
+    "chimney-smoke-5": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 40,
+        "h": 44
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 40,
+        "h": 44
+      },
+      "sourceSize": {
+        "w": 40,
+        "h": 44
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "filename": "edge-clean-chimney-smoke-5"
+    },
+    "lit-window-bakery": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 900,
+        "y": 60,
+        "w": 184,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "lit-window-mill": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1120,
+        "y": 60,
+        "w": 172,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "lit-window-library": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1328,
+        "y": 56,
+        "w": 184,
+        "h": 180
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "shelf-icon-road": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 56,
+        "y": 280,
+        "w": 200,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "shelf-icon-village": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 336,
+        "y": 324,
+        "w": 320,
+        "h": 200
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "shelf-icon-craft": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 708,
+        "y": 292,
+        "w": 272,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "pin-unpinned": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1056,
+        "y": 300,
+        "w": 120,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "pin-pinned": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1280,
+        "y": 276,
+        "w": 196,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "gate-waiting": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 84,
+        "y": 532,
+        "w": 156,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "gate-needs-embers": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 400,
+        "y": 620,
+        "w": 184,
+        "h": 132
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "gate-locked": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 668,
+        "y": 540,
+        "w": 248,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "signpost-plumb-missing-east": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1024,
+        "y": 512,
+        "w": 252,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "east-finger-bracken": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 48,
+        "y": 796,
+        "w": 284,
+        "h": 200
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 64
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      }
+    },
+    "east-finger-painted": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 420,
+        "y": 784,
+        "w": 428,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 64
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      }
+    },
+    "keepsake-east-finger": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 912,
+        "y": 836,
+        "w": 248,
+        "h": 116
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "keepsake-tally-token": {
+      "source": "exterior-icons",
+      "frame": {
+        "x": 1256,
+        "y": 792,
+        "w": 200,
+        "h": 196
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "oven-hearth-fire-0": {
+      "source": "oven-hearth-frames",
+      "frame": {
+        "x": 22,
+        "y": 70,
+        "w": 500,
+        "h": 572
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "oven-hearth-fire-1": {
+      "source": "oven-hearth-frames",
+      "frame": {
+        "x": 566,
+        "y": 70,
+        "w": 500,
+        "h": 572
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "oven-hearth-fire-2": {
+      "source": "oven-hearth-frames",
+      "frame": {
+        "x": 1106,
+        "y": 70,
+        "w": 500,
+        "h": 572
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "oven-hearth-fire-3": {
+      "source": "oven-hearth-frames",
+      "frame": {
+        "x": 1650,
+        "y": 70,
+        "w": 500,
+        "h": 572
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    "library-shelf-front-sparse": {
+      "filename": "round2-library-shelf-front-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 232,
+        "h": 398
+      }
+    },
+    "library-shelf-front-half": {
+      "filename": "round2-library-shelf-front-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      }
+    },
+    "library-shelf-front-full": {
+      "filename": "round2-library-shelf-front-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 398
+      }
+    },
+    "library-shelf-tall-left-sparse": {
+      "filename": "round2-library-shelf-tall-left-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 220
+      }
+    },
+    "library-shelf-tall-right-sparse": {
+      "filename": "round2-library-shelf-tall-right-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 219
+      }
+    },
+    "library-shelf-tall-left-half": {
+      "filename": "round2-library-shelf-tall-left-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 101,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-right-half": {
+      "filename": "round2-library-shelf-tall-right-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-left-full": {
+      "filename": "round2-library-shelf-tall-left-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      }
+    },
+    "library-shelf-tall-right-full": {
+      "filename": "round2-library-shelf-tall-right-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      }
+    },
+    "library-shelf-short-left-sparse": {
+      "filename": "round2-library-shelf-short-left-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 183
+      }
+    },
+    "library-shelf-short-right-sparse": {
+      "filename": "round2-library-shelf-short-right-sparse",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 185
+      }
+    },
+    "library-shelf-short-left-half": {
+      "filename": "round2-library-shelf-short-left-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 98,
+        "h": 190
+      }
+    },
+    "library-shelf-short-right-half": {
+      "filename": "round2-library-shelf-short-right-half",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 93,
+        "h": 186
+      }
+    },
+    "library-shelf-short-left-full": {
+      "filename": "round2-library-shelf-short-left-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 104,
+        "h": 221
+      }
+    },
+    "library-shelf-short-right-full": {
+      "filename": "round2-library-shelf-short-right-full",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 103,
+        "h": 221
+      }
+    },
+    "library-reading-nook-front-default": {
+      "filename": "round2-library-reading-nook-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 493,
+        "h": 338
+      }
+    },
+    "library-elara-desk-front-empty": {
+      "filename": "round2-library-elara-desk-front-empty",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 311,
+        "h": 287
+      }
+    },
+    "library-elara-desk-front-seated": {
+      "filename": "round2-library-elara-desk-front-seated",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 302,
+        "h": 351
+      }
+    },
+    "library-section-sign-front-stories": {
+      "filename": "round2-library-section-sign-front-stories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 76
+      }
+    },
+    "library-section-sign-front-histories": {
+      "filename": "round2-library-section-sign-front-histories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 75
+      }
+    },
+    "library-section-sign-front-recipes": {
+      "filename": "round2-library-section-sign-front-recipes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 77
+      }
+    },
+    "library-section-sign-front-field-notes": {
+      "filename": "round2-library-section-sign-front-field-notes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 233,
+        "h": 78
+      }
+    },
+    "rug-woven-front-default": {
+      "filename": "round2-rug-woven-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 391,
+        "h": 164
+      }
+    },
+    "rug-braided-front-default": {
+      "filename": "round2-rug-braided-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 398,
+        "h": 177
+      }
+    },
+    "rug-patchwork-front-default": {
+      "filename": "round2-rug-patchwork-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 517,
+        "h": 176
+      }
+    },
+    "shelf-generic-front-default": {
+      "filename": "round2-shelf-generic-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 212
+      }
+    },
+    "shelf-generic-left-default": {
+      "filename": "round2-shelf-generic-left-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      }
+    },
+    "shelf-generic-right-default": {
+      "filename": "round2-shelf-generic-right-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 109,
+        "h": 201
+      }
+    },
+    "wall-pegs-front-tools": {
+      "filename": "round2-wall-pegs-front-tools",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 260
+      }
+    },
+    "crate-front-default": {
+      "filename": "round2-crate-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 194,
+        "h": 181
+      }
+    },
+    "barrel-front-default": {
+      "filename": "round2-barrel-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 169,
+        "h": 198
+      }
+    },
+    "sack-large-front-upright": {
+      "filename": "round2-sack-large-front-upright",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 201
+      }
+    },
+    "sack-large-front-slumped": {
+      "filename": "round2-sack-large-front-slumped",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 125,
+        "h": 162
+      }
+    },
+    "basket-front-default": {
+      "filename": "round2-basket-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 163,
+        "h": 118
+      }
+    },
+    "plant-leafy-front-default": {
+      "filename": "round2-plant-leafy-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 190
+      }
+    },
+    "plant-flowering-front-default": {
+      "filename": "round2-plant-flowering-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 119,
+        "h": 156
+      }
+    },
+    "lamp-oil-front-default": {
+      "filename": "round2-lamp-oil-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 110,
+        "h": 172
+      }
+    },
+    "candle-holder-front-default": {
+      "filename": "round2-candle-holder-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 137
+      }
+    },
+    "candle-stick-front-default": {
+      "filename": "round2-candle-stick-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 166
+      }
+    },
+    "picture-frame-front-default": {
+      "filename": "round2-picture-frame-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 191,
+        "h": 188
+      }
+    },
+    "calendar-front-default": {
+      "filename": "round2-calendar-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 127,
+        "h": 209
+      }
+    },
+    "curtains-front-default": {
+      "filename": "round2-curtains-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 239,
+        "h": 232
+      }
+    },
+    "side-table-front-default": {
+      "filename": "round2-side-table-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 153,
+        "h": 173
+      }
+    },
+    "chair-front-default": {
+      "filename": "round2-chair-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 194
+      }
+    },
+    "chair-left-default": {
+      "filename": "round2-chair-left-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      }
+    },
+    "chair-right-default": {
+      "filename": "round2-chair-right-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 117,
+        "h": 194
+      }
+    },
+    "stool-front-default": {
+      "filename": "round2-stool-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 126,
+        "h": 140
+      }
+    },
+    "chest-front-default": {
+      "filename": "round2-chest-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 198,
+        "h": 161
+      }
+    },
+    "kitchen-oven-front-fire": {
+      "filename": "round2-kitchen-oven-front-fire",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 772,
+        "h": 604
+      }
+    },
+    "kitchen-worktable-front-default": {
+      "filename": "round2-kitchen-worktable-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 715,
+        "h": 311
+      }
+    },
+    "kitchen-washtub-front-default": {
+      "filename": "round2-kitchen-washtub-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      }
+    },
+    "kitchen-cauldron-front-steaming-0": {
+      "filename": "round2-kitchen-cauldron-front-steaming-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 236
+      }
+    },
+    "kitchen-cauldron-front-steaming-1": {
+      "filename": "round2-kitchen-cauldron-front-steaming-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 159,
+        "h": 237
+      }
+    },
+    "kitchen-cauldron-front-steaming-2": {
+      "filename": "round2-kitchen-cauldron-front-steaming-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 156,
+        "h": 237
+      }
+    },
+    "kitchen-cauldron-front-steaming-3": {
+      "filename": "round2-kitchen-cauldron-front-steaming-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 155,
+        "h": 235
+      }
+    },
+    "kitchen-bread-rack-front-default": {
+      "filename": "round2-kitchen-bread-rack-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 357,
+        "h": 294
+      }
+    },
+    "kitchen-jar-shelf-front-default": {
+      "filename": "round2-kitchen-jar-shelf-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 306
+      }
+    },
+    "kitchen-flour-handprint-wall-default": {
+      "filename": "round2-kitchen-flour-handprint-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 102,
+        "h": 129
+      }
+    },
+    "kitchen-oven-peel-wall-default": {
+      "filename": "round2-kitchen-oven-peel-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 108,
+        "h": 203
+      }
+    },
+    "millstone-hopper-front-turn-0": {
+      "filename": "round2-millstone-hopper-front-turn-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-1": {
+      "filename": "round2-millstone-hopper-front-turn-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 199,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-2": {
+      "filename": "round2-millstone-hopper-front-turn-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "millstone-hopper-front-turn-3": {
+      "filename": "round2-millstone-hopper-front-turn-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 349
+      }
+    },
+    "mill-sifter-front-default": {
+      "filename": "round2-mill-sifter-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 202,
+        "h": 354
+      }
+    },
+    "mill-gear-wheel-left-turn-0": {
+      "filename": "round2-mill-gear-wheel-left-turn-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 152,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-1": {
+      "filename": "round2-mill-gear-wheel-left-turn-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 138,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-2": {
+      "filename": "round2-mill-gear-wheel-left-turn-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 201
+      }
+    },
+    "mill-gear-wheel-left-turn-3": {
+      "filename": "round2-mill-gear-wheel-left-turn-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 134,
+        "h": 201
+      }
+    },
+    "mill-sack-front-upright": {
+      "filename": "round2-mill-sack-front-upright",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 151,
+        "h": 174
+      }
+    },
+    "mill-sack-front-slumped": {
+      "filename": "round2-mill-sack-front-slumped",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 201,
+        "h": 128
+      }
+    },
+    "mill-stairs-diag-default": {
+      "filename": "round2-mill-stairs-diag-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 358,
+        "h": 376
+      }
+    },
+    "loft-stair-opening-front-default": {
+      "filename": "round2-loft-stair-opening-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 453,
+        "h": 238
+      }
+    },
+    "loft-hoist-front-default": {
+      "filename": "round2-loft-hoist-front-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 324
+      }
+    },
+    "mill-tally-board-wall-default": {
+      "filename": "round2-mill-tally-board-wall-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 91,
+        "h": 153
+      }
+    },
+    "mill-gear-wall-small-default": {
+      "filename": "round2-mill-gear-wall-small-default",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
+      },
+      "sourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 111,
+        "h": 339
+      }
+    }
+  },
+  "animations": [
+    {
+      "key": "plank-floor",
+      "frames": [
+        "plank-floor-0",
+        "plank-floor-1",
+        "plank-floor-2",
+        "plank-floor-3"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "flagstone-floor",
+      "frames": [
+        "flagstone-floor-0",
+        "flagstone-floor-1",
+        "flagstone-floor-2",
+        "flagstone-floor-3"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "back-wall",
+      "frames": [
+        "back-wall-0",
+        "back-wall-1",
+        "back-wall-2"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "millstones",
+      "frames": [
+        "millstones-0",
+        "millstones-1",
+        "millstones-2",
+        "millstones-3"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "gear-train",
+      "frames": [
+        "gear-train-0",
+        "gear-train-1",
+        "gear-train-2",
+        "gear-train-3"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "chimney-smoke",
+      "frames": [
+        "chimney-smoke-0",
+        "chimney-smoke-1",
+        "chimney-smoke-2",
+        "chimney-smoke-3",
+        "chimney-smoke-4",
+        "chimney-smoke-5"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "tallow-steam",
+      "frames": [
+        "tallow-pot-steam-0",
+        "tallow-pot-steam-1",
+        "tallow-pot-steam-2"
+      ],
+      "frameRate": 3,
+      "loop": true
+    },
+    {
+      "key": "sponge-rise",
+      "frames": [
+        "sponge-bowl-flat",
+        "sponge-bowl-risen"
+      ],
+      "frameRate": 1,
+      "loop": false
+    },
+    {
+      "key": "library-shelf-fill",
+      "frames": [
+        "library-shelf-0",
+        "library-shelf-1",
+        "library-shelf-2"
+      ],
+      "frameRate": 1,
+      "loop": false
+    },
+    {
+      "key": "reading-lamp-fire",
+      "frames": [
+        "reading-lamp-flame-0",
+        "reading-lamp-flame-1",
+        "reading-lamp-flame-2"
+      ],
+      "frameRate": 6,
+      "loop": true
+    },
+    {
+      "key": "donation-shelf-fill",
+      "frames": [
+        "donation-shelf-0",
+        "donation-shelf-1",
+        "donation-shelf-2"
+      ],
+      "frameRate": 1,
+      "loop": false
+    },
+    {
+      "key": "sack-hoist",
+      "frames": [
+        "sack-hoist-swing-0",
+        "sack-hoist-swing-1",
+        "sack-hoist-swing-2"
+      ],
+      "frameRate": 4,
+      "loop": true
+    },
+    {
+      "key": "oven-hearth-fire",
+      "frames": [
+        "oven-hearth-fire-0",
+        "oven-hearth-fire-1",
+        "oven-hearth-fire-2",
+        "oven-hearth-fire-3"
+      ],
+      "frameRate": 4,
+      "loop": true
+    }
+  ]
+}

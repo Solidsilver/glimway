@@ -94,6 +94,13 @@ export function landEntry(): { tx: number; ty: number } {
   return { tx: L.gate.x, ty: L.height - 2 }
 }
 
+/** The cottage door on any gate's land (left of its two tiles), and the doorstep you come out onto. */
+export function landDoor(): { door: { tx: number; ty: number }; doorstep: { tx: number; ty: number } } {
+  const s = HOMESTEAD_DATA.land.site
+  const door = { tx: s.x + Math.floor(s.w / 2) - 1, ty: s.y + s.h - 2 }
+  return { door, doorstep: { tx: door.tx, ty: door.ty + 1 } }
+}
+
 const loading = new Map<string, Promise<void>>()
 
 /** Fetch a gate's served land (once per world and gate); the map rebuilds when it lands. */
@@ -247,7 +254,7 @@ export function buildLand(gate: number): LandWorld {
   // walked through: a sapling is its own sprite, a patch the woods' own.
   for (const p of plants) scenery.push(plantScenery(p, atlas))
   const area = homeArea(gate)
-  const door = { tx: s.x + Math.floor(s.w / 2) - 1, ty: s.y + s.h - 2 }
+  const { door, doorstep } = landDoor()
   return {
     areaId: area,
     width: W,
@@ -279,7 +286,7 @@ export function buildLand(gate: number): LandWorld {
     served: known !== null,
     site: { ...s },
     door,
-    doorstep: { tx: door.tx, ty: door.ty + 1 },
+    doorstep,
     // The old 16×12 plot's art sat with the site at (4, 0): keep that framing.
     origin: { x: (s.x - 4) * TILE, y: s.y * TILE },
     mailbox: { tx: L.gate.x + L.gate.w, ty: s.y + s.h },

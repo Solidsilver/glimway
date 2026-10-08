@@ -3,10 +3,10 @@
  * "indoor", the decoration grid) under a timber-framed back wall with the
  * hearth set into it, and the door in the near wall.
  *
- * The room is a view, not a save area: while you are inside, the save still
- * says you are on the homestead's land (`home:<gate>`), standing on the
- * doorstep, so a home rest by the hearth is a rest at your own place.
- * Reloading puts you outside your door.
+ * The room is a place (`in:home:<gate>`, docs/design/indoors.md 3.4): you
+ * save inside, visitors appear inside with you, and a home rest by the
+ * hearth is checked against your deed by that area. The way out puts you on
+ * the doorstep of the homestead's land, facing away from the door.
  */
 import { HOMESTEAD_DATA, homeArea } from '../lib/homestead.ts'
 import { TERRAIN, TILE } from '../lib/tile.ts'
@@ -46,7 +46,7 @@ export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): W
     solid.push(s)
   }
   return {
-    areaId: 'cottage',
+    areaId: homeRoomArea(gate),
     width: W,
     height: H,
     widthPx: W * TILE,
@@ -58,7 +58,7 @@ export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): W
     rocks: [],
     npcs: [],
     enemies: [],
-    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: homeArea(gate), entry: { ...doorstep }, label: null }],
+    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: homeArea(gate), entry: { ...doorstep }, label: null, side: 'south', kind: 'door' }],
     props: [],
     scenery: [{ key: 'room-walls', x: 0, y: H * TILE, originX: 0, depth: -5 }],
     discoverySpots: [],
@@ -69,4 +69,15 @@ export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): W
     emberSpots: [],
     spawn: { ...ROOM_ENTRY }
   }
+}
+
+/** The cottage on homestead `gate`: its area id. */
+export function homeRoomArea(gate: number): string {
+  return `in:home:${gate}`
+}
+
+/** The gate of a cottage's area id (null for anything else; gates as src/lib/rooms.ts accepts them). */
+export function parseHomeRoom(area: string): number | null {
+  const m = /^in:home:(0|[1-9]\d{0,3})$/.exec(area)
+  return m ? Number(m[1]) : null
 }

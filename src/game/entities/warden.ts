@@ -120,11 +120,11 @@ export class WardenEncounter {
 
   /**
    * The state the game shows changed. If it says the warden still waits
-   * (its settling step was refused) while it rests settled here, it stands
-   * again on its post.
+   * (its settling was refused: no defeat mark, no step) while it rests
+   * settled here, it stands again on its post.
    */
-  reconcile(quest: QuestStage): void {
-    if (!wardenToRestore(quest, this.restingState, !!this.activeWarden())) return
+  reconcile(quest: QuestStage, defeated: boolean): void {
+    if (!wardenToRestore(quest, this.restingState, !!this.activeWarden(), defeated)) return
     this.clearRestingWarden()
     this.guardianSpawned = false
     this.spawnGuardian(false)
@@ -372,12 +372,12 @@ export class WardenEncounter {
     this.gutterHeart(false)
     this.restingWarden = w.sprite
     this.restingState = 'settled'
-    // The quest event, then the defeated-enemy entry. In this order: each
-    // queues a predicted operation, and a refresh that saw the defeat before
-    // the step would read a settled warden at 'clue-found' as a refused
-    // settling and stand it up again (reconcile).
-    this.deps.session.applyQuestEvent('defeat-guardian')
+    // The defeated-enemy entry, then the quest event. In this order: the
+    // step's trigger is `defeat: stone-warden`, which the world checks
+    // against that mark. Reconcile reads the mark as a settling that held,
+    // so a refresh between the two doesn't stand the warden up again.
     this.deps.session.recordDefeat(w.id)
+    this.deps.session.applyQuestEvent('defeat-guardian')
   }
 
   /** Read-only snapshot for playtests (window.__fsWarden). */
