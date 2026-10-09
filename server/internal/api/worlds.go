@@ -420,6 +420,11 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 // about having left a party ends with the move.
 func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRef, now int64) (bool, int, error) {
 	from := s.WorldID
+	// A world move pulls the line in (design 5.4): an open cast closes and
+	// its fish goes back to the water it was reserved from.
+	if err := closeOpenCasts(ctx, tx, s.AccountID, float64(now), now); err != nil {
+		return false, 0, err
+	}
 	if err := settleHomes(ctx, tx, from, now); err != nil {
 		return false, 0, err
 	}
