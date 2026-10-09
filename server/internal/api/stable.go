@@ -128,7 +128,9 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	var account string
+	var avatar *presenceAvatarMsg
+	err := a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		h, err := stableHome(ctx, tx, s, req.GetHomeId(), now)
 		if err != nil {
 			return nil, err
@@ -173,16 +175,35 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 				return nil, err
 			}
 		}
+		// A mount that is out stands in a bay (3.3): emptying its bay, or
+		// swapping another mount over it, sends it home on the spot — and
+		// the room hears the new avatar, as mount-out does.
+		c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
+		if err != nil {
+			return nil, err
+		}
+		if c.MountOut == "" {
+			if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='',mount_home=NULL WHERE account_id=?", s.AccountID); err != nil {
+				return nil, err
+			}
+		}
 		home, err := myHome(ctx, tx, s.AccountID, now)
 		if err != nil {
 			return nil, err
 		}
+		account = s.AccountID
+		avatar = companionAvatar(c, *p)
 		out := &contract.StallResult{}
 		if home != nil {
 			out.Home = homeViewProto(*home)
 		}
 		return out, nil
+	}, func() {
+		if avatar != nil {
+			a.avatarChanged(account, avatar)
+		}
 	})
+	return err
 }
 
 // mountOut saddles up the mount stalled at `stall` (6.2, POST
@@ -251,7 +272,7 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 	}
 	var account string
 	var avatar *presenceAvatarMsg
-	err := a.keyedOp(w, r, req.Op, nil, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	err := a.keyedOpStay(w, r, req.Op, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -328,7 +349,10 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		for _, v := range placedItems(h) {
-			if v.ID == stable.ID {
+			// Indoor and gate pieces stand on their own grids
+			// (validatePlacement's scene rule): only outdoor ground is the
+			// bay's business.
+			if v.ID == stable.ID || v.Scene == nil || *v.Scene != "outdoor" {
 				continue
 			}
 			if o, ok := placedRect(v); ok && ext.overlaps(o) {

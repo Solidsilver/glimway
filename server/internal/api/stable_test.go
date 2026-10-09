@@ -7,6 +7,8 @@ package api
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/land"
@@ -14,6 +16,39 @@ import (
 	"net/http"
 	"testing"
 )
+
+// stableTestWorld pins the homestead land: the land is seeded from the world
+// id and the gate (land.Seed), so a fixed world id gives the same ground on
+// every run — the stable tests always find their spots and never skip.
+// (Chosen by scanning: gate 0 has a two-bay spot, a dark bay edge and a bay
+// with ground standing on it.)
+const stableTestWorld = "lane-b-stable-01"
+
+// pinWorld: the caller lives in the fixed world before claiming its deed.
+func (x *rig) pinWorld(s *response) {
+	x.t.Helper()
+	if _, err := x.db.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES(?,'lane-b-tests','',?)", stableTestWorld, x.now.Load()); err != nil {
+		x.t.Fatal(err)
+	}
+	if _, err := x.db.DB.Exec("UPDATE players SET world_id=? WHERE account_id=?", stableTestWorld, s.AccountID); err != nil {
+		x.t.Fatal(err)
+	}
+	s.WorldID = stableTestWorld
+}
+
+// storedMountOut is what the account's row says (not what it reads as).
+func storedMountOut(t *testing.T, x *rig, account string) string {
+	t.Helper()
+	var v string
+	err := x.db.DB.QueryRow("SELECT COALESCE(mount_out,'') FROM player_companions WHERE account_id=?", account).Scan(&v)
+	if err == sql.ErrNoRows {
+		return ""
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
 
 // exec runs a test's own SQL (the fixtures do what Silas would).
 func exec(t *testing.T, x *rig, query string, args ...any) {
@@ -46,8 +81,12 @@ func stableSpot(t *testing.T, h homeView, stalls int) (int, int, [][2]int, bool)
 			}
 		}
 		for _, v := range placedItems(h) {
-			if o, ok := placedRect(v); ok && here.overlaps(o) {
-				return false, nil
+			// Only outdoor pieces stand on this ground (3.2's scene rule):
+			// indoor and gate pieces live on their own grids.
+			if v.ID != "" && v.Scene != nil && *v.Scene == "outdoor" {
+				if o, ok := placedRect(v); ok && here.overlaps(o) {
+					return false, nil
+				}
 			}
 		}
 		for _, p := range h.Plants {
@@ -100,8 +139,10 @@ func stableEdge(t *testing.T, h homeView, dark bool) (int, int, [][2]int, [][2]i
 				bad = bad || here.overlaps(r) || ext.overlaps(r)
 			}
 			for _, v := range placedItems(h) {
-				if o, ok := placedRect(v); ok && (here.overlaps(o) || ext.overlaps(o)) {
-					bad = true
+				if v.Scene != nil && *v.Scene == "outdoor" {
+					if o, ok := placedRect(v); ok && (here.overlaps(o) || ext.overlaps(o)) {
+						bad = true
+					}
 				}
 			}
 			for _, p := range h.Plants {
@@ -202,7 +243,7 @@ func stableGround(t *testing.T, x *rig, c *http.Cookie, h homeView, stalls int) 
 			exec(t, x, "DELETE FROM homestead_items WHERE id='test-post'")
 		}
 	}
-	t.Skip("no ground for the stable, even with a post")
+	t.Fatal("no ground for the stable, even with a post")
 	return 0, 0, homeView{}
 }
 
@@ -235,6 +276,7 @@ func atBay(h homeView, x0, y0, stall int) map[string]any {
 func TestStableComesWithStallOneAndOnePerHomestead(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 
 	// It comes with stall 1 (3.1).
@@ -272,6 +314,7 @@ func TestStableComesWithStallOneAndOnePerHomestead(t *testing.T) {
 func TestStableFacesFrontAndGrowsEast(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	x0, y0, h := stableGround(t, x, ac, x.home(ac), 2)
 
@@ -280,6 +323,10 @@ func TestStableFacesFrontAndGrowsEast(t *testing.T) {
 		t.Fatal("the stable never rotates", r.Error.Code)
 	}
 	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": id, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
+
+	// An indoor piece "at" the bay's coordinates stands on its own grid
+	// (validatePlacement's scene rule): it never refuses the growth.
+	exec(t, x, "INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('test-bed','wooden-stool','placed',?,'indoor',?,?,0)", h.ID, x0+4, y0)
 
 	// Build a bay: the footprint grows east and the growth bill is paid.
 	m0 := x.exp("GET", fmt.Sprintf("/api/homestead/gate/%d", h.Gate), nil, ac, 200).Materials
@@ -315,11 +362,12 @@ func TestStableFacesFrontAndGrowsEast(t *testing.T) {
 func TestStableExtendRefusesStandingGround(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	h := x.home(ac)
 	x0, y0, clear, _, ok := stableEdge(t, h, false)
 	if !ok {
-		t.Skip("no ground east of the light refuses a bay")
+		t.Fatal("no ground east of the light refuses a bay")
 	}
 	clearTiles(t, x, h.ID, clear)
 	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": id, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
@@ -331,11 +379,12 @@ func TestStableExtendRefusesStandingGround(t *testing.T) {
 func TestStableExtendRefusesDarkGround(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	h := x.home(ac)
 	x0, y0, clear, extClear, ok := stableEdge(t, h, true)
 	if !ok {
-		t.Skip("no dark ground east of the light")
+		t.Fatal("no dark ground east of the light")
 	}
 	// The bay's ground is clear but for the light: "Clear and light the
 	// ground east of the stable first."
@@ -349,6 +398,7 @@ func TestStableExtendRefusesDarkGround(t *testing.T) {
 func TestStableExtendRefusesGrowthAndShortage(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	x0, y0, h := stableGround(t, x, ac, x.home(ac), 2)
 	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": id, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
@@ -376,6 +426,7 @@ func TestStallsAreSharedOnAJointDeed(t *testing.T) {
 	bob.Mounts = []string{"Lion-Golden"}
 	x.set(bob)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	bc, b := x.member("bob", a.WorldID)
 	x.share(ac, &a, bc, &b)
@@ -424,6 +475,7 @@ func TestMountOutHomeAndLazyValidity(t *testing.T) {
 	bob := profile("bob", 1, 0, 20)
 	x.set(bob)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	bc, b := x.member("bob", a.WorldID)
 	x.share(ac, &a, bc, &b)
@@ -506,6 +558,7 @@ func TestLeavingTakesTheLeaversStalls(t *testing.T) {
 	bob.Mounts = []string{"Lion-Golden"}
 	x.set(bob)
 	ac, a := x.ready("alice")
+	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
 	bc, b := x.member("bob", a.WorldID)
 	x.share(ac, &a, bc, &b)
@@ -567,6 +620,7 @@ func TestWorldMoveSendsTheMountHome(t *testing.T) {
 	_, c := x.signInAsked("alice", "p1", "")
 	x.expect("POST", "/api/world/choose", map[string]any{"choice": "own"}, c, 200)
 	r := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
+	x.pinWorld(&r)
 	h, x0, y0 := standingStable(x, c, &r, 1)
 	x.companionOp("POST", "/api/stable/stall", body(r, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), c, 200)
 	at := body(r, "up", map[string]any{"homeId": h.ID, "stall": 1})
@@ -581,5 +635,171 @@ func TestWorldMoveSendsTheMountHome(t *testing.T) {
 	}
 	if got := x.companionsInState(c).MountOut; got != "" {
 		t.Fatal("a world move finds the mount home", got)
+	}
+	// And the stored row says so (relocate's own clear), not just the read.
+	if got := storedMountOut(t, x, x.account("alice")); got != "" {
+		t.Fatal("the stored row still says out", got)
+	}
+}
+
+// resultJSON is a keyed answer's result part: a replay answers what it
+// answered then, while the state around it moves on.
+func resultJSON(t *testing.T, raw []byte) string {
+	t.Helper()
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	return string(doc["result"])
+}
+
+// A mount that is out comes home when its bay goes (3.3): emptying the bay
+// clears the row, and stalling the mount again leaves it standing in its
+// bay — nothing is out again without a fresh Saddle up.
+func TestMountOutDoesNotSurviveAnEmptiedBay(t *testing.T) {
+	x := newRig(t)
+	alice := profile("alice", 1, 0, 20)
+	alice.Mounts = []string{"Wolf-Shade"}
+	x.set(alice)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	h, x0, y0 := standingStable(x, ac, &a, 1)
+	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
+	at["where"] = atBay(h, x0, y0, 1)
+	x.companionOp("POST", "/api/stable/out", at, ac, 200)
+	if got := storedMountOut(t, x, x.account("alice")); got != "Wolf-Shade" {
+		t.Fatal("out on the mount", got)
+	}
+	// The bay goes empty: it goes home on the spot.
+	x.companionOp("POST", "/api/stable/stall", body(a, "empty", map[string]any{"homeId": h.ID, "stall": 1, "mount": ""}), ac, 200)
+	if got := storedMountOut(t, x, x.account("alice")); got != "" {
+		t.Fatal("an emptied bay left it out", got)
+	}
+	if c := x.companionsInState(ac); c.MountOut != "" {
+		t.Fatal("it reads home", c)
+	}
+	// Stalled again, it stands in its bay: no resurrection.
+	x.companionOp("POST", "/api/stable/stall", body(a, "again", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	if c := x.companionsInState(ac); c.MountOut != "" {
+		t.Fatal("stalling it again brought it out", c)
+	}
+}
+
+// And a deed left takes the mount out with its owner (3.3): reclaiming the
+// vacant deed and stalling the mount again is not a Saddle up either.
+func TestMountOutDoesNotSurviveTheDeed(t *testing.T) {
+	x := newRig(t)
+	alice := profile("alice", 1, 0, 20)
+	alice.Mounts = []string{"Wolf-Shade"}
+	x.set(alice)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	h, x0, y0 := standingStable(x, ac, &a, 1)
+	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
+	at["where"] = atBay(h, x0, y0, 1)
+	x.companionOp("POST", "/api/stable/out", at, ac, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
+	if got := storedMountOut(t, x, x.account("alice")); got != "" {
+		t.Fatal("the deed left it out", got)
+	}
+	// Back on the deed, the bay is empty (her mounts came with her), and
+	// stalling the mount again leaves it standing there.
+	x.claimGate(ac, &a, 0)
+	x.companionOp("POST", "/api/stable/stall", body(a, "again", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	if c := x.companionsInState(ac); c.MountOut != "" {
+		t.Fatal("stalling it again brought it out", c)
+	}
+}
+
+// A keyed replay of `stable-extend` is the same envelope, one bay, and the
+// bill paid once (opIdem).
+func TestStableExtendReplaysOnce(t *testing.T) {
+	x := newRig(t)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	id := boughtStable(x, ac, &a)
+	x0, y0, h := stableGround(t, x, ac, x.home(ac), 2)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": id, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
+	req := body(a, "bay2", map[string]any{"homeId": h.ID})
+	first := x.rawHTTP("POST", "/api/stable/extend", req, ac)
+	second := x.rawHTTP("POST", "/api/stable/extend", req, ac)
+	if first.Code != 200 || second.Code != 200 {
+		t.Fatal("the extend", first.Code, second.Code)
+	}
+	if first.Body.String() != second.Body.String() {
+		t.Fatal("a replay is not the same envelope")
+	}
+	stalls := 0
+	for _, it := range x.home(ac).Items {
+		if it.ID == id && it.Stalls != nil {
+			stalls = *it.Stalls
+		}
+	}
+	if stalls != 2 {
+		t.Fatal("a replay built another bay", stalls)
+	}
+	for m, n := range content.HomeStallCost(content.HomeRules, 1) {
+		billed := count(t, x.db, "SELECT COALESCE(-sum(delta),0) FROM ledger WHERE account_id=? AND reason='stable-extend' AND currency=?", x.account("alice"), "material:"+m)
+		if billed != int(n) {
+			t.Fatal("the bill was not paid exactly once", m, billed)
+		}
+	}
+}
+
+// A keyed replay of `stall` answers what it answered then, even after the
+// bay moved on — and it moves nothing.
+func TestStallReplayKeepsTheFirstAnswer(t *testing.T) {
+	x := newRig(t)
+	alice := profile("alice", 1, 0, 20)
+	alice.Mounts = []string{"Wolf-Shade"}
+	x.set(alice)
+	bob := profile("bob", 1, 0, 20)
+	bob.Mounts = []string{"Lion-Golden"}
+	x.set(bob)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	id := boughtStable(x, ac, &a)
+	bc, b := x.member("bob", a.WorldID)
+	x.share(ac, &a, bc, &b)
+	x0, y0, h := stableGround(t, x, ac, x.home(ac), 1)
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": id, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
+	exec(t, x, "UPDATE homestead_items SET stalls=2 WHERE id=?", id)
+	h = x.home(ac)
+	req := body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"})
+	first := x.rawHTTP("POST", "/api/stable/stall", req, ac)
+	if first.Code != 200 {
+		t.Fatal("the first answer", first.Code)
+	}
+	// The bay moves on: alice empties it and bob's mount goes in.
+	x.companionOp("POST", "/api/stable/stall", body(a, "empty", map[string]any{"homeId": h.ID, "stall": 1, "mount": ""}), ac, 200)
+	x.companionOp("POST", "/api/stable/stall", body(b, "his", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Lion-Golden"}), bc, 200)
+	// The replayed key answers what it answered then...
+	second := x.rawHTTP("POST", "/api/stable/stall", req, ac)
+	if second.Code != 200 || resultJSON(t, second.Body.Bytes()) != resultJSON(t, first.Body.Bytes()) {
+		t.Fatal("a replay changed its answer")
+	}
+	// ...and changes nothing: bob's mount still stands in the bay.
+	if s := x.home(ac).Stalls; s[0].Mount != "Lion-Golden" {
+		t.Fatal("a replay moved the world", s)
+	}
+}
+
+// An absent `where` on an operation that has one is still an invalid
+// position: only `companions` and `mount-home` stay put (6.2, lane D's
+// keyedOpStay).
+func TestAbsentWhereIsStillInvalid(t *testing.T) {
+	x := newRig(t)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	h, _, _ := standingStable(x, ac, &a, 1)
+	req := map[string]any{"op": map[string]any{"lease": a.Lease, "key": "no-where"}, "homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}
+	if r := x.companionOp("POST", "/api/stable/stall", req, ac, 409); r.Error.Code != "invalid-position" {
+		t.Fatal("a where-less stall was not refused", r.Error.Code)
+	}
+	// And the two stay-put ops run without one.
+	if r := x.companionOp("POST", "/api/stable/home", map[string]any{"op": map[string]any{"lease": a.Lease, "key": "home-no-where"}}, ac, 200); r.Result.Companions.MountOut != "" {
+		t.Fatal("mount-home without a where", r.Result.Companions)
 	}
 }

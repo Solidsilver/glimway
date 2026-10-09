@@ -49,7 +49,7 @@ func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {
 	}
 	var account string
 	var avatar *presenceAvatarMsg
-	err := a.keyedOp(w, r, req.Op, nil, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	err := a.keyedOpStay(w, r, req.Op, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if s.ProfileSource != "habitica" {
 			return nil, fail(409, "needs-habitica")
 		}
