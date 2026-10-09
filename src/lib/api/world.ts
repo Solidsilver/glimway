@@ -5,7 +5,7 @@
  * application views the game reads; the snapshot envelope is parsed by
  * parse.ts as before.
  */
-import { fromJson, type JsonValue } from '@bufbuild/protobuf';
+import { decodeWire } from './wire.ts';
 import { WorldChoiceSchema, WorldViewSchema, WorldMoveResultSchema, WorldLeaveResultSchema, type WorldRef as GeneratedWorldRef, type WorldView as GeneratedWorldView, type WorldMoveResult, type WorldLeaveResult } from '../gen/glimway/v1/world_pb.js';
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
@@ -132,7 +132,7 @@ function decode<T>(read: () => T): T {
 }
 
 export function parseWorld(raw: unknown): WorldView {
-  return decode(() => message(fromJson(WorldViewSchema, raw as JsonValue, { ignoreUnknownFields: true })));
+  return decode(() => message(decodeWire(WorldViewSchema, raw)));
 }
 
 /** POST /api/world/move and POST /api/world/leave (keyed). */
@@ -145,7 +145,7 @@ export function parseWorldChoice(raw: unknown): WorldChoice | null {
   const held = (raw as { worldChoice?: unknown } | null)?.worldChoice;
   if (held == null || typeof held !== 'object') return null;
   return decode(() => {
-    const c = fromJson(WorldChoiceSchema, held as JsonValue, { ignoreUnknownFields: true });
+    const c = decodeWire(WorldChoiceSchema, held);
     if (!c.habiticaId) throw new Error('missing choice');
     const choice: WorldChoice = { habiticaId: c.habiticaId, displayName: c.displayName.slice(0, 128), partyWorld: refOrNull(c.partyWorld), partyCanOpen: c.partyCanOpen, partyAdmitted: c.partyAdmitted };
     return choice;
@@ -163,7 +163,7 @@ export function parseWorldMove(raw: unknown): WorldMoveResponse {
     // The keyed answer carries its result under the Envelope's case name.
     const caseRaw = (raw as Record<string, unknown> | null)?.worldMove;
     if (!caseRaw || typeof caseRaw !== 'object') throw new Error('missing move result');
-    return { ...parseSnapshot(raw), result: moveResult(fromJson(WorldMoveResultSchema, caseRaw as JsonValue, { ignoreUnknownFields: true })) };
+    return { ...parseSnapshot(raw), result: moveResult(decodeWire(WorldMoveResultSchema, caseRaw)) };
   });
 }
 
@@ -172,6 +172,6 @@ export function parseWorldLeave(raw: unknown): WorldMoveResponse {
   return decode(() => {
     const caseRaw = (raw as Record<string, unknown> | null)?.worldLeave;
     if (!caseRaw || typeof caseRaw !== 'object') throw new Error('missing leave result');
-    return { ...parseSnapshot(raw), result: moveResult(fromJson(WorldLeaveResultSchema, caseRaw as JsonValue, { ignoreUnknownFields: true })) };
+    return { ...parseSnapshot(raw), result: moveResult(decodeWire(WorldLeaveResultSchema, caseRaw)) };
   });
 }

@@ -346,7 +346,7 @@ export class Village {
 
   /** Stock or take from the gift shelf. */
   async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<Result<ShelfActionResponse>> {
-    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: req })
+    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: { action: req.op, gate: req.gate, slot: req.slot, ...(req.asset ? { asset: req.asset } : {}) } })
     if (!r.ok) return fail(r.code)
     if (r.res.inventory) {
       this.inventory = r.res.inventory

@@ -1724,6 +1724,177 @@
           "value": "supplies"
         }
       ]
+    },
+    {
+      "name": "mender-bill-absent-with-embers",
+      "valid": true,
+      "rule": "",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-empty-with-embers",
+      "valid": true,
+      "rule": "",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "value": {}
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-absent-without-embers",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-empty-without-embers",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "value": {}
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-populated-without-embers",
+      "valid": true,
+      "rule": "",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "value": {
+            "timber": 2,
+            "wooden-peg": 1
+          }
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-populated-with-embers",
+      "valid": true,
+      "rule": "",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "mender-bill-populated-invalid",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "value": {
+            "gold": 1
+          }
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "value": 1
+        }
+      ]
     }
   ]
 }

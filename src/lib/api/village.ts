@@ -8,7 +8,7 @@
  * home and workshop views) stay in types.ts until the homestead and items
  * lanes land theirs.
  */
-import { fromJson, type JsonValue } from '@bufbuild/protobuf';
+import { decodeWire } from './wire.ts';
 import {
   LibraryDonateResultSchema,
   MailReadResultSchema, MailSendResultSchema, MailActionResultSchema, MailRecallResultSchema, type MailView as GeneratedMailView,
@@ -102,7 +102,7 @@ type LibraryShelfEntry = { paperId: string; donatedBy: string | null; donatedAt:
 /** POST /api/library/donate: the paper just shelved, beside the snapshot. */
 export function parseLibraryDonate(raw: unknown): Snapshot & { result: { entry: LibraryShelfEntry } } {
   return decode(() => {
-    const out = fromJson(LibraryDonateResultSchema, envelopeResult(raw, 'libraryDonate') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(LibraryDonateResultSchema, envelopeResult(raw, 'libraryDonate'));
     if (!out.entry) throw new Error('missing shelf entry');
     // Empty names and dates read as null, as the read's rows always have.
     const entry: LibraryShelfEntry = { paperId: out.entry.paperId, donatedBy: out.entry.donatedBy || null, donatedAt: out.entry.donatedAt || null };
@@ -186,7 +186,7 @@ function mailAnswer(raw: unknown, result: { mailId: string; mail: GeneratedMailV
 
 export function parseMail(raw: unknown): MailResponse {
   return decode(() => {
-    const out = fromJson(MailReadResultSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(MailReadResultSchema, obj(raw));
     return {
       ...parseSnapshot(raw),
       mail: mailList(out.mail),
@@ -198,15 +198,15 @@ export function parseMail(raw: unknown): MailResponse {
 }
 
 export function parseMailSend(raw: unknown): MailActionResponse {
-  return decode(() => mailAnswer(raw, fromJson(MailSendResultSchema, envelopeResult(raw, 'mailSend') as JsonValue, { ignoreUnknownFields: true })));
+  return decode(() => mailAnswer(raw, decodeWire(MailSendResultSchema, envelopeResult(raw, 'mailSend'))));
 }
 
 export function parseMailClaim(raw: unknown): MailActionResponse {
-  return decode(() => mailAnswer(raw, fromJson(MailActionResultSchema, envelopeResult(raw, 'mailClaim') as JsonValue, { ignoreUnknownFields: true })));
+  return decode(() => mailAnswer(raw, decodeWire(MailActionResultSchema, envelopeResult(raw, 'mailClaim'))));
 }
 
 export function parseMailRecall(raw: unknown): MailActionResponse {
-  return decode(() => mailAnswer(raw, fromJson(MailRecallResultSchema, envelopeResult(raw, 'mailRecall') as JsonValue, { ignoreUnknownFields: true })));
+  return decode(() => mailAnswer(raw, decodeWire(MailRecallResultSchema, envelopeResult(raw, 'mailRecall'))));
 }
 
 // ------------------------------------------------------------- storage and crafting
@@ -234,32 +234,32 @@ export type DeskCopyResponse = Snapshot & {
 
 export function parseStorage(raw: unknown): StorageResponse {
   return decode(() => {
-    const v = fromJson(WorkshopViewSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true });
+    const v = decodeWire(WorkshopViewSchema, obj(raw));
     return { ...parseSnapshot(raw), ...workshop(v) };
   });
 }
 
 export function parseStorageMove(raw: unknown): StorageMoveResponse {
-  return decode(() => ({ ...parseSnapshot(raw), result: workshop(fromJson(WorkshopViewSchema, envelopeResult(raw, 'storageMove') as JsonValue, { ignoreUnknownFields: true })) }));
+  return decode(() => ({ ...parseSnapshot(raw), result: workshop(decodeWire(WorkshopViewSchema, envelopeResult(raw, 'storageMove'))) }));
 }
 
 export function parseCraft(raw: unknown): CraftResponse {
   return decode(() => {
-    const out = fromJson(CraftResultSchema, envelopeResult(raw, 'craft') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(CraftResultSchema, envelopeResult(raw, 'craft'));
     return { ...parseSnapshot(raw), result: { ...workshopFields(out), recipeId: out.recipeId, output: asset(out.output), instanceIds: [...out.instanceIds] } };
   });
 }
 
 export function parseHearthCraft(raw: unknown): HearthCraftResponse {
   return decode(() => {
-    const out = fromJson(HearthCraftResultSchema, envelopeResult(raw, 'hearthCraft') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(HearthCraftResultSchema, envelopeResult(raw, 'hearthCraft'));
     return { ...parseSnapshot(raw), result: { ...workshopFields(out), recipeId: out.recipeId, output: asset(out.output) } };
   });
 }
 
 export function parseDeskCopy(raw: unknown): DeskCopyResponse {
   return decode(() => {
-    const out = fromJson(DeskCopyResultSchema, envelopeResult(raw, 'deskCopy') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(DeskCopyResultSchema, envelopeResult(raw, 'deskCopy'));
     return { ...parseSnapshot(raw), result: { ...workshopFields(out), pageId: out.pageId, qty: out.qty } };
   });
 }
@@ -319,7 +319,7 @@ function gateInfo(g: GeneratedGateView): GateInfo {
 
 export function parseCommons(raw: unknown): CommonsResponse {
   return decode(() => {
-    const out = fromJson(CommonsResultSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(CommonsResultSchema, obj(raw));
     return {
       ...parseSnapshot(raw),
       gates: out.gates.map(gateInfo),
@@ -384,12 +384,12 @@ function projectsFields(out: { projects: readonly GeneratedProjectView[]; worldF
 }
 
 export function parseProjects(raw: unknown): ProjectsResponse {
-  return decode(() => ({ ...parseSnapshot(raw), ...projectsFields(fromJson(ProjectsResultSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true })) }));
+  return decode(() => ({ ...parseSnapshot(raw), ...projectsFields(decodeWire(ProjectsResultSchema, obj(raw))) }));
 }
 
 export function parseContribute(raw: unknown): ContributeResponse {
   return decode(() => {
-    const out = fromJson(ContributeResultSchema, envelopeResult(raw, 'contribute') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(ContributeResultSchema, envelopeResult(raw, 'contribute'));
     return { ...parseSnapshot(raw), result: { ...projectsFields(out), projectId: out.projectId, materials: { ...out.materials } } };
   });
 }
@@ -458,12 +458,12 @@ function repairsFields(out: GeneratedRepairsResult): RepairsView {
 }
 
 export function parseRepairs(raw: unknown): RepairsResponse {
-  return decode(() => ({ ...parseSnapshot(raw), ...repairsFields(fromJson(RepairsResultSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true })) }));
+  return decode(() => ({ ...parseSnapshot(raw), ...repairsFields(decodeWire(RepairsResultSchema, obj(raw))) }));
 }
 
 export function parseMend(raw: unknown): MendResponse {
   return decode(() => {
-    const out = fromJson(MendResultSchema, envelopeResult(raw, 'mend') as JsonValue, { ignoreUnknownFields: true });
+    const out = decodeWire(MendResultSchema, envelopeResult(raw, 'mend'));
     if (!out.repairs || !out.items) throw new Error('missing mend view');
     const result: MendResult = { repairs: repairsFields(out.repairs), mended: out.mended, reaction: out.reaction, items: projectItemsView(out.items) };
     if (out.gift) result.gift = { kind: out.gift.kind, id: out.gift.id, qty: out.gift.qty };

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -128,12 +129,37 @@ func refuseField(path string, v any, fd protoreflect.FieldDescriptor) error {
 	}
 }
 
+// numericKind: the scalar kinds ProtoJSON reads from numbers — and from
+// numeric strings ("3", "Infinity", "NaN"), which the typed decoders never
+// accepted and which admit the non-finite spellings past range rules.
+func numericKind(k protoreflect.Kind) bool {
+	switch k {
+	case protoreflect.Int32Kind, protoreflect.Int64Kind, protoreflect.Uint32Kind, protoreflect.Uint64Kind,
+		protoreflect.Sint32Kind, protoreflect.Sint64Kind, protoreflect.Fixed32Kind, protoreflect.Fixed64Kind,
+		protoreflect.Sfixed32Kind, protoreflect.Sfixed64Kind, protoreflect.FloatKind, protoreflect.DoubleKind:
+		return true
+	}
+	return false
+}
+
 func refuseSingular(path string, v any, fd protoreflect.FieldDescriptor) error {
 	if v == nil {
 		return fmt.Errorf("null content field %s", path)
 	}
 	if fd.Message() != nil {
 		return refuseContent(path, v, fd.Message())
+	}
+	// A numeric scalar is a JSON number, and a finite one: numeric strings
+	// ("3", and the "Infinity"/"-Infinity"/"NaN" spellings ProtoJSON would
+	// take) are refused, as is any number the parse left non-finite. One
+	// rule id for every position — singular, repeated and map values.
+	if numericKind(fd.Kind()) {
+		if s, ok := v.(string); ok {
+			return fmt.Errorf("non-finite number at %s: numeric strings are refused (%q)", path, s)
+		}
+		if f, ok := v.(float64); ok && (math.IsNaN(f) || math.IsInf(f, 0)) {
+			return fmt.Errorf("non-finite number at %s", path)
+		}
 	}
 	return nil
 }

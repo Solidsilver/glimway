@@ -1,12 +1,12 @@
 /**
  * The homestead routes (proto/glimway/v1/homestead.proto): the gate read,
  * the keyed lane mutations, the gate shelf and the woodpile. Responses
- * decode through the generated protobuf-es types (fromJson) and project
+ * decode through the generated protobuf-es types (decodeWire) and project
  * onto the game's shapes: tile pairs stay [x, y] tuples, absent optionals
  * stay null, and ProtoJSON's extra spellings are refused (ApiError
  * `bad-response`), as parse.ts did by hand.
  */
-import { fromJson, type JsonValue } from '@bufbuild/protobuf';
+import { decodeWire } from './wire.ts';
 import {
   HomesteadReadSchema, HomesteadResultSchema, ShelfReadSchema, ShelfResultSchema,
   WoodpileReadSchema, WoodpileResultSchema,
@@ -86,22 +86,6 @@ export type HomeAction =
   | { op: 'joint'; homeId: string; to: string }
   | { op: 'leave' };
 
-export interface HomeActionRequest {
-  op: { lease: string; key: string };
-  where: { area: string; x: number; y: number };
-  itemDef?: string;
-  itemId?: string;
-  scene?: 'indoor' | 'outdoor' | 'gate';
-  x?: number;
-  y?: number;
-  rotation?: number;
-  tier?: number;
-  name?: string;
-  gate?: number;
-  to?: string;
-  homeId?: string;
-}
-
 export interface HomeActionResponse extends Snapshot {
   result: { home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' };
 }
@@ -130,16 +114,6 @@ export interface ShelfView {
 
 export interface ShelfResponse extends Snapshot {
   shelf: ShelfView;
-}
-
-export interface ShelfRequest {
-  op: { lease: string; key: string };
-  where: { area: string; x: number; y: number };
-  /** The shelf's own action (it was `op` before the operation header took that name). */
-  action: 'stock' | 'take';
-  gate: number;
-  slot: number;
-  asset?: Asset;
 }
 
 export interface ShelfActionResponse extends Snapshot {
@@ -263,7 +237,7 @@ export function projectHome(h: GeneratedHomeView): HomeView {
 export function parseHome(raw: unknown): HomeResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
-    const read = fromJson(HomesteadReadSchema, (o.result !== undefined ? o.result : o) as JsonValue, { ignoreUnknownFields: true }) as HomesteadRead;
+    const read = decodeWire(HomesteadReadSchema, (o.result !== undefined ? o.result : o)) as HomesteadRead;
     return {
       ...parseSnapshot(raw),
       gate: int(read.gate),
@@ -279,7 +253,7 @@ export function parseHomeAction(raw: unknown): HomeActionResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
     if (!o.result || typeof o.result !== 'object') throw new Error('missing result');
-    const r = fromJson(HomesteadResultSchema, (o.result ?? null) as JsonValue, { ignoreUnknownFields: true }) as HomesteadResult;
+    const r = decodeWire(HomesteadResultSchema, (o.result ?? null)) as HomesteadResult;
     const result: HomeActionResponse['result'] = { home: r.home ? projectHome(r.home) : null, materials: countMap(r.materials) };
     if (r.itemId) result.itemId = r.itemId;
     if (r.status === 'joined' || r.status === 'waiting') result.status = r.status;
@@ -313,7 +287,7 @@ function shelfView(v: GeneratedShelfView): ShelfView {
 export function parseShelf(raw: unknown): ShelfResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
-    const read = fromJson(ShelfReadSchema, (o.result !== undefined ? o.result : o) as JsonValue, { ignoreUnknownFields: true }) as ShelfRead;
+    const read = decodeWire(ShelfReadSchema, (o.result !== undefined ? o.result : o)) as ShelfRead;
     if (!read.shelf) throw new Error('missing shelf');
     return { ...parseSnapshot(raw), shelf: shelfView(read.shelf) };
   });
@@ -324,7 +298,7 @@ export function parseShelfAction(raw: unknown): ShelfActionResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
     if (!o.result || typeof o.result !== 'object') throw new Error('missing result');
-    const r = fromJson(ShelfResultSchema, (o.result ?? null) as JsonValue, { ignoreUnknownFields: true }) as ShelfResult;
+    const r = decodeWire(ShelfResultSchema, (o.result ?? null)) as ShelfResult;
     if (!r.shelf) throw new Error('missing shelf');
     return {
       ...parseSnapshot(raw),
@@ -361,7 +335,7 @@ function woodpile(v: GeneratedWoodpileView): WoodpileView {
 export function parseWoodpileRead(raw: unknown): WoodpileResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
-    const read = fromJson(WoodpileReadSchema, (o.result !== undefined ? o.result : o) as JsonValue, { ignoreUnknownFields: true }) as WoodpileRead;
+    const read = decodeWire(WoodpileReadSchema, (o.result !== undefined ? o.result : o)) as WoodpileRead;
     if (!read.woodpile) throw new Error('missing woodpile');
     return { ...parseSnapshot(raw), woodpile: woodpile(read.woodpile) };
   });
@@ -372,7 +346,7 @@ export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
     if (!o.result || typeof o.result !== 'object') throw new Error('missing result');
-    const r = fromJson(WoodpileResultSchema, (o.result ?? null) as JsonValue, { ignoreUnknownFields: true }) as WoodpileResult;
+    const r = decodeWire(WoodpileResultSchema, (o.result ?? null)) as WoodpileResult;
     if (!r.woodpile) throw new Error('missing woodpile');
     return {
       ...parseSnapshot(raw),

@@ -1,99 +1,1322 @@
 {
   "loader": [
-    { "name": "shipped-catalogue", "valid": true, "edits": [] },
-    { "name": "empty", "valid": false, "rule": "repeated.min_items", "edits": [{ "path": ["pieces"], "value": [] }] },
-    { "name": "duplicate-id", "valid": false, "rule": "duplicate id", "edits": [{ "path": ["pieces", 1, "id"], "value": "wooden-stool" }] },
-    { "name": "no-name", "valid": false, "rule": "string.min_len", "edits": [{ "path": ["pieces", 0, "name"], "value": "" }] },
-    { "name": "bad-id", "valid": false, "rule": "string.pattern", "edits": [{ "path": ["pieces", 0, "id"], "value": "Wooden Stool" }] },
-    { "name": "bad-mount", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 0, "mount"], "value": "hover" }] },
-    { "name": "bad-size", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 0, "size"], "value": "huge" }] },
-    { "name": "no-facings", "valid": false, "rule": "map.min_pairs", "edits": [{ "path": ["pieces", 0, "facings"], "value": {} }] },
-    { "name": "unknown-facing", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 0, "facings"], "value": { "threequarter": "" } }] },
-    { "name": "bad-facing-art", "valid": false, "rule": "string.pattern", "edits": [{ "path": ["pieces", 0, "facings"], "value": { "front": "Not An Id" } }] },
-    { "name": "footprint-three", "valid": false, "rule": "repeated.max_items", "edits": [{ "path": ["pieces", 0, "footprint"], "value": [1, 1, 1] }] },
-    { "name": "footprint-too-wide", "valid": false, "rule": "furnishing.footprint", "edits": [{ "path": ["pieces", 0, "footprint"], "value": [13, 1] }] },
-    { "name": "base-outside-footprint", "valid": false, "rule": "furnishing.base_in_footprint", "edits": [{ "path": ["pieces", 0, "base", "w"], "value": 2 }] },
-    { "name": "base-empty", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["pieces", 0, "base", "w"], "value": 0 }] },
-    { "name": "base-negative", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["pieces", 0, "base", "x"], "value": -1 }] },
-    { "name": "bad-layer", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 0, "layer"], "value": "over" }] },
-    { "name": "rug-on-wall", "valid": false, "rule": "furnishing.rug", "edits": [{ "path": ["pieces", 2, "mount"], "value": "wall" }] },
-    { "name": "rug-with-offers", "valid": false, "rule": "furnishing.rug", "edits": [{ "path": ["pieces", 2, "offers"], "value": { "top": 1 } }] },
-    { "name": "offers-empty", "valid": false, "rule": "furnish_offers.slot", "edits": [{ "path": ["pieces", 4, "offers"], "value": {} }] },
-    { "name": "offers-zero-slots", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["pieces", 4, "offers"], "value": { "top": 0 } }] },
-    { "name": "offers-negative-slots", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["pieces", 4, "offers"], "value": { "top": -1 } }] },
-    { "name": "no-tags", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 0, "tags"], "value": null }] },
-    { "name": "bad-tag", "valid": false, "rule": "string.pattern", "edits": [{ "path": ["pieces", 0, "tags"], "value": ["Seat!"] }] },
-    { "name": "duplicate-tag", "valid": false, "rule": "repeated.unique", "edits": [{ "path": ["pieces", 0, "tags"], "value": ["seat", "seat"] }] },
-    { "name": "states-no-default", "valid": false, "rule": "furnishing.states_default", "edits": [{ "path": ["pieces", 5, "states"], "value": { "open": { "frames": ["fern-open"] } } }] },
-    { "name": "states-two-defaults", "valid": false, "rule": "furnishing.states_default", "edits": [{ "path": ["pieces", 5, "states"], "value": { "open": { "frames": ["fern-open"], "default": true }, "shut": { "frames": ["fern-shut"], "default": true } } }] },
-    { "name": "states-empty-frames", "valid": false, "rule": "furnishing.states_default", "edits": [{ "path": ["pieces", 5, "states"], "value": { "open": { "frames": [] } } }] },
-    { "name": "states-bad-name", "valid": false, "rule": "furnishing.states_default", "edits": [{ "path": ["pieces", 5, "states"], "value": { "Open!": { "frames": ["fern-open"] } } }] },
-    { "name": "states-ok", "valid": true, "edits": [{ "path": ["pieces", 5, "states"], "value": { "empty": { "frames": ["fern-empty"], "default": true }, "steaming": { "frames": ["fern-a", "fern-b"], "loop": true } } }] },
-    { "name": "null-mount", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 0, "mount"], "value": null }] },
-    { "name": "null-offers", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 4, "offers"], "value": null }] },
-    { "name": "null-layer", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 0, "layer"], "value": null }] },
-    { "name": "null-states", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 5, "states"], "value": null }] },
-    { "name": "unknown-key", "valid": false, "rule": "unknown key", "edits": [{ "path": ["pieces", 0, "siz"], "value": "small" }] },
-    { "name": "piece-level-loop", "valid": false, "rule": "unknown key", "edits": [{ "path": ["pieces", 0, "loop"], "value": true }] },
-    { "name": "offers-explicit-zero", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["pieces", 4, "offers", "top"], "value": 0 }] },
-    { "name": "offers-partial-zero", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["pieces", 4, "offers"], "value": { "top": 0, "shelves": 3 } }] },
-    { "name": "null-size", "valid": false, "rule": "null content field", "edits": [{ "path": ["pieces", 2, "size"], "value": null }] },
-    { "name": "size-without-rug", "valid": false, "rule": "furnishing.size_or_rug", "edits": [{ "path": ["pieces", 0, "size"], "remove": true }] },
-    { "name": "missing-tags-ok", "valid": true, "edits": [{ "path": ["pieces", 0, "tags"], "remove": true }] },
-    { "name": "states-empty-map-ok", "valid": true, "edits": [{ "path": ["pieces", 5, "states"], "value": {} }] },
-    { "name": "rug-empty-size", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 2, "size"], "value": "" }] },
-    { "name": "empty-layer", "valid": false, "rule": "string.in", "edits": [{ "path": ["pieces", 0, "layer"], "value": "" }] }
+    {
+      "name": "shipped-catalogue",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "empty",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "pieces"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-id",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            1,
+            "id"
+          ],
+          "value": "wooden-stool"
+        }
+      ]
+    },
+    {
+      "name": "no-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "bad-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "id"
+          ],
+          "value": "Wooden Stool"
+        }
+      ]
+    },
+    {
+      "name": "bad-mount",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "mount"
+          ],
+          "value": "hover"
+        }
+      ]
+    },
+    {
+      "name": "bad-size",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "size"
+          ],
+          "value": "huge"
+        }
+      ]
+    },
+    {
+      "name": "no-facings",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "facings"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "unknown-facing",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "facings"
+          ],
+          "value": {
+            "threequarter": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "bad-facing-art",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "facings"
+          ],
+          "value": {
+            "front": "Not An Id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "footprint-three",
+      "valid": false,
+      "rule": "repeated.max_items",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "footprint"
+          ],
+          "value": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "footprint-too-wide",
+      "valid": false,
+      "rule": "furnishing.footprint",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "footprint"
+          ],
+          "value": [
+            13,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "base-outside-footprint",
+      "valid": false,
+      "rule": "furnishing.base_in_footprint",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "base",
+            "w"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "base-empty",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "base",
+            "w"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "base-negative",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "base",
+            "x"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "bad-layer",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "layer"
+          ],
+          "value": "over"
+        }
+      ]
+    },
+    {
+      "name": "rug-on-wall",
+      "valid": false,
+      "rule": "furnishing.rug",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            2,
+            "mount"
+          ],
+          "value": "wall"
+        }
+      ]
+    },
+    {
+      "name": "rug-with-offers",
+      "valid": false,
+      "rule": "furnishing.rug",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            2,
+            "offers"
+          ],
+          "value": {
+            "top": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "offers-empty",
+      "valid": false,
+      "rule": "furnish_offers.slot",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "offers-zero-slots",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers"
+          ],
+          "value": {
+            "top": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "offers-negative-slots",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers"
+          ],
+          "value": {
+            "top": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "no-tags",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "tags"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "bad-tag",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "tags"
+          ],
+          "value": [
+            "Seat!"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-tag",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "tags"
+          ],
+          "value": [
+            "seat",
+            "seat"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "states-no-default",
+      "valid": false,
+      "rule": "furnishing.states_default",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {
+            "open": {
+              "frames": [
+                "fern-open"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "states-two-defaults",
+      "valid": false,
+      "rule": "furnishing.states_default",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {
+            "open": {
+              "frames": [
+                "fern-open"
+              ],
+              "default": true
+            },
+            "shut": {
+              "frames": [
+                "fern-shut"
+              ],
+              "default": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "states-empty-frames",
+      "valid": false,
+      "rule": "furnishing.states_default",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {
+            "open": {
+              "frames": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "states-bad-name",
+      "valid": false,
+      "rule": "furnishing.states_default",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {
+            "Open!": {
+              "frames": [
+                "fern-open"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "states-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {
+            "empty": {
+              "frames": [
+                "fern-empty"
+              ],
+              "default": true
+            },
+            "steaming": {
+              "frames": [
+                "fern-a",
+                "fern-b"
+              ],
+              "loop": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "null-mount",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "mount"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "null-offers",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "null-layer",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "layer"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "null-states",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "siz"
+          ],
+          "value": "small"
+        }
+      ]
+    },
+    {
+      "name": "piece-level-loop",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "loop"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "offers-explicit-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers",
+            "top"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "offers-partial-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            4,
+            "offers"
+          ],
+          "value": {
+            "top": 0,
+            "shelves": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "null-size",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            2,
+            "size"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "size-without-rug",
+      "valid": false,
+      "rule": "furnishing.size_or_rug",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "size"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing-tags-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "tags"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "states-empty-map-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            5,
+            "states"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "rug-empty-size",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            2,
+            "size"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "empty-layer",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "layer"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "non-finite-repeated-value",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "pieces",
+            0,
+            "footprint",
+            1
+          ],
+          "value": "Infinity"
+        }
+      ]
+    }
   ],
   "pieces": {
-    "candle": { "id": "candle", "name": "Candle", "facings": { "front": "" }, "footprint": [1, 1], "base": { "x": 0, "y": 0, "w": 1, "h": 1 }, "mount": "surface", "size": "small", "tags": ["light"] },
-    "basket": { "id": "basket", "name": "Basket", "facings": { "front": "" }, "footprint": [1, 1], "base": { "x": 0, "y": 0, "w": 1, "h": 1 }, "mount": "floor", "size": "medium", "tags": [] },
-    "chest": { "id": "chest", "name": "Chest", "facings": { "front": "" }, "footprint": [2, 1], "base": { "x": 0, "y": 0, "w": 2, "h": 1 }, "mount": "floor", "offers": { "top": 1 }, "size": "large", "tags": [] },
-    "bookshelf": { "id": "bookshelf", "name": "Bookshelf", "facings": { "front": "" }, "footprint": [2, 1], "base": { "x": 0, "y": 0, "w": 2, "h": 1 }, "mount": "floor", "offers": { "shelves": 2 }, "size": "large", "tags": ["books"] },
-    "table": { "id": "table", "name": "Table", "facings": { "front": "" }, "footprint": [2, 2], "base": { "x": 0, "y": 0, "w": 2, "h": 2 }, "mount": "floor", "offers": { "top": 2 }, "size": "large", "tags": [] },
-    "counter": { "id": "counter", "name": "Counter", "facings": { "front": "" }, "footprint": [3, 1], "base": { "x": 0, "y": 0, "w": 3, "h": 1 }, "mount": "floor", "offers": { "top": 4 }, "size": "large", "tags": [] },
-    "peg": { "id": "peg", "name": "Wall Peg", "facings": { "front": "" }, "footprint": [1, 1], "base": { "x": 0, "y": 0, "w": 1, "h": 1 }, "mount": "wall", "size": "small", "tags": [] },
-    "jug": { "id": "jug", "name": "Jug", "facings": { "front": "" }, "footprint": [1, 1], "base": { "x": 0, "y": 0, "w": 1, "h": 1 }, "mount": "surface", "size": "medium", "tags": [] },
-    "rug": { "id": "rug", "name": "Rug", "facings": { "front": "" }, "footprint": [3, 2], "base": { "x": 0, "y": 0, "w": 3, "h": 2 }, "mount": "floor", "layer": "under", "size": "large", "tags": [] }
+    "candle": {
+      "id": "candle",
+      "name": "Candle",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "surface",
+      "size": "small",
+      "tags": [
+        "light"
+      ]
+    },
+    "basket": {
+      "id": "basket",
+      "name": "Basket",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "floor",
+      "size": "medium",
+      "tags": []
+    },
+    "chest": {
+      "id": "chest",
+      "name": "Chest",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 1
+      },
+      "mount": "floor",
+      "offers": {
+        "top": 1
+      },
+      "size": "large",
+      "tags": []
+    },
+    "bookshelf": {
+      "id": "bookshelf",
+      "name": "Bookshelf",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 1
+      },
+      "mount": "floor",
+      "offers": {
+        "shelves": 2
+      },
+      "size": "large",
+      "tags": [
+        "books"
+      ]
+    },
+    "table": {
+      "id": "table",
+      "name": "Table",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 2
+      },
+      "mount": "floor",
+      "offers": {
+        "top": 2
+      },
+      "size": "large",
+      "tags": []
+    },
+    "counter": {
+      "id": "counter",
+      "name": "Counter",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        3,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 1
+      },
+      "mount": "floor",
+      "offers": {
+        "top": 4
+      },
+      "size": "large",
+      "tags": []
+    },
+    "peg": {
+      "id": "peg",
+      "name": "Wall Peg",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "wall",
+      "size": "small",
+      "tags": []
+    },
+    "jug": {
+      "id": "jug",
+      "name": "Jug",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "surface",
+      "size": "medium",
+      "tags": []
+    },
+    "rug": {
+      "id": "rug",
+      "name": "Rug",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 2
+      },
+      "mount": "floor",
+      "layer": "under",
+      "size": "large",
+      "tags": []
+    }
   },
   "placements": [
-    { "name": "small on the floor", "piece": "candle", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "small on a top", "piece": "candle", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 0, "ok": true },
-    { "name": "small on a second top slot", "piece": "candle", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 1, "ok": true },
-    { "name": "small past the top slots", "piece": "candle", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 2, "ok": false },
-    { "name": "small on shelves", "piece": "candle", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 0, "ok": true },
-    { "name": "small on the last shelf slot", "piece": "candle", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 1, "ok": true },
-    { "name": "small past the shelf slots", "piece": "candle", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 2, "ok": false },
-    { "name": "small on a one-slot top", "piece": "candle", "onto": { "kind": "surface", "host": "chest", "offer": "top" }, "at": 0, "ok": true },
-    { "name": "small on a one-slot top, past it", "piece": "candle", "onto": { "kind": "surface", "host": "chest", "offer": "top" }, "at": 1, "ok": false },
-    { "name": "small on the floor despite a surface mount", "piece": "candle", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "medium on the floor", "piece": "basket", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "medium on a big-enough top", "piece": "basket", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 0, "ok": true },
-    { "name": "medium on the back of a big top", "piece": "basket", "onto": { "kind": "surface", "host": "counter", "offer": "top" }, "at": 2, "ok": true },
-    { "name": "medium on a too-small top", "piece": "basket", "onto": { "kind": "surface", "host": "chest", "offer": "top" }, "at": 0, "ok": false },
-    { "name": "medium past a top's slots", "piece": "basket", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 1, "ok": false },
-    { "name": "medium past a big top's slots", "piece": "basket", "onto": { "kind": "surface", "host": "counter", "offer": "top" }, "at": 3, "ok": false },
-    { "name": "medium on shelves", "piece": "basket", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 0, "ok": false },
-    { "name": "large on the floor", "piece": "chest", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "large on a top", "piece": "chest", "onto": { "kind": "surface", "host": "counter", "offer": "top" }, "at": 0, "ok": false },
-    { "name": "large on shelves", "piece": "chest", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 0, "ok": false },
-    { "name": "wall piece on a wall", "piece": "peg", "onto": { "kind": "wall" }, "at": 0, "ok": true },
-    { "name": "wall piece on the floor", "piece": "peg", "onto": { "kind": "floor" }, "at": 0, "ok": false },
-    { "name": "wall piece on a top", "piece": "peg", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 0, "ok": false },
-    { "name": "floor piece on a wall", "piece": "basket", "onto": { "kind": "wall" }, "at": 0, "ok": false },
-    { "name": "rug on the floor", "piece": "rug", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "rug on a top", "piece": "rug", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": 0, "ok": false },
-    { "name": "rug on a wall", "piece": "rug", "onto": { "kind": "wall" }, "at": 0, "ok": false },
-    { "name": "rug on a rug", "piece": "rug", "onto": { "kind": "rug" }, "at": 0, "ok": false },
-    { "name": "floor piece on a rug", "piece": "basket", "onto": { "kind": "rug" }, "at": 0, "ok": true },
-    { "name": "large floor piece on a rug", "piece": "chest", "onto": { "kind": "rug" }, "at": 0, "ok": true },
-    { "name": "surface piece on a rug", "piece": "candle", "onto": { "kind": "rug" }, "at": 0, "ok": true },
-    { "name": "wall piece on shelves", "piece": "peg", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 0, "ok": false },
-    { "name": "rug on shelves", "piece": "rug", "onto": { "kind": "surface", "host": "bookshelf", "offer": "shelves" }, "at": 0, "ok": false },
-    { "name": "host with no offers", "piece": "candle", "onto": { "kind": "surface", "host": "peg", "offer": "top" }, "at": 0, "ok": false },
-    { "name": "unknown offer", "piece": "candle", "onto": { "kind": "surface", "host": "table", "offer": "ledge" }, "at": 0, "ok": false },
-    { "name": "medium surface piece on a big-enough top", "piece": "jug", "onto": { "kind": "surface", "host": "counter", "offer": "top" }, "at": 0, "ok": true },
-    { "name": "medium surface piece on the floor", "piece": "jug", "onto": { "kind": "floor" }, "at": 0, "ok": true },
-    { "name": "wall piece on a rug", "piece": "peg", "onto": { "kind": "rug" }, "at": 0, "ok": false },
-    { "name": "negative slot", "piece": "candle", "onto": { "kind": "surface", "host": "table", "offer": "top" }, "at": -1, "ok": false }
+    {
+      "name": "small on the floor",
+      "piece": "candle",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "small on a top",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "small on a second top slot",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 1,
+      "ok": true
+    },
+    {
+      "name": "small past the top slots",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 2,
+      "ok": false
+    },
+    {
+      "name": "small on shelves",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "small on the last shelf slot",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 1,
+      "ok": true
+    },
+    {
+      "name": "small past the shelf slots",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 2,
+      "ok": false
+    },
+    {
+      "name": "small on a one-slot top",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "chest",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "small on a one-slot top, past it",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "chest",
+        "offer": "top"
+      },
+      "at": 1,
+      "ok": false
+    },
+    {
+      "name": "small on the floor despite a surface mount",
+      "piece": "candle",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "medium on the floor",
+      "piece": "basket",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "medium on a big-enough top",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "medium on the back of a big top",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "counter",
+        "offer": "top"
+      },
+      "at": 2,
+      "ok": true
+    },
+    {
+      "name": "medium on a too-small top",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "chest",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "medium past a top's slots",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 1,
+      "ok": false
+    },
+    {
+      "name": "medium past a big top's slots",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "counter",
+        "offer": "top"
+      },
+      "at": 3,
+      "ok": false
+    },
+    {
+      "name": "medium on shelves",
+      "piece": "basket",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "large on the floor",
+      "piece": "chest",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "large on a top",
+      "piece": "chest",
+      "onto": {
+        "kind": "surface",
+        "host": "counter",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "large on shelves",
+      "piece": "chest",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "wall piece on a wall",
+      "piece": "peg",
+      "onto": {
+        "kind": "wall"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "wall piece on the floor",
+      "piece": "peg",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "wall piece on a top",
+      "piece": "peg",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "floor piece on a wall",
+      "piece": "basket",
+      "onto": {
+        "kind": "wall"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "rug on the floor",
+      "piece": "rug",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "rug on a top",
+      "piece": "rug",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "rug on a wall",
+      "piece": "rug",
+      "onto": {
+        "kind": "wall"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "rug on a rug",
+      "piece": "rug",
+      "onto": {
+        "kind": "rug"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "floor piece on a rug",
+      "piece": "basket",
+      "onto": {
+        "kind": "rug"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "large floor piece on a rug",
+      "piece": "chest",
+      "onto": {
+        "kind": "rug"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "surface piece on a rug",
+      "piece": "candle",
+      "onto": {
+        "kind": "rug"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "wall piece on shelves",
+      "piece": "peg",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "rug on shelves",
+      "piece": "rug",
+      "onto": {
+        "kind": "surface",
+        "host": "bookshelf",
+        "offer": "shelves"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "host with no offers",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "peg",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "unknown offer",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "ledge"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "medium surface piece on a big-enough top",
+      "piece": "jug",
+      "onto": {
+        "kind": "surface",
+        "host": "counter",
+        "offer": "top"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "medium surface piece on the floor",
+      "piece": "jug",
+      "onto": {
+        "kind": "floor"
+      },
+      "at": 0,
+      "ok": true
+    },
+    {
+      "name": "wall piece on a rug",
+      "piece": "peg",
+      "onto": {
+        "kind": "rug"
+      },
+      "at": 0,
+      "ok": false
+    },
+    {
+      "name": "negative slot",
+      "piece": "candle",
+      "onto": {
+        "kind": "surface",
+        "host": "table",
+        "offer": "top"
+      },
+      "at": -1,
+      "ok": false
+    }
   ]
 }

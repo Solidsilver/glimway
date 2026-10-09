@@ -11,7 +11,8 @@ export type RepairDef = RepairDefValid;
 /**
  * Throws on anything content/repairs.go would refuse: the rules that span
  * entries or families, in Go's order with Go's tags — the schema's own
- * (protovalidate) rules ran in decodeContent before these.
+ * (protovalidate) rules ran in decodeContent before these, outside a
+ * production build.
  */
 export function validateRepairs(value: unknown): RepairsData {
   const data = decodeContent(RepairsSchema, value, 'repairs', ['repairs']) as RepairsData;

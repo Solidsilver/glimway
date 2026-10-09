@@ -8,10 +8,12 @@ import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 
 // The homestead, gate-shelf, woodpile and item route types moved to the
-// generated schema's modules (homestead.ts, items.ts).
+// generated schema's modules (homestead.ts, items.ts); the requests
+// themselves are the generated ones (HomesteadRequest, ShelfRequest, …,
+// built by requests.ts).
 export type {
-  HomeMember, HomeView, HomePlantView, HomeResponse, HomeOp, HomeAction, HomeActionRequest, HomeActionResponse,
-  ShelfSlotView, ShelfView, ShelfRequest, ShelfResponse, ShelfActionResponse,
+  HomeMember, HomeView, HomePlantView, HomeResponse, HomeOp, HomeAction, HomeActionResponse,
+  ShelfSlotView, ShelfView, ShelfResponse, ShelfActionResponse,
   WoodpileStack, WoodpileView, WoodpileResponse, WoodpileActionResponse,
 } from './homestead.ts';
 export type {
@@ -66,23 +68,6 @@ export interface StateResponse extends Snapshot {
   leaseActive?: boolean;
 }
 
-export interface ProgressResponse extends Snapshot {
-  status: 'current' | 'stale';
-}
-
-export interface SyncResponse extends Snapshot {
-  status: 'synced' | 'unchanged';
-  /** Signed vitals change from the sync, relative to the carried progress. */
-  vitalsCredit: { hp: number; mana: number };
-}
-
-export interface SpendResponse extends Snapshot {
-  /** `lit:road-1`, `opened:ashwatch-chest`, or '' for rest/revive. */
-  outcome: string;
-}
-
-type SpendKind = 'rest' | 'revive' | 'home-rest' | 'road-lantern' | 'chest';
-
 export interface LoginRequest {
   userId: string;
   token: string;
@@ -91,27 +76,9 @@ export interface LoginRequest {
   party?: string;
 }
 
-export interface ProgressRequest {
-  lease: string;
-  baseRev: number;
-  doc: Progress;
-}
-
-export interface SyncRequest {
-  lease: string;
-  baseRev: number;
-  progress: Progress;
-  profile: HabiticaProfile;
-}
-
-export interface SpendRequest {
-  lease: string;
-  baseRev: number;
-  kind: SpendKind;
-  target?: string;
-  progress?: Progress;
-  key: string;
-}
+// The progress/sync/spend requests and responses of the retired lane A
+// (uploaded documents) are gone: those routes now run through the generated
+// messages (operations_pb.ts), like every other operation.
 
 export type { InviteInfo, CreatedInvite, InviteList } from './invites.ts';
 

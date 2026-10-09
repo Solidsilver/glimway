@@ -1,11 +1,11 @@
 /**
  * The item routes (proto/glimway/v1/items.proto): what the caller carries
  * (GET /api/items) and every keyed item mutation. Responses decode through
- * the generated protobuf-es types (fromJson) and project onto the game's
+ * the generated protobuf-es types (decodeWire) and project onto the game's
  * shapes (absent optionals become null); ProtoJSON's extra spellings are
  * refused (ApiError `bad-response`), as parse.ts did by hand.
  */
-import { fromJson, type JsonValue } from '@bufbuild/protobuf';
+import { decodeWire } from './wire.ts';
 import {
   type AssetCounts as GeneratedAssetCounts, type Instance as GeneratedInstance,
   type ItemsView as GeneratedItemsView,
@@ -263,7 +263,7 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
 export function parseItems(raw: unknown): ItemsResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
-    const read = fromJson(ItemsReadSchema, (o.result !== undefined ? o.result : o) as JsonValue, { ignoreUnknownFields: true }) as ItemsRead;
+    const read = decodeWire(ItemsReadSchema, (o.result !== undefined ? o.result : o)) as ItemsRead;
     if (!read.items) throw new Error('missing items');
     return { ...parseSnapshot(raw), items: projectItemsView(read.items) };
   });
@@ -274,12 +274,12 @@ export function parseItemsAction(raw: unknown): ItemsActionResponse {
   return decoded(() => {
     const o = raw as Record<string, unknown>;
     if (!o.result || typeof o.result !== 'object') throw new Error('missing result');
-    const r = fromJson(ItemsResultSchema, (o.result ?? null) as JsonValue, { ignoreUnknownFields: true }) as ItemsResult;
+    const r = decodeWire(ItemsResultSchema, (o.result ?? null)) as ItemsResult;
     return { ...parseSnapshot(raw), result: result(r) };
   });
 }
 
 /** Shared domain parser for the server-first mixed envelope. */
 export function parseItemsResult(raw: unknown): ItemsActionResponse['result'] {
-  return decoded(() => result(fromJson(ItemsResultSchema, raw as JsonValue, { ignoreUnknownFields: true }) as ItemsResult));
+  return decoded(() => result(decodeWire(ItemsResultSchema, raw) as ItemsResult));
 }

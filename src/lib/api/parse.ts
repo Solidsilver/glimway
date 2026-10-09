@@ -10,11 +10,8 @@ import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { ApiError } from './errors.ts';
 import type {
   PlayResponse,
-  ProgressResponse,
   Snapshot,
   StateResponse,
-  SpendResponse,
-  SyncResponse,
   WildsClaimResponse,
   WildsDefeatResponse,
   WildsEntityState,
@@ -101,24 +98,6 @@ export function parseState(raw: unknown): StateResponse {
 
 export function parsePlay(raw: unknown): PlayResponse {
   return { ...parseSnapshot(raw), lease: str(obj(raw).lease) };
-}
-
-export function parseProgress(raw: unknown): ProgressResponse {
-  const status = obj(raw).status;
-  if (status !== 'current' && status !== 'stale') throw new ApiError('bad-response');
-  return { ...parseSnapshot(raw), status };
-}
-
-export function parseSync(raw: unknown): SyncResponse {
-  const o = obj(raw);
-  if (o.status !== 'synced' && o.status !== 'unchanged') throw new ApiError('bad-response');
-  const credit = obj(o.vitalsCredit);
-  return { ...parseSnapshot(raw), status: o.status, vitalsCredit: { hp: num(credit.hp), mana: num(credit.mana) } };
-}
-
-export function parseSpend(raw: unknown): SpendResponse {
-  const o = obj(raw);
-  return { ...parseSnapshot(raw), outcome: typeof o.outcome === 'string' ? o.outcome : '' };
 }
 
 export { parseCreatedInvite, parseInviteList } from './invites.ts';

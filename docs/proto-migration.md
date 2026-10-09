@@ -20,18 +20,42 @@ Generation uses `clean: true` to remove stale output before regenerating.
 Ordinary npm, Docker and Nix builds consume the checked-in output without
 invoking compilers. Include generated files when committing schema changes.
 CI lints, regenerates, rejects changed/untracked generated files, and enforces
-`buf breaking` against `origin/main` with full Git history. The initial migration
-bootstraps that check when main has no Buf schema yet; later runs require the
-main contract.
+`buf breaking` against two baselines with full Git history (the
+`scripts/buf-breaking.sh` step): `origin/main`, the branch's own contract, and
+the latest release tag — the contract the last release shipped, which is what
+players actually run. The initial migration bootstrapped that check when main
+had no Buf schema yet; later runs require both contracts.
+
+### Compatibility: what may move
 
 Every field number and binary event number is permanent. Append fields/codes;
-reserve removed names and numbers. Review JSON field names as well as numbers:
-`buf.yaml` uses FILE breaking checks for the wire packages, which can be run
-against a committed base with `GIT_LFS_SKIP_SMUDGE=1 node_modules/.bin/buf
-breaking --against '.git#ref=refs/remotes/origin/main'`. Skipping LFS smudging
-avoids unrelated art downloads for the comparison. Never renumber the error enum.
-(The content schemas and the vendored `buf/validate` are exempt from breaking
-checks: their loaders change in the same commit as the files.)
+reserve removed names and numbers. Never renumber the error enum. (The content
+schemas and the vendored `buf/validate` are exempt from breaking checks: their
+loaders change in the same commit as the files.)
+
+A **message may move between two files of the same package** (and so between
+the Go package and the protobuf-es module): its name, fields and numbers are
+unchanged, so the wire form and the JSON spelling are identical — only the
+generated source's imports change. Buf's FILE rule still reports the move as
+a deletion from the old file, so a move is accepted explicitly, by buf's exact
+line, in `scripts/buf-breaking.sh` (one line per moved message). The
+acceptance is emptied once a release ships the move: the release tag baseline
+then contains the moved-to file, and the recorded line matches nothing. Moves
+are not a habit: keep messages in the file that owns their domain, and move
+only when a dependency arrangement demands it — never in a way that creates
+an import cycle between the files.
+
+The two moves this release made (both out of `state.proto` into
+`world.proto`, same names and fields): `WorldRef` and `WorldChoice` — they
+are the accepted lines in `scripts/buf-breaking.sh` until the next release
+ships.
+
+Review JSON field names as well as numbers: `buf.yaml` uses FILE breaking
+checks for the wire packages, which can be run against a committed base with
+`GIT_LFS_SKIP_SMUDGE=1 node_modules/.bin/buf breaking --against
+'.git#ref=refs/remotes/origin/main'` (or `scripts/buf-breaking.sh` for both
+baselines). Skipping LFS smudging avoids unrelated art downloads for the
+comparison.
 Go and TypeScript adapt enum names by removing `ERROR_CODE_`, lowercasing, and
 replacing underscores with hyphens. This preserves the existing error strings;
 raw protobuf enum JSON names are **not** the HTTP error vocabulary.

@@ -823,9 +823,10 @@ func (x *ItemDef) GetMarked() bool {
 type ItemRepair struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Bench map[string]int32       `protobuf:"bytes,1,rep,name=bench,proto3" json:"bench,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	// The mender's bill may be absent (a bench-only mending); its ranges
-	// still hold when it's there. "Neither mender bill nor embers" is a code
-	// rule (item_def ... repair cost).
+	// The mender's bill may be absent — or present and empty; the two mean
+	// the same (no materials, embers pay). Its ranges still hold when entries
+	// are there. "Neither mender materials nor embers" is a code rule
+	// (item_def ... repair cost), identical in both loaders.
 	Mender        map[string]int32 `protobuf:"bytes,2,rep,name=mender,proto3" json:"mender,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	MenderEmbers  *int32           `protobuf:"varint,3,opt,name=mender_embers,json=menderEmbers,proto3,oneof" json:"mender_embers,omitempty"`
 	unknownFields protoimpl.UnknownFields

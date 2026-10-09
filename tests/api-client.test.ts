@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { create } from '@bufbuild/protobuf';
 import { createQueue } from '../src/lib/api/queue.ts';
 import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERROR_CODES } from '../src/lib/api/errors.ts';
 import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
+import { CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema } from '../src/lib/gen/glimway/v1/village_pb.js';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
 import { parseItemsAction, parseWildsClaim } from '../src/lib/api/parse.ts';
 
@@ -69,9 +71,11 @@ test('Wilds claim parser preserves and validates rare warden sliver finds', () =
 
 test('items parser keeps what a seller handed over (/api/items/buy)', () => {
   const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
-  const raw = { ...snapshot(), result: { items, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1 } } };
+  // The wire answer carries every ItemsResult field (EmitUnpopulated).
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0 };
+  const raw = { ...snapshot(), result: { items, ...fields, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1 } } };
   assert.deepEqual(parseItemsAction(raw).result.bought, { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1 });
-  assert.equal(parseItemsAction({ ...raw, result: { items } }).result.bought, undefined);
+  assert.equal(parseItemsAction({ ...raw, result: { items, ...fields, bought: null } }).result.bought, undefined);
 });
 
 test('queue: a failure goes to its own caller and the queue keeps going', async () => {
@@ -103,7 +107,7 @@ test('client: run builds each request when it starts, after earlier calls settle
     return json(200, { ...snapshot({ version: seen.length }), result: { recipeId: 'plank', qty: 1, made: {}, inventory: {} } });
   }) as typeof fetch;
   const api = createApiClient({ fetchImpl });
-  const craft = () => api.run((raw) => raw.craft({ op: { lease, key: newKey() }, where: { area: 'village', x: 1, y: 1 }, recipeId: 'plank', qty: 1 }).catch(() => undefined));
+  const craft = () => api.run((raw) => raw.craft(create(CraftRequestSchema, { op: { lease, key: newKey() }, where: { area: 'village', x: 1, y: 1 }, recipeId: 'plank', qty: 1 })).catch(() => undefined));
   await Promise.all([craft(), craft(), craft()]);
   assert.deepEqual(seen, ['L1', 'L2', 'L3']);
 });
@@ -122,10 +126,10 @@ test('errors: every documented code maps to itself with its status', () => {
 test('client: crafting refusals survive the real hearth, desk and woodpile methods', async () => {
   const envelope = { op: { lease: 'L', key: 'craft-refused' }, where: { area: 'village', x: 1, y: 1 } };
   const cases = [
-    { code: 'recipe-unknown', status: 409, path: '/api/hearth/craft', call: (api: ReturnType<typeof createApiClient>) => api.hearthCraft({ ...envelope, recipeId: 'herb-broth', qty: 1 }) },
-    { code: 'desk-required', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'recipe-page', qty: 1 }) },
-    { code: 'invalid-page', status: 400, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'timber', qty: 1 }) },
-    { code: 'page-not-held', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy({ ...envelope, pageId: 'recipe-page', qty: 1 }) },
+    { code: 'recipe-unknown', status: 409, path: '/api/hearth/craft', call: (api: ReturnType<typeof createApiClient>) => api.hearthCraft(create(HearthCraftRequestSchema, { ...envelope, recipeId: 'herb-broth', qty: 1 })) },
+    { code: 'desk-required', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy(create(DeskCopyRequestSchema, { ...envelope, pageId: 'recipe-page', qty: 1 })) },
+    { code: 'invalid-page', status: 400, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy(create(DeskCopyRequestSchema, { ...envelope, pageId: 'timber', qty: 1 })) },
+    { code: 'page-not-held', status: 409, path: '/api/desk/copy', call: (api: ReturnType<typeof createApiClient>) => api.deskCopy(create(DeskCopyRequestSchema, { ...envelope, pageId: 'recipe-page', qty: 1 })) },
     { code: 'woodpile-required', status: 409, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpile() },
     { code: 'nothing-ready', status: 409, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpileAction({ ...envelope, action: 'collect' }) },
     { code: 'invalid-action', status: 400, path: '/api/homestead/woodpile', call: (api: ReturnType<typeof createApiClient>) => api.woodpileAction({ ...envelope, action: 'stack', qty: 1 }) },
@@ -362,7 +366,7 @@ test('client id: without BroadcastChannel or storage it still works', async () =
 
 // ---------------------------------------------------------------- hearth, desk, woodpile
 
-const workshopView = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {} }, storage: null, personal: { materials: {}, items: {}, decorations: {} }, shared: 'not-a-member' };
+const workshopView = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
 
 test('hearth, desk and woodpile: endpoints, method, body and parsed shape', async () => {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -371,21 +375,22 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
       calls.push({ url, init });
       const base = snapshot();
       if (calls.length === 3) return json(200, { ...base, woodpile: { homesteadId: 'h1', placed: true, stacks: [{ id: 's1', homesteadId: 'h1', accountId: 'a', qty: 10, stackedAt: 100, ready: true, remaining: 0 }], readyCount: 10, totalTimber: 10 } });
-      const answer = { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2 }, pageId: 'recipe-page-tea', qty: 2 };
+      // A server answer emits every field (EmitUnpopulated): null wrappers, empty strings.
+      const answer = { ...workshopView, recipeId: 'hearth-wax-seal', output: { kind: 'item', id: 'wax-seal', qty: 2, instance: '', maker: null }, pageId: 'recipe-page-tea', qty: 2 };
       // The hearth and desk answers sit under their Envelope case; the
       // woodpile (a homestead lane route) keeps the mixed result.
       if (calls.length === 1) return json(200, { ...base, hearthCraft: answer });
       if (calls.length === 2) return json(200, { ...base, deskCopy: answer });
-      return json(200, { ...base, result: { ...answer, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: undefined } });
+      return json(200, { ...base, result: { ...answer, woodpile: { homesteadId: 'h1', placed: true, stacks: [], readyCount: 0, totalTimber: 0 }, action: 'stack', collectedQty: 0 } });
     }) as typeof fetch,
   });
-  const hearth = await api.hearthCraft({ lease: 'L', baseRev: 3, key: 'k1', recipeId: 'hearth-wax-seal', qty: 2 });
+  const hearth = await api.hearthCraft(create(HearthCraftRequestSchema, { op: { lease: 'L', key: 'k1' }, where: { area: 'village', x: 1, y: 1 }, recipeId: 'hearth-wax-seal', qty: 2 }));
   assert.equal(calls[0].url, '/api/hearth/craft');
   assert.equal(calls[0].init.method, 'POST');
   assert.deepEqual(JSON.parse(String(calls[0].init.body)).recipeId, 'hearth-wax-seal');
   assert.equal(hearth.result.recipeId, 'hearth-wax-seal');
   assert.deepEqual(hearth.result.output, { kind: 'item', id: 'wax-seal', qty: 2 });
-  const desk = await api.deskCopy({ lease: 'L', baseRev: 3, key: 'k2', pageId: 'recipe-page-tea', qty: 2 });
+  const desk = await api.deskCopy(create(DeskCopyRequestSchema, { op: { lease: 'L', key: 'k2' }, where: { area: 'village', x: 1, y: 1 }, pageId: 'recipe-page-tea', qty: 2 }));
   assert.equal(calls[1].url, '/api/desk/copy');
   assert.equal(desk.result.pageId, 'recipe-page-tea');
   assert.equal(desk.result.qty, 2);

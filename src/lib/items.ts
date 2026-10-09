@@ -83,7 +83,11 @@ export function validateItems(value: unknown): Items {
       if (d.repair) {
         const costsOK = (m: Record<string, number>) => Object.keys(m).length > 0 && Object.entries(m).every(([id, n]) => { const def = defs.get(id); return !!def && isStackable(def) && n >= 1 && n <= 1_000_000; });
         const rep = d.repair;
-        if (!costsOK(rep.bench) || (rep.mender !== undefined && !costsOK(rep.mender)) || (!rep.mender && !rep.menderEmbers)) return fail('repair cost');
+        // An absent mender bill and an empty one mean the same: no
+        // materials. A mender repair then needs embers; a populated one
+        // must still be a valid stack bill.
+        const menderMaterials = Object.keys(rep.mender ?? {}).length > 0;
+        if (!costsOK(rep.bench) || (menderMaterials && !costsOK(rep.mender)) || (!menderMaterials && !rep.menderEmbers)) return fail('repair cost');
       }
     }
     if ((d.kind === 'consumable') !== !!d.use?.length) return fail('use');

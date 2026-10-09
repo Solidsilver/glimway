@@ -550,9 +550,10 @@ export declare type ItemRepair = Message<"glimway.content.v1.ItemRepair"> & {
   bench: { [key: string]: number };
 
   /**
-   * The mender's bill may be absent (a bench-only mending); its ranges
-   * still hold when it's there. "Neither mender bill nor embers" is a code
-   * rule (item_def ... repair cost).
+   * The mender's bill may be absent — or present and empty; the two mean
+   * the same (no materials, embers pay). Its ranges still hold when entries
+   * are there. "Neither mender materials nor embers" is a code rule
+   * (item_def ... repair cost), identical in both loaders.
    *
    * @generated from field: map<string, int32> mender = 2;
    */

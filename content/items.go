@@ -33,19 +33,12 @@ type (
 	ItemSeller   = contentv1.ItemSeller
 )
 
-// The closed sets. A new kind, tab, fitting or effect type is a code change
-// on both sides (src/lib/items.ts mirrors these), never just data.
+// The closed sets live in the schema now (their rules ride the catalogue
+// definitions); the tables below are the ones code still walks. A new kind,
+// tab, fitting or effect type is a code change on both sides
+// (src/lib/items.ts mirrors these), never just data.
 var (
-	ItemTabs        = []string{"tools", "supplies", "keepsakes", "home", "papers"}
-	ItemKinds       = []string{"tool", "consumable", "material", "fitting", "part", "seed", "keepsake", "home-good", "paper", "off-hand", "carry-gear"}
-	FittingKinds    = []string{"bite", "hold", "heft", "glow", "grip", "remember"}
-	ToolActions     = []string{"chop", "break", "dig", "draw", "water", "trim", "mark"}
-	PlayerClasses   = []string{"warrior", "mage", "healer", "rogue"}
-	UseEffects      = []string{"restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored", "wisps-forget", "refill-lantern", "light-post"}
-	PocketEffects   = []string{"papers-glint", "notice-later", "gather-more", "pond-skip", "wend-gives-more"}
-	HeldEffects     = []string{"light", "wisps-keep-off", "compass", "remedy-at-hand", "whistle", "papers-chime"}
 	PickupAreas     = []string{"village", "woodland", "ruin", "commons"}
-	kindTab         = map[string]string{"tool": "tools", "off-hand": "tools", "carry-gear": "tools", "consumable": "supplies", "material": "supplies", "fitting": "supplies", "part": "supplies", "seed": "supplies", "keepsake": "keepsakes", "home-good": "home", "paper": "papers"}
 	instancedKinds  = []string{"tool", "off-hand", "carry-gear", "fitting"}
 	ImplementedUses = []string{"restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored"}
 	atZeroForGrade  = map[string][]string{"cheap": {"breaks"}, "heirloom": {"blunt", "cracked"}, "special": {"never"}}
@@ -197,7 +190,11 @@ func validateItems(v *Items) error {
 			}
 			if d.GetRepair() != nil {
 				rep := d.GetRepair()
-				if !validStackCosts(rep.GetBench(), loaded) || (rep.GetMender() != nil && !validStackCosts(rep.GetMender(), loaded)) || (rep.GetMender() == nil && rep.GetMenderEmbers() == 0) {
+				// An absent mender bill and an empty one mean the same: no
+				// materials. A mender repair then needs embers; a populated
+				// one must still be a valid stack bill.
+				menderMaterials := len(rep.GetMender()) > 0
+				if !validStackCosts(rep.GetBench(), loaded) || (menderMaterials && !validStackCosts(rep.GetMender(), loaded)) || (!menderMaterials && rep.GetMenderEmbers() == 0) {
 					return fmt.Errorf("invalid items: item %s: repair cost", d.GetId())
 				}
 			}
