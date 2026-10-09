@@ -143,7 +143,7 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
   await silasSays(page, /Build on a workshop/)
-  await readOn(page, /eaves/)
+  await readOn(page, /There\. Deep eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
   fund(id, { materials: { timber: 12 } })
   await intoCottage(page)

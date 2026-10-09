@@ -61,7 +61,7 @@ test.describe('in a world', () => {
     await shot(page, 'art-home-tier1-desktop')
     await page.waitForTimeout(400)
     await silasSays(page, /Build on a workshop/)
-    await readOn(page, /Steady|eaves/)
+    await readOn(page, /There\. Deep eaves/)
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
     await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier2-desktop')

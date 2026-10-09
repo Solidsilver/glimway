@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT, served } from './connected'
-import { dialogueState, waitForLive, waitGame } from './helpers'
+import { dialogueState, frames, waitForLive, waitGame } from './helpers'
 import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
 /**
@@ -59,8 +59,39 @@ async function workshopPlayer(page: Page): Promise<string> {
   await claimDeed(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
-  await silasSays(page, /Build on a workshop/)
-  await readOn(page, /Steady|eaves/)
+  // Let the offer close before the build answer reaches the client. The
+  // offer also says "Deep eaves": accepting that as the completion used to
+  // leave the late reply open, hiding the next "Talk to Silas" prompt in CI.
+  let release!: () => void
+  const held = new Promise<void>((resolve) => { release = resolve })
+  let committed!: () => void
+  const arrived = new Promise<void>((resolve) => { committed = resolve })
+  let answering: Promise<void> | undefined
+  const upgrade = '**/api/homestead/upgrade'
+  await page.route(upgrade, (route) => {
+    answering = (async () => {
+      const response = await route.fetch()
+      committed()
+      await held
+      await route.fulfill({ response })
+    })()
+    return answering
+  })
+  try {
+    await silasSays(page, /Build on a workshop/)
+    await arrived
+    let finished = false
+    const reading = readOn(page, /There\. Deep eaves/).then(() => { finished = true })
+    // Observe the wait while the answer is held, across several drawn frames.
+    await frames(page, 8)
+    expect(finished, 'the workshop offer is not the build completion').toBe(false)
+    release()
+    await reading
+  } finally {
+    release()
+    await answering
+    await page.unroute(upgrade)
+  }
   await expect.poll(async () => (await myHome(page)).tier).toBe(2)
   return id
 }
