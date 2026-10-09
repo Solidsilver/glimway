@@ -11,6 +11,7 @@ tags wait for the owner's playtest.
 
 | Tag | Branch | What it adds |
 |---|---|---|
+| `v0.4.0-alpha.2` | `expansion` | **One schema**: every shared type and content file on protobuf (endpoints, 21 content families, protovalidate, shared vectors), reviewed per lane and by Sol; the production client skips content validation. 0.4 art follow-ups: the risen washtub, the working hoist, Elara writing at her desk, smaller library signs |
 | `v0.4.0-alpha.1` | `expansion` | **0.4 Indoors**: rooms (kitchen, mill and loft, library, cottage), residents on the hour, Elara keeps the library, the quest tree and Quests page, the furnishing catalogue and interior kit, the owner's playtest fixes (style rules, collision at the base, stairs along a wall), and the tab-close report fix. Full suite 206/206 |
 | `v0.3.0-alpha.5` | `expansion` | Dev mode for local playtesting (grants from a dev panel; dev builds only, never Habitica); the panel open/close sound removed (owner); the warden's rest after a naming runs on real time (the coop flake); a reconnect after offline play reports at once; e2e server-answer waits 15 s |
 | `v0.3.0-alpha.4` | `expansion` | The owner's 0.3 playtest fixes: felling takes the whole tree (path-side Wilds trees weren't registered on their tile, so their canopy stayed); painted dialogue busts for Mara, Orrin and Pip, and Silas's wired |
@@ -38,8 +39,13 @@ tags wait for the owner's playtest.
 | 14 | `Place` carries `outer_epoch` (a proto field added during the gate); the contract stays 3, since 0.3 was never deployed. | Clean break: nobody runs an earlier 0.3. | alpha.3 |
 | 15 | Dev mode is local only (owner's choice): dev builds and `vite` dev. A phone on the same Wi-Fi opening the dev page can use it, since requests come through Vite on the Mac. Grants go through the real store paths; Habitica items are refused. | Owner asked for a way to test with plenty of resources. | alpha.5 |
 | 16 | 0.4 Indoors: the owner confirmed open questions 1 (60-minute hour), 8 (small rewards), 9 (rooms bigger inside), 10 (light pools, no day/night); the other defaults stand. | Owner, 2026-10-08. | `exp/indoors` |
+| 17 | Content files proto can't express are reshaped (a list of lists becomes a list of named rows, a map of lists a map of messages, `$comment` a field). | Owner's call: keep full validation, our own files. | alpha.2 |
+| 18 | The production client doesn't validate bundled content (CI and the server do); dev builds and tests do. Bundle 962 → 891 kB gzip, content import 141 → 47 ms (0.4 was 846 kB, 10 ms). | Owner: keep validation where it helps. | alpha.2 |
+| 19 | Library section signs are small plaques on the shelf tops. | Owner found the first ones too large. | alpha.2 |
 
 ## Test health
+
+- Smoke on the slow GitHub runner: `inventory.spec.ts:170` timed out once (passed on rerun and in the full suite). `crafting.spec.ts:127`'s CI failure was a test race (the workshop offer and completion share 'Deep eaves'), fixed.
 
 - Fixed at their cause in alpha.2: `gifts.spec.ts:17`, `party-worlds.spec.ts:47`,
   `crafting.spec.ts:114`. Playwright actions now time out after a minute instead of never.

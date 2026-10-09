@@ -15,6 +15,10 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Hazel's sponge rises in its washtub, Finn's hoist works when it's
+  fixed, and Elara sits writing at her desk while she keeps the library.
+- The library's section signs are small plaques on the shelves now, so
+  the books show.
 - Step inside. Hazel's kitchen, Finn's mill with its sack loft up the
   stairs, the library's reading room and your own cottage are rooms you
   walk into, furnished and lived-in.
@@ -61,6 +65,19 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- One schema: everything the server and the client both type or load is
+  on protobuf. The remaining hand-typed routes (homestead, items, library,
+  mail, storage, crafting, commons, projects, repairs, world, operation
+  results, invites) have generated request and answer types, decoded
+  strictly on both sides; client requests are built through the generated
+  schemas. Every content file both sides load has a schema in
+  `proto/glimway/content/v1` (files stay JSON; a few reshaped where proto
+  can't express them), field rules as protovalidate constraints, and
+  cross-entry rules in code once per language, pinned by shared vectors
+  with a rule id per refusal. The production client skips content
+  validation (CI and the server validate the bundled files). See
+  `docs/proto-migration.md`.
+- The reconciliation read answers an operation's actual result.
 - 0.4 Indoors (`docs/design/indoors.md`), contract 4: rooms are places
   (`content/rooms.json`, `in:<parent>[:floor]` ids, per-room presence),
   residents on an hourly cycle (`content/residents.json`, `residentAt`,
