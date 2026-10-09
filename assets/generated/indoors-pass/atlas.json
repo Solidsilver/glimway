@@ -39,6 +39,38 @@
     {
       "key": "floors-seamless",
       "file": "sheets/floors-seamless.png"
+    },
+    {
+      "key": "gaps-kitchen-washtub-front-risen",
+      "file": "sheets/gaps-crops/kitchen-washtub-front-risen.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-0",
+      "file": "sheets/gaps-crops/loft-hoist-front-working-0.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-1",
+      "file": "sheets/gaps-crops/loft-hoist-front-working-1.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-2",
+      "file": "sheets/gaps-crops/loft-hoist-front-working-2.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-3",
+      "file": "sheets/gaps-crops/loft-hoist-front-working-3.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-empty",
+      "file": "sheets/gaps-crops/library-elara-desk-front-empty.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-writing-0",
+      "file": "sheets/gaps-crops/library-elara-desk-front-writing-0.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-writing-1",
+      "file": "sheets/gaps-crops/library-elara-desk-front-writing-1.png"
     }
   ],
   "frames": {
@@ -3749,49 +3781,24 @@
       }
     },
     "library-elara-desk-front-empty": {
-      "filename": "round2-library-elara-desk-front-empty",
+      "filename": "gaps-library-elara-desk-front-empty",
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 311,
-        "h": 287
+        "w": 691,
+        "h": 691
       },
       "rotated": false,
       "trimmed": true,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 311,
-        "h": 287
+        "w": 691,
+        "h": 691
       },
       "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 311,
-        "h": 287
-      }
-    },
-    "library-elara-desk-front-seated": {
-      "filename": "round2-library-elara-desk-front-seated",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 302,
-        "h": 351
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 302,
-        "h": 351
-      },
-      "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 302,
-        "h": 351
+        "w": 691,
+        "h": 691
       }
     },
     "library-section-sign-front-stories": {
@@ -5103,6 +5110,153 @@
         "y": 0,
         "w": 111,
         "h": 339
+      }
+    },
+    "kitchen-washtub-front-risen": {
+      "filename": "gaps-kitchen-washtub-front-risen",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "sourceSize": {
+        "w": 284,
+        "h": 228
+      }
+    },
+    "loft-hoist-front-working-0": {
+      "filename": "gaps-loft-hoist-front-working-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "sourceSize": {
+        "w": 504,
+        "h": 801
+      }
+    },
+    "loft-hoist-front-working-1": {
+      "filename": "gaps-loft-hoist-front-working-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "sourceSize": {
+        "w": 504,
+        "h": 801
+      }
+    },
+    "loft-hoist-front-working-2": {
+      "filename": "gaps-loft-hoist-front-working-2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "sourceSize": {
+        "w": 504,
+        "h": 801
+      }
+    },
+    "loft-hoist-front-working-3": {
+      "filename": "gaps-loft-hoist-front-working-3",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "sourceSize": {
+        "w": 504,
+        "h": 801
+      }
+    },
+    "library-elara-desk-front-writing-0": {
+      "filename": "gaps-library-elara-desk-front-writing-0",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "sourceSize": {
+        "w": 691,
+        "h": 691
+      }
+    },
+    "library-elara-desk-front-writing-1": {
+      "filename": "gaps-library-elara-desk-front-writing-1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "sourceSize": {
+        "w": 691,
+        "h": 691
       }
     }
   },

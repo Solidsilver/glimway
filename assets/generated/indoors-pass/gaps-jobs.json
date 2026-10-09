@@ -1,0 +1,466 @@
+{
+  "date": "2026-10-08",
+  "tool": "built-in image_gen",
+  "sources": {
+    "washtub": "gaps-source/washtub-risen.png",
+    "hoist": "gaps-source/hoist-working-strip.png",
+    "elara": "gaps-source/elara-desk-chair-strip.png"
+  },
+  "imageHandling": "Generated with transparent backgrounds; alpha below 128 is cleared to remove soft halos. The risen dough and lifted cloth are composited over the unchanged tub pixels inside the basin. The three equal Elara desk panels share one source canvas and scale so the empty and occupied chair positions match.",
+  "prompts": {
+    "washtub": "High risen dough forms a prominent dome well above the rim; the striped cloth is lifted and stretched over it. Preserve the existing tub exactly, with only basin contents changed.",
+    "hoist": "Four-frame working loop for the existing loft hoist: subtle pulley rotation, rope motion and small hook lift, fixed beam and bracket.",
+    "elara": "Three-frame empty/writing/writing strip. In every panel, use the same empty desk and chair tucked behind it; Elara sits on that chair, facing down and writing; only her presence and subtle idle pose change."
+  },
+  "jobs": [
+    {
+      "key": "kitchen-washtub-front-risen",
+      "source": "washtub",
+      "crop": [
+        0,
+        0,
+        1400,
+        1123
+      ],
+      "id": "kitchen-washtub",
+      "facing": "front",
+      "state": "risen",
+      "frame": null,
+      "canvas": [
+        64,
+        128
+      ],
+      "destination": [
+        0,
+        77,
+        64,
+        51
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature",
+        "quest:set-to-rise"
+      ],
+      "preservePanel": true,
+      "noBorder": true,
+      "alphaThreshold": 128,
+      "blendBase": "round2-crops/kitchen-washtub-front-default.png",
+      "blendMask": [
+        [
+          22,
+          63
+        ],
+        [
+          39,
+          46
+        ],
+        [
+          69,
+          34
+        ],
+        [
+          105,
+          27
+        ],
+        [
+          142,
+          24
+        ],
+        [
+          178,
+          28
+        ],
+        [
+          214,
+          38
+        ],
+        [
+          243,
+          51
+        ],
+        [
+          260,
+          66
+        ],
+        [
+          251,
+          81
+        ],
+        [
+          229,
+          94
+        ],
+        [
+          199,
+          103
+        ],
+        [
+          172,
+          108
+        ],
+        [
+          142,
+          110
+        ],
+        [
+          109,
+          106
+        ],
+        [
+          80,
+          100
+        ],
+        [
+          54,
+          92
+        ],
+        [
+          33,
+          80
+        ]
+      ]
+    },
+    {
+      "key": "loft-hoist-front-working-0",
+      "source": "hoist",
+      "crop": [
+        0,
+        0,
+        496,
+        793
+      ],
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "frame": 0,
+      "canvas": [
+        128,
+        192
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        192
+      ],
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      },
+      "preservePanel": true
+    },
+    {
+      "key": "loft-hoist-front-working-1",
+      "source": "hoist",
+      "crop": [
+        496,
+        0,
+        496,
+        793
+      ],
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "frame": 1,
+      "canvas": [
+        128,
+        192
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        192
+      ],
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      },
+      "preservePanel": true
+    },
+    {
+      "key": "loft-hoist-front-working-2",
+      "source": "hoist",
+      "crop": [
+        992,
+        0,
+        496,
+        793
+      ],
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "frame": 2,
+      "canvas": [
+        128,
+        192
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        192
+      ],
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      },
+      "preservePanel": true
+    },
+    {
+      "key": "loft-hoist-front-working-3",
+      "source": "hoist",
+      "crop": [
+        1487,
+        0,
+        496,
+        793
+      ],
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "frame": 3,
+      "canvas": [
+        128,
+        192
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        192
+      ],
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      },
+      "preservePanel": true
+    },
+    {
+      "key": "library-elara-desk-front-empty",
+      "crop": [
+        0,
+        0,
+        683,
+        683
+      ],
+      "source": "elara",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "canvas": [
+        128,
+        128
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "panelSize": [
+        683,
+        683
+      ],
+      "preservePanel": true,
+      "alphaThreshold": 128,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "library-signature"
+      ],
+      "state": "empty",
+      "frame": null
+    },
+    {
+      "key": "library-elara-desk-front-writing-0",
+      "crop": [
+        683,
+        0,
+        682,
+        683
+      ],
+      "source": "elara",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "canvas": [
+        128,
+        128
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "panelSize": [
+        683,
+        683
+      ],
+      "preservePanel": true,
+      "alphaThreshold": 128,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "resident-state",
+        "library-signature"
+      ],
+      "state": "writing",
+      "frame": 0,
+      "loop": {
+        "frameRate": 1.5
+      }
+    },
+    {
+      "key": "library-elara-desk-front-writing-1",
+      "crop": [
+        1366,
+        0,
+        682,
+        683
+      ],
+      "source": "elara",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "canvas": [
+        128,
+        128
+      ],
+      "destination": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "panelSize": [
+        683,
+        683
+      ],
+      "preservePanel": true,
+      "alphaThreshold": 128,
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "resident-state",
+        "library-signature"
+      ],
+      "state": "writing",
+      "frame": 1,
+      "loop": {
+        "frameRate": 1.5
+      }
+    }
+  ]
+}
