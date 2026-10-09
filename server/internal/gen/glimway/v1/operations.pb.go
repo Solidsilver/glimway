@@ -9,6 +9,8 @@ package contract
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -1593,12 +1595,170 @@ func (x *WildsLanternResult) GetLanterns() []*WildsLantern {
 	return nil
 }
 
+// GET /api/operations/result: what a key committed on a route — its payload
+// (the request without the op header) and stored result, for the outbox's
+// mismatch resolution. Payload is always a JSON object; Result is any JSON
+// (a typed operation's oneof case value, or a domain result). ResultCase is
+// the Envelope oneof case the result answers as ("result" for a domain
+// route); ResultType is the message's full name (empty for a domain route).
+type CommittedOperation struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Route         string                  `protobuf:"bytes,1,opt,name=route,proto3" json:"route,omitempty"`
+	Key           string                  `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Payload       *structpb.Struct        `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	PayloadHash   string                  `protobuf:"bytes,4,opt,name=payload_hash,json=payloadHash,proto3" json:"payload_hash,omitempty"`
+	Version       float64                 `protobuf:"fixed64,5,opt,name=version,proto3" json:"version,omitempty"`
+	Refused       *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=refused,proto3" json:"refused,omitempty"`
+	Result        *structpb.Value         `protobuf:"bytes,7,opt,name=result,proto3" json:"result,omitempty"`
+	ResultCase    string                  `protobuf:"bytes,8,opt,name=result_case,json=resultCase,proto3" json:"result_case,omitempty"`
+	ResultType    string                  `protobuf:"bytes,9,opt,name=result_type,json=resultType,proto3" json:"result_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommittedOperation) Reset() {
+	*x = CommittedOperation{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommittedOperation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommittedOperation) ProtoMessage() {}
+
+func (x *CommittedOperation) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommittedOperation.ProtoReflect.Descriptor instead.
+func (*CommittedOperation) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CommittedOperation) GetRoute() string {
+	if x != nil {
+		return x.Route
+	}
+	return ""
+}
+
+func (x *CommittedOperation) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *CommittedOperation) GetPayload() *structpb.Struct {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *CommittedOperation) GetPayloadHash() string {
+	if x != nil {
+		return x.PayloadHash
+	}
+	return ""
+}
+
+func (x *CommittedOperation) GetVersion() float64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *CommittedOperation) GetRefused() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Refused
+	}
+	return nil
+}
+
+func (x *CommittedOperation) GetResult() *structpb.Value {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *CommittedOperation) GetResultCase() string {
+	if x != nil {
+		return x.ResultCase
+	}
+	return ""
+}
+
+func (x *CommittedOperation) GetResultType() string {
+	if x != nil {
+		return x.ResultType
+	}
+	return ""
+}
+
+type OperationsResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operation     *CommittedOperation    `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OperationsResult) Reset() {
+	*x = OperationsResult{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OperationsResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OperationsResult) ProtoMessage() {}
+
+func (x *OperationsResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OperationsResult.ProtoReflect.Descriptor instead.
+func (*OperationsResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *OperationsResult) GetOperation() *CommittedOperation {
+	if x != nil {
+		return x.Operation
+	}
+	return nil
+}
+
 var File_glimway_v1_operations_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\n" +
 	"\x1bglimway/v1/operations.proto\x12\n" +
-	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x18glimway/v1/profile.proto\x1a\x16glimway/v1/wilds.proto\"\xe8\x01\n" +
+	"glimway.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x13glimway/v1/op.proto\x1a\x18glimway/v1/profile.proto\x1a\x16glimway/v1/wilds.proto\"\xe8\x01\n" +
 	"\rReportRequest\x12\x14\n" +
 	"\x05lease\x18\x01 \x01(\tR\x05lease\x12\x16\n" +
 	"\x06client\x18\x02 \x01(\tR\x06client\x12\x10\n" +
@@ -1732,7 +1892,21 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\blanterns\x18\x05 \x03(\v2\x18.glimway.v1.WildsLanternR\blanterns\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd6\x02\n" +
+	"\x12CommittedOperation\x12\x14\n" +
+	"\x05route\x18\x01 \x01(\tR\x05route\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x121\n" +
+	"\apayload\x18\x03 \x01(\v2\x17.google.protobuf.StructR\apayload\x12!\n" +
+	"\fpayload_hash\x18\x04 \x01(\tR\vpayloadHash\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\x01R\aversion\x126\n" +
+	"\arefused\x18\x06 \x01(\v2\x1c.google.protobuf.StringValueR\arefused\x12.\n" +
+	"\x06result\x18\a \x01(\v2\x16.google.protobuf.ValueR\x06result\x12\x1f\n" +
+	"\vresult_case\x18\b \x01(\tR\n" +
+	"resultCase\x12\x1f\n" +
+	"\vresult_type\x18\t \x01(\tR\n" +
+	"resultType\"P\n" +
+	"\x10OperationsResult\x12<\n" +
+	"\toperation\x18\x01 \x01(\v2\x1e.glimway.v1.CommittedOperationR\toperationB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_operations_proto_rawDescOnce sync.Once
@@ -1746,78 +1920,87 @@ func file_glimway_v1_operations_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_operations_proto_rawDescData
 }
 
-var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_glimway_v1_operations_proto_goTypes = []any{
-	(*ReportRequest)(nil),       // 0: glimway.v1.ReportRequest
-	(*ReportResult)(nil),        // 1: glimway.v1.ReportResult
-	(*QuestStepRequest)(nil),    // 2: glimway.v1.QuestStepRequest
-	(*ItemQty)(nil),             // 3: glimway.v1.ItemQty
-	(*QuestStepResult)(nil),     // 4: glimway.v1.QuestStepResult
-	(*MarkRequest)(nil),         // 5: glimway.v1.MarkRequest
-	(*MarkResult)(nil),          // 6: glimway.v1.MarkResult
-	(*TakePaperRequest)(nil),    // 7: glimway.v1.TakePaperRequest
-	(*TakePaperResult)(nil),     // 8: glimway.v1.TakePaperResult
-	(*SettleEchoRequest)(nil),   // 9: glimway.v1.SettleEchoRequest
-	(*SettleEchoResult)(nil),    // 10: glimway.v1.SettleEchoResult
-	(*FallRequest)(nil),         // 11: glimway.v1.FallRequest
-	(*FallResult)(nil),          // 12: glimway.v1.FallResult
-	(*ProfileReport)(nil),       // 13: glimway.v1.ProfileReport
-	(*VitalsCredit)(nil),        // 14: glimway.v1.VitalsCredit
-	(*ProfileResult)(nil),       // 15: glimway.v1.ProfileResult
-	(*SpendRequest)(nil),        // 16: glimway.v1.SpendRequest
-	(*SpendResult)(nil),         // 17: glimway.v1.SpendResult
-	(*WildsClaimRequest)(nil),   // 18: glimway.v1.WildsClaimRequest
-	(*WildsClaimResult)(nil),    // 19: glimway.v1.WildsClaimResult
-	(*WildsLanternRequest)(nil), // 20: glimway.v1.WildsLanternRequest
-	(*WildsLanternResult)(nil),  // 21: glimway.v1.WildsLanternResult
-	nil,                         // 22: glimway.v1.WildsClaimResult.MaterialsEntry
-	nil,                         // 23: glimway.v1.WildsLanternResult.MaterialsEntry
-	(*Where)(nil),               // 24: glimway.v1.Where
-	(*OpHeader)(nil),            // 25: glimway.v1.OpHeader
-	(*Vitals)(nil),              // 26: glimway.v1.Vitals
-	(*Place)(nil),               // 27: glimway.v1.Place
-	(*HabiticaUser)(nil),        // 28: glimway.v1.HabiticaUser
-	(*ReportBarrier)(nil),       // 29: glimway.v1.ReportBarrier
-	(*WildsEntityState)(nil),    // 30: glimway.v1.WildsEntityState
-	(*WildsLoot)(nil),           // 31: glimway.v1.WildsLoot
-	(*WildsLantern)(nil),        // 32: glimway.v1.WildsLantern
+	(*ReportRequest)(nil),          // 0: glimway.v1.ReportRequest
+	(*ReportResult)(nil),           // 1: glimway.v1.ReportResult
+	(*QuestStepRequest)(nil),       // 2: glimway.v1.QuestStepRequest
+	(*ItemQty)(nil),                // 3: glimway.v1.ItemQty
+	(*QuestStepResult)(nil),        // 4: glimway.v1.QuestStepResult
+	(*MarkRequest)(nil),            // 5: glimway.v1.MarkRequest
+	(*MarkResult)(nil),             // 6: glimway.v1.MarkResult
+	(*TakePaperRequest)(nil),       // 7: glimway.v1.TakePaperRequest
+	(*TakePaperResult)(nil),        // 8: glimway.v1.TakePaperResult
+	(*SettleEchoRequest)(nil),      // 9: glimway.v1.SettleEchoRequest
+	(*SettleEchoResult)(nil),       // 10: glimway.v1.SettleEchoResult
+	(*FallRequest)(nil),            // 11: glimway.v1.FallRequest
+	(*FallResult)(nil),             // 12: glimway.v1.FallResult
+	(*ProfileReport)(nil),          // 13: glimway.v1.ProfileReport
+	(*VitalsCredit)(nil),           // 14: glimway.v1.VitalsCredit
+	(*ProfileResult)(nil),          // 15: glimway.v1.ProfileResult
+	(*SpendRequest)(nil),           // 16: glimway.v1.SpendRequest
+	(*SpendResult)(nil),            // 17: glimway.v1.SpendResult
+	(*WildsClaimRequest)(nil),      // 18: glimway.v1.WildsClaimRequest
+	(*WildsClaimResult)(nil),       // 19: glimway.v1.WildsClaimResult
+	(*WildsLanternRequest)(nil),    // 20: glimway.v1.WildsLanternRequest
+	(*WildsLanternResult)(nil),     // 21: glimway.v1.WildsLanternResult
+	(*CommittedOperation)(nil),     // 22: glimway.v1.CommittedOperation
+	(*OperationsResult)(nil),       // 23: glimway.v1.OperationsResult
+	nil,                            // 24: glimway.v1.WildsClaimResult.MaterialsEntry
+	nil,                            // 25: glimway.v1.WildsLanternResult.MaterialsEntry
+	(*Where)(nil),                  // 26: glimway.v1.Where
+	(*OpHeader)(nil),               // 27: glimway.v1.OpHeader
+	(*Vitals)(nil),                 // 28: glimway.v1.Vitals
+	(*Place)(nil),                  // 29: glimway.v1.Place
+	(*HabiticaUser)(nil),           // 30: glimway.v1.HabiticaUser
+	(*ReportBarrier)(nil),          // 31: glimway.v1.ReportBarrier
+	(*WildsEntityState)(nil),       // 32: glimway.v1.WildsEntityState
+	(*WildsLoot)(nil),              // 33: glimway.v1.WildsLoot
+	(*WildsLantern)(nil),           // 34: glimway.v1.WildsLantern
+	(*structpb.Struct)(nil),        // 35: google.protobuf.Struct
+	(*wrapperspb.StringValue)(nil), // 36: google.protobuf.StringValue
+	(*structpb.Value)(nil),         // 37: google.protobuf.Value
 }
 var file_glimway_v1_operations_proto_depIdxs = []int32{
-	24, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
-	25, // 1: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 2: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
+	26, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
+	27, // 1: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 2: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
 	3,  // 3: glimway.v1.QuestStepResult.taken:type_name -> glimway.v1.ItemQty
 	3,  // 4: glimway.v1.QuestStepResult.given:type_name -> glimway.v1.ItemQty
-	25, // 5: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 6: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
-	25, // 7: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 8: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
-	25, // 9: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 10: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
-	25, // 11: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 12: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
-	26, // 13: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
-	27, // 14: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
-	28, // 15: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
-	29, // 16: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
+	27, // 5: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 6: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
+	27, // 7: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 8: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
+	27, // 9: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 10: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
+	27, // 11: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 12: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
+	28, // 13: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
+	29, // 14: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
+	30, // 15: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
+	31, // 16: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
 	14, // 17: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
-	25, // 18: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 19: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
-	25, // 20: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 21: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
-	30, // 22: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
-	31, // 23: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
-	22, // 24: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
-	25, // 25: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
-	24, // 26: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
-	31, // 27: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
-	23, // 28: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
-	32, // 29: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
-	30, // [30:30] is the sub-list for method output_type
-	30, // [30:30] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	27, // 18: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 19: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
+	27, // 20: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 21: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
+	32, // 22: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
+	33, // 23: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
+	24, // 24: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
+	27, // 25: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
+	26, // 26: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
+	33, // 27: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
+	25, // 28: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
+	34, // 29: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
+	35, // 30: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
+	36, // 31: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
+	37, // 32: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
+	22, // 33: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
+	34, // [34:34] is the sub-list for method output_type
+	34, // [34:34] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_operations_proto_init() }
@@ -1834,7 +2017,7 @@ func file_glimway_v1_operations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_operations_proto_rawDesc), len(file_glimway_v1_operations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

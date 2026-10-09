@@ -228,7 +228,7 @@ test('entries older than six days, or from another contract, are dropped unsent 
 test('a domain mutation carries op and where, and a lost answer is replayed before anything else', async (t) => {
   const r = await rig(t);
   await online(r);
-  const craftAnswer = { body: { state: S({ version: 2 }), result: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } };
+  const craftAnswer = { body: { state: S({ version: 2 }), craft: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } };
   r.server.on('POST /api/craft', 'network', craftAnswer);
   const lost = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } });
   assert.deepEqual(lost, { ok: false, code: 'pending' });
@@ -262,7 +262,19 @@ test('things the server decides need a connection; never-sent ones go when it do
   assert.deepEqual(r.link.outbox.map((e) => e.kind), ['mark']);
 });
 
-const lookup = (operation: unknown, state = S({ version: 2 })): Answer => ({ body: { state, result: { operation } } });
+// The reconciliation read's wire shape (operations.proto): the operation's
+// fields are always present (null when unset), per EmitUnpopulated.
+const lookup = (operation: unknown, state = S({ version: 2 })): Answer => ({
+  body: {
+    state,
+    result: {
+      operation: operation === null ? null : {
+        payloadHash: 'h', refused: null, result: null, resultType: '',
+        ...(operation as Record<string, unknown>),
+      },
+    },
+  },
+});
 const lookupPath = (route: string, key: string) => `GET /api/operations/result?route=${encodeURIComponent(route)}&key=${encodeURIComponent(key)}`;
 
 test('idempotency-mismatch, a different payload committed: that action is not this one, its prediction goes, the queue goes on', async (t) => {
@@ -629,9 +641,9 @@ test('back online after someone played elsewhere, with work unsent here: the wel
 test('asking again for an order whose answer was lost settles that order: resolved, never a second one', async (t) => {
   const r = await rig(t);
   await online(r);
-  const craftAnswer = { body: { state: S({ version: 2 }), result: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } };
+  const craftAnswer = { body: { state: S({ version: 2 }), craft: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } };
   const trouble = { status: 503, body: { error: { code: 'unavailable' } } };
-  r.server.on('POST /api/craft', trouble, craftAnswer, { body: { state: S({ version: 3 }), result: { recipeId: 'nail', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {} } } });
+  r.server.on('POST /api/craft', trouble, craftAnswer, { body: { state: S({ version: 3 }), craft: { recipeId: 'nail', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } });
   assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'pending' });
   r.server.on('GET /api/state', { body: { state: S(), leaseActive: true } });
   await new Promise((done) => setTimeout(done, 20)); // the player asks again a moment later

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"slices"
@@ -332,9 +333,7 @@ func (a *Server) repairsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		repairsView
-	}{v})
+	return a.finishRead(w, r, tx, s, repairsViewProto(v))
 }
 
 func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
@@ -342,14 +341,12 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Mutation
-	}
-	if err = decode(w, r, &req); err != nil {
+	var req contract.MendRequest
+	if err = decodeOp(w, r, &req); err != nil {
 		return err
 	}
 
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		def, ok := content.RepairFor(id)
 		if !ok {
 			return nil, fail(404, "repair-not-found")
@@ -440,18 +437,10 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 
-		return struct {
-			Repairs  repairsView         `json:"repairs"`
-			Mended   string              `json:"mended"`
-			Reaction string              `json:"reaction"`
-			Gift     *content.RepairGift `json:"gift,omitempty"`
-			Items    itemsView           `json:"items"`
-		}{
-			Repairs:  v,
-			Mended:   id,
-			Reaction: def.Reaction,
-			Gift:     def.Gift,
-			Items:    items,
-		}, nil
+		out := &contract.MendResult{Mended: id, Reaction: def.Reaction, Repairs: repairsViewProto(v), Items: itemsViewProto(items)}
+		if def.Gift != nil {
+			out.Gift = &contract.RepairGift{Kind: def.Gift.Kind, Id: def.Gift.ID, Qty: int32(def.Gift.Qty)}
+		}
+		return out, nil
 	})
 }

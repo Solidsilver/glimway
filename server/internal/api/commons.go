@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"net/http"
 )
 
@@ -125,12 +126,17 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Gates     []gateView   `json:"gates"`
-		GateCount int          `json:"gateCount"`
-		Mine      any          `json:"mine"`
-		Invites   []inviteView `json:"invites"`
-	}{gates, n, mine, invites})
+	out := &contract.CommonsResult{Gates: make([]*contract.GateView, 0, len(gates)), GateCount: int32(n), Invites: make([]*contract.DeedInvite, 0, len(invites))}
+	for i := range gates {
+		out.Gates = append(out.Gates, gateViewProto(gates[i]))
+	}
+	if mine != nil {
+		out.Mine = &contract.CommonsMine{HomeId: mine.HomeID, Gate: int32(mine.Gate)}
+	}
+	for i := range invites {
+		out.Invites = append(out.Invites, inviteViewProto(invites[i]))
+	}
+	return a.finishRead(w, r, tx, s, out)
 }
 
 // invitesFor lists unexpired invites to the caller or from their homestead.

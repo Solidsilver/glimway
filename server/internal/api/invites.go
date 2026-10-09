@@ -153,5 +153,5 @@ func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	return a.finish(w, r, tx, map[string]bool{"ok": true})
+	return a.finish(w, r, tx, &contract.RevokeInviteResponse{Ok: true})
 }

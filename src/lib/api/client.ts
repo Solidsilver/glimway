@@ -11,24 +11,14 @@
 import { noteServerClock } from '../server-time.ts';
 import contract from '../../../content/contract.json' with { type: 'json' };
 import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
+import { OperationsResultSchema } from '../gen/glimway/v1/operations_pb.js';
+import { decodeWire } from './wire.ts';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { ApiError, errorFromResponse, isReloadNeeded, isServerErrorCode, type ServerErrorCode } from './errors.ts';
 import {
   parseCalendar,
-  parseContribute,
-  parseCraft,
-  parseDeskCopy,
-  parseHearthCraft,
   parseWoodpileRead,
   parseWoodpileAction,
-  parseMail,
-  parseMailAction,
-  parseProjects,
-  parseRepairs,
-  parseMend,
-  parseStorage,
-  parseStorageMove,
-  parseCommons,
   parseHome,
   parseHomeAction,
   parseShelf,
@@ -41,12 +31,11 @@ import {
   parseSnapshot,
   parseState,
   parseWildsRegion,
-  parseWorld,
-  parseWorldChoice,
-  parseWorldMove,
 } from './parse.ts';
+import { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailSend, parseMailClaim, parseMailRecall, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend, parseLibraryDonate } from './village.ts';
+import { parseWorld, parseWorldChoice, parseWorldMove, parseWorldLeave } from './world.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
-import { parseEntry, type ShelfEntry } from '../papers/library.ts';
+import type { ShelfEntry } from '../papers/library.ts';
 import type {
   Asset,
   CalendarResponse,
@@ -312,7 +301,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseWorldMove(await request('POST', '/api/world/move', req));
     },
     async worldLeave(req) {
-      return parseWorldMove(await request('POST', '/api/world/leave', req));
+      return parseWorldLeave(await request('POST', '/api/world/leave', req));
     },
     async worldNotice() {
       return parseWorld(await request('POST', '/api/world/notice', {}));
@@ -375,13 +364,13 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseMail(mixedRead(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`)));
     },
     async mailSend(req) {
-      return parseMailAction(await request('POST', '/api/mail', req));
+      return parseMailSend(await request('POST', '/api/mail', req));
     },
     async mailClaim(id, req) {
-      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/claim`, req));
+      return parseMailClaim(await request('POST', `/api/mail/${encodeURIComponent(id)}/claim`, req));
     },
     async mailRecall(id, req) {
-      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
+      return parseMailRecall(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
     },
     async projects() {
       return parseProjects(mixedRead(await request('GET', '/api/projects')));
@@ -406,10 +395,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseOperationResult(raw);
     },
     async libraryDonate(req) {
-      const res = await request('POST', '/api/library/donate', req);
-      const entry = parseEntry((res as { result?: { entry?: unknown } } | null)?.result?.entry);
-      if (!entry) throw new ApiError('bad-response', { status: 200 });
-      return { ...parseSnapshot(res), result: { entry } };
+      return parseLibraryDonate(await request('POST', '/api/library/donate', req));
     },
   };
 
@@ -476,18 +462,20 @@ export function mixedRead(raw: unknown): unknown {
   return { ...(result as Record<string, unknown>), state };
 }
 
-/** The reconciliation read, validated: a current state, and the committed operation or null. */
+/** The reconciliation read, validated: a current state, and the committed
+ * operation or null (operations.proto, decoded through the generated
+ * `OperationsResult`). */
 export function parseOperationResult(raw: unknown): { state: PlayerState; operation: CommittedOperation | null } {
-  const { state, result } = decodeMixed(raw, (r) => r);
-  const op = (result as { operation?: unknown } | null)?.operation;
-  if (op === null || op === undefined) return { state, operation: null };
-  const o = op as Record<string, unknown>;
-  if (typeof o.route !== 'string' || typeof o.key !== 'string' || !o.payload || typeof o.payload !== 'object' || Array.isArray(o.payload) || typeof o.resultCase !== 'string' || typeof o.version !== 'number') {
-    throw new ApiError('bad-response', { status: 200 });
-  }
-  const refused = o.refused;
-  if (refused !== undefined && (typeof refused !== 'string' || !isServerErrorCode(refused))) throw new ApiError('bad-response', { status: 200 });
-  return { state, operation: { route: o.route, key: o.key, payload: o.payload as Record<string, unknown>, version: o.version, result: o.result, resultCase: o.resultCase, ...(refused ? { refused } : {}) } };
+  const { state, result } = decodeMixed(raw, (r) => {
+    const out = decodeWire(OperationsResultSchema, r);
+    const op = out.operation;
+    if (!op) return null;
+    if (!op.route || !op.key || !op.resultCase) throw new Error('missing committed operation fields');
+    const refused = op.refused;
+    if (refused !== undefined && !isServerErrorCode(refused)) throw new Error('unknown refusal code');
+    return { route: op.route, key: op.key, payload: op.payload as Record<string, unknown>, version: op.version, result: op.result, resultCase: op.resultCase, ...(refused ? { refused } : {}) };
+  });
+  return { state, operation: result };
 }
 
 /**

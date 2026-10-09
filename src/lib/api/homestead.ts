@@ -10,10 +10,11 @@ import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import {
   HomesteadReadSchema, HomesteadResultSchema, ShelfReadSchema, ShelfResultSchema,
   WoodpileReadSchema, WoodpileResultSchema,
-  type HomeView as GeneratedHomeView, type HomesteadRead, type HomesteadResult,
+  type HomesteadRead, type HomesteadResult,
   type ShelfRead, type ShelfResult, type ShelfView as GeneratedShelfView,
   type WoodpileRead, type WoodpileResult, type WoodpileView as GeneratedWoodpileView,
 } from '../gen/glimway/v1/homestead_pb.js';
+import { type HomeView as GeneratedHomeView } from '../gen/glimway/v1/goods_pb.js';
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
 import { projectAsset, projectCounts } from './items.ts';
@@ -228,7 +229,7 @@ function homeInstance(v: GeneratedHomeInstance): HomeInstance {
 }
 
 /** The homestead view, projected (tiles as tuples, nulls kept). */
-function projectHome(h: GeneratedHomeView): HomeView {
+export function projectHome(h: GeneratedHomeView): HomeView {
   if (!h.id || !Array.isArray(h.members)) throw new Error('invalid home');
   return {
     id: h.id,

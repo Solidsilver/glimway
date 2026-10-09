@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 	"net/http"
@@ -146,26 +147,21 @@ func (a *Server) mailRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		mailPage
-		Inventory assetCounts `json:"inventory"`
-	}{list, inventory})
+	mail, next, nextPending := mailPageFields(list)
+	return a.finishRead(w, r, tx, s, &contract.MailReadResult{Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)})
 }
 func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		ToID  string        `json:"toId"`
-		Asset content.Asset `json:"asset"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.MailSendRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if req.ToID == s.AccountID {
+	asset := assetOf(req.Asset)
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		if req.ToId == s.AccountID {
 			return nil, fail(400, "self-mail")
 		}
 		var world string
-		err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", req.ToID).Scan(&world)
+		err := tx.QueryRowContext(ctx, "SELECT world_id FROM players WHERE account_id=?", req.ToId).Scan(&world)
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "recipient-not-found")
 		}
@@ -176,33 +172,33 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(403, "world-access-denied")
 		}
 		var eligible bool
-		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica')) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica'))", req.ToID, req.ToID).Scan(&eligible); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica')) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=(SELECT subject FROM sign_ins WHERE account_id=? AND method='habitica'))", req.ToId, req.ToId).Scan(&eligible); err != nil {
 			return nil, err
 		}
 		if !eligible {
 			return nil, fail(403, "recipient-unavailable")
 		}
-		if err = validAsset(req.Asset); err != nil {
+		if err = validAsset(asset); err != nil {
 			return nil, err
 		}
-		if d, ok := content.ItemFor(req.Asset.ID); ok && req.Asset.Kind != "decoration" && !d.Giveable() {
+		if d, ok := content.ItemFor(asset.ID); ok && asset.Kind != "decoration" && !d.Giveable() {
 			return nil, fail(409, "not-giveable")
 		}
-		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToID, now, w); err != nil {
+		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToId, now, w); err != nil {
 			return nil, err
 		}
 		id, err := store.Random()
 		if err != nil {
 			return nil, err
 		}
-		got, err := takeAsset(ctx, tx, s, req.Asset, holder{"mail", s.AccountID, ""}, "mail-send", id, now)
+		got, err := takeAsset(ctx, tx, s, asset, holder{"mail", s.AccountID, ""}, "mail-send", id, now)
 		if err != nil {
 			return nil, err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToID, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToId, asset.Kind, asset.ID, asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
-		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", req.Asset.Kind, req.Asset.ID), req.Asset.Qty, "mail-send", id, now); err != nil {
+		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", asset.Kind, asset.ID), asset.Qty, "mail-send", id, now); err != nil {
 			return nil, err
 		}
 		list, err := mailList(ctx, tx, *s, nil, nil)
@@ -213,11 +209,8 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			MailID string `json:"mailId"`
-			mailPage
-			Inventory assetCounts `json:"inventory"`
-		}{id, list, inventory}, nil
+		mail, next, nextPending := mailPageFields(list)
+		return &contract.MailSendResult{MailId: id, Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)}, nil
 	})
 }
 func pathActionID(path, prefix, suffix string) (string, error) {
@@ -235,13 +228,11 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Mutation
-	}
-	if err = decode(w, r, &req); err != nil {
+	var req contract.MailKeyedRequest
+	if err = decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var v content.Asset
 		var from, world, to, raw, makers string
 		var claimed, returned sql.NullInt64
@@ -304,12 +295,8 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			MailID string        `json:"mailId"`
-			Asset  content.Asset `json:"asset"`
-			mailPage
-			Inventory assetCounts `json:"inventory"`
-		}{id, v, list, inventory}, nil
+		mail, next, nextPending := mailPageFields(list)
+		return &contract.MailActionResult{MailId: id, Asset: assetProto(v), Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)}, nil
 	})
 }
 
@@ -344,13 +331,11 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Mutation
-	}
-	if err = decode(w, r, &req); err != nil {
+	var req contract.MailKeyedRequest
+	if err = decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var from, world string
 		var asset content.Asset
 		var claimed, returned sql.NullInt64
@@ -387,12 +372,8 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			MailID string        `json:"mailId"`
-			Asset  content.Asset `json:"asset"`
-			mailPage
-			Inventory assetCounts `json:"inventory"`
-		}{id, asset, list, inventory}, nil
+		mail, next, nextPending := mailPageFields(list)
+		return &contract.MailRecallResult{MailId: id, Asset: assetProto(asset), Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)}, nil
 	})
 }
 

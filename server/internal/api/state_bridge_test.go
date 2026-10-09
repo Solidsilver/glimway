@@ -68,6 +68,14 @@ func testSnapshotJSON(raw []byte) []byte {
 	for k, v := range projected {
 		fields[k] = v
 	}
+	// A typed operation's answer sits under its Envelope oneof case name
+	// (protojson); the test responses read it as the domain's result.
+	for _, c := range []string{"report", "questStep", "mark", "takePaper", "settleEcho", "fall", "profile", "spend", "wildsClaim", "wildsLantern", "libraryDonate", "mailSend", "mailClaim", "mailRecall", "storageMove", "craft", "hearthCraft", "deskCopy", "worldMove", "worldLeave", "contribute", "mend"} {
+		if fields[c] != nil {
+			fields["result"] = fields[c]
+			delete(fields, c)
+		}
+	}
 	var extras map[string]json.RawMessage
 	if json.Unmarshal(fields["result"], &extras) == nil {
 		for k, v := range extras {

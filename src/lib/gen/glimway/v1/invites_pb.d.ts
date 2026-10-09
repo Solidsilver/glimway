@@ -116,3 +116,21 @@ export declare type ListInvitesResponse = Message<"glimway.v1.ListInvitesRespons
  */
 export declare const ListInvitesResponseSchema: GenMessage<ListInvitesResponse>;
 
+/**
+ * DELETE /api/invites/:id.
+ *
+ * @generated from message glimway.v1.RevokeInviteResponse
+ */
+export declare type RevokeInviteResponse = Message<"glimway.v1.RevokeInviteResponse"> & {
+  /**
+   * @generated from field: bool ok = 1;
+   */
+  ok: boolean;
+};
+
+/**
+ * Describes the message glimway.v1.RevokeInviteResponse.
+ * Use `create(RevokeInviteResponseSchema)` to create a new message.
+ */
+export declare const RevokeInviteResponseSchema: GenMessage<RevokeInviteResponse>;
+

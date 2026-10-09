@@ -3,10 +3,11 @@
 /* eslint-disable */
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 import type { OpHeader, Place, ReportBarrier, Vitals, Where } from "./op_pb.js";
 import type { HabiticaUser } from "./profile_pb.js";
 import type { WildsEntityState, WildsLantern, WildsLoot } from "./wilds_pb.js";
+import type { Value } from "@bufbuild/protobuf/wkt";
 
 /**
  * Describes the file glimway/v1/operations.proto.
@@ -746,4 +747,83 @@ export declare type WildsLanternResult = Message<"glimway.v1.WildsLanternResult"
  * Use `create(WildsLanternResultSchema)` to create a new message.
  */
 export declare const WildsLanternResultSchema: GenMessage<WildsLanternResult>;
+
+/**
+ * GET /api/operations/result: what a key committed on a route — its payload
+ * (the request without the op header) and stored result, for the outbox's
+ * mismatch resolution. Payload is always a JSON object; Result is any JSON
+ * (a typed operation's oneof case value, or a domain result). ResultCase is
+ * the Envelope oneof case the result answers as ("result" for a domain
+ * route); ResultType is the message's full name (empty for a domain route).
+ *
+ * @generated from message glimway.v1.CommittedOperation
+ */
+export declare type CommittedOperation = Message<"glimway.v1.CommittedOperation"> & {
+  /**
+   * @generated from field: string route = 1;
+   */
+  route: string;
+
+  /**
+   * @generated from field: string key = 2;
+   */
+  key: string;
+
+  /**
+   * @generated from field: google.protobuf.Struct payload = 3;
+   */
+  payload?: JsonObject | undefined;
+
+  /**
+   * @generated from field: string payload_hash = 4;
+   */
+  payloadHash: string;
+
+  /**
+   * @generated from field: double version = 5;
+   */
+  version: number;
+
+  /**
+   * @generated from field: google.protobuf.StringValue refused = 6;
+   */
+  refused?: string | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Value result = 7;
+   */
+  result?: Value | undefined;
+
+  /**
+   * @generated from field: string result_case = 8;
+   */
+  resultCase: string;
+
+  /**
+   * @generated from field: string result_type = 9;
+   */
+  resultType: string;
+};
+
+/**
+ * Describes the message glimway.v1.CommittedOperation.
+ * Use `create(CommittedOperationSchema)` to create a new message.
+ */
+export declare const CommittedOperationSchema: GenMessage<CommittedOperation>;
+
+/**
+ * @generated from message glimway.v1.OperationsResult
+ */
+export declare type OperationsResult = Message<"glimway.v1.OperationsResult"> & {
+  /**
+   * @generated from field: glimway.v1.CommittedOperation operation = 1;
+   */
+  operation?: CommittedOperation | undefined;
+};
+
+/**
+ * Describes the message glimway.v1.OperationsResult.
+ * Use `create(OperationsResultSchema)` to create a new message.
+ */
+export declare const OperationsResultSchema: GenMessage<OperationsResult>;
 

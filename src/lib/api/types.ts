@@ -17,10 +17,6 @@ export type {
 export type {
   MakerView, FittingView, InstanceView, StackView, SlotView, ThanksView, ItemsView, ItemsResponse, ItemsOp, ItemsActionResponse,
 } from './items.ts';
-// The projections above are this module's vocabulary too (the workshop,
-// repairs and mail answers embed them).
-import type { HomeMember, HomeView } from './homestead.ts';
-import type { InstanceView, ItemsView } from './items.ts';
 
 /** The client-writable progress document (`doc` / `progress`). */
 export interface Progress {
@@ -121,92 +117,8 @@ export type { InviteInfo, CreatedInvite, InviteList } from './invites.ts';
 
 // ------------------------------------------------------------- worlds
 
-/** A world as the server names it: its owner (none for a party's) and how many live there. */
-export interface WorldRef {
-  id: string;
-  /** Empty for a party's world. */
-  ownerId: string;
-  ownerName: string;
-  members: number;
-  /** The owner lives there. */
-  ownerHere: boolean;
-  /** A party's world, owned by no one. */
-  party: boolean;
-}
-
-/**
- * A first sign-in held for the world choice (POST /api/session, GET
- * /api/world/choice): the account is signed in, but has no world until
- * POST /api/world/choose. Everything else answers `world-choice-required`.
- */
-export interface WorldChoice {
-  habiticaId: string;
-  displayName: string;
-  /** The party's world here, and how many live there. */
-  partyWorld: WorldRef | null;
-  /** The party has no world here yet: choosing it opens one. */
-  partyCanOpen: boolean;
-  /** Let in through the party: they make no invite codes, even from a world of their own. */
-  partyAdmitted: boolean;
-}
-
-/** What a move would leave behind (GET /api/world). */
-interface WorldLeaving {
-  /** Your homestead's gate (-1: none). */
-  gate: number;
-  /** You are its only member: it goes quiet after you leave. */
-  last: boolean;
-  /** Parcels you sent that are still on the road (recall them first). */
-  outgoing: number;
-  /** Parcels waiting for you (they go back to their senders). */
-  incoming: number;
-  /** Warden-set tools in your homestead's shared chest (they stay behind). */
-  wardenTools: number;
-  /** Embers a deed costs in the next world (0: your first, free). */
-  deedCost: number;
-}
-
-/** GET /api/world: your world, your party's world, and when you may next move. */
-export interface WorldView {
-  world: WorldRef;
-  isOwner: boolean;
-  /** Your last sign-in reported a party. */
-  inParty: boolean;
-  /** You live in your party's world. */
-  partyHome: boolean;
-  /** Your party's world, when you live somewhere else. */
-  partyWorld: WorldRef | null;
-  /** Your party has no world here yet and you may open it. */
-  partyCanOpen: boolean;
-  /** A world you own, when you live somewhere else. */
-  ownWorld: WorldRef | null;
-  /** The party world's join prompt hasn't been shown yet. */
-  prompt: boolean;
-  leaving: WorldLeaving;
-  /** When the next move is allowed (unix seconds, the server's clock; 0: now). One move a day. */
-  moveOpensAt: number;
-  /** Seconds until then, by the server's clock: count down from this on the device's own. */
-  moveOpensIn: number;
-  /** You live in a party's world and have left that party. */
-  leaver: WorldLeaver | null;
-  /** When the server moved you out of a party's world you'd left (0: it didn't), until noticed. */
-  movedOutAt: number;
-}
-
-/** Living in a party's world after leaving the party (GET /api/world). */
-export interface WorldLeaver {
-  leftAt: number;
-  /** When the next sign-in moves you out (server clock); moveOutIn: seconds until then. */
-  moveOutAt: number;
-  moveOutIn: number;
-  /** You own a world to go to (otherwise one is made for you). */
-  hasOwn: boolean;
-}
-
-/** POST /api/world/move (keyed). */
-export interface WorldMoveResponse extends Snapshot {
-  result: { world: WorldView; from: string; leftHome: boolean; returned: number };
-}
+// The world views and moves (world.proto, decoded in world.ts).
+export type { WorldRef, WorldChoice, WorldLeaver, WorldLeaving, WorldView, WorldMoveResponse } from './world.ts';
 
 // ------------------------------------------------------------- the Wilds
 
@@ -348,40 +260,8 @@ export interface WildsLanternResponse extends Snapshot {
 
 // ------------------------------------------------------------ homesteads
 
-/** One gate on the Commons lane. */
-export interface GateInfo {
-  gate: number;
-  homeId: string | null;
-  names: string[];
-  members: HomeMember[];
-  tier: number;
-  desolate: boolean;
-  mine: boolean;
-  /** Unclaimed: what the deed costs the caller in embers. */
-  price: number | null;
-  /** The caller was on this empty home's deed and can take it back, free, until the deed is lost. */
-  reclaim: boolean;
-  shelf?: boolean;
-  shelfStocked?: boolean;
-}
-
-/** A joint-deed invitation the caller is part of. */
-export interface DeedInvite {
-  homeId: string;
-  gate: number;
-  from: { id: string; name: string };
-  to: { id: string; name: string };
-  expiresAt: number;
-  fromConfirmedAt: number | null;
-  toConfirmedAt: number | null;
-}
-
-export interface CommonsResponse extends Snapshot {
-  gates: GateInfo[];
-  gateCount: number;
-  mine: { homeId: string; gate: number } | null;
-  invites: DeedInvite[];
-}
+// The Commons read (village.proto, decoded in village.ts).
+export type { GateInfo, DeedInvite, CommonsResponse } from './village.ts';
 
 // ------------------------------------------------------------ phase 5
 
@@ -408,154 +288,25 @@ export interface AssetCounts {
 }
 
 // ------------------------------------------------------------ items (docs/items/)
+import type { InstanceView } from './items.ts';
 // The item-model types (MakerView, InstanceView, ItemsView, ItemsResponse,
 // ItemsOp, ItemsActionResponse…) moved to items.ts with their parsers.
 
 export type { CalendarResponse } from './calendar.ts';
 
-/** Which chest at home: the shared one, or the caller's own small one. */
-export type ChestId = 'shared' | 'personal';
-
-/**
- * The workshop: your pack, your own chest (always reachable: it goes with
- * you), and, with a Workshop home, that home and its shared chest. Without
- * one, home and storage are null and `shared` says why.
- */
-export interface WorkshopView {
-  home: HomeView | null;
-  inventory: AssetCounts;
-  storage: AssetCounts | null;
-  personal: AssetCounts;
-  shared: 'open' | 'not-a-member' | 'tier-required' | string;
-}
-
-export interface StorageResponse extends Snapshot, WorkshopView {}
-
-export interface StorageMoveResponse extends Snapshot {
-  result: WorkshopView;
-}
-
-export interface CraftResponse extends Snapshot {
-  result: WorkshopView & { recipeId: string; output: Asset; instanceIds: string[] };
-}
-
-/** Made at the cottage hearth (food, remedies, oils): the workshop view plus what the batch made. */
-export interface HearthCraftResponse extends Snapshot {
-  result: WorkshopView & { recipeId: string; output: Asset };
-}
-
-/** A recipe page copied at the writing desk: the workshop view plus the copies. */
-export interface DeskCopyResponse extends Snapshot {
-  result: WorkshopView & { pageId: string; qty: number };
-}
+// Storage and crafting answers (village.proto, decoded in village.ts); the
+// workshop view they carry is the village lane's too.
+export type { WorkshopView, ChestId, StorageResponse, StorageMoveResponse, CraftResponse, HearthCraftResponse, DeskCopyResponse } from './village.ts';
 
 // The gate-shelf and woodpile types moved to homestead.ts with their parsers.
 
-export interface Mail {
-  id: string;
-  worldId: string;
-  fromId: string;
-  toId: string;
-  fromName: string;
-  toName: string;
-  asset: Asset;
-  sentAt: number;
-  claimedAt: number | null;
-  /** Set when it went back to the sender (recall, 30-day return, recipient removed). */
-  returnedAt?: number | null;
-  returnReason?: 'recalled' | 'expired' | 'recipient-removed' | null;
-}
+// Mail, projects and repairs answers (village.proto, decoded in village.ts).
+export type {
+  Mail, MailResponse, MailActionResponse,
+  ProjectView, ProjectsView, ProjectsResponse, ContributeResponse,
+  ChoreView, MendedView, ChoreHistoryView, RepairsView, RepairsResponse, MendResult, MendResponse,
+} from './village.ts';
 
-export interface MailResponse extends Snapshot {
-  mail: Mail[];
-  /** History continues at `?cursor=` (opaque); pending mail repeats on every page. */
-  nextCursor?: string | null;
-  /** Only for legacy pending backlogs past the current caps: `?pendingCursor=`. */
-  nextPendingCursor?: string | null;
-  /** Carried counts (this client's server addition); absent from older servers. */
-  inventory?: AssetCounts;
-}
-
-export interface MailActionResponse extends Snapshot {
-  result: { mailId: string; mail: Mail[]; inventory: AssetCounts; asset?: Asset };
-}
-
-export interface ProjectView {
-  id: string;
-  name: string;
-  stage: 'open' | 'in-progress' | 'complete';
-  required: Record<string, number>;
-  contributed: Record<string, number>;
-  /** The caller's own share (this client's server addition). */
-  mine: Record<string, number>;
-  completedAt: number | null;
-  worldFlag: string | null;
-  grantablePapers: string[];
-}
-
-export interface ProjectsView {
-  projects: ProjectView[];
-  worldFlags: string[];
-  grantablePapers: string[];
-}
-
-export interface ProjectsResponse extends Snapshot, ProjectsView {}
-
-export interface ContributeResponse extends Snapshot {
-  result: ProjectsView & { projectId: string; materials: Record<string, number> };
-}
-
-export interface ChoreView {
-  id: string;
-  name: string;
-  part: string;
-  area: string;
-  target: string;
-  pos: { tx: number; ty: number };
-  resident: string;
-  hint: string;
-  description: string;
-}
-
-export interface MendedView {
-  repairId: string;
-  mendedBy: string;
-  displayName: string;
-  mendedAt: number;
-}
-
-export interface ChoreHistoryView {
-  id: string;
-  repairId: string;
-  repairName: string;
-  mendedBy: string;
-  displayName: string;
-  mendedAt: number;
-}
-
-export interface RepairsView {
-  open: ChoreView[];
-  mended: MendedView[];
-  worldFlags: string[];
-  history: ChoreHistoryView[];
-}
-
-export interface RepairsResponse extends Snapshot, RepairsView {}
-
-export interface MendResult {
-  repairs: RepairsView;
-  mended: string;
-  reaction: string;
-  gift?: { kind: string; id: string; qty: number };
-  items: ItemsView;
-}
-
-export interface MendResponse extends Snapshot {
-  result: MendResult;
-}
-
-// The v3 facade uses generated contracts directly. The GameState interfaces
-// above remain only for the intermediate domain/Link compilation bridge.
 export type { PlayerState, Envelope as OperationEnvelope, SessionResponse as SessionReply, PlayResponse as PlayReply, StateResponse as StateReply, Refusal as OperationRefusal } from '../gen/glimway/v1/state_pb.js';
 export type { OpHeader, Where, ReportBarrier, Vitals, Place } from '../gen/glimway/v1/op_pb.js';
 export type { ReportRequest, ReportResult, ItemQty, QuestStepRequest, QuestStepResult, MarkRequest, MarkResult, TakePaperRequest, TakePaperResult, SettleEchoRequest, SettleEchoResult, FallRequest, FallResult, ProfileReport, ProfileResult } from '../gen/glimway/v1/operations_pb.js';

@@ -22,343 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A stack of made goods (one maker's).
-type Stack struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemDef       string                 `protobuf:"bytes,1,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Qty           int32                  `protobuf:"varint,2,opt,name=qty,proto3" json:"qty,omitempty"`
-	Maker         *Maker                 `protobuf:"bytes,3,opt,name=maker,proto3" json:"maker,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Stack) Reset() {
-	*x = Stack{}
-	mi := &file_glimway_v1_items_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Stack) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Stack) ProtoMessage() {}
-
-func (x *Stack) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Stack.ProtoReflect.Descriptor instead.
-func (*Stack) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Stack) GetItemDef() string {
-	if x != nil {
-		return x.ItemDef
-	}
-	return ""
-}
-
-func (x *Stack) GetQty() int32 {
-	if x != nil {
-		return x.Qty
-	}
-	return 0
-}
-
-func (x *Stack) GetMaker() *Maker {
-	if x != nil {
-		return x.Maker
-	}
-	return nil
-}
-
-// A pocket or the off hand: what it points at (null when empty).
-type Slot struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Slot          string                  `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
-	ItemDef       *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Instance      *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Slot) Reset() {
-	*x = Slot{}
-	mi := &file_glimway_v1_items_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Slot) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Slot) ProtoMessage() {}
-
-func (x *Slot) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Slot.ProtoReflect.Descriptor instead.
-func (*Slot) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *Slot) GetSlot() string {
-	if x != nil {
-		return x.Slot
-	}
-	return ""
-}
-
-func (x *Slot) GetItemDef() *wrapperspb.StringValue {
-	if x != nil {
-		return x.ItemDef
-	}
-	return nil
-}
-
-func (x *Slot) GetInstance() *wrapperspb.StringValue {
-	if x != nil {
-		return x.Instance
-	}
-	return nil
-}
-
-// The off hand: it opens with a class.
-type OffHand struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Open          bool                    `protobuf:"varint,1,opt,name=open,proto3" json:"open,omitempty"`
-	Class         *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=class,proto3" json:"class,omitempty"`
-	ItemDef       *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Instance      *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=instance,proto3" json:"instance,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *OffHand) Reset() {
-	*x = OffHand{}
-	mi := &file_glimway_v1_items_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *OffHand) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OffHand) ProtoMessage() {}
-
-func (x *OffHand) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OffHand.ProtoReflect.Descriptor instead.
-func (*OffHand) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *OffHand) GetOpen() bool {
-	if x != nil {
-		return x.Open
-	}
-	return false
-}
-
-func (x *OffHand) GetClass() *wrapperspb.StringValue {
-	if x != nil {
-		return x.Class
-	}
-	return nil
-}
-
-func (x *OffHand) GetItemDef() *wrapperspb.StringValue {
-	if x != nil {
-		return x.ItemDef
-	}
-	return nil
-}
-
-func (x *OffHand) GetInstance() *wrapperspb.StringValue {
-	if x != nil {
-		return x.Instance
-	}
-	return nil
-}
-
-// A recent thank-you for something you made (at: Unix seconds).
-type Thanks struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FromName      string                 `protobuf:"bytes,1,opt,name=from_name,json=fromName,proto3" json:"from_name,omitempty"`
-	ItemDef       string                 `protobuf:"bytes,2,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	At            float64                `protobuf:"fixed64,3,opt,name=at,proto3" json:"at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Thanks) Reset() {
-	*x = Thanks{}
-	mi := &file_glimway_v1_items_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Thanks) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Thanks) ProtoMessage() {}
-
-func (x *Thanks) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Thanks.ProtoReflect.Descriptor instead.
-func (*Thanks) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *Thanks) GetFromName() string {
-	if x != nil {
-		return x.FromName
-	}
-	return ""
-}
-
-func (x *Thanks) GetItemDef() string {
-	if x != nil {
-		return x.ItemDef
-	}
-	return ""
-}
-
-func (x *Thanks) GetAt() float64 {
-	if x != nil {
-		return x.At
-	}
-	return 0
-}
-
-// What the caller carries (GET /api/items and every item mutation).
-type ItemsView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Stacks        []*Stack               `protobuf:"bytes,1,rep,name=stacks,proto3" json:"stacks,omitempty"`
-	Instances     []*Instance            `protobuf:"bytes,2,rep,name=instances,proto3" json:"instances,omitempty"`
-	Pockets       []*Slot                `protobuf:"bytes,3,rep,name=pockets,proto3" json:"pockets,omitempty"`
-	OffHand       *OffHand               `protobuf:"bytes,4,opt,name=off_hand,json=offHand,proto3" json:"off_hand,omitempty"`
-	PickedUp      []string               `protobuf:"bytes,5,rep,name=picked_up,json=pickedUp,proto3" json:"picked_up,omitempty"`
-	Thanks        []*Thanks              `protobuf:"bytes,6,rep,name=thanks,proto3" json:"thanks,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ItemsView) Reset() {
-	*x = ItemsView{}
-	mi := &file_glimway_v1_items_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ItemsView) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ItemsView) ProtoMessage() {}
-
-func (x *ItemsView) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ItemsView.ProtoReflect.Descriptor instead.
-func (*ItemsView) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ItemsView) GetStacks() []*Stack {
-	if x != nil {
-		return x.Stacks
-	}
-	return nil
-}
-
-func (x *ItemsView) GetInstances() []*Instance {
-	if x != nil {
-		return x.Instances
-	}
-	return nil
-}
-
-func (x *ItemsView) GetPockets() []*Slot {
-	if x != nil {
-		return x.Pockets
-	}
-	return nil
-}
-
-func (x *ItemsView) GetOffHand() *OffHand {
-	if x != nil {
-		return x.OffHand
-	}
-	return nil
-}
-
-func (x *ItemsView) GetPickedUp() []string {
-	if x != nil {
-		return x.PickedUp
-	}
-	return nil
-}
-
-func (x *ItemsView) GetThanks() []*Thanks {
-	if x != nil {
-		return x.Thanks
-	}
-	return nil
-}
-
 // One use of a tool: the wear it took, what wore out or broke.
 type WearResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -378,7 +41,7 @@ type WearResult struct {
 
 func (x *WearResult) Reset() {
 	*x = WearResult{}
-	mi := &file_glimway_v1_items_proto_msgTypes[5]
+	mi := &file_glimway_v1_items_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +53,7 @@ func (x *WearResult) String() string {
 func (*WearResult) ProtoMessage() {}
 
 func (x *WearResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[5]
+	mi := &file_glimway_v1_items_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +66,7 @@ func (x *WearResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WearResult.ProtoReflect.Descriptor instead.
 func (*WearResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_items_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *WearResult) GetBroke() bool {
@@ -489,7 +152,7 @@ type Bought struct {
 
 func (x *Bought) Reset() {
 	*x = Bought{}
-	mi := &file_glimway_v1_items_proto_msgTypes[6]
+	mi := &file_glimway_v1_items_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -501,7 +164,7 @@ func (x *Bought) String() string {
 func (*Bought) ProtoMessage() {}
 
 func (x *Bought) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[6]
+	mi := &file_glimway_v1_items_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -514,7 +177,7 @@ func (x *Bought) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bought.ProtoReflect.Descriptor instead.
 func (*Bought) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_items_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Bought) GetSeller() string {
@@ -585,7 +248,7 @@ type ItemsRequest struct {
 
 func (x *ItemsRequest) Reset() {
 	*x = ItemsRequest{}
-	mi := &file_glimway_v1_items_proto_msgTypes[7]
+	mi := &file_glimway_v1_items_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -597,7 +260,7 @@ func (x *ItemsRequest) String() string {
 func (*ItemsRequest) ProtoMessage() {}
 
 func (x *ItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[7]
+	mi := &file_glimway_v1_items_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -610,7 +273,7 @@ func (x *ItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemsRequest.ProtoReflect.Descriptor instead.
 func (*ItemsRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_items_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ItemsRequest) GetOp() *OpHeader {
@@ -770,7 +433,7 @@ type ItemsResult struct {
 
 func (x *ItemsResult) Reset() {
 	*x = ItemsResult{}
-	mi := &file_glimway_v1_items_proto_msgTypes[8]
+	mi := &file_glimway_v1_items_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -782,7 +445,7 @@ func (x *ItemsResult) String() string {
 func (*ItemsResult) ProtoMessage() {}
 
 func (x *ItemsResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[8]
+	mi := &file_glimway_v1_items_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -795,7 +458,7 @@ func (x *ItemsResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemsResult.ProtoReflect.Descriptor instead.
 func (*ItemsResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_items_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ItemsResult) GetItems() *ItemsView {
@@ -913,7 +576,7 @@ type ItemsRead struct {
 
 func (x *ItemsRead) Reset() {
 	*x = ItemsRead{}
-	mi := &file_glimway_v1_items_proto_msgTypes[9]
+	mi := &file_glimway_v1_items_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -925,7 +588,7 @@ func (x *ItemsRead) String() string {
 func (*ItemsRead) ProtoMessage() {}
 
 func (x *ItemsRead) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_items_proto_msgTypes[9]
+	mi := &file_glimway_v1_items_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -938,7 +601,7 @@ func (x *ItemsRead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemsRead.ProtoReflect.Descriptor instead.
 func (*ItemsRead) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_items_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v1_items_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ItemsRead) GetItems() *ItemsView {
@@ -953,31 +616,7 @@ var File_glimway_v1_items_proto protoreflect.FileDescriptor
 const file_glimway_v1_items_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/items.proto\x12\n" +
-	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x1aglimway/v1/homestead.proto\x1a\x1egoogle/protobuf/wrappers.proto\"]\n" +
-	"\x05Stack\x12\x19\n" +
-	"\bitem_def\x18\x01 \x01(\tR\aitemDef\x12\x10\n" +
-	"\x03qty\x18\x02 \x01(\x05R\x03qty\x12'\n" +
-	"\x05maker\x18\x03 \x01(\v2\x11.glimway.v1.MakerR\x05maker\"\x8d\x01\n" +
-	"\x04Slot\x12\x12\n" +
-	"\x04slot\x18\x01 \x01(\tR\x04slot\x127\n" +
-	"\bitem_def\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\aitemDef\x128\n" +
-	"\binstance\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\binstance\"\xc4\x01\n" +
-	"\aOffHand\x12\x12\n" +
-	"\x04open\x18\x01 \x01(\bR\x04open\x122\n" +
-	"\x05class\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\x05class\x127\n" +
-	"\bitem_def\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\aitemDef\x128\n" +
-	"\binstance\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\binstance\"P\n" +
-	"\x06Thanks\x12\x1b\n" +
-	"\tfrom_name\x18\x01 \x01(\tR\bfromName\x12\x19\n" +
-	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\x0e\n" +
-	"\x02at\x18\x03 \x01(\x01R\x02at\"\x8f\x02\n" +
-	"\tItemsView\x12)\n" +
-	"\x06stacks\x18\x01 \x03(\v2\x11.glimway.v1.StackR\x06stacks\x122\n" +
-	"\tinstances\x18\x02 \x03(\v2\x14.glimway.v1.InstanceR\tinstances\x12*\n" +
-	"\apockets\x18\x03 \x03(\v2\x10.glimway.v1.SlotR\apockets\x12.\n" +
-	"\boff_hand\x18\x04 \x01(\v2\x13.glimway.v1.OffHandR\aoffHand\x12\x1b\n" +
-	"\tpicked_up\x18\x05 \x03(\tR\bpickedUp\x12*\n" +
-	"\x06thanks\x18\x06 \x03(\v2\x12.glimway.v1.ThanksR\x06thanks\"\xad\x02\n" +
+	"glimway.v1\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x16glimway/v1/goods.proto\x1a\x1aglimway/v1/homestead.proto\x1a\x13glimway/v1/op.proto\"\xad\x02\n" +
 	"\n" +
 	"WearResult\x12\x14\n" +
 	"\x05broke\x18\x01 \x01(\bR\x05broke\x12\x19\n" +
@@ -1049,58 +688,43 @@ func file_glimway_v1_items_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_items_proto_rawDescData
 }
 
-var file_glimway_v1_items_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_glimway_v1_items_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_glimway_v1_items_proto_goTypes = []any{
-	(*Stack)(nil),                  // 0: glimway.v1.Stack
-	(*Slot)(nil),                   // 1: glimway.v1.Slot
-	(*OffHand)(nil),                // 2: glimway.v1.OffHand
-	(*Thanks)(nil),                 // 3: glimway.v1.Thanks
-	(*ItemsView)(nil),              // 4: glimway.v1.ItemsView
-	(*WearResult)(nil),             // 5: glimway.v1.WearResult
-	(*Bought)(nil),                 // 6: glimway.v1.Bought
-	(*ItemsRequest)(nil),           // 7: glimway.v1.ItemsRequest
-	(*ItemsResult)(nil),            // 8: glimway.v1.ItemsResult
-	(*ItemsRead)(nil),              // 9: glimway.v1.ItemsRead
-	(*Maker)(nil),                  // 10: glimway.v1.Maker
-	(*wrapperspb.StringValue)(nil), // 11: google.protobuf.StringValue
-	(*Instance)(nil),               // 12: glimway.v1.Instance
-	(*OpHeader)(nil),               // 13: glimway.v1.OpHeader
-	(*Where)(nil),                  // 14: glimway.v1.Where
-	(*Asset)(nil),                  // 15: glimway.v1.Asset
-	(*HomePlant)(nil),              // 16: glimway.v1.HomePlant
-	(*HomeLandChange)(nil),         // 17: glimway.v1.HomeLandChange
+	(*WearResult)(nil),             // 0: glimway.v1.WearResult
+	(*Bought)(nil),                 // 1: glimway.v1.Bought
+	(*ItemsRequest)(nil),           // 2: glimway.v1.ItemsRequest
+	(*ItemsResult)(nil),            // 3: glimway.v1.ItemsResult
+	(*ItemsRead)(nil),              // 4: glimway.v1.ItemsRead
+	(*Instance)(nil),               // 5: glimway.v1.Instance
+	(*OpHeader)(nil),               // 6: glimway.v1.OpHeader
+	(*Where)(nil),                  // 7: glimway.v1.Where
+	(*wrapperspb.StringValue)(nil), // 8: google.protobuf.StringValue
+	(*Asset)(nil),                  // 9: glimway.v1.Asset
+	(*ItemsView)(nil),              // 10: glimway.v1.ItemsView
+	(*Stack)(nil),                  // 11: glimway.v1.Stack
+	(*HomePlant)(nil),              // 12: glimway.v1.HomePlant
+	(*HomeLandChange)(nil),         // 13: glimway.v1.HomeLandChange
 }
 var file_glimway_v1_items_proto_depIdxs = []int32{
-	10, // 0: glimway.v1.Stack.maker:type_name -> glimway.v1.Maker
-	11, // 1: glimway.v1.Slot.item_def:type_name -> google.protobuf.StringValue
-	11, // 2: glimway.v1.Slot.instance:type_name -> google.protobuf.StringValue
-	11, // 3: glimway.v1.OffHand.class:type_name -> google.protobuf.StringValue
-	11, // 4: glimway.v1.OffHand.item_def:type_name -> google.protobuf.StringValue
-	11, // 5: glimway.v1.OffHand.instance:type_name -> google.protobuf.StringValue
-	0,  // 6: glimway.v1.ItemsView.stacks:type_name -> glimway.v1.Stack
-	12, // 7: glimway.v1.ItemsView.instances:type_name -> glimway.v1.Instance
-	1,  // 8: glimway.v1.ItemsView.pockets:type_name -> glimway.v1.Slot
-	2,  // 9: glimway.v1.ItemsView.off_hand:type_name -> glimway.v1.OffHand
-	3,  // 10: glimway.v1.ItemsView.thanks:type_name -> glimway.v1.Thanks
-	12, // 11: glimway.v1.WearResult.instance:type_name -> glimway.v1.Instance
-	13, // 12: glimway.v1.ItemsRequest.op:type_name -> glimway.v1.OpHeader
-	14, // 13: glimway.v1.ItemsRequest.where:type_name -> glimway.v1.Where
-	11, // 14: glimway.v1.ItemsRequest.maker:type_name -> google.protobuf.StringValue
-	15, // 15: glimway.v1.ItemsRequest.asset:type_name -> glimway.v1.Asset
-	4,  // 16: glimway.v1.ItemsResult.items:type_name -> glimway.v1.ItemsView
-	5,  // 17: glimway.v1.ItemsResult.wear:type_name -> glimway.v1.WearResult
-	15, // 18: glimway.v1.ItemsResult.given:type_name -> glimway.v1.Asset
-	0,  // 19: glimway.v1.ItemsResult.gathered:type_name -> glimway.v1.Stack
-	16, // 20: glimway.v1.ItemsResult.plant:type_name -> glimway.v1.HomePlant
-	17, // 21: glimway.v1.ItemsResult.land:type_name -> glimway.v1.HomeLandChange
-	11, // 22: glimway.v1.ItemsResult.paper:type_name -> google.protobuf.StringValue
-	6,  // 23: glimway.v1.ItemsResult.bought:type_name -> glimway.v1.Bought
-	4,  // 24: glimway.v1.ItemsRead.items:type_name -> glimway.v1.ItemsView
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	5,  // 0: glimway.v1.WearResult.instance:type_name -> glimway.v1.Instance
+	6,  // 1: glimway.v1.ItemsRequest.op:type_name -> glimway.v1.OpHeader
+	7,  // 2: glimway.v1.ItemsRequest.where:type_name -> glimway.v1.Where
+	8,  // 3: glimway.v1.ItemsRequest.maker:type_name -> google.protobuf.StringValue
+	9,  // 4: glimway.v1.ItemsRequest.asset:type_name -> glimway.v1.Asset
+	10, // 5: glimway.v1.ItemsResult.items:type_name -> glimway.v1.ItemsView
+	0,  // 6: glimway.v1.ItemsResult.wear:type_name -> glimway.v1.WearResult
+	9,  // 7: glimway.v1.ItemsResult.given:type_name -> glimway.v1.Asset
+	11, // 8: glimway.v1.ItemsResult.gathered:type_name -> glimway.v1.Stack
+	12, // 9: glimway.v1.ItemsResult.plant:type_name -> glimway.v1.HomePlant
+	13, // 10: glimway.v1.ItemsResult.land:type_name -> glimway.v1.HomeLandChange
+	8,  // 11: glimway.v1.ItemsResult.paper:type_name -> google.protobuf.StringValue
+	1,  // 12: glimway.v1.ItemsResult.bought:type_name -> glimway.v1.Bought
+	10, // 13: glimway.v1.ItemsRead.items:type_name -> glimway.v1.ItemsView
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_items_proto_init() }
@@ -1108,15 +732,16 @@ func file_glimway_v1_items_proto_init() {
 	if File_glimway_v1_items_proto != nil {
 		return
 	}
-	file_glimway_v1_op_proto_init()
+	file_glimway_v1_goods_proto_init()
 	file_glimway_v1_homestead_proto_init()
+	file_glimway_v1_op_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_items_proto_rawDesc), len(file_glimway_v1_items_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,0 +1,199 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+import "glimway/v1/goods.proto";
+import "glimway/v1/op.proto";
+
+// The village domains: the Hearthwick Library, mail, the Workshop's storage
+// and crafting, the Commons, projects and repairs. Requests decode with
+// protojson (decode_op); answers marshal with protojson (EmitUnpopulated).
+//
+// The goods views every answer carries (Asset, AssetCounts, the instance
+// and maker views, the home views, the item model) live in goods.proto.
+
+// ---- the Workshop's storage and crafting ----
+
+// The workshop: the caller's pack, their personal chest (always theirs,
+// wherever they live), and, when they belong to a homestead with a
+// Workshop, that home and its shared chest. Without one, Home and Storage
+// are null and Shared says why.
+message WorkshopView {
+  HomeView home = 1;
+  AssetCounts inventory = 2;
+  AssetCounts storage = 3;
+  AssetCounts personal = 4;
+  string shared = 5;
+}
+// The reads and moves answer with the workshop view itself; the craft
+// answers carry the same fields beside what the batch made.
+message StorageMoveRequest {
+  OpHeader op = 1; Where where = 2;
+  string direction = 3; // deposit | withdraw
+  string chest = 4; // '' | shared | personal
+  Asset asset = 5;
+}
+message CraftRequest { OpHeader op = 1; Where where = 2; string recipe_id = 3; int32 qty = 4; }
+message CraftResult {
+  HomeView home = 1; AssetCounts inventory = 2; AssetCounts storage = 3;
+  AssetCounts personal = 4; string shared = 5;
+  string recipe_id = 6; Asset output = 7; repeated string instance_ids = 8;
+}
+message HearthCraftRequest { OpHeader op = 1; Where where = 2; string recipe_id = 3; int32 qty = 4; }
+// Made at the cottage hearth (food, remedies, oils): the workshop view plus
+// what the batch made.
+message HearthCraftResult {
+  HomeView home = 1; AssetCounts inventory = 2; AssetCounts storage = 3;
+  AssetCounts personal = 4; string shared = 5;
+  string recipe_id = 6; Asset output = 7;
+}
+message DeskCopyRequest { OpHeader op = 1; Where where = 2; string page_id = 3; int32 qty = 4; }
+// A recipe page copied at the writing desk: the workshop view plus the copies.
+message DeskCopyResult {
+  HomeView home = 1; AssetCounts inventory = 2; AssetCounts storage = 3;
+  AssetCounts personal = 4; string shared = 5;
+  string page_id = 6; int32 qty = 7;
+}
+
+// ---- the Hearthwick Library ----
+
+message LibraryEntry { string paper_id = 1; string donated_by = 2; string donated_at = 3; }
+message LibraryReadResult { repeated LibraryEntry shelves = 1; }
+message LibraryDonateRequest { OpHeader op = 1; Where where = 2; string paper_id = 3; }
+message LibraryDonateResult { LibraryEntry entry = 1; }
+
+// ---- mail ----
+
+message MailView {
+  string id = 1; string world_id = 2; string from_id = 3; string to_id = 4;
+  string from_name = 5; string to_name = 6;
+  Asset asset = 7;
+  double sent_at = 8;
+  google.protobuf.DoubleValue claimed_at = 9;
+  google.protobuf.DoubleValue returned_at = 10;
+  google.protobuf.StringValue return_reason = 11; // recalled | expired | recipient-removed
+}
+message MailReadResult {
+  repeated MailView mail = 1;
+  google.protobuf.StringValue next_cursor = 2;
+  google.protobuf.StringValue next_pending_cursor = 3;
+  AssetCounts inventory = 4;
+}
+message MailSendRequest { OpHeader op = 1; Where where = 2; string to_id = 3; Asset asset = 4; }
+message MailSendResult {
+  string mail_id = 1;
+  repeated MailView mail = 2;
+  google.protobuf.StringValue next_cursor = 3;
+  google.protobuf.StringValue next_pending_cursor = 4;
+  AssetCounts inventory = 5;
+}
+// Body of both POST /api/mail/{id}/claim and POST /api/mail/{id}/recall.
+message MailKeyedRequest { OpHeader op = 1; Where where = 2; }
+message MailActionResult {
+  string mail_id = 1;
+  Asset asset = 2;
+  repeated MailView mail = 3;
+  google.protobuf.StringValue next_cursor = 4;
+  google.protobuf.StringValue next_pending_cursor = 5;
+  AssetCounts inventory = 6;
+}
+// A recall's answer is its own message: the Envelope's result cases resolve
+// by message type name, so two cases may not share one.
+message MailRecallResult {
+  string mail_id = 1;
+  Asset asset = 2;
+  repeated MailView mail = 3;
+  google.protobuf.StringValue next_cursor = 4;
+  google.protobuf.StringValue next_pending_cursor = 5;
+  AssetCounts inventory = 6;
+}
+
+// ---- the Commons ----
+
+message Person { string id = 1; string name = 2; }
+message GateView {
+  int32 gate = 1;
+  google.protobuf.StringValue home_id = 2;
+  repeated string names = 3;
+  repeated HomeMember members = 4;
+  int32 tier = 5;
+  bool desolate = 6;
+  bool mine = 7;
+  // Unclaimed: what the deed costs the caller in embers.
+  google.protobuf.Int32Value price = 8;
+  // The caller was on this empty home's deed and can take it back, free,
+  // until the deed is lost.
+  bool reclaim = 9;
+  bool shelf = 10;
+  bool shelf_stocked = 11;
+}
+// A joint-deed invitation the caller is part of.
+message DeedInvite {
+  string home_id = 1; int32 gate = 2;
+  Person from = 3; Person to = 4;
+  double expires_at = 5;
+  google.protobuf.DoubleValue from_confirmed_at = 6;
+  google.protobuf.DoubleValue to_confirmed_at = 7;
+}
+message CommonsMine { string home_id = 1; int32 gate = 2; }
+message CommonsResult {
+  repeated GateView gates = 1;
+  int32 gate_count = 2;
+  CommonsMine mine = 3;
+  repeated DeedInvite invites = 4;
+}
+
+// ---- projects ----
+
+message ProjectView {
+  string id = 1; string name = 2; string stage = 3; // open | in-progress | complete
+  map<string, int32> required = 4;
+  map<string, int32> contributed = 5;
+  // Mine is the caller's own running contribution per material.
+  map<string, int32> mine = 6;
+  google.protobuf.DoubleValue completed_at = 7;
+  google.protobuf.StringValue world_flag = 8;
+  repeated string grantable_papers = 9;
+}
+message ProjectsResult {
+  repeated ProjectView projects = 1;
+  repeated string world_flags = 2;
+  repeated string grantable_papers = 3;
+}
+message ContributeRequest { OpHeader op = 1; Where where = 2; map<string, int32> materials = 3; }
+message ContributeResult {
+  repeated ProjectView projects = 1;
+  repeated string world_flags = 2;
+  repeated string grantable_papers = 3;
+  string project_id = 4;
+  map<string, int32> materials = 5;
+}
+
+// ---- village repairs and chores ----
+
+message RepairPos { int32 tx = 1; int32 ty = 2; }
+message ChoreView {
+  string id = 1; string name = 2; string part = 3; string area = 4;
+  string target = 5; RepairPos pos = 6; string resident = 7;
+  string hint = 8; string description = 9;
+}
+message MendedView { string repair_id = 1; string mended_by = 2; string display_name = 3; double mended_at = 4; }
+message ChoreHistoryView {
+  string id = 1; string repair_id = 2; string repair_name = 3;
+  string mended_by = 4; string display_name = 5; double mended_at = 6;
+}
+message RepairsResult {
+  repeated ChoreView open = 1;
+  repeated MendedView mended = 2;
+  repeated string world_flags = 3;
+  repeated ChoreHistoryView history = 4;
+}
+message MendRequest { OpHeader op = 1; Where where = 2; }
+message RepairGift { string kind = 1; string id = 2; int32 qty = 3; }
+message MendResult {
+  RepairsResult repairs = 1;
+  string mended = 2;
+  string reaction = 3;
+  RepairGift gift = 4;
+  ItemsView items = 5;
+}

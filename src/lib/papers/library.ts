@@ -11,11 +11,12 @@ import contract from '../../../content/contract.json' with { type: 'json' };
  *   game/papers.ts still calls it: TODO(C2), donations go through the
  *   operation queue and the local half goes with it.
  *
- * Server contract (server/internal/api/library.go):
- *   GET  /api/library        → 200 { shelves: [{ paperId, donatedBy, donatedAt }] }
- *   POST /api/library/donate   { paperId, key }
- *                            → 200 { entry: { paperId, donatedBy, donatedAt } }
- *                            → 409 { error: { code: 'already-shelved' }, entry }
+ * Server contract (server/internal/api/library.go, village.proto):
+ *   GET  /api/library        → 200 { state, result: { shelves: [{ paperId, donatedBy, donatedAt }] } }
+ *                              (the adapter flattens the mixed envelope before parsing)
+ *   POST /api/library/donate   { paperId, op, where }
+ *                            → 200 { state, libraryDonate: { entry: { paperId, donatedBy, donatedAt } } }
+ *                            → 409 { error: { code: 'already-shelved' } }
  *                                  (no entry for a starting-shelf paper)
  *                            → 403 { error: { code: 'not-held' } }
  *                            → 422 { error: { code: 'unknown-paper' } }
@@ -24,6 +25,8 @@ import contract from '../../../content/contract.json' with { type: 'json' };
  *   A 404/405/501, or an answer that is not JSON, means "no library on this
  *   server": the client falls back to local.
  */
+import { fromJson } from '@bufbuild/protobuf';
+import { LibraryEntrySchema } from '../gen/glimway/v1/village_pb.js';
 import { PAPERS, paperById } from '../../content/papers.ts';
 
 export interface ShelfEntry {
@@ -92,11 +95,24 @@ export function parseShelves(data: unknown): ShelfEntry[] | null {
 
 export function parseEntry(row: unknown): ShelfEntry | null {
   if (!row || typeof row !== 'object') return null;
-  const r = row as Record<string, unknown>;
-  if (typeof r.paperId !== 'string' || !paperById(r.paperId)) return null;
-  const by = typeof r.donatedBy === 'string' && r.donatedBy.trim() ? r.donatedBy.trim().slice(0, 60) : null;
-  const at = typeof r.donatedAt === 'string' && !Number.isNaN(Date.parse(r.donatedAt)) ? r.donatedAt : null;
-  return { paperId: r.paperId, donatedBy: by, donatedAt: at };
+  // Decode the wire's generated entry; a malformed row is dropped (the
+  // remote read stays tolerant: an older server without the library falls
+  // back to local).
+  let paperId: string;
+  let donatedBy: string;
+  let donatedAt: string;
+  try {
+    const e = fromJson(LibraryEntrySchema, row as never, { ignoreUnknownFields: true });
+    paperId = e.paperId;
+    donatedBy = e.donatedBy;
+    donatedAt = e.donatedAt;
+  } catch {
+    return null;
+  }
+  if (!paperById(paperId)) return null;
+  const by = donatedBy.trim() ? donatedBy.trim().slice(0, 60) : null;
+  const at = !Number.isNaN(Date.parse(donatedAt)) ? donatedAt : null;
+  return { paperId, donatedBy: by, donatedAt: at };
 }
 
 // ------------------------------------------------------------ remote adapter

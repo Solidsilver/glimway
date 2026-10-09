@@ -1,6 +1,8 @@
 syntax = "proto3";
 package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
 import "glimway/v1/op.proto";
 import "glimway/v1/profile.proto";
 import "glimway/v1/wilds.proto";
@@ -41,3 +43,22 @@ message WildsClaimResult {
 }
 message WildsLanternRequest { OpHeader op = 1; string epoch = 2; string owner_id = 3; string lantern_id = 4; Where where = 5; }
 message WildsLanternResult { string epoch = 1; bool rewarded = 2; WildsLoot loot = 3; map<string,double> materials = 4; repeated WildsLantern lanterns = 5; }
+
+// GET /api/operations/result: what a key committed on a route — its payload
+// (the request without the op header) and stored result, for the outbox's
+// mismatch resolution. Payload is always a JSON object; Result is any JSON
+// (a typed operation's oneof case value, or a domain result). ResultCase is
+// the Envelope oneof case the result answers as ("result" for a domain
+// route); ResultType is the message's full name (empty for a domain route).
+message CommittedOperation {
+  string route = 1;
+  string key = 2;
+  google.protobuf.Struct payload = 3;
+  string payload_hash = 4;
+  double version = 5;
+  google.protobuf.StringValue refused = 6;
+  google.protobuf.Value result = 7;
+  string result_case = 8;
+  string result_type = 9;
+}
+message OperationsResult { CommittedOperation operation = 1; }

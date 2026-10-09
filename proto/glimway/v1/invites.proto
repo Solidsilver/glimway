@@ -24,3 +24,5 @@ message ListInvitesResponse {
   bool party_world = 4;
   bool party_admitted = 5;
 }
+// DELETE /api/invites/:id.
+message RevokeInviteResponse { bool ok = 1; }

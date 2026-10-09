@@ -9,6 +9,8 @@ import * as operations from '../src/lib/gen/glimway/v1/operations_pb.js';
 import * as profile from '../src/lib/gen/glimway/v1/profile_pb.js';
 import * as state from '../src/lib/gen/glimway/v1/state_pb.js';
 import * as wilds from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import * as village from '../src/lib/gen/glimway/v1/village_pb.js';
+import * as world from '../src/lib/gen/glimway/v1/world_pb.js';
 import { decodeWire } from '../src/lib/api/wire.ts';
 import { decodePlayerState } from '../src/lib/api/state-contract.ts';
 import { FakeOperations, createOperationsApi, decodeEnvelope, decodeMixed } from '../src/lib/api/operations.ts';
@@ -20,7 +22,7 @@ import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS } from '../sr
 
 const fixtures = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { name: string; case: string; json: JsonValue; binaryHex?: string }[];
 const schemas = new Map<string, DescMessage>();
-for (const module of [op, operations, profile, state, wilds]) for (const value of Object.values(module)) if (typeof value === 'object' && value && 'kind' in value && value.kind === 'message') schemas.set(value.typeName, value as DescMessage);
+for (const module of [op, operations, profile, state, wilds, village, world]) for (const value of Object.values(module)) if (typeof value === 'object' && value && 'kind' in value && value.kind === 'message') schemas.set(value.typeName, value as DescMessage);
 const valid = fixtures.find(f => f.name === 'glimway.v1.PlayerState' && f.case === 'valid')!.json;
 test('Go ProtoJSON fixtures decode in TS for every new request and result, including empty collections', () => {
   for (const f of fixtures) {

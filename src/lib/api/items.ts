@@ -8,10 +8,11 @@
 import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import {
   type AssetCounts as GeneratedAssetCounts, type Instance as GeneratedInstance,
-} from '../gen/glimway/v1/homestead_pb.js';
+  type ItemsView as GeneratedItemsView,
+} from '../gen/glimway/v1/goods_pb.js';
 import {
   ItemsReadSchema, ItemsResultSchema,
-  type ItemsRead, type ItemsResult, type ItemsView as GeneratedItemsView,
+  type ItemsRead, type ItemsResult,
   type WearResult as GeneratedWearResult,
 } from '../gen/glimway/v1/items_pb.js';
 import { ApiError } from './errors.ts';
@@ -183,7 +184,7 @@ export function projectCounts(v: GeneratedAssetCounts | undefined): AssetCounts 
   return out;
 }
 
-function itemsView(v: GeneratedItemsView): ItemsView {
+export function projectItemsView(v: GeneratedItemsView): ItemsView {
   if (!v.offHand) throw new Error('missing off hand');
   return {
     stacks: v.stacks.map((s): StackView => ({ itemDef: s.itemDef, qty: int(s.qty, 1), maker: maker(s.maker ?? undefined) })),
@@ -222,7 +223,7 @@ export function projectAsset(v: { kind: string; id: string; qty: number; instanc
 
 function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (!r.items) throw new Error('missing items');
-  const out: ItemsActionResponse['result'] = { items: itemsView(r.items) };
+  const out: ItemsActionResponse['result'] = { items: projectItemsView(r.items) };
   if (r.wear) out.wear = wear(r.wear);
   if (r.used) out.used = r.used;
   if (r.pickup) out.pickup = r.pickup;
@@ -264,7 +265,7 @@ export function parseItems(raw: unknown): ItemsResponse {
     const o = raw as Record<string, unknown>;
     const read = fromJson(ItemsReadSchema, (o.result !== undefined ? o.result : o) as JsonValue, { ignoreUnknownFields: true }) as ItemsRead;
     if (!read.items) throw new Error('missing items');
-    return { ...parseSnapshot(raw), items: itemsView(read.items) };
+    return { ...parseSnapshot(raw), items: projectItemsView(read.items) };
   });
 }
 

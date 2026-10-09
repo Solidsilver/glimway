@@ -68,9 +68,10 @@ type homeView struct {
 	Items       []homeInstance    `json:"items"`
 }
 
-// tileList decodes the homestead wire's tile pairs (now {"x":…,"y":…}
-// objects) into the domain's [2]int pairs. The domain and the workshop's
-// own answers keep emitting the pair arrays it always did.
+// tileList decodes the homestead wire's tile pairs into the domain's [2]int
+// pairs. Every HomeView on the wire (the homestead reads and the workshop's
+// storage and craft answers alike) carries Coord objects — goods.proto's
+// shared message; the pair shape survives only in the client's projections.
 type tileList [][2]int
 
 func (t *tileList) UnmarshalJSON(b []byte) error {

@@ -1,91 +1,22 @@
 syntax = "proto3";
 package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
-import "glimway/v1/op.proto";
 import "google/protobuf/wrappers.proto";
+import "glimway/v1/goods.proto";
+import "glimway/v1/op.proto";
 
 // Every /api/homestead route: the Commons lane's gates (homestead.go,
 // home_queries.go, home_shelves.go, land.go) and the woodpile
-// (crafting.go), plus the shared goods vocabulary every domain result
-// carries (makers, assets, item instances, carried counts — items.proto
-// builds on them). Counters and timestamps are doubles so ProtoJSON carries
-// numbers; nullable fields are wrapper messages (null on the wire).
+// (crafting.go). The shared goods and home views (Asset, AssetCounts,
+// HomeView, …) live in goods.proto. Counters and timestamps are doubles so
+// ProtoJSON carries numbers; nullable fields are wrapper messages (null on
+// the wire).
 
-// A homestead member (everyone on a deed is equal).
-message HomeMember { string id = 1; string display_name = 2; }
-// A land tile (column, row). Tile PAIRS on this lane's wire stay [x, y]
-// arrays, not Coord — the gather stump proof matches stored payloads with
-// json_extract(payload_json,'$.tile[0]'), which an object tile would break
-// (see gathering.go), and the client's request building is untouched by it.
-// Coord is only for the home's cleared/stump lists, which carry no such
-// proof.
-message Coord { int32 x = 1; int32 y = 2; }
-// A cottage's room grid (content.HomeGrid).
-message HomeGrid { int32 width = 1; int32 height = 2; }
-
-// A maker's mark: who made a carried thing.
-message Maker { string id = 1; string name = 2; }
-// Goods on the move: stacks and home goods by catalogue id and count; an
-// instance (a tool, off-hand item, carry gear or fitting) one at a time by
-// its id; maker picks one maker's stack ('' = unmarked).
-message Asset {
-  string kind = 1; string id = 2; int32 qty = 3;
-  string instance = 4; google.protobuf.StringValue maker = 5;
-}
-// One fitting fitted on a tool.
-message Fitting {
-  string id = 1; string item_def = 2; string fitting = 3;
-  int32 condition = 4; int32 max_condition = 5; int32 uses_left = 6; Maker maker = 7;
-}
-// One item instance: condition in wear points (max_condition 0: never
-// wears); state is whole, worn, blunt, cracked or dull (a warden-set tool
-// at zero).
-message Instance {
-  string id = 1; string item_def = 2; double condition = 3; double max_condition = 4;
-  double uses_left = 5; string state = 6; bool warden_set = 7;
-  google.protobuf.DoubleValue dullness = 8; google.protobuf.DoubleValue speed = 9;
-  repeated Fitting fittings = 10; Maker maker = 11;
-}
-// Counts by kind; a missing key means zero. Carried decorations are the
-// pack's (placed ones belong to the homestead).
-message AssetCounts {
-  map<string, int32> materials = 1; map<string, int32> items = 2; map<string, int32> decorations = 3;
-  repeated Instance instances = 4;
-}
-
-// A piece owned by a homestead: in a member's inventory, or placed
-// (scene, x, y, rotation and, for lantern posts, its name).
-message HomeInstance {
-  string id = 1; string item_def = 2;
-  google.protobuf.StringValue scene = 3;
-  google.protobuf.Int32Value x = 4; google.protobuf.Int32Value y = 5;
-  google.protobuf.Int32Value rotation = 6;
-  google.protobuf.StringValue name = 7;
-}
-// A seed or sapling on the land, where it stands today; planted_at and
-// planted_day are Unix seconds (planted_day the UTC day it went in).
-message HomePlant {
-  string id = 1; string item_def = 2; int32 x = 3; int32 y = 4;
-  double planted_at = 5; double planted_day = 6; bool lit = 7;
-}
 // A gather that changed home land inside lamplight (the drift rule: a stump
 // stays, open ground stays open). The client reads the home again when it
 // sees one, so the next build of the land shows it. Tile is [x, y], keeping
 // the pair shape the retired homeLandChange struct served.
 message HomeLandChange { repeated int32 tile = 1; bool stump = 2; bool cleared = 3; }
-
-// A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
-// land's changes, its placed pieces, and the caller's own pack of
-// decorations when the caller is a member.
-message HomeView {
-  string id = 1; int32 gate = 2; string world_id = 3; int32 tier = 4;
-  repeated HomeMember members = 5; bool member = 6; bool desolate = 7;
-  google.protobuf.DoubleValue vacant_since = 8; uint32 land_seed = 9;
-  repeated Coord cleared = 10; repeated Coord stumps = 11; repeated HomePlant plants = 12;
-  int32 posts_bought = 13; map<string, int32> next_post = 14;
-  HomeGrid outdoor = 15; HomeGrid indoor = 16;
-  repeated HomeInstance items = 17;
-}
 
 // One request message for all ten lane mutations, mirroring the retired
 // hand-written homeRequest: every op's fields are optional and empty means

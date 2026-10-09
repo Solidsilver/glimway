@@ -3,83 +3,49 @@
 /* eslint-disable */
 
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_glimway_v1_op } from "./op_pb.js";
-import { file_glimway_v1_homestead } from "./homestead_pb.js";
 import { file_google_protobuf_wrappers } from "@bufbuild/protobuf/wkt";
+import { file_glimway_v1_goods } from "./goods_pb.js";
+import { file_glimway_v1_homestead } from "./homestead_pb.js";
+import { file_glimway_v1_op } from "./op_pb.js";
 
 /**
  * Describes the file glimway/v1/items.proto.
  */
 export const file_glimway_v1_items = /*@__PURE__*/
-  fileDesc("ChZnbGltd2F5L3YxL2l0ZW1zLnByb3RvEgpnbGltd2F5LnYxIkgKBVN0YWNrEhAKCGl0ZW1fZGVmGAEgASgJEgsKA3F0eRgCIAEoBRIgCgVtYWtlchgDIAEoCzIRLmdsaW13YXkudjEuTWFrZXIidAoEU2xvdBIMCgRzbG90GAEgASgJEi4KCGl0ZW1fZGVmGAIgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlEi4KCGluc3RhbmNlGAMgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlIqQBCgdPZmZIYW5kEgwKBG9wZW4YASABKAgSKwoFY2xhc3MYAiABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSLgoIaXRlbV9kZWYYAyABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSLgoIaW5zdGFuY2UYBCABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUiOQoGVGhhbmtzEhEKCWZyb21fbmFtZRgBIAEoCRIQCghpdGVtX2RlZhgCIAEoCRIKCgJhdBgDIAEoASLYAQoJSXRlbXNWaWV3EiEKBnN0YWNrcxgBIAMoCzIRLmdsaW13YXkudjEuU3RhY2sSJwoJaW5zdGFuY2VzGAIgAygLMhQuZ2xpbXdheS52MS5JbnN0YW5jZRIhCgdwb2NrZXRzGAMgAygLMhAuZ2xpbXdheS52MS5TbG90EiUKCG9mZl9oYW5kGAQgASgLMhMuZ2xpbXdheS52MS5PZmZIYW5kEhEKCXBpY2tlZF91cBgFIAMoCRIiCgZ0aGFua3MYBiADKAsyEi5nbGltd2F5LnYxLlRoYW5rcyLSAQoKV2VhclJlc3VsdBINCgVicm9rZRgBIAEoCBIQCgh3b3JlX291dBgCIAEoCBINCgVzdGF0ZRgDIAEoCRIQCgh3b3JuX291dBgEIAMoCRIQCghyZXR1cm5lZBgFIAMoCRIQCghpdGVtX2RlZhgGIAEoCRIRCgl1c2VzX2xlZnQYByABKAESEQoJY29uZGl0aW9uGAggASgBEiYKCGluc3RhbmNlGAkgASgLMhQuZ2xpbXdheS52MS5JbnN0YW5jZRIQCghtYWtlcl9pZBgKIAEoCSJHCgZCb3VnaHQSDgoGc2VsbGVyGAEgASgJEhAKCGl0ZW1fZGVmGAIgASgJEgsKA3F0eRgDIAEoBRIOCgZlbWJlcnMYBCABKAUijAMKDEl0ZW1zUmVxdWVzdBIgCgJvcBgBIAEoCzIULmdsaW13YXkudjEuT3BIZWFkZXISIAoFd2hlcmUYAiABKAsyES5nbGltd2F5LnYxLldoZXJlEhAKCGluc3RhbmNlGAMgASgJEhAKCGl0ZW1fZGVmGAQgASgJEisKBW1ha2VyGAUgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlEg4KBmFjdGlvbhgGIAEoCRIKCgJhdBgHIAEoCRIMCgR0b29sGAggASgJEgwKBHNsb3QYCSABKAUSDQoFdG9faWQYCiABKAkSIAoFYXNzZXQYCyABKAsyES5nbGltd2F5LnYxLkFzc2V0Eg4KBnBpY2t1cBgMIAEoCRIOCgZ0YXJnZXQYDSABKAkSEAoIdW5tb29yZWQYDiABKAgSEAoIdmlzaXRfaWQYDyABKAkSDAoEdGlsZRgQIAMoBRIOCgZyZWdpb24YESABKAkSDgoGc2VsbGVyGBIgASgJEgwKBGdvb2QYEyABKAkiuwMKC0l0ZW1zUmVzdWx0EiQKBWl0ZW1zGAEgASgLMhUuZ2xpbXdheS52MS5JdGVtc1ZpZXcSJAoEd2VhchgCIAEoCzIWLmdsaW13YXkudjEuV2VhclJlc3VsdBIMCgR1c2VkGAMgASgJEg4KBnBpY2t1cBgEIAEoCRIgCgVnaXZlbhgFIAEoCzIRLmdsaW13YXkudjEuQXNzZXQSDgoGbWVuZGVkGAYgASgJEg8KB2NyZWF0ZWQYByADKAkSIwoIZ2F0aGVyZWQYCCADKAsyES5nbGltd2F5LnYxLlN0YWNrEiQKBXBsYW50GAkgASgLMhUuZ2xpbXdheS52MS5Ib21lUGxhbnQSKAoEbGFuZBgKIAEoCzIaLmdsaW13YXkudjEuSG9tZUxhbmRDaGFuZ2USEAoIcmV0dXJuZWQYCyABKAkSKwoFcGFwZXIYDCABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSEAoIaGVpcmxvb20YDSABKAkSFQoNYWRhX29pbF9jb3VudBgOIAEoBRIiCgZib3VnaHQYDyABKAsyEi5nbGltd2F5LnYxLkJvdWdodCIxCglJdGVtc1JlYWQSJAoFaXRlbXMYASABKAsyFS5nbGltd2F5LnYxLkl0ZW1zVmlld0IxWi9nbGltd2F5L3NlcnZlci9pbnRlcm5hbC9nZW4vZ2xpbXdheS92MTtjb250cmFjdGIGcHJvdG8z", [file_glimway_v1_op, file_glimway_v1_homestead, file_google_protobuf_wrappers]);
-
-/**
- * Describes the message glimway.v1.Stack.
- * Use `create(StackSchema)` to create a new message.
- */
-export const StackSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 0);
-
-/**
- * Describes the message glimway.v1.Slot.
- * Use `create(SlotSchema)` to create a new message.
- */
-export const SlotSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 1);
-
-/**
- * Describes the message glimway.v1.OffHand.
- * Use `create(OffHandSchema)` to create a new message.
- */
-export const OffHandSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 2);
-
-/**
- * Describes the message glimway.v1.Thanks.
- * Use `create(ThanksSchema)` to create a new message.
- */
-export const ThanksSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 3);
-
-/**
- * Describes the message glimway.v1.ItemsView.
- * Use `create(ItemsViewSchema)` to create a new message.
- */
-export const ItemsViewSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 4);
+  fileDesc("ChZnbGltd2F5L3YxL2l0ZW1zLnByb3RvEgpnbGltd2F5LnYxItIBCgpXZWFyUmVzdWx0Eg0KBWJyb2tlGAEgASgIEhAKCHdvcmVfb3V0GAIgASgIEg0KBXN0YXRlGAMgASgJEhAKCHdvcm5fb3V0GAQgAygJEhAKCHJldHVybmVkGAUgAygJEhAKCGl0ZW1fZGVmGAYgASgJEhEKCXVzZXNfbGVmdBgHIAEoARIRCgljb25kaXRpb24YCCABKAESJgoIaW5zdGFuY2UYCSABKAsyFC5nbGltd2F5LnYxLkluc3RhbmNlEhAKCG1ha2VyX2lkGAogASgJIkcKBkJvdWdodBIOCgZzZWxsZXIYASABKAkSEAoIaXRlbV9kZWYYAiABKAkSCwoDcXR5GAMgASgFEg4KBmVtYmVycxgEIAEoBSKMAwoMSXRlbXNSZXF1ZXN0EiAKAm9wGAEgASgLMhQuZ2xpbXdheS52MS5PcEhlYWRlchIgCgV3aGVyZRgCIAEoCzIRLmdsaW13YXkudjEuV2hlcmUSEAoIaW5zdGFuY2UYAyABKAkSEAoIaXRlbV9kZWYYBCABKAkSKwoFbWFrZXIYBSABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSDgoGYWN0aW9uGAYgASgJEgoKAmF0GAcgASgJEgwKBHRvb2wYCCABKAkSDAoEc2xvdBgJIAEoBRINCgV0b19pZBgKIAEoCRIgCgVhc3NldBgLIAEoCzIRLmdsaW13YXkudjEuQXNzZXQSDgoGcGlja3VwGAwgASgJEg4KBnRhcmdldBgNIAEoCRIQCgh1bm1vb3JlZBgOIAEoCBIQCgh2aXNpdF9pZBgPIAEoCRIMCgR0aWxlGBAgAygFEg4KBnJlZ2lvbhgRIAEoCRIOCgZzZWxsZXIYEiABKAkSDAoEZ29vZBgTIAEoCSK7AwoLSXRlbXNSZXN1bHQSJAoFaXRlbXMYASABKAsyFS5nbGltd2F5LnYxLkl0ZW1zVmlldxIkCgR3ZWFyGAIgASgLMhYuZ2xpbXdheS52MS5XZWFyUmVzdWx0EgwKBHVzZWQYAyABKAkSDgoGcGlja3VwGAQgASgJEiAKBWdpdmVuGAUgASgLMhEuZ2xpbXdheS52MS5Bc3NldBIOCgZtZW5kZWQYBiABKAkSDwoHY3JlYXRlZBgHIAMoCRIjCghnYXRoZXJlZBgIIAMoCzIRLmdsaW13YXkudjEuU3RhY2sSJAoFcGxhbnQYCSABKAsyFS5nbGltd2F5LnYxLkhvbWVQbGFudBIoCgRsYW5kGAogASgLMhouZ2xpbXdheS52MS5Ib21lTGFuZENoYW5nZRIQCghyZXR1cm5lZBgLIAEoCRIrCgVwYXBlchgMIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRIQCghoZWlybG9vbRgNIAEoCRIVCg1hZGFfb2lsX2NvdW50GA4gASgFEiIKBmJvdWdodBgPIAEoCzISLmdsaW13YXkudjEuQm91Z2h0IjEKCUl0ZW1zUmVhZBIkCgVpdGVtcxgBIAEoCzIVLmdsaW13YXkudjEuSXRlbXNWaWV3QjFaL2dsaW13YXkvc2VydmVyL2ludGVybmFsL2dlbi9nbGltd2F5L3YxO2NvbnRyYWN0YgZwcm90bzM", [file_google_protobuf_wrappers, file_glimway_v1_goods, file_glimway_v1_homestead, file_glimway_v1_op]);
 
 /**
  * Describes the message glimway.v1.WearResult.
  * Use `create(WearResultSchema)` to create a new message.
  */
 export const WearResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 5);
+  messageDesc(file_glimway_v1_items, 0);
 
 /**
  * Describes the message glimway.v1.Bought.
  * Use `create(BoughtSchema)` to create a new message.
  */
 export const BoughtSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 6);
+  messageDesc(file_glimway_v1_items, 1);
 
 /**
  * Describes the message glimway.v1.ItemsRequest.
  * Use `create(ItemsRequestSchema)` to create a new message.
  */
 export const ItemsRequestSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 7);
+  messageDesc(file_glimway_v1_items, 2);
 
 /**
  * Describes the message glimway.v1.ItemsResult.
  * Use `create(ItemsResultSchema)` to create a new message.
  */
 export const ItemsResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 8);
+  messageDesc(file_glimway_v1_items, 3);
 
 /**
  * Describes the message glimway.v1.ItemsRead.
  * Use `create(ItemsReadSchema)` to create a new message.
  */
 export const ItemsReadSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_items, 9);
+  messageDesc(file_glimway_v1_items, 4);
 

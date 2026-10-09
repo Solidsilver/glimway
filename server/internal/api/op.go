@@ -226,6 +226,10 @@ func writeOpResult(w http.ResponseWriter, state *contract.PlayerState, result an
 	_, err = w.Write(append(raw, '\n'))
 	return err
 }
+
+// mixedBytes is the domain-read envelope: the same current PlayerState the
+// keyed answers carry, beside the read's own result — a typed proto message
+// (protojson) or an existing domain's JSON result.
 func mixedBytes(state *contract.PlayerState, result any) ([]byte, error) {
 	if state == nil {
 		return nil, errors.New("missing player state")
@@ -236,6 +240,16 @@ func mixedBytes(state *contract.PlayerState, result any) ([]byte, error) {
 	raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(state)
 	if err != nil {
 		return nil, err
+	}
+	if message, ok := result.(proto.Message); ok {
+		if err := finiteProto(message.ProtoReflect()); err != nil {
+			return nil, err
+		}
+		encoded, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
+		if err != nil {
+			return nil, err
+		}
+		result = json.RawMessage(encoded)
 	}
 	return json.Marshal(struct {
 		State  json.RawMessage `json:"state"`

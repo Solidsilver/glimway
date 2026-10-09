@@ -24,6 +24,503 @@
     }
   },
   {
+    "name": "glimway.v1.ChoreHistoryView",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "repairId": "",
+      "repairName": "",
+      "mendedBy": "",
+      "displayName": "",
+      "mendedAt": 0
+    }
+  },
+  {
+    "name": "glimway.v1.ChoreHistoryView",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "repairId": "fixture",
+      "repairName": "fixture",
+      "mendedBy": "fixture",
+      "displayName": "fixture",
+      "mendedAt": 1
+    }
+  },
+  {
+    "name": "glimway.v1.ChoreView",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "name": "",
+      "part": "",
+      "area": "",
+      "target": "",
+      "pos": null,
+      "resident": "",
+      "hint": "",
+      "description": ""
+    }
+  },
+  {
+    "name": "glimway.v1.ChoreView",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "name": "fixture",
+      "part": "fixture",
+      "area": "fixture",
+      "target": "fixture",
+      "pos": {
+        "tx": 1,
+        "ty": 1
+      },
+      "resident": "fixture",
+      "hint": "fixture",
+      "description": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.CommittedOperation",
+    "case": "empty",
+    "json": {
+      "route": "",
+      "key": "",
+      "payload": null,
+      "payloadHash": "",
+      "version": 0,
+      "refused": null,
+      "result": null,
+      "resultCase": "",
+      "resultType": ""
+    }
+  },
+  {
+    "name": "glimway.v1.CommittedOperation",
+    "case": "populated",
+    "json": {
+      "route": "fixture",
+      "key": "fixture",
+      "payload": {
+        "fixture": null
+      },
+      "payloadHash": "fixture",
+      "version": 1,
+      "refused": "fixture",
+      "result": "fixture",
+      "resultCase": "fixture",
+      "resultType": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.CommonsMine",
+    "case": "empty",
+    "json": {
+      "homeId": "",
+      "gate": 0
+    }
+  },
+  {
+    "name": "glimway.v1.CommonsMine",
+    "case": "populated",
+    "json": {
+      "homeId": "fixture",
+      "gate": 1
+    }
+  },
+  {
+    "name": "glimway.v1.CommonsResult",
+    "case": "empty",
+    "json": {
+      "gates": [],
+      "gateCount": 0,
+      "mine": null,
+      "invites": []
+    }
+  },
+  {
+    "name": "glimway.v1.CommonsResult",
+    "case": "populated",
+    "json": {
+      "gates": [
+        {
+          "gate": 1,
+          "homeId": "fixture",
+          "names": [
+            "fixture"
+          ],
+          "members": [
+            {
+              "id": "fixture",
+              "displayName": "fixture"
+            }
+          ],
+          "tier": 1,
+          "desolate": true,
+          "mine": true,
+          "price": 1,
+          "reclaim": true,
+          "shelf": true,
+          "shelfStocked": true
+        }
+      ],
+      "gateCount": 1,
+      "mine": {
+        "homeId": "fixture",
+        "gate": 1
+      },
+      "invites": [
+        {
+          "homeId": "fixture",
+          "gate": 1,
+          "from": {
+            "id": "fixture",
+            "name": "fixture"
+          },
+          "to": {
+            "id": "fixture",
+            "name": "fixture"
+          },
+          "expiresAt": 1,
+          "fromConfirmedAt": 1,
+          "toConfirmedAt": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.ContributeRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "materials": {}
+    }
+  },
+  {
+    "name": "glimway.v1.ContributeRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "materials": {
+        "fixture": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.ContributeResult",
+    "case": "empty",
+    "json": {
+      "projects": [],
+      "worldFlags": [],
+      "grantablePapers": [],
+      "projectId": "",
+      "materials": {}
+    }
+  },
+  {
+    "name": "glimway.v1.ContributeResult",
+    "case": "populated",
+    "json": {
+      "projects": [
+        {
+          "id": "fixture",
+          "name": "fixture",
+          "stage": "fixture",
+          "required": {
+            "fixture": 1
+          },
+          "contributed": {
+            "fixture": 1
+          },
+          "mine": {
+            "fixture": 1
+          },
+          "completedAt": 1,
+          "worldFlag": "fixture",
+          "grantablePapers": [
+            "fixture"
+          ]
+        }
+      ],
+      "worldFlags": [
+        "fixture"
+      ],
+      "grantablePapers": [
+        "fixture"
+      ],
+      "projectId": "fixture",
+      "materials": {
+        "fixture": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.CraftRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "recipeId": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.CraftRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "recipeId": "fixture",
+      "qty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.CraftResult",
+    "case": "empty",
+    "json": {
+      "home": null,
+      "inventory": null,
+      "storage": null,
+      "personal": null,
+      "shared": "",
+      "recipeId": "",
+      "output": null,
+      "instanceIds": []
+    }
+  },
+  {
+    "name": "glimway.v1.CraftResult",
+    "case": "populated",
+    "json": {
+      "home": {
+        "id": "fixture",
+        "gate": 1,
+        "worldId": "fixture",
+        "tier": 1,
+        "members": [
+          {
+            "id": "fixture",
+            "displayName": "fixture"
+          }
+        ],
+        "member": true,
+        "desolate": true,
+        "vacantSince": 1,
+        "landSeed": 1,
+        "cleared": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "stumps": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "x": 1,
+            "y": 1,
+            "plantedAt": 1,
+            "plantedDay": 1,
+            "lit": true
+          }
+        ],
+        "postsBought": 1,
+        "nextPost": {
+          "fixture": 1
+        },
+        "outdoor": {
+          "width": 1,
+          "height": 1
+        },
+        "indoor": {
+          "width": 1,
+          "height": 1
+        },
+        "items": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture"
+          }
+        ]
+      },
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "storage": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "personal": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "shared": "fixture",
+      "recipeId": "fixture",
+      "output": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      },
+      "instanceIds": [
+        "fixture"
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.DecorList",
     "case": "empty",
     "json": {
@@ -63,6 +560,280 @@
         1
       ],
       "flags": "AQI="
+    }
+  },
+  {
+    "name": "glimway.v1.DeedInvite",
+    "case": "empty",
+    "json": {
+      "homeId": "",
+      "gate": 0,
+      "from": null,
+      "to": null,
+      "expiresAt": 0,
+      "fromConfirmedAt": null,
+      "toConfirmedAt": null
+    }
+  },
+  {
+    "name": "glimway.v1.DeedInvite",
+    "case": "populated",
+    "json": {
+      "homeId": "fixture",
+      "gate": 1,
+      "from": {
+        "id": "fixture",
+        "name": "fixture"
+      },
+      "to": {
+        "id": "fixture",
+        "name": "fixture"
+      },
+      "expiresAt": 1,
+      "fromConfirmedAt": 1,
+      "toConfirmedAt": 1
+    }
+  },
+  {
+    "name": "glimway.v1.DeskCopyRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "pageId": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.DeskCopyRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "pageId": "fixture",
+      "qty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.DeskCopyResult",
+    "case": "empty",
+    "json": {
+      "home": null,
+      "inventory": null,
+      "storage": null,
+      "personal": null,
+      "shared": "",
+      "pageId": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.DeskCopyResult",
+    "case": "populated",
+    "json": {
+      "home": {
+        "id": "fixture",
+        "gate": 1,
+        "worldId": "fixture",
+        "tier": 1,
+        "members": [
+          {
+            "id": "fixture",
+            "displayName": "fixture"
+          }
+        ],
+        "member": true,
+        "desolate": true,
+        "vacantSince": 1,
+        "landSeed": 1,
+        "cleared": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "stumps": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "x": 1,
+            "y": 1,
+            "plantedAt": 1,
+            "plantedDay": 1,
+            "lit": true
+          }
+        ],
+        "postsBought": 1,
+        "nextPost": {
+          "fixture": 1
+        },
+        "outdoor": {
+          "width": 1,
+          "height": 1
+        },
+        "indoor": {
+          "width": 1,
+          "height": 1
+        },
+        "items": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture"
+          }
+        ]
+      },
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "storage": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "personal": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "shared": "fixture",
+      "pageId": "fixture",
+      "qty": 1
     }
   },
   {
@@ -1607,6 +2378,47 @@
     }
   },
   {
+    "name": "glimway.v1.GateView",
+    "case": "empty",
+    "json": {
+      "gate": 0,
+      "homeId": null,
+      "names": [],
+      "members": [],
+      "tier": 0,
+      "desolate": false,
+      "mine": false,
+      "price": null,
+      "reclaim": false,
+      "shelf": false,
+      "shelfStocked": false
+    }
+  },
+  {
+    "name": "glimway.v1.GateView",
+    "case": "populated",
+    "json": {
+      "gate": 1,
+      "homeId": "fixture",
+      "names": [
+        "fixture"
+      ],
+      "members": [
+        {
+          "id": "fixture",
+          "displayName": "fixture"
+        }
+      ],
+      "tier": 1,
+      "desolate": true,
+      "mine": true,
+      "price": 1,
+      "reclaim": true,
+      "shelf": true,
+      "shelfStocked": true
+    }
+  },
+  {
     "name": "glimway.v1.HabiticaBuffs",
     "case": "empty",
     "json": {
@@ -2008,6 +2820,254 @@
     }
   },
   {
+    "name": "glimway.v1.HearthCraftRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "recipeId": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.HearthCraftRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "recipeId": "fixture",
+      "qty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.HearthCraftResult",
+    "case": "empty",
+    "json": {
+      "home": null,
+      "inventory": null,
+      "storage": null,
+      "personal": null,
+      "shared": "",
+      "recipeId": "",
+      "output": null
+    }
+  },
+  {
+    "name": "glimway.v1.HearthCraftResult",
+    "case": "populated",
+    "json": {
+      "home": {
+        "id": "fixture",
+        "gate": 1,
+        "worldId": "fixture",
+        "tier": 1,
+        "members": [
+          {
+            "id": "fixture",
+            "displayName": "fixture"
+          }
+        ],
+        "member": true,
+        "desolate": true,
+        "vacantSince": 1,
+        "landSeed": 1,
+        "cleared": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "stumps": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "x": 1,
+            "y": 1,
+            "plantedAt": 1,
+            "plantedDay": 1,
+            "lit": true
+          }
+        ],
+        "postsBought": 1,
+        "nextPost": {
+          "fixture": 1
+        },
+        "outdoor": {
+          "width": 1,
+          "height": 1
+        },
+        "indoor": {
+          "width": 1,
+          "height": 1
+        },
+        "items": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture"
+          }
+        ]
+      },
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "storage": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "personal": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "shared": "fixture",
+      "recipeId": "fixture",
+      "output": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      }
+    }
+  },
+  {
     "name": "glimway.v1.HomesteadLand",
     "case": "empty",
     "json": {
@@ -2046,6 +3106,92 @@
     }
   },
   {
+    "name": "glimway.v1.LibraryDonateRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "paperId": ""
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryDonateRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "paperId": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryDonateResult",
+    "case": "empty",
+    "json": {
+      "entry": null
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryDonateResult",
+    "case": "populated",
+    "json": {
+      "entry": {
+        "paperId": "fixture",
+        "donatedBy": "fixture",
+        "donatedAt": "fixture"
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryEntry",
+    "case": "empty",
+    "json": {
+      "paperId": "",
+      "donatedBy": "",
+      "donatedAt": ""
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryEntry",
+    "case": "populated",
+    "json": {
+      "paperId": "fixture",
+      "donatedBy": "fixture",
+      "donatedAt": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryReadResult",
+    "case": "empty",
+    "json": {
+      "shelves": []
+    }
+  },
+  {
+    "name": "glimway.v1.LibraryReadResult",
+    "case": "populated",
+    "json": {
+      "shelves": [
+        {
+          "paperId": "fixture",
+          "donatedBy": "fixture",
+          "donatedAt": "fixture"
+        }
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.LoginRequest",
     "case": "empty",
     "json": {
@@ -2063,6 +3209,458 @@
       "token": "fixture",
       "invite": "fixture",
       "party": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.MailActionResult",
+    "case": "empty",
+    "json": {
+      "mailId": "",
+      "asset": null,
+      "mail": [],
+      "nextCursor": null,
+      "nextPendingCursor": null,
+      "inventory": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailActionResult",
+    "case": "populated",
+    "json": {
+      "mailId": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      },
+      "mail": [
+        {
+          "id": "fixture",
+          "worldId": "fixture",
+          "fromId": "fixture",
+          "toId": "fixture",
+          "fromName": "fixture",
+          "toName": "fixture",
+          "asset": {
+            "kind": "fixture",
+            "id": "fixture",
+            "qty": 1,
+            "instance": "fixture",
+            "maker": "fixture"
+          },
+          "sentAt": 1,
+          "claimedAt": 1,
+          "returnedAt": 1,
+          "returnReason": "fixture"
+        }
+      ],
+      "nextCursor": "fixture",
+      "nextPendingCursor": "fixture",
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailKeyedRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailKeyedRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailReadResult",
+    "case": "empty",
+    "json": {
+      "mail": [],
+      "nextCursor": null,
+      "nextPendingCursor": null,
+      "inventory": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailReadResult",
+    "case": "populated",
+    "json": {
+      "mail": [
+        {
+          "id": "fixture",
+          "worldId": "fixture",
+          "fromId": "fixture",
+          "toId": "fixture",
+          "fromName": "fixture",
+          "toName": "fixture",
+          "asset": {
+            "kind": "fixture",
+            "id": "fixture",
+            "qty": 1,
+            "instance": "fixture",
+            "maker": "fixture"
+          },
+          "sentAt": 1,
+          "claimedAt": 1,
+          "returnedAt": 1,
+          "returnReason": "fixture"
+        }
+      ],
+      "nextCursor": "fixture",
+      "nextPendingCursor": "fixture",
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailRecallResult",
+    "case": "empty",
+    "json": {
+      "mailId": "",
+      "asset": null,
+      "mail": [],
+      "nextCursor": null,
+      "nextPendingCursor": null,
+      "inventory": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailRecallResult",
+    "case": "populated",
+    "json": {
+      "mailId": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      },
+      "mail": [
+        {
+          "id": "fixture",
+          "worldId": "fixture",
+          "fromId": "fixture",
+          "toId": "fixture",
+          "fromName": "fixture",
+          "toName": "fixture",
+          "asset": {
+            "kind": "fixture",
+            "id": "fixture",
+            "qty": 1,
+            "instance": "fixture",
+            "maker": "fixture"
+          },
+          "sentAt": 1,
+          "claimedAt": 1,
+          "returnedAt": 1,
+          "returnReason": "fixture"
+        }
+      ],
+      "nextCursor": "fixture",
+      "nextPendingCursor": "fixture",
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailSendRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "toId": "",
+      "asset": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailSendRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "toId": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailSendResult",
+    "case": "empty",
+    "json": {
+      "mailId": "",
+      "mail": [],
+      "nextCursor": null,
+      "nextPendingCursor": null,
+      "inventory": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailSendResult",
+    "case": "populated",
+    "json": {
+      "mailId": "fixture",
+      "mail": [
+        {
+          "id": "fixture",
+          "worldId": "fixture",
+          "fromId": "fixture",
+          "toId": "fixture",
+          "fromName": "fixture",
+          "toName": "fixture",
+          "asset": {
+            "kind": "fixture",
+            "id": "fixture",
+            "qty": 1,
+            "instance": "fixture",
+            "maker": "fixture"
+          },
+          "sentAt": 1,
+          "claimedAt": 1,
+          "returnedAt": 1,
+          "returnReason": "fixture"
+        }
+      ],
+      "nextCursor": "fixture",
+      "nextPendingCursor": "fixture",
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MailView",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "worldId": "",
+      "fromId": "",
+      "toId": "",
+      "fromName": "",
+      "toName": "",
+      "asset": null,
+      "sentAt": 0,
+      "claimedAt": null,
+      "returnedAt": null,
+      "returnReason": null
+    }
+  },
+  {
+    "name": "glimway.v1.MailView",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "worldId": "fixture",
+      "fromId": "fixture",
+      "toId": "fixture",
+      "fromName": "fixture",
+      "toName": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      },
+      "sentAt": 1,
+      "claimedAt": 1,
+      "returnedAt": 1,
+      "returnReason": "fixture"
     }
   },
   {
@@ -2112,6 +3710,183 @@
     }
   },
   {
+    "name": "glimway.v1.MendRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.MendRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MendResult",
+    "case": "empty",
+    "json": {
+      "repairs": null,
+      "mended": "",
+      "reaction": "",
+      "gift": null,
+      "items": null
+    }
+  },
+  {
+    "name": "glimway.v1.MendResult",
+    "case": "populated",
+    "json": {
+      "repairs": {
+        "open": [
+          {
+            "id": "fixture",
+            "name": "fixture",
+            "part": "fixture",
+            "area": "fixture",
+            "target": "fixture",
+            "pos": {
+              "tx": 1,
+              "ty": 1
+            },
+            "resident": "fixture",
+            "hint": "fixture",
+            "description": "fixture"
+          }
+        ],
+        "mended": [
+          {
+            "repairId": "fixture",
+            "mendedBy": "fixture",
+            "displayName": "fixture",
+            "mendedAt": 1
+          }
+        ],
+        "worldFlags": [
+          "fixture"
+        ],
+        "history": [
+          {
+            "id": "fixture",
+            "repairId": "fixture",
+            "repairName": "fixture",
+            "mendedBy": "fixture",
+            "displayName": "fixture",
+            "mendedAt": 1
+          }
+        ]
+      },
+      "mended": "fixture",
+      "reaction": "fixture",
+      "gift": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1
+      },
+      "items": {
+        "stacks": [
+          {
+            "itemDef": "fixture",
+            "qty": 1,
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ],
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ],
+        "pockets": [
+          {
+            "slot": "fixture",
+            "itemDef": "fixture",
+            "instance": "fixture"
+          }
+        ],
+        "offHand": {
+          "open": true,
+          "class": "fixture",
+          "itemDef": "fixture",
+          "instance": "fixture"
+        },
+        "pickedUp": [
+          "fixture"
+        ],
+        "thanks": [
+          {
+            "fromName": "fixture",
+            "itemDef": "fixture",
+            "at": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.MendedView",
+    "case": "empty",
+    "json": {
+      "repairId": "",
+      "mendedBy": "",
+      "displayName": "",
+      "mendedAt": 0
+    }
+  },
+  {
+    "name": "glimway.v1.MendedView",
+    "case": "populated",
+    "json": {
+      "repairId": "fixture",
+      "mendedBy": "fixture",
+      "displayName": "fixture",
+      "mendedAt": 1
+    }
+  },
+  {
     "name": "glimway.v1.OpHeader",
     "case": "empty",
     "json": {
@@ -2131,6 +3906,48 @@
         "generation": "fixture",
         "seq": 1
       }
+    }
+  },
+  {
+    "name": "glimway.v1.OperationsResult",
+    "case": "empty",
+    "json": {
+      "operation": null
+    }
+  },
+  {
+    "name": "glimway.v1.OperationsResult",
+    "case": "populated",
+    "json": {
+      "operation": {
+        "route": "fixture",
+        "key": "fixture",
+        "payload": {
+          "fixture": null
+        },
+        "payloadHash": "fixture",
+        "version": 1,
+        "refused": "fixture",
+        "result": "fixture",
+        "resultCase": "fixture",
+        "resultType": "fixture"
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Person",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "name": ""
+    }
+  },
+  {
+    "name": "glimway.v1.Person",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "name": "fixture"
     }
   },
   {
@@ -2767,6 +4584,86 @@
     }
   },
   {
+    "name": "glimway.v1.ProjectView",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "name": "",
+      "stage": "",
+      "required": {},
+      "contributed": {},
+      "mine": {},
+      "completedAt": null,
+      "worldFlag": null,
+      "grantablePapers": []
+    }
+  },
+  {
+    "name": "glimway.v1.ProjectView",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "name": "fixture",
+      "stage": "fixture",
+      "required": {
+        "fixture": 1
+      },
+      "contributed": {
+        "fixture": 1
+      },
+      "mine": {
+        "fixture": 1
+      },
+      "completedAt": 1,
+      "worldFlag": "fixture",
+      "grantablePapers": [
+        "fixture"
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.ProjectsResult",
+    "case": "empty",
+    "json": {
+      "projects": [],
+      "worldFlags": [],
+      "grantablePapers": []
+    }
+  },
+  {
+    "name": "glimway.v1.ProjectsResult",
+    "case": "populated",
+    "json": {
+      "projects": [
+        {
+          "id": "fixture",
+          "name": "fixture",
+          "stage": "fixture",
+          "required": {
+            "fixture": 1
+          },
+          "contributed": {
+            "fixture": 1
+          },
+          "mine": {
+            "fixture": 1
+          },
+          "completedAt": 1,
+          "worldFlag": "fixture",
+          "grantablePapers": [
+            "fixture"
+          ]
+        }
+      ],
+      "worldFlags": [
+        "fixture"
+      ],
+      "grantablePapers": [
+        "fixture"
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.QuestStepRequest",
     "case": "empty",
     "json": {
@@ -3071,6 +4968,93 @@
           "verifiedXp": 0
         }
       }
+    }
+  },
+  {
+    "name": "glimway.v1.RepairGift",
+    "case": "empty",
+    "json": {
+      "kind": "",
+      "id": "",
+      "qty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.RepairGift",
+    "case": "populated",
+    "json": {
+      "kind": "fixture",
+      "id": "fixture",
+      "qty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.RepairPos",
+    "case": "empty",
+    "json": {
+      "tx": 0,
+      "ty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.RepairPos",
+    "case": "populated",
+    "json": {
+      "tx": 1,
+      "ty": 1
+    }
+  },
+  {
+    "name": "glimway.v1.RepairsResult",
+    "case": "empty",
+    "json": {
+      "open": [],
+      "mended": [],
+      "worldFlags": [],
+      "history": []
+    }
+  },
+  {
+    "name": "glimway.v1.RepairsResult",
+    "case": "populated",
+    "json": {
+      "open": [
+        {
+          "id": "fixture",
+          "name": "fixture",
+          "part": "fixture",
+          "area": "fixture",
+          "target": "fixture",
+          "pos": {
+            "tx": 1,
+            "ty": 1
+          },
+          "resident": "fixture",
+          "hint": "fixture",
+          "description": "fixture"
+        }
+      ],
+      "mended": [
+        {
+          "repairId": "fixture",
+          "mendedBy": "fixture",
+          "displayName": "fixture",
+          "mendedAt": 1
+        }
+      ],
+      "worldFlags": [
+        "fixture"
+      ],
+      "history": [
+        {
+          "id": "fixture",
+          "repairId": "fixture",
+          "repairName": "fixture",
+          "mendedBy": "fixture",
+          "displayName": "fixture",
+          "mendedAt": 1
+        }
+      ]
     }
   },
   {
@@ -3613,6 +5597,46 @@
         }
       },
       "leaseActive": true
+    }
+  },
+  {
+    "name": "glimway.v1.StorageMoveRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "direction": "",
+      "chest": "",
+      "asset": null
+    }
+  },
+  {
+    "name": "glimway.v1.StorageMoveRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "direction": "fixture",
+      "chest": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      }
     }
   },
   {
@@ -4471,6 +6495,212 @@
     }
   },
   {
+    "name": "glimway.v1.WorkshopView",
+    "case": "empty",
+    "json": {
+      "home": null,
+      "inventory": null,
+      "storage": null,
+      "personal": null,
+      "shared": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WorkshopView",
+    "case": "populated",
+    "json": {
+      "home": {
+        "id": "fixture",
+        "gate": 1,
+        "worldId": "fixture",
+        "tier": 1,
+        "members": [
+          {
+            "id": "fixture",
+            "displayName": "fixture"
+          }
+        ],
+        "member": true,
+        "desolate": true,
+        "vacantSince": 1,
+        "landSeed": 1,
+        "cleared": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "stumps": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "x": 1,
+            "y": 1,
+            "plantedAt": 1,
+            "plantedDay": 1,
+            "lit": true
+          }
+        ],
+        "postsBought": 1,
+        "nextPost": {
+          "fixture": 1
+        },
+        "outdoor": {
+          "width": 1,
+          "height": 1
+        },
+        "indoor": {
+          "width": 1,
+          "height": 1
+        },
+        "items": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture"
+          }
+        ]
+      },
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "storage": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "personal": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      },
+      "shared": "fixture"
+    }
+  },
+  {
     "name": "glimway.v1.WorldChoice",
     "case": "empty",
     "json": {
@@ -4514,6 +6744,276 @@
     }
   },
   {
+    "name": "glimway.v1.WorldLeaveRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaveRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaveResult",
+    "case": "empty",
+    "json": {
+      "world": null,
+      "from": "",
+      "leftHome": false,
+      "returned": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaveResult",
+    "case": "populated",
+    "json": {
+      "world": {
+        "world": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "isOwner": true,
+        "inParty": true,
+        "partyHome": true,
+        "partyWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "partyCanOpen": true,
+        "ownWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "prompt": true,
+        "leaving": {
+          "gate": 1,
+          "last": true,
+          "outgoing": 1,
+          "incoming": 1,
+          "wardenTools": 1,
+          "deedCost": 1
+        },
+        "moveOpensAt": 1,
+        "moveOpensIn": 1,
+        "leaver": {
+          "leftAt": 1,
+          "moveOutAt": 1,
+          "moveOutIn": 1,
+          "hasOwn": true
+        },
+        "movedOutAt": 1
+      },
+      "from": "fixture",
+      "leftHome": true,
+      "returned": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaver",
+    "case": "empty",
+    "json": {
+      "leftAt": 0,
+      "moveOutAt": 0,
+      "moveOutIn": 0,
+      "hasOwn": false
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaver",
+    "case": "populated",
+    "json": {
+      "leftAt": 1,
+      "moveOutAt": 1,
+      "moveOutIn": 1,
+      "hasOwn": true
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaving",
+    "case": "empty",
+    "json": {
+      "gate": 0,
+      "last": false,
+      "outgoing": 0,
+      "incoming": 0,
+      "wardenTools": 0,
+      "deedCost": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaving",
+    "case": "populated",
+    "json": {
+      "gate": 1,
+      "last": true,
+      "outgoing": 1,
+      "incoming": 1,
+      "wardenTools": 1,
+      "deedCost": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WorldMoveRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "worldId": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WorldMoveRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "worldId": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WorldMoveResult",
+    "case": "empty",
+    "json": {
+      "world": null,
+      "from": "",
+      "leftHome": false,
+      "returned": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldMoveResult",
+    "case": "populated",
+    "json": {
+      "world": {
+        "world": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "isOwner": true,
+        "inParty": true,
+        "partyHome": true,
+        "partyWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "partyCanOpen": true,
+        "ownWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "prompt": true,
+        "leaving": {
+          "gate": 1,
+          "last": true,
+          "outgoing": 1,
+          "incoming": 1,
+          "wardenTools": 1,
+          "deedCost": 1
+        },
+        "moveOpensAt": 1,
+        "moveOpensIn": 1,
+        "leaver": {
+          "leftAt": 1,
+          "moveOutAt": 1,
+          "moveOutIn": 1,
+          "hasOwn": true
+        },
+        "movedOutAt": 1
+      },
+      "from": "fixture",
+      "leftHome": true,
+      "returned": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WorldNoticeRequest",
+    "case": "empty",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.WorldNoticeRequest",
+    "case": "populated",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.WorldPartyRequest",
+    "case": "empty",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.WorldPartyRequest",
+    "case": "populated",
+    "json": {}
+  },
+  {
+    "name": "glimway.v1.WorldPromptRequest",
+    "case": "empty",
+    "json": {
+      "worldId": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WorldPromptRequest",
+    "case": "populated",
+    "json": {
+      "worldId": "fixture"
+    }
+  },
+  {
     "name": "glimway.v1.WorldRef",
     "case": "empty",
     "json": {
@@ -4535,6 +7035,77 @@
       "members": 1,
       "ownerHere": true,
       "party": true
+    }
+  },
+  {
+    "name": "glimway.v1.WorldView",
+    "case": "empty",
+    "json": {
+      "world": null,
+      "isOwner": false,
+      "inParty": false,
+      "partyHome": false,
+      "partyWorld": null,
+      "partyCanOpen": false,
+      "ownWorld": null,
+      "prompt": false,
+      "leaving": null,
+      "moveOpensAt": 0,
+      "moveOpensIn": 0,
+      "leaver": null,
+      "movedOutAt": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldView",
+    "case": "populated",
+    "json": {
+      "world": {
+        "id": "fixture",
+        "ownerId": "fixture",
+        "ownerName": "fixture",
+        "members": 1,
+        "ownerHere": true,
+        "party": true
+      },
+      "isOwner": true,
+      "inParty": true,
+      "partyHome": true,
+      "partyWorld": {
+        "id": "fixture",
+        "ownerId": "fixture",
+        "ownerName": "fixture",
+        "members": 1,
+        "ownerHere": true,
+        "party": true
+      },
+      "partyCanOpen": true,
+      "ownWorld": {
+        "id": "fixture",
+        "ownerId": "fixture",
+        "ownerName": "fixture",
+        "members": 1,
+        "ownerHere": true,
+        "party": true
+      },
+      "prompt": true,
+      "leaving": {
+        "gate": 1,
+        "last": true,
+        "outgoing": 1,
+        "incoming": 1,
+        "wardenTools": 1,
+        "deedCost": 1
+      },
+      "moveOpensAt": 1,
+      "moveOpensIn": 1,
+      "leaver": {
+        "leftAt": 1,
+        "moveOutAt": 1,
+        "moveOutIn": 1,
+        "hasOwn": true
+      },
+      "movedOutAt": 1
     }
   },
   {

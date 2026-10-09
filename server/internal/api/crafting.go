@@ -72,22 +72,18 @@ func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string,
 // hearthCraft makes consumables, remedies, oils and wax seals at the
 // cottage hearth (membership in a tier 1+ homestead).
 func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		RecipeID string `json:"recipeId"`
-		Qty      int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.HearthCraftRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := cottageHearth(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		recipe, ok := content.HearthRecipeFor(req.RecipeID)
+		recipe, ok := content.HearthRecipeFor(req.RecipeId)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
 		}
@@ -102,21 +98,22 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "recipe-unknown")
 			}
 		}
-		if req.Qty < 1 || req.Qty > 100 {
+		qty := int(req.Qty)
+		if qty < 1 || qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}
 		// Bloom flowers in the pack dry once their wick has turned.
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, qty), recipe.Swaps); err != nil {
 			return nil, err
 		}
-		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "hearth", recipe.ID, now); err != nil {
+		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, qty, "hearth", recipe.ID, now); err != nil {
 			return nil, err
 		}
 		output := recipe.Output
-		output.Qty *= req.Qty
+		output.Qty *= qty
 		def, ok := content.ItemFor(output.ID)
 		maker := ""
 		if ok && def.Marked {
@@ -132,40 +129,35 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			RecipeID string        `json:"recipeId"`
-			Output   content.Asset `json:"output"`
-		}{v, recipe.ID, output}, nil
+		out := &contract.HearthCraftResult{RecipeId: recipe.ID, Output: assetProto(output)}
+		fillHearthWorkshop(out, v)
+		return out, nil
 	})
 }
 
 // deskCopy copies any recipe page the player holds using 1 fiber per copy,
 // bearing the player's maker's mark.
 func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		PageID string `json:"pageId"`
-		Qty    int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.DeskCopyRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := writingDeskPlaced(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		if req.Qty < 1 || req.Qty > 100 {
+		qty := int(req.Qty)
+		if qty < 1 || qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}
-		def, ok := content.ItemFor(req.PageID)
+		def, ok := content.ItemFor(req.PageId)
 		if !ok || def.Kind != "paper" {
 			return nil, fail(400, "invalid-page")
 		}
-		held, err := stackTotal(ctx, tx, packOf(s.AccountID), req.PageID)
+		held, err := stackTotal(ctx, tx, packOf(s.AccountID), req.PageId)
 		if err != nil {
 			return nil, err
 		}
@@ -173,15 +165,15 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(409, "page-not-held")
 		}
 		cost := map[string]int{"fiber": 1}
-		if err := checkMaterials(ctx, tx, s.AccountID, scaled(cost, req.Qty)); err != nil {
+		if err := checkMaterials(ctx, tx, s.AccountID, scaled(cost, qty)); err != nil {
 			return nil, err
 		}
-		if err := debitMaterials(ctx, tx, s, cost, req.Qty, "desk", req.PageID, now); err != nil {
+		if err := debitMaterials(ctx, tx, s, cost, qty, "desk", req.PageId, now); err != nil {
 			return nil, err
 		}
 		// Maker's mark carries player's ID
 		maker := s.AccountID
-		if err := packPut(ctx, tx, s.AccountID, req.PageID, []makerQty{{Maker: maker, Qty: req.Qty}}, "desk", req.PageID, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, req.PageId, []makerQty{{Maker: maker, Qty: qty}}, "desk", req.PageId, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -191,11 +183,9 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			PageID string `json:"pageId"`
-			Qty    int    `json:"qty"`
-		}{v, req.PageID, req.Qty}, nil
+		out := &contract.DeskCopyResult{PageId: req.PageId, Qty: req.Qty}
+		fillDeskWorkshop(out, v)
+		return out, nil
 	})
 }
 
