@@ -9,11 +9,42 @@
   import Panel from './Panel.svelte'
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
+  import CompanionsTab from './CompanionsTab.svelte'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
   // stays on the hero.
-  let { session, onClose, onInventory }: { session: Session; onClose: () => void; onInventory: () => void } = $props()
+  // Two pages: the hero, and their companions (a Habitica hero's only: guests
+  // and heroes without a profile have no pets to choose from, crafts.md 2.2).
+  // `initialTab`: the page to open on (the stable's "Choose a mount" opens
+  // Companions).
+  let {
+    session,
+    onClose,
+    onInventory,
+    initialTab = 'hero'
+  }: { session: Session; onClose: () => void; onInventory: () => void; initialTab?: CharacterTab } = $props()
+
+  type CharacterTab = 'hero' | 'companions'
+  const TABS: { id: CharacterTab; label: string }[] = [
+    { id: 'hero', label: 'Hero' },
+    { id: 'companions', label: 'Companions' }
+  ]
+  let tab = $state<CharacterTab>('hero')
+  $effect.pre(() => {
+    tab = initialTab
+  })
+  const showTabs = $derived(ui.importedProfile !== null)
+  const page = $derived<CharacterTab>(showTabs ? tab : 'hero')
+
+  function onTabKey(e: KeyboardEvent): void {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    const i = TABS.findIndex((t) => t.id === tab)
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length
+    tab = TABS[next].id
+    document.getElementById(`char-tab-${tab}`)?.focus()
+  }
 
   // Tracks quest/inventory changes: a quest step (session.reachStep) replaces the state object.
   const snapshot = $derived(session.state)
@@ -45,7 +76,35 @@
 </script>
 
 <Panel id="char" icon="person" title="Character" closeLabel="Close character sheet" {onClose}>
+  {#snippet head()}
+    {#if showTabs}
+      <div class="tabs" role="tablist" aria-label="Character pages">
+        {#each TABS as t (t.id)}
+          <button
+            type="button"
+            role="tab"
+            id={`char-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`char-page-${t.id}`}
+            tabindex={tab === t.id ? 0 : -1}
+            class:active={tab === t.id}
+            data-testid={`char-tab-${t.id}`}
+            onclick={() => (tab = t.id)}
+            onkeydown={onTabKey}
+          >
+            {t.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
 
+  {#if page === 'companions'}
+  <div role="tabpanel" id="char-page-companions" aria-labelledby="char-tab-companions">
+    <CompanionsTab />
+  </div>
+  {:else}
+  <div role="tabpanel" id="char-page-hero" aria-labelledby={showTabs ? 'char-tab-hero' : undefined}>
   <div class="hero">
     <div class="avatar">
       {#if !profile && ui.portraits['You']}
@@ -106,6 +165,7 @@
     {/each}
   </div>
 
+  <!-- Lane F replaces this Abilities block (through the chips) with its AbilitiesSection component. -->
   <h3 class="section-title">Abilities</h3>
   <div class="abilities">
     <div class="ability">
@@ -152,9 +212,41 @@
   <p class="fine foot">
     Stats come from your Habitica hero, gear and level included. Nothing here ever changes your account.
   </p>
+  </div>
+  {/if}
 </Panel>
 
 <style>
+  /* The page chips, as the journal's (JournalPanel.svelte). */
+  .tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .tabs button {
+    flex: 1;
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 2px solid transparent;
+    box-shadow: none;
+    background: transparent;
+    color: var(--text-soft);
+  }
+  .tabs button.active {
+    background: #fff1c2;
+    border-color: var(--gold-deep);
+    color: var(--wood-dark);
+  }
+  :global(:root.touch) .tabs button {
+    min-height: 44px;
+    padding: 4px 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .tabs button:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
   /* Phones: a smaller portrait, so the pinned header leaves room for the sheet. */
   :global(:root.touch) .avatar {
     width: 60px;
