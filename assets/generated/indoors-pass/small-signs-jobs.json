@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-08",
+  "method": "pixel-preserving nearest-neighbour reduction of the four existing isolated plaque crops",
+  "sourceDirectory": "sheets/round2-crops",
+  "outputDirectory": "sheets/section-signs-small",
+  "canvas": [128, 42],
+  "frameCanvas": [128, 48],
+  "placement": [0, 6, 128, 42],
+  "frames": [
+    { "key": "library-section-sign-front-stories", "source": "library-section-sign-front-stories.png", "label": "Stories", "icon": "book" },
+    { "key": "library-section-sign-front-histories", "source": "library-section-sign-front-histories.png", "label": "Histories", "icon": "scroll" },
+    { "key": "library-section-sign-front-recipes", "source": "library-section-sign-front-recipes.png", "label": "Recipes", "icon": "spoon" },
+    { "key": "library-section-sign-front-field-notes", "source": "library-section-sign-front-field-notes.png", "label": "Field notes", "icon": "leaf" }
+  ]
+}

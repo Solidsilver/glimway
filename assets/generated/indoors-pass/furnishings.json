@@ -82,7 +82,7 @@
         "side-wall"
       ],
       "offers": {
-        "shelves": 6
+        "shelves": 4
       }
     },
     {
@@ -189,179 +189,6 @@
       }
     },
     {
-      "id": "library-elara-desk",
-      "footprint": [
-        2,
-        1
-      ],
-      "base": [
-        0,
-        0.5,
-        2,
-        0.5
-      ],
-      "size": "large",
-      "mount": "floor",
-      "facings": {
-        "front": {
-          "empty": [
-            "library-elara-desk-front-empty"
-          ],
-          "elara-seated": [
-            "library-elara-desk-front-seated"
-          ]
-        }
-      },
-      "states": {
-        "empty": {
-          "frames": [
-            "library-elara-desk-front-empty"
-          ]
-        },
-        "elara-seated": {
-          "frames": [
-            "library-elara-desk-front-seated"
-          ]
-        }
-      },
-      "tags": [
-        "desk",
-        "library-signature",
-        "resident-state"
-      ],
-      "offers": {
-        "top": 3
-      }
-    },
-    {
-      "id": "library-section-sign-stories",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-stories"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-stories"
-          ]
-        }
-      },
-      "tags": [
-        "section:stories"
-      ]
-    },
-    {
-      "id": "library-section-sign-histories",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-histories"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-histories"
-          ]
-        }
-      },
-      "tags": [
-        "section:histories"
-      ]
-    },
-    {
-      "id": "library-section-sign-recipes",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-recipes"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-recipes"
-          ]
-        }
-      },
-      "tags": [
-        "section:recipes"
-      ]
-    },
-    {
-      "id": "library-section-sign-field-notes",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-field-notes"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-field-notes"
-          ]
-        }
-      },
-      "tags": [
-        "section:field-notes"
-      ]
-    },
-    {
       "id": "rug-woven",
       "footprint": [
         3,
@@ -389,8 +216,7 @@
           ]
         }
       },
-      "tags": [],
-      "layer": "under"
+      "tags": []
     },
     {
       "id": "rug-braided",
@@ -420,8 +246,7 @@
           ]
         }
       },
-      "tags": [],
-      "layer": "under"
+      "tags": []
     },
     {
       "id": "rug-patchwork",
@@ -451,8 +276,7 @@
           ]
         }
       },
-      "tags": [],
-      "layer": "under"
+      "tags": []
     },
     {
       "id": "shelf-generic-front",
@@ -1187,6 +1011,9 @@
         "front": {
           "default": [
             "kitchen-washtub-front-default"
+          ],
+          "risen": [
+            "kitchen-washtub-front-risen"
           ]
         }
       },
@@ -1195,10 +1022,16 @@
           "frames": [
             "kitchen-washtub-front-default"
           ]
+        },
+        "risen": {
+          "frames": [
+            "kitchen-washtub-front-risen"
+          ]
         }
       },
       "tags": [
-        "hazel-signature"
+        "hazel-signature",
+        "quest:set-to-rise"
       ]
     },
     {
@@ -1617,6 +1450,12 @@
         "front": {
           "default": [
             "loft-hoist-front-default"
+          ],
+          "working": [
+            "loft-hoist-front-working-0",
+            "loft-hoist-front-working-1",
+            "loft-hoist-front-working-2",
+            "loft-hoist-front-working-3"
           ]
         }
       },
@@ -1625,6 +1464,17 @@
           "frames": [
             "loft-hoist-front-default"
           ]
+        },
+        "working": {
+          "frames": [
+            "loft-hoist-front-working-0",
+            "loft-hoist-front-working-1",
+            "loft-hoist-front-working-2",
+            "loft-hoist-front-working-3"
+          ],
+          "loop": {
+            "frameRate": 2
+          }
         }
       },
       "tags": [
@@ -1694,6 +1544,184 @@
       },
       "tags": [
         "finn-signature"
+      ]
+    },
+    {
+      "id": "library-elara-desk",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "facings": {
+        "front": {
+          "empty": [
+            "library-elara-desk-front-empty"
+          ],
+          "writing": [
+            "library-elara-desk-front-writing-0",
+            "library-elara-desk-front-writing-1"
+          ]
+        }
+      },
+      "states": {
+        "empty": {
+          "frames": [
+            "library-elara-desk-front-empty"
+          ]
+        },
+        "writing": {
+          "frames": [
+            "library-elara-desk-front-writing-0",
+            "library-elara-desk-front-writing-1"
+          ],
+          "loop": {
+            "frameRate": 1.5
+          }
+        }
+      },
+      "tags": [
+        "desk",
+        "library-signature",
+        "resident-state"
+      ],
+      "offers": {
+        "top": 3
+      }
+    },
+    {
+      "id": "library-section-sign-stories",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-stories"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-stories"
+          ]
+        }
+      },
+      "tags": [
+        "section:stories"
+      ]
+    },
+    {
+      "id": "library-section-sign-histories",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-histories"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-histories"
+          ]
+        }
+      },
+      "tags": [
+        "section:histories"
+      ]
+    },
+    {
+      "id": "library-section-sign-recipes",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-recipes"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-recipes"
+          ]
+        }
+      },
+      "tags": [
+        "section:recipes"
+      ]
+    },
+    {
+      "id": "library-section-sign-field-notes",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-field-notes"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-field-notes"
+          ]
+        }
+      },
+      "tags": [
+        "section:field-notes"
       ]
     }
   ]

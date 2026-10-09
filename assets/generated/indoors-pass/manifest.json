@@ -363,6 +363,54 @@
     {
       "key": "round2-mill-gear-wall-small-default",
       "file": "round2-crops/mill-gear-wall-small-default.png"
+    },
+    {
+      "key": "gaps-kitchen-washtub-front-risen",
+      "file": "gaps-crops/kitchen-washtub-front-risen.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-0",
+      "file": "gaps-crops/loft-hoist-front-working-0.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-1",
+      "file": "gaps-crops/loft-hoist-front-working-1.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-2",
+      "file": "gaps-crops/loft-hoist-front-working-2.png"
+    },
+    {
+      "key": "gaps-loft-hoist-front-working-3",
+      "file": "gaps-crops/loft-hoist-front-working-3.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-empty",
+      "file": "gaps-crops/library-elara-desk-front-empty.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-writing-0",
+      "file": "gaps-crops/library-elara-desk-front-writing-0.png"
+    },
+    {
+      "key": "gaps-library-elara-desk-front-writing-1",
+      "file": "gaps-crops/library-elara-desk-front-writing-1.png"
+    },
+    {
+      "key": "small-sign-stories",
+      "file": "section-signs-small/library-section-sign-front-stories.png"
+    },
+    {
+      "key": "small-sign-histories",
+      "file": "section-signs-small/library-section-sign-front-histories.png"
+    },
+    {
+      "key": "small-sign-recipes",
+      "file": "section-signs-small/library-section-sign-front-recipes.png"
+    },
+    {
+      "key": "small-sign-field-notes",
+      "file": "section-signs-small/library-section-sign-front-field-notes.png"
     }
   ],
   "frames": [
@@ -4613,333 +4661,6 @@
       }
     },
     {
-      "key": "library-elara-desk-front-empty",
-      "source": "round2-library-elara-desk-front-empty",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 311,
-        "h": 287
-      },
-      "canvasSize": {
-        "w": 128,
-        "h": 128
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 10,
-        "w": 128,
-        "h": 118
-      },
-      "footprint": [
-        2,
-        1
-      ],
-      "footPoint": {
-        "x": 64,
-        "y": 128
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-elara-desk",
-        "facing": "front",
-        "state": "empty",
-        "footprint": [
-          2,
-          1
-        ],
-        "base": [
-          0,
-          0.5,
-          2,
-          0.5
-        ],
-        "size": "large",
-        "mount": "floor",
-        "offers": {
-          "top": 3
-        },
-        "tags": [
-          "desk",
-          "library-signature"
-        ]
-      }
-    },
-    {
-      "key": "library-elara-desk-front-seated",
-      "source": "round2-library-elara-desk-front-seated",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 302,
-        "h": 351
-      },
-      "canvasSize": {
-        "w": 128,
-        "h": 128
-      },
-      "destinationRect": {
-        "x": 9,
-        "y": 0,
-        "w": 110,
-        "h": 128
-      },
-      "footprint": [
-        2,
-        1
-      ],
-      "footPoint": {
-        "x": 64,
-        "y": 128
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-elara-desk",
-        "facing": "front",
-        "state": "elara-seated",
-        "footprint": [
-          2,
-          1
-        ],
-        "base": [
-          0,
-          0.5,
-          2,
-          0.5
-        ],
-        "size": "large",
-        "mount": "floor",
-        "offers": {
-          "top": 3
-        },
-        "tags": [
-          "desk",
-          "resident-state",
-          "library-signature"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-stories",
-      "source": "round2-library-section-sign-front-stories",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 76
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 63
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-stories",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:stories"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-histories",
-      "source": "round2-library-section-sign-front-histories",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 75
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 62
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-histories",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:histories"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-recipes",
-      "source": "round2-library-section-sign-front-recipes",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 77
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 63
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-recipes",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:recipes"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-field-notes",
-      "source": "round2-library-section-sign-front-field-notes",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 78
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 1,
-        "y": 0,
-        "w": 191,
-        "h": 64
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-field-notes",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:field-notes"
-        ]
-      }
-    },
-    {
       "key": "rug-woven-front-default",
       "source": "round2-rug-woven-front-default",
       "sourceRect": {
@@ -7757,6 +7478,679 @@
           "finn-signature"
         ]
       }
+    },
+    {
+      "key": "kitchen-washtub-front-risen",
+      "source": "gaps-kitchen-washtub-front-risen",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 284,
+        "h": 228
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 77,
+        "w": 64,
+        "h": 51
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "kitchen-washtub",
+        "facing": "front",
+        "state": "risen",
+        "footprint": [
+          1,
+          1
+        ],
+        "base": [
+          0,
+          0.5,
+          1,
+          0.5
+        ],
+        "size": "medium",
+        "mount": "floor",
+        "tags": [
+          "hazel-signature",
+          "quest:set-to-rise"
+        ]
+      }
+    },
+    {
+      "key": "loft-hoist-front-working-0",
+      "source": "gaps-loft-hoist-front-working-0",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 121,
+        "h": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "loft-hoist",
+        "facing": "front",
+        "state": "working",
+        "footprint": [
+          2,
+          2
+        ],
+        "base": [
+          0,
+          1.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "wall",
+        "tags": [
+          "finn-signature",
+          "quest:stuck-hoist"
+        ],
+        "loop": {
+          "frameRate": 2
+        }
+      }
+    },
+    {
+      "key": "loft-hoist-front-working-1",
+      "source": "gaps-loft-hoist-front-working-1",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 121,
+        "h": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "loft-hoist",
+        "facing": "front",
+        "state": "working",
+        "footprint": [
+          2,
+          2
+        ],
+        "base": [
+          0,
+          1.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "wall",
+        "tags": [
+          "finn-signature",
+          "quest:stuck-hoist"
+        ],
+        "loop": {
+          "frameRate": 2
+        }
+      }
+    },
+    {
+      "key": "loft-hoist-front-working-2",
+      "source": "gaps-loft-hoist-front-working-2",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 121,
+        "h": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "loft-hoist",
+        "facing": "front",
+        "state": "working",
+        "footprint": [
+          2,
+          2
+        ],
+        "base": [
+          0,
+          1.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "wall",
+        "tags": [
+          "finn-signature",
+          "quest:stuck-hoist"
+        ],
+        "loop": {
+          "frameRate": 2
+        }
+      }
+    },
+    {
+      "key": "loft-hoist-front-working-3",
+      "source": "gaps-loft-hoist-front-working-3",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 504,
+        "h": 801
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 3,
+        "y": 0,
+        "w": 121,
+        "h": 192
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "loft-hoist",
+        "facing": "front",
+        "state": "working",
+        "footprint": [
+          2,
+          2
+        ],
+        "base": [
+          0,
+          1.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "wall",
+        "tags": [
+          "finn-signature",
+          "quest:stuck-hoist"
+        ],
+        "loop": {
+          "frameRate": 2
+        }
+      }
+    },
+    {
+      "key": "library-elara-desk-front-empty",
+      "source": "gaps-library-elara-desk-front-empty",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-elara-desk",
+        "facing": "front",
+        "state": "empty",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "floor",
+        "offers": {
+          "top": 3
+        },
+        "tags": [
+          "desk",
+          "library-signature"
+        ]
+      }
+    },
+    {
+      "key": "library-elara-desk-front-writing-0",
+      "source": "gaps-library-elara-desk-front-writing-0",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-elara-desk",
+        "facing": "front",
+        "state": "writing",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "floor",
+        "offers": {
+          "top": 3
+        },
+        "tags": [
+          "desk",
+          "resident-state",
+          "library-signature"
+        ],
+        "loop": {
+          "frameRate": 1.5
+        }
+      }
+    },
+    {
+      "key": "library-elara-desk-front-writing-1",
+      "source": "gaps-library-elara-desk-front-writing-1",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 691,
+        "h": 691
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-elara-desk",
+        "facing": "front",
+        "state": "writing",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0.5,
+          2,
+          0.5
+        ],
+        "size": "large",
+        "mount": "floor",
+        "offers": {
+          "top": 3
+        },
+        "tags": [
+          "desk",
+          "resident-state",
+          "library-signature"
+        ],
+        "loop": {
+          "frameRate": 1.5
+        }
+      }
+    },
+    {
+      "key": "library-section-sign-front-stories",
+      "source": "small-sign-stories",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-stories",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:stories"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-histories",
+      "source": "small-sign-histories",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-histories",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:histories"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-recipes",
+      "source": "small-sign-recipes",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-recipes",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:recipes"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-field-notes",
+      "source": "small-sign-field-notes",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-field-notes",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:field-notes"
+        ]
+      }
     }
   ],
   "animations": [
@@ -7928,6 +8322,26 @@
         "mill-gear-wheel-left-turn-3"
       ],
       "frameRate": 2,
+      "loop": true
+    },
+    {
+      "key": "loft-hoist-working",
+      "frames": [
+        "loft-hoist-front-working-0",
+        "loft-hoist-front-working-1",
+        "loft-hoist-front-working-2",
+        "loft-hoist-front-working-3"
+      ],
+      "frameRate": 2,
+      "loop": true
+    },
+    {
+      "key": "library-elara-writing",
+      "frames": [
+        "library-elara-desk-front-writing-0",
+        "library-elara-desk-front-writing-1"
+      ],
+      "frameRate": 1.5,
       "loop": true
     }
   ],
@@ -8334,141 +8748,6 @@
         "seat",
         "light",
         "library-signature"
-      ]
-    },
-    {
-      "frame": "library-elara-desk-front-empty",
-      "id": "library-elara-desk",
-      "facing": "front",
-      "state": "empty",
-      "footprint": [
-        2,
-        1
-      ],
-      "base": [
-        0,
-        0.5,
-        2,
-        0.5
-      ],
-      "size": "large",
-      "mount": "floor",
-      "offers": {
-        "top": 3
-      },
-      "tags": [
-        "desk",
-        "library-signature"
-      ]
-    },
-    {
-      "frame": "library-elara-desk-front-seated",
-      "id": "library-elara-desk",
-      "facing": "front",
-      "state": "elara-seated",
-      "footprint": [
-        2,
-        1
-      ],
-      "base": [
-        0,
-        0.5,
-        2,
-        0.5
-      ],
-      "size": "large",
-      "mount": "floor",
-      "offers": {
-        "top": 3
-      },
-      "tags": [
-        "desk",
-        "resident-state",
-        "library-signature"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-stories",
-      "id": "library-section-sign-stories",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:stories"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-histories",
-      "id": "library-section-sign-histories",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:histories"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-recipes",
-      "id": "library-section-sign-recipes",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:recipes"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-field-notes",
-      "id": "library-section-sign-field-notes",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:field-notes"
       ]
     },
     {
@@ -9592,6 +9871,295 @@
       "mount": "wall",
       "tags": [
         "finn-signature"
+      ]
+    },
+    {
+      "frame": "kitchen-washtub-front-risen",
+      "id": "kitchen-washtub",
+      "facing": "front",
+      "state": "risen",
+      "footprint": [
+        1,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        1,
+        0.5
+      ],
+      "size": "medium",
+      "mount": "floor",
+      "tags": [
+        "hazel-signature",
+        "quest:set-to-rise"
+      ]
+    },
+    {
+      "frame": "loft-hoist-front-working-0",
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "frame": "loft-hoist-front-working-1",
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "frame": "loft-hoist-front-working-2",
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "frame": "loft-hoist-front-working-3",
+      "id": "loft-hoist",
+      "facing": "front",
+      "state": "working",
+      "footprint": [
+        2,
+        2
+      ],
+      "base": [
+        0,
+        1.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "wall",
+      "tags": [
+        "finn-signature",
+        "quest:stuck-hoist"
+      ],
+      "loop": {
+        "frameRate": 2
+      }
+    },
+    {
+      "frame": "library-elara-desk-front-empty",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "state": "empty",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "library-signature"
+      ]
+    },
+    {
+      "frame": "library-elara-desk-front-writing-0",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "state": "writing",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "resident-state",
+        "library-signature"
+      ],
+      "loop": {
+        "frameRate": 1.5
+      }
+    },
+    {
+      "frame": "library-elara-desk-front-writing-1",
+      "id": "library-elara-desk",
+      "facing": "front",
+      "state": "writing",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0.5,
+        2,
+        0.5
+      ],
+      "size": "large",
+      "mount": "floor",
+      "offers": {
+        "top": 3
+      },
+      "tags": [
+        "desk",
+        "resident-state",
+        "library-signature"
+      ],
+      "loop": {
+        "frameRate": 1.5
+      }
+    },
+    {
+      "frame": "library-section-sign-front-stories",
+      "id": "library-section-sign-stories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:stories"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-histories",
+      "id": "library-section-sign-histories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:histories"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-recipes",
+      "id": "library-section-sign-recipes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:recipes"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-field-notes",
+      "id": "library-section-sign-field-notes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:field-notes"
       ]
     }
   ]

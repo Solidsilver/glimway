@@ -60,7 +60,7 @@ made from section 7 of `docs/design/indoors.md`.
 | Chute and meal bin | 2×2 | 128×128 | 1 | — |
 | Flour sacks | 2×2 | 128×128 | 2 variants | Tied; one slumped |
 | Counting stool and window | 1×1 | 64×64 | 1 | Three-legged stool; tally scratches on sill |
-| Sack hoist and hatch | 2×2 | 128×192 | 2 hoist states + 3 rope swings | Pulley above hatch; seized state has frayed, kinked rope |
+| Sack hoist and hatch | 2×2 | 128×192 | Still default + four-frame `working` loop | Pulley above hatch; keep the default still; quest-only rope, hook and wheel motion |
 | Roof beams | 12×1 | 768×64 | 1 | Foreground overlay across loft top, drawn over player |
 
 ## 4. Library reading room
@@ -71,6 +71,7 @@ made from section 7 of `docs/design/indoors.md`.
 | Reading table with lamp | 4×2 | 256×160 | 2 lamp states + 3 flame frames | Two chairs either side; visible tin note tag |
 | Donation shelf | 2×1 | 128×128 | 3 fill states | Lower shelf, slot box and card |
 | Window seat | 2×1 | 128×128 | 1 | Cushion and open book |
+| Elara's desk | 2×1 | 128×128 | Empty + two-frame `writing` idle | Composite of Elara seated at the desk, facing down and writing; slow breath and pen movement; preserve the empty desk while she is away |
 
 ## 5. Outside: smoke and lit windows
 
@@ -103,6 +104,39 @@ position recorded in the building atlas.
 
 The runtime art pass makes frames available in the packed atlas; room wiring is
 owned by the 0.4 code lanes.
+
+## Gap completion: three small furnishing states
+
+Added 2026-10-08 after the Round 2b integration review. The additions follow
+section 7.0 and use the same native canvas, bottom-centre foot point, transparent
+alpha, resident-scale pixels and aspect-contained crop rules:
+
+- `kitchen-washtub-front-risen` adds the raised dough domes beneath the striped
+  cloth while keeping the existing tub pixels, default frame and 64×128 canvas.
+- `loft-hoist-front-working-0..3` adds the four-frame, 2 fps working loop beside
+  the unchanged `loft-hoist-front-default`. Its animation is reserved for the
+  Stuck Hoist quest state.
+- `library-elara-desk-front-writing-0..1` replaces the earlier seated composite
+  with a two-frame desk-and-Elara piece on the 128×128, 2×1 canvas. The empty desk
+  state now uses a matching desk-and-chair drawing with the chair tucked behind
+  the desk, so it stays in the same place when Elara is out.
+
+The job definitions and crop/build step are `assets/generated/indoors-pass/gaps-jobs.json`
+and `build_gaps_frames.py`. The 1×/3× neighbour comparison is
+`.agent/screens/gaps.png`.
+
+## Library section plaques (2026-10-08)
+
+The four plaques looked oversized and covered the books. Keep the painted labels
+and icons, but reduce each plaque to one shelf unit (two tiles) wide with true
+transparent alpha. Reposition their anchors to the back wall's top row, centred
+over their corresponding shelf units, so the shelf books remain fully visible.
+The source crops are reduced with nearest-neighbour sampling into 128×42 PNGs
+and 128×48 frame canvases. The source job and build step are
+`assets/generated/indoors-pass/small-signs-jobs.json` and
+`build_small_signs.py`; review the 1×/3× comparison at
+`.agent/screens/signs-sheet.png` and the in-game placement at
+`.agent/screens/signs-after.png`.
 
 
 ## Round 2b delivery: shared furnishing kit and room refinements
