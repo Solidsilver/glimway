@@ -1,0 +1,84 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+import "glimway/v1/goods.proto";
+import "glimway/v1/op.proto";
+
+// Every /api/homestead route: the Commons lane's gates (homestead.go,
+// home_queries.go, home_shelves.go, land.go) and the woodpile
+// (crafting.go). The shared goods and home views (Asset, AssetCounts,
+// HomeView, …) live in goods.proto. Counters and timestamps are doubles so
+// ProtoJSON carries numbers; nullable fields are wrapper messages (null on
+// the wire).
+
+// A gather that changed home land inside lamplight (the drift rule: a stump
+// stays, open ground stays open). The client reads the home again when it
+// sees one, so the next build of the land shows it. Tile is [x, y], keeping
+// the pair shape the retired homeLandChange struct served.
+message HomeLandChange { repeated int32 tile = 1; bool stump = 2; bool cleared = 3; }
+
+// One request message for all ten lane mutations, mirroring the retired
+// hand-written homeRequest: every op's fields are optional and empty means
+// unset (the op name comes from the URL path). Deliberate; don't copy the
+// grab-bag into new routes without saying why — the per-op result messages
+// in state.proto's Envelope oneof are the pattern to grow into.
+//
+// POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave}.
+message HomesteadRequest {
+  OpHeader op = 1; Where where = 2;
+  string item_def = 3; string item_id = 4; google.protobuf.Int32Value tier = 5;
+  string scene = 6; google.protobuf.Int32Value x = 7; google.protobuf.Int32Value y = 8;
+  google.protobuf.Int32Value rotation = 9; google.protobuf.StringValue name = 10;
+  google.protobuf.Int32Value gate = 11; string to = 12; string home_id = 13;
+}
+message HomesteadResult {
+  HomeView home = 1; map<string, int32> materials = 2;
+  string item_id = 3; string status = 4;
+}
+// GET /api/homestead/gate/:g.
+message HomesteadRead { int32 gate = 1; uint32 land_seed = 2; HomeView home = 3; map<string, int32> materials = 4; }
+
+// ------------------------------------------------------------ gate shelf
+
+message ShelfSlot {
+  int32 slot = 1; string kind = 2; string item_def = 3; int32 qty = 4;
+  Maker maker = 5; google.protobuf.StringValue instance = 6;
+  string stocked_by = 7; double stocked_at = 8;
+}
+message ShelfView {
+  int32 gate = 1; string home_id = 2; string owner_name = 3; repeated string names = 4;
+  repeated ShelfSlot slots = 5; bool taken_today = 6; bool can_stock = 7; bool has_shelf = 8;
+}
+message ShelfRead { ShelfView shelf = 1; }
+// POST /api/homestead/shelf (stock or take).
+message ShelfRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; int32 gate = 4; int32 slot = 5; Asset asset = 6;
+}
+message ShelfResult {
+  ShelfView shelf = 1; AssetCounts inventory = 2;
+  Asset taken = 3; string line = 4;
+}
+
+// ------------------------------------------------------------ woodpile
+
+// One stack of green timber on a placed woodpile (seasons after a real day).
+message WoodpileStack {
+  string id = 1; string homestead_id = 2; string account_id = 3;
+  int32 qty = 4; double stacked_at = 5; bool ready = 6; double remaining = 7;
+}
+message WoodpileView {
+  string homestead_id = 1; bool placed = 2; repeated WoodpileStack stacks = 3;
+  int32 ready_count = 4; int32 total_timber = 5;
+}
+message WoodpileRead { WoodpileView woodpile = 1; }
+// POST /api/homestead/woodpile ("stack" or "collect").
+message WoodpileRequest { OpHeader op = 1; Where where = 2; string action = 3; int32 qty = 4; string stack_id = 5; }
+// The workshop view's fields (home, inventory, storage, personal, shared —
+// the shape the storage and craft routes share) plus what the pile did.
+message WoodpileResult {
+  HomeView home = 1; AssetCounts inventory = 2; AssetCounts storage = 3;
+  AssetCounts personal = 4; string shared = 5;
+  WoodpileView woodpile = 6; string action = 7; int32 collected_qty = 8;
+}

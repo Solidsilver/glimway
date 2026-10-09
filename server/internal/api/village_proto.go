@@ -2,153 +2,17 @@ package api
 
 // Boundary converters for the village domains (village.proto): the internal
 // row-scan views become the generated wire messages at the emit boundary,
-// the way worldChoiceView does for the world choice. Answers only ever leave
-// through protojson.
+// the way worldChoiceView does for the world choice. Answers only ever
+// leave through protojson. The goods views' converters (assetProto,
+// countsProto, homeViewProto, …) are homestead_wire.go's, shared now that
+// the messages live in goods.proto.
 
 import (
 	contract "glimway/server/internal/gen/glimway/v1"
-	"glimway/content"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func assetProto(v content.Asset) *contract.Asset {
-	out := &contract.Asset{Kind: v.Kind, Id: v.ID, Qty: int32(v.Qty), Instance: v.Instance}
-	if v.Maker != nil {
-		out.Maker = wrapperspb.String(*v.Maker)
-	}
-	return out
-}
-
-// assetFromProto is a request's goods, back in the domain's own shape.
-func assetFromProto(v *contract.Asset) content.Asset {
-	if v == nil {
-		return content.Asset{}
-	}
-	out := content.Asset{Kind: v.GetKind(), ID: v.GetId(), Qty: int(v.GetQty()), Instance: v.GetInstance()}
-	if v.Maker != nil {
-		maker := v.Maker.Value
-		out.Maker = &maker
-	}
-	return out
-}
-
-func makerViewProto(v *makerView) *contract.MakerView {
-	if v == nil {
-		return nil
-	}
-	return &contract.MakerView{Id: v.ID, Name: v.Name}
-}
-
-func fittingViewProto(v fittingView) *contract.FittingView {
-	out := &contract.FittingView{Id: v.ID, ItemDef: v.ItemDef, Fitting: v.Fitting, Condition: int32(v.Condition), MaxCondition: int32(v.MaxCondition), UsesLeft: int32(v.UsesLeft), Maker: makerViewProto(v.Maker)}
-	return out
-}
-
-func instanceViewProto(v instanceView) *contract.InstanceView {
-	out := &contract.InstanceView{Id: v.ID, ItemDef: v.ItemDef, Condition: int32(v.Condition), MaxCondition: int32(v.MaxCondition), UsesLeft: int32(v.UsesLeft), State: v.State, WardenSet: v.WardenSet, Maker: makerViewProto(v.Maker)}
-	if v.Dullness != nil {
-		out.Dullness = wrapperspb.Double(*v.Dullness)
-	}
-	if v.Speed != nil {
-		out.Speed = wrapperspb.Double(*v.Speed)
-	}
-	for _, f := range v.Fittings {
-		out.Fittings = append(out.Fittings, fittingViewProto(f))
-	}
-	return out
-}
-
-func countsProto(v assetCounts) *contract.AssetCounts {
-	out := &contract.AssetCounts{Materials: map[string]int32{}, Items: map[string]int32{}, Decorations: map[string]int32{}}
-	for id, n := range v.Materials {
-		out.Materials[id] = int32(n)
-	}
-	for id, n := range v.Items {
-		out.Items[id] = int32(n)
-	}
-	for id, n := range v.Decorations {
-		out.Decorations[id] = int32(n)
-	}
-	for _, i := range v.Instances {
-		out.Instances = append(out.Instances, instanceViewProto(i))
-	}
-	return out
-}
-
-func homeMemberProto(v homeMember) *contract.HomeMember {
-	return &contract.HomeMember{Id: v.ID, DisplayName: v.DisplayName}
-}
-
-func homeTileProto(t [2]int) *contract.HomeTile {
-	return &contract.HomeTile{X: int32(t[0]), Y: int32(t[1])}
-}
-
-func homeInstanceProto(v homeInstance) *contract.HomeInstance {
-	out := &contract.HomeInstance{Id: v.ID, ItemDef: v.ItemDef}
-	if v.Scene != nil {
-		out.Scene = wrapperspb.String(*v.Scene)
-	}
-	if v.X != nil {
-		out.X = wrapperspb.Int32(int32(*v.X))
-	}
-	if v.Y != nil {
-		out.Y = wrapperspb.Int32(int32(*v.Y))
-	}
-	if v.Rotation != nil {
-		out.Rotation = wrapperspb.Int32(int32(*v.Rotation))
-	}
-	if v.Name != nil {
-		out.Name = wrapperspb.String(*v.Name)
-	}
-	return out
-}
-
-func homePlantProto(v homePlantView) *contract.HomePlantView {
-	out := &contract.HomePlantView{Id: v.ID, ItemDef: v.ItemDef, X: int32(v.X), Y: int32(v.Y), Lit: v.Lit}
-	if v.PlantedAt != 0 {
-		out.PlantedAt = wrapperspb.Double(float64(v.PlantedAt))
-	}
-	if v.PlantedDay != 0 {
-		out.PlantedDay = wrapperspb.Double(float64(v.PlantedDay))
-	}
-	return out
-}
-
-func homeGridProto(v content.HomeGrid) *contract.HomeGrid {
-	return &contract.HomeGrid{Width: int32(v.Width), Height: int32(v.Height)}
-}
-
-func homeViewProto(v homeView) *contract.HomeView {
-	out := &contract.HomeView{Id: v.ID, Gate: int32(v.Gate), WorldId: v.WorldID, Tier: int32(v.Tier), Member: v.Member, Desolate: v.Desolate, LandSeed: v.LandSeed, PostsBought: int32(v.PostsBought)}
-	for _, m := range v.Members {
-		out.Members = append(out.Members, homeMemberProto(m))
-	}
-	if v.VacantSince != nil {
-		out.VacantSince = wrapperspb.Double(float64(*v.VacantSince))
-	}
-	for _, t := range v.Cleared {
-		out.Cleared = append(out.Cleared, homeTileProto(t))
-	}
-	for _, t := range v.Stumps {
-		out.Stumps = append(out.Stumps, homeTileProto(t))
-	}
-	for _, p := range v.Plants {
-		out.Plants = append(out.Plants, homePlantProto(p))
-	}
-	out.NextPost = map[string]int32{}
-	for id, n := range v.NextPost {
-		out.NextPost[id] = int32(n)
-	}
-	out.Outdoor = homeGridProto(v.Outdoor)
-	if v.Indoor != nil {
-		out.Indoor = homeGridProto(*v.Indoor)
-	}
-	for _, i := range v.Items {
-		out.Items = append(out.Items, homeInstanceProto(i))
-	}
-	return out
-}
-
+// workshopProto is the storage read's and move's result.
 func workshopProto(v workshopView) *contract.WorkshopView {
 	out := &contract.WorkshopView{Inventory: countsProto(v.Inventory), Personal: countsProto(v.Personal), Shared: v.Shared}
 	if v.Home != nil {
@@ -176,40 +40,6 @@ func fillDeskWorkshop(out *contract.DeskCopyResult, v workshopView) {
 func workshopFields(v workshopView) (*contract.HomeView, *contract.AssetCounts, *contract.AssetCounts, *contract.AssetCounts, string) {
 	w := workshopProto(v)
 	return w.Home, w.Inventory, w.Storage, w.Personal, w.Shared
-}
-
-func itemsViewProto(v itemsView) *contract.ItemsView {
-	out := &contract.ItemsView{OffHand: &contract.OffHandView{Open: v.OffHand.Open}}
-	for _, s := range v.Stacks {
-		out.Stacks = append(out.Stacks, &contract.StackView{ItemDef: s.ItemDef, Qty: int32(s.Qty), Maker: makerViewProto(s.Maker)})
-	}
-	for _, i := range v.Instances {
-		out.Instances = append(out.Instances, instanceViewProto(i))
-	}
-	for _, p := range v.Pockets {
-		slot := &contract.SlotView{Slot: p.Slot}
-		if p.ItemDef != nil {
-			slot.ItemDef = wrapperspb.String(*p.ItemDef)
-		}
-		if p.Instance != nil {
-			slot.Instance = wrapperspb.String(*p.Instance)
-		}
-		out.Pockets = append(out.Pockets, slot)
-	}
-	if v.OffHand.Class != nil {
-		out.OffHand.Class = wrapperspb.String(*v.OffHand.Class)
-	}
-	if v.OffHand.ItemDef != nil {
-		out.OffHand.ItemDef = wrapperspb.String(*v.OffHand.ItemDef)
-	}
-	if v.OffHand.Instance != nil {
-		out.OffHand.Instance = wrapperspb.String(*v.OffHand.Instance)
-	}
-	out.PickedUp = append(out.PickedUp, v.PickedUp...)
-	for _, t := range v.Thanks {
-		out.Thanks = append(out.Thanks, &contract.ThanksView{FromName: t.FromName, ItemDef: t.ItemDef, At: float64(t.At)})
-	}
-	return out
 }
 
 func personProto(v person) *contract.Person {
@@ -274,16 +104,7 @@ func inviteViewProto(v inviteView) *contract.DeedInvite {
 }
 
 func projectViewProto(v projectView) *contract.ProjectView {
-	out := &contract.ProjectView{Id: v.ID, Name: v.Name, Stage: v.Stage, Required: map[string]int32{}, Contributed: map[string]int32{}, Mine: map[string]int32{}}
-	for id, n := range v.Required {
-		out.Required[id] = int32(n)
-	}
-	for id, n := range v.Contributed {
-		out.Contributed[id] = int32(n)
-	}
-	for id, n := range v.Mine {
-		out.Mine[id] = int32(n)
-	}
+	out := &contract.ProjectView{Id: v.ID, Name: v.Name, Stage: v.Stage, Required: materialCountsProto(v.Required), Contributed: materialCountsProto(v.Contributed), Mine: materialCountsProto(v.Mine)}
 	if v.CompletedAt != nil {
 		out.CompletedAt = wrapperspb.Double(float64(*v.CompletedAt))
 	}

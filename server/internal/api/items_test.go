@@ -22,21 +22,34 @@ type itemsResponse struct {
 	store.Snapshot
 	Items  itemsView `json:"items"`
 	Result struct {
-		Items       itemsView       `json:"items"`
-		Wear        *wearResult     `json:"wear"`
-		Used        string          `json:"used"`
-		Pickup      string          `json:"pickup"`
-		Given       *content.Asset  `json:"given"`
-		Mended      string          `json:"mended"`
-		Created     []string        `json:"created"`
-		Gathered    []stackView     `json:"gathered"`
-		Plant       *homePlantView  `json:"plant"`
-		Land        *homeLandChange `json:"land"`
-		Returned    string          `json:"returned"`
-		Paper       *string         `json:"paper"`
-		Heirloom    string          `json:"heirloom"`
-		AdaOilCount int             `json:"adaOilCount"`
-		Bought      *boughtView     `json:"bought"`
+		Items    itemsView      `json:"items"`
+		Wear     *wearResult    `json:"wear"`
+		Used     string         `json:"used"`
+		Pickup   string         `json:"pickup"`
+		Given    *content.Asset `json:"given"`
+		Mended   string         `json:"mended"`
+		Created  []string       `json:"created"`
+		Gathered []stackView    `json:"gathered"`
+		Plant    *homePlantView `json:"plant"`
+		Land     *struct {
+			// homeLandChange retired for the schema (contract.HomeLandChange);
+			// its wire shape, read here, is unchanged.
+			Tile    [2]int `json:"tile"`
+			Stump   bool   `json:"stump"`
+			Cleared bool   `json:"cleared"`
+		} `json:"land"`
+		Returned    string  `json:"returned"`
+		Paper       *string `json:"paper"`
+		Heirloom    string  `json:"heirloom"`
+		AdaOilCount int     `json:"adaOilCount"`
+		// boughtView retired for the schema (contract.Bought); its wire
+		// shape, read here, is unchanged.
+		Bought *struct {
+			Seller  string `json:"seller"`
+			ItemDef string `json:"itemDef"`
+			Qty     int    `json:"qty"`
+			Embers  int    `json:"embers"`
+		} `json:"bought"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

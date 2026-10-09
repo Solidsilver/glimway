@@ -226,6 +226,7 @@ func writeOpResult(w http.ResponseWriter, state *contract.PlayerState, result an
 	_, err = w.Write(append(raw, '\n'))
 	return err
 }
+
 // mixedBytes is the domain-read envelope: the same current PlayerState the
 // keyed answers carry, beside the read's own result — a typed proto message
 // (protojson) or an existing domain's JSON result.

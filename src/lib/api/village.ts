@@ -17,20 +17,33 @@ import {
   CommonsResultSchema, type GateView as GeneratedGateView,
   ProjectsResultSchema, ContributeResultSchema, type ProjectView as GeneratedProjectView,
   RepairsResultSchema, MendResultSchema, type ChoreView as GeneratedChoreView, type RepairsResult as GeneratedRepairsResult,
-  type Asset as GeneratedAsset, type AssetCounts as GeneratedAssetCounts, type InstanceView as GeneratedInstanceView,
-  type HomeView as GeneratedHomeView, type HomePlantView as GeneratedHomePlantView, type MendResult as GeneratedMendResult,
 } from '../gen/glimway/v1/village_pb.js';
+import {
+  type Asset as GeneratedAsset, type AssetCounts as GeneratedAssetCounts,
+  type HomeView as GeneratedHomeView, type HomePlant as GeneratedHomePlant,
+} from '../gen/glimway/v1/goods_pb.js';
 import { ApiError } from './errors.ts';
+import type { HomeMember } from './homestead.ts';
 import type { HomeInstance } from '../homestead.ts';
-import type {
-  Asset, AssetCounts, FittingView, InstanceView, MakerView, HomeView, HomePlantView, Snapshot, WorkshopView,
-} from './types.ts';
+import type { HomeView, HomePlantView } from './homestead.ts';
+import { projectAsset, projectCounts, projectItemsView } from './items.ts';
+import type { Asset, AssetCounts, Snapshot } from './types.ts';
 import { parseSnapshot } from './parse.ts';
 
-/** A homestead member (everyone on a deed is equal). */
-type HomeMember = { id: string; displayName: string };
-
 type Json = Record<string, unknown>;
+
+/**
+ * The workshop: your pack, your own chest (always reachable: it goes with
+ * you), and, with a Workshop home, that home and its shared chest. Without
+ * one, home and storage are null and `shared` says why.
+ */
+export interface WorkshopView {
+  home: HomeView | null;
+  inventory: AssetCounts;
+  storage: AssetCounts | null;
+  personal: AssetCounts;
+  shared: 'open' | 'not-a-member' | 'tier-required' | string;
+}
 
 function obj(raw: unknown): Json {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ApiError('bad-response');
@@ -53,51 +66,20 @@ function envelopeResult(raw: unknown, caseName: string): unknown {
 
 // ------------------------------------------------------------- goods views
 
+// The goods views (Asset, counts, instances, homes) are the items and
+// homestead lanes' projectors, shared now that the messages live in
+// goods.proto. The home is projected here (the workshop view needs it from
+// a decoded message, not raw JSON).
+
 function asset(raw: GeneratedAsset | undefined): Asset {
-  if (!raw) throw new Error('missing asset');
-  const out: Asset = { kind: raw.kind as Asset['kind'], id: raw.id, qty: raw.qty };
-  if (raw.instance) out.instance = raw.instance;
-  if (raw.maker) out.maker = raw.maker;
-  return out;
-}
-
-function maker(m: { id: string; name: string } | undefined): MakerView | null {
-  return m ? { id: m.id, name: m.name } : null;
-}
-
-function instance(raw: GeneratedInstanceView): InstanceView {
-  if (!['whole', 'worn', 'blunt', 'cracked', 'dull'].includes(raw.state)) throw new Error('invalid wear state');
-  if (raw.condition > raw.maxCondition) throw new Error('condition above max');
-  return {
-    id: raw.id,
-    itemDef: raw.itemDef,
-    condition: raw.condition,
-    maxCondition: raw.maxCondition,
-    usesLeft: raw.usesLeft,
-    state: raw.state as InstanceView['state'],
-    wardenSet: raw.wardenSet,
-    maker: maker(raw.maker),
-    fittings: raw.fittings.map((f): FittingView => ({ id: f.id, itemDef: f.itemDef, fitting: f.fitting, condition: f.condition, maxCondition: f.maxCondition, usesLeft: f.usesLeft, maker: maker(f.maker) })),
-  };
-}
-
-function counts(raw: GeneratedAssetCounts | undefined): AssetCounts {
-  const out: AssetCounts = { materials: { ...raw?.materials }, items: { ...raw?.items }, decorations: { ...raw?.decorations } };
-  if (raw?.instances.length) out.instances = raw.instances.map(instance);
-  return out;
-}
-
-function plant(raw: GeneratedHomePlantView): HomePlantView {
-  const out: HomePlantView = { id: raw.id, itemDef: raw.itemDef, x: raw.x, y: raw.y };
-  if (raw.plantedAt) out.plantedAt = raw.plantedAt;
-  if (raw.plantedDay) out.plantedDay = raw.plantedDay;
-  if (raw.lit) out.lit = true;
+  const out = projectAsset(raw);
+  if (!out) throw new Error('missing asset');
   return out;
 }
 
 function home(raw: GeneratedHomeView | undefined): HomeView | null {
   if (!raw) return null;
-  const out: HomeView = {
+  return {
     id: raw.id,
     gate: raw.gate,
     worldId: raw.worldId,
@@ -120,9 +102,15 @@ function home(raw: GeneratedHomeView | undefined): HomeView | null {
       rotation: (i.rotation ?? null) as HomeInstance['rotation'],
       name: i.name || null,
     })),
+    stumps: raw.stumps.map((t) => [t.x, t.y]),
+    plants: raw.plants.map(plant),
   };
-  if (raw.stumps.length) out.stumps = raw.stumps.map((t) => [t.x, t.y]);
-  if (raw.plants.length) out.plants = raw.plants.map(plant);
+}
+
+function plant(raw: GeneratedHomePlant): HomePlantView {
+  const out: HomePlantView = { id: raw.id, itemDef: raw.itemDef, x: raw.x, y: raw.y, lit: raw.lit };
+  if (raw.plantedAt) out.plantedAt = raw.plantedAt;
+  if (raw.plantedDay) out.plantedDay = raw.plantedDay;
   return out;
 }
 
@@ -135,9 +123,9 @@ function workshop(raw: GeneratedWorkshopView | undefined): WorkshopView {
 function workshopFields(out: Partial<Pick<GeneratedWorkshopView, 'home' | 'inventory' | 'storage' | 'personal' | 'shared'>>): WorkshopView {
   return {
     home: home(out.home),
-    inventory: counts(out.inventory),
-    storage: out.storage ? counts(out.storage) : null,
-    personal: counts(out.personal),
+    inventory: projectCounts(out.inventory),
+    storage: out.storage ? projectCounts(out.storage) : null,
+    personal: projectCounts(out.personal),
     shared: out.shared ?? '',
   };
 }
@@ -230,7 +218,7 @@ function parseMailAnswer(raw: unknown, result: { mailId: string; mail: Generated
     result: {
       mailId: result.mailId,
       mail: mailList(result.mail),
-      inventory: counts(result.inventory),
+      inventory: projectCounts(result.inventory),
       ...(result.asset && result.asset.id ? { asset: asset(result.asset) } : {}),
     },
   };
@@ -244,7 +232,7 @@ export function parseMail(raw: unknown): MailResponse {
       mail: mailList(out.mail),
       nextCursor: out.nextCursor ?? null,
       nextPendingCursor: out.nextPendingCursor ?? null,
-      inventory: counts(out.inventory),
+      inventory: projectCounts(out.inventory),
     };
   });
 }
@@ -501,17 +489,6 @@ function repairsFields(out: GeneratedRepairsResult): RepairsView {
   };
 }
 
-function itemsView(out: NonNullable<GeneratedMendResult['items']>): import('./types.ts').ItemsView {
-  return {
-    stacks: out.stacks.map((s) => ({ itemDef: s.itemDef, qty: s.qty, maker: maker(s.maker) })),
-    instances: out.instances.map(instance),
-    pockets: out.pockets.map((p) => ({ slot: p.slot, itemDef: p.itemDef ?? null, instance: p.instance ?? null })),
-    offHand: { open: out.offHand?.open === true, class: out.offHand?.class ?? null, itemDef: out.offHand?.itemDef ?? null, instance: out.offHand?.instance ?? null },
-    pickedUp: [...out.pickedUp],
-    thanks: out.thanks.map((t) => ({ fromName: t.fromName, itemDef: t.itemDef, at: t.at })),
-  };
-}
-
 export function parseRepairs(raw: unknown): RepairsResponse {
   return decode(() => ({ ...parseSnapshot(raw), ...repairsFields(fromJson(RepairsResultSchema, obj(raw) as JsonValue, { ignoreUnknownFields: true })) }));
 }
@@ -520,7 +497,7 @@ export function parseMend(raw: unknown): MendResponse {
   return decode(() => {
     const out = fromJson(MendResultSchema, envelopeResult(raw, 'mend') as JsonValue, { ignoreUnknownFields: true });
     if (!out.repairs || !out.items) throw new Error('missing mend view');
-    const result: MendResult = { repairs: repairsFields(out.repairs), mended: out.mended, reaction: out.reaction, items: itemsView(out.items) };
+    const result: MendResult = { repairs: repairsFields(out.repairs), mended: out.mended, reaction: out.reaction, items: projectItemsView(out.items) };
     if (out.gift) result.gift = { kind: out.gift.kind, id: out.gift.id, qty: out.gift.qty };
     return { ...parseSnapshot(raw), result };
   });

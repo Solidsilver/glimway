@@ -265,6 +265,10 @@ func TestReturningKeepsakes(t *testing.T) {
 // dependency, not a chore) never breaks again.
 func TestRepairsWeatherPacing(t *testing.T) {
 	x := newRig(t)
+	// A fixed day, not today's: Thaw, day 3, at noon (the calendar's epoch is
+	// 2026-01-05). Its wick jumps reach Bud, far from the hame's Carting Day
+	// window (Cart, day 5), which opens a second chore whatever the weather does.
+	x.now.Store(int64(1767571200) + 2*86400 + 12*3600)
 	c, s := x.ready("alice")
 	// The idle session expires in exactly 7 days, so a wick jump re-logins.
 	nextWick := func() repairsTestResponse {

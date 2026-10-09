@@ -24,84 +24,6 @@
     }
   },
   {
-    "name": "glimway.v1.Asset",
-    "case": "empty",
-    "json": {
-      "kind": "",
-      "id": "",
-      "qty": 0,
-      "instance": "",
-      "maker": null
-    }
-  },
-  {
-    "name": "glimway.v1.Asset",
-    "case": "populated",
-    "json": {
-      "kind": "fixture",
-      "id": "fixture",
-      "qty": 1,
-      "instance": "fixture",
-      "maker": "fixture"
-    }
-  },
-  {
-    "name": "glimway.v1.AssetCounts",
-    "case": "empty",
-    "json": {
-      "materials": {},
-      "items": {},
-      "decorations": {},
-      "instances": []
-    }
-  },
-  {
-    "name": "glimway.v1.AssetCounts",
-    "case": "populated",
-    "json": {
-      "materials": {
-        "fixture": 1
-      },
-      "items": {
-        "fixture": 1
-      },
-      "decorations": {
-        "fixture": 1
-      },
-      "instances": [
-        {
-          "id": "fixture",
-          "itemDef": "fixture",
-          "condition": 1,
-          "maxCondition": 1,
-          "usesLeft": 1,
-          "state": "fixture",
-          "wardenSet": true,
-          "dullness": 1,
-          "speed": 1,
-          "fittings": [
-            {
-              "id": "fixture",
-              "itemDef": "fixture",
-              "fitting": "fixture",
-              "condition": 1,
-              "maxCondition": 1,
-              "usesLeft": 1,
-              "maker": {
-                "id": "fixture",
-                "name": "fixture"
-              }
-            }
-          ],
-          "maker": {
-            "id": "fixture",
-            "name": "fixture"
-          }
-        }
-      ]
-    }
-  },
-  {
     "name": "glimway.v1.ChoreHistoryView",
     "case": "empty",
     "json": {
@@ -2424,35 +2346,6 @@
     }
   },
   {
-    "name": "glimway.v1.FittingView",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "itemDef": "",
-      "fitting": "",
-      "condition": 0,
-      "maxCondition": 0,
-      "usesLeft": 0,
-      "maker": null
-    }
-  },
-  {
-    "name": "glimway.v1.FittingView",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "itemDef": "fixture",
-      "fitting": "fixture",
-      "condition": 1,
-      "maxCondition": 1,
-      "usesLeft": 1,
-      "maker": {
-        "id": "fixture",
-        "name": "fixture"
-      }
-    }
-  },
-  {
     "name": "glimway.v1.GateView",
     "case": "empty",
     "json": {
@@ -3143,195 +3036,6 @@
     }
   },
   {
-    "name": "glimway.v1.HomeGrid",
-    "case": "empty",
-    "json": {
-      "width": 0,
-      "height": 0
-    }
-  },
-  {
-    "name": "glimway.v1.HomeGrid",
-    "case": "populated",
-    "json": {
-      "width": 1,
-      "height": 1
-    }
-  },
-  {
-    "name": "glimway.v1.HomeInstance",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "itemDef": "",
-      "scene": null,
-      "x": null,
-      "y": null,
-      "rotation": null,
-      "name": null
-    }
-  },
-  {
-    "name": "glimway.v1.HomeInstance",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "itemDef": "fixture",
-      "scene": "fixture",
-      "x": 1,
-      "y": 1,
-      "rotation": 1,
-      "name": "fixture"
-    }
-  },
-  {
-    "name": "glimway.v1.HomeMember",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "displayName": ""
-    }
-  },
-  {
-    "name": "glimway.v1.HomeMember",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "displayName": "fixture"
-    }
-  },
-  {
-    "name": "glimway.v1.HomePlantView",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "itemDef": "",
-      "x": 0,
-      "y": 0,
-      "plantedAt": null,
-      "plantedDay": null,
-      "lit": false
-    }
-  },
-  {
-    "name": "glimway.v1.HomePlantView",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "itemDef": "fixture",
-      "x": 1,
-      "y": 1,
-      "plantedAt": 1,
-      "plantedDay": 1,
-      "lit": true
-    }
-  },
-  {
-    "name": "glimway.v1.HomeTile",
-    "case": "empty",
-    "json": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "name": "glimway.v1.HomeTile",
-    "case": "populated",
-    "json": {
-      "x": 1,
-      "y": 1
-    }
-  },
-  {
-    "name": "glimway.v1.HomeView",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "gate": 0,
-      "worldId": "",
-      "tier": 0,
-      "members": [],
-      "member": false,
-      "desolate": false,
-      "vacantSince": null,
-      "landSeed": 0,
-      "cleared": [],
-      "stumps": [],
-      "plants": [],
-      "postsBought": 0,
-      "nextPost": {},
-      "outdoor": null,
-      "indoor": null,
-      "items": []
-    }
-  },
-  {
-    "name": "glimway.v1.HomeView",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "gate": 1,
-      "worldId": "fixture",
-      "tier": 1,
-      "members": [
-        {
-          "id": "fixture",
-          "displayName": "fixture"
-        }
-      ],
-      "member": true,
-      "desolate": true,
-      "vacantSince": 1,
-      "landSeed": 1,
-      "cleared": [
-        {
-          "x": 1,
-          "y": 1
-        }
-      ],
-      "stumps": [
-        {
-          "x": 1,
-          "y": 1
-        }
-      ],
-      "plants": [
-        {
-          "id": "fixture",
-          "itemDef": "fixture",
-          "x": 1,
-          "y": 1,
-          "plantedAt": 1,
-          "plantedDay": 1,
-          "lit": true
-        }
-      ],
-      "postsBought": 1,
-      "nextPost": {
-        "fixture": 1
-      },
-      "outdoor": {
-        "width": 1,
-        "height": 1
-      },
-      "indoor": {
-        "width": 1,
-        "height": 1
-      },
-      "items": [
-        {
-          "id": "fixture",
-          "itemDef": "fixture",
-          "scene": "fixture",
-          "x": 1,
-          "y": 1,
-          "rotation": 1,
-          "name": "fixture"
-        }
-      ]
-    }
-  },
-  {
     "name": "glimway.v1.HomesteadLand",
     "case": "empty",
     "json": {
@@ -3354,56 +3058,6 @@
     }
   },
   {
-    "name": "glimway.v1.InstanceView",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "itemDef": "",
-      "condition": 0,
-      "maxCondition": 0,
-      "usesLeft": 0,
-      "state": "",
-      "wardenSet": false,
-      "dullness": null,
-      "speed": null,
-      "fittings": [],
-      "maker": null
-    }
-  },
-  {
-    "name": "glimway.v1.InstanceView",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "itemDef": "fixture",
-      "condition": 1,
-      "maxCondition": 1,
-      "usesLeft": 1,
-      "state": "fixture",
-      "wardenSet": true,
-      "dullness": 1,
-      "speed": 1,
-      "fittings": [
-        {
-          "id": "fixture",
-          "itemDef": "fixture",
-          "fitting": "fixture",
-          "condition": 1,
-          "maxCondition": 1,
-          "usesLeft": 1,
-          "maker": {
-            "id": "fixture",
-            "name": "fixture"
-          }
-        }
-      ],
-      "maker": {
-        "id": "fixture",
-        "name": "fixture"
-      }
-    }
-  },
-  {
     "name": "glimway.v1.ItemQty",
     "case": "empty",
     "json": {
@@ -3417,88 +3071,6 @@
     "json": {
       "def": "fixture",
       "qty": 1
-    }
-  },
-  {
-    "name": "glimway.v1.ItemsView",
-    "case": "empty",
-    "json": {
-      "stacks": [],
-      "instances": [],
-      "pockets": [],
-      "offHand": null,
-      "pickedUp": [],
-      "thanks": []
-    }
-  },
-  {
-    "name": "glimway.v1.ItemsView",
-    "case": "populated",
-    "json": {
-      "stacks": [
-        {
-          "itemDef": "fixture",
-          "qty": 1,
-          "maker": {
-            "id": "fixture",
-            "name": "fixture"
-          }
-        }
-      ],
-      "instances": [
-        {
-          "id": "fixture",
-          "itemDef": "fixture",
-          "condition": 1,
-          "maxCondition": 1,
-          "usesLeft": 1,
-          "state": "fixture",
-          "wardenSet": true,
-          "dullness": 1,
-          "speed": 1,
-          "fittings": [
-            {
-              "id": "fixture",
-              "itemDef": "fixture",
-              "fitting": "fixture",
-              "condition": 1,
-              "maxCondition": 1,
-              "usesLeft": 1,
-              "maker": {
-                "id": "fixture",
-                "name": "fixture"
-              }
-            }
-          ],
-          "maker": {
-            "id": "fixture",
-            "name": "fixture"
-          }
-        }
-      ],
-      "pockets": [
-        {
-          "slot": "fixture",
-          "itemDef": "fixture",
-          "instance": "fixture"
-        }
-      ],
-      "offHand": {
-        "open": true,
-        "class": "fixture",
-        "itemDef": "fixture",
-        "instance": "fixture"
-      },
-      "pickedUp": [
-        "fixture"
-      ],
-      "thanks": [
-        {
-          "fromName": "fixture",
-          "itemDef": "fixture",
-          "at": 1
-        }
-      ]
     }
   },
   {
@@ -4007,22 +3579,6 @@
     }
   },
   {
-    "name": "glimway.v1.MakerView",
-    "case": "empty",
-    "json": {
-      "id": "",
-      "name": ""
-    }
-  },
-  {
-    "name": "glimway.v1.MakerView",
-    "case": "populated",
-    "json": {
-      "id": "fixture",
-      "name": "fixture"
-    }
-  },
-  {
     "name": "glimway.v1.MarkRequest",
     "case": "empty",
     "json": {
@@ -4243,26 +3799,6 @@
       "mendedBy": "fixture",
       "displayName": "fixture",
       "mendedAt": 1
-    }
-  },
-  {
-    "name": "glimway.v1.OffHandView",
-    "case": "empty",
-    "json": {
-      "open": false,
-      "class": null,
-      "itemDef": null,
-      "instance": null
-    }
-  },
-  {
-    "name": "glimway.v1.OffHandView",
-    "case": "populated",
-    "json": {
-      "open": true,
-      "class": "fixture",
-      "itemDef": "fixture",
-      "instance": "fixture"
     }
   },
   {
@@ -5682,24 +5218,6 @@
     }
   },
   {
-    "name": "glimway.v1.SlotView",
-    "case": "empty",
-    "json": {
-      "slot": "",
-      "itemDef": null,
-      "instance": null
-    }
-  },
-  {
-    "name": "glimway.v1.SlotView",
-    "case": "populated",
-    "json": {
-      "slot": "fixture",
-      "itemDef": "fixture",
-      "instance": "fixture"
-    }
-  },
-  {
     "name": "glimway.v1.SpendRequest",
     "case": "empty",
     "json": {
@@ -5743,27 +5261,6 @@
     "case": "populated",
     "json": {
       "outcome": "fixture"
-    }
-  },
-  {
-    "name": "glimway.v1.StackView",
-    "case": "empty",
-    "json": {
-      "itemDef": "",
-      "qty": 0,
-      "maker": null
-    }
-  },
-  {
-    "name": "glimway.v1.StackView",
-    "case": "populated",
-    "json": {
-      "itemDef": "fixture",
-      "qty": 1,
-      "maker": {
-        "id": "fixture",
-        "name": "fixture"
-      }
     }
   },
   {
@@ -6141,24 +5638,6 @@
     "json": {
       "paper": "fixture",
       "added": true
-    }
-  },
-  {
-    "name": "glimway.v1.ThanksView",
-    "case": "empty",
-    "json": {
-      "fromName": "",
-      "itemDef": "",
-      "at": 0
-    }
-  },
-  {
-    "name": "glimway.v1.ThanksView",
-    "case": "populated",
-    "json": {
-      "fromName": "fixture",
-      "itemDef": "fixture",
-      "at": 1
     }
   },
   {
@@ -8418,13 +7897,26 @@
           "pickedUp": [],
           "thanks": []
         },
+        "wear": null,
+        "used": "",
+        "pickup": "",
+        "given": null,
+        "mended": "",
+        "created": [],
         "gathered": [
           {
             "itemDef": "timber",
             "qty": 2,
             "maker": null
           }
-        ]
+        ],
+        "plant": null,
+        "land": null,
+        "returned": "",
+        "paper": null,
+        "heirloom": "",
+        "adaOilCount": 0,
+        "bought": null
       }
     }
   }

@@ -4,484 +4,13 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
+import type { Asset, AssetCounts, HomeMember, HomeView, ItemsView } from "./goods_pb.js";
 import type { OpHeader, Where } from "./op_pb.js";
 
 /**
  * Describes the file glimway/v1/village.proto.
  */
 export declare const file_glimway_v1_village: GenFile;
-
-/**
- * Asset: stacks and home goods by catalogue id and count; an `instance`
- * (a tool, off-hand item, carry gear or fitting) one at a time by its id.
- * `maker` picks one maker's stack ('' = unmarked); absent takes any.
- *
- * @generated from message glimway.v1.Asset
- */
-export declare type Asset = Message<"glimway.v1.Asset"> & {
-  /**
-   * material | item | decoration | instance | thanks
-   *
-   * @generated from field: string kind = 1;
-   */
-  kind: string;
-
-  /**
-   * @generated from field: string id = 2;
-   */
-  id: string;
-
-  /**
-   * @generated from field: int32 qty = 3;
-   */
-  qty: number;
-
-  /**
-   * @generated from field: string instance = 4;
-   */
-  instance: string;
-
-  /**
-   * @generated from field: google.protobuf.StringValue maker = 5;
-   */
-  maker?: string | undefined;
-};
-
-/**
- * Describes the message glimway.v1.Asset.
- * Use `create(AssetSchema)` to create a new message.
- */
-export declare const AssetSchema: GenMessage<Asset>;
-
-/**
- * @generated from message glimway.v1.MakerView
- */
-export declare type MakerView = Message<"glimway.v1.MakerView"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-};
-
-/**
- * Describes the message glimway.v1.MakerView.
- * Use `create(MakerViewSchema)` to create a new message.
- */
-export declare const MakerViewSchema: GenMessage<MakerView>;
-
-/**
- * @generated from message glimway.v1.FittingView
- */
-export declare type FittingView = Message<"glimway.v1.FittingView"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string item_def = 2;
-   */
-  itemDef: string;
-
-  /**
-   * @generated from field: string fitting = 3;
-   */
-  fitting: string;
-
-  /**
-   * @generated from field: int32 condition = 4;
-   */
-  condition: number;
-
-  /**
-   * @generated from field: int32 max_condition = 5;
-   */
-  maxCondition: number;
-
-  /**
-   * @generated from field: int32 uses_left = 6;
-   */
-  usesLeft: number;
-
-  /**
-   * @generated from field: glimway.v1.MakerView maker = 7;
-   */
-  maker?: MakerView | undefined;
-};
-
-/**
- * Describes the message glimway.v1.FittingView.
- * Use `create(FittingViewSchema)` to create a new message.
- */
-export declare const FittingViewSchema: GenMessage<FittingView>;
-
-/**
- * condition in wear points; uses_left at today's rate; state is whole,
- * worn, blunt, cracked or dull (a warden-set tool at zero).
- *
- * @generated from message glimway.v1.InstanceView
- */
-export declare type InstanceView = Message<"glimway.v1.InstanceView"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string item_def = 2;
-   */
-  itemDef: string;
-
-  /**
-   * @generated from field: int32 condition = 3;
-   */
-  condition: number;
-
-  /**
-   * @generated from field: int32 max_condition = 4;
-   */
-  maxCondition: number;
-
-  /**
-   * @generated from field: int32 uses_left = 5;
-   */
-  usesLeft: number;
-
-  /**
-   * @generated from field: string state = 6;
-   */
-  state: string;
-
-  /**
-   * @generated from field: bool warden_set = 7;
-   */
-  wardenSet: boolean;
-
-  /**
-   * @generated from field: google.protobuf.DoubleValue dullness = 8;
-   */
-  dullness?: number | undefined;
-
-  /**
-   * @generated from field: google.protobuf.DoubleValue speed = 9;
-   */
-  speed?: number | undefined;
-
-  /**
-   * @generated from field: repeated glimway.v1.FittingView fittings = 10;
-   */
-  fittings: FittingView[];
-
-  /**
-   * @generated from field: glimway.v1.MakerView maker = 11;
-   */
-  maker?: MakerView | undefined;
-};
-
-/**
- * Describes the message glimway.v1.InstanceView.
- * Use `create(InstanceViewSchema)` to create a new message.
- */
-export declare const InstanceViewSchema: GenMessage<InstanceView>;
-
-/**
- * Counts by kind; a missing key means zero. Carried decorations are the
- * pack's (placed ones belong to the homestead).
- *
- * @generated from message glimway.v1.AssetCounts
- */
-export declare type AssetCounts = Message<"glimway.v1.AssetCounts"> & {
-  /**
-   * @generated from field: map<string, int32> materials = 1;
-   */
-  materials: { [key: string]: number };
-
-  /**
-   * @generated from field: map<string, int32> items = 2;
-   */
-  items: { [key: string]: number };
-
-  /**
-   * @generated from field: map<string, int32> decorations = 3;
-   */
-  decorations: { [key: string]: number };
-
-  /**
-   * @generated from field: repeated glimway.v1.InstanceView instances = 4;
-   */
-  instances: InstanceView[];
-};
-
-/**
- * Describes the message glimway.v1.AssetCounts.
- * Use `create(AssetCountsSchema)` to create a new message.
- */
-export declare const AssetCountsSchema: GenMessage<AssetCounts>;
-
-/**
- * @generated from message glimway.v1.HomeMember
- */
-export declare type HomeMember = Message<"glimway.v1.HomeMember"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string display_name = 2;
-   */
-  displayName: string;
-};
-
-/**
- * Describes the message glimway.v1.HomeMember.
- * Use `create(HomeMemberSchema)` to create a new message.
- */
-export declare const HomeMemberSchema: GenMessage<HomeMember>;
-
-/**
- * @generated from message glimway.v1.HomeTile
- */
-export declare type HomeTile = Message<"glimway.v1.HomeTile"> & {
-  /**
-   * @generated from field: int32 x = 1;
-   */
-  x: number;
-
-  /**
-   * @generated from field: int32 y = 2;
-   */
-  y: number;
-};
-
-/**
- * Describes the message glimway.v1.HomeTile.
- * Use `create(HomeTileSchema)` to create a new message.
- */
-export declare const HomeTileSchema: GenMessage<HomeTile>;
-
-/**
- * @generated from message glimway.v1.HomeInstance
- */
-export declare type HomeInstance = Message<"glimway.v1.HomeInstance"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string item_def = 2;
-   */
-  itemDef: string;
-
-  /**
-   * indoor | outdoor | gate
-   *
-   * @generated from field: google.protobuf.StringValue scene = 3;
-   */
-  scene?: string | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Int32Value x = 4;
-   */
-  x?: number | undefined;
-
-  /**
-   * @generated from field: google.protobuf.Int32Value y = 5;
-   */
-  y?: number | undefined;
-
-  /**
-   * 0 | 90 | 180 | 270
-   *
-   * @generated from field: google.protobuf.Int32Value rotation = 6;
-   */
-  rotation?: number | undefined;
-
-  /**
-   * @generated from field: google.protobuf.StringValue name = 7;
-   */
-  name?: string | undefined;
-};
-
-/**
- * Describes the message glimway.v1.HomeInstance.
- * Use `create(HomeInstanceSchema)` to create a new message.
- */
-export declare const HomeInstanceSchema: GenMessage<HomeInstance>;
-
-/**
- * A seed or sapling on the land; planted_day is the UTC day it went in.
- *
- * @generated from message glimway.v1.HomePlantView
- */
-export declare type HomePlantView = Message<"glimway.v1.HomePlantView"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string item_def = 2;
-   */
-  itemDef: string;
-
-  /**
-   * @generated from field: int32 x = 3;
-   */
-  x: number;
-
-  /**
-   * @generated from field: int32 y = 4;
-   */
-  y: number;
-
-  /**
-   * @generated from field: google.protobuf.DoubleValue planted_at = 5;
-   */
-  plantedAt?: number | undefined;
-
-  /**
-   * @generated from field: google.protobuf.DoubleValue planted_day = 6;
-   */
-  plantedDay?: number | undefined;
-
-  /**
-   * @generated from field: bool lit = 7;
-   */
-  lit: boolean;
-};
-
-/**
- * Describes the message glimway.v1.HomePlantView.
- * Use `create(HomePlantViewSchema)` to create a new message.
- */
-export declare const HomePlantViewSchema: GenMessage<HomePlantView>;
-
-/**
- * @generated from message glimway.v1.HomeGrid
- */
-export declare type HomeGrid = Message<"glimway.v1.HomeGrid"> & {
-  /**
-   * @generated from field: int32 width = 1;
-   */
-  width: number;
-
-  /**
-   * @generated from field: int32 height = 2;
-   */
-  height: number;
-};
-
-/**
- * Describes the message glimway.v1.HomeGrid.
- * Use `create(HomeGridSchema)` to create a new message.
- */
-export declare const HomeGridSchema: GenMessage<HomeGrid>;
-
-/**
- * A homestead: its land's changes, its placed pieces, and the caller's own
- * pack of decorations when the caller is a member.
- *
- * @generated from message glimway.v1.HomeView
- */
-export declare type HomeView = Message<"glimway.v1.HomeView"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: int32 gate = 2;
-   */
-  gate: number;
-
-  /**
-   * @generated from field: string world_id = 3;
-   */
-  worldId: string;
-
-  /**
-   * @generated from field: int32 tier = 4;
-   */
-  tier: number;
-
-  /**
-   * @generated from field: repeated glimway.v1.HomeMember members = 5;
-   */
-  members: HomeMember[];
-
-  /**
-   * @generated from field: bool member = 6;
-   */
-  member: boolean;
-
-  /**
-   * @generated from field: bool desolate = 7;
-   */
-  desolate: boolean;
-
-  /**
-   * @generated from field: google.protobuf.DoubleValue vacant_since = 8;
-   */
-  vacantSince?: number | undefined;
-
-  /**
-   * @generated from field: uint32 land_seed = 9;
-   */
-  landSeed: number;
-
-  /**
-   * @generated from field: repeated glimway.v1.HomeTile cleared = 10;
-   */
-  cleared: HomeTile[];
-
-  /**
-   * @generated from field: repeated glimway.v1.HomeTile stumps = 11;
-   */
-  stumps: HomeTile[];
-
-  /**
-   * @generated from field: repeated glimway.v1.HomePlantView plants = 12;
-   */
-  plants: HomePlantView[];
-
-  /**
-   * @generated from field: int32 posts_bought = 13;
-   */
-  postsBought: number;
-
-  /**
-   * @generated from field: map<string, int32> next_post = 14;
-   */
-  nextPost: { [key: string]: number };
-
-  /**
-   * @generated from field: glimway.v1.HomeGrid outdoor = 15;
-   */
-  outdoor?: HomeGrid | undefined;
-
-  /**
-   * @generated from field: glimway.v1.HomeGrid indoor = 16;
-   */
-  indoor?: HomeGrid | undefined;
-
-  /**
-   * @generated from field: repeated glimway.v1.HomeInstance items = 17;
-   */
-  items: HomeInstance[];
-};
-
-/**
- * Describes the message glimway.v1.HomeView.
- * Use `create(HomeViewSchema)` to create a new message.
- */
-export declare const HomeViewSchema: GenMessage<HomeView>;
 
 /**
  * The workshop: the caller's pack, their personal chest (always theirs,
@@ -525,157 +54,288 @@ export declare type WorkshopView = Message<"glimway.v1.WorkshopView"> & {
 export declare const WorkshopViewSchema: GenMessage<WorkshopView>;
 
 /**
- * @generated from message glimway.v1.StackView
+ * The reads and moves answer with the workshop view itself; the craft
+ * answers carry the same fields beside what the batch made.
+ *
+ * @generated from message glimway.v1.StorageMoveRequest
  */
-export declare type StackView = Message<"glimway.v1.StackView"> & {
+export declare type StorageMoveRequest = Message<"glimway.v1.StorageMoveRequest"> & {
   /**
-   * @generated from field: string item_def = 1;
+   * @generated from field: glimway.v1.OpHeader op = 1;
    */
-  itemDef: string;
+  op?: OpHeader | undefined;
 
   /**
-   * @generated from field: int32 qty = 2;
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * deposit | withdraw
+   *
+   * @generated from field: string direction = 3;
+   */
+  direction: string;
+
+  /**
+   * '' | shared | personal
+   *
+   * @generated from field: string chest = 4;
+   */
+  chest: string;
+
+  /**
+   * @generated from field: glimway.v1.Asset asset = 5;
+   */
+  asset?: Asset | undefined;
+};
+
+/**
+ * Describes the message glimway.v1.StorageMoveRequest.
+ * Use `create(StorageMoveRequestSchema)` to create a new message.
+ */
+export declare const StorageMoveRequestSchema: GenMessage<StorageMoveRequest>;
+
+/**
+ * @generated from message glimway.v1.CraftRequest
+ */
+export declare type CraftRequest = Message<"glimway.v1.CraftRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: string recipe_id = 3;
+   */
+  recipeId: string;
+
+  /**
+   * @generated from field: int32 qty = 4;
    */
   qty: number;
-
-  /**
-   * @generated from field: glimway.v1.MakerView maker = 3;
-   */
-  maker?: MakerView | undefined;
 };
 
 /**
- * Describes the message glimway.v1.StackView.
- * Use `create(StackViewSchema)` to create a new message.
+ * Describes the message glimway.v1.CraftRequest.
+ * Use `create(CraftRequestSchema)` to create a new message.
  */
-export declare const StackViewSchema: GenMessage<StackView>;
+export declare const CraftRequestSchema: GenMessage<CraftRequest>;
 
 /**
- * @generated from message glimway.v1.SlotView
+ * @generated from message glimway.v1.CraftResult
  */
-export declare type SlotView = Message<"glimway.v1.SlotView"> & {
+export declare type CraftResult = Message<"glimway.v1.CraftResult"> & {
   /**
-   * @generated from field: string slot = 1;
+   * @generated from field: glimway.v1.HomeView home = 1;
    */
-  slot: string;
+  home?: HomeView | undefined;
 
   /**
-   * @generated from field: google.protobuf.StringValue item_def = 2;
+   * @generated from field: glimway.v1.AssetCounts inventory = 2;
    */
-  itemDef?: string | undefined;
+  inventory?: AssetCounts | undefined;
 
   /**
-   * @generated from field: google.protobuf.StringValue instance = 3;
+   * @generated from field: glimway.v1.AssetCounts storage = 3;
    */
-  instance?: string | undefined;
+  storage?: AssetCounts | undefined;
+
+  /**
+   * @generated from field: glimway.v1.AssetCounts personal = 4;
+   */
+  personal?: AssetCounts | undefined;
+
+  /**
+   * @generated from field: string shared = 5;
+   */
+  shared: string;
+
+  /**
+   * @generated from field: string recipe_id = 6;
+   */
+  recipeId: string;
+
+  /**
+   * @generated from field: glimway.v1.Asset output = 7;
+   */
+  output?: Asset | undefined;
+
+  /**
+   * @generated from field: repeated string instance_ids = 8;
+   */
+  instanceIds: string[];
 };
 
 /**
- * Describes the message glimway.v1.SlotView.
- * Use `create(SlotViewSchema)` to create a new message.
+ * Describes the message glimway.v1.CraftResult.
+ * Use `create(CraftResultSchema)` to create a new message.
  */
-export declare const SlotViewSchema: GenMessage<SlotView>;
+export declare const CraftResultSchema: GenMessage<CraftResult>;
 
 /**
- * @generated from message glimway.v1.OffHandView
+ * @generated from message glimway.v1.HearthCraftRequest
  */
-export declare type OffHandView = Message<"glimway.v1.OffHandView"> & {
+export declare type HearthCraftRequest = Message<"glimway.v1.HearthCraftRequest"> & {
   /**
-   * @generated from field: bool open = 1;
+   * @generated from field: glimway.v1.OpHeader op = 1;
    */
-  open: boolean;
+  op?: OpHeader | undefined;
 
   /**
-   * @generated from field: google.protobuf.StringValue class = 2;
+   * @generated from field: glimway.v1.Where where = 2;
    */
-  class?: string | undefined;
+  where?: Where | undefined;
 
   /**
-   * @generated from field: google.protobuf.StringValue item_def = 3;
+   * @generated from field: string recipe_id = 3;
    */
-  itemDef?: string | undefined;
+  recipeId: string;
 
   /**
-   * @generated from field: google.protobuf.StringValue instance = 4;
+   * @generated from field: int32 qty = 4;
    */
-  instance?: string | undefined;
+  qty: number;
 };
 
 /**
- * Describes the message glimway.v1.OffHandView.
- * Use `create(OffHandViewSchema)` to create a new message.
+ * Describes the message glimway.v1.HearthCraftRequest.
+ * Use `create(HearthCraftRequestSchema)` to create a new message.
  */
-export declare const OffHandViewSchema: GenMessage<OffHandView>;
+export declare const HearthCraftRequestSchema: GenMessage<HearthCraftRequest>;
 
 /**
- * @generated from message glimway.v1.ThanksView
- */
-export declare type ThanksView = Message<"glimway.v1.ThanksView"> & {
-  /**
-   * @generated from field: string from_name = 1;
-   */
-  fromName: string;
-
-  /**
-   * @generated from field: string item_def = 2;
-   */
-  itemDef: string;
-
-  /**
-   * @generated from field: double at = 3;
-   */
-  at: number;
-};
-
-/**
- * Describes the message glimway.v1.ThanksView.
- * Use `create(ThanksViewSchema)` to create a new message.
- */
-export declare const ThanksViewSchema: GenMessage<ThanksView>;
-
-/**
- * What the caller carries, in the item model (GET /api/items and every
- * item mutation).
+ * Made at the cottage hearth (food, remedies, oils): the workshop view plus
+ * what the batch made.
  *
- * @generated from message glimway.v1.ItemsView
+ * @generated from message glimway.v1.HearthCraftResult
  */
-export declare type ItemsView = Message<"glimway.v1.ItemsView"> & {
+export declare type HearthCraftResult = Message<"glimway.v1.HearthCraftResult"> & {
   /**
-   * @generated from field: repeated glimway.v1.StackView stacks = 1;
+   * @generated from field: glimway.v1.HomeView home = 1;
    */
-  stacks: StackView[];
+  home?: HomeView | undefined;
 
   /**
-   * @generated from field: repeated glimway.v1.InstanceView instances = 2;
+   * @generated from field: glimway.v1.AssetCounts inventory = 2;
    */
-  instances: InstanceView[];
+  inventory?: AssetCounts | undefined;
 
   /**
-   * @generated from field: repeated glimway.v1.SlotView pockets = 3;
+   * @generated from field: glimway.v1.AssetCounts storage = 3;
    */
-  pockets: SlotView[];
+  storage?: AssetCounts | undefined;
 
   /**
-   * @generated from field: glimway.v1.OffHandView off_hand = 4;
+   * @generated from field: glimway.v1.AssetCounts personal = 4;
    */
-  offHand?: OffHandView | undefined;
+  personal?: AssetCounts | undefined;
 
   /**
-   * @generated from field: repeated string picked_up = 5;
+   * @generated from field: string shared = 5;
    */
-  pickedUp: string[];
+  shared: string;
 
   /**
-   * @generated from field: repeated glimway.v1.ThanksView thanks = 6;
+   * @generated from field: string recipe_id = 6;
    */
-  thanks: ThanksView[];
+  recipeId: string;
+
+  /**
+   * @generated from field: glimway.v1.Asset output = 7;
+   */
+  output?: Asset | undefined;
 };
 
 /**
- * Describes the message glimway.v1.ItemsView.
- * Use `create(ItemsViewSchema)` to create a new message.
+ * Describes the message glimway.v1.HearthCraftResult.
+ * Use `create(HearthCraftResultSchema)` to create a new message.
  */
-export declare const ItemsViewSchema: GenMessage<ItemsView>;
+export declare const HearthCraftResultSchema: GenMessage<HearthCraftResult>;
+
+/**
+ * @generated from message glimway.v1.DeskCopyRequest
+ */
+export declare type DeskCopyRequest = Message<"glimway.v1.DeskCopyRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: string page_id = 3;
+   */
+  pageId: string;
+
+  /**
+   * @generated from field: int32 qty = 4;
+   */
+  qty: number;
+};
+
+/**
+ * Describes the message glimway.v1.DeskCopyRequest.
+ * Use `create(DeskCopyRequestSchema)` to create a new message.
+ */
+export declare const DeskCopyRequestSchema: GenMessage<DeskCopyRequest>;
+
+/**
+ * A recipe page copied at the writing desk: the workshop view plus the copies.
+ *
+ * @generated from message glimway.v1.DeskCopyResult
+ */
+export declare type DeskCopyResult = Message<"glimway.v1.DeskCopyResult"> & {
+  /**
+   * @generated from field: glimway.v1.HomeView home = 1;
+   */
+  home?: HomeView | undefined;
+
+  /**
+   * @generated from field: glimway.v1.AssetCounts inventory = 2;
+   */
+  inventory?: AssetCounts | undefined;
+
+  /**
+   * @generated from field: glimway.v1.AssetCounts storage = 3;
+   */
+  storage?: AssetCounts | undefined;
+
+  /**
+   * @generated from field: glimway.v1.AssetCounts personal = 4;
+   */
+  personal?: AssetCounts | undefined;
+
+  /**
+   * @generated from field: string shared = 5;
+   */
+  shared: string;
+
+  /**
+   * @generated from field: string page_id = 6;
+   */
+  pageId: string;
+
+  /**
+   * @generated from field: int32 qty = 7;
+   */
+  qty: number;
+};
+
+/**
+ * Describes the message glimway.v1.DeskCopyResult.
+ * Use `create(DeskCopyResultSchema)` to create a new message.
+ */
+export declare const DeskCopyResultSchema: GenMessage<DeskCopyResult>;
 
 /**
  * @generated from message glimway.v1.LibraryEntry
@@ -1019,290 +679,6 @@ export declare type MailActionResult = Message<"glimway.v1.MailActionResult"> & 
  * Use `create(MailActionResultSchema)` to create a new message.
  */
 export declare const MailActionResultSchema: GenMessage<MailActionResult>;
-
-/**
- * The reads and moves answer with the workshop view itself; the craft
- * answers carry the same fields beside what the batch made.
- *
- * @generated from message glimway.v1.StorageMoveRequest
- */
-export declare type StorageMoveRequest = Message<"glimway.v1.StorageMoveRequest"> & {
-  /**
-   * @generated from field: glimway.v1.OpHeader op = 1;
-   */
-  op?: OpHeader | undefined;
-
-  /**
-   * @generated from field: glimway.v1.Where where = 2;
-   */
-  where?: Where | undefined;
-
-  /**
-   * deposit | withdraw
-   *
-   * @generated from field: string direction = 3;
-   */
-  direction: string;
-
-  /**
-   * '' | shared | personal
-   *
-   * @generated from field: string chest = 4;
-   */
-  chest: string;
-
-  /**
-   * @generated from field: glimway.v1.Asset asset = 5;
-   */
-  asset?: Asset | undefined;
-};
-
-/**
- * Describes the message glimway.v1.StorageMoveRequest.
- * Use `create(StorageMoveRequestSchema)` to create a new message.
- */
-export declare const StorageMoveRequestSchema: GenMessage<StorageMoveRequest>;
-
-/**
- * @generated from message glimway.v1.CraftRequest
- */
-export declare type CraftRequest = Message<"glimway.v1.CraftRequest"> & {
-  /**
-   * @generated from field: glimway.v1.OpHeader op = 1;
-   */
-  op?: OpHeader | undefined;
-
-  /**
-   * @generated from field: glimway.v1.Where where = 2;
-   */
-  where?: Where | undefined;
-
-  /**
-   * @generated from field: string recipe_id = 3;
-   */
-  recipeId: string;
-
-  /**
-   * @generated from field: int32 qty = 4;
-   */
-  qty: number;
-};
-
-/**
- * Describes the message glimway.v1.CraftRequest.
- * Use `create(CraftRequestSchema)` to create a new message.
- */
-export declare const CraftRequestSchema: GenMessage<CraftRequest>;
-
-/**
- * @generated from message glimway.v1.CraftResult
- */
-export declare type CraftResult = Message<"glimway.v1.CraftResult"> & {
-  /**
-   * @generated from field: glimway.v1.HomeView home = 1;
-   */
-  home?: HomeView | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts inventory = 2;
-   */
-  inventory?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts storage = 3;
-   */
-  storage?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts personal = 4;
-   */
-  personal?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: string shared = 5;
-   */
-  shared: string;
-
-  /**
-   * @generated from field: string recipe_id = 6;
-   */
-  recipeId: string;
-
-  /**
-   * @generated from field: glimway.v1.Asset output = 7;
-   */
-  output?: Asset | undefined;
-
-  /**
-   * @generated from field: repeated string instance_ids = 8;
-   */
-  instanceIds: string[];
-};
-
-/**
- * Describes the message glimway.v1.CraftResult.
- * Use `create(CraftResultSchema)` to create a new message.
- */
-export declare const CraftResultSchema: GenMessage<CraftResult>;
-
-/**
- * @generated from message glimway.v1.HearthCraftRequest
- */
-export declare type HearthCraftRequest = Message<"glimway.v1.HearthCraftRequest"> & {
-  /**
-   * @generated from field: glimway.v1.OpHeader op = 1;
-   */
-  op?: OpHeader | undefined;
-
-  /**
-   * @generated from field: glimway.v1.Where where = 2;
-   */
-  where?: Where | undefined;
-
-  /**
-   * @generated from field: string recipe_id = 3;
-   */
-  recipeId: string;
-
-  /**
-   * @generated from field: int32 qty = 4;
-   */
-  qty: number;
-};
-
-/**
- * Describes the message glimway.v1.HearthCraftRequest.
- * Use `create(HearthCraftRequestSchema)` to create a new message.
- */
-export declare const HearthCraftRequestSchema: GenMessage<HearthCraftRequest>;
-
-/**
- * Made at the cottage hearth (food, remedies, oils): the workshop view plus
- * what the batch made.
- *
- * @generated from message glimway.v1.HearthCraftResult
- */
-export declare type HearthCraftResult = Message<"glimway.v1.HearthCraftResult"> & {
-  /**
-   * @generated from field: glimway.v1.HomeView home = 1;
-   */
-  home?: HomeView | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts inventory = 2;
-   */
-  inventory?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts storage = 3;
-   */
-  storage?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts personal = 4;
-   */
-  personal?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: string shared = 5;
-   */
-  shared: string;
-
-  /**
-   * @generated from field: string recipe_id = 6;
-   */
-  recipeId: string;
-
-  /**
-   * @generated from field: glimway.v1.Asset output = 7;
-   */
-  output?: Asset | undefined;
-};
-
-/**
- * Describes the message glimway.v1.HearthCraftResult.
- * Use `create(HearthCraftResultSchema)` to create a new message.
- */
-export declare const HearthCraftResultSchema: GenMessage<HearthCraftResult>;
-
-/**
- * @generated from message glimway.v1.DeskCopyRequest
- */
-export declare type DeskCopyRequest = Message<"glimway.v1.DeskCopyRequest"> & {
-  /**
-   * @generated from field: glimway.v1.OpHeader op = 1;
-   */
-  op?: OpHeader | undefined;
-
-  /**
-   * @generated from field: glimway.v1.Where where = 2;
-   */
-  where?: Where | undefined;
-
-  /**
-   * @generated from field: string page_id = 3;
-   */
-  pageId: string;
-
-  /**
-   * @generated from field: int32 qty = 4;
-   */
-  qty: number;
-};
-
-/**
- * Describes the message glimway.v1.DeskCopyRequest.
- * Use `create(DeskCopyRequestSchema)` to create a new message.
- */
-export declare const DeskCopyRequestSchema: GenMessage<DeskCopyRequest>;
-
-/**
- * A recipe page copied at the writing desk: the workshop view plus the copies.
- *
- * @generated from message glimway.v1.DeskCopyResult
- */
-export declare type DeskCopyResult = Message<"glimway.v1.DeskCopyResult"> & {
-  /**
-   * @generated from field: glimway.v1.HomeView home = 1;
-   */
-  home?: HomeView | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts inventory = 2;
-   */
-  inventory?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts storage = 3;
-   */
-  storage?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: glimway.v1.AssetCounts personal = 4;
-   */
-  personal?: AssetCounts | undefined;
-
-  /**
-   * @generated from field: string shared = 5;
-   */
-  shared: string;
-
-  /**
-   * @generated from field: string page_id = 6;
-   */
-  pageId: string;
-
-  /**
-   * @generated from field: int32 qty = 7;
-   */
-  qty: number;
-};
-
-/**
- * Describes the message glimway.v1.DeskCopyResult.
- * Use `create(DeskCopyResultSchema)` to create a new message.
- */
-export declare const DeskCopyResultSchema: GenMessage<DeskCopyResult>;
 
 /**
  * @generated from message glimway.v1.Person

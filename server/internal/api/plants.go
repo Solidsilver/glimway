@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -101,7 +102,7 @@ func abs(n int) int {
 }
 
 // plant: a seed or sapling set into your own land at a tile beside you.
-func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	if !content.IsGatheringSeed(req.ItemDef) {
 		return fail(400, "not-a-seed")
 	}
@@ -109,10 +110,10 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req i
 	if err != nil {
 		return err
 	}
-	if req.Tile == nil {
+	if len(req.Tile) != 2 {
 		return fail(400, "tile-required")
 	}
-	x, y := (*req.Tile)[0], (*req.Tile)[1]
+	x, y := int(req.Tile[0]), int(req.Tile[1])
 	if !nearTile(s, s.State.Area, x, y, 2) {
 		return fail(409, "too-far-away")
 	}
@@ -136,6 +137,6 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req i
 	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_plants VALUES(?,?,?,?,?,?,?)", id, h.ID, req.ItemDef, x, y, now, day); err != nil {
 		return err
 	}
-	out.Plant = &homePlantView{ID: id, ItemDef: req.ItemDef, X: x, Y: y, PlantedAt: now, PlantedDay: day, Lit: land.Lit(connectedLights(placedItems(*h), ""), x, y)}
+	out.Plant = &contract.HomePlant{Id: id, ItemDef: req.ItemDef, X: int32(x), Y: int32(y), PlantedAt: float64(now), PlantedDay: float64(day), Lit: land.Lit(connectedLights(placedItems(*h), ""), x, y)}
 	return nil
 }

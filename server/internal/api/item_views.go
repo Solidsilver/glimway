@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"math"
 	"net/http"
@@ -256,7 +257,9 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Items itemsView `json:"items"`
-	}{v})
+	raw, err := protoResult(&contract.ItemsRead{Items: itemsViewProto(v)})
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, raw)
 }

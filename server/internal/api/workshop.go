@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 	"database/sql"
-	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 )
@@ -85,7 +85,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	asset := assetFromProto(req.Asset)
+	asset := assetOf(req.Asset)
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err

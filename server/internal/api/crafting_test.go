@@ -8,12 +8,18 @@ import (
 	"testing"
 )
 
+// The woodpile's wire shape (contract.WoodpileView) as these tests read it.
+type woodpileWire struct {
+	Placed     bool `json:"placed"`
+	ReadyCount int  `json:"readyCount"`
+}
+
 type craftingResponse struct {
 	store.Snapshot
-	Woodpile woodpileView `json:"woodpile"`
+	Woodpile woodpileWire `json:"woodpile"`
 	Result   struct {
 		Output       content.Asset `json:"output"`
-		Woodpile     woodpileView  `json:"woodpile"`
+		Woodpile     woodpileWire  `json:"woodpile"`
 		Action       string        `json:"action"`
 		CollectedQty int           `json:"collectedQty"`
 		PageID       string        `json:"pageId"`
