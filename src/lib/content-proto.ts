@@ -1,6 +1,4 @@
-import { fromJson, getExtension, ScalarType, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
-import { createValidator, type Violation } from '@bufbuild/protovalidate';
-import { message as messageRulesExt, field as fieldRulesExt } from './gen/buf/validate/validate_pb.js';
+import { fromJson, ScalarType, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
 
 /**
  * Content files are JSON read into the generated proto messages
@@ -11,30 +9,23 @@ import { message as messageRulesExt, field as fieldRulesExt } from './gen/buf/va
  * treated a null as an error), and so is any key that isn't a field's
  * canonical JSON name (a proto name alone included, which fromJson would
  * otherwise accept). Then protovalidate runs the schema's field and message
- * rules; rules that span entries stay in each family's loader.
+ * rules (content-validate.ts); rules that span entries stay in each
+ * family's loader.
+ *
+ * Except in a production build: the bundled content is already validated
+ * by the shared vectors in CI and by the server at start-up, so a player's
+ * browser skips the schema's rules, and the dead branch below takes the
+ * validator, CEL and RE2 out of the bundle. Dev, `npm test`, the vectors
+ * and e2e (the dev server) all validate. `?.`: Node has no import.meta.env.
  */
-const validator = createValidator();
-
-/** A refusing loader error that came from the schema, with the rule ids that fired (the shared vectors name one). */
-export class ContentValidationError extends Error {
-  readonly ruleIds: string[];
-  constructor(message: string, ruleIds: string[]) {
-    super(message);
-    this.name = 'ContentValidationError';
-    this.ruleIds = ruleIds;
-  }
-}
-
-/** One repeated field's entries, by proto field name and each entry's id. */
-interface EntryList { field: string; ids: string[] }
+const validate = import.meta.env?.PROD ? undefined : (await import('./content-validate.ts')).validateContent;
 
 /**
  * Reads raw content into the generated message, refusing nulls and unknown
- * keys, then runs the schema's rules. Violations are reported the way the Go
- * loader does: naming the entry and the field ("candle base.w: ...").
- * `family` names the file ("furnishings"); `entryFields` are the proto names
- * of the repeated fields the entries live in ("pieces" — several for a file
- * with more than one list), each resolved through the descriptor.
+ * keys, then (outside production) runs the schema's rules. `family` names
+ * the file ("furnishings"); `entryFields` are the proto names of the
+ * repeated fields the entries live in ("pieces"), naming the entry in a
+ * violation ("candle base.w: ...").
  */
 export function decodeContent<Desc extends DescMessage>(schema: Desc, raw: unknown, family: string, entryFields: string[]): MessageShape<Desc> {
   try {
@@ -48,54 +39,8 @@ export function decodeContent<Desc extends DescMessage>(schema: Desc, raw: unkno
   } catch (e) {
     throw new Error(`invalid ${family}: decode: ${(e as Error).message}`);
   }
-  const entries = entryFields.map((field) => {
-    // entryFields spell the fields as the violation paths do (the JSON
-    // name); the message is read through the field's localName.
-    const fd = schema.fields.find((f) => f.jsonName === field) ?? schema.fields.find((f) => f.name === field);
-    const list = fd ? (msg as unknown as Record<string, { id?: string }[] | undefined>)[fd.localName] : undefined;
-    return { field: fd ? fd.jsonName : field, ids: (list ?? []).map((e) => e.id ?? '') };
-  });
-  const result = validator.validate(schema, msg);
-  if (result.kind === 'valid') return msg;
-  if (result.kind === 'error') {
-    // A CEL rule that errors mid-evaluation (a timestamp() conversion over
-    // a malformed string) comes back as a bare RuntimeError without the
-    // rule's id — Go's runtime names it in the text. Map it onto the rules
-    // being evaluated (the schema's CEL ids), so both runtimes' texts carry
-    // the id the shared vectors assert.
-    const ids = celRuleIds(schema);
-    throw new ContentValidationError(`invalid ${family}: ${result.error.message}${ids.length > 0 ? ` [${ids.join(', ')}]` : ''}`, ids);
-  }
-  const issues = result.violations.map((v) => nameEntry(entries, violationIssue(v)));
-  throw new ContentValidationError(`invalid ${family}: ${issues.join('; ')}`, result.violations.map((v) => v.ruleId));
-}
-
-// celRuleIds collects the CEL rule ids declared on the schema's message
-// tree — the message rules and the field rules (the generated descriptors
-// keep the options; the runtime's own errors don't name the rule).
-function celRuleIds(desc: DescMessage): string[] {
-  const ids: string[] = [];
-  const optionsOf = (o: unknown): { options?: object } | undefined => (o as { proto?: { options?: object } } | undefined)?.proto;
-  const visit = (md: DescMessage): void => {
-    const opts = optionsOf(md)?.options;
-    if (opts) {
-      try {
-        const rules = getExtension(opts as never, messageRulesExt);
-        for (const c of rules?.cel ?? []) if (c.id) ids.push(c.id);
-      } catch { /* no message rules */ }
-    }
-    for (const f of md.fields) {
-      const fo = optionsOf(f)?.options;
-      if (!fo) continue;
-      try {
-        const rules = getExtension(fo as never, fieldRulesExt);
-        for (const c of rules?.cel ?? []) if (c.id) ids.push(c.id);
-      } catch { /* no field rules */ }
-    }
-    for (const n of md.nestedMessages) visit(n);
-  };
-  visit(desc);
-  return ids;
+  validate?.(schema, msg, family, entryFields);
+  return msg;
 }
 
 // refuseContent walks the parsed content beside the message descriptor,
@@ -160,41 +105,3 @@ const NUMERIC_SCALARS = new Set([
   ScalarType.SINT32, ScalarType.SINT64, ScalarType.FIXED32, ScalarType.FIXED64,
   ScalarType.SFIXED32, ScalarType.SFIXED64, ScalarType.FLOAT, ScalarType.DOUBLE,
 ]);
-
-// violationIssue renders one violation as "path: message", with the path's
-// field names spelled the way the JSON files do (period_minutes ->
-// periodMinutes).
-// The rule id stays in the text: the shared vectors name the rule they
-// refuse for, and both runtimes' errors must carry it.
-function violationIssue(v: Violation): string {
-  let path = '';
-  for (const el of v.field) {
-    if (el.kind === 'list_sub') { path += `[${el.index}]`; continue; }
-    if (el.kind === 'map_sub') { path += `[${JSON.stringify(el.key)}]`; continue; }
-    if (el.kind === 'extension') { path += `[${el.typeName}]`; continue; }
-    if (el.kind === 'oneof') { path += (path ? '.' : '') + el.name; continue; }
-    if (path) path += '.';
-    path += el.jsonName;
-  }
-  return path ? `${path}: ${v.message} [${v.ruleId}]` : `${v.message} [${v.ruleId}]`;
-}
-
-const entryPath = /^(\w+)\[(\d+)\]\.?(.*)$/;
-
-// nameEntry rewrites a violation path ("pieces[2].base.w: ...") to name the
-// entry ("candle base.w: ..."); ids[i] names the entry in the message's
-// field (pieces, rooms, residents).
-function nameEntry(entries: EntryList[], issue: string): string {
-  const m = entryPath.exec(issue);
-  if (!m) return issue;
-  for (const e of entries) {
-    if (e.field !== m[1]) continue;
-    const i = Number(m[2]);
-    if (!Number.isSafeInteger(i) || i < 0 || i >= e.ids.length) return issue;
-    // A message rule's path ends at the entry ("hazel: home is ...").
-    if (m[3] === '') return e.ids[i]!;
-    if (m[3]!.startsWith(':')) return `${e.ids[i]}${m[3]}`;
-    return `${e.ids[i]} ${m[3]}`;
-  }
-  return issue;
-}
